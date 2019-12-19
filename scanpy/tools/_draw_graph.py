@@ -19,6 +19,7 @@ def draw_graph(
     adata: AnnData,
     layout: _Layout = 'fa',
     init_pos: Union[str, bool, None] = None,
+    init_pos_paga_key: Optional[str] = None,
     root: Optional[int] = None,
     random_state: Optional[Union[int, RandomState]] = 0,
     n_jobs: Optional[int] = None,
@@ -73,6 +74,8 @@ def draw_graph(
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
+    init_pos_paga_key
+        Use the PAGA representation under adata.uns['paga'][init_pos_paga_key].
     copy
         Return a copy instead of writing to adata.
     **kwds
@@ -105,7 +108,7 @@ def draw_graph(
         init_coords = adata.obsm[init_pos]
     elif init_pos == 'paga' or init_pos:
         init_coords = get_init_pos_from_paga(
-            adata, adjacency, random_state=random_state
+            adata, adjacency, random_state=random_state, key=init_pos_paga_key
         )
     else:
         np.random.seed(random_state)

@@ -200,10 +200,17 @@ def spring_project(
 
     # Write PAGA data, if present
     if 'paga' in adata.uns:
-        clusts = np.array(adata.obs[adata.uns['paga']['groups']].cat.codes)
-        uniq_clusts = adata.obs[adata.uns['paga']['groups']].cat.categories
+        if 'groups' in adata.uns['paga']:
+            uns = adata.uns['paga']
+        else:
+            key = list(adata.uns['paga'].keys())[0] # save only the first key
+            uns = adata.uns['paga'][key]
+            if 'groups' not in uns:
+                return
+        clusts = np.array(adata.obs[uns['groups']].cat.codes)
+        uniq_clusts = adata.obs[uns['groups']].cat.categories
         paga_coords = [coords[clusts == i, :].mean(0) for i in range(len(uniq_clusts))]
-        _export_PAGA_to_SPRING(adata, paga_coords, subplot_dir / 'PAGA_data.json')
+        _export_PAGA_to_SPRING(adata, paga_coords, subplot_dir / 'PAGA_data.json', uns)
 
 
 # --------------------------------------------------------------------------------
@@ -342,9 +349,9 @@ def _write_cell_groupings(filename, categorical_coloring_data):
         f.write(json.dumps(categorical_coloring_data,indent=4, sort_keys=True))#.decode('utf-8'))
 
 
-def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
+def _export_PAGA_to_SPRING(adata, paga_coords, outpath, paga_dict):
     # retrieve node data
-    group_key = adata.uns['paga']['groups']
+    group_key = paga_dict['groups']
     names = adata.obs[group_key].cat.categories
     coords = [list(xy) for xy in paga_coords]
 
@@ -360,8 +367,8 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
         colors = list(adata.uns[group_key + '_colors'])
 
     # retrieve edge level data
-    sources,targets = adata.uns['paga']['connectivities'].nonzero()
-    weights = np.sqrt(adata.uns['paga']['connectivities'].data) / 3
+    sources,targets = paga_dict['connectivities'].nonzero()
+    weights = np.sqrt(paga_dict['connectivities'].data) / 3
 
     # save a threshold weight for showing edges so that by default,
     # the number of edges shown is 8X the number of nodes

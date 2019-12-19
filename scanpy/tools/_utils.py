@@ -90,28 +90,33 @@ def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
             return adata.X
 
 
-def get_init_pos_from_paga(adata, adjacency=None, random_state=0):
+def get_init_pos_from_paga(adata, adjacency=None, key=None, random_state=0):
     np.random.seed(random_state)
+    if 'paga' not in adata.uns:
+        raise ValueError('Run sc.tl.paga first.')
+    if key is not None and key not in adata.uns['paga']:
+        raise ValueError(f'Run sc.tl.paga with key_added={key} first.')
+    uns = adata.uns['paga'] if key is None else adata.uns['paga'][key]
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
-    if 'paga' in adata.uns and 'pos' in adata.uns['paga']:
-        groups = adata.obs[adata.uns['paga']['groups']]
-        pos = adata.uns['paga']['pos']
-        connectivities_coarse = adata.uns['paga']['connectivities']
-        init_pos = np.ones((adjacency.shape[0], 2))
-        for i, group_pos in enumerate(pos):
-            subset = (groups == groups.cat.categories[i]).values
-            neighbors = connectivities_coarse[i].nonzero()
-            if len(neighbors[1]) > 0:
-                connectivities = connectivities_coarse[i][neighbors]
-                nearest_neighbor = neighbors[1][np.argmax(connectivities)]
-                noise = np.random.random((len(subset[subset]), 2))
-                dist = pos[i] - pos[nearest_neighbor]
-                noise = noise * dist
-                init_pos[subset] = group_pos - 0.5*dist + noise
-            else:
-                init_pos[subset] = group_pos
-    else:
-        raise ValueError('Plot PAGA first, so that adata.uns[\'paga\']'
+    key_str = '' if key is None else f"['{key}']"
+    if 'pos' not in uns:
+        raise ValueError(f'Plot PAGA first, so that adata.uns[\'paga\']{key_str}'
                          'with key \'pos\'.')
+    groups = adata.obs[uns['groups']]
+    pos = uns['pos']
+    connectivities_coarse = uns['connectivities']
+    init_pos = np.ones((adjacency.shape[0], 2))
+    for i, group_pos in enumerate(pos):
+        subset = (groups == groups.cat.categories[i]).values
+        neighbors = connectivities_coarse[i].nonzero()
+        if len(neighbors[1]) > 0:
+            connectivities = connectivities_coarse[i][neighbors]
+            nearest_neighbor = neighbors[1][np.argmax(connectivities)]
+            noise = np.random.random((len(subset[subset]), 2))
+            dist = pos[i] - pos[nearest_neighbor]
+            noise = noise * dist
+            init_pos[subset] = group_pos - 0.5*dist + noise
+        else:
+            init_pos[subset] = group_pos
     return init_pos
