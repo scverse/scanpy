@@ -106,6 +106,14 @@ Clustering and trajectory inference
    tl.dpt
    tl.paga
 
+Dataset integration
+~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   tl.ingest
+
 Marker genes
 ~~~~~~~~~~~~
 
