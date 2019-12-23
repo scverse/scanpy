@@ -28,19 +28,25 @@
 .. _Fabian Theis: https://twitter.com/fabian_theis
 
 
-On master
----------
-
-- :mod:`scanpy.pp.downsample_counts` now always preserves the dtype of it's input, instead of converting to floats to int :noteversion:`1.4.5` :pr:`865` :smaller:`thanks to I Virshup`
-- :mod:`scanpy.queries` recieved many updates. This includes enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`thanks to I Virshup`
-- Allow specifying a base for :func:`~scanpy.pp.log1p` :pr:`931` :smaller:`thanks to G Eraslan`
-- :func:`~scanpy.tl.ingest` allows to map labels and embeddings from one adata to another :pr:`651` :smaller:`thanks to S Rybakov`
-
-.. _gprofiler: https://biit.cs.ut.ee/gprofiler/
-
-
 Version 1.4.*
 -------------
+
+1.4.5
+~~~~~
+New functionality:
+
+- :func:`~scanpy.tl.ingest` integrates embeddings and annotations of an `adata` with a reference dataset, see `ingest tutorial`_ :pr:`651` :smaller:`thanks to S Rybakov`
+- :mod:`scanpy.queries` recieved many updates. This includes enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`thanks to I Virshup`
+
+.. _gprofiler: https://biit.cs.ut.ee/gprofiler/
+.. _ingest-tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+
+Code design:
+- :mod:`scanpy.pp.downsample_counts` now always preserves the dtype of it's input, instead of converting to floats to int :noteversion:`1.4.5` :pr:`865` :smaller:`thanks to I Virshup`
+- allow specifying a base for :func:`~scanpy.pp.log1p` :pr:`931` :smaller:`thanks to G Eraslan`
+- run neighbors on a GPU using rapids :pr:`850` :smaller:`thanks to T White`
+
+And many further improvements and bug fixes.
 
 1.4.4
 ~~~~~
