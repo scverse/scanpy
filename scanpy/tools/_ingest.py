@@ -3,22 +3,24 @@ import numpy as np
 from sklearn.utils import check_random_state
 from scipy.sparse import issparse
 from collections.abc import MutableMapping
+from typing import Iterable, Union, Optional
+from anndata import AnnData
 
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 
 
 def ingest(
-    adata,
-    adata_ref,
-    obs=None,
-    inplace=True,
-    embedding_method=('umap', 'pca'),
-    labeling_method='knn',
-    return_joint=False,
-    batch_key='batch',
-    batch_categories=None,
-    index_unique='-',
+    adata: AnnData,
+    adata_ref: AnnData,
+    obs: Optional[Union[str, Iterable[str]]] = None,
+    embedding_method: Union[str, Iterable[str]] = ('umap', 'pca'),
+    labeling_method: str = 'knn',
+    return_joint: bool = False,
+    batch_key: str = 'batch',
+    batch_categories: Optional[Iterable[str]] = None,
+    index_unique: str='-',
+    inplace: bool = True,
     **kwargs,
 ):
     """\
@@ -32,45 +34,45 @@ def ingest(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes. This is the dataset without labels and
         embeddings.
-    adata_ref : :class:`~anndata.AnnData`
+    adata_ref
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
         Variables (`n_vars` and `var_names`) of `adata_ref` should be the same
         as in `adata`.
         This is the dataset with labels and embeddings
         which need to be mapped to `adata`.
-    obs : `str` or list of `str` or `None`, optional (default: `None`)
+    obs
         Labels' keys in `adata_ref.obs` which need to be mapped to `adata.obs`
         (inferred for observation of `adata`).
-    embedding_method : `str` or list of `str`, optional (default: `('umap', 'pca')`)
+    embedding_method
         Embeddings in `adata_ref` which need to be mapped to `adata`.
         The only supported values are 'umap' and 'pca'.
-    labeling_method : `str`, optional (default: `knn`)
+    labeling_method
         The method to map labels in `adata_ref.obs` to `adata.obs`.
         The only supported value is 'knn'.
-    return_joint : `bool`, optional (default: `False`)
+    return_joint
         If set to `True` the function
         returns the new :class:`~anndata.AnnData` object with concatenated
         existing embeddings and labels of 'adata_ref' and inferred embeddings
         and labels for `adata`.
-    batch_key : `str`, optional (default: `'batch'`)
+    batch_key
         Only works if `return_joint=True`.
         Add the batch annotation to `obs`
         of the new :class:`~anndata.AnnData` object using this key.
-    batch_categories : `str` or `None`, optional (default: `None`)
+    batch_categories
         Only works if `return_joint=True`.
         Use these as categories for the batch annotation.
         By default, use increasing numbers.
-    index_unique : `str` or `None`, optional (default: `None`)
+    index_unique
         Only works if `return_joint=True`.
         Make the index unique by joining the existing index names with the
         batch category, using `index_unique='-'`, for instance. Provide
         `None` to keep existing indices.
-    inplace : `bool`, optional (default: `True`)
+    inplace
         Only works if `return_joint=False`.
         Add labels and embeddings to the passed `adata` (if `True`)
         or return a copy of `adata` with mapped embeddings and labels.
