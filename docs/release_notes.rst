@@ -35,11 +35,11 @@ Version 1.4.*
 ~~~~~
 New functionality:
 
-- :func:`~scanpy.tl.ingest` integrates embeddings and annotations of an `adata` with a reference dataset, see `ingest tutorial`_ :pr:`651` :smaller:`thanks to S Rybakov`
+- :func:`~scanpy.tl.ingest` integrates embeddings and annotations of an `adata` with a reference dataset, see the `ingest tutorial`_ :pr:`651` :smaller:`thanks to S Rybakov`
 - :mod:`scanpy.queries` recieved many updates. This includes enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`thanks to I Virshup`
 
 .. _gprofiler: https://biit.cs.ut.ee/gprofiler/
-.. _ingest-tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+.. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
 
 Code design:
 - :mod:`scanpy.pp.downsample_counts` now always preserves the dtype of it's input, instead of converting to floats to int :noteversion:`1.4.5` :pr:`865` :smaller:`thanks to I Virshup`
