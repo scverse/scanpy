@@ -31,27 +31,26 @@ For more possibilities on visualizing marker genes, see this `plotting gallery`_
 Trajectory Inference
 --------------------
 
-We offer several examples for `trajectory inference`_ on complex datasets.
-Get started with the `Paul PAGA`_ example for the following result on hematopoiesis:
+We offer many examples for `trajectory inference`_ on complex datasets via
+PAGA [Wolf19]_. Get started with the `following example for hematopoiesis`_.
 
 .. image:: http://www.falexwolf.de/img/paga_paul15.png
    :width: 450px
 
 You can extend this to multi-resolution analyses of whole animals,
-such as the `Planaria PAGA`_ example:
+such as for `planaria`_.
 
 .. image:: http://www.falexwolf.de/img/paga_planaria.png
    :width: 350px
 
-The PAGA method behind this is described in [Wolf19]_.
 As a reference for simple pseudotime analyses, we provide the diffusion pseudotime analyses of [Haghverdi16]_
-for two hematopoiesis datasets: The `Paul DPT`_ example [Paul15]_ and the `Moignard DPT`_ example [Moignard15]_.
+for two hematopoiesis datasets: The `Paul15 DPT`_ example [Paul15]_ and the `Moignard15 DPT`_ example [Moignard15]_.
 
 .. _trajectory inference: https://github.com/theislab/paga
-.. _Paul PAGA: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/blood/paul15/paul15.ipynb
-.. _Planaria PAGA: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/planaria/planaria.ipynb
-.. _Paul DPT: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
-.. _Moignard DPT: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
+.. _following example for hematopoiesis: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/blood/paul15/paul15.ipynb
+.. _planaria: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/planaria/planaria.ipynb
+.. _Paul15 DPT: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
+.. _Moignard15 DPT: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
 
 
 -----------------
