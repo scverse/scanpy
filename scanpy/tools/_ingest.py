@@ -19,12 +19,16 @@ def ingest(
     return_joint: bool = False,
     batch_key: str = 'batch',
     batch_categories: Optional[Iterable[str]] = None,
-    index_unique: str='-',
+    index_unique: str = '-',
     inplace: bool = True,
     **kwargs,
 ):
     """\
     Map labels and embeddings from existing data to new data.
+
+    Integrates embeddings and annotations of an `adata` with a reference dataset
+    `adata_ref` by "ingesting" data through projecting on a PCA (or alternate
+    model) that has been fitted on the reference data.
 
     The function uses the k-nearest neighbors method for mapping labels.
     You need to run :func:`~scanpy.pp.neighbors` on `adata_ref` before
@@ -91,13 +95,12 @@ def ingest(
     -------
     Assuming there is `adata_ref` with 'cell_type' in `adata_ref.obs`
     which we want to infer for observations in `adata`.
+
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
     >>> adata_joint = sc.tl.ingest(
     >>>     adata, adata_ref, obs='cell_type',
-    >>>     embedding_method='umap',
-    >>>     batch_key='ing_batch',
-    >>>     return_joint=True)
+    >>>     batch_key='ing_batch', return_joint=True)
     """
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
