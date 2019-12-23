@@ -26,8 +26,6 @@ def ingest(
     """\
     Map labels and embeddings from existing data to new data.
 
-    This function allows to map the specified labels and embeddings
-    from `adata_ref` to `adata`.
     The function uses the k-nearest neighbors method for mapping labels.
     You need to run :func:`~scanpy.pp.neighbors` on `adata_ref` before
     passing it.
@@ -79,7 +77,7 @@ def ingest(
 
     Returns
     -------
-    if `return_joint=True` returns the new :class:`~anndata.AnnData` object
+    If `return_joint=True` returns the new :class:`~anndata.AnnData` object
     with concatenated existing embeddings and labels of 'adata_ref' and
     inferred embeddings and labels for `adata`.
     if `return_joint=False` then:
@@ -95,10 +93,11 @@ def ingest(
     which we want to infer for observations in `adata`.
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
-    >>> adata_joint = sc.tl.ingest(adata, adata_ref, obs='cell_type',
-                                   embedding_method='umap',
-                                   batch_key='ing_batch',
-                                   return_joint=True)
+    >>> adata_joint = sc.tl.ingest(
+    >>>     adata, adata_ref, obs='cell_type',
+    >>>     embedding_method='umap',
+    >>>     batch_key='ing_batch',
+    >>>     return_joint=True)
     """
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
