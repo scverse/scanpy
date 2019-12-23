@@ -64,24 +64,24 @@ Bug fixes:
 
 Code design:
 
-- :func:`~scanpy.pp.calculate_qc_metrics` is single threaded by default for datasets under 300,000 cells -- allowing cached compilation :noteversion:`1.4.3` :pr:`615 :smaller:`thanks to I Virshup`
+- :func:`~scanpy.pp.calculate_qc_metrics` is single threaded by default for datasets under 300,000 cells -- allowing cached compilation :noteversion:`1.4.3` :pr:`615` :smaller:`thanks to I Virshup`
 
 1.4.2
 ~~~~~
 New functionality:
 
-- :func:`~scanpy.pp.combat` supports additional covariates which may include adjustment variables or biological condition :noteversion:`1.4.2` :pr:`618 :smaller:`thanks to G Eraslan`
-- :func:`~scanpy.pp.highly_variable_genes` has a `batch_key` option which performs HVG selection in each batch separately to avoid selecting genes that vary strongly across batches :noteversion:`1.4.2` :pr:`622 :smaller:`thanks to G Eraslan`
+- :func:`~scanpy.pp.combat` supports additional covariates which may include adjustment variables or biological condition :noteversion:`1.4.2` :pr:`618` :smaller:`thanks to G Eraslan`
+- :func:`~scanpy.pp.highly_variable_genes` has a `batch_key` option which performs HVG selection in each batch separately to avoid selecting genes that vary strongly across batches :noteversion:`1.4.2` :pr:`622` :smaller:`thanks to G Eraslan`
 
 Bug fixes:
 
-- :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation :noteversion:`1.4.2` :pr:`621 :smaller:`thanks to I Virshup`
+- :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation :noteversion:`1.4.2` :pr:`621` :smaller:`thanks to I Virshup`
 - :func:`~scanpy.tl.umap` with `init_pos='paga'` detects correct `dtype` :noteversion:`1.4.2` :smaller:`thanks to A Wolf`
 - :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.leiden` auto-generate `key_added=louvain_R` upon passing `restrict_to`, which was temporarily changed in `v1.4.1` :noteversion:`1.4.2` :smaller:`thanks to A Wolf`
 
 Code design:
 
-- :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency :noteversion:`1.4.2` :pr:`576 :smaller:`thanks to S Rybakov`
+- :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency :noteversion:`1.4.2` :pr:`576` :smaller:`thanks to S Rybakov`
 
 1.4.1
 ~~~~~
@@ -92,9 +92,9 @@ New functionality:
 - :func:`~scanpy.tl.marker_gene_overlap` computes overlaps of marker genes :noteversion:`1.4.1` :smaller:`thanks to M Luecken`
 - :func:`~scanpy.tl.filter_rank_genes_groups` filters out genes based on fold change and fraction of cells expressing genes :noteversion:`1.4.1` :smaller:`thanks to F Ramirez`
 - :func:`~scanpy.pp.normalize_total` replaces :func:`~scanpy.pp.normalize_per_cell`, is more efficient and provides a parameter to only normalize using a fraction of expressed genes :noteversion:`1.4.1` :smaller:`thanks to S Rybakov`
-- :func:`~scanpy.pp.downsample_counts` has been sped up, changed default value of `replace` parameter to `False` :noteversion:`1.4.1` :pr:`474 :smaller:`thanks to I Virshup`
-- :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings :noteversion:`1.4.1` :pr:`543 :smaller:`thanks to M Luecken`
-- :func:`~scanpy.external.tl.palantir` interfaces Palantir [Setty18]_ :noteversion:`1.4.1` :pr:`493 :smaller:`thanks to A Mousa`
+- :func:`~scanpy.pp.downsample_counts` has been sped up, changed default value of `replace` parameter to `False` :noteversion:`1.4.1` :pr:`474` :smaller:`thanks to I Virshup`
+- :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings :noteversion:`1.4.1` :pr:`543` :smaller:`thanks to M Luecken`
+- :func:`~scanpy.external.tl.palantir` interfaces Palantir [Setty18]_ :noteversion:`1.4.1` :pr:`493` :smaller:`thanks to A Mousa`
 
 Code design:
 
@@ -108,7 +108,7 @@ Version 1.3.*
 
 1.3.8
 ~~~~~
-- :func:`~scanpy.read_10x_h5` throws more stringent errors and doesn’t require speciying default genomes anymore. :noteversion:`1.3.8` :pr:`442` and :pr:`444  :smaller:`thanks to I Vishrup`
+- :func:`~scanpy.read_10x_h5` throws more stringent errors and doesn’t require speciying default genomes anymore. :noteversion:`1.3.8` :pr:`442` and :pr:`444` :smaller:`thanks to I Vishrup`
 
 1.3.7
 ~~~~~
