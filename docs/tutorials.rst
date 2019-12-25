@@ -43,14 +43,14 @@ such as for `planaria`_ (data of [Plass18]_).
 .. image:: http://www.falexwolf.de/img/paga_planaria.png
    :width: 350px
 
-As a reference for simple pseudotime analyses, we provide the diffusion pseudotime analyses of [Haghverdi16]_
-for two hematopoiesis datasets: The `Paul15 DPT`_ example [Paul15]_ and the `Moignard15 DPT`_ example [Moignard15]_.
+As a reference for simple pseudotime analyses, we provide the diffusion pseudotime (DPT) analyses of [Haghverdi16]_
+for two hematopoiesis datasets: `DPT example 1`_ [Paul15]_ and `DPT example 2`_ [Moignard15]_.
 
 .. _trajectory inference: https://github.com/theislab/paga
 .. _following example for hematopoiesis: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/blood/paul15/paul15.ipynb
 .. _planaria: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/planaria/planaria.ipynb
-.. _Paul15 DPT: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
-.. _Moignard15 DPT: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
+.. _DPT example 1: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
+.. _DPT example 2: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
 
 
 -----------------
