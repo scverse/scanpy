@@ -29,6 +29,8 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 .. _GitHub: https://github.com/theislab/scanpy
 .. _Genome Biology (2018): https://doi.org/10.1186/s13059-017-1382-0
 
+See the :doc:`external API <external/index>` and the :doc:`ecosystem page <ecosystem>` for tools that harmonize well with Scanpy/anndata.
+
 .. include:: release-latest.rst
 
 .. put references first so all references are resolved
@@ -42,5 +44,6 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
    installation
    api/index
    external/index
+   ecosystem
    release-notes
    references
