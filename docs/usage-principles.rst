@@ -19,7 +19,7 @@ For each tool, there typically is an associated plotting function in `sc.pl`::
 
     sc.pl.umap(adata, **plotting_params)
 
-If you pass `show=False`, a :class:`matplotlib.axes.Axes` instance is returned
+If you pass `show=False`, a :class:`~matplotlib.axes.Axes` instance is returned
 and you have all of matplotlib's detailed configuration possibilities.
 
 To facilitate writing memory-efficient pipelines, by default,
@@ -38,10 +38,9 @@ Scanpy is based on :mod:`anndata`, which provides the :class:`~anndata.AnnData` 
    :width: 300px
 
 At the most basic level, an :class:`~anndata.AnnData` object `adata` stores
-a data matrix (`adata.X`), dataframe-like annotation of observations
-(`adata.obs`) and variables (`adata.var`) and unstructured dict-like
-annotation (`adata.uns`). Values can be retrieved and appended via
-`adata.obs['key1']` and `adata.var['key2']`. Names of observations and
+a data matrix `adata.X`, annotation of observations
+`adata.obs` and variables `adata.var` as `pd.DataFrame` and unstructured
+annotation `adata.uns` as `dict`. Names of observations and
 variables can be accessed via `adata.obs_names` and `adata.var_names`,
 respectively. :class:`~anndata.AnnData` objects can be sliced like
 dataframes, for example, `adata_subset = adata[:, list_of_gene_names]`.

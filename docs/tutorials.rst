@@ -38,7 +38,7 @@ PAGA [Wolf19]_. Get started with the `following example for hematopoiesis`_.
    :width: 450px
 
 You can extend this to multi-resolution analyses of whole animals,
-such as for `planaria`_.
+such as for `planaria`_ (data of [Plass18]_).
 
 .. image:: http://www.falexwolf.de/img/paga_planaria.png
    :width: 350px

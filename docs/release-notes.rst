@@ -1,3 +1,13 @@
+Release Notes
+=============
+
+.. note::
+
+   Also see the `release notes`__ of :mod:`anndata`.
+
+.. __: https://anndata.readthedocs.io
+
+
 .. include:: release-latest.rst
 
 Version 1.4.*
