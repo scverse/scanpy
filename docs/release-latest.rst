@@ -28,7 +28,7 @@ Version 1.4.5 :small:`December 25, 2019`
 
 New functionality:
 
-- :func:`~scanpy.tl.ingest` integrates embeddings and annotations of an `adata` with a reference dataset, see the `ingest tutorial`_ :pr:`651` :smaller:`thanks to S Rybakov`
+- :func:`~scanpy.tl.ingest` integrating new data with embeddings and annotations of reference data, see the `ingest tutorial`_ :pr:`651` :smaller:`thanks to S Rybakov`
 - :mod:`~scanpy.queries` recieved many updates. This includes enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`thanks to I Virshup`
 
 .. _gprofiler: https://biit.cs.ut.ee/gprofiler/
