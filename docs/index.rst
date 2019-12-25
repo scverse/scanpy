@@ -8,7 +8,7 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 .. _GitHub: https://github.com/theislab/scanpy
 .. _Genome Biology (2018): https://doi.org/10.1186/s13059-017-1382-0
 
-.. include:: release_notes.rst
+.. include:: release-latest.rst
 
 .. put references first so all references are resolved
 .. NO! there is a particular meaning to this sequence
@@ -17,8 +17,9 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
    :hidden:
 
    tutorials
-   basic_usage
+   usage-principles
    installation
    api/index
    external/index
+   release-notes
    references
