@@ -39,3 +39,8 @@ Code design:
 - :mod:`~scanpy.pp.downsample_counts` now always preserves the dtype of it's input, instead of converting to floats to int :noteversion:`1.4.5` :pr:`865` :smaller:`I Virshup`
 - allow specifying a base for :func:`~scanpy.pp.log1p` :pr:`931` :smaller:`G Eraslan`
 - run neighbors on a GPU using rapids :pr:`850` :smaller:`T White`
+
+.. warning::
+
+   * Changed default solver of :func:`~scanpy.tl.pca` from `auto` to `arpack`.
+   * Changed default behavior of `use_raw` of :func:`~scanpy.tl.score_genes` from `False` to `None`.

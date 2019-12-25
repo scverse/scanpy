@@ -12,7 +12,7 @@ Release Notes
 
 Version 1.4.*
 -------------
-             
+
 1.4.4 :small:`July 20, 2019`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 New functionality:
@@ -25,7 +25,7 @@ Bug fixes:
 
 Code design:
 
-- :func:`~scanpy.pp.normalize_total` gains param `exclude_highly_expressed`, and `fraction` is renamed to `max_fraction` with better docs :noteversion:`1.4.4` :smaller:`A Wolf`             
+- :func:`~scanpy.pp.normalize_total` gains param `exclude_highly_expressed`, and `fraction` is renamed to `max_fraction` with better docs :noteversion:`1.4.4` :smaller:`A Wolf`
 
 1.4.3
 ~~~~~
@@ -210,28 +210,30 @@ The API gained a preprocessing function :func:`~scanpy.pp.neighbors` and a
 class :func:`~scanpy.Neighbors` to which all basic graph computations are
 delegated.
 
-Upgrading to 1.0 isn’t fully backwards compatible in the following changes:
+.. warning::
 
-- the graph-based tools :func:`~scanpy.tl.louvain`
-  :func:`~scanpy.tl.dpt` :func:`~scanpy.tl.draw_graph`
-  :func:`~scanpy.tl.umap` :func:`~scanpy.tl.diffmap`
-  :func:`~scanpy.tl.paga` require prior computation of the graph:
-  ``sc.pp.neighbors(adata, n_neighbors=5); sc.tl.louvain(adata)`` instead of
-  previously ``sc.tl.louvain(adata, n_neighbors=5)``
-- install `numba` via ``conda install numba``, which replaces cython
-- the default connectivity measure (dpt will look different using default
-  settings) changed. setting `method='gauss'` in `sc.pp.neighbors` uses
-  gauss kernel connectivities and reproduces the previous behavior,
-  see, for instance in the example paul15_.
-- namings of returned annotation have changed for less bloated AnnData
-  objects, which means that some of the unstructured annotation of old
-  AnnData files is not recognized anymore
-- replace occurances of `group_by` with `groupby` (consistency with
-  `pandas`)
-- it is worth checking out the notebook examples to see changes, e.g.
-  the seurat_ example.
-- upgrading scikit-learn from 0.18 to 0.19 changed the implementation of PCA,
-  some results might therefore look slightly different
+   Upgrading to 1.0 isn’t fully backwards compatible in the following changes:
+
+   - the graph-based tools :func:`~scanpy.tl.louvain`
+     :func:`~scanpy.tl.dpt` :func:`~scanpy.tl.draw_graph`
+     :func:`~scanpy.tl.umap` :func:`~scanpy.tl.diffmap`
+     :func:`~scanpy.tl.paga` require prior computation of the graph:
+     ``sc.pp.neighbors(adata, n_neighbors=5); sc.tl.louvain(adata)`` instead of
+     previously ``sc.tl.louvain(adata, n_neighbors=5)``
+   - install `numba` via ``conda install numba``, which replaces cython
+   - the default connectivity measure (dpt will look different using default
+     settings) changed. setting `method='gauss'` in `sc.pp.neighbors` uses
+     gauss kernel connectivities and reproduces the previous behavior,
+     see, for instance in the example paul15_.
+   - namings of returned annotation have changed for less bloated AnnData
+     objects, which means that some of the unstructured annotation of old
+     AnnData files is not recognized anymore
+   - replace occurances of `group_by` with `groupby` (consistency with
+     `pandas`)
+   - it is worth checking out the notebook examples to see changes, e.g.
+     the seurat_ example.
+   - upgrading scikit-learn from 0.18 to 0.19 changed the implementation of PCA,
+     some results might therefore look slightly different
 
 .. _paul15: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
 .. _seurat: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170505_seurat/seurat.ipynb
