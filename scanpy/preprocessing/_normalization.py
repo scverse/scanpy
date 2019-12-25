@@ -135,7 +135,7 @@ def normalize_total(
         )
 
     gene_subset = None
-    msg = 'mormalizing counts per cell'
+    msg = 'normalizing counts per cell'
     if exclude_highly_expressed:
         counts_per_cell = adata.X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
