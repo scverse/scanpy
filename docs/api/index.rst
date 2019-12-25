@@ -12,7 +12,6 @@ Import Scanpy as::
 
 .. note::
    Wrappers to external functionality are found in :mod:`scanpy.external`.
-   Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
 
 Preprocessing: `pp`
 -------------------
@@ -323,7 +322,6 @@ Further modules
 .. autosummary::
    :toctree: .
 
-   api
    plotting
 
 
