@@ -26,11 +26,16 @@ def ingest(
     """\
     Map labels and embeddings from existing data to new data.
 
+    See the `ingest tutorial`_.
+
+    .. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+
     Integrates embeddings and annotations of an `adata` with a reference dataset
     `adata_ref` by "ingesting" data through projecting on a PCA (or alternate
-    model) that has been fitted on the reference data.
+    model) that has been fitted on the reference data. The function uses a knn
+    classifier for mapping labels and the UMAP package [McInnes18]_ for mapping
+    the embeddings.
 
-    The function uses the k-nearest neighbors method for mapping labels.
     You need to run :func:`~scanpy.pp.neighbors` on `adata_ref` before
     passing it.
 
