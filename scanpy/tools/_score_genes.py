@@ -21,6 +21,7 @@ def score_genes(
     random_state: Optional[Union[int, RandomState]] = 0,
     copy: bool = False,
     use_raw: bool = None,
+    layer: Optional[str] = None,
 ) -> Optional[AnnData]:
     """\
     Score a set of genes [Satija15]_.
@@ -53,6 +54,8 @@ def score_genes(
         Copy `adata` or modify it inplace.
     use_raw
         Use `raw` attribute of `adata` if present.
+    layer
+        Key from `adata.layers` whose value will be used to calculate the score.
 
     Returns
     -------
@@ -69,8 +72,21 @@ def score_genes(
     if random_state is not None:
         np.random.seed(random_state)
 
+    if layer is not None and use_raw:
+        raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
+
+    if layer is not None:
+        _adata = adata
+        x_or_layer = lambda ad: ad.layers[layer]
+    else:
+        if adata.raw is not None and (use_raw or use_raw is None):
+            _adata = adata.raw
+        else:
+            _adata = adata
+        x_or_layer = lambda ad: ad.X
+
     gene_list_in_var = []
-    var_names = adata.raw.var_names if use_raw else adata.var_names
+    var_names = _adata.var_names
     genes_to_ignore = []
     for gene in gene_list:
         if gene in var_names:
@@ -95,17 +111,13 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    if use_raw is None:
-        use_raw = True if adata.raw is not None else False
-    _adata = adata.raw if use_raw else adata
-
     _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
-    if issparse(_adata_subset.X):
+    if issparse(x_or_layer(_adata_subset)):
         obs_avg = pd.Series(
-            np.array(_adata_subset.X.mean(axis=0)).flatten(), index=gene_pool)  # average expression of genes
+            np.array(x_or_layer(_adata_subset).mean(axis=0)).flatten(), index=gene_pool)  # average expression of genes
     else:
         obs_avg = pd.Series(
-            np.nanmean(_adata_subset.X, axis=0), index=gene_pool)  # average expression of genes
+            np.nanmean(x_or_layer(_adata_subset), axis=0), index=gene_pool)  # average expression of genes
 
     obs_avg = obs_avg[np.isfinite(obs_avg)] # Sometimes (and I don't know how) missing data may be there, with nansfor
 
@@ -124,9 +136,9 @@ def score_genes(
     control_genes = list(control_genes - gene_list)
     gene_list = list(gene_list)
 
-    X_list = _adata[:, gene_list].X
+    X_list = x_or_layer(_adata[:, gene_list])
     if issparse(X_list): X_list = X_list.toarray()
-    X_control = _adata[:, control_genes].X
+    X_control = x_or_layer(_adata[:, control_genes])
     if issparse(X_control): X_control = X_control.toarray()
     X_control = np.nanmean(X_control, axis=1)
 
@@ -138,10 +150,10 @@ def score_genes(
         )
         return adata if copy else None
     elif len(gene_list) == 1:
-        if _adata[:, gene_list].X.ndim == 2:
-            vector = _adata[:, gene_list].X.toarray()[:, 0] # new anndata
+        if x_or_layer(_adata[:, gene_list]).ndim == 2:
+            vector = x_or_layer(_adata[:, gene_list]).toarray()[:, 0] # new anndata
         else:
-            vector =  _adata[:, gene_list].X  # old anndata
+            vector =  x_or_layer(_adata[:, gene_list])  # old anndata
         score = vector - X_control
     else:
         score = np.nanmean(X_list, axis=1) - X_control
