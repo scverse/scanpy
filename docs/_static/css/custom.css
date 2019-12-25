@@ -2,6 +2,9 @@
 
 
 .wy-nav-top { background-color: #f07e44 }
+.wy-nav-content {
+    max-width: 1200px;
+}
 .wy-side-nav-search { background-color: transparent }
 .wy-side-nav-search input[type="text"] { border-width: 0 }
 
@@ -32,7 +35,6 @@
 .rst-content a > code.xref {
     text-decoration: underline;
 }
-
 
 /* Just one box for annotation code for a less noisy look */
 
