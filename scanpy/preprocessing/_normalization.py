@@ -190,8 +190,7 @@ def normalize_total(
             dat[layer_name] = _normalize_data(layer, counts, after, copy=True)
 
     logg.info(
-        '    finished ({time_passed}):'
-        'normalized adata.X',
+        '    finished ({time_passed})'
         time=start,
     )
     if key_added is not None:
