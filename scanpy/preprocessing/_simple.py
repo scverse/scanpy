@@ -480,7 +480,7 @@ def pca(
     if use_highly_variable is None:
         use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
     if use_highly_variable:
-        logg.info('computing PCA on highly variable genes')
+        logg.info('    on highly variable genes')
     adata_comp = adata[:, adata.var['highly_variable']] if use_highly_variable else adata
 
     if chunked:
