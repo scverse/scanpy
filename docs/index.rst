@@ -22,14 +22,14 @@
 .. _Alex Wolf: https://twitter.com/falexwolf
 .. _Fabian Theis: https://twitter.com/fabian_theis              
 
-Discuss usage on Discourse_. See the code and discuss development on GitHub_.
+Discuss usage on Discourse_ and development on GitHub_.
 If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
 .. _Discourse: https://scanpy.discourse.group/
 .. _GitHub: https://github.com/theislab/scanpy
 .. _Genome Biology (2018): https://doi.org/10.1186/s13059-017-1382-0
 
-See the :doc:`external API <external/index>` and the :doc:`ecosystem page <ecosystem>` for tools that harmonize well with Scanpy/anndata.
+See the :doc:`external API <external/index>` and the :doc:`ecosystem page <ecosystem>` for tools that harmonize well with anndata & Scanpy.
 
 .. topic:: News - CZI grant (2012-11-14)
 
@@ -39,7 +39,7 @@ See the :doc:`external API <external/index>` and the :doc:`ecosystem page <ecosy
    along with giants such as Numpy, Pandas, scikit-learn, scikit-image, Seurat,
    and others.
 
-.. topic:: News - latest release
+.. topic:: News - latest release (2012-12-27)
    
    .. include:: release-latest.rst
 
