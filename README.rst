@@ -1,9 +1,11 @@
-|PyPI| |bioconda| |Docs| |Build Status|
+|Stars| |PyPI| |bioconda| |Docs| |Build Status|
 
-.. |PyPI| image:: https://img.shields.io/pypi/v/scanpy.svg
+.. |PyPI| image:: https://img.shields.io/pypi/v/scanpy
    :target: https://pypi.org/project/scanpy
 .. |bioconda| image:: https://img.shields.io/conda/vn/bioconda/scanpy
    :target: https://bioconda.github.io/recipes/scanpy/README.html
+.. |Stars| image:: https://img.shields.io/github/stars/theislab/scanpy?logo=GitHub
+   :target: https://github.com/theislab/scanpy/stargazers
 .. |Docs| image:: https://readthedocs.com/projects/icb-scanpy/badge/?version=latest
    :target: https://scanpy.readthedocs.io
 .. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
