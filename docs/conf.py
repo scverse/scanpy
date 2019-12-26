@@ -13,16 +13,12 @@ HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / 'extensions')]
 import scanpy  # noqa
 
-with warnings.catch_warnings():
-    warnings.filterwarnings('ignore', category=FutureWarning)
-    import scanpy.api
-
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 # -- General configuration ------------------------------------------------
 
 
-nitpicky = True  # Warn about broken links
+nitpicky = False  # Warn about broken links
 needs_sphinx = '2.0'  # Nicer param docs
 suppress_warnings = ['ref.citation']
 
@@ -153,25 +149,3 @@ nitpick_ignore = [
     # Won’t be documented
     ('py:class', 'scanpy.readwrite.Empty'),
 ]
-
-for mod_name in [
-    'pp',
-    'tl',
-    'pl',
-    'queries',
-    'logging',
-    'datasets',
-    'export_to',
-    None,
-]:
-    if mod_name is None:
-        mod = scanpy.api
-        mod_name = 'scanpy.api'
-    else:
-        mod = getattr(scanpy.api, mod_name)
-        mod_name = f'scanpy.api.{mod_name}'
-    for name, item in vars(mod).items():
-        if not callable(item):
-            continue
-        for kind in ['func', 'obj']:
-            nitpick_ignore.append((f'py:{kind}', f'{mod_name}.{name}'))

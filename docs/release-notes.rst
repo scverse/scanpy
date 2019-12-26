@@ -159,7 +159,7 @@ Plotting of :ref:`pl-generic` marker genes and quality control.
 
 .. __: https://gist.github.com/fidelram/2289b7a8d6da055fb058ac9a79ed485c
 
-There is now a section on :ref:`pp-imputation`:
+There is now a section on imputation in :doc:`external <external/index>`:
 
 - :func:`~scanpy.external.pp.magic` for imputation using data diffusion [vanDijk18]_. :noteversion:`1.3` :pr:`187` :smaller:`S Gigante`
 - :func:`~scanpy.external.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_. :noteversion:`1.3` :pr:`186` :smaller:`G Eraslan`
@@ -291,7 +291,7 @@ Version 0.4 :small:`December 23, 2017`
 --------------------------------------
 
 - export to SPRING_ [Weinreb17]_ for interactive visualization of data:
-  `spring tutorial`_, docs :mod:`scanpy.api`.
+  `spring tutorial`_
 
 .. _SPRING: https://github.com/AllonKleinLab/SPRING/
 .. _spring tutorial: https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export
