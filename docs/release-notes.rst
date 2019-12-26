@@ -11,16 +11,16 @@ Release Notes
 .. include:: key_contributors.rst
 
 
-Version 1.4.* :small:`December 27, 2019`
-----------------------------------------
+Version 1.4.* :small:`2019-12-27`
+---------------------------------
 
-1.4.5 :small:`December 27, 2019`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.4.5 :small:`2019-12-27`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. include:: release-latest.rst
 
-1.4.4 :small:`July 20, 2019`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.4.4 :small:`2019-07-20`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 New functionality:
 
 - :mod:`scanpy.get` adds helper functions for extracting data in convenient formats :noteversion:`1.4.4` :pr:`619` :smaller:`I Virshup`
@@ -80,8 +80,8 @@ Code design:
 - fix return sections of docs :noteversion:`1.4.1` :smaller:`P Angerer`
 
 
-Version 1.3.* :small:`February 5, 2019`
----------------------------------------
+Version 1.3.* :small:`2019-02-05`
+---------------------------------
 
 1.3.8
 ~~~~~
@@ -141,14 +141,15 @@ Further updates:
 
 - :func:`~scanpy.read_10x_h5` and :func:`~scanpy.read_10x_mtx` read Cell Ranger 3.0 outputs, see :noteversion:`1.3.3` :pr:`334` :smaller:`Q Gong`
 
-AnnData 0.6.*
-~~~~~~~~~~~~~
+.. note::
 
-- changed default compression to `None` in :meth:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical :noteversion:`anndata 0.6.16`
-- performance gains in :meth:`~anndata.AnnData.write_h5ad` due to better handling of strings and categories :noteversion:`anndata 0.6.19` :smaller:`S Rybakov`
+   Also see change in anndata 0.6.
+   
+   - changed default compression to `None` in :meth:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical :noteversion:`anndata 0.6.16`
+   - performance gains in :meth:`~anndata.AnnData.write_h5ad` due to better handling of strings and categories :noteversion:`anndata 0.6.19` :smaller:`S Rybakov`
 
-1.3 :small:`September 3, 2018`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.3 :small:`2018-09-03`
+~~~~~~~~~~~~~~~~~~~~~~~
 
 RNA velocity in single cells [Manno18]_:
 
@@ -171,8 +172,8 @@ There is now a section on imputation in :doc:`external <external/index>`:
 - :func:`~scanpy.external.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_. :noteversion:`1.3` :pr:`186` :smaller:`G Eraslan`
 
 
-Version 1.2 :small:`June 8, 2018`
----------------------------------
+Version 1.2 :small:`2018-06-08`
+-------------------------------
 
 1.2.1
 ~~~~~
@@ -187,8 +188,8 @@ Plotting of :ref:`pl-generic` marker genes and quality control.
 - :func:`~scanpy.tl.paga` improved, see `theislab/paga`_; the default model changed, restore the previous default model by passing `model='v1.0'`
 
 
-Version 1.1 :small:`May 31, 2018`
----------------------------------
+Version 1.1 :small:`2018-05-31`
+-------------------------------
 
 - :func:`~scanpy.set_figure_params` by default passes `vector_friendly=True` and allows you to produce reasonablly sized pdfs by rasterizing large scatter plots
 - :func:`~scanpy.tl.draw_graph` defaults to the ForceAtlas2 layout [Jacomy14]_ [Chippada18]_, which is often more visually appealing and whose computation is much faster :smaller:`S Wollock`
@@ -202,8 +203,8 @@ Version 1.1 :small:`May 31, 2018`
 - :func:`~scanpy.external.tl.sandbag`, :func:`~scanpy.external.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
 
 
-Version 1.0 :small:`March 28, 2018`
------------------------------------
+Version 1.0 :small:`2018-03-28`
+-------------------------------
 
 Scanpy is much faster and more memory efficient. Preprocess, cluster and visualize
 1.3M cells in 6h_, 130K cells in 14min_, and 68K cells in 3min_.
@@ -270,16 +271,16 @@ Further changes are:
 - `'X_diffmap'` contains the zero component, plotting remains unchanged
 
 
-Version 0.4.4 :small:`February 26, 2018`
-----------------------------------------
+Version 0.4.4 :small:`2018-02-26`
+---------------------------------
 
 - embed cells using :func:`~scanpy.tl.umap` [McInnes18]_: :pr:`92`
 - score sets of genes, e.g. for `cell cycle`_, using :func:`~scanpy.tl.score_genes` [Satija15]_.
 
 .. _cell cycle: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb
 
-Version 0.4.3 :small:`February 9, 2018`
----------------------------------------
+Version 0.4.3 :small:`2018-02-09`
+---------------------------------
 
 - :func:`~scanpy.pl.clustermap`: heatmap from hierarchical clustering,
   based on :func:`seaborn.clustermap` [Waskom16]_
@@ -287,14 +288,14 @@ Version 0.4.3 :small:`February 9, 2018`
   when `show=False`, otherwise `None`
 
 
-Version 0.4.2 :small:`January 7, 2018`
+Version 0.4.2 :small:`2018-01-07`
 --------------------------------------
 
 - amendments in `theislab/paga`_ and its plotting functions
 
 
-Version 0.4 :small:`December 23, 2017`
---------------------------------------
+Version 0.4 :small:`2017-12-23`
+-------------------------------
 
 - export to SPRING_ [Weinreb17]_ for interactive visualization of data:
   `spring tutorial`_
@@ -302,15 +303,15 @@ Version 0.4 :small:`December 23, 2017`
 .. _SPRING: https://github.com/AllonKleinLab/SPRING/
 .. _spring tutorial: https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export
 
-Version 0.3.2 :small:`November 29, 2017`
-----------------------------------------
+Version 0.3.2 :small:`2017-11-29`
+---------------------------------
 
 - finding marker genes via :func:`~scanpy.pl.rank_genes_groups_violin` improved:
   For an example, see :issue:`51`.
 
 
-Version 0.3 :small:`November 16, 2017`
---------------------------------------
+Version 0.3 :small:`2017-11-16`
+-------------------------------
 
 - :class:`~anndata.AnnData` can be :meth:`~anndata.AnnData.concatenate` d.
 - :class:`~anndata.AnnData` is available as the anndata_ package.
@@ -319,16 +320,16 @@ Version 0.3 :small:`November 16, 2017`
 .. _anndata: https://pypi.org/project/anndata/
 
 
-Version 0.2.9 :small:`October 25, 2017`
----------------------------------------
+Version 0.2.9 :small:`2017-10-25`
+---------------------------------
 
 Initial release of *partition-based graph abstraction (PAGA)*: `theislab/paga`_
 
 .. _theislab/paga: https://github.com/theislab/paga
 
 
-Version 0.2.1 :small:`July 24, 2017`
----------------------------------------
+Version 0.2.1 :small:`2017-07-24`
+---------------------------------
 
 Scanpy includes preprocessing, visualization, clustering, pseudotime and
 trajectory inference, differential expression testing and simulation of gene
@@ -336,8 +337,8 @@ regulatory networks. The implementation efficiently deals with datasets of more
 than one million cells.
 
 
-Version 0.1 :small:`May 1, 2017`
---------------------------------
+Version 0.1 :small:`2017-05-01`
+-------------------------------
 
 Scanpy computationally outperforms the Cell Ranger R kit and allows reproducing
 most of Seurat’s guided clustering tutorial.
