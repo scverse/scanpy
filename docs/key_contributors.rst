@@ -1,6 +1,5 @@
 .. sidebar:: Key Contributors
-
-   `anndata graph`_ | `scanpy graph`_ | ☀ = maintainer
+   :subtitle: `anndata graph`_ | `scanpy graph`_ | ☀ = maintainer
 
    * `Isaac Virshup`_: anndata overhaul, diverse contributions ☀
    * Gökcen Eraslan: diverse contributions ☀

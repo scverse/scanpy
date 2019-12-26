@@ -110,7 +110,7 @@ Simulating single cells using literature-curated gene regulatory networks [Wittm
 Images
 ~~~~~~
 
-See a pseudotime-based vs. deep-learning based `cell cycle reconstruction`_ from image data [Eulenberg17]_.
+See pseudotime-time inference on deep-learning based features for `cell cycle reconstruction`_ from image data [Eulenberg17]_.
 
 .. _cell cycle reconstruction: https://github.com/theislab/scanpy_usage/tree/master/170529_images
 
