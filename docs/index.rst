@@ -3,6 +3,9 @@
 
 .. include:: key_contributors.rst
 
+.. role:: small
+.. role:: smaller
+
 Discuss usage on Discourse_ and development on GitHub_.
 If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
@@ -12,7 +15,7 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
 See the :doc:`external API <external/index>` and the :doc:`ecosystem page <ecosystem>` for tools that harmonize well with anndata & Scanpy.
 
-.. topic:: News - CZI grant (2012-11-14)
+.. topic:: News - CZI grant :small:`2012-11-14`
 
    Scanpy has been selected an `essential open source software for science
    <https://chanzuckerberg.com/newsroom/chan-zuckerberg-initiative-awards-5-million-for-open-source-software-projects-essential-to-science/>`__
@@ -20,7 +23,7 @@ See the :doc:`external API <external/index>` and the :doc:`ecosystem page <ecosy
    along with giants such as Numpy, Pandas, scikit-learn, scikit-image, Seurat,
    and others.
 
-.. topic:: News - latest release (2012-12-27)
+.. topic:: News - latest release :small:`2012-12-27`
 
    .. include:: release-latest.rst
 

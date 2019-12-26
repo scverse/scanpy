@@ -11,8 +11,8 @@ Release Notes
 .. include:: key_contributors.rst
 
 
-Version 1.4.* :small:`2019-12-27`
----------------------------------
+Version 1.4 :small:`2019-12-27`
+-------------------------------
 
 1.4.5 :small:`2019-12-27`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,8 +80,8 @@ Code design:
 - fix return sections of docs :noteversion:`1.4.1` :smaller:`P Angerer`
 
 
-Version 1.3.* :small:`2019-02-05`
----------------------------------
+Version 1.3 :small:`2019-02-05`
+-------------------------------
 
 1.3.8
 ~~~~~
@@ -144,12 +144,12 @@ Further updates:
 .. note::
 
    Also see change in anndata 0.6.
-   
+
    - changed default compression to `None` in :meth:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical :noteversion:`anndata 0.6.16`
    - performance gains in :meth:`~anndata.AnnData.write_h5ad` due to better handling of strings and categories :noteversion:`anndata 0.6.19` :smaller:`S Rybakov`
 
-1.3 :small:`2018-09-03`
-~~~~~~~~~~~~~~~~~~~~~~~
+1.3.0 :small:`2018-09-03`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 RNA velocity in single cells [Manno18]_:
 
@@ -182,8 +182,8 @@ Plotting of :ref:`pl-generic` marker genes and quality control.
 
 - :func:`~scanpy.pl.highest_expr_genes` for quality control; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_. :noteversion:`1.2.1` :pr:`169` :smaller:`F Ramirez`
 
-1.2
-~~~
+1.2.0
+~~~~~
 
 - :func:`~scanpy.tl.paga` improved, see `theislab/paga`_; the default model changed, restore the previous default model by passing `model='v1.0'`
 
@@ -271,16 +271,19 @@ Further changes are:
 - `'X_diffmap'` contains the zero component, plotting remains unchanged
 
 
-Version 0.4.4 :small:`2018-02-26`
----------------------------------
+Version 0.4 :small:`2018-02-26`
+-------------------------------
+
+0.4.4 :small:`2018-02-26`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - embed cells using :func:`~scanpy.tl.umap` [McInnes18]_: :pr:`92`
 - score sets of genes, e.g. for `cell cycle`_, using :func:`~scanpy.tl.score_genes` [Satija15]_.
 
 .. _cell cycle: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb
 
-Version 0.4.3 :small:`2018-02-09`
----------------------------------
+0.4.3 :small:`2018-02-09`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - :func:`~scanpy.pl.clustermap`: heatmap from hierarchical clustering,
   based on :func:`seaborn.clustermap` [Waskom16]_
@@ -288,14 +291,14 @@ Version 0.4.3 :small:`2018-02-09`
   when `show=False`, otherwise `None`
 
 
-Version 0.4.2 :small:`2018-01-07`
---------------------------------------
+0.4.2 :small:`2018-01-07`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - amendments in `theislab/paga`_ and its plotting functions
 
 
-Version 0.4 :small:`2017-12-23`
--------------------------------
+0.4.0 :small:`2017-12-23`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - export to SPRING_ [Weinreb17]_ for interactive visualization of data:
   `spring tutorial`_
@@ -303,15 +306,19 @@ Version 0.4 :small:`2017-12-23`
 .. _SPRING: https://github.com/AllonKleinLab/SPRING/
 .. _spring tutorial: https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export
 
-Version 0.3.2 :small:`2017-11-29`
----------------------------------
+
+Version 0.3 :small:`2017-11-29`
+-------------------------------
+
+0.3.2 :small:`2017-11-29`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - finding marker genes via :func:`~scanpy.pl.rank_genes_groups_violin` improved:
   For an example, see :issue:`51`.
 
 
-Version 0.3 :small:`2017-11-16`
--------------------------------
+0.3 :small:`2017-11-16`
+~~~~~~~~~~~~~~~~~~~~~~~
 
 - :class:`~anndata.AnnData` can be :meth:`~anndata.AnnData.concatenate` d.
 - :class:`~anndata.AnnData` is available as the anndata_ package.
@@ -320,16 +327,19 @@ Version 0.3 :small:`2017-11-16`
 .. _anndata: https://pypi.org/project/anndata/
 
 
-Version 0.2.9 :small:`2017-10-25`
----------------------------------
+Version 0.2 :small:`2017-10-25`
+-------------------------------
+
+0.2.9 :small:`2017-10-25`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Initial release of *partition-based graph abstraction (PAGA)*: `theislab/paga`_
 
 .. _theislab/paga: https://github.com/theislab/paga
 
 
-Version 0.2.1 :small:`2017-07-24`
----------------------------------
+0.2.1 :small:`2017-07-24`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Scanpy includes preprocessing, visualization, clustering, pseudotime and
 trajectory inference, differential expression testing and simulation of gene
