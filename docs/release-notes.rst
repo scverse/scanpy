@@ -1,18 +1,23 @@
 Release Notes
 =============
 
+.. role:: small
+.. role:: smaller
+
 .. note::
 
    Also see the release notes of :mod:`anndata`.
 
+.. include:: key_contributors.rst
 
-Version 1.4.5 :small:`December 25, 2019`
+
+Version 1.4.* :small:`December 27, 2019`
 ----------------------------------------
 
-.. include:: release-latest.rst
+1.4.5 :small:`December 27, 2019`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Version 1.4.*
--------------
+.. include:: release-latest.rst
 
 1.4.4 :small:`July 20, 2019`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

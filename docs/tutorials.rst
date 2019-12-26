@@ -32,7 +32,7 @@ Trajectory Inference
 --------------------
 
 We offer many examples for `trajectory inference`_ on complex datasets via
-PAGA [Wolf19]_. Get started with the `following example for hematopoiesis`_.
+PAGA [Wolf19]_. Get started with the `following example for hematopoiesis`_ (data of [Paul15]_).
 
 .. image:: http://www.falexwolf.de/img/paga_paul15.png
    :width: 450px
@@ -47,7 +47,7 @@ As a reference for simple pseudotime analyses, we provide the diffusion pseudoti
 for two hematopoiesis datasets: `DPT example 1`_ [Paul15]_ and `DPT example 2`_ [Moignard15]_.
 
 .. _trajectory inference: https://github.com/theislab/paga
-.. _following example for hematopoiesis: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/blood/paul15/paul15.ipynb
+.. _following example for hematopoiesis: https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html
 .. _planaria: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/planaria/planaria.ipynb
 .. _DPT example 1: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
 .. _DPT example 2: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
