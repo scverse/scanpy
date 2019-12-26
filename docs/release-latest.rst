@@ -1,9 +1,6 @@
 .. role:: small
 .. role:: smaller
 
-Version 1.4.5 :small:`December 25, 2019`
-----------------------------------------
-
 New functionality:
 
 - :func:`~scanpy.tl.ingest` integrating new data with embeddings and annotations of reference data, see the `ingest tutorial`_ :pr:`651` :smaller:`S Rybakov`

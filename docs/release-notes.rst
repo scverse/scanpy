@@ -3,10 +3,11 @@ Release Notes
 
 .. note::
 
-   Also see the `release notes`__ of :mod:`anndata`.
+   Also see the release notes of :mod:`anndata`.
 
-.. __: https://anndata.readthedocs.io
 
+Version 1.4.5 :small:`December 25, 2019`
+----------------------------------------
 
 .. include:: release-latest.rst
 
