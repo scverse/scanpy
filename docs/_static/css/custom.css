@@ -13,14 +13,27 @@
 .small { font-size:40% }
 .smaller, .pr, .noteversion { font-size:70% }
 .noteversion::after { content: "/" }
+
+
+/* Code: literals and links */
+
 .rst-content p.rubric {
     margin-bottom: 6px;
     font-weight: normal;
 }
 .rst-content p.rubric::after { content: ":" }
 
-
-/* Code: literals and links */
+/* sidebar */
+.rst-content .sidebar {
+    /* margin: 0px 0px 0px 12px; */
+    padding-bottom: 0px;
+}
+.rst-content .sidebar p {
+    margin-bottom: 12px;
+}
+.rst-content .sidebar p, .rst-content .sidebar ul, .rst-content .sidebar dl {
+    font-size: 13px;
+}
 
 .rst-content tt.literal,
 .rst-content code.literal {
