@@ -2985,22 +2985,38 @@ def _prepare_dataframe(
                 f'Given {groupby}, valid observations: {adata.obs_keys()}'
             )
 
-    if gene_symbols is not None and gene_symbols in adata.var.columns:
-        # translate gene_symbols to var_names
-        # slow method but gives a meaningful error if no gene symbol is found:
-        translated_var_names = []
-        for symbol in var_names:
-            if symbol not in adata.var[gene_symbols].values:
-                logg.error(
-                    f"Gene symbol {symbol!r} not found in given "
-                    f"gene_symbols column: {gene_symbols!r}"
+    # translate gene_symbols to var_names
+    # slow method but gives a meaningful error if no gene symbol is found:
+    if use_raw:
+        if gene_symbols is not None and gene_symbols in adata.raw.var.columns:
+            translated_var_names = []
+            for symbol in var_names:
+                if symbol not in adata.raw.var[gene_symbols].values:
+                    logg.error(
+                        f"Gene symbol {symbol!r} not found in given "
+                        f"gene_symbols column: {gene_symbols!r}"
+                    )
+                    return
+                translated_var_names.append(
+                    adata.raw.var[adata.raw.var[gene_symbols] == symbol].index[0]
                 )
-                return
-            translated_var_names.append(
-                adata.var[adata.var[gene_symbols] == symbol].index[0]
-            )
-        symbols = var_names
-        var_names = translated_var_names
+            symbols = var_names
+            var_names = translated_var_names
+    else:
+        if gene_symbols is not None and gene_symbols in adata.var.columns:
+            translated_var_names = []
+            for symbol in var_names:
+                if symbol not in adata.var[gene_symbols].values:
+                    logg.error(
+                        f"Gene symbol {symbol!r} not found in given "
+                        f"gene_symbols column: {gene_symbols!r}"
+                    )
+                    return
+                translated_var_names.append(
+                    adata.var[adata.var[gene_symbols] == symbol].index[0]
+                )
+            symbols = var_names
+            var_names = translated_var_names
     if layer is not None:
         if layer not in adata.layers.keys():
             raise KeyError(
