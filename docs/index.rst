@@ -31,6 +31,8 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
 See the :doc:`external API <external/index>` and the :doc:`ecosystem page <ecosystem>` for tools that harmonize well with Scanpy/anndata.
 
+Scanpy was selected as an `essential open source software for science <https://chanzuckerberg.com/eoss/proposals/>`__ by CZI, among 32 projects, along with giants such as Numpy, Pandas, scikit-learn, scikit-image, Seurat, and others.
+
 .. include:: release-latest.rst
 
 .. put references first so all references are resolved
