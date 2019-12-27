@@ -16,6 +16,7 @@
 - :mod:`~scanpy.pp.downsample_counts` now always preserves the dtype of it's input, instead of converting floats to ints :pr:`865` :smaller:`I Virshup`
 - allow specifying a base for :func:`~scanpy.pp.log1p` :pr:`931` :smaller:`G Eraslan`
 - run neighbors on a GPU using rapids :pr:`850` :smaller:`T White`
+- webpage overhaul, ecosystem page, release notes, docs from typed params :smaller:`P Angerer, A Wolf`
 
 .. warning::
 

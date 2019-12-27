@@ -21,48 +21,48 @@ Version 1.4 :small:`2019-12`
 
 1.4.4 :small:`2019-07-20`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-New functionality:
+.. rubric:: New functionality
 
 - :mod:`scanpy.get` adds helper functions for extracting data in convenient formats :pr:`619` :smaller:`I Virshup`
 
-Bug fixes:
+.. rubric:: Bug fixes
 
 - Stopped deprecations warnings from AnnData `0.6.22` :smaller:`I Virshup`
 
-Code design:
+.. rubric:: Code design
 
 - :func:`~scanpy.pp.normalize_total` gains param `exclude_highly_expressed`, and `fraction` is renamed to `max_fraction` with better docs :smaller:`A Wolf`
 
 1.4.3
 ~~~~~
-Bug fixes:
+.. rubric:: Bug fixes
 
 - :func:`~scanpy.pp.neighbors` correctly infers `n_neighbors` again from `params`, which was temporarily broken in `v1.4.2` :smaller:`I Virshup`
 
-Code design:
+.. rubric:: Code design
 
 - :func:`~scanpy.pp.calculate_qc_metrics` is single threaded by default for datasets under 300,000 cells -- allowing cached compilation :pr:`615` :smaller:`I Virshup`
 
 1.4.2
 ~~~~~
-New functionality:
+.. rubric:: New functionality
 
 - :func:`~scanpy.pp.combat` supports additional covariates which may include adjustment variables or biological condition :pr:`618` :smaller:`G Eraslan`
 - :func:`~scanpy.pp.highly_variable_genes` has a `batch_key` option which performs HVG selection in each batch separately to avoid selecting genes that vary strongly across batches :pr:`622` :smaller:`G Eraslan`
 
-Bug fixes:
+.. rubric:: Bug fixes
 
 - :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation :pr:`621` :smaller:`I Virshup`
 - :func:`~scanpy.tl.umap` with `init_pos='paga'` detects correct `dtype` :smaller:`A Wolf`
 - :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.leiden` auto-generate `key_added=louvain_R` upon passing `restrict_to`, which was temporarily changed in `1.4.1` :smaller:`A Wolf`
 
-Code design:
+.. rubric:: Code design
 
 - :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency :pr:`576` :smaller:`S Rybakov`
 
 1.4.1
 ~~~~~
-New functionality:
+.. rubric:: New functionality
 
 - Scanpy has a command line interface again. Invoking it with `scanpy somecommand [args]` calls `scanpy-somecommand [args]`, except for builtin commands (currently `scanpy settings`)  :pr:`604` :smaller:`P Angerer`
 - :func:`~scanpy.datasets.ebi_expression_atlas` allows convenient download of EBI expression atlas :smaller:`I Virshup`
@@ -73,7 +73,7 @@ New functionality:
 - :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings  :pr:`543` :smaller:`M Luecken`
 - :func:`~scanpy.external.tl.palantir` interfaces Palantir [Setty18]_  :pr:`493` :smaller:`A Mousa`
 
-Code design:
+.. rubric:: Code design
 
 - `.layers` support of scatter plots :smaller:`F Ramirez`
 - fix double-logarithmization in compute of log fold change in :func:`~scanpy.tl.rank_genes_groups` :smaller:`A Muñoz-Rojas`
@@ -89,18 +89,18 @@ Version 1.3 :small:`2019-02`
 
 1.3.7
 ~~~~~
-Major updates:
+.. rubric:: Major updates
 
 - one can `import scanpy as sc` instead of `import scanpy.api as sc`, see :mod:`scanpy`
 
-Further updates:
+.. rubric:: New functionality
 
 - :func:`~scanpy.pp.combat` reimplements Combat for batch effect correction [Johnson07]_ [Leek12]_, heavily based on the Python implementation of [Pedersen12]_, but with performance improvements :pr:`398 :smaller:`M Lange`
 - :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_ :smaller:`A Mousa`
 
 1.3.6
 ~~~~~
-Major updates:
+.. rubric:: Major updates
 
 - a new plotting gallery for :doc:`visualizing-marker-genes` :smaller:`F Ramirez`
 - tutorials are integrated on ReadTheDocs, :doc:`pbmc3k` and :doc:`paga-paul15`
@@ -113,7 +113,7 @@ Two new possibilities for interactive exploration of analysis results:
 .. _cellxgene: https://github.com/chanzuckerberg/cellxgene
 .. _UCSC Single Cell Browser: https://github.com/maximilianh/cellBrowser
 
-Further updates:
+.. rubric:: Code design
 
 - :func:`~scanpy.pp.highly_variable_genes` supersedes :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn’t subset
 
@@ -131,12 +131,11 @@ Further updates:
 
 1.3.3
 ~~~~~
-
-Major updates:
+.. rubric:: Major updates
 
 - a fully distributed preprocessing backend :smaller:`T White and the Laserson Lab`
 
-Further updates:
+.. rubric:: Code design
 
 - :func:`~scanpy.read_10x_h5` and :func:`~scanpy.read_10x_mtx` read Cell Ranger 3.0 outputs :pr:`334` :smaller:`Q Gong`
 
