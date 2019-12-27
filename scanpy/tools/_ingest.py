@@ -8,6 +8,7 @@ from anndata import AnnData
 
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
+from .. import logging as logg
 
 
 def ingest(
@@ -24,17 +25,25 @@ def ingest(
     **kwargs,
 ):
     """\
-    Map labels and embeddings from existing data to new data.
+    Map labels and embeddings from reference data to new data.
 
     See the `ingest tutorial`_.
 
     .. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
 
     Integrates embeddings and annotations of an `adata` with a reference dataset
-    `adata_ref` by "ingesting" data through projecting on a PCA (or alternate
+    `adata_ref` through projecting on a PCA (or alternate
     model) that has been fitted on the reference data. The function uses a knn
     classifier for mapping labels and the UMAP package [McInnes18]_ for mapping
     the embeddings.
+
+    .. note::
+
+        We refer to this *asymmetric* dataset integration as *ingesting*
+        annotations from reference data to new data. This is different from
+        learning a joint representation that integrates both datasets in an
+        unbiased way, as CCA (e.g. in Seurat) or a conditional VAE (e.g. in
+        scVI) would do.
 
     You need to run :func:`~scanpy.pp.neighbors` on `adata_ref` before
     passing it.
@@ -107,6 +116,7 @@ def ingest(
     >>>     adata, adata_ref, obs='cell_type',
     >>>     batch_key='ing_batch', return_joint=True)
     """
+    start = logg.info('running ingest')    
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
         [embedding_method]
@@ -133,7 +143,8 @@ def ingest(
         ing.neighbors(**kwargs)
         for i, col in enumerate(obs):
             ing.map_labels(col, labeling_method[i])
-
+            
+    logg.info('    finished', time=start)
     if return_joint:
         return ing.to_adata_joint(batch_key, batch_categories, index_unique)
     else:
