@@ -3,12 +3,13 @@
 
 .. rubric:: New functionality
 
-- :func:`~scanpy.tl.ingest` map labels and embeddings of reference data to new data, see the `ingest tutorial`_ :pr:`651` :smaller:`S Rybakov`
+- :func:`~scanpy.tl.ingest` map labels and embeddings of reference data to new data, see the `ingest PBMC tutorial`_ and the `ingest Pancreas tutorial`_.  :pr:`651` :smaller:`S Rybakov`
 - :mod:`~scanpy.queries` recieved many updates. This includes enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`I Virshup`
 - :func:`~scanpy.set_figure_params` allows setting `figsize`
 
 .. _gprofiler: https://biit.cs.ut.ee/gprofiler/
-.. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+.. _ingest PBMC tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+.. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
 
 .. rubric:: Code design
 

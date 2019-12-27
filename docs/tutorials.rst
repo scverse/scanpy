@@ -60,9 +60,11 @@ Further Tutorials
 Integrating datasets
 ~~~~~~~~~~~~~~~~~~~~
 
-Integrate embeddings and annotations of an `adata` with a reference dataset in the `ingest tutorial`_.
+Map labels and embeddings of reference data to new data in the `ingest PBMC
+tutorial`_ and the `ingest Pancreas tutorial`_.
 
-.. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+.. _ingest PBMC tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+.. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
 
 Conversion: AnnData, SingleCellExperiment, and Seurat objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
