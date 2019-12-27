@@ -1,21 +1,48 @@
 /* ReadTheDocs theme colors */
 
-
 .wy-nav-top { background-color: #f07e44 }
+.wy-nav-content {
+    max-width: 1200px;
+}
 .wy-side-nav-search { background-color: transparent }
 .wy-side-nav-search input[type="text"] { border-width: 0 }
 
 
 /* Custom classes */
 
-
 .small { font-size:40% }
 .smaller, .pr, .noteversion { font-size:70% }
 .noteversion::after { content: "/" }
 
 
-/* Code: literals and links */
+/* Formatting of RTD markup: rubrics and sidebars and admonitions */
 
+/* rubric */
+.rst-content p.rubric {
+    margin-bottom: 6px;
+    font-weight: normal;
+}
+.rst-content p.rubric::after { content: ":" }
+
+/* sidebar */
+.rst-content .sidebar {
+    /* margin: 0px 0px 0px 12px; */
+    padding-bottom: 0px;
+}
+.rst-content .sidebar p {
+    margin-bottom: 12px;
+}
+.rst-content .sidebar p, .rst-content .sidebar ul, .rst-content .sidebar dl {
+    font-size: 13px;
+}
+
+/* less space after bullet lists in admonitions like warnings and notes */
+.rst-content .section .admonition ul {
+    margin-bottom: 6px;
+}
+
+
+/* Code: literals and links */
 
 .rst-content tt.literal,
 .rst-content code.literal {
@@ -36,7 +63,6 @@
 
 /* Just one box for annotation code for a less noisy look */
 
-
 .rst-content .annotation {
     padding: 2px 5px;
     background-color: white;
@@ -51,7 +77,6 @@
 
 
 /* Parameter lists */
-
 
 /* Mimick rubric style used for other headings */
 /* TODO: once scanpydoc adds classes, also change return types like this */

@@ -96,7 +96,7 @@ def leiden(
         import leidenalg
     except ImportError:
         raise ImportError(
-            'Please install the leiden algorithm: `pip3 install leidenalg`.'
+            'Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`.'
         )
     partition_kwargs = dict(partition_kwargs)
 

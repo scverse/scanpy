@@ -32,25 +32,25 @@ Trajectory Inference
 --------------------
 
 We offer many examples for `trajectory inference`_ on complex datasets via
-PAGA [Wolf19]_. Get started with the `following example for hematopoiesis`_.
+PAGA [Wolf19]_. Get started with the `following example for hematopoiesis`_ (data of [Paul15]_).
 
 .. image:: http://www.falexwolf.de/img/paga_paul15.png
    :width: 450px
 
 You can extend this to multi-resolution analyses of whole animals,
-such as for `planaria`_.
+such as for `planaria`_ (data of [Plass18]_).
 
 .. image:: http://www.falexwolf.de/img/paga_planaria.png
    :width: 350px
 
-As a reference for simple pseudotime analyses, we provide the diffusion pseudotime analyses of [Haghverdi16]_
-for two hematopoiesis datasets: The `Paul15 DPT`_ example [Paul15]_ and the `Moignard15 DPT`_ example [Moignard15]_.
+As a reference for simple pseudotime analyses, we provide the diffusion pseudotime (DPT) analyses of [Haghverdi16]_
+for two hematopoiesis datasets: `DPT example 1`_ [Paul15]_ and `DPT example 2`_ [Moignard15]_.
 
 .. _trajectory inference: https://github.com/theislab/paga
-.. _following example for hematopoiesis: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/blood/paul15/paul15.ipynb
+.. _following example for hematopoiesis: https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html
 .. _planaria: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/planaria/planaria.ipynb
-.. _Paul15 DPT: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
-.. _Moignard15 DPT: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
+.. _DPT example 1: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
+.. _DPT example 2: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
 
 
 -----------------
@@ -60,9 +60,11 @@ Further Tutorials
 Integrating datasets
 ~~~~~~~~~~~~~~~~~~~~
 
-Integrate embeddings and annotations of an `adata` with a reference dataset in the `ingest tutorial`_.
+Map labels and embeddings of reference data to new data in the `ingest PBMC
+tutorial`_ and the `ingest Pancreas tutorial`_.
 
-.. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+.. _ingest PBMC tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+.. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
 
 Conversion: AnnData, SingleCellExperiment, and Seurat objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,7 +112,7 @@ Simulating single cells using literature-curated gene regulatory networks [Wittm
 Images
 ~~~~~~
 
-See a pseudotime-based vs. deep-learning based `cell cycle reconstruction`_ from image data [Eulenberg17]_.
+See pseudotime-time inference on deep-learning based features for `cell cycle reconstruction`_ from image data [Eulenberg17]_.
 
 .. _cell cycle reconstruction: https://github.com/theislab/scanpy_usage/tree/master/170529_images
 

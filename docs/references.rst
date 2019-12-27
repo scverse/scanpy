@@ -152,9 +152,9 @@ References
    *Identification of transcriptional signatures for cell types from single-cell RNA-Seq*,
    `bioRxiv <https://doi.org/10.1101/258566>`__.
 
-.. [Polanski19] Polanski *et al.* (2019),
-   *BBKNN: fast batch alignment of single cell transcriptomes*
-   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btz625>`__.
+.. [Paul15] Paul *et al.* (2015),
+   *Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors*,
+   `Cell <https://doi.org/10.1016/j.cell.2015.11.013>`__.
 
 .. [Pedersen12] Pedersen (2012),
    *Python implementation of ComBat*
@@ -164,9 +164,13 @@ References
    *Scikit-learn: Machine Learning in Python*,
    `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
 
-.. [Paul15] Paul *et al.* (2015),
-   *Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors*,
-   `Cell <https://doi.org/10.1016/j.cell.2015.11.013>`__.
+.. [Polanski19] Polanski *et al.* (2019),
+   *BBKNN: fast batch alignment of single cell transcriptomes*
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btz625>`__.
+
+.. [Plass18] Plass (2018),
+   *Cell type atlas and lineage tree of a whole complex animal by single-cell transcriptomics*
+   `Science <https://doi.org/10.1126/science.aaq1723>`__.
 
 .. [Scialdone15] Scialdone *et al.* (2015),
    *Computational assignment of cell-cycle stage from single-cell transcriptome data*

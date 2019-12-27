@@ -371,7 +371,7 @@ def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: int = N_PCS,
     zero_center: Optional[bool] = True,
-    svd_solver: str = 'auto',
+    svd_solver: str = 'arpack',
     random_state: Optional[Union[int, RandomState]] = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
@@ -408,6 +408,9 @@ def pca(
           for the randomized algorithm due to Halko (2009).
         `'auto'` (the default)
           chooses automatically depending on the size of the problem.
+
+        .. versionchanged:: 1.4.5
+           Default value changed from `'auto'` to `'arpack'`.
 
     random_state
         Change to use different initial states for the optimization.
@@ -480,11 +483,11 @@ def pca(
     if use_highly_variable is None:
         use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
     if use_highly_variable:
-        logg.info('computing PCA on highly variable genes')
+        logg.info('    on highly variable genes')
     adata_comp = adata[:, adata.var['highly_variable']] if use_highly_variable else adata
 
     if chunked:
-        if not zero_center or random_state or svd_solver != 'auto':
+        if not zero_center or random_state or svd_solver != 'arpack':
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
         from sklearn.decomposition import IncrementalPCA

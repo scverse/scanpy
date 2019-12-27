@@ -54,6 +54,9 @@ def score_genes(
     use_raw
         Use `raw` attribute of `adata` if present.
 
+        .. versionchanged:: 1.4.5
+           Default value changed from `False` to `None`.
+
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with an additional field
