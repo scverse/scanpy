@@ -183,7 +183,7 @@ Version 1.2 :small:`2018-06`
 1.2.0 :small:`2018-06-08`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- :func:`~scanpy.tl.paga` improved, see `theislab/paga`_; the default model changed, restore the previous default model by passing `model='v1.0'`
+- :func:`~scanpy.tl.paga` improved, see PAGA_; the default model changed, restore the previous default model by passing `model='v1.0'`
 
 
 Version 1.1 :small:`2018-05`
@@ -251,7 +251,7 @@ Version 1.0 :small:`2018-03`
   in contrast to tSNE, UMAP directly embeds the single-cell graph and is faster;
   UMAP is also used for measuring connectivities and computing neighbors,
   see :func:`~scanpy.pp.neighbors`
-- graph abstraction: AGA is renamed to PAGA: :func:`~scanpy.tl.paga`; now,
+- graph abstraction: AGA is renamed to PAGA_: :func:`~scanpy.tl.paga`; now,
   it only measures connectivities between partitions of the single-cell graph,
   pseudotime and clustering need to be computed separately via
   :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.dpt`, the
