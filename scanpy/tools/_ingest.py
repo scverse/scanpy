@@ -419,7 +419,9 @@ class Ingest:
             )
 
     def _knn_classify(self, labels):
-        cat_array = self._adata_ref.obs[labels].astype('category')  # ensure it's categorical
+        cat_array = self._adata_ref.obs[labels].astype(
+            'category'
+        )  # ensure it's categorical
         values = [cat_array[inds].mode()[0] for inds in self._indices]
         return pd.Categorical(
             values=values, categories=cat_array.cat.categories
