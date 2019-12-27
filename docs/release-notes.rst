@@ -141,7 +141,7 @@ Version 1.3 :small:`2019-02`
 
 .. note::
 
-   Also see changes in anndata 0.6.
+   .. rubric:: Also see changes in anndata 0.6.
 
    - changed default compression to `None` in :meth:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical
    - performance gains in :meth:`~anndata.AnnData.write_h5ad` due to better handling of strings and categories :smaller:`S Rybakov`
@@ -333,7 +333,6 @@ Version 0.2 :small:`2017-10`
 .. rubric:: Initial release of the new trajectory inference method PAGA: `theislab/paga`_
 
 - :func:`~scanpy.tl.paga` computes an abstracted, coarse-grained (PAGA) graph of the neighborhood graph
-- :func:`~scanpy.pl.paga` plot this graph
 - :func:`~scanpy.pl.paga_compare` plot this graph next an embedding
 - :func:`~scanpy.pl.paga_path` plots a heatmap through a node sequence in the PAGA graph
 
