@@ -105,7 +105,7 @@ Version 1.3 :small:`2019-02`
 - a new plotting gallery for :doc:`visualizing-marker-genes` :smaller:`F Ramirez`
 - tutorials are integrated on ReadTheDocs, :doc:`pbmc3k` and :doc:`paga-paul15`
 
-Two new possibilities for interactive exploration of analysis results:
+.. rubric:: Interactive exploration of analysis results through *manifold viewers*
 
 - CZI’s cellxgene_ directly reads `.h5ad` files :smaller:`the cellxgene developers`
 - the `UCSC Single Cell Browser`_ requires exporting via :func:`~scanpy.external.exporting.cellbrowser` :smaller:`M Haeussler`
@@ -149,14 +149,14 @@ Two new possibilities for interactive exploration of analysis results:
 1.3.0 :small:`2018-09-03`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-RNA velocity in single cells [Manno18]_:
+.. rubric:: RNA velocity in single cells [Manno18]_
 
 - Scanpy and AnnData support loom’s layers so that computations for single-cell RNA velocity [Manno18]_ become feasible :smaller:`S Rybakov and V Bergen`
 - the package scvelo_ perfectly harmonizes with Scanpy and is able to process loom files with splicing information produced by Velocyto [Manno18]_, it runs a lot faster than the count matrix analysis of Velocyto and provides several conceptual developments (preprint to come)
 
 .. _scvelo: https://github.com/theislab/scvelo
 
-Plotting of :ref:`pl-generic` marker genes and quality control.
+.. rubric:: Plotting (:ref:`pl-generic`)
 
 - :func:`~scanpy.pl.dotplot` for visualizing genes across conditions and clusters, see `here`__ :pr:`199` :smaller:`F Ramirez`
 - :func:`~scanpy.pl.heatmap` for pretty heatmaps :pr:`175` :smaller:`F Ramirez`
@@ -164,7 +164,7 @@ Plotting of :ref:`pl-generic` marker genes and quality control.
 
 .. __: https://gist.github.com/fidelram/2289b7a8d6da055fb058ac9a79ed485c
 
-There is now a section on imputation in :doc:`external <external/index>`:
+.. rubric:: There now is a section on imputation in :doc:`external <external/index>`:
 
 - :func:`~scanpy.external.pp.magic` for imputation using data diffusion [vanDijk18]_ :pr:`187` :smaller:`S Gigante`
 - :func:`~scanpy.external.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_ :pr:`186` :smaller:`G Eraslan`
@@ -176,7 +176,7 @@ Version 1.2 :small:`2018-06`
 1.2.1 :small:`2018-06-08`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Plotting of :ref:`pl-generic` marker genes and quality control.
+.. rubric:: Plotting of :ref:`pl-generic` marker genes and quality control.
 
 - :func:`~scanpy.pl.highest_expr_genes` for quality control; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_ :pr:`169` :smaller:`F Ramirez`
 
@@ -204,20 +204,22 @@ Version 1.1 :small:`2018-05`
 Version 1.0 :small:`2018-03`
 ----------------------------
 
-Scanpy is much faster and more memory efficient. Preprocess, cluster and visualize
-1.3M cells in 6h_, 130K cells in 14min_, and 68K cells in 3min_.
+.. rubric:: Major updates
+
+- Scanpy is much faster and more memory efficient. Preprocess, cluster and
+  visualize 1.3M cells in 6h_, 130K cells in 14min_, and 68K cells in 3min_
+- The API gained a preprocessing function :func:`~scanpy.pp.neighbors` and a
+  class :func:`~scanpy.Neighbors` to which all basic graph computations are
+  delegated
 
 .. _6h: https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/
 .. _14min: https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_130K.txt
 .. _3min: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170503_zheng17/zheng17.ipynb
 
-The API gained a preprocessing function :func:`~scanpy.pp.neighbors` and a
-class :func:`~scanpy.Neighbors` to which all basic graph computations are
-delegated.
 
 .. warning::
 
-   Upgrading to 1.0 isn’t fully backwards compatible in the following changes:
+   .. rubric:: Upgrading to 1.0 isn’t fully backwards compatible in the following changes
 
    - the graph-based tools :func:`~scanpy.tl.louvain`
      :func:`~scanpy.tl.dpt` :func:`~scanpy.tl.draw_graph`
@@ -243,7 +245,7 @@ delegated.
 .. _paul15: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
 .. _seurat: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170505_seurat/seurat.ipynb
 
-Further changes are:
+.. rubric:: Further updates
 
 - UMAP [McInnes18]_ can serve as a first visualization of the data just as tSNE,
   in contrast to tSNE, UMAP directly embeds the single-cell graph and is faster;
@@ -309,15 +311,15 @@ Version 0.3 :small:`2017-11`
 0.3.2 :small:`2017-11-29`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- finding marker genes via :func:`~scanpy.pl.rank_genes_groups_violin` improved:
-  For an example, see :issue:`51`.
+- finding marker genes via :func:`~scanpy.pl.rank_genes_groups_violin` improved,
+  see :issue:`51`
 
 0.3.0 :small:`2017-11-16`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - :class:`~anndata.AnnData` gains method :meth:`~anndata.AnnData.concatenate`
-- :class:`~anndata.AnnData` is available as the anndata_ package.
-- results of PAGA are simplified: `theislab/paga`_
+- :class:`~anndata.AnnData` is available as the separate anndata_ package
+- results of PAGA simplified: `theislab/paga`_
 
 .. _anndata: https://pypi.org/project/anndata/
 
@@ -328,7 +330,12 @@ Version 0.2 :small:`2017-10`
 0.2.9 :small:`2017-10-25`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Initial release of *partition-based graph abstraction (PAGA)*: `theislab/paga`_
+.. rubric:: Initial release of the new trajectory inference method PAGA: `theislab/paga`_
+
+- :func:`~scanpy.tl.paga` computes an abstracted, coarse-grained (PAGA) graph of the neighborhood graph
+- :func:`~scanpy.pl.paga` plot this graph
+- :func:`~scanpy.pl.paga_compare` plot this graph next an embedding
+- :func:`~scanpy.pl.paga_path` plots a heatmap through a node sequence in the PAGA graph
 
 .. _theislab/paga: https://github.com/theislab/paga
 
