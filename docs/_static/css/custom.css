@@ -15,7 +15,7 @@
 .noteversion::after { content: "/" }
 
 
-/* Code: literals and links */
+/* Formatting of RTD markup: rubrics and sidebars */
 
 .rst-content p.rubric {
     margin-bottom: 6px;
@@ -34,6 +34,9 @@
 .rst-content .sidebar p, .rst-content .sidebar ul, .rst-content .sidebar dl {
     font-size: 13px;
 }
+
+
+/* Code: literals and links */
 
 .rst-content tt.literal,
 .rst-content code.literal {
