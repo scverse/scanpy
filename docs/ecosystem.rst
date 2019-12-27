@@ -4,16 +4,17 @@ Ecosystem
 .. role:: small
 .. role:: smaller
 
-Tools that operate on :class:`~anndata.AnnData` but do not have an interface in the :doc:`external API <external/index>`.
+With *ecosystem*, we mean single-cell related tools that operate on :class:`~anndata.AnnData`. Here, we list some that do not have an interface in the :doc:`external API <external/index>`.
+
 
 Viewers
 -------
 
-Interactive manifold viewers that directly read anndata's `.h5ad` or have an export in :doc:`external API <external/index>`.
+Interactive manifold viewers.
 
 * `cellxgene <https://github.com/chanzuckerberg/cellxgene>`__ :small:`CZI` - direct reading of `.h5ad`
-* `cell browser <https://cells.ucsc.edu/>`__ :small:`UCSC` - :func:`~scanpy.external.exporting.cellbrowser`
-* `SPRING <https://github.com/AllonKleinLab/SPRING>`__ :small:`Harvard Med` - :func:`~scanpy.external.exporting.spring_project`
+* `cell browser <https://cells.ucsc.edu/>`__ :small:`UCSC` - exporing via :func:`~scanpy.external.exporting.cellbrowser`
+* `SPRING <https://github.com/AllonKleinLab/SPRING>`__ :small:`Harvard Med` - exporting via :func:`~scanpy.external.exporting.spring_project`
 
 
 Portals
