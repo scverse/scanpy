@@ -11,8 +11,8 @@ Release Notes
 .. include:: key_contributors.rst
 
 
-Version 1.4 :small:`2019-12-27`
--------------------------------
+Version 1.4 :small:`2019-12`
+----------------------------
 
 1.4.5 :small:`2019-12-27`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,11 +80,11 @@ Code design:
 - fix return sections of docs :smaller:`P Angerer`
 
 
-Version 1.3 :small:`2019-02-05`
--------------------------------
+Version 1.3 :small:`2019-02`
+----------------------------
 
-1.3.8
-~~~~~
+1.3.8 :small:`2019-02-05`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 - :func:`~scanpy.read_10x_h5` throws more stringent errors and doesn’t require speciying default genomes anymore. :pr:`442` and :pr:`444` :smaller:`I Vishrup`
 
 1.3.7
@@ -112,7 +112,6 @@ Two new possibilities for interactive exploration of analysis results:
 
 .. _cellxgene: https://github.com/chanzuckerberg/cellxgene
 .. _UCSC Single Cell Browser: https://github.com/maximilianh/cellBrowser
-
 
 Further updates:
 
@@ -172,11 +171,11 @@ There is now a section on imputation in :doc:`external <external/index>`:
 - :func:`~scanpy.external.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_ :pr:`186` :smaller:`G Eraslan`
 
 
-Version 1.2 :small:`2018-06-08`
--------------------------------
+Version 1.2 :small:`2018-06`
+----------------------------
 
-1.2.1
-~~~~~
+1.2.1 :small:`2018-06-08`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Plotting of :ref:`pl-generic` marker genes and quality control.
 
@@ -188,8 +187,8 @@ Plotting of :ref:`pl-generic` marker genes and quality control.
 - :func:`~scanpy.tl.paga` improved, see `theislab/paga`_; the default model changed, restore the previous default model by passing `model='v1.0'`
 
 
-Version 1.1 :small:`2018-05-31`
--------------------------------
+Version 1.1 :small:`2018-05`
+----------------------------
 
 - :func:`~scanpy.set_figure_params` by default passes `vector_friendly=True` and allows you to produce reasonablly sized pdfs by rasterizing large scatter plots
 - :func:`~scanpy.tl.draw_graph` defaults to the ForceAtlas2 layout [Jacomy14]_ [Chippada18]_, which is often more visually appealing and whose computation is much faster :smaller:`S Wollock`
@@ -203,8 +202,8 @@ Version 1.1 :small:`2018-05-31`
 - :func:`~scanpy.external.tl.sandbag`, :func:`~scanpy.external.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
 
 
-Version 1.0 :small:`2018-03-28`
--------------------------------
+Version 1.0 :small:`2018-03`
+----------------------------
 
 Scanpy is much faster and more memory efficient. Preprocess, cluster and visualize
 1.3M cells in 6h_, 130K cells in 14min_, and 68K cells in 3min_.
@@ -271,8 +270,8 @@ Further changes are:
 - `'X_diffmap'` contains the zero component, plotting remains unchanged
 
 
-Version 0.4 :small:`2018-02-26`
--------------------------------
+Version 0.4 :small:`2018-02`
+----------------------------
 
 0.4.4 :small:`2018-02-26`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -290,12 +289,10 @@ Version 0.4 :small:`2018-02-26`
 - only return :class:`matplotlib.axes.Axes` in plotting functions of `sc.pl`
   when `show=False`, otherwise `None`
 
-
 0.4.2 :small:`2018-01-07`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - amendments in `theislab/paga`_ and its plotting functions
-
 
 0.4.0 :small:`2017-12-23`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -307,15 +304,14 @@ Version 0.4 :small:`2018-02-26`
 .. _spring tutorial: https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export
 
 
-Version 0.3 :small:`2017-11-29`
--------------------------------
+Version 0.3 :small:`2017-11`
+----------------------------
 
 0.3.2 :small:`2017-11-29`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - finding marker genes via :func:`~scanpy.pl.rank_genes_groups_violin` improved:
   For an example, see :issue:`51`.
-
 
 0.3.0 :small:`2017-11-16`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -327,7 +323,7 @@ Version 0.3 :small:`2017-11-29`
 .. _anndata: https://pypi.org/project/anndata/
 
 
-Version 0.2 :small:`2017-10-25`
+Version 0.2 :small:`2017-10`
 -------------------------------
 
 0.2.9 :small:`2017-10-25`
@@ -336,7 +332,6 @@ Version 0.2 :small:`2017-10-25`
 Initial release of *partition-based graph abstraction (PAGA)*: `theislab/paga`_
 
 .. _theislab/paga: https://github.com/theislab/paga
-
 
 0.2.1 :small:`2017-07-24`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -347,8 +342,8 @@ regulatory networks. The implementation efficiently deals with datasets of more
 than one million cells.
 
 
-Version 0.1 :small:`2017-05-01`
--------------------------------
+Version 0.1 :small:`2017-05`
+-----------------------------
 
 Scanpy computationally outperforms the Cell Ranger R kit and allows reproducing
 most of Seurat’s guided clustering tutorial.
