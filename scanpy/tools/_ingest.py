@@ -495,5 +495,4 @@ class Ingest:
             adata.uns['pca'] = self._adata_ref.uns['pca']
             adata.varm['PCs'] = self._adata_ref.varm['PCs']
 
-        adata.uns['neighbors'] = self._adata_ref.uns['neighbors']  # problematic as this new graph isn't the shape of the new data matrix
         return adata
