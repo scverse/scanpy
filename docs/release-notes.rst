@@ -343,12 +343,16 @@ Version 0.2 :small:`2017-10`
 
 Scanpy includes preprocessing, visualization, clustering, pseudotime and
 trajectory inference, differential expression testing and simulation of gene
-regulatory networks. The implementation efficiently deals with datasets of more
-than one million cells.
+regulatory networks. The implementation efficiently deals with `datasets of more
+than one million cells
+<https://github.com/theislab/scanpy_usage/tree/master/170522_visualizing_one_million_cells>`__.
 
 
 Version 0.1 :small:`2017-05`
 -----------------------------
 
-Scanpy computationally outperforms the Cell Ranger R kit and allows reproducing
-most of Seurat’s guided clustering tutorial.
+Scanpy computationally outperforms and allows reproducing both the `Cell Ranger
+R kit's <https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17>`__
+and most of `Seurat’s
+<https://github.com/theislab/scanpy_usage/tree/master/170505_seurat>`__
+clustering workflows.
