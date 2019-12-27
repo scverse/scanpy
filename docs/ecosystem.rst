@@ -20,9 +20,9 @@ Interactive manifold viewers.
 Portals
 -------
 
-* The `Gene Expression Analysis Resource <https://umgear.org/>`__ :small:`U Maryland`
-* The `Galaxy Project <https://humancellatlas.usegalaxy.eu>`__ for the Human Cell Atlas :small:`U Freiburg` `[tweet] <https://twitter.com/ExpressionAtlas/status/1151797848469626881>`__
-* The `Expression Atlas <https://www.ebi.ac.uk/gxa/sc/help.html>`__ :small:`EMBL-EBI`
+* the `Gene Expression Analysis Resource <https://umgear.org/>`__ :small:`U Maryland`
+* the `Galaxy Project <https://humancellatlas.usegalaxy.eu>`__ for the Human Cell Atlas :small:`U Freiburg` `[tweet] <https://twitter.com/ExpressionAtlas/status/1151797848469626881>`__
+* the `Expression Atlas <https://www.ebi.ac.uk/gxa/sc/help.html>`__ :small:`EMBL-EBI`
 
 
 RNA velocity
@@ -47,4 +47,4 @@ Integrating datasets and modeling data
 Modeling perturbations
 ----------------------
 
-* `scgen <https://github.com/theislab/scgen>`__ / `trvae <https://github.com/theislab/trvae>`__ :small:`Helmholtz Munich`
+* `scgen <https://github.com/theislab/scgen>`__ / `trVAE <https://github.com/theislab/trvae>`__ :small:`Helmholtz Munich`
