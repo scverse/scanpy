@@ -15,8 +15,9 @@
 .noteversion::after { content: "/" }
 
 
-/* Formatting of RTD markup: rubrics and sidebars */
+/* Formatting of RTD markup: rubrics and sidebars and admonitions */
 
+/* rubric */
 .rst-content p.rubric {
     margin-bottom: 6px;
     font-weight: normal;
@@ -33,6 +34,11 @@
 }
 .rst-content .sidebar p, .rst-content .sidebar ul, .rst-content .sidebar dl {
     font-size: 13px;
+}
+
+/* less space after bullet lists in admonitions like warnings and notes */
+.rst-content .section .admonition ul {
+    margin-bottom: 6px;
 }
 
 
