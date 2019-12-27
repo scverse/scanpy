@@ -116,7 +116,7 @@ def ingest(
     >>>     adata, adata_ref, obs='cell_type',
     >>>     batch_key='ing_batch', return_joint=True)
     """
-    start = logg.info('running ingest')    
+    start = logg.info('running ingest')
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
         [embedding_method]
@@ -143,7 +143,7 @@ def ingest(
         ing.neighbors(**kwargs)
         for i, col in enumerate(obs):
             ing.map_labels(col, labeling_method[i])
-            
+
     logg.info('    finished', time=start)
     if return_joint:
         return ing.to_adata_joint(batch_key, batch_categories, index_unique)
@@ -496,4 +496,5 @@ class Ingest:
             adata.uns['pca'] = self._adata_ref.uns['pca']
             adata.varm['PCs'] = self._adata_ref.varm['PCs']
 
+        adata.uns['neighbors'] = self._adata_ref.uns['neighbors']  # problematic as this new graph isn't the shape of the new data matrix
         return adata
