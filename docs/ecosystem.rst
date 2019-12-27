@@ -12,9 +12,9 @@ Viewers
 
 Interactive manifold viewers.
 
-* `cellxgene <https://github.com/chanzuckerberg/cellxgene>`__ :small:`CZI` - direct reading of `.h5ad`
-* `cell browser <https://cells.ucsc.edu/>`__ :small:`UCSC` - exporing via :func:`~scanpy.external.exporting.cellbrowser`
-* `SPRING <https://github.com/AllonKleinLab/SPRING>`__ :small:`Harvard Med` - exporting via :func:`~scanpy.external.exporting.spring_project`
+* `cellxgene <https://github.com/chanzuckerberg/cellxgene>`__ via direct reading of `.h5ad` :small:`CZI`
+* `cell browser <https://cells.ucsc.edu/>`__ via exporing through :func:`~scanpy.external.exporting.cellbrowser` :small:`UCSC`
+* `SPRING <https://github.com/AllonKleinLab/SPRING>`__ via exporting through :func:`~scanpy.external.exporting.spring_project` :small:`Harvard Med`
 
 
 Portals
@@ -28,7 +28,7 @@ Portals
 RNA velocity
 ------------
 
-* `scvelo <https://scvelo.org>`__ :small:`Helmholtz Munich`
+* `scVelo <https://scvelo.org>`__ :small:`Helmholtz Munich`
 
 
 Differential expression
@@ -47,4 +47,4 @@ Integrating datasets and modeling data
 Modeling perturbations
 ----------------------
 
-* `scgen <https://github.com/theislab/scgen>`__ / `trVAE <https://github.com/theislab/trvae>`__ :small:`Helmholtz Munich`
+* `scGen <https://github.com/theislab/scgen>`__ / `trVAE <https://github.com/theislab/trvae>`__ :small:`Helmholtz Munich`
