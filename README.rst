@@ -1,16 +1,21 @@
-|Stars| |PyPI| |bioconda| |Docs| |Build Status|
+|Stars| |PyPI| |PyPIDownloads| |BiocondaDownloads| |Docs| |Build Status|
 
-.. |Stars| image:: https://img.shields.io/github/stars/theislab/scanpy?logo=GitHub
+.. |Stars| image:: https://img.shields.io/github/stars/theislab/scanpy?logo=GitHub&color=yellow
    :target: https://github.com/theislab/scanpy/stargazersNice!
-.. |PyPI| image:: https://img.shields.io/pypi/v/scanpy
+.. |PyPI| image:: https://img.shields.io/pypi/v/scanpy?logo=PyPI
    :target: https://pypi.org/project/scanpy
-.. |bioconda| image:: https://img.shields.io/conda/vn/bioconda/scanpy
+.. |PyPIDownloads| image:: https://pepy.tech/badge/scanpy
+   :target: https://pepy.tech/project/scanpy
+.. doesn't really add anything
+   .. |Bioconda| image:: https://img.shields.io/conda/vn/bioconda/scanpy?logo=Anaconda&color=green
+      :target: https://bioconda.github.io/recipes/scanpy/README.html
+.. |BiocondaDownloads| image:: https://img.shields.io/conda/dn/bioconda/scanpy?logo=Anaconda&color=green
    :target: https://bioconda.github.io/recipes/scanpy/README.html
 .. |Docs| image:: https://readthedocs.com/projects/icb-scanpy/badge/?version=latest
    :target: https://scanpy.readthedocs.io
 .. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
    :target: https://travis-ci.org/theislab/scanpy
-..
+.. wait until we have better coverage ;-)
    .. |Coverage| image:: https://codecov.io/gh/theislab/scanpy/branch/master/graph/badge.svg
       :target: https://codecov.io/gh/theislab/scanpy
 

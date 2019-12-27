@@ -1,5 +1,5 @@
 .. include:: ../README.rst
-   :end-line: 24
+   :end-line: 29
 
 .. include:: key_contributors.rst
 
