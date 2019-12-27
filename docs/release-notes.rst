@@ -33,8 +33,8 @@ Version 1.4 :small:`2019-12`
 
 - :func:`~scanpy.pp.normalize_total` gains param `exclude_highly_expressed`, and `fraction` is renamed to `max_fraction` with better docs :smaller:`A Wolf`
 
-1.4.3
-~~~~~
+1.4.3 :small:`2019-05-14`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 .. rubric:: Bug fixes
 
 - :func:`~scanpy.pp.neighbors` correctly infers `n_neighbors` again from `params`, which was temporarily broken in `v1.4.2` :smaller:`I Virshup`
@@ -43,8 +43,8 @@ Version 1.4 :small:`2019-12`
 
 - :func:`~scanpy.pp.calculate_qc_metrics` is single threaded by default for datasets under 300,000 cells -- allowing cached compilation :pr:`615` :smaller:`I Virshup`
 
-1.4.2
-~~~~~
+1.4.2 :small:`2019-05-06`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 .. rubric:: New functionality
 
 - :func:`~scanpy.pp.combat` supports additional covariates which may include adjustment variables or biological condition :pr:`618` :smaller:`G Eraslan`
@@ -60,8 +60,8 @@ Version 1.4 :small:`2019-12`
 
 - :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency :pr:`576` :smaller:`S Rybakov`
 
-1.4.1
-~~~~~
+1.4.1 :small:`2019-04-26`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 .. rubric:: New functionality
 
 - Scanpy has a command line interface again. Invoking it with `scanpy somecommand [args]` calls `scanpy-somecommand [args]`, except for builtin commands (currently `scanpy settings`)  :pr:`604` :smaller:`P Angerer`
@@ -87,8 +87,8 @@ Version 1.3 :small:`2019-02`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 - :func:`~scanpy.read_10x_h5` throws more stringent errors and doesn’t require speciying default genomes anymore. :pr:`442` and :pr:`444` :smaller:`I Vishrup`
 
-1.3.7
-~~~~~
+1.3.7 :small:`2019-01-02`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 .. rubric:: Major updates
 
 - one can `import scanpy as sc` instead of `import scanpy.api as sc`, see :mod:`scanpy`
@@ -98,8 +98,8 @@ Version 1.3 :small:`2019-02`
 - :func:`~scanpy.pp.combat` reimplements Combat for batch effect correction [Johnson07]_ [Leek12]_, heavily based on the Python implementation of [Pedersen12]_, but with performance improvements :pr:`398 :smaller:`M Lange`
 - :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_ :smaller:`A Mousa`
 
-1.3.6
-~~~~~
+1.3.6 :small:`2018-12-11`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 .. rubric:: Major updates
 
 - a new plotting gallery for :doc:`visualizing-marker-genes` :smaller:`F Ramirez`
@@ -117,20 +117,20 @@ Version 1.3 :small:`2019-02`
 
 - :func:`~scanpy.pp.highly_variable_genes` supersedes :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn’t subset
 
-1.3.5
-~~~~~
+1.3.5 :small:`2018-12-09`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - uncountable figure improvements :pr:`369` :smaller:`F Ramirez`
 
-1.3.4
-~~~~~
+1.3.4 :small:`2018-11-24`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - :func:`~scanpy.tl.leiden` wraps the recent graph clustering package by [Traag18]_ :smaller:`K Polanski`
 - :func:`~scanpy.external.pp.bbknn` wraps the recent batch correction package [Polanski19]_ :smaller:`K Polanski`
 - :func:`~scanpy.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :smaller:`I Virshup`
 
-1.3.3
-~~~~~
+1.3.3 :small:`2018-11-05`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 .. rubric:: Major updates
 
 - a fully distributed preprocessing backend :smaller:`T White and the Laserson Lab`
@@ -146,7 +146,7 @@ Version 1.3 :small:`2019-02`
    - changed default compression to `None` in :meth:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical
    - performance gains in :meth:`~anndata.AnnData.write_h5ad` due to better handling of strings and categories :smaller:`S Rybakov`
 
-1.3.0 :small:`2018-09-03`
+1.3.1 :small:`2018-09-03`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. rubric:: RNA velocity in single cells [Manno18]_
@@ -180,8 +180,8 @@ Version 1.2 :small:`2018-06`
 
 - :func:`~scanpy.pl.highest_expr_genes` for quality control; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_ :pr:`169` :smaller:`F Ramirez`
 
-1.2.0
-~~~~~
+1.2.0 :small:`2018-06-08`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - :func:`~scanpy.tl.paga` improved, see `theislab/paga`_; the default model changed, restore the previous default model by passing `model='v1.0'`
 
