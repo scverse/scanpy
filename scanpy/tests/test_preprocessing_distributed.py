@@ -94,7 +94,7 @@ class TestPreprocessingDistributed:
         # write metadata using regular anndata
         adata.write_zarr(temp_store, chunks)
         if isinstance(adata_dist.X, da.Array):
-            adata_dist.X.to_zarr(temp_store.dir_path("X"))
+            adata_dist.X.to_zarr(temp_store.dir_path("X"), overwrite=True)
         else:
             adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks)
         # read back as zarr directly and check it is the same as adata.X
