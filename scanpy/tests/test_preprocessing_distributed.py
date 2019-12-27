@@ -90,7 +90,7 @@ class TestPreprocessingDistributed:
         temp_store = zarr.TempStore()
         chunks = adata_dist.X.chunks
         if isinstance(chunks[0], tuple):
-            chunks = (chunks[0][0],)+chunks[1]
+            chunks = (chunks[0][0],) + chunks[1]
         # write metadata using regular anndata
         adata.write_zarr(temp_store, chunks)
         if isinstance(adata_dist.X, da.Array):
