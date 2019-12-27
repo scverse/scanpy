@@ -206,9 +206,9 @@ Version 1.0 :small:`2018-03`
 
 .. rubric:: Major updates
 
-- Scanpy is much faster and more memory efficient. Preprocess, cluster and
+- Scanpy is much faster and more memory efficient: preprocess, cluster and
   visualize 1.3M cells in 6h_, 130K cells in 14min_, and 68K cells in 3min_
-- The API gained a preprocessing function :func:`~scanpy.pp.neighbors` and a
+- the API gained a preprocessing function :func:`~scanpy.pp.neighbors` and a
   class :func:`~scanpy.Neighbors` to which all basic graph computations are
   delegated
 
@@ -277,8 +277,8 @@ Version 0.4 :small:`2018-02`
 0.4.4 :small:`2018-02-26`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- embed cells using :func:`~scanpy.tl.umap` [McInnes18]_: :pr:`92`
-- score sets of genes, e.g. for `cell cycle`_, using :func:`~scanpy.tl.score_genes` [Satija15]_.
+- embed cells using :func:`~scanpy.tl.umap` [McInnes18]_ :pr:`92` :smaller:`G Eraslan`
+- score sets of genes, e.g. for `cell cycle`_, using :func:`~scanpy.tl.score_genes` [Satija15]_ :smaller:`D Cittaro`
 
 .. _cell cycle: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb
 
@@ -293,7 +293,7 @@ Version 0.4 :small:`2018-02`
 0.4.2 :small:`2018-01-07`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- amendments in `theislab/paga`_ and its plotting functions
+- amendments in PAGA_ and its plotting functions
 
 0.4.0 :small:`2017-12-23`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -319,7 +319,7 @@ Version 0.3 :small:`2017-11`
 
 - :class:`~anndata.AnnData` gains method :meth:`~anndata.AnnData.concatenate`
 - :class:`~anndata.AnnData` is available as the separate anndata_ package
-- results of PAGA simplified: `theislab/paga`_
+- results of PAGA_ simplified
 
 .. _anndata: https://pypi.org/project/anndata/
 
@@ -330,13 +330,13 @@ Version 0.2 :small:`2017-10`
 0.2.9 :small:`2017-10-25`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. rubric:: Initial release of the new trajectory inference method PAGA: `theislab/paga`_
+.. rubric:: Initial release of the new trajectory inference method PAGA_
 
 - :func:`~scanpy.tl.paga` computes an abstracted, coarse-grained (PAGA) graph of the neighborhood graph
 - :func:`~scanpy.pl.paga_compare` plot this graph next an embedding
 - :func:`~scanpy.pl.paga_path` plots a heatmap through a node sequence in the PAGA graph
 
-.. _theislab/paga: https://github.com/theislab/paga
+.. _PAGA: https://github.com/theislab/paga
 
 0.2.1 :small:`2017-07-24`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
