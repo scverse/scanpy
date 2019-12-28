@@ -911,6 +911,14 @@ def embedding_density(
     if basis == 'fa':
         basis = 'draw_graph_fa'
 
+    if key is not None and groupby is not None:
+        raise ValueError('either pass key or groupby but not both')
+
+    if key is None:
+        key = 'umap_density'
+    if groupby is not None:
+        key += f'_{groupby}'
+
     if f'X_{basis}' not in adata.obsm_keys():
         raise ValueError(
             f'Cannot find the embedded representation `adata.obsm[X_{basis!r}]`. '
@@ -929,14 +937,6 @@ def embedding_density(
             'components used to calculate the density can be plotted.'
         )
         del kwargs['components']
-
-    if key is not None and groupby is not None:
-        raise ValueError('either pass key or groupby but not both')
-
-    if key is None:
-        key = 'umap_density'
-    if groupby is not None:
-        key += f'_{groupby}'
 
     components = adata.uns[f'{key}_params']['components']
     groupby = adata.uns[f'{key}_params']['covariate']
