@@ -25,7 +25,7 @@ suppress_warnings = ['ref.citation']
 # General information
 project = 'Scanpy'
 author = scanpy.__author__
-copyright = f'{datetime.now():%Y}, {author}'
+copyright = f'{datetime.now():%Y}, {author}.'
 version = scanpy.__version__.replace('.dirty', '')
 release = version
 
