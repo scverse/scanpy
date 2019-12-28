@@ -89,6 +89,12 @@ def ingest(
     .. _ingest PBMC tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
     .. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
     """
+    # anndata version check
+    from distutils.version import LooseVersion
+    anndata_version = version("anndata")
+    if anndata_version <= LooseVersion('0.7rc1'):
+        logg.warn('ingest only works fine with anndata >= 0.7rc2')
+    
     start = logg.info('running ingest')
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
