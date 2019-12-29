@@ -9,6 +9,7 @@ from anndata import AnnData
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 from .. import logging as logg
+from .._utils import version
 
 
 def ingest(
@@ -92,9 +93,11 @@ def ingest(
     # anndata version check
     from distutils.version import LooseVersion
     anndata_version = version("anndata")
-    if anndata_version <= LooseVersion('0.7rc1'):
-        logg.warn('ingest only works fine with anndata >= 0.7rc2')
-    
+    if anndata_version <= LooseVersion('0.6.23'):
+        raise ValueError(
+            'ingest only works correctly with anndata>=0.7rc2 '
+            'as prior to that, `AnnData.concatenate` did not concatentate `.obsm`')
+
     start = logg.info('running ingest')
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
