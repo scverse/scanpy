@@ -1,2 +1,1 @@
-.. tutorials
-.. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-data-using-ingest.html
+.. _PAGA: https://github.com/theislab/paga

@@ -8,6 +8,7 @@ Release Notes
 
    Also see the release notes of :mod:`anndata`.
 
+.. include:: _links.rst
 .. include:: _key_contributors.rst
 
 
@@ -335,8 +336,6 @@ Version 0.2 :small:`2017-10`
 - :func:`~scanpy.tl.paga` computes an abstracted, coarse-grained (PAGA) graph of the neighborhood graph
 - :func:`~scanpy.pl.paga_compare` plot this graph next an embedding
 - :func:`~scanpy.pl.paga_path` plots a heatmap through a node sequence in the PAGA graph
-
-.. _PAGA: https://github.com/theislab/paga
 
 0.2.1 :small:`2017-07-24`
 ~~~~~~~~~~~~~~~~~~~~~~~~~

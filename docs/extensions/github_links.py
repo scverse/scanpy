@@ -46,7 +46,7 @@ def register_links(app: Sphinx, config: Config):
     scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
     app.add_role(
         'tutorial',
-        AutoLink('tutorial', f'{scanpy_tutorials_url}/{{}}.html', '{}')
+        AutoLink('tutorial', f'{scanpy_tutorials_url}/{{}}.html', '→ tutorial: {}')
     )
 
 

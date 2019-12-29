@@ -16,7 +16,11 @@
 
 /* Custom classes with bootstrap buttons */
 
-.tutorial {
+.tutorial,
+.tutorial:visited,
+.tutorial:hover
+{
+    /* text-decoration: underline; */
     font-weight: bold;
     padding: 2px 5px;
     white-space: nowrap;
@@ -29,10 +33,6 @@
     color: #404040;
     overflow-x: auto;
     box-sizing: border-box;
-}
-
-.tutorial:visited {
-    color: #404040;
 }
 
 
@@ -53,7 +53,9 @@
 .rst-content .sidebar p {
     margin-bottom: 12px;
 }
-.rst-content .sidebar p, .rst-content .sidebar ul, .rst-content .sidebar dl {
+.rst-content .sidebar p,
+.rst-content .sidebar ul,
+.rst-content .sidebar dl {
     font-size: 13px;
 }
 
@@ -73,12 +75,18 @@
 .rst-content tt:not(.xref),
 .rst-content code:not(.xref),
 .rst-content *:not(a) > tt.xref,
-.rst-content *:not(a) > code.xref {
+.rst-content *:not(a) > code.xref,
+.rst-content dl:not(.docutils) code
+{
     font-weight: normal;
 }
 .rst-content a > tt.xref,
-.rst-content a > code.xref {
-    text-decoration: underline;
+.rst-content a > code.xref,
+.rst-content dl:not(.docutils) a > tt.xref,
+.rst-content dl:not(.docutils) a > code.xref
+{
+    font-weight: bold;  /* underline looks clumsy, in particular with buttons and
+                           other hyperlinks, which don't come with underlines */
 }
 
 
@@ -113,3 +121,11 @@
 .rst-content dl.field-list dl > dt { font-weight: unset }
 /* Add colon between return tuple element name and type */
 .rst-content dl:not(.docutils) dl > dt .classifier::before { content: ' : ' }
+
+/* Function headers */
+
+.rst-content dl:not(.docutils) dt {
+    background: #edf0f2;
+    color: #404040;
+    border-top: solid 3px #343131;
+}

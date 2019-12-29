@@ -25,9 +25,7 @@ def ingest(
     """\
     Map labels and embeddings from reference data to new data.
 
-    See the `ingest tutorial`_.
-
-    .. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-data-using-ingest.html
+    :tutorial:`integrating-data-using-ingest`
 
     Integrates embeddings and annotations of an `adata` with a reference dataset
     `adata_ref` through projecting on a PCA (or alternate
@@ -82,8 +80,6 @@ def ingest(
 
     Example
     -------
-    See the `ingest tutorial`_.
-
     Call sequence:
 
     >>> sc.pp.neighbors(adata_ref)
