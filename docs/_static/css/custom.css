@@ -11,8 +11,29 @@
 /* Custom classes */
 
 .small { font-size:40% }
-.smaller, .pr, .noteversion { font-size:70% }
-.noteversion::after { content: "/" }
+.smaller, .pr { font-size:70% }
+
+
+/* Custom classes with bootstrap buttons */
+
+.tutorial {
+    font-weight: bold;
+    padding: 2px 5px;
+    white-space: nowrap;
+    max-width: 100%;
+    background: #f07e44;
+    border: solid 1px #f07e44;
+    border-radius: .25rem;
+    font-size: 75%;
+    /* font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",Courier,monospace; */
+    color: #404040;
+    overflow-x: auto;
+    box-sizing: border-box;
+}
+
+.tutorial:visited {
+    color: #404040;
+}
 
 
 /* Formatting of RTD markup: rubrics and sidebars and admonitions */

@@ -67,6 +67,8 @@ napoleon_custom_sections = [('Params', 'Parameters')]
 todo_include_todos = False
 api_dir = HERE / 'api'  # function_images
 
+scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
+
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
@@ -84,10 +86,7 @@ intersphinx_mapping = dict(
     scvelo=('https://scvelo.readthedocs.io/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
-    scanpy_tutorials=(
-        'https://scanpy-tutorials.readthedocs.io/en/latest',
-        None,
-    ),
+    scanpy_tutorials=(scanpy_tutorials_url, None),
 )
 
 
@@ -113,6 +112,16 @@ html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 def setup(app):
     app.warningiserror = on_rtd
     app.add_stylesheet('css/custom.css')
+
+
+def autolink(url_template, title_template='{}'):
+    from docutils import nodes
+    def role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+        url = url_template.format(text)
+        title = title_template.format(text)
+        node = nodes.reference(rawtext, title, refuri=url, **options)
+        return [node], []
+    return role
 
 
 # -- Options for other output formats ------------------------------------------

@@ -1,9 +1,10 @@
 .. role:: small
 .. role:: smaller
 
+
 .. rubric:: New functionality
 
-- :func:`~scanpy.tl.ingest` maps labels and embeddings of reference data to new data, see the `ingest tutorial`_ :pr:`651` :smaller:`S Rybakov, A Wolf`
+- :func:`~scanpy.tl.ingest` maps labels and embeddings of reference data to new data, see tutorial :tutorial:`integrating-data-using-ingest` :pr:`651` :smaller:`S Rybakov, A Wolf`
 - :mod:`~scanpy.queries` recieved many updates including enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`I Virshup`
 - :func:`~scanpy.set_figure_params` allows setting `figsize`
 
