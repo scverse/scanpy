@@ -28,7 +28,7 @@ See the :doc:`external API <external/index>` and the :doc:`ecosystem page <ecosy
 .. _32 projects: https://chanzuckerberg.com/eoss/proposals/
 
 
-.. topic:: Latest release :small:`2012-12-27`
+.. topic:: Latest release :small:`2012-12-30`
 
    .. include:: release-latest.rst
 
