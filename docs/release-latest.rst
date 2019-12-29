@@ -3,13 +3,11 @@
 
 .. rubric:: New functionality
 
-- :func:`~scanpy.tl.ingest` maps labels and embeddings of reference data to new data, see the `ingest PBMC tutorial`_ and the `ingest Pancreas tutorial`_ :pr:`651` :smaller:`S Rybakov, A Wolf`
+- :func:`~scanpy.tl.ingest` maps labels and embeddings of reference data to new data, see the `ingest tutorial`_ :pr:`651` :smaller:`S Rybakov, A Wolf`
 - :mod:`~scanpy.queries` recieved many updates including enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`I Virshup`
 - :func:`~scanpy.set_figure_params` allows setting `figsize`
 
 .. _gprofiler: https://biit.cs.ut.ee/gprofiler/
-.. _ingest PBMC tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
-.. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
 
 .. rubric:: Code design
 
@@ -21,5 +19,5 @@
 
 .. warning::
 
-   * Changed default solver of :func:`~scanpy.tl.pca` from `auto` to `arpack`.
-   * Changed default behavior of `use_raw` of :func:`~scanpy.tl.score_genes` from `False` to `None`.
+   * changed default `solver` in :func:`~scanpy.tl.pca` from `auto` to `arpack`
+   * changed default `use_raw` in :func:`~scanpy.tl.score_genes` from `False` to `None`

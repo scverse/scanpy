@@ -5,6 +5,7 @@ from scipy.sparse import issparse
 from collections.abc import MutableMapping
 from typing import Iterable, Union, Optional
 from anndata import AnnData
+from distutils.version import LooseVersion
 
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
@@ -24,7 +25,9 @@ def ingest(
     """\
     Map labels and embeddings from reference data to new data.
 
-    See the `ingest PBMC tutorial`_ and the `ingest Pancreas tutorial`_.
+    See the `ingest tutorial`_.
+
+    .. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-data-using-ingest.html
 
     Integrates embeddings and annotations of an `adata` with a reference dataset
     `adata_ref` through projecting on a PCA (or alternate
@@ -79,7 +82,7 @@ def ingest(
 
     Example
     -------
-    See the `ingest PBMC tutorial`_ and the `ingest Pancreas tutorial`_.
+    See the `ingest tutorial`_.
 
     Call sequence:
 
@@ -91,12 +94,12 @@ def ingest(
     .. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
     """
     # anndata version check
-    from distutils.version import LooseVersion
     anndata_version = version("anndata")
     if anndata_version <= LooseVersion('0.6.23'):
         raise ValueError(
             'ingest only works correctly with anndata>=0.7rc2 '
-            'as prior to that, `AnnData.concatenate` did not concatentate `.obsm`')
+            'as prior to that, `AnnData.concatenate` did not concatentate `.obsm`'
+        )
 
     start = logg.info('running ingest')
     obs = [obs] if isinstance(obs, str) else obs
