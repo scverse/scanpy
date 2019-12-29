@@ -113,19 +113,6 @@ def test_ingest_function(adatas):
     assert 'X_umap' in ad.obsm
     assert 'X_pca' in ad.obsm
 
-    ad = sc.tl.ingest(
-        adata_new,
-        adata_ref,
-        obs='bulk_labels',
-        embedding_method=['umap', 'pca'],
-        return_joint=True,
-    )
-
-    assert ad.shape == (adata_new.n_obs + adata_ref.n_obs, adata_ref.n_vars)
-    assert 'bulk_labels' in ad.obs
-    assert 'X_umap' in ad.obsm
-    assert 'X_pca' in ad.obsm
-
 
 def test_ingest_map_embedding_umap():
     adata_ref = sc.AnnData(X)

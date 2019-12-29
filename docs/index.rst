@@ -1,7 +1,8 @@
 .. include:: ../README.rst
    :end-line: 29
 
-.. include:: key_contributors.rst
+.. include:: _links.rst
+.. include:: _key_contributors.rst
 
 .. role:: small
 .. role:: smaller
@@ -15,15 +16,19 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
 See the :doc:`external API <external/index>` and the :doc:`ecosystem page <ecosystem>` for tools that harmonize well with anndata & Scanpy.
 
+
 .. topic:: News - CZI grant :small:`2012-11-14`
 
-   Scanpy has been selected an `essential open source software for science
-   <https://chanzuckerberg.com/newsroom/chan-zuckerberg-initiative-awards-5-million-for-open-source-software-projects-essential-to-science/>`__
-   by CZI among `32 projects <https://chanzuckerberg.com/eoss/proposals/>`__,
-   along with giants such as Numpy, Pandas, scikit-learn, scikit-image, Seurat,
-   and others.
+   Scanpy has been selected an `essential open source software for science`_ by
+   CZI among `32 projects`_, along with giants such as Scipy, Numpy, Pandas,
+   Matplotlib, scikit-learn, scikit-image/plotly, pip, jupyterhub/binder,
+   Bioconda, Seurat, Bioconductor, and others.
 
-.. topic:: News - latest release :small:`2012-12-27`
+.. _essential open source software for science: https://chanzuckerberg.com/newsroom/chan-zuckerberg-initiative-awards-5-million-for-open-source-software-projects-essential-to-science/
+.. _32 projects: https://chanzuckerberg.com/eoss/proposals/
+
+
+.. topic:: Latest release :small:`2012-12-27`
 
    .. include:: release-latest.rst
 

@@ -5,22 +5,20 @@ from scipy.sparse import issparse
 from collections.abc import MutableMapping
 from typing import Iterable, Union, Optional
 from anndata import AnnData
+from distutils.version import LooseVersion
 
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 from .. import logging as logg
+from .._utils import version
 
 
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
     obs: Optional[Union[str, Iterable[str]]] = None,
-    embedding_method: Union[str, Iterable[str]] = ('umap', 'pca'),
+    embedding_method: Union[str, Iterable[str]] = ['umap', 'pca'],
     labeling_method: str = 'knn',
-    return_joint: bool = False,
-    batch_key: str = 'batch',
-    batch_categories: Optional[Iterable[str]] = None,
-    index_unique: str = '-',
     inplace: bool = True,
     **kwargs,
 ):
@@ -29,7 +27,7 @@ def ingest(
 
     See the `ingest tutorial`_.
 
-    .. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+    .. _ingest tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-data-using-ingest.html
 
     Integrates embeddings and annotations of an `adata` with a reference dataset
     `adata_ref` through projecting on a PCA (or alternate
@@ -70,24 +68,6 @@ def ingest(
     labeling_method
         The method to map labels in `adata_ref.obs` to `adata.obs`.
         The only supported value is 'knn'.
-    return_joint
-        If set to `True` the function
-        returns the new :class:`~anndata.AnnData` object with concatenated
-        existing embeddings and labels of 'adata_ref' and inferred embeddings
-        and labels for `adata`.
-    batch_key
-        Only works if `return_joint=True`.
-        Add the batch annotation to `obs`
-        of the new :class:`~anndata.AnnData` object using this key.
-    batch_categories
-        Only works if `return_joint=True`.
-        Use these as categories for the batch annotation.
-        By default, use increasing numbers.
-    index_unique
-        Only works if `return_joint=True`.
-        Make the index unique by joining the existing index names with the
-        batch category, using `index_unique='-'`, for instance. Provide
-        `None` to keep existing indices.
     inplace
         Only works if `return_joint=False`.
         Add labels and embeddings to the passed `adata` (if `True`)
@@ -95,27 +75,32 @@ def ingest(
 
     Returns
     -------
-    If `return_joint=True` returns the new :class:`~anndata.AnnData` object
-    with concatenated existing embeddings and labels of 'adata_ref' and
-    inferred embeddings and labels for `adata`.
-    if `return_joint=False` then:
-
     * if `inplace=False` returns a copy of `adata`
-      with mapped embeddings and labels in `obsm` and `obs` correspondingly.
-    * if `inplace=True` returns nothing and updates `adata.obsm` and `adata.obs`
-      with mapped embeddings and labels.
+      with mapped embeddings and labels in `obsm` and `obs` correspondingly
+    * if `inplace=True` returns `None` and updates `adata.obsm` and `adata.obs`
+      with mapped embeddings and labels
 
     Example
     -------
-    Assuming there is `adata_ref` with 'cell_type' in `adata_ref.obs`
-    which we want to infer for observations in `adata`.
+    See the `ingest tutorial`_.
+
+    Call sequence:
 
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
-    >>> adata_joint = sc.tl.ingest(
-    >>>     adata, adata_ref, obs='cell_type',
-    >>>     batch_key='ing_batch', return_joint=True)
+    >>> sc.tl.ingest(adata, adata_ref, obs='cell_type')
+
+    .. _ingest PBMC tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
+    .. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
     """
+    # anndata version check
+    anndata_version = version("anndata")
+    if anndata_version <= LooseVersion('0.6.23'):
+        raise ValueError(
+            'ingest only works correctly with anndata>=0.7rc2 '
+            'as prior to that, `AnnData.concatenate` did not concatentate `.obsm`'
+        )
+
     start = logg.info('running ingest')
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
@@ -145,10 +130,7 @@ def ingest(
             ing.map_labels(col, labeling_method[i])
 
     logg.info('    finished', time=start)
-    if return_joint:
-        return ing.to_adata_joint(batch_key, batch_categories, index_unique)
-    else:
-        return ing.to_adata(inplace)
+    return ing.to_adata(inplace)
 
 
 class _DimDict(MutableMapping):

@@ -8,7 +8,7 @@ Release Notes
 
    Also see the release notes of :mod:`anndata`.
 
-.. include:: key_contributors.rst
+.. include:: _key_contributors.rst
 
 
 Version 1.4 :small:`2019-12`
