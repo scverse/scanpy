@@ -28,7 +28,7 @@ For more possibilities on visualizing marker genes: :tutorial:`visualizing-marke
    :width: 250px
 
 
-Trajectory Inference
+Trajectory inference
 --------------------
 
 Get started with the following example for hematopoiesis for data of [Paul15]_: :tutorial:`paga-paul15`
