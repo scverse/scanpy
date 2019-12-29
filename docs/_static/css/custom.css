@@ -25,8 +25,8 @@
     padding: 2px 5px;
     white-space: nowrap;
     max-width: 100%;
-    background: #f07e44;
-    border: solid 1px #f07e44;
+    background: #EF3270;  /* color from the tail of the scampy */
+    border: solid 1px #EF3270;
     border-radius: .25rem;
     font-size: 75%;
     /* font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",Courier,monospace; */

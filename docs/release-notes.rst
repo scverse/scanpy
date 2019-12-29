@@ -15,7 +15,7 @@ Release Notes
 Version 1.4 :small:`2019-12`
 ----------------------------
 
-1.4.5 :small:`2019-12-27`
+1.4.5 :small:`2019-12-30`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. include:: release-latest.rst

@@ -37,10 +37,10 @@ Differential expression
 * `diffxpy <https://github.com/theislab/diffxpy>`__ :small:`Helmholtz Munich`
 
 
-Integrating datasets and modeling data
---------------------------------------
+Data integration
+----------------
 
-* `scVI <https://github.com/YosefLab/scVI>`__ :small:`Berkeley`
+* `scVI <https://github.com/YosefLab/scVI>`__, see `comparison <https://nbviewer.jupyter.org/github/YosefLab/scVI/blob/master/tests/notebooks/scanpy_pbmc3k.ipynb>`__ :small:`Berkeley`
 * `scanaroma <https://github.com/brianhie/scanorama>`__ :small:`MIT`
 
 

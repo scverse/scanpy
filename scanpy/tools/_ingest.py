@@ -93,8 +93,8 @@ def ingest(
     anndata_version = version("anndata")
     if anndata_version <= LooseVersion('0.6.23'):
         raise ValueError(
-            'ingest only works correctly with anndata>=0.7rc2 '
-            'as prior to that, `AnnData.concatenate` did not concatentate `.obsm`'
+            f'ingest only works correctly with anndata>=0.7rc2 (you have {anndata_version}) '
+            'as prior to 0.7rc2, `AnnData.concatenate` did not concatenate `.obsm`'
         )
 
     start = logg.info('running ingest')
