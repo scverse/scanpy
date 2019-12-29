@@ -114,18 +114,7 @@ def setup(app):
     app.add_stylesheet('css/custom.css')
 
 
-def autolink(url_template, title_template='{}'):
-    from docutils import nodes
-    def role(name, rawtext, text, lineno, inliner, options={}, content=[]):
-        url = url_template.format(text)
-        title = title_template.format(text)
-        node = nodes.reference(rawtext, title, refuri=url, **options)
-        return [node], []
-    return role
-
-
 # -- Options for other output formats ------------------------------------------
-
 
 htmlhelp_basename = f'{project}doc'
 doc_title = f'{project} Documentation'
