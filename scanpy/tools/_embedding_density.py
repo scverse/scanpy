@@ -31,8 +31,8 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
 
 def embedding_density(
     adata: AnnData,
-    # there is no asterisk here, on purpose, for backward compat (previously, there was)
-    basis: str = 'umap', # was positional before 1.4.5
+    # there is no asterisk here for backward compat (previously, there was)
+    basis: str = 'umap',  # was positional before 1.4.5
     groupby: Optional[str] = None,
     key_added: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
