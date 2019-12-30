@@ -12,8 +12,8 @@ Release Notes
 .. include:: _key_contributors.rst
 
 
-Version 1.4 :small:`2019-12`
-----------------------------
+Version 1.4
+-----------
 
 1.4.5 :small:`2019-12-30`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -81,8 +81,8 @@ Version 1.4 :small:`2019-12`
 - fix return sections of docs :smaller:`P Angerer`
 
 
-Version 1.3 :small:`2019-02`
-----------------------------
+Version 1.3
+-----------
 
 1.3.8 :small:`2019-02-05`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -171,8 +171,8 @@ Version 1.3 :small:`2019-02`
 - :func:`~scanpy.external.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_ :pr:`186` :smaller:`G Eraslan`
 
 
-Version 1.2 :small:`2018-06`
-----------------------------
+Version 1.2
+-----------
 
 1.2.1 :small:`2018-06-08`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -187,8 +187,11 @@ Version 1.2 :small:`2018-06`
 - :func:`~scanpy.tl.paga` improved, see PAGA_; the default model changed, restore the previous default model by passing `model='v1.0'`
 
 
-Version 1.1 :small:`2018-05`
-----------------------------
+Version 1.1
+-----------
+
+1.1.0 :small:`2018-06-01`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - :func:`~scanpy.set_figure_params` by default passes `vector_friendly=True` and allows you to produce reasonablly sized pdfs by rasterizing large scatter plots
 - :func:`~scanpy.tl.draw_graph` defaults to the ForceAtlas2 layout [Jacomy14]_ [Chippada18]_, which is often more visually appealing and whose computation is much faster :smaller:`S Wollock`
@@ -202,8 +205,11 @@ Version 1.1 :small:`2018-05`
 - :func:`~scanpy.external.tl.sandbag`, :func:`~scanpy.external.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
 
 
-Version 1.0 :small:`2018-03`
-----------------------------
+Version 1.0
+-----------
+
+1.0.0 :small:`2018-03-30`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. rubric:: Major updates
 
@@ -272,8 +278,8 @@ Version 1.0 :small:`2018-03`
 - `'X_diffmap'` contains the zero component, plotting remains unchanged
 
 
-Version 0.4 :small:`2018-02`
-----------------------------
+Version 0.4
+-----------
 
 0.4.4 :small:`2018-02-26`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -306,8 +312,8 @@ Version 0.4 :small:`2018-02`
 .. _spring tutorial: https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export
 
 
-Version 0.3 :small:`2017-11`
-----------------------------
+Version 0.3
+-----------
 
 0.3.2 :small:`2017-11-29`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -325,8 +331,8 @@ Version 0.3 :small:`2017-11`
 .. _anndata: https://pypi.org/project/anndata/
 
 
-Version 0.2 :small:`2017-10`
--------------------------------
+Version 0.2
+-----------
 
 0.2.9 :small:`2017-10-25`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -347,8 +353,11 @@ than one million cells
 <https://github.com/theislab/scanpy_usage/tree/master/170522_visualizing_one_million_cells>`__.
 
 
-Version 0.1 :small:`2017-05`
------------------------------
+Version 0.1
+-----------
+
+0.1.0 :small:`2017-05-17`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Scanpy computationally outperforms and allows reproducing both the `Cell Ranger
 R kit's <https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17>`__
