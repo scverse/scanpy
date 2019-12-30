@@ -93,6 +93,13 @@ Embeddings
    tl.draw_graph
    tl.diffmap
 
+Compute densities on embeddings.
+
+.. autosummary::
+   :toctree: .
+
+   tl.embedding_density
+
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

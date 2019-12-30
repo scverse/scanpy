@@ -71,7 +71,7 @@ Version 1.4
 - :func:`~scanpy.tl.filter_rank_genes_groups` filters out genes based on fold change and fraction of cells expressing genes :smaller:`F Ramirez`
 - :func:`~scanpy.pp.normalize_total` replaces :func:`~scanpy.pp.normalize_per_cell`, is more efficient and provides a parameter to only normalize using a fraction of expressed genes :smaller:`S Rybakov`
 - :func:`~scanpy.pp.downsample_counts` has been sped up, changed default value of `replace` parameter to `False`  :pr:`474` :smaller:`I Virshup`
-- :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings  :pr:`543` :smaller:`M Luecken`
+- :func:`~scanpy.tl.embedding_density` computes densities on embeddings  :pr:`543` :smaller:`M Luecken`
 - :func:`~scanpy.external.tl.palantir` interfaces Palantir [Setty18]_  :pr:`493` :smaller:`A Mousa`
 
 .. rubric:: Code design

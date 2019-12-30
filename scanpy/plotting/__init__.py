@@ -89,6 +89,12 @@ Embeddings
    pl.diffmap
    pl.draw_graph
    pl.embedding
+
+Compute densities on embeddings.
+
+.. autosummary::
+   :toctree: .
+
    pl.embedding_density
 
 Branching trajectories and pseudotime, clustering
