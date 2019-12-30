@@ -57,7 +57,7 @@ Recipes
 Batch effect correction
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Also see `Data integration`_. Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :module:`scanpy.external` for more.
+Also see `Data integration`_. Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :mod:`scanpy.external` for more.
 
 .. autosummary::
    :toctree: .
