@@ -1,7 +1,7 @@
 |Stars| |PyPI| |PyPIDownloads| |BiocondaDownloads| |Docs| |Build Status|
 
 .. |Stars| image:: https://img.shields.io/github/stars/theislab/scanpy?logo=GitHub&color=yellow
-   :target: https://github.com/theislab/scanpy/stargazersNice!
+   :target: https://github.com/theislab/scanpy/stargazers
 .. |PyPI| image:: https://img.shields.io/pypi/v/scanpy?logo=PyPI
    :target: https://pypi.org/project/scanpy
 .. |PyPIDownloads| image:: https://pepy.tech/badge/scanpy
