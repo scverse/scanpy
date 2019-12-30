@@ -56,7 +56,7 @@ Integrating datasets
 
 Map labels and embeddings of reference data to new data: :tutorial:`integrating-data-using-ingest`
 
-.. image:: https://scanpy-tutorials.readthedocs.io/en/latest/_images/integrating-data-using-ingest_22_0.png
+.. image:: https://scanpy-tutorials.readthedocs.io/en/latest/_images/integrating-data-using-ingest_21_0.png
    :width: 350px
 
 

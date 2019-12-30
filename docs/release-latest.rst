@@ -16,7 +16,7 @@
 - allow specifying a base for :func:`~scanpy.pp.log1p` :pr:`931` :smaller:`G Eraslan`
 - run neighbors on a GPU using rapids :pr:`850` :smaller:`T White`
 - parameter docs from typed params :smaller:`P Angerer`
-- webpage page overhaul, ecosystem page, release notes, tutorials overhaul :pr:`960` :pr:`965` :pr:`966` :smaller:`A Wolf`
+- webpage overhaul, ecosystem page, release notes, tutorials overhaul :pr:`960` :pr:`965` :pr:`966` :smaller:`A Wolf`
 
 .. warning::
 
