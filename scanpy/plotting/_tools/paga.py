@@ -565,7 +565,8 @@ def paga(
     if plot:
         _utils.savefig_or_show('paga', show=show, save=save)
         if len(colors) == 1 and isinstance(axs, list): axs = axs[0]
-        return axs if not show else None
+        if show is False:
+            return axs
 
 
 def _paga_graph(
