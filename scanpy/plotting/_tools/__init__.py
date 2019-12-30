@@ -866,9 +866,9 @@ def embedding_density(
         The embedding over which the density was calculated. This embedded
         representation should be found in `adata.obsm['X_[basis]']``.
     key
-        Name of the `.obs` covariate that contains the density estimates. Also see `groupby`.
+        Name of the `.obs` covariate that contains the density estimates. Alternatively, pass `groupby`.
     groupby
-        Name of the condition used in `tl.embedding_density`.
+        Name of the condition used in `tl.embedding_density`. Alternatively, pass `key`.
     group
         The category in the categorical observation annotation to be plotted.
         For example, 'G1' in the cell cycle 'phase' covariate. If all categories

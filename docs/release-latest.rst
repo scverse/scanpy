@@ -16,8 +16,8 @@
 - allow specifying a base for :func:`~scanpy.pp.log1p` :pr:`931` :smaller:`G Eraslan`
 - run neighbors on a GPU using rapids :pr:`850` :smaller:`T White`
 - param docs from typed params :smaller:`P Angerer`
-- :func:`~scanpy.tl.embedding_density` now only takes one positional argument and gets default `basis='umap'`; similar for :func:`~scanpy.pl.embedding_density`, which gains a param `groupby` :smaller:`A Wolf`
-- webpage overhaul, ecosystem page, release notes, tutorials overhaul :pr:`960` :pr:`965` :pr:`966` :smaller:`A Wolf`
+- :func:`~scanpy.tl.embedding_density` now only takes one positional argument; similar for :func:`~scanpy.pl.embedding_density`, which gains a param `groupby` :pr:`965` :smaller:`A Wolf`
+- webpage overhaul, ecosystem page, release notes, tutorials overhaul :pr:`960` :pr:`966` :smaller:`A Wolf`
 
 .. warning::
 
