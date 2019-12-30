@@ -47,7 +47,7 @@ def register_links(app: Sphinx, config: Config):
     app.add_role(
         'tutorial',
         AutoLink(
-            'tutorial', f'{scanpy_tutorials_url}/{{}}.html', '→ tutorial: {}'
+            'tutorial', f'{scanpy_tutorials_url}{{}}.html', '→ tutorial: {}'
         ),
     )
 
