@@ -809,7 +809,7 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                       else 2 if len(categories) <= 30 else 3),
                 fontsize=legend_fontsize)
 
-        if legend_loc == 'on data':
+        elif legend_loc == 'on data':
             # identify centroids to put labels
             all_pos = np.zeros((len(categories), 2))
             for ilabel, label in enumerate(categories):
@@ -826,6 +826,18 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 all_pos[ilabel] = [x_pos, y_pos]
             # this is temporary storage for access by other tools
             _utils._tmp_cluster_pos = all_pos
+        else:
+            # legend_loc should be a valid keyword for plt.legend()
+            for idx, label in enumerate(categories):
+                color = colors[idx]
+                # use empty scatter to set labels
+                ax.scatter([], [], c=color, label=label)
+            ax.legend(
+                frameon=False, loc=legend_loc,
+                ncol=(1 if len(categories) <= 14
+                      else 2 if len(categories) <= 30 else 3),
+                fontsize=legend_fontsize)
+
     else:
         # add colorbar to figure
         pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
