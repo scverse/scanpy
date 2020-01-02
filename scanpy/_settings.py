@@ -397,6 +397,7 @@ class ScanpyConfig:
         figsize: Optional[int] = None,
         color_map: Optional[str] = None,
         format: _Format = "pdf",
+        facecolor: Optional[str] = None,
         transparent: bool = False,
         ipython_format: str = "png2x",
     ):
@@ -424,6 +425,9 @@ class ScanpyConfig:
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
         format
             This sets the default format for saving figures: `file_format_figs`.
+        facecolor
+            Sets backgrounds via `rcParams['figure.facecolor'] = facecolor` and
+            `rcParams['axes.facecolor'] = facecolor`.
         transparent
             Save figures with transparent back ground. Sets
             `rcParams['savefig.transparent']`.
@@ -447,6 +451,9 @@ class ScanpyConfig:
             rcParams["savefig.dpi"] = dpi_save
         if transparent is not None:
             rcParams["savefig.transparent"] = transparent
+        if facecolor is not None:
+            rcParams['figure.facecolor'] = facecolor
+            rcParams['axes.facecolor'] = facecolor
         if scanpy:
             from .plotting._rcmod import set_rcParams_scanpy
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)

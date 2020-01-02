@@ -15,6 +15,13 @@ Release Notes
 Version 1.4
 -----------
 
+On master
+~~~~~~~~~
+
+.. rubric:: New functionality
+
+- :func:`~scanpy.set_figure_params` accepts `facecolor`, useful for working in dark mode  :smaller:`A Wolf`
+
 1.4.5 :small:`2019-12-30`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
