@@ -3034,9 +3034,7 @@ def _prepare_dataframe(
     if gene_symbols is not None:
         # translate the column names to the symbol names
         obs_tidy.rename(
-            columns={
-                var_names[x]: symbols[x] for x in range(len(var_names))
-            },
+            columns={var_names[x]: symbols[x] for x in range(len(var_names))},
             inplace=True,
         )
     categories = obs_tidy.index.categories
