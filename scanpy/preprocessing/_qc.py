@@ -377,7 +377,7 @@ def top_segment_proportions_dense(
     sums = mtx.sum(axis=1)
     partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][:, :ns[-1]]
     values = np.zeros((mtx.shape[0], len(ns)))
-    acc = np.zeros((mtx.shape[0]))
+    acc = np.zeros(mtx.shape[0])
     prev = 0
     for j, n in enumerate(ns):
         acc += partitioned[:, prev:n].sum(axis=1)

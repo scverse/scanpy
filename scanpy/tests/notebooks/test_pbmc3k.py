@@ -1,4 +1,3 @@
-# coding: utf-8
 # *First compiled on May 5, 2017. Updated August 14, 2018.*
 # # Clustering 3k PBMCs following a Seurat Tutorial
 #
