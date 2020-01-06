@@ -20,7 +20,7 @@
 .. _Genome Biology (2018): https://doi.org/10.1186/s13059-017-1382-0
 
 
-.. topic:: News - CZI grant :small:`2012-11-14`
+.. topic:: News - CZI grant :small:`2019-11-14`
 
    Scanpy has been selected an `essential open source software for science`_ by
    CZI among `32 projects`_, along with giants such as Scipy, Numpy, Pandas,
@@ -31,7 +31,7 @@
 .. _32 projects: https://chanzuckerberg.com/eoss/proposals/
 
 
-.. topic:: Latest release - 1.4.5 :small:`2012-12-30`
+.. topic:: Latest release - 1.4.5 :small:`2019-12-30`
 
    .. include:: release-latest.rst
 
