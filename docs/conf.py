@@ -18,7 +18,7 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 # -- General configuration ------------------------------------------------
 
 
-nitpicky = False  # Warn about broken links
+nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = '2.0'  # Nicer param docs
 suppress_warnings = ['ref.citation']
 
