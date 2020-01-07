@@ -10,20 +10,16 @@ from ... import logging as logg
 
 def SAM(
     adata: AnnData,
-    pp_with_sam: bool = True,
-    pp_transform: Optional[str] = 'log',
-    pp_min_expression: float = 1.0,
-    pp_sum_norm: Union[str,float,None] = None,
-    pp_thresh: float = 0.01,
-    run_max_iter: int = 10,
-    run_num_norm_avg: int = 50,
-    run_k: int = 20,
-    run_distance: str = 'correlation',
-    run_standardization: Optional[str] = 'Normalizer',
-    run_weight_PCs: bool = True,
-    run_npcs: Optional[int]=None,
-    run_n_genes: Optional[int]=None,
-    run_projection: Optional[str]='umap'
+    max_iter: int = 10,
+    num_norm_avg: int = 50,
+    k: int = 20,
+    distance: str = 'correlation',
+    standardization: Optional[str] = 'Normalizer',
+    weight_PCs: bool = True,
+    npcs: Optional[int]=None,
+    n_genes: Optional[int]=None,
+    projection: Optional[str]='umap'
+    inplace: bool = True
 
 ) -> Optional[AnnData]:
     """Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
@@ -33,56 +29,27 @@ def SAM(
     It outputs the gene weights, nearest neighbor matrix, and a 2D projection.
 
     The AnnData input should contain unstandardized, non-negative values.
+    Preferably, the data should be log-normalized and no genes should be filtered out.
 
-    Parameters with the 'pp_' prefix are data preprocessing parameters.
-    Parameters with the 'run_' prefix are the SAM algorithm parameters.
 
     Parameters
     ----------
 
-    pp_with_sam : bool, optional, default True
-        If True, preprocess the data using built-in SAM functions. A copy
-        of the input AnnData will be made in this case. If False, do not
-        preprocess the data. SAM will be run in-place on the input AnnData.
-
-    pp_sum_norm : str or float, optional, default None
-        If a float, the total number of transcripts in each cell will be
-        normalized to this value prior to normalization and filtering.
-        Otherwise, nothing happens. If 'cell_median', each cell is
-        normalized to have the median total read count per cell. If
-        'gene_median', each gene is normalized to have the median total
-        read count per gene.
-
-    pp_transform : str, optional, default 'log'
-        If 'log', log-transforms the expression data. If 'ftt', applies the
-        Freeman-Tukey variance-stabilization transformation. If None, the data
-        is not transformed.
-
-    pp_min_expression : float, optional, default 1
-        The threshold above which a gene is considered
-        expressed. Gene expression values less than 'min_expression' are
-        set to zero.
-
-    pp_thresh : float, optional, default 0.2
-        Keep genes expressed in greater than 'thresh'*100 % of cells and
-        less than (1-'thresh')*100 % of cells, where a gene is considered
-        expressed if its expression value exceeds 'min_expression'.
-
-    run_k - int, optional, default 20
+    k - int, optional, default 20
         The number of nearest neighbors to identify for each cell.
 
-    run_distance : string, optional, default 'correlation'
+    distance : string, optional, default 'correlation'
         The distance metric to use when identifying nearest neighbors.
         Can be any of the distance metrics supported by sklearn's 'pdist'.
 
-    run_max_iter - int, optional, default 10
+    max_iter - int, optional, default 10
         The maximum number of iterations SAM will run.
 
-    run_projection - str, optional, default 'umap'
+    projection - str, optional, default 'umap'
         If 'tsne', generates a t-SNE embedding. If 'umap', generates a UMAP
         embedding. Otherwise, no embedding will be generated.
 
-    run_standardization - str, optional, default 'Normalizer'
+    standardization - str, optional, default 'Normalizer'
         If 'Normalizer', use sklearn.preprocessing.Normalizer, which
         normalizes expression data prior to PCA such that each cell has
         unit L2 norm. If 'StandardScaler', use
@@ -92,30 +59,34 @@ def SAM(
         recommend using 'StandardScaler' for large datasets with many
         expected cell types and 'Normalizer' otherwise.
 
-    run_num_norm_avg - int, optional, default 50
+    num_norm_avg - int, optional, default 50
         The top 'num_norm_avg' dispersions are averaged to determine the
         normalization factor when calculating the weights. This prevents
         genes with large spatial dispersions from skewing the distribution
         of weights.
 
-    run_weight_PCs - bool, optional, default True
+    weight_PCs - bool, optional, default True
         If True, scale the principal components by their eigenvalues. In
         datasets with many expected cell types, setting this to False might
         improve the resolution as these cell types might be encoded by low-
         variance principal components.
 
-    run_npcs - int, optional, default None,
+    npcs - int, optional, default None,
         Determines the number of top principal components selected at each
         iteration of the SAM algorithm. If None, this number is chosen
-        automatically based on the size of the dataset. If run_weight_PCs is
+        automatically based on the size of the dataset. If weight_PCs is
         set to True, this parameter primarily affects the runtime of the SAM
         algorithm (more PCs = longer runtime).
 
-    run_n_genes - int, optional, default None:
+    n_genes - int, optional, default None:
         Determines the number of top SAM-weighted genes to use at each iteration
         of the SAM algorithm. If None, this number is chosen automatically
         based on the size of the dataset. This parameter primarily affects
         the runtime of the SAM algorithm (more genes = longer runtime).
+    
+    inplace - bool, optional, default True:
+        Set fields in `adata` if True. Otherwise, returns a copy.
+
 
     Returns
     -------
@@ -123,9 +94,6 @@ def SAM(
         The SAM object
 
     adata - AnnData
-        The AnnData object. If pp_with_sam = True, this is simply a reference
-        to the input AnnData object.
-
         `.var['weights']`
             SAM weights for each gene.
         `.var['spatial_dispersions']`
@@ -170,13 +138,11 @@ def SAM(
     Assuming we are given an AnnData object called `adata`, we can run the SAM
     algorithm as follows:
 
-    >>> sam,adata = sce.tl.SAM(adata,pp_with_sam=True)
+    >>> sam = sce.tl.SAM(adata,inplace=True)
 
     The input AnnData object should contain unstandardized, non-negative
-    expression values.
-
-    Setting `pp_with_sam=True` preprocesses the data using a built-in function
-    in SAM.
+    expression values. Preferably, the data should be log-normalized and no
+    genes should be filtered out.
 
     Please see the documentation for a description of all available parameters.
 
@@ -229,20 +195,13 @@ def SAM(
             '\tpip install .'
         )
 
-    if pp_with_sam:
-        adata = adata.copy()
-        sam = SAM(counts = adata)
-        logg.info('Preprocessing data')
-        sam.preprocess_data(sum_norm=pp_sum_norm, norm = pp_transform,
-                            thresh = pp_thresh, min_expression=pp_min_expression)
-    else:
-        sam = SAM(counts = adata)
+    sam = SAM(counts = adata, inplace = inplace)
 
     logg.info('Running SAM')
-    sam.run(max_iter=run_max_iter,num_norm_avg=run_num_norm_avg,k=run_k,
-            distance=run_distance,preprocessing=run_standardization,
-            weight_PCs=run_weight_PCs,npcs=run_npcs,n_genes=run_n_genes,
-            projection = run_projection,verbose=False)
+    sam.run(max_iter=max_iter,num_norm_avg=num_norm_avg,k=k,
+            distance=distance,preprocessing=standardization,
+            weight_PCs=weight_PCs,npcs=npcs,n_genes=n_genes,
+            projection = projection,verbose=False)
 
-    return sam, sam.adata
+    return (sam) if inplace else (sam,adata)
 

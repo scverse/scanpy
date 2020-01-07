@@ -58,6 +58,7 @@ Embeddings
    tl.phate
    tl.palantir
    tl.trimap
+   tl.sam
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
