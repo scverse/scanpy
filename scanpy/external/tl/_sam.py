@@ -19,7 +19,8 @@ def sam(
     npcs: Optional[int]=None,
     n_genes: Optional[int]=None,
     projection: Optional[str]='umap',
-    inplace: bool = True
+    inplace: bool = True,
+    verbose: bool = True
 
 ) -> Optional[AnnData]:
     """Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
@@ -86,7 +87,9 @@ def sam(
     
     inplace - bool, optional, default True:
         Set fields in `adata` if True. Otherwise, returns a copy.
-
+    
+    verbose - bool, optional, default True:
+        If True, displays SAM log statements.
 
     Returns
     -------
@@ -201,7 +204,7 @@ def sam(
     s.run(max_iter=max_iter,num_norm_avg=num_norm_avg,k=k,
             distance=distance,preprocessing=standardization,
             weight_PCs=weight_pcs,npcs=npcs,n_genes=n_genes,
-            projection = projection,verbose=False)
+            projection = projection,verbose=verbose)
 
-    return (s) if inplace else (s,adata)
+    return (s) if inplace else (s,s.adata)
 
