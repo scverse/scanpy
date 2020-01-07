@@ -11,14 +11,17 @@ from .._compat import Literal
 
 def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
-    after = np.median(counts[counts>0]) if after is None else after
+    if issubclass(X.dtype.type, (int, np.integer)):
+        X = X.astype(np.float32)  # TODO: Check if float64 should be used
+    counts = np.asarray(counts)  # dask doesn't do medians
+    after = np.median(counts[counts>0], axis=0) if after is None else after
     counts += (counts == 0)
-    counts /= after
+    counts = counts / after
     if issparse(X):
         sparsefuncs.inplace_row_scale(X, 1/counts)
     else:
-        X /= counts[:, None]
-    return X if copy else None
+        np.divide(X, counts[:, None], out=X)
+    return X
 
 
 def normalize_total(
@@ -132,7 +135,7 @@ def normalize_total(
         )
 
     gene_subset = None
-    msg = 'Normalizing counts per cell.'
+    msg = 'normalizing counts per cell'
     if exclude_highly_expressed:
         counts_per_cell = adata.X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
@@ -170,10 +173,7 @@ def normalize_total(
     if inplace:
         if key_added is not None:
             adata.obs[key_added] = counts_per_cell
-        if hasattr(adata.X, '__itruediv__'):
-            _normalize_data(adata.X, counts_per_cell, target_sum)
-        else:
-            adata.X = _normalize_data(adata.X, counts_per_cell, target_sum, copy=True)
+        adata.X = _normalize_data(adata.X, counts_per_cell, target_sum)
     else:
         # not recarray because need to support sparse
         dat = dict(
@@ -185,16 +185,12 @@ def normalize_total(
         layer = adata.layers[layer_name]
         counts = np.ravel(layer.sum(1))
         if inplace:
-            if hasattr(layer, '__itruediv__'):
-                _normalize_data(layer, counts, after)
-            else:
-                adata.layers[layer_name] = _normalize_data(layer, counts, after, copy=True)
+            adata.layers[layer_name] = _normalize_data(layer, counts, after)
         else:
             dat[layer_name] = _normalize_data(layer, counts, after, copy=True)
 
     logg.info(
-        '    finished ({time_passed}):'
-        'normalized adata.X',
+        '    finished ({time_passed})',
         time=start,
     )
     if key_added is not None:

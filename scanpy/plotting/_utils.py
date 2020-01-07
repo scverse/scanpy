@@ -1,13 +1,13 @@
 import warnings
 import collections.abc as cabc
-from typing import Union, List, Sequence, Tuple
+from typing import Union, List, Sequence, Tuple, Collection, Optional
 
 import numpy as np
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like
-from matplotlib.figure import SubplotParams as sppars
+from matplotlib.figure import SubplotParams as sppars, Figure
 from cycler import Cycler, cycler
 
 from .. import logging as logg
@@ -22,6 +22,9 @@ ColorLike = Union[str, Tuple[float, ...]]
 _IGraphLayout = Literal['fa', 'fr', 'rt', 'rt_circular', 'drl', 'eq_tree', ...]
 _FontWeight = Literal[
     'light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 'black'
+]
+_FontSize = Literal[
+    'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
 
 
@@ -49,28 +52,34 @@ def matrix(matrix, xlabel=None, ylabel=None, xticks=None, yticks=None,
 
 def timeseries(X, **kwargs):
     """Plot X. See timeseries_subplot."""
-    pl.figure(figsize=(2*rcParams['figure.figsize'][0], rcParams['figure.figsize'][1]),
-              subplotpars=sppars(left=0.12, right=0.98, bottom=0.13))
+    pl.figure(
+        figsize=tuple(2*s for s in rcParams['figure.figsize']),
+        subplotpars=sppars(left=0.12, right=0.98, bottom=0.13),
+    )
     timeseries_subplot(X, **kwargs)
 
 
-def timeseries_subplot(X,
-                       time=None,
-                       color=None,
-                       var_names=(),
-                       highlightsX=(),
-                       xlabel='',
-                       ylabel='gene expression',
-                       yticks=None,
-                       xlim=None,
-                       legend=True,
-                       palette=None,
-                       color_map='viridis'):
-    """Plot X.
+def timeseries_subplot(
+    X: np.ndarray,
+    time=None,
+    color=None,
+    var_names=(),
+    highlights_x=(),
+    xlabel='',
+    ylabel='gene expression',
+    yticks=None,
+    xlim=None,
+    legend=True,
+    palette: Union[Sequence[str], Cycler, None] = None,
+    color_map='viridis',
+    ax: Optional[Axes] = None,
+):
+    """\
+    Plot X.
 
     Parameters
     ----------
-    X : np.ndarray
+    X
         Call this with:
         X with one column, color categorical.
         X with one column, color continuous.
@@ -93,8 +102,10 @@ def timeseries_subplot(X,
         colors = np.array(palette[:len(levels)].by_key()['color'])
         subsets = [(x_range[color == l], X[color == l, :]) for l in levels]
 
+    if ax is None:
+        ax = pl.subplot()
     for i, (x, y) in enumerate(subsets):
-        pl.scatter(
+        ax.scatter(
             x, y,
             marker='.',
             edgecolor='face',
@@ -102,35 +113,38 @@ def timeseries_subplot(X,
             c=colors[i],
             label=var_names[i] if len(var_names) > 0 else '',
             cmap=color_map,
-            rasterized=settings._vector_friendly)
-    ylim = pl.ylim()
-    for ih, h in enumerate(highlightsX):
-        pl.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
-    pl.ylim(ylim)
+            rasterized=settings._vector_friendly,
+        )
+    ylim = ax.get_ylim()
+    for h in highlights_x:
+        ax.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
+    ax.set_ylim(ylim)
     if xlim is not None:
-        pl.xlim(xlim)
-    pl.xlabel(xlabel)
-    pl.ylabel(ylabel)
+        ax.set_xlim(xlim)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     if yticks is not None:
-        pl.yticks(yticks)
+        ax.set_yticks(yticks)
     if len(var_names) > 0 and legend:
-        pl.legend(frameon=False)
+        ax.legend(frameon=False)
 
 
-def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map=None):
-    """Plot timeseries as heatmap.
+def timeseries_as_heatmap(
+    X: np.ndarray,
+    var_names: Collection[str] = (),
+    highlights_x=(),
+    color_map=None,
+):
+    """\
+    Plot timeseries as heatmap.
 
     Parameters
     ----------
-    X : np.ndarray
+    X
         Data array.
-    var_names : array_like
+    var_names
         Array of strings naming variables stored in columns of X.
     """
-    if highlightsX is None:
-        highlightsX = []
-    if var_names is None:
-        var_names = []
     if len(var_names) == 0:
         var_names = np.arange(X.shape[1])
     if var_names.ndim == 2:
@@ -138,32 +152,36 @@ def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map=None):
 
     # transpose X
     X = X.T
-    minX = np.min(X)
+    min_x = np.min(X)
 
     # insert space into X
     if False:
-        # generate new array with highlightsX
+        # generate new array with highlights_x
         space = 10  # integer
-        Xnew = np.zeros((X.shape[0], X.shape[1] + space*len(highlightsX)))
+        x_new = np.zeros((X.shape[0], X.shape[1] + space*len(highlights_x)))
         hold = 0
         _hold = 0
         space_sum = 0
-        for ih, h in enumerate(highlightsX):
+        for ih, h in enumerate(highlights_x):
             _h = h + space_sum
-            Xnew[:, _hold:_h] = X[:, hold:h]
-            Xnew[:, _h:_h+space] = minX * np.ones((X.shape[0], space))
+            x_new[:, _hold:_h] = X[:, hold:h]
+            x_new[:, _h:_h+space] = min_x * np.ones((X.shape[0], space))
             # update variables
             space_sum += space
             _hold = _h + space
             hold = h
-        Xnew[:, _hold:] = X[:, hold:]
+        x_new[:, _hold:] = X[:, hold:]
 
-    fig = pl.figure(figsize=(1.5*4, 2*4))
-    im = pl.imshow(np.array(X, dtype=np.float_), aspect='auto',
-                   interpolation='nearest', cmap=color_map)
+    _, ax = pl.subplots(figsize=(1.5*4, 2*4))
+    ax.imshow(
+        np.array(X, dtype=np.float_),
+        aspect='auto',
+        interpolation='nearest',
+        cmap=color_map,
+    )
     pl.colorbar(shrink=0.5)
     pl.yticks(range(X.shape[0]), var_names)
-    for ih, h in enumerate(highlightsX):
+    for h in highlights_x:
         pl.plot([h, h], [0, X.shape[0]], '--', color='black')
     pl.xlim([0, X.shape[1]-1])
     pl.ylim([0, X.shape[0]-1])
@@ -242,7 +260,13 @@ def savefig(writekey, dpi=None, ext=None):
     pl.savefig(filename, dpi=dpi, bbox_inches='tight')
 
 
-def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
+def savefig_or_show(
+    writekey: str,
+    show: Optional[bool] = None,
+    dpi: Optional[int] = None,
+    ext: str = None,
+    save: Union[bool, str, None] = None,
+):
     if isinstance(save, str):
         # check whether `save` contains a figure extension
         if ext is None:
@@ -261,7 +285,9 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
     if save: pl.close()  # clear figure
 
 
-def default_palette(palette=None):
+def default_palette(
+    palette: Union[Sequence[str], Cycler, None] = None
+) -> Cycler:
     if palette is None: return rcParams['axes.prop_cycle']
     elif not isinstance(palette, Cycler): return cycler(color=palette)
     else: return palette
@@ -298,7 +324,11 @@ def _validate_palette(adata, key):
         adata.uns[color_key] = _palette
 
 
-def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
+def _set_colors_for_categorical_obs(
+    adata,
+    value_to_plot,
+    palette: Union[str, Sequence[str], Cycler],
+):
     """
     Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
 
@@ -310,7 +340,7 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
         name of a valid categorical observation
     palette
         Palette should be either a valid :func:`~matplotlib.pyplot.colormaps` string,
-        a list of colors (in a format that can be understood by matplotlib,
+        a sequence of colors (in a format that can be understood by matplotlib,
         eg. RGB, RGBS, hex, or a cycler object with key='color'
 
     Returns
@@ -374,8 +404,10 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
 
     Parameters
     ----------
-    adata : annData object
-    value_to_plot : name of a valid categorical observation
+    adata
+        AnnData object
+    value_to_plot
+        Name of a valid categorical observation
 
     Returns
     -------
@@ -696,14 +728,14 @@ def scatter_base(
     return axs
 
 
-def scatter_single(ax, Y, *args, **kwargs):
+def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
     """Plot scatter plot of data.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis to plot on.
-    Y : np.array
+    Y
         Data array, data to be plotted needs to be in the first two columns.
     """
     if 's' not in kwargs:
@@ -715,17 +747,22 @@ def scatter_single(ax, Y, *args, **kwargs):
     ax.set_yticks([])
 
 
-def arrows_transitions(ax, X, indices, weight=None):
+def arrows_transitions(
+    ax: Axes,
+    X: np.ndarray,
+    indices: Sequence[int],
+    weight=None,
+):
     """
     Plot arrows of transitions in data matrix.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    X : np.array
+    X
         Data array, any representation wished (X, psi, phi, etc).
-    indices : array_like
+    indices
         Indices storing the transitions.
     """
     step = 1
@@ -738,34 +775,40 @@ def arrows_transitions(ax, X, indices, weight=None):
         width = axis_to_data(ax, 0.0001)
     head_width = 10*width
     for ix, x in enumerate(X):
-        if ix % step == 0:
-            X_step = X[indices[ix]] - x
-            # don't plot arrow of length 0
-            for itrans in range(X_step.shape[0]):
-                alphai = 1
-                widthi = width
-                head_widthi = head_width
-                if weight is not None:
-                    alphai *= weight[ix, itrans]
-                    widthi *= weight[ix, itrans]
-                if np.any(X_step[itrans, :1]):
-                    ax.arrow(x[0], x[1],
-                             X_step[itrans, 0], X_step[itrans, 1],
-                             length_includes_head=True,
-                             width=widthi,
-                             head_width=head_widthi,
-                             alpha=alphai,
-                             color='grey')
+        if ix % step != 0:
+            continue
+        X_step = X[indices[ix]] - x
+        # don't plot arrow of length 0
+        for itrans in range(X_step.shape[0]):
+            alphai = 1
+            widthi = width
+            head_widthi = head_width
+            if weight is not None:
+                alphai *= weight[ix, itrans]
+                widthi *= weight[ix, itrans]
+            if not np.any(X_step[itrans, :1]):
+                continue
+            ax.arrow(
+                x[0],
+                x[1],
+                X_step[itrans, 0],
+                X_step[itrans, 1],
+                length_includes_head=True,
+                width=widthi,
+                head_width=head_widthi,
+                alpha=alphai,
+                color='grey',
+            )
 
 
 def ticks_formatter(x, pos):
     # pretty scientific notation
     if False:
-        a, b = '{:.2e}'.format(x).split('e')
+        a, b = f'{x:.2e}'.split('e')
         b = int(b)
-        return r'${} \times 10^{{{}}}$'.format(a, b)
+        return fr'${a} \times 10^{{{b}}}$'
     else:
-        return ('%.3f' % (x)).rstrip('0').rstrip('.')
+        return f'{x:.3f}'.rstrip('0').rstrip('.')
 
 
 def pimp_axis(x_or_y_ax):
@@ -874,14 +917,14 @@ def zoom(ax, xy='x', factor=1):
         ax.set_ylim(new_limits)
 
 
-def get_ax_size(ax, fig):
+def get_ax_size(ax: Axes, fig: Figure):
     """Get axis size
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    fig : matplotlib.Figure
+    fig
         Figure.
     """
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
@@ -890,15 +933,15 @@ def get_ax_size(ax, fig):
     height *= fig.dpi
 
 
-def axis_to_data(ax, width):
+def axis_to_data(ax: Axes, width: float):
     """For a width in axis coordinates, return the corresponding in data
     coordinates.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    width : float
+    width
         Width in xaxis coordinates.
     """
     xlim = ax.get_xlim()
@@ -908,32 +951,32 @@ def axis_to_data(ax, width):
     return 0.5*(widthx + widthy)
 
 
-def axis_to_data_points(ax, points_axis):
+def axis_to_data_points(ax: Axes, points_axis: np.ndarray):
     """Map points in axis coordinates to data coordinates.
 
     Uses matplotlib.transform.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    points_axis : np.array
+    points_axis
         Points in axis coordinates.
     """
     axis_to_data = ax.transAxes + ax.transData.inverted()
     return axis_to_data.transform(points_axis)
 
 
-def data_to_axis_points(ax, points_data):
+def data_to_axis_points(ax: Axes, points_data: np.ndarray):
     """Map points in data coordinates to axis coordinates.
 
     Uses matplotlib.transform.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    points_axis : np.array
+    points_data
         Points in data coordinates.
     """
     data_to_axis = axis_to_data.inverted()

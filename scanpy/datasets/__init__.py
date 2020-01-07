@@ -127,7 +127,7 @@ def moignard15() -> AnnData:
     )
     adata = adata[:, gene_subset]  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
-    adata.uns['iroot'] = 532  # note that in Matlab/R, counting starts at 1
+    adata.uns["iroot"] = 532  # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups
     groups = {
         'HF': '#D7A83E',
@@ -282,4 +282,20 @@ def pbmc3k() -> AnnData:
     """
     url = 'http://falexwolf.de/data/pbmc3k_raw.h5ad'
     adata = read(settings.datasetdir / 'pbmc3k_raw.h5ad', backup_url=url)
+    return adata
+
+
+def pbmc3k_processed() -> AnnData:
+    """Processed 3k PBMCs from 10x Genomics.
+
+    Processed using the `basic tutorial <https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html>`__.
+
+    Returns
+    -------
+    Annotated data matrix.
+    """
+    adata = read(
+        settings.datasetdir / 'pbmc3k_processed.h5ad',
+        backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
+    )
     return adata

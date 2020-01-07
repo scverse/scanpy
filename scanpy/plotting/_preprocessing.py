@@ -69,6 +69,8 @@ def highly_variable_genes(
         pl.ylabel(('$log_{10}$ ' if False else '') + 'dispersions of genes'
                   + (' (normalized)' if idx == 0 else ' (not normalized)'))
     _utils.savefig_or_show('filter_genes_dispersion', show=show, save=save)
+    if show is False:
+        return pl.gca()
 
 
 # backwards compat

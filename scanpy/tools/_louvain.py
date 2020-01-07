@@ -1,3 +1,4 @@
+from types import MappingProxyType
 from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Union
 
 import numpy as np
@@ -29,7 +30,7 @@ def louvain(
     directed: bool = True,
     use_weights: bool = False,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
-    partition_kwargs: Optional[Mapping[str, Any]]=None,
+    partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -90,6 +91,7 @@ def louvain(
     :class:`~anndata.AnnData`
         When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
     """
+    partition_kwargs = dict(partition_kwargs)
     start = logg.info('running Louvain clustering')
     if (flavor != 'vtraag') and (partition_type is not None):
         raise ValueError(
@@ -127,8 +129,6 @@ def louvain(
             weights = None
         if flavor == 'vtraag':
             import louvain
-            if partition_kwargs is None:
-                partition_kwargs = {}
             if partition_type is None:
                 partition_type = louvain.RBConfigurationVertexPartition
             if resolution is not None:

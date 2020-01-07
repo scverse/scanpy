@@ -1,10 +1,11 @@
-from typing import Optional, Tuple, Collection
+from typing import Optional, Tuple, Collection, Union
 from warnings import warn
 
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, isspmatrix_coo
+from scipy.sparse import issparse, isspmatrix_csr, isspmatrix_coo
+from scipy.sparse import spmatrix, csr_matrix
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
 from anndata import AnnData
@@ -289,15 +290,15 @@ def calculate_qc_metrics(
         return obs_metrics, var_metrics
 
 
-def top_proportions(mtx, n):
-    """
+def top_proportions(mtx: Union[np.array, spmatrix], n: int):
+    """\
     Calculates cumulative proportions of top expressed genes
 
     Parameters
     ----------
-    mtx : `Union[np.array, sparse.spmatrix]`
+    mtx
         Matrix, where each row is a sample, each column a feature.
-    n : `int`
+    n
         Rank to calculate proportions up to. Value is treated as 1-indexed,
         `n=50` will calculate cumulative proportions up to the 50th most
         expressed gene.
@@ -340,15 +341,17 @@ def top_proportions_sparse_csr(data, indptr, n):
     return values
 
 
-def top_segment_proportions(mtx, ns):
+def top_segment_proportions(
+    mtx: Union[np.array, spmatrix], ns: Collection[int]
+) -> np.ndarray:
     """
     Calculates total percentage of counts in top ns genes.
 
     Parameters
     ----------
-    mtx : `Union[np.array, sparse.spmatrix]`
+    mtx
         Matrix, where each row is a sample, each column a feature.
-    ns : `Container[Int]`
+    ns
         Positions to calculate cumulative proportion at. Values are considered
         1-indexed, e.g. `ns=[50]` will calculate cumulative proportion up to
         the 50th most expressed gene.
@@ -366,7 +369,9 @@ def top_segment_proportions(mtx, ns):
         return top_segment_proportions_dense(mtx, ns)
 
 
-def top_segment_proportions_dense(mtx, ns):
+def top_segment_proportions_dense(
+    mtx: Union[np.array, spmatrix], ns: Collection[int]
+) -> np.ndarray:
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)
     sums = mtx.sum(axis=1)

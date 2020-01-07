@@ -43,7 +43,12 @@ def _highly_variable_genes_single_batch(
     if max_mean is None: max_mean = 3
     if max_disp is None: max_disp = np.inf
 
-    X = np.expm1(adata.X) if flavor == 'seurat' else adata.X
+    X = adata.X
+    if flavor == 'seurat':
+        if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
+            X *= np.log(adata.uns['log1p']['base'])
+        X = np.expm1(X)
+
     mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value

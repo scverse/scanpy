@@ -29,6 +29,7 @@ Plotting API
 .. note::
    See the :ref:`settings` section for all important plotting configurations.
 
+.. _pl-generic:
 
 Generic
 -------
@@ -88,6 +89,12 @@ Embeddings
    pl.diffmap
    pl.draw_graph
    pl.embedding
+
+Compute densities on embeddings.
+
+.. autosummary::
+   :toctree: .
+
    pl.embedding_density
 
 Branching trajectories and pseudotime, clustering

@@ -1,6 +1,7 @@
 import collections.abc as cabc
 import numpy as np
 import pandas as pd
+from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from scipy.sparse import issparse
@@ -160,7 +161,7 @@ def dpt_timeseries(
         timeseries_as_heatmap(
             adata.X[adata.obs['dpt_order_indices'].values],
             var_names=adata.var_names,
-            highlightsX=adata.uns['dpt_changepoints'],
+            highlights_x=adata.uns['dpt_changepoints'],
             color_map=color_map,
         )
     else:
@@ -168,35 +169,45 @@ def dpt_timeseries(
         timeseries(
             adata.X[adata.obs['dpt_order_indices'].values],
             var_names=adata.var_names,
-            highlightsX=adata.uns['dpt_changepoints'],
+            highlights_x=adata.uns['dpt_changepoints'],
             xlim=[0, 1.3*adata.X.shape[0]],
         )
     pl.xlabel('dpt order')
     savefig_or_show('dpt_timeseries', save=save, show=show)
 
 
-def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=None):
+def dpt_groups_pseudotime(
+    adata: AnnData,
+    color_map: Union[str, Colormap, None] = None,
+    palette: Union[Sequence[str], Cycler, None] = None,
+    show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+):
     """Plot groups and pseudotime."""
-    pl.figure()
-    pl.subplot(211)
-    timeseries_subplot(adata.obs['dpt_groups'].cat.codes,
-                       time=adata.obs['dpt_order'].values,
-                       color=np.asarray(adata.obs['dpt_groups']),
-                       highlightsX=adata.uns['dpt_changepoints'],
-                       ylabel='dpt groups',
-                       yticks=(np.arange(len(adata.obs['dpt_groups'].cat.categories), dtype=int)
-                                     if len(adata.obs['dpt_groups'].cat.categories) < 5 else None),
-                       palette=palette)
-    pl.subplot(212)
+    _, (ax_grp, ax_ord) = pl.subplots(2, 1)
+    timeseries_subplot(
+        adata.obs['dpt_groups'].cat.codes,
+        time=adata.obs['dpt_order'].values,
+        color=np.asarray(adata.obs['dpt_groups']),
+        highlights_x=adata.uns['dpt_changepoints'],
+        ylabel='dpt groups',
+        yticks=(
+            np.arange(len(adata.obs['dpt_groups'].cat.categories), dtype=int)
+            if len(adata.obs['dpt_groups'].cat.categories) < 5 else None
+        ),
+        palette=palette,
+        ax=ax_grp,
+    )
     timeseries_subplot(
         adata.obs['dpt_pseudotime'].values,
         time=adata.obs['dpt_order'].values,
         color=adata.obs['dpt_pseudotime'].values,
         xlabel='dpt order',
-        highlightsX=adata.uns['dpt_changepoints'],
+        highlights_x=adata.uns['dpt_changepoints'],
         ylabel='pseudotime',
         yticks=[0, 1],
         color_map=color_map,
+        ax=ax_ord,
     )
     savefig_or_show('dpt_groups_pseudotime', save=save, show=show)
 
@@ -786,7 +797,7 @@ def sim(
                 adata.X,
                 var_names=adata.var_names,
                 xlim=[0, 1.25*adata.n_obs],
-                highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
+                highlights_x=np.arange(tmax, n_realizations*tmax, tmax),
                 xlabel='realizations',
             )
         else:
@@ -794,7 +805,7 @@ def sim(
             timeseries_as_heatmap(
                 adata.X,
                 var_names=adata.var_names,
-                highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
+                highlights_x=np.arange(tmax, n_realizations*tmax, tmax),
             )
         pl.xticks(
             np.arange(0, n_realizations*tmax, tmax),
@@ -809,7 +820,7 @@ def sim(
             X,
             var_names=adata.var_names,
             xlim=[0, 1.25*adata.n_obs],
-            highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
+            highlights_x=np.arange(tmax, n_realizations*tmax, tmax),
             xlabel='index (arbitrary order)',
         )
         savefig_or_show('sim_shuffled', save=save, show=show)
@@ -818,9 +829,10 @@ def sim(
 @_doc_params(vminmax=doc_vminmax, panels=doc_panels, show_save_ax=doc_show_save_ax)
 def embedding_density(
     adata: AnnData,
-    basis: str,
-    key: str,
-    *,
+    # on purpose, there is no asterisk here (for backward compat)
+    basis: str = 'umap',  # was positional before 1.4.5
+    key: Optional[str] = None,  # was positional before 1.4.5
+    groupby: Optional[str] = None,
     group: Optional[Union[str, List[str], None]] = 'all',
     color_map: Union[Colormap, str] = 'YlOrRd',
     bg_dotsize: Optional[int] = 80,
@@ -838,7 +850,7 @@ def embedding_density(
     **kwargs,
 ) -> Union[Figure, Axes, None]:
     """\
-    Plot the density of cells in an embedding (per condition)
+    Plot the density of cells in an embedding (per condition).
 
     Plots the gaussian kernel density estimates (over condition) from the
     `sc.tl.embedding_density()` output.
@@ -854,7 +866,9 @@ def embedding_density(
         The embedding over which the density was calculated. This embedded
         representation should be found in `adata.obsm['X_[basis]']``.
     key
-        Name of the `.obs` covariate that contains the density estimates
+        Name of the `.obs` covariate that contains the density estimates. Alternatively, pass `groupby`.
+    groupby
+        Name of the condition used in `tl.embedding_density`. Alternatively, pass `key`.
     group
         The category in the categorical observation annotation to be plotted.
         For example, 'G1' in the cell cycle 'phase' covariate. If all categories
@@ -896,6 +910,14 @@ def embedding_density(
 
     if basis == 'fa':
         basis = 'draw_graph_fa'
+
+    if key is not None and groupby is not None:
+        raise ValueError('either pass key or groupby but not both')
+
+    if key is None:
+        key = 'umap_density'
+    if groupby is not None:
+        key += f'_{groupby}'
 
     if f'X_{basis}' not in adata.obsm_keys():
         raise ValueError(

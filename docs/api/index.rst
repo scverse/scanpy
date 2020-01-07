@@ -12,7 +12,6 @@ Import Scanpy as::
 
 .. note::
    Wrappers to external functionality are found in :mod:`scanpy.external`.
-   Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
 
 Preprocessing: `pp`
 -------------------
@@ -58,7 +57,7 @@ Recipes
 Batch effect correction
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :class:`scanpy.external` for more.
+Also see `Data integration`_. Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :mod:`scanpy.external` for more.
 
 .. autosummary::
    :toctree: .
@@ -94,6 +93,13 @@ Embeddings
    tl.draw_graph
    tl.diffmap
 
+Compute densities on embeddings.
+
+.. autosummary::
+   :toctree: .
+
+   tl.embedding_density
+
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -105,6 +111,14 @@ Clustering and trajectory inference
    tl.dendrogram
    tl.dpt
    tl.paga
+
+Data integration
+~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   tl.ingest
 
 Marker genes
 ~~~~~~~~~~~~
@@ -303,6 +317,7 @@ Datasets
    datasets.krumsiek11
    datasets.moignard15
    datasets.pbmc3k
+   datasets.pbmc3k_processed
    datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch
@@ -314,7 +329,6 @@ Further modules
 .. autosummary::
    :toctree: .
 
-   api
    plotting
 
 

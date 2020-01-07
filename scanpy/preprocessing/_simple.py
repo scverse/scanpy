@@ -73,10 +73,10 @@ def filter_cells(
     Depending on `inplace`, returns the following arrays or directly subsets
     and annotates the data matrix:
 
-    cells_subset : numpy.ndarray
+    cells_subset
         Boolean index mask that does filtering. `True` means that the
         cell is kept. `False` means the cell is removed.
-    number_per_cell : numpy.ndarray
+    number_per_cell
         Depending on what was tresholded (`counts` or `genes`),
         the array stores `n_counts` or `n_cells` per gene.
 
@@ -193,10 +193,10 @@ def filter_genes(
     Depending on `inplace`, returns the following arrays or directly subsets
     and annotates the data matrix
 
-    gene_subset : numpy.ndarray
+    gene_subset
         Boolean index mask that does filtering. `True` means that the
         gene is kept. `False` means the gene is removed.
-    number_per_gene : numpy.ndarray
+    number_per_gene
         Depending on what was tresholded (`counts` or `cells`), the array stores
         `n_counts` or `n_cells` per gene.
     """
@@ -255,12 +255,13 @@ def log1p(
     copy: bool = False,
     chunked: bool = False,
     chunk_size: Optional[int] = None,
+    base: Optional[float] = None,
 ) -> Optional[AnnData]:
     """\
     Logarithmize the data matrix.
 
     Computes :math:`X = \\log(X + 1)`,
-    where :math:`log` denotes the natural logarithm.
+    where :math:`log` denotes the natural logarithm unless a different base is given.
 
     Parameters
     ----------
@@ -275,11 +276,16 @@ def log1p(
         Applies only to :class:`~anndata.AnnData`.
     chunk_size
         `n_obs` of the chunks to process the data in.
+    base
+        Base of the logarithm. Natural logarithm is used by default.
 
     Returns
     -------
     Returns or updates `data`, depending on `copy`.
     """
+    if 'log1p' in data.uns_keys():
+        logg.warning('adata.X seems to be already log-transformed.')
+
     if copy:
         if not isinstance(data, AnnData):
             data = data.astype(np.floating)
@@ -294,8 +300,12 @@ def log1p(
     def _log1p(X):
         if issparse(X):
             np.log1p(X.data, out=X.data)
+            if base is not None:
+                np.divide(X.data, np.log(base), out=X.data)
         else:
             np.log1p(X, out=X)
+            if base is not None:
+                np.divide(X, np.log(base), out=X)
         return X
 
     if isinstance(data, AnnData):
@@ -309,6 +319,7 @@ def log1p(
     else:
         _log1p(data)
 
+    data.uns['log1p'] = {'base': base}
     return data if copy else None
 
 
@@ -360,7 +371,7 @@ def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: int = N_PCS,
     zero_center: Optional[bool] = True,
-    svd_solver: str = 'auto',
+    svd_solver: str = 'arpack',
     random_state: Optional[Union[int, RandomState]] = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
@@ -398,6 +409,9 @@ def pca(
         `'auto'` (the default)
           chooses automatically depending on the size of the problem.
 
+        .. versionchanged:: 1.4.5
+           Default value changed from `'auto'` to `'arpack'`.
+
     random_state
         Change to use different initial states for the optimization.
     return_info
@@ -422,7 +436,7 @@ def pca(
 
     Returns
     -------
-    X_pca : :class:`scipy.sparse.spmatrix` or :class:`numpy.ndarray`
+    X_pca : :class:`~scipy.sparse.spmatrix`, :class:`~numpy.ndarray`
         If `data` is array-like and `return_info=False` was passed,
         this function only returns `X_pca`…
     adata : anndata.AnnData
@@ -469,11 +483,11 @@ def pca(
     if use_highly_variable is None:
         use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
     if use_highly_variable:
-        logg.info('computing PCA on highly variable genes')
+        logg.info('    on highly variable genes')
     adata_comp = adata[:, adata.var['highly_variable']] if use_highly_variable else adata
 
     if chunked:
-        if not zero_center or random_state or svd_solver != 'auto':
+        if not zero_center or random_state or svd_solver != 'arpack':
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
         from sklearn.decomposition import IncrementalPCA
@@ -520,12 +534,16 @@ def pca(
 
     if data_is_AnnData:
         adata.obsm['X_pca'] = X_pca
+        adata.uns['pca'] = {}
+        adata.uns['pca']['params'] = {
+            'zero_center': zero_center,
+            'use_highly_variable': use_highly_variable
+        }
         if use_highly_variable:
             adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
             adata.varm['PCs'][adata.var['highly_variable']] = pca_.components_.T
         else:
             adata.varm['PCs'] = pca_.components_.T
-        adata.uns['pca'] = {}
         adata.uns['pca']['variance'] = pca_.explained_variance_
         adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
         logg.info('    finished', time=start)
@@ -725,10 +743,11 @@ def regress_out(
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
-    Regress out unwanted sources of variation.
+    Regress out (mostly) unwanted sources of variation.
 
     Uses simple linear regression. This is inspired by Seurat's `regressOut`
-    function in R [Satija15].
+    function in R [Satija15]. Note that this function tends to overcorrect
+    in certain circumstances as described in :issue:`526`.
 
     Parameters
     ----------
@@ -978,6 +997,7 @@ def downsample_counts(
     adata: AnnData,
     counts_per_cell: Optional[Union[int, Collection[int]]] = None,
     total_counts: Optional[int] = None,
+    *,
     random_state: Optional[Union[int, RandomState]] = 0,
     replace: bool = False,
     copy: bool = False,
@@ -1016,14 +1036,19 @@ def downsample_counts(
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
-        raise ValueError("Must specify exactly one of `total_counts` or `counts_per_cell`.")
+        raise ValueError(
+            "Must specify exactly one of `total_counts` or `counts_per_cell`."
+        )
     if copy:
         adata = adata.copy()
-    adata.X = adata.X.astype(np.integer)  # Numba doesn't want floats
     if total_counts_call:
-        adata.X = _downsample_total_counts(adata.X, total_counts, random_state, replace)
+        adata.X = _downsample_total_counts(
+            adata.X, total_counts, random_state, replace
+        )
     elif counts_per_cell_call:
-        adata.X = _downsample_per_cell(adata.X, counts_per_cell, random_state, replace)
+        adata.X = _downsample_per_cell(
+            adata.X, counts_per_cell, random_state, replace
+        )
     if copy:
         return adata
 
@@ -1034,7 +1059,12 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         counts_per_cell = np.full(n_obs, counts_per_cell)
     else:
         counts_per_cell = np.asarray(counts_per_cell)
-    if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
+    # np.random.choice needs int arguments in numba code:
+    counts_per_cell = counts_per_cell.astype(np.int_, copy=False)
+    if (
+        not isinstance(counts_per_cell, np.ndarray)
+        or len(counts_per_cell) != n_obs
+    ):
         raise ValueError(
             "If provided, 'counts_per_cell' must be either an integer, or "
             "coercible to an `np.ndarray` of length as number of observations"
@@ -1046,11 +1076,16 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
             X = csr_matrix(X)
         totals = np.ravel(X.sum(axis=1))  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
-        rows = np.split(X.data.view(), X.indptr[1:-1])
+        rows = np.split(X.data, X.indptr[1:-1])
         for rowidx in under_target:
             row = rows[rowidx]
-            _downsample_array(row, counts_per_cell[rowidx], random_state=random_state,
-                              replace=replace, inplace=True)
+            _downsample_array(
+                row,
+                counts_per_cell[rowidx],
+                random_state=random_state,
+                replace=replace,
+                inplace=True,
+            )
         X.eliminate_zeros()
         if original_type is not csr_matrix:  # Put it back
             X = original_type(X)
@@ -1058,13 +1093,19 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         totals = np.ravel(X.sum(axis=1))
         under_target = np.nonzero(totals > counts_per_cell)[0]
         for rowidx in under_target:
-            row = X[rowidx, :].view()
-            _downsample_array(row, counts_per_cell[rowidx], random_state=random_state,
-                              replace=replace, inplace=True)
+            row = X[rowidx, :]
+            _downsample_array(
+                row,
+                counts_per_cell[rowidx],
+                random_state=random_state,
+                replace=replace,
+                inplace=True,
+            )
     return X
 
 
 def _downsample_total_counts(X, total_counts, random_state, replace):
+    total_counts = int(total_counts)
     total = X.sum()
     if total < total_counts:
         return X
@@ -1072,21 +1113,27 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
         original_type = type(X)
         if not isspmatrix_csr(X):
             X = csr_matrix(X)
-        _downsample_array(X.data, total_counts, random_state=random_state,
-                          replace=replace, inplace=True)
+        _downsample_array(
+            X.data,
+            total_counts,
+            random_state=random_state,
+            replace=replace,
+            inplace=True,
+        )
         X.eliminate_zeros()
         if original_type is not csr_matrix:
             X = original_type(X)
     else:
-        v = X.view().reshape(np.multiply(*X.shape))
-        _downsample_array(v, total_counts, random_state, replace=replace,
-                          inplace=True)
+        v = X.reshape(np.multiply(*X.shape))
+        _downsample_array(
+            v, total_counts, random_state, replace=replace, inplace=True
+        )
     return X
 
 
 @numba.njit(cache=True)
 def _downsample_array(
-    col: np.array,
+    col: np.ndarray,
     target: int,
     random_state: Optional[Union[int, RandomState]] = 0,
     replace: bool = True,
@@ -1097,7 +1144,6 @@ def _downsample_array(
 
     This is an internal function and has some restrictions:
 
-    * `dtype` of col must be an integer (i.e. satisfy issubclass(col.dtype.type, np.integer))
     * total counts in cell must be less than target
     """
     np.random.seed(random_state)
@@ -1106,7 +1152,7 @@ def _downsample_array(
         col[:] = 0
     else:
         col = np.zeros_like(col)
-    total = cumcounts[-1]
+    total = np.int_(cumcounts[-1])
     sample = np.random.choice(total, target, replace=replace)
     sample.sort()
     geneptr = 0
@@ -1115,6 +1161,7 @@ def _downsample_array(
             geneptr += 1
         col[geneptr] += 1
     return col
+
 
 
 def zscore_deprecated(X: np.ndarray) -> np.ndarray:

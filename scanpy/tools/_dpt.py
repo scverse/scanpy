@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Sequence
+from typing import Tuple, Optional, Sequence, List
 
 import numpy as np
 import pandas as pd
@@ -324,9 +324,9 @@ class DPT(Neighbors):
 
         Returns
         -------
-        iseg : int
+        iseg
             Index identifying the position within the list of line segments.
-        tips3 : int
+        tips3
             Positions of tips within chosen segment.
         """
         scores_tips = np.zeros((len(segs), 4))
@@ -629,7 +629,13 @@ class DPT(Neighbors):
         Dseg: np.ndarray,
         tips: np.ndarray,
         seg_reference=None,
-    ):
+    ) -> Tuple[
+        List[np.ndarray],
+        List[np.ndarray],
+        List[List[int]],
+        List[List[int]],
+        int,
+    ]:
         """\
         Detect branching on given segment.
 
@@ -647,11 +653,17 @@ class DPT(Neighbors):
 
         Returns
         -------
-        ssegs : list of np.ndarray
+        ssegs
             List of segments obtained from splitting the single segment defined
             via the first two tip cells.
-        ssegs_tips : list of np.ndarray
+        ssegs_tips
             List of tips of segments in ssegs.
+        ssegs_adjacency
+            ?
+        ssegs_connects
+            ?
+        trunk
+            ?
         """
         if self.flavor == 'haghverdi16':
             ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
@@ -716,12 +728,16 @@ class DPT(Neighbors):
             added_dist[1] = Dseg[closest_points[0, 1], closest_points[1, 0]] + Dseg[closest_points[2, 1], closest_points[1, 2]]
             added_dist[2] = Dseg[closest_points[1, 2], closest_points[2, 1]] + Dseg[closest_points[0, 2], closest_points[2, 0]]
             trunk = np.argmin(added_dist)
-            ssegs_adjacency = [[trunk] if i != trunk else
-                               [j for j in range(3) if j != trunk]
-                               for i in range(3)]
-            ssegs_connects = [[closest_points[i, trunk]] if i != trunk else
-                              [closest_points[trunk, j] for j in range(3) if j != trunk]
-                              for i in range(3)]
+            ssegs_adjacency = [
+                [trunk] if i != trunk else
+                [j for j in range(3) if j != trunk]
+                for i in range(3)
+            ]
+            ssegs_connects = [
+                [closest_points[i, trunk]] if i != trunk else
+                [closest_points[trunk, j] for j in range(3) if j != trunk]
+                for i in range(3)
+            ]
         else:
             trunk = 0
             ssegs_adjacency = [[1], [0]]
@@ -777,8 +793,11 @@ class DPT(Neighbors):
         ssegs = [closer_to_0_than_to_1, ~closer_to_0_than_to_1]
         return ssegs
 
-    def __detect_branching_haghverdi16(self, Dseg, tips):
-        """Detect branching on given segment.
+    def __detect_branching_haghverdi16(
+        self, Dseg: np.ndarray, tips: np.ndarray
+    ) -> np.ndarray:
+        """\
+        Detect branching on given segment.
 
         Compute point that maximizes kendall tau correlation of the sequences of
         distances to the second and the third tip, respectively, when 'moving
@@ -787,15 +806,14 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        Dseg : np.ndarray
+        Dseg
             Dchosen distance matrix restricted to segment.
-        tips : np.ndarray
+        tips
             The three tip points. They form a 'triangle' that contains the data.
 
         Returns
         -------
-        ssegs : list of np.ndarray
-            List of segments obtained from "splitting away the first tip cell".
+        Segments obtained from "splitting away the first tip cell".
         """
         # sort distance from first tip point
         # then the sequence of distances Dseg[tips[0]][idcs] increases
@@ -805,17 +823,21 @@ class DPT(Neighbors):
         # where they become correlated
         # at the point where this happens, we define a branching point
         if True:
-            imax = self.kendall_tau_split(Dseg[tips[1]][idcs],
-                                          Dseg[tips[2]][idcs])
+            imax = self.kendall_tau_split(
+                Dseg[tips[1]][idcs],
+                Dseg[tips[2]][idcs],
+            )
         if False:
             # if we were in euclidian space, the following should work
             # as well, but here, it doesn't because the scales in Dseg are
             # highly different, one would need to write the following equation
             # in terms of an ordering, such as exploited by the kendall
             # correlation method above
-            imax = np.argmin(Dseg[tips[0]][idcs]
-                             + Dseg[tips[1]][idcs]
-                             + Dseg[tips[2]][idcs])
+            imax = np.argmin(
+                Dseg[tips[0]][idcs]
+                + Dseg[tips[1]][idcs]
+                + Dseg[tips[2]][idcs]
+            )
         # init list to store new segments
         ssegs = []
         # first new segment: all points until, but excluding the branching point
@@ -898,34 +920,34 @@ class DPT(Neighbors):
             logg.debug('    is root itself, never obtain significant correlation')
         return imax
 
-    def _kendall_tau_add(self, len_old, diff_pos, tau_old):
+    def _kendall_tau_add(self, len_old: int, diff_pos: int, tau_old: float):
         """Compute Kendall tau delta.
 
         The new sequence has length len_old + 1.
 
         Parameters
         ----------
-        len_old : int
+        len_old
             The length of the old sequence, used to compute tau_old.
-        diff_pos : int
+        diff_pos
             Difference between concordant and non-concordant pairs.
-        tau_old : float
+        tau_old
             Kendall rank correlation of the old sequence.
         """
         return 2./(len_old+1)*(float(diff_pos)/len_old-tau_old)
 
-    def _kendall_tau_subtract(self, len_old, diff_neg, tau_old):
+    def _kendall_tau_subtract(self, len_old: int, diff_neg: int, tau_old: float):
         """Compute Kendall tau delta.
 
         The new sequence has length len_old - 1.
 
         Parameters
         ----------
-        len_old : int
+        len_old
             The length of the old sequence, used to compute tau_old.
-        diff_neg : int
+        diff_neg
             Difference between concordant and non-concordant pairs.
-        tau_old : float
+        tau_old
             Kendall rank correlation of the old sequence.
         """
         return 2./(len_old-2)*(-float(diff_neg)/(len_old-1)+tau_old)

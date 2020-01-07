@@ -31,14 +31,14 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
 
 def embedding_density(
     adata: AnnData,
-    basis: str,
-    *,
+    # there is no asterisk here for backward compat (previously, there was)
+    basis: str = 'umap',  # was positional before 1.4.5
     groupby: Optional[str] = None,
     key_added: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
 ) -> None:
     """\
-    Calculate the density of cells in an embedding (per condition)
+    Calculate the density of cells in an embedding (per condition).
 
     Gaussian kernel density estimation is used to calculate the density of
     cells in an embedded space. This can be performed per category over a

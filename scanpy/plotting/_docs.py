@@ -54,7 +54,7 @@ legend_loc
     Location of legend, either `'on data'`, `'right margin'` or a valid keyword
     for the `loc` parameter of :class:`~matplotlib.legend.Legend`.
 legend_fontsize
-    Numeric size in pt or {`'[x-|xx-]small'`, `'medium'`, `'[x-|xx-]large'`}.
+    Numeric size in pt or string describing the size.
     See :meth:`~matplotlib.text.Text.set_fontsize`.
 legend_fontweight
     Legend font weight. A numeric value in range 0-1000 or a string.
@@ -64,7 +64,9 @@ legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
 size
-    Point size. If `None`, is automatically computed.
+    Point size. If `None`, is automatically computed as 120000 / n_cells.
+    Can be a sequence containing the size for each cell. The order should be
+    the same as in adata.obs.
 color_map
     Color map to use for continous variables. Can be a name or a
     :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
