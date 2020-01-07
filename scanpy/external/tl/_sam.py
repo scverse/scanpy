@@ -8,14 +8,14 @@ from anndata import AnnData
 from ... import logging as logg
 
 
-def SAM(
+def sam(
     adata: AnnData,
     max_iter: int = 10,
     num_norm_avg: int = 50,
     k: int = 20,
     distance: str = 'correlation',
     standardization: Optional[str] = 'Normalizer',
-    weight_PCs: bool = True,
+    weight_pcs: bool = True,
     npcs: Optional[int]=None,
     n_genes: Optional[int]=None,
     projection: Optional[str]='umap'
@@ -65,7 +65,7 @@ def SAM(
         genes with large spatial dispersions from skewing the distribution
         of weights.
 
-    weight_PCs - bool, optional, default True
+    weight_pcs - bool, optional, default True
         If True, scale the principal components by their eigenvalues. In
         datasets with many expected cell types, setting this to False might
         improve the resolution as these cell types might be encoded by low-
@@ -74,7 +74,7 @@ def SAM(
     npcs - int, optional, default None,
         Determines the number of top principal components selected at each
         iteration of the SAM algorithm. If None, this number is chosen
-        automatically based on the size of the dataset. If weight_PCs is
+        automatically based on the size of the dataset. If weight_pcs is
         set to True, this parameter primarily affects the runtime of the SAM
         algorithm (more PCs = longer runtime).
 
@@ -195,13 +195,13 @@ def SAM(
             '\tpip install .'
         )
 
-    sam = SAM(counts = adata, inplace = inplace)
+    s = SAM(counts = adata, inplace = inplace)
 
     logg.info('Running SAM')
-    sam.run(max_iter=max_iter,num_norm_avg=num_norm_avg,k=k,
+    s.run(max_iter=max_iter,num_norm_avg=num_norm_avg,k=k,
             distance=distance,preprocessing=standardization,
-            weight_PCs=weight_PCs,npcs=npcs,n_genes=n_genes,
+            weight_PCs=weight_pcs,npcs=npcs,n_genes=n_genes,
             projection = projection,verbose=False)
 
-    return (sam) if inplace else (sam,adata)
+    return (s) if inplace else (s,adata)
 
