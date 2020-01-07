@@ -141,7 +141,7 @@ def sam(
     Assuming we are given an AnnData object called `adata`, we can run the SAM
     algorithm as follows:
 
-    >>> sam = sce.tl.SAM(adata,inplace=True)
+    >>> sam,adata = sce.tl.SAM(adata,inplace=True)
 
     The input AnnData object should contain unstandardized, non-negative
     expression values. Preferably, the data should be log-normalized and no
@@ -206,5 +206,5 @@ def sam(
             weight_PCs=weight_pcs,npcs=npcs,n_genes=n_genes,
             projection = projection,verbose=verbose)
 
-    return (s) if inplace else (s,s.adata)
+    return (s,adata) if inplace else (s,s.adata)
 
