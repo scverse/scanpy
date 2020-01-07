@@ -18,7 +18,7 @@ def sam(
     weight_pcs: bool = True,
     npcs: Optional[int]=None,
     n_genes: Optional[int]=None,
-    projection: Optional[str]='umap'
+    projection: Optional[str]='umap',
     inplace: bool = True
 
 ) -> Optional[AnnData]:
