@@ -178,7 +178,11 @@ References
 
 .. [Setty18] Setty *et al.* (2018),
    *Palantir characterizes cell fate continuities in human hematopoiesis*
-   `bioRxiv <https://doi.org/10.1101/385328>`__.
+   `Nature Biotechnology <https://www.nature.com/articles/s41587-019-0068-4>`__.
+
+.. [Nowotschin18i] Nowotschin *et al.* (2018),
+   *The emergent landscape of the mouse gut endoderm at single-cell resolution*
+   `Nature <https://www.nature.com/articles/s41586-019-1127-1>`__.
 
 .. [Traag17] Traag (2017),
    *Louvain*,
