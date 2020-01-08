@@ -1,12 +1,13 @@
 .. role:: small
 .. role:: smaller
 
+Please install `scanpy==1.4.5.post1` instead of `scanpy==1.4.5`.
 
 .. rubric:: New functionality
 
 - :func:`~scanpy.tl.ingest` maps labels and embeddings of reference data to new data :tutorial:`integrating-data-using-ingest` :pr:`651` :smaller:`S Rybakov, A Wolf`
 - :mod:`~scanpy.queries` recieved many updates including enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`I Virshup`
-- :func:`~scanpy.set_figure_params` allows setting `figsize` :smaller:`A Wolf`
+- :func:`~scanpy.set_figure_params` allows setting `figsize` and accepts `facecolor='white'`, useful for working in dark mode  :smaller:`A Wolf`
 
 .. _gprofiler: https://biit.cs.ut.ee/gprofiler/
 
