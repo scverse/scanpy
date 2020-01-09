@@ -108,27 +108,30 @@ def test_qc_metrics():
         assert np.allclose(adata.var[col], old_var[col])
 
 
-def test_qc_metrics_format():
+def adata_mito():
     a = np.random.binomial(100, 0.005, (1000, 1000))
     init_var = pd.DataFrame(
         dict(mito=np.concatenate((np.ones(100, dtype=bool), np.zeros(900, dtype=bool))))
     )
     adata_dense = AnnData(X=a, var=init_var.copy())
+    return adata_dense, init_var
+
+
+@pytest.mark.parametrize(
+    "cls", [np.asarray, sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]
+)
+def test_qc_metrics_format(cls):
+    adata_dense, init_var = adata_mito()
     sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"], inplace=True)
-    for fmt in [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]:
-        adata = AnnData(X=fmt(a), var=init_var.copy())
-        sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], inplace=True)
-        assert np.allclose(adata.obs, adata_dense.obs)
-        for col in adata.var:  # np.allclose doesn't like mix of types
-            assert np.allclose(adata.var[col], adata_dense.var[col])
+    adata = AnnData(X=cls(adata_dense.X), var=init_var.copy())
+    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], inplace=True)
+    assert np.allclose(adata.obs, adata_dense.obs)
+    for col in adata.var:  # np.allclose doesn't like mix of types
+        assert np.allclose(adata.var[col], adata_dense.var[col])
 
 
 def test_qc_metrics_percentage():  # In response to #421
-    a = np.random.binomial(100, 0.005, (1000, 1000))
-    init_var = pd.DataFrame(
-        dict(mito=np.concatenate((np.ones(100, dtype=bool), np.zeros(900, dtype=bool))))
-    )
-    adata_dense = AnnData(X=a, var=init_var.copy())
+    adata_dense, init_var = adata_mito()
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=[])
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=())
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=None)
