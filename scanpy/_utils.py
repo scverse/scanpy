@@ -14,6 +14,7 @@ from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple
 import numpy as np
 from anndata import AnnData
 from textwrap import dedent
+from packaging import version
 
 from ._settings import settings
 from ._compat import Literal
@@ -22,28 +23,26 @@ from . import logging as logg
 EPS = 1e-15
 
 
-def version(package):
+def pkg_version(package):
     try:
-        from importlib.metadata import version
+        from importlib.metadata import version as v
     except ImportError:  # < Python 3.8: Use backport module
-        from importlib_metadata import version
-    return version(package)
+        from importlib_metadata import version as v
+    return version.parse(v(package))
 
 
 def check_versions():
-    from distutils.version import LooseVersion
+    anndata_version = pkg_version("anndata")
+    umap_version = pkg_version("umap-learn")
 
-    anndata_version = version("anndata")
-    umap_version = version("umap-learn")
-
-    if anndata_version < LooseVersion('0.6.10'):
+    if anndata_version < version.parse('0.6.10'):
         from . import __version__
         raise ImportError(
             f'Scanpy {__version__} needs anndata version >=0.6.10, '
             f'not {anndata_version}.\nRun `pip install anndata -U --no-deps`.'
         )
 
-    if umap_version < LooseVersion('0.3.0'):
+    if umap_version < version.parse('0.3.0'):
         from . import __version__
         # make this a warning, not an error
         # it might be useful for people to still be able to run it
