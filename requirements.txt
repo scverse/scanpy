@@ -15,7 +15,7 @@ networkx
 natsort
 joblib
 numba>=0.41.0
-umap-learn>=0.3.0
+umap-learn>=0.3.10
 legacy-api-wrap
 setuptools_scm
 packaging
