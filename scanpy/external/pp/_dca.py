@@ -149,9 +149,7 @@ def dca(
     try:
         from dca.api import dca
     except ImportError:
-        raise ImportError(
-            'Please install dca package (>= 0.2.1) via `pip install dca`'
-        )
+        raise ImportError('Please install dca package (>= 0.2.1) via `pip install dca`')
 
     return dca(
         adata,

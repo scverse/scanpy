@@ -100,14 +100,10 @@ def ingest(
     start = logg.info('running ingest')
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
-        [embedding_method]
-        if isinstance(embedding_method, str)
-        else embedding_method
+        [embedding_method] if isinstance(embedding_method, str) else embedding_method
     )
     labeling_method = (
-        [labeling_method]
-        if isinstance(labeling_method, str)
-        else labeling_method
+        [labeling_method] if isinstance(labeling_method, str) else labeling_method
     )
 
     if len(labeling_method) == 1 and len(obs or []) > 1:
@@ -189,9 +185,7 @@ class Ingest:
         self._umap._metric_kwds = adata.uns['neighbors']['params'].get(
             'metric_kwds', {}
         )
-        self._umap._n_neighbors = adata.uns['neighbors']['params'][
-            'n_neighbors'
-        ]
+        self._umap._n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
         self._umap._initial_alpha = self._umap.learning_rate
 
         self._umap._random_init = self._random_init
@@ -216,9 +210,7 @@ class Ingest:
 
         if 'use_rep' in adata.uns['neighbors']['params']:
             self._use_rep = adata.uns['neighbors']['params']['use_rep']
-            self._rep = (
-                adata.X if self._use_rep == 'X' else adata.obsm[self._use_rep]
-            )
+            self._rep = adata.X if self._use_rep == 'X' else adata.obsm[self._use_rep]
         elif 'n_pcs' in adata.uns['neighbors']['params']:
             self._use_rep = 'X_pca'
             self._n_pcs = adata.uns['neighbors']['params']['n_pcs']
@@ -229,15 +221,11 @@ class Ingest:
             self._n_pcs = self._rep.shape[1]
 
         if 'metric_kwds' in adata.uns['neighbors']['params']:
-            dist_args = tuple(
-                adata.uns['neighbors']['params']['metric_kwds'].values()
-            )
+            dist_args = tuple(adata.uns['neighbors']['params']['metric_kwds'].values())
         else:
             dist_args = ()
         dist_func = named_distances[adata.uns['neighbors']['params']['metric']]
-        self._random_init, self._tree_init = make_initialisations(
-            dist_func, dist_args
-        )
+        self._random_init, self._tree_init = make_initialisations(dist_func, dist_args)
         self._search = make_initialized_nnd_search(dist_func, dist_args)
 
         search_graph = adata.uns['neighbors']['distances'].copy()
@@ -245,9 +233,7 @@ class Ingest:
         self._search_graph = search_graph.maximum(search_graph.transpose())
 
         if 'rp_forest' in adata.uns['neighbors']:
-            self._rp_forest = _rp_forest_generate(
-                adata.uns['neighbors']['rp_forest']
-            )
+            self._rp_forest = _rp_forest_generate(adata.uns['neighbors']['rp_forest'])
         else:
             self._rp_forest = None
 
@@ -349,9 +335,7 @@ class Ingest:
         from umap.umap_ import INT32_MAX, INT32_MIN
 
         random_state = check_random_state(random_state)
-        rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(
-            np.int64
-        )
+        rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
 
         train = self._rep
         test = self._obsm['rep']
@@ -367,11 +351,7 @@ class Ingest:
         )
 
         result = self._search(
-            train,
-            self._search_graph.indptr,
-            self._search_graph.indices,
-            init,
-            test,
+            train, self._search_graph.indptr, self._search_graph.indices, init, test,
         )
         indices, dists = deheap_sort(result)
         self._indices, self._distances = indices[:, :k], dists[:, :k]
@@ -401,9 +381,7 @@ class Ingest:
             'category'
         )  # ensure it's categorical
         values = [cat_array[inds].mode()[0] for inds in self._indices]
-        return pd.Categorical(
-            values=values, categories=cat_array.cat.categories
-        )
+        return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):
         """\

@@ -64,9 +64,7 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
     rcParams['grid.color'] = '.8'
 
     # color map
-    rcParams['image.cmap'] = (
-        rcParams['image.cmap'] if color_map is None else color_map
-    )
+    rcParams['image.cmap'] = rcParams['image.cmap'] if color_map is None else color_map
 
 
 def set_rcParams_defaults():

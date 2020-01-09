@@ -208,8 +208,7 @@ def harmony_timeseries(data: list, **kargs):
                 print('"sample_names" not provided, constructed internally')
                 rep = range(len(self.data))
                 self.sample_names = [
-                    "_".join(["sample{}".format(n + 1), str(n + 1)])
-                    for n in rep
+                    "_".join(["sample{}".format(n + 1), str(n + 1)]) for n in rep
                 ]
                 print('"sample_names": {}'.format(self.sample_names))
 
@@ -217,9 +216,7 @@ def harmony_timeseries(data: list, **kargs):
                 assert self.timepoints
             except AssertionError:
                 try:
-                    self.timepoints = [
-                        i.split("_")[0] for i in self.sample_names
-                    ]
+                    self.timepoints = [i.split("_")[0] for i in self.sample_names]
                 except:
                     msg = (
                         '"timepoints" must be a list of Time Points!!\n\n\t'
@@ -242,9 +239,7 @@ def harmony_timeseries(data: list, **kargs):
                         assert isinstance(data[0].to_df(), pd.DataFrame)
                     else:
                         assert isinstance(data[0], pd.DataFrame)
-                    counts = self.load_from_AnnData(
-                        self.data, self.sample_names
-                    )
+                    counts = self.load_from_AnnData(self.data, self.sample_names)
                     logg.info("Input data is a list of scanpy.AnnData objects")
                 except:
                     raise RuntimeError(
@@ -286,9 +281,7 @@ def harmony_timeseries(data: list, **kargs):
             self.timepoint_connections = pd.DataFrame(columns=[0, 1])
             index = 0
             for i in range(len(self.timepoints) - 1):
-                self.timepoint_connections.loc[index, :] = self.timepoints[
-                    i : i + 2
-                ]
+                self.timepoint_connections.loc[index, :] = self.timepoints[i : i + 2]
                 index += 1
 
             # compute the augmented and non-augmented affinity matrices
@@ -317,19 +310,14 @@ def harmony_timeseries(data: list, **kargs):
             self.harmony_adata.uns["aug_aff"] = self.aug_aff
             self.harmony_adata.uns["sample_names"] = self.sample_names
             self.harmony_adata.uns["timepoints"] = self.timepoints
-            self.harmony_adata.uns[
-                "timepoint_connections"
-            ] = self.timepoint_connections
+            self.harmony_adata.uns["timepoint_connections"] = self.timepoint_connections
 
             logg.info("End of processing, start plotting.")
 
             return self.harmony_adata
 
         def load_from_AnnData(
-            self,
-            data_list: list,
-            sample_names: list = None,
-            min_cell_count: int = 10,
+            self, data_list: list, sample_names: list = None, min_cell_count: int = 10,
         ):
             """
             Read in scRNA-seq data from :class:`~anndata.AnnData` list
@@ -375,32 +363,18 @@ def harmony_timeseries(data: list, **kargs):
             # Concatenate cells and genes
             print("Concatenating data..")
             all_cells = list(
-                chain(
-                    *[
-                        list(counts_dict[sample].index)
-                        for sample in sample_names
-                    ]
-                )
+                chain(*[list(counts_dict[sample].index) for sample in sample_names])
             )
             all_genes = list(
-                chain(
-                    *[
-                        list(counts_dict[sample].columns)
-                        for sample in sample_names
-                    ]
-                )
+                chain(*[list(counts_dict[sample].columns) for sample in sample_names])
             )
             all_genes = list(set(all_genes))
 
             # Counts matrix
-            counts = pd.DataFrame(
-                0, index=all_cells, columns=all_genes, dtype=np.int16
-            )
+            counts = pd.DataFrame(0, index=all_cells, columns=all_genes, dtype=np.int16)
             for sample in sample_names:
                 sample_counts = counts_dict[sample]
-                counts.loc[
-                    sample_counts.index, sample_counts.columns
-                ] = sample_counts
+                counts.loc[sample_counts.index, sample_counts.columns] = sample_counts
 
             # Filter out low detection genes
             gs = counts.sum()
@@ -415,9 +389,7 @@ def harmony_timeseries(data: list, **kargs):
         @log_transform.setter
         def log_transform(self, value):
             if value is True:
-                self.data_df = self.harmony_timeseries.utils.log_transform(
-                    self.data_df
-                )
+                self.data_df = self.harmony_timeseries.utils.log_transform(self.data_df)
                 logg.info("data log transformed ...")
 
     def wrapper_cls(data, func=None, **kargs):

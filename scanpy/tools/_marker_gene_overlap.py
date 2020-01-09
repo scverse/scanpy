@@ -203,14 +203,12 @@ def marker_gene_overlap(
 
         if adj_pval_threshold < 0:
             logg.warning(
-                '`adj_pval_threshold` was set below 0. '
-                'Threshold will be set to 0.'
+                '`adj_pval_threshold` was set below 0. Threshold will be set to 0.'
             )
             adj_pval_threshold = 0
         elif adj_pval_threshold > 1:
             logg.warning(
-                '`adj_pval_threshold` was set above 1. '
-                'Threshold will be set to 1.'
+                '`adj_pval_threshold` was set above 1. Threshold will be set to 1.'
             )
             adj_pval_threshold = 1
 
@@ -222,8 +220,7 @@ def marker_gene_overlap(
 
     if top_n_markers is not None and top_n_markers < 1:
         logg.warning(
-            '`top_n_markers` was set below 1. '
-            '`top_n_markers` will be set to 1.'
+            '`top_n_markers` was set below 1. `top_n_markers` will be set to 1.'
         )
         top_n_markers = 1
 
@@ -236,9 +233,7 @@ def marker_gene_overlap(
             n_genes = min(top_n_markers, adata.uns[key]['names'].shape[0])
             data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
         elif adj_pval_threshold is not None:
-            n_genes = (
-                adata.uns[key]['pvals_adj'][group] < adj_pval_threshold
-            ).sum()
+            n_genes = (adata.uns[key]['pvals_adj'][group] < adj_pval_threshold).sum()
             data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
             if n_genes == 0:
                 logg.warning(
@@ -254,10 +249,7 @@ def marker_gene_overlap(
         if normalize == 'reference':
             # Ensure rows sum to 1
             ref_lengths = np.array(
-                [
-                    len(reference_markers[m_group])
-                    for m_group in reference_markers
-                ]
+                [len(reference_markers[m_group]) for m_group in reference_markers]
             )
             marker_match = marker_match / ref_lengths[:, np.newaxis]
             marker_match = np.nan_to_num(marker_match)
@@ -290,8 +282,6 @@ def marker_gene_overlap(
     # Store the results
     if inplace:
         adata.uns[key_added] = marker_matching_df
-        logg.hint(
-            'added\n' f'    {key_added!r}, marker overlap scores (adata.uns)'
-        )
+        logg.hint(f'added\n    {key_added!r}, marker overlap scores (adata.uns)')
     else:
         return marker_matching_df
