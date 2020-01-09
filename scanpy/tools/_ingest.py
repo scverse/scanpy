@@ -1,23 +1,26 @@
-import pandas as pd
-import numpy as np
-from sklearn.utils import check_random_state
-from scipy.sparse import issparse
 from collections.abc import MutableMapping
 from typing import Iterable, Union, Optional
+
+import pandas as pd
+import numpy as np
+from packaging import version
+from sklearn.utils import check_random_state
+from scipy.sparse import issparse
 from anndata import AnnData
-from distutils.version import LooseVersion
 
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 from .. import logging as logg
-from .._utils import version
+from .._utils import pkg_version
+
+ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
     obs: Optional[Union[str, Iterable[str]]] = None,
-    embedding_method: Union[str, Iterable[str]] = ['umap', 'pca'],
+    embedding_method: Union[str, Iterable[str]] = ('umap', 'pca'),
     labeling_method: str = 'knn',
     inplace: bool = True,
     **kwargs,
@@ -82,6 +85,7 @@ def ingest(
     -------
     Call sequence:
 
+    >>> import scanpy as sc
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
     >>> sc.tl.ingest(adata, adata_ref, obs='cell_type')
@@ -90,11 +94,12 @@ def ingest(
     .. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
     """
     # anndata version check
-    anndata_version = version("anndata")
-    if anndata_version <= LooseVersion('0.6.23'):
+    anndata_version = pkg_version("anndata")
+    if anndata_version < ANNDATA_MIN_VERSION:
         raise ValueError(
-            f'ingest only works correctly with anndata>=0.7rc2 (you have {anndata_version}) '
-            'as prior to 0.7rc2, `AnnData.concatenate` did not concatenate `.obsm`'
+            f'ingest only works correctly with anndata>={ANNDATA_MIN_VERSION} '
+            f'(you have {anndata_version}) as prior to {ANNDATA_MIN_VERSION}, '
+            '`AnnData.concatenate` did not concatenate `.obsm`.'
         )
 
     start = logg.info('running ingest')
@@ -112,9 +117,8 @@ def ingest(
     ing = Ingest(adata_ref)
     ing.fit(adata)
 
-    if embedding_method is not None:
-        for method in embedding_method:
-            ing.map_embedding(method)
+    for method in embedding_method:
+        ing.map_embedding(method)
 
     if obs is not None:
         ing.neighbors(**kwargs)

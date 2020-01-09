@@ -1,10 +1,12 @@
 import pytest
 import numpy as np
-import scanpy as sc
-from scanpy.preprocessing._simple import N_PCS
 
 from sklearn.neighbors import KDTree
 from umap import UMAP
+
+import scanpy as sc
+from scanpy.preprocessing._simple import N_PCS
+from scanpy._utils import pkg_version
 
 
 X = np.array(
@@ -85,6 +87,10 @@ def test_neighbors(adatas):
     assert percent_correct > 0.99
 
 
+@pytest.mark.skipif(
+    pkg_version("anndata") < sc.tl._ingest.ANNDATA_MIN_VERSION,
+    reason="`AnnData.concatenate` does not concatenate `.obsm` in old anndata versions",
+)
 def test_ingest_function(adatas):
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()
@@ -129,6 +135,6 @@ def test_ingest_map_embedding_umap():
 
     reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4)
     reducer.fit(X)
-    umap_transformed_T = reducer.transform(T)
+    umap_transformed_t = reducer.transform(T)
 
-    assert np.allclose(ing._obsm['X_umap'], umap_transformed_T)
+    assert np.allclose(ing._obsm['X_umap'], umap_transformed_t)
