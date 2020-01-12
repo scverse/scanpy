@@ -40,8 +40,7 @@ def download_experiment(accession: str):
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     _download(
-        download_url + "experiment-design",
-        experiment_dir / "experimental_design.tsv",
+        download_url + "experiment-design", experiment_dir / "experimental_design.tsv",
     )
     _download(
         download_url + "quantification-filtered",
@@ -123,9 +122,7 @@ def ebi_expression_atlas(
 
     with ZipFile(experiment_dir / "expression_archive.zip", "r") as f:
         adata = read_expression_from_archive(f)
-    obs = pd.read_csv(
-        experiment_dir / "experimental_design.tsv", sep="\t", index_col=0
-    )
+    obs = pd.read_csv(experiment_dir / "experimental_design.tsv", sep="\t", index_col=0)
 
     adata.obs[obs.columns] = obs
     adata.write(dataset_path, compression="gzip")  # To be kind to disk space

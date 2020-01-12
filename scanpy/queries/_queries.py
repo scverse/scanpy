@@ -56,9 +56,7 @@ def simple_query(
     elif isinstance(attrs, cabc.Iterable):
         attrs = list(attrs)
     else:
-        raise TypeError(
-            f"attrs must be of type list or str, was {type(attrs)}."
-        )
+        raise TypeError(f"attrs must be of type list or str, was {type(attrs)}.")
     try:
         from pybiomart import Server
     except ImportError:

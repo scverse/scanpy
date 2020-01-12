@@ -32,12 +32,7 @@ def test_heatmap(image_comparer):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        show=False,
-        dendrogram=True,
+        adata, adata.var_names, 'cell_type', use_raw=False, show=False, dendrogram=True,
     )
     save_and_compare_images('master_heatmap')
 
@@ -112,12 +107,7 @@ def test_dotplot(image_comparer):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.dotplot(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
+        adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
     )
     save_and_compare_images('master_dotplot')
 
@@ -212,12 +202,7 @@ def test_matrixplot(image_comparer):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.matrixplot(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
+        adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
     )
     save_and_compare_images('master_matrixplot')
 
@@ -280,12 +265,7 @@ def test_stacked_violin(image_comparer, plt):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.stacked_violin(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        color='blue',
-        show=False,
+        adata, adata.var_names, 'cell_type', use_raw=False, color='blue', show=False,
     )
 
     plt.title("image may have cut labels.\nThis is ok for test")
@@ -430,9 +410,7 @@ def test_rank_genes_groups(image_comparer):
     save_and_compare_images('master_ranked_genes_matrixplot')
 
     # test ranked genes using matrixplot (swap_axes=True)
-    sc.pl.rank_genes_groups_matrixplot(
-        pbmc, n_genes=5, swap_axes=True, show=False
-    )
+    sc.pl.rank_genes_groups_matrixplot(pbmc, n_genes=5, swap_axes=True, show=False)
     save_and_compare_images('master_ranked_genes_matrixplot_swap_axes')
 
     # test ranked genes using tracks_plot
@@ -548,11 +526,7 @@ def test_scatterplots(image_comparer):
     save_and_compare_images('master_multipanel')
 
     sc.pl.pca(
-        pbmc,
-        color=['CD3D', 'CD79A'],
-        layer="sparse",
-        cmap='viridis',
-        show=False,
+        pbmc, color=['CD3D', 'CD79A'], layer="sparse", cmap='viridis', show=False,
     )
     save_and_compare_images('master_pca_sparse_layer')
 
@@ -606,9 +580,7 @@ def test_scatterplots(image_comparer):
 
     # test edges = True
     sc.pp.neighbors(pbmc)
-    sc.pl.umap(
-        pbmc, color='louvain', edges=True, edges_width=0.1, s=50, show=False
-    )
+    sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50, show=False)
     save_and_compare_images('master_umap_with_edges', tolerance=35)
 
     # test diffmap
@@ -716,9 +688,7 @@ def test_scatter_rep(tmpdir):
     }
     states = pd.DataFrame.from_records(
         zip(
-            list(
-                chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])
-            ),
+            list(chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])),
             list(chain.from_iterable(repeat("abc", 3))),
             [1, 2, 3, 3, 1, 2, 2, 3, 1],
         ),
@@ -728,9 +698,7 @@ def test_scatter_rep(tmpdir):
         TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"
         for state in states.itertuples()
     ]
-    pattern = np.array(
-        list(chain.from_iterable(repeat(i, 5) for i in range(3)))
-    )
+    pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))
     coords = np.c_[np.arange(15) % 5, pattern]
 
     adata = AnnData(
@@ -755,9 +723,7 @@ def test_scatter_rep(tmpdir):
         if s1.result == s2.result:
             assert comp is None, comp
         else:
-            assert (
-                "Error" in comp
-            ), f"{s1.outpth}, {s2.outpth} aren't supposed to match"
+            assert "Error" in comp, f"{s1.outpth}, {s2.outpth} aren't supposed to match"
 
 
 def test_paga(image_comparer):
@@ -771,36 +737,22 @@ def test_paga(image_comparer):
     sc.pl.paga(pbmc, threshold=0.5, max_edge_width=1.0, show=False)
     save_and_compare_images('master_paga')
 
-    sc.pl.paga(
-        pbmc, color='CST3', threshold=0.5, max_edge_width=1.0, show=False
-    )
+    sc.pl.paga(pbmc, color='CST3', threshold=0.5, max_edge_width=1.0, show=False)
     save_and_compare_images('master_paga_continuous')
 
     pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze()
     sc.pl.paga(
-        pbmc,
-        color='cool_feature',
-        threshold=0.5,
-        max_edge_width=1.0,
-        show=False,
+        pbmc, color='cool_feature', threshold=0.5, max_edge_width=1.0, show=False,
     )
     save_and_compare_images('master_paga_continuous_obs')
 
     sc.pl.paga(
-        pbmc,
-        color=['CST3', 'GATA2'],
-        threshold=0.5,
-        max_edge_width=1.0,
-        show=False,
+        pbmc, color=['CST3', 'GATA2'], threshold=0.5, max_edge_width=1.0, show=False,
     )
     save_and_compare_images('master_paga_continuous_multiple')
 
     sc.pl.paga_compare(
-        pbmc,
-        legend_fontoutline=2,
-        threshold=0.5,
-        max_edge_width=1.0,
-        show=False,
+        pbmc, legend_fontoutline=2, threshold=0.5, max_edge_width=1.0, show=False,
     )
     save_and_compare_images('master_paga_compare')
 
@@ -815,10 +767,6 @@ def test_paga(image_comparer):
     save_and_compare_images('master_paga_compare_continuous')
 
     sc.pl.paga_compare(
-        pbmc,
-        basis='X_pca',
-        legend_fontweight='normal',
-        threshold=0.5,
-        show=False,
+        pbmc, basis='X_pca', legend_fontweight='normal', threshold=0.5, show=False,
     )
     save_and_compare_images('master_paga_compare_pca')
