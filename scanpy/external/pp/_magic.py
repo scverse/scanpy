@@ -139,11 +139,10 @@ def magic(
         min_version = (2, 0)
         if not version >= min_version:
             raise ImportError(
-                'scanpy requires magic-impute >= v{}.{} (detected: v{}). '
+                'scanpy requires magic-impute >= '
+                f'v{min_version[0]}.{min_version[1]} (detected: v{__version__}). '
                 'Please update magic package via `pip install --user '
-                '--upgrade magic-impute`'.format(
-                    min_version[0], min_version[1], __version__
-                )
+                '--upgrade magic-impute`'
             )
 
     start = logg.info('computing MAGIC')
