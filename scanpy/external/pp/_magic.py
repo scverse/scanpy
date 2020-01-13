@@ -57,35 +57,36 @@ def magic(
         may require a large amount of memory if the input data is sparse.
         Another possibility is `'pca_only'`.
     knn
-        number of nearest neighbors on which to build kernel
+        number of nearest neighbors on which to build kernel.
     decay
         sets decay rate of kernel tails.
-        If None, alpha decaying kernel is not used
+        If None, alpha decaying kernel is not used.
     knn_max
         maximum number of nearest neighbors with nonzero connection.
-        If `None`, will be set to 3 * `knn`
+        If `None`, will be set to 3 * `knn`.
     t
         power to which the diffusion operator is powered.
         This sets the level of diffusion. If 'auto', t is selected
-        according to the Procrustes disparity of the diffused data
+        according to the Procrustes disparity of the diffused data.
     n_pca
         Number of principal components to use for calculating
         neighborhoods. For extremely large datasets, using
         n_pca < 20 allows neighborhoods to be calculated in
-        roughly log(n_samples) time.
+        roughly log(n_samples) time. If `None`, no PCA is performed.
     solver
         Which solver to use. "exact" uses the implementation described
-        in van Dijk et al. (2018) [1]_. "approximate" uses a faster implementation
-        that performs imputation in the PCA space and then projects back to the
-        gene space. Note, the "approximate" solver may return negative values.
+        in van Dijk et al. (2018) [vanDijk18]_. "approximate" uses a faster
+        implementation that performs imputation in the PCA space and then
+        projects back to the gene space. Note, the "approximate" solver may
+        return negative values.
     knn_dist
         recommended values: 'euclidean', 'cosine', 'precomputed'
         Any metric from `scipy.spatial.distance` can be used
         distance metric for building kNN graph. If 'precomputed',
         `data` should be an n_samples x n_samples distance or
-        affinity matrix
+        affinity matrix.
     random_state
-        Random seed. Defaults to the global `numpy` random number generator
+        Random seed. Defaults to the global `numpy` random number generator.
     n_jobs
         Number of threads to use in training. All cores are used by default.
     verbose
@@ -97,7 +98,7 @@ def magic(
         if `genes` is `'all_genes'` or `'pca_only'`, as the resultant data
         will otherwise have different column names from the input data.
     kwargs
-        Additional arguments to `magic.MAGIC`
+        Additional arguments to `magic.MAGIC`.
 
     Returns
     -------
