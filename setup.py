@@ -31,6 +31,7 @@ setup(
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
         rapids=['cudf', 'cuml', 'cugraph'],
+        magic=['magic-impute>=2.0'],
         doc=[
             'sphinx',
             'sphinx_rtd_theme',
