@@ -17,10 +17,12 @@ def magic(
     adata: AnnData,
     name_list: Union[Literal['all_genes', 'pca_only'], Sequence[str], None] = None,
     *,
-    knn: int = 10,
-    decay: int = 15,
-    t: str = 'auto',
+    knn: int = 5,
+    decay: int = 1,
+    knn_max: Optional[int] = None,
+    t: str = 3,
     n_pca: int = 100,
+    solver: Literal['exact', 'approximate'] = 'exact',
     knn_dist: str = 'euclidean',
     random_state: Optional[Union[int, RandomState]] = None,
     n_jobs: Optional[int] = None,
@@ -59,6 +61,9 @@ def magic(
     decay
         sets decay rate of kernel tails.
         If None, alpha decaying kernel is not used
+    knn_max
+        maximum number of nearest neighbors with nonzero connection.
+        If `None`, will be set to 3 * `knn`
     t
         power to which the diffusion operator is powered.
         This sets the level of diffusion. If 'auto', t is selected
@@ -68,6 +73,11 @@ def magic(
         neighborhoods. For extremely large datasets, using
         n_pca < 20 allows neighborhoods to be calculated in
         roughly log(n_samples) time.
+    solver
+        Which solver to use. "exact" uses the implementation described
+        in van Dijk et al. (2018) [1]_. "approximate" uses a faster implementation
+        that performs imputation in the PCA space and then projects back to the
+        gene space. Note, the "approximate" solver may return negative values.
     knn_dist
         recommended values: 'euclidean', 'cosine', 'precomputed'
         Any metric from `scipy.spatial.distance` can be used
@@ -124,11 +134,15 @@ def magic(
             'git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`'
         )
     else:
-        __version__ = tuple([int(v) for v in __version__.split(".")[:2]])
-        if not __version__ >= (1, 5):
+        version = tuple([int(v) for v in __version__.split(".")[:2]])
+        min_version = (2, 0)
+        if not version >= min_version:
             raise ImportError(
+                'scanpy requires magic-impute >= v{}.{} (detected: v{}). '
                 'Please update magic package via `pip install --user '
-                '--upgrade magic-impute`'
+                '--upgrade magic-impute`'.format(
+                    min_version[0], min_version[1], __version__
+                )
             )
 
     start = logg.info('computing MAGIC')
@@ -152,8 +166,10 @@ def magic(
     X_magic = MAGIC(
         knn=knn,
         decay=decay,
+        knn_max=knn_max,
         t=t,
         n_pca=n_pca,
+        solver=solver,
         knn_dist=knn_dist,
         random_state=random_state,
         n_jobs=n_jobs,
