@@ -1,23 +1,26 @@
-import pandas as pd
-import numpy as np
-from sklearn.utils import check_random_state
-from scipy.sparse import issparse
 from collections.abc import MutableMapping
 from typing import Iterable, Union, Optional
+
+import pandas as pd
+import numpy as np
+from packaging import version
+from sklearn.utils import check_random_state
+from scipy.sparse import issparse
 from anndata import AnnData
-from distutils.version import LooseVersion
 
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 from .. import logging as logg
-from .._utils import version
+from .._utils import pkg_version
+
+ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
     obs: Optional[Union[str, Iterable[str]]] = None,
-    embedding_method: Union[str, Iterable[str]] = ['umap', 'pca'],
+    embedding_method: Union[str, Iterable[str]] = ('umap', 'pca'),
     labeling_method: str = 'knn',
     inplace: bool = True,
     **kwargs,
@@ -82,6 +85,7 @@ def ingest(
     -------
     Call sequence:
 
+    >>> import scanpy as sc
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
     >>> sc.tl.ingest(adata, adata_ref, obs='cell_type')
@@ -90,24 +94,21 @@ def ingest(
     .. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
     """
     # anndata version check
-    anndata_version = version("anndata")
-    if anndata_version <= LooseVersion('0.6.23'):
+    anndata_version = pkg_version("anndata")
+    if anndata_version < ANNDATA_MIN_VERSION:
         raise ValueError(
-            f'ingest only works correctly with anndata>=0.7rc2 (you have {anndata_version}) '
-            'as prior to 0.7rc2, `AnnData.concatenate` did not concatenate `.obsm`'
+            f'ingest only works correctly with anndata>={ANNDATA_MIN_VERSION} '
+            f'(you have {anndata_version}) as prior to {ANNDATA_MIN_VERSION}, '
+            '`AnnData.concatenate` did not concatenate `.obsm`.'
         )
 
     start = logg.info('running ingest')
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
-        [embedding_method]
-        if isinstance(embedding_method, str)
-        else embedding_method
+        [embedding_method] if isinstance(embedding_method, str) else embedding_method
     )
     labeling_method = (
-        [labeling_method]
-        if isinstance(labeling_method, str)
-        else labeling_method
+        [labeling_method] if isinstance(labeling_method, str) else labeling_method
     )
 
     if len(labeling_method) == 1 and len(obs or []) > 1:
@@ -116,9 +117,8 @@ def ingest(
     ing = Ingest(adata_ref)
     ing.fit(adata)
 
-    if embedding_method is not None:
-        for method in embedding_method:
-            ing.map_embedding(method)
+    for method in embedding_method:
+        ing.map_embedding(method)
 
     if obs is not None:
         ing.neighbors(**kwargs)
@@ -189,9 +189,7 @@ class Ingest:
         self._umap._metric_kwds = adata.uns['neighbors']['params'].get(
             'metric_kwds', {}
         )
-        self._umap._n_neighbors = adata.uns['neighbors']['params'][
-            'n_neighbors'
-        ]
+        self._umap._n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
         self._umap._initial_alpha = self._umap.learning_rate
 
         self._umap._random_init = self._random_init
@@ -216,9 +214,7 @@ class Ingest:
 
         if 'use_rep' in adata.uns['neighbors']['params']:
             self._use_rep = adata.uns['neighbors']['params']['use_rep']
-            self._rep = (
-                adata.X if self._use_rep == 'X' else adata.obsm[self._use_rep]
-            )
+            self._rep = adata.X if self._use_rep == 'X' else adata.obsm[self._use_rep]
         elif 'n_pcs' in adata.uns['neighbors']['params']:
             self._use_rep = 'X_pca'
             self._n_pcs = adata.uns['neighbors']['params']['n_pcs']
@@ -229,15 +225,11 @@ class Ingest:
             self._n_pcs = self._rep.shape[1]
 
         if 'metric_kwds' in adata.uns['neighbors']['params']:
-            dist_args = tuple(
-                adata.uns['neighbors']['params']['metric_kwds'].values()
-            )
+            dist_args = tuple(adata.uns['neighbors']['params']['metric_kwds'].values())
         else:
             dist_args = ()
         dist_func = named_distances[adata.uns['neighbors']['params']['metric']]
-        self._random_init, self._tree_init = make_initialisations(
-            dist_func, dist_args
-        )
+        self._random_init, self._tree_init = make_initialisations(dist_func, dist_args)
         self._search = make_initialized_nnd_search(dist_func, dist_args)
 
         search_graph = adata.uns['neighbors']['distances'].copy()
@@ -245,9 +237,7 @@ class Ingest:
         self._search_graph = search_graph.maximum(search_graph.transpose())
 
         if 'rp_forest' in adata.uns['neighbors']:
-            self._rp_forest = _rp_forest_generate(
-                adata.uns['neighbors']['rp_forest']
-            )
+            self._rp_forest = _rp_forest_generate(adata.uns['neighbors']['rp_forest'])
         else:
             self._rp_forest = None
 
@@ -349,9 +339,7 @@ class Ingest:
         from umap.umap_ import INT32_MAX, INT32_MIN
 
         random_state = check_random_state(random_state)
-        rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(
-            np.int64
-        )
+        rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
 
         train = self._rep
         test = self._obsm['rep']
@@ -367,11 +355,7 @@ class Ingest:
         )
 
         result = self._search(
-            train,
-            self._search_graph.indptr,
-            self._search_graph.indices,
-            init,
-            test,
+            train, self._search_graph.indptr, self._search_graph.indices, init, test,
         )
         indices, dists = deheap_sort(result)
         self._indices, self._distances = indices[:, :k], dists[:, :k]
@@ -401,9 +385,7 @@ class Ingest:
             'category'
         )  # ensure it's categorical
         values = [cat_array[inds].mode()[0] for inds in self._indices]
-        return pd.Categorical(
-            values=values, categories=cat_array.cat.categories
-        )
+        return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):
         """\

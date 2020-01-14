@@ -5,6 +5,7 @@ from typing import Mapping, Optional, Collection, Union, Tuple, List, Dict
 
 import pandas as pd
 from anndata import AnnData
+from packaging import version
 
 from ... import settings
 
@@ -142,10 +143,10 @@ def cyclone(
 
 def _check_import():
     try:
-        from pypairs import __version__ as pypairsversion
-        from distutils.version import LooseVersion
-
-        if LooseVersion(pypairsversion) < LooseVersion("v3.0.9"):
-            raise ImportError('Please only use `pypairs` >= v3.0.9 ')
+        import pypairs
     except ImportError:
         raise ImportError('You need to install the package `pypairs`.')
+
+    min_version = version.parse("3.0.9")
+    if version.parse(pypairs.__version__) < min_version:
+        raise ImportError(f'Please only use `pypairs` >= {min_version}')

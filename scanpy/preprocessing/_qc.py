@@ -48,7 +48,7 @@ def describe_obs(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Collection[int] = (50, 100, 200, 500),
+    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace: bool = False,
@@ -214,7 +214,7 @@ def calculate_qc_metrics(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Collection[int] = (50, 100, 200, 500),
+    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace: bool = False,
@@ -388,6 +388,8 @@ def top_segment_proportions_dense(
 
 @numba.njit(cache=True, parallel=True)
 def top_segment_proportions_sparse_csr(data, indptr, ns):
+    # work around https://github.com/numba/numba/issues/5056
+    indptr = indptr.astype(np.int64)
     ns = np.sort(ns)
     maxidx = ns[-1]
     sums = np.zeros((indptr.size - 1), dtype=data.dtype)
@@ -405,8 +407,9 @@ def top_segment_proportions_sparse_csr(data, indptr, ns):
     partitioned = partitioned[:, ::-1][:, :ns[-1]]
     acc = np.zeros((indptr.size - 1), dtype=data.dtype)
     prev = 0
-    for j, n in enumerate(ns):
-        acc += partitioned[:, prev:n].sum(axis=1)
+    # can’t use enumerate due to https://github.com/numba/numba/issues/2625
+    for j in range(ns.size):
+        acc += partitioned[:, prev:ns[j]].sum(axis=1)
         values[:, j] = acc
-        prev = n
+        prev = ns[j]
     return values / sums.reshape((indptr.size - 1, 1))

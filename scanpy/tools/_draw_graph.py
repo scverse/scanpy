@@ -95,8 +95,7 @@ def draw_graph(
     adata = adata.copy() if copy else adata
     if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
-            'You need to run `pp.neighbors` first '
-            'to compute a neighborhood graph.'
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
         )
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
@@ -163,17 +162,12 @@ def draw_graph(
             ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
     adata.uns['draw_graph'] = {}
-    adata.uns['draw_graph']['params'] = dict(
-        layout=layout, random_state=random_state
-    )
+    adata.uns['draw_graph']['params'] = dict(layout=layout, random_state=random_state)
     key_added = f'X_draw_graph_{key_added_ext or layout}'
     adata.obsm[key_added] = positions
     logg.info(
         '    finished',
         time=start,
-        deep=(
-            'added\n'
-            f'    {key_added!r}, graph_drawing coordinates (adata.obsm)'
-        ),
+        deep=f'added\n    {key_added!r}, graph_drawing coordinates (adata.obsm)',
     )
     return adata if copy else None

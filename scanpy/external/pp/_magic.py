@@ -15,14 +15,14 @@ from ..._compat import Literal
 @legacy_api('k', 'a')
 def magic(
     adata: AnnData,
-    name_list: Union[
-        Literal['all_genes', 'pca_only'], Sequence[str], None
-    ] = None,
+    name_list: Union[Literal['all_genes', 'pca_only'], Sequence[str], None] = None,
     *,
-    knn: int = 10,
-    decay: int = 15,
-    t: str = 'auto',
-    n_pca: int = 100,
+    knn: int = 5,
+    decay: Optional[float] = 1,
+    knn_max: Optional[int] = None,
+    t: Union[Literal['auto'], int] = 3,
+    n_pca: Optional[int] = 100,
+    solver: Literal['exact', 'approximate'] = 'exact',
     knn_dist: str = 'euclidean',
     random_state: Optional[Union[int, RandomState]] = None,
     n_jobs: Optional[int] = None,
@@ -57,27 +57,36 @@ def magic(
         may require a large amount of memory if the input data is sparse.
         Another possibility is `'pca_only'`.
     knn
-        number of nearest neighbors on which to build kernel
+        number of nearest neighbors on which to build kernel.
     decay
         sets decay rate of kernel tails.
-        If None, alpha decaying kernel is not used
+        If None, alpha decaying kernel is not used.
+    knn_max
+        maximum number of nearest neighbors with nonzero connection.
+        If `None`, will be set to 3 * `knn`.
     t
         power to which the diffusion operator is powered.
         This sets the level of diffusion. If 'auto', t is selected
-        according to the Procrustes disparity of the diffused data
+        according to the Procrustes disparity of the diffused data.
     n_pca
         Number of principal components to use for calculating
         neighborhoods. For extremely large datasets, using
         n_pca < 20 allows neighborhoods to be calculated in
-        roughly log(n_samples) time.
+        roughly log(n_samples) time. If `None`, no PCA is performed.
+    solver
+        Which solver to use. "exact" uses the implementation described
+        in van Dijk et al. (2018) [vanDijk18]_. "approximate" uses a faster
+        implementation that performs imputation in the PCA space and then
+        projects back to the gene space. Note, the "approximate" solver may
+        return negative values.
     knn_dist
         recommended values: 'euclidean', 'cosine', 'precomputed'
         Any metric from `scipy.spatial.distance` can be used
         distance metric for building kNN graph. If 'precomputed',
         `data` should be an n_samples x n_samples distance or
-        affinity matrix
+        affinity matrix.
     random_state
-        Random seed. Defaults to the global `numpy` random number generator
+        Random seed. Defaults to the global `numpy` random number generator.
     n_jobs
         Number of threads to use in training. All cores are used by default.
     verbose
@@ -89,7 +98,7 @@ def magic(
         if `genes` is `'all_genes'` or `'pca_only'`, as the resultant data
         will otherwise have different column names from the input data.
     kwargs
-        Additional arguments to `magic.MAGIC`
+        Additional arguments to `magic.MAGIC`.
 
     Returns
     -------
@@ -126,9 +135,12 @@ def magic(
             'git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`'
         )
     else:
-        __version__ = tuple([int(v) for v in __version__.split(".")[:2]])
-        if not __version__ >= (1, 5):
+        version = tuple([int(v) for v in __version__.split(".")[:2]])
+        min_version = (2, 0)
+        if not version >= min_version:
             raise ImportError(
+                'scanpy requires magic-impute >= '
+                f'v{min_version[0]}.{min_version[1]} (detected: v{__version__}). '
                 'Please update magic package via `pip install --user '
                 '--upgrade magic-impute`'
             )
@@ -154,8 +166,10 @@ def magic(
     X_magic = MAGIC(
         knn=knn,
         decay=decay,
+        knn_max=knn_max,
         t=t,
         n_pca=n_pca,
+        solver=solver,
         knn_dist=knn_dist,
         random_state=random_state,
         n_jobs=n_jobs,

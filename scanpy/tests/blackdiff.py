@@ -24,9 +24,7 @@ def black_diff(src: Path, differ=Differ()) -> Tuple[int, int]:
 
     counts = Counter(
         line[0]
-        for line in differ.compare(
-            src_contents.splitlines(), dst_contents.splitlines()
-        )
+        for line in differ.compare(src_contents.splitlines(), dst_contents.splitlines())
     )
     return counts['+'], counts['-']
 
