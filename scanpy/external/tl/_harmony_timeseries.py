@@ -9,7 +9,8 @@ from ... import logging as logg
 
 
 def harmony_timeseries(data: AnnData, tp: str):
-    """Harmony time series for data visualization with augmented affinity matrix
+    """\
+    Harmony time series for data visualization with augmented affinity matrix
     at discrete time points [Nowotschin18i]_.
 
     Harmony time series is a framework for data visualization, trajectory
