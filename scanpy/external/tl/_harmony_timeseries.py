@@ -19,7 +19,9 @@ def harmony_timeseries(data: AnnData, tp: str):
     successive time points. This augmented affinity matrix forms the basis for
     generated a force directed layout for visualization and also serves as input
     for computing the diffusion operator which can be used for trajectory
-    detection using **Palantir**.
+    detection using Palantir_.
+
+    .. _Palantir: https://github.com/dpeerlab/Palantir
 
     More about **Palantir** can be found here:
     https://github.com/dpeerlab/Palantir.
