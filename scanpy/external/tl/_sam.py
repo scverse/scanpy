@@ -16,12 +16,11 @@ def sam(
     distance: str = 'correlation',
     standardization: Optional[str] = 'Normalizer',
     weight_pcs: bool = True,
-    npcs: Optional[int]=None,
-    n_genes: Optional[int]=None,
-    projection: Optional[str]='umap',
+    npcs: Optional[int] = None,
+    n_genes: Optional[int] = None,
+    projection: Optional[str] = 'umap',
     inplace: bool = True,
-    verbose: bool = True
-
+    verbose: bool = True,
 ) -> Optional[AnnData]:
     """Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
 
@@ -198,13 +197,20 @@ def sam(
             '\tpip install .'
         )
 
-    s = SAM(counts = adata, inplace = inplace)
+    s = SAM(counts=adata, inplace=inplace)
 
     logg.info('Running SAM')
-    s.run(max_iter=max_iter,num_norm_avg=num_norm_avg,k=k,
-            distance=distance,preprocessing=standardization,
-            weight_PCs=weight_pcs,npcs=npcs,n_genes=n_genes,
-            projection = projection,verbose=verbose)
+    s.run(
+        max_iter=max_iter,
+        num_norm_avg=num_norm_avg,
+        k=k,
+        distance=distance,
+        preprocessing=standardization,
+        weight_PCs=weight_pcs,
+        npcs=npcs,
+        n_genes=n_genes,
+        projection=projection,
+        verbose=verbose,
+    )
 
-    return (s,adata) if inplace else (s,s.adata)
-
+    return (s, adata) if inplace else (s, s.adata)
