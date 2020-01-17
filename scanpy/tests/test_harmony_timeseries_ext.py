@@ -17,13 +17,7 @@ sc.pp.highly_variable_genes(adata, n_top_genes=1000, subset=True)
 
 def load_timepoints_from_anndata_list():
 
-    d = sce.tl.harmony_timeseries(data=adata, tp="time_points")
-    aug_aff, aff = d.harmony_timeseries.core.augmented_affinity_matrix(
-        data_df=adata.to_df(),
-        timepoints=adata.obs["time_points"],
-        timepoint_connections=adata.uns["timepoint_connections"],
-        pc_components=300,
-    )
+    sce.tl.harmony_timeseries(adata=adata, tp="time_points", n_components=None)
     assert all(
-        [aug_aff.shape[0], aff.shape[0],]
+        [adata.uns['aug_aff'].shape[0], adata.uns['aff'].shape[0]]
     ), "harmony_timeseries augmented affinity matrix Error!"
