@@ -135,7 +135,7 @@ def harmony_timeseries(
             "git clone https://github.com/dpeerlab/Harmony.git\n\t"
             "cd Harmony\n\t"
             "pip install .\n"
-            )
+        )
 
     logg.info("Harmony augmented affinity matrix")
 
