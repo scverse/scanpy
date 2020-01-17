@@ -10,9 +10,7 @@ from anndata import AnnData
 from ... import logging as logg
 
 
-def harmony_timeseries(
-    adata: AnnData, tp: str, n_components: Optional[int] = 1000
-):
+def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 1000):
     """\
     Harmony time series for data visualization with augmented affinity matrix
     at discrete time points [Nowotschin18i]_.
