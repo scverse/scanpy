@@ -10,17 +10,6 @@ from anndata import AnnData
 from ... import logging as logg
 
 
-try:
-    import harmony
-except ImportError:
-    raise ImportError(
-        "\nplease install harmony: \n\n\t"
-        "git clone https://github.com/dpeerlab/Harmony.git\n\t"
-        "cd Harmony\n\t"
-        "pip install .\n"
-    )
-
-
 def harmony_timeseries(
     adata: AnnData, tp: str, n_components: Optional[int] = 1000
 ):
@@ -137,6 +126,17 @@ def harmony_timeseries(
     It provides a comprehensive guide to draw *gene expression trends*, amongst
     other things.
     """
+
+    try:
+        import harmony
+    except ImportError:
+        raise ImportError(
+            "\nplease install harmony: \n\n\t"
+            "git clone https://github.com/dpeerlab/Harmony.git\n\t"
+            "cd Harmony\n\t"
+            "pip install .\n"
+            )
+
     logg.info("Harmony augmented affinity matrix")
 
     timepoint_connections = pd.DataFrame(columns=[0, 1])
