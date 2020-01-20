@@ -50,6 +50,7 @@ setup(
         ],
     ),
     packages=find_packages(),
+    include_package_data=True,
     entry_points=dict(console_scripts=['scanpy=scanpy.cli:console_main']),
     zip_safe=False,
     classifiers=[
