@@ -156,6 +156,6 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
     # Force directed layouts
     layout = harmony.plot.force_directed_layout(aug_aff, adata.obs.index)
 
-    adata.obs[['x', 'y']] = layout
+    adata.obsm["X_harmony"] = layout
     adata.uns['aff'] = aff
     adata.uns['aug_aff'] = aug_aff
