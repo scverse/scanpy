@@ -46,13 +46,13 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
 
     Returns
     -------
-    Updates `.obs` and `.uns` with the following:
+    Updates `.obsm` and `.uns` with the following:
 
-    **aff**
+    **aff_harmony**
         affinity matrix
-    **aug_aff**
+    **aff_aug_harmony**
         augmented affinity matrix
-    **layout**
+    **X_harmony**
         force directed layout
     **timepoint_connections**
         links between time points
@@ -157,5 +157,5 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
     layout = harmony.plot.force_directed_layout(aug_aff, adata.obs.index)
 
     adata.obsm["X_harmony"] = layout
-    adata.uns['aff'] = aff
-    adata.uns['aug_aff'] = aug_aff
+    adata.uns['aff_harmony'] = aff
+    adata.uns['aff_aug_harmony'] = aug_aff
