@@ -12,6 +12,9 @@ from ..._settings import settings
 from ..._compat import Literal
 
 
+__min_version__ = "2.0"
+
+
 @legacy_api('k', 'a')
 def magic(
     adata: AnnData,
@@ -136,7 +139,7 @@ def magic(
         )
     else:
         version = tuple([int(v) for v in __version__.split(".")[:2]])
-        min_version = (2, 0)
+        min_version = tuple([int(v) for v in __min_version__.split(".")[:2]])
         if not version >= min_version:
             raise ImportError(
                 'scanpy requires magic-impute >= '
