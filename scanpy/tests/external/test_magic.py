@@ -1,4 +1,12 @@
 import pytest
+
+try:
+    import magic
+except ModuleNotFoundError:
+    pytest.skip(
+        "magic-impute not installed, skipping MAGIC tests", allow_module_level=True
+    )
+
 import numpy as np
 from anndata import AnnData
 
