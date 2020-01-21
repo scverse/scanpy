@@ -19,5 +19,5 @@ def load_timepoints_from_anndata_list():
 
     sce.tl.harmony_timeseries(adata=adata, tp="time_points", n_components=None)
     assert all(
-        [adata.uns['aug_aff'].shape[0], adata.uns['aff'].shape[0]]
+        [adata.uns['aff_aug_harmony'].shape[0], adata.uns['aff_harmony'].shape[0]]
     ), "harmony_timeseries augmented affinity matrix Error!"
