@@ -770,3 +770,35 @@ def test_paga(image_comparer):
         pbmc, basis='X_pca', legend_fontweight='normal', threshold=0.5, show=False,
     )
     save_and_compare_images('master_paga_compare_pca')
+
+
+def test_no_copy():
+    # https://github.com/theislab/scanpy/issues/1000
+    # Tests that plotting functions don't make a copy from a view unless they
+    # actually have to
+    actual = sc.datasets.pbmc68k_reduced()
+    sc.pl.umap(actual, color=["bulk_labels", "louvain"], show=False)  # Set colors
+
+    view = actual[np.random.choice(actual.obs_names, size=actual.shape[0] // 5), :]
+
+    sc.pl.umap(view, color=["bulk_labels", "louvain"], show=False)
+    assert view.is_view
+
+    rank_genes_groups_plotting_funcs = [
+        sc.pl.rank_genes_groups,
+        sc.pl.rank_genes_groups_dotplot,
+        sc.pl.rank_genes_groups_heatmap,
+        sc.pl.rank_genes_groups_matrixplot,
+        sc.pl.rank_genes_groups_stacked_violin,
+        # TODO: raises ValueError about empty distance matrix – investigate
+        # sc.pl.rank_genes_groups_tracksplot,
+        sc.pl.rank_genes_groups_violin,
+    ]
+
+    # Only plotting one group at a time to avoid generating dendrogram
+    # TODO: Generating a dendrogram modifies the object, this should be
+    # optional and also maybe not modify the object.
+    for plotfunc in rank_genes_groups_plotting_funcs:
+        view = actual[actual.obs["bulk_labels"] == "Dendritic"]
+        plotfunc(view, ["Dendritic"], show=False)
+        assert view.is_view
