@@ -66,6 +66,7 @@ Clustering and trajectory inference
    :toctree: .
 
    tl.phenograph
+   tl.harmony_timeseries
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
