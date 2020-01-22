@@ -31,6 +31,7 @@ setup(
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
         rapids=['cudf', 'cuml', 'cugraph'],
+        magic=['magic-impute>=2.0'],
         doc=[
             'sphinx',
             'sphinx_rtd_theme',
@@ -49,6 +50,7 @@ setup(
         ],
     ),
     packages=find_packages(),
+    include_package_data=True,
     entry_points=dict(console_scripts=['scanpy=scanpy.cli:console_main']),
     zip_safe=False,
     classifiers=[
