@@ -4,7 +4,7 @@ from anndata import AnnData
 
 import scanpy as sc
 
-pytest.importorskip("magic", minversion=sc.external.pp._magic.__min_version__)
+pytest.importorskip("magic", minversion=sc.external.pp._magic.MIN_VERSION)
 
 A_list = [
     [0, 0, 7, 0, 0],

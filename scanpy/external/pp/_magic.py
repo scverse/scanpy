@@ -6,13 +6,14 @@ from typing import Union, Sequence, Optional
 from anndata import AnnData
 from numpy.random.mtrand import RandomState
 from legacy_api_wrap import legacy_api
+from packaging import version
 
 from ... import logging as logg
 from ..._settings import settings
 from ..._compat import Literal
 
 
-__min_version__ = "2.0"
+MIN_VERSION = "2.0"
 
 
 @legacy_api('k', 'a')
@@ -138,12 +139,10 @@ def magic(
             'git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`'
         )
     else:
-        version = tuple([int(v) for v in __version__.split(".")[:2]])
-        min_version = tuple([int(v) for v in __min_version__.split(".")[:2]])
-        if not version >= min_version:
+        if not version.parse(__version__) >= version.parse(MIN_VERSION):
             raise ImportError(
                 'scanpy requires magic-impute >= '
-                f'v{min_version[0]}.{min_version[1]} (detected: v{__version__}). '
+                f'v{MIN_VERSION} (detected: v{__version__}). '
                 'Please update magic package via `pip install --user '
                 '--upgrade magic-impute`'
             )
