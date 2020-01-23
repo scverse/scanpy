@@ -51,6 +51,42 @@ def test_obs_df(adata):
     assert all(badkey_err.match(k) for k in badkeys)
 
 
+def test_obs_df_key_collision(adata):
+    # Test that we warn on key collisions
+    orig = adata.copy()
+    adata.obs = adata.obs.join(
+        pd.DataFrame(
+            np.zeros(adata.shape),
+            columns=adata.var_names,
+            index=adata.obs_names,
+        )
+    )
+    # adata.obs = adata.obs.join(sc.get.obs_df(adata, ["gene1", "gene2"]))
+    with pytest.warns(FutureWarning, match=r"gene1.*gene2.*obs.*adata\.var_names"):
+        df = sc.get.obs_df(adata, ["gene1", "gene2"])
+    # TODO: Make this true:
+    # Until this throws an error, it should favor returning values from X for backwards compat.
+    pd.testing.assert_frame_equal(
+        df,
+        sc.get.obs_df(orig, ["gene1", "gene2"]),
+        check_dtype=False
+    )
+
+    # Test for gene_symbols
+    adata.obs = adata.obs.join(
+        sc.get.obs_df(
+            adata, ["genesymbol1", "genesymbol2"], gene_symbols="gene_symbols"
+        )
+    )
+    with pytest.warns(
+        FutureWarning,
+        match=r"genesymbol1.*genesymbol2.*obs.*adata\.var\['gene_symbols'\]",
+    ):
+        sc.get.obs_df(
+            adata, ["genesymbol1", "genesymbol2"], gene_symbols="gene_symbols"
+        )
+
+
 def test_var_df(adata):
     adata.varm["eye"] = np.eye(2)
     adata.varm["sparse"] = sparse.csr_matrix(np.eye(2))
@@ -67,6 +103,26 @@ def test_var_df(adata):
     with pytest.raises(KeyError) as badkey_err:
         sc.get.var_df(adata, keys=badkeys)
     assert all(badkey_err.match(k) for k in badkeys)
+
+
+def test_var_df_key_collision(adata):
+    # Test that we warn on key collisions
+    orig = adata.copy()
+    adata.var = adata.var.join(
+        pd.DataFrame(
+            np.zeros(adata.shape[::-1]),
+            columns=adata.obs_names,
+            index=adata.var_names,
+        )
+    )
+    with pytest.warns(FutureWarning, match=r"cell1.*cell2.*var.*adata\.obs_names"):
+        df = sc.get.var_df(adata, ["cell1", "cell2"])
+    # TODO: Make this true
+    pd.testing.assert_frame_equal(
+        df,
+        sc.get.var_df(orig, ["cell1", "cell2"]),
+        check_dtype=False
+    )
 
 
 def test_rank_genes_groups_df():
