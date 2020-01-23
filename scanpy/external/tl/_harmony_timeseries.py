@@ -61,6 +61,7 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
     Example
     -------
 
+    >>> from itertools import product
     >>> from anndata import AnnData
     >>> import scanpy as sc
     >>> import scanpy.external as sce

@@ -1,15 +1,20 @@
+from itertools import product
+
+from anndata import AnnData
+
 import scanpy as sc
 import scanpy.external as sce
 
-sample_names = ['sa1_Rep1', 'sa1_Rep2', 'sa2_Rep1', 'sa2_Rep2']
+
 adata_ref = sc.datasets.pbmc3k()
-n = int(adata_ref.shape[0] / 4)
-datalist = [adata_ref[n * i : n * (i + 1)] for i in range(4)]
-timepoints = [i.split("_")[0] for i in sample_names]
-for ad, sn, tp in zip(datalist, sample_names, timepoints):
-    ad.obs["time_points"] = tp
-    ad.obs["sample_name"] = sn
-adata = datalist[0].concatenate(*datalist[1:], join="outer")
+start = [596, 615, 1682, 1663, 1409, 1432]
+adata = AnnData.concatenate(
+    *(adata_ref[i : i + 1000] for i in start),
+    join="outer",
+    batch_key="sample",
+    batch_categories=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
+)
+adata.obs["time_points"] = adata.obs["sample"].str.split("_", expand=True)[0]
 sc.pp.normalize_total(adata, target_sum=10000)
 sc.pp.log1p(adata)
 sc.pp.highly_variable_genes(adata, n_top_genes=1000, subset=True)
@@ -19,5 +24,5 @@ def load_timepoints_from_anndata_list():
 
     sce.tl.harmony_timeseries(adata=adata, tp="time_points", n_components=None)
     assert all(
-        [adata.uns['aff_aug_harmony'].shape[0], adata.uns['aff_harmony'].shape[0]]
+        [adata.obsp['harmony_aff'].shape[0], adata.obsp['harmony_aff_aug'].shape[0]]
     ), "harmony_timeseries augmented affinity matrix Error!"
