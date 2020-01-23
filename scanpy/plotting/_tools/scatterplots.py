@@ -41,6 +41,11 @@ def embedding(
     components: Union[str, Sequence[str]] = None,
     layer: Optional[str] = None,
     projection: Literal['2d', '3d'] = '2d',
+    img_type: Literal['hires', 'lowres', 'fiducials'] = None,
+    crop_coord: Optional[int] = None,
+    alpha_img: Optional[float] = 1,
+    scale_spot: Optional[float] = 0.5,
+    bw: Optional[bool] = False,
     color_map: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
     size: Union[float, Sequence[float], None] = None,
@@ -129,7 +134,7 @@ def embedding(
 
     # get the points position and the components list
     # (only if components is not None)
-    data_points, components_list = _get_data_points(adata, basis, projection, components)
+    data_points, components_list = _get_data_points(adata, basis, projection, components, img_type)
 
     # Setup layout.
     # Most of the code is for the case when multiple plots are required
@@ -256,6 +261,26 @@ def embedding(
                 **kwargs,
             )
         else:
+            if img_type is not None:
+                img_processed, img_coord, spot_radius, cmap  = _process_image(adata, 
+                                data_points,
+                                img_type,
+                                crop_coord,
+                                scale_spot,
+                                bw)
+                ax.imshow(img_processed, 
+                          cmap = cmap,
+                          alpha = alpha_img, 
+                          origin='lower',
+                          extent = (-0.5, 
+                                    img_processed.shape[1]-0.5, 
+                                    -0.5, 
+                                    img_processed.shape[0]-0.5))
+                ax.set_xlim(img_coord[0], img_coord[1])
+                ax.set_ylim(img_coord[3], img_coord[2])
+
+                size = spot_radius
+
             if add_outline:
                 # the default outline is a black edge followed by a
                 # thin white edged added around connected clusters.
@@ -304,15 +329,17 @@ def embedding(
                 else:
                     in_groups_size = not_in_groups_size = size
 
-                ax.scatter(
-                    _data_points[~in_groups, 0],
-                    _data_points[~in_groups, 1],
-                    s=not_in_groups_size,
-                    marker=".",
-                    c=color_vector[~in_groups],
-                    rasterized=settings._vector_friendly,
-                    **kwargs,
-                )
+                #added so to not plot points not in group, useful for images
+                if img_type is None:
+                    ax.scatter(
+                        _data_points[~in_groups, 0],
+                        _data_points[~in_groups, 1],
+                        s=not_in_groups_size,
+                        marker=".",
+                        c=color_vector[~in_groups],
+                        rasterized=settings._vector_friendly,
+                        **kwargs,
+                    )
                 cax = ax.scatter(
                     _data_points[in_groups, 0],
                     _data_points[in_groups, 1],
@@ -677,11 +704,10 @@ def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """
     return embedding(adata, 'pca', **kwargs)
 
-
 # Helpers
 
 
-def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
+def _get_data_points(adata, basis, projection, components, img_type) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
     """
     Returns the data points corresponding to the selected basis, projection and/or components.
 
@@ -769,6 +795,18 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
     else:
         data_points = [adata.obsm[basis_key][:, offset:offset+n_dims]]
         components_list = []
+    
+    if img_type is not None:
+        if f"tissue_{img_type}_scalef" in adata.uns.keys():
+            img_type_key = f"tissue_{img_type}_scalef"
+            data_points[0] = np.multiply(data_points[0], adata.uns[img_type_key])
+        else:
+            raise KeyError(
+            f"Could not find entry in `adata.uns` for '{img_type}'.\n"
+            f"Available keys are: {list(adata.uns.keys())}."
+        )
+
+        
     return data_points, components_list
 
 
@@ -907,3 +945,36 @@ def _basis2name(basis):
         else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
         else basis)
     return component_name
+
+def _process_image(adata,
+    data_points,
+    img_type, 
+    crop_coord,
+    scale_spot,
+    bw = False):
+
+    offset = 100
+    cmap = None
+    img = adata.uns[img_type]
+
+    if crop_coord is not None:
+        img_coord = crop_coord
+    else:
+        img_coord = [data_points[0][:,0].min()-offset,
+                     data_points[0][:,0].max()+offset,
+                     data_points[0][:,1].min()-offset,
+                     data_points[0][:,1].max()+offset]
+
+    if bw:
+        img = np.dot(img[...,:3], [0.2989, 0.5870, 0.1140])
+        cmap = "gray"
+    
+    print(adata.uns["fiducial_diameter_fullres"])
+    spot_radius = adata.uns["tissue_hires_scalef"] * data_points[0].max() * scale_spot
+    #spot_radius = data_points[0][:,].max() * adata.uns["tissue_hires_scalef"]
+    print(spot_radius)
+
+    return img, img_coord, spot_radius*2, cmap
+
+    
+    
