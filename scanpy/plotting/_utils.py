@@ -320,7 +320,8 @@ def _validate_palette(adata, key):
                 _palette = None
                 break
         _palette.append(color)
-    if _palette is not None:
+    # Don't modify if nothing changed
+    if (_palette is not None and list(_palette) != list(adata.uns[color_key])):
         adata.uns[color_key] = _palette
 
 
