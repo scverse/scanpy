@@ -55,6 +55,8 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
         augmented affinity matrix
     `.uns['harmony_timepoint_var']`
         The name of the variable passed as `tp`
+    `.uns['harmony_timepoint_connections']`
+        The links between time points
 
     Example
     -------
@@ -135,3 +137,4 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
     adata.obsp["harmony_aff"] = aff
     adata.obsp["harmony_aff_aug"] = aug_aff
     adata.uns["harmony_timepoint_var"] = tp
+    adata.uns["harmony_timepoint_connections"] = timepoint_connections
