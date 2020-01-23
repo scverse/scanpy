@@ -73,20 +73,13 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
 
     >>> adata_ref = sc.datasets.pbmc3k()
     >>> start = [596, 615, 1682, 1663, 1409, 1432]
-    >>> adatas = [adata_ref[i : i + 1000] for i in start]
-    >>> sample_names = [
-    ...     "sa1_Rep1",
-    ...     "sa1_Rep2",
-    ...     "sa2_Rep1",
-    ...     "sa2_Rep2",
-    ...     "sa3_Rep1",
-    ...     "sa3_Rep2",
-    ... ]
-    >>> timepoints = [i.split("_")[0] for i in sample_names]
-    >>> for ad, sn, tp in zip(adatas, sample_names, timepoints):
-    ...     ad.obs["time_points"] = tp
-    ...     ad.obs["sample_name"] = sn
-    >>> adata = AnnData.concatenate(*adatas, join="outer")
+    >>> adata = AnnData.concatenate(
+    ...     *(adata_ref[i : i + 1000] for i in start),
+    ...     join="outer",
+    ...     batch_key="sample",
+    ...     batch_categories=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
+    ... )
+    >>> adata.obs["time_points"] = adata.obs["sample"].str.split("_", expand=True)[0]
 
     Normalize and filter for highly expressed genes
 
