@@ -1,5 +1,6 @@
-"""Harmony time series for data visualization with augmented affinity matrix at
-    discrete time points
+"""\
+Harmony time series for data visualization with augmented affinity matrix at
+discrete time points
 """
 
 from typing import Optional
@@ -131,4 +132,4 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
     adata.obsp["harmony_aff"] = aff
     adata.obsp["harmony_aff_aug"] = aug_aff
     adata.uns["harmony_timepoint_var"] = tp
-    adata.uns["harmony_timepoint_connections"] = timepoint_connections
+    adata.uns["harmony_timepoint_connections"] = np.asarray(timepoint_connections)
