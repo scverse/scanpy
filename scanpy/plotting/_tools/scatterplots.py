@@ -14,7 +14,12 @@ from matplotlib.colors import Colormap
 
 from .. import _utils
 from .._utils import _IGraphLayout, _FontWeight, _FontSize
-from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_embedding, doc_show_save_ax
+from .._docs import (
+    doc_adata_color_etc,
+    doc_edges_arrows,
+    doc_scatter_embedding,
+    doc_show_save_ax,
+)
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params
@@ -23,7 +28,12 @@ from ..._compat import Literal
 VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
 
-@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    edges_arrows=doc_edges_arrows,
+    scatter_bulk=doc_scatter_embedding,
+    show_save_ax=doc_show_save_ax,
+)
 def embedding(
     adata: AnnData,
     basis: str,
@@ -41,11 +51,13 @@ def embedding(
     components: Union[str, Sequence[str]] = None,
     layer: Optional[str] = None,
     projection: Literal['2d', '3d'] = '2d',
-    img_type: Literal['hires', 'lowres', 'fiducials'] = None,
-    crop_coord: Optional[int] = None,
-    alpha_img: Optional[float] = 1,
-    scale_spot: Optional[float] = 0.5,
-    bw: Optional[bool] = False,
+    # image parameters
+    img_key: Optional[str] = None,
+    crop_coord: Tuple[int, int, int, int] = None,
+    alpha_img: float = 1.0,
+    scale_spot: float = 0.5,
+    bw: bool = False,
+    #
     color_map: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
     size: Union[float, Sequence[float], None] = None,
@@ -103,6 +115,7 @@ def embedding(
 
     if projection == '3d':
         from mpl_toolkits.mplot3d import Axes3D
+
         args_3d = {'projection': '3d'}
     else:
         args_3d = {}
@@ -134,7 +147,9 @@ def embedding(
 
     # get the points position and the components list
     # (only if components is not None)
-    data_points, components_list = _get_data_points(adata, basis, projection, components, img_type)
+    data_points, components_list = _get_data_points(
+        adata, basis, projection, components, img_key
+    )
 
     # Setup layout.
     # Most of the code is for the case when multiple plots are required
@@ -142,12 +157,10 @@ def embedding(
     # Eg. ['Gene1', 'louvain', 'Gene2'].
     # component_list is a list of components [[0,1], [1,2]]
     if (
-        (
-            not isinstance(color, str)
-            and isinstance(color, cabc.Sequence)
-            and len(color) > 1
-        ) or len(components_list) > 1
-    ):
+        not isinstance(color, str)
+        and isinstance(color, cabc.Sequence)
+        and len(color) > 1
+    ) or len(components_list) > 1:
         if ax is not None:
             raise ValueError(
                 "Cannot specify `ax` when plotting multiple panels "
@@ -180,13 +193,12 @@ def embedding(
         # check if size is any type of sequence, and if so
         # set as ndarray
         import pandas.core.series
+
         if (
             size is not None
-            and isinstance(size, (
-                cabc.Sequence,
-                pandas.core.series.Series,
-                np.ndarray,
-            ))
+            and isinstance(
+                size, (cabc.Sequence, pandas.core.series.Series, np.ndarray,)
+            )
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
@@ -197,6 +209,7 @@ def embedding(
     # make the plots
     axs = []
     import itertools
+
     idx_components = range(len(components_list))
 
     # use itertools.product to make a plot for each color and for each component
@@ -205,11 +218,17 @@ def embedding(
     #     color=gene1, components=[1,2], color=gene1, components=[2,3],
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
-    for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
+    for count, (value_to_plot, component_idx) in enumerate(
+        itertools.product(color, idx_components)
+    ):
         color_vector, categorical = _get_color_values(
-            adata, value_to_plot, layer=layer,
-            groups=groups, palette=palette,
-            use_raw=use_raw, gene_symbols=gene_symbols,
+            adata,
+            value_to_plot,
+            layer=layer,
+            groups=groups,
+            palette=palette,
+            use_raw=use_raw,
+            gene_symbols=gene_symbols,
         )
 
         # check if higher value points should be plot on top
@@ -251,35 +270,42 @@ def embedding(
         if categorical:
             kwargs['vmin'] = kwargs['vmax'] = None
         else:
-            kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(vmin, vmax, count, color_vector)
+            kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(
+                vmin, vmax, count, color_vector
+            )
 
         # make the scatter plot
         if projection == '3d':
             cax = ax.scatter(
-                _data_points[:, 0], _data_points[:, 1], _data_points[:, 2],
-                marker=".", c=color_vector, rasterized=settings._vector_friendly,
+                _data_points[:, 0],
+                _data_points[:, 1],
+                _data_points[:, 2],
+                marker=".",
+                c=color_vector,
+                rasterized=settings._vector_friendly,
                 **kwargs,
             )
         else:
-            if img_type is not None:
-                img_processed, img_coord, spot_radius, cmap  = _process_image(adata, 
-                                data_points,
-                                img_type,
-                                crop_coord,
-                                scale_spot,
-                                bw)
-                ax.imshow(img_processed, 
-                          cmap = cmap,
-                          alpha = alpha_img, 
-                          origin='lower',
-                          extent = (-0.5, 
-                                    img_processed.shape[1]-0.5, 
-                                    -0.5, 
-                                    img_processed.shape[0]-0.5))
+            if img_key is not None:
+                img_processed, img_coord, spot_size, cmap_img = _process_image(
+                    adata, data_points, img_key, crop_coord, scale_spot, bw
+                )
+                ax.imshow(
+                    img_processed,
+                    cmap=cmap_img,
+                    alpha=alpha_img,
+                    origin='lower',
+                    extent=(
+                        -0.5,
+                        img_processed.shape[1] - 0.5,
+                        -0.5,
+                        img_processed.shape[0] - 0.5,
+                    ),
+                )
                 ax.set_xlim(img_coord[0], img_coord[1])
                 ax.set_ylim(img_coord[3], img_coord[2])
 
-                size = spot_radius
+                size = spot_size
 
             if add_outline:
                 # the default outline is a black edge followed by a
@@ -293,8 +319,8 @@ def embedding(
 
                 bg_width, gap_width = outline_width
                 point = np.sqrt(size)
-                gap_size = (point + (point * gap_width)*2)**2
-                bg_size = (np.sqrt(gap_size) + (point * bg_width)*2)**2
+                gap_size = (point + (point * gap_width) * 2) ** 2
+                bg_size = (np.sqrt(gap_size) + (point * bg_width) * 2) ** 2
                 # the default black and white colors can be changes using
                 # the contour_config parameter
                 bg_color, gap_color = outline_color
@@ -307,13 +333,23 @@ def embedding(
                 alpha = kwargs.pop('alpha') if 'alpha' in kwargs else None
 
                 ax.scatter(
-                    _data_points[:, 0], _data_points[:, 1], s=bg_size,
-                    marker=".", c=bg_color, rasterized=settings._vector_friendly,
-                    **kwargs)
+                    _data_points[:, 0],
+                    _data_points[:, 1],
+                    s=bg_size,
+                    marker=".",
+                    c=bg_color,
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                )
                 ax.scatter(
-                    _data_points[:, 0], _data_points[:, 1], s=gap_size,
-                    marker=".", c=gap_color, rasterized=settings._vector_friendly,
-                    **kwargs)
+                    _data_points[:, 0],
+                    _data_points[:, 1],
+                    s=gap_size,
+                    marker=".",
+                    c=gap_color,
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                )
                 # if user did not set alpha, set alpha to 0.7
                 kwargs['alpha'] = 0.7 if alpha is None else alpha
 
@@ -329,8 +365,8 @@ def embedding(
                 else:
                     in_groups_size = not_in_groups_size = size
 
-                #added so to not plot points not in group, useful for images
-                if img_type is None:
+                # added condition useful for images
+                if img_key is None:
                     ax.scatter(
                         _data_points[~in_groups, 0],
                         _data_points[~in_groups, 1],
@@ -395,17 +431,25 @@ def embedding(
             continue
 
         if legend_fontoutline is not None:
-            path_effect = [patheffects.withStroke(
-                linewidth=legend_fontoutline,
-                foreground='w',
-            )]
+            path_effect = [
+                patheffects.withStroke(linewidth=legend_fontoutline, foreground='w',)
+            ]
         else:
             path_effect = None
 
         _add_legend_or_colorbar(
-            adata, ax, cax, categorical, value_to_plot, legend_loc,
-            _data_points, legend_fontweight, legend_fontsize, path_effect,
-            groups, bool(grid),
+            adata,
+            ax,
+            cax,
+            categorical,
+            value_to_plot,
+            legend_loc,
+            _data_points,
+            legend_fontweight,
+            legend_fontsize,
+            path_effect,
+            groups,
+            bool(grid),
         )
 
     if return_fig is True:
@@ -418,20 +462,27 @@ def embedding(
 
 def _panel_grid(hspace, wspace, ncols, num_panels):
     from matplotlib import gridspec
+
     n_panels_x = min(ncols, num_panels)
     n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
     # each panel will have the size of rcParams['figure.figsize']
-    fig = pl.figure(figsize=(
-        n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
-        n_panels_y * rcParams['figure.figsize'][1]),
+    fig = pl.figure(
+        figsize=(
+            n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
+            n_panels_y * rcParams['figure.figsize'][1],
+        ),
     )
     left = 0.2 / n_panels_x
     bottom = 0.13 / n_panels_y
     gs = gridspec.GridSpec(
-        nrows=n_panels_y, ncols=n_panels_x,
-        left=left, right=1 - (n_panels_x - 1) * left - 0.01 / n_panels_x,
-        bottom=bottom, top=1 - (n_panels_y - 1) * bottom - 0.1 / n_panels_y,
-        hspace=hspace, wspace=wspace,
+        nrows=n_panels_y,
+        ncols=n_panels_x,
+        left=left,
+        right=1 - (n_panels_x - 1) * left - 0.01 / n_panels_x,
+        bottom=bottom,
+        top=1 - (n_panels_y - 1) * bottom - 0.1 / n_panels_y,
+        hspace=hspace,
+        wspace=wspace,
     )
     return fig, gs
 
@@ -480,9 +531,11 @@ def _get_vmin_vmax(
             try:
                 v_value = v[index]
             except IndexError:
-                logg.error(f"The parameter {v_name} is not valid. If setting multiple {v_name} values,"
-                           f"check that the length of the {v_name} list is equal to the number "
-                           "of plots. ")
+                logg.error(
+                    f"The parameter {v_name} is not valid. If setting multiple {v_name} values,"
+                    f"check that the length of the {v_name} list is equal to the number "
+                    "of plots. "
+                )
                 v_value = None
 
         if v_value is not None:
@@ -490,24 +543,30 @@ def _get_vmin_vmax(
                 try:
                     float(v_value[1:])
                 except ValueError:
-                    logg.error(f"The parameter {v_name}={v_value} for plot number {index + 1} is not valid. "
-                               f"Please check the correct format for percentiles.")
+                    logg.error(
+                        f"The parameter {v_name}={v_value} for plot number {index + 1} is not valid. "
+                        f"Please check the correct format for percentiles."
+                    )
                 # interpret value of vmin/vmax as quantile with the following syntax 'p99.9'
                 v_value = np.percentile(color_vector, q=float(v_value[1:]))
             elif callable(v_value):
                 # interpret vmin/vmax as function
                 v_value = v_value(color_vector)
                 if not isinstance(v_value, float):
-                    logg.error(f"The return of the function given for {v_name} is not valid. "
-                               "Please check that the function returns a number.")
+                    logg.error(
+                        f"The return of the function given for {v_name} is not valid. "
+                        "Please check that the function returns a number."
+                    )
                     v_value = None
             else:
                 try:
                     float(v_value)
                 except ValueError:
-                    logg.error(f"The given {v_name}={v_value} for plot number {index + 1} is not valid. "
-                               f"Please check that the value given is a valid number, a string "
-                               f"starting with 'p' for percentiles or a valid function.")
+                    logg.error(
+                        f"The given {v_name}={v_value} for plot number {index + 1} is not valid. "
+                        f"Please check that the value given is a valid number, a string "
+                        f"starting with 'p' for percentiles or a valid function."
+                    )
                     v_value = None
         out.append(v_value)
     return tuple(out)
@@ -515,12 +574,10 @@ def _get_vmin_vmax(
 
 def _wraps_plot_scatter(wrapper):
     annots_orig = {
-        k: v for k, v in wrapper.__annotations__.items()
-        if k not in {'adata', 'kwargs'}
+        k: v for k, v in wrapper.__annotations__.items() if k not in {'adata', 'kwargs'}
     }
     annots_scatter = {
-        k: v for k, v in embedding.__annotations__.items()
-        if k != 'basis'
+        k: v for k, v in embedding.__annotations__.items() if k != 'basis'
     }
     wrapper.__annotations__ = {**annots_scatter, **annots_orig}
     wrapper.__wrapped__ = embedding
@@ -529,8 +586,14 @@ def _wraps_plot_scatter(wrapper):
 
 # API
 
+
 @_wraps_plot_scatter
-@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    edges_arrows=doc_edges_arrows,
+    scatter_bulk=doc_scatter_embedding,
+    show_save_ax=doc_show_save_ax,
+)
 def trimap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in TriMap basis.
@@ -550,7 +613,12 @@ def trimap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    edges_arrows=doc_edges_arrows,
+    scatter_bulk=doc_scatter_embedding,
+    show_save_ax=doc_show_save_ax,
+)
 def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in UMAP basis.
@@ -570,7 +638,12 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    edges_arrows=doc_edges_arrows,
+    scatter_bulk=doc_scatter_embedding,
+    show_save_ax=doc_show_save_ax,
+)
 def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in tSNE basis.
@@ -590,7 +663,12 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    edges_arrows=doc_edges_arrows,
+    scatter_bulk=doc_scatter_embedding,
+    show_save_ax=doc_show_save_ax,
+)
 def phate(adata, **kwargs) -> Union[List[Axes], None]:
     """\
     Scatter plot in PHATE basis.
@@ -634,7 +712,11 @@ def phate(adata, **kwargs) -> Union[List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@_doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    scatter_bulk=doc_scatter_embedding,
+    show_save_ax=doc_show_save_ax,
+)
 def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in Diffusion Map basis.
@@ -653,11 +735,14 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    edges_arrows=doc_edges_arrows,
+    scatter_bulk=doc_scatter_embedding,
+    show_save_ax=doc_show_save_ax,
+)
 def draw_graph(
-    adata: AnnData,
-    layout: Optional[_IGraphLayout] = None,
-    **kwargs,
+    adata: AnnData, layout: Optional[_IGraphLayout] = None, **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
@@ -680,14 +765,21 @@ def draw_graph(
         layout = str(adata.uns['draw_graph']['params']['layout'])
     basis = 'draw_graph_' + layout
     if 'X_' + basis not in adata.obsm_keys():
-        raise ValueError('Did not find {} in adata.obs. Did you compute layout {}?'
-                         .format('draw_graph_' + layout, layout))
+        raise ValueError(
+            'Did not find {} in adata.obs. Did you compute layout {}?'.format(
+                'draw_graph_' + layout, layout
+            )
+        )
 
     return embedding(adata, basis, **kwargs)
 
 
 @_wraps_plot_scatter
-@_doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    scatter_bulk=doc_scatter_embedding,
+    show_save_ax=doc_show_save_ax,
+)
 def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in PCA coordinates.
@@ -704,10 +796,65 @@ def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """
     return embedding(adata, 'pca', **kwargs)
 
+
+@_wraps_plot_scatter
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    scatter_bulk=doc_scatter_embedding,
+    show_save_ax=doc_show_save_ax,
+)
+def spatial(
+    adata,
+    *,
+    img_key: Optional[str] = None,
+    crop_coord: Tuple[int, int, int, int] = None,
+    alpha_img: float = 1.0,
+    scale_spot: float = 0.5,
+    bw: bool = False,
+    **kwargs,
+) -> Union[Axes, List[Axes], None]:
+    """\
+    Scatter plot in spatial coordinates.
+
+    Parameters
+    ----------
+    img_key
+        Key for image data in `adata.uns`
+    crop_coord
+        Tuple for coordinate to crop: (left, right, top, bottom)
+    alpha_img
+        Alpha value for image
+    scale_spot
+        Scaling factor for scatter points (spots), 
+        only for Visium data, else use `size`
+    bw
+        Plot image in gray scale
+    {adata_color_etc}
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+    """
+    return embedding(
+        adata,
+        'spatial',
+        img_key=img_key,
+        crop_coord=crop_coord,
+        alpha_img=alpha_img,
+        scale_spot=scale_spot,
+        bw=bw,
+        **kwargs,
+    )
+
+
 # Helpers
 
 
-def _get_data_points(adata, basis, projection, components, img_type) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
+def _get_data_points(
+    adata, basis, projection, components, img_key
+) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
     """
     Returns the data points corresponding to the selected basis, projection and/or components.
 
@@ -749,20 +896,26 @@ def _get_data_points(adata, basis, projection, components, img_type) -> Tuple[Li
 
     if components == 'all':
         from itertools import combinations
+
         r_value = 3 if projection == '3d' else 2
         _components_list = np.arange(adata.obsm[basis_key].shape[1]) + 1
-        components = [",".join(map(str, x)) for x in combinations(_components_list, r=r_value)]
+        components = [
+            ",".join(map(str, x)) for x in combinations(_components_list, r=r_value)
+        ]
 
     components_list = []
     offset = 0
-    if basis == 'diffmap': offset = 1
+    if basis == 'diffmap':
+        offset = 1
     if components is not None:
         # components have different formats, either a list with integers, a string
         # or a list of strings.
 
         if isinstance(components, str):
             # eg: components='1,2'
-            components_list.append(tuple(int(x.strip()) - 1 + offset for x in components.split(',')))
+            components_list.append(
+                tuple(int(x.strip()) - 1 + offset for x in components.split(','))
+            )
 
         elif isinstance(components, cabc.Sequence):
             if isinstance(components[0], int):
@@ -774,45 +927,63 @@ def _get_data_points(adata, basis, projection, components, img_type) -> Tuple[Li
                 # More than one component can be given and is stored
                 # as a new item of components_list
                 for comp in components:
-                    components_list.append(tuple(int(x.strip()) - 1 + offset for x in comp.split(',')))
+                    components_list.append(
+                        tuple(int(x.strip()) - 1 + offset for x in comp.split(','))
+                    )
 
         else:
-            raise ValueError("Given components: '{}' are not valid. Please check. "
-                             "A valid example is `components='2,3'`")
+            raise ValueError(
+                "Given components: '{}' are not valid. Please check. "
+                "A valid example is `components='2,3'`"
+            )
         # check if the components are present in the data
         try:
             data_points = []
             for comp in components_list:
                 data_points.append(adata.obsm[basis_key][:, comp])
         except:
-            raise ValueError("Given components: '{}' are not valid. Please check. "
-                             "A valid example is `components='2,3'`")
+            raise ValueError(
+                "Given components: '{}' are not valid. Please check. "
+                "A valid example is `components='2,3'`"
+            )
 
         if basis == 'diffmap':
             # remove the offset added in the case of diffmap, such that
             # plot_scatter can print the labels correctly.
-            components_list = [tuple(number-1 for number in comp) for comp in components_list]
+            components_list = [
+                tuple(number - 1 for number in comp) for comp in components_list
+            ]
     else:
-        data_points = [adata.obsm[basis_key][:, offset:offset+n_dims]]
+        data_points = [adata.obsm[basis_key][:, offset : offset + n_dims]]
         components_list = []
-    
-    if img_type is not None:
-        if f"tissue_{img_type}_scalef" in adata.uns.keys():
-            img_type_key = f"tissue_{img_type}_scalef"
-            data_points[0] = np.multiply(data_points[0], adata.uns[img_type_key])
+
+    if img_key is not None:
+        if f"tissue_{img_key}_scalef" in adata.uns.keys():
+            scalef_key = f"tissue_{img_key}_scalef"
+            data_points[0] = np.multiply(data_points[0], adata.uns[scalef_key])
         else:
             raise KeyError(
-            f"Could not find entry in `adata.uns` for '{img_type}'.\n"
-            f"Available keys are: {list(adata.uns.keys())}."
-        )
+                f"Could not find entry in `adata.uns` for '{img_key}'.\n"
+                f"Available keys are: {list(adata.uns.keys())}."
+            )
 
-        
     return data_points, components_list
 
 
-def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_loc,
-                            scatter_array, legend_fontweight, legend_fontsize,
-                            legend_fontoutline, groups, multi_panel):
+def _add_legend_or_colorbar(
+    adata,
+    ax,
+    cax,
+    categorical,
+    value_to_plot,
+    legend_loc,
+    scatter_array,
+    legend_fontweight,
+    legend_fontsize,
+    legend_fontoutline,
+    groups,
+    multi_panel,
+):
     """
     Adds a color bar or a legend to the given ax. A legend is added when the
     data is categorical and a color bar is added when a continuous value was used.
@@ -841,11 +1012,14 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 # use empty scatter to set labels
                 ax.scatter([], [], c=color, label=label)
             ax.legend(
-                frameon=False, loc='center left',
+                frameon=False,
+                loc='center left',
                 bbox_to_anchor=(1, 0.5),
-                ncol=(1 if len(categories) <= 14
-                      else 2 if len(categories) <= 30 else 3),
-                fontsize=legend_fontsize)
+                ncol=(
+                    1 if len(categories) <= 14 else 2 if len(categories) <= 30 else 3
+                ),
+                fontsize=legend_fontsize,
+            )
 
         if legend_loc == 'on data':
             # identify centroids to put labels
@@ -854,12 +1028,16 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 _scatter = scatter_array[adata.obs[value_to_plot] == label, :]
                 x_pos, y_pos = np.median(_scatter, axis=0)
 
-                ax.text(x_pos, y_pos, label,
-                        weight=legend_fontweight,
-                        verticalalignment='center',
-                        horizontalalignment='center',
-                        fontsize=legend_fontsize,
-                        path_effects=legend_fontoutline)
+                ax.text(
+                    x_pos,
+                    y_pos,
+                    label,
+                    weight=legend_fontweight,
+                    verticalalignment='center',
+                    horizontalalignment='center',
+                    fontsize=legend_fontsize,
+                    path_effects=legend_fontoutline,
+                )
 
                 all_pos[ilabel] = [x_pos, y_pos]
             # this is temporary storage for access by other tools
@@ -894,11 +1072,15 @@ def _get_color_values(
     """
     if value_to_plot is None:
         return "lightgray", False
-    if (gene_symbols is not None
+    if (
+        gene_symbols is not None
         and value_to_plot not in adata.obs.columns
-        and value_to_plot not in adata.var_names):
+        and value_to_plot not in adata.var_names
+    ):
         # We should probably just make an index for this, and share it over runs
-        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0] # TODO: Throw helpful error if this doesn't work
+        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][
+            0
+        ]  # TODO: Throw helpful error if this doesn't work
     if use_raw and value_to_plot not in adata.obs.columns:
         values = adata.raw.obs_vector(value_to_plot)
     else:
@@ -914,8 +1096,9 @@ def _get_color_values(
         color_key = f"{value_to_plot}_colors"
         if palette:
             _utils._set_colors_for_categorical_obs(adata, value_to_plot, palette)
-        elif color_key not in adata.uns or \
-            len(adata.uns[color_key]) < len(values.categories):
+        elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
+            values.categories
+        ):
             #  set a default palette in case that no colors or few colors are found
             _utils._set_default_colors_for_categorical_obs(adata, value_to_plot)
         else:
@@ -938,43 +1121,43 @@ def _basis2name(basis):
     """
 
     component_name = (
-        'DC' if basis == 'diffmap'
-        else 'tSNE' if basis == 'tsne'
-        else 'UMAP' if basis == 'umap'
-        else 'PC' if basis == 'pca'
-        else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
-        else basis)
+        'DC'
+        if basis == 'diffmap'
+        else 'tSNE'
+        if basis == 'tsne'
+        else 'UMAP'
+        if basis == 'umap'
+        else 'PC'
+        if basis == 'pca'
+        else basis.replace('draw_graph_', '').upper()
+        if 'draw_graph' in basis
+        else basis
+    )
     return component_name
 
-def _process_image(adata,
-    data_points,
-    img_type, 
-    crop_coord,
-    scale_spot,
-    bw = False):
+
+def _process_image(adata, data_points, img_key, crop_coord, scale_spot, bw=False):
 
     offset = 100
-    cmap = None
-    img = adata.uns[img_type]
+    cmap_img = None
+    img = adata.uns[img_key]
+    scalef_key = f"tissue_{img_key}_scalef"
+
+    spot_size = adata.uns[scalef_key] * data_points[0].max() * scale_spot
 
     if crop_coord is not None:
         img_coord = crop_coord
     else:
-        img_coord = [data_points[0][:,0].min()-offset,
-                     data_points[0][:,0].max()+offset,
-                     data_points[0][:,1].min()-offset,
-                     data_points[0][:,1].max()+offset]
+        img_coord = [
+            data_points[0][:, 0].min() - offset,
+            data_points[0][:, 0].max() + offset,
+            data_points[0][:, 1].min() - offset,
+            data_points[0][:, 1].max() + offset,
+        ]
 
     if bw:
-        img = np.dot(img[...,:3], [0.2989, 0.5870, 0.1140])
-        cmap = "gray"
-    
-    print(adata.uns["fiducial_diameter_fullres"])
-    spot_radius = adata.uns["tissue_hires_scalef"] * data_points[0].max() * scale_spot
-    #spot_radius = data_points[0][:,].max() * adata.uns["tissue_hires_scalef"]
-    print(spot_radius)
+        img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
+        cmap_img = "gray"
 
-    return img, img_coord, spot_radius*2, cmap
+    return img, img_coord, spot_size, cmap_img
 
-    
-    

@@ -87,7 +87,18 @@ frameon
     :func:`~scanpy.set_figure_params`, defaults to `True`.
 title
     Provide title for panels either as string or list of strings,
-    e.g. `['title1', 'title2', ...]`.\
+    e.g. `['title1', 'title2', ...]`.
+img_key
+    Key for image data, stored in `adata.uns`.
+crop_coord
+    Coordinates to use for cropping the image.
+alpha_img
+    Alpha value for image.
+scale_spot
+    Scaling factor for scatter points overlaying image (spots), 
+    only for Visium, otherwise use `size`.
+bw
+    Plot Image in gray scale.\
 """
 
 doc_vminmax = """\
