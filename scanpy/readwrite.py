@@ -328,17 +328,17 @@ def _read_legacy_10x_mtx(
     ).T  # transpose the data
     genes = pd.read_csv(path / 'genes.tsv', header=None, sep='\t')
     if var_names == 'gene_symbols':
-        var_names = genes[1]
+        var_names = genes[1].values
         if make_unique:
             var_names = anndata.utils.make_index_unique(pd.Index(var_names))
         adata.var_names = var_names
         adata.var['gene_ids'] = genes[0].values
     elif var_names == 'gene_ids':
-        adata.var_names = genes[0]
+        adata.var_names = genes[0].values
         adata.var['gene_symbols'] = genes[1].values
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
-    adata.obs_names = pd.read_csv(path / 'barcodes.tsv', header=None)[0]
+    adata.obs_names = pd.read_csv(path / 'barcodes.tsv', header=None)[0].values
     return adata
 
 
@@ -360,18 +360,18 @@ def _read_v3_10x_mtx(
     ).T  # transpose the data
     genes = pd.read_csv(path / 'features.tsv.gz', header=None, sep='\t')
     if var_names == 'gene_symbols':
-        var_names = genes[1]
+        var_names = genes[1].values
         if make_unique:
             var_names = anndata.utils.make_index_unique(pd.Index(var_names))
         adata.var_names = var_names
         adata.var['gene_ids'] = genes[0].values
     elif var_names == 'gene_ids':
-        adata.var_names = genes[0]
+        adata.var_names = genes[0].values
         adata.var['gene_symbols'] = genes[1].values
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
     adata.var['feature_types'] = genes[2].values
-    adata.obs_names = pd.read_csv(path / 'barcodes.tsv.gz', header=None)[0]
+    adata.obs_names = pd.read_csv(path / 'barcodes.tsv.gz', header=None)[0].values
     return adata
 
 

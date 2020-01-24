@@ -8,6 +8,12 @@ matrix:
         - black . --check --diff
         - python -m scanpy.tests.blackdiff 10
       after_success: skip
+    - name: "anndata dev"
+      python: "3.7"
+      install:
+        - pip install docutils sphinx
+        - pip install -e .[test,louvain,leiden,magic]
+        - pip install git+https://github.com/theislab/anndata
 python:
   - '3.6'
   - '3.7'

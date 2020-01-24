@@ -1774,7 +1774,7 @@ def dotplot(
 
     See also
     --------
-    rank_genes_groups_dotplot: to plot marker genes identified using the
+    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
     :func:`~scanpy.tl.rank_genes_groups` function.
     """
     if use_raw is None and adata.raw is not None:
