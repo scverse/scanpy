@@ -91,7 +91,7 @@ title
 img_key
     Key for image data, stored in `adata.uns`.
 crop_coord
-    Coordinates to use for cropping the image.
+    Coordinates to use for cropping the image (left, right, top, bottom).
 alpha_img
     Alpha value for image.
 scale_spot

@@ -293,14 +293,7 @@ def embedding(
                 ax.imshow(
                     img_processed,
                     cmap=cmap_img,
-                    alpha=alpha_img,
-                    origin='lower',
-                    extent=(
-                        -0.5,
-                        img_processed.shape[1] - 0.5,
-                        -0.5,
-                        img_processed.shape[0] - 0.5,
-                    ),
+                    alpha=alpha_img
                 )
                 ax.set_xlim(img_coord[0], img_coord[1])
                 ax.set_ylim(img_coord[3], img_coord[2])
@@ -809,26 +802,19 @@ def spatial(
     img_key: Optional[str] = None,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
-    scale_spot: float = 0.5,
+    scale_spot: float = 0.3,
     bw: bool = False,
     **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in spatial coordinates.
 
+    Use the parameter `img_key` to see the microscopy image in the background.
+    Use `crop_coord`, `alpha_img`, and `bw` to control how it is displayed,
+    and `scale_spot` to control the size of the Visium spots plotted on top.
+
     Parameters
     ----------
-    img_key
-        Key for image data in `adata.uns`
-    crop_coord
-        Tuple for coordinate to crop: (left, right, top, bottom)
-    alpha_img
-        Alpha value for image
-    scale_spot
-        Scaling factor for scatter points (spots), 
-        only for Visium data, else use `size`
-    bw
-        Plot image in gray scale
     {adata_color_etc}
     {scatter_bulk}
     {show_save_ax}
@@ -1146,7 +1132,7 @@ def _process_image(adata, data_points, img_key, crop_coord, scale_spot, bw=False
     spot_size = adata.uns[scalef_key] * data_points[0].max() * scale_spot
 
     if crop_coord is not None:
-        img_coord = crop_coord
+        img_coord = [crop_coord[0], crop_coord[1], np.ceil(img.shape[0]-crop_coord[2]), np.ceil(img.shape[0]-crop_coord[3])]
     else:
         img_coord = [
             data_points[0][:, 0].min() - offset,
