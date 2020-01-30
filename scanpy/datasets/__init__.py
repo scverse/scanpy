@@ -295,3 +295,107 @@ def pbmc3k_processed() -> AnnData:
         backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
     )
     return adata
+
+def SGE10x(sample_ID = 'V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
+    """Processed Spatial Gene Expression data from 10x Genomics.
+    Database: https://support.10xgenomics.com/spatial-gene-expression/datasets
+    Parameters
+    ----------
+    sample_ID
+        The ID of data sample in 10x spatial data base.
+        It should be one of the followings:       
+        'V1_Breast_Cancer_Block_A_Section_1'
+        'V1_Breast_Cancer_Block_A_Section_2'
+        'V1_Human_Heart'
+        'V1_Human_Lymph_Node'
+        'V1_Mouse_Kidney'
+        'V1_Adult_Mouse_Brain'
+        'V1_Mouse_Brain_Sagittal_Posterior'
+        'V1_Mouse_Brain_Sagittal_Posterior_Section_2'
+        'V1_Mouse_Brain_Sagittal_Anterior'
+        'V1_Mouse_Brain_Sagittal_Anterior_Section_2'
+        By defaults, It is set to:
+        'V1_Breast_Cancer_Block_A_Section_1'
+
+    Returns
+    -------
+    Annotated data matrix.
+    """    
+    
+    
+    # setting filenames, tarfilenames, backup_rurls
+    # tarfilenames and backup_urls will be used for downloading data base
+    from urllib.parse import urljoin
+    files = {
+        'counts'                 : settings.datasetdir / (sample_ID + '_raw_feature_bc_matrix.h5'),
+        'tissue_positions_file'  : settings.datasetdir / 'spatial/tissue_positions_list.csv',
+        'scalefactors_json_file' : settings.datasetdir / 'spatial/scalefactors_json.json',
+        'hires_image'            : settings.datasetdir / 'spatial/tissue_hires_image.png',
+        'lowres_image'           : settings.datasetdir / 'spatial/tissue_lowres_image.png'
+    }
+
+    tarfiles = {
+        'tissue_positions_file'  : settings.datasetdir / (sample_ID + '_spatial.tar'),
+        'scalefactors_json_file' : settings.datasetdir / (sample_ID + '_spatial.tar'),
+        'hires_image'            : settings.datasetdir / (sample_ID + '_spatial.tar'),
+        'lowres_image'           : settings.datasetdir / (sample_ID + '_spatial.tar')
+    }
+    
+    _sge10x_url = 'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/'
+
+    backup_urls = {
+        'counts'                 : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_raw_feature_bc_matrix.h5'),       
+        'tissue_positions_file'  : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_spatial.tar.gz'),
+        'scalefactors_json_file' : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_spatial.tar.gz'),
+        'hires_image'            : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_spatial.tar.gz'),
+        'lowres_image'           : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_spatial.tar.gz')
+    }
+    
+    # Downloading or untar files if it's necessary
+    for _f in files:
+        if _f in tarfiles:
+            _utils.check_presence_download_untar(
+                filename    = files[_f],
+                tarfilename = tarfiles[_f], 
+                backup_url  = backup_urls[_f]
+            )
+        else:
+            _utils.check_presence_download(
+                filename = files[_f], 
+                backup_url = backup_urls[_f]
+            )
+    
+    
+    # reading h5 file
+    from ..readwrite import read_10x_h5
+    adata = read_10x_h5(files['counts'])
+    
+    adata.var_names_make_unique()
+
+    # reading images
+    # imread can only get string and not a Path object
+    import matplotlib.image as img
+    adata.uns['hires_image'] = img.imread(str(files['hires_image'])) 
+    adata.uns['lowres_image'] = img.imread(str(files['hires_image']))
+    
+    
+
+    # reading json scalefactors
+    import json
+    with open(files['scalefactors_json_file']) as json_file:
+        adata.uns['scalefactors'] = json.load(json_file)
+
+    # reading coordinates
+    positions =  pd.read_csv(
+        settings.datasetdir / 'spatial/tissue_positions_list.csv', 
+        header = None,
+    )
+    positions.columns = ['index', '0', '1', '2', 'X2_coord', 'X1_coord']
+    positions.set_index('index')
+
+    positions = positions.join(adata.obs, how = 'right')
+    
+
+    adata.obsm['X_spatial'] = positions[['X2_coord', 'X1_coord']].to_numpy()
+
+    return adata
