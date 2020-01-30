@@ -13,7 +13,7 @@ from matplotlib import patheffects
 from matplotlib.colors import Colormap
 
 from .. import _utils
-from .._utils import _IGraphLayout, _FontWeight, _FontSize
+from .._utils import _IGraphLayout, _FontWeight, _FontSize, circles
 from .._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
@@ -55,7 +55,7 @@ def embedding(
     img_key: Optional[str] = None,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
-    scale_spot: float = 0.5,
+    scale_spot: float = 1.0,
     bw: bool = False,
     #
     color_map: Union[Colormap, str, None] = None,
@@ -298,7 +298,7 @@ def embedding(
                 ax.set_xlim(img_coord[0], img_coord[1])
                 ax.set_ylim(img_coord[3], img_coord[2])
 
-                size = spot_size
+                #size = spot_size
 
             if add_outline:
                 # the default outline is a black edge followed by a
@@ -358,8 +358,17 @@ def embedding(
                 else:
                     in_groups_size = not_in_groups_size = size
 
-                # added condition useful for images
-                if img_key is None:
+                # only show grey points if no image is below
+                if img_key is not None:
+                    cax = circles(
+                    _data_points[in_groups, 0],
+                    _data_points[in_groups, 1],
+                    s=spot_size,
+                    c=color_vector[in_groups],
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                    )
+                else:
                     ax.scatter(
                         _data_points[~in_groups, 0],
                         _data_points[~in_groups, 1],
@@ -369,26 +378,36 @@ def embedding(
                         rasterized=settings._vector_friendly,
                         **kwargs,
                     )
-                cax = ax.scatter(
-                    _data_points[in_groups, 0],
-                    _data_points[in_groups, 1],
-                    s=in_groups_size,
-                    marker=".",
-                    c=color_vector[in_groups],
-                    rasterized=settings._vector_friendly,
-                    **kwargs,
-                )
+                    cax = ax.scatter(
+                        _data_points[in_groups, 0],
+                        _data_points[in_groups, 1],
+                        s=in_groups_size,
+                        marker=".",
+                        c=color_vector[in_groups],
+                        rasterized=settings._vector_friendly,
+                        **kwargs,
+                    )
 
             else:
-                cax = ax.scatter(
+                if img_key is not None:
+                    cax = circles(
                     _data_points[:, 0],
                     _data_points[:, 1],
-                    s=size,
-                    marker=".",
+                    s=spot_size,
                     c=color_vector,
                     rasterized=settings._vector_friendly,
                     **kwargs,
-                )
+                    )
+                else:
+                    cax = ax.scatter(
+                        _data_points[:, 0],
+                        _data_points[:, 1],
+                        s=size,
+                        marker=".",
+                        c=color_vector,
+                        rasterized=settings._vector_friendly,
+                        **kwargs,
+                    )
 
         # remove y and x ticks
         ax.set_yticks([])
@@ -946,11 +965,11 @@ def _get_data_points(
     if img_key is not None:
         if f"tissue_{img_key}_scalef" in adata.uns.keys():
             scalef_key = f"tissue_{img_key}_scalef"
-            data_points[0] = np.multiply(data_points[0], adata.uns[scalef_key])
+            data_points[0] = np.multiply(data_points[0], adata.uns['scalefactors'][scalef_key])
         else:
             raise KeyError(
                 f"Could not find entry in `adata.uns` for '{img_key}'.\n"
-                f"Available keys are: {list(adata.uns.keys())}."
+                f"Available keys are: {list(adata.uns['image'].keys())}."
             )
 
     return data_points, components_list
@@ -1126,10 +1145,10 @@ def _process_image(adata, data_points, img_key, crop_coord, scale_spot, bw=False
 
     offset = 100
     cmap_img = None
-    img = adata.uns[img_key]
+    img = adata.uns['image'][img_key]
     scalef_key = f"tissue_{img_key}_scalef"
 
-    spot_size = adata.uns[scalef_key] * data_points[0].max() * scale_spot
+    spot_size = adata.uns[scalef_key] * adata.uns['scalefactors']['fiducial_diameter_fullres'] * scale_spot
 
     if crop_coord is not None:
         crop_coord = np.asarray(crop_coord)
