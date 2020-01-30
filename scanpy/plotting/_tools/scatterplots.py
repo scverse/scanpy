@@ -1132,7 +1132,10 @@ def _process_image(adata, data_points, img_key, crop_coord, scale_spot, bw=False
     spot_size = adata.uns[scalef_key] * data_points[0].max() * scale_spot
 
     if crop_coord is not None:
-        img_coord = [crop_coord[0], crop_coord[1], np.ceil(img.shape[0]-crop_coord[2]), np.ceil(img.shape[0]-crop_coord[3])]
+        crop_coord = np.asarray(crop_coord)
+        if len(crop_coord) != 4:
+            raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
+        img_coord = (*crop_coord[:2], *np.ceil(img.shape[0] - crop_coord[2:4]).astype(int))
     else:
         img_coord = [
             data_points[0][:, 0].min() - offset,
@@ -1146,4 +1149,3 @@ def _process_image(adata, data_points, img_key, crop_coord, scale_spot, bw=False
         cmap_img = "gray"
 
     return img, img_coord, spot_size, cmap_img
-
