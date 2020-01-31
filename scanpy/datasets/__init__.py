@@ -296,8 +296,8 @@ def pbmc3k_processed() -> AnnData:
     )
     return adata
 
-def SGE10x(sample_ID = 'V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
-    """Processed Spatial Gene Expression data from 10x Genomics.
+def visium_sge(sample_ID = 'V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
+    """Processed Visium Spatial Gene Expression data from 10x Genomics.
     Database: https://support.10xgenomics.com/spatial-gene-expression/datasets
     Parameters
     ----------
@@ -326,30 +326,30 @@ def SGE10x(sample_ID = 'V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
     # setting filenames, tarfilenames, backup_rurls
     # tarfilenames and backup_urls will be used for downloading data base
     from urllib.parse import urljoin
-    files = {
-        'counts'                 : settings.datasetdir / (sample_ID + '_raw_feature_bc_matrix.h5'),
-        'tissue_positions_file'  : settings.datasetdir / 'spatial/tissue_positions_list.csv',
-        'scalefactors_json_file' : settings.datasetdir / 'spatial/scalefactors_json.json',
-        'hires_image'            : settings.datasetdir / 'spatial/tissue_hires_image.png',
-        'lowres_image'           : settings.datasetdir / 'spatial/tissue_lowres_image.png'
-    }
+    files = dict(
+        counts                 = settings.datasetdir / f'{sample_ID}_raw_feature_bc_matrix.h5',
+        tissue_positions_file  = settings.datasetdir / 'spatial/tissue_positions_list.csv',
+        scalefactors_json_file = settings.datasetdir / 'spatial/scalefactors_json.json',
+        hires_image            = settings.datasetdir / 'spatial/tissue_hires_image.png',
+        lowres_image           = settings.datasetdir / 'spatial/tissue_lowres_image.png'
+    )
 
-    tarfiles = {
-        'tissue_positions_file'  : settings.datasetdir / (sample_ID + '_spatial.tar'),
-        'scalefactors_json_file' : settings.datasetdir / (sample_ID + '_spatial.tar'),
-        'hires_image'            : settings.datasetdir / (sample_ID + '_spatial.tar'),
-        'lowres_image'           : settings.datasetdir / (sample_ID + '_spatial.tar')
-    }
+    tarfiles = dict(
+        tissue_positions_file  = settings.datasetdir / f'{sample_ID}_spatial.tar',
+        scalefactors_json_file = settings.datasetdir / f'{sample_ID}_spatial.tar',
+        hires_image            = settings.datasetdir / f'{sample_ID}_spatial.tar',
+        lowres_image           = settings.datasetdir / f'{sample_ID}_spatial.tar'
+    )
     
     _sge10x_url = 'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/'
 
-    backup_urls = {
-        'counts'                 : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_raw_feature_bc_matrix.h5'),       
-        'tissue_positions_file'  : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_spatial.tar.gz'),
-        'scalefactors_json_file' : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_spatial.tar.gz'),
-        'hires_image'            : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_spatial.tar.gz'),
-        'lowres_image'           : urljoin(_sge10x_url, sample_ID + '/' + sample_ID + '_spatial.tar.gz')
-    }
+    backup_urls = dict(
+        counts                 = urljoin(_sge10x_url, f'{sample_ID}/{sample_ID}_raw_feature_bc_matrix.h5'),       
+        tissue_positions_file  = urljoin(_sge10x_url, f'{sample_ID}/{sample_ID}_spatial.tar.gz'),
+        scalefactors_json_file = urljoin(_sge10x_url, f'{sample_ID}/{sample_ID}_spatial.tar.gz'),
+        hires_image            = urljoin(_sge10x_url, f'{sample_ID}/{sample_ID}_spatial.tar.gz'),
+        lowres_image           = urljoin(_sge10x_url, f'{sample_ID}/{sample_ID}_spatial.tar.gz')
+    )
     
     # Downloading or untar files if it's necessary
     for _f in files:
@@ -375,15 +375,15 @@ def SGE10x(sample_ID = 'V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
     # reading images
     # imread can only get string and not a Path object
     import matplotlib.image as img
-    adata.uns['hires_image'] = img.imread(str(files['hires_image'])) 
-    adata.uns['lowres_image'] = img.imread(str(files['hires_image']))
+    adata.uns['image'] = dict()
+    adata.uns['images']['hires']  = img.imread(str(files['hires_image'])) 
+    adata.uns['images']['lowres'] = img.imread(str(files['lowres_image']))
     
     
 
     # reading json scalefactors
     import json
-    with open(files['scalefactors_json_file']) as json_file:
-        adata.uns['scalefactors'] = json.load(json_file)
+    adata.uns['scalefactors'] = json.loads(files['scalefactors_json_file'].read_bytes())
 
     # reading coordinates
     positions =  pd.read_csv(
@@ -395,7 +395,6 @@ def SGE10x(sample_ID = 'V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
 
     positions = positions.join(adata.obs, how = 'right')
     
-
     adata.obsm['X_spatial'] = positions[['X2_coord', 'X1_coord']].to_numpy()
 
     return adata
