@@ -297,6 +297,12 @@ def embedding(
                 ax.imshow(img_processed, cmap=cmap_img, alpha=alpha_img)
                 ax.set_xlim(img_coord[0], img_coord[1])
                 ax.set_ylim(img_coord[3], img_coord[2])
+            
+            scatter = (
+                partial(ax.scatter, s=in_groups_size)
+                if img_key is None
+                else partial(circles, s=size_spot)
+            )
 
             if add_outline:
                 # the default outline is a black edge followed by a
@@ -367,11 +373,6 @@ def embedding(
                         rasterized=settings._vector_friendly,
                         **kwargs,
                     )
-                scatter = (
-                    partial(ax.scatter, s=in_groups_size)
-                    if img_key is None
-                    else partial(circles, s=size_spot)
-                )
                 cax = scatter(
                     _data_points[in_groups, 0],
                     _data_points[in_groups, 1],
@@ -382,11 +383,6 @@ def embedding(
                 )
 
             else:
-                scatter = (
-                    partial(ax.scatter, s=size)
-                    if img_key is None
-                    else partial(circles, s=size_spot)
-                )
                 cax = scatter(
                     _data_points[:, 0],
                     _data_points[:, 1],

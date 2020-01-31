@@ -95,9 +95,6 @@ crop_coord
     Coordinates to use for cropping the image (left, right, top, bottom).
 alpha_img
     Alpha value for image.
-scale_spot
-    Scaling factor for scatter points overlaying image (spots), 
-    only for Visium, otherwise use `size`.
 bw
     Plot Image in gray scale.\
 """
