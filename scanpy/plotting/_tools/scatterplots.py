@@ -11,6 +11,7 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import Colormap
+from functools import partial
 
 from .. import _utils
 from .._utils import _IGraphLayout, _FontWeight, _FontSize, circles
@@ -55,7 +56,6 @@ def embedding(
     img_key: Optional[str] = None,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
-    scale_spot: float = 1.0,
     bw: bool = False,
     #
     color_map: Union[Colormap, str, None] = None,
@@ -202,6 +202,8 @@ def embedding(
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
+    elif img_key is not None:
+        size = 1.0
     else:
         size = 120000 / adata.shape[0]
 
@@ -287,18 +289,14 @@ def embedding(
             )
         else:
             if img_key is not None:
-                img_processed, img_coord, spot_size, cmap_img = _process_image(
-                    adata, data_points, img_key, crop_coord, scale_spot, bw
+                # had to return size_spot cause spot size is set according
+                # to the image to be plotted
+                img_processed, img_coord, size_spot, cmap_img = _process_image(
+                    adata, data_points, img_key, crop_coord, size, bw
                 )
-                ax.imshow(
-                    img_processed,
-                    cmap=cmap_img,
-                    alpha=alpha_img
-                )
+                ax.imshow(img_processed, cmap=cmap_img, alpha=alpha_img)
                 ax.set_xlim(img_coord[0], img_coord[1])
                 ax.set_ylim(img_coord[3], img_coord[2])
-
-                #size = spot_size
 
             if add_outline:
                 # the default outline is a black edge followed by a
@@ -359,16 +357,7 @@ def embedding(
                     in_groups_size = not_in_groups_size = size
 
                 # only show grey points if no image is below
-                if img_key is not None:
-                    cax = circles(
-                    _data_points[in_groups, 0],
-                    _data_points[in_groups, 1],
-                    s=spot_size,
-                    c=color_vector[in_groups],
-                    rasterized=settings._vector_friendly,
-                    **kwargs,
-                    )
-                else:
+                if img_key is None:
                     ax.scatter(
                         _data_points[~in_groups, 0],
                         _data_points[~in_groups, 1],
@@ -378,36 +367,34 @@ def embedding(
                         rasterized=settings._vector_friendly,
                         **kwargs,
                     )
-                    cax = ax.scatter(
-                        _data_points[in_groups, 0],
-                        _data_points[in_groups, 1],
-                        s=in_groups_size,
-                        marker=".",
-                        c=color_vector[in_groups],
-                        rasterized=settings._vector_friendly,
-                        **kwargs,
-                    )
+                scatter = (
+                    partial(ax.scatter, s=in_groups_size)
+                    if img_key is None
+                    else partial(circles, s=size_spot)
+                )
+                cax = scatter(
+                    _data_points[in_groups, 0],
+                    _data_points[in_groups, 1],
+                    marker=".",
+                    c=color_vector[in_groups],
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                )
 
             else:
-                if img_key is not None:
-                    cax = circles(
+                scatter = (
+                    partial(ax.scatter, s=size)
+                    if img_key is None
+                    else partial(circles, s=size_spot)
+                )
+                cax = scatter(
                     _data_points[:, 0],
                     _data_points[:, 1],
-                    s=spot_size,
+                    marker=".",
                     c=color_vector,
                     rasterized=settings._vector_friendly,
                     **kwargs,
-                    )
-                else:
-                    cax = ax.scatter(
-                        _data_points[:, 0],
-                        _data_points[:, 1],
-                        s=size,
-                        marker=".",
-                        c=color_vector,
-                        rasterized=settings._vector_friendly,
-                        **kwargs,
-                    )
+                )
 
         # remove y and x ticks
         ax.set_yticks([])
@@ -821,16 +808,15 @@ def spatial(
     img_key: Optional[str] = None,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
-    scale_spot: float = 0.3,
     bw: bool = False,
     **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in spatial coordinates.
 
-    Use the parameter `img_key` to see the microscopy image in the background.
-    Use `crop_coord`, `alpha_img`, and `bw` to control how it is displayed,
-    and `scale_spot` to control the size of the Visium spots plotted on top.
+    Use the parameter `img_key` to see the image in the background.
+    Use `crop_coord`, `alpha_img`, and `bw` to control how it is displayed.
+    Use `size` to scale the size of the Visium spots plotted on top.
 
     Parameters
     ----------
@@ -848,7 +834,6 @@ def spatial(
         img_key=img_key,
         crop_coord=crop_coord,
         alpha_img=alpha_img,
-        scale_spot=scale_spot,
         bw=bw,
         **kwargs,
     )
@@ -963,9 +948,11 @@ def _get_data_points(
         components_list = []
 
     if img_key is not None:
-        if f"tissue_{img_key}_scalef" in adata.uns.keys():
+        if f"tissue_{img_key}_scalef" in adata.uns['scalefactors'].keys():
             scalef_key = f"tissue_{img_key}_scalef"
-            data_points[0] = np.multiply(data_points[0], adata.uns['scalefactors'][scalef_key])
+            data_points[0] = np.multiply(
+                data_points[0], adata.uns['scalefactors'][scalef_key]
+            )
         else:
             raise KeyError(
                 f"Could not find entry in `adata.uns` for '{img_key}'.\n"
@@ -1148,13 +1135,25 @@ def _process_image(adata, data_points, img_key, crop_coord, scale_spot, bw=False
     img = adata.uns['image'][img_key]
     scalef_key = f"tissue_{img_key}_scalef"
 
-    spot_size = adata.uns[scalef_key] * adata.uns['scalefactors']['fiducial_diameter_fullres'] * scale_spot
+    # 0.5 needed for optimal matching with spot boundaries
+    # checked with detected_tissue_image.png
+    spot_size = (
+        (
+            adata.uns['scalefactors'][scalef_key]
+            * adata.uns['scalefactors']['spot_diameter_fullres']
+        )
+        * 0.5
+        * scale_spot
+    )
 
     if crop_coord is not None:
         crop_coord = np.asarray(crop_coord)
         if len(crop_coord) != 4:
             raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
-        img_coord = (*crop_coord[:2], *np.ceil(img.shape[0] - crop_coord[2:4]).astype(int))
+        img_coord = (
+            *crop_coord[:2],
+            *np.ceil(img.shape[0] - crop_coord[2:4]).astype(int),
+        )
     else:
         img_coord = [
             data_points[0][:, 0].min() - offset,

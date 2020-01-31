@@ -66,7 +66,8 @@ legend_fontoutline
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
-    the same as in adata.obs.
+    the same as in adata.obs. If `img_key` not `None`, size is the scaling factor
+    for the spot size.
 color_map
     Color map to use for continous variables. Can be a name or a
     :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
