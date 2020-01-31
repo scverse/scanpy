@@ -45,7 +45,6 @@ exclude = '''
     |plotting/(
         __init__
         |palettes
-        |_utils
         |_preprocessing
         |_tools/(__init__|paga)
     )

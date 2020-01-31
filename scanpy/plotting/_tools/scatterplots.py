@@ -297,9 +297,9 @@ def embedding(
                 ax.imshow(img_processed, cmap=cmap_img, alpha=alpha_img)
                 ax.set_xlim(img_coord[0], img_coord[1])
                 ax.set_ylim(img_coord[3], img_coord[2])
-            
+
             scatter = (
-                partial(ax.scatter, s=in_groups_size)
+                partial(ax.scatter, s=size)
                 if img_key is None
                 else partial(circles, s=size_spot)
             )
@@ -359,6 +359,8 @@ def embedding(
                 if isinstance(size, np.ndarray):
                     in_groups_size = size[in_groups]
                     not_in_groups_size = size[~in_groups]
+                elif img_key is not None:
+                    in_groups_size = not_in_groups_size = size_spot
                 else:
                     in_groups_size = not_in_groups_size = size
 
@@ -376,6 +378,7 @@ def embedding(
                 cax = scatter(
                     _data_points[in_groups, 0],
                     _data_points[in_groups, 1],
+                    s=in_groups_size,
                     marker=".",
                     c=color_vector[in_groups],
                     rasterized=settings._vector_friendly,
