@@ -190,7 +190,7 @@ def louvain(
         )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),
-        categories=natsorted(np.unique(groups).astype('U')),
+        categories=np.array(natsorted(np.unique(groups).astype('U'))),
     )
     adata.uns['louvain'] = {}
     adata.uns['louvain']['params'] = dict(
