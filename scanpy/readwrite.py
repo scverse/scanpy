@@ -168,7 +168,8 @@ def read_10x_h5(
             adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
         if gex_only:
             adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
-        return adata
+        if adata.is_view:
+            return adata.copy()
     else:
         return _read_legacy_10x_h5(filename, genome=genome, start=start)
 
@@ -307,7 +308,7 @@ def read_10x_mtx(
         return adata
     else:
         gex_rows = list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))
-        return adata[:, gex_rows]
+        return adata[:, gex_rows].copy()
 
 
 def _read_legacy_10x_mtx(
