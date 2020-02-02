@@ -775,6 +775,10 @@ def regress_out(
 
     sanitize_anndata(adata)
 
+    # TODO: This should throw an implicit modification warning
+    if adata.is_view:
+        adata._init_as_actual(adata.copy())
+
     if isinstance(keys, str):
         keys = [keys]
 
