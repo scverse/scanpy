@@ -66,7 +66,8 @@ legend_fontoutline
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
-    the same as in adata.obs.
+    the same as in adata.obs. If `img_key` not `None`, size is the scaling factor
+    for the spot size.
 color_map
     Color map to use for continous variables. Can be a name or a
     :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
@@ -87,7 +88,15 @@ frameon
     :func:`~scanpy.set_figure_params`, defaults to `True`.
 title
     Provide title for panels either as string or list of strings,
-    e.g. `['title1', 'title2', ...]`.\
+    e.g. `['title1', 'title2', ...]`.
+img_key
+    Key for image data, stored in `adata.uns`.
+crop_coord
+    Coordinates to use for cropping the image (left, right, top, bottom).
+alpha_img
+    Alpha value for image.
+bw
+    Plot Image in gray scale.\
 """
 
 doc_vminmax = """\
