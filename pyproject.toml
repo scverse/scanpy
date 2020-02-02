@@ -45,9 +45,8 @@ exclude = '''
     |plotting/(
         __init__
         |palettes
-        |_utils
         |_preprocessing
-        |_tools/(scatterplots|__init__|paga)
+        |_tools/(__init__|paga)
     )
     |tests/(
         test_get
