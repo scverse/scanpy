@@ -102,6 +102,12 @@ def test_subsample():
     assert adata.n_obs == 4
 
 
+def test_subsample_copy():
+    adata = AnnData(np.ones((200, 10)))
+    assert sc.pp.subsample(adata, n_obs=40, copy=True).shape == (40, 10)
+    assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
+
+
 def test_scale():
     adata = sc.datasets.pbmc68k_reduced()
     adata.X = adata.raw.X
