@@ -328,7 +328,7 @@ def visium_sge(sample_ID='V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
     from urllib.parse import urljoin
 
     files = dict(
-        counts=settings.datasetdir / f'{sample_ID}_raw_feature_bc_matrix.h5',
+        counts=settings.datasetdir / f'{sample_ID}_filtered_feature_bc_matrix.h5',
         tissue_positions_file=settings.datasetdir / 'spatial/tissue_positions_list.csv',
         scalefactors_json_file=settings.datasetdir / 'spatial/scalefactors_json.json',
         hires_image=settings.datasetdir / 'spatial/tissue_hires_image.png',
@@ -346,7 +346,7 @@ def visium_sge(sample_ID='V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
 
     backup_urls = dict(
         counts=urljoin(
-            _sge10x_url, f'{sample_ID}/{sample_ID}_raw_feature_bc_matrix.h5'
+            _sge10x_url, f'{sample_ID}/{sample_ID}_filtered_feature_bc_matrix.h5'
         ),
         tissue_positions_file=urljoin(
             _sge10x_url, f'{sample_ID}/{sample_ID}_spatial.tar.gz'
@@ -394,10 +394,10 @@ def visium_sge(sample_ID='V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
         settings.datasetdir / 'spatial/tissue_positions_list.csv', header=None,
     )
     positions.columns = ['index', '0', '1', '2', 'X2_coord', 'X1_coord']
-    positions.set_index('index')
+    positions.index = positions['index']
 
     positions = positions.join(adata.obs, how='right')
 
-    adata.obsm['X_spatial'] = positions[['X2_coord', 'X1_coord']].to_numpy()
+    adata.obsm['X_spatial'] = positions[['X1_coord', 'X2_coord',]].to_numpy()
 
     return adata
