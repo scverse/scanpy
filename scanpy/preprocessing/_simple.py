@@ -988,9 +988,10 @@ def subsample(
         raise ValueError('Either pass `n_obs` or `fraction`.')
     obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
     if isinstance(data, AnnData):
-        adata = data.copy() if copy else data
-        adata._inplace_subset_obs(obs_indices)
-        return adata if copy else None
+        if copy:
+            return data[obs_indices].copy()
+        else:
+            data._inplace_subset_obs(obs_indices)
     else:
         X = data
         return X[obs_indices], obs_indices
