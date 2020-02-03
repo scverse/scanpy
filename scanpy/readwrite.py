@@ -750,7 +750,12 @@ def _download(url: str, path: Path):
                 t.total = tsize
             t.update(b * bsize - t.n)
 
-        urlretrieve(url, str(path), reporthook=update_to)
+        try:
+            urlretrieve(url, str(path), reporthook=update_to)
+        except Exception:
+            # Make sure file doesn’t exist half-downloaded
+            path.unlink(missing_ok=True)
+            raise
 
 
 def _check_datafile_present_and_download(path, backup_url=None):
