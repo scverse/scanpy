@@ -882,7 +882,7 @@ def _get_data_points(
         else:
             raise KeyError(
                 f"Could not find entry in `adata.uns` for '{img_key}'.\n"
-                f"Available keys are: {list(adata.uns['image'].keys())}."
+                f"Available keys are: {list(adata.uns['images'].keys())}."
             )
 
     return data_points, components_list
@@ -1060,7 +1060,7 @@ def _process_image(adata, data_points, img_key, crop_coord, scale_spot, bw=False
 
     offset = 100
     cmap_img = None
-    img = adata.uns['image'][img_key]
+    img = adata.uns['images'][img_key]
     scalef_key = f"tissue_{img_key}_scalef"
 
     # 0.5 needed for optimal matching with spot boundaries
