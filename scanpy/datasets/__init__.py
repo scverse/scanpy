@@ -1,14 +1,18 @@
 """Builtin Datasets.
 """
+import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from tqdm.auto import tqdm
+from matplotlib.image import imread
 
 from .. import logging as logg, _utils
+from .._compat import Literal
 from .._settings import settings
-from ..readwrite import read
+from ..readwrite import read, read_10x_h5
 from ._ebi_expression_atlas import ebi_expression_atlas
 
 
@@ -297,38 +301,38 @@ def pbmc3k_processed() -> AnnData:
     return adata
 
 
-def visium_sge(sample_ID='V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
-    """Processed Visium Spatial Gene Expression data from 10x Genomics.
+def visium_sge(
+    sample_id: Literal[
+        'V1_Breast_Cancer_Block_A_Section_1',
+        'V1_Breast_Cancer_Block_A_Section_2',
+        'V1_Human_Heart',
+        'V1_Human_Lymph_Node',
+        'V1_Mouse_Kidney',
+        'V1_Adult_Mouse_Brain',
+        'V1_Mouse_Brain_Sagittal_Posterior',
+        'V1_Mouse_Brain_Sagittal_Posterior_Section_2',
+        'V1_Mouse_Brain_Sagittal_Anterior',
+        'V1_Mouse_Brain_Sagittal_Anterior_Section_2',
+    ] = 'V1_Breast_Cancer_Block_A_Section_1',
+) -> AnnData:
+    """\
+    Processed Visium Spatial Gene Expression data from 10x Genomics.
     Database: https://support.10xgenomics.com/spatial-gene-expression/datasets
+
     Parameters
     ----------
-    sample_ID
-        The ID of data sample in 10x spatial data base.
-        It should be one of the followings:       
-        'V1_Breast_Cancer_Block_A_Section_1'
-        'V1_Breast_Cancer_Block_A_Section_2'
-        'V1_Human_Heart'
-        'V1_Human_Lymph_Node'
-        'V1_Mouse_Kidney'
-        'V1_Adult_Mouse_Brain'
-        'V1_Mouse_Brain_Sagittal_Posterior'
-        'V1_Mouse_Brain_Sagittal_Posterior_Section_2'
-        'V1_Mouse_Brain_Sagittal_Anterior'
-        'V1_Mouse_Brain_Sagittal_Anterior_Section_2'
-        By defaults, It is set to:
-        'V1_Breast_Cancer_Block_A_Section_1'
+    sample_id
+        The ID of the data sample in 10x’s spatial database.
 
     Returns
     -------
     Annotated data matrix.
     """
 
-    # setting filenames, tarfilenames, backup_rurls
+    # setting filenames, tarfilenames, backup_urls
     # tarfilenames and backup_urls will be used for downloading data base
-    from urllib.parse import urljoin
-
     files = dict(
-        counts=settings.datasetdir / f'{sample_ID}_filtered_feature_bc_matrix.h5',
+        counts=settings.datasetdir / f'{sample_id}_filtered_feature_bc_matrix.h5',
         tissue_positions_file=settings.datasetdir / 'spatial/tissue_positions_list.csv',
         scalefactors_json_file=settings.datasetdir / 'spatial/scalefactors_json.json',
         hires_image=settings.datasetdir / 'spatial/tissue_hires_image.png',
@@ -336,62 +340,49 @@ def visium_sge(sample_ID='V1_Breast_Cancer_Block_A_Section_1') -> AnnData:
     )
 
     tarfiles = dict(
-        tissue_positions_file=settings.datasetdir / f'{sample_ID}_spatial.tar',
-        scalefactors_json_file=settings.datasetdir / f'{sample_ID}_spatial.tar',
-        hires_image=settings.datasetdir / f'{sample_ID}_spatial.tar',
-        lowres_image=settings.datasetdir / f'{sample_ID}_spatial.tar',
+        tissue_positions_file=settings.datasetdir / f'{sample_id}_spatial.tar',
+        scalefactors_json_file=settings.datasetdir / f'{sample_id}_spatial.tar',
+        hires_image=settings.datasetdir / f'{sample_id}_spatial.tar',
+        lowres_image=settings.datasetdir / f'{sample_id}_spatial.tar',
     )
 
-    _sge10x_url = 'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/'
-
+    url_prefix = (
+        f'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/{sample_id}/{sample_id}'
+    )
     backup_urls = dict(
-        counts=urljoin(
-            _sge10x_url, f'{sample_ID}/{sample_ID}_filtered_feature_bc_matrix.h5'
-        ),
-        tissue_positions_file=urljoin(
-            _sge10x_url, f'{sample_ID}/{sample_ID}_spatial.tar.gz'
-        ),
-        scalefactors_json_file=urljoin(
-            _sge10x_url, f'{sample_ID}/{sample_ID}_spatial.tar.gz'
-        ),
-        hires_image=urljoin(_sge10x_url, f'{sample_ID}/{sample_ID}_spatial.tar.gz'),
-        lowres_image=urljoin(_sge10x_url, f'{sample_ID}/{sample_ID}_spatial.tar.gz'),
+        counts=f'{url_prefix}_filtered_feature_bc_matrix.h5',
+        tissue_positions_file=f'{url_prefix}_spatial.tar.gz',
+        scalefactors_json_file=f'{url_prefix}_spatial.tar.gz',
+        hires_image=f'{url_prefix}_spatial.tar.gz',
+        lowres_image=f'{url_prefix}_spatial.tar.gz',
     )
 
-    # Downloading or untar files if it's necessary
-    for _f in files:
-        if _f in tarfiles:
+    # download and untar files if necessary
+    for f in tqdm(files, desc='Files'):
+        if f in tarfiles:
             _utils.check_presence_download_untar(
-                filename=files[_f], tarfilename=tarfiles[_f], backup_url=backup_urls[_f]
+                filename=files[f], tarfilename=tarfiles[f], backup_url=backup_urls[f]
             )
         else:
-            _utils.check_presence_download(
-                filename=files[_f], backup_url=backup_urls[_f]
-            )
+            _utils.check_presence_download(filename=files[f], backup_url=backup_urls[f])
 
-    # reading h5 file
-    from ..readwrite import read_10x_h5
-
+    # read h5 file
     adata = read_10x_h5(files['counts'])
-
     adata.var_names_make_unique()
 
-    # reading images
-    # imread can only get string and not a Path object
-    import matplotlib.image as img
+    # read images
+    # imread only accepts strings, not Path objects
+    adata.uns['images'] = dict(
+        hires=imread(str(files['hires_image'])),
+        lowres=imread(str(files['lowres_image'])),
+    )
 
-    adata.uns['images'] = dict()
-    adata.uns['images']['hires'] = img.imread(str(files['hires_image']))
-    adata.uns['images']['lowres'] = img.imread(str(files['lowres_image']))
-
-    # reading json scalefactors
-    import json
-
+    # read json scalefactors
     adata.uns['scalefactors'] = json.loads(files['scalefactors_json_file'].read_bytes())
 
-    # reading coordinates
+    # read coordinates
     positions = pd.read_csv(
-        settings.datasetdir / 'spatial/tissue_positions_list.csv', header=None,
+        settings.datasetdir / 'spatial/tissue_positions_list.csv', header=None
     )
     positions.columns = ['index', '0', '1', '2', 'X2_coord', 'X1_coord']
     positions.index = positions['index']

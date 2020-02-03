@@ -88,6 +88,7 @@ Embeddings
    pl.umap
    pl.diffmap
    pl.draw_graph
+   pl.spatial
    pl.embedding
 
 Compute densities on embeddings.
