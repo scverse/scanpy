@@ -496,15 +496,15 @@ def test_rank_genes_symbols(image_comparer):
     save_and_compare_images('master_tracksplot_gene_symbols')
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def pbmc_scatterplots():
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc.layers["sparse"] = pbmc.raw.X / 2
     pbmc.layers["test"] = pbmc.X.copy() + 100
+    pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
     sc.pp.neighbors(pbmc)
     sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
     sc.tl.diffmap(pbmc)
-    pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
     return pbmc
 
 
