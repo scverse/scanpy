@@ -42,8 +42,8 @@ def test_read_10x(tmp_path, mtx_path, h5_path):
     assert_anndata_equal(mtx, h5)
 
     # Test that it can be written:
-    from_mtx_pth = Path(tmp_path) / "from_mtx.h5ad"
-    from_h5_pth = Path(tmp_path) / "from_h5.h5ad"
+    from_mtx_pth = tmp_path / "from_mtx.h5ad"
+    from_h5_pth = tmp_path / "from_h5.h5ad"
 
     mtx.write(from_mtx_pth)
     h5.write(from_h5_pth)
