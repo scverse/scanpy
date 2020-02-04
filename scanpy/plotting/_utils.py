@@ -982,3 +982,30 @@ def data_to_axis_points(ax: Axes, points_data: np.ndarray):
     """
     data_to_axis = axis_to_data.inverted()
     return data_to_axis(points_data)
+
+
+def check_mpl_3d_bug():
+    from io import BytesIO
+    from matplotlib import __version__ as mpl_version
+    from matplotlib.collections import PatchCollection
+    from matplotlib.patches import Circle
+    from mpl_toolkits.mplot3d import Axes3D
+
+    fig = Figure()
+    ax = Axes3D(fig)
+
+    circles = PatchCollection([Circle((5, 1)), Circle((2, 2))])
+    ax.add_collection3d(circles, zs=[1, 2])
+
+    buf = BytesIO()
+    try:
+        fig.savefig(buf)
+    except ValueError as e:
+        if not 'operands could not be broadcast together' in str(e):
+            raise e
+        raise ValueError(
+            'There is a known error with matplotlib 3d plotting, '
+            f'and your version ({mpl_version}) seems to be affected. '
+            'Please install matplotlib==3.0.2 or wait for '
+            'https://github.com/matplotlib/matplotlib/issues/14298'
+        )
