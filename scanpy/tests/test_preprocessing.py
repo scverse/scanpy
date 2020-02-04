@@ -7,6 +7,7 @@ import scanpy as sc
 from sklearn.utils.testing import assert_allclose
 import pytest
 from anndata import AnnData
+from anndata.tests.helpers import assert_equal
 
 
 HERE = Path(__file__).parent
@@ -138,6 +139,20 @@ def test_regress_out_ordinal():
         adata, keys=['n_counts', 'percent_mito'], n_jobs=8, copy=True)
 
     np.testing.assert_array_equal(single.X, multi.X)
+
+
+def test_regress_out_view():
+    from scipy.sparse import random
+    adata = AnnData(random(500, 1100, density=0.2, format='csr'))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    subset_adata = adata[:, :1050]
+    subset_adata_copy = subset_adata.copy()
+
+    sc.pp.regress_out(subset_adata, keys=['n_counts', 'percent_mito'])
+    sc.pp.regress_out(subset_adata_copy, keys=['n_counts', 'percent_mito'])
+    assert_equal(subset_adata, subset_adata_copy)
+    assert not subset_adata.is_view
 
 
 def test_regress_out_categorical():

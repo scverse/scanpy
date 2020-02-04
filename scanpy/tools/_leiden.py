@@ -150,7 +150,7 @@ def leiden(
         )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),
-        categories=natsorted(np.unique(groups).astype('U')),
+        categories=natsorted(map(str, np.unique(groups))),
     )
     # store information on the clustering parameters
     adata.uns['leiden'] = {}

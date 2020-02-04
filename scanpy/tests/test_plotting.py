@@ -6,10 +6,11 @@ from matplotlib.testing import setup
 
 setup()
 
-from matplotlib.testing.compare import compare_images
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.testing.compare import compare_images
 from anndata import AnnData
 
 import scanpy as sc
@@ -91,15 +92,16 @@ def test_heatmap(image_comparer):
     save_and_compare_images('master_heatmap_std_scale_obs')
 
 
-def test_clustermap(image_comparer):
+@pytest.mark.xfail(reason="https://github.com/mwaskom/seaborn/issues/1953")
+@pytest.mark.parametrize(
+    "obs_keys,name",
+    [(None, "master_clustermap"), ("cell_type", "master_clustermap_withcolor")],
+)
+def test_clustermap(image_comparer, obs_keys, name):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-
     adata = sc.datasets.krumsiek11()
-    sc.pl.clustermap(adata)
-    save_and_compare_images('master_clustermap')
-
-    sc.pl.clustermap(adata, 'cell_type')
-    save_and_compare_images('master_clustermap_withcolor')
+    sc.pl.clustermap(adata, obs_keys)
+    save_and_compare_images(name)
 
 
 def test_dotplot(image_comparer):
@@ -510,8 +512,11 @@ def test_scatterplots(image_comparer):
     save_and_compare_images('master_pca_with_fonts')
 
     # test projection='3d'
-    sc.pl.pca(pbmc, color='bulk_labels', projection='3d', show=False)
-    save_and_compare_images('master_3dprojection')
+    from packaging.version import parse
+
+    if parse(matplotlib.__version__) <= parse('3.1'):
+        sc.pl.pca(pbmc, color='bulk_labels', projection='3d', show=False)
+        save_and_compare_images('master_3dprojection')
 
     sc.pl.pca(
         pbmc,
