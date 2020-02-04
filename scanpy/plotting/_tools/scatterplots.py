@@ -13,7 +13,7 @@ from matplotlib import patheffects
 from matplotlib.colors import Colormap
 
 from .. import _utils
-from .._utils import _IGraphLayout, _FontWeight, _FontSize
+from .._utils import _IGraphLayout, _FontWeight, _FontSize, check_mpl_3d_bug
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_embedding, doc_show_save_ax
 from ... import logging as logg
 from ..._settings import settings
@@ -97,6 +97,7 @@ def embedding(
             groups = [groups]
 
     if projection == '3d':
+        check_mpl_3d_bug()
         from mpl_toolkits.mplot3d import Axes3D
         args_3d = {'projection': '3d'}
     else:

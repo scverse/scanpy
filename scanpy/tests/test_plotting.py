@@ -524,12 +524,7 @@ def pbmc_scatterplots():
             ),
         ),
         pytest.param(
-            "3dprojection",
-            partial(sc.pl.pca, color='bulk_labels', projection='3d',),
-            marks=pytest.mark.xfail(
-                pkg_version("matplotlib") <= version.parse('3.3'),
-                reason="https://github.com/matplotlib/matplotlib/issues/14298",
-            ),
+            "3dprojection", partial(sc.pl.pca, color='bulk_labels', projection='3d'),
         ),
         (
             "multipanel",
@@ -604,8 +599,13 @@ def pbmc_scatterplots():
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    fn(pbmc_scatterplots, show=False)
-    save_and_compare_images(f"master_{id}")
+    if id == "3dprojection":
+        # check if this still happens so we can remove our checks once mpl is fixed
+        with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
+            fn(pbmc_scatterplots, show=False)
+    else:
+        fn(pbmc_scatterplots, show=False)
+        save_and_compare_images(f"master_{id}")
 
 
 def test_scatter_embedding_groups_and_size(image_comparer):
