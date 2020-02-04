@@ -1,12 +1,15 @@
+from functools import partial
 from pathlib import Path
 from itertools import repeat, chain, combinations
 
 import pytest
 from matplotlib.testing import setup
+from packaging import version
+
+from scanpy._utils import pkg_version
 
 setup()
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -92,7 +95,10 @@ def test_heatmap(image_comparer):
     save_and_compare_images('master_heatmap_std_scale_obs')
 
 
-@pytest.mark.xfail(reason="https://github.com/mwaskom/seaborn/issues/1953")
+@pytest.mark.skipif(
+    pkg_version("matplotlib") < version.parse('3.1'),
+    reason="https://github.com/mwaskom/seaborn/issues/1953",
+)
 @pytest.mark.parametrize(
     "obs_keys,name",
     [(None, "master_clustermap"), ("cell_type", "master_clustermap_withcolor")],
@@ -490,113 +496,116 @@ def test_rank_genes_symbols(image_comparer):
     save_and_compare_images('master_tracksplot_gene_symbols')
 
 
-def test_scatterplots(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-
+@pytest.fixture(scope="module")
+def pbmc_scatterplots():
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc.layers["sparse"] = pbmc.raw.X / 2
-
-    # test pca
-    sc.pl.pca(pbmc, color='bulk_labels', show=False)
-    save_and_compare_images('master_pca')
-
-    sc.pl.pca(
-        pbmc,
-        color=['bulk_labels', 'louvain'],
-        legend_loc='on data',
-        legend_fontoutline=2,
-        legend_fontweight='normal',
-        legend_fontsize=10,
-        show=False,
-    )
-    save_and_compare_images('master_pca_with_fonts')
-
-    # test projection='3d'
-    from packaging.version import parse
-
-    if parse(matplotlib.__version__) <= parse('3.1'):
-        sc.pl.pca(pbmc, color='bulk_labels', projection='3d', show=False)
-        save_and_compare_images('master_3dprojection')
-
-    sc.pl.pca(
-        pbmc,
-        color=['CD3D', 'CD79A'],
-        components=['1,2', '1,3'],
-        vmax=5,
-        use_raw=False,
-        vmin=-5,
-        cmap='seismic',
-        show=False,
-    )
-    save_and_compare_images('master_multipanel')
-
-    sc.pl.pca(
-        pbmc, color=['CD3D', 'CD79A'], layer="sparse", cmap='viridis', show=False,
-    )
-    save_and_compare_images('master_pca_sparse_layer')
-
-    # test tsne
-    # I am removing this test because  slight differences are present even
-    # after setting a random_state.
-    # sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
-    # sc.pl.tsne(pbmc, color=['CD3D', 'louvain'], show=False)
-    # save_and_compare_images('master_tsne', tolerance=tolerance)
-
-    # Test umap with no colors
-    sc.pl.umap(pbmc, show=False)
-    save_and_compare_images('master_umap_nocolor')
-
-    # test umap with louvain clusters and palette with custom colors
-    sc.pl.umap(
-        pbmc,
-        color=['louvain'],
-        palette=['b', 'grey80', 'r', 'yellow', 'black', 'gray', 'lightblue'],
-        frameon=False,
-        show=False,
-    )
-    save_and_compare_images('master_umap')
-
-    # test umap with gene expression
-    sc.pl.umap(
-        pbmc,
-        color=np.array(['LYZ', 'CD79A']),
-        s=20,
-        alpha=0.5,
-        frameon=False,
-        title=['gene1', 'gene2'],
-        show=False,
-    )
-    save_and_compare_images('master_umap_gene_expr')
-
-    # test umap using layer
-    pbmc.layers['test'] = pbmc.X.copy() + 100
-    sc.pl.umap(
-        pbmc,
-        color=np.array(['LYZ', 'CD79A']),
-        s=20,
-        alpha=0.5,
-        frameon=False,
-        title=['gene1', 'gene2'],
-        layer='test',
-        show=False,
-        vmin=100,
-    )
-    save_and_compare_images('master_umap_layer')
-
-    # test edges = True
-    sc.pp.neighbors(pbmc)
-    sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50, show=False)
-    save_and_compare_images('master_umap_with_edges', tolerance=35)
-
-    # test diffmap
-    # sc.tl.diffmap(pbmc)
-    # sc.pl.diffmap(pbmc, components='all', color=['CD3D'], show=False)
-    # save_and_compare_images('master_diffmap', tolerance=tolerance)
-
-    # test gene_symbols
+    pbmc.layers["test"] = pbmc.X.copy() + 100
     pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
-    sc.pl.umap(pbmc, color=['1', '2', '3'], gene_symbols="numbers", show=False)
-    save_and_compare_images('master_umap_symbols')
+    sc.pp.neighbors(pbmc)
+    sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
+    sc.tl.diffmap(pbmc)
+    return pbmc
+
+
+@pytest.mark.parametrize(
+    "id,fn",
+    [
+        ("pca", partial(sc.pl.pca, color='bulk_labels')),
+        (
+            "pca_with_fonts",
+            partial(
+                sc.pl.pca,
+                color=['bulk_labels', 'louvain'],
+                legend_loc='on data',
+                legend_fontoutline=2,
+                legend_fontweight='normal',
+                legend_fontsize=10,
+            ),
+        ),
+        pytest.param(
+            "3dprojection", partial(sc.pl.pca, color='bulk_labels', projection='3d'),
+        ),
+        (
+            "multipanel",
+            partial(
+                sc.pl.pca,
+                color=['CD3D', 'CD79A'],
+                components=['1,2', '1,3'],
+                vmax=5,
+                use_raw=False,
+                vmin=-5,
+                cmap='seismic',
+            ),
+        ),
+        (
+            "pca_sparse_layer",
+            partial(
+                sc.pl.pca, color=['CD3D', 'CD79A'], layer="sparse", cmap='viridis',
+            ),
+        ),
+        pytest.param(
+            "tsne",
+            partial(sc.pl.tsne, color=['CD3D', 'louvain']),
+            marks=pytest.mark.xfail(
+                reason="slight differences even after setting random_state."
+            ),
+        ),
+        ("umap_nocolor", sc.pl.umap),
+        (
+            "umap",
+            partial(
+                sc.pl.umap,
+                color=['louvain'],
+                palette=['b', 'grey80', 'r', 'yellow', 'black', 'gray', 'lightblue'],
+                frameon=False,
+            ),
+        ),
+        (
+            "umap_gene_expr",
+            partial(
+                sc.pl.umap,
+                color=np.array(['LYZ', 'CD79A']),
+                s=20,
+                alpha=0.5,
+                frameon=False,
+                title=['gene1', 'gene2'],
+            ),
+        ),
+        (
+            "umap_layer",
+            partial(
+                sc.pl.umap,
+                color=np.array(['LYZ', 'CD79A']),
+                s=20,
+                alpha=0.5,
+                frameon=False,
+                title=['gene1', 'gene2'],
+                layer='test',
+                vmin=100,
+            ),
+        ),
+        (
+            "umap_with_edges",
+            partial(sc.pl.umap, color='louvain', edges=True, edges_width=0.1, s=50),
+        ),
+        # ("diffmap", partial(sc.pl.diffmap, components='all', color=['CD3D'])),
+        (
+            "umap_symbols",
+            partial(sc.pl.umap, color=['1', '2', '3'], gene_symbols="numbers"),
+        ),
+    ],
+)
+def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+
+    if id == "3dprojection":
+        # check if this still happens so we can remove our checks once mpl is fixed
+        with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
+            fn(pbmc_scatterplots, show=False)
+    else:
+        fn(pbmc_scatterplots, show=False)
+        save_and_compare_images(f"master_{id}")
 
 
 def test_scatter_embedding_groups_and_size(image_comparer):

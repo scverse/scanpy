@@ -10,16 +10,13 @@ from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 
 
-HERE = Path(__file__).parent
-
-
-def test_log1p():
+def test_log1p(tmp_path):
     A = np.random.rand(200, 10)
     A_l = np.log1p(A)
     ad = AnnData(A)
     ad2 = AnnData(A)
     ad3 = AnnData(A)
-    ad3.filename = HERE / 'test.h5ad'
+    ad3.filename = tmp_path / 'test.h5ad'
     sc.pp.log1p(ad)
     assert np.allclose(ad.X, A_l)
     sc.pp.log1p(ad2, chunked=True)
@@ -100,6 +97,12 @@ def test_subsample():
     assert adata.n_obs == 40
     sc.pp.subsample(adata, fraction=0.1)
     assert adata.n_obs == 4
+
+
+def test_subsample_copy():
+    adata = AnnData(np.ones((200, 10)))
+    assert sc.pp.subsample(adata, n_obs=40, copy=True).shape == (40, 10)
+    assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
 
 
 def test_scale():
