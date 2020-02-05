@@ -679,8 +679,12 @@ def violin(
         keys = [keys]
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
+        _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
+        color_mapper = dict(zip(obs_df[groupby].cat.categories, adata.uns[f'{groupby}_colors']))
+        palette = obs_df[groupby].apply(lambda cat: color_mapper[cat])
     else:
         obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
+        palette = None
     if groupby is None:
         obs_tidy = pd.melt(obs_df, value_vars=keys)
         x = 'variable'
@@ -745,6 +749,7 @@ def violin(
                 order=order,
                 orient='vertical',
                 scale=scale,
+                palette=palette,
                 ax=ax,
                 **kwds,
             )
