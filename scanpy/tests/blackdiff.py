@@ -51,9 +51,9 @@ if __name__ == '__main__':
             sys.exit(1)
         elif added + removed < thresh:
             print(
-                'This above file has < {thresh} changes to black formatting. '
-                'Please black format it and afterwards remove it from '
-                '“tool.black.exclude" in pyproject.toml'
+                f'This above file has < {thresh} changes to black formatting. '
+                'Please remove it from “tool.black.exclude" in pyproject.toml'
+                'and afterwards black format it.'
             )
             sys.exit(1)
     sys.exit(0)
