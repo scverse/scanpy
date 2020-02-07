@@ -384,11 +384,24 @@ def visium_sge(
     positions = pd.read_csv(
         settings.datasetdir / 'spatial/tissue_positions_list.csv', header=None
     )
-    positions.columns = ['index', '0', '1', '2', 'X2_coord', 'X1_coord']
-    positions.index = positions['index']
+    positions.columns = [
+        'barcode',
+        'in_tissue',
+        'array_row',
+        'array_col',
+        'pxl_col_in_fullres',
+        'pxl_row_in_fullres',
+    ]
+    positions.index = positions['barcode']
 
-    positions = positions.join(adata.obs, how='right')
+    adata.obs = adata.obs.join(positions, how="left")
 
-    adata.obsm['X_spatial'] = positions[['X1_coord', 'X2_coord',]].to_numpy()
+    adata.obsm['X_spatial'] = adata.obs[
+        ['pxl_row_in_fullres', 'pxl_col_in_fullres',]
+    ].to_numpy()
+    adata.obs.drop(
+        columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres',], inplace=True
+    )
 
     return adata
+
