@@ -310,7 +310,6 @@ def read_visium(
     start = logg.info(f'reading {filename}')
     with tables.open_file(str(filename), 'r') as f:
         v3 = '/matrix' in f
-    print(v3)
     if v3:
         adata = _read_v3_10x_h5(filename, start=start)
         if genome:
@@ -339,7 +338,6 @@ def read_visium(
 
         # check if files exists
         for f in files.values():
-            print(f)
             if not f.exists():
                 raise ValueError(f"Could not find '{f}'")
                 return False
