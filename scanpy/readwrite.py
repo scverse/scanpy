@@ -292,6 +292,9 @@ def read_visium(
         Filter expression to this genes within this genome. For legacy 10x h5
         files, this must be provided if the data contains more than one genome.
     load_image
+        If True, it looks for the `spatial` folder where the count file is
+        and import images, coordinates and scale factors.
+        Based on https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
 
     Returns
     -------
@@ -300,6 +303,9 @@ def read_visium(
     `adata.X`, cell names in `adata.obs_names` and gene names in
     `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
     The feature types are stored in `adata.var['feature_types']`
+    The images are stored in `adata.uns['images']` and scale factors
+    are stored in `adata.uns['scalefactors']`.
+    The spatial coordinates are stored as a `basis` in `adata.obsm`
     """
     start = logg.info(f'reading {filename}')
     with tables.open_file(str(filename), 'r') as f:
