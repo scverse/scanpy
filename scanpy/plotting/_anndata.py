@@ -681,8 +681,9 @@ def violin(
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
         if kwds.get('palette', None) is None:
             _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
-            kwds['palette'] = dict(zip(obs_df[groupby].cat.categories,
-                                   adata.uns[f'{groupby}_colors']))
+            kwds['palette'] = dict(
+                zip(obs_df[groupby].cat.categories, adata.uns[f'{groupby}_colors'])
+            )
     else:
         obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
     if groupby is None:
