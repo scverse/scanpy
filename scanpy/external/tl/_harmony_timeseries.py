@@ -1,9 +1,11 @@
-"""Harmony time series for data visualization with augmented affinity matrix at
-    discrete time points
+"""\
+Harmony time series for data visualization with augmented affinity matrix at
+discrete time points
 """
 
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 from anndata import AnnData
 
@@ -27,8 +29,8 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
     .. _Palantir: https://github.com/dpeerlab/Palantir
 
     .. note::
-        More information and bug reports `here
-        <https://github.com/dpeerlab/Harmony>`__.
+       More information and bug reports `here
+       <https://github.com/dpeerlab/Harmony>`__.
 
     Parameters
     ----------
@@ -36,30 +38,32 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
         Annotated data matrix of shape n_obs `×` n_vars. Rows correspond to
         cells and columns to genes. Rows represent two or more time points,
         where replicates of the same time point are consecutive in order.
-
     tp
         key name of observation annotation `.obs` representing time points.
-
     n_components
         Minimum number of principal components to use. Specify `None` to use
         pre-computed components.
 
     Returns
     -------
-    Updates `.obsm` and `.uns` with the following:
+    Updates `.obsm`, `.obsp` and `.uns` with the following:
 
-    **aff_harmony**
-        affinity matrix
-    **aff_aug_harmony**
-        augmented affinity matrix
-    **X_harmony**
+    `.obsm['X_harmony']`
         force directed layout
-    **timepoint_connections**
-        links between time points
+    `.obsp['harmony_aff']`
+        affinity matrix
+    `.obsp['harmony_aff_aug']`
+        augmented affinity matrix
+    `.uns['harmony_timepoint_var']`
+        The name of the variable passed as `tp`
+    `.uns['harmony_timepoint_connections']`
+        The links between time points
 
     Example
     -------
 
+    >>> from itertools import product
+    >>> from anndata import AnnData
     >>> import scanpy as sc
     >>> import scanpy.external as sce
 
@@ -73,20 +77,13 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
 
     >>> adata_ref = sc.datasets.pbmc3k()
     >>> start = [596, 615, 1682, 1663, 1409, 1432]
-    >>> adatas = [adata_ref[i : i + 1000] for i in start]
-    >>> sample_names = [
-            "sa1_Rep1",
-            "sa1_Rep2",
-            "sa2_Rep1",
-            "sa2_Rep2",
-            "sa3_Rep1",
-            "sa3_Rep2",
-        ]
-    >>> timepoints = [i.split("_")[0] for i in sample_names]
-    >>> for ad, sn, tp in zip(adatas, sample_names, timepoints):
-            ad.obs["time_points"] = tp
-            ad.obs["sample_name"] = sn
-    >>> adata = adatas[0].concatenate(*adatas[1:], join="outer")
+    >>> adata = AnnData.concatenate(
+    ...     *(adata_ref[i : i + 1000] for i in start),
+    ...     join="outer",
+    ...     batch_key="sample",
+    ...     batch_categories=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
+    ... )
+    >>> adata.obs["time_points"] = adata.obs["sample"].str.split("_", expand=True)[0]
 
     Normalize and filter for highly expressed genes
 
@@ -96,66 +93,43 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
 
     Run harmony_timeseries
 
-    >>> d = sce.tl.harmony_timeseries(
-            adata=adata, tp="time_points", n_components=None
-        )
+    >>> sce.tl.harmony_timeseries(adata, tp="time_points", n_components=None)
 
     Plot time points:
 
-    >>> from matplotlib import pyplot as plt
-    >>> fig, ax = plt.subplots(1, 3, figsize=(12, 5))
-    >>> tps = ['sa1', 'sa2', 'sa3']
-    >>> for i, tp in enumerate(tps):
-            p = sc.pl.scatter(
-                adata=adata,
-                x='x', y='y',
-                color = 'time_points',
-                groups=tp, title=tp,
-                show=False, ax=ax[i],
-                legend_loc='none',
-            )
-            p.set_axis_off()
+    >>> sce.pl.harmony_timeseries(adata)
 
-    For further demonstration of Harmony visualizations please follow this
-    notebook
+    For further demonstration of Harmony visualizations please follow the notebook
     `Harmony_sample_notebook.ipynb
     <https://github.com/dpeerlab/Harmony/blob/master/notebooks/
     Harmony_sample_notebook.ipynb>`_.
-    It provides a comprehensive guide to draw *gene expression trends*, amongst
-    other things.
+    It provides a comprehensive guide to draw *gene expression trends*,
+    amongst other things.
     """
 
     try:
         import harmony
     except ImportError:
         raise ImportError(
-            "\nplease install harmony: \n\n\t"
-            "git clone https://github.com/dpeerlab/Harmony.git\n\t"
-            "cd Harmony\n\t"
-            "pip install .\n"
+            "\nplease install harmony:\n\n"
+            "\tpip install git+https://github.com/dpeerlab/Harmony.git"
         )
 
     logg.info("Harmony augmented affinity matrix")
 
-    timepoint_connections = pd.DataFrame(columns=[0, 1])
-    index = 0
     timepoints = adata.obs[tp].unique().tolist()
-    for i in range(len(timepoints) - 1):
-        timepoint_connections.loc[index, :] = timepoints[i : i + 2]
-        index += 1
-    adata.uns['timepoint_connections'] = timepoint_connections
+    timepoint_connections = pd.DataFrame(np.array([timepoints[:-1], timepoints[1:]]).T)
 
     # compute the augmented and non-augmented affinity matrices
-    (aug_aff, aff,) = harmony.core.augmented_affinity_matrix(
-        adata.to_df(),
-        adata.obs[tp],
-        adata.uns['timepoint_connections'],
-        pc_components=n_components,
+    aug_aff, aff = harmony.core.augmented_affinity_matrix(
+        adata.to_df(), adata.obs[tp], timepoint_connections, pc_components=n_components,
     )
 
     # Force directed layouts
     layout = harmony.plot.force_directed_layout(aug_aff, adata.obs.index)
 
-    adata.obsm["X_harmony"] = layout
-    adata.uns['aff_harmony'] = aff
-    adata.uns['aff_aug_harmony'] = aug_aff
+    adata.obsm["X_harmony"] = np.asarray(layout)
+    adata.obsp["harmony_aff"] = aff
+    adata.obsp["harmony_aff_aug"] = aug_aff
+    adata.uns["harmony_timepoint_var"] = tp
+    adata.uns["harmony_timepoint_connections"] = np.asarray(timepoint_connections)

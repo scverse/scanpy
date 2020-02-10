@@ -26,7 +26,7 @@ try:
     __version__ = get_version(root='..', relative_to=__file__)
     del get_version
 except (LookupError, ImportError):
-    __version__ = pkg_version(__name__)
+    __version__ = str(pkg_version(__name__))
 
 check_versions()
 del pkg_version, check_versions
