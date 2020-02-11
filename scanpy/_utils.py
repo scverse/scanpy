@@ -550,7 +550,7 @@ def check_presence_download_untar(filename: Path, tarfilename: Path, backup_url:
     """Check if file is present otherwise download and untar."""
     if not filename.is_file():
         check_presence_download(tarfilename, backup_url)
-        
+
         # The following extract only the intended file within some folders, and not all other files.
         import tarfile
         tar = tarfile.open(tarfilename)

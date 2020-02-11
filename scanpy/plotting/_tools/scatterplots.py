@@ -14,7 +14,13 @@ from matplotlib.colors import Colormap
 from functools import partial
 
 from .. import _utils
-from .._utils import _IGraphLayout, _FontWeight, _FontSize, circles, check_mpl_3d_bug
+from .._utils import (
+    _IGraphLayout,
+    _FontWeight,
+    _FontSize,
+    circles,
+    make_projection_available,
+)
 from .._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
@@ -113,13 +119,8 @@ def embedding(
         if isinstance(groups, str):
             groups = [groups]
 
-    if projection == '3d':
-        check_mpl_3d_bug()
-        from mpl_toolkits.mplot3d import Axes3D
-
-        args_3d = {'projection': '3d'}
-    else:
-        args_3d = {}
+    make_projection_available(projection)
+    args_3d = dict(projection='3d') if projection == '3d' else {}
 
     # Deal with Raw
     if use_raw is None:
