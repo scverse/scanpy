@@ -4,14 +4,20 @@ from enum import Enum
 from pathlib import Path, PurePath
 from typing import Union, Dict, Optional, Tuple, BinaryIO
 
+import json
 import numpy as np
 import pandas as pd
+from matplotlib.image import imread
 import tables
 import anndata
 from anndata import (
     AnnData,
-    read_csv, read_text, read_excel,
-    read_mtx, read_loom, read_hdf,
+    read_csv,
+    read_text,
+    read_excel,
+    read_mtx,
+    read_loom,
+    read_hdf,
 )
 from anndata import read as read_h5ad
 
@@ -22,18 +28,27 @@ from . import logging as logg
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
     'csv',
-    'tsv', 'tab', 'data', 'txt',  # these four are all equivalent
+    'tsv',
+    'tab',
+    'data',
+    'txt',  # these four are all equivalent
 }
 avail_exts = {
-    'anndata', 'xlsx',
-    'h5', 'h5ad', 'mtx', 'mtx.gz',
-    'soft.gz', 'loom',
+    'anndata',
+    'xlsx',
+    'h5',
+    'h5ad',
+    'mtx',
+    'mtx.gz',
+    'soft.gz',
+    'loom',
 } | text_exts
 """Available file formats for reading data. """
 
 
 class Empty(Enum):
     token = 0
+
 
 _empty = Empty.token
 
@@ -128,9 +143,7 @@ def read(
 
 
 def read_10x_h5(
-    filename: Union[str, Path],
-    genome: Optional[str] = None,
-    gex_only: bool = True,
+    filename: Union[str, Path], genome: Optional[str] = None, gex_only: bool = True,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted hdf5 file.
@@ -167,7 +180,10 @@ def read_10x_h5(
                 )
             adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
         if gex_only:
-            adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
+            adata = adata[
+                :,
+                list(map(lambda x: x == 'Gene Expression', adata.var['feature_types'])),
+            ]
         if adata.is_view:
             return adata.copy()
     else:
@@ -200,14 +216,14 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
             # AnnData works with csr matrices
             # 10x stores the transposed data, so we do the transposition right away
             from scipy.sparse import csr_matrix
+
             M, N = dsets['shape']
             data = dsets['data']
             if dsets['data'].dtype == np.dtype('int32'):
                 data = dsets['data'].view('float32')
                 data[:] = dsets['data']
             matrix = csr_matrix(
-                (data, dsets['indices'], dsets['indptr']),
-                shape=(N, M),
+                (data, dsets['indices'], dsets['indptr']), shape=(N, M),
             )
             # the csc matrix is automatically the transposed csr matrix
             # as scanpy expects it, so, no need for a further transpostion
@@ -235,14 +251,14 @@ def _read_v3_10x_h5(filename, *, start=None):
             for node in f.walk_nodes('/matrix', 'Array'):
                 dsets[node.name] = node.read()
             from scipy.sparse import csr_matrix
+
             M, N = dsets['shape']
             data = dsets['data']
             if dsets['data'].dtype == np.dtype('int32'):
                 data = dsets['data'].view('float32')
                 data[:] = dsets['data']
             matrix = csr_matrix(
-                (data, dsets['indices'], dsets['indptr']),
-                shape=(N, M),
+                (data, dsets['indices'], dsets['indptr']), shape=(N, M),
             )
             adata = AnnData(
                 matrix,
@@ -258,6 +274,107 @@ def _read_v3_10x_h5(filename, *, start=None):
             return adata
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
+
+
+def read_visium(
+    filename: Union[str, Path],
+    genome: Optional[str] = None,
+    load_images: Optional[bool] = True,
+) -> AnnData:
+    """\
+    Read 10x-Genomics-formatted hdf5 file.
+
+    Parameters
+    ----------
+    filename
+        Filename.
+    genome
+        Filter expression to this genes within this genome. For legacy 10x h5
+        files, this must be provided if the data contains more than one genome.
+    load_image
+        If True, it looks for the `spatial` folder where the count file is
+        and import images, coordinates and scale factors.
+        Based on https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
+
+    Returns
+    -------
+    Annotated data matrix, where obsevations/cells are named by their
+    barcode and variables/genes by gene name. The data matrix is stored in
+    `adata.X`, cell names in `adata.obs_names` and gene names in
+    `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
+    The feature types are stored in `adata.var['feature_types']`
+    The images are stored in `adata.uns['images']` and scale factors
+    are stored in `adata.uns['scalefactors']`.
+    The spatial coordinates are stored as a `basis` in `adata.obsm`
+    """
+    start = logg.info(f'reading {filename}')
+    with tables.open_file(str(filename), 'r') as f:
+        v3 = '/matrix' in f
+    if v3:
+        adata = _read_v3_10x_h5(filename, start=start)
+        if genome:
+            if genome not in adata.var['genome'].values:
+                raise ValueError(
+                    f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
+                    f'Available genomes are: {list(adata.var["genome"].unique())}.'
+                )
+            adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
+        # removed gex_only as there are no other data types
+        # the if statement below could also be removed since it's supposed to be v3 chemistry
+        if adata.is_view:
+            adata = _read_legacy_10x_h5(filename, genome=genome, start=start)
+
+    if load_images:
+        if not isinstance(filename, Path):
+            filename = Path(filename)
+
+        filedir = filename.parents[0]
+        files = dict(
+            tissue_positions_file=filedir / Path('spatial/tissue_positions_list.csv'),
+            scalefactors_json_file=filedir / Path('spatial/scalefactors_json.json'),
+            hires_image=filedir / Path('spatial/tissue_hires_image.png'),
+            lowres_image=filedir / Path('spatial/tissue_lowres_image.png'),
+        )
+
+        # check if files exists
+        for f in files.values():
+            if not f.exists():
+                raise ValueError(f"Could not find '{f}'")
+                return False
+
+        adata.uns['images'] = dict(
+            hires=imread(str(files['hires_image'])),
+            lowres=imread(str(files['lowres_image'])),
+        )
+
+        # read json scalefactors
+        adata.uns['scalefactors'] = json.loads(
+            files['scalefactors_json_file'].read_bytes()
+        )
+
+        # read coordinates
+        positions = pd.read_csv(files['tissue_positions_file'], header=None)
+        positions.columns = [
+            'barcode',
+            'in_tissue',
+            'array_row',
+            'array_col',
+            'pxl_col_in_fullres',
+            'pxl_row_in_fullres',
+        ]
+        positions.index = positions['barcode']
+
+        adata.obs = adata.obs.join(positions, how="left")
+
+        adata.obsm['X_spatial'] = adata.obs[
+            ['pxl_row_in_fullres', 'pxl_col_in_fullres',]
+        ].to_numpy()
+        adata.obs.drop(
+            columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres',],
+            inplace=True,
+        )
+
+    return adata.copy()
 
 
 def read_10x_mtx(
@@ -307,7 +424,9 @@ def read_10x_mtx(
     if genefile_exists or not gex_only:
         return adata
     else:
-        gex_rows = list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))
+        gex_rows = list(
+            map(lambda x: x == 'Gene Expression', adata.var['feature_types'])
+        )
         return adata[:, gex_rows].copy()
 
 
@@ -323,9 +442,7 @@ def _read_legacy_10x_mtx(
     """
     path = Path(path)
     adata = read(
-        path / 'matrix.mtx',
-        cache=cache,
-        cache_compression=cache_compression,
+        path / 'matrix.mtx', cache=cache, cache_compression=cache_compression,
     ).T  # transpose the data
     genes = pd.read_csv(path / 'genes.tsv', header=None, sep='\t')
     if var_names == 'gene_symbols':
@@ -355,9 +472,7 @@ def _read_v3_10x_mtx(
     """
     path = Path(path)
     adata = read(
-        path / 'matrix.mtx.gz',
-        cache=cache,
-        cache_compression=cache_compression
+        path / 'matrix.mtx.gz', cache=cache, cache_compression=cache_compression
     ).T  # transpose the data
     genes = pd.read_csv(path / 'features.tsv.gz', header=None, sep='\t')
     if var_names == 'gene_symbols':
@@ -422,8 +537,9 @@ def write(
     if ext == 'csv':
         adata.write_csvs(filename)
     else:
-        adata.write(filename, compression=compression,
-                    compression_opts=compression_opts)
+        adata.write(
+            filename, compression=compression, compression_opts=compression_opts
+        )
 
 
 # -------------------------------------------------------------------------------
@@ -432,8 +548,7 @@ def write(
 
 
 def read_params(
-    filename: Union[Path, str],
-    asheader: bool = False,
+    filename: Union[Path, str], asheader: bool = False,
 ) -> Dict[str, Union[int, float, bool, str, None]]:
     """\
     Read parameter dictionary from text file.
@@ -458,6 +573,7 @@ def read_params(
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     from collections import OrderedDict
+
     params = OrderedDict([])
     for line in open(filename):
         if '=' in line:
@@ -509,16 +625,13 @@ def _read(
 ):
     if ext is not None and ext not in avail_exts:
         raise ValueError(
-            'Please provide one of the available extensions.\n'
-            f'{avail_exts}'
+            'Please provide one of the available extensions.\n' f'{avail_exts}'
         )
     else:
         ext = is_valid_filename(filename, return_ext=True)
-    is_present = _check_datafile_present_and_download(
-        filename,
-        backup_url=backup_url,
-    )
-    if not is_present: logg.debug(f'... did not find original file {filename}')
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url,)
+    if not is_present:
+        logg.debug(f'... did not find original file {filename}')
     # read hdf5 files
     if ext in {'h5', 'h5ad'}:
         if sheet is None:
@@ -527,7 +640,9 @@ def _read(
             logg.debug(f'reading sheet {sheet} from file {filename}')
             return read_hdf(filename, sheet)
     # read other file types
-    path_cache = settings.cachedir / _slugify(filename).replace('.' + ext, '.h5ad')  # type: Path
+    path_cache = settings.cachedir / _slugify(filename).replace(
+        '.' + ext, '.h5ad'
+    )  # type: Path
     if path_cache.suffix in {'.gz', '.bz2'}:
         path_cache = path_cache.with_suffix('')
     if cache and path_cache.is_file():
@@ -545,9 +660,7 @@ def _read(
     # do the actual reading
     if ext == 'xlsx' or ext == 'xls':
         if sheet is None:
-            raise ValueError(
-                "Provide `sheet` parameter when reading '.xlsx' files."
-            )
+            raise ValueError("Provide `sheet` parameter when reading '.xlsx' files.")
         else:
             adata = read_excel(filename, sheet)
     elif ext in {'mtx', 'mtx.gz'}:
@@ -557,8 +670,7 @@ def _read(
     elif ext in {'txt', 'tab', 'data', 'tsv'}:
         if ext == 'data':
             logg.hint(
-                "... assuming '.data' means tab or white-space "
-                'separated text file',
+                "... assuming '.data' means tab or white-space " 'separated text file',
             )
             logg.hint('change this by passing `ext` to sc.read')
         adata = read_text(filename, delimiter, first_column_names)
@@ -610,6 +722,7 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
     http://dept.stat.lsa.umich.edu/~kshedden/Python-Workshop/gene_expression_comparison.html
     """
     import gzip
+
     with gzip.open(filename, mode='rt') as file:
         # The header part of the file contains information about the
         # samples. Read that information first.
@@ -717,9 +830,9 @@ def convert_string(string: str) -> Union[int, float, bool, str, None]:
 def get_used_files():
     """Get files used by processes with name scanpy."""
     import psutil
+
     loop_over_scanpy_processes = (
-        proc for proc in psutil.process_iter()
-        if proc.name() == 'scanpy'
+        proc for proc in psutil.process_iter() if proc.name() == 'scanpy'
     )
     filenames = []
     for proc in loop_over_scanpy_processes:
@@ -745,6 +858,7 @@ def _download(url: str, path: Path):
 
     path.parent.mkdir(parents=True, exist_ok=True)
     with tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t:
+
         def update_to(b=1, bsize=1, tsize=None):
             if tsize is not None:
                 t.total = tsize
@@ -762,8 +876,10 @@ def _check_datafile_present_and_download(path, backup_url=None):
     """Check whether the file is present, otherwise download.
     """
     path = Path(path)
-    if path.is_file(): return True
-    if backup_url is None: return False
+    if path.is_file():
+        return True
+    if backup_url is None:
+        return False
     logg.info(
         f'try downloading from url\n{backup_url}\n'
         '... this may take a while but only happens once'
@@ -798,9 +914,12 @@ def is_valid_filename(filename: Path, return_ext=False):
         return 'mtx.gz' if return_ext else True
     elif not return_ext:
         return False
-    raise ValueError(f'''\
+    raise ValueError(
+        f'''\
 {filename!r} does not end on a valid extension.
 Please, provide one of the available extensions.
 {avail_exts}
 Text files with .gz and .bz2 extensions are also supported.\
-''')
+'''
+    )
+
