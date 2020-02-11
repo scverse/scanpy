@@ -209,13 +209,11 @@ class Ingest:
     def _init_search(self, dist_func, dist_args):
         from functools import partial
         from umap.nndescent import initialise_search
-        from umap.utils import deheap_sort
-        from umap.umap_ import INT32_MAX, INT32_MIN
 
         self._random_init = None
         self._tree_init = None
 
-        self._init_search = None
+        self._initialise_search = None
         self._search = None
 
         if pkg_version('umap-learn') < version.parse("0.4.0rc1"):
