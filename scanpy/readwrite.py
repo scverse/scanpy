@@ -922,4 +922,3 @@ Please, provide one of the available extensions.
 Text files with .gz and .bz2 extensions are also supported.\
 '''
     )
-
