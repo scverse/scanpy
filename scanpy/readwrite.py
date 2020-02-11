@@ -343,7 +343,6 @@ def read_visium(
         for f in files.values():
             if not f.exists():
                 raise ValueError(f"Could not find '{f}'")
-                return False
 
         adata.uns['images'] = dict(
             hires=imread(str(files['hires_image'])),

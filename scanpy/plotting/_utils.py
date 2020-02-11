@@ -1,5 +1,6 @@
 import warnings
 import collections.abc as cabc
+from functools import lru_cache
 from typing import Union, List, Sequence, Tuple, Collection, Optional
 
 import numpy as np
@@ -567,11 +568,7 @@ def setup_axes(
 ):
     """Grid of axes for plotting, legends and colorbars.
     """
-    if '3d' in projection:
-        from mpl_toolkits.mplot3d import Axes3D
-    avail_projections = {'2d', '3d'}
-    if projection not in avail_projections:
-        raise ValueError('choose projection from', avail_projections)
+    make_projection_available(projection)
     if left_margin is not None:
         raise NotImplementedError('We currently don’t support `left_margin`.')
     if np.any(colorbars) and right_margin is None:
@@ -680,7 +677,7 @@ def scatter_base(
         highlights_indices = highlights
         highlights_labels = []
     # if we have a single array, transform it into a list with a single array
-    if type(colors) == str:
+    if isinstance(colors, str):
         colors = [colors]
     if len(sizes) != len(colors) and len(sizes) == 1:
         sizes = [sizes[0] for _ in range(len(colors))]
@@ -1041,7 +1038,14 @@ def data_to_axis_points(ax: Axes, points_data: np.ndarray):
     return data_to_axis(points_data)
 
 
-def check_mpl_3d_bug():
+@lru_cache(None)
+def make_projection_available(projection):
+    avail_projections = {'2d', '3d'}
+    if projection not in avail_projections:
+        raise ValueError(f'choose projection from {avail_projections}')
+    if projection == '2d':
+        return
+
     from io import BytesIO
     from matplotlib import __version__ as mpl_version
     from matplotlib.collections import PatchCollection
