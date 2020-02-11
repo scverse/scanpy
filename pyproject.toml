@@ -13,7 +13,6 @@ exclude = '''
     |__init__
     |cli
     |logging
-    |readwrite
     |_utils
     |_settings
     |neighbors/__init__

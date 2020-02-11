@@ -1,18 +1,16 @@
 """Builtin Datasets.
 """
-import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 from tqdm.auto import tqdm
-from matplotlib.image import imread
 
 from .. import logging as logg, _utils
 from .._compat import Literal
 from .._settings import settings
-from ..readwrite import read, read_10x_h5
+from ..readwrite import read, read_visium
 from ._ebi_expression_atlas import ebi_expression_atlas
 
 
@@ -366,29 +364,6 @@ def visium_sge(
         else:
             _utils.check_presence_download(filename=files[f], backup_url=backup_urls[f])
 
-    # read h5 file
-    adata = read_10x_h5(files['counts'])
-    adata.var_names_make_unique()
-
-    # read images
-    # imread only accepts strings, not Path objects
-    adata.uns['images'] = dict(
-        hires=imread(str(files['hires_image'])),
-        lowres=imread(str(files['lowres_image'])),
-    )
-
-    # read json scalefactors
-    adata.uns['scalefactors'] = json.loads(files['scalefactors_json_file'].read_bytes())
-
-    # read coordinates
-    positions = pd.read_csv(
-        settings.datasetdir / 'spatial/tissue_positions_list.csv', header=None
-    )
-    positions.columns = ['index', '0', '1', '2', 'X2_coord', 'X1_coord']
-    positions.index = positions['index']
-
-    positions = positions.join(adata.obs, how='right')
-
-    adata.obsm['X_spatial'] = positions[['X1_coord', 'X2_coord',]].to_numpy()
+    adata = read_visium(files['counts'])
 
     return adata
