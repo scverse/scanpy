@@ -151,9 +151,9 @@ def read_10x_h5(
     Parameters
     ----------
     filename
-        Filename.
+        Path to a 10x hdf5 file.
     genome
-        Filter expression to this genes within this genome. For legacy 10x h5
+        Filter expression to genes within this genome. For legacy 10x h5
         files, this must be provided if the data contains more than one genome.
     gex_only
         Only keep 'Gene Expression' data and ignore other feature types,
@@ -287,25 +287,28 @@ def read_visium(
     Parameters
     ----------
     filename
-        Filename.
+        Path to a 10x hdf5 file.
     genome
-        Filter expression to this genes within this genome. For legacy 10x h5
-        files, this must be provided if the data contains more than one genome.
+        Filter expression to genes within this genome.
     load_image
         If True, it looks for the `spatial` folder where the count file is
         and import images, coordinates and scale factors.
-        Based on https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
+        Based on the `Space Ranger output docs`_.
+
+        .. _Space Ranger output docs: https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
 
     Returns
     -------
-    Annotated data matrix, where obsevations/cells are named by their
-    barcode and variables/genes by gene name. The data matrix is stored in
-    `adata.X`, cell names in `adata.obs_names` and gene names in
-    `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
-    The feature types are stored in `adata.var['feature_types']`
-    The images are stored in `adata.uns['images']` and scale factors
-    are stored in `adata.uns['scalefactors']`.
-    The spatial coordinates are stored as a `basis` in `adata.obsm`
+    Annotated data matrix, where observations/cells are named by their
+    barcode and variables/genes by gene name.
+    The data matrix is stored in :attr:`~anndata.AnnData.X`,
+    cell names in :attr:`~anndata.AnnData.obs_names` and
+    gene names in :attr:`~anndata.AnnData.var_names`.
+    The gene IDs are stored in :attr:`~anndata.AnnData.var`\\ `['gene_ids']`.
+    The feature types are stored in :attr:`~anndata.AnnData.var`\\ `['feature_types']`.
+    The images are stored in :attr:`~anndata.AnnData.uns`\\ `['images']` and
+    scale factors are stored in :attr:`~anndata.AnnData.uns`\\ `['scalefactors']`.
+    The spatial coordinates are stored as a `basis` in :attr:`~anndata.AnnData.obsm`.
     """
     start = logg.info(f'reading {filename}')
     with tables.open_file(str(filename), 'r') as f:
