@@ -12,7 +12,7 @@ from matplotlib.image import imread
 from .. import logging as logg, _utils
 from .._compat import Literal
 from .._settings import settings
-from ..readwrite import read, read_10x_h5
+from ..readwrite import read, read_10x_h5, read_visium
 from ._ebi_expression_atlas import ebi_expression_atlas
 
 
@@ -366,42 +366,7 @@ def visium_sge(
         else:
             _utils.check_presence_download(filename=files[f], backup_url=backup_urls[f])
 
-    # read h5 file
-    adata = read_10x_h5(files['counts'])
-    adata.var_names_make_unique()
-
-    # read images
-    # imread only accepts strings, not Path objects
-    adata.uns['images'] = dict(
-        hires=imread(str(files['hires_image'])),
-        lowres=imread(str(files['lowres_image'])),
-    )
-
-    # read json scalefactors
-    adata.uns['scalefactors'] = json.loads(files['scalefactors_json_file'].read_bytes())
-
-    # read coordinates
-    positions = pd.read_csv(
-        settings.datasetdir / 'spatial/tissue_positions_list.csv', header=None
-    )
-    positions.columns = [
-        'barcode',
-        'in_tissue',
-        'array_row',
-        'array_col',
-        'pxl_col_in_fullres',
-        'pxl_row_in_fullres',
-    ]
-    positions.index = positions['barcode']
-
-    adata.obs = adata.obs.join(positions, how="left")
-
-    adata.obsm['X_spatial'] = adata.obs[
-        ['pxl_row_in_fullres', 'pxl_col_in_fullres',]
-    ].to_numpy()
-    adata.obs.drop(
-        columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres',], inplace=True
-    )
+    adata = read_visium(files['counts'])
 
     return adata
 
