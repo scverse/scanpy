@@ -151,7 +151,7 @@ def sam(
 
     To visualize the output, we can use:
 
-    >>> sce.pl.sam(adata,projection = 'X_umap')
+    >>> sce.pl.sam(adata,projection='X_umap')
 
     `sce.pl.sam` accepts all keyword arguments used in the
     `matplotlib.pyplot.scatter` function.
