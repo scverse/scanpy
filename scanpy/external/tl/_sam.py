@@ -1,12 +1,22 @@
 """\
 Run the Self-Assembling Manifold algorithm
 """
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 
 from anndata import AnnData
 
 from ... import logging as logg
+from ..._compat import Literal
 
+try:
+    from SAM import SAM
+except ImportError:
+    raise ImportError(
+        '\nplease install sam-algorithm: \n\n'
+        '\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n'
+        '\tcd self-assembling-manifold\n'
+        '\tpip install .'
+    )
 
 def sam(
     adata: AnnData,
@@ -14,15 +24,17 @@ def sam(
     num_norm_avg: int = 50,
     k: int = 20,
     distance: str = 'correlation',
-    standardization: Optional[str] = 'Normalizer',
+    standardization: Literal['Normalizer', 'StandardScaler', 'None'] = 'Normalizer',
     weight_pcs: bool = True,
-    npcs: Optional[int] = None,
+    n_pcs: Optional[int] = None,
     n_genes: Optional[int] = None,
-    projection: Optional[str] = 'umap',
+    projection: Literal['umap', 'tsne', 'None'] = 'umap',
     inplace: bool = True,
     verbose: bool = True,
-) -> Optional[AnnData]:
-    """Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
+) -> Union[SAM, Tuple[SAM,AnnData]]:
+    """
+
+    Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
 
     SAM iteratively rescales the input gene expression matrix to emphasize
     genes that are spatially variable along the intrinsic manifold of the data.
@@ -35,22 +47,22 @@ def sam(
     Parameters
     ----------
 
-    k - int, optional, default 20
+    k
         The number of nearest neighbors to identify for each cell.
 
-    distance : string, optional, default 'correlation'
+    distance
         The distance metric to use when identifying nearest neighbors.
         Can be any of the distance metrics supported by
         :func:`~scipy.spatial.distance.pdist`.
 
-    max_iter - int, optional, default 10
+    max_iter
         The maximum number of iterations SAM will run.
 
-    projection - str, optional, default 'umap'
+    projection
         If 'tsne', generates a t-SNE embedding. If 'umap', generates a UMAP
         embedding. Otherwise, no embedding will be generated.
 
-    standardization - str, optional, default 'Normalizer'
+    standardization
         If 'Normalizer', use sklearn.preprocessing.Normalizer, which
         normalizes expression data prior to PCA such that each cell has
         unit L2 norm. If 'StandardScaler', use
@@ -60,35 +72,35 @@ def sam(
         recommend using 'StandardScaler' for large datasets with many
         expected cell types and 'Normalizer' otherwise.
 
-    num_norm_avg - int, optional, default 50
+    num_norm_avg
         The top 'num_norm_avg' dispersions are averaged to determine the
         normalization factor when calculating the weights. This prevents
         genes with large spatial dispersions from skewing the distribution
         of weights.
 
-    weight_pcs - bool, optional, default True
+    weight_pcs
         If True, scale the principal components by their eigenvalues. In
         datasets with many expected cell types, setting this to False might
         improve the resolution as these cell types might be encoded by low-
         variance principal components.
 
-    npcs - int, optional, default None,
+    n_pcs
         Determines the number of top principal components selected at each
         iteration of the SAM algorithm. If None, this number is chosen
         automatically based on the size of the dataset. If weight_pcs is
         set to True, this parameter primarily affects the runtime of the SAM
         algorithm (more PCs = longer runtime).
 
-    n_genes - int, optional, default None:
+    n_genes
         Determines the number of top SAM-weighted genes to use at each iteration
         of the SAM algorithm. If None, this number is chosen automatically
         based on the size of the dataset. This parameter primarily affects
         the runtime of the SAM algorithm (more genes = longer runtime).
-    
-    inplace - bool, optional, default True:
+
+    inplace
         Set fields in `adata` if True. Otherwise, returns a copy.
-    
-    verbose - bool, optional, default True:
+
+    verbose
         If True, displays SAM log statements.
 
     Returns
@@ -105,22 +117,15 @@ def sam(
         `.var['mask_genes']`
             If preprocessed with SAM, this boolean vector indicates which genes
             were filtered out (=False).
-        `.uns['preprocess_args']`
-            Dictionary of parameters used for preprocessing.
-        `.uns['run_args']`
-            Dictionary of parameters used for running SAM.
-        `.uns['pca_obj']`
-            The sklearn.decomposition.PCA object.
-        `.uns['X_processed']`
-            The standardized and SAM-weighted data fed into PCA.
+        `.uns['sam']`
+            Dictionary of SAM-specific parameters used for preprocessing
+            ('preprocess_args') and running ('run_args') SAM.
         `.uns['neighbors']`
             A dictionary with key 'connectivities' containing the kNN adjacency
             matrix output by SAM. If built-in scanpy dimensionality reduction
             methods are to be used using the SAM-output AnnData, users
             should recompute the neighbors using `.obs['X_pca']` with
             `scanpy.pp.neighbors`.
-        `.uns['ranked_genes']`
-            Gene IDs ranked in descending order by their SAM weights.
         `.obsm['X_pca']`
             The principal components output by SAM.
         `.obsm['X_umap']`
@@ -188,16 +193,6 @@ def sam(
 
     logg.info('Self-assembling manifold')
 
-    try:
-        from SAM import SAM
-    except ImportError:
-        raise ImportError(
-            '\nplease install sam-algorithm: \n\n'
-            '\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n'
-            '\tcd self-assembling-manifold\n'
-            '\tpip install .'
-        )
-
     s = SAM(counts=adata, inplace=inplace)
 
     logg.info('Running SAM')
@@ -208,10 +203,14 @@ def sam(
         distance=distance,
         preprocessing=standardization,
         weight_PCs=weight_pcs,
-        npcs=npcs,
+        npcs=n_pcs,
         n_genes=n_genes,
         projection=projection,
         verbose=verbose,
     )
 
-    return (s, adata) if inplace else (s, s.adata)
+    s.adata.uns['sam'] = {}
+    for attr in ['nnm','preprocess_args','run_args','ranked_genes']:
+        s.adata.uns['sam'][attr] = s.adata.uns.pop(attr,None)
+
+    return s if inplace else (s, s.adata)
