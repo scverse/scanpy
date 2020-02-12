@@ -1,4 +1,7 @@
+from importlib.util import find_spec
+
 import numpy as np
+import pytest
 from sklearn.utils.testing import assert_array_almost_equal
 
 import scanpy as sc
@@ -15,9 +18,15 @@ def test_umap_init_dtype():
     assert_array_almost_equal(embed1, embed2)
 
 
-def test_umap_init_paga():
+needs_fa2 = pytest.mark.skipif(not find_spec("fa2"), reason="needs module `fa2`")
+
+
+@pytest.mark.parametrize(
+    "layout", [pytest.param("fa", marks=needs_fa2), "fr"],
+)
+def test_umap_init_paga(layout):
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc = pbmc[:100, :].copy()
     sc.tl.paga(pbmc)
-    sc.pl.paga(pbmc, show=False)
+    sc.pl.paga(pbmc, layout=layout, show=False)
     sc.tl.umap(pbmc, init_pos="paga")
