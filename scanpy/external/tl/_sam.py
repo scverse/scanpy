@@ -50,7 +50,7 @@ def sam(
 
     projection
         If 'tsne', generates a t-SNE embedding. If 'umap', generates a UMAP
-        embedding. Otherwise, no embedding will be generated.
+        embedding. If 'None', no embedding will be generated.
 
     standardization
         If 'Normalizer', use sklearn.preprocessing.Normalizer, which
@@ -60,7 +60,8 @@ def sam(
         data prior to PCA such that each gene has zero mean and unit
         variance. Otherwise, do not normalize the expression data. We
         recommend using 'StandardScaler' for large datasets with many
-        expected cell types and 'Normalizer' otherwise.
+        expected cell types and 'Normalizer' otherwise. If 'None', no
+        transformation is applied.
 
     num_norm_avg
         The top 'num_norm_avg' dispersions are averaged to determine the
@@ -71,7 +72,7 @@ def sam(
     weight_pcs
         If True, scale the principal components by their eigenvalues. In
         datasets with many expected cell types, setting this to False might
-        improve the resolution as these cell types might be encoded by low-
+        improve the resolution as these cell types might be encoded by lower-
         variance principal components.
 
     n_pcs
@@ -85,7 +86,9 @@ def sam(
         Determines the number of top SAM-weighted genes to use at each iteration
         of the SAM algorithm. If None, this number is chosen automatically
         based on the size of the dataset. This parameter primarily affects
-        the runtime of the SAM algorithm (more genes = longer runtime).
+        the runtime of the SAM algorithm (more genes = longer runtime). For
+        extremely homogeneous datasets, decreasing `n_genes` may improve
+        clustering resolution.
 
     inplace
         Set fields in `adata` if True. Otherwise, returns a copy.
