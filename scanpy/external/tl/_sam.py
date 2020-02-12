@@ -1,22 +1,12 @@
 """\
 Run the Self-Assembling Manifold algorithm
 """
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, Any
 
 from anndata import AnnData
 
 from ... import logging as logg
 from ..._compat import Literal
-
-try:
-    from SAM import SAM
-except ImportError:
-    raise ImportError(
-        '\nplease install sam-algorithm: \n\n'
-        '\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n'
-        '\tcd self-assembling-manifold\n'
-        '\tpip install .'
-    )
 
 
 def sam(
@@ -32,7 +22,7 @@ def sam(
     projection: Literal['umap', 'tsne', 'None'] = 'umap',
     inplace: bool = True,
     verbose: bool = True,
-) -> Union[SAM, Tuple[SAM, AnnData]]:
+) -> Union[Any, Tuple[Any, AnnData]]:
     """
 
     Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
@@ -192,6 +182,16 @@ def sam(
     self-assembling-manifold README.
 
     """
+
+    try:
+        from SAM import SAM
+    except ImportError:
+        raise ImportError(
+            '\nplease install sam-algorithm: \n\n'
+            '\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n'
+            '\tcd self-assembling-manifold\n'
+            '\tpip install .'
+        )
 
     logg.info('Self-assembling manifold')
 
