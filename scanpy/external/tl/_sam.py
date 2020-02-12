@@ -106,9 +106,6 @@ def sam(
         `.var['spatial_dispersions']`
             Spatial dispersions for each gene (these are used to compute the
             SAM weights)
-        `.var['mask_genes']`
-            If preprocessed with SAM, this boolean vector indicates which genes
-            were filtered out (=False).
         `.uns['sam']`
             Dictionary of SAM-specific outputs, such as the parameters
             used for preprocessing ('preprocess_args') and running
