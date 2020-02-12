@@ -18,6 +18,7 @@ except ImportError:
         '\tpip install .'
     )
 
+
 def sam(
     adata: AnnData,
     max_iter: int = 10,
@@ -31,7 +32,7 @@ def sam(
     projection: Literal['umap', 'tsne', 'None'] = 'umap',
     inplace: bool = True,
     verbose: bool = True,
-) -> Union[SAM, Tuple[SAM,AnnData]]:
+) -> Union[SAM, Tuple[SAM, AnnData]]:
     """
 
     Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
@@ -210,7 +211,7 @@ def sam(
     )
 
     s.adata.uns['sam'] = {}
-    for attr in ['nnm','preprocess_args','run_args','ranked_genes']:
-        s.adata.uns['sam'][attr] = s.adata.uns.pop(attr,None)
+    for attr in ['nnm', 'preprocess_args', 'run_args', 'ranked_genes']:
+        s.adata.uns['sam'][attr] = s.adata.uns.pop(attr, None)
 
     return s if inplace else (s, s.adata)

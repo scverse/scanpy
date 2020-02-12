@@ -138,16 +138,19 @@ def harmony_timeseries(
     elif not show:
         return axes
 
-def sam(adata: AnnData,
-        projection: Union[str, np.ndarray] = 'X_umap',
-        c: Optional[Union[str, np.ndarray]] = None,
-        cmap: str = 'rainbow',
-        linewidth: float = 0.0,
-        edgecolor: str = 'k',
-        axes: Optional[Axes] = None,
-        colorbar: bool = True,
-        s: float = 10.0,
-        **kwargs: Any) -> Axes:
+
+def sam(
+    adata: AnnData,
+    projection: Union[str, np.ndarray] = 'X_umap',
+    c: Optional[Union[str, np.ndarray]] = None,
+    cmap: str = 'rainbow',
+    linewidth: float = 0.0,
+    edgecolor: str = 'k',
+    axes: Optional[Axes] = None,
+    colorbar: bool = True,
+    s: float = 10.0,
+    **kwargs: Any,
+) -> Axes:
 
     """
 
@@ -174,22 +177,22 @@ def sam(adata: AnnData,
 
     import utilities as ut
 
-    if(isinstance(projection, str)):
+    if isinstance(projection, str):
         try:
             dt = adata.obsm[projection]
         except KeyError:
-            print('Please create a projection first using run_umap or'
-                  'run_tsne')
+            print('Please create a projection first using run_umap or' 'run_tsne')
     else:
         dt = projection
 
-    if(axes is None):
+    if axes is None:
         plt.figure()
         axes = plt.gca()
 
-    if(c is None):
-        axes.scatter(dt[:, 0], dt[:, 1], s=s,
-                    linewidth=linewidth, edgecolor=edgecolor, **kwargs)
+    if c is None:
+        axes.scatter(
+            dt[:, 0], dt[:, 1], s=s, linewidth=linewidth, edgecolor=edgecolor, **kwargs
+        )
     else:
 
         if isinstance(c, str):
@@ -198,16 +201,23 @@ def sam(adata: AnnData,
             except KeyError:
                 0  # do nothing
 
-        if((isinstance(c[0], str) or isinstance(c[0], np.str_)) and
-           (isinstance(c, np.ndarray) or isinstance(c, list))):
+        if (isinstance(c[0], str) or isinstance(c[0], np.str_)) and (
+            isinstance(c, np.ndarray) or isinstance(c, list)
+        ):
             i = ut.convert_annotations(c)
             ui, ai = np.unique(i, return_index=True)
-            cax = axes.scatter(dt[:,0], dt[:,1], c=i, cmap=cmap, s=s,
-                               linewidth=linewidth,
-                               edgecolor=edgecolor,
-                               **kwargs)
+            cax = axes.scatter(
+                dt[:, 0],
+                dt[:, 1],
+                c=i,
+                cmap=cmap,
+                s=s,
+                linewidth=linewidth,
+                edgecolor=edgecolor,
+                **kwargs,
+            )
 
-            if(colorbar):
+            if colorbar:
                 cbar = plt.colorbar(cax, ax=axes, ticks=ui)
                 cbar.ax.set_yticklabels(c[ai])
         else:
@@ -215,11 +225,17 @@ def sam(adata: AnnData,
                 colorbar = False
             i = c
 
-            cax = axes.scatter(dt[:,0], dt[:,1], c=i, cmap=cmap, s=s,
-                               linewidth=linewidth,
-                               edgecolor=edgecolor,
-                               **kwargs)
+            cax = axes.scatter(
+                dt[:, 0],
+                dt[:, 1],
+                c=i,
+                cmap=cmap,
+                s=s,
+                linewidth=linewidth,
+                edgecolor=edgecolor,
+                **kwargs,
+            )
 
-            if(colorbar):
+            if colorbar:
                 plt.colorbar(cax, ax=axes)
     return axes
