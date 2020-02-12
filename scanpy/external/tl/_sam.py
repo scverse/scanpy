@@ -40,7 +40,8 @@ def sam(
 
     distance : string, optional, default 'correlation'
         The distance metric to use when identifying nearest neighbors.
-        Can be any of the distance metrics supported by sklearn's 'pdist'.
+        Can be any of the distance metrics supported by
+        :func:`~scipy.spatial.distance.pdist`.
 
     max_iter - int, optional, default 10
         The maximum number of iterations SAM will run.
