@@ -226,15 +226,15 @@ def _compute_pos(
                 init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
             else:
                 init_pos = init_pos.copy()
-                # this is a super-weird hack that is necessary as igraphs layout function
-                # seems to do some strange stuff, here
+                # this is a super-weird hack that is necessary as igraph’s
+                # layout function seems to do some strange stuff here
                 init_pos[:, 1] *= -1
                 init_coords = init_pos.tolist()
             try:
                 pos_list = g.layout(
                     layout, seed=init_coords,
                     weights='weight', **layout_kwds).coords
-            except:  # hack for excepting attribute error for empty graphs...
+            except AttributeError:  # hack for empty graphs...
                 pos_list = g.layout(
                     layout, seed=init_coords,
                     **layout_kwds).coords

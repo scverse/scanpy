@@ -163,7 +163,7 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     if isinstance(weights, np.matrix):
         weights = weights.A1
     g = ig.Graph(directed=directed)
-    g.add_vertices(adjacency.shape[0])  # this adds adjacency.shap[0] vertices
+    g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
     g.add_edges(list(zip(sources, targets)))
     try:
         g.es['weight'] = weights
