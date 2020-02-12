@@ -119,8 +119,9 @@ def sam(
             If preprocessed with SAM, this boolean vector indicates which genes
             were filtered out (=False).
         `.uns['sam']`
-            Dictionary of SAM-specific parameters used for preprocessing
-            ('preprocess_args') and running ('run_args') SAM.
+            Dictionary of SAM-specific outputs, such as the parameters
+            used for preprocessing ('preprocess_args') and running
+            ('run_args') SAM.
         `.uns['neighbors']`
             A dictionary with key 'connectivities' containing the kNN adjacency
             matrix output by SAM. If built-in scanpy dimensionality reduction
