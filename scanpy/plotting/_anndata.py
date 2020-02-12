@@ -679,6 +679,16 @@ def violin(
         keys = [keys]
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
+        if kwds.get('palette', None) is None:
+            if not is_categorical_dtype(adata.obs[groupby]):
+                raise ValueError(
+                    f'The column `adata.obs[{groupby!r}]` needs to be categorical, '
+                    f'but is of dtype {adata.obs[groupby].dtype}.'
+                )
+            _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
+            kwds['palette'] = dict(
+                zip(obs_df[groupby].cat.categories, adata.uns[f'{groupby}_colors'])
+            )
     else:
         obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
     if groupby is None:
