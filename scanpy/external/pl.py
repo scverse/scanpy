@@ -152,10 +152,8 @@ def sam(
     **kwargs: Any,
 ) -> Axes:
 
-    """
-
-    Displays a scatter plot using the SAM projection or another input
-    projection.
+    """\
+    Scatter plot using the SAM projection or another input projection.
 
     Parameters
     ----------
