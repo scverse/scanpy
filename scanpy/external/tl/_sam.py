@@ -95,8 +95,7 @@ def sam(
 
     Returns
     -------
-    sam - SAM
-        The SAM object
+    sam_obj if inplace is True or (sam_obj,AnnData) otherwise
 
     adata - AnnData
         `.var['weights']`
@@ -137,7 +136,7 @@ def sam(
     Assuming we are given an AnnData object called `adata`, we can run the SAM
     algorithm as follows:
 
-    >>> sam,adata = sce.tl.SAM(adata,inplace=True)
+    >>> sam_obj = sce.tl.sam(adata,inplace=True)
 
     The input AnnData object should contain unstandardized, non-negative
     expression values. Preferably, the data should be log-normalized and no
@@ -150,16 +149,12 @@ def sam(
 
     *** Plotting ***
 
-    To visualize the output, we can use the built-in `scatter` function (this
-    assumes that `matplotlib` is installed.)
+    To visualize the output, we can use:
 
-    >>> sam.scatter(projection = 'X_umap')
+    >>> sce.pl.sam(adata,projection = 'X_umap')
 
-    `scatter` accepts all keyword arguments used in the
-    `matplotlib.pyplot.scatter` function. Please visit the plotting tutorials
-    for more information:
-
-    https://github.com/atarashansky/self-assembling-manifold/tree/master/tutorial/SAM_Plotting
+    `sce.pl.sam` accepts all keyword arguments used in the
+    `matplotlib.pyplot.scatter` function.
 
     *** SAMGUI ***
 
@@ -174,7 +169,7 @@ def sam(
     In a Jupyter notebook, execute the following to launch the interface:
 
     >>> from SAMGUI import SAMGUI
-    >>> sam_gui = SAMGUI(sam) # sam is your SAM object
+    >>> sam_gui = SAMGUI(sam_obj) # sam_obj is your SAM object
     >>> sam_gui.SamPlot
 
     This can also be enabled in Jupyer Lab by following the instructions in the
