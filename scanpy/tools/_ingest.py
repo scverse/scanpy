@@ -192,9 +192,10 @@ class Ingest:
         self._umap._n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
         self._umap._initial_alpha = self._umap.learning_rate
 
-        self._umap._random_init = self._random_init
-        self._umap._tree_init = self._tree_init
-        self._umap._search = self._search
+        if self._random_init is not None or self._tree_init is not None:
+            self._umap._random_init = self._random_init
+            self._umap._tree_init = self._tree_init
+            self._umap._search = self._search
 
         self._umap._rp_forest = self._rp_forest
 
@@ -205,12 +206,49 @@ class Ingest:
 
         self._umap._input_hash = None
 
+    def _init_search(self, dist_func, dist_args):
+        from functools import partial
+        from umap.nndescent import initialise_search
+
+        self._random_init = None
+        self._tree_init = None
+
+        self._initialise_search = None
+        self._search = None
+
+        if pkg_version('umap-learn') < version.parse("0.4.0rc1"):
+            from umap.nndescent import (
+                make_initialisations,
+                make_initialized_nnd_search,
+            )
+
+            self._random_init, self._tree_init = make_initialisations(
+                dist_func, dist_args
+            )
+            _initialise_search = partial(
+                initialise_search,
+                init_from_random=self._random_init,
+                init_from_tree=self._tree_init,
+            )
+            _search = make_initialized_nnd_search(dist_func, dist_args)
+
+        else:
+            from numba import njit
+            from umap.nndescent import initialized_nnd_search
+
+            @njit
+            def _partial_dist_func(x, y):
+                return dist_func(x, y, *dist_args)
+
+            _dist_func = _partial_dist_func
+            _initialise_search = partial(initialise_search, dist=_dist_func)
+            _search = partial(initialized_nnd_search, dist=_dist_func)
+
+        self._initialise_search = _initialise_search
+        self._search = _search
+
     def _init_neighbors(self, adata):
         from umap.distances import named_distances
-        from umap.nndescent import (
-            make_initialisations,
-            make_initialized_nnd_search,
-        )
 
         if 'use_rep' in adata.uns['neighbors']['params']:
             self._use_rep = adata.uns['neighbors']['params']['use_rep']
@@ -229,8 +267,8 @@ class Ingest:
         else:
             dist_args = ()
         dist_func = named_distances[adata.uns['neighbors']['params']['metric']]
-        self._random_init, self._tree_init = make_initialisations(dist_func, dist_args)
-        self._search = make_initialized_nnd_search(dist_func, dist_args)
+
+        self._init_search(dist_func, dist_args)
 
         search_graph = adata.uns['neighbors']['distances'].copy()
         search_graph.data = (search_graph.data > 0).astype(np.int8)
@@ -334,7 +372,6 @@ class Ingest:
         This function calculates `k` neighbors in `adata` for
         each observation of `adata_new`.
         """
-        from umap.nndescent import initialise_search
         from umap.utils import deheap_sort
         from umap.umap_ import INT32_MAX, INT32_MIN
 
@@ -344,14 +381,8 @@ class Ingest:
         train = self._rep
         test = self._obsm['rep']
 
-        init = initialise_search(
-            self._rp_forest,
-            train,
-            test,
-            int(k * queue_size),
-            self._random_init,
-            self._tree_init,
-            rng_state,
+        init = self._initialise_search(
+            self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state,
         )
 
         result = self._search(

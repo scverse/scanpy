@@ -7,7 +7,7 @@ from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from pandas.api.types import is_categorical_dtype
-from matplotlib import pyplot as pl
+from matplotlib import pyplot as pl, colors
 from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import Colormap
@@ -503,25 +503,6 @@ def _wraps_plot_scatter(wrapper):
 
 # API
 
-@_wraps_plot_scatter
-@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
-def trimap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
-    """\
-    Scatter plot in TriMap basis.
-
-    Parameters
-    ----------
-    {adata_color_etc}
-    {edges_arrows}
-    {scatter_bulk}
-    {show_save_ax}
-
-    Returns
-    -------
-    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
-    """
-    return embedding(adata, 'trimap', **kwargs)
-
 
 @_wraps_plot_scatter
 @_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
@@ -561,50 +542,6 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     return embedding(adata, 'tsne', **kwargs)
-
-
-@_wraps_plot_scatter
-@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
-def phate(adata, **kwargs) -> Union[List[Axes], None]:
-    """\
-    Scatter plot in PHATE basis.
-
-    Parameters
-    ----------
-    {adata_color_etc}
-    {edges_arrows}
-    {scatter_bulk}
-    {show_save_ax}
-
-    Returns
-    -------
-    If `show==False`, a list of :class:`~matplotlib.axes.Axes` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
-
-    Examples
-    --------
-    >>> from anndata import AnnData
-    >>> import scanpy.external as sce
-    >>> import phate
-    >>> data, branches = phate.tree.gen_dla(
-    ...     n_dim=100,
-    ...     n_branch=20,
-    ...     branch_length=100,
-    ... )
-    >>> data.shape
-    (2000, 100)
-    >>> adata = AnnData(data)
-    >>> adata.obs['branches'] = branches
-    >>> sce.tl.phate(adata, k=5, a=20, t=150)
-    >>> adata.obsm['X_phate'].shape
-    (2000, 2)
-    >>> sce.pl.phate(
-    ...     adata,
-    ...     color='branches',
-    ...     color_map='tab20',
-    ... )
-    """
-    return embedding(adata, 'phate', **kwargs)
 
 
 @_wraps_plot_scatter
@@ -888,7 +825,9 @@ def _get_color_values(
 
         # Handle groups
         if groups:
-            color_vector = np.array(color_vector, dtype='<U15')
+            color_vector = np.fromiter(
+                map(colors.to_hex, color_vector), '<U15', len(color_vector)
+            )
             # set color to 'light gray' for all values
             # that are not in the groups
             color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
