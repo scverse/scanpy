@@ -350,7 +350,7 @@ def read_visium(
         try:
             adata.uns['images']['hires'] = imread(str(files['hires_image']))
             adata.uns['images']['lowres'] = imread(str(files['lowres_image']))
-        except:
+        except Exception:
             pass
 
         # read json scalefactors
