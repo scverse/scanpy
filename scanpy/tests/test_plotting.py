@@ -805,3 +805,24 @@ def test_no_copy():
         view = actual[actual.obs["bulk_labels"] == "Dendritic"]
         plotfunc(view, ["Dendritic"], show=False)
         assert view.is_view
+
+
+def test_visium_circles(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    adata = sc.read_visium(
+        HERE / '_data' / '10x_data' / 'visium' / 'V1_Human_Heart_filtered_feature_bc_matrix.h5',
+    )
+    adata.obs = adata.obs.astype({'array_row': 'str'})
+    from functools import partial
+
+    sc.pl.spatial(
+        adata,
+        img_key="hires",
+        color="array_row",
+        groups=["3", "20"],
+        crop_coord=[1200, 1700, 1900, 1000],
+        alpha=0.5,
+        size=1.3,
+    )
+
+    save_and_compare_images('master_spatial_visium')
