@@ -87,3 +87,11 @@ def test_error_missing_genome():
         sc.read_10x_h5(legacy_pth, genome="not a genome")
     with pytest.raises(ValueError, match=r".*GRCh38_chr21.*"):
         sc.read_10x_h5(v3_pth, genome="not a genome")
+
+
+def test_read_visium():
+    spec_genome_v3 = sc.read_10x_h5(
+        ROOT / 'visium' / 'V1_Human_Heart_subsampled.h5', genome='GRCh38',
+    )
+    nospec_genome_v3 = sc.read_10x_h5(ROOT / 'visium' / 'V1_Human_Heart_subsampled.h5')
+    assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
