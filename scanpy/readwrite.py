@@ -322,10 +322,6 @@ def read_visium(
                     f'Available genomes are: {list(adata.var["genome"].unique())}.'
                 )
             adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
-        # removed gex_only as there are no other data types
-        # the if statement below could also be removed since it's supposed to be v3 chemistry
-        if adata.is_view:
-            adata = _read_legacy_10x_h5(filename, genome=genome, start=start)
 
     if load_images:
         if not isinstance(filename, Path):
@@ -339,15 +335,26 @@ def read_visium(
             lowres_image=filedir / Path('spatial/tissue_lowres_image.png'),
         )
 
-        # check if files exists
+        # check if files exists, continue if images are missing
         for f in files.values():
             if not f.exists():
-                raise ValueError(f"Could not find '{f}'")
+                if any(x in str(f) for x in ["hires_image", "lowres_image"]):
+                    logg.warning(
+                        f"You seem to be missing an image file.\n"
+                        f"Could not find '{f}'."
+                    )
+                else:
+                    raise ValueError(f"Could not find '{f}'")
 
-        adata.uns['images'] = dict(
-            hires=imread(str(files['hires_image'])),
-            lowres=imread(str(files['lowres_image'])),
-        )
+        adata.uns['images'] = dict()
+        try:
+            adata.uns['images']['hires'] = imread(str(files['hires_image']))
+        except Exception:
+            pass
+        try:
+            adata.uns['images']['lowres'] = imread(str(files['lowres_image']))
+        except Exception:
+            pass
 
         # read json scalefactors
         adata.uns['scalefactors'] = json.loads(

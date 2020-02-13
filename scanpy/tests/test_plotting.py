@@ -628,7 +628,6 @@ def test_scatter_embedding_groups_and_size(image_comparer):
 def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
-    from functools import partial
 
     sc.pl.embedding(
         pbmc,
@@ -805,3 +804,23 @@ def test_no_copy():
         view = actual[actual.obs["bulk_labels"] == "Dendritic"]
         plotfunc(view, ["Dendritic"], show=False)
         assert view.is_view
+
+
+def test_visium_circles(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    adata = sc.read_visium(
+        HERE / '_data' / '10x_data' / 'visium' / 'V1_Human_Heart_subsampled.h5',
+    )
+    adata.obs = adata.obs.astype({'array_row': 'str'})
+
+    sc.pl.spatial(
+        adata,
+        img_key="lowres",
+        color='array_row',
+        groups=["24", "33"],
+        crop_coord=[100, 400, 400, 100],
+        alpha=0.5,
+        size=1.3,
+    )
+
+    save_and_compare_images('master_spatial_visium')
