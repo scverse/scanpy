@@ -143,7 +143,7 @@ def sam(
     adata: AnnData,
     projection: Union[str, np.ndarray] = 'X_umap',
     c: Optional[Union[str, np.ndarray]] = None,
-    cmap: str = 'rainbow',
+    cmap: str = 'Spectral_r',
     linewidth: float = 0.0,
     edgecolor: str = 'k',
     axes: Optional[Axes] = None,

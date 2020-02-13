@@ -88,7 +88,7 @@ Plotting: PL
    pl.phate
    pl.trimap
    tl.palantir
-
+   pl.sam
 
 Exporting
 ---------

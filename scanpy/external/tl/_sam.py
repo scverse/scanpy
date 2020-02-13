@@ -8,6 +8,11 @@ from anndata import AnnData
 from ... import logging as logg
 from ..._compat import Literal
 
+try:
+    from SAM import SAM
+except ImportError:
+    SAM = Any
+
 
 def sam(
     adata: AnnData,
@@ -23,7 +28,7 @@ def sam(
     projection: Literal['umap', 'tsne', 'None'] = 'umap',
     inplace: bool = True,
     verbose: bool = True,
-) -> Union[Any, Tuple[Any, AnnData]]:
+) -> Union[SAM, Tuple[SAM, AnnData]]:
     """\
     Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
 
