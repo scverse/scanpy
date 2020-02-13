@@ -628,7 +628,6 @@ def test_scatter_embedding_groups_and_size(image_comparer):
 def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
-    from functools import partial
 
     sc.pl.embedding(
         pbmc,
