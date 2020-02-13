@@ -17,6 +17,7 @@ def sam(
     distance: str = 'correlation',
     standardization: Literal['Normalizer', 'StandardScaler', 'None'] = 'Normalizer',
     weight_pcs: bool = True,
+    sparse_pca: bool = False,
     n_pcs: Optional[int] = None,
     n_genes: Optional[int] = None,
     projection: Literal['umap', 'tsne', 'None'] = 'umap',
@@ -74,6 +75,12 @@ def sam(
         datasets with many expected cell types, setting this to False might
         improve the resolution as these cell types might be encoded by lower-
         variance principal components.
+
+    sparse_pca
+        If True, uses an implementation of PCA that accepts sparse inputs.
+        This way, we no longer need a temporary dense copy of the sparse data.
+        However, this implementation is slower and so is only worth using when
+        memory constraints become noticeable.
 
     n_pcs
         Determines the number of top principal components selected at each
@@ -202,6 +209,7 @@ def sam(
         npcs=n_pcs,
         n_genes=n_genes,
         projection=projection,
+        sparse_pca=sparse_pca,
         verbose=verbose,
     )
 
