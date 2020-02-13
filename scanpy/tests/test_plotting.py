@@ -816,7 +816,6 @@ def test_visium_circles(image_comparer):
         / 'V1_Human_Heart_filtered_feature_bc_matrix.h5',
     )
     adata.obs = adata.obs.astype({'array_row': 'str'})
-    from functools import partial
 
     sc.pl.spatial(
         adata,
