@@ -12,7 +12,7 @@ matrix:
       python: "3.7"
       install:
         - pip install docutils sphinx
-        - pip install -e .[test,louvain,leiden,magic]
+        - pip install -e .[test,louvain,leiden,magic] umap-learn>=0.4
         - pip install git+https://github.com/theislab/anndata
 python:
   - '3.6'
