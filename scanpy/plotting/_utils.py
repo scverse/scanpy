@@ -1048,8 +1048,6 @@ def make_projection_available(projection):
 
     from io import BytesIO
     from matplotlib import __version__ as mpl_version
-    from matplotlib.collections import PatchCollection
-    from matplotlib.patches import Circle
     from mpl_toolkits.mplot3d import Axes3D
 
     fig = Figure()
