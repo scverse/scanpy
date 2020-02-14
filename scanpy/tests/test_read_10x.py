@@ -91,10 +91,7 @@ def test_error_missing_genome():
 
 def test_read_visium():
     spec_genome_v3 = sc.read_10x_h5(
-        ROOT / 'visium' / 'V1_Human_Heart_filtered_feature_bc_matrix.h5',
-        genome='GRCh38',
+        ROOT / 'visium' / 'V1_Human_Heart_subsampled.h5', genome='GRCh38',
     )
-    nospec_genome_v3 = sc.read_10x_h5(
-        ROOT / 'visium' / 'V1_Human_Heart_filtered_feature_bc_matrix.h5'
-    )
+    nospec_genome_v3 = sc.read_10x_h5(ROOT / 'visium' / 'V1_Human_Heart_subsampled.h5')
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)

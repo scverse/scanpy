@@ -813,16 +813,16 @@ def test_visium_circles(image_comparer):
         / '_data'
         / '10x_data'
         / 'visium'
-        / 'V1_Human_Heart_filtered_feature_bc_matrix.h5',
+        / 'V1_Human_Heart_subsampled.h5',
     )
     adata.obs = adata.obs.astype({'array_row': 'str'})
 
     sc.pl.spatial(
         adata,
-        img_key="hires",
-        color="array_row",
-        groups=["3", "20"],
-        crop_coord=[1200, 1700, 1900, 1000],
+        img_key="lowres",
+        color='array_row',
+        groups=["24", "33"],
+        crop_coord=[100, 400, 400, 100],
         alpha=0.5,
         size=1.3,
     )
