@@ -134,7 +134,8 @@ texinfo_documents = [
 # -- Suppress link warnings ----------------------------------------------------
 
 qualname_overrides = {
-    "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric"
+    "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
+    "numpy.random.mtrand.RandomState": "numpy.random.RandomState",
 }
 
 nitpick_ignore = [
@@ -143,5 +144,5 @@ nitpick_ignore = [
     # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
     ('py:class', 'seaborn.ClusterGrid'),
     # Won’t be documented
-    ('py:class', 'scanpy.readwrite.Empty'),
+    ('py:class', 'scanpy._utils.Empty'),
 ]
