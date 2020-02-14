@@ -809,11 +809,7 @@ def test_no_copy():
 def test_visium_circles(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.read_visium(
-        HERE
-        / '_data'
-        / '10x_data'
-        / 'visium'
-        / 'V1_Human_Heart_subsampled.h5',
+        HERE / '_data' / '10x_data' / 'visium' / 'V1_Human_Heart_subsampled.h5',
     )
     adata.obs = adata.obs.astype({'array_row': 'str'})
 
