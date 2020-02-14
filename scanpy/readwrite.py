@@ -349,6 +349,9 @@ def read_visium(
         adata.uns['images'] = dict()
         try:
             adata.uns['images']['hires'] = imread(str(files['hires_image']))
+        except Exception:
+            pass
+        try:
             adata.uns['images']['lowres'] = imread(str(files['lowres_image']))
         except Exception:
             pass
