@@ -4,6 +4,7 @@ import sys
 import inspect
 import warnings
 import importlib.util
+from enum import Enum
 from pathlib import Path
 from weakref import WeakSet
 from collections import namedtuple
@@ -19,6 +20,13 @@ from packaging import version
 from ._settings import settings
 from ._compat import Literal
 from . import logging as logg
+
+
+class Empty(Enum):
+    token = 0
+
+
+_empty = Empty.token
 
 EPS = 1e-15
 

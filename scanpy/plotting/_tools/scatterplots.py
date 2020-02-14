@@ -29,7 +29,7 @@ from .._docs import (
 )
 from ... import logging as logg
 from ..._settings import settings
-from ..._utils import sanitize_anndata, _doc_params
+from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
 from ..._compat import Literal
 
 VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
@@ -732,7 +732,7 @@ def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 def spatial(
     adata,
     *,
-    img_key: Optional[str] = None,
+    img_key: Union[str, None, Empty] = _empty,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
     bw: bool = False,
@@ -742,6 +742,7 @@ def spatial(
     Scatter plot in spatial coordinates.
 
     Use the parameter `img_key` to see the image in the background.
+    By default, `'hires'` and `'lowres'` are attempted.
     Use `crop_coord`, `alpha_img`, and `bw` to control how it is displayed.
     Use `size` to scale the size of the Visium spots plotted on top.
 
@@ -755,6 +756,11 @@ def spatial(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
+    if img_key is _empty:
+        img_key = next(
+            (k for k in ['hires', 'lowres'] if k in adata.uns['images']), None
+        )
+
     return embedding(
         adata,
         'spatial',
@@ -1058,7 +1064,6 @@ def _basis2name(basis):
 
 
 def _process_image(adata, data_points, img_key, crop_coord, scale_spot, bw=False):
-
     offset = 100
     cmap_img = None
     img = adata.uns['images'][img_key]
