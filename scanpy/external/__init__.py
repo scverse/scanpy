@@ -58,6 +58,7 @@ Embeddings
    tl.phate
    tl.palantir
    tl.trimap
+   tl.sam
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -87,7 +88,7 @@ Plotting: PL
    pl.phate
    pl.trimap
    tl.palantir
-
+   pl.sam
 
 Exporting
 ---------
