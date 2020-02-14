@@ -775,6 +775,20 @@ def test_paga(image_comparer):
     save_and_compare_images('master_paga_compare_pca')
 
 
+def test_paga_path(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.tl.paga(pbmc, groups='bulk_labels')
+
+    pbmc.uns['iroot'] = 0
+    sc.tl.dpt(pbmc)
+    sc.pl.paga_path(
+        pbmc, nodes=['Dendritic'], keys=['HES4', 'SRM', 'CSTB'], show=False,
+    )
+    save_and_compare_images('master_paga_path')
+
+
 def test_no_copy():
     # https://github.com/theislab/scanpy/issues/1000
     # Tests that plotting functions don't make a copy from a view unless they

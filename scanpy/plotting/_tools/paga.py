@@ -13,6 +13,7 @@ from matplotlib import pyplot as pl, rcParams, ticker
 from matplotlib import patheffects
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like, Colormap
+from scipy.sparse import issparse
 
 from .. import _utils
 from .._utils import matrix, _IGraphLayout, _FontWeight, _FontSize
@@ -247,7 +248,7 @@ def _compute_pos(
 def paga(
     adata: AnnData,
     threshold: Optional[float] = None,
-    color: Optional[str] = None,
+    color: Optional[Union[str, Sequence[str]]] = None,
     layout: Optional[_IGraphLayout] = None,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
     init_pos: Optional[np.ndarray] = None,
@@ -1025,17 +1026,18 @@ def paga_path(
             idcs_group = np.argsort(adata.obs['dpt_pseudotime'].values[
                 adata.obs[groups_key].values == nodes_strs[igroup]])
             idcs = idcs[idcs_group]
-            if key in adata.obs_keys(): x += list(adata.obs[key].values[idcs])
-            else: x += list(adata_X[:, key].X[idcs])
+            values = (
+                adata.obs[key].values if key in adata.obs_keys() else adata_X[:, key].X
+            )[idcs]
+            x += (values.A if issparse(values) else values).tolist()
             if ikey == 0:
-                groups += [group for i in range(len(idcs))]
+                groups += [group] * len(idcs)
                 x_tick_locs.append(len(x))
                 for anno in annotations:
                     series = adata.obs[anno]
                     if is_categorical_dtype(series): series = series.cat.codes
                     anno_dict[anno] += list(series.values[idcs])
         if n_avg > 1:
-            old_len_x = len(x)
             x = moving_average(x)
             if ikey == 0:
                 for key in annotations:
@@ -1054,7 +1056,7 @@ def paga_path(
                 else:
                     label = group
                 x_tick_labels.append(label)
-    X = np.array(X)
+    X = np.asarray(X).squeeze()
     if as_heatmap:
         img = ax.imshow(
             X, aspect='auto', interpolation='nearest', cmap=color_map
