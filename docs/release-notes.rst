@@ -23,9 +23,9 @@ Version 1.4
 
 .. rubric:: Bug fixes
 
-- See the many PRs linked in the commits `1.4.5.post2...1.4.5.1`_.
+- See the many PRs linked in the commits `1.4.5.post3...1.4.5.1`_.
 
-.. _1.4.5.post2...1.4.5.1: https://github.com/theislab/scanpy/compare/1.4.5.post2...1.4.5.1
+.. _1.4.5.post3...1.4.5.1: https://github.com/theislab/scanpy/compare/1.4.5.post3...1.4.5.1
 
 1.4.5 :small:`2019-12-30`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
