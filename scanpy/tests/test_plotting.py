@@ -776,7 +776,7 @@ def test_paga(image_comparer):
 
 
 def test_paga_path(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.tl.paga(pbmc, groups='bulk_labels')
