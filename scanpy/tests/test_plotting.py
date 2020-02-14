@@ -815,10 +815,9 @@ def test_visium_circles(image_comparer):
 
     sc.pl.spatial(
         adata,
-        img_key="lowres",
-        color='array_row',
+        color="array_row",
         groups=["24", "33"],
-        crop_coord=[100, 400, 400, 100],
+        crop_coord=(100, 400, 400, 100),
         alpha=0.5,
         size=1.3,
     )

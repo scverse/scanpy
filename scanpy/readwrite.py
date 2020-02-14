@@ -1,6 +1,5 @@
 """Reading and Writing
 """
-from enum import Enum
 from pathlib import Path, PurePath
 from typing import Union, Dict, Optional, Tuple, BinaryIO
 
@@ -23,6 +22,7 @@ from anndata import read as read_h5ad
 
 from ._settings import settings
 from ._compat import Literal
+from ._utils import Empty, _empty
 from . import logging as logg
 
 # .gz and .bz2 suffixes are also allowed for text formats
@@ -44,13 +44,6 @@ avail_exts = {
     'loom',
 } | text_exts
 """Available file formats for reading data. """
-
-
-class Empty(Enum):
-    token = 0
-
-
-_empty = Empty.token
 
 
 # --------------------------------------------------------------------------------
@@ -161,11 +154,19 @@ def read_10x_h5(
 
     Returns
     -------
-    Annotated data matrix, where obsevations/cells are named by their
-    barcode and variables/genes by gene name. The data matrix is stored in
-    `adata.X`, cell names in `adata.obs_names` and gene names in
-    `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
-    The feature types are stored in `adata.var['feature_types']`
+    Annotated data matrix, where observations/cells are named by their
+    barcode and variables/genes by gene name. Stores the following information:
+
+    :attr:`~anndata.AnnData.X`
+        The data matrix is stored
+    :attr:`~anndata.AnnData.obs_names`
+        Cell names
+    :attr:`~anndata.AnnData.var_names`
+        Gene names
+    :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
+        Gene IDs
+    :attr:`~anndata.AnnData.var`\\ `['feature_types']`
+        Feature types
     """
     start = logg.info(f'reading {filename}')
     with tables.open_file(str(filename), 'r') as f:
@@ -284,44 +285,45 @@ def read_visium(
     """\
     Read 10x-Genomics-formatted hdf5 file.
 
+    In addition to reading regular 10x output,
+    this looks for the `spatial` folder and loads images,
+    coordinates and scale factors.
+    Based on the `Space Ranger output docs`_.
+
+    See :func:`~scanpy.pl.spatial` for a compatible plotting function.
+
+    .. _Space Ranger output docs: https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
+
     Parameters
     ----------
     filename
         Path to a 10x hdf5 file.
     genome
         Filter expression to genes within this genome.
-    load_image
-        If True, it looks for the `spatial` folder where the count file is
-        and import images, coordinates and scale factors.
-        Based on the `Space Ranger output docs`_.
-
-        .. _Space Ranger output docs: https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
 
     Returns
     -------
     Annotated data matrix, where observations/cells are named by their
-    barcode and variables/genes by gene name.
-    The data matrix is stored in :attr:`~anndata.AnnData.X`,
-    cell names in :attr:`~anndata.AnnData.obs_names` and
-    gene names in :attr:`~anndata.AnnData.var_names`.
-    The gene IDs are stored in :attr:`~anndata.AnnData.var`\\ `['gene_ids']`.
-    The feature types are stored in :attr:`~anndata.AnnData.var`\\ `['feature_types']`.
-    The images are stored in :attr:`~anndata.AnnData.uns`\\ `['images']` and
-    scale factors are stored in :attr:`~anndata.AnnData.uns`\\ `['scalefactors']`.
-    The spatial coordinates are stored as a `basis` in :attr:`~anndata.AnnData.obsm`.
+    barcode and variables/genes by gene name. Stores the following information:
+
+    :attr:`~anndata.AnnData.X`
+        The data matrix is stored
+    :attr:`~anndata.AnnData.obs_names`
+        Cell names
+    :attr:`~anndata.AnnData.var_names`
+        Gene names
+    :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
+        Gene IDs
+    :attr:`~anndata.AnnData.var`\\ `['feature_types']`
+        Feature types
+    :attr:`~anndata.AnnData.uns`\\ `['images']`
+        Dict of images (`'hires'` and `'lowres'`)
+    :attr:`~anndata.AnnData.uns`\\ `['scalefactors']`
+        Scale factors for the spots
+    :attr:`~anndata.AnnData.obsm`\\ `['X_spatial']`
+        Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
-    start = logg.info(f'reading {filename}')
-    with tables.open_file(str(filename), 'r') as f:
-        v3 = '/matrix' in f
-    if v3:
-        adata = _read_v3_10x_h5(filename, start=start)
-        if genome:
-            if genome not in adata.var['genome'].values:
-                raise ValueError(
-                    f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
-                    f'Available genomes are: {list(adata.var["genome"].unique())}.'
-                )
-            adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
+    adata = read_10x_h5(filename, genome)
 
     if load_images:
         if not isinstance(filename, Path):
@@ -347,14 +349,11 @@ def read_visium(
                     raise ValueError(f"Could not find '{f}'")
 
         adata.uns['images'] = dict()
-        try:
-            adata.uns['images']['hires'] = imread(str(files['hires_image']))
-        except Exception:
-            pass
-        try:
-            adata.uns['images']['lowres'] = imread(str(files['lowres_image']))
-        except Exception:
-            pass
+        for res in ['hires', 'lowres']:
+            try:
+                adata.uns['images'][res] = imread(str(files[f'{res}_image']))
+            except Exception:
+                pass
 
         # read json scalefactors
         adata.uns['scalefactors'] = json.loads(
@@ -376,10 +375,10 @@ def read_visium(
         adata.obs = adata.obs.join(positions, how="left")
 
         adata.obsm['X_spatial'] = adata.obs[
-            ['pxl_row_in_fullres', 'pxl_col_in_fullres',]
+            ['pxl_row_in_fullres', 'pxl_col_in_fullres']
         ].to_numpy()
         adata.obs.drop(
-            columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres',],
+            columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres'],
             inplace=True,
         )
 
