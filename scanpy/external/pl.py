@@ -197,7 +197,7 @@ def sam(
             pass
 
     if isinstance(c[0], (str, np.str_)) and isinstance(c, (np.ndarray, list)):
-        from SAM import ut
+        import samalg.utilities as ut
 
         i = ut.convert_annotations(c)
         ui, ai = np.unique(i, return_index=True)

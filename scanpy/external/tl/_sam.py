@@ -9,7 +9,7 @@ from ... import logging as logg
 from ..._compat import Literal
 
 try:
-    from SAM import SAM
+    from samalg import SAM
 except ImportError:
     SAM = Any
 
@@ -180,7 +180,7 @@ def sam(
 
     In a Jupyter notebook, execute the following to launch the interface:
 
-    >>> from SAMGUI import SAMGUI
+    >>> from samalg.gui import SAMGUI
     >>> sam_gui = SAMGUI(sam_obj) # sam_obj is your SAM object
     >>> sam_gui.SamPlot
 
@@ -190,7 +190,7 @@ def sam(
     """
 
     try:
-        from SAM import SAM
+        from samalg import SAM
     except ImportError:
         raise ImportError(
             '\nplease install sam-algorithm: \n\n'
