@@ -51,3 +51,18 @@ def test_pca_transform(typ):
 
     sc.pp.pca(adata, n_comps=4, zero_center=False, dtype='float64', random_state=14)
     assert np.linalg.norm(A_svd_abs[:, :4]-np.abs(adata.obsm['X_pca'])) < 2e-05
+
+
+def test_pca_shapes():
+    """Tests that n_comps behaves correctly"""
+    # https://github.com/theislab/scanpy/issues/1051
+    adata = AnnData(np.random.randn(30, 20))
+    sc.pp.pca(adata)
+    assert adata.obsm["X_pca"].shape == (30, 19)
+
+    adata = AnnData(np.random.randn(20, 30))
+    sc.pp.pca(adata)
+    assert adata.obsm["X_pca"].shape == (20, 19)
+
+    with pytest.raises(ValueError):
+        sc.pp.pca(adata, n_comps=100)
