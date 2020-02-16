@@ -369,7 +369,7 @@ def sqrt(
 
 def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
-    n_comps: int = N_PCS,
+    n_comps: Optional[int] = None,
     zero_center: Optional[bool] = True,
     svd_solver: str = 'arpack',
     random_state: Optional[Union[int, RandomState]] = 0,
@@ -392,7 +392,8 @@ def pca(
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     n_comps
-        Number of principal components to compute.
+        Number of principal components to compute. Defaults to 50, or 1 - minimum
+        dimension size of selected representation.
     zero_center
         If `True`, compute standard PCA from covariance matrix.
         If `False`, omit zero-centering variables
@@ -457,8 +458,7 @@ def pca(
         logg.info(
             'Note that scikit-learn\'s randomized PCA might not be exactly '
             'reproducible across different computational platforms. For exact '
-            'reproducibility, choose `svd_solver=\'arpack\'.` This will likely '
-            'become the Scanpy default in the future.'
+            'reproducibility, choose `svd_solver=\'arpack\'.`'
         )
 
     data_is_AnnData = isinstance(data, AnnData)
@@ -466,15 +466,6 @@ def pca(
         adata = data.copy() if copy else data
     else:
         adata = AnnData(data)
-
-    start = logg.info(f'computing PCA with n_comps = {n_comps}')
-
-    if adata.n_vars < n_comps:
-        n_comps = adata.n_vars - 1
-        logg.debug(
-            f'reducing number of computed PCs to {n_comps} '
-            f'as dim of data is only {adata.n_vars}'
-        )
 
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
         raise ValueError('Did not find adata.var[\'highly_variable\']. '
@@ -485,6 +476,15 @@ def pca(
     if use_highly_variable:
         logg.info('    on highly variable genes')
     adata_comp = adata[:, adata.var['highly_variable']] if use_highly_variable else adata
+
+    if n_comps is None:
+        min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
+        if N_PCS >= min_dim:
+            n_comps = min_dim - 1
+        else:
+            n_comps = N_PCS
+
+    start = logg.info(f'computing PCA with n_comps = {n_comps}')
 
     if chunked:
         if not zero_center or random_state or svd_solver != 'arpack':
