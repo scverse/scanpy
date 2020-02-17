@@ -110,10 +110,10 @@ def test_scale():
     adata.X = adata.raw.X
     v = adata[:, 0:adata.shape[1] // 2]
     # Should turn view to copy https://github.com/theislab/anndata/issues/171#issuecomment-508689965
-    assert v.isview
+    assert v.is_view
     with pytest.warns(Warning, match="view"):
         sc.pp.scale(v)
-    assert not v.isview
+    assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
 
