@@ -294,7 +294,7 @@ def log1p(
     elif not isinstance(data, AnnData) and np.issubdtype(data.dtype, np.integer):
         raise TypeError("Cannot perform inplace log1p on integer array")
 
-    if isinstance(data, AnnData) and data.isview:
+    if isinstance(data, AnnData) and data.is_view:
         view_to_actual(data)
 
     def _log1p(X):
