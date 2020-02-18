@@ -2,13 +2,13 @@ from typing import Union, Optional
 
 import numpy as np
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 from scipy.sparse import spmatrix
 
 from .. import _utils
 from .. import logging as logg
 from ._utils import get_init_pos_from_paga
 from .._compat import Literal
+from .._utils import AnyRandom
 
 
 _LAYOUTS = ('fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa')
@@ -20,7 +20,7 @@ def draw_graph(
     layout: _Layout = 'fa',
     init_pos: Union[str, bool, None] = None,
     root: Optional[int] = None,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     n_jobs: Optional[int] = None,
     adjacency: Optional[spmatrix] = None,
     key_added_ext: Optional[str] = None,

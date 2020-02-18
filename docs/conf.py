@@ -135,7 +135,8 @@ texinfo_documents = [
 
 qualname_overrides = {
     "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
-    "numpy.random.mtrand.RandomState": "numpy.random.RandomState",
+    # If the docs are built with an old version of numpy, this will make it work:
+    "numpy.random.RandomState": "numpy.random.mtrand.RandomState",
 }
 
 nitpick_ignore = [

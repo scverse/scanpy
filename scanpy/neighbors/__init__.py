@@ -4,15 +4,15 @@ from typing import Union, Optional, Any, Mapping, Callable, NamedTuple, Generato
 import numpy as np
 import scipy
 from anndata import AnnData
-from numpy.random import RandomState
 from scipy.sparse import issparse, coo_matrix, csr_matrix
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .. import _utils
-from .._utils import _doc_params
+from .._utils import _doc_params, AnyRandom
 from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
+
 
 N_DCS = 15  # default number of diffusion components
 N_PCS = 50  # default number of PCs
@@ -40,7 +40,7 @@ def neighbors(
     n_pcs: Optional[int] = None,
     use_rep: Optional[str] = None,
     knn: bool = True,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     method: Optional[_Method] = 'umap',
     metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
@@ -166,7 +166,7 @@ def _rp_forest_generate(rp_forest_dict: RPForestDict) -> Generator[FlatTree, Non
 def compute_neighbors_umap(
     X: Union[np.ndarray, csr_matrix],
     n_neighbors: int,
-    random_state: Optional[Union[int, RandomState]] = None,
+    random_state: AnyRandom = None,
     metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     angular: bool = False,
@@ -630,7 +630,7 @@ class Neighbors:
         n_pcs: Optional[int] = None,
         use_rep: Optional[str] = None,
         method: _Method = 'umap',
-        random_state: Optional[Union[int, RandomState]] = 0,
+        random_state: AnyRandom = 0,
         write_knn_indices: bool = False,
         metric: _Metric = 'euclidean',
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),

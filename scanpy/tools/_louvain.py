@@ -1,11 +1,10 @@
 from types import MappingProxyType
-from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Union
+from typing import Optional, Tuple, Sequence, Type, Mapping, Any
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 from natsort import natsorted
-from numpy.random.mtrand import RandomState
 from scipy.sparse import spmatrix
 
 from ._utils_clustering import rename_groups, restrict_adjacency
@@ -22,7 +21,7 @@ except ImportError:
 def louvain(
     adata: AnnData,
     resolution: Optional[float] = None,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: _utils.AnyRandom = 0,
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
     key_added: str = 'louvain',
     adjacency: Optional[spmatrix] = None,

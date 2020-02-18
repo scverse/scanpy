@@ -2,13 +2,13 @@ from typing import Optional, Union
 
 import numpy as np
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 from sklearn.utils import check_random_state, check_array
 
 from ._utils import get_init_pos_from_paga, _choose_representation
 from .. import logging as logg
 from .._settings import settings
 from .._compat import Literal
+from .._utils import AnyRandom
 
 
 _InitPos = Literal['paga', 'spectral', 'random']
@@ -24,7 +24,7 @@ def umap(
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
     init_pos: Union[_InitPos, np.ndarray, None] = 'spectral',
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     a: Optional[float] = None,
     b: Optional[float] = None,
     copy: bool = False,
@@ -84,7 +84,7 @@ def umap(
         * A numpy array of initial embedding positions.
     random_state
         If `int`, `random_state` is the seed used by the random number generator;
-        If `RandomState`, `random_state` is the random number generator;
+        If `RandomState` or `Generator`, `random_state` is the random number generator;
         If `None`, the random number generator is the `RandomState` instance used
         by `np.random`.
     a
