@@ -13,6 +13,7 @@ from types import ModuleType, MethodType
 from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple
 
 import numpy as np
+from numpy import random
 from anndata import AnnData
 from textwrap import dedent
 from packaging import version
@@ -27,6 +28,9 @@ class Empty(Enum):
 
 
 _empty = Empty.token
+
+# e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+AnyRandom = Union[None, int, random.RandomState]  # maybe in the future random.Generator
 
 EPS = 1e-15
 

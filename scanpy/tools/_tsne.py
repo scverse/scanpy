@@ -1,9 +1,8 @@
 from typing import Optional, Union
 
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 
-from .._utils import _doc_params
+from .._utils import _doc_params, AnyRandom
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 from .._settings import settings
 from .. import logging as logg
@@ -17,7 +16,7 @@ def tsne(
     perplexity: Union[float, int] = 30,
     early_exaggeration: Union[float, int] = 12,
     learning_rate: Union[float, int] = 1000,
-    random_state: Union[int, RandomState] = 0,
+    random_state: AnyRandom = 0,
     use_fast_tsne: bool = True,
     n_jobs: Optional[int] = None,
     copy: bool = False,

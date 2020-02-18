@@ -4,11 +4,11 @@ Embed high-dimensional data using PHATE
 from typing import Optional, Union
 
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 
 from ..._settings import settings
 from ..._compat import Literal
 from ... import logging as logg
+from ..._utils import AnyRandom
 
 
 def phate(
@@ -24,7 +24,7 @@ def phate(
     mds_dist: str = 'euclidean',
     mds: Literal['classic', 'metric', 'nonmetric'] = 'metric',
     n_jobs: Optional[int] = None,
-    random_state: Optional[Union[int, RandomState]] = None,
+    random_state: AnyRandom = None,
     verbose: Union[bool, int, None] = None,
     copy: bool = False,
     **kwargs,
