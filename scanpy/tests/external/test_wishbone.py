@@ -15,8 +15,10 @@ def test_run_wishbone():
     sc.tl.diffmap(adata, n_comps=10)
 
     sce.tl.wishbone(
-        adata=adata, start_cell='ACAAGAGACTTATC-1',
-        components_list=[2, 3], num_waypoints=150,
+        adata=adata,
+        start_cell='ACAAGAGACTTATC-1',
+        components_list=[2, 3],
+        num_waypoints=150,
     )
     assert all(
         [k in adata.obs for k in ['trajectory_wishbone', 'branch_wishbone']]
