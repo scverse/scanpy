@@ -262,7 +262,7 @@ def wishbone_marker_trajectory(
 
     `weights_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
         Computed gaussian weights for points at each location
-    `branch_point_bin` : 'int' (`adata.uns`)
+    `branch_point_bin` : :class:`int` (`adata.uns`)
         Identifies the bin with the branch point. In case of no branching,
         defaults to `no_bins`
     `bins_wishbone` : :class:`numpy.ndarray` (`adata.uns`)
