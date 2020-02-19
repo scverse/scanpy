@@ -210,7 +210,7 @@ def _scatter_obs(
     if isinstance(components, str):
         components = components.split(',')
     components = np.array(components).astype(int) - 1
-    keys = ['grey'] if color is None else [color] if isinstance(color, str) else color
+    keys = ['grey'] if color is None else [color] if is_color_like(color) else color
     if title is not None and isinstance(title, str):
         title = [title]
     highlights = adata.uns['highlights'] if 'highlights' in adata.uns else []
