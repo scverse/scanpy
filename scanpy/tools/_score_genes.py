@@ -1,14 +1,14 @@
 """Calculate scores based on the expression of gene lists.
 """
-from typing import Sequence, Optional, Union
+from typing import Sequence, Optional
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 from scipy.sparse import issparse
 
 from .. import logging as logg
+from .._utils import AnyRandom
 
 
 def score_genes(
@@ -18,7 +18,7 @@ def score_genes(
     gene_pool: Optional[Sequence[str]] = None,
     n_bins: int = 25,
     score_name: str = 'score',
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     copy: bool = False,
     use_raw: bool = None,
 ) -> Optional[AnnData]:

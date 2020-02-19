@@ -1,13 +1,13 @@
 """Preprocessing recipes from the literature"""
-from typing import Optional, Union
+from typing import Optional
 
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 
 from . import _simple as pp
 from ._deprecated.highly_variable_genes import filter_genes_dispersion, filter_genes_cv_deprecated
 from ._normalization import normalize_total
 from .. import logging as logg
+from .._utils import AnyRandom
 
 
 def recipe_weinreb17(
@@ -17,7 +17,7 @@ def recipe_weinreb17(
     cv_threshold: int = 2,
     n_pcs: int = 50,
     svd_solver='randomized',
-    random_state: Union[int, RandomState] = 0,
+    random_state: AnyRandom = 0,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\

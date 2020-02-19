@@ -1,10 +1,9 @@
-from typing import Optional, Tuple, Sequence, Type, Union
+from typing import Optional, Tuple, Sequence, Type
 
 import numpy as np
 import pandas as pd
 from natsort import natsorted
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 from scipy import sparse
 
 from .. import _utils
@@ -24,7 +23,7 @@ def leiden(
     resolution: float = 1,
     *,
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: _utils.AnyRandom = 0,
     key_added: str = 'leiden',
     adjacency: Optional[sparse.spmatrix] = None,
     directed: bool = True,

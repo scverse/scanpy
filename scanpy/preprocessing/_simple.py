@@ -8,7 +8,6 @@ from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
 import numba
 import numpy as np
 import scipy as sp
-from numpy.random.mtrand import RandomState
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
@@ -16,7 +15,7 @@ from anndata import AnnData
 
 from .. import logging as logg
 from .._settings import settings as sett
-from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual
+from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, AnyRandom
 from .._compat import Literal
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
@@ -294,7 +293,7 @@ def log1p(
     elif not isinstance(data, AnnData) and np.issubdtype(data.dtype, np.integer):
         raise TypeError("Cannot perform inplace log1p on integer array")
 
-    if isinstance(data, AnnData) and data.isview:
+    if isinstance(data, AnnData) and data.is_view:
         view_to_actual(data)
 
     def _log1p(X):
@@ -369,10 +368,10 @@ def sqrt(
 
 def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
-    n_comps: int = N_PCS,
+    n_comps: Optional[int] = None,
     zero_center: Optional[bool] = True,
     svd_solver: str = 'arpack',
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
     dtype: str = 'float32',
@@ -392,7 +391,8 @@ def pca(
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     n_comps
-        Number of principal components to compute.
+        Number of principal components to compute. Defaults to 50, or 1 - minimum
+        dimension size of selected representation.
     zero_center
         If `True`, compute standard PCA from covariance matrix.
         If `False`, omit zero-centering variables
@@ -457,8 +457,7 @@ def pca(
         logg.info(
             'Note that scikit-learn\'s randomized PCA might not be exactly '
             'reproducible across different computational platforms. For exact '
-            'reproducibility, choose `svd_solver=\'arpack\'.` This will likely '
-            'become the Scanpy default in the future.'
+            'reproducibility, choose `svd_solver=\'arpack\'.`'
         )
 
     data_is_AnnData = isinstance(data, AnnData)
@@ -466,15 +465,6 @@ def pca(
         adata = data.copy() if copy else data
     else:
         adata = AnnData(data)
-
-    start = logg.info(f'computing PCA with n_comps = {n_comps}')
-
-    if adata.n_vars < n_comps:
-        n_comps = adata.n_vars - 1
-        logg.debug(
-            f'reducing number of computed PCs to {n_comps} '
-            f'as dim of data is only {adata.n_vars}'
-        )
 
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
         raise ValueError('Did not find adata.var[\'highly_variable\']. '
@@ -485,6 +475,15 @@ def pca(
     if use_highly_variable:
         logg.info('    on highly variable genes')
     adata_comp = adata[:, adata.var['highly_variable']] if use_highly_variable else adata
+
+    if n_comps is None:
+        min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
+        if N_PCS >= min_dim:
+            n_comps = min_dim - 1
+        else:
+            n_comps = N_PCS
+
+    start = logg.info(f'computing PCA with n_comps = {n_comps}')
 
     if chunked:
         if not zero_center or random_state or svd_solver != 'arpack':
@@ -946,7 +945,7 @@ def subsample(
     data: Union[AnnData, np.ndarray, spmatrix],
     fraction: Optional[float] = None,
     n_obs: Optional[int] = None,
-    random_state: Union[int, RandomState] = 0,
+    random_state: AnyRandom = 0,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -1003,7 +1002,7 @@ def downsample_counts(
     counts_per_cell: Optional[Union[int, Collection[int]]] = None,
     total_counts: Optional[int] = None,
     *,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     replace: bool = False,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -1140,7 +1139,7 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
 def _downsample_array(
     col: np.ndarray,
     target: int,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     replace: bool = True,
     inplace: bool = False,
 ):
