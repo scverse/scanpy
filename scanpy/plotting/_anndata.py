@@ -711,6 +711,8 @@ def violin(
     # of the violin plot (see stacked_violin code) for more info.
     if 'cut' not in kwds:
         kwds['cut'] = 0
+    if 'inner' not in kwds:
+        kwds['inner'] = None
 
     if multi_panel and groupby is None and len(ys) == 1:
         # This is a quick and dirty way for adapting scales across several
@@ -721,7 +723,6 @@ def violin(
         g = g.map(
             sns.violinplot,
             y,
-            inner=None,
             orient='vertical',
             scale=scale,
             order=keys,
@@ -758,7 +759,6 @@ def violin(
                 x,
                 y=y,
                 data=obs_tidy,
-                inner=None,
                 order=order,
                 orient='vertical',
                 scale=scale,
@@ -1010,6 +1010,8 @@ def stacked_violin(
     # trim=True in ggplot.
     if 'cut' not in kwds:
         kwds['cut'] = 0
+    if 'inner' not in kwds:
+        kwds['inner'] = None
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
@@ -1152,7 +1154,6 @@ def stacked_violin(
                 'variable',
                 y='value',
                 data=df,
-                inner=None,
                 orient='vertical',
                 scale=scale,
                 ax=ax,
@@ -1264,7 +1265,6 @@ def stacked_violin(
                 x=obs_tidy.index,
                 y=y,
                 data=obs_tidy,
-                inner=None,
                 orient='vertical',
                 scale=scale,
                 ax=ax,
