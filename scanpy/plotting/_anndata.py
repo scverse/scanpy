@@ -2169,6 +2169,7 @@ def matrixplot(
     num_categories: int = 7,
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
+    plot_totals: Union[bool, str] = False,
     gene_symbols: Optional[str] = None,
     var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
     var_group_labels: Optional[Sequence[str]] = None,
@@ -2237,6 +2238,8 @@ def matrixplot(
         dendrogram = False
 
     mean_obs = obs_tidy.groupby(level=0).mean()
+    if plot_totals:
+        col_counts = obs_tidy.index.value_counts(sort=False)
 
     if standard_scale == 'group':
         mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
@@ -2356,7 +2359,13 @@ def matrixplot(
         # plot colorbar
         _plot_colorbar(pc, fig, axs[1, 2])
     else:
-        dendro_height = 0.5 if dendrogram else 0
+        if dendrogram:
+            dendro_height = 0.5
+        elif plot_totals:
+            dendro_height = 1.5
+        else:
+            dendro_height = 0
+
         if var_group_positions is not None and len(var_group_positions) > 0:
             # add some space in case 'color blocks' want to be plotted on the right of the image
             vargroups_width = 0.4
@@ -2390,8 +2399,60 @@ def matrixplot(
             height_ratios=[dendro_height, heatmap_height],
         )
 
+        if dendrogram:
+            dendro_ax = fig.add_subplot(axs[0, 0])
+            _plot_dendrogram(
+                dendro_ax,
+                adata,
+                groupby,
+                dendrogram_key=dendrogram,
+                ticks=x_ticks,
+                orientation='top',
+            )
+        elif plot_totals:
+            total_barplot_ax = fig.add_subplot(axs[0, 0])
+            col_counts = col_counts[mean_obs.index]
+            if f'{groupby}_colors' in adata.uns:
+                color = adata.uns[f'{groupby}_colors']
+            else:
+                color = 'salmon'
+            col_counts.plot(
+                kind="bar",
+                color=color,
+                ax=total_barplot_ax, edgecolor="black", width=0.65
+            )
+            # add numbers to the top of the bars
+            max_y = max([p.get_height() for p in total_barplot_ax.patches])
+
+            for p in total_barplot_ax.patches:
+                p.set_x(p.get_x() + 0.5)
+                if p.get_height() >= 1000:
+                    display_number = f'{np.round(p.get_height()/1000, decimals=1)}k'
+                else:
+                    display_number = np.round(p.get_height(), decimals=1)
+                total_barplot_ax.annotate(
+                    display_number,
+                    (p.get_x() + p.get_width() / 2.0, (p.get_height() + max_y * 0.05)),
+                    ha="center",
+                    va="top",
+                    xytext=(0, 10),
+                    fontsize="x-small",
+                    textcoords="offset points",
+                )
+            # for k in total_barplot_ax.spines.keys():
+            #     total_barplot_ax.spines[k].set_visible(False)
+            total_barplot_ax.set_ylim(0, max_y * 2)
+            total_barplot_ax.grid(False)
+            total_barplot_ax.axis("off")
+            #total_barplot_ax.set_xlim(0, p.get_x() + p.get_width())
+
         mean_obs = mean_obs.T
-        matrix_ax = fig.add_subplot(axs[1, 0])
+        if dendrogram:
+            matrix_ax = fig.add_subplot(axs[1, 0], sharex=dendro_ax)
+        elif plot_totals:
+            matrix_ax = fig.add_subplot(axs[1, 0], sharex=total_barplot_ax)
+        else:
+            matrix_ax = fig.add_subplot(axs[1, 0])
         pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
         y_ticks = np.arange(mean_obs.shape[0]) + 0.5
         matrix_ax.set_yticks(y_ticks)
@@ -2411,17 +2472,6 @@ def matrixplot(
         matrix_ax.set_xlabel(groupby)
         # invert y axis to show var_names ordered from top to bottom
         matrix_ax.set_ylim(mean_obs.shape[0], 0)
-
-        if dendrogram:
-            dendro_ax = fig.add_subplot(axs[0, 0], sharex=matrix_ax)
-            _plot_dendrogram(
-                dendro_ax,
-                adata,
-                groupby,
-                dendrogram_key=dendrogram,
-                ticks=x_ticks,
-                orientation='top',
-            )
 
         # plot group legends on top of matrix_ax (if given)
         if var_group_positions is not None and len(var_group_positions) > 0:
