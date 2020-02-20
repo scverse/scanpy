@@ -19,6 +19,7 @@ from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, Any
 from .._compat import Literal
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
+from ._utils import _pca_with_sparse
 
 # install dask if available
 try:
@@ -378,6 +379,7 @@ def pca(
     copy: bool = False,
     chunked: bool = False,
     chunk_size: Optional[int] = None,
+    pca_sparse: bool = False
 ) -> Union[AnnData, np.ndarray, spmatrix]:
     """\
     Principal component analysis [Pedregosa11]_.
@@ -412,6 +414,8 @@ def pca(
         .. versionchanged:: 1.4.5
            Default value changed from `'auto'` to `'arpack'`.
 
+        If `sparse_input` is `True`, automatically uses the `'arpack'` solver.
+
     random_state
         Change to use different initial states for the optimization.
     return_info
@@ -433,6 +437,9 @@ def pca(
     chunk_size
         Number of observations to include in each chunk.
         Required if `chunked=True` was passed.
+    pca_sparse
+        If `True`, uses the `'arpack'` solver in `scipy.sparse.linalg.svds`
+        with implicit mean centering on the sparse data.
 
     Returns
     -------
@@ -502,7 +509,7 @@ def pca(
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
-    else:
+    elif (not pca_sparse or not issparse(adata_comp.X)):
         if zero_center is None:
             zero_center = not issparse(adata_comp.X)
         if zero_center:
@@ -528,6 +535,16 @@ def pca(
             pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
             X = adata_comp.X
         X_pca = pca_.fit_transform(X)
+    else:
+        from sklearn.decomposition import PCA
+        X = adata_comp.X
+        X_pca,components,sigma = _pca_with_sparse(X,n_comps)
+        #this is just a wrapper for the results
+        pca_ = PCA(n_components=n_comps,svd_solver='arpack')
+        pca_.components_ = components
+        pca_.explained_variance_ = sigma
+        pca_.explained_variance_ratio_ = (pca_.explained_variance_ /
+                                          pca_.explained_variance_.sum())
 
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
 
@@ -536,7 +553,8 @@ def pca(
         adata.uns['pca'] = {}
         adata.uns['pca']['params'] = {
             'zero_center': zero_center,
-            'use_highly_variable': use_highly_variable
+            'use_highly_variable': use_highly_variable,
+            'pca_sparse': pca_sparse
         }
         if use_highly_variable:
             adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))

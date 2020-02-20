@@ -1,6 +1,9 @@
 import numpy as np
 from scipy import sparse
 import numba
+import scipy as sp
+from sklearn.utils.extmath import svd_flip
+from sklearn.utils import check_array
 
 
 def _get_mean_var(X, *, axis=0):
@@ -13,6 +16,52 @@ def _get_mean_var(X, *, axis=0):
     # enforce R convention (unbiased estimator) for variance
     var *= X.shape[axis] / (X.shape[axis] - 1)
     return mean, var
+
+
+def _pca_with_sparse(X, npcs, mu=None):
+    X = check_array(X, accept_sparse=['csr', 'csc'])
+
+    if mu is None:
+        mu = X.mean(0).A.flatten()[None, :]
+    mdot = mu.dot
+    mmat = mdot
+    mhdot = mu.T.dot
+    mhmat = mu.T.dot
+    Xdot = X.dot
+    Xmat = Xdot
+    XHdot = X.T.conj().dot
+    XHmat = XHdot
+    ones = np.ones(X.shape[0])[None, :].dot
+
+    def matvec(x):
+        return Xdot(x) - mdot(x)
+
+    def matmat(x):
+        return Xmat(x) - mmat(x)
+
+    def rmatvec(x):
+        return XHdot(x) - mhdot(ones(x))
+
+    def rmatmat(x):
+        return XHmat(x) - mhmat(ones(x))
+
+    XL = sp.sparse.linalg.LinearOperator(
+        matvec=matvec,
+        dtype=X.dtype,
+        matmat=matmat,
+        shape=X.shape,
+        rmatvec=rmatvec,
+        rmatmat=rmatmat,
+    )
+
+    u, s, v = sp.sparse.linalg.svds(XL, solver='arpack', k=npcs)
+
+    idx = np.argsort(-s)
+    u = u[:, idx]
+    v = v[idx, :]
+    u, v = svd_flip(u, v)
+
+    return u * s, v, s[idx]
 
 
 def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
