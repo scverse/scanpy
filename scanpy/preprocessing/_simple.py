@@ -414,7 +414,7 @@ def pca(
         .. versionchanged:: 1.4.5
            Default value changed from `'auto'` to `'arpack'`.
 
-        If `sparse_input` is `True`, automatically uses the `'arpack'` solver.
+        If `pca_sparse` is `True`, automatically uses the `'arpack'` solver.
 
     random_state
         Change to use different initial states for the optimization.
