@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from anndata import AnnData
 
 
@@ -78,7 +79,7 @@ def wishbone(
 
     >>> sc.pl.tsne(adata, color=['trajectory_wishbone', 'branch_wishbone'])
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ', 'MALAT1']
-    >>> sce.pl.wishbone(adata, markers, legend_prop={"size": 10}, show=True)
+    >>> sce.pl.wishbone_marker_trajectory(adata, markers, show=True)
 
     For further demonstration of Wishbone methods and visualization please follow the
     notebooks in the package `Wishbone_for_single_cell_RNAseq.ipynb
@@ -136,3 +137,22 @@ def wishbone(
         adata.obs['branch_wishbone'] = np.asarray(branches)
 
     return
+
+
+def load_plot_helper(func):
+    from functools import wraps
+
+    @wraps(func)
+    def wb_wrapper(df, adata):
+        from wishbone.wb import SCData, Wishbone
+
+        scdata = SCData(df)
+        scdata.diffusion_eigenvectors = pd.DataFrame(
+            adata.obsm['X_diffmap'], index=adata.obs_names
+        )
+        wb = Wishbone(scdata)
+        wb.trajectory = adata.obs["trajectory_wishbone"]
+        wb.branch = adata.obs["branch_wishbone"]
+        return wb
+
+    return wb_wrapper
