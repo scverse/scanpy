@@ -1775,7 +1775,7 @@ def dotplot(
 
     Returns
     -------
-    List of :class:`~matplotlib.axes.Axes`
+    :class:`~matplotlib.figure.Figure`
 
     Examples
     -------
@@ -2085,7 +2085,7 @@ def dotplot(
     size_legend.set_ylim(ymin, ymax + 0.5)
 
     _utils.savefig_or_show('dotplot', show=show, save=save)
-    return axs
+    return dot_ax.figure
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
