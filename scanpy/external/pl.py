@@ -288,7 +288,7 @@ def wishbone_marker_trajectory(
         Computed values for the second branch.
     """
 
-    @load_plot_helper
+    @_load_plot_helper
     def scdata_converter(func):
         return func
 
