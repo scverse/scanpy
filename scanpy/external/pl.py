@@ -15,7 +15,7 @@ from ..plotting._docs import (
 )
 from ..plotting._tools.scatterplots import _wraps_plot_scatter
 from ..plotting import _utils
-from .tl._wishbone import load_plot_helper
+from .tl._wishbone import load_plot_helper as _load_plot_helper
 
 
 @_wraps_plot_scatter
