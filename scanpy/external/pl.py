@@ -1,8 +1,8 @@
-from typing import Union, List, Optional, Any
+from typing import Union, List, Optional, Any, Tuple, Collection
 
 import numpy as np
-from anndata import AnnData
 import matplotlib.pyplot as plt
+from anndata import AnnData
 from matplotlib.axes import Axes
 
 from .._utils import _doc_params
@@ -14,6 +14,8 @@ from ..plotting._docs import (
     doc_show_save_ax,
 )
 from ..plotting._tools.scatterplots import _wraps_plot_scatter
+from ..plotting import _utils
+from .tl._wishbone import _anndata_to_wishbone
 
 
 @_wraps_plot_scatter
@@ -234,3 +236,90 @@ def sam(
         if colorbar:
             plt.colorbar(cax, ax=axes)
     return axes
+
+
+@_doc_params(show_save_ax=doc_show_save_ax)
+def wishbone_marker_trajectory(
+    adata: AnnData,
+    markers: Collection[str],
+    no_bins: int = 150,
+    smoothing_factor: int = 1,
+    min_delta: float = 0.1,
+    show_variance: bool = False,
+    figsize: Optional[Tuple[float, float]] = None,
+    return_fig: bool = False,
+    show: bool = True,
+    save: Optional[Union[str, bool]] = None,
+    ax: Optional[Axes] = None,
+):
+    """\
+    Plot marker trends along trajectory, and return trajectory branches for further
+    analysis and visualization (heatmap, etc..)
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    markers
+        Iterable of markers/genes to be plotted.
+    show_variance
+        Logical indicating if the trends should be accompanied with variance.
+    no_bins
+        Number of bins for calculating marker density.
+    smoothing_factor
+        Parameter controlling the degree of smoothing.
+    min_delta
+        Minimum difference in marker expression after normalization to show
+        separate trends for the two branches.
+    figsize
+        width, height
+    return_fig
+        Return the matplotlib figure.
+    {show_save_ax}
+
+    Returns
+    -------
+    Updates `adata` with the following fields:
+
+    `trunk_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
+        Computed values before branching
+    `branch1_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
+        Computed values for the first branch
+    `branch2_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
+        Computed values for the second branch.
+    """
+
+    wb = _anndata_to_wishbone(adata)
+
+    if figsize is None:
+        width = 2 * len(markers)
+        height = 0.75 * len(markers)
+    else:
+        width, height = figsize
+
+    if ax:
+        fig = ax.figure
+    else:
+        fig = plt.figure(figsize=(width, height))
+        ax = plt.gca()
+
+    ret_values, fig, ax = wb.plot_marker_trajectory(
+        markers=markers,
+        show_variance=show_variance,
+        no_bins=no_bins,
+        smoothing_factor=smoothing_factor,
+        min_delta=min_delta,
+        fig=fig,
+        ax=ax,
+    )
+
+    adata.uns['trunk_wishbone'] = ret_values['Trunk']
+    adata.uns['branch1_wishbone'] = ret_values['Branch1']
+    adata.uns['branch2_wishbone'] = ret_values['Branch2']
+
+    _utils.savefig_or_show('wishbone_trajectory', show=show, save=save)
+
+    if return_fig:
+        return fig
+    elif not show:
+        return ax

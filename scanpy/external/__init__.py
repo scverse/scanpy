@@ -68,6 +68,7 @@ Clustering and trajectory inference
 
    tl.phenograph
    tl.harmony_timeseries
+   tl.wishbone
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,6 +90,7 @@ Plotting: PL
    pl.trimap
    tl.palantir
    pl.sam
+   pl.wishbone
 
 Exporting
 ---------
