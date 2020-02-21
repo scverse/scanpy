@@ -1,5 +1,5 @@
 import collections.abc as cabc
-from typing import Iterable
+from typing import Iterable, Collection, Union
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ def wishbone(
     branch: bool = True,
     k: int = 15,
     components: Iterable[int] = (1, 2, 3),
-    num_waypoints: int = 250,
+    num_waypoints: Union[int, Collection] = 250,
 ):
     """\
     Wishbone identifies bifurcating developmental trajectories from single-cell data
@@ -104,13 +104,14 @@ def wishbone(
             f"Start cell {start_cell} not found in data. "
             "Please rerun with correct start cell."
         )
-    if isinstance(num_waypoints, (cabc.Sequence, np.ndarray)):
-        if np.setdiff1d(num_waypoints, adata.obs.index).size > 0:
+    if isinstance(num_waypoints, cabc.Collection):
+        diff = np.setdiff1d(num_waypoints, adata.obs.index)
+        if diff.size > 0:
             logging.warning(
                 "Some of the specified waypoints are not in the data. "
                 "These will be removed"
             )
-            num_waypoints = np.intersect1d(num_waypoints, adata.obs.index).tolist()
+            num_waypoints = diff.tolist()
     elif num_waypoints > adata.shape[0]:
         raise RuntimeError(
             "num_waypoints parameter is higher than the number of cells in the "
