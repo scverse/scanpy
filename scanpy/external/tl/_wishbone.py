@@ -61,9 +61,9 @@ def wishbone(
     **Loading Data and Pre-processing**
 
     >>> adata = sc.datasets.pbmc3k()
-    >>> sc.preprocessing.normalize_per_cell(adata)
-    >>> sc.preprocessing.pca(adata)
-    >>> sc.tools.tsne(adata=adata, n_pcs=5, perplexity=30)
+    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.pca(adata)
+    >>> sc.tl.tsne(adata=adata, n_pcs=5, perplexity=30)
     >>> sc.pp.neighbors(adata, n_pcs=15, n_neighbors=10)
     >>> sc.tl.diffmap(adata, n_comps=10)
 
@@ -142,33 +142,14 @@ def wishbone(
     return
 
 
-def load_plot_helper(func):
-    """\
-    Helper function to plot wishbone trajectories. It wraps a wishbone data object
-    passed to plotting methods in wishbone.
+def _anndata_to_wishbone(adata: AnnData):
+    from wishbone.wb import SCData, Wishbone
 
-    Parameters
-    ----------
-    func
-        Decorated function
-
-    Returns
-    -------
-        wrapper function
-    """
-    from functools import wraps
-
-    @wraps(func)
-    def wb_wrapper(df, adata):
-        from wishbone.wb import SCData, Wishbone
-
-        scdata = SCData(df)
-        scdata.diffusion_eigenvectors = pd.DataFrame(
-            adata.obsm['X_diffmap'], index=adata.obs_names
-        )
-        wb = Wishbone(scdata)
-        wb.trajectory = adata.obs["trajectory_wishbone"]
-        wb.branch = adata.obs["branch_wishbone"]
-        return wb
-
-    return wb_wrapper
+    scdata = SCData(adata.to_df())
+    scdata.diffusion_eigenvectors = pd.DataFrame(
+        adata.obsm['X_diffmap'], index=adata.obs_names
+    )
+    wb = Wishbone(scdata)
+    wb.trajectory = adata.obs["trajectory_wishbone"]
+    wb.branch = adata.obs["branch_wishbone"]
+    return wb

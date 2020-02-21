@@ -15,7 +15,7 @@ from ..plotting._docs import (
 )
 from ..plotting._tools.scatterplots import _wraps_plot_scatter
 from ..plotting import _utils
-from .tl._wishbone import load_plot_helper as _load_plot_helper
+from .tl._wishbone import _anndata_to_wishbone
 
 
 @_wraps_plot_scatter
@@ -250,6 +250,7 @@ def wishbone_marker_trajectory(
     return_fig: bool = False,
     show: bool = True,
     save: Optional[Union[str, bool]] = None,
+    ax: Optional[Axes] = None,
 ):
     """\
     Plot marker trends along trajectory, and return trajectory branches for further
@@ -288,11 +289,7 @@ def wishbone_marker_trajectory(
         Computed values for the second branch.
     """
 
-    @_load_plot_helper
-    def scdata_converter(func):
-        return func
-
-    wb = scdata_converter(adata.to_df(), adata)
+    wb = _anndata_to_wishbone(adata)
 
     if figsize is None:
         width = 2 * len(markers)
@@ -300,8 +297,11 @@ def wishbone_marker_trajectory(
     else:
         width, height = figsize
 
-    fig = plt.figure(figsize=(width, height))
-    ax = plt.gca()
+    if ax:
+        fig = ax.figure
+    else:
+        fig = plt.figure(figsize=(width, height))
+        ax = plt.gca()
 
     ret_values, fig, ax = wb.plot_marker_trajectory(
         markers=markers,
