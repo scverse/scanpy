@@ -313,9 +313,9 @@ def wishbone_marker_trajectory(
         ax=ax,
     )
 
-    adata.uns['Trunk_wishbone'] = ret_values['Trunk']
-    adata.uns['Branch1_wishbone'] = ret_values['Branch1']
-    adata.uns['Branch2_wishbone'] = ret_values['Branch2']
+    adata.uns['trunk_wishbone'] = ret_values['Trunk']
+    adata.uns['branch1_wishbone'] = ret_values['Branch1']
+    adata.uns['branch2_wishbone'] = ret_values['Branch2']
 
     _utils.savefig_or_show('wishbone_trajectory', show=show, save=save)
 
