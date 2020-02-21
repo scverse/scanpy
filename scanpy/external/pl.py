@@ -272,7 +272,7 @@ def wishbone_marker_trajectory(
         separate trends for the two branches.
     figsize
         width, height
-    return_fig:
+    return_fig
         Return the matplotlib figure.
     {show_save_ax}
 
