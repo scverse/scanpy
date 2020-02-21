@@ -342,7 +342,7 @@ def highly_variable_genes(
                 df['highly_variable_nbatches'].values,
                 df['highly_variable_intersection'].values,
             ])
-            dtypes.append([
+            dtypes.extend([
                 ('highly_variable_nbatches', int),
                 ('highly_variable_intersection', np.bool_),
             ])
