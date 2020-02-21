@@ -34,7 +34,29 @@ def scvi(
     ----------
     adata
         An anndata file with `X` attribute representing raw counts.
-
+    n_hidden
+        Number of nodes per hidden layer
+    n_latent
+        Dimensionality of the latent space
+    n_layers
+        Number of hidden layers used for encoder and decoder NNs
+    dispersion
+        One of the following
+        * ``'gene'`` - dispersion parameter of NB is constant per gene across cells
+        * ``'gene-batch'`` - dispersion can differ between different batches
+        * ``'gene-label'`` - dispersion can differ between different labels
+        * ``'gene-cell'`` - dispersion can differ for every gene in every cell
+    n_epochs: int = 1,
+    train_size: int = 1.0,
+    use_cuda: bool = True,
+    metrics_to_monitor: List = None,
+    metrics_monitor_frequency: int = None,
+    return_posterior: bool = False,
+    return_info: bool = False,
+    copy: bool = False,
+    batch_label: str = 'batch_indices',
+    ctype_label: str = 'cell_types',
+    class_label: str = 'labels',
     """
 
     try:
@@ -71,7 +93,6 @@ def scvi(
         trainer.model, dataset, indices=np.arange(len(dataset))
     )
     latent, batch_indices, labels = full.sequential().get_latent()
-    batch_indices = batch_indices.ravel()
 
     if copy:
         adata = adata.copy()
