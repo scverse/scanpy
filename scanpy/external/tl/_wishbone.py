@@ -89,7 +89,7 @@ def wishbone(
         from wishbone.core import wishbone as c_wishbone
     except ImportError:
         raise ImportError(
-            "\nplease install wishbone:\n\n" "\thttps://github.com/dpeerlab/wishbone"
+            "\nplease install wishbone:\n\n\thttps://github.com/dpeerlab/wishbone"
         )
 
     # Start cell index
