@@ -538,11 +538,11 @@ def pca(
     else:
         from sklearn.decomposition import PCA
         X = adata_comp.X
-        X_pca,components,sigma = _pca_with_sparse(X,n_comps)
+        X_pca,components = _pca_with_sparse(X,n_comps)
         #this is just a wrapper for the results
         pca_ = PCA(n_components=n_comps,svd_solver='arpack')
         pca_.components_ = components
-        pca_.explained_variance_ = sigma
+        pca_.explained_variance_ = X_pca.var(0)
         pca_.explained_variance_ratio_ = (pca_.explained_variance_ /
                                           pca_.explained_variance_.sum())
 
