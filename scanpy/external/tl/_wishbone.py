@@ -1,8 +1,11 @@
+import collections.abc as cabc
 from typing import Iterable
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+
+from ... import logging
 
 
 def wishbone(
@@ -74,7 +77,7 @@ def wishbone(
 
     >>> sce.tl.wishbone(
     ...     adata=adata, start_cell='ACAAGAGACTTATC-1',
-    ...     components_list=[2, 3], num_waypoints=150,
+    ...     components=[2, 3], num_waypoints=150,
     ... )
 
     **Visualizing Wishbone results**
@@ -98,17 +101,16 @@ def wishbone(
     s = np.where(adata.obs_names == start_cell)[0]
     if len(s) == 0:
         raise RuntimeError(
-            "Start cell %s not found in data. Please rerun with correct start "
-            "cell" % start_cell
+            f"Start cell {start_cell} not found in data. "
+            "Please rerun with correct start cell."
         )
-    if isinstance(num_waypoints, list):
+    if isinstance(num_waypoints, (cabc.Sequence, np.ndarray)):
         if np.setdiff1d(num_waypoints, adata.obs.index).size > 0:
-            print(
-                "Some of the specified waypoints are not in the data. These will "
-                "be removed"
+            logging.warning(
+                "Some of the specified waypoints are not in the data. "
+                "These will be removed"
             )
-            num_waypoints = np.intersect1d(num_waypoints, adata.obs.index)
-            num_waypoints = num_waypoints.tolist()
+            num_waypoints = np.intersect1d(num_waypoints, adata.obs.index).tolist()
     elif num_waypoints > adata.shape[0]:
         raise RuntimeError(
             "num_waypoints parameter is higher than the number of cells in the "
@@ -138,8 +140,6 @@ def wishbone(
     if branch:
         branches = res["Branches"].astype(int)
         adata.obs['branch_wishbone'] = np.asarray(branches)
-
-    return
 
 
 def _anndata_to_wishbone(adata: AnnData):
