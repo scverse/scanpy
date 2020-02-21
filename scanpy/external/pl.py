@@ -241,7 +241,7 @@ def sam(
 @_doc_params(show_save_ax=doc_show_save_ax)
 def wishbone_marker_trajectory(
     adata: AnnData,
-    markers: List[str],
+    markers: Collection[str],
     no_bins: int = 150,
     smoothing_factor: int = 1,
     min_delta: float = 0.1,
