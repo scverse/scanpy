@@ -1,4 +1,4 @@
-from typing import Union, List, Optional, Any, Tuple
+from typing import Union, List, Optional, Any, Tuple, Collection
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -280,11 +280,11 @@ def wishbone_marker_trajectory(
     -------
     Updates `adata` with the following fields:
 
-    `Trunk_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
+    `trunk_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
         Computed values before branching
-    `Branch1_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
+    `branch1_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
         Computed values for the first branch
-    `Branch2_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
+    `branch2_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
         Computed values for the second branch.
     """
 

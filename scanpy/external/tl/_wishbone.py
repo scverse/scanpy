@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import numpy as np
 import pandas as pd
 from anndata import AnnData
@@ -36,7 +38,7 @@ def wishbone(
         Use True for Wishbone and False for Wanderlust.
     k
         Number of nearest neighbors for graph construction.
-    components_list
+    components
         Components to use for running Wishbone.
     num_waypoints
         Number of waypoints to sample.
@@ -115,8 +117,9 @@ def wishbone(
     s = s[0]
 
     # Run the algorithm
+    components = list(components)
     res = c_wishbone(
-        adata.obsm['X_diffmap'][:, components_list],
+        adata.obsm['X_diffmap'][:, components],
         s=s,
         k=k,
         l=k,
