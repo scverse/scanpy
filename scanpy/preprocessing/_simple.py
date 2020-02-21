@@ -537,10 +537,16 @@ def pca(
         X_pca = pca_.fit_transform(X)
     else:
         from sklearn.decomposition import PCA
+
+        if svd_solver not in ['lobpcg','arpack']:
+            logg.info('solver {svd_solver} is not a valid option for '
+                      '`scipy.sparse.linalg.svds`. Defaulting to `\'arpack\'`')
+            svd_solver = 'arpack'
+
         X = adata_comp.X
-        X_pca,components = _pca_with_sparse(X,n_comps)
+        X_pca,components = _pca_with_sparse(X,n_comps,solver = svd_solver)
         #this is just a wrapper for the results
-        pca_ = PCA(n_components=n_comps,svd_solver='arpack')
+        pca_ = PCA(n_components=n_comps,svd_solver=svd_solver)
         pca_.components_ = components
         pca_.explained_variance_ = X_pca.var(0)
         pca_.explained_variance_ratio_ = (pca_.explained_variance_ /
