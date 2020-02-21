@@ -8,7 +8,7 @@ def wishbone(
     start_cell: str,
     branch: bool = True,
     k: int = 15,
-    components_list: list = [1, 2, 3],
+    components: Iterable[int] = (1, 2, 3),
     num_waypoints: int = 250,
 ):
     """\
