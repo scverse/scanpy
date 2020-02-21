@@ -143,6 +143,19 @@ def wishbone(
 
 
 def load_plot_helper(func):
+    """\
+    Helper function to plot wishbone trajectories. It wraps a wishbone data object
+    passed to plotting methods in wishbone.
+
+    Parameters
+    ----------
+    func
+        Decorated function
+
+    Returns
+    -------
+        wrapper function
+    """
     from functools import wraps
 
     @wraps(func)
