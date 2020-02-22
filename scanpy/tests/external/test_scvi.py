@@ -19,10 +19,8 @@ def test_scvi():
         use_cuda=False,
         n_epochs=1,
         n_latent=n_latent,
-        use_highly_variable_genes=False,
         return_posterior=True,
         batch_key='batch',
-        # subset_genes=1,
     )
     assert adata.obsm['X_scvi'].shape == (n_samples * 2, n_latent)
     assert adata.obsm['X_scvi_denoised'].shape == adata.shape

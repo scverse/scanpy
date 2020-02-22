@@ -105,7 +105,7 @@ def scvi(
 
     if subset_genes is not None:
         adata_subset = adata[:, subset_genes]
-    elif use_highly_variable_genes:
+    elif use_highly_variable_genes and "highly_variable" in adata.var:
         adata_subset = adata[:, adata.var["highly_variable"]]
     else:
         adata_subset = adata
