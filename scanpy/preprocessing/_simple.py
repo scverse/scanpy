@@ -532,7 +532,8 @@ def pca(
                 '    the first component, e.g., might be heavily influenced by different means\n'
                 '    the following components often resemble the exact PCA very closely'
             )
-            pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
+            pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state,
+                                algorithm=svd_solver)
             X = adata_comp.X
         X_pca = pca_.fit_transform(X)
     else:
