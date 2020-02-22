@@ -1,31 +1,36 @@
 import numpy as np
+import pandas as pd
+import scipy as sp
 
-from typing import Optional, List
+from typing import Optional, Sequence, Union
 from anndata import AnnData
 
 
 def scvi(
     adata: AnnData,
     n_hidden: int = 128,
-    n_latent: int = 30,
-    n_layers: int = 2,
+    n_latent: int = 10,
+    n_layers: int = 1,
     dispersion: str = "gene",
-    n_epochs: int = 1,
+    n_epochs: int = 400,
     train_size: int = 1.0,
-    use_cuda: bool = True,
-    metrics_to_monitor: List = None,
-    metrics_monitor_frequency: int = None,
-    return_posterior: bool = False,
-    return_info: bool = False,
+    batch_key: Optional[str] = None,
+    use_highly_variable_genes: bool = True,
+    subset_genes: Optional[Sequence[Union[int, str]]] = None,
+    metrics_to_monitor: Optional[Sequence[str]] = None,
+    metrics_monitor_frequency: Optional[int] = None,
     copy: bool = False,
-    batch_label: str = 'batch_indices',
-    ctype_label: str = 'cell_types',
-    class_label: str = 'labels',
+    use_cuda: bool = True,
+    return_posterior: bool = True,
 ) -> Optional[AnnData]:
     """\
     SCVI [Lopez18]_.
 
-    Fits SCVI model onto raw count data given in the anndata object
+    Fits scVI model onto raw count data given an anndata object
+
+    scVI uses stochastic optimization and deep neural networks to aggregate information 
+    across similar cells and genes and to approximate the distributions that underlie
+    observed expression values, while accounting for batch effects and limited sensitivity.
 
     .. note::
         More information and bug reports `here <https://github.com/YosefLab/scVI>`__.
@@ -33,7 +38,7 @@ def scvi(
     Parameters
     ----------
     adata
-        An anndata file with `X` attribute representing raw counts.
+        An anndata file with `X` attribute of unnormalized count data
     n_hidden
         Number of nodes per hidden layer
     n_latent
@@ -42,21 +47,37 @@ def scvi(
         Number of hidden layers used for encoder and decoder NNs
     dispersion
         One of the following
-        * ``'gene'`` - dispersion parameter of NB is constant per gene across cells
-        * ``'gene-batch'`` - dispersion can differ between different batches
-        * ``'gene-label'`` - dispersion can differ between different labels
-        * ``'gene-cell'`` - dispersion can differ for every gene in every cell
-    n_epochs: int = 1,
-    train_size: int = 1.0,
-    use_cuda: bool = True,
-    metrics_to_monitor: List = None,
-    metrics_monitor_frequency: int = None,
-    return_posterior: bool = False,
-    return_info: bool = False,
-    copy: bool = False,
-    batch_label: str = 'batch_indices',
-    ctype_label: str = 'cell_types',
-    class_label: str = 'labels',
+        * `'gene'` - dispersion parameter of NB is constant per gene across cells
+        * `'gene-batch'` - dispersion can differ between different batches
+        * `'gene-label'` - dispersion can differ between different labels
+        * `'gene-cell'` - dispersion can differ for every gene in every cell
+    n_epochs
+        Number of epochs to train
+    train_size
+        The train size, either a float between 0 and 1 or an integer for the number of training samples to use
+    batch_key
+        Column name in anndata.obs for batches
+    use_highly_variable_genes
+        If true, uses only the genes in anndata.var["highly_variable"]
+    subset_genes
+        Optional list of indices or gene names to subset anndata. 
+        If not None, use_highly_variable_genes is ignored
+    copy
+        If true, a copy of anndata is returned
+    use_cuda
+        Default: True
+    
+    Returns
+    -------
+    If `copy` is true, anndata is returned.
+    If `return_posterior` is true, the posterior object is returned
+    If both `copy` and `return_posterior` are true, 
+    a tuple of anndata and the posterior are returned in that order. 
+
+    `adata.obsm['X_scvi']` stores the latent representations
+    `adata.obsm['X_scvi_denoised']` stores the normalized mean of the negative binomial
+    `adata.obsm['X_scvi_sample_rate']` stores the mean of the negative binomial
+
     """
 
     try:
@@ -64,13 +85,43 @@ def scvi(
         from scvi.inference import UnsupervisedTrainer
         from scvi.dataset import AnnDatasetFromAnnData
     except ImportError:
-        raise ImportError("Please install scvi package via")
+        raise ImportError(
+            "Please install scvi package from https://github.com/YosefLab/scVI"
+        )
 
-    dataset = AnnDatasetFromAnnData(adata, use_raw=True)
+    # check if observations are unnormalized using first 10
+    # code from: https://github.com/theislab/dca/blob/89eee4ed01dd969b3d46e0c815382806fbfc2526/dca/io.py#L63-L69
+    if len(adata) > 10:
+        X_subset = adata.X[:10]
+    else:
+        X_subset = adata.X
+    norm_error = (
+        'Make sure that the dataset (adata.X) contains unnormalized count data.'
+    )
+    if sp.sparse.issparse(X_subset):
+        assert (X_subset.astype(int) != X_subset).nnz == 0, norm_error
+    else:
+        assert np.all(X_subset.astype(int) == X_subset), norm_error
+
+    if subset_genes is not None:
+        adata_subset = adata[:, subset_genes]
+    elif use_highly_variable_genes:
+        adata_subset = adata[:, adata.var["highly_variable"]]
+    else:
+        adata_subset = adata
+
+    if batch_key is not None:
+        codes, uniques = pd.factorize(adata_subset.obs[batch_key])
+        adata_subset.obs['_tmp_scvi_batch'] = codes
+        n_batches = len(uniques)
+    else:
+        n_batches = 0
+
+    dataset = AnnDatasetFromAnnData(adata_subset, batch_label='_tmp_scvi_batch')
 
     vae = VAE(
         dataset.nb_genes,
-        n_batch=dataset.n_batches,
+        n_batch=n_batches,
         n_labels=dataset.n_labels,
         n_hidden=n_hidden,
         n_latent=n_latent,
@@ -101,8 +152,9 @@ def scvi(
     adata.obsm['X_scvi_denoised'] = full.sequential().get_sample_scale()
     adata.obsm['X_scvi_sample_rate'] = full.sequential().imputation()
 
-    if return_posterior:
+    if copy and return_posterior:
         return adata, full
-    else:
+    elif copy:
         return adata
-
+    elif return_posterior:
+        return full
