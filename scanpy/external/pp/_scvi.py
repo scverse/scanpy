@@ -17,8 +17,6 @@ def scvi(
     batch_key: Optional[str] = None,
     use_highly_variable_genes: bool = True,
     subset_genes: Optional[Sequence[Union[int, str]]] = None,
-    metrics_to_monitor: Optional[Sequence[str]] = None,
-    metrics_monitor_frequency: Optional[int] = None,
     copy: bool = False,
     use_cuda: bool = True,
     return_posterior: bool = True,
@@ -64,8 +62,10 @@ def scvi(
         If not None, use_highly_variable_genes is ignored
     copy
         If true, a copy of anndata is returned
+    return_posterior
+        If true, posterior object is returned
     use_cuda
-        Default: True
+        If true, uses cuda
     
     Returns
     -------
@@ -130,12 +130,7 @@ def scvi(
     )
 
     trainer = UnsupervisedTrainer(
-        model=vae,
-        gene_dataset=dataset,
-        use_cuda=use_cuda,
-        metrics_to_monitor=metrics_to_monitor,
-        frequency=metrics_monitor_frequency,
-        train_size=train_size,
+        model=vae, gene_dataset=dataset, use_cuda=use_cuda, train_size=train_size,
     )
 
     trainer.train(n_epochs=n_epochs)
