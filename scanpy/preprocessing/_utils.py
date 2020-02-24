@@ -3,7 +3,7 @@ from scipy import sparse
 import numba
 import scipy as sp
 from sklearn.utils.extmath import svd_flip
-from sklearn.utils import check_array
+from sklearn.utils import check_array, check_random_state
 
 
 def _get_mean_var(X, *, axis=0):
@@ -18,7 +18,10 @@ def _get_mean_var(X, *, axis=0):
     return mean, var
 
 
-def _pca_with_sparse(X, npcs, solver='arpack', mu=None):
+def _pca_with_sparse(X, npcs, solver='arpack', mu=None, random_state=None):
+    random_state = check_random_state(random_state)
+    np.random.set_state(random_state.get_state())
+    random_init = np.random.rand(np.min(X.shape))
     X = check_array(X, accept_sparse=['csr', 'csc'])
 
     if mu is None:
@@ -54,7 +57,7 @@ def _pca_with_sparse(X, npcs, solver='arpack', mu=None):
         rmatmat=rmatmat,
     )
 
-    u, s, v = sp.sparse.linalg.svds(XL, solver=solver, k=npcs)
+    u, s, v = sp.sparse.linalg.svds(XL, solver=solver, k=npcs, v0=random_init)
 
     idx = np.argsort(-s)
     s = s[idx]
