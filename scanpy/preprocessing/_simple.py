@@ -9,7 +9,7 @@ import numba
 import numpy as np
 import scipy as sp
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
-from sklearn.utils import sparsefuncs
+from sklearn.utils import sparsefuncs, check_random_state
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 
@@ -18,8 +18,7 @@ from .._settings import settings as sett
 from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, AnyRandom
 from .._compat import Literal
 from ._distributed import materialize_as_ndarray
-from ._utils import _get_mean_var
-from ._utils import _pca_with_sparse
+from ._utils import _get_mean_var,_pca_with_sparse
 
 # install dask if available
 try:
@@ -490,6 +489,7 @@ def pca(
         else:
             n_comps = N_PCS
 
+    random_state = check_random_state(random_state)
     start = logg.info(f'computing PCA with n_comps = {n_comps}')
 
     if chunked:
@@ -545,7 +545,7 @@ def pca(
             svd_solver = 'arpack'
 
         X = adata_comp.X
-        X_pca,components = _pca_with_sparse(X,n_comps,solver = svd_solver)
+        X_pca,components = _pca_with_sparse(X,n_comps,solver = svd_solver,random_state=random_state)
         #this is just a wrapper for the results
         pca_ = PCA(n_components=n_comps,svd_solver=svd_solver)
         pca_.components_ = components
