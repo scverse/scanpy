@@ -719,12 +719,7 @@ def violin(
         g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
         # don't really know why this gives a warning without passing `order`
         g = g.map(
-            sns.violinplot,
-            y,
-            orient='vertical',
-            scale=scale,
-            order=keys,
-            **kwds,
+            sns.violinplot, y, orient='vertical', scale=scale, order=keys, **kwds,
         )
         if stripplot:
             g = g.map(
