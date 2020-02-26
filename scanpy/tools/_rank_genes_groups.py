@@ -482,6 +482,7 @@ def rank_genes_groups(
     ns = np.count_nonzero(groups_masks, axis=1)
     logg.debug(f'consider {groupby!r} groups:')
     logg.debug(f'with sizes: {ns}')
+    del ns
 
     ireference = None
     if reference != 'rest':
