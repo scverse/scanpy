@@ -530,7 +530,7 @@ def rank_genes_groups(
             X, adata_comp.var_names, n_genes_user, grouping, groups_order, **kwds
         )
 
-    group_names = [*d['scores']]
+    group_names = [str(name) for name in d['scores']]
     n_groups = len(group_names)
     dtypes = {
         'names': ['U50'] * n_groups,
