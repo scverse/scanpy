@@ -405,7 +405,7 @@ def pca(
         `'arpack'`
           for the ARPACK wrapper in SciPy (:func:`~scipy.sparse.linalg.svds`)
         `'randomized'`
-          for the randomized algorithm due to Halko (2009).
+          for the randomized algorithm of [Halko09]_.
         `'auto'` (the default)
           chooses automatically depending on the size of the problem.
 

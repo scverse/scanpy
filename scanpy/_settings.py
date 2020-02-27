@@ -436,10 +436,9 @@ class ScanpyConfig:
             :func:`~IPython.display.set_matplotlib_formats` for details.
         """
         try:
-            import IPython
             if isinstance(ipython_format, str):
                 ipython_format = [ipython_format]
-            IPython.display.set_matplotlib_formats(*ipython_format)
+            self._set_matplotlib_formats(ipython_format)
         except Exception:
             pass
         from matplotlib import rcParams
@@ -460,6 +459,32 @@ class ScanpyConfig:
         if figsize is not None:
             rcParams['figure.figsize'] = figsize
         self._frameon = frameon
+
+    def _set_matplotlib_formats(self, formats: Iterable[str]):
+        """Since this is called on import, try to preserve previously set formats"""
+        from IPython.display import set_matplotlib_formats
+        from IPython import InteractiveShell
+        from matplotlib.figure import Figure
+
+        formats = set(formats)
+        shell = InteractiveShell.instance()
+        preset_mimes = {
+            mime for mime, fmtr in shell.display_formatter.formatters.items()
+            if fmtr.type_printers.get(Figure)
+        }
+
+        mime2fmts = {
+            'image/png': ['png2x', 'retina', 'png'],
+            'image/jpeg': ['jpg', 'jpeg'],
+            'image/svg+xml': ['svg'],
+            'application/pdf': ['pdf'],
+        }
+        for mime in preset_mimes:
+            # if a formatter for that mime has been activated before,
+            # we don’t decativate, but allow overriding png with png2x
+            if not (set(mime2fmts[mime]) & formats):
+                formats |= mime2fmts[mime][0]
+        set_matplotlib_formats(*formats)
 
     @staticmethod
     def _is_run_from_ipython():
