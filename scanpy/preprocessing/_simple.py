@@ -545,13 +545,13 @@ def pca(
             svd_solver = 'arpack'
 
         X = adata_comp.X
-        X_pca,components = _pca_with_sparse(X,n_comps,solver = svd_solver,random_state=random_state)
+        output = _pca_with_sparse(X,n_comps,solver = svd_solver)
         #this is just a wrapper for the results
+        X_pca = output['X_pca']
         pca_ = PCA(n_components=n_comps,svd_solver=svd_solver)
-        pca_.components_ = components
-        pca_.explained_variance_ = X_pca.var(0)
-        pca_.explained_variance_ratio_ = (pca_.explained_variance_ /
-                                          pca_.explained_variance_.sum())
+        pca_.components_ = output['components']
+        pca_.explained_variance_ = output['variance']
+        pca_.explained_variance_ratio_ = output['variance_ratio']
 
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
 
