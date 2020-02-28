@@ -877,19 +877,19 @@ def _get_data_points(
                 tuple(number - 1 for number in comp) for comp in components_list
             ]
     else:
-        data_points = [adata.obsm[basis_key][:, offset : offset + n_dims]]
+        data_points = [np.array(adata.obsm[basis_key])[:, offset : offset + n_dims]]
         components_list = []
-
-    if img_key is not None:
-        if f"tissue_{img_key}_scalef" in adata.uns['scalefactors'].keys():
+        if (
+            img_key is not None
+            and f"tissue_{img_key}_scalef" in adata.uns['scalefactors'].keys()
+        ):
             scalef_key = f"tissue_{img_key}_scalef"
             data_points[0] = np.multiply(
                 data_points[0], adata.uns['scalefactors'][scalef_key]
             )
-        else:
-            raise KeyError(
-                f"Could not find entry in `adata.uns` for '{img_key}'.\n"
-                f"Available keys are: {list(adata.uns['images'].keys())}."
+        elif img_key is None and basis_key == "X_spatial":
+            data_points[0][:, 1] = np.abs(
+                np.subtract(data_points[0][:, 1], np.max(data_points[0][:, 1]))
             )
 
     return data_points, components_list
