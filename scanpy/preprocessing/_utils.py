@@ -58,14 +58,23 @@ def _pca_with_sparse(X, npcs, solver='arpack', mu=None, random_state=None):
     )
 
     u, s, v = sp.sparse.linalg.svds(XL, solver=solver, k=npcs, v0=random_init)
-
-    idx = np.argsort(-s)
-    s = s[idx]
-    u = u[:, idx]
-    v = v[idx, :]
     u, v = svd_flip(u, v)
-    return u * s, v
+    idx = np.argsort(-s)
+    v = v[idx, :]
 
+    X_pca = (u * s)[:, idx]
+    ev = X_pca.var(0)
+
+    total_var = _get_mean_var(X)[1].sum()
+    ev_ratio = ev / total_var
+
+    output = {
+        'X_pca': X_pca,
+        'variance': ev,
+        'variance_ratio': ev_ratio,
+        'components': v,
+    }
+    return output
 
 def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
     """
