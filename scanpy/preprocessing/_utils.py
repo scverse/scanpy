@@ -76,6 +76,7 @@ def _pca_with_sparse(X, npcs, solver='arpack', mu=None, random_state=None):
     }
     return output
 
+
 def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
     """
     This code and internal functions are based on sklearns
