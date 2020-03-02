@@ -91,7 +91,8 @@ def scvi(
     `adata.obsm['X_scvi_sample_rate']` stores the mean of the negative binomial
     
     If linear_decoder is true:
-    `adata.uns['ldvae_loadings']` stores the per-gene weights in the linear decoder
+    `adata.uns['ldvae_loadings']` stores the per-gene weights in the linear decoder as a
+    genes by n_latent matrix
 
     """
 
