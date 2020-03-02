@@ -13,10 +13,12 @@ def scvi(
     n_layers: int = 1,
     dispersion: str = "gene",
     n_epochs: int = 400,
+    lr: int = 1e-3,
     train_size: int = 1.0,
     batch_key: Optional[str] = None,
     use_highly_variable_genes: bool = True,
     subset_genes: Optional[Sequence[Union[int, str]]] = None,
+    linear_decoder: bool = False, 
     copy: bool = False,
     use_cuda: bool = True,
     return_posterior: bool = True,
@@ -29,6 +31,12 @@ def scvi(
     scVI uses stochastic optimization and deep neural networks to aggregate information 
     across similar cells and genes and to approximate the distributions that underlie
     observed expression values, while accounting for batch effects and limited sensitivity.
+
+    To use a linear-decoded Variational AutoEncoder model (implementation of [Svensson20]_.),
+    set linear_decoded = True. Compared to standard VAE, this model is less powerful, but can 
+    be used to inspect which genes contribute to variation in the dataset. It may also be used
+    for all scVI tasks, like differential expression, batch correction, imputation, etc.
+    However, batch correction may be less powerful as it assumes a linear model.
 
     .. note::
         More information and bug reports `here <https://github.com/YosefLab/scVI>`__.
@@ -51,6 +59,8 @@ def scvi(
         * `'gene-cell'` - dispersion can differ for every gene in every cell
     n_epochs
         Number of epochs to train
+    lr
+        Learning rate
     train_size
         The train size, either a float between 0 and 1 or an integer for the number of training samples to use
     batch_key
@@ -60,6 +70,8 @@ def scvi(
     subset_genes
         Optional list of indices or gene names to subset anndata. 
         If not None, use_highly_variable_genes is ignored
+    linear_decoder
+        If true, uses LDVAE model, which is an implementation of [Svensson20]_.
     copy
         If true, a copy of anndata is returned
     return_posterior
@@ -77,11 +89,14 @@ def scvi(
     `adata.obsm['X_scvi']` stores the latent representations
     `adata.obsm['X_scvi_denoised']` stores the normalized mean of the negative binomial
     `adata.obsm['X_scvi_sample_rate']` stores the mean of the negative binomial
+    
+    If linear_decoder is true:
+    `adata.uns['ldvae_loadings']` stores the per-gene weights in the linear decoder
 
     """
 
     try:
-        from scvi.models import VAE
+        from scvi.models import VAE, LDVAE
         from scvi.inference import UnsupervisedTrainer
         from scvi.dataset import AnnDatasetFromAnnData
     except ImportError:
@@ -119,21 +134,33 @@ def scvi(
 
     dataset = AnnDatasetFromAnnData(adata_subset, batch_label='_tmp_scvi_batch')
 
-    vae = VAE(
-        dataset.nb_genes,
-        n_batch=n_batches,
-        n_labels=dataset.n_labels,
-        n_hidden=n_hidden,
-        n_latent=n_latent,
-        n_layers=n_layers,
-        dispersion=dispersion,
-    )
+    if linear_decoder: 
+        vae = LDVAE(
+            dataset.nb_genes,
+            n_batch=n_batches,
+            n_labels=dataset.n_labels,
+            n_hidden=n_hidden,
+            n_latent=n_latent,
+            n_layers_encoder=n_layers,
+            dispersion=dispersion,
+        )
+
+    else:
+        vae = VAE(
+            dataset.nb_genes,
+            n_batch=n_batches,
+            n_labels=dataset.n_labels,
+            n_hidden=n_hidden,
+            n_latent=n_latent,
+            n_layers=n_layers,
+            dispersion=dispersion,
+        )
 
     trainer = UnsupervisedTrainer(
         model=vae, gene_dataset=dataset, use_cuda=use_cuda, train_size=train_size,
     )
 
-    trainer.train(n_epochs=n_epochs)
+    trainer.train(n_epochs=n_epochs, lr=lr)
 
     full = trainer.create_posterior(
         trainer.model, dataset, indices=np.arange(len(dataset))
@@ -146,6 +173,10 @@ def scvi(
     adata.obsm['X_scvi'] = latent
     adata.obsm['X_scvi_denoised'] = full.sequential().get_sample_scale()
     adata.obsm['X_scvi_sample_rate'] = full.sequential().imputation()
+
+    if linear_decoder:
+        # loadings = padnavae.get_loadings()
+        adata.uns['ldvae_loadings'] = vae.get_loadings()
 
     if copy and return_posterior:
         return adata, full
