@@ -30,7 +30,7 @@ setup(
         louvain=['python-igraph', 'louvain>=0.6'],
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
-        rapids=['cudf', 'cuml', 'cugraph'],
+        rapids=['cudf>=0.9', 'cuml>=0.9', 'cugraph>=0.9'],
         magic=['magic-impute>=2.0'],
         doc=[
             'sphinx',
