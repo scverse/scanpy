@@ -139,7 +139,6 @@ def _wilcoxon(
     d = dict(scores={}, names={}, logfoldchanges={}, pvals={}, pvals_adj={})
 
     means = np.zeros((n_groups, n_genes))
-    vars = np.zeros((n_groups, n_genes))
     ns = np.count_nonzero(groups_masks, axis=1)
     # initialize space for z-scores
     scores = np.zeros(n_genes)
