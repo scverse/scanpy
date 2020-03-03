@@ -147,7 +147,7 @@ def _wilcoxon(
     if ireference is not None:
         for imask, mask in enumerate(groups_masks):
             # for fold-change only
-            means[imask], vars[imask] = _get_mean_var(X[mask])
+            means[imask], _ = _get_mean_var(X[mask])
 
             if imask == ireference:
                 continue
@@ -156,7 +156,7 @@ def _wilcoxon(
                 mask_rest = groups_masks[ireference]
             ns_rest = np.count_nonzero(mask_rest)
             # for fold-change only
-            mean_rest, var_rest = _get_mean_var(X[mask_rest])
+            mean_rest, _ = _get_mean_var(X[mask_rest])
 
             if ns_rest <= 25 or ns[imask] <= 25:
                 logg.hint(
@@ -260,8 +260,8 @@ def _wilcoxon(
         for imask, mask in enumerate(groups_masks):
             mask_rest = ~groups_masks[imask]
             # for fold-change
-            means[imask], vars[imask] = _get_mean_var(X[mask])
-            mean_rest, var_rest = _get_mean_var(X[mask_rest])
+            means[imask], _ = _get_mean_var(X[mask])
+            mean_rest, _ = _get_mean_var(X[mask_rest])
 
             scores[imask, :] = (
                 scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)
