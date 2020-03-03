@@ -63,7 +63,7 @@ def _pca_with_sparse(X, npcs, solver='arpack', mu=None, random_state=None):
     v = v[idx, :]
 
     X_pca = (u * s)[:, idx]
-    ev = X_pca.var(0)
+    ev = s[idx] ** 2 / (X.shape[0] - 1)
 
     total_var = _get_mean_var(X)[1].sum()
     ev_ratio = ev / total_var
