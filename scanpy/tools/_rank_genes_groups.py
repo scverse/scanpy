@@ -120,7 +120,6 @@ def _t_test(
 def _wilcoxon(
     X,
     var_names,
-    method,
     corr_method,
     expm1_func,
     rankby_abs,
@@ -510,7 +509,6 @@ def rank_genes_groups(
         d = _wilcoxon(
             X,
             adata_comp.var_names,
-            method,
             corr_method,
             expm1_func,
             rankby_abs,
