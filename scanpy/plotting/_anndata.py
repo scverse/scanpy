@@ -709,8 +709,8 @@ def violin(
 
     # set by default the violin plot cut=0 to limit the extend
     # of the violin plot (see stacked_violin code) for more info.
-    if 'cut' not in kwds:
-        kwds['cut'] = 0
+    kwds.setdefault('cut', 0)
+    kwds.setdefault('inner')
 
     if multi_panel and groupby is None and len(ys) == 1:
         # This is a quick and dirty way for adapting scales across several
@@ -719,13 +719,7 @@ def violin(
         g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
         # don't really know why this gives a warning without passing `order`
         g = g.map(
-            sns.violinplot,
-            y,
-            inner=None,
-            orient='vertical',
-            scale=scale,
-            order=keys,
-            **kwds,
+            sns.violinplot, y, orient='vertical', scale=scale, order=keys, **kwds,
         )
         if stripplot:
             g = g.map(
@@ -758,7 +752,6 @@ def violin(
                 x,
                 y=y,
                 data=obs_tidy,
-                inner=None,
                 order=order,
                 orient='vertical',
                 scale=scale,
@@ -1008,8 +1001,9 @@ def stacked_violin(
     # the extreme datapoints. Set to 0 to limit the violin range within
     # the range of the observed data (i.e., to have the same effect as
     # trim=True in ggplot.
-    if 'cut' not in kwds:
-        kwds['cut'] = 0
+    kwds.setdefault('cut', 0)
+    kwds.setdefault('inner')
+
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
@@ -1152,7 +1146,6 @@ def stacked_violin(
                 'variable',
                 y='value',
                 data=df,
-                inner=None,
                 orient='vertical',
                 scale=scale,
                 ax=ax,
@@ -1264,7 +1257,6 @@ def stacked_violin(
                 x=obs_tidy.index,
                 y=y,
                 data=obs_tidy,
-                inner=None,
                 orient='vertical',
                 scale=scale,
                 ax=ax,
