@@ -6,7 +6,7 @@ from typing import Iterable, Union, Optional
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from scipy.sparse import issparse
+from scipy.sparse import issparse, vstack
 
 from .. import _utils
 from .. import logging as logg
@@ -117,6 +117,53 @@ def _t_test(
     return d
 
 
+def _ranks_generator(X, mask=None, mask_rest=None):
+    CONST_MAX_SIZE = 10000000
+
+    n_genes = X.shape[1]
+
+    if issparse(X):
+        merge = lambda tpl: vstack(tpl).todense()
+        adapt = lambda X: X.todense()
+    else:
+        merge = np.vstack
+        adapt = lambda X: X
+
+    masked = mask is not None and mask_rest is not None
+
+    if masked:
+        n_cells = np.count_nonzero(mask) + np.count_nonzero(mask_rest)
+        get_chunk = lambda X, left, right: merge(
+            (X[mask, left:right], X[mask_rest, left:right])
+        )
+    else:
+        n_cells = X.shape[0]
+        get_chunk = lambda X, left, right: adapt(X[:, left:right])
+
+    # Now calculate gene expression ranking in chunkes:
+    chunk = []
+    # Calculate chunk frames
+    n_genes_max_chunk = floor(CONST_MAX_SIZE / n_cells)
+    if n_genes_max_chunk < n_genes:
+        chunk_index = n_genes_max_chunk
+        while chunk_index < n_genes:
+            chunk.append(chunk_index)
+            chunk_index = chunk_index + n_genes_max_chunk
+        chunk.append(n_genes)
+    else:
+        chunk.append(n_genes)
+
+    left = 0
+    # Calculate rank sums for each chunk for the current mask
+    for chunk_index, right in enumerate(chunk):
+
+        df = pd.DataFrame(data=get_chunk(X, left, right))
+        ranks = df.rank()
+        yield ranks, left, right
+
+        left = right
+
+
 def _wilcoxon(
     X,
     var_names,
@@ -130,8 +177,6 @@ def _wilcoxon(
 ):
     from scipy import stats
     from statsmodels.stats.multitest import multipletests
-
-    CONST_MAX_SIZE = 10000000
 
     n_genes = X.shape[1]
     n_groups = groups_masks.shape[0]
@@ -164,40 +209,9 @@ def _wilcoxon(
             n_active = ns[imask]
             m_active = ns_rest
 
-            # Now calculate gene expression ranking in chunkes:
-            chunk = []
-            # Calculate chunk frames
-            n_genes_max_chunk = floor(CONST_MAX_SIZE / (n_active + m_active))
-            if n_genes_max_chunk < n_genes:
-                chunk_index = n_genes_max_chunk
-                while chunk_index < n_genes:
-                    chunk.append(chunk_index)
-                    chunk_index = chunk_index + n_genes_max_chunk
-                chunk.append(n_genes)
-            else:
-                chunk.append(n_genes)
-
-            left = 0
             # Calculate rank sums for each chunk for the current mask
-            for chunk_index, right in enumerate(chunk):
-                # Check if issparse is true: AnnData objects are currently sparse.csr or ndarray.
-                if issparse(X):
-                    df1 = pd.DataFrame(data=X[mask, left:right].todense())
-                    df2 = pd.DataFrame(
-                        data=X[mask_rest, left:right].todense(),
-                        index=np.arange(start=n_active, stop=n_active + m_active),
-                    )
-                else:
-                    df1 = pd.DataFrame(data=X[mask, left:right])
-                    df2 = pd.DataFrame(
-                        data=X[mask_rest, left:right],
-                        index=np.arange(start=n_active, stop=n_active + m_active),
-                    )
-                df1 = df1.append(df2)
-                ranks = df1.rank()
-                # sum up adjusted_ranks to calculate W_m,n
+            for ranks, left, right in _ranks_generator(X, mask, mask_rest):
                 scores[left:right] = np.sum(ranks.loc[0:n_active, :])
-                left = right
 
             scores = (scores - (n_active * ((n_active + m_active + 1) / 2))) / sqrt(
                 (n_active * m_active / 12 * (n_active + m_active + 1))
@@ -231,29 +245,12 @@ def _wilcoxon(
     # ranking needs only to be done once (full mask)
     else:
         scores = np.zeros((n_groups, n_genes))
-        chunk = []
         n_cells = X.shape[0]
-        n_genes_max_chunk = floor(CONST_MAX_SIZE / n_cells)
-        if n_genes_max_chunk < n_genes:
-            chunk_index = n_genes_max_chunk
-            while chunk_index < n_genes:
-                chunk.append(chunk_index)
-                chunk_index = chunk_index + n_genes_max_chunk
-            chunk.append(n_genes)
-        else:
-            chunk.append(n_genes)
-        left = 0
-        for chunk_index, right in enumerate(chunk):
-            # Check if issparse is true
-            if issparse(X):
-                df1 = pd.DataFrame(data=X[:, left:right].todense())
-            else:
-                df1 = pd.DataFrame(data=X[:, left:right])
-            ranks = df1.rank()
+
+        for ranks, left, right in _ranks_generator(X):
             # sum up adjusted_ranks to calculate W_m,n
             for imask, mask in enumerate(groups_masks):
                 scores[imask, left:right] = np.sum(ranks.loc[mask, :])
-            left = right
 
         for imask, mask in enumerate(groups_masks):
             mask_rest = ~groups_masks[imask]
