@@ -1109,9 +1109,10 @@ def stacked_violin(
         gs = gs_fn(
             nrows=num_rows,
             ncols=2,
+            hspace=0,
             height_ratios=height_ratios,
-            width_ratios=[width, dendro_width],
             wspace=0.08,
+            width_ratios=[width, dendro_width],
         )
 
         axs_list = []
@@ -1248,6 +1249,7 @@ def stacked_violin(
         gs = gs_fn(
             nrows=num_rows,
             ncols=2,
+            hspace=0,  # This will also affect the gap between dendrogram and plots
             height_ratios=height_ratios,
             wspace=0.2,
             width_ratios=[width - vargroups_width, vargroups_width],
