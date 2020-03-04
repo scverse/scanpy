@@ -18,10 +18,12 @@ def scvi(
     batch_key: Optional[str] = None,
     use_highly_variable_genes: bool = True,
     subset_genes: Optional[Sequence[Union[int, str]]] = None,
-    linear_decoder: bool = False, 
+    linear_decoder: bool = False,
     copy: bool = False,
     use_cuda: bool = True,
     return_posterior: bool = True,
+    trainer_kwargs: dict = {},
+    model_kwargs: dict = {},
 ) -> Optional[AnnData]:
     """\
     SCVI [Lopez18]_.
@@ -78,6 +80,10 @@ def scvi(
         If true, posterior object is returned
     use_cuda
         If true, uses cuda
+    trainer_kwargs
+        Extra arguments for UnsupervisedTrainer
+    model kwargs
+        Extra arguments for VAE or LDVAE model
     
     Returns
     -------
@@ -92,7 +98,7 @@ def scvi(
     
     If linear_decoder is true:
     `adata.uns['ldvae_loadings']` stores the per-gene weights in the linear decoder as a
-    genes by n_latent matrix
+    genes by n_latent matrix.
 
     """
 
@@ -135,15 +141,16 @@ def scvi(
 
     dataset = AnnDatasetFromAnnData(adata_subset, batch_label='_tmp_scvi_batch')
 
-    if linear_decoder: 
+    if linear_decoder:
         vae = LDVAE(
-            dataset.nb_genes,
+            n_input=dataset.nb_genes,
             n_batch=n_batches,
             n_labels=dataset.n_labels,
             n_hidden=n_hidden,
             n_latent=n_latent,
             n_layers_encoder=n_layers,
             dispersion=dispersion,
+            **model_kwargs,
         )
 
     else:
@@ -155,10 +162,15 @@ def scvi(
             n_latent=n_latent,
             n_layers=n_layers,
             dispersion=dispersion,
+            **model_kwargs,
         )
 
     trainer = UnsupervisedTrainer(
-        model=vae, gene_dataset=dataset, use_cuda=use_cuda, train_size=train_size,
+        model=vae,
+        gene_dataset=dataset,
+        use_cuda=use_cuda,
+        train_size=train_size,
+        **trainer_kwargs,
     )
 
     trainer.train(n_epochs=n_epochs, lr=lr)
@@ -176,8 +188,9 @@ def scvi(
     adata.obsm['X_scvi_sample_rate'] = full.sequential().imputation()
 
     if linear_decoder:
-        # loadings = padnavae.get_loadings()
-        adata.uns['ldvae_loadings'] = vae.get_loadings()
+        loadings = vae.get_loadings()
+        df = pd.DataFrame(loadings, index=adata_subset.var_names)
+        adata.uns['ldvae_loadings'] = df
 
     if copy and return_posterior:
         return adata, full

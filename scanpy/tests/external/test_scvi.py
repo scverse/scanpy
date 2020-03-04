@@ -5,6 +5,7 @@ import numpy as np
 
 from anndata import AnnData
 
+
 def test_scvi_linear():
     n_samples = 4
     n_genes = 7
@@ -14,6 +15,7 @@ def test_scvi_linear():
     ad2 = AnnData(batch2)
     adata = ad1.concatenate(ad2, batch_categories=['test1', 'test2'])
     n_latent = 30
+    gene_subset = ['1', '4', '6']
     sce.pp.scvi(
         adata,
         use_cuda=False,
@@ -21,13 +23,17 @@ def test_scvi_linear():
         n_latent=n_latent,
         return_posterior=True,
         batch_key='batch',
-        linear_decoder=True
+        linear_decoder=True,
+        subset_genes=gene_subset,
     )
+
     assert adata.obsm['X_scvi'].shape == (n_samples * 2, n_latent)
-    assert adata.obsm['X_scvi_denoised'].shape == adata.shape
-    assert adata.obsm['X_scvi_sample_rate'].shape == adata.shape
-    assert adata.uns['ldvae_loadings'].shape == (n_genes, n_latent)
- 
+    assert adata.obsm['X_scvi_denoised'].shape == (n_samples * 2, len(gene_subset))
+    assert adata.obsm['X_scvi_sample_rate'].shape == (n_samples * 2, len(gene_subset))
+    assert adata.uns['ldvae_loadings'].shape == (len(gene_subset), n_latent)
+    assert len(adata.uns['ldvae_loadings'].index) == len(gene_subset)
+    assert set(adata.uns['ldvae_loadings'].index) == set(gene_subset)
+
 
 def test_scvi():
     n_samples = 4
@@ -45,6 +51,7 @@ def test_scvi():
         n_latent=n_latent,
         return_posterior=True,
         batch_key='batch',
+        model_kwargs={'reconstruction_loss': 'nb'},
     )
     assert adata.obsm['X_scvi'].shape == (n_samples * 2, n_latent)
     assert adata.obsm['X_scvi_denoised'].shape == adata.shape
