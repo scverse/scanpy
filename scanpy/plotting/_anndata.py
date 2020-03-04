@@ -1,6 +1,7 @@
 """Plotting functions for AnnData.
 """
 import collections.abc as cabc
+from abc import ABC
 from itertools import product
 from typing import Optional, Union, Mapping  # Special
 from typing import Sequence, Collection, Iterable  # ABCs
@@ -51,6 +52,10 @@ VALID_LEGENDLOCS = {
 # TODO: is that all?
 _Basis = Literal['pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr']
 _VarNames = Union[str, Sequence[str]]
+
+
+class _AxesSubplot(Axes, SubplotBase, ABC):
+    """Intersection between Axes and SubplotBase: Has methods of both"""
 
 
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
@@ -880,7 +885,7 @@ def stacked_violin(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     row_palette: str = 'muted',
-    ax: Optional[SubplotBase] = None,
+    ax: Optional[_AxesSubplot] = None,
     **kwds,
 ):
     """\
