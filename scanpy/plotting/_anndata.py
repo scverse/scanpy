@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from cycler import Cycler
-from matplotlib.axes import Axes, SubplotBase
+from matplotlib.axes import Axes
 from pandas.api.types import is_categorical_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
