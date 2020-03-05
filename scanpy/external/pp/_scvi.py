@@ -66,7 +66,9 @@ def scvi(
     train_size
         The train size, either a float between 0 and 1 or an integer for the number of training samples to use
     batch_key
-        Column name in anndata.obs for batches
+        Column name in anndata.obs for batches. 
+        If None, no batch correction is performed
+        If not None, batch correction is performed per batch category
     use_highly_variable_genes
         If true, uses only the genes in anndata.var["highly_variable"]
     subset_genes
@@ -82,7 +84,7 @@ def scvi(
         If true, uses cuda
     trainer_kwargs
         Extra arguments for UnsupervisedTrainer
-    model kwargs
+    model_kwargs
         Extra arguments for VAE or LDVAE model
     
     Returns
