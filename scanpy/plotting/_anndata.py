@@ -952,6 +952,8 @@ def stacked_violin(
     """
     import seaborn as sns  # Slow import, only import if called
 
+    ax_parent = ax
+    del ax
     if use_raw is None and adata.raw is not None:
         use_raw = True
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
@@ -1093,7 +1095,7 @@ def stacked_violin(
         # each row is one violin plot. Second column is reserved for dendrogram (if any)
         # if var_group_positions is defined, a new row is added
         fig, gs = make_grid_spec(
-            ax or (width, height),
+            ax_parent or (width, height),
             nrows=num_rows,
             ncols=2,
             hspace=0,
@@ -1209,7 +1211,6 @@ def stacked_violin(
                 ax.set_xticklabels(var_names)
 
         ax0.tick_params(axis='x', labelrotation=90, labelsize='small')
-
     else:
         # plot image in which x = group by and y = var_names
         dendro_height = 3 if dendrogram else 0
@@ -1227,7 +1228,7 @@ def stacked_violin(
         height_ratios = [dendro_height] + ([1] * len(var_names))
 
         fig, gs = make_grid_spec(
-            ax or (width, height),
+            ax_parent or (width, height),
             nrows=num_rows,
             ncols=2,
             hspace=0,  # This will also affect the gap between dendrogram and plots
