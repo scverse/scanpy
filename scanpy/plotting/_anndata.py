@@ -1,7 +1,6 @@
 """Plotting functions for AnnData.
 """
 import collections.abc as cabc
-from abc import ABC
 from itertools import product
 from typing import Optional, Union, Mapping  # Special
 from typing import Sequence, Collection, Iterable  # ABCs
@@ -26,8 +25,8 @@ from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes
-from ._utils import ColorLike, _FontWeight, _FontSize
+from ._utils import scatter_base, scatter_group, setup_axes, make_grid_spec
+from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
 
@@ -52,10 +51,6 @@ VALID_LEGENDLOCS = {
 # TODO: is that all?
 _Basis = Literal['pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr']
 _VarNames = Union[str, Sequence[str]]
-
-
-class _AxesSubplot(Axes, SubplotBase, ABC):
-    """Intersection between Axes and SubplotBase: Has methods of both"""
 
 
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
@@ -959,13 +954,6 @@ def stacked_violin(
 
     if use_raw is None and adata.raw is not None:
         use_raw = True
-
-    ax_parent = ax
-    if ax_parent is not None:
-        ax_parent.set_frame_on(False)
-        ax_parent.set_xticks([])
-        ax_parent.set_yticks([])
-
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
     )
@@ -1101,17 +1089,11 @@ def stacked_violin(
             height_ratios = [0.2, 0.05] + [height / len(categories)] * len(categories)
             categories = [None, None] + list(categories)
 
-        if ax_parent is None:
-            fig = pl.figure(figsize=(width, height))
-            gs_fn = gridspec.GridSpec
-        else:
-            fig = ax_parent.figure
-            gs_fn = ax_parent.get_subplotspec().subgridspec
-
         # define a layout of nrows = len(categories) rows x 2 columns
         # each row is one violin plot. Second column is reserved for dendrogram (if any)
         # if var_group_positions is defined, a new row is added
-        gs = gs_fn(
+        fig, gs = make_grid_spec(
+            ax or (width, height),
             nrows=num_rows,
             ncols=2,
             hspace=0,
@@ -1238,20 +1220,14 @@ def stacked_violin(
         else:
             width, height = figsize
 
-        if ax_parent is None:
-            fig = pl.figure(figsize=(width, height))
-            gs_fn = gridspec.GridSpec
-        else:
-            fig = ax_parent.figure
-            gs_fn = ax_parent.get_subplotspec().subgridspec
-
         # define a layout of nrows = var_names x 1 columns
         # if plot dendrogram a row is added
         # each row is one violin plot.
         num_rows = len(var_names) + 1  # +1 to account for dendrogram
         height_ratios = [dendro_height] + ([1] * len(var_names))
 
-        gs = gs_fn(
+        fig, gs = make_grid_spec(
+            ax or (width, height),
             nrows=num_rows,
             ncols=2,
             hspace=0,  # This will also affect the gap between dendrogram and plots
