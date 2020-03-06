@@ -411,7 +411,7 @@ def rank_genes_groups(
     # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-    logg.warn(
+    logg.warning(
         "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
     )
 
