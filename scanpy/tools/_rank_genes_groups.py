@@ -330,7 +330,7 @@ def rank_genes_groups(
     rankby_abs: bool = False,
     key_added: Optional[str] = None,
     copy: bool = False,
-    method: _Method = 't-test_overestim_var',
+    method: _Method = 't-test',
     corr_method: _CorrMethod = 'benjamini-hochberg',
     layer: Optional[str] = None,
     **kwds,
@@ -411,6 +411,10 @@ def rank_genes_groups(
     # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
+    logg.warn(
+        "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+    )
+
     if 'only_positive' in kwds:
         rankby_abs = not kwds.pop('only_positive')  # backwards compat
 
