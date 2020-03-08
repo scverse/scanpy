@@ -70,3 +70,10 @@ def test_toggleswitch():
 
 def test_pbmc68k_reduced():
     sc.datasets.pbmc68k_reduced()
+
+
+def test_download_failure():
+    from urllib.error import HTTPError
+
+    with pytest.raises(HTTPError):
+        sc.datasets.ebi_expression_atlas("not_a_real_accession")

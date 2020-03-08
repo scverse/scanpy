@@ -876,7 +876,8 @@ def _download(url: str, path: Path):
             urlretrieve(url, str(path), reporthook=update_to)
         except Exception:
             # Make sure file doesn’t exist half-downloaded
-            path.unlink(missing_ok=True)
+            if path.is_file():
+                path.unlink()
             raise
 
 
