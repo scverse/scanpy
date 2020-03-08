@@ -278,12 +278,14 @@ def _read_v3_10x_h5(filename, *, start=None):
 
 
 def read_visium(
-    filename: Union[str, Path],
+    path: Union[str, Path],
     genome: Optional[str] = None,
+    *,
+    count_file: str = "filtered_feature_bc_matrix.h5",
     load_images: Optional[bool] = True,
 ) -> AnnData:
     """\
-    Read 10x-Genomics-formatted hdf5 file.
+    Read 10x-Genomics-formatted visum dataset.
 
     In addition to reading regular 10x output,
     this looks for the `spatial` folder and loads images,
@@ -296,10 +298,13 @@ def read_visium(
 
     Parameters
     ----------
-    filename
-        Path to a 10x hdf5 file.
+    path
+        Path to directory for visium datafiles.
     genome
         Filter expression to genes within this genome.
+    count_file
+        Which file in the passed directory to use as the count file. Typically would be one of:
+        'filtered_feature_bc_matrix.h5' or 'raw_feature_bc_matrix.h5'.
 
     Returns
     -------
@@ -323,18 +328,15 @@ def read_visium(
     :attr:`~anndata.AnnData.obsm`\\ `['X_spatial']`
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
-    adata = read_10x_h5(filename, genome)
+    path = Path(path)
+    adata = read_10x_h5(path / count_file, genome=genome)
 
     if load_images:
-        if not isinstance(filename, Path):
-            filename = Path(filename)
-
-        filedir = filename.parents[0]
         files = dict(
-            tissue_positions_file=filedir / Path('spatial/tissue_positions_list.csv'),
-            scalefactors_json_file=filedir / Path('spatial/scalefactors_json.json'),
-            hires_image=filedir / Path('spatial/tissue_hires_image.png'),
-            lowres_image=filedir / Path('spatial/tissue_lowres_image.png'),
+            tissue_positions_file=path / 'spatial/tissue_positions_list.csv',
+            scalefactors_json_file=path / 'spatial/scalefactors_json.json',
+            hires_image=path / 'spatial/tissue_hires_image.png',
+            lowres_image=path / 'spatial/tissue_lowres_image.png',
         )
 
         # check if files exists, continue if images are missing
@@ -346,7 +348,7 @@ def read_visium(
                         f"Could not find '{f}'."
                     )
                 else:
-                    raise ValueError(f"Could not find '{f}'")
+                    raise OSError(f"Could not find '{f}'")
 
         adata.uns['images'] = dict()
         for res in ['hires', 'lowres']:
@@ -382,7 +384,7 @@ def read_visium(
             inplace=True,
         )
 
-    return adata.copy()
+    return adata
 
 
 def read_10x_mtx(
