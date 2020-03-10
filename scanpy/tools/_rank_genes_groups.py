@@ -123,8 +123,8 @@ def _ranks_generator(X, mask=None, mask_rest=None):
     n_genes = X.shape[1]
 
     if issparse(X):
-        merge = lambda tpl: vstack(tpl).todense()
-        adapt = lambda X: X.todense()
+        merge = lambda tpl: vstack(tpl).toarray()
+        adapt = lambda X: X.toarray()
     else:
         merge = np.vstack
         adapt = lambda X: X
