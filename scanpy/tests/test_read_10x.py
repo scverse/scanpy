@@ -95,3 +95,11 @@ def test_read_visium_counts():
     spec_genome_v3 = sc.read_10x_h5(h5_pth, genome='GRCh38')
     nospec_genome_v3 = sc.read_10x_h5(h5_pth)
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
+
+
+def test_10x_h5_gex():
+    # Tests that gex option doesn't, say, make the function return None
+    h5_pth = ROOT / '3.0.0' / 'filtered_feature_bc_matrix.h5'
+    assert_anndata_equal(
+        sc.read_10x_h5(h5_pth, gex_only=True), sc.read_10x_h5(h5_pth, gex_only=False)
+    )
