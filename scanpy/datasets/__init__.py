@@ -299,6 +299,40 @@ def pbmc3k_processed() -> AnnData:
     return adata
 
 
+def _download_visium_dataset(sample_id: str, base_dir: Path = settings.datasetdir):
+    """
+    Params
+    ------
+    sample_id
+        String name of example visium dataset.
+    base_dir
+        Where to download the dataset to.
+    """
+    import tarfile
+
+    url_prefix = f'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/{sample_id}/'
+
+    sample_dir = base_dir / sample_id
+    sample_dir.mkdir(exist_ok=True)
+
+    # Download spatial data
+    tar_filename = f"{sample_id}_spatial.tar.gz"
+    tar_pth = sample_dir / tar_filename
+    _utils.check_presence_download(
+        filename=tar_pth, backup_url=url_prefix + tar_filename
+    )
+    with tarfile.open(tar_pth) as f:
+        for el in f:
+            if not (sample_dir / el.name).exists():
+                f.extract(el, sample_dir)
+
+    # Download counts
+    _utils.check_presence_download(
+        filename=sample_dir / "filtered_feature_bc_matrix.h5",
+        backup_url=url_prefix + f"{sample_id}_filtered_feature_bc_matrix.h5",
+    )
+
+
 def visium_sge(
     sample_id: Literal[
         'V1_Breast_Cancer_Block_A_Section_1',
@@ -326,44 +360,5 @@ def visium_sge(
     -------
     Annotated data matrix.
     """
-
-    # setting filenames, tarfilenames, backup_urls
-    # tarfilenames and backup_urls will be used for downloading data base
-    files = dict(
-        counts=settings.datasetdir / f'{sample_id}_filtered_feature_bc_matrix.h5',
-        tissue_positions_file=settings.datasetdir / 'spatial/tissue_positions_list.csv',
-        scalefactors_json_file=settings.datasetdir / 'spatial/scalefactors_json.json',
-        hires_image=settings.datasetdir / 'spatial/tissue_hires_image.png',
-        lowres_image=settings.datasetdir / 'spatial/tissue_lowres_image.png',
-    )
-
-    tarfiles = dict(
-        tissue_positions_file=settings.datasetdir / f'{sample_id}_spatial.tar',
-        scalefactors_json_file=settings.datasetdir / f'{sample_id}_spatial.tar',
-        hires_image=settings.datasetdir / f'{sample_id}_spatial.tar',
-        lowres_image=settings.datasetdir / f'{sample_id}_spatial.tar',
-    )
-
-    url_prefix = (
-        f'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/{sample_id}/{sample_id}'
-    )
-    backup_urls = dict(
-        counts=f'{url_prefix}_filtered_feature_bc_matrix.h5',
-        tissue_positions_file=f'{url_prefix}_spatial.tar.gz',
-        scalefactors_json_file=f'{url_prefix}_spatial.tar.gz',
-        hires_image=f'{url_prefix}_spatial.tar.gz',
-        lowres_image=f'{url_prefix}_spatial.tar.gz',
-    )
-
-    # download and untar files if necessary
-    for f in tqdm(files, desc='Files'):
-        if f in tarfiles:
-            _utils.check_presence_download_untar(
-                filename=files[f], tarfilename=tarfiles[f], backup_url=backup_urls[f]
-            )
-        else:
-            _utils.check_presence_download(filename=files[f], backup_url=backup_urls[f])
-
-    adata = read_visium(files['counts'])
-
-    return adata
+    _download_visium_dataset(sample_id)
+    return read_visium(settings.datasetdir / sample_id)
