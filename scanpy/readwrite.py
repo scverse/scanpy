@@ -186,9 +186,10 @@ def read_10x_h5(
                 list(map(lambda x: x == 'Gene Expression', adata.var['feature_types'])),
             ]
         if adata.is_view:
-            return adata.copy()
+            adata = adata.copy()
     else:
-        return _read_legacy_10x_h5(filename, genome=genome, start=start)
+        adata = _read_legacy_10x_h5(filename, genome=genome, start=start)
+    return adata
 
 
 def _read_legacy_10x_h5(filename, *, genome=None, start=None):
