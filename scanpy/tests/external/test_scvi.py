@@ -5,6 +5,8 @@ import numpy as np
 
 from anndata import AnnData
 
+pytest.importorskip("scvi", minversion=sce.pp._scvi.MIN_VERSION)
+
 
 def test_scvi_linear():
     n_samples = 4
