@@ -5,7 +5,7 @@ import scipy as sp
 from typing import Optional, Sequence, Union
 from anndata import AnnData
 
-MIN_VERSION = "0.5.0"
+MIN_VERSION = "0.6.1"
 
 
 def scvi(
@@ -143,7 +143,7 @@ def scvi(
     else:
         n_batches = 0
 
-    dataset = AnnDatasetFromAnnData(adata_subset, batch_label='_tmp_scvi_batch')
+    dataset = AnnDatasetFromAnnData(adata_subset.copy(), batch_label='_tmp_scvi_batch')
 
     if linear_decoder:
         vae = LDVAE(
