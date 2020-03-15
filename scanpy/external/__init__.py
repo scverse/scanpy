@@ -90,7 +90,7 @@ Plotting: PL
    pl.trimap
    tl.palantir
    pl.sam
-   pl.wishbone
+   pl.wishbone_marker_trajectory
 
 Exporting
 ---------
