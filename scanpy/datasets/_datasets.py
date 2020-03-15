@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -295,7 +296,7 @@ def pbmc3k_processed() -> AnnData:
     return adata
 
 
-def _download_visium_dataset(sample_id: str, base_dir: Path = settings.datasetdir):
+def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
     """
     Params
     ------
@@ -305,6 +306,9 @@ def _download_visium_dataset(sample_id: str, base_dir: Path = settings.datasetdi
         Where to download the dataset to.
     """
     import tarfile
+
+    if base_dir is None:
+        base_dir = settings.datasetdir
 
     url_prefix = f'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/{sample_id}/'
 
