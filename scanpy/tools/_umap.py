@@ -131,7 +131,10 @@ def umap(
     if hasattr(init_coords, "dtype"):
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
+    if random_state != 0:
+        adata.uns['umap']['params']['random_state'] = random_state
     random_state = check_random_state(random_state)
+
     neigh_params = adata.uns['neighbors']['params']
     X = _choose_representation(
         adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None), silent=True)
