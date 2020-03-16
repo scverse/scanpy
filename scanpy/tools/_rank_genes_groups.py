@@ -28,23 +28,12 @@ def _select_top_n(scores, n_top, n_from):
 
 
 def _t_test(
-    X,
-    var_names,
-    method,
-    corr_method,
-    expm1_func,
-    rankby_abs,
-    n_genes_user,
-    groups_order,
-    groups_masks,
-    ireference,
+    X, method, groups_order, groups_masks, ireference,
 ):
     from scipy import stats
-    from statsmodels.stats.multitest import multipletests
 
     n_genes = X.shape[1]
     n_groups = groups_masks.shape[0]
-    d = dict(scores={}, names={}, logfoldchanges={}, pvals={}, pvals_adj={})
 
     # loop over all masks and compute means, variances and sample numbers
     means = np.zeros((n_groups, n_genes))
@@ -90,34 +79,15 @@ def _t_test(
                 equal_var=False,  # Welch's
             )
 
-        # Fold change
-        foldchanges = (expm1_func(mean_group) + 1e-9) / (
-            expm1_func(mean_rest) + 1e-9
-        )  # add small value to remove 0's
-
         # I think it's only nan when means are the same and vars are 0
         scores[np.isnan(scores)] = 0
         # This also has to happen for Benjamini Hochberg
         pvals[np.isnan(pvals)] = 1
 
-        if corr_method == 'benjamini-hochberg':
-            _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
-        elif corr_method == 'bonferroni':
-            pvals_adj = np.minimum(pvals * n_genes, 1.0)
-
-        scores_sort = np.abs(scores) if rankby_abs else scores
-        global_indices = _select_top_n(scores_sort, n_genes_user, n_genes)
-
-        d['scores'][group_name] = scores[global_indices]
-        d['logfoldchanges'][group_name] = np.log2(foldchanges[global_indices])
-        d['names'][group_name] = var_names[global_indices]
-        d['pvals'][group_name] = pvals[global_indices]
-        d['pvals_adj'][group_name] = pvals_adj[global_indices]
-
-    return d
+        yield group_name, scores, pvals, mean_group, mean_rest
 
 
-def _ranks_generator(X, mask=None, mask_rest=None):
+def _ranks(X, mask=None, mask_rest=None):
     CONST_MAX_SIZE = 10000000
 
     n_genes = X.shape[1]
@@ -165,22 +135,12 @@ def _ranks_generator(X, mask=None, mask_rest=None):
 
 
 def _wilcoxon(
-    X,
-    var_names,
-    corr_method,
-    expm1_func,
-    rankby_abs,
-    n_genes_user,
-    groups_order,
-    groups_masks,
-    ireference,
+    X, groups_order, groups_masks, ireference,
 ):
     from scipy import stats
-    from statsmodels.stats.multitest import multipletests
 
     n_genes = X.shape[1]
     n_groups = groups_masks.shape[0]
-    d = dict(scores={}, names={}, logfoldchanges={}, pvals={}, pvals_adj={})
 
     means = np.zeros((n_groups, n_genes))
     ns = np.count_nonzero(groups_masks, axis=1)
@@ -189,16 +149,14 @@ def _wilcoxon(
     # First loop: Loop over all genes
     if ireference is not None:
         for imask, mask in enumerate(groups_masks):
-            # for fold-change only
-            means[imask], _ = _get_mean_var(X[mask])
 
             if imask == ireference:
                 continue
 
-            else:
-                mask_rest = groups_masks[ireference]
+            mask_rest = groups_masks[ireference]
             ns_rest = np.count_nonzero(mask_rest)
             # for fold-change only
+            means[imask], _ = _get_mean_var(X[mask])
             mean_rest, _ = _get_mean_var(X[mask_rest])
 
             if ns_rest <= 25 or ns[imask] <= 25:
@@ -210,7 +168,7 @@ def _wilcoxon(
             m_active = ns_rest
 
             # Calculate rank sums for each chunk for the current mask
-            for ranks, left, right in _ranks_generator(X, mask, mask_rest):
+            for ranks, left, right in _ranks(X, mask, mask_rest):
                 scores[left:right] = np.sum(ranks.loc[0:n_active, :])
 
             scores = (scores - (n_active * ((n_active + m_active + 1) / 2))) / sqrt(
@@ -219,35 +177,14 @@ def _wilcoxon(
             scores[np.isnan(scores)] = 0
             pvals = 2 * stats.distributions.norm.sf(np.abs(scores))
 
-            if corr_method == 'benjamini-hochberg':
-                # set Nan values to 1 to properly convert using Benhjamini Hochberg
-                pvals[np.isnan(pvals)] = 1
-                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
-            elif corr_method == 'bonferroni':
-                pvals_adj = np.minimum(pvals * n_genes, 1.0)
-
-            # Fold change
-            foldchanges = (expm1_func(means[imask]) + 1e-9) / (
-                expm1_func(mean_rest) + 1e-9
-            )  # add small value to remove 0's
-            scores_sort = np.abs(scores) if rankby_abs else scores
-            global_indices = _select_top_n(scores_sort, n_genes_user, n_genes)
-
-            d['scores'][groups_order[imask]] = scores[global_indices]
-            d['logfoldchanges'][groups_order[imask]] = np.log2(
-                foldchanges[global_indices]
-            )
-            d['names'][groups_order[imask]] = var_names[global_indices]
-            d['pvals'][groups_order[imask]] = pvals[global_indices]
-            d['pvals_adj'][groups_order[imask]] = pvals_adj[global_indices]
-
+            yield groups_order[imask], scores, pvals, means[imask], mean_rest
     # If no reference group exists,
     # ranking needs only to be done once (full mask)
     else:
         scores = np.zeros((n_groups, n_genes))
         n_cells = X.shape[0]
 
-        for ranks, left, right in _ranks_generator(X):
+        for ranks, left, right in _ranks(X):
             # sum up adjusted_ranks to calculate W_m,n
             for imask, mask in enumerate(groups_masks):
                 scores[imask, left:right] = np.sum(ranks.loc[mask, :])
@@ -264,42 +201,16 @@ def _wilcoxon(
             scores[np.isnan(scores)] = 0
             pvals = 2 * stats.distributions.norm.sf(np.abs(scores[imask, :]))
 
-            if corr_method == 'benjamini-hochberg':
-                # set NaN values to 1 to convert using Benjamini Hochberg
-                pvals[np.isnan(pvals)] = 1
-                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
-            elif corr_method == 'bonferroni':
-                pvals_adj = np.minimum(pvals * n_genes, 1.0)
-
-            # Fold change
-            foldchanges = (expm1_func(means[imask]) + 1e-9) / (
-                expm1_func(mean_rest) + 1e-9
-            )  # add small value to remove 0's
-
-            scores_sort = np.abs(scores) if rankby_abs else scores
-            global_indices = _select_top_n(scores_sort[imask], n_genes_user, n_genes)
-
-            d['scores'][groups_order[imask]] = scores[imask, global_indices]
-            d['logfoldchanges'][groups_order[imask]] = np.log2(
-                foldchanges[global_indices]
-            )
-            d['names'][groups_order[imask]] = var_names[global_indices]
-            d['pvals'][groups_order[imask]] = pvals[global_indices]
-            d['pvals_adj'][groups_order[imask]] = pvals_adj[global_indices]
-
-    return d
+            yield groups_order[imask], scores[imask], pvals, means[imask], mean_rest
 
 
-def _logreg(X, var_names, n_genes_user, grouping, groups_order, **kwds):
+def _logreg(X, grouping, groups_order, **kwds):
     # if reference is not set, then the groups listed will be compared to the rest
     # if reference is set, then the groups listed will be compared only to the other groups listed
     from sklearn.linear_model import LogisticRegression
 
     if len(groups_order) == 1:
         raise Exception('Cannot perform logistic regression on a single cluster.')
-
-    n_genes = X.shape[1]
-    d = dict(scores={}, names={})
 
     clf = LogisticRegression(**kwds)
     clf.fit(X, grouping.cat.codes)
@@ -310,14 +221,10 @@ def _logreg(X, var_names, n_genes_user, grouping, groups_order, **kwds):
         else:
             scores = scores_all[igroup]
 
-        global_indices = _select_top_n(scores, n_genes_user, n_genes)
+        yield group_name, scores, None, None, None
 
-        d['scores'][group_name] = scores[global_indices]
-        d['names'][group_name] = var_names[global_indices]
         if len(groups_order) <= 2:
             break
-
-    return d
 
 
 def rank_genes_groups(
@@ -477,6 +384,8 @@ def rank_genes_groups(
     # make sure indices are not OoB in case there are less genes than n_genes
     if n_genes_user > X.shape[1]:
         n_genes_user = X.shape[1]
+    # in the following, n_genes is simply another name for the total number of genes
+    n_genes = X.shape[1]
 
     ns = np.count_nonzero(groups_masks, axis=1)
     logg.debug(f'consider {groupby!r} groups:')
@@ -493,31 +402,12 @@ def rank_genes_groups(
         expm1_func = np.expm1
 
     if method in {'t-test', 't-test_overestim_var'}:
-        d = _t_test(
-            X,
-            adata_comp.var_names,
-            method,
-            corr_method,
-            expm1_func,
-            rankby_abs,
-            n_genes_user,
-            groups_order,
-            groups_masks,
-            ireference,
+        generate_test_results = _t_test(
+            X, method, groups_order, groups_masks, ireference
         )
 
     elif method == 'wilcoxon':
-        d = _wilcoxon(
-            X,
-            adata_comp.var_names,
-            corr_method,
-            expm1_func,
-            rankby_abs,
-            n_genes_user,
-            groups_order,
-            groups_masks,
-            ireference,
-        )
+        generate_test_results = _wilcoxon(X, groups_order, groups_masks, ireference)
 
     elif method == 'logreg':
         grouping_mask = adata.obs[groupby].isin(groups_order)
@@ -525,11 +415,43 @@ def rank_genes_groups(
         # Indexing with a series causes issues, possibly segfault
         X = X[grouping_mask.values, :]
 
-        d = _logreg(
-            X, adata_comp.var_names, n_genes_user, grouping, groups_order, **kwds
-        )
+        generate_test_results = _logreg(X, grouping, groups_order, **kwds)
 
-    group_names = [str(name) for name in d['scores']]
+    d = dict(scores={}, names={})
+
+    for group_name, scores, pvals, mean_group, mean_rest in generate_test_results:
+        group_name = str(group_name)
+
+        scores_sort = np.abs(scores) if rankby_abs else scores
+        global_indices = _select_top_n(scores_sort, n_genes_user, n_genes)
+
+        if mean_group is not None and mean_rest is not None:
+            foldchanges = (expm1_func(mean_group) + 1e-9) / (
+                expm1_func(mean_rest) + 1e-9
+            )  # add small value to remove 0's
+            if 'logfoldchanges' not in d:
+                d['logfoldchanges'] = {}
+            d['logfoldchanges'][group_name] = np.log2(foldchanges[global_indices])
+
+        if pvals is not None:
+            if 'pvals' not in d:
+                d['pvals'] = {}
+            if 'pvals_adj' not in d:
+                d['pvals_adj'] = {}
+
+            d['pvals'][group_name] = pvals[global_indices]
+            if corr_method == 'benjamini-hochberg':
+                from statsmodels.stats.multitest import multipletests
+                pvals[np.isnan(pvals)] = 1
+                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+            elif corr_method == 'bonferroni':
+                pvals_adj = np.minimum(pvals * n_genes, 1.0)
+            d['pvals_adj'][group_name] = pvals_adj[global_indices]
+
+        d['scores'][group_name] = scores[global_indices]
+        d['names'][group_name] = adata_comp.var_names[global_indices]
+
+    group_names = list(d['scores'].keys())
     n_groups = len(group_names)
     dtypes = {
         'names': ['U50'] * n_groups,
