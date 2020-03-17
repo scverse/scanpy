@@ -20,12 +20,15 @@ from .._utils import (
     _FontSize,
     circles,
     make_projection_available,
+    _Aes,
+    _process_layers,
 )
 from .._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
     doc_scatter_embedding,
     doc_show_save_ax,
+    doc_basis,
 )
 from ... import logging as logg
 from ..._settings import settings
@@ -37,6 +40,7 @@ VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
+    basis=doc_basis,
     edges_arrows=doc_edges_arrows,
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
@@ -54,7 +58,7 @@ def embedding(
     # mapping
     use_raw: Optional[bool] = None,
     components: Union[str, Sequence[str]] = None,
-    layers: Union[str, Tuple[str, str, str], None] = None,
+    layers: Union[str, Tuple[str, str, str], Mapping[_Aes, str], None] = None,
     color_map: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
     projection: Literal['2d', '3d'] = '2d',
@@ -101,8 +105,7 @@ def embedding(
 
     Parameters
     ----------
-    basis
-        Name of the `obsm` basis to use.
+    {basis}
     {adata_color_etc}
     {edges_arrows}
     {scatter_bulk}
@@ -125,8 +128,9 @@ def embedding(
         kwargs['edgecolor'] = 'none'
     if 'layer' in kwargs:
         if layers is not None:
-            raise ValueError('Can’t specify layer and layers at once')
+            raise ValueError('Can’t specify `layer` and `layers` at once')
         layers = kwargs.pop('layer')
+    layers = _process_layers(adata, layers, use_raw)
 
     if groups:
         if isinstance(groups, str):
@@ -134,16 +138,6 @@ def embedding(
 
     make_projection_available(projection)
     args_3d = dict(projection='3d') if projection == '3d' else {}
-
-    # Deal with Raw
-    if use_raw is None:
-        # check if adata.raw is set
-        use_raw = layer is None and adata.raw is not None
-    if use_raw and layer is not None:
-        raise ValueError(
-            "Cannot use both a layer and the raw representation. Was passed:"
-            f"use_raw={use_raw}, layer={layer}."
-        )
 
     if wspace is None:
         #  try to set a wspace that is not too large or too small given the
@@ -241,7 +235,7 @@ def embedding(
         color_vector, categorical = _get_color_values(
             adata,
             value_to_plot,
-            layer=layer,
+            layer=layers["color"],
             groups=groups,
             palette=palette,
             use_raw=use_raw,

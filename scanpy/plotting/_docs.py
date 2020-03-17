@@ -8,7 +8,7 @@ adata
     Annotated data matrix.
 color
     Keys for annotations of observations/cells or variables/genes, e.g.,
-    `'ann1'` or `['ann1', 'ann2']`.
+    or a hex color specification, e.g., `'ann1'`, `'#fe57a1'`, or `['ann1', 'ann2']`.
 gene_symbols
     Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
     refer to the index column of the `.var` DataFrame. Setting this option allows
@@ -16,11 +16,19 @@ gene_symbols
 use_raw
     Use `.raw` attribute of `adata` for coloring with gene expression. If `None`,
     defaults to `True` if `layer` isn't provided and `adata.raw` is present.
-layer
-    Name of the AnnData object layer that wants to be plotted. By default
-    adata.raw.X is plotted. If `use_raw=False` is set, then `adata.X` is plotted.
-    If `layer` is set to a valid layer name, then the layer is plotted. `layer`
-    takes precedence over `use_raw`.\
+layers
+    Use the `layers` attribute of `adata` if present:
+    specify the layer for all aesthetics in the dict, e.g.
+    `dict(x='X', y='prot', alpha='X')`.
+    If `layers` is a string, then that layer is used for everything.
+    If a 3-element tuple is passed, it specifies the layers
+    for `x`, `y` and `color`.\
+"""
+
+doc_basis = """\
+basis
+    Name of the `obsm` basis to use.
+    E.g. `"pca"` means :attr:`~anndata.AnnData.obsm`\\ `["X_pca"]`\
 """
 
 doc_edges_arrows = """\

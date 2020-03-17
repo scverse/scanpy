@@ -46,7 +46,7 @@ def test_obs_df(adata):
     badkeys = ["badkey1", "badkey2"]
     with pytest.raises(KeyError) as badkey_err:
         sc.get.obs_df(adata, keys=badkeys)
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         sc.get.obs_df(adata, keys=["gene1"], use_raw=True, layer="double")
     assert all(badkey_err.match(k) for k in badkeys)
 

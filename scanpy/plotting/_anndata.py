@@ -25,10 +25,22 @@ from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes, make_grid_spec
+from ._utils import (
+    scatter_base,
+    scatter_group,
+    setup_axes,
+    make_grid_spec,
+    _Aes,
+    _process_layers,
+)
 from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
-from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
-
+from ._docs import (
+    doc_scatter_basic,
+    doc_show_save_ax,
+    doc_common_plot_args,
+    doc_adata_color_etc,
+    doc_basis,
+)
 
 VALID_LEGENDLOCS = {
     'none',
@@ -53,7 +65,12 @@ _Basis = Literal['pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr']
 _VarNames = Union[str, Sequence[str]]
 
 
-@_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    basis=doc_basis,
+    scatter_temp=doc_scatter_basic,
+    show_save_ax=doc_show_save_ax,
+)
 def scatter(
     adata: AnnData,
     x: Optional[str] = None,
@@ -69,7 +86,7 @@ def scatter(
     # mapping
     use_raw: Optional[bool] = None,
     components: Union[str, Collection[str]] = None,
-    layers: Union[str, Tuple[str, str, str], None] = None,
+    layers: Union[str, Tuple[str, str, str], Mapping[_Aes, str], None] = None,
     color_map: Union[str, Colormap] = None,
     palette: Union[Cycler, ListedColormap, ColorLike, Sequence[ColorLike]] = None,
     projection: Literal['2d', '3d'] = '2d',
@@ -97,24 +114,12 @@ def scatter(
 
     Parameters
     ----------
-    adata
-        Annotated data matrix.
     x
         x coordinate.
     y
         y coordinate.
-    color
-        Keys for annotations of observations/cells or variables/genes,
-        or a hex color specification, e.g.,
-        `'ann1'`, `'#fe57a1'`, or `['ann1', 'ann2']`.
-    use_raw
-        Use `raw` attribute of `adata` if present.
-    layers
-        Use the `layers` attribute of `adata` if present: specify the layer for
-        `x`, `y` and `color`. If `layers` is a string, then it is expanded to
-        `(layers, layers, layers)`.
-    basis
-        String that denotes a plotting tool that computed coordinates.
+    {basis}
+    {adata_color_etc}
     {scatter_temp}
     {show_save_ax}
 
@@ -188,25 +193,7 @@ def _scatter_obs(
         use_raw = True
 
     # Process layers
-    if layers in ['X', None] or (
-        isinstance(layers, str) and layers in adata.layers.keys()
-    ):
-        layers = (layers, layers, layers)
-    elif isinstance(layers, cabc.Collection) and len(layers) == 3:
-        layers = tuple(layers)
-        for layer in layers:
-            if layer not in adata.layers.keys() and layer not in ['X', None]:
-                raise ValueError(
-                    '`layers` should have elements that are '
-                    'either None or in adata.layers.keys().'
-                )
-    else:
-        raise ValueError(
-            "`layers` should be a string or a collection of strings "
-            f"with length 3, had value '{layers}'"
-        )
-    if use_raw and layers not in [('X', 'X', 'X'), (None, None, None)]:
-        ValueError('`use_raw` must be `False` if layers are used.')
+    layers = _process_layers(adata, layers, use_raw)
 
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
@@ -252,8 +239,8 @@ def _scatter_obs(
             else:
                 y_arr = adata.raw.obs_vector(y)
         else:
-            x_arr = adata.obs_vector(x, layer=layers[0])
-            y_arr = adata.obs_vector(y, layer=layers[1])
+            x_arr = adata.obs_vector(x, layer=layers["x"])
+            y_arr = adata.obs_vector(y, layer=layers["y"])
 
         Y = np.c_[x_arr, y_arr]
     else:
@@ -320,7 +307,7 @@ def _scatter_obs(
         elif use_raw and adata.raw is not None and key in adata.raw.var_names:
             c = adata.raw.obs_vector(key)
         elif key in adata.var_names:
-            c = adata.obs_vector(key, layer=layers[2])
+            c = adata.obs_vector(key, layer=layers["color"])
         elif is_color_like(key):  # a flat color
             c = key
             colorbar = False

@@ -155,10 +155,7 @@ def obs_df(
             gene_error = f"gene_symbols column `{ad_str}.var['{gene_symbols}']`"
         if len(found_twice) > 0:
             raise KeyError(
-                f"Found keys {found_twice} in columns of `obs` and in {gene_error}.\n"
-                "\n"
-                "This will be an error in a future version of scanpy, "
-                "but interpreting as a variable name for now."
+                f"Found keys {found_twice} in columns of `obs` and in {gene_error}."
             )
         else:
             raise KeyError(

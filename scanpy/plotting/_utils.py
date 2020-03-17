@@ -1,10 +1,12 @@
 import warnings
 import collections.abc as cabc
 from abc import ABC
+from collections import defaultdict
 from functools import lru_cache
-from typing import Union, List, Sequence, Tuple, Collection, Optional
+from typing import Union, List, Sequence, Tuple, Collection, Optional, Dict
 
 import numpy as np
+from anndata import AnnData
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker, gridspec, axes
 from matplotlib.axes import Axes
@@ -28,6 +30,7 @@ _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 
 _FontSize = Literal[
     'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
+_Aes = Literal['x', 'y', 'z', 'color', 'alpha', 'size', 'groups', 'sort_order']
 
 
 class _AxesSubplot(Axes, axes.SubplotBase, ABC):
@@ -1158,3 +1161,27 @@ def make_grid_spec(
         ax.set_xticks([])
         ax.set_yticks([])
         return ax.figure, ax.get_subplotspec().subgridspec(nrows, ncols, **kw)
+
+
+def _process_layers(adata: AnnData, layers, use_raw: bool) -> Dict[_Aes, str]:
+    if use_raw and layers not in ['X', None]:
+        ValueError('`use_raw` must be `False` if layers are used.')
+    if layers in ['X', None] or (
+        isinstance(layers, str) and layers in adata.layers.keys()
+    ):
+        layer = layers
+        layers = defaultdict(lambda: layer)
+    elif isinstance(layers, cabc.Collection) and len(layers) == 3:
+        layers = dict(zip(['x', 'y', 'color'], layers))
+        for layer in layers:
+            if layer not in adata.layers.keys() and layer not in ['X', None]:
+                raise ValueError(
+                    '`layers` should have elements that are '
+                    'either None or in adata.layers.keys().'
+                )
+    elif not isinstance(layers, cabc.Mapping):
+        raise ValueError(
+            "`layers` should be a string, a collection of strings "
+            f"with length 3 or a mapping, had value {layers!r}."
+        )
+    return layers
