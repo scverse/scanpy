@@ -1,19 +1,56 @@
+from numbers import Number
+from typing import List, Iterable, Union
+from itertools import repeat
+
 import scanpy as sc
 import leidenalg
+import igraph
 
 import pandas as pd
 import numpy as np
+from scipy.sparse import spmatrix
 
-# TODO: Work for n reps
-# TODO: Allow passing in the graphs
+
+def _validate_reps(reps, adata):
+    reps_out = []
+    correct_shape = (adata.n_obs, adata.n_obs)
+    for i, rep in enumerate(reps):
+        if isinstance(rep, str):
+            rep = adata.obsp[rep]
+        if isinstance(rep, spmatrix):
+            reps_out.append(sc._utils.get_igraph_from_adjacency(rep, directed=True))
+        elif isinstance(rep, igraph.Graph):
+            if rep.shape != correct_shape:
+                raise ValueError(
+                    "Graph of invalid shape passed to leiden_multiplex.\n\n"
+                    f"Rep {i}'s shape was {rep.shape}, but should be {correct_shape}."
+                )
+            elif "weight" not in rep.es.attribute_names():
+                raise NotImplementedError(
+                    "Graphs passed to leiden_multiplex must have edge weights under a 'weight' attribute."
+                )
+            reps_out.append(rep)
+    return reps_out
+
+
+def _validate_floats(vals, n_reps: int, arg_name: str):
+    if isinstance(vals, Number):
+        return list(repeat(vals, n_reps))
+    vals_out = list(vals)
+    if len(vals_out) != n_reps:
+        raise ValueError(
+            f"Incorrect number of {arg_name}. Expected 1 or {n_reps}, got {len(vals_out)}."
+        )
+    return vals_out
+
+
+# TODO: Document better
+# TODO: Test better
 def leiden_multiplex(
     adata: "sc.AnnData",
-    rep1: str,
-    rep2: str,
-    w1=1.0,
-    w2=1.0,
-    res1: float = 1.0,
-    res2: float = None,
+    reps: Iterable[Union[str, igraph.Graph, spmatrix]],
+    layer_weights: Union[float, Iterable[float]] = 1.0,
+    resolutions: Union[float, Iterable[float]] = 1.0,
     key_added: str = "leiden_multiplex",
 ):
     """Perform a multiplexed clustering on multiple graphs representation of the same data.
@@ -23,52 +60,47 @@ def leiden_multiplex(
     Params
     ------
     adata
-    rep
-        Adjacency matrix of shape n_obs, n_obs
-    w
-        Layer weight for graph rep
-    res
-        Resolution parameter for this graph rep
-        If connectivity graphs calculated by umap are being used, you probably don't need to specify different values for this.
+    reps
+        Connectivity graphs to use. Possible values are:
+        * string key to .obsp
+        * sparse matrix of shape (n_obs, n_obs)
+        * igraph.Graph
+    layer_weights
+        Weights to use for each representation in the joint clustering.
+    resolutions
+        Resolution parameter to use for each representation.
     key_added
         Key in .obs to add this clustering in.
 
     Usage
     -----
-    >>> sc.tl.leiden_multiplex(adata, "rna_connectivities", "protein_connectivities")
+    >>> sc.tl.leiden_multiplex(adata, ["rna_connectivities", "protein_connectivities"])
     >>> sc.pl.umap(adata, color="leiden_multiplex")
     """
-    if res2 is None:
-        res2 = res1
+    n_reps = len(reps)
 
-    g1_rep = sc.get._get_obs_rep(adata, obsp=rep1)
-    g2_rep = sc.get._get_obs_rep(adata, obsp=rep2)
+    reps = _validate_reps(reps, adata)
+    layer_weights = _validate_floats(layer_weights, n_reps, "layer_weights")
+    resolutions = _validate_floats(resolutions, n_reps, "resolutions")
 
-    g1 = sc._utils.get_igraph_from_adjacency(g1_rep, directed=True)
-    g2 = sc._utils.get_igraph_from_adjacency(g2_rep, directed=True)
-
-    clustering = cluster_joint(g1, g2, res1, res2, w1=w1, w2=w2)
+    clustering = cluster_joint(reps, layer_weights, resolutions)
 
     adata.obs[key_added] = pd.Categorical.from_codes(
         clustering, categories=list(map(str, np.unique(clustering))),
     )
 
 
-# Internal function, for after everything has been preprocessed and extracted
 def cluster_joint(
-    g1: "igraph.Graph",
-    g2: "igraph.Graph",
-    res1: float,
-    res2: float,
-    w1: float = 1.0,
-    w2: float = 1.0,
+    reps: List[igraph.Graph], layer_weights: List[float], resolutions: List[float],
 ):
-    part1 = leidenalg.RBConfigurationVertexPartition(
-        g1, weights="weight", resolution_parameter=res1
-    )
-    part2 = leidenalg.RBConfigurationVertexPartition(
-        g2, weights="weight", resolution_parameter=res2
-    )
+    """Actually do the clustering.
+    """
+    partitions = [
+        leidenalg.RBConfigurationVertexPartition(
+            rep, weights="weight", resolution_parameter=res
+        )
+        for rep, res in zip(reps, resolutions)
+    ]
     optimiser = leidenalg.Optimiser()
-    optimiser.optimise_partition_multiplex([part1, part2], layer_weights=[w1, w2])
-    return np.array(part1.membership)
+    optimiser.optimise_partition_multiplex(partitions, layer_weights=layer_weights)
+    return np.array(partitions[0].membership)

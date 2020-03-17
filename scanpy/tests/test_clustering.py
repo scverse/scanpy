@@ -63,4 +63,4 @@ def test_leiden_multiplex():
             "rep2": sparse.random(100, 100, density=0.1, format="csr"),
         },
     )
-    sc.tl.leiden_multiplex(adata, "rep1", "rep2")
+    sc.tl.leiden_multiplex(adata, ["rep1", "rep2"])
