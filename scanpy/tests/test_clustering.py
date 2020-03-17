@@ -11,10 +11,10 @@ def adata_neighbors():
 def test_leiden_basic(adata_neighbors):
     sc.tl.leiden(adata_neighbors)
 
-@pytest.mark.parametrize('clustering,key', [
-    (sc.tl.louvain, 'louvain'),
-    (sc.tl.leiden, 'leiden'),
-])
+
+@pytest.mark.parametrize(
+    'clustering,key', [(sc.tl.louvain, 'louvain'), (sc.tl.leiden, 'leiden'),]
+)
 def test_clustering_subset(adata_neighbors, clustering, key):
     clustering(adata_neighbors, key_added=key)
 
@@ -24,9 +24,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         ncells_in_c = adata_neighbors.obs[key].value_counts().loc[c]
         key_sub = str(key) + '_sub'
         clustering(
-            adata_neighbors,
-            restrict_to=(key, [c]),
-            key_added=key_sub,
+            adata_neighbors, restrict_to=(key, [c]), key_added=key_sub,
         )
         # Get new clustering labels
         new_partition = adata_neighbors.obs[key_sub]
