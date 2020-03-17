@@ -396,7 +396,7 @@ class Ingest:
         self._adata_new = adata_new
         self._obsm['rep'] = self._same_rep()
 
-    def neighbors(self, k=10, queue_size=5, random_state=0):
+    def neighbors(self, k=None, queue_size=5, random_state=0):
         """\
         Calculate neighbors of `adata_new` observations in `adata`.
 
@@ -411,6 +411,9 @@ class Ingest:
 
         train = self._rep
         test = self._obsm['rep']
+
+        if k is None:
+            k = self._n_neighbors
 
         init = self._initialise_search(
             self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state,
