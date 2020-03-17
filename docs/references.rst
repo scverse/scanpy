@@ -188,9 +188,9 @@ References
    *Palantir characterizes cell fate continuities in human hematopoiesis*
    `Nature Biotechnology <https://www.nature.com/articles/s41587-019-0068-4>`__.
 
-.. [Svensson19] Svensson *et al.* (2019),
+.. [Svensson20] Svensson *et al.* (2020),
    *Interpretable factor models of single-cell RNA-seq via variational autoencoders*
-   `bioRxiv <https://doi.org/10.1101/737601>`__. 
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__. 
 
 .. [Nowotschin18i] Nowotschin *et al.* (2018),
    *The emergent landscape of the mouse gut endoderm at single-cell resolution*
