@@ -1,7 +1,20 @@
 .. role:: small
 .. role:: smaller
 
-Please install `scanpy==1.4.5.post1` instead of `scanpy==1.4.5`.
+1.4.6 :small:`2020-03-17`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. rubric:: New functionality
+
+- :func:`~scanpy.external.tl.harmony_timeseries` for trajectory detection and interpretation of scRNA-seq data measured at discrete time points :pr:`994`
+
+.. rubric:: Bug fixes
+
+- see the PRs linked in these `commits <https://github.com/theislab/scanpy/compare/1.4.5.post3...1.4.5.1>`__
+
+1.4.5 :small:`2019-12-30`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please install `scanpy==1.4.5.post3` instead of `scanpy==1.4.5`.
 
 .. rubric:: New functionality
 
