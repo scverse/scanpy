@@ -3,13 +3,22 @@
 
 1.4.6 :small:`2020-03-17`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. rubric:: New functionality
+.. rubric:: Functionality in `external`
 
-- :func:`~scanpy.external.tl.harmony_timeseries` for trajectory detection and interpretation of scRNA-seq data measured at discrete time points :pr:`994`
+- :func:`~scanpy.external.tl.sam` self-assembling manifolds [Tarashansky19]_ :pr:`903` :smaller:`A Tarashansky`
+- :func:`~scanpy.external.tl.harmony_timeseries` for trajectory inference on discrete time points :pr:`994` :smaller:`A Mousa`
+- :func:`~scanpy.external.tl.wishbone` for trajectory inference (bifurcations) :pr:`1063` :smaller:`A Mousa`
+
+.. rubric:: Code design
+
+- :mod:`~scanpy.pl.violin` now reads `.uns['colors_...']` :pr:`1029` :smaller:`michalk8`
 
 .. rubric:: Bug fixes
 
-- see the PRs linked in these `commits <https://github.com/theislab/scanpy/compare/1.4.5.post3...1.4.5.1>`__
+- adapt :func:`~scanpy.tl.ingest` for UMAP 0.4 :pr:`1038` :pr:`1106` :smaller:`S Rybakov`
+- compat with matplotlib 3.1 and 3.2 :pr:`1090` :smaller:`I Virshup, P Angerer`
+- fix PAGA for new igraph :pr:`1037` :smaller:`P Angerer`
+- fix rapids compat of louvain :pr:`1079` :smaller:`LouisFaure`
 
 1.4.5 :small:`2019-12-30`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
