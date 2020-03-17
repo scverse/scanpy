@@ -3,7 +3,7 @@ import collections.abc as cabc
 from abc import ABC
 from collections import defaultdict
 from functools import lru_cache
-from typing import Union, List, Sequence, Tuple, Collection, Optional, Dict
+from typing import Union, List, Sequence, Tuple, Collection, Optional, Dict, Mapping
 
 import numpy as np
 from anndata import AnnData
@@ -20,6 +20,7 @@ from .. import logging as logg
 from .._settings import settings
 from .._compat import Literal
 from . import palettes
+from ._scatter import _Aes, _Basis
 
 
 _tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
@@ -30,7 +31,6 @@ _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 
 _FontSize = Literal[
     'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
-_Aes = Literal['x', 'y', 'z', 'color', 'alpha', 'size', 'groups', 'sort_order']
 
 
 class _AxesSubplot(Axes, axes.SubplotBase, ABC):
@@ -1138,22 +1138,23 @@ def circles(x, y, s, marker=None, c='b', vmin=None, vmax=None, **kwargs):
 
 
 def make_grid_spec(
-    ax_or_figsize: Union[Tuple[int, int], _AxesSubplot],
+    ax_or_figsize: Union[Tuple[int, int], _AxesSubplot, None],
     nrows: int,
     ncols: int,
     wspace: Optional[float] = None,
     hspace: Optional[float] = None,
     width_ratios: Optional[Sequence[float]] = None,
     height_ratios: Optional[Sequence[float]] = None,
+    frameon: bool = True,
 ) -> Tuple[Figure, gridspec.GridSpecBase]:
     kw = dict(
         wspace=wspace,
-        hspace=hspace,
+        hspace=0.25 if hspace is None else hspace,
         width_ratios=width_ratios,
         height_ratios=height_ratios,
     )
     if isinstance(ax_or_figsize, tuple):
-        fig = pl.figure(figsize=ax_or_figsize)
+        fig = pl.figure(figsize=ax_or_figsize, frameon=frameon)
         return fig, gridspec.GridSpec(nrows, ncols, **kw)
     else:
         ax = ax_or_figsize
@@ -1163,7 +1164,11 @@ def make_grid_spec(
         return ax.figure, ax.get_subplotspec().subgridspec(nrows, ncols, **kw)
 
 
-def _process_layers(adata: AnnData, layers, use_raw: bool) -> Dict[_Aes, str]:
+def _process_layers(
+    adata: AnnData,
+    layers: Union[str, Tuple[str, str, str], Mapping[_Aes, str], None],
+    use_raw: bool,
+) -> Dict[_Aes, str]:
     if use_raw and layers not in ['X', None]:
         ValueError('`use_raw` must be `False` if layers are used.')
     if layers in ['X', None] or (
@@ -1173,15 +1178,15 @@ def _process_layers(adata: AnnData, layers, use_raw: bool) -> Dict[_Aes, str]:
         layers = defaultdict(lambda: layer)
     elif isinstance(layers, cabc.Collection) and len(layers) == 3:
         layers = dict(zip(['x', 'y', 'color'], layers))
-        for layer in layers:
-            if layer not in adata.layers.keys() and layer not in ['X', None]:
-                raise ValueError(
-                    '`layers` should have elements that are '
-                    'either None or in adata.layers.keys().'
-                )
     elif not isinstance(layers, cabc.Mapping):
         raise ValueError(
             "`layers` should be a string, a collection of strings "
             f"with length 3 or a mapping, had value {layers!r}."
         )
+    for layer in layers.values():
+        if layer not in adata.layers.keys() and layer not in ['X', None]:
+            raise ValueError(
+                '`layers` should have elements that are '
+                'either None or in adata.layers.keys().'
+            )
     return layers

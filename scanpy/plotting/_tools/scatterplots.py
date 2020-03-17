@@ -20,7 +20,6 @@ from .._utils import (
     _FontSize,
     circles,
     make_projection_available,
-    _Aes,
     _process_layers,
 )
 from .._docs import (
@@ -30,6 +29,7 @@ from .._docs import (
     doc_show_save_ax,
     doc_basis,
 )
+from .._scatter import _Aes, _Basis
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
@@ -47,7 +47,7 @@ VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 )
 def embedding(
     adata: AnnData,
-    basis: str,
+    basis: _Basis,
     *,
     # additional point aesthetics
     color: Union[str, Sequence[str], None] = None,
@@ -164,7 +164,7 @@ def embedding(
     # Most of the code is for the case when multiple plots are required
     # 'color' is a list of names that want to be plotted.
     # Eg. ['Gene1', 'louvain', 'Gene2'].
-    # component_list is a list of components [[0,1], [1,2]]
+    # components_list is a list of components [[0,1], [1,2]]
     if (
         not isinstance(color, str)
         and isinstance(color, cabc.Sequence)
@@ -783,7 +783,7 @@ def spatial(
 
 
 def _get_data_points(
-    adata, basis, projection, components, img_key
+    adata, basis, projection, components, img_key=None
 ) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
     """
     Returns the data points corresponding to the selected basis, projection and/or components.
@@ -1004,14 +1004,7 @@ def _get_color_values(
     """
     if value_to_plot is None:
         return "lightgray", False
-    if (
-        gene_symbols is not None
-        and value_to_plot not in adata.obs.columns
-        and value_to_plot not in adata.var_names
-    ):
-        # We should probably just make an index for this, and share it over runs
-        # TODO: Throw helpful error if this doesn't work
-        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0]
+    value_to_plot = gene_symbol_column(adata, gene_symbols, value_to_plot)
     if use_raw and value_to_plot not in adata.obs.columns:
         values = adata.raw.obs_vector(value_to_plot)
     else:
@@ -1046,6 +1039,18 @@ def _get_color_values(
             # that are not in the groups
             color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
         return color_vector, True
+
+
+def gene_symbol_column(adata, gene_symbols, value_to_plot):
+    if (
+        gene_symbols is not None
+        and value_to_plot not in adata.obs.columns
+        and value_to_plot not in adata.var_names
+    ):
+        # We should probably just make an index for this, and share it over runs
+        # TODO: Throw helpful error if this doesn't work
+        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0]
+    return value_to_plot
 
 
 def _basis2name(basis):

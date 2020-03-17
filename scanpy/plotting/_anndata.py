@@ -2,8 +2,8 @@
 """
 import collections.abc as cabc
 from itertools import product
-from typing import Optional, Union, Mapping  # Special
-from typing import Sequence, Collection, Iterable  # ABCs
+from typing import Optional, Union  # Special
+from typing import Sequence, Collection, Iterable, Mapping  # ABCs
 from typing import Tuple, List  # Classes
 
 import numpy as np
@@ -19,6 +19,7 @@ from matplotlib import gridspec
 from matplotlib import patheffects
 from matplotlib.colors import is_color_like, Colormap, ListedColormap
 
+from ._tools.scatterplots import _basis2name
 from .. import get
 from .. import logging as logg
 from .._settings import settings
@@ -30,7 +31,6 @@ from ._utils import (
     scatter_group,
     setup_axes,
     make_grid_spec,
-    _Aes,
     _process_layers,
 )
 from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
@@ -41,6 +41,8 @@ from ._docs import (
     doc_adata_color_etc,
     doc_basis,
 )
+from ._scatter import _Aes, _Basis
+
 
 VALID_LEGENDLOCS = {
     'none',
@@ -61,7 +63,6 @@ VALID_LEGENDLOCS = {
 }
 
 # TODO: is that all?
-_Basis = Literal['pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr']
 _VarNames = Union[str, Sequence[str]]
 
 
@@ -105,6 +106,7 @@ def scatter(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     ax: Optional[Axes] = None,
+    # TODO: return_fig
 ):
     """\
     Scatter plot along observations or variables axes.
@@ -187,7 +189,6 @@ def _scatter_obs(
 ):
     """See docstring of scatter."""
     sanitize_anndata(adata)
-    from scipy.sparse import issparse
 
     if use_raw is None and adata.raw is not None:
         use_raw = True
@@ -268,24 +269,7 @@ def _scatter_obs(
     for i, palette in enumerate(palettes):
         palettes[i] = _utils.default_palette(palette)
 
-    if basis is not None:
-        component_name = (
-            'DC'
-            if basis == 'diffmap'
-            else 'tSNE'
-            if basis == 'tsne'
-            else 'UMAP'
-            if basis == 'umap'
-            else 'PC'
-            if basis == 'pca'
-            else 'TriMap'
-            if basis == 'trimap'
-            else basis.replace('draw_graph_', '').upper()
-            if 'draw_graph' in basis
-            else basis
-        )
-    else:
-        component_name = None
+    component_name = None if basis is None else _basis2name(basis)
     axis_labels = (x, y) if component_name is None else None
     show_ticks = True if component_name is None else False
 
