@@ -1,5 +1,6 @@
 import pytest
 import scanpy as sc
+from scipy import sparse
 
 
 @pytest.fixture
@@ -50,5 +51,18 @@ def test_louvain_basic(adata_neighbors):
 
 def test_partition_type(adata_neighbors):
     import louvain
+
     sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
     sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
+
+
+def test_leiden_multiplex():
+    """Currently just tests that leiden_multiplex doesn't fail."""
+    adata = sc.AnnData(
+        X=sparse.random(100, 50, format="csr"),
+        obsp={
+            "rep1": sparse.random(100, 100, density=0.1, format="csr"),
+            "rep2": sparse.random(100, 100, density=0.1, format="csr"),
+        },
+    )
+    sc.tl.leiden_multiplex(adata, "rep1", "rep2")

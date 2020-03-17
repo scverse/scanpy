@@ -13,6 +13,7 @@ from ._paga import (
 from ._rank_genes_groups import rank_genes_groups, filter_rank_genes_groups
 from ._dpt import dpt
 from ._leiden import leiden
+from ._leiden_multiplex import leiden_multiplex
 from ._louvain import louvain
 from ._sim import sim
 from ._score_genes import score_genes, score_genes_cell_cycle
