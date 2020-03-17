@@ -103,6 +103,7 @@ def obs_df(
     --------
     Getting value for plotting:
 
+    >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> plotdf = sc.get.obs_df(
             pbmc,
@@ -122,17 +123,13 @@ def obs_df(
     >>> grouped = genedf.groupby("louvain")
     >>> mean, var = grouped.mean(), grouped.var()
     """
-    if use_raw:
-        assert layer is None, "Cannot specify use_raw=True and a layer at the same time."
-        if gene_symbols is not None:
-            gene_names = pd.Series(adata.raw.var_names, index=adata.raw.var[gene_symbols])
-        else:
-            gene_names = pd.Series(adata.raw.var_names, index=adata.raw.var_names)
-    else:
-        if gene_symbols is not None:
-            gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
-        else:
-            gene_names = pd.Series(adata.var_names, index=adata.var_names)
+    if use_raw and layer is not None:
+        raise ValueError("Cannot specify use_raw=True and a layer at the same time.")
+    ad = adata.raw if use_raw else adata
+    idx = ad.var_names if gene_symbols is None else ad.var[gene_symbols]
+    gene_names = pd.Series(ad.var_names, index=idx)
+    del ad, idx
+
     lookup_keys = []
     not_found = []
     found_twice = []
@@ -151,22 +148,17 @@ def obs_df(
         elif in_obs and in_var_index:
             found_twice.append(key)
     if len(not_found) > 0 or len(found_twice) > 0:
-        if use_raw:
-            if gene_symbols is None:
-                gene_error = "`adata.raw.var_names`"
-            else:
-                gene_error = f"gene_symbols column `adata.raw.var['{gene_symbols}']`"
+        ad_str = "adata.raw" if use_raw else "adata"
+        if gene_symbols is None:
+            gene_error = f"`{ad_str}.var_names`"
         else:
-            if gene_symbols is None:
-                gene_error = "`adata.var_names`"
-            else:
-                gene_error = f"gene_symbols column `adata.var['{gene_symbols}']`"
+            gene_error = f"gene_symbols column `{ad_str}.var['{gene_symbols}']`"
         if len(found_twice) > 0:
-            warnings.warn(
-                f"Found keys {found_twice} in columns of `obs` and in `{gene_error}`. \n\n"
-                "This will be an error in a future version of scanpy, but interpreting"
-                " as a variable name for now.",
-                FutureWarning
+            raise KeyError(
+                f"Found keys {found_twice} in columns of `obs` and in {gene_error}.\n"
+                "\n"
+                "This will be an error in a future version of scanpy, "
+                "but interpreting as a variable name for now."
             )
         else:
             raise KeyError(
@@ -238,11 +230,11 @@ def var_df(
         elif in_var and in_obs_index:
             found_twice.append(key)
     if len(found_twice) > 0:
-        warnings.warn(
-            f"Found keys {found_twice} in columns of `var` and in `adata.obs_names`. \n\n"
-            "This will be an error in a future version of scanpy, but interpreting"
-            " as a observation name for now.",
-            FutureWarning
+        raise KeyError(
+            f"Found keys {found_twice} in columns of `var` and in `adata.obs_names`.\n"
+            "\n"
+            "This will be an error in a future version of scanpy, "
+            "but interpreting as a observation name for now."
         )
     if len(not_found) > 0:
         raise KeyError(

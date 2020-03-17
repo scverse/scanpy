@@ -62,15 +62,8 @@ def test_obs_df_key_collision(adata):
         )
     )
     # adata.obs = adata.obs.join(sc.get.obs_df(adata, ["gene1", "gene2"]))
-    with pytest.warns(FutureWarning, match=r"gene1.*gene2.*obs.*adata\.var_names"):
+    with pytest.raises(KeyError, match=r"gene1.*gene2.*obs.*adata\.var_names"):
         df = sc.get.obs_df(adata, ["gene1", "gene2"])
-    # TODO: Make this true:
-    # Until this throws an error, it should favor returning values from X for backwards compat.
-    pd.testing.assert_frame_equal(
-        df,
-        sc.get.obs_df(orig, ["gene1", "gene2"]),
-        check_dtype=False
-    )
 
     # Test for gene_symbols
     adata.obs = adata.obs.join(
@@ -78,8 +71,8 @@ def test_obs_df_key_collision(adata):
             adata, ["genesymbol1", "genesymbol2"], gene_symbols="gene_symbols"
         )
     )
-    with pytest.warns(
-        FutureWarning,
+    with pytest.raises(
+        KeyError,
         match=r"genesymbol1.*genesymbol2.*obs.*adata\.var\['gene_symbols'\]",
     ):
         sc.get.obs_df(
@@ -115,14 +108,8 @@ def test_var_df_key_collision(adata):
             index=adata.var_names,
         )
     )
-    with pytest.warns(FutureWarning, match=r"cell1.*cell2.*var.*adata\.obs_names"):
+    with pytest.raises(KeyError, match=r"cell1.*cell2.*var.*adata\.obs_names"):
         df = sc.get.var_df(adata, ["cell1", "cell2"])
-    # TODO: Make this true
-    pd.testing.assert_frame_equal(
-        df,
-        sc.get.var_df(orig, ["cell1", "cell2"]),
-        check_dtype=False
-    )
 
 
 def test_rank_genes_groups_df():

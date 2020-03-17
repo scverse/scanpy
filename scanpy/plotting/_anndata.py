@@ -2854,16 +2854,17 @@ def _prepare_dataframe(
         use_raw=use_raw,
     )
     if groupby is not None:
-        if pd.api.types.is_categorical(adata.obs[groupby]):
+        if pd.api.types.is_categorical(tidy_df[groupby]):
             tidy_df.set_index(groupby, inplace=True)
         else:
             tidy_df.index = pd.cut(tidy_df[groupby], num_categories)
             # tidy_df.drop(columns=groupby, inplace=True)
     else:
-        tidydf.index = pd.Series(np.repeat("", len(tidy_df))).astype("category")
+        tidy_df.index = pd.Series(np.repeat("", len(tidy_df))).astype("category")
     if log:
         tidy_df = np.log1p(tidy_df)
-    return (tidy_df.index.categories, tidy_df)
+    return tidy_df.index.categories, tidy_df
+
 
 def _plot_gene_groups_brackets(
     gene_groups_ax: Axes,
