@@ -1,11 +1,12 @@
 import warnings
 import collections.abc as cabc
+from abc import ABC
 from functools import lru_cache
 from typing import Union, List, Sequence, Tuple, Collection, Optional
 
 import numpy as np
 from matplotlib import pyplot as pl
-from matplotlib import rcParams, ticker
+from matplotlib import rcParams, ticker, gridspec, axes
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars, Figure
@@ -27,6 +28,10 @@ _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 
 _FontSize = Literal[
     'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
+
+
+class _AxesSubplot(Axes, axes.SubplotBase, ABC):
+    """Intersection between Axes and SubplotBase: Has methods of both"""
 
 
 # -------------------------------------------------------------------------------
@@ -1127,3 +1132,29 @@ def circles(x, y, s, marker=None, c='b', vmin=None, vmax=None, **kwargs):
     ax.autoscale_view()
 
     return collection
+
+
+def make_grid_spec(
+    ax_or_figsize: Union[Tuple[int, int], _AxesSubplot],
+    nrows: int,
+    ncols: int,
+    wspace: Optional[float] = None,
+    hspace: Optional[float] = None,
+    width_ratios: Optional[Sequence[float]] = None,
+    height_ratios: Optional[Sequence[float]] = None,
+) -> Tuple[Figure, gridspec.GridSpecBase]:
+    kw = dict(
+        wspace=wspace,
+        hspace=hspace,
+        width_ratios=width_ratios,
+        height_ratios=height_ratios,
+    )
+    if isinstance(ax_or_figsize, tuple):
+        fig = pl.figure(figsize=ax_or_figsize)
+        return fig, gridspec.GridSpec(nrows, ncols, **kw)
+    else:
+        ax = ax_or_figsize
+        ax.set_frame_on(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        return ax.figure, ax.get_subplotspec().subgridspec(nrows, ncols, **kw)
