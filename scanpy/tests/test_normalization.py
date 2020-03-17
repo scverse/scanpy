@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from anndata import AnnData
+from scipy import sparse
 from scipy.sparse import csr_matrix
 
 import scanpy as sc
@@ -44,3 +45,17 @@ def test_normalize_total_view(typ, dtype):
 
     assert not v.is_view
     assert_equal(adata, v)
+
+
+def test_normalize_geometric():
+    mtx = sparse.random(100, 50, density=.4, format="csr", dtype=np.float32)
+    adata = AnnData(X=mtx.copy(), layers={"dense": mtx.toarray()})
+    adata.obsm["df"] = adata.to_df()
+
+    sc.pp.normalize_geometric(adata)
+    sc.pp.normalize_geometric(adata, obsm="df")
+    sc.pp.normalize_geometric(adata, layer="dense")
+
+    assert np.array_equal(adata.X, adata.layers["dense"])
+    assert np.array_equal(adata.X, adata.obsm["df"].values)
+    assert not np.array_equal(adata.X, mtx)

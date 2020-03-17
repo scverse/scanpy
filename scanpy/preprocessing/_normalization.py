@@ -1,10 +1,12 @@
 from typing import Optional, Union, Iterable, Dict
 
-import numpy as np
 from anndata import AnnData
+import numpy as np
+import pandas as pd
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
+import scanpy as sc
 from .. import logging as logg
 from .._compat import Literal
 from .._utils import view_to_actual
@@ -201,3 +203,63 @@ def normalize_total(
         )
 
     return dat if not inplace else None
+
+
+# TODO: Document better
+# TODO: Test better (have at least one gold standard comparison)
+def normalize_geometric(
+    adata: AnnData, *, inplace=True, copy=False, use_raw=False, layer=None, obsm=None
+):
+    """Normalize data by geometric mean.
+
+    Params
+    ------
+    adata
+        AnnData containing array to normalize.
+
+    Usage
+    -----
+    >>> sc.pp.normalize_geometric(adata)
+    >>> sc.pp.log1p(adata)
+    """
+    if copy:
+        adata = adata.copy()
+    if adata.is_view:
+        adata._init_as_actual()
+
+    # Sorry about the ugliness of dataframe support
+    was_df = False
+    X = sc.get._get_obs_rep(adata, use_raw=use_raw, layer=layer, obsm=obsm)
+    if isinstance(X, pd.DataFrame):
+        was_df = True
+        orig = X
+        X = X.values
+
+    if issparse(X):
+        X = X.toarray()
+        inplace = False
+    if not np.issubdtype(X.dtype, np.floating):
+        X = X.astype(np.promote_type(X.dtype, np.float32), copy=False)
+
+    X = _normalize_geometric(X, inplace)
+
+    if was_df:
+        if X is not orig.values:
+            X = pd.DataFrame(X, index=orig.index, columns=orig.columns)
+        else:
+            X = orig
+
+    sc.get._set_obs_rep(adata, X, use_raw=use_raw, layer=layer, obsm=obsm)
+
+    if copy:
+        return adata
+
+
+def _normalize_geometric(X: np.ndarray, inplace=True):
+    from scipy.stats.mstats import gmean
+
+    if inplace:
+        out = X
+    else:
+        out = None
+    return np.divide(X, gmean(X + 1, axis=0), out=X)
