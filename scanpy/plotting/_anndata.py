@@ -1535,7 +1535,9 @@ def heatmap(
         )
 
         heatmap_ax = fig.add_subplot(axs[1, 1])
-        im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', **kwds)
+        im = heatmap_ax.imshow(
+            obs_tidy.values, aspect='auto', interpolation="nearest", **kwds
+        )
         heatmap_ax.set_ylim(obs_tidy.shape[0] - 0.5, -0.5)
         heatmap_ax.set_xlim(-0.5, obs_tidy.shape[1] - 0.5)
         heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
@@ -1633,7 +1635,9 @@ def heatmap(
         # plot heatmap
         heatmap_ax = fig.add_subplot(axs[1, 0])
 
-        im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
+        im = heatmap_ax.imshow(
+            obs_tidy.T.values, aspect='auto', interpolation="nearest", **kwds
+        )
         heatmap_ax.set_xlim(0, obs_tidy.shape[0])
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)

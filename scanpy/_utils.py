@@ -558,16 +558,6 @@ def check_presence_download(filename: Path, backup_url):
         from .readwrite import _download
         _download(backup_url, filename)
 
-def check_presence_download_untar(filename: Path, tarfilename: Path, backup_url: str):
-    """Check if file is present otherwise download and untar."""
-    if not filename.is_file():
-        check_presence_download(tarfilename, backup_url)
-
-        # The following extract only the intended file within some folders, and not all other files.
-        import tarfile
-        tar = tarfile.open(tarfilename)
-        _file = [_ for _ in tar.getnames() if Path(_).name == filename.name][0]
-        tar.extract(_file , tarfilename.parent)
 
 def lazy_import(full_name):
     """Imports a module in a way that it’s only executed on member access"""
