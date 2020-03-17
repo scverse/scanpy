@@ -45,42 +45,51 @@ def embedding(
     adata: AnnData,
     basis: str,
     *,
+    # additional point aesthetics
     color: Union[str, Sequence[str], None] = None,
-    gene_symbols: Optional[str] = None,
-    use_raw: Optional[bool] = None,
+    size: Union[float, Sequence[float], None] = None,
+    # TODO: alpha
+    groups: Optional[str] = None,
     sort_order: bool = True,
+    # mapping
+    use_raw: Optional[bool] = None,
+    components: Union[str, Sequence[str]] = None,
+    layers: Union[str, Tuple[str, str, str], None] = None,
+    color_map: Union[Colormap, str, None] = None,
+    palette: Union[str, Sequence[str], Cycler, None] = None,
+    projection: Literal['2d', '3d'] = '2d',
+    gene_symbols: Optional[str] = None,
+    # edges & arrows
     edges: bool = False,
     edges_width: float = 0.1,
     edges_color: Union[str, Sequence[float], Sequence[str]] = 'grey',
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
-    groups: Optional[str] = None,
-    components: Union[str, Sequence[str]] = None,
-    layer: Optional[str] = None,
-    projection: Literal['2d', '3d'] = '2d',
-    # image parameters
+    # outline
+    add_outline: Optional[bool] = False,
+    outline_width: Tuple[float, float] = (0.3, 0.05),
+    outline_color: Tuple[str, str] = ('black', 'white'),
+    # image parameters TODO: extract
     img_key: Optional[str] = None,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
     bw: bool = False,
-    #
-    color_map: Union[Colormap, str, None] = None,
-    palette: Union[str, Sequence[str], Cycler, None] = None,
-    size: Union[float, Sequence[float], None] = None,
-    frameon: Optional[bool] = None,
+    # legend
     legend_fontsize: Union[int, float, _FontSize, None] = None,
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
+    # vminmax
     vmax: Union[VMinMax, Sequence[VMinMax], None] = None,
     vmin: Union[VMinMax, Sequence[VMinMax], None] = None,
-    add_outline: Optional[bool] = False,
-    outline_width: Tuple[float, float] = (0.3, 0.05),
-    outline_color: Tuple[str, str] = ('black', 'white'),
+    # gridspec
     ncols: int = 4,
     hspace: float = 0.25,
     wspace: Optional[float] = None,
+    # global figure params
     title: Union[str, Sequence[str], None] = None,
+    frameon: Optional[bool] = None,
+    # show save ax
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
@@ -114,6 +123,10 @@ def embedding(
         # very small sizes the edge will not reduce its size
         # (https://github.com/theislab/scanpy/issues/293)
         kwargs['edgecolor'] = 'none'
+    if 'layer' in kwargs:
+        if layers is not None:
+            raise ValueError('Can’t specify layer and layers at once')
+        layers = kwargs.pop('layer')
 
     if groups:
         if isinstance(groups, str):
