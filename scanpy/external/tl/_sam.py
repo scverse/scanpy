@@ -30,7 +30,7 @@ def sam(
     verbose: bool = True,
 ) -> Union[SAM, Tuple[SAM, AnnData]]:
     """\
-    Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
+    Self-Assembling Manifolds single-cell RNA sequencing analysis tool [Tarashansky19]_.
 
     SAM iteratively rescales the input gene expression matrix to emphasize
     genes that are spatially variable along the intrinsic manifold of the data.
