@@ -243,7 +243,6 @@ def var_df(
     return df
 
 
-
 def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     """
     Choose array aligned with obs annotation.
@@ -269,6 +268,7 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
             "That was unexpected. Please report this bug at:\n\n\t"
             " https://github.com/theislab/scanpy/issues"
         )
+
 
 def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None):
     """
