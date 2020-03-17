@@ -167,7 +167,7 @@ def paul15() -> AnnData:
     filename = settings.datasetdir / 'paul15/paul15.h5'
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     _utils.check_presence_download(filename, backup_url)
-    with h5py.File(filename, 'r') as f:
+    with h5py.File(filename.absolute(), 'r') as f:
         X = f['data.debatched'][()]
         gene_names = f['data.debatched_rownames'][()].astype(str)
         cell_names = f['data.debatched_colnames'][()].astype(str)
