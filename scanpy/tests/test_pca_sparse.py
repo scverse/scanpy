@@ -11,5 +11,7 @@ def test_pca_sparse():
     explicit = sc.pp.pca(pbmc, pca_sparse=False, dtype=np.float64, copy=True)
 
     assert np.allclose(implicit.uns["pca"]["variance"], explicit.uns["pca"]["variance"])
-    assert np.allclose(implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"])
-    assert np.allclose(implicit.obsm['X_pca'],explicit.obsm['X_pca'])
+    assert np.allclose(
+        implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"]
+    )
+    assert np.allclose(implicit.obsm['X_pca'], explicit.obsm['X_pca'])
