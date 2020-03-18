@@ -180,7 +180,10 @@ class Ingest:
     def _init_umap(self, adata):
         from umap import UMAP
 
-        self._umap = UMAP(metric=adata.uns['neighbors']['params']['metric'])
+        self._umap = UMAP(
+            metric=adata.uns['neighbors']['params']['metric'],
+            random_state=adata.uns['umap']['params'].get('random_state', 0),
+        )
 
         self._umap.embedding_ = adata.obsm['X_umap']
         self._umap._raw_data = self._rep

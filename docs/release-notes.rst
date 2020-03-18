@@ -15,21 +15,6 @@ Release Notes
 Version 1.4
 -----------
 
-1.4.5.1 :small:`2020-02-13`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. rubric:: New functionality
-
-- :func:`~scanpy.external.tl.harmony_timeseries` for trajectory detection and interpretation of scRNA-seq data measured at discrete time points :pr:`994`
-
-.. rubric:: Bug fixes
-
-- See the many PRs linked in the commits `1.4.5.post3...1.4.5.1`_.
-
-.. _1.4.5.post3...1.4.5.1: https://github.com/theislab/scanpy/compare/1.4.5.post3...1.4.5.1
-
-1.4.5 :small:`2019-12-30`
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
 .. include:: release-latest.rst
 
 1.4.4 :small:`2019-07-20`
