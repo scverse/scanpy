@@ -48,7 +48,7 @@ def test_normalize_total_view(typ, dtype):
 
 
 def test_normalize_geometric():
-    mtx = sparse.random(100, 50, density=.4, format="csr", dtype=np.float32)
+    mtx = sparse.random(100, 50, density=0.4, format="csr", dtype=np.float32)
     adata = AnnData(X=mtx.copy(), layers={"dense": mtx.toarray()})
     adata.obsm["df"] = adata.to_df()
 

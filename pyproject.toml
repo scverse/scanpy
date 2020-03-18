@@ -23,7 +23,6 @@ exclude = '''
         |_combat
         |_simple
         |_recipes
-        |_normalization
         |_highly_variable_genes
         |_deprecated/highly_variable_genes
     )
@@ -53,7 +52,6 @@ exclude = '''
         |test_combat
         |test_neighbors
         |test_readwrite
-        |test_clustering
         |test_preprocessing
         |test_rank_genes_groups
         |test_marker_gene_overlap
