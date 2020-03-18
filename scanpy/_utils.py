@@ -648,29 +648,29 @@ class NeighborsView:
             if 'neighbors' not in adata.uns:
                 raise KeyError('No "neighbors" in .uns')
             self._neighbors_dict = adata.uns['neighbors']
-            conns_key = 'connectivities'
-            dists_key = 'distances'
+            self._conns_key = 'connectivities'
+            self._dists_key = 'distances'
         else:
             if key not in adata.uns:
                 raise KeyError(f'No "{key}" in .uns')
             self._neighbors_dict = adata.uns[key]
-            conns_key = self._neighbors_dict['connectivities_key']
-            dists_key = self._neighbors_dict['distances_key']
+            self._conns_key = self._neighbors_dict['connectivities_key']
+            self._dists_key = self._neighbors_dict['distances_key']
 
         if conns_key in adata.obsp:
-            self._connectivities = adata.obsp[conns_key]
+            self._connectivities = adata.obsp[self._conns_key]
         if dists_key in adata.obsp:
-            self._distances = adata.obsp[dists_key]
+            self._distances = adata.obsp[self._dists_key]
 
     def __getitem__(self, key):
         if key == 'distances':
             if 'distances' not in self:
-                raise KeyError(f'No "{self._neighbors_dict["distances_key"]}" in .obsp')
+                raise KeyError(f'No "{self._dists_key}" in .obsp')
             return self._distances
         elif key == 'connectivities':
             if 'connectivities' not in self:
                 raise KeyError(
-                    f'No "{self._neighbors_dict["connectivities_key"]}" in .obsp'
+                    f'No "{self._conns_key}" in .obsp'
                 )
             return self._connectivities
         else:
