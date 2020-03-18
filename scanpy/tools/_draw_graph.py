@@ -8,7 +8,7 @@ from .. import _utils
 from .. import logging as logg
 from ._utils import get_init_pos_from_paga
 from .._compat import Literal
-from .._utils import AnyRandom
+from .._utils import AnyRandom, NeighborsView
 
 
 _LAYOUTS = ('fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa')
@@ -24,6 +24,7 @@ def draw_graph(
     n_jobs: Optional[int] = None,
     adjacency: Optional[spmatrix] = None,
     key_added_ext: Optional[str] = None,
+    neighbors_key: Optional[str] = None,
     copy: bool = False,
     **kwds,
 ):
@@ -98,13 +99,14 @@ def draw_graph(
             'You need to run `pp.neighbors` first to compute a neighborhood graph.'
         )
     if adjacency is None:
-        adjacency = adata.uns['neighbors']['connectivities']
+        neighbors = NeighborsView(adata, neighbors_key)
+        adjacency = neighbors['connectivities']
     # init coordinates
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif init_pos == 'paga' or init_pos:
         init_coords = get_init_pos_from_paga(
-            adata, adjacency, random_state=random_state
+            adata, adjacency, random_state=random_state, neighbors_key=neighbors_key
         )
     else:
         np.random.seed(random_state)

@@ -570,3 +570,42 @@ def lazy_import(full_name):
         # Make module with proper locking and get it inserted into sys.modules.
         loader.exec_module(module)
         return module
+
+
+# --------------------------------------------------------------------------------
+# Neighbors
+# --------------------------------------------------------------------------------
+
+class NeighborsView:
+    def __init__(self, adata, key=None):
+        self._connectivities = None
+        self._distances = None
+
+        if key is None or key == 'neighbors':
+            self._neighbors_dict = adata.uns['neighbors']
+            if 'connectivities' in adata.obsp and 'distances' in adata.obsp:
+                self._connectivities = adata.obsp['connectivities']
+                self._distances = adata.obsp['distances']
+            else:
+                self._connectivities = self._neighbors_dict['connectivities']
+                self._distances = self._neighbors_dict['distances']
+        else:
+            self._neighbors_dict = adata.uns[key]
+            self._connectivities = adata.obsp[self._neighbors_dict['connectivities_key']]
+            self._distances = adata.obsp[self._neighbors_dict['distances_key']]
+
+    def __getitem__(self, key):
+        if key == 'distances':
+            return self._distances
+        elif key == 'connectivities':
+            return self._connectivities
+        else:
+            return self._neighbors_dict[key]
+
+    def __contains__(self, key):
+        if key == 'distances':
+            return self._distances is not None
+        elif key == 'connectivities':
+            return self._connectivities is not None
+        else:
+            return key in self._neighbors_dict

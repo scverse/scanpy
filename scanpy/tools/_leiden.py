@@ -30,6 +30,7 @@ def leiden(
     use_weights: bool = True,
     n_iterations: int = -1,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
+    neighbors_key: Optional[str] = None,
     copy: bool = False,
     **partition_kwargs,
 ) -> Optional[AnnData]:
@@ -103,12 +104,15 @@ def leiden(
     adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
     if adjacency is None:
-        if 'neighbors' not in adata.uns:
+        if neighbors_key is None:
+            neighbors_key = 'neighbors'
+        if neighbors_key not in adata.uns:
             raise ValueError(
                 'You need to run `pp.neighbors` first '
                 'to compute a neighborhood graph.'
             )
-        adjacency = adata.uns['neighbors']['connectivities']
+        neighbors = _utils.NeighborsView(adata, neighbors_key)
+        adjacency = neighbors['connectivities']
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         adjacency, restrict_indices = restrict_adjacency(

@@ -10,6 +10,7 @@ from scipy.sparse import spmatrix
 from ._utils_clustering import rename_groups, restrict_adjacency
 from .. import _utils, logging as logg
 from .._compat import Literal
+from .._utils import NeighborsView
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -30,6 +31,7 @@ def louvain(
     use_weights: bool = False,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    neighbors_key: Optional[str] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -98,13 +100,16 @@ def louvain(
             'when `flavour` is "vtraag"'
         )
     adata = adata.copy() if copy else adata
-    if adjacency is None and 'neighbors' not in adata.uns:
+    if neighbors_key is None:
+        neighbors_key = 'neighbors'
+    if adjacency is None and neighbors_key not in adata.uns:
         raise ValueError(
             'You need to run `pp.neighbors` first '
             'to compute a neighborhood graph.'
         )
     if adjacency is None:
-        adjacency = adata.uns['neighbors']['connectivities']
+        neighbors = NeighborsView(adata, neighbors_key)
+        adjacency = neighbors['connectivities']
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         adjacency, restrict_indices = restrict_adjacency(

@@ -482,14 +482,18 @@ def add_colors_for_categorical_sample_annotation(
         _set_default_colors_for_categorical_obs(adata, key)
 
 
-def plot_edges(axs, adata, basis, edges_width, edges_color):
+def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
     import networkx as nx
 
     if not isinstance(axs, cabc.Sequence):
         axs = [axs]
-    if 'neighbors' not in adata.uns:
+
+    if neighbors_key is None:
+        neighbors_key = 'neighbors'
+    if neighbors_key not in adata.uns:
         raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
-    g = nx.Graph(adata.uns['neighbors']['connectivities'])
+    neighbors = NeighborsView(adata, neighbors_key)
+    g = nx.Graph(neighbors['connectivities'])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for ax in axs:
