@@ -148,16 +148,16 @@ def _wilcoxon(
     scores = np.zeros(n_genes)
     # First loop: Loop over all genes
     if ireference is not None:
+        mask_rest = groups_masks[ireference]
+        ns_rest = np.count_nonzero(mask_rest)
+        mean_rest, _ = _get_mean_var(X[mask_rest])
+
         for imask, mask in enumerate(groups_masks):
 
             if imask == ireference:
                 continue
 
-            mask_rest = groups_masks[ireference]
-            ns_rest = np.count_nonzero(mask_rest)
-            # for fold-change only
             means[imask], _ = _get_mean_var(X[mask])
-            mean_rest, _ = _get_mean_var(X[mask_rest])
 
             if ns_rest <= 25 or ns[imask] <= 25:
                 logg.hint(
@@ -442,6 +442,7 @@ def rank_genes_groups(
             d['pvals'][group_name] = pvals[global_indices]
             if corr_method == 'benjamini-hochberg':
                 from statsmodels.stats.multitest import multipletests
+
                 pvals[np.isnan(pvals)] = 1
                 _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
             elif corr_method == 'bonferroni':
@@ -450,6 +451,32 @@ def rank_genes_groups(
 
         d['scores'][group_name] = scores[global_indices]
         d['names'][group_name] = adata_comp.var_names[global_indices]
+
+    n_groups = groups_masks.shape[0]
+    group_names = [str(name) for name in groups_order]
+
+    pts = np.zeros((n_genes, n_groups))
+    pts_rest = np.zeros((n_genes, n_groups)) if ireference is None else None
+
+    if issparse(X):
+        get_nonzeros = lambda X: X.getnnz(axis=0)
+    else:
+        get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
+
+    for imask, mask in enumerate(groups_masks):
+        X_mask = X[mask]
+        pts[:, imask] = get_nonzeros(X_mask) / X_mask.shape[0]
+        if ireference is None:
+            X_mask = X[~mask]
+            pts_rest[:, imask] = get_nonzeros(X_mask) / X_mask.shape[0]
+
+    adata.uns[key_added]['pts'] = pd.DataFrame(
+        pts, index=adata_comp.var_names, columns=group_names
+    )
+    if ireference is None:
+        adata.uns[key_added]['pts_rest'] = pd.DataFrame(
+            pts_rest, index=adata_comp.var_names, columns=group_names
+        )
 
     group_names = list(d['scores'].keys())
     n_groups = len(group_names)
