@@ -1,9 +1,10 @@
 from anndata import AnnData
+from typing import Optional
 
 from ._dpt import _diffmap
 
 
-def diffmap(adata: AnnData, n_comps: int = 15, copy: bool = False):
+def diffmap(adata: AnnData, n_comps: int = 15, copy: bool = False, neighbors_key: Optional[str] = None):
     """\
     Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf18]_.
 
@@ -39,12 +40,15 @@ def diffmap(adata: AnnData, n_comps: int = 15, copy: bool = False):
         Array of size (number of eigen vectors).
         Eigenvalues of transition matrix.
     """
-    if 'neighbors' not in adata.uns:
+    if neighbors_key is None:
+        neighbors_key = 'neighbors'
+
+    if neighbors_key not in adata.uns:
         raise ValueError(
             'You need to run `pp.neighbors` first to compute a neighborhood graph.'
         )
     if n_comps <= 2:
         raise ValueError('Provide any value greater than 2 for `n_comps`. ')
     adata = adata.copy() if copy else adata
-    _diffmap(adata, n_comps=n_comps)
+    _diffmap(adata, n_comps=n_comps, neighbors_key)
     return adata if copy else None
