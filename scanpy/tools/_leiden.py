@@ -77,6 +77,11 @@ def leiden(
         Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`.
         For the available options, consult the documentation for
         :func:`~leidenalg.find_partition`.
+    neighbors_key
+        If not specified, leiden looks .obsp['connectivities'] for connectivities
+        (default storage place for pp.neighbors).
+        If specified, leiden looks
+        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
     copy
         Whether to copy `adata` or modify it inplace.
     **partition_kwargs

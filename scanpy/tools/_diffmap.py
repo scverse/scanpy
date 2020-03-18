@@ -7,8 +7,8 @@ from ._dpt import _diffmap
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
-    copy: bool = False,
     neighbors_key: Optional[str] = None,
+    copy: bool = False,
 ):
     """\
     Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf18]_.
@@ -31,6 +31,14 @@ def diffmap(
         Annotated data matrix.
     n_comps
         The number of dimensions of the representation.
+    neighbors_key
+        If not specified, diffmap looks .uns['neighbors'] for neighbors settings
+        and .obsp['connectivities'], .obsp['distances'] for connectivities and
+        distances respectively (default storage places for pp.neighbors).
+        If specified, diffmap looks .uns[neighbors_key] for neighbors settings and
+        .obsp[.uns[neighbors_key]['connectivities_key']],
+        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
+        respectively.
     copy
         Return a copy instead of writing to adata.
 

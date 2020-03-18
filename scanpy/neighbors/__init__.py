@@ -512,6 +512,8 @@ class Neighbors:
         Annotated data object.
     n_dcs
         Number of diffusion components to use.
+    neighbors_key
+        Where to look in .uns and .obsp for neighbors data
     """
 
     def __init__(self, adata: AnnData, n_dcs: Optional[int] = None, neighbors_key: Optional[str] = None):

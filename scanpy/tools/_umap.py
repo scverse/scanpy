@@ -100,7 +100,13 @@ def umap(
         Return a copy instead of writing to adata.
     method
         Use the original 'umap' implementation, or 'rapids' (experimental, GPU only)
-
+    neighbors_key
+        If not specified, umap looks .uns['neighbors'] for neighbors settings
+        and .obsp['connectivities'] for connectivities
+        (default storage places for pp.neighbors).
+        If specified, umap looks .uns[neighbors_key] for neighbors settings and
+        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+    
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
