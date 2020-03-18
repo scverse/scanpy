@@ -106,7 +106,7 @@ def umap(
         (default storage places for pp.neighbors).
         If specified, umap looks .uns[neighbors_key] for neighbors settings and
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
-    
+
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.

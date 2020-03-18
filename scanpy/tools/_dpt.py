@@ -91,7 +91,7 @@ def dpt(
         If specified, dpt looks .uns[neighbors_key] for neighbors settings and
         .obsp[.uns[neighbors_key]['connectivities_key']],
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
-        respectively.    
+        respectively.
     copy
         Copy instance before computation and return a copy.
         Otherwise, perform computation inplace and return `None`.
