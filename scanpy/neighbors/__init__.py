@@ -44,6 +44,7 @@ def neighbors(
     method: Optional[_Method] = 'umap',
     metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+    key_added: Optional[str] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -109,26 +110,43 @@ def neighbors(
         method=method, metric=metric, metric_kwds=metric_kwds,
         random_state=random_state,
     )
-    adata.uns['neighbors'] = {}
-    adata.uns['neighbors']['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
-    adata.uns['neighbors']['params']['metric'] = metric
+
+    if key_added is None:
+        key_added = 'neighbors'
+        conns_key = 'connectivities'
+        dists_key = 'distances'
+    else:
+        conns_key = key_added + '_connectivities'
+        dists_key = key_added + '_distances'
+
+    adata.uns[key_added] = {}
+
+    neighbors_dict = adata.uns[key_added]
+
+    neighbors_dict['connectivities_key'] = conns_key
+    neighbors_dict['distances_key'] = dists_key
+
+    neighbors_dict['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
+    neighbors_dict['params']['metric'] = metric
     if metric_kwds:
-        adata.uns['neighbors']['params']['metric_kwds'] = metric_kwds
+        neighbors_dict['params']['metric_kwds'] = metric_kwds
     if use_rep is not None:
-        adata.uns['neighbors']['params']['use_rep'] = use_rep
+        neighbors_dict['params']['use_rep'] = use_rep
     if n_pcs is not None:
-        adata.uns['neighbors']['params']['n_pcs'] = n_pcs
-    adata.uns['neighbors']['distances'] = neighbors.distances
-    adata.uns['neighbors']['connectivities'] = neighbors.connectivities
+        neighbors_dict['params']['n_pcs'] = n_pcs
+
+    adata.obsp[dists_key] = neighbors.distances
+    adata.obsp[conns_key] = neighbors.connectivities
+
     if neighbors.rp_forest is not None:
-        adata.uns['neighbors']['rp_forest'] = neighbors.rp_forest
+        neighbors_dict['rp_forest'] = neighbors.rp_forest
     logg.info(
         '    finished',
         time=start,
         deep=(
-            'added to `.uns[\'neighbors\']`\n'
-            '    \'distances\', distances for each pair of neighbors\n'
-            '    \'connectivities\', weighted adjacency matrix'
+            f'added to `.uns[{key_added!r}]`\n'
+            f'    `.obsp[{dists_key!r}]`, distances for each pair of neighbors\n'
+            f'    `.obsp[{conns_key!r}]`, weighted adjacency matrix'
         ),
     )
     return adata if copy else None

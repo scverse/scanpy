@@ -52,6 +52,7 @@ def embedding(
     edges: bool = False,
     edges_width: float = 0.1,
     edges_color: Union[str, Sequence[float], Sequence[str]] = 'grey',
+    neighbors_key: Optional[str] = None,
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
     groups: Optional[str] = None,
@@ -421,7 +422,7 @@ def embedding(
         ax.autoscale_view()
 
         if edges:
-            _utils.plot_edges(ax, adata, basis, edges_width, edges_color)
+            _utils.plot_edges(ax, adata, basis, edges_width, edges_color, neighbors_key)
         if arrows:
             _utils.plot_arrows(ax, adata, basis, arrows_kwds)
 

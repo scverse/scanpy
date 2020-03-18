@@ -5,6 +5,7 @@ from .. import logging as logg
 from ._pca import pca
 from ..preprocessing._simple import N_PCS
 from .. import settings
+from .._utils import NeighborsView
 
 doc_use_rep = """\
 use_rep
@@ -90,10 +91,11 @@ def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
             return adata.X
 
 
-def get_init_pos_from_paga(adata, adjacency=None, random_state=0):
+def get_init_pos_from_paga(adata, adjacency=None, random_state=0, neighbors_key=None):
     np.random.seed(random_state)
     if adjacency is None:
-        adjacency = adata.uns['neighbors']['connectivities']
+        neighbors = NeighborsView(adata, neighbors_key)
+        adjacency = neighbors['connectivities']
     if 'paga' in adata.uns and 'pos' in adata.uns['paga']:
         groups = adata.obs[adata.uns['paga']['groups']]
         pos = adata.uns['paga']['pos']
