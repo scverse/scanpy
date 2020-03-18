@@ -657,9 +657,9 @@ class NeighborsView:
             self._conns_key = self._neighbors_dict['connectivities_key']
             self._dists_key = self._neighbors_dict['distances_key']
 
-        if conns_key in adata.obsp:
+        if self._conns_key in adata.obsp:
             self._connectivities = adata.obsp[self._conns_key]
-        if dists_key in adata.obsp:
+        if self._dists_key in adata.obsp:
             self._distances = adata.obsp[self._dists_key]
 
     def __getitem__(self, key):
@@ -669,9 +669,7 @@ class NeighborsView:
             return self._distances
         elif key == 'connectivities':
             if 'connectivities' not in self:
-                raise KeyError(
-                    f'No "{self._conns_key}" in .obsp'
-                )
+                raise KeyError(f'No "{self._conns_key}" in .obsp')
             return self._connectivities
         else:
             return self._neighbors_dict[key]
