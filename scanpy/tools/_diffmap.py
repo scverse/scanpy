@@ -50,5 +50,5 @@ def diffmap(adata: AnnData, n_comps: int = 15, copy: bool = False, neighbors_key
     if n_comps <= 2:
         raise ValueError('Provide any value greater than 2 for `n_comps`. ')
     adata = adata.copy() if copy else adata
-    _diffmap(adata, n_comps=n_comps, neighbors_key)
+    _diffmap(adata, n_comps=n_comps, neighbors_key=neighbors_key)
     return adata if copy else None
