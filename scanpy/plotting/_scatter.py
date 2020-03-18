@@ -3,6 +3,7 @@ from typing import Collection, Iterable, Sequence  # ABCs
 from typing import Tuple  # classes
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from anndata import AnnData
 from cycler import Cycler
@@ -17,6 +18,8 @@ from ._tools.scatterplots import (
     gene_symbol_column,
     VMinMax,
     _get_vmin_vmax,
+    _basis2name,
+    _add_legend_or_colorbar,
 )
 from ._utils import (
     _FontSize,
@@ -40,6 +43,7 @@ def scatter(
     basis: Union[_Basis, Collection[_Basis], None] = None,
     *,
     # additional point aesthetics
+    z: Union[str, Collection[str], np.ndarray, None] = None,
     color: Union[str, Collection[str], np.ndarray, None] = None,
     size: Union[str, Collection[str], np.ndarray, None] = None,
     alpha: Union[str, Collection[str], np.ndarray, None] = None,
@@ -110,7 +114,7 @@ def scatter(
         multi_params = [{k: v} for k, vs in multi.items() for v in vs]
         for i, (gs, ps) in enumerate(zip(grid_spec, multi_params)):
             a = fig.add_subplot(gs, projection=projection)
-            do_scatter(a, i, **params, **ps)
+            do_scatter(a, i, multi=True, **params, **ps)
         ax = axes
     else:  # do a single plot
         if ax_parent is None:
@@ -120,11 +124,11 @@ def scatter(
             fig = ax_parent.figure
             ax = ax_parent
 
-        do_scatter(ax, 0, **params)
+        do_scatter(ax, 0, multi=False, **params)
 
     if return_fig:
         return fig
-    savefig_or_show('stacked_violin', show=show, save=save)
+    savefig_or_show(basis or "scatter", show=show, save=save)
     if show is False:
         return ax
 
@@ -133,6 +137,7 @@ def do_scatter(
     ax: Union[Axes, Axes3D],
     index: int,
     *,
+    multi: bool,
     adata: AnnData,
     x: Union[str, np.ndarray, None] = None,
     y: Union[str, np.ndarray, None] = None,
@@ -154,10 +159,17 @@ def do_scatter(
     # vminmax
     vmax: Union[VMinMax, Sequence[VMinMax], None] = None,
     vmin: Union[VMinMax, Sequence[VMinMax], None] = None,
+    # legend
+    legend_loc: str = 'right margin',
+    legend_fontsize: Union[int, float, _FontSize, None] = None,
+    legend_fontweight: Union[int, _FontWeight, None] = None,
+    legend_fontoutline: float = None,
 ) -> None:
     dims = [x, y, z] if projection == '3d' else [x, y]
-    data_points = [None] * len(dims)
     basis_key = f"X_{basis}"
+    name = _basis2name(basis)
+    data_points = [None] * len(dims)
+    axis_labels = [None] * len(dims)
     # TODO: restructure _get_data_points?
     for i, d in enumerate(dims):
         if isinstance(d, np.ndarray):
@@ -168,17 +180,20 @@ def do_scatter(
             elif d is None:
                 d = i
             data_points[i] = adata.obsm[basis_key][:, d]
+            axis_labels[i] = f"{name}{i+1}"
         else:  # isinstance(d, str)
             d = gene_symbol_column(adata, gene_symbols, d)
             data_points[i] = adata.obs_vector(d, layer=layer)
+            axis_labels[i] = d
+    data_points = np.array(data_points)
 
     if not is_color_like(color):
         if sort_order:
             sort = np.argsort(color)
             color = color[sort]
-            data_points = data_points[sort]
+            data_points = data_points[:, sort]
         color_vector = color
-        categorical = False
+        categorical = pd.is_categorical(color)
     else:
         color_vector, categorical = _get_color_values(
             adata,
@@ -205,4 +220,20 @@ def do_scatter(
         rasterized=settings._vector_friendly,
         vmin=vmin,
         vmax=vmax,
+    )
+    for n, l in zip("xyz", axis_labels):
+        getattr(ax, f"{n}axis").set_label_lext(l)
+    _add_legend_or_colorbar(
+        adata,
+        ax,
+        cax,
+        categorical,
+        color,
+        legend_loc,
+        data_points,
+        legend_fontweight,
+        legend_fontsize,
+        legend_fontoutline,
+        groups,
+        multi,
     )

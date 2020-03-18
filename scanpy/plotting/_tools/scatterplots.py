@@ -437,13 +437,6 @@ def embedding(
             # there is not need to plot a legend or a colorbar
             continue
 
-        if legend_fontoutline is not None:
-            path_effect = [
-                patheffects.withStroke(linewidth=legend_fontoutline, foreground='w',)
-            ]
-        else:
-            path_effect = None
-
         _add_legend_or_colorbar(
             adata,
             ax,
@@ -454,7 +447,7 @@ def embedding(
             _data_points,
             legend_fontweight,
             legend_fontsize,
-            path_effect,
+            legend_fontoutline,
             groups,
             bool(grid),
         )
@@ -954,6 +947,11 @@ def _add_legend_or_colorbar(
             )
 
         if legend_loc == 'on data':
+            path_effects = (
+                [patheffects.withStroke(linewidth=legend_fontoutline, foreground='w')]
+                if legend_fontoutline
+                else None
+            )
             # identify centroids to put labels
             all_pos = np.zeros((len(categories), 2))
             for ilabel, label in enumerate(categories):
@@ -968,7 +966,7 @@ def _add_legend_or_colorbar(
                     verticalalignment='center',
                     horizontalalignment='center',
                     fontsize=legend_fontsize,
-                    path_effects=legend_fontoutline,
+                    path_effects=path_effects,
                 )
 
                 all_pos[ilabel] = [x_pos, y_pos]
