@@ -322,7 +322,8 @@ class Ingest:
         else:
             raise ValueError(
                 f'There is no neighbors data in `adata.uns["{neighbors_key}"]`.\n'
-                'Please run pp.neighbors.')
+                'Please run pp.neighbors.'
+            )
 
         if 'X_umap' in adata.obsm:
             self._init_umap(adata)

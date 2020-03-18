@@ -4,7 +4,12 @@ from typing import Optional
 from ._dpt import _diffmap
 
 
-def diffmap(adata: AnnData, n_comps: int = 15, copy: bool = False, neighbors_key: Optional[str] = None):
+def diffmap(
+    adata: AnnData,
+    n_comps: int = 15,
+    copy: bool = False,
+    neighbors_key: Optional[str] = None,
+):
     """\
     Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf18]_.
 
