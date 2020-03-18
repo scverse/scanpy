@@ -70,6 +70,13 @@ def ingest(
     labeling_method
         The method to map labels in `adata_ref.obs` to `adata.obs`.
         The only supported value is 'knn'.
+    neighbors_key
+        If not specified, ingest looks adata_ref.uns['neighbors']
+        for neighbors settings and adata_ref.obsp['distances'] for
+        distances (default storage places for pp.neighbors).
+        If specified, ingest looks adata_ref.uns[neighbors_key] for
+        neighbors settings and adata_ref.obsp[neighbors_key+'_distances']
+        for distances.
     inplace
         Only works if `return_joint=False`.
         Add labels and embeddings to the passed `adata` (if `True`)
