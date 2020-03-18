@@ -583,16 +583,25 @@ class NeighborsView:
 
         if key is None or key == 'neighbors':
             self._neighbors_dict = adata.uns['neighbors']
-            if 'connectivities' in adata.obsp and 'distances' in adata.obsp:
-                self._connectivities = adata.obsp['connectivities']
-                self._distances = adata.obsp['distances']
-            else:
-                self._connectivities = self._neighbors_dict['connectivities']
-                self._distances = self._neighbors_dict['distances']
+            conns_key = 'connectivities'
+            dists_key = 'distances'
+
+            if conns_key in adata.obsp:
+                self._connectivities = adata.obsp[conns_key]
+            elif conns_key in self._neighbors_dict:
+                self._connectivities = self._neighbors_dict[conns_key]
+
+            if dists_key in adata.obsp:
+                self._distances = adata.obsp[dists_key]
+            elif dists_key in self._neighbors_dict:
+                self._distances = self._neighbors_dict[dists_key]
         else:
             self._neighbors_dict = adata.uns[key]
-            self._connectivities = adata.obsp[self._neighbors_dict['connectivities_key']]
-            self._distances = adata.obsp[self._neighbors_dict['distances_key']]
+            conns_key = self._neighbors_dict['connectivities_key']
+            dists_key = self._neighbors_dict['distances_key']
+            
+            self._connectivities = adata.obsp[conns_key]
+            self._distances = adata.obsp[dists_key]
 
     def __getitem__(self, key):
         if key == 'distances':

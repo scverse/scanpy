@@ -9,7 +9,7 @@ from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .. import _utils
-from .._utils import _doc_params, AnyRandom
+from .._utils import _doc_params, AnyRandom, NeighborsView
 from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 
@@ -507,7 +507,7 @@ class Neighbors:
         Number of diffusion components to use.
     """
 
-    def __init__(self, adata: AnnData, n_dcs: Optional[int] = None):
+    def __init__(self, adata: AnnData, n_dcs: Optional[int] = None, neighbors_key: Optional[str] = None):
         self._adata = adata
         self._init_iroot()
         # use the graph in adata
@@ -518,17 +518,20 @@ class Neighbors:
         self._transitions_sym: Union[np.ndarray, csr_matrix, None] = None
         self._number_connected_components: Optional[int] = None
         self._rp_forest: Optional[RPForestDict] = None
-        if 'neighbors' in adata.uns:
-            if 'distances' in adata.uns['neighbors']:
-                self.knn = issparse(adata.uns['neighbors']['distances'])
-                self._distances = adata.uns['neighbors']['distances']
-            if 'connectivities' in adata.uns['neighbors']:
-                self.knn = issparse(adata.uns['neighbors']['connectivities'])
-                self._connectivities = adata.uns['neighbors']['connectivities']
-            if 'rp_forest' in adata.uns['neighbors']:
-                self._rp_forest = adata.uns['neighbors']['rp_forest']
-            if 'params' in adata.uns['neighbors']:
-                self.n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+        if neighbors_key is None:
+            neighbors_key = 'neighbors'
+        if neighbors_key in adata.uns:
+            neighbors = NeighborsView(adata, neighbors_key)
+            if 'distances' in neighbors:
+                self.knn = issparse(neighbors['distances'])
+                self._distances = neighbors['distances']
+            if 'connectivities' in neighbors:
+                self.knn = issparse(neighbors['connectivities'])
+                self._connectivities = neighbors['connectivities']
+            if 'rp_forest' in neighbors:
+                self._rp_forest = neighbors['rp_forest']
+            if 'params' in neighbors:
+                self.n_neighbors = neighbors['params']['n_neighbors']
             else:
                 def count_nonzero(a: Union[np.ndarray, csr_matrix]) -> int:
                     return a.count_nonzero() if issparse(a) else np.count_nonzero(a)
