@@ -86,6 +86,13 @@ def neighbors(
         A known metric’s name or a callable that returns a distance.
     metric_kwds
         Options for the metric.
+    key_added
+        If not specified, the neighbors data is stored in .uns['neighbors'],
+        distances and connectivities are stored in .obsp['distances'] and
+        .obsp['connectivities'] respectively.
+        If specified, the neighbors data is added to .uns[key_added],
+        distances are stored in .obsp[key_added+'_distances'] and
+        connectivities in .obsp[key_added+'_connectivities'].
     copy
         Return a copy instead of writing to adata.
 
