@@ -75,8 +75,8 @@ def ingest(
         for neighbors settings and adata_ref.obsp['distances'] for
         distances (default storage places for pp.neighbors).
         If specified, ingest looks adata_ref.uns[neighbors_key] for
-        neighbors settings and adata_ref.obsp[neighbors_key+'_distances']
-        for distances.
+        neighbors settings and
+        adata_ref.obsp[adata_ref.uns[neighbors_key]['distances_key']] for distances.
     inplace
         Only works if `return_joint=False`.
         Add labels and embeddings to the passed `adata` (if `True`)

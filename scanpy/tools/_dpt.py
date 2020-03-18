@@ -84,6 +84,14 @@ def dpt(
         If a very small branch is detected upon splitting, shift away from
         maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
         stabilize the splitting.
+    neighbors_key
+        If not specified, dpt looks .uns['neighbors'] for neighbors settings
+        and .obsp['connectivities'], .obsp['distances'] for connectivities and
+        distances respectively (default storage places for pp.neighbors).
+        If specified, dpt looks .uns[neighbors_key] for neighbors settings and
+        .obsp[.uns[neighbors_key]['connectivities_key']],
+        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
+        respectively.    
     copy
         Copy instance before computation and return a copy.
         Otherwise, perform computation inplace and return `None`.

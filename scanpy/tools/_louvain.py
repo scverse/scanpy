@@ -77,6 +77,11 @@ def louvain(
     partition_kwargs
         Key word arguments to pass to partitioning,
         if ``vtraag`` method is being used.
+    neighbors_key
+        If not specified, louvain looks .obsp['connectivities'] for connectivities
+        (default storage place for pp.neighbors).
+        If specified, louvain looks
+        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
     copy
         Copy adata or modify it inplace.
 

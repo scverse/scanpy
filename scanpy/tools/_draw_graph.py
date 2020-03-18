@@ -74,6 +74,11 @@ def draw_graph(
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
+    neighbors_key
+        If not specified, draw_graph looks .obsp['connectivities'] for connectivities
+        (default storage place for pp.neighbors).
+        If specified, draw_graph looks
+        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
     copy
         Return a copy instead of writing to adata.
     **kwds
