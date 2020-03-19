@@ -609,6 +609,15 @@ def lazy_import(full_name):
 # --------------------------------------------------------------------------------
 
 
+def _fallback_to_uns(dct, conns, dists, conns_key, dists_key):
+    if conns is None and conns_key in dct:
+        conns = dct[conns_key]
+    if dists is None and dists_key in dct:
+        dists = dct[dists_key]
+
+    return conns, dists
+
+
 class NeighborsView:
     """Convenience class for accessing neighbors graph representations.
 
@@ -661,6 +670,15 @@ class NeighborsView:
             self._connectivities = adata.obsp[self._conns_key]
         if self._dists_key in adata.obsp:
             self._distances = adata.obsp[self._dists_key]
+
+        # fallback to uns
+        self._connectivities, self._distances = _fallback_to_uns(
+            self._neighbors_dict,
+            self._connectivities,
+            self._distances,
+            self._conns_key,
+            self._dists_key,
+        )
 
     def __getitem__(self, key):
         if key == 'distances':
