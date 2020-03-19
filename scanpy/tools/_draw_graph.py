@@ -25,7 +25,7 @@ def draw_graph(
     adjacency: Optional[spmatrix] = None,
     key_added_ext: Optional[str] = None,
     neighbors_key: Optional[str] = None,
-    obsp_key: Optional[str] = None,
+    obsp: Optional[str] = None,
     copy: bool = False,
     **kwds,
 ):
@@ -79,9 +79,9 @@ def draw_graph(
         (default storage place for pp.neighbors).
         If specified, draw_graph looks
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
-    obsp_key
-        Use .obsp[obsp_key] as adjacency. You can't specify both
-        obsp_key and neighbors_key at the same time.
+    obsp
+        Use .obsp[obsp] as adjacency. You can't specify both
+        `obsp` and `neighbors_key` at the same time.
     copy
         Return a copy instead of writing to adata.
     **kwds
@@ -103,7 +103,7 @@ def draw_graph(
         raise ValueError(f'Provide a valid layout, one of {_LAYOUTS}.')
     adata = adata.copy() if copy else adata
     if adjacency is None:
-        adjacency = _choose_graph(adata, obsp_key, neighbors_key)
+        adjacency = _choose_graph(adata, obsp, neighbors_key)
     # init coordinates
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
