@@ -681,3 +681,23 @@ class NeighborsView:
             return self._connectivities is not None
         else:
             return key in self._neighbors_dict
+
+
+def _choose_graph(adata, obsp_key, neighbors_key):
+    """Choose connectivities from neighbbors or another obsp column"""
+    if obsp_key is not None and neighbors_key is not None:
+        raise ValueError(
+            'You can\'t specify both obsp_key, neighbors_key. '
+            'Please select only one.'
+        )
+
+    if obsp_key is not None:
+        return adata.obsp[obsp_key]
+    else:
+        neighbors = NeighborsView(adata, neighbors_key)
+        if 'connectivities' not in neighbors:
+            raise ValueError(
+                'You need to run `pp.neighbors` first '
+                'to compute a neighborhood graph.'
+            )
+        return neighbors['connectivities']
