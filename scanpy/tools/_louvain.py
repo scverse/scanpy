@@ -10,7 +10,7 @@ from scipy.sparse import spmatrix
 from ._utils_clustering import rename_groups, restrict_adjacency
 from .. import _utils, logging as logg
 from .._compat import Literal
-from .._utils import NeighborsView
+from .._utils import _choose_graph
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -32,6 +32,7 @@ def louvain(
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
     neighbors_key: Optional[str] = None,
+    obsp_key: Optional[str] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -62,8 +63,7 @@ def louvain(
     key_added
         Key under which to add the cluster labels. (default: ``'louvain'``)
     adjacency
-        Sparse adjacency matrix of the graph, defaults to
-        ``adata.uns['neighbors']['connectivities']``.
+        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     flavor
         Choose between to packages for computing the clustering.
         ``'vtraag'`` is much more powerful, and the default.
@@ -78,10 +78,14 @@ def louvain(
         Key word arguments to pass to partitioning,
         if ``vtraag`` method is being used.
     neighbors_key
+        Use neighbors connectivities as adjacency.
         If not specified, louvain looks .obsp['connectivities'] for connectivities
         (default storage place for pp.neighbors).
         If specified, louvain looks
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+    obsp_key
+        Use .obsp[obsp_key] as adjacency. You can't specify both
+        obsp_key and neighbors_key at the same time.
     copy
         Copy adata or modify it inplace.
 
@@ -105,16 +109,8 @@ def louvain(
             'when `flavour` is "vtraag"'
         )
     adata = adata.copy() if copy else adata
-    if neighbors_key is None:
-        neighbors_key = 'neighbors'
-    if adjacency is None and neighbors_key not in adata.uns:
-        raise ValueError(
-            'You need to run `pp.neighbors` first '
-            'to compute a neighborhood graph.'
-        )
     if adjacency is None:
-        neighbors = NeighborsView(adata, neighbors_key)
-        adjacency = neighbors['connectivities']
+        adjacency = _choose_graph(adata, obsp_key, neighbors_key)
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         adjacency, restrict_indices = restrict_adjacency(
