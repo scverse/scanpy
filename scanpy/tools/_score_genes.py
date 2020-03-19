@@ -156,8 +156,8 @@ def score_genes(
         time=start,
         deep=(
             'added\n'
-            f'    {score_name!r}, score of gene set (adata.obs)'
-            f'\n{len(control_genes)} total control genes are used as baseline.'
+            f'    {score_name!r}, score of gene set (adata.obs).\n'
+            f'    {len(control_genes)} total control genes are used.'
         ),
     )
     return adata if copy else None
