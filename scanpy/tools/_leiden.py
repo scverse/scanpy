@@ -31,7 +31,7 @@ def leiden(
     n_iterations: int = -1,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     neighbors_key: Optional[str] = None,
-    obsp_key: Optional[str] = None,
+    obsp: Optional[str] = None,
     copy: bool = False,
     **partition_kwargs,
 ) -> Optional[AnnData]:
@@ -83,9 +83,9 @@ def leiden(
         (default storage place for pp.neighbors).
         If specified, leiden looks
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
-    obsp_key
-        Use .obsp[obsp_key] as adjacency. You can't specify both
-        obsp_key and neighbors_key at the same time.
+    obsp
+        Use .obsp[obsp] as adjacency. You can't specify both
+        `obsp` and `neighbors_key` at the same time.
     copy
         Whether to copy `adata` or modify it inplace.
     **partition_kwargs
@@ -113,7 +113,7 @@ def leiden(
     adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
     if adjacency is None:
-        adjacency = _utils._choose_graph(adata, obsp_key, neighbors_key)
+        adjacency = _utils._choose_graph(adata, obsp, neighbors_key)
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         adjacency, restrict_indices = restrict_adjacency(
