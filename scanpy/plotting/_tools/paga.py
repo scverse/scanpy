@@ -822,51 +822,43 @@ def _paga_graph(
                     size=fontsize, fontweight=fontweight, **text_kwds)
     # else pie chart plot
     else:
-        # start with this dummy plot... otherwise strange behavior
-        sct = ax.scatter(
-            pos_array[:, 0], pos_array[:, 1],
-            c='white', edgecolors='face', s=groups_sizes, cmap=cmap)
-        trans = ax.transData.transform
-        bbox = ax.get_position().get_points()
-        ax_x_min = bbox[0, 0]
-        ax_x_max = bbox[1, 0]
-        ax_y_min = bbox[0, 1]
-        ax_y_max = bbox[1, 1]
-        ax_len_x = ax_x_max - ax_x_min
-        ax_len_y = ax_y_max - ax_y_min
-        trans2 = ax.transAxes.inverted().transform
-        pie_axs = []
-        for count, n in enumerate(nx_g_solid.nodes()):
-            pie_size = groups_sizes[count] / base_scale_scatter
-            x1, y1 = trans(pos[n])     # data coordinates
-            xa, ya = trans2((x1, y1))  # axis coordinates
-            xa = ax_x_min + (xa - pie_size/2) * ax_len_x
-            ya = ax_y_min + (ya - pie_size/2) * ax_len_y
-            # clip, the fruchterman layout sometimes places below figure
-            if ya < 0: ya = 0
-            if xa < 0: xa = 0
-            pie_axs.append(pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y], frameon=False))
-            pie_axs[count].set_xticks([])
-            pie_axs[count].set_yticks([])
-            if not isinstance(colors[count], cabc.Mapping):
+        xs, ys = pos_array[:, 0], pos_array[:, 1]
+        for ix, node in enumerate(nx_g_solid.nodes()):
+            if not isinstance(colors[ix], cabc.Mapping):
                 raise ValueError(
-                    f'{colors[count]} is neither a dict of valid '
+                    f'{colors[ix]} is neither a dict of valid '
                     'matplotlib colors nor a valid matplotlib color.'
                 )
-            color_single = colors[count].keys()
-            fracs = [colors[count][c] for c in color_single]
+            xx, yy = xs[ix], ys[ix]
+            color_single = colors[ix].keys()
+            fracs = [colors[ix][c] for c in color_single]
+
             if sum(fracs) < 1:
                 color_single = list(color_single)
                 color_single.append('grey')
-                fracs.append(1-sum(fracs))
-            pie_axs[count].pie(fracs, colors=color_single)
-        if node_labels is not None:
-            for ia, a in enumerate(pie_axs):
-                a.text(0.5, 0.5, node_labels[ia],
-                       verticalalignment='center',
-                       horizontalalignment='center',
-                       transform=a.transAxes,
-                       size=fontsize, fontweight=fontweight, **text_kwds)
+                fracs.append(1 - sum(fracs))
+
+            cumsum = np.cumsum(fracs)
+            cumsum = cumsum / cumsum[-1]
+            cumsum = [0] + cumsum.tolist()
+
+            for r1, r2, color in zip(cumsum[:-1], cumsum[1:], color_single):
+                angles = np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 20)
+                x = [0] + np.cos(angles).tolist()
+                y = [0] + np.sin(angles).tolist()
+
+                xy = np.column_stack([x, y])
+                s = np.abs(xy).max()
+
+                sct = ax.scatter([xx], [yy], marker=xy,
+                                 s=s ** 2 * groups_sizes[ix], color=color)
+
+            if node_labels is not None:
+                ax.text(xx, yy, node_labels[ix],
+                        verticalalignment='center',
+                        horizontalalignment='center',
+                        size=fontsize, fontweight=fontweight, **text_kwds)
+
     return sct
 
 
