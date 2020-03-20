@@ -46,8 +46,8 @@ def test_neighbors_key_obsp(field):
     else:
         arg = {field: adata1.uns[key]['connectivities_key']}
 
-    sc.tl.draw_graph(adata, layout='fr', random_state=0)
-    sc.tl.draw_graph(adata1, layout='fr', random_state=0, **arg)
+    sc.tl.draw_graph(adata, layout='fr', random_state=1)
+    sc.tl.draw_graph(adata1, layout='fr', random_state=1, **arg)
 
     assert adata.uns['draw_graph']['params'] == adata1.uns['draw_graph']['params']
     assert np.allclose(adata.obsm['X_draw_graph_fr'], adata1.obsm['X_draw_graph_fr'])
