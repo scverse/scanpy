@@ -109,10 +109,11 @@ def draw_graph(
         init_coords = adata.obsm[init_pos]
     elif init_pos == 'paga' or init_pos:
         init_coords = get_init_pos_from_paga(
-            adata, adjacency,
+            adata,
+            adjacency,
             random_state=random_state,
             neighbors_key=neighbors_key,
-            obsp=obsp
+            obsp=obsp,
         )
     else:
         np.random.seed(random_state)
