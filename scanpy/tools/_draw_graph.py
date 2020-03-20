@@ -163,7 +163,7 @@ def draw_graph(
     else:
         # igraph doesn't use numpy seed
         random.seed(random_state)
-        
+
         g = _utils.get_igraph_from_adjacency(adjacency)
         if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
             ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
