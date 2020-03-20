@@ -822,14 +822,12 @@ def _paga_graph(
                     size=fontsize, fontweight=fontweight, **text_kwds)
     # else pie chart plot
     else:
-        xs, ys = pos_array[:, 0], pos_array[:, 1]
-        for ix, node in enumerate(nx_g_solid.nodes()):
+        for ix, (xx, yy) in enumerate(zip(pos_array[:, 0], pos_array[:, 1])):
             if not isinstance(colors[ix], cabc.Mapping):
                 raise ValueError(
                     f'{colors[ix]} is neither a dict of valid '
                     'matplotlib colors nor a valid matplotlib color.'
                 )
-            xx, yy = xs[ix], ys[ix]
             color_single = colors[ix].keys()
             fracs = [colors[ix][c] for c in color_single]
 
