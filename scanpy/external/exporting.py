@@ -217,7 +217,7 @@ def spring_project(
 
 def _get_edges(adata, neighbors_key=None):
     neighbors = NeighborsView(adata, neighbors_key)
-    if 'distances' in adata.uns['neighbors']:  # these are sparse matrices
+    if 'distances' in neighbors:  # these are sparse matrices
         matrix = neighbors['distances']
     else:
         matrix = neighbors['connectivities']
