@@ -20,13 +20,16 @@ from .._utils import (
     _FontSize,
     circles,
     make_projection_available,
+    _process_layers,
 )
 from .._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
     doc_scatter_embedding,
     doc_show_save_ax,
+    doc_basis,
 )
+from .._scatter import _Aes, _Basis
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
@@ -37,51 +40,61 @@ VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
+    basis=doc_basis,
     edges_arrows=doc_edges_arrows,
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
 def embedding(
     adata: AnnData,
-    basis: str,
+    basis: _Basis,
     *,
+    # additional point aesthetics
     color: Union[str, Sequence[str], None] = None,
-    gene_symbols: Optional[str] = None,
-    use_raw: Optional[bool] = None,
+    size: Union[float, Sequence[float], None] = None,
+    # TODO: alpha
+    groups: Optional[str] = None,
     sort_order: bool = True,
+    # mapping
+    use_raw: Optional[bool] = None,
+    components: Union[str, Sequence[str]] = None,
+    layers: Union[str, Tuple[str, str, str], Mapping[_Aes, str], None] = None,
+    color_map: Union[Colormap, str, None] = None,
+    palette: Union[str, Sequence[str], Cycler, None] = None,
+    projection: Literal['2d', '3d'] = '2d',
+    gene_symbols: Optional[str] = None,
+    # edges & arrows
     edges: bool = False,
     edges_width: float = 0.1,
     edges_color: Union[str, Sequence[float], Sequence[str]] = 'grey',
     neighbors_key: Optional[str] = None,
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
-    groups: Optional[str] = None,
-    components: Union[str, Sequence[str]] = None,
-    layer: Optional[str] = None,
-    projection: Literal['2d', '3d'] = '2d',
-    # image parameters
+    # outline
+    add_outline: Optional[bool] = False,
+    outline_width: Tuple[float, float] = (0.3, 0.05),
+    outline_color: Tuple[str, str] = ('black', 'white'),
+    # image parameters TODO: extract
     img_key: Optional[str] = None,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
     bw: bool = False,
-    #
-    color_map: Union[Colormap, str, None] = None,
-    palette: Union[str, Sequence[str], Cycler, None] = None,
-    size: Union[float, Sequence[float], None] = None,
-    frameon: Optional[bool] = None,
+    # legend
     legend_fontsize: Union[int, float, _FontSize, None] = None,
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
+    # vminmax
     vmax: Union[VMinMax, Sequence[VMinMax], None] = None,
     vmin: Union[VMinMax, Sequence[VMinMax], None] = None,
-    add_outline: Optional[bool] = False,
-    outline_width: Tuple[float, float] = (0.3, 0.05),
-    outline_color: Tuple[str, str] = ('black', 'white'),
+    # gridspec
     ncols: int = 4,
     hspace: float = 0.25,
     wspace: Optional[float] = None,
+    # global figure params
     title: Union[str, Sequence[str], None] = None,
+    frameon: Optional[bool] = None,
+    # show save ax
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
@@ -93,8 +106,7 @@ def embedding(
 
     Parameters
     ----------
-    basis
-        Name of the `obsm` basis to use.
+    {basis}
     {adata_color_etc}
     {edges_arrows}
     {scatter_bulk}
@@ -115,6 +127,11 @@ def embedding(
         # very small sizes the edge will not reduce its size
         # (https://github.com/theislab/scanpy/issues/293)
         kwargs['edgecolor'] = 'none'
+    if 'layer' in kwargs:
+        if layers is not None:
+            raise ValueError('Can’t specify `layer` and `layers` at once')
+        layers = kwargs.pop('layer')
+    layers = _process_layers(adata, layers, use_raw)
 
     if groups:
         if isinstance(groups, str):
@@ -122,16 +139,6 @@ def embedding(
 
     make_projection_available(projection)
     args_3d = dict(projection='3d') if projection == '3d' else {}
-
-    # Deal with Raw
-    if use_raw is None:
-        # check if adata.raw is set
-        use_raw = layer is None and adata.raw is not None
-    if use_raw and layer is not None:
-        raise ValueError(
-            "Cannot use both a layer and the raw representation. Was passed:"
-            f"use_raw={use_raw}, layer={layer}."
-        )
 
     if wspace is None:
         #  try to set a wspace that is not too large or too small given the
@@ -158,7 +165,7 @@ def embedding(
     # Most of the code is for the case when multiple plots are required
     # 'color' is a list of names that want to be plotted.
     # Eg. ['Gene1', 'louvain', 'Gene2'].
-    # component_list is a list of components [[0,1], [1,2]]
+    # components_list is a list of components [[0,1], [1,2]]
     if (
         not isinstance(color, str)
         and isinstance(color, cabc.Sequence)
@@ -229,7 +236,7 @@ def embedding(
         color_vector, categorical = _get_color_values(
             adata,
             value_to_plot,
-            layer=layer,
+            layer=layers["color"],
             groups=groups,
             palette=palette,
             use_raw=use_raw,
@@ -431,13 +438,6 @@ def embedding(
             # there is not need to plot a legend or a colorbar
             continue
 
-        if legend_fontoutline is not None:
-            path_effect = [
-                patheffects.withStroke(linewidth=legend_fontoutline, foreground='w',)
-            ]
-        else:
-            path_effect = None
-
         _add_legend_or_colorbar(
             adata,
             ax,
@@ -448,7 +448,7 @@ def embedding(
             _data_points,
             legend_fontweight,
             legend_fontsize,
-            path_effect,
+            legend_fontoutline,
             groups,
             bool(grid),
         )
@@ -777,7 +777,7 @@ def spatial(
 
 
 def _get_data_points(
-    adata, basis, projection, components, img_key
+    adata, basis, projection, components, img_key=None
 ) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
     """
     Returns the data points corresponding to the selected basis, projection and/or components.
@@ -948,6 +948,11 @@ def _add_legend_or_colorbar(
             )
 
         if legend_loc == 'on data':
+            path_effects = (
+                [patheffects.withStroke(linewidth=legend_fontoutline, foreground='w')]
+                if legend_fontoutline
+                else None
+            )
             # identify centroids to put labels
             all_pos = np.zeros((len(categories), 2))
             for ilabel, label in enumerate(categories):
@@ -962,7 +967,7 @@ def _add_legend_or_colorbar(
                     verticalalignment='center',
                     horizontalalignment='center',
                     fontsize=legend_fontsize,
-                    path_effects=legend_fontoutline,
+                    path_effects=path_effects,
                 )
 
                 all_pos[ilabel] = [x_pos, y_pos]
@@ -998,15 +1003,7 @@ def _get_color_values(
     """
     if value_to_plot is None:
         return "lightgray", False
-    if (
-        gene_symbols is not None
-        and value_to_plot not in adata.obs.columns
-        and value_to_plot not in adata.var_names
-    ):
-        # We should probably just make an index for this, and share it over runs
-        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][
-            0
-        ]  # TODO: Throw helpful error if this doesn't work
+    value_to_plot = gene_symbol_column(adata, gene_symbols, value_to_plot)
     if use_raw and value_to_plot not in adata.obs.columns:
         values = adata.raw.obs_vector(value_to_plot)
     else:
@@ -1041,6 +1038,18 @@ def _get_color_values(
             # that are not in the groups
             color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
         return color_vector, True
+
+
+def gene_symbol_column(adata, gene_symbols, value_to_plot):
+    if (
+        gene_symbols is not None
+        and value_to_plot not in adata.obs.columns
+        and value_to_plot not in adata.var_names
+    ):
+        # We should probably just make an index for this, and share it over runs
+        # TODO: Throw helpful error if this doesn't work
+        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0]
+    return value_to_plot
 
 
 def _basis2name(basis):

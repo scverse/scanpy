@@ -56,8 +56,6 @@ def test_heatmap(image_comparer):
 
     # test heatmap numeric column():
 
-    # set as numeric column the vales for the first gene on the matrix
-    adata.obs['Gata2'] = adata.X[:, 0]
     sc.pl.heatmap(
         adata,
         adata.var_names,
@@ -120,7 +118,6 @@ def test_dotplot(image_comparer):
     save_and_compare_images('master_dotplot')
 
     # test dotplot numeric column():
-    adata.obs['Gata2'] = adata.X[:, 0]
     sc.pl.dotplot(
         adata,
         adata.var_names,
@@ -254,7 +251,6 @@ def test_matrixplot(image_comparer):
     save_and_compare_images('master_matrixplot_std_scale_group')
 
     # test matrixplot numeric column and alternative cmap
-    adata.obs['Gata2'] = adata.X[:, 0]
     sc.pl.matrixplot(
         adata,
         adata.var_names,

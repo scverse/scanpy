@@ -46,9 +46,38 @@ def test_obs_df(adata):
     badkeys = ["badkey1", "badkey2"]
     with pytest.raises(KeyError) as badkey_err:
         sc.get.obs_df(adata, keys=badkeys)
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         sc.get.obs_df(adata, keys=["gene1"], use_raw=True, layer="double")
     assert all(badkey_err.match(k) for k in badkeys)
+
+
+def test_obs_df_key_collision(adata):
+    # Test that we warn on key collisions
+    orig = adata.copy()
+    adata.obs = adata.obs.join(
+        pd.DataFrame(
+            np.zeros(adata.shape),
+            columns=adata.var_names,
+            index=adata.obs_names,
+        )
+    )
+    # adata.obs = adata.obs.join(sc.get.obs_df(adata, ["gene1", "gene2"]))
+    with pytest.raises(KeyError, match=r"gene1.*gene2.*obs.*adata\.var_names"):
+        df = sc.get.obs_df(adata, ["gene1", "gene2"])
+
+    # Test for gene_symbols
+    adata.obs = adata.obs.join(
+        sc.get.obs_df(
+            adata, ["genesymbol1", "genesymbol2"], gene_symbols="gene_symbols"
+        )
+    )
+    with pytest.raises(
+        KeyError,
+        match=r"genesymbol1.*genesymbol2.*obs.*adata\.var\['gene_symbols'\]",
+    ):
+        sc.get.obs_df(
+            adata, ["genesymbol1", "genesymbol2"], gene_symbols="gene_symbols"
+        )
 
 
 def test_var_df(adata):
@@ -67,6 +96,20 @@ def test_var_df(adata):
     with pytest.raises(KeyError) as badkey_err:
         sc.get.var_df(adata, keys=badkeys)
     assert all(badkey_err.match(k) for k in badkeys)
+
+
+def test_var_df_key_collision(adata):
+    # Test that we warn on key collisions
+    orig = adata.copy()
+    adata.var = adata.var.join(
+        pd.DataFrame(
+            np.zeros(adata.shape[::-1]),
+            columns=adata.obs_names,
+            index=adata.var_names,
+        )
+    )
+    with pytest.raises(KeyError, match=r"cell1.*cell2.*var.*adata\.obs_names"):
+        df = sc.get.var_df(adata, ["cell1", "cell2"])
 
 
 def test_rank_genes_groups_df():

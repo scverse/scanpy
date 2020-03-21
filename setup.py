@@ -41,6 +41,9 @@ setup(
         ],
         test=[
             'pytest>=4.4',
+            'leidenalg',
+            'louvain>=0.6',
+            'python-igraph',
             'dask[array]',
             'fsspec',
             'zappy',

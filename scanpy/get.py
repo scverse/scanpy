@@ -1,5 +1,6 @@
 """This module contains helper functions for accessing data."""
 from typing import Optional, Iterable, Tuple
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -102,6 +103,7 @@ def obs_df(
     --------
     Getting value for plotting:
 
+    >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> plotdf = sc.get.obs_df(
             pbmc,
@@ -121,41 +123,45 @@ def obs_df(
     >>> grouped = genedf.groupby("louvain")
     >>> mean, var = grouped.mean(), grouped.var()
     """
-    if use_raw:
-        assert layer is None, "Cannot specify use_raw=True and a layer at the same time."
-        if gene_symbols is not None:
-            gene_names = pd.Series(adata.raw.var_names, index=adata.raw.var[gene_symbols])
-        else:
-            gene_names = pd.Series(adata.raw.var_names, index=adata.raw.var_names)
-    else:
-        if gene_symbols is not None:
-            gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
-        else:
-            gene_names = pd.Series(adata.var_names, index=adata.var_names)
+    if use_raw and layer is not None:
+        raise ValueError("Cannot specify use_raw=True and a layer at the same time.")
+    ad = adata.raw if use_raw else adata
+    idx = ad.var_names if gene_symbols is None else ad.var[gene_symbols]
+    gene_names = pd.Series(ad.var_names, index=idx)
+    del ad, idx
+
     lookup_keys = []
     not_found = []
+    found_twice = []
     for key in keys:
+        in_obs, in_var_index = False, False
         if key in adata.obs.columns:
             lookup_keys.append(key)
-        elif key in gene_names.index:
-            lookup_keys.append(gene_names[key])
-        else:
+            in_obs = True
+        if key in gene_names.index:
+            in_var_index = True
+            if not in_obs:
+                lookup_keys.append(gene_names[key])
+        # Test failure cases
+        if not (in_obs or in_var_index):
             not_found.append(key)
-    if len(not_found) > 0:
-        if use_raw:
-            if gene_symbols is None:
-                gene_error = "`adata.raw.var_names`"
-            else:
-                gene_error = "gene_symbols column `adata.raw.var[{}].values`".format(gene_symbols)
+        elif in_obs and in_var_index:
+            found_twice.append(key)
+    if len(not_found) > 0 or len(found_twice) > 0:
+        ad_str = "adata.raw" if use_raw else "adata"
+        if gene_symbols is None:
+            gene_error = f"`{ad_str}.var_names`"
         else:
-            if gene_symbols is None:
-                gene_error = "`adata.var_names`"
-            else:
-                gene_error = "gene_symbols column `adata.var[{}].values`".format(gene_symbols)
-        raise KeyError(
-            f"Could not find keys '{not_found}' in columns of `adata.obs` or in"
-            f" {gene_error}."
-        )
+            gene_error = f"gene_symbols column `{ad_str}.var['{gene_symbols}']`"
+        if len(found_twice) > 0:
+            raise KeyError(
+                f"Found keys {found_twice} in columns of `obs` and in {gene_error}."
+            )
+        else:
+            raise KeyError(
+                f"Could not find keys '{not_found}' in columns of `adata.obs` or in"
+                f" {gene_error}."
+            )
 
     # Make df
     df = pd.DataFrame(index=adata.obs_names)
@@ -205,13 +211,28 @@ def var_df(
     # Argument handling
     lookup_keys = []
     not_found = []
+    found_twice = []
     for key in keys:
+        in_var, in_obs_index = False, False
         if key in adata.var.columns:
+            in_var = True
             lookup_keys.append(key)
-        elif key in adata.obs_names:
-            lookup_keys.append(key)
-        else:
+        if key in adata.obs_names:
+            in_obs_index = True
+            if not in_var:
+                lookup_keys.append(key)
+        # Test failure cases
+        if not (in_var or in_obs_index):
             not_found.append(key)
+        elif in_var and in_obs_index:
+            found_twice.append(key)
+    if len(found_twice) > 0:
+        raise KeyError(
+            f"Found keys {found_twice} in columns of `var` and in `adata.obs_names`.\n"
+            "\n"
+            "This will be an error in a future version of scanpy, "
+            "but interpreting as a observation name for now."
+        )
     if len(not_found) > 0:
         raise KeyError(
             f"Could not find keys '{not_found}' in columns of `adata.var` or"

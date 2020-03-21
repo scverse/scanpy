@@ -2,8 +2,8 @@
 """
 import collections.abc as cabc
 from itertools import product
-from typing import Optional, Union, Mapping  # Special
-from typing import Sequence, Collection, Iterable  # ABCs
+from typing import Optional, Union  # Special
+from typing import Sequence, Collection, Iterable, Mapping  # ABCs
 from typing import Tuple, List  # Classes
 
 import numpy as np
@@ -19,15 +19,29 @@ from matplotlib import gridspec
 from matplotlib import patheffects
 from matplotlib.colors import is_color_like, Colormap, ListedColormap
 
+from ._tools.scatterplots import _basis2name
 from .. import get
 from .. import logging as logg
 from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes, make_grid_spec
+from ._utils import (
+    scatter_base,
+    scatter_group,
+    setup_axes,
+    make_grid_spec,
+    _process_layers,
+)
 from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
-from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
+from ._docs import (
+    doc_scatter_basic,
+    doc_show_save_ax,
+    doc_common_plot_args,
+    doc_adata_color_etc,
+    doc_basis,
+)
+from ._scatter import _Aes, _Basis
 
 
 VALID_LEGENDLOCS = {
@@ -49,38 +63,50 @@ VALID_LEGENDLOCS = {
 }
 
 # TODO: is that all?
-_Basis = Literal['pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr']
 _VarNames = Union[str, Sequence[str]]
 
 
-@_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    adata_color_etc=doc_adata_color_etc,
+    basis=doc_basis,
+    scatter_temp=doc_scatter_basic,
+    show_save_ax=doc_show_save_ax,
+)
 def scatter(
     adata: AnnData,
     x: Optional[str] = None,
     y: Optional[str] = None,
-    color: Union[str, Collection[str]] = None,
-    use_raw: Optional[bool] = None,
-    layers: Union[str, Collection[str]] = None,
-    sort_order: bool = True,
-    alpha: Optional[float] = None,
     basis: Optional[_Basis] = None,
+    *,
+    # additional point aesthetics
+    color: Union[str, Collection[str]] = None,
+    size: Union[int, float, None] = None,
+    alpha: Optional[float] = None,
     groups: Union[str, Iterable[str]] = None,
+    sort_order: bool = True,
+    # mapping
+    use_raw: Optional[bool] = None,
     components: Union[str, Collection[str]] = None,
+    layers: Union[str, Tuple[str, str, str], Mapping[_Aes, str], None] = None,
+    color_map: Union[str, Colormap] = None,
+    palette: Union[Cycler, ListedColormap, ColorLike, Sequence[ColorLike]] = None,
     projection: Literal['2d', '3d'] = '2d',
+    # TODO: gene_symbols
+    # legend
     legend_loc: str = 'right margin',
     legend_fontsize: Union[int, float, _FontSize, None] = None,
     legend_fontweight: Union[int, _FontWeight, None] = None,
     legend_fontoutline: float = None,
-    color_map: Union[str, Colormap] = None,
-    palette: Union[Cycler, ListedColormap, ColorLike, Sequence[ColorLike]] = None,
+    # global figure params
+    title: Optional[str] = None,
     frameon: Optional[bool] = None,
     right_margin: Optional[float] = None,
     left_margin: Optional[float] = None,
-    size: Union[int, float, None] = None,
-    title: Optional[str] = None,
+    # show save ax
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     ax: Optional[Axes] = None,
+    # TODO: return_fig
 ):
     """\
     Scatter plot along observations or variables axes.
@@ -90,24 +116,12 @@ def scatter(
 
     Parameters
     ----------
-    adata
-        Annotated data matrix.
     x
         x coordinate.
     y
         y coordinate.
-    color
-        Keys for annotations of observations/cells or variables/genes,
-        or a hex color specification, e.g.,
-        `'ann1'`, `'#fe57a1'`, or `['ann1', 'ann2']`.
-    use_raw
-        Use `raw` attribute of `adata` if present.
-    layers
-        Use the `layers` attribute of `adata` if present: specify the layer for
-        `x`, `y` and `color`. If `layers` is a string, then it is expanded to
-        `(layers, layers, layers)`.
-    basis
-        String that denotes a plotting tool that computed coordinates.
+    {basis}
+    {adata_color_etc}
     {scatter_temp}
     {show_save_ax}
 
@@ -150,10 +164,10 @@ def _scatter_obs(
     x=None,
     y=None,
     color=None,
+    alpha=None,
     use_raw=None,
     layers=None,
     sort_order=True,
-    alpha=None,
     basis=None,
     groups=None,
     components=None,
@@ -175,31 +189,12 @@ def _scatter_obs(
 ):
     """See docstring of scatter."""
     sanitize_anndata(adata)
-    from scipy.sparse import issparse
 
     if use_raw is None and adata.raw is not None:
         use_raw = True
 
     # Process layers
-    if layers in ['X', None] or (
-        isinstance(layers, str) and layers in adata.layers.keys()
-    ):
-        layers = (layers, layers, layers)
-    elif isinstance(layers, cabc.Collection) and len(layers) == 3:
-        layers = tuple(layers)
-        for layer in layers:
-            if layer not in adata.layers.keys() and layer not in ['X', None]:
-                raise ValueError(
-                    '`layers` should have elements that are '
-                    'either None or in adata.layers.keys().'
-                )
-    else:
-        raise ValueError(
-            "`layers` should be a string or a collection of strings "
-            f"with length 3, had value '{layers}'"
-        )
-    if use_raw and layers not in [('X', 'X', 'X'), (None, None, None)]:
-        ValueError('`use_raw` must be `False` if layers are used.')
+    layers = _process_layers(adata, layers, use_raw)
 
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
@@ -245,8 +240,8 @@ def _scatter_obs(
             else:
                 y_arr = adata.raw.obs_vector(y)
         else:
-            x_arr = adata.obs_vector(x, layer=layers[0])
-            y_arr = adata.obs_vector(y, layer=layers[1])
+            x_arr = adata.obs_vector(x, layer=layers["x"])
+            y_arr = adata.obs_vector(y, layer=layers["y"])
 
         Y = np.c_[x_arr, y_arr]
     else:
@@ -274,24 +269,7 @@ def _scatter_obs(
     for i, palette in enumerate(palettes):
         palettes[i] = _utils.default_palette(palette)
 
-    if basis is not None:
-        component_name = (
-            'DC'
-            if basis == 'diffmap'
-            else 'tSNE'
-            if basis == 'tsne'
-            else 'UMAP'
-            if basis == 'umap'
-            else 'PC'
-            if basis == 'pca'
-            else 'TriMap'
-            if basis == 'trimap'
-            else basis.replace('draw_graph_', '').upper()
-            if 'draw_graph' in basis
-            else basis
-        )
-    else:
-        component_name = None
+    component_name = None if basis is None else _basis2name(basis)
     axis_labels = (x, y) if component_name is None else None
     show_ticks = True if component_name is None else False
 
@@ -313,7 +291,7 @@ def _scatter_obs(
         elif use_raw and adata.raw is not None and key in adata.raw.var_names:
             c = adata.raw.obs_vector(key)
         elif key in adata.var_names:
-            c = adata.obs_vector(key, layer=layers[2])
+            c = adata.obs_vector(key, layer=layers["color"])
         elif is_color_like(key):  # a flat color
             c = key
             colorbar = False
@@ -2833,114 +2811,37 @@ def correlation_matrix(
 
 
 def _prepare_dataframe(
-    adata: AnnData,
-    var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: Optional[str] = None,
-    use_raw: Optional[bool] = None,
-    log: bool = False,
-    num_categories: int = 7,
+    adata,
+    var_names,
+    groupby=None,
+    use_raw=None,
+    log=False,
+    num_categories=7,
+    gene_symbols=None,
     layer=None,
-    gene_symbols: Optional[str] = None,
 ):
-    """
-    Given the anndata object, prepares a data frame in which the row index are the categories
-    defined by group by and the columns correspond to var_names.
-
-    Parameters
-    ----------
-    adata
-        Annotated data matrix.
-    var_names
-        `var_names` should be a valid subset of  `adata.var_names`.
-    groupby
-        The key of the observation grouping to consider. It is expected that
-        groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories`.
-    use_raw
-        Use `raw` attribute of `adata` if present.
-    log
-        Use the log of the values
-    num_categories
-        Only used if groupby observation is not categorical. This value
-        determines the number of groups into which the groupby observation
-        should be subdivided.
-    gene_symbols
-        Key for field in .var that stores gene symbols.
-
-    Returns
-    -------
-    Tuple of `pandas.DataFrame` and list of categories.
-    """
-    from scipy.sparse import issparse
-
-    sanitize_anndata(adata)
+    # Backwards compat
     if use_raw is None and adata.raw is not None:
         use_raw = True
-    if isinstance(var_names, str):
-        var_names = [var_names]
-
+    # sanitize_anndata(adata)
+    tidy_df = get.obs_df(
+        adata,
+        var_names if groupby is None else [groupby] + list(var_names),
+        gene_symbols=gene_symbols,
+        layer=layer,
+        use_raw=use_raw,
+    )
     if groupby is not None:
-        if groupby not in adata.obs_keys():
-            raise ValueError(
-                'groupby has to be a valid observation. '
-                f'Given {groupby}, valid observations: {adata.obs_keys()}'
-            )
-
-    if gene_symbols is not None and gene_symbols in adata.var.columns:
-        # translate gene_symbols to var_names
-        # slow method but gives a meaningful error if no gene symbol is found:
-        translated_var_names = []
-        for symbol in var_names:
-            if symbol not in adata.var[gene_symbols].values:
-                logg.error(
-                    f"Gene symbol {symbol!r} not found in given "
-                    f"gene_symbols column: {gene_symbols!r}"
-                )
-                return
-            translated_var_names.append(
-                adata.var[adata.var[gene_symbols] == symbol].index[0]
-            )
-        symbols = var_names
-        var_names = translated_var_names
-    if layer is not None:
-        if layer not in adata.layers.keys():
-            raise KeyError(
-                f'Selected layer: {layer} is not in the layers list. '
-                f'The list of valid layers is: {adata.layers.keys()}'
-            )
-        matrix = adata[:, var_names].layers[layer]
-    elif use_raw:
-        matrix = adata.raw[:, var_names].X
-    else:
-        matrix = adata[:, var_names].X
-
-    if issparse(matrix):
-        matrix = matrix.toarray()
-    if log:
-        matrix = np.log1p(matrix)
-
-    obs_tidy = pd.DataFrame(matrix, columns=var_names)
-    if groupby is None:
-        groupby = ''
-        categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
-    else:
-        if not is_categorical_dtype(adata.obs[groupby]):
-            # if the groupby column is not categorical, turn it into one
-            # by subdividing into  `num_categories` categories
-            categorical = pd.cut(adata.obs[groupby], num_categories)
+        if pd.api.types.is_categorical(tidy_df[groupby]):
+            tidy_df.set_index(groupby, inplace=True)
         else:
-            categorical = adata.obs[groupby]
-
-    obs_tidy.set_index(categorical, groupby, inplace=True)
-    if gene_symbols is not None:
-        # translate the column names to the symbol names
-        obs_tidy.rename(
-            columns=dict([(var_names[x], symbols[x]) for x in range(len(var_names))]),
-            inplace=True,
-        )
-    categories = obs_tidy.index.categories
-
-    return categories, obs_tidy
+            tidy_df.index = pd.cut(tidy_df[groupby], num_categories)
+            # tidy_df.drop(columns=groupby, inplace=True)
+    else:
+        tidy_df.index = pd.Series(np.repeat("", len(tidy_df))).astype("category")
+    if log:
+        tidy_df = np.log1p(tidy_df)
+    return tidy_df.index.categories, tidy_df
 
 
 def _plot_gene_groups_brackets(
