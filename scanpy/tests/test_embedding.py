@@ -7,6 +7,15 @@ from sklearn.utils.testing import assert_array_almost_equal
 import scanpy as sc
 
 
+def test_ica():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc.X = pbmc.raw.X
+    sc.pp.highly_variable_genes(pbmc)
+    sc.tl.ica(pbmc, 10, highly_variable_genes=True)
+    sc.pp.neighbors(pbmc, use_rep="X_ica")
+    sc.tl.umap(pbmc)
+
+
 def test_umap_init_dtype():
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc = pbmc[:100, :].copy()
