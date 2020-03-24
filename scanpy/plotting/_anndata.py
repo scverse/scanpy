@@ -1751,11 +1751,14 @@ def dotplot(
     num_categories: int = 7,
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
-    color_map: str = 'Reds',
+    color_map: str = 'RdBu_r',
+    style: Optional[str] = 'square color',
     dot_max: Optional[float] = None,
     dot_min: Optional[float] = None,
     standard_scale: Literal['var', 'group'] = None,
     smallest_dot: float = 0.0,
+    color_title: Optional[str] = 'Expression\nlevel in group',
+    size_title: Optional[str] = 'Fraction of cells\nin group (%)',
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
     gene_symbols: Optional[str] = None,
@@ -1886,31 +1889,30 @@ def dotplot(
         logg.warning('Unknown type for standard_scale, ignored')
 
     dendro_width = 0.8 if dendrogram else 0
-    colorbar_width = 0.2
-    colorbar_width_spacer = 0.5
-    size_legend_width = 1.5
+    legends_width_spacer = 0.2
+    legends_width = 1.2
+    min_height = 2.5
+    category_height = category_width = 0.35
     if figsize is None:
-        height = len(categories) * 0.3 + 1  # +1 for labels
+        height = len(categories) * category_height + 1  # +1 for labels
         # if the number of categories is small (eg 1 or 2) use
         # a larger height
-        height = max([1.5, height])
-        heatmap_width = len(var_names) * 0.35
+
+        height = max([min_height, height])
+        heatmap_width = len(var_names) * category_width
         width = (
             heatmap_width
-            + colorbar_width
-            + size_legend_width
+            + legends_width
             + dendro_width
-            + colorbar_width_spacer
+            + legends_width_spacer
         )
     else:
         width, height = figsize
         heatmap_width = width - (
-            colorbar_width
-            + size_legend_width
+            + legends_width
             + dendro_width
-            + colorbar_width_spacer
+            + legends_width_spacer
         )
-
     # colorbar ax width should not change with differences in the width of the image
     # otherwise can become too small
 
@@ -1920,32 +1922,31 @@ def dotplot(
     else:
         height_ratios = [0, 10.5]
 
-    # define a layout of 2 rows x 5 columns
+    # define a layout of 2 rows x 4 columns
     # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
     # second row is for main content. This second row
-    # is divided into 4 axes:
+    # is divided into 3 axes:
     #   first ax is for the main figure
     #   second ax is for dendrogram (if present)
-    #   third ax is for the color bar legend
-    #   fourth ax is for an spacer that avoids the ticks
-    #             from the color bar to be hidden beneath the size lengend axis
-    #   fifth ax is to plot the size legend
+    #   third ax is for an spacer that avoids the ticks
+    #             from the color bar to overlap
+    #   fourth ax is to plot the size and colobar legend
     fig = pl.figure(figsize=(width, height))
     axs = gridspec.GridSpec(
         nrows=2,
-        ncols=5,
+        ncols=4,
         wspace=0.02,
         hspace=0.04,
         width_ratios=[
             heatmap_width,
             dendro_width,
-            colorbar_width,
-            colorbar_width_spacer,
-            size_legend_width,
+            legends_width_spacer,
+            legends_width,
         ],
         height_ratios=height_ratios,
     )
-    if len(categories) < 4:
+    if len(categories) * category_height < min_height:
+        dot_plot_height = len(categories) * category_height
         # when few categories are shown, the colorbar and size legend
         # need to be larger than the main plot, otherwise they would look
         # compressed. For this, the dotplot ax is split into two:
@@ -1953,13 +1954,11 @@ def dotplot(
             2,
             1,
             subplot_spec=axs[1, 0],
-            height_ratios=[len(categories) * 0.3, 1],
+            height_ratios=[dot_plot_height, min_height - dot_plot_height],
         )
         dot_ax = fig.add_subplot(axs2[0])
     else:
         dot_ax = fig.add_subplot(axs[1, 0])
-
-    color_legend = fig.add_subplot(axs[1, 2])
 
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
@@ -1999,53 +1998,34 @@ def dotplot(
             dendro_ax, adata, groupby, dendrogram_key=dendrogram, ticks=y_ticks
         )
 
-    # to keep the size_legend_ax of about the same height, irrespective
-    # of the number of categories, the fourth ax is subdivided into two parts
-    size_legend_height = min(0.8, height)
-    # wspace is proportional to the width but a constant value is
-    # needed such that the spacing is the same for thinner or wider images.
-    wspace = 10.5 / width
+    # to maintain the fixed height size of the legends a
+    # variable space is added at the bottom. The structure for the legends
+    # is:
+    # first row: size legend
+    # second row: spacer to avoid ax titles to overlap
+    # third row: colorbar
+    # fourth raw: variable space to keep the first three rows of the same size
+
+    cbar_legend_height = min_height * 0.08
+    size_legend_height = min_height * 0.27
+    spacer_height = min_height * 0.3
+    height_ratios = [
+        size_legend_height,
+        spacer_height,
+        cbar_legend_height,
+        height - size_legend_height - cbar_legend_height - spacer_height
+    ]
     axs3 = gridspec.GridSpecFromSubplotSpec(
-        2,
+        4,
         1,
-        subplot_spec=axs[1, 4],
-        wspace=wspace,
-        height_ratios=[
-            size_legend_height / height,
-            (height - size_legend_height) / height,
-        ],
+        subplot_spec=axs[1, 3],
+        height_ratios=height_ratios,
     )
-    # make scatter plot in which
-    # x = var_names
-    # y = groupby category
-    # size = fraction
-    # color = mean expression
 
     cmap = pl.get_cmap(color_map)
-    import matplotlib.colors
-    normalize = matplotlib.colors.Normalize(
-        vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
-    )
-    if dot_max is None:
-        dot_max = np.ceil(fraction_obs.values.max() * 10) / 10
-    else:
-        if dot_max < 0 or dot_max > 1:
-            raise ValueError("`dot_max` value has to be between 0 and 1")
-    if dot_min is None:
-        dot_min = 0
-    else:
-        if dot_min < 0 or dot_min > 1:
-            raise ValueError("`dot_min` value has to be between 0 and 1")
 
-    if dot_min != 0 or dot_max != 1:
-        # clip frac between dot_min and  dot_max
-        frac = np.clip(frac, dot_min, dot_max)
-        old_range = dot_max - dot_min
-        # re-scale frac between 0 and 1
-        frac = (frac - dot_min) / old_range
-
-    dot_ax = _dotplot(fraction_obs, mean_obs, dot_ax, color_map=color_map,
-                      dot_max=dot_max, dot_min=dot_min)
+    normalize, dot_min, dot_max = _dotplot(fraction_obs, mean_obs, dot_ax, color_map=color_map,
+                                           dot_max=dot_max, dot_min=dot_min, style=style, **kwds)
 
     # plot group legends on top of dot_ax (if given)
     if var_group_positions is not None and len(var_group_positions) > 0:
@@ -2061,8 +2041,14 @@ def dotplot(
 
     # plot colorbar
     import matplotlib.colorbar
+    color_legend_ax = fig.add_subplot(axs3[2])
 
-    matplotlib.colorbar.ColorbarBase(color_legend, cmap=cmap, norm=normalize)
+    matplotlib.colorbar.ColorbarBase(color_legend_ax,
+                                     orientation='horizontal',
+                                     cmap=cmap, norm=normalize)
+
+    color_legend_ax.set_title(color_title,
+                              fontsize='small')
 
     # for the dot size legend, use step between dot_max and dot_min
     # based on how different they are.
@@ -2077,20 +2063,14 @@ def dotplot(
     # to guarantee that dot_max is in the legend.
     fracs_legends = np.arange(dot_max, dot_min, step * -1)[::-1]
     if dot_min != 0 or dot_max != 1:
-        fracs_values = (fracs_legends - dot_min) / old_range
+        dot_range = dot_max - dot_min
+        fracs_values = (fracs_legends - dot_min) / dot_range
     else:
         fracs_values = fracs_legends
     size = (fracs_values * 10) ** 2
     size += smallest_dot
-    color = [
-        cmap(normalize(value))
-        for value in np.repeat(mean_obs.values.max() * 0.7, len(size))
-    ]
 
     # plot size bar
-
-    _ax1 = fig.add_subplot(axs3[1])
-    _ax2 = fig.add_subplot(axs3[0])
     size_legend_ax = fig.add_subplot(axs3[0])
     size_legend_ax.scatter(
         np.arange(len(size)) + 0.5,
@@ -2103,7 +2083,8 @@ def dotplot(
     if dot_max < 1:
         labels[-1] = ">" + labels[-1]
     size_legend_ax.set_xticklabels(labels)
-    size_legend_ax.set_xticklabels(["{}".format(int(x*100)) for x in fracs_legends])
+    size_legend_ax.set_xticklabels(["{}".format(int(x*100)) for x in fracs_legends],
+                                   fontsize='small')
 
     # remove y ticks and labels
     size_legend_ax.tick_params(
@@ -2118,12 +2099,13 @@ def dotplot(
     size_legend_ax.grid(False)
 
     ymin, ymax = size_legend_ax.get_ylim()
-    size_legend_ax.set_ylim(-0.015, ymax)
+    size_legend_ax.set_ylim(-0.9, 4)
+    size_legend_ax.set_title(size_title, y=ymax + 0.25,
+                             size='small')
+
     xmin, xmax = size_legend_ax.get_xlim()
     size_legend_ax.set_xlim(xmin,  xmax + 0.5)
 
-    size_legend_ax.set_title('Fraction of cells\nin cluster (%)', y= ymax+0.2,
-                             size='medium')
 
     _utils.savefig_or_show('dotplot', show=show, save=save)
     return axs
@@ -3637,6 +3619,7 @@ def _dotplot(
     dot_color,
     dot_ax,
     color_map: str = 'Reds',
+    style: Optional[str] = 'square color',
     y_label: Optional[str] = None,
     dot_max: Optional[float] = None,
     dot_min: Optional[float] = None,
@@ -3682,7 +3665,7 @@ def _dotplot(
 
     Returns
     -------
-    List of :class:`~matplotlib.axes.Axes`
+    matplotlib.colors.Normalize, dot_min, dot_max
 
     """
     assert dot_size.shape == dot_color.shape, 'please check that the dot_size ' \
@@ -3743,20 +3726,36 @@ def _dotplot(
         vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
     )
 
-    colors = cmap(normalize(mean_flat))
-    dot_ax.pcolor(dot_color.values, cmap='RdBu_r')
-    dot_ax.scatter(
-        x,
-        y,
-        color=colors,
-        s=size,
-        cmap=cmap,
-        norm=None,
-        linewidth=1.5,
-        facecolor='none',
-        edgecolor='white',
-        **kwds,
-    )
+    if style == 'square color':
+        # makes first a 'matrixplot' (squares with the asigned colormap
+        dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
+        for axis in ['top', 'bottom', 'left', 'right']:
+            dot_ax.spines[axis].set_linewidth(1.5)
+        dot_ax.scatter(
+            x,
+            y,
+            s=size,
+            cmap=cmap,
+            norm=None,
+            linewidth=1.5,
+            facecolor='none',
+            edgecolor='white',
+            **kwds,
+        )
+    else:
+        color = cmap(normalize(mean_flat))
+        dot_ax.scatter(
+            x,
+            y,
+            s=size,
+            color=color,
+            cmap=cmap,
+            norm=None,
+            linewidth=0.5,
+            edgecolor='none',
+            **kwds,
+        )
+
     y_ticks = np.arange(dot_color.shape[0]).astype(int)
     dot_ax.set_yticks(y_ticks + 0.5)
     dot_ax.set_yticklabels([dot_color.index[idx] for idx in y_ticks])
@@ -3775,4 +3774,9 @@ def _dotplot(
     # top
     dot_ax.set_xlim(len(var_names), 0)
 
-    return dot_ax
+    if style != 'square color':
+        # add more distance to the x and y lims
+        ylim = dot_ax.get_ylim()
+        dot_ax.set_ylim(ylim[0]-0.5, ylim[1]+0.5)
+
+    return normalize, dot_min, dot_max
