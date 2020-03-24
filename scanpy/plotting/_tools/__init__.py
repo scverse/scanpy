@@ -16,6 +16,7 @@ from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax, doc_panels
+from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
 from matplotlib.colors import Colormap
 
@@ -332,6 +333,7 @@ def _rank_genes_groups_plot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    values_to_plot: Optional[str] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -382,11 +384,37 @@ def _rank_genes_groups_plot(
         group_names_valid.append(group)
         start = end
 
+    # TODO: this works only for dotplot and matrix plot, add check
+    values_df = None
+    if values_to_plot is not None:
+        # by default, the values to plot are the expression
+        # values. However, if rank_genes_groups has been computed
+        # then, also pvalues and logfold change can be plotted
+        df_list = []
+        for group in group_names:
+            # df = rank_genes_groups_df(adata, group, key=key)
+            df = rank_genes_groups_df(adata, group, key='rank_genes_groups')
+            df['group'] = group
+            df_list.append(df)
+
+        values_df = pd.concat(df_list)
+        values_df = pd.pivot(values_df, index='names', columns='group',
+                             values=values_to_plot).fillna(1)
+
+        color_title = None
+        if values_to_plot in ['pvals', 'pvals_adj']:
+            values_df = -1 * np.log10(values_df)
+            color_title = '-log10(pvalue)'
+        # TODO. n_genes for tl.rank_genes needs to be larger to get good results
+        values_df = values_df.loc[gene_names].T
+
     group_names = group_names_valid
     if plot_type == 'dotplot':
         from .._anndata import dotplot
-        dotplot(adata, gene_names, groupby, var_group_labels=group_names,
-                var_group_positions=group_positions, show=show, save=save, **kwds)
+        return dotplot(adata, gene_names, groupby, var_group_labels=group_names,
+                var_group_positions=group_positions,
+                dot_color_df=values_df, color_title=color_title,
+                show=show, save=save, **kwds)
 
     elif plot_type == 'heatmap':
         from .._anndata import heatmap
@@ -511,6 +539,7 @@ def rank_genes_groups_dotplot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    values_to_plot: Optional[str] = 'pvals_adj',
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -540,12 +569,13 @@ def rank_genes_groups_dotplot(
         Are passed to :func:`~scanpy.pl.dotplot`.
     """
 
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='dotplot',
         groups=groups,
         n_genes=n_genes,
         groupby=groupby,
+        values_to_plot=values_to_plot,
         key=key,
         show=show,
         save=save,

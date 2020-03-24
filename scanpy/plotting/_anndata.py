@@ -1766,6 +1766,7 @@ def dotplot(
     var_group_labels: Optional[Sequence[str]] = None,
     var_group_rotation: Optional[float] = None,
     layer: Optional[str] = None,
+    dot_color_df: Optional[pd.DataFrame] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwds,
@@ -1871,100 +1872,106 @@ def dotplot(
         obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
     )
 
-    # 2. compute mean value
-    if mean_only_expressed:
-        mean_obs = obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
-    else:
-        mean_obs = obs_tidy.groupby(level=0).mean()
+    if dot_color_df is None:
+        # 2. compute mean value
+        if mean_only_expressed:
+            mean_obs = obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+        else:
+            mean_obs = obs_tidy.groupby(level=0).mean()
 
-    if standard_scale == 'group':
-        mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
-        mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
-    elif standard_scale == 'var':
-        mean_obs -= mean_obs.min(0)
-        mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
-    elif standard_scale is None:
-        pass
+        if standard_scale == 'group':
+            mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
+            mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
+        elif standard_scale == 'var':
+            mean_obs -= mean_obs.min(0)
+            mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
+        elif standard_scale is None:
+            pass
+        else:
+            logg.warning('Unknown type for standard_scale, ignored')
     else:
-        logg.warning('Unknown type for standard_scale, ignored')
+        mean_obs = dot_color_df
 
+    assert mean_obs.shape == fraction_obs.shape
     dendro_width = 0.8 if dendrogram else 0
-    legends_width_spacer = 0.2
     legends_width = 1.2
-    min_height = 2.5
     category_height = category_width = 0.35
     if figsize is None:
-        height = len(categories) * category_height + 1  # +1 for labels
-        # if the number of categories is small (eg 1 or 2) use
-        # a larger height
+        min_height = 2.5
+        dotplot_height = len(categories) * category_height
+        height = dotplot_height + 1  # +1 for labels
+
+        # if the number of categories is small use
+        # a larger height, otherwise the legends do not fit
 
         height = max([min_height, height])
-        heatmap_width = len(var_names) * category_width
+        dotplot_width = len(var_names) * category_width
         width = (
-            heatmap_width
+            dotplot_width
             + legends_width
             + dendro_width
-            + legends_width_spacer
         )
     else:
         width, height = figsize
-        heatmap_width = width - (
+        min_height = height
+        dotplot_height = height
+
+        dotplot_width = width - (
             + legends_width
             + dendro_width
-            + legends_width_spacer
         )
-    # colorbar ax width should not change with differences in the width of the image
-    # otherwise can become too small
 
-    if var_group_positions is not None and len(var_group_positions) > 0:
-        # add some space in case 'brackets' want to be plotted on top of the image
-        height_ratios = [0.5, 10]
-    else:
-        height_ratios = [0, 10.5]
+    legends_width_spacer = 0.7 / width
 
-    # define a layout of 2 rows x 4 columns
-    # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
-    # second row is for main content. This second row
-    # is divided into 3 axes:
-    #   first ax is for the main figure
-    #   second ax is for dendrogram (if present)
-    #   third ax is for an spacer that avoids the ticks
-    #             from the color bar to overlap
-    #   fourth ax is to plot the size and colobar legend
+    # define a layout of 1 rows x 2 columns
+    #   first ax is for the main figure.
+    #   second ax is to plot the size and colobar legend
+
     fig = pl.figure(figsize=(width, height))
-    axs = gridspec.GridSpec(
-        nrows=2,
-        ncols=4,
-        wspace=0.02,
-        hspace=0.04,
+    gs = gridspec.GridSpec(
+        nrows=1,
+        ncols=2,
+        wspace=legends_width_spacer,
         width_ratios=[
-            heatmap_width,
-            dendro_width,
-            legends_width_spacer,
+            dotplot_width + dendro_width,
             legends_width,
         ],
-        height_ratios=height_ratios,
     )
-    if len(categories) * category_height < min_height:
-        dot_plot_height = len(categories) * category_height
-        # when few categories are shown, the colorbar and size legend
-        # need to be larger than the main plot, otherwise they would look
-        # compressed. For this, the dotplot ax is split into two:
-        axs2 = gridspec.GridSpecFromSubplotSpec(
-            2,
-            1,
-            subplot_spec=axs[1, 0],
-            height_ratios=[dot_plot_height, min_height - dot_plot_height],
-        )
-        dot_ax = fig.add_subplot(axs2[0])
-    else:
-        dot_ax = fig.add_subplot(axs[1, 0])
 
-    if groupby is None or len(categories) <= 1:
+    # the main plot is divided into three rows and two columns
+    # first fow is for brackets if needed,
+    # second row is for dotplot and dendrogram (if needed)
+    # third row is an spacer, that is adjusted in case the
+    # legends need more height than the dotplot
+    if var_group_positions is not None and len(var_group_positions) > 0:
+        # add some space in case 'brackets' want to be plotted on top of the image
+        var_groups_height = category_height / 2
+    else:
+        var_groups_height = 0
+
+    height_ratios = [var_groups_height, dotplot_height,
+                     height - var_groups_height - dotplot_height]
+
+    main_ax_grid = gridspec.GridSpecFromSubplotSpec(
+        nrows=3,
+        ncols=2,
+        wspace=0.1 / width,
+        hspace=0.1 / height,
+        subplot_spec=gs[0, 0],
+        height_ratios=height_ratios,
+        width_ratios=[dotplot_width, dendro_width]
+    )
+    dot_ax = fig.add_subplot(main_ax_grid[1, 0])
+    if dendrogram:
+        dendro_ax = fig.add_subplot(main_ax_grid[1, 1], sharey=dot_ax)
+    if var_group_positions is not None and len(var_group_positions) > 0:
+        gene_groups_ax = fig.add_subplot(main_ax_grid[0, 0], sharex=dot_ax)
+
+    if groupby is None or len(categories) <= 2:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
 
-    if dendrogram and len(categories) > 2:
+    if dendrogram:
         dendro_data = _reorder_categories_after_dendrogram(
             adata,
             groupby,
@@ -1993,7 +2000,6 @@ def dotplot(
         ]
 
         y_ticks = np.arange(mean_obs.shape[0]) + 0.5
-        dendro_ax = fig.add_subplot(axs[1, 1], sharey=dot_ax)
         _plot_dendrogram(
             dendro_ax, adata, groupby, dendrogram_key=dendrogram, ticks=y_ticks
         )
@@ -2016,9 +2022,9 @@ def dotplot(
         height - size_legend_height - cbar_legend_height - spacer_height
     ]
     axs3 = gridspec.GridSpecFromSubplotSpec(
-        4,
-        1,
-        subplot_spec=axs[1, 3],
+        nrows=4,
+        ncols=1,
+        subplot_spec=gs[0, 1],
         height_ratios=height_ratios,
     )
 
@@ -2029,7 +2035,6 @@ def dotplot(
 
     # plot group legends on top of dot_ax (if given)
     if var_group_positions is not None and len(var_group_positions) > 0:
-        gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=dot_ax)
         _plot_gene_groups_brackets(
             gene_groups_ax,
             group_positions=var_group_positions,
@@ -2108,7 +2113,7 @@ def dotplot(
 
 
     _utils.savefig_or_show('dotplot', show=show, save=save)
-    return axs
+    return gs
 
 
 @_doc_params(
@@ -3779,4 +3784,6 @@ def _dotplot(
         ylim = dot_ax.get_ylim()
         dot_ax.set_ylim(ylim[0]-0.5, ylim[1]+0.5)
 
+        xlim = dot_ax.get_xlim()
+        dot_ax.set_xlim(xlim[0] + 0.5, xlim[1] - 0.5)
     return normalize, dot_min, dot_max
