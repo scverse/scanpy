@@ -386,6 +386,7 @@ def _rank_genes_groups_plot(
 
     # TODO: this works only for dotplot and matrix plot, add check
     values_df = None
+
     if values_to_plot is not None:
         # by default, the values to plot are the expression
         # values. However, if rank_genes_groups has been computed
@@ -403,10 +404,10 @@ def _rank_genes_groups_plot(
         values_df = pd.pivot(values_df, index='names', columns='group',
                              values=values_to_plot).fillna(1)
 
-        color_title = None
         if values_to_plot in ['pvals', 'pvals_adj']:
             values_df = -1 * np.log10(values_df)
-            color_title = '-log10(pvalue)'
+            kwds.setdefault('color_title', "-log10(pvalue")
+
         # TODO. n_genes for tl.rank_genes needs to be larger to get good results
         values_df = values_df.loc[gene_names].T
 
@@ -415,7 +416,7 @@ def _rank_genes_groups_plot(
         from .._anndata import dotplot
         return dotplot(adata, gene_names, groupby, var_group_labels=group_names,
                 var_group_positions=group_positions,
-                dot_color_df=values_df, color_title=color_title,
+                dot_color_df=values_df,
                 show=show, save=save, **kwds)
 
     elif plot_type == 'heatmap':

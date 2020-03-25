@@ -1846,9 +1846,18 @@ def dotplot(
         else:
             logg.warning('Unknown type for standard_scale, ignored')
     else:
-        mean_obs = dot_color_df
+        # check that both matrices have the same shape
+        if dot_color_df.shape != fraction_obs.shape:
+            logg.error("the given dot_color_df data frame has a different shape than"
+                       "the data frame used for the dot size. Both data frames need"
+                       "to have the same index and columns")
 
-    assert mean_obs.shape == fraction_obs.shape
+        # get the same order for rows and columns in the color values using the order
+        # in the fraction values. Because genes (columns) can be duplicated
+        # they need to be removed first. Otherwise, the duplicate genes are further
+        # duplicated.
+        mean_obs = dot_color_df.loc[fraction_obs.index].T.drop_duplicates().T[fraction_obs.columns]
+
     dendro_width = 0.8 if dendrogram else 0
     legends_width = 1.2
     category_height = category_width = 0.35
@@ -3592,13 +3601,13 @@ def _dotplot(
     matplotlib.colors.Normalize, dot_min, dot_max
 
     """
-    assert dot_size.shape == dot_color.shape, 'please check that the dot_size ' \
+    assert dot_size.shape == dot_color.shape, 'please check that dot_size ' \
                                 'and dot_color dataframes have the same shape'
 
-    assert np.all(dot_size.index == dot_color.index), 'please check that the dot_size ' \
+    assert list(dot_size.index) == list(dot_color.index), 'please check that dot_size ' \
                                 'and dot_color dataframes have the same index'
 
-    assert np.all(dot_size.columns == dot_color.columns), 'please check that the dot_size ' \
+    assert list(dot_size.columns) == list(dot_color.columns), 'please check that the dot_size ' \
                                 'and dot_color dataframes have the same columns'
 
     var_names = dot_size.columns
@@ -3696,13 +3705,13 @@ def _dotplot(
     # to be consistent with the heatmap plot, is better to
     # invert the order of the y-axis, such that the first group is on
     # top
-    dot_ax.set_xlim(len(var_names), 0)
+    dot_ax.set_ylim(dot_color.shape[0], 0)
+    dot_ax.set_xlim(0, dot_color.shape[1])
 
     if style != 'square color':
         # add more distance to the x and y lims
-        ylim = dot_ax.get_ylim()
-        dot_ax.set_ylim(ylim[0]-0.5, ylim[1]+0.5)
+        dot_ax.set_ylim(dot_color.shape[0] + 0.5, -0.5)
 
-        xlim = dot_ax.get_xlim()
-        dot_ax.set_xlim(xlim[0] + 0.5, xlim[1] - 0.5)
+        dot_ax.set_xlim(-0.3, dot_color.shape[1] + 0.3)
+
     return normalize, dot_min, dot_max
