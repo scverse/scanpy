@@ -24,8 +24,8 @@ If you'd like to see your tool included here, please open a `pull request <https
 Preprocessing: PP
 ------------------
 
-Batch effect correction
-~~~~~~~~~~~~~~~~~~~~~~~
+Data integration
+~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: .
@@ -57,6 +57,8 @@ Embeddings
 
    tl.phate
    tl.palantir
+   tl.trimap
+   tl.sam
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,6 +67,8 @@ Clustering and trajectory inference
    :toctree: .
 
    tl.phenograph
+   tl.harmony_timeseries
+   tl.wishbone
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,8 +87,10 @@ Plotting: PL
    :toctree: .
 
    pl.phate
+   pl.trimap
    tl.palantir
-
+   pl.sam
+   pl.wishbone_marker_trajectory
 
 Exporting
 ---------

@@ -76,9 +76,7 @@ def test_timing(monkeypatch, capsys, logging_state):
         def now(tz):
             nonlocal counter
             counter += 1
-            return datetime(
-                2000, 1, 1, second=counter, microsecond=counter, tzinfo=tz
-            )
+            return datetime(2000, 1, 1, second=counter, microsecond=counter, tzinfo=tz)
 
     monkeypatch.setattr(l, 'datetime', IncTime)
     s.verbosity = Verbosity.debug

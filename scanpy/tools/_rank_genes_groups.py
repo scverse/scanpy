@@ -340,8 +340,8 @@ def rank_genes_groups(
                     scores[left:right] = np.sum(ranks.loc[0:n_active, :])
                     left = right
 
-                scores = (scores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
-                    (n_active * m_active * (n_active + m_active + 1) / 12))
+                scores = (scores - (n_active * ((n_active + m_active + 1) / 2))) / sqrt(
+                    (n_active * m_active / 12 * (n_active + m_active + 1)))
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores))
 
@@ -398,7 +398,7 @@ def rank_genes_groups(
                 mean_rest, var_rest = _get_mean_var(X[mask_rest])
 
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
-                    (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
+                    (ns[imask] * (n_cells - ns[imask]) / 12 * (n_cells + 1)))
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[imask,:]))
 

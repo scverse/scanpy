@@ -8,7 +8,11 @@ installing Miniconda_ (see `Installing Miniconda`_). Then run::
 
     conda install -c bioconda scanpy
 
-Otherwise, you might want to pull Scanpy `from PyPI`_:
+Install the Leiden clustering package [Traag18]_ (improved Louvain clustering) via::
+
+    conda install -c conda-forge leidenalg
+
+Alternatively, you might want to pull Scanpy `from PyPI`_.
 
 .. _from PyPI: https://pypi.org/project/scanpy
 
