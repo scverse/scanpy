@@ -393,6 +393,8 @@ def _rank_genes_groups_plot(
         df_list = []
         for group in group_names:
             # df = rank_genes_groups_df(adata, group, key=key)
+            # TODO: other means of filtering genes are needed.
+            # maybe do it in place for the image
             df = rank_genes_groups_df(adata, group, key='rank_genes_groups')
             df['group'] = group
             df_list.append(df)
