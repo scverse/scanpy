@@ -1724,6 +1724,7 @@ def dotplot(
     var_group_labels: Optional[Sequence[str]] = None,
     var_group_rotation: Optional[float] = None,
     layer: Optional[str] = None,
+    swap_axes: Optional[bool] = False,
     dot_color_df: Optional[pd.DataFrame] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -1858,24 +1859,53 @@ def dotplot(
         # duplicated.
         mean_obs = dot_color_df.loc[fraction_obs.index].T.drop_duplicates().T[fraction_obs.columns]
 
-    dendro_width = 0.8 if dendrogram else 0
-    legends_width = 1.2
+    if groupby is None or len(categories) <= 2:
+        # dendrogram can only be computed  between groupby categories
+        dendrogram = False
+
+    if dendrogram:
+        dendro_data = _reorder_categories_after_dendrogram(
+            adata,
+            groupby,
+            dendrogram,
+            var_names=var_names,
+            var_group_labels=var_group_labels,
+            var_group_positions=var_group_positions,
+        )
+
+        var_group_labels = dendro_data['var_group_labels']
+        var_group_positions = dendro_data['var_group_positions']
+
+        # reorder matrix
+        if dendro_data['var_names_idx_ordered'] is not None:
+            # reorder columns (usually genes) if needed. This only happens when
+            # var_group_positions and var_group_labels is set
+            mean_obs = mean_obs.iloc[:, dendro_data['var_names_idx_ordered']]
+            fraction_obs = fraction_obs.iloc[:, dendro_data['var_names_idx_ordered']]
+
+        # reorder rows (categories) to match the dendrogram order
+        mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
+        fraction_obs = fraction_obs.iloc[dendro_data['categories_idx_ordered'], :]
+
+        dendro_ticks = np.arange(mean_obs.shape[0]) + 0.5
+
     category_height = category_width = 0.35
+    legends_width = 1.2
+    dendro_width = 0.8 if dendrogram else 0
     if figsize is None:
+        # minimum height required for legends to plot properly
         min_height = 2.5
         dotplot_height = len(categories) * category_height
+        dotplot_width = len(var_names) * category_width + dendro_width
+        if swap_axes:
+            dotplot_height, dotplot_width = dotplot_width, dotplot_height
+
         height = dotplot_height + 1  # +1 for labels
 
         # if the number of categories is small use
         # a larger height, otherwise the legends do not fit
-
         height = max([min_height, height])
-        dotplot_width = len(var_names) * category_width
-        width = (
-            dotplot_width
-            + legends_width
-            + dendro_width
-        )
+        width = dotplot_width + legends_width
     else:
         width, height = figsize
         min_height = height
@@ -1908,14 +1938,27 @@ def dotplot(
     # second row is for dotplot and dendrogram (if needed)
     # third row is an spacer, that is adjusted in case the
     # legends need more height than the dotplot
-    if var_group_positions is not None and len(var_group_positions) > 0:
+    has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
+    if has_var_groups:
         # add some space in case 'brackets' want to be plotted on top of the image
-        var_groups_height = category_height / 2
+        if swap_axes:
+            var_groups_height = category_height
+        else:
+            var_groups_height = category_height / 2
+
     else:
         var_groups_height = 0
 
-    height_ratios = [var_groups_height, dotplot_height,
-                     height - var_groups_height - dotplot_height]
+    dotplot_width = dotplot_width - dendro_width
+    spacer_height = height - var_groups_height - dotplot_height
+    if not swap_axes:
+        height_ratios = [var_groups_height, dotplot_height, spacer_height]
+        width_ratios = [dotplot_width, dendro_width]
+
+    else:
+        height_ratios = [dendro_width, dotplot_height, spacer_height]
+        width_ratios = [dotplot_width, var_groups_height]
+        # gridspec is the same but rows and columns are swapped
 
     main_ax_grid = gridspec.GridSpecFromSubplotSpec(
         nrows=3,
@@ -1923,47 +1966,54 @@ def dotplot(
         wspace=0.1 / width,
         hspace=0.1 / height,
         subplot_spec=gs[0, 0],
-        height_ratios=height_ratios,
-        width_ratios=[dotplot_width, dendro_width]
+        width_ratios=width_ratios,
+        height_ratios=height_ratios
     )
+    print(width_ratios, height_ratios)
     dot_ax = fig.add_subplot(main_ax_grid[1, 0])
+
+    if not swap_axes:
+        if dendrogram:
+            dendro_ax = fig.add_subplot(main_ax_grid[1, 1], sharey=dot_ax)
+            dendro_orientation = 'right'
+        if has_var_groups:
+            gene_groups_ax = fig.add_subplot(main_ax_grid[0, 0], sharex=dot_ax)
+            var_group_orientation = 'top'
+    else:
+        if dendrogram:
+            dendro_ax = fig.add_subplot(main_ax_grid[0, 0], sharex=dot_ax)
+            dendro_orientation = 'top'
+        if has_var_groups:
+            gene_groups_ax = fig.add_subplot(main_ax_grid[1, 1], sharey=dot_ax)
+            var_group_orientation = 'right'
+
     if dendrogram:
-        dendro_ax = fig.add_subplot(main_ax_grid[1, 1], sharey=dot_ax)
-    if var_group_positions is not None and len(var_group_positions) > 0:
-        gene_groups_ax = fig.add_subplot(main_ax_grid[0, 0], sharex=dot_ax)
-
-    if groupby is None or len(categories) <= 2:
-        # dendrogram can only be computed  between groupby categories
-        dendrogram = False
-
-    if dendrogram:
-        dendro_data = _reorder_categories_after_dendrogram(
-            adata,
-            groupby,
-            dendrogram,
-            var_names=var_names,
-            var_group_labels=var_group_labels,
-            var_group_positions=var_group_positions,
-        )
-
-        var_group_labels = dendro_data['var_group_labels']
-        var_group_positions = dendro_data['var_group_positions']
-
-        # reorder matrix
-        if dendro_data['var_names_idx_ordered'] is not None:
-            # reorder columns (usually genes) if needed. This only happens when
-            # var_group_positions and var_group_labels is set
-            mean_obs = mean_obs.iloc[:, dendro_data['var_names_idx_ordered']]
-            fraction_obs = fraction_obs.iloc[:, dendro_data['var_names_idx_ordered']]
-
-        # reorder rows (categories) to match the dendrogram order
-        mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
-        fraction_obs = fraction_obs.iloc[dendro_data['categories_idx_ordered'], :]
-
-        y_ticks = np.arange(mean_obs.shape[0]) + 0.5
         _plot_dendrogram(
-            dendro_ax, adata, groupby, dendrogram_key=dendrogram, ticks=y_ticks
+            dendro_ax, adata, groupby, dendrogram_key=dendrogram,
+            ticks=dendro_ticks, orientation=dendro_orientation
         )
+
+    # plot group legends on top or left of dot_ax (if given)
+    if has_var_groups:
+        _plot_gene_groups_brackets(
+            gene_groups_ax,
+            group_positions=var_group_positions,
+            group_labels=var_group_labels,
+            rotation=var_group_rotation,
+            left_adjustment=0.2,
+            right_adjustment=0.7,
+            orientation=var_group_orientation
+        )
+
+    if swap_axes:
+        fraction_obs = fraction_obs.T
+        mean_obs = mean_obs.T
+
+    # plot the dotplot
+    normalize, dot_min, dot_max = _dotplot(fraction_obs, mean_obs, dot_ax, color_map=color_map,
+                                           dot_max=dot_max, dot_min=dot_min, style=style, **kwds)
+
+    ## plot legends
 
     # to maintain the fixed height size of the legends, a
     # spacer of variable height is added at the bottom. The structure for the legends
@@ -1989,23 +2039,9 @@ def dotplot(
         height_ratios=height_ratios,
     )
 
+    ## plot colorbar
+
     cmap = pl.get_cmap(color_map)
-
-    normalize, dot_min, dot_max = _dotplot(fraction_obs, mean_obs, dot_ax, color_map=color_map,
-                                           dot_max=dot_max, dot_min=dot_min, style=style, **kwds)
-
-    # plot group legends on top of dot_ax (if given)
-    if var_group_positions is not None and len(var_group_positions) > 0:
-        _plot_gene_groups_brackets(
-            gene_groups_ax,
-            group_positions=var_group_positions,
-            group_labels=var_group_labels,
-            rotation=var_group_rotation,
-            left_adjustment=0.2,
-            right_adjustment=0.7
-        )
-
-    # plot colorbar
     import matplotlib.colorbar
     color_legend_ax = fig.add_subplot(axs3[2])
 
@@ -2027,13 +2063,13 @@ def dotplot(
         step = 0.2
     # a descending range that is afterwards inverted is used
     # to guarantee that dot_max is in the legend.
-    fracs_legends = np.arange(dot_max, dot_min, step * -1)[::-1]
+    size_range = np.arange(dot_max, dot_min, step * -1)[::-1]
     if dot_min != 0 or dot_max != 1:
         dot_range = dot_max - dot_min
-        fracs_values = (fracs_legends - dot_min) / dot_range
+        size_values = (size_range - dot_min) / dot_range
     else:
-        fracs_values = fracs_legends
-    size = (fracs_values * 10) ** 2
+        size_values = size_range
+    size = (size_values * 10) ** 2
     size += smallest_dot
 
     # plot size bar
@@ -2045,11 +2081,11 @@ def dotplot(
         edgecolor='black'
     )
     size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
-    labels = ["{}".format(int(x*100)) for x in fracs_legends]
+    labels = ["{}".format(int(x*100)) for x in size_range]
     if dot_max < 1:
         labels[-1] = ">" + labels[-1]
     size_legend_ax.set_xticklabels(labels)
-    size_legend_ax.set_xticklabels(["{}".format(int(x*100)) for x in fracs_legends],
+    size_legend_ax.set_xticklabels(["{}".format(int(x*100)) for x in size_range],
                                    fontsize='small')
 
     # remove y ticks and labels
@@ -2071,7 +2107,6 @@ def dotplot(
 
     xmin, xmax = size_legend_ax.get_xlim()
     size_legend_ax.set_xlim(xmin,  xmax + 0.5)
-
 
     _utils.savefig_or_show('dotplot', show=show, save=save)
     return gs
