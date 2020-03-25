@@ -890,7 +890,7 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 
 def _download(url: str, path: Path):
-    from tqdm.auto import tqdm
+    from tqdm import tqdm
     from urllib.request import urlretrieve
 
     path.parent.mkdir(parents=True, exist_ok=True)
