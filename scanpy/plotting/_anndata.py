@@ -1700,7 +1700,7 @@ def heatmap(
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
-def dotplot(
+def dotplot2(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
     groupby: Optional[str] = None,
@@ -2187,7 +2187,7 @@ def matrixplot(
         layer=layer,
     )
     if groupby is None or len(categories) <= 1:
-        # dendrogram can only be computed  between groupby categories
+        # dendrogram can only be computed between groupby categories
         dendrogram = False
 
     mean_obs = obs_tidy.groupby(level=0).mean()
@@ -2226,11 +2226,18 @@ def matrixplot(
 
         # reorder rows (categories) to match the dendrogram order
         mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
+        dendro_ticks = np.arange(mean_obs.shape[0]) + 0.5
 
     colorbar_width = 0.2
 
     if not swap_axes:
-        dendro_width = 0.8 if dendrogram else 0
+        if dendrogram:
+            dendro_width = 0.5
+        elif plot_totals:
+            dendro_width = 1.5
+        else:
+            dendro_width = 0
+
         if figsize is None:
             height = len(categories) * 0.2 + 1  # +1 for labels
             heatmap_width = len(var_names) * 0.32
@@ -2265,16 +2272,22 @@ def matrixplot(
 
         matrix_ax = fig.add_subplot(axs[1, 0])
         y_ticks = np.arange(mean_obs.shape[0]) + 0.5
+        if dendrogram:
+            dendro_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
+            _plot_dendrogram(
+                dendro_ax, adata, groupby, dendrogram_key=dendrogram, ticks=dendro_ticks,
+            )
+        elif plot_totals:
+            total_barplot_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
+            col_counts = col_counts[mean_obs.index]
+            _plot_group_totals(total_barplot_ax, adata,
+                               col_counts, groupby, orientation='right',
+                               ticks=y_ticks)
+
         matrix_ax.set_yticks(y_ticks)
         matrix_ax.set_yticklabels(
             [mean_obs.index[idx] for idx in range(mean_obs.shape[0])]
         )
-
-        if dendrogram:
-            dendro_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
-            _plot_dendrogram(
-                dendro_ax, adata, groupby, dendrogram_key=dendrogram, ticks=y_ticks,
-            )
 
         pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
 
@@ -2354,45 +2367,14 @@ def matrixplot(
                 adata,
                 groupby,
                 dendrogram_key=dendrogram,
-                ticks=x_ticks,
+                ticks=dendro_ticks,
                 orientation='top',
             )
         elif plot_totals:
             total_barplot_ax = fig.add_subplot(axs[0, 0])
             col_counts = col_counts[mean_obs.index]
-            if f'{groupby}_colors' in adata.uns:
-                color = adata.uns[f'{groupby}_colors']
-            else:
-                color = 'salmon'
-            col_counts.plot(
-                kind="bar",
-                color=color,
-                ax=total_barplot_ax, edgecolor="black", width=0.65
-            )
-            # add numbers to the top of the bars
-            max_y = max([p.get_height() for p in total_barplot_ax.patches])
-
-            for p in total_barplot_ax.patches:
-                p.set_x(p.get_x() + 0.5)
-                if p.get_height() >= 1000:
-                    display_number = f'{np.round(p.get_height()/1000, decimals=1)}k'
-                else:
-                    display_number = np.round(p.get_height(), decimals=1)
-                total_barplot_ax.annotate(
-                    display_number,
-                    (p.get_x() + p.get_width() / 2.0, (p.get_height() + max_y * 0.05)),
-                    ha="center",
-                    va="top",
-                    xytext=(0, 10),
-                    fontsize="x-small",
-                    textcoords="offset points",
-                )
-            # for k in total_barplot_ax.spines.keys():
-            #     total_barplot_ax.spines[k].set_visible(False)
-            total_barplot_ax.set_ylim(0, max_y * 2)
-            total_barplot_ax.grid(False)
-            total_barplot_ax.axis("off")
-            #total_barplot_ax.set_xlim(0, p.get_x() + p.get_width())
+            _plot_group_totals(total_barplot_ax, adata,
+                               col_counts, groupby, orientation='top')
 
         mean_obs = mean_obs.T
         if dendrogram:
@@ -3750,3 +3732,499 @@ def _dotplot(
         dot_ax.set_xlim(-0.3, dot_color.shape[1] + 0.3)
 
     return normalize, dot_min, dot_max
+
+
+class dotplot(object):
+    '''
+    '''
+    def __init__(self,
+        adata: AnnData,
+        var_names: Union[_VarNames, Mapping[str, _VarNames]],
+        groupby: Optional[str] = None,
+        use_raw: Optional[bool] = None,
+        log: bool = False,
+        num_categories: int = 7,
+        expression_cutoff: float = 0.0,
+        mean_only_expressed: bool = False,
+        color_map: str = 'RdBu_r',
+        style: Optional[str] = 'square color',
+        dot_max: Optional[float] = None,
+        dot_min: Optional[float] = None,
+        standard_scale: Literal['var', 'group'] = None,
+        smallest_dot: float = 0.0,
+        color_title: Optional[str] = 'Expression\nlevel in group',
+        size_title: Optional[str] = 'Fraction of cells\nin group (%)',
+        figsize: Optional[Tuple[float, float]] = None,
+        gene_symbols: Optional[str] = None,
+        var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
+        var_group_labels: Optional[Sequence[str]] = None,
+        var_group_rotation: Optional[float] = None,
+        layer: Optional[str] = None,
+        dot_color_df: Optional[pd.DataFrame] = None,
+        show: Optional[bool] = None,
+        save: Union[str, bool, None] = None,
+        **kwds,
+    ):
+        if use_raw is None and adata.raw is not None:
+            use_raw = True
+        var_names, var_group_labels, var_group_positions = _check_var_names_type(
+            var_names, var_group_labels, var_group_positions
+        )
+        categories, obs_tidy = _prepare_dataframe(
+            adata,
+            var_names,
+            groupby,
+            use_raw,
+            log,
+            num_categories,
+            layer=layer,
+            gene_symbols=gene_symbols,
+        )
+        self.adata = adata
+        self.groupby = groupby
+        self.color_map = color_map
+        self.dot_max = dot_max
+        self.dot_min = dot_min
+        self.smallest_dot = smallest_dot
+        self.color_title = color_title
+        self.size_title = size_title
+        self.style = style
+        self.kwds = kwds
+        self.categories = categories
+        self.obs_tidy = obs_tidy
+
+        self.has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
+
+        # for if category defined by groupby (if any) compute for each var_name
+        # 1. the fraction of cells in the category having a value >expression_cutoff
+        # 2. the mean value over the category
+
+        # 1. compute fraction of cells having value > expression_cutoff
+        # transform obs_tidy into boolean matrix using the expression_cutoff
+        obs_bool = obs_tidy > expression_cutoff
+
+        # compute the sum per group which in the boolean matrix this is the number
+        # of values >expression_cutoff, and divide the result by the total number of
+        # values in the group (given by `count()`)
+        fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+
+        if dot_color_df is None:
+            # 2. compute mean value
+            if mean_only_expressed:
+                mean_obs = obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+            else:
+                mean_obs = obs_tidy.groupby(level=0).mean()
+
+            if standard_scale == 'group':
+                mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
+                mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
+            elif standard_scale == 'var':
+                mean_obs -= mean_obs.min(0)
+                mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
+            elif standard_scale is None:
+                pass
+            else:
+                logg.warning('Unknown type for standard_scale, ignored')
+        else:
+            # check that both matrices have the same shape
+            if dot_color_df.shape != fraction_obs.shape:
+                logg.error("the given dot_color_df data frame has a different shape than"
+                           "the data frame used for the dot size. Both data frames need"
+                           "to have the same index and columns")
+
+            # get the same order for rows and columns in the color values using the order
+            # in the fraction values. Because genes (columns) can be duplicated
+            # they need to be removed first. Otherwise, the duplicate genes are further
+            # duplicated.
+            mean_obs = dot_color_df.loc[fraction_obs.index].T.drop_duplicates().T[fraction_obs.columns]
+
+        self.mean_obs = mean_obs
+
+        self.legends_width = 1.5
+        self.figsize = figsize
+        self.are_axes_swapped = False
+
+        self.var_names = var_names
+        self.var_group_labels = var_group_labels
+        self.var_group_positions = var_group_positions
+        self.var_group_rotation = var_group_rotation
+        self.fraction_obs = fraction_obs
+
+        self.group_extra_size = 0
+        self.plot_group_extra = None
+
+    def swap_axes(self, swap_axes: Optional[bool] = True):
+        self.are_axes_swapped = swap_axes
+        return self
+
+    def add_dendrogram(self,
+                       show_dendrogram: Optional[bool] = True,
+                       dendrogram_key: Optional[str] = None,
+                       size: Optional[float] = 0.8
+                       ):
+        if not show_dendrogram:
+            self.plot_group_extra = None
+            return self
+
+        if self.groupby is None or len(self.categories) <= 2:
+            # dendrogram can only be computed  between groupby categories
+            logg.warning("Dendrogram not added. Dendrogram is adeed only"
+                         "when the number of categories to plot > 2")
+            return self
+
+        self.group_extra_size = size
+
+        if self.plot_group_extra is not None and self.plot_group_extra['kind'] == 'dendrogram':
+            # this means that the dendrogram was already computed
+            return self
+
+        dendro_data = _reorder_categories_after_dendrogram(
+            self.adata,
+            self.groupby,
+            dendrogram_key,
+            var_names=self.var_names,
+            var_group_labels=self.var_group_labels,
+            var_group_positions=self.var_group_positions,
+        )
+
+        self.var_group_labels = dendro_data['var_group_labels']
+        self.var_group_positions = dendro_data['var_group_positions']
+
+        # reorder matrix
+        if dendro_data['var_names_idx_ordered'] is not None:
+            # reorder columns (usually genes) if needed. This only happens when
+            # var_group_positions and var_group_labels is set
+            self.mean_obs = self.mean_obs.iloc[:, dendro_data['var_names_idx_ordered']]
+            self.fraction_obs = self.fraction_obs.iloc[:, dendro_data['var_names_idx_ordered']]
+
+        # reorder rows (categories) to match the dendrogram order
+        self.mean_obs = self.mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
+
+        self.fraction_obs = self.fraction_obs.iloc[dendro_data['categories_idx_ordered'], :]
+        dendro_ticks = np.arange(self.mean_obs.shape[0]) + 0.5
+        self.group_extra_size = size
+        self.plot_group_extra = {'kind': 'dendrogram',
+                                 'width': size,
+                                 'dendrogram_key': dendrogram_key,
+                                 'dendrogram_ticks': dendro_ticks
+                                 }
+        return self
+
+    def add_totals(self,
+                   show_totals: Optional[bool] = True,
+                   size: Optional[float] = 0.8
+                   ):
+        self.group_extra_size = size
+
+        if not show_totals:
+            self.plot_group_extra = None
+            self.group_extra_size = 0
+            return self
+
+        if self.plot_group_extra is not None and \
+            self.plot_group_extra['kind'] == 'group_totals':
+            # this means that the add_totals was already computed
+            return self
+
+        counts_df = self.obs_tidy.index.value_counts(sort=False)
+        self.plot_group_extra = {'kind': 'group_totals',
+                                 'width': size,
+                                 'counts_df': counts_df
+                                 }
+        return self
+
+    def _plot_totals(self, total_barplot_ax, orientation):
+        counts_df = self.plot_group_extra['counts_df']
+        # check that the counts df and the dataframe to plot
+        # have the same order
+        counts_df = counts_df.loc[self.mean_obs.index]
+
+        if f'{self.groupby}_colors' in self.adata.uns:
+            color = self.adata.uns[f'{self.groupby}_colors']
+        else:
+            color = 'salmon'
+
+        if orientation == 'top':
+            counts_df.plot(
+                kind="bar",
+                color=color,
+                position=0.5,
+                ax=total_barplot_ax, edgecolor="black", width=0.65
+            )
+            # add numbers to the top of the bars
+            max_y = max([p.get_height() for p in total_barplot_ax.patches])
+
+            for p in total_barplot_ax.patches:
+                p.set_x(p.get_x() + 0.5)
+                if p.get_height() >= 1000:
+                    display_number = f'{np.round(p.get_height()/1000, decimals=1)}k'
+                else:
+                    display_number = np.round(p.get_height(), decimals=1)
+                total_barplot_ax.annotate(
+                    display_number,
+                    (p.get_x() + p.get_width() / 2.0, (p.get_height() + max_y * 0.05)),
+                    ha="center",
+                    va="top",
+                    xytext=(0, 10),
+                    fontsize="x-small",
+                    textcoords="offset points",
+                )
+            # for k in total_barplot_ax.spines.keys():
+            #     total_barplot_ax.spines[k].set_visible(False)
+            total_barplot_ax.set_ylim(0, max_y * 2)
+            total_barplot_ax.set_xticks([])
+
+        elif orientation == 'right':
+            counts_df.plot(
+                kind="barh",
+                color=color,
+                position= -0.5,
+                ax=total_barplot_ax, edgecolor="black", width=0.65
+            )
+#            total_barplot_ax.set_xticks(ticks)
+        total_barplot_ax.grid(False)
+        total_barplot_ax.axis("off")
+
+    def _plot_colorbar(self,
+                       color_legend_ax: Axes,
+                       normalize):
+        ## plot colorbar
+        cmap = pl.get_cmap(self.color_map)
+        import matplotlib.colorbar
+        matplotlib.colorbar.ColorbarBase(color_legend_ax,
+                                         orientation='horizontal',
+                                         cmap=cmap, norm=normalize)
+
+        color_legend_ax.set_title(self.color_title,
+                                  fontsize='small')
+
+    def _plot_size_legend(
+        self,
+        size_legend_ax: Axes,
+        dot_min: float,
+        dot_max: float
+    ):
+        # for the dot size legend, use step between dot_max and dot_min
+        # based on how different they are.
+        diff = dot_max - dot_min
+        if 0.3 < diff <= 0.6:
+            step = 0.1
+        elif diff <= 0.3:
+            step = 0.05
+        else:
+            step = 0.2
+        # a descending range that is afterwards inverted is used
+        # to guarantee that dot_max is in the legend.
+        size_range = np.arange(dot_max, dot_min, step * -1)[::-1]
+        if dot_min != 0 or dot_max != 1:
+            dot_range = dot_max - dot_min
+            size_values = (size_range - dot_min) / dot_range
+        else:
+            size_values = size_range
+        size = (size_values * 10) ** 2
+        size += self.smallest_dot
+
+        # plot size bar
+        size_legend_ax.scatter(
+            np.arange(len(size)) + 0.5,
+            np.repeat(0, len(size)),
+            s=size, color='gray',
+            edgecolor='black'
+        )
+        size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
+        labels = ["{}".format(int(x*100)) for x in size_range]
+        if dot_max < 1:
+            labels[-1] = ">" + labels[-1]
+        size_legend_ax.set_xticklabels(labels)
+        size_legend_ax.set_xticklabels(["{}".format(int(x*100)) for x in size_range],
+                                       fontsize='small')
+
+        # remove y ticks and labels
+        size_legend_ax.tick_params(
+            axis='y', left=False, labelleft=False, labelright=False
+        )
+
+        # remove surrounding lines
+        size_legend_ax.spines['right'].set_visible(False)
+        size_legend_ax.spines['top'].set_visible(False)
+        size_legend_ax.spines['left'].set_visible(False)
+        size_legend_ax.spines['bottom'].set_visible(False)
+        size_legend_ax.grid(False)
+
+        ymin, ymax = size_legend_ax.get_ylim()
+        size_legend_ax.set_ylim(-0.9, 4)
+        size_legend_ax.set_title(self.size_title, y=ymax + 0.25,
+                                 size='small')
+
+        xmin, xmax = size_legend_ax.get_xlim()
+        size_legend_ax.set_xlim(xmin,  xmax + 0.5)
+
+    def show(self):
+        category_height = category_width = 0.35
+
+        if self.figsize is None:
+            # minimum height required for legends to plot properly
+            min_height = 2.5
+            dotplot_height = len(self.categories) * category_height
+            dotplot_width = len(self.var_names) * category_width + self.group_extra_size
+            if self.are_axes_swapped:
+                dotplot_height, dotplot_width = dotplot_width, dotplot_height
+
+            height = dotplot_height + 1  # +1 for labels
+
+            # if the number of categories is small use
+            # a larger height, otherwise the legends do not fit
+            height = max([min_height, height])
+            width = dotplot_width + self.legends_width
+        else:
+            width, height = self.figsize
+            min_height = height
+            dotplot_height = height
+
+            dotplot_width = width - (
+
+                + self.legends_width
+                + self.group_extra_size
+            )
+
+        # define a layout of 1 rows x 2 columns
+        #   first ax is for the main figure.
+        #   second ax is to plot the size and colobar legend
+        legends_width_spacer = 0.7 / width
+
+        fig = pl.figure(figsize=(width, height))
+        gs = gridspec.GridSpec(
+            nrows=1,
+            ncols=2,
+            wspace=legends_width_spacer,
+            width_ratios=[
+                dotplot_width + self.group_extra_size,
+                self.legends_width,
+            ],
+        )
+
+        # the main plot is divided into three rows and two columns
+        # first row is for brackets (if needed),
+        # second row is for dotplot and dendrogram (if needed)
+        # third row is an spacer, that is adjusted in case the
+        # legends need more height than the dotplot
+        if self.has_var_groups:
+            # add some space in case 'brackets' want to be plotted on top of the image
+            if self.are_axes_swapped:
+                var_groups_height = category_height
+            else:
+                var_groups_height = category_height / 2
+
+        else:
+            var_groups_height = 0
+
+        dotplot_width = dotplot_width - self.group_extra_size
+        spacer_height = height - var_groups_height - dotplot_height
+        if not self.are_axes_swapped:
+            height_ratios = [var_groups_height, dotplot_height, spacer_height]
+            width_ratios = [dotplot_width, self.group_extra_size]
+
+        else:
+            height_ratios = [self.group_extra_size, dotplot_height, spacer_height]
+            width_ratios = [dotplot_width, var_groups_height]
+            # gridspec is the same but rows and columns are swapped
+
+        main_ax_grid = gridspec.GridSpecFromSubplotSpec(
+            nrows=3,
+            ncols=2,
+            wspace=0.1 / width,
+            hspace=0.1 / height,
+            subplot_spec=gs[0, 0],
+            width_ratios=width_ratios,
+            height_ratios=height_ratios
+        )
+        dot_ax = fig.add_subplot(main_ax_grid[1, 0])
+
+        if not self.are_axes_swapped:
+            if self.plot_group_extra is not None:
+                group_extra_ax = fig.add_subplot(main_ax_grid[1, 1], sharey=dot_ax)
+                group_extra_orientation = 'right'
+            if self.has_var_groups:
+                gene_groups_ax = fig.add_subplot(main_ax_grid[0, 0], sharex=dot_ax)
+                var_group_orientation = 'top'
+        else:
+            if self.plot_group_extra:
+                group_extra_ax = fig.add_subplot(main_ax_grid[0, 0], sharex=dot_ax)
+                group_extra_orientation = 'top'
+            if self.has_var_groups:
+                gene_groups_ax = fig.add_subplot(main_ax_grid[1, 1], sharey=dot_ax)
+                var_group_orientation = 'right'
+
+        if self.plot_group_extra is not None:
+            if self.plot_group_extra['kind'] == 'dendrogram':
+                _plot_dendrogram(
+                    group_extra_ax, self.adata, self.groupby,
+                    dendrogram_key=self.plot_group_extra['dendrogram_key'],
+                    ticks=self.plot_group_extra['dendrogram_ticks'],
+                    orientation=group_extra_orientation
+                )
+            if self.plot_group_extra['kind'] == 'group_totals':
+                self._plot_totals(group_extra_ax, group_extra_orientation)
+        # plot group legends on top or left of dot_ax (if given)
+        if self.has_var_groups:
+            _plot_gene_groups_brackets(
+                gene_groups_ax,
+                group_positions=self.var_group_positions,
+                group_labels=self.var_group_labels,
+                rotation=self.var_group_rotation,
+                left_adjustment=0.2,
+                right_adjustment=0.7,
+                orientation=var_group_orientation
+            )
+
+        if self.are_axes_swapped:
+            self.fraction_obs = self.fraction_obs.T
+            self.mean_obs = self.mean_obs.T
+
+        # plot the dotplot
+        normalize, dot_min, dot_max = _dotplot(self.fraction_obs, self.mean_obs,
+                                               dot_ax, color_map=self.color_map,
+                                               dot_max=self.dot_max, dot_min=self.dot_min,
+                                               style=self.style, **self.kwds)
+
+        if self.are_axes_swapped:
+            # revert the change
+            self.fraction_obs = self.fraction_obs.T
+            self.mean_obs = self.mean_obs.T
+
+        ## plot legends
+
+        # to maintain the fixed height size of the legends, a
+        # spacer of variable height is added at the bottom. The structure for the legends
+        # is:
+        # first row: size legend
+        # second row: spacer to avoid ax titles to overlap
+        # third row: colorbar
+        # fourth raw: variable space to keep the first three rows of the same size
+
+        cbar_legend_height = min_height * 0.08
+        size_legend_height = min_height * 0.27
+        spacer_height = min_height * 0.3
+        top_spacer = self.group_extra_size if self.are_axes_swapped else 0.01
+        height_ratios = [
+            top_spacer,
+            size_legend_height,
+            spacer_height,
+            cbar_legend_height,
+            height - size_legend_height - cbar_legend_height - spacer_height,
+            ]
+        axs3 = gridspec.GridSpecFromSubplotSpec(
+            nrows=5,
+            ncols=1,
+            subplot_spec=gs[0, 1],
+            height_ratios=height_ratios,
+        )
+
+        size_legend_ax = fig.add_subplot(axs3[1])
+        self._plot_size_legend(size_legend_ax, dot_min, dot_max)
+
+        color_legend_ax = fig.add_subplot(axs3[3])
+        self._plot_colorbar(color_legend_ax, normalize)
+
+        # _utils.savefig_or_show('dotplot', show=show, save=save)
+        # return gs

@@ -361,8 +361,8 @@ def _rank_genes_groups_plot(
     if key is None:
         key = 'rank_genes_groups'
 
-    if 'dendrogram' not in kwds:
-        kwds['dendrogram'] = True
+    # if 'dendrogram' not in kwds:
+    #     kwds['dendrogram'] = True
     if groupby is None:
         groupby = str(adata.uns[key]['params']['groupby'])
     group_names = (adata.uns[key]['names'].dtype.names
