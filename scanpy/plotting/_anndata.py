@@ -3971,17 +3971,36 @@ class dotplot(object):
                 )
             # for k in total_barplot_ax.spines.keys():
             #     total_barplot_ax.spines[k].set_visible(False)
-            total_barplot_ax.set_ylim(0, max_y * 2)
+            total_barplot_ax.set_ylim(0, max_y * 1.4)
             total_barplot_ax.set_xticks([])
 
         elif orientation == 'right':
             counts_df.plot(
                 kind="barh",
                 color=color,
-                position= -0.5,
+                position=-0.3,
                 ax=total_barplot_ax, edgecolor="black", width=0.65
             )
-#            total_barplot_ax.set_xticks(ticks)
+
+            # add numbers to the right of the bars
+            max_x = max([p.get_width() for p in total_barplot_ax.patches])
+            for p in total_barplot_ax.patches:
+                if p.get_width() >= 1000:
+                    display_number = f'{np.round(p.get_width()/1000, decimals=1)}k'
+                else:
+                    display_number = np.round(p.get_width(), decimals=1)
+                total_barplot_ax.annotate(
+                    display_number,
+                    ((p.get_width()), p.get_y() + p.get_height()),
+                    ha="center",
+                    va="top",
+                    xytext=(10, 10),
+                    fontsize="x-small",
+                    textcoords="offset points",
+                )
+            total_barplot_ax.set_xlim(0, max_x * 1.4)
+            total_barplot_ax.set_xticks([])
+
         total_barplot_ax.grid(False)
         total_barplot_ax.axis("off")
 
