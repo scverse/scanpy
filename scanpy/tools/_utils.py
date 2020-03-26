@@ -50,14 +50,13 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
         if use_rep in adata.obsm.keys():
             X = adata.obsm[use_rep]
             if use_rep == 'X_pca' and n_pcs is not None:
-                X = adata.obsm[use_rep][:, :n_pcs]            
+                X = adata.obsm[use_rep][:, :n_pcs]
         elif use_rep == 'X':
             X = adata.X
         else:
             raise ValueError(
                 'Did not find {} in `.obsm.keys()`. '
                 'You need to compute it first.'.format(use_rep))
-        
     settings.verbosity = verbosity  # resetting verbosity
     return X
 
