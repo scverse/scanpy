@@ -3752,8 +3752,6 @@ class dotplot(object):
         dot_min: Optional[float] = None,
         standard_scale: Literal['var', 'group'] = None,
         smallest_dot: float = 0.0,
-        color_title: Optional[str] = 'Expression\nlevel in group',
-        size_title: Optional[str] = 'Fraction of cells\nin group (%)',
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -3786,8 +3784,6 @@ class dotplot(object):
         self.dot_max = dot_max
         self.dot_min = dot_min
         self.smallest_dot = smallest_dot
-        self.color_title = color_title
-        self.size_title = size_title
         self.style = style
         self.kwds = kwds
         self.categories = categories
@@ -3840,7 +3836,11 @@ class dotplot(object):
 
         self.mean_obs = mean_obs
 
+        # legend parameters
         self.legends_width = 1.5
+        self.color_title = 'Expression\nlevel in group'
+        self.size_title = 'Fraction of cells\nin group (%)'
+
         self.figsize = figsize
         self.are_axes_swapped = False
 
@@ -3858,11 +3858,11 @@ class dotplot(object):
         return self
 
     def add_dendrogram(self,
-                       show_dendrogram: Optional[bool] = True,
+                       show: Optional[bool] = True,
                        dendrogram_key: Optional[str] = None,
                        size: Optional[float] = 0.8
                        ):
-        if not show_dendrogram:
+        if not show:
             self.plot_group_extra = None
             return self
 
@@ -3911,12 +3911,12 @@ class dotplot(object):
         return self
 
     def add_totals(self,
-                   show_totals: Optional[bool] = True,
+                   show: Optional[bool] = True,
                    size: Optional[float] = 0.8
                    ):
         self.group_extra_size = size
 
-        if not show_totals:
+        if not show:
             self.plot_group_extra = None
             self.group_extra_size = 0
             return self
@@ -3931,6 +3931,22 @@ class dotplot(object):
                                  'width': size,
                                  'counts_df': counts_df
                                  }
+        return self
+
+    def legend(self,
+               show: Optional[bool] = True,
+               color_title: Optional[str] = 'Expression\nlevel in group',
+               size_title: Optional[str] = 'Fraction of cells\nin group (%)',
+               width: Optional[float] = 1.5
+               ):
+
+        if not show:
+            self.legends_width = 0
+        else:
+            self.color_title = color_title
+            self.size_title = size_title
+            self.legends_width = width
+
         return self
 
     def _plot_totals(self, total_barplot_ax, orientation):
@@ -4184,6 +4200,7 @@ class dotplot(object):
                 )
             if self.plot_group_extra['kind'] == 'group_totals':
                 self._plot_totals(group_extra_ax, group_extra_orientation)
+
         # plot group legends on top or left of dot_ax (if given)
         if self.has_var_groups:
             _plot_gene_groups_brackets(
@@ -4211,39 +4228,40 @@ class dotplot(object):
             self.fraction_obs = self.fraction_obs.T
             self.mean_obs = self.mean_obs.T
 
-        ## plot legends
+        if self.legends_width > 0:
+            ## plot legends
 
-        # to maintain the fixed height size of the legends, a
-        # spacer of variable height is added at the bottom. The structure for the legends
-        # is:
-        # first row: size legend
-        # second row: spacer to avoid ax titles to overlap
-        # third row: colorbar
-        # fourth raw: variable space to keep the first three rows of the same size
+            # to maintain the fixed height size of the legends, a
+            # spacer of variable height is added at the bottom. The structure for the legends
+            # is:
+            # first row: size legend
+            # second row: spacer to avoid ax titles to overlap
+            # third row: colorbar
+            # fourth raw: variable space to keep the first three rows of the same size
 
-        cbar_legend_height = min_height * 0.08
-        size_legend_height = min_height * 0.27
-        spacer_height = min_height * 0.3
-        top_spacer = self.group_extra_size if self.are_axes_swapped else 0.01
-        height_ratios = [
-            top_spacer,
-            size_legend_height,
-            spacer_height,
-            cbar_legend_height,
-            height - size_legend_height - cbar_legend_height - spacer_height,
-            ]
-        axs3 = gridspec.GridSpecFromSubplotSpec(
-            nrows=5,
-            ncols=1,
-            subplot_spec=gs[0, 1],
-            height_ratios=height_ratios,
-        )
+            cbar_legend_height = min_height * 0.08
+            size_legend_height = min_height * 0.27
+            spacer_height = min_height * 0.3
+            top_spacer = self.group_extra_size if self.are_axes_swapped else 0.01
+            height_ratios = [
+                top_spacer,
+                size_legend_height,
+                spacer_height,
+                cbar_legend_height,
+                height - size_legend_height - cbar_legend_height - spacer_height,
+                ]
+            axs3 = gridspec.GridSpecFromSubplotSpec(
+                nrows=5,
+                ncols=1,
+                subplot_spec=gs[0, 1],
+                height_ratios=height_ratios,
+            )
 
-        size_legend_ax = fig.add_subplot(axs3[1])
-        self._plot_size_legend(size_legend_ax, dot_min, dot_max)
+            size_legend_ax = fig.add_subplot(axs3[1])
+            self._plot_size_legend(size_legend_ax, dot_min, dot_max)
 
-        color_legend_ax = fig.add_subplot(axs3[3])
-        self._plot_colorbar(color_legend_ax, normalize)
+            color_legend_ax = fig.add_subplot(axs3[3])
+            self._plot_colorbar(color_legend_ax, normalize)
 
         # _utils.savefig_or_show('dotplot', show=show, save=save)
         # return gs
