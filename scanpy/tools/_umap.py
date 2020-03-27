@@ -1,4 +1,6 @@
+from numbers import Number
 from typing import Optional, Union
+from warnings import warn
 
 import numpy as np
 from anndata import AnnData
@@ -8,7 +10,7 @@ from ._utils import get_init_pos_from_paga, _choose_representation
 from .. import logging as logg
 from .._settings import settings
 from .._compat import Literal
-from .._utils import AnyRandom, NeighborsView
+from .._utils import AnyRandom, NeighborsView, _choose_graph
 
 
 _InitPos = Literal['paga', 'spectral', 'random']
@@ -16,6 +18,8 @@ _InitPos = Literal['paga', 'spectral', 'random']
 
 def umap(
     adata: AnnData,
+    *,
+    init_pos: Union[_InitPos, str, np.ndarray, None] = 'spectral',
     min_dist: float = 0.5,
     spread: float = 1.0,
     n_components: int = 2,
@@ -23,13 +27,14 @@ def umap(
     alpha: float = 1.0,
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
-    init_pos: Union[_InitPos, np.ndarray, None] = 'spectral',
     random_state: AnyRandom = 0,
     a: Optional[float] = None,
     b: Optional[float] = None,
     copy: bool = False,
     method: Literal['umap', 'rapids'] = 'umap',
     neighbors_key: Optional[str] = None,
+    obsp: Optional[str] = None,
+    key_added: str = "X_umap",
 ) -> Optional[AnnData]:
     """\
     Embed the neighborhood graph using UMAP [McInnes18]_.
@@ -49,6 +54,15 @@ def umap(
     ----------
     adata
         Annotated data matrix.
+    init_pos
+        How to initialize the low dimensional embedding. Called `init` in the
+        original UMAP. Options are:
+
+        * 'paga': positions from :func:`~scanpy.pl.paga`.
+        * 'spectral': use a spectral embedding of the graph.
+        * 'random': assign initial embedding positions at random.
+        * Any key for `adata.obsm`.
+        * A numpy array of initial embedding positions.
     min_dist
         The effective minimum distance between embedded points. Smaller values
         will result in a more clustered/clumped embedding where nearby points on
@@ -74,15 +88,6 @@ def umap(
     negative_sample_rate
         The number of negative edge/1-simplex samples to use per positive
         edge/1-simplex sample in optimizing the low dimensional embedding.
-    init_pos
-        How to initialize the low dimensional embedding. Called `init` in the
-        original UMAP. Options are:
-
-        * Any key for `adata.obsm`.
-        * 'paga': positions from :func:`~scanpy.pl.paga`.
-        * 'spectral': use a spectral embedding of the graph.
-        * 'random': assign initial embedding positions at random.
-        * A numpy array of initial embedding positions.
     random_state
         If `int`, `random_state` is the seed used by the random number generator;
         If `RandomState` or `Generator`, `random_state` is the random number generator;
@@ -106,6 +111,8 @@ def umap(
         (default storage places for pp.neighbors).
         If specified, umap looks .uns[neighbors_key] for neighbors settings and
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+    key_added
+        What key in obsm should the embedding be placed in?
 
     Returns
     -------
@@ -116,49 +123,54 @@ def umap(
     """
     adata = adata.copy() if copy else adata
 
-    if neighbors_key is None:
-        neighbors_key = 'neighbors'
+    graph = _choose_graph(adata, obsp, neighbors_key)
+    neighbors = {} if obsp is not None else NeighborsView(adata, neighbors_key)
 
-    if neighbors_key not in adata.uns:
-        raise ValueError(
-            f'Did not find .uns["{neighbors_key}"]. Run `sc.pp.neighbors` first.')
     start = logg.info('computing UMAP')
 
-    neighbors = NeighborsView(adata, neighbors_key)
-
-    if ('params' not in neighbors
-        or neighbors['params']['method'] != 'umap'):
-        logg.warning(f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap')
+    if 'params' not in neighbors or neighbors['params']['method'] != 'umap':
+        warn(
+            'Computing umap layout on graph which may have not been computed using umap.',
+            RuntimeWarning,
+        )
     from umap.umap_ import find_ab_params, simplicial_set_embedding
+
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
     else:
         a = a
         b = b
-    adata.uns['umap'] = {'params':{'a': a, 'b': b}}
+    adata.uns['umap'] = {'params': {'a': a, 'b': b}}
+
     if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(adata, random_state=random_state, neighbors_key=neighbors_key)
+        init_coords = get_init_pos_from_paga(
+            adata, random_state=random_state, neighbors_key=neighbors_key
+        )
     else:
         init_coords = init_pos  # Let umap handle it
     if hasattr(init_coords, "dtype"):
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
-    if random_state != 0:
+    if isinstance(random_state, Number):
         adata.uns['umap']['params']['random_state'] = random_state
     random_state = check_random_state(random_state)
 
-    neigh_params = neighbors['params']
+    neigh_params = neighbors['params'] if 'params' in neighbors else {}
     X = _choose_representation(
-        adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None), silent=True)
+        adata,
+        neigh_params.get('use_rep', None),
+        neigh_params.get('n_pcs', None),
+        silent=True,
+    )
     if method == 'umap':
         # the data matrix X is really only used for determining the number of connected components
         # for the init condition in the UMAP embedding
         n_epochs = 0 if maxiter is None else maxiter
         X_umap = simplicial_set_embedding(
             X,
-            neighbors['connectivities'].tocoo(),
+            graph.tocoo(),
             n_components,
             alpha,
             a,
@@ -180,8 +192,11 @@ def umap(
                 "but umap `method` 'rapids' only supports the 'euclidean' metric."
             )
         from cuml import UMAP
+
         n_neighbors = neighbors['params']['n_neighbors']
-        n_epochs = 500 if maxiter is None else maxiter # 0 is not a valid value for rapids, unlike original umap
+        n_epochs = (
+            500 if maxiter is None else maxiter
+        )  # 0 is not a valid value for rapids, unlike original umap
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
         umap = UMAP(
             n_neighbors=n_neighbors,
@@ -197,13 +212,10 @@ def umap(
             verbose=settings.verbosity > 3,
         )
         X_umap = umap.fit_transform(X_contiguous)
-    adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
+    adata.obsm[key_added] = X_umap  # annotate samples with UMAP coordinates
     logg.info(
         '    finished',
         time=start,
-        deep=(
-            'added\n'
-            "    'X_umap', UMAP coordinates (adata.obsm)"
-        ),
+        deep=(f'added\n' "    '{key_added}', UMAP coordinates (adata.obsm)"),
     )
     return adata if copy else None

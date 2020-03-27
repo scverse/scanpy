@@ -30,3 +30,24 @@ def test_umap_init_paga(layout):
     sc.tl.paga(pbmc)
     sc.pl.paga(pbmc, layout=layout, show=False)
     sc.tl.umap(pbmc, init_pos="paga")
+
+
+def test_umap_args():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    if "connectivities" in pbmc.uns["neighbors"]:  # Backwards compat for older anndata
+        pbmc.obsp["connectivities"] = pbmc.uns["neighbors"].pop("connectivities")
+        pbmc.obsp["distances"] = pbmc.uns["neighbors"].pop("distances")
+
+    sc.tl.umap(pbmc, key_added="umap_orig")
+
+    del pbmc.uns["neighbors"]
+
+    with pytest.warns(RuntimeWarning):
+        sc.tl.umap(pbmc, obsp="connectivities", key_added="umap_no-neighbors")
+    pbmc.obsp["new_connect"] = pbmc.obsp.pop("connectivities")
+
+    with pytest.warns(RuntimeWarning):
+        sc.tl.umap(pbmc, obsp="new_connect", key_added="umap_obsp-key")
+
+    assert np.allclose(pbmc.obsm["umap_orig"], pbmc.obsm["umap_no-neighbors"])
+    assert np.allclose(pbmc.obsm["umap_orig"], pbmc.obsm["umap_obsp-key"])
