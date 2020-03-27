@@ -2899,6 +2899,7 @@ def _reorder_categories_after_dendrogram(
 
     # order of groupby categories
     categories_idx_ordered = dendro_info['categories_idx_ordered']
+    categories_ordered = dendro_info['categories_ordered']
 
     if len(categories) != len(categories_idx_ordered):
         raise ValueError(
@@ -2915,12 +2916,13 @@ def _reorder_categories_after_dendrogram(
         var_names_idx_ordered = list(range(len(var_names)))
 
     if var_group_positions:
-        if list(var_group_labels) == list(categories):
+        if set(var_group_labels) == set(categories):
             positions_ordered = []
             labels_ordered = []
             position_start = 0
             var_names_idx_ordered = []
-            for idx in categories_idx_ordered:
+            for cat_name in categories_ordered:
+                idx = var_group_labels.index(cat_name)
                 position = var_group_positions[idx]
                 _var_names = var_names[position[0] : position[1] + 1]
                 var_names_idx_ordered.extend(range(position[0], position[1] + 1))
@@ -2943,9 +2945,11 @@ def _reorder_categories_after_dendrogram(
 
     return dict(
         categories_idx_ordered=categories_idx_ordered,
+        categories_ordered=dendro_info['categories_ordered'],
         var_names_idx_ordered=var_names_idx_ordered,
+        var_names_ordered=[var_names[x] for x in var_names_idx_ordered],
         var_group_labels=var_group_labels,
-        var_group_positions=var_group_positions,
+        var_group_positions=var_group_positions
     )
 
 
@@ -3717,10 +3721,6 @@ class DotPlot(object):
 
         self.group_extra_size = size
 
-        if self.plot_group_extra is not None and self.plot_group_extra['kind'] == 'dendrogram':
-            # this means that the dendrogram was already computed
-            return self
-
         # to correctly plot the dendrogram the categories need to be ordered
         # according to the dendrogram ordering.
         dendro_data = _reorder_categories_after_dendrogram(
@@ -3743,9 +3743,9 @@ class DotPlot(object):
             self.fraction_obs = self.fraction_obs.iloc[:, dendro_data['var_names_idx_ordered']]
 
         # reorder rows (categories) to match the dendrogram order
-        self.mean_obs = self.mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
+        self.mean_obs = self.mean_obs.loc[dendro_data['categories_ordered'], :]
 
-        self.fraction_obs = self.fraction_obs.iloc[dendro_data['categories_idx_ordered'], :]
+        self.fraction_obs = self.fraction_obs.loc[dendro_data['categories_ordered'], :]
         dendro_ticks = np.arange(self.mean_obs.shape[0]) + 0.5
         self.group_extra_size = size
         self.plot_group_extra = {'kind': 'dendrogram',
@@ -3757,6 +3757,7 @@ class DotPlot(object):
 
     def add_totals(self,
                    show: Optional[bool] = True,
+                   sort: Literal['ascending', 'descending'] = None,
                    size: Optional[float] = 0.8
                    ):
         """
@@ -3768,6 +3769,8 @@ class DotPlot(object):
         Parameters
         ----------
         show : bool, default True
+        sort : Set to either 'ascending' or 'descending' to reorder the categories
+            by cell number
         size : size of the barplot. Corresponds to width when shown on
             the right of the plot, or height when shown on top.
 
@@ -3788,13 +3791,23 @@ class DotPlot(object):
             self.group_extra_size = 0
             return self
 
-        if self.plot_group_extra is not None and self.plot_group_extra['kind'] == 'group_totals':
-            # this means that the add_totals was already computed
-            return self
+        _sort = True if sort is not None else False
+        _ascending = True if sort=='ascending' else False
+        counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
 
-        counts_df = self.obs_tidy.index.value_counts(sort=False)
+        # check that the counts df and the dataframe to plot
+        # have the same order
+        if sort is None:
+            counts_df = counts_df.loc[self.mean_obs.index]
+        else:
+            # sort the color and size dfs categories according to
+            # the counts sorting.
+            self.mean_obs = self.mean_obs.loc[counts_df.index, :]
+            self.fraction_obs = self.fraction_obs.loc[counts_df.index, :]
+
         self.plot_group_extra = {'kind': 'group_totals',
                                  'width': size,
+                                 'sort': sort,
                                  'counts_df': counts_df
                                  }
         return self
@@ -3846,9 +3859,6 @@ class DotPlot(object):
         """
 
         counts_df = self.plot_group_extra['counts_df']
-        # check that the counts df and the dataframe to plot
-        # have the same order
-        counts_df = counts_df.loc[self.mean_obs.index]
 
         if f'{self.groupby}_colors' in self.adata.uns:
             color = self.adata.uns[f'{self.groupby}_colors']
