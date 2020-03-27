@@ -111,6 +111,9 @@ def umap(
         (default storage places for pp.neighbors).
         If specified, umap looks .uns[neighbors_key] for neighbors settings and
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+    obsp
+        Key in obsp for connectivity graph. Cannot be specified at the same time
+        as neighbors_key.
     key_added
         What key in obsm should the embedding be placed in?
 
