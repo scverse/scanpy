@@ -143,7 +143,7 @@ def umap(
     else:
         a = a
         b = b
-    adata.uns['umap'] = {'params': {'a': a, 'b': b}}
+    umap_params = {'a': a, 'b': b}
 
     if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
@@ -157,7 +157,7 @@ def umap(
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
     if isinstance(random_state, Number):
-        adata.uns['umap']['params']['random_state'] = random_state
+        umap_params['random_state'] = random_state
     random_state = check_random_state(random_state)
 
     neigh_params = neighbors['params'] if 'params' in neighbors else {}
@@ -216,6 +216,10 @@ def umap(
         )
         X_umap = umap.fit_transform(X_contiguous)
     adata.obsm[key_added] = X_umap  # annotate samples with UMAP coordinates
+    adata.uns["umap"] = {
+        "params": umap_params,
+        "obsm_key": key_added,
+    }
     logg.info(
         '    finished',
         time=start,
