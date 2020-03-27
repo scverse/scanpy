@@ -1710,7 +1710,6 @@ def dotplot(
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
     color_map: str = 'Reds',
-    style: Optional[str] = 'dot color',
     dot_max: Optional[float] = None,
     dot_min: Optional[float] = None,
     standard_scale: Literal['var', 'group'] = None,
@@ -1809,12 +1808,7 @@ def dotplot(
             num_categories=num_categories,
             expression_cutoff=expression_cutoff,
             mean_only_expressed=mean_only_expressed,
-            color_map=color_map,
-            style=style,
-            dot_max=dot_max,
-            dot_min=dot_min,
             standard_scale=standard_scale,
-            smallest_dot=smallest_dot,
             figsize=figsize,
             gene_symbols=gene_symbols,
             var_group_positions=var_group_positions,
@@ -1830,6 +1824,7 @@ def dotplot(
     if swap_axes:
         dp.swap_axes()
 
+    dp = dp.style(color_map=color_map, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot)
     return dp.show(show=show, save=save)
 
 
@@ -3294,7 +3289,7 @@ def _dotplot(
     dot_color,
     dot_ax,
     color_map: str = 'Reds',
-    style: Optional[str] = 'square color',
+    color_on: Optional[str] = 'dot',
     y_label: Optional[str] = None,
     dot_max: Optional[float] = None,
     dot_min: Optional[float] = None,
@@ -3352,8 +3347,6 @@ def _dotplot(
     assert list(dot_size.columns) == list(dot_color.columns), 'please check that the dot_size ' \
                                 'and dot_color dataframes have the same columns'
 
-    var_names = dot_size.columns
-
     if standard_scale == 'group':
         dot_color = dot_color.sub(dot_color.min(1), axis=0)
         dot_color = dot_color.div(dot_color.max(1), axis=0).fillna(0)
@@ -3401,7 +3394,7 @@ def _dotplot(
         vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
     )
 
-    if style == 'square color':
+    if color_on == 'square':
         # makes first a 'matrixplot' (squares with the asigned colormap
         dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
         for axis in ['top', 'bottom', 'left', 'right']:
@@ -3450,8 +3443,9 @@ def _dotplot(
     dot_ax.set_ylim(dot_color.shape[0], 0)
     dot_ax.set_xlim(0, dot_color.shape[1])
 
-    if style != 'square color':
-        # add more distance to the x and y lims
+    if color_on == 'dot':
+        # add more distance to the x and y lims with the color is on the
+        # dots
         dot_ax.set_ylim(dot_color.shape[0] + 0.5, -0.5)
 
         dot_ax.set_xlim(-0.3, dot_color.shape[1] + 0.3)
@@ -3490,23 +3484,10 @@ class DotPlot(object):
     mean_only_expressed
         If True, gene expression is averaged only over the cells
         expressing the given genes.
-    color_map
-        String denoting matplotlib color map.
-    dot_max
-        If none, the maximum dot size is set to the maximum fraction value found
-        (e.g. 0.6). If given, the value should be a number between 0 and 1.
-        All fractions larger than dot_max are clipped to this value.
-    dot_min
-        If none, the minimum dot size is set to 0. If given,
-        the value should be a number between 0 and 1.
-        All fractions smaller than dot_min are clipped to this value.
     standard_scale
         Whether or not to standardize that dimension between 0 and 1,
         meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
-    smallest_dot
-        If none, the smallest dot has size 0.
-        All expression levels with `dot_min` are plotted with this size.
 
     **kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
@@ -3540,12 +3521,7 @@ class DotPlot(object):
         num_categories: int = 7,
         expression_cutoff: float = 0.0,
         mean_only_expressed: bool = False,
-        color_map: str = 'RdBu_r',
-        style: Optional[str] = 'square color',
-        dot_max: Optional[float] = None,
-        dot_min: Optional[float] = None,
         standard_scale: Literal['var', 'group'] = None,
-        smallest_dot: float = 0.0,
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -3572,11 +3548,6 @@ class DotPlot(object):
         )
         self.adata = adata
         self.groupby = groupby
-        self.color_map = color_map
-        self.dot_max = dot_max
-        self.dot_min = dot_min
-        self.smallest_dot = smallest_dot
-        self.style = style
         self.kwds = kwds
         self.categories = categories
         self.obs_tidy = obs_tidy
@@ -3628,10 +3599,11 @@ class DotPlot(object):
 
         self.mean_obs = mean_obs
 
-        # legend parameters
-        self.legends_width = 1.5
-        self.color_title = 'Expression\nlevel in group'
-        self.size_title = 'Fraction of cells\nin group (%)'
+        # set default values for legend and style
+        self.legend()
+        self.style()
+
+        # style default parameters
 
         self.figsize = figsize
         self.are_axes_swapped = False
@@ -3644,6 +3616,49 @@ class DotPlot(object):
 
         self.group_extra_size = 0
         self.plot_group_extra = None
+
+    def style(self,
+              color_map: str = 'RdBu_r',
+              color_on: Optional[Literal['dot', 'square']] = 'dot',
+              dot_max: Optional[float] = None,
+              dot_min: Optional[float] = None,
+              smallest_dot: float = 0.0,
+    ):
+        """
+        Modifies plot style
+
+        Parameters
+        ----------
+        color_map
+            String denoting matplotlib color map.
+        color_on
+            Options are 'dot' or 'square'. Be default the colomap is applied to
+            the color of the dot. Optionally, the colormap can be applied to an
+            square behind the dot, in which case the dot is transparent and only
+            the edge is shown.
+        dot_max
+            If none, the maximum dot size is set to the maximum fraction value found
+            (e.g. 0.6). If given, the value should be a number between 0 and 1.
+            All fractions larger than dot_max are clipped to this value.
+        dot_min
+            If none, the minimum dot size is set to 0. If given,
+            the value should be a number between 0 and 1.
+            All fractions smaller than dot_min are clipped to this value.
+        smallest_dot
+            If none, the smallest dot has size 0.
+            All expression levels with `dot_min` are plotted with this size.
+
+        Returns
+        -------
+        DotPlot
+        """
+        self.color_map = color_map
+        self.dot_max = dot_max
+        self.dot_min = dot_min
+        self.smallest_dot = smallest_dot
+        self.color_on = color_on
+
+        return self
 
     def swap_axes(self, swap_axes: Optional[bool] = True):
         """
@@ -3758,7 +3773,8 @@ class DotPlot(object):
     def add_totals(self,
                    show: Optional[bool] = True,
                    sort: Literal['ascending', 'descending'] = None,
-                   size: Optional[float] = 0.8
+                   size: Optional[float] = 0.8,
+                   color: Optional[Union[ColorLike, Sequence[ColorLike]]] = None
                    ):
         """
         Show barplot for the number of cells in in `groupby` category.
@@ -3773,7 +3789,8 @@ class DotPlot(object):
             by cell number
         size : size of the barplot. Corresponds to width when shown on
             the right of the plot, or height when shown on top.
-
+        color: Color for the bar plots or list of colors for each of the bar plots.
+            By default, each bar plot uses the colors assigned in `adata.uns[{groupby}_colors.
         Returns
         -------
         DotPlot
@@ -3808,7 +3825,8 @@ class DotPlot(object):
         self.plot_group_extra = {'kind': 'group_totals',
                                  'width': size,
                                  'sort': sort,
-                                 'counts_df': counts_df
+                                 'counts_df': counts_df,
+                                 'color': color
                                  }
         return self
 
@@ -3857,13 +3875,15 @@ class DotPlot(object):
         """
         Makes the bar plot for totals
         """
-
-        counts_df = self.plot_group_extra['counts_df']
-
-        if f'{self.groupby}_colors' in self.adata.uns:
-            color = self.adata.uns[f'{self.groupby}_colors']
+        params = self.plot_group_extra
+        counts_df = params['counts_df']
+        if params['color'] is None:
+            if f'{self.groupby}_colors' in self.adata.uns:
+                color = self.adata.uns[f'{self.groupby}_colors']
+            else:
+                color = 'salmon'
         else:
-            color = 'salmon'
+            color = params['color']
 
         if orientation == 'top':
             counts_df.plot(
@@ -4167,7 +4187,7 @@ class DotPlot(object):
         normalize, dot_min, dot_max = _dotplot(self.fraction_obs, self.mean_obs,
                                                dot_ax, color_map=self.color_map,
                                                dot_max=self.dot_max, dot_min=self.dot_min,
-                                               style=self.style, **self.kwds)
+                                               color_on=self.color_on, **self.kwds)
 
         if self.are_axes_swapped:
             # revert the change
