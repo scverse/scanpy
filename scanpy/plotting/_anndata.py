@@ -1822,8 +1822,6 @@ def dotplot(
             var_group_rotation=var_group_rotation,
             layer=layer,
             dot_color_df=dot_color_df,
-            show=show,
-            save=save,
             ** kwds,
     )
 
@@ -1832,8 +1830,7 @@ def dotplot(
     if swap_axes:
         dp.swap_axes()
 
-    dp.show()
-    return dp
+    return dp.show(show=show, save=save)
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
@@ -3458,9 +3455,10 @@ def _dotplot(
     return normalize, dot_min, dot_max
 
 
+@_doc_params(common_plot_args=doc_common_plot_args)
 class DotPlot(object):
     """\
-    Allows the visualization of two values that are enconded as
+    Allows the visualization of two values that are encoded as
     dot size and color. The size usually represents the fraction
     of cells (obs) that have a non-zero value for genes (var).
 
@@ -3506,7 +3504,6 @@ class DotPlot(object):
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
 
-    {show_save_ax}
     **kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
@@ -3516,15 +3513,14 @@ class DotPlot(object):
 
     Examples
     -------
-    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
 
     Using var_names as dict:
 
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
 
     See also
     --------
@@ -3553,8 +3549,6 @@ class DotPlot(object):
         var_group_rotation: Optional[float] = None,
         layer: Optional[str] = None,
         dot_color_df: Optional[pd.DataFrame] = None,
-        show: Optional[bool] = None,
-        save: Union[str, bool, None] = None,
         **kwds,
     ):
         if use_raw is None and adata.raw is not None:
@@ -3648,6 +3642,23 @@ class DotPlot(object):
         self.plot_group_extra = None
 
     def swap_axes(self, swap_axes: Optional[bool] = True):
+        """
+        Plots a transposed image.
+
+        By default, the x axis contains `var_names` (e.g. genes) and the y
+        axis the `groupby` categories. By setting `swap_axes` then x are
+        the `groupby` categories and y the `var_names`.
+
+        Parameters
+        ----------
+        swap_axes : bool, default: True
+
+        Returns
+        -------
+        DotPlot
+
+        """
+
         self.are_axes_swapped = swap_axes
         return self
 
@@ -3656,6 +3667,44 @@ class DotPlot(object):
                        dendrogram_key: Optional[str] = None,
                        size: Optional[float] = 0.8
                        ):
+        """
+        Show dendrogram based on the hierarchical clustering between the `groupby`
+        categories. Categories are reordered to match the dendrogram order.
+
+        The dendrogram information is computed using :func:`scanpy.tl.dendrogram`.
+        If `sc.tl.dendrogram` has not been called previously the function is called
+        with default parameters.
+
+        The dendrogram is by default shown on the right side of the plot or on top
+        if the axes are swapped.
+
+        `var_names` are reordered to produce a more pleasing output if:
+            * The data contains `var_groups`
+            * the `var_groups` match the categories.
+        The previous conditions happen by default when using dot plot
+        to show the results from `sc.tl.rank_genes_groups` (aka gene markers), by
+        doing `sc.tl.rank_genes_groups_dotplot`.
+
+        Parameters
+        ----------
+        show : bool, default True
+        dendrogram_key : str, default None
+            Needed if `sc.tl.dendrogram` saved the dendrogram using a key different
+            than the default name.
+        size : size of the dendrogram. Corresponds to width when dendrogram shown on
+            the right of the plot, or height when shown on top.
+
+        Returns
+        -------
+        DotPlot
+
+        Examples
+        --------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
+
+        """
         if not show:
             self.plot_group_extra = None
             return self
@@ -3672,6 +3721,8 @@ class DotPlot(object):
             # this means that the dendrogram was already computed
             return self
 
+        # to correctly plot the dendrogram the categories need to be ordered
+        # according to the dendrogram ordering.
         dendro_data = _reorder_categories_after_dendrogram(
             self.adata,
             self.groupby,
@@ -3708,6 +3759,28 @@ class DotPlot(object):
                    show: Optional[bool] = True,
                    size: Optional[float] = 0.8
                    ):
+        """
+        Show barplot for the number of cells in in `groupby` category.
+
+        The barplot is by default shown on the right side of the plot or on top
+        if the axes are swapped.
+
+        Parameters
+        ----------
+        show : bool, default True
+        size : size of the barplot. Corresponds to width when shown on
+            the right of the plot, or height when shown on top.
+
+        Returns
+        -------
+        DotPlot
+
+        Examples
+        --------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').add_totals().show()
+        """
         self.group_extra_size = size
 
         if not show:
@@ -3715,8 +3788,7 @@ class DotPlot(object):
             self.group_extra_size = 0
             return self
 
-        if self.plot_group_extra is not None and \
-            self.plot_group_extra['kind'] == 'group_totals':
+        if self.plot_group_extra is not None and self.plot_group_extra['kind'] == 'group_totals':
             # this means that the add_totals was already computed
             return self
 
@@ -3729,12 +3801,34 @@ class DotPlot(object):
 
     def legend(self,
                show: Optional[bool] = True,
-               color_title: Optional[str] = 'Expression\nlevel in group',
                size_title: Optional[str] = 'Fraction of cells\nin group (%)',
+               color_title: Optional[str] = 'Expression\nlevel in group',
                width: Optional[float] = 1.5
                ):
+        """
+        Configure legend parameters.
+
+        Parameters
+        ----------
+        show : Set to `False` to hide the default plot of the legends.
+        size_title : Title for the dot size legend. Use "\n" to add line breaks.
+        color_title : Title for the color bar. Use "\n" to add line breaks.
+        width : Width of the legends.
+
+        Returns
+        -------
+        DotPlot
+
+        Examples
+        --------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
+        >>> dp.legend(color_title='log(UMI counts + 1)').show()
+        """
 
         if not show:
+            # turn of legends by setting width to 0
             self.legends_width = 0
         else:
             self.color_title = color_title
@@ -3743,7 +3837,14 @@ class DotPlot(object):
 
         return self
 
-    def _plot_totals(self, total_barplot_ax, orientation):
+    def _plot_totals(self,
+                     total_barplot_ax: Axes,
+                     orientation: Literal['top', 'right']
+                     ):
+        """
+        Makes the bar plot for totals
+        """
+
         counts_df = self.plot_group_extra['counts_df']
         # check that the counts df and the dataframe to plot
         # have the same order
@@ -3888,7 +3989,43 @@ class DotPlot(object):
         xmin, xmax = size_legend_ax.get_xlim()
         size_legend_ax.set_xlim(xmin,  xmax + 0.5)
 
-    def show(self):
+    def show(self,
+             show: Optional[bool] = None,
+             save: Union[str, bool, None] = None,
+             ):
+        """
+        Render the image
+
+        Parameters
+        ----------
+        show
+             Show the plot, do not return axis. If false, plot is not shown
+             and axes returned.
+        save
+            If `True` or a `str`, save the figure.
+            A string is appended to the default filename.
+            Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+
+        Returns
+        -------
+        If `show=False`: Dict of :class:`~matplotlib.axes.Axes`. The dict key indicates the
+        type of ax (eg. dotplot_ax)
+
+        Examples
+        -------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
+        Get the axes
+        >>> axes_dict = sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show(show=False)
+        >>> axes_dict['dotplot_ax'].grid(True)
+        >>> plt.show()
+
+        Save image
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show(save='dotplot.pdf')
+
+        """
         category_height = category_width = 0.35
 
         if self.figsize is None:
@@ -3916,6 +4053,7 @@ class DotPlot(object):
                 + self.group_extra_size
             )
 
+        return_ax_dict = {}
         # define a layout of 1 rows x 2 columns
         #   first ax is for the main figure.
         #   second ax is to plot the size and colobar legend
@@ -3968,6 +4106,7 @@ class DotPlot(object):
             height_ratios=height_ratios
         )
         dot_ax = fig.add_subplot(main_ax_grid[1, 0])
+        return_ax_dict['dotplot_ax'] = dot_ax
 
         if not self.are_axes_swapped:
             if self.plot_group_extra is not None:
@@ -3995,6 +4134,8 @@ class DotPlot(object):
             if self.plot_group_extra['kind'] == 'group_totals':
                 self._plot_totals(group_extra_ax, group_extra_orientation)
 
+            return_ax_dict['group_extra_ax'] = group_extra_ax
+
         # plot group legends on top or left of dot_ax (if given)
         if self.has_var_groups:
             _plot_gene_groups_brackets(
@@ -4006,6 +4147,7 @@ class DotPlot(object):
                 right_adjustment=0.7,
                 orientation=var_group_orientation
             )
+            return_ax_dict['gene_group_ax'] = gene_groups_ax
 
         if self.are_axes_swapped:
             self.fraction_obs = self.fraction_obs.T
@@ -4053,9 +4195,13 @@ class DotPlot(object):
 
             size_legend_ax = fig.add_subplot(axs3[1])
             self._plot_size_legend(size_legend_ax, dot_min, dot_max)
+            return_ax_dict['size_legend_ax'] = size_legend_ax
 
             color_legend_ax = fig.add_subplot(axs3[3])
             self._plot_colorbar(color_legend_ax, normalize)
+            return_ax_dict['color_legend_ax'] = color_legend_ax
 
-        # _utils.savefig_or_show('dotplot', show=show, save=save)
-        # return gs
+        _utils.savefig_or_show('dotplot', show=show, save=save)
+
+        if show is False:
+            return return_ax_dict
