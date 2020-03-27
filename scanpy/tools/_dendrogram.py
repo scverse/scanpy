@@ -131,16 +131,14 @@ def dendrogram(
     )
     dendro_info = sch.dendrogram(z_var, labels=categories, no_plot=True)
 
-    # order of groupby categories
-    categories_idx_ordered = dendro_info['leaves']
-
     dat = dict(
         linkage=z_var,
         groupby=groupby,
         use_rep=use_rep,
         cor_method=cor_method,
         linkage_method=linkage_method,
-        categories_idx_ordered=categories_idx_ordered,
+        categories_ordered=dendro_info['ivl'],
+        categories_idx_ordered=dendro_info['leaves'],
         dendrogram_info=dendro_info,
         correlation_matrix=corr_matrix.values,
     )
