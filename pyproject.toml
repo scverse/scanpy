@@ -31,7 +31,6 @@ exclude = '''
         _dpt
         |_sim
         |_paga
-        |_umap
         |_utils
         |_leiden
         |_louvain
