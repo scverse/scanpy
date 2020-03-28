@@ -109,6 +109,7 @@ def test_scale():
     adata = sc.datasets.pbmc68k_reduced()
     adata.X = adata.raw.X
     v = adata[:, 0:adata.shape[1] // 2]
+    v_copy = v.copy()
     # Should turn view to copy https://github.com/theislab/anndata/issues/171#issuecomment-508689965
     assert v.is_view
     with pytest.warns(Warning, match="view"):
@@ -116,6 +117,10 @@ def test_scale():
     assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
+    assert 'mean' in v.var.columns
+    assert 'std' in v.var.columns
+    assert_allclose(v_copy.X.mean(axis=0).A1, v.var['mean'].values, atol=0.001)
+    assert_allclose(v_copy.X.toarray().std(axis=0, ddof=1), v.var['std'].values, atol=0.001)
 
 
 def test_recipe_plotting():

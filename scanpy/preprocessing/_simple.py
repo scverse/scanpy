@@ -876,7 +876,7 @@ def _regress_out_chunk(data):
 
 
 def scale(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    adata: AnnData,
     zero_center: bool = True,
     max_value: Optional[float] = None,
     copy: bool = False,
@@ -905,40 +905,32 @@ def scale(
 
     Returns
     -------
-    Depending on `copy` returns or updates `adata` with a scaled `adata.X`.
+    Depending on `copy` returns or updates `adata` with a scaled `adata.X`,
+    annotated with `'mean'` and `'std'` in `adata.var`.
     """
-    if isinstance(data, AnnData):
-        adata = data.copy() if copy else data
-        view_to_actual(adata)
-        # need to add the following here to make inplace logic work
-        if zero_center and issparse(adata.X):
-            logg.debug(
-                '... scale_data: as `zero_center=True`, sparse input is '
-                'densified and may lead to large memory consumption.'
-            )
-            adata.X = adata.X.toarray()
-        scale(adata.X, zero_center=zero_center, max_value=max_value, copy=False)
-        return adata if copy else None
-    X = data.copy() if copy else data  # proceed with the data matrix
-    zero_center = not issparse(X) if zero_center is None else zero_center
+    adata = adata.copy() if copy else adata
+    view_to_actual(adata)
+    # need to add the following here to make inplace logic work
+    if zero_center and issparse(adata.X):
+        logg.info(
+            '... as `zero_center=True`, sparse input is '
+            'densified and may lead to large memory consumption'
+        )
+        adata.X = adata.X.toarray()
     if not zero_center and max_value is not None:
-        logg.debug(
-            '... scale_data: be careful when using `max_value` '
+        logg.info(
+            '... be careful when using `max_value` '
             'without `zero_center`.'
         )
     if max_value is not None:
         logg.debug(f'... clipping at max_value {max_value}')
-    if zero_center and issparse(X):
-        logg.debug(
-            '... scale_data: as `zero_center=True`, sparse input is densified '
-            'and may lead to large memory consumption, returning copy.'
-        )
-        X = X.toarray()
-        copy = True
-    _scale(X, zero_center)
+    mean, std = _scale(adata.X, zero_center)
+    adata.var['mean'] = mean
+    adata.var['std'] = std
+    # do the clipping
     if max_value is not None:
-        X[X > max_value] = max_value
-    return X if copy else None
+        adata.X[adata.X > max_value] = max_value
+    return adata if copy else None
 
 
 def subsample(
@@ -1223,14 +1215,15 @@ def _scale(X, zero_center=True):
     #   the result differs very slightly, why?
     if True:
         mean, var = _get_mean_var(X)
-        scale = np.sqrt(var)
+        std = np.sqrt(var)
         if issparse(X):
             if zero_center: raise ValueError('Cannot zero-center sparse matrix.')
-            sparsefuncs.inplace_column_scale(X, 1/scale)
+            sparsefuncs.inplace_column_scale(X, 1/std)
         else:
             X -= mean
-            scale[scale == 0] = 1e-12
-            X /= scale
+            std[std == 0] = 1e-12
+            X /= std
+        return mean, std
     else:
         from sklearn.preprocessing import StandardScaler
         scaler = StandardScaler(with_mean=zero_center, copy=False).partial_fit(X)
