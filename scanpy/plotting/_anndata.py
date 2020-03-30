@@ -2839,12 +2839,8 @@ def _plot_gene_groups_brackets(
     patch = patches.PathPatch(path, facecolor='none', lw=1.5)
 
     gene_groups_ax.add_patch(patch)
-    gene_groups_ax.spines['right'].set_visible(False)
-    gene_groups_ax.spines['top'].set_visible(False)
-    gene_groups_ax.spines['left'].set_visible(False)
-    gene_groups_ax.spines['bottom'].set_visible(False)
     gene_groups_ax.grid(False)
-
+    gene_groups_ax.axis('off')
     # remove y ticks
     gene_groups_ax.tick_params(axis='y', left=False, labelleft=False)
     # remove x ticks and labels
@@ -3424,14 +3420,16 @@ def _dotplot(
             **kwds,
         )
 
-    y_ticks = np.arange(dot_color.shape[0]).astype(int)
-    dot_ax.set_yticks(y_ticks + 0.5)
-    dot_ax.set_yticklabels([dot_color.index[idx] for idx in y_ticks])
+    y_ticks = np.arange(dot_color.shape[0]) + 0.5
+    dot_ax.set_yticks(y_ticks)
+    dot_ax.set_yticklabels([dot_color.index[idx] for idx,_ in enumerate(y_ticks)],
+                           minor=False)
 
-    x_ticks = np.arange(dot_color.shape[1]).astype(int)
-    dot_ax.set_xticks(x_ticks + 0.5)
+    x_ticks = np.arange(dot_color.shape[1]) + 0.5
+    dot_ax.set_xticks(x_ticks)
     dot_ax.set_xticklabels(
-        [dot_color.columns[idx] for idx in x_ticks], rotation=90
+        [dot_color.columns[idx] for idx,_ in enumerate(x_ticks)], rotation=90,
+        ha='center', minor=False
     )
     dot_ax.tick_params(axis='both', labelsize='small')
     dot_ax.grid(False)
@@ -3926,7 +3924,6 @@ class DotPlot(object):
             # for k in total_barplot_ax.spines.keys():
             #     total_barplot_ax.spines[k].set_visible(False)
             total_barplot_ax.set_ylim(0, max_y * 1.4)
-            total_barplot_ax.set_xticks([])
 
         elif orientation == 'right':
             counts_df.plot(
@@ -3953,7 +3950,6 @@ class DotPlot(object):
                     textcoords="offset points",
                 )
             total_barplot_ax.set_xlim(0, max_x * 1.4)
-            total_barplot_ax.set_xticks([])
 
         total_barplot_ax.grid(False)
         total_barplot_ax.axis("off")
@@ -4259,6 +4255,10 @@ class DotPlot(object):
                                                dot_ax, color_map=self.color_map,
                                                dot_max=self.dot_max, dot_min=self.dot_min,
                                                color_on=self.color_on, **self.kwds)
+
+        # code from add_totals adds minor ticks that need to be removed
+        dot_ax.yaxis.set_tick_params(which='minor', left=False, right=False)
+        dot_ax.xaxis.set_tick_params(which='minor', top=False, bottom=False, length=0)
 
         if self.are_axes_swapped:
             # revert the change
