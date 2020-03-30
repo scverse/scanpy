@@ -3291,6 +3291,8 @@ def _dotplot(
     dot_min: Optional[float] = None,
     standard_scale: Literal['var', 'group'] = None,
     smallest_dot: float = 0.0,
+    edge_color: Optional[ColorLike] = None,
+    edge_lw: Optional[float] = None,
     **kwds,
 ):
     """\
@@ -3309,6 +3311,11 @@ def _dotplot(
     y_lebel:
     color_map
         String denoting matplotlib color map.
+    color_on
+        Options are 'dot' or 'square'. Be default the colomap is applied to
+        the color of the dot. Optionally, the colormap can be applied to an
+        square behind the dot, in which case the dot is transparent and only
+        the edge is shown.
     y_label: String. Label for y axis
     dot_max
         If none, the maximum dot size is set to the maximum fraction value found
@@ -3325,6 +3332,12 @@ def _dotplot(
     smallest_dot
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
+    edge_color
+        Dot edge color. When `color_on='dot'` the default is no edge. When
+        `color_on='square'`, edge color is white
+    edge_lw
+        Dot edge line width. When `color_on='dot'` the default is no edge. When
+        `color_on='square'`, line width = 1.5
 
     **kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
@@ -3391,6 +3404,8 @@ def _dotplot(
     )
 
     if color_on == 'square':
+        edge_color = 'white' if edge_color is None else edge_color
+        edge_lw = 1.5 if edge_lw is None else edge_lw
         # makes first a 'matrixplot' (squares with the asigned colormap
         dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
         for axis in ['top', 'bottom', 'left', 'right']:
@@ -3401,12 +3416,15 @@ def _dotplot(
             s=size,
             cmap=cmap,
             norm=None,
-            linewidth=1.5,
+            linewidth=edge_lw,
             facecolor='none',
-            edgecolor='white',
+            edgecolor=edge_color,
             **kwds,
         )
     else:
+        edge_color = 'none' if edge_color is None else edge_color
+        edge_lw = 0.5 if edge_lw is None else edge_lw
+
         color = cmap(normalize(mean_flat))
         dot_ax.scatter(
             x,
@@ -3415,8 +3433,8 @@ def _dotplot(
             color=color,
             cmap=cmap,
             norm=None,
-            linewidth=0.5,
-            edgecolor='none',
+            linewidth=edge_lw,
+            edgecolor=edge_color,
             **kwds,
         )
 
@@ -3622,7 +3640,10 @@ class DotPlot(object):
               dot_max: Optional[float] = None,
               dot_min: Optional[float] = None,
               smallest_dot: float = 0.0,
-    ):
+              dot_edge_color=None,
+              dot_edge_lw=None,
+
+              ):
         """
         Modifies plot style
 
@@ -3646,7 +3667,12 @@ class DotPlot(object):
         smallest_dot
             If none, the smallest dot has size 0.
             All expression levels with `dot_min` are plotted with this size.
-
+        dot_edge_color
+            Dot edge color. When `color_on='dot'` the default is no edge. When
+            `color_on='square'`, edge color is white
+        dot_edge_lw
+            Dot edge line width. When `color_on='dot'` the default is no edge. When
+            `color_on='square'`, line width = 1.5
         Returns
         -------
         DotPlot
@@ -3657,6 +3683,8 @@ class DotPlot(object):
         self.smallest_dot = smallest_dot
         self.color_on = color_on
 
+        self.dot_edge_color = dot_edge_color
+        self.dot_edge_lw = dot_edge_lw
         return self
 
     def swap_axes(self, swap_axes: Optional[bool] = True):
@@ -4254,7 +4282,10 @@ class DotPlot(object):
         normalize, dot_min, dot_max = _dotplot(self.fraction_obs, self.mean_obs,
                                                dot_ax, color_map=self.color_map,
                                                dot_max=self.dot_max, dot_min=self.dot_min,
-                                               color_on=self.color_on, **self.kwds)
+                                               color_on=self.color_on,
+                                               edge_color=self.dot_edge_color,
+                                               edge_lw=self.dot_edge_lw,
+                                               **self.kwds)
 
         # code from add_totals adds minor ticks that need to be removed
         dot_ax.yaxis.set_tick_params(which='minor', left=False, right=False)
