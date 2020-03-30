@@ -49,6 +49,8 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
     else:
         if use_rep in adata.obsm.keys():
             X = adata.obsm[use_rep]
+            if use_rep == 'X_pca' and n_pcs is not None:
+                X = adata.obsm[use_rep][:, :n_pcs]
         elif use_rep == 'X':
             X = adata.X
         else:
