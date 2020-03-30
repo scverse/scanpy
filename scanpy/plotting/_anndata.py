@@ -3604,8 +3604,6 @@ class DotPlot(object):
         self.style()
 
         # style default parameters
-
-        self.figsize = figsize
         self.are_axes_swapped = False
 
         self.var_names = var_names
@@ -3613,6 +3611,9 @@ class DotPlot(object):
         self.var_group_positions = var_group_positions
         self.var_group_rotation = var_group_rotation
         self.fraction_obs = fraction_obs
+        self.height, self.width = figsize if figsize is not None else (None, None)
+        # minimum height required for legends to plot properly
+        self.min_figure_height = 2.5
 
         self.group_extra_size = 0
         self.plot_group_extra = None
@@ -3832,6 +3833,8 @@ class DotPlot(object):
 
     def legend(self,
                show: Optional[bool] = True,
+               show_size_legend: Optional[bool] = True,
+               show_colorbar: Optional[bool] = True,
                size_title: Optional[str] = 'Fraction of cells\nin group (%)',
                color_title: Optional[str] = 'Expression\nlevel in group',
                width: Optional[float] = 1.5
@@ -3841,10 +3844,18 @@ class DotPlot(object):
 
         Parameters
         ----------
-        show : Set to `False` to hide the default plot of the legends.
-        size_title : Title for the dot size legend. Use "\n" to add line breaks.
-        color_title : Title for the color bar. Use "\n" to add line breaks.
-        width : Width of the legends.
+        show
+            Set to `False` to hide the default plot of the legends.
+        show_size_legend
+            Set to `False` to hide the the size legend
+        show_colorbar
+            Set to `False` to hide the the colorbar
+        size_title
+            Title for the dot size legend. Use "\n" to add line breaks.
+        color_title
+            Title for the color bar. Use "\n" to add line breaks.
+        width
+            Width of the legends.
 
         Returns
         -------
@@ -3865,6 +3876,8 @@ class DotPlot(object):
             self.color_title = color_title
             self.size_title = size_title
             self.legends_width = width
+            self.show_size_legend = show_size_legend
+            self.show_colorbar = show_colorbar
 
         return self
 
@@ -3948,15 +3961,31 @@ class DotPlot(object):
     def _plot_colorbar(self,
                        color_legend_ax: Axes,
                        normalize):
-        ## plot colorbar
+        """
+        Plots a horizontal colorbar given the ax an normalize values
+
+        Parameters
+        ----------
+        color_legend_ax
+        normalize
+
+        Returns
+        -------
+        None, updates color_legend_ax
+
+        """
+        import matplotlib.ticker as ticker
         cmap = pl.get_cmap(self.color_map)
         import matplotlib.colorbar
         matplotlib.colorbar.ColorbarBase(color_legend_ax,
                                          orientation='horizontal',
                                          cmap=cmap, norm=normalize)
 
+        print((normalize.vmin, normalize.vmax))
         color_legend_ax.set_title(self.color_title,
                                   fontsize='small')
+
+        color_legend_ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
 
     def _plot_size_legend(
         self,
@@ -4019,6 +4048,51 @@ class DotPlot(object):
         xmin, xmax = size_legend_ax.get_xlim()
         size_legend_ax.set_xlim(xmin,  xmax + 0.5)
 
+    def _plot_legends(self,
+                      fig,
+                      gs,
+                      return_ax_dict,
+                      normalize,
+                      dot_min=None,
+                      dot_max=None):
+
+            # to maintain the fixed height size of the legends, a
+            # spacer of variable height is added at the bottom. The structure for the legends
+            # is:
+            # first row: size legend
+            # second row: spacer to avoid ax titles to overlap
+            # third row: colorbar
+            # fourth raw: variable space to keep the first three rows of the same size
+
+            cbar_legend_height = self.min_figure_height * 0.08
+            size_legend_height = self.min_figure_height * 0.27
+            spacer_height = self.min_figure_height * 0.3
+            top_spacer = self.group_extra_size if self.are_axes_swapped else 0.01
+            height_ratios = [
+                top_spacer,
+                size_legend_height,
+                spacer_height,
+                cbar_legend_height,
+                self.height - size_legend_height - cbar_legend_height - spacer_height,
+                ]
+            axs3 = gridspec.GridSpecFromSubplotSpec(
+                nrows=5,
+                ncols=1,
+                subplot_spec=gs[0, 1],
+                height_ratios=height_ratios,
+            )
+
+            if self.show_size_legend:
+                size_legend_ax = fig.add_subplot(axs3[1])
+                self._plot_size_legend(size_legend_ax, dot_min, dot_max)
+                return_ax_dict['size_legend_ax'] = size_legend_ax
+
+            if self.show_colorbar:
+                color_legend_ax = fig.add_subplot(axs3[3])
+
+                self._plot_colorbar(color_legend_ax, normalize)
+                return_ax_dict['color_legend_ax'] = color_legend_ax
+
     def show(self,
              show: Optional[bool] = None,
              save: Union[str, bool, None] = None,
@@ -4058,9 +4132,7 @@ class DotPlot(object):
         """
         category_height = category_width = 0.35
 
-        if self.figsize is None:
-            # minimum height required for legends to plot properly
-            min_height = 2.5
+        if self.height is None:
             dotplot_height = len(self.categories) * category_height
             dotplot_width = len(self.var_names) * category_width + self.group_extra_size
             if self.are_axes_swapped:
@@ -4070,14 +4142,13 @@ class DotPlot(object):
 
             # if the number of categories is small use
             # a larger height, otherwise the legends do not fit
-            height = max([min_height, height])
-            width = dotplot_width + self.legends_width
+            self.height = max([self.min_figure_height, height])
+            self.width = dotplot_width + self.legends_width
         else:
-            width, height = self.figsize
-            min_height = height
-            dotplot_height = height
+            self.min_figure_height = self.height
+            dotplot_height = self.height
 
-            dotplot_width = width - (
+            dotplot_width = self.width - (
 
                 + self.legends_width
                 + self.group_extra_size
@@ -4087,9 +4158,9 @@ class DotPlot(object):
         # define a layout of 1 rows x 2 columns
         #   first ax is for the main figure.
         #   second ax is to plot the size and colobar legend
-        legends_width_spacer = 0.7 / width
+        legends_width_spacer = 0.7 / self.width
 
-        fig = pl.figure(figsize=(width, height))
+        fig = pl.figure(figsize=(self.width, self.height))
         gs = gridspec.GridSpec(
             nrows=1,
             ncols=2,
@@ -4116,7 +4187,7 @@ class DotPlot(object):
             var_groups_height = 0
 
         dotplot_width = dotplot_width - self.group_extra_size
-        spacer_height = height - var_groups_height - dotplot_height
+        spacer_height = self.height - var_groups_height - dotplot_height
         if not self.are_axes_swapped:
             height_ratios = [var_groups_height, dotplot_height, spacer_height]
             width_ratios = [dotplot_width, self.group_extra_size]
@@ -4129,8 +4200,8 @@ class DotPlot(object):
         main_ax_grid = gridspec.GridSpecFromSubplotSpec(
             nrows=3,
             ncols=2,
-            wspace=0.1 / width,
-            hspace=0.1 / height,
+            wspace=0.1 / self.width,
+            hspace=0.1 / self.height,
             subplot_spec=gs[0, 0],
             width_ratios=width_ratios,
             height_ratios=height_ratios
@@ -4195,41 +4266,7 @@ class DotPlot(object):
             self.mean_obs = self.mean_obs.T
 
         if self.legends_width > 0:
-            ## plot legends
-
-            # to maintain the fixed height size of the legends, a
-            # spacer of variable height is added at the bottom. The structure for the legends
-            # is:
-            # first row: size legend
-            # second row: spacer to avoid ax titles to overlap
-            # third row: colorbar
-            # fourth raw: variable space to keep the first three rows of the same size
-
-            cbar_legend_height = min_height * 0.08
-            size_legend_height = min_height * 0.27
-            spacer_height = min_height * 0.3
-            top_spacer = self.group_extra_size if self.are_axes_swapped else 0.01
-            height_ratios = [
-                top_spacer,
-                size_legend_height,
-                spacer_height,
-                cbar_legend_height,
-                height - size_legend_height - cbar_legend_height - spacer_height,
-                ]
-            axs3 = gridspec.GridSpecFromSubplotSpec(
-                nrows=5,
-                ncols=1,
-                subplot_spec=gs[0, 1],
-                height_ratios=height_ratios,
-            )
-
-            size_legend_ax = fig.add_subplot(axs3[1])
-            self._plot_size_legend(size_legend_ax, dot_min, dot_max)
-            return_ax_dict['size_legend_ax'] = size_legend_ax
-
-            color_legend_ax = fig.add_subplot(axs3[3])
-            self._plot_colorbar(color_legend_ax, normalize)
-            return_ax_dict['color_legend_ax'] = color_legend_ax
+            self._plot_legends(fig, gs, return_ax_dict, normalize, dot_min, dot_max)
 
         _utils.savefig_or_show('dotplot', show=show, save=save)
 
