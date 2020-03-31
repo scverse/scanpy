@@ -5,7 +5,6 @@ from .. import logging as logg
 from ._pca import pca
 from ..preprocessing._simple import N_PCS
 from .. import settings
-from .._utils import _choose_graph
 
 doc_use_rep = """\
 use_rep
@@ -49,8 +48,6 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
     else:
         if use_rep in adata.obsm.keys():
             X = adata.obsm[use_rep]
-            if use_rep == 'X_pca' and n_pcs is not None:
-                X = adata.obsm[use_rep][:, :n_pcs]
         elif use_rep == 'X':
             X = adata.X
         else:
@@ -93,10 +90,10 @@ def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
             return adata.X
 
 
-def get_init_pos_from_paga(adata, adjacency=None, random_state=0, neighbors_key=None, obsp=None):
+def get_init_pos_from_paga(adata, adjacency=None, random_state=0):
     np.random.seed(random_state)
     if adjacency is None:
-        adjacency = _choose_graph(adata, obsp, neighbors_key)
+        adjacency = adata.uns['neighbors']['connectivities']
     if 'paga' in adata.uns and 'pos' in adata.uns['paga']:
         groups = adata.obs[adata.uns['paga']['groups']]
         pos = adata.uns['paga']['pos']

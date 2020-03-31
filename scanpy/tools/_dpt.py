@@ -10,9 +10,9 @@ from .. import logging as logg
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 
-def _diffmap(adata, n_comps=15, neighbors_key=None):
+def _diffmap(adata, n_comps=15):
     start = logg.info(f'computing Diffusion Maps using n_comps={n_comps}(=n_dcs)')
-    dpt = DPT(adata, neighbors_key)
+    dpt = DPT(adata)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps)
     adata.obsm['X_diffmap'] = dpt.eigen_basis
@@ -34,7 +34,6 @@ def dpt(
     n_branchings: int = 0,
     min_group_size: float = 0.01,
     allow_kendall_tau_shift: bool = True,
-    neighbors_key: Optional[str] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -84,14 +83,6 @@ def dpt(
         If a very small branch is detected upon splitting, shift away from
         maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
         stabilize the splitting.
-    neighbors_key
-        If not specified, dpt looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'], .obsp['distances'] for connectivities and
-        distances respectively (default storage places for pp.neighbors).
-        If specified, dpt looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']],
-        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
-        respectively.
     copy
         Copy instance before computation and return a copy.
         Otherwise, perform computation inplace and return `None`.
@@ -116,10 +107,7 @@ def dpt(
     """
     # standard errors, warnings etc.
     adata = adata.copy() if copy else adata
-
-    if neighbors_key is None:
-        neighbors_key = 'neighbors'
-    if neighbors_key not in adata.uns:
+    if 'neighbors' not in adata.uns:
         raise ValueError(
             'You need to run `pp.neighbors` and `tl.diffmap` first.')
     if 'iroot' not in adata.uns and 'xroot' not in adata.var:
@@ -134,12 +122,11 @@ def dpt(
             'Trying to run `tl.dpt` without prior call of `tl.diffmap`. '
             'Falling back to `tl.diffmap` with default parameters.'
         )
-        _diffmap(adata, neighbors_key=neighbors_key)
+        _diffmap(adata)
     # start with the actual computation
     dpt = DPT(adata, n_dcs=n_dcs, min_group_size=min_group_size,
               n_branchings=n_branchings,
-              allow_kendall_tau_shift=allow_kendall_tau_shift,
-              neighbors_key=neighbors_key)
+              allow_kendall_tau_shift=allow_kendall_tau_shift)
     start = logg.info(f'computing Diffusion Pseudotime using n_dcs={n_dcs}')
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     if dpt.iroot is not None:
@@ -182,8 +169,8 @@ class DPT(Neighbors):
     """
 
     def __init__(self, adata, n_dcs=None, min_group_size=0.01,
-                 n_branchings=0, allow_kendall_tau_shift=False, neighbors_key=None):
-        super(DPT, self).__init__(adata, n_dcs=n_dcs, neighbors_key=neighbors_key)
+                 n_branchings=0, allow_kendall_tau_shift=False):
+        super(DPT, self).__init__(adata, n_dcs=n_dcs)
         self.flavor = 'haghverdi16'
         self.n_branchings = n_branchings
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self._adata.shape[0])

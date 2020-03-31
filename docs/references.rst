@@ -188,13 +188,9 @@ References
    *The emergent landscape of the mouse gut endoderm at single-cell resolution*
    `Nature <https://www.nature.com/articles/s41586-019-1127-1>`__.
 
-.. [Traag17]  (2017),
+.. [Traag17] Traag (2017),
    *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
-
-.. [Tarashansky19] Tarashansky (2019),
-   *Self-assembling manifolds in single-cell RNA sequencing data*,
-   `Elife <https://doi.org/10.7554/eLife.48994>`__.
 
 .. [Traag18] Traag *et al.* (2018),
    *From Louvain to Leiden: guaranteeing well-connected communities*

@@ -25,8 +25,8 @@ from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes, make_grid_spec
-from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
+from ._utils import scatter_base, scatter_group, setup_axes
+from ._utils import ColorLike, _FontWeight, _FontSize
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
 
@@ -880,7 +880,6 @@ def stacked_violin(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     row_palette: str = 'muted',
-    ax: Optional[_AxesSubplot] = None,
     **kwds,
 ):
     """\
@@ -952,8 +951,6 @@ def stacked_violin(
     """
     import seaborn as sns  # Slow import, only import if called
 
-    ax_parent = ax
-    del ax
     if use_raw is None and adata.raw is not None:
         use_raw = True
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
@@ -1090,24 +1087,22 @@ def stacked_violin(
             num_rows += 2  # +2 to add the row for the brackets and a spacer
             height_ratios = [0.2, 0.05] + [height / len(categories)] * len(categories)
             categories = [None, None] + list(categories)
+        fig = pl.figure(figsize=(width, height))
 
         # define a layout of nrows = len(categories) rows x 2 columns
         # each row is one violin plot. Second column is reserved for dendrogram (if any)
         # if var_group_positions is defined, a new row is added
-        fig, gs = make_grid_spec(
-            ax_parent or (width, height),
+        axs = gridspec.GridSpec(
             nrows=num_rows,
             ncols=2,
-            hspace=0,
             height_ratios=height_ratios,
-            wspace=0.08,
             width_ratios=[width, dendro_width],
+            wspace=0.08,
         )
-
         axs_list = []
         if dendrogram:
             first_plot_idx = 1 if has_var_groups else 0
-            dendro_ax = fig.add_subplot(gs[first_plot_idx:, 1])
+            dendro_ax = fig.add_subplot(axs[first_plot_idx:, 1])
             _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=dendrogram)
             axs_list.append(dendro_ax)
         ax0 = None
@@ -1122,10 +1117,10 @@ def stacked_violin(
         for idx in range(num_rows)[::-1]:
             category = categories[idx]
             if has_var_groups and idx <= 1:
-                # if var_group_positions is given, gs[0] and gs[1] are the location for the
-                # brackets and a spacer (gs[1])
+                # if var_group_positions is given, axs[0] and axs[1] are the location for the
+                # brackets and a spacer (axs[1])
                 if idx == 0:
-                    brackets_ax = fig.add_subplot(gs[0], sharex=ax0)
+                    brackets_ax = fig.add_subplot(axs[0], sharex=ax0)
                     _plot_gene_groups_brackets(
                         brackets_ax,
                         group_positions=var_group_positions,
@@ -1139,11 +1134,11 @@ def stacked_violin(
                 obs_tidy[obs_tidy.index == category], value_vars=obs_tidy.columns,
             )
             if ax0 is None:
-                ax = fig.add_subplot(gs[idx, 0])
+                ax = fig.add_subplot(axs[idx, 0])
                 ax0 = ax
 
             else:
-                ax = fig.add_subplot(gs[idx, 0])
+                ax = fig.add_subplot(axs[idx, 0])
 
             axs_list.append(ax)
 
@@ -1211,6 +1206,7 @@ def stacked_violin(
                 ax.set_xticklabels(var_names)
 
         ax0.tick_params(axis='x', labelrotation=90, labelsize='small')
+
     else:
         # plot image in which x = group by and y = var_names
         dendro_height = 3 if dendrogram else 0
@@ -1221,17 +1217,17 @@ def stacked_violin(
         else:
             width, height = figsize
 
+        fig = pl.figure(figsize=(width, height))
+
         # define a layout of nrows = var_names x 1 columns
         # if plot dendrogram a row is added
         # each row is one violin plot.
         num_rows = len(var_names) + 1  # +1 to account for dendrogram
         height_ratios = [dendro_height] + ([1] * len(var_names))
 
-        fig, gs = make_grid_spec(
-            ax_parent or (width, height),
+        axs = gridspec.GridSpec(
             nrows=num_rows,
             ncols=2,
-            hspace=0,  # This will also affect the gap between dendrogram and plots
             height_ratios=height_ratios,
             wspace=0.2,
             width_ratios=[width - vargroups_width, vargroups_width],
@@ -1239,7 +1235,7 @@ def stacked_violin(
 
         axs_list = []
         if dendrogram:
-            dendro_ax = fig.add_subplot(gs[0])
+            dendro_ax = fig.add_subplot(axs[0])
             _plot_dendrogram(
                 dendro_ax, adata, groupby, orientation='top', dendrogram_key=dendrogram,
             )
@@ -1252,10 +1248,10 @@ def stacked_violin(
         for idx, y in enumerate(obs_tidy.columns):
             ax_idx = idx + 1  # +1 to account that idx 0 is the dendrogram
             if first_ax is None:
-                ax = fig.add_subplot(gs[ax_idx, 0])
+                ax = fig.add_subplot(axs[ax_idx, 0])
                 first_ax = ax
             else:
-                ax = fig.add_subplot(gs[ax_idx, 0])
+                ax = fig.add_subplot(axs[ax_idx, 0])
             axs_list.append(ax)
             ax = sns.violinplot(
                 x=obs_tidy.index,
@@ -1315,7 +1311,7 @@ def stacked_violin(
 
         if has_var_groups:
             start = 1 if dendrogram else 0
-            gene_groups_ax = fig.add_subplot(gs[start:, 1])
+            gene_groups_ax = fig.add_subplot(axs[start:, 1])
             arr = []
             for idx, pos in enumerate(var_group_positions):
                 arr += [idx] * (pos[1] + 1 - pos[0])
@@ -1331,8 +1327,7 @@ def stacked_violin(
             axs_list.append(gene_groups_ax)
 
     # remove the spacing between subplots
-    if ax_parent is None:
-        fig.subplots_adjust(wspace=0, hspace=0)
+    pl.subplots_adjust(wspace=0, hspace=0)
 
     _utils.savefig_or_show('stacked_violin', show=show, save=save)
 

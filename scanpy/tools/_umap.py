@@ -8,7 +8,7 @@ from ._utils import get_init_pos_from_paga, _choose_representation
 from .. import logging as logg
 from .._settings import settings
 from .._compat import Literal
-from .._utils import AnyRandom, NeighborsView
+from .._utils import AnyRandom
 
 
 _InitPos = Literal['paga', 'spectral', 'random']
@@ -28,8 +28,7 @@ def umap(
     a: Optional[float] = None,
     b: Optional[float] = None,
     copy: bool = False,
-    method: Literal['umap', 'rapids'] = 'umap',
-    neighbors_key: Optional[str] = None,
+    method: Literal['umap', 'rapids'] = 'umap'
 ) -> Optional[AnnData]:
     """\
     Embed the neighborhood graph using UMAP [McInnes18]_.
@@ -100,12 +99,6 @@ def umap(
         Return a copy instead of writing to adata.
     method
         Use the original 'umap' implementation, or 'rapids' (experimental, GPU only)
-    neighbors_key
-        If not specified, umap looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'] for connectivities
-        (default storage places for pp.neighbors).
-        If specified, umap looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
 
     Returns
     -------
@@ -115,20 +108,13 @@ def umap(
         UMAP coordinates of data.
     """
     adata = adata.copy() if copy else adata
-
-    if neighbors_key is None:
-        neighbors_key = 'neighbors'
-
-    if neighbors_key not in adata.uns:
+    if 'neighbors' not in adata.uns:
         raise ValueError(
-            f'Did not find .uns["{neighbors_key}"]. Run `sc.pp.neighbors` first.')
+            'Did not find \'neighbors/connectivities\'. Run `sc.pp.neighbors` first.')
     start = logg.info('computing UMAP')
-
-    neighbors = NeighborsView(adata, neighbors_key)
-
-    if ('params' not in neighbors
-        or neighbors['params']['method'] != 'umap'):
-        logg.warning(f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap')
+    if ('params' not in adata.uns['neighbors']
+        or adata.uns['neighbors']['params']['method'] != 'umap'):
+        logg.warning('neighbors/connectivities have not been computed using umap')
     from umap.umap_ import find_ab_params, simplicial_set_embedding
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
@@ -139,17 +125,14 @@ def umap(
     if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(adata, random_state=random_state, neighbors_key=neighbors_key)
+        init_coords = get_init_pos_from_paga(adata, random_state=random_state)
     else:
         init_coords = init_pos  # Let umap handle it
     if hasattr(init_coords, "dtype"):
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
-    if random_state != 0:
-        adata.uns['umap']['params']['random_state'] = random_state
     random_state = check_random_state(random_state)
-
-    neigh_params = neighbors['params']
+    neigh_params = adata.uns['neighbors']['params']
     X = _choose_representation(
         adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None), silent=True)
     if method == 'umap':
@@ -158,7 +141,7 @@ def umap(
         n_epochs = 0 if maxiter is None else maxiter
         X_umap = simplicial_set_embedding(
             X,
-            neighbors['connectivities'].tocoo(),
+            adata.uns['neighbors']['connectivities'].tocoo(),
             n_components,
             alpha,
             a,
@@ -180,7 +163,7 @@ def umap(
                 "but umap `method` 'rapids' only supports the 'euclidean' metric."
             )
         from cuml import UMAP
-        n_neighbors = neighbors['params']['n_neighbors']
+        n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
         n_epochs = 500 if maxiter is None else maxiter # 0 is not a valid value for rapids, unlike original umap
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
         umap = UMAP(

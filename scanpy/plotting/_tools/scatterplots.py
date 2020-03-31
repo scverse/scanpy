@@ -52,7 +52,6 @@ def embedding(
     edges: bool = False,
     edges_width: float = 0.1,
     edges_color: Union[str, Sequence[float], Sequence[str]] = 'grey',
-    neighbors_key: Optional[str] = None,
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
     groups: Optional[str] = None,
@@ -64,7 +63,6 @@ def embedding(
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
     bw: bool = False,
-    library_id: str = None,
     #
     color_map: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
@@ -152,7 +150,7 @@ def embedding(
     # get the points position and the components list
     # (only if components is not None)
     data_points, components_list = _get_data_points(
-        adata, basis, projection, components, img_key, library_id
+        adata, basis, projection, components, img_key
     )
 
     # Setup layout.
@@ -296,7 +294,7 @@ def embedding(
                 # had to return size_spot cause spot size is set according
                 # to the image to be plotted
                 img_processed, img_coord, size_spot, cmap_img = _process_image(
-                    adata, data_points, img_key, crop_coord, size, library_id, bw
+                    adata, data_points, img_key, crop_coord, size, bw
                 )
                 ax.imshow(img_processed, cmap=cmap_img, alpha=alpha_img)
                 ax.set_xlim(img_coord[0], img_coord[1])
@@ -305,7 +303,7 @@ def embedding(
             scatter = (
                 partial(ax.scatter, s=size)
                 if img_key is None
-                else partial(circles, s=size_spot, ax=ax)
+                else partial(circles, s=size_spot)
             )
 
             if add_outline:
@@ -423,7 +421,7 @@ def embedding(
         ax.autoscale_view()
 
         if edges:
-            _utils.plot_edges(ax, adata, basis, edges_width, edges_color, neighbors_key)
+            _utils.plot_edges(ax, adata, basis, edges_width, edges_color)
         if arrows:
             _utils.plot_arrows(ax, adata, basis, arrows_kwds)
 
@@ -735,7 +733,6 @@ def spatial(
     adata,
     *,
     img_key: Union[str, None, Empty] = _empty,
-    library_id: Union[str, Empty] = _empty,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
     bw: bool = False,
@@ -744,10 +741,8 @@ def spatial(
     """\
     Scatter plot in spatial coordinates.
 
-    Use the parameter `img_key` to see the image in the background
-    And the parameter `library_id` to select the image.
+    Use the parameter `img_key` to see the image in the background.
     By default, `'hires'` and `'lowres'` are attempted.
-    Also by default the first entry of `library_id` is attempted.
     Use `crop_coord`, `alpha_img`, and `bw` to control how it is displayed.
     Use `size` to scale the size of the Visium spots plotted on top.
 
@@ -761,29 +756,18 @@ def spatial(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    if library_id is _empty:
-        library_id = next((i for i in adata.uns['spatial'].keys()))
-    else:
-        if library_id not in adata.uns['spatial'].keys():
-            raise KeyError(
-                f"Could not find '{library_id}' in adata.uns['spatial'].keys().\n"
-                f"Available keys are: {list(adata.uns['spatial'].keys())}."
-            )
-
-    spatial_data = adata.uns['spatial'][library_id]
     if img_key is _empty:
         img_key = next(
-            (k for k in ['hires', 'lowres'] if k in spatial_data['images']), None,
+            (k for k in ['hires', 'lowres'] if k in adata.uns['images']), None
         )
 
     return embedding(
         adata,
-        'coords',
+        'spatial',
         img_key=img_key,
         crop_coord=crop_coord,
         alpha_img=alpha_img,
         bw=bw,
-        library_id=library_id,
         **kwargs,
     )
 
@@ -792,7 +776,7 @@ def spatial(
 
 
 def _get_data_points(
-    adata, basis, projection, components, img_key, library_id
+    adata, basis, projection, components, img_key
 ) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
     """
     Returns the data points corresponding to the selected basis, projection and/or components.
@@ -897,16 +881,15 @@ def _get_data_points(
         components_list = []
 
     if img_key is not None:
-        spatial_data = adata.uns["spatial"][library_id]
-        if f"tissue_{img_key}_scalef" in spatial_data['scalefactors'].keys():
+        if f"tissue_{img_key}_scalef" in adata.uns['scalefactors'].keys():
             scalef_key = f"tissue_{img_key}_scalef"
             data_points[0] = np.multiply(
-                data_points[0], spatial_data['scalefactors'][scalef_key],
+                data_points[0], adata.uns['scalefactors'][scalef_key]
             )
         else:
             raise KeyError(
-                f"Could not find entry in `adata.uns[spatial][{library_id}]` for '{img_key}'.\n"
-                f"Available keys are: {list(spatial_data['images'].keys())}."
+                f"Could not find entry in `adata.uns` for '{img_key}'.\n"
+                f"Available keys are: {list(adata.uns['images'].keys())}."
             )
 
     return data_points, components_list
@@ -1080,21 +1063,18 @@ def _basis2name(basis):
     return component_name
 
 
-def _process_image(
-    adata, data_points, img_key, crop_coord, scale_spot, library_id, bw=False
-):
+def _process_image(adata, data_points, img_key, crop_coord, scale_spot, bw=False):
     offset = 100
     cmap_img = None
-    spatial_data = adata.uns['spatial'][library_id]
-    img = spatial_data['images'][img_key]
+    img = adata.uns['images'][img_key]
     scalef_key = f"tissue_{img_key}_scalef"
 
     # 0.5 needed for optimal matching with spot boundaries
     # checked with detected_tissue_image.png
     spot_size = (
         (
-            spatial_data['scalefactors'][scalef_key]
-            * spatial_data['scalefactors']['spot_diameter_fullres']
+            adata.uns['scalefactors'][scalef_key]
+            * adata.uns['scalefactors']['spot_diameter_fullres']
         )
         * 0.5
         * scale_spot
