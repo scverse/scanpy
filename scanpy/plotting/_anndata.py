@@ -3469,64 +3469,15 @@ def _dotplot(
     return normalize, dot_min, dot_max
 
 
-@_doc_params(common_plot_args=doc_common_plot_args)
-class DotPlot(object):
+class Plot(object):
     """\
-    Allows the visualization of two values that are encoded as
-    dot size and color. The size usually represents the fraction
-    of cells (obs) that have a non-zero value for genes (var).
+    Generic class for the visualization of AnnData categories and
+    selected `var` (features or genes).
 
-    For each var_name and each `groupby` category a dot is plotted.
-    Each dot represents two values: mean expression within each category
-    (visualized by color) and fraction of cells expressing the `var_name` in the
-    category (visualized by the size of the dot). If `groupby` is not given,
-    the dotplot assumes that all data belongs to a single category.
+    Takes care of the visual location of a main plot, additional plots
+    in the margins (e.g. dendrogram, margin totals) and legends. Also
+    understand how to adapt the visual parameter if the plot is rotated
 
-    .. note::
-       A gene is considered expressed if the expression value in the `adata` (or
-       `adata.raw`) is above the specified threshold which is zero by default.
-
-    An example of dotplot usage is to visualize, for multiple marker genes,
-    the mean value and the percentage of cells expressing the gene
-    across multiple clusters.
-
-    Parameters
-    ----------
-    {common_plot_args}
-    expression_cutoff
-        Expression cutoff that is used for binarizing the gene expression and
-        determining the fraction of cells expressing given genes. A gene is
-        expressed only if the expression value is greater than this threshold.
-    mean_only_expressed
-        If True, gene expression is averaged only over the cells
-        expressing the given genes.
-    standard_scale
-        Whether or not to standardize that dimension between 0 and 1,
-        meaning for each variable or group,
-        subtract the minimum and divide each by its maximum.
-
-    **kwds
-        Are passed to :func:`matplotlib.pyplot.scatter`.
-
-    Returns
-    -------
-    List of :class:`~matplotlib.axes.Axes`
-
-    Examples
-    -------
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
-
-    Using var_names as dict:
-
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
-
-    See also
-    --------
-    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
-    :func:`~scanpy.tl.rank_genes_groups` function.
     """
     def __init__(self,
         adata: AnnData,
@@ -3535,24 +3486,21 @@ class DotPlot(object):
         use_raw: Optional[bool] = None,
         log: bool = False,
         num_categories: int = 7,
-        expression_cutoff: float = 0.0,
-        mean_only_expressed: bool = False,
-        standard_scale: Literal['var', 'group'] = None,
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
         var_group_labels: Optional[Sequence[str]] = None,
         var_group_rotation: Optional[float] = None,
         layer: Optional[str] = None,
-        dot_color_df: Optional[pd.DataFrame] = None,
-        **kwds,
+        ax: Optional[Axes] = None,
+        **kwds
     ):
         if use_raw is None and adata.raw is not None:
             use_raw = True
         var_names, var_group_labels, var_group_positions = _check_var_names_type(
             var_names, var_group_labels, var_group_positions
         )
-        categories, obs_tidy = _prepare_dataframe(
+        self.categories, self.obs_tidy = _prepare_dataframe(
             adata,
             var_names,
             groupby,
@@ -3564,128 +3512,30 @@ class DotPlot(object):
         )
         self.adata = adata
         self.groupby = groupby
-        self.kwds = kwds
-        self.categories = categories
-        self.obs_tidy = obs_tidy
 
         self.has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
 
-        # for if category defined by groupby (if any) compute for each var_name
-        # 1. the fraction of cells in the category having a value >expression_cutoff
-        # 2. the mean value over the category
-
-        # 1. compute fraction of cells having value > expression_cutoff
-        # transform obs_tidy into boolean matrix using the expression_cutoff
-        obs_bool = obs_tidy > expression_cutoff
-
-        # compute the sum per group which in the boolean matrix this is the number
-        # of values >expression_cutoff, and divide the result by the total number of
-        # values in the group (given by `count()`)
-        fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
-
-        if dot_color_df is None:
-            # 2. compute mean value
-            if mean_only_expressed:
-                mean_obs = obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
-            else:
-                mean_obs = obs_tidy.groupby(level=0).mean()
-
-            if standard_scale == 'group':
-                mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
-                mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
-            elif standard_scale == 'var':
-                mean_obs -= mean_obs.min(0)
-                mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
-            elif standard_scale is None:
-                pass
-            else:
-                logg.warning('Unknown type for standard_scale, ignored')
-        else:
-            # check that both matrices have the same shape
-            if dot_color_df.shape != fraction_obs.shape:
-                logg.error("the given dot_color_df data frame has a different shape than"
-                           "the data frame used for the dot size. Both data frames need"
-                           "to have the same index and columns")
-
-            # get the same order for rows and columns in the color values using the order
-            # in the fraction values. Because genes (columns) can be duplicated
-            # they need to be removed first. Otherwise, the duplicate genes are further
-            # duplicated.
-            mean_obs = dot_color_df.loc[fraction_obs.index].T.drop_duplicates().T[fraction_obs.columns]
-
-        self.mean_obs = mean_obs
-
-        # set default values for legend and style
+        # set default values for legend
         self.legend()
         self.style()
 
         # style default parameters
         self.are_axes_swapped = False
+        self.categories_order = None
+        self.var_names_idx_order = None
 
         self.var_names = var_names
         self.var_group_labels = var_group_labels
         self.var_group_positions = var_group_positions
         self.var_group_rotation = var_group_rotation
-        self.fraction_obs = fraction_obs
         self.height, self.width = figsize if figsize is not None else (None, None)
         # minimum height required for legends to plot properly
         self.min_figure_height = 2.5
 
         self.group_extra_size = 0
         self.plot_group_extra = None
-
-    def style(self,
-              color_map: str = 'RdBu_r',
-              color_on: Optional[Literal['dot', 'square']] = 'dot',
-              dot_max: Optional[float] = None,
-              dot_min: Optional[float] = None,
-              smallest_dot: float = 0.0,
-              dot_edge_color=None,
-              dot_edge_lw=None,
-
-              ):
-        """
-        Modifies plot style
-
-        Parameters
-        ----------
-        color_map
-            String denoting matplotlib color map.
-        color_on
-            Options are 'dot' or 'square'. Be default the colomap is applied to
-            the color of the dot. Optionally, the colormap can be applied to an
-            square behind the dot, in which case the dot is transparent and only
-            the edge is shown.
-        dot_max
-            If none, the maximum dot size is set to the maximum fraction value found
-            (e.g. 0.6). If given, the value should be a number between 0 and 1.
-            All fractions larger than dot_max are clipped to this value.
-        dot_min
-            If none, the minimum dot size is set to 0. If given,
-            the value should be a number between 0 and 1.
-            All fractions smaller than dot_min are clipped to this value.
-        smallest_dot
-            If none, the smallest dot has size 0.
-            All expression levels with `dot_min` are plotted with this size.
-        dot_edge_color
-            Dot edge color. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, edge color is white
-        dot_edge_lw
-            Dot edge line width. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, line width = 1.5
-        Returns
-        -------
-        DotPlot
-        """
-        self.color_map = color_map
-        self.dot_max = dot_max
-        self.dot_min = dot_min
-        self.smallest_dot = smallest_dot
-        self.color_on = color_on
-
-        self.dot_edge_color = dot_edge_color
-        self.dot_edge_lw = dot_edge_lw
-        return self
+        self.ax = ax
+        self.kwds = kwds
 
     def swap_axes(self, swap_axes: Optional[bool] = True):
         """
@@ -3777,18 +3627,11 @@ class DotPlot(object):
         self.var_group_labels = dendro_data['var_group_labels']
         self.var_group_positions = dendro_data['var_group_positions']
 
-        # reorder matrix
-        if dendro_data['var_names_idx_ordered'] is not None:
-            # reorder columns (usually genes) if needed. This only happens when
-            # var_group_positions and var_group_labels is set
-            self.mean_obs = self.mean_obs.iloc[:, dendro_data['var_names_idx_ordered']]
-            self.fraction_obs = self.fraction_obs.iloc[:, dendro_data['var_names_idx_ordered']]
+        self.categories_order = dendro_data['categories_ordered']
+        self.var_names_idx_order = dendro_data['var_names_idx_ordered']
 
-        # reorder rows (categories) to match the dendrogram order
-        self.mean_obs = self.mean_obs.loc[dendro_data['categories_ordered'], :]
-
-        self.fraction_obs = self.fraction_obs.loc[dendro_data['categories_ordered'], :]
         dendro_ticks = np.arange(self.mean_obs.shape[0]) + 0.5
+
         self.group_extra_size = size
         self.plot_group_extra = {'kind': 'dendrogram',
                                  'width': size,
@@ -3857,12 +3700,13 @@ class DotPlot(object):
                                  }
         return self
 
+    def style(self,
+              color_map: str = 'RdBu_r'):
+        self.color_map = color_map
+
     def legend(self,
                show: Optional[bool] = True,
-               show_size_legend: Optional[bool] = True,
-               show_colorbar: Optional[bool] = True,
-               size_title: Optional[str] = 'Fraction of cells\nin group (%)',
-               color_title: Optional[str] = 'Expression\nlevel in group',
+               title: Optional[str] = 'Expression\nlevel in group',
                width: Optional[float] = 1.5
                ):
         """
@@ -3871,17 +3715,11 @@ class DotPlot(object):
         Parameters
         ----------
         show
-            Set to `False` to hide the default plot of the legends.
-        show_size_legend
-            Set to `False` to hide the the size legend
-        show_colorbar
-            Set to `False` to hide the the colorbar
-        size_title
+            Set to `False` to hide the default plot of the legend.
+        title
             Title for the dot size legend. Use "\n" to add line breaks.
-        color_title
-            Title for the color bar. Use "\n" to add line breaks.
         width
-            Width of the legends.
+            Width of the legend.
 
         Returns
         -------
@@ -3899,11 +3737,8 @@ class DotPlot(object):
             # turn of legends by setting width to 0
             self.legends_width = 0
         else:
-            self.color_title = color_title
-            self.size_title = size_title
+            self.color_legend_title = title
             self.legends_width = width
-            self.show_size_legend = show_size_legend
-            self.show_colorbar = show_colorbar
 
         return self
 
@@ -4005,11 +3840,485 @@ class DotPlot(object):
                                          orientation='horizontal',
                                          cmap=cmap, norm=normalize)
 
-        print((normalize.vmin, normalize.vmax))
-        color_legend_ax.set_title(self.color_title,
+        color_legend_ax.set_title(self.color_legend_title,
                                   fontsize='small')
 
         color_legend_ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
+
+    def _plot_legend(self,
+        legend_ax,
+        return_ax_dict,
+        normalize
+    ):
+
+        # to maintain the fixed height size of the legends, a
+        # spacer of variable height is added at top and bottom. The structure for the legends
+        # is:
+        # first row: spacer
+        # second row: size legend
+        # third row raw: variable space to keep the first three rows of the same size
+
+        legend_height = self.min_figure_height * 0.08
+        top_spacer = self.group_extra_size if self.are_axes_swapped else 0.01
+        height_ratios = [
+            top_spacer,
+            legend_height,
+            self.height - top_spacer - legend_height,
+            ]
+        fig, legend_gs = make_grid_spec(
+            legend_ax,
+            nrows=3,
+            ncols=1,
+            height_ratios=height_ratios,
+        )
+
+        color_legend_ax = fig.add_subplot(legend_gs[1])
+
+        self._plot_colorbar(color_legend_ax, normalize)
+        return_ax_dict['color_legend_ax'] = color_legend_ax
+
+    def _mainplot(self, ax):
+        import matplotlib.colors
+
+        normalize = matplotlib.colors.Normalize(
+            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+        )
+
+        return normalize
+
+    def show(self,
+             show: Optional[bool] = None,
+             save: Union[str, bool, None] = None,
+             ):
+        """
+        Render the image
+
+        Parameters
+        ----------
+        show
+             Show the plot, do not return axis. If false, plot is not shown
+             and axes returned.
+        save
+            If `True` or a `str`, save the figure.
+            A string is appended to the default filename.
+            Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+
+        Returns
+        -------
+        If `show=False`: Dict of :class:`~matplotlib.axes.Axes`. The dict key indicates the
+        type of ax (eg. mainplot_ax)
+
+        Examples
+        -------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
+        Get the axes
+        >>> axes_dict = sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show(show=False)
+        >>> axes_dict['mainplot_ax'].grid(True)
+        >>> plt.show()
+
+        Save image
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show(save='dotplot.pdf')
+
+        """
+        category_height = category_width = 0.35
+
+        if self.height is None:
+            mainplot_height = len(self.categories) * category_height
+            mainplot_width = len(self.var_names) * category_width + self.group_extra_size
+            if self.are_axes_swapped:
+                mainplot_height, mainplot_width = mainplot_width, mainplot_height
+
+            height = mainplot_height + 1  # +1 for labels
+
+            # if the number of categories is small use
+            # a larger height, otherwise the legends do not fit
+            self.height = max([self.min_figure_height, height])
+            self.width = mainplot_width + self.legends_width
+        else:
+            self.min_figure_height = self.height
+            mainplot_height = self.height
+
+            mainplot_width = self.width - (
+
+                + self.legends_width
+                + self.group_extra_size
+            )
+
+        return_ax_dict = {}
+        # define a layout of 1 rows x 2 columns
+        #   first ax is for the main figure.
+        #   second ax is to plot the size and colobar legend
+        legends_width_spacer = 0.7 / self.width
+
+        # fig = pl.figure(figsize=(self.width, self.height))
+        # gs = gridspec.GridSpec(
+
+        fig, gs = make_grid_spec(
+            self.ax or (self.width, self.height),
+            nrows=1,
+            ncols=2,
+            wspace=legends_width_spacer,
+            width_ratios=[
+                mainplot_width + self.group_extra_size,
+                self.legends_width,
+            ],
+        )
+
+        # the main plot is divided into three rows and two columns
+        # first row is for brackets (if needed),
+        # second row is for mainplot and dendrogram (if needed)
+        # third row is an spacer, that is adjusted in case the
+        # legends need more height than the main plot
+        if self.has_var_groups:
+            # add some space in case 'brackets' want to be plotted on top of the image
+            if self.are_axes_swapped:
+                var_groups_height = category_height
+            else:
+                var_groups_height = category_height / 2
+
+        else:
+            var_groups_height = 0
+
+        mainplot_width = mainplot_width - self.group_extra_size
+        spacer_height = self.height - var_groups_height - mainplot_height
+        if not self.are_axes_swapped:
+            height_ratios = [var_groups_height, mainplot_height, spacer_height]
+            width_ratios = [mainplot_width, self.group_extra_size]
+
+        else:
+            height_ratios = [self.group_extra_size, mainplot_height, spacer_height]
+            width_ratios = [mainplot_width, var_groups_height]
+            # gridspec is the same but rows and columns are swapped
+
+        mainplot_gs = gridspec.GridSpecFromSubplotSpec(
+            nrows=3,
+            ncols=2,
+            wspace=0.1 / self.width,
+            hspace=0.1 / self.height,
+            subplot_spec=gs[0, 0],
+            width_ratios=width_ratios,
+            height_ratios=height_ratios
+        )
+        main_ax = fig.add_subplot(mainplot_gs[1, 0])
+        return_ax_dict['mainplot_ax'] = main_ax
+
+        if not self.are_axes_swapped:
+            if self.plot_group_extra is not None:
+                group_extra_ax = fig.add_subplot(mainplot_gs[1, 1], sharey=main_ax)
+                group_extra_orientation = 'right'
+            if self.has_var_groups:
+                gene_groups_ax = fig.add_subplot(mainplot_gs[0, 0], sharex=main_ax)
+                var_group_orientation = 'top'
+        else:
+            if self.plot_group_extra:
+                group_extra_ax = fig.add_subplot(mainplot_gs[0, 0], sharex=main_ax)
+                group_extra_orientation = 'top'
+            if self.has_var_groups:
+                gene_groups_ax = fig.add_subplot(mainplot_gs[1, 1], sharey=main_ax)
+                var_group_orientation = 'right'
+
+        if self.plot_group_extra is not None:
+            if self.plot_group_extra['kind'] == 'dendrogram':
+                _plot_dendrogram(
+                    group_extra_ax, self.adata, self.groupby,
+                    dendrogram_key=self.plot_group_extra['dendrogram_key'],
+                    ticks=self.plot_group_extra['dendrogram_ticks'],
+                    orientation=group_extra_orientation
+                )
+            if self.plot_group_extra['kind'] == 'group_totals':
+                self._plot_totals(group_extra_ax, group_extra_orientation)
+
+            return_ax_dict['group_extra_ax'] = group_extra_ax
+
+        # plot group legends on top or left of main_ax (if given)
+        if self.has_var_groups:
+            _plot_gene_groups_brackets(
+                gene_groups_ax,
+                group_positions=self.var_group_positions,
+                group_labels=self.var_group_labels,
+                rotation=self.var_group_rotation,
+                left_adjustment=0.2,
+                right_adjustment=0.7,
+                orientation=var_group_orientation
+            )
+            return_ax_dict['gene_group_ax'] = gene_groups_ax
+
+        if self.are_axes_swapped:
+            self.fraction_obs = self.fraction_obs.T
+            self.mean_obs = self.mean_obs.T
+
+        # plot the mainplot
+        normalize = self._mainplot(main_ax)
+
+        # code from add_totals adds minor ticks that need to be removed
+        main_ax.yaxis.set_tick_params(which='minor', left=False, right=False)
+        main_ax.xaxis.set_tick_params(which='minor', top=False, bottom=False, length=0)
+
+        if self.are_axes_swapped:
+            # revert the change
+            self.fraction_obs = self.fraction_obs.T
+            self.mean_obs = self.mean_obs.T
+
+        if self.legends_width > 0:
+            legend_ax = fig.add_subplot(gs[0, 1])
+            self._plot_legend(legend_ax, return_ax_dict, normalize)
+
+        # TODO change mainplot to a variable
+        _utils.savefig_or_show('mainplot', show=show, save=save)
+
+        if show is False:
+            return return_ax_dict
+
+
+@_doc_params(common_plot_args=doc_common_plot_args)
+class DotPlot(Plot):
+    """\
+    Allows the visualization of two values that are encoded as
+    dot size and color. The size usually represents the fraction
+    of cells (obs) that have a non-zero value for genes (var).
+
+    For each var_name and each `groupby` category a dot is plotted.
+    Each dot represents two values: mean expression within each category
+    (visualized by color) and fraction of cells expressing the `var_name` in the
+    category (visualized by the size of the dot). If `groupby` is not given,
+    the dotplot assumes that all data belongs to a single category.
+
+    .. note::
+       A gene is considered expressed if the expression value in the `adata` (or
+       `adata.raw`) is above the specified threshold which is zero by default.
+
+    An example of dotplot usage is to visualize, for multiple marker genes,
+    the mean value and the percentage of cells expressing the gene
+    across multiple clusters.
+
+    Parameters
+    ----------
+    {common_plot_args}
+    expression_cutoff
+        Expression cutoff that is used for binarizing the gene expression and
+        determining the fraction of cells expressing given genes. A gene is
+        expressed only if the expression value is greater than this threshold.
+    mean_only_expressed
+        If True, gene expression is averaged only over the cells
+        expressing the given genes.
+    standard_scale
+        Whether or not to standardize that dimension between 0 and 1,
+        meaning for each variable or group,
+        subtract the minimum and divide each by its maximum.
+
+    **kwds
+        Are passed to :func:`matplotlib.pyplot.scatter`.
+
+    Returns
+    -------
+    List of :class:`~matplotlib.axes.Axes`
+
+    Examples
+    -------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
+    Using var_names as dict:
+
+    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
+    See also
+    --------
+    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
+    :func:`~scanpy.tl.rank_genes_groups` function.
+    """
+    def __init__(self,
+        adata: AnnData,
+        var_names: Union[_VarNames, Mapping[str, _VarNames]],
+        groupby: Optional[str] = None,
+        use_raw: Optional[bool] = None,
+        log: bool = False,
+        num_categories: int = 7,
+        figsize: Optional[Tuple[float, float]] = None,
+        gene_symbols: Optional[str] = None,
+        var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
+        var_group_labels: Optional[Sequence[str]] = None,
+        var_group_rotation: Optional[float] = None,
+        layer: Optional[str] = None,
+        expression_cutoff: float = 0.0,
+        mean_only_expressed: bool = False,
+        standard_scale: Literal['var', 'group'] = None,
+        dot_color_df: Optional[pd.DataFrame] = None,
+        ax: Optional[Axes] = None,
+        **kwds
+    ):
+        Plot.__init__(self,
+                       adata,
+                       var_names,
+                       groupby=groupby,
+                       use_raw=use_raw,
+                       log=log,
+                       num_categories=num_categories,
+                       figsize=figsize,
+                       gene_symbols=gene_symbols,
+                       var_group_positions=var_group_positions,
+                       var_group_labels=var_group_labels,
+                       var_group_rotation=var_group_rotation,
+                       layer=layer,
+                       ax=ax)
+
+        # for if category defined by groupby (if any) compute for each var_name
+        # 1. the fraction of cells in the category having a value >expression_cutoff
+        # 2. the mean value over the category
+
+        # 1. compute fraction of cells having value > expression_cutoff
+        # transform obs_tidy into boolean matrix using the expression_cutoff
+        obs_bool = self.obs_tidy > expression_cutoff
+
+        # compute the sum per group which in the boolean matrix this is the number
+        # of values >expression_cutoff, and divide the result by the total number of
+        # values in the group (given by `count()`)
+        fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+
+        if dot_color_df is None:
+            # 2. compute mean value
+            if mean_only_expressed:
+                mean_obs = self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+            else:
+                mean_obs = self.obs_tidy.groupby(level=0).mean()
+
+            if standard_scale == 'group':
+                mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
+                mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
+            elif standard_scale == 'var':
+                mean_obs -= mean_obs.min(0)
+                mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
+            elif standard_scale is None:
+                pass
+            else:
+                logg.warning('Unknown type for standard_scale, ignored')
+        else:
+            # check that both matrices have the same shape
+            if dot_color_df.shape != fraction_obs.shape:
+                logg.error("the given dot_color_df data frame has a different shape than"
+                           "the data frame used for the dot size. Both data frames need"
+                           "to have the same index and columns")
+
+            # get the same order for rows and columns in the color values using the order
+            # in the fraction values. Because genes (columns) can be duplicated
+            # they need to be removed first. Otherwise, the duplicate genes are further
+            # duplicated.
+            mean_obs = dot_color_df.loc[fraction_obs.index].T.drop_duplicates().T[fraction_obs.columns]
+
+        # set default values for style
+        self.style()
+
+        self.mean_obs = mean_obs
+        self.fraction_obs = fraction_obs
+        self.kwds = kwds
+
+    def style(self,
+              color_map: str = 'RdBu_r',
+              color_on: Optional[Literal['dot', 'square']] = 'dot',
+              dot_max: Optional[float] = None,
+              dot_min: Optional[float] = None,
+              smallest_dot: float = 0.0,
+              dot_edge_color=None,
+              dot_edge_lw=None,
+
+              ):
+        """
+        Modifies plot style
+
+        Parameters
+        ----------
+        color_map
+            String denoting matplotlib color map.
+        color_on
+            Options are 'dot' or 'square'. Be default the colomap is applied to
+            the color of the dot. Optionally, the colormap can be applied to an
+            square behind the dot, in which case the dot is transparent and only
+            the edge is shown.
+        dot_max
+            If none, the maximum dot size is set to the maximum fraction value found
+            (e.g. 0.6). If given, the value should be a number between 0 and 1.
+            All fractions larger than dot_max are clipped to this value.
+        dot_min
+            If none, the minimum dot size is set to 0. If given,
+            the value should be a number between 0 and 1.
+            All fractions smaller than dot_min are clipped to this value.
+        smallest_dot
+            If none, the smallest dot has size 0.
+            All expression levels with `dot_min` are plotted with this size.
+        dot_edge_color
+            Dot edge color. When `color_on='dot'` the default is no edge. When
+            `color_on='square'`, edge color is white
+        dot_edge_lw
+            Dot edge line width. When `color_on='dot'` the default is no edge. When
+            `color_on='square'`, line width = 1.5
+        Returns
+        -------
+        DotPlot
+        """
+        self.color_map = color_map
+        self.dot_max = dot_max
+        self.dot_min = dot_min
+        self.smallest_dot = smallest_dot
+        self.color_on = color_on
+
+        self.dot_edge_color = dot_edge_color
+        self.dot_edge_lw = dot_edge_lw
+        return self
+
+    def legend(self,
+               show: Optional[bool] = True,
+               show_size_legend: Optional[bool] = True,
+               show_colorbar: Optional[bool] = True,
+               size_title: Optional[str] = 'Fraction of cells\nin group (%)',
+               color_title: Optional[str] = 'Expression\nlevel in group',
+               width: Optional[float] = 1.5
+               ):
+        """
+        Configure legend parameters.
+
+        Parameters
+        ----------
+        show
+            Set to `False` to hide the default plot of the legends.
+        show_size_legend
+            Set to `False` to hide the the size legend
+        show_colorbar
+            Set to `False` to hide the the colorbar
+        size_title
+            Title for the dot size legend. Use "\n" to add line breaks.
+        color_title
+            Title for the color bar. Use "\n" to add line breaks.
+        width
+            Width of the legends.
+
+        Returns
+        -------
+        DotPlot
+
+        Examples
+        --------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
+        >>> dp.legend(color_title='log(UMI counts + 1)').show()
+        """
+
+        if not show:
+            # turn of legends by setting width to 0
+            self.legends_width = 0
+        else:
+            self.color_legend_title = color_title
+            self.size_title = size_title
+            self.legends_width = width
+            self.show_size_legend = show_size_legend
+            self.show_colorbar = show_colorbar
+
+        return self
 
     def _plot_size_legend(
         self,
@@ -4072,13 +4381,10 @@ class DotPlot(object):
         xmin, xmax = size_legend_ax.get_xlim()
         size_legend_ax.set_xlim(xmin,  xmax + 0.5)
 
-    def _plot_legends(self,
-                      fig,
-                      gs,
+    def _plot_legend(self,
+                      legend_ax,
                       return_ax_dict,
-                      normalize,
-                      dot_min=None,
-                      dot_max=None):
+                      normalize):
 
             # to maintain the fixed height size of the legends, a
             # spacer of variable height is added at the bottom. The structure for the legends
@@ -4099,207 +4405,39 @@ class DotPlot(object):
                 cbar_legend_height,
                 self.height - size_legend_height - cbar_legend_height - spacer_height,
                 ]
-            axs3 = gridspec.GridSpecFromSubplotSpec(
+            fig, legend_gs = make_grid_spec(
+                legend_ax,
                 nrows=5,
                 ncols=1,
-                subplot_spec=gs[0, 1],
                 height_ratios=height_ratios,
             )
 
             if self.show_size_legend:
-                size_legend_ax = fig.add_subplot(axs3[1])
-                self._plot_size_legend(size_legend_ax, dot_min, dot_max)
+                size_legend_ax = fig.add_subplot(legend_gs[1])
+                self._plot_size_legend(size_legend_ax, self.dot_min, self.dot_max)
                 return_ax_dict['size_legend_ax'] = size_legend_ax
 
             if self.show_colorbar:
-                color_legend_ax = fig.add_subplot(axs3[3])
+                color_legend_ax = fig.add_subplot(legend_gs[3])
 
                 self._plot_colorbar(color_legend_ax, normalize)
                 return_ax_dict['color_legend_ax'] = color_legend_ax
 
-    def show(self,
-             show: Optional[bool] = None,
-             save: Union[str, bool, None] = None,
-             ):
-        """
-        Render the image
+    def _mainplot(self, ax):
+        if self.var_names_idx_order is not None:
+            self.mean_obs = self.mean_obs.iloc[:, self.var_names_idx_order]
+            self.fraction_obs = self.fraction_obs.iloc[:, self.var_names_idx_order]
 
-        Parameters
-        ----------
-        show
-             Show the plot, do not return axis. If false, plot is not shown
-             and axes returned.
-        save
-            If `True` or a `str`, save the figure.
-            A string is appended to the default filename.
-            Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+        if self.categories_order is not None:
+            self.mean_obs = self.mean_obs.loc[self.categories_order, :]
+            self.fraction_obs = self.fraction_obs.loc[self.categories_order, :]
 
-        Returns
-        -------
-        If `show=False`: Dict of :class:`~matplotlib.axes.Axes`. The dict key indicates the
-        type of ax (eg. dotplot_ax)
-
-        Examples
-        -------
-        >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
-
-        Get the axes
-        >>> axes_dict = sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show(show=False)
-        >>> axes_dict['dotplot_ax'].grid(True)
-        >>> plt.show()
-
-        Save image
-        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show(save='dotplot.pdf')
-
-        """
-        category_height = category_width = 0.35
-
-        if self.height is None:
-            dotplot_height = len(self.categories) * category_height
-            dotplot_width = len(self.var_names) * category_width + self.group_extra_size
-            if self.are_axes_swapped:
-                dotplot_height, dotplot_width = dotplot_width, dotplot_height
-
-            height = dotplot_height + 1  # +1 for labels
-
-            # if the number of categories is small use
-            # a larger height, otherwise the legends do not fit
-            self.height = max([self.min_figure_height, height])
-            self.width = dotplot_width + self.legends_width
-        else:
-            self.min_figure_height = self.height
-            dotplot_height = self.height
-
-            dotplot_width = self.width - (
-
-                + self.legends_width
-                + self.group_extra_size
-            )
-
-        return_ax_dict = {}
-        # define a layout of 1 rows x 2 columns
-        #   first ax is for the main figure.
-        #   second ax is to plot the size and colobar legend
-        legends_width_spacer = 0.7 / self.width
-
-        fig = pl.figure(figsize=(self.width, self.height))
-        gs = gridspec.GridSpec(
-            nrows=1,
-            ncols=2,
-            wspace=legends_width_spacer,
-            width_ratios=[
-                dotplot_width + self.group_extra_size,
-                self.legends_width,
-            ],
-        )
-
-        # the main plot is divided into three rows and two columns
-        # first row is for brackets (if needed),
-        # second row is for dotplot and dendrogram (if needed)
-        # third row is an spacer, that is adjusted in case the
-        # legends need more height than the dotplot
-        if self.has_var_groups:
-            # add some space in case 'brackets' want to be plotted on top of the image
-            if self.are_axes_swapped:
-                var_groups_height = category_height
-            else:
-                var_groups_height = category_height / 2
-
-        else:
-            var_groups_height = 0
-
-        dotplot_width = dotplot_width - self.group_extra_size
-        spacer_height = self.height - var_groups_height - dotplot_height
-        if not self.are_axes_swapped:
-            height_ratios = [var_groups_height, dotplot_height, spacer_height]
-            width_ratios = [dotplot_width, self.group_extra_size]
-
-        else:
-            height_ratios = [self.group_extra_size, dotplot_height, spacer_height]
-            width_ratios = [dotplot_width, var_groups_height]
-            # gridspec is the same but rows and columns are swapped
-
-        main_ax_grid = gridspec.GridSpecFromSubplotSpec(
-            nrows=3,
-            ncols=2,
-            wspace=0.1 / self.width,
-            hspace=0.1 / self.height,
-            subplot_spec=gs[0, 0],
-            width_ratios=width_ratios,
-            height_ratios=height_ratios
-        )
-        dot_ax = fig.add_subplot(main_ax_grid[1, 0])
-        return_ax_dict['dotplot_ax'] = dot_ax
-
-        if not self.are_axes_swapped:
-            if self.plot_group_extra is not None:
-                group_extra_ax = fig.add_subplot(main_ax_grid[1, 1], sharey=dot_ax)
-                group_extra_orientation = 'right'
-            if self.has_var_groups:
-                gene_groups_ax = fig.add_subplot(main_ax_grid[0, 0], sharex=dot_ax)
-                var_group_orientation = 'top'
-        else:
-            if self.plot_group_extra:
-                group_extra_ax = fig.add_subplot(main_ax_grid[0, 0], sharex=dot_ax)
-                group_extra_orientation = 'top'
-            if self.has_var_groups:
-                gene_groups_ax = fig.add_subplot(main_ax_grid[1, 1], sharey=dot_ax)
-                var_group_orientation = 'right'
-
-        if self.plot_group_extra is not None:
-            if self.plot_group_extra['kind'] == 'dendrogram':
-                _plot_dendrogram(
-                    group_extra_ax, self.adata, self.groupby,
-                    dendrogram_key=self.plot_group_extra['dendrogram_key'],
-                    ticks=self.plot_group_extra['dendrogram_ticks'],
-                    orientation=group_extra_orientation
-                )
-            if self.plot_group_extra['kind'] == 'group_totals':
-                self._plot_totals(group_extra_ax, group_extra_orientation)
-
-            return_ax_dict['group_extra_ax'] = group_extra_ax
-
-        # plot group legends on top or left of dot_ax (if given)
-        if self.has_var_groups:
-            _plot_gene_groups_brackets(
-                gene_groups_ax,
-                group_positions=self.var_group_positions,
-                group_labels=self.var_group_labels,
-                rotation=self.var_group_rotation,
-                left_adjustment=0.2,
-                right_adjustment=0.7,
-                orientation=var_group_orientation
-            )
-            return_ax_dict['gene_group_ax'] = gene_groups_ax
-
-        if self.are_axes_swapped:
-            self.fraction_obs = self.fraction_obs.T
-            self.mean_obs = self.mean_obs.T
-
-        # plot the dotplot
         normalize, dot_min, dot_max = _dotplot(self.fraction_obs, self.mean_obs,
-                                               dot_ax, color_map=self.color_map,
+                                               ax, color_map=self.color_map,
                                                dot_max=self.dot_max, dot_min=self.dot_min,
                                                color_on=self.color_on,
                                                edge_color=self.dot_edge_color,
                                                edge_lw=self.dot_edge_lw,
                                                **self.kwds)
-
-        # code from add_totals adds minor ticks that need to be removed
-        dot_ax.yaxis.set_tick_params(which='minor', left=False, right=False)
-        dot_ax.xaxis.set_tick_params(which='minor', top=False, bottom=False, length=0)
-
-        if self.are_axes_swapped:
-            # revert the change
-            self.fraction_obs = self.fraction_obs.T
-            self.mean_obs = self.mean_obs.T
-
-        if self.legends_width > 0:
-            self._plot_legends(fig, gs, return_ax_dict, normalize, dot_min, dot_max)
-
-        _utils.savefig_or_show('dotplot', show=show, save=save)
-
-        if show is False:
-            return return_ax_dict
+        self.dot_min, self.dot_max = dot_min, dot_max
+        return normalize
