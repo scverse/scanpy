@@ -11,7 +11,7 @@ from anndata import AnnData
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 from .. import logging as logg
-from .._utils import pkg_version
+from .._utils import pkg_version, NeighborsView
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
@@ -22,6 +22,7 @@ def ingest(
     obs: Optional[Union[str, Iterable[str]]] = None,
     embedding_method: Union[str, Iterable[str]] = ('umap', 'pca'),
     labeling_method: str = 'knn',
+    neighbors_key: Optional[str] = None,
     inplace: bool = True,
     **kwargs,
 ):
@@ -69,6 +70,13 @@ def ingest(
     labeling_method
         The method to map labels in `adata_ref.obs` to `adata.obs`.
         The only supported value is 'knn'.
+    neighbors_key
+        If not specified, ingest looks adata_ref.uns['neighbors']
+        for neighbors settings and adata_ref.obsp['distances'] for
+        distances (default storage places for pp.neighbors).
+        If specified, ingest looks adata_ref.uns[neighbors_key] for
+        neighbors settings and
+        adata_ref.obsp[adata_ref.uns[neighbors_key]['distances_key']] for distances.
     inplace
         Only works if `return_joint=False`.
         Add labels and embeddings to the passed `adata` (if `True`)
@@ -114,7 +122,7 @@ def ingest(
     if len(labeling_method) == 1 and len(obs or []) > 1:
         labeling_method = labeling_method * len(obs)
 
-    ing = Ingest(adata_ref)
+    ing = Ingest(adata_ref, neighbors_key)
     ing.fit(adata)
 
     for method in embedding_method:
@@ -180,16 +188,17 @@ class Ingest:
     def _init_umap(self, adata):
         from umap import UMAP
 
-        self._umap = UMAP(metric=adata.uns['neighbors']['params']['metric'])
+        self._umap = UMAP(
+            metric=self._metric,
+            random_state=adata.uns['umap']['params'].get('random_state', 0),
+        )
 
         self._umap.embedding_ = adata.obsm['X_umap']
         self._umap._raw_data = self._rep
         self._umap._sparse_data = issparse(self._rep)
         self._umap._small_data = self._rep.shape[0] < 4096
-        self._umap._metric_kwds = adata.uns['neighbors']['params'].get(
-            'metric_kwds', {}
-        )
-        self._umap._n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+        self._umap._metric_kwds = self._metric_kwds
+        self._umap._n_neighbors = self._n_neighbors
         self._umap._initial_alpha = self._umap.learning_rate
 
         if self._random_init is not None or self._tree_init is not None:
@@ -247,35 +256,43 @@ class Ingest:
         self._initialise_search = _initialise_search
         self._search = _search
 
-    def _init_neighbors(self, adata):
+    def _init_neighbors(self, adata, neighbors_key):
         from umap.distances import named_distances
 
-        if 'use_rep' in adata.uns['neighbors']['params']:
-            self._use_rep = adata.uns['neighbors']['params']['use_rep']
+        neighbors = NeighborsView(adata, neighbors_key)
+
+        self._n_neighbors = neighbors['params']['n_neighbors']
+
+        if 'use_rep' in neighbors['params']:
+            self._use_rep = neighbors['params']['use_rep']
             self._rep = adata.X if self._use_rep == 'X' else adata.obsm[self._use_rep]
-        elif 'n_pcs' in adata.uns['neighbors']['params']:
+        elif 'n_pcs' in neighbors['params']:
             self._use_rep = 'X_pca'
-            self._n_pcs = adata.uns['neighbors']['params']['n_pcs']
+            self._n_pcs = neighbors['params']['n_pcs']
             self._rep = adata.obsm['X_pca'][:, : self._n_pcs]
         elif adata.n_vars > N_PCS and 'X_pca' in adata.obsm.keys():
             self._use_rep = 'X_pca'
             self._rep = adata.obsm['X_pca'][:, :N_PCS]
             self._n_pcs = self._rep.shape[1]
 
-        if 'metric_kwds' in adata.uns['neighbors']['params']:
-            dist_args = tuple(adata.uns['neighbors']['params']['metric_kwds'].values())
+        if 'metric_kwds' in neighbors['params']:
+            self._metric_kwds = neighbors['params']['metric_kwds']
+            dist_args = tuple(self._metric_kwds.values())
         else:
+            self._metric_kwds = {}
             dist_args = ()
-        dist_func = named_distances[adata.uns['neighbors']['params']['metric']]
+
+        self._metric = neighbors['params']['metric']
+        dist_func = named_distances[self._metric]
 
         self._init_search(dist_func, dist_args)
 
-        search_graph = adata.uns['neighbors']['distances'].copy()
+        search_graph = neighbors['distances'].copy()
         search_graph.data = (search_graph.data > 0).astype(np.int8)
         self._search_graph = search_graph.maximum(search_graph.transpose())
 
-        if 'rp_forest' in adata.uns['neighbors']:
-            self._rp_forest = _rp_forest_generate(adata.uns['neighbors']['rp_forest'])
+        if 'rp_forest' in neighbors:
+            self._rp_forest = _rp_forest_generate(neighbors['rp_forest'])
         else:
             self._rp_forest = None
 
@@ -291,7 +308,7 @@ class Ingest:
         else:
             self._pca_basis = adata.varm['PCs']
 
-    def __init__(self, adata):
+    def __init__(self, adata, neighbors_key=None):
         # assume rep is X if all initializations fail to identify it
         self._rep = adata.X
         self._use_rep = 'X'
@@ -304,8 +321,16 @@ class Ingest:
         if 'pca' in adata.uns:
             self._init_pca(adata)
 
-        if 'neighbors' in adata.uns:
-            self._init_neighbors(adata)
+        if neighbors_key is None:
+            neighbors_key = 'neighbors'
+
+        if neighbors_key in adata.uns:
+            self._init_neighbors(adata, neighbors_key)
+        else:
+            raise ValueError(
+                f'There is no neighbors data in `adata.uns["{neighbors_key}"]`.\n'
+                'Please run pp.neighbors.'
+            )
 
         if 'X_umap' in adata.obsm:
             self._init_umap(adata)

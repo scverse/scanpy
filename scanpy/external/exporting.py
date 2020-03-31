@@ -24,6 +24,7 @@ def spring_project(
     cell_groupings: Union[str, Iterable[str], None] = None,
     custom_color_tracks: Union[str, Iterable[str], None] = None,
     total_counts_key: str = 'n_counts',
+    neighbors_key: Optional[str] = None,
     overwrite: bool = False,
 ):
     """\
@@ -61,7 +62,10 @@ def spring_project(
     """
 
     # need to get nearest neighbors first
-    if 'neighbors' not in adata.uns:
+    if neighbors_key is None:
+        neighbors_key = 'neighbors'
+
+    if neighbors_key not in adata.uns:
         raise ValueError('Run `sc.pp.neighbors` first.')
 
     # check that requested 2-D embedding has been generated
@@ -174,7 +178,7 @@ def spring_project(
     _write_cell_groupings(subplot_dir / 'categorical_coloring_data.json', categorical_coloring_data)
 
     # Write graph in two formats for backwards compatibility
-    edges = _get_edges(adata)
+    edges = _get_edges(adata, neighbors_key)
     _write_graph(subplot_dir / 'graph_data.json', E.shape[0], edges)
     _write_edges(subplot_dir / 'edges.csv', edges)
 
@@ -211,11 +215,12 @@ def spring_project(
 # --------------------------------------------------------------------------------
 
 
-def _get_edges(adata):
-    if 'distances' in adata.uns['neighbors']:  # these are sparse matrices
-        matrix = adata.uns['neighbors']['distances']
+def _get_edges(adata, neighbors_key=None):
+    neighbors = NeighborsView(adata, neighbors_key)
+    if 'distances' in neighbors:  # these are sparse matrices
+        matrix = neighbors['distances']
     else:
-        matrix = adata.uns['neighbors']['connectivities']
+        matrix = neighbors['connectivities']
     matrix = matrix.tocoo()
     edges = [(i,j) for i, j in zip(matrix.row, matrix.col)]
 
