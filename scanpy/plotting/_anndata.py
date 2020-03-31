@@ -2934,11 +2934,16 @@ def _reorder_categories_after_dendrogram(
     else:
         var_names_idx_ordered = None
 
+    if var_names_idx_ordered is not None:
+        var_names_ordered = [var_names[x] for x in var_names_idx_ordered]
+    else:
+        var_names_ordered = None
+
     return dict(
         categories_idx_ordered=categories_idx_ordered,
         categories_ordered=dendro_info['categories_ordered'],
         var_names_idx_ordered=var_names_idx_ordered,
-        var_names_ordered=[var_names[x] for x in var_names_idx_ordered],
+        var_names_ordered=var_names_ordered,
         var_group_labels=var_group_labels,
         var_group_positions=var_group_positions
     )
