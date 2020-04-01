@@ -3635,7 +3635,7 @@ class Plot(object):
         self.categories_order = dendro_data['categories_ordered']
         self.var_names_idx_order = dendro_data['var_names_idx_ordered']
 
-        dendro_ticks = np.arange(self.mean_obs.shape[0]) + 0.5
+        dendro_ticks = np.arange(len(self.categories)) + 0.5
 
         self.group_extra_size = size
         self.plot_group_extra = {'kind': 'dendrogram',
@@ -3679,23 +3679,16 @@ class Plot(object):
         self.group_extra_size = size
 
         if not show:
+            # hide totals
             self.plot_group_extra = None
             self.group_extra_size = 0
             return self
 
         _sort = True if sort is not None else False
-        _ascending = True if sort=='ascending' else False
+        _ascending = True if sort == 'ascending' else False
         counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
 
-        # check that the counts df and the dataframe to plot
-        # have the same order
-        if sort is None:
-            counts_df = counts_df.loc[self.mean_obs.index]
-        else:
-            # sort the color and size dfs categories according to
-            # the counts sorting.
-            self.mean_obs = self.mean_obs.loc[counts_df.index, :]
-            self.fraction_obs = self.fraction_obs.loc[counts_df.index, :]
+        self.categories_order = counts_df.index
 
         self.plot_group_extra = {'kind': 'group_totals',
                                  'width': size,
@@ -3885,6 +3878,40 @@ class Plot(object):
     def _mainplot(self, ax):
         import matplotlib.colors
 
+        y_labels = self.categories
+        x_labels = self.var_names
+
+        if self.var_names_idx_order is not None:
+            x_labels = [x_labels[x] for x in self.var_names_idx_order]
+
+        if self.categories_order is not None:
+            y_labels = self.categories_order
+
+        if self.are_axes_swapped:
+            x_labels, y_labels = y_labels, x_labels
+            ax.set_xlabel(self.groupby)
+        else:
+            ax.set_ylabel(self.groupby)
+
+        y_ticks = np.arange(len(y_labels)) + 0.5
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels(y_labels)
+
+        x_ticks = np.arange(len(x_labels)) + 0.5
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(x_labels, rotation=90,
+                           ha='center', minor=False
+        )
+
+        ax.tick_params(axis='both', labelsize='small')
+        ax.grid(False)
+
+        # to be consistent with the heatmap plot, is better to
+        # invert the order of the y-axis, such that the first group is on
+        # top
+        ax.set_ylim(len(y_labels), 0)
+        ax.set_xlim(0, len(x_labels))
+
         normalize = matplotlib.colors.Normalize(
             vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
         )
@@ -4051,21 +4078,12 @@ class Plot(object):
             )
             return_ax_dict['gene_group_ax'] = gene_groups_ax
 
-        if self.are_axes_swapped:
-            self.fraction_obs = self.fraction_obs.T
-            self.mean_obs = self.mean_obs.T
-
         # plot the mainplot
         normalize = self._mainplot(main_ax)
 
         # code from add_totals adds minor ticks that need to be removed
         main_ax.yaxis.set_tick_params(which='minor', left=False, right=False)
         main_ax.xaxis.set_tick_params(which='minor', top=False, bottom=False, length=0)
-
-        if self.are_axes_swapped:
-            # revert the change
-            self.fraction_obs = self.fraction_obs.T
-            self.mean_obs = self.mean_obs.T
 
         if self.legends_width > 0:
             legend_ax = fig.add_subplot(gs[0, 1])
@@ -4429,15 +4447,22 @@ class DotPlot(Plot):
                 return_ax_dict['color_legend_ax'] = color_legend_ax
 
     def _mainplot(self, ax):
+        # work on a copy of the dataframes
+        _color_df = self.mean_obs.copy()
+        _fraction_df = self.fraction_obs.copy()
         if self.var_names_idx_order is not None:
-            self.mean_obs = self.mean_obs.iloc[:, self.var_names_idx_order]
-            self.fraction_obs = self.fraction_obs.iloc[:, self.var_names_idx_order]
+            _color_df = _color_df.iloc[:, self.var_names_idx_order]
+            _fraction_df = _fraction_df.iloc[:, self.var_names_idx_order]
 
         if self.categories_order is not None:
-            self.mean_obs = self.mean_obs.loc[self.categories_order, :]
-            self.fraction_obs = self.fraction_obs.loc[self.categories_order, :]
+            _color_df = _color_df.loc[self.categories_order, :]
+            _fraction_df = _fraction_df.loc[self.categories_order, :]
 
-        normalize, dot_min, dot_max = _dotplot(self.fraction_obs, self.mean_obs,
+        if self.are_axes_swapped:
+            _fraction_df = _fraction_df.T
+            _color_df = _color_df.T
+
+        normalize, dot_min, dot_max = _dotplot(_fraction_df, _color_df,
                                                ax, color_map=self.color_map,
                                                dot_max=self.dot_max, dot_min=self.dot_min,
                                                color_on=self.color_on,
