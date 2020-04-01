@@ -1883,259 +1883,33 @@ def matrixplot(
 
     See also
     --------
-    rank_genes_groups_matrixplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes identified using the
+    :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
-    var_names, var_group_labels, var_group_positions = _check_var_names_type(
-        var_names, var_group_labels, var_group_positions
+    dp = MatrixPlot(adata,
+            var_names,
+            groupby=groupby,
+            use_raw=use_raw,
+            log=log,
+            num_categories=num_categories,
+            standard_scale=standard_scale,
+            figsize=figsize,
+            gene_symbols=gene_symbols,
+            var_group_positions=var_group_positions,
+            var_group_labels=var_group_labels,
+            var_group_rotation=var_group_rotation,
+            layer=layer,
+            ** kwds,
     )
-
-    categories, obs_tidy = _prepare_dataframe(
-        adata,
-        var_names,
-        groupby,
-        use_raw,
-        log,
-        num_categories,
-        gene_symbols=gene_symbols,
-        layer=layer,
-    )
-    if groupby is None or len(categories) <= 1:
-        # dendrogram can only be computed between groupby categories
-        dendrogram = False
-
-    mean_obs = obs_tidy.groupby(level=0).mean()
-    if plot_totals:
-        col_counts = obs_tidy.index.value_counts(sort=False)
-
-    if standard_scale == 'group':
-        mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
-        mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
-    elif standard_scale == 'var':
-        mean_obs -= mean_obs.min(0)
-        mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
-    elif standard_scale is None:
-        pass
-    else:
-        logg.warning('Unknown type for standard_scale, ignored')
 
     if dendrogram:
-        dendro_data = _reorder_categories_after_dendrogram(
-            adata,
-            groupby,
-            dendrogram,
-            var_names=var_names,
-            var_group_labels=var_group_labels,
-            var_group_positions=var_group_positions,
-        )
+        dp.add_dendrogram(dendrogram_key=dendrogram)
+    if swap_axes:
+        dp.swap_axes()
 
-        var_group_labels = dendro_data['var_group_labels']
-        var_group_positions = dendro_data['var_group_positions']
-
-        # reorder matrix
-        if dendro_data['var_names_idx_ordered'] is not None:
-            # reorder columns (usually genes) if needed. This only happens when
-            # var_group_positions and var_group_labels is set
-            mean_obs = mean_obs.iloc[:, dendro_data['var_names_idx_ordered']]
-
-        # reorder rows (categories) to match the dendrogram order
-        mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
-        dendro_ticks = np.arange(mean_obs.shape[0]) + 0.5
-
-    colorbar_width = 0.2
-
-    if not swap_axes:
-        if dendrogram:
-            dendro_width = 0.5
-        elif plot_totals:
-            dendro_width = 1.5
-        else:
-            dendro_width = 0
-
-        if figsize is None:
-            height = len(categories) * 0.2 + 1  # +1 for labels
-            heatmap_width = len(var_names) * 0.32
-            width = heatmap_width + dendro_width + colorbar_width
-        else:
-            width, height = figsize
-            heatmap_width = width - (dendro_width + colorbar_width)
-
-        if var_group_positions is not None and len(var_group_positions) > 0:
-            # add some space in case 'brackets' want to be plotted on top of the image
-            height_ratios = [0.5, 10]
-            height += 0.5
-        else:
-            height_ratios = [0, 10.5]
-
-        # define a layout of 2 rows x 3 columns
-        # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
-        # second row is for main content. This second row
-        # is divided into three axes:
-        #   first ax is for the main matrix figure
-        #   second ax is for the dendrogram
-        #   third ax is for the color bar legend
-        fig = pl.figure(figsize=(width, height))
-        axs = gridspec.GridSpec(
-            nrows=2,
-            ncols=3,
-            wspace=0.02,
-            hspace=0.04,
-            width_ratios=[heatmap_width, dendro_width, colorbar_width],
-            height_ratios=height_ratios,
-        )
-
-        matrix_ax = fig.add_subplot(axs[1, 0])
-        y_ticks = np.arange(mean_obs.shape[0]) + 0.5
-        if dendrogram:
-            dendro_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
-            _plot_dendrogram(
-                dendro_ax, adata, groupby, dendrogram_key=dendrogram, ticks=dendro_ticks,
-            )
-        elif plot_totals:
-            total_barplot_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
-            col_counts = col_counts[mean_obs.index]
-            _plot_group_totals(total_barplot_ax, adata,
-                               col_counts, groupby, orientation='right',
-                               ticks=y_ticks)
-
-        matrix_ax.set_yticks(y_ticks)
-        matrix_ax.set_yticklabels(
-            [mean_obs.index[idx] for idx in range(mean_obs.shape[0])]
-        )
-
-        pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
-
-        # invert y axis to show categories ordered from top to bottom
-        matrix_ax.set_ylim(mean_obs.shape[0], 0)
-
-        x_ticks = np.arange(mean_obs.shape[1]) + 0.5
-        matrix_ax.set_xticks(x_ticks)
-        matrix_ax.set_xticklabels(
-            [mean_obs.columns[idx] for idx in range(mean_obs.shape[1])], rotation=90,
-        )
-        matrix_ax.tick_params(axis='both', labelsize='small')
-        matrix_ax.grid(False)
-        matrix_ax.set_xlim(-0.5, len(var_names) + 0.5)
-        matrix_ax.set_ylabel(groupby)
-        matrix_ax.set_xlim(0, mean_obs.shape[1])
-
-        # plot group legends on top of matrix_ax (if given)
-        if var_group_positions is not None and len(var_group_positions) > 0:
-            gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=matrix_ax)
-            _plot_gene_groups_brackets(
-                gene_groups_ax,
-                group_positions=var_group_positions,
-                group_labels=var_group_labels,
-                rotation=var_group_rotation,
-                left_adjustment=0.2,
-                right_adjustment=0.8,
-            )
-
-        # plot colorbar
-        _plot_colorbar(pc, fig, axs[1, 2])
-    else:
-        if dendrogram:
-            dendro_height = 0.5
-        elif plot_totals:
-            dendro_height = 1.5
-        else:
-            dendro_height = 0
-
-        if var_group_positions is not None and len(var_group_positions) > 0:
-            # add some space in case 'color blocks' want to be plotted on the right of the image
-            vargroups_width = 0.4
-        else:
-            vargroups_width = 0
-
-        if figsize is None:
-            heatmap_height = len(var_names) * 0.2
-            height = dendro_height + heatmap_height + 1  # +1 for labels
-            heatmap_width = len(categories) * 0.3
-            width = heatmap_width + vargroups_width + colorbar_width
-        else:
-            width, height = figsize
-            heatmap_width = width - (vargroups_width + colorbar_width)
-            heatmap_height = height - dendro_height
-
-        # define a layout of 2 rows x 3 columns
-        # first row is for 'dendrogram' (if no dendrogram is plotted, the height of this row is zero)
-        # second row is for main content. This row
-        # is divided into three axes:
-        #   first ax is for the main matrix figure
-        #   second ax is for the groupby categories (eg. brackets)
-        #   third ax is for the color bar legend
-        fig = pl.figure(figsize=(width, height))
-        axs = gridspec.GridSpec(
-            nrows=2,
-            ncols=3,
-            wspace=0.05,
-            hspace=0.005,
-            width_ratios=[heatmap_width, vargroups_width, colorbar_width],
-            height_ratios=[dendro_height, heatmap_height],
-        )
-
-        if dendrogram:
-            dendro_ax = fig.add_subplot(axs[0, 0])
-            _plot_dendrogram(
-                dendro_ax,
-                adata,
-                groupby,
-                dendrogram_key=dendrogram,
-                ticks=dendro_ticks,
-                orientation='top',
-            )
-        elif plot_totals:
-            total_barplot_ax = fig.add_subplot(axs[0, 0])
-            col_counts = col_counts[mean_obs.index]
-            _plot_group_totals(total_barplot_ax, adata,
-                               col_counts, groupby, orientation='top')
-
-        mean_obs = mean_obs.T
-        if dendrogram:
-            matrix_ax = fig.add_subplot(axs[1, 0], sharex=dendro_ax)
-        elif plot_totals:
-            matrix_ax = fig.add_subplot(axs[1, 0], sharex=total_barplot_ax)
-        else:
-            matrix_ax = fig.add_subplot(axs[1, 0])
-        pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
-        y_ticks = np.arange(mean_obs.shape[0]) + 0.5
-        matrix_ax.set_yticks(y_ticks)
-        matrix_ax.set_yticklabels(
-            [mean_obs.index[idx] for idx in range(mean_obs.shape[0])]
-        )
-
-        x_ticks = np.arange(mean_obs.shape[1]) + 0.5
-        matrix_ax.set_xticks(x_ticks)
-        matrix_ax.set_xticklabels(
-            [mean_obs.columns[idx] for idx in range(mean_obs.shape[1])], rotation=90,
-        )
-        matrix_ax.tick_params(axis='both', labelsize='small')
-        matrix_ax.grid(False)
-        matrix_ax.set_xlim(0, len(categories))
-        matrix_ax.set_xlabel(groupby)
-        # invert y axis to show var_names ordered from top to bottom
-        matrix_ax.set_ylim(mean_obs.shape[0], 0)
-
-        # plot group legends on top of matrix_ax (if given)
-        if var_group_positions is not None and len(var_group_positions) > 0:
-            gene_groups_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
-            _plot_gene_groups_brackets(
-                gene_groups_ax,
-                group_positions=var_group_positions,
-                group_labels=var_group_labels,
-                rotation=var_group_rotation,
-                left_adjustment=0.2,
-                right_adjustment=0.8,
-                orientation='right',
-            )
-
-        # plot colorbar
-        _plot_colorbar(pc, fig, axs[1, 2])
-
-    _utils.savefig_or_show('matrixplot', show=show, save=save)
-    return axs
+    dp = dp.style(color_map=kwds.get('cmap'))
+    return dp.show(show=show, save=save)
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
@@ -3556,7 +3330,7 @@ class Plot(object):
 
         Returns
         -------
-        DotPlot
+        Plot
 
         """
 
@@ -3582,9 +3356,9 @@ class Plot(object):
         `var_names` are reordered to produce a more pleasing output if:
             * The data contains `var_groups`
             * the `var_groups` match the categories.
-        The previous conditions happen by default when using dot plot
+        The previous conditions happen by default when using Plot
         to show the results from `sc.tl.rank_genes_groups` (aka gene markers), by
-        doing `sc.tl.rank_genes_groups_dotplot`.
+        calling `sc.tl.rank_genes_groups_(plot_name)`.
 
         Parameters
         ----------
@@ -3597,15 +3371,16 @@ class Plot(object):
 
         Returns
         -------
-        DotPlot
+        Plot
 
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
+        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
 
         """
+
         if not show:
             self.plot_group_extra = None
             return self
@@ -3668,13 +3443,13 @@ class Plot(object):
             By default, each bar plot uses the colors assigned in `adata.uns[{groupby}_colors.
         Returns
         -------
-        DotPlot
+        Plot
 
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').add_totals().show()
+        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').add_totals().show()
         """
         self.group_extra_size = size
 
@@ -3721,13 +3496,13 @@ class Plot(object):
 
         Returns
         -------
-        DotPlot
+        Plot
 
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
+        >>> dp = sc.pl.Plot(adata, markers, groupby='bulk_labels')
         >>> dp.legend(color_title='log(UMI counts + 1)').show()
         """
 
@@ -3944,15 +3719,15 @@ class Plot(object):
         -------
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').show()
 
         Get the axes
-        >>> axes_dict = sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show(show=False)
+        >>> axes_dict = sc.pl.Plot(adata, markers, groupby='bulk_labels').show(show=False)
         >>> axes_dict['mainplot_ax'].grid(True)
         >>> plt.show()
 
         Save image
-        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show(save='dotplot.pdf')
+        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').show(save='plot.pdf')
 
         """
         category_height = category_width = 0.35
@@ -4245,9 +4020,9 @@ class DotPlot(Plot):
               color_on: Optional[Literal['dot', 'square']] = 'dot',
               dot_max: Optional[float] = None,
               dot_min: Optional[float] = None,
-              smallest_dot: float = 0.0,
-              dot_edge_color=None,
-              dot_edge_lw=None,
+              smallest_dot: Optional[float] = 0.0,
+              dot_edge_color: Optional[ColorLike] = None,
+              dot_edge_lw: Optional[float] = None,
 
               ):
         """
@@ -4282,6 +4057,20 @@ class DotPlot(Plot):
         Returns
         -------
         DotPlot
+
+        Examples
+        -------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+
+        Change color map and apply it to the square behind the dot
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
+        ...               .style(color_map='RdBu_r', color_on='square').show()
+
+        Add edge to dots
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
+        ...               .style(dot_edge_color='black',  dot_edge_lw=1).show()
+
         """
         self.color_map = color_map
         self.dot_max = dot_max
@@ -4470,4 +4259,198 @@ class DotPlot(Plot):
                                                edge_lw=self.dot_edge_lw,
                                                **self.kwds)
         self.dot_min, self.dot_max = dot_min, dot_max
+        return normalize
+
+
+@_doc_params(common_plot_args=doc_common_plot_args)
+class MatrixPlot(Plot):
+    """\
+    Allows the visualization of two values that are encoded as
+    dot size and color. The size usually represents the fraction
+    of cells (obs) that have a non-zero value for genes (var).
+
+    For each var_name and each `groupby` category a dot is plotted.
+    Each dot represents two values: mean expression within each category
+    (visualized by color) and fraction of cells expressing the `var_name` in the
+    category (visualized by the size of the dot). If `groupby` is not given,
+    the dotplot assumes that all data belongs to a single category.
+
+    .. note::
+       A gene is considered expressed if the expression value in the `adata` (or
+       `adata.raw`) is above the specified threshold which is zero by default.
+
+    An example of dotplot usage is to visualize, for multiple marker genes,
+    the mean value and the percentage of cells expressing the gene
+    across multiple clusters.
+
+    Parameters
+    ----------
+    {common_plot_args}
+    expression_cutoff
+        Expression cutoff that is used for binarizing the gene expression and
+        determining the fraction of cells expressing given genes. A gene is
+        expressed only if the expression value is greater than this threshold.
+    mean_only_expressed
+        If True, gene expression is averaged only over the cells
+        expressing the given genes.
+    standard_scale
+        Whether or not to standardize that dimension between 0 and 1,
+        meaning for each variable or group,
+        subtract the minimum and divide each by its maximum.
+
+    **kwds
+        Are passed to :func:`matplotlib.pyplot.scatter`.
+
+    Returns
+    -------
+    List of :class:`~matplotlib.axes.Axes`
+
+    Examples
+    -------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
+    Using var_names as dict:
+
+    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
+    See also
+    --------
+    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
+    :func:`~scanpy.tl.rank_genes_groups` function.
+    """
+    def __init__(self,
+        adata: AnnData,
+        var_names: Union[_VarNames, Mapping[str, _VarNames]],
+        groupby: Optional[str] = None,
+        use_raw: Optional[bool] = None,
+        log: bool = False,
+        num_categories: int = 7,
+        figsize: Optional[Tuple[float, float]] = None,
+        gene_symbols: Optional[str] = None,
+        var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
+        var_group_labels: Optional[Sequence[str]] = None,
+        var_group_rotation: Optional[float] = None,
+        layer: Optional[str] = None,
+        standard_scale: Literal['var', 'group'] = None,
+        ax: Optional[Axes] = None,
+        **kwds
+    ):
+        Plot.__init__(self,
+                       adata,
+                       var_names,
+                       groupby=groupby,
+                       use_raw=use_raw,
+                       log=log,
+                       num_categories=num_categories,
+                       figsize=figsize,
+                       gene_symbols=gene_symbols,
+                       var_group_positions=var_group_positions,
+                       var_group_labels=var_group_labels,
+                       var_group_rotation=var_group_rotation,
+                       layer=layer,
+                       ax=ax)
+
+        # 2. compute mean value
+        mean_obs = self.obs_tidy.groupby(level=0).mean()
+
+        if standard_scale == 'group':
+            mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
+            mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
+        elif standard_scale == 'var':
+            mean_obs -= mean_obs.min(0)
+            mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
+        elif standard_scale is None:
+            pass
+        else:
+            logg.warning('Unknown type for standard_scale, ignored')
+
+        # set default values for style
+        self.style()
+
+        self.mean_obs = mean_obs
+        self.kwds = kwds
+
+    def style(self,
+              color_map: str = 'RdBu_r',
+              edge_color: Optional[ColorLike] = 'gray',
+              edge_lw: Optional[float] = 0.1,
+              ):
+        """
+        Modifies plot graphical parameters
+
+        Parameters
+        ----------
+        color_map
+            String denoting matplotlib color map.
+        edge_color
+            Edge color betweem the squares of matrix plot. Default is gray
+        edge_lw
+            Edge line width.
+
+        Returns
+        -------
+        MatrixPlot
+
+        Examples
+        -------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+
+        Change color map and turn off edges
+        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
+        ...               .style(color_map='Blues', edge_color='none').show()
+
+        """
+
+        self.color_map = color_map
+        self.edge_color = edge_color
+        self.edge_lw = edge_lw
+
+        return self
+
+    def _mainplot(self, ax):
+        # work on a copy of the dataframe
+        _color_df = self.mean_obs.copy()
+        if self.var_names_idx_order is not None:
+            _color_df = _color_df.iloc[:, self.var_names_idx_order]
+
+        if self.categories_order is not None:
+            _color_df = _color_df.loc[self.categories_order, :]
+
+        if self.are_axes_swapped:
+            _color_df = _color_df.T
+        cmap = pl.get_cmap(self.color_map)
+
+        import matplotlib.colors
+        normalize = matplotlib.colors.Normalize(
+            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+        )
+        __ = ax.pcolor(_color_df, edgecolor=self.edge_color, linewidth=self.edge_lw,
+                       cmap=cmap, norm=normalize, **self.kwds)
+
+        y_labels = _color_df.index
+        x_labels = _color_df.columns
+
+        y_ticks = np.arange(len(y_labels)) + 0.5
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels(y_labels)
+
+        x_ticks = np.arange(len(x_labels)) + 0.5
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(x_labels, rotation=90,
+                           ha='center', minor=False
+        )
+
+        ax.tick_params(axis='both', labelsize='small')
+        ax.grid(False)
+
+        # to be consistent with the heatmap plot, is better to
+        # invert the order of the y-axis, such that the first group is on
+        # top
+        ax.set_ylim(len(y_labels), 0)
+        ax.set_xlim(0, len(x_labels))
+
         return normalize
