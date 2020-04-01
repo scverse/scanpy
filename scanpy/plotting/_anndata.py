@@ -3461,7 +3461,7 @@ class Plot(object):
 
         _sort = True if sort is not None else False
         _ascending = True if sort == 'ascending' else False
-        counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
+        counts_df = self.adata.obs[self.groupby].value_counts(sort=_sort, ascending=_ascending)
 
         self.categories_order = counts_df.index
 
@@ -3947,6 +3947,7 @@ class DotPlot(Plot):
         mean_only_expressed: bool = False,
         standard_scale: Literal['var', 'group'] = None,
         dot_color_df: Optional[pd.DataFrame] = None,
+        dot_size_df: Optional[pd.DataFrame] = None,
         ax: Optional[Axes] = None,
         **kwds
     ):
@@ -3976,43 +3977,44 @@ class DotPlot(Plot):
         # compute the sum per group which in the boolean matrix this is the number
         # of values >expression_cutoff, and divide the result by the total number of
         # values in the group (given by `count()`)
-        fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+        if dot_size_df is None:
+            dot_size_df = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
 
         if dot_color_df is None:
-            # 2. compute mean value
+            # 2. compute mean expression value value
             if mean_only_expressed:
-                mean_obs = self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+                dot_color_df = self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
             else:
-                mean_obs = self.obs_tidy.groupby(level=0).mean()
+                dot_color_df = self.obs_tidy.groupby(level=0).mean()
 
             if standard_scale == 'group':
-                mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
-                mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
+                dot_color_df = dot_color_df.sub(dot_color_df.min(1), axis=0)
+                dot_color_df = dot_color_df.div(dot_color_df.max(1), axis=0).fillna(0)
             elif standard_scale == 'var':
-                mean_obs -= mean_obs.min(0)
-                mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
+                dot_color_df -= dot_color_df.min(0)
+                dot_color_df = (dot_color_df / dot_color_df.max(0)).fillna(0)
             elif standard_scale is None:
                 pass
             else:
                 logg.warning('Unknown type for standard_scale, ignored')
         else:
             # check that both matrices have the same shape
-            if dot_color_df.shape != fraction_obs.shape:
+            if dot_color_df.shape != dot_size_df.shape:
                 logg.error("the given dot_color_df data frame has a different shape than"
                            "the data frame used for the dot size. Both data frames need"
                            "to have the same index and columns")
 
             # get the same order for rows and columns in the color values using the order
-            # in the fraction values. Because genes (columns) can be duplicated
+            # in the fraction (size) values. Because genes (columns) can be duplicated
             # they need to be removed first. Otherwise, the duplicate genes are further
-            # duplicated.
-            mean_obs = dot_color_df.loc[fraction_obs.index].T.drop_duplicates().T[fraction_obs.columns]
+            # duplicated (that is the reason for the funny `.T.drop_duplicates` .
+            dot_color_df = dot_color_df.loc[dot_size_df.index].T.drop_duplicates().T[dot_size_df.columns]
 
         # set default values for style
         self.style()
 
-        self.mean_obs = mean_obs
-        self.fraction_obs = fraction_obs
+        self.dot_color_df = dot_color_df
+        self.dot_size_df = dot_size_df
         self.kwds = kwds
 
     def style(self,
@@ -4237,8 +4239,8 @@ class DotPlot(Plot):
 
     def _mainplot(self, ax):
         # work on a copy of the dataframes
-        _color_df = self.mean_obs.copy()
-        _fraction_df = self.fraction_obs.copy()
+        _color_df = self.dot_color_df.copy()
+        _fraction_df = self.dot_size_df.copy()
         if self.var_names_idx_order is not None:
             _color_df = _color_df.iloc[:, self.var_names_idx_order]
             _fraction_df = _fraction_df.iloc[:, self.var_names_idx_order]
