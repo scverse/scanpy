@@ -3462,8 +3462,10 @@ class Plot(object):
         _sort = True if sort is not None else False
         _ascending = True if sort == 'ascending' else False
         counts_df = self.adata.obs[self.groupby].value_counts(sort=_sort, ascending=_ascending)
+        counts_df = counts_df.loc[self.categories]
 
-        self.categories_order = counts_df.index
+        if _sort:
+            self.categories_order = counts_df.index
 
         self.plot_group_extra = {'kind': 'group_totals',
                                  'width': size,
@@ -3524,6 +3526,8 @@ class Plot(object):
         """
         params = self.plot_group_extra
         counts_df = params['counts_df']
+        if self.categories_order is not None:
+            counts_df = counts_df.loc[self.categories_order]
         if params['color'] is None:
             if f'{self.groupby}_colors' in self.adata.uns:
                 color = self.adata.uns[f'{self.groupby}_colors']
@@ -3856,7 +3860,8 @@ class Plot(object):
         # plot the mainplot
         normalize = self._mainplot(main_ax)
 
-        # code from add_totals adds minor ticks that need to be removed
+        # code from pandas.plot in add_totals adds
+        # minor ticks that need to be removed
         main_ax.yaxis.set_tick_params(which='minor', left=False, right=False)
         main_ax.xaxis.set_tick_params(which='minor', top=False, bottom=False, length=0)
 
