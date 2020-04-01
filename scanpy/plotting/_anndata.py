@@ -3069,7 +3069,8 @@ def _dotplot(
     dot_max: Optional[float] = None,
     dot_min: Optional[float] = None,
     standard_scale: Literal['var', 'group'] = None,
-    smallest_dot: float = 0.0,
+    smallest_dot: Optional[float] = 0.0,
+    largest_dot: Optional[float] = 200,
     edge_color: Optional[ColorLike] = None,
     edge_lw: Optional[float] = None,
     **kwds,
@@ -3174,7 +3175,8 @@ def _dotplot(
         # re-scale frac between 0 and 1
         frac = (frac - dot_min) / old_range
 
-    size = (frac * 10) ** 2
+    largest_dot = np.sqrt(largest_dot)
+    size = (frac * largest_dot) ** 2
     size += smallest_dot
     import matplotlib.colors
 
@@ -4028,6 +4030,7 @@ class DotPlot(Plot):
               dot_max: Optional[float] = None,
               dot_min: Optional[float] = None,
               smallest_dot: Optional[float] = 0.0,
+              largest_dot: Optional[float] = 200,
               dot_edge_color: Optional[ColorLike] = None,
               dot_edge_lw: Optional[float] = None,
 
@@ -4054,7 +4057,10 @@ class DotPlot(Plot):
             All fractions smaller than dot_min are clipped to this value.
         smallest_dot
             If none, the smallest dot has size 0.
-            All expression levels with `dot_min` are plotted with this size.
+            All expression fractions with `dot_min` are plotted with this size.
+        largest_dot
+            If none, the largest dot has size 200.
+            All expression fractions with `dot_max` are plotted with this size.
         dot_edge_color
             Dot edge color. When `color_on='dot'` the default is no edge. When
             `color_on='square'`, edge color is white
@@ -4083,6 +4089,7 @@ class DotPlot(Plot):
         self.dot_max = dot_max
         self.dot_min = dot_min
         self.smallest_dot = smallest_dot
+        self.largest_dot = largest_dot
         self.color_on = color_on
 
         self.dot_edge_color = dot_edge_color
@@ -4162,7 +4169,7 @@ class DotPlot(Plot):
             size_values = (size_range - dot_min) / dot_range
         else:
             size_values = size_range
-        size = (size_values * 10) ** 2
+        size = (size_values * np.sqrt(self.largest_dot)) ** 2
         size += self.smallest_dot
 
         # plot size bar
@@ -4193,7 +4200,7 @@ class DotPlot(Plot):
         size_legend_ax.grid(False)
 
         ymin, ymax = size_legend_ax.get_ylim()
-        size_legend_ax.set_ylim(-0.9, 4)
+        size_legend_ax.set_ylim(-1.25, 4)
         size_legend_ax.set_title(self.size_title, y=ymax + 0.25,
                                  size='small')
 
@@ -4245,26 +4252,29 @@ class DotPlot(Plot):
     def _mainplot(self, ax):
         # work on a copy of the dataframes
         _color_df = self.dot_color_df.copy()
-        _fraction_df = self.dot_size_df.copy()
+        _size_df = self.dot_size_df.copy()
         if self.var_names_idx_order is not None:
             _color_df = _color_df.iloc[:, self.var_names_idx_order]
-            _fraction_df = _fraction_df.iloc[:, self.var_names_idx_order]
+            _size_df = _size_df.iloc[:, self.var_names_idx_order]
 
         if self.categories_order is not None:
             _color_df = _color_df.loc[self.categories_order, :]
-            _fraction_df = _fraction_df.loc[self.categories_order, :]
+            _size_df = _size_df.loc[self.categories_order, :]
 
         if self.are_axes_swapped:
-            _fraction_df = _fraction_df.T
+            _size_df = _size_df.T
             _color_df = _color_df.T
 
-        normalize, dot_min, dot_max = _dotplot(_fraction_df, _color_df,
+        normalize, dot_min, dot_max = _dotplot(_size_df, _color_df,
                                                ax, color_map=self.color_map,
                                                dot_max=self.dot_max, dot_min=self.dot_min,
                                                color_on=self.color_on,
                                                edge_color=self.dot_edge_color,
                                                edge_lw=self.dot_edge_lw,
+                                               smallest_dot=self.smallest_dot,
+                                               largest_dot=self.largest_dot,
                                                **self.kwds)
+
         self.dot_min, self.dot_max = dot_min, dot_max
         return normalize
 
