@@ -3250,7 +3250,7 @@ def _dotplot(
     return normalize, dot_min, dot_max
 
 
-class Plot(object):
+class BasePlot(object):
     """\
     Generic class for the visualization of AnnData categories and
     selected `var` (features or genes).
@@ -3332,7 +3332,7 @@ class Plot(object):
 
         Returns
         -------
-        Plot
+        BasePlot
 
         """
 
@@ -3373,13 +3373,13 @@ class Plot(object):
 
         Returns
         -------
-        Plot
+        BasePlot
 
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
+        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
 
         """
 
@@ -3445,13 +3445,13 @@ class Plot(object):
             By default, each bar plot uses the colors assigned in `adata.uns[{groupby}_colors.
         Returns
         -------
-        Plot
+        BasePlot
 
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').add_totals().show()
+        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_totals().show()
         """
         self.group_extra_size = size
 
@@ -3500,13 +3500,13 @@ class Plot(object):
 
         Returns
         -------
-        Plot
+        BasePlot
 
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        >>> dp = sc.pl.Plot(adata, markers, groupby='bulk_labels')
+        >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
         >>> dp.legend(color_title='log(UMI counts + 1)').show()
         """
 
@@ -3733,7 +3733,7 @@ class Plot(object):
         >>> plt.show()
 
         Save image
-        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').show(save='plot.pdf')
+        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').show(save='plot.pdf')
 
         """
         category_height = category_width = 0.35
@@ -3879,7 +3879,7 @@ class Plot(object):
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
-class DotPlot(Plot):
+class DotPlot(BasePlot):
     """\
     Allows the visualization of two values that are encoded as
     dot size and color. The size usually represents the fraction
@@ -3958,20 +3958,20 @@ class DotPlot(Plot):
         ax: Optional[Axes] = None,
         **kwds
     ):
-        Plot.__init__(self,
-                       adata,
-                       var_names,
-                       groupby=groupby,
-                       use_raw=use_raw,
-                       log=log,
-                       num_categories=num_categories,
-                       figsize=figsize,
-                       gene_symbols=gene_symbols,
-                       var_group_positions=var_group_positions,
-                       var_group_labels=var_group_labels,
-                       var_group_rotation=var_group_rotation,
-                       layer=layer,
-                       ax=ax)
+        BasePlot.__init__(self,
+                          adata,
+                          var_names,
+                          groupby=groupby,
+                          use_raw=use_raw,
+                          log=log,
+                          num_categories=num_categories,
+                          figsize=figsize,
+                          gene_symbols=gene_symbols,
+                          var_group_positions=var_group_positions,
+                          var_group_labels=var_group_labels,
+                          var_group_rotation=var_group_rotation,
+                          layer=layer,
+                          ax=ax)
 
         # for if category defined by groupby (if any) compute for each var_name
         # 1. the fraction of cells in the category having a value >expression_cutoff
@@ -4280,7 +4280,7 @@ class DotPlot(Plot):
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
-class MatrixPlot(Plot):
+class MatrixPlot(BasePlot):
     """\
     Allows the visualization of two values that are encoded as
     dot size and color. The size usually represents the fraction
@@ -4355,20 +4355,20 @@ class MatrixPlot(Plot):
         ax: Optional[Axes] = None,
         **kwds
     ):
-        Plot.__init__(self,
-                       adata,
-                       var_names,
-                       groupby=groupby,
-                       use_raw=use_raw,
-                       log=log,
-                       num_categories=num_categories,
-                       figsize=figsize,
-                       gene_symbols=gene_symbols,
-                       var_group_positions=var_group_positions,
-                       var_group_labels=var_group_labels,
-                       var_group_rotation=var_group_rotation,
-                       layer=layer,
-                       ax=ax)
+        BasePlot.__init__(self,
+                          adata,
+                          var_names,
+                          groupby=groupby,
+                          use_raw=use_raw,
+                          log=log,
+                          num_categories=num_categories,
+                          figsize=figsize,
+                          gene_symbols=gene_symbols,
+                          var_group_positions=var_group_positions,
+                          var_group_labels=var_group_labels,
+                          var_group_rotation=var_group_rotation,
+                          layer=layer,
+                          ax=ax)
 
         # 2. compute mean value
         mean_obs = self.obs_tidy.groupby(level=0).mean()
