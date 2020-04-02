@@ -4177,7 +4177,7 @@ class DotPlot(BasePlot):
             np.arange(len(size)) + 0.5,
             np.repeat(0, len(size)),
             s=size, color='gray',
-            edgecolor='black'
+            edgecolor='black', zorder=100
         )
         size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
         labels = ["{}".format(int(x*100)) for x in size_range]
@@ -4200,7 +4200,7 @@ class DotPlot(BasePlot):
         size_legend_ax.grid(False)
 
         ymin, ymax = size_legend_ax.get_ylim()
-        size_legend_ax.set_ylim(-1.25, 4)
+        size_legend_ax.set_ylim(-1.05 - self.largest_dot * 0.003, 4)
         size_legend_ax.set_title(self.size_title, y=ymax + 0.25,
                                  size='small')
 
