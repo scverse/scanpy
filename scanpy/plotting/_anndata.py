@@ -3738,7 +3738,8 @@ class BasePlot(object):
         >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').show(save='plot.pdf')
 
         """
-        category_height = category_width = 0.35
+        category_height = 0.35
+        category_width = 0.37
 
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
@@ -4457,6 +4458,10 @@ class MatrixPlot(BasePlot):
         normalize = matplotlib.colors.Normalize(
             vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
         )
+
+        for axis in ['top', 'bottom', 'left', 'right']:
+            ax.spines[axis].set_linewidth(1.5)
+
         __ = ax.pcolor(_color_df, edgecolor=self.edge_color, linewidth=self.edge_lw,
                        cmap=cmap, norm=normalize, **self.kwds)
 
