@@ -3071,6 +3071,7 @@ def _dotplot(
     standard_scale: Literal['var', 'group'] = None,
     smallest_dot: Optional[float] = 0.0,
     largest_dot: Optional[float] = 200,
+    size_exponent: Optional[float] = 2,
     edge_color: Optional[ColorLike] = None,
     edge_lw: Optional[float] = None,
     **kwds,
@@ -3175,9 +3176,10 @@ def _dotplot(
         # re-scale frac between 0 and 1
         frac = (frac - dot_min) / old_range
 
-    largest_dot = np.sqrt(largest_dot)
-    size = (frac * largest_dot) ** 2
-    size += smallest_dot
+    size = frac ** size_exponent
+    # rescale size to match smallest_dot and largest_dot
+    size = size * (largest_dot - smallest_dot) + smallest_dot
+
     import matplotlib.colors
 
     normalize = matplotlib.colors.Normalize(
@@ -4033,7 +4035,7 @@ class DotPlot(BasePlot):
               largest_dot: Optional[float] = 200,
               dot_edge_color: Optional[ColorLike] = None,
               dot_edge_lw: Optional[float] = None,
-
+              size_exponent: Optional[float] = 1.5
               ):
         """
         Modifies plot style
@@ -4067,6 +4069,13 @@ class DotPlot(BasePlot):
         dot_edge_lw
             Dot edge line width. When `color_on='dot'` the default is no edge. When
             `color_on='square'`, line width = 1.5
+        size_exponent
+            Dot size is computed as:
+            fraction  ** size exponent and afterwards scaled to match the
+            `smallest_dot` and `largest_dot` size parameters.
+            Using a different size exponent changes the relative sizes of the dots
+            to each other.
+
         Returns
         -------
         DotPlot
@@ -4091,6 +4100,7 @@ class DotPlot(BasePlot):
         self.smallest_dot = smallest_dot
         self.largest_dot = largest_dot
         self.color_on = color_on
+        self.size_exponent = size_exponent
 
         self.dot_edge_color = dot_edge_color
         self.dot_edge_lw = dot_edge_lw
@@ -4169,8 +4179,9 @@ class DotPlot(BasePlot):
             size_values = (size_range - dot_min) / dot_range
         else:
             size_values = size_range
-        size = (size_values * np.sqrt(self.largest_dot)) ** 2
-        size += self.smallest_dot
+
+        size = size_values ** self.size_exponent
+        size = size * (self.largest_dot - self.smallest_dot) + self.smallest_dot
 
         # plot size bar
         size_legend_ax.scatter(
@@ -4273,6 +4284,7 @@ class DotPlot(BasePlot):
                                                edge_lw=self.dot_edge_lw,
                                                smallest_dot=self.smallest_dot,
                                                largest_dot=self.largest_dot,
+                                               size_exponent=self.size_exponent,
                                                **self.kwds)
 
         self.dot_min, self.dot_max = dot_min, dot_max
