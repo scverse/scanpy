@@ -3809,8 +3809,8 @@ class BasePlot(object):
         mainplot_gs = gridspec.GridSpecFromSubplotSpec(
             nrows=3,
             ncols=2,
-            wspace=0.1 / self.width,
-            hspace=0.1 / self.height,
+            wspace=0.0,
+            hspace=0.0,
             subplot_spec=gs[0, 0],
             width_ratios=width_ratios,
             height_ratios=height_ratios
@@ -3866,7 +3866,7 @@ class BasePlot(object):
         # minor ticks that need to be removed
         main_ax.yaxis.set_tick_params(which='minor', left=False, right=False)
         main_ax.xaxis.set_tick_params(which='minor', top=False, bottom=False, length=0)
-
+        main_ax.set_zorder(100)
         if self.legends_width > 0:
             legend_ax = fig.add_subplot(gs[0, 1])
             self._plot_legend(legend_ax, return_ax_dict, normalize)
