@@ -327,11 +327,11 @@ def read_visium(
         Feature types
     :attr:`~anndata.AnnData.uns`\\ `['spatial']`
         Dict of spaceranger output files with 'library_id' as key
-    :attr:`~anndata.AnnData.uns['spatial']['library_id']`\\ `['images']`
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['images']`
         Dict of images (`'hires'` and `'lowres'`)
-    :attr:`~anndata.AnnData.uns['spatial']['library_id']`\\ `['scalefactors']`
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['scalefactors']`
         Scale factors for the spots
-    :attr:`~anndata.AnnData.uns['spatial']['library_id']`\\ `['metadata']`
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
         Files metadata: 'chemistry_description', 'software_version'
     :attr:`~anndata.AnnData.obsm`\\ `['coords']`
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
