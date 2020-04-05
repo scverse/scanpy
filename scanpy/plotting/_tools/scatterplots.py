@@ -893,7 +893,7 @@ def _get_data_points(
                 tuple(number - 1 for number in comp) for comp in components_list
             ]
     else:
-        data_points = [adata.obsm[basis_key][:, offset : offset + n_dims]]
+        data_points = [np.array(adata.obsm[basis_key])[:, offset : offset + n_dims]]
         components_list = []
 
     if img_key is not None:
@@ -905,9 +905,13 @@ def _get_data_points(
             )
         else:
             raise KeyError(
-                f"Could not find entry in `adata.uns[spatial][{library_id}]` for '{img_key}'.\n"
+                f"Could not find entry in `adata.uns` for '{img_key}'.\n"
                 f"Available keys are: {list(spatial_data['images'].keys())}."
             )
+    elif img_key is None and basis_key == "coords":
+        data_points[0][:, 1] = np.abs(
+            np.subtract(data_points[0][:, 1], np.max(data_points[0][:, 1]))
+        )
 
     return data_points, components_list
 
