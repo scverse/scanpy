@@ -1163,3 +1163,36 @@ def make_grid_spec(
         ax.set_xticks([])
         ax.set_yticks([])
         return ax.figure, ax.get_subplotspec().subgridspec(nrows, ncols, **kw)
+
+
+def fix_kwds(kwds_dict, **kwargs):
+    """
+    Given a dictionary of plot parameters (kwds_dict) and a dict of kwds,
+    merge the parameters into a single consolidated dictionary to avoid
+    argument duplication errors.
+
+    If kwds_dict an kwargs have the same key, only the value in kwds_dict is kept.
+
+    Parameters
+    ----------
+    kwds_dict kwds_dictionary
+    kwargs
+
+    Returns
+    -------
+    kwds_dict merged with kwargs
+
+    Examples
+    --------
+
+    >>> def _example(**kwds):
+    ...     return fix_kwds(kwds, key1="value1", key2="value2")
+    >>> example(key1="value10", key3="value3")
+        {'key1': 'value10, 'key2': 'value2', 'key3': 'value3'}
+
+    """
+
+    for key, value in kwargs.items():
+        kwds_dict[key] = kwds_dict.get(key, value)
+
+    return kwds_dict

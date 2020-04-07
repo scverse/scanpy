@@ -25,7 +25,7 @@ from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes, make_grid_spec
+from ._utils import scatter_base, scatter_group, setup_axes, make_grid_spec, fix_kwds
 from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
@@ -1824,7 +1824,7 @@ def dotplot(
     if swap_axes:
         dp.swap_axes()
 
-    dp = dp.style(color_map=color_map, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot)
+    dp = dp.style(cmap=color_map, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot)
     return dp.show(show=show, save=save)
 
 
@@ -1908,7 +1908,7 @@ def matrixplot(
     if swap_axes:
         dp.swap_axes()
 
-    dp = dp.style(color_map=kwds.get('cmap'))
+    dp = dp.style(cmap=kwds.get('cmap'))
     return dp.show(show=show, save=save)
 
 
@@ -3063,7 +3063,7 @@ def _dotplot(
     dot_size,
     dot_color,
     dot_ax,
-    color_map: str = 'Reds',
+    cmap: str = 'Reds',
     color_on: Optional[str] = 'dot',
     y_label: Optional[str] = None,
     dot_max: Optional[float] = None,
@@ -3090,7 +3090,7 @@ def _dotplot(
             shape, columns and indices as dot_size.
     dot_ax: matplotlib axis
     y_lebel:
-    color_map
+    cmap
         String denoting matplotlib color map.
     color_on
         Options are 'dot' or 'square'. Be default the colomap is applied to
@@ -3157,7 +3157,9 @@ def _dotplot(
     x = x.flatten() + 0.5
     frac = dot_size.values.flatten()
     mean_flat = dot_color.values.flatten()
-    cmap = pl.get_cmap(color_map)
+    cmap = pl.get_cmap(kwds.get('cmap', cmap))
+    if 'cmap' in kwds:
+        del(kwds['cmap'])
     if dot_max is None:
         dot_max = np.ceil(max(frac) * 10) / 10
     else:
@@ -3193,33 +3195,29 @@ def _dotplot(
         dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
         for axis in ['top', 'bottom', 'left', 'right']:
             dot_ax.spines[axis].set_linewidth(1.5)
-        dot_ax.scatter(
-            x,
-            y,
-            s=size,
-            cmap=cmap,
-            norm=None,
-            linewidth=edge_lw,
-            facecolor='none',
-            edgecolor=edge_color,
-            **kwds,
-        )
+        kwds = fix_kwds(kwds,
+                        s=size,
+                        cmap=cmap,
+                        norm=None,
+                        linewidth=edge_lw,
+                        facecolor='none',
+                        edgecolor=edge_color,
+                        )
+        dot_ax.scatter(x, y, **kwds)
     else:
         edge_color = 'none' if edge_color is None else edge_color
         edge_lw = 0.5 if edge_lw is None else edge_lw
 
         color = cmap(normalize(mean_flat))
-        dot_ax.scatter(
-            x,
-            y,
-            s=size,
-            color=color,
-            cmap=cmap,
-            norm=None,
-            linewidth=edge_lw,
-            edgecolor=edge_color,
-            **kwds,
-        )
+        kwds = fix_kwds(kwds,
+                        s=size,
+                        cmap=cmap,
+                        color=color,
+                        norm=None,
+                        linewidth=edge_lw,
+                        edgecolor=edge_color)
+
+        dot_ax.scatter(x, y, **kwds)
 
     y_ticks = np.arange(dot_color.shape[0]) + 0.5
     dot_ax.set_yticks(y_ticks)
@@ -3479,9 +3477,8 @@ class BasePlot(object):
                                  }
         return self
 
-    def style(self,
-              color_map: str = 'RdBu_r'):
-        self.color_map = color_map
+    def style(self, cmap: Optional[str] = 'RdBu_r'):
+        self.cmap = cmap
 
     def legend(self,
                show: Optional[bool] = True,
@@ -3615,7 +3612,7 @@ class BasePlot(object):
 
         """
         import matplotlib.ticker as ticker
-        cmap = pl.get_cmap(self.color_map)
+        cmap = pl.get_cmap(self.cmap)
         import matplotlib.colorbar
         matplotlib.colorbar.ColorbarBase(color_legend_ax,
                                          orientation='horizontal',
@@ -4028,7 +4025,7 @@ class DotPlot(BasePlot):
         self.kwds = kwds
 
     def style(self,
-              color_map: str = 'RdBu_r',
+              cmap: str = 'RdBu_r',
               color_on: Optional[Literal['dot', 'square']] = 'dot',
               dot_max: Optional[float] = None,
               dot_min: Optional[float] = None,
@@ -4043,7 +4040,7 @@ class DotPlot(BasePlot):
 
         Parameters
         ----------
-        color_map
+        cmap
             String denoting matplotlib color map.
         color_on
             Options are 'dot' or 'square'. Be default the colomap is applied to
@@ -4088,14 +4085,14 @@ class DotPlot(BasePlot):
 
         Change color map and apply it to the square behind the dot
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(color_map='RdBu_r', color_on='square').show()
+        ...               .style(cmap='RdBu_r', color_on='square').show()
 
         Add edge to dots
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(dot_edge_color='black',  dot_edge_lw=1).show()
 
         """
-        self.color_map = color_map
+        self.cmap = cmap
         self.dot_max = dot_max
         self.dot_min = dot_min
         self.smallest_dot = smallest_dot
@@ -4276,9 +4273,12 @@ class DotPlot(BasePlot):
         if self.are_axes_swapped:
             _size_df = _size_df.T
             _color_df = _color_df.T
+        self.cmap = self.kwds.get('cmap', self.cmap)
+        if 'cmap' in self.kwds:
+            del(self.kwds['cmap'])
 
         normalize, dot_min, dot_max = _dotplot(_size_df, _color_df,
-                                               ax, color_map=self.color_map,
+                                               ax, cmap=self.cmap,
                                                dot_max=self.dot_max, dot_min=self.dot_min,
                                                color_on=self.color_on,
                                                edge_color=self.dot_edge_color,
@@ -4404,7 +4404,7 @@ class MatrixPlot(BasePlot):
         self.kwds = kwds
 
     def style(self,
-              color_map: str = 'RdBu_r',
+              cmap: str = 'RdBu_r',
               edge_color: Optional[ColorLike] = 'gray',
               edge_lw: Optional[float] = 0.1,
               ):
@@ -4413,7 +4413,7 @@ class MatrixPlot(BasePlot):
 
         Parameters
         ----------
-        color_map
+        cmap
             String denoting matplotlib color map.
         edge_color
             Edge color betweem the squares of matrix plot. Default is gray
@@ -4431,11 +4431,11 @@ class MatrixPlot(BasePlot):
 
         Change color map and turn off edges
         >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(color_map='Blues', edge_color='none').show()
+        ...               .style(cmap='Blues', edge_color='none').show()
 
         """
 
-        self.color_map = color_map
+        self.cmap = cmap
         self.edge_color = edge_color
         self.edge_lw = edge_lw
 
@@ -4452,7 +4452,9 @@ class MatrixPlot(BasePlot):
 
         if self.are_axes_swapped:
             _color_df = _color_df.T
-        cmap = pl.get_cmap(self.color_map)
+        cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
+        if 'cmap' in self.kwds:
+            del(self.kwds['cmap'])
 
         import matplotlib.colors
         normalize = matplotlib.colors.Normalize(
@@ -4462,8 +4464,9 @@ class MatrixPlot(BasePlot):
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(1.5)
 
-        __ = ax.pcolor(_color_df, edgecolor=self.edge_color, linewidth=self.edge_lw,
-                       cmap=cmap, norm=normalize, **self.kwds)
+        kwds = fix_kwds(self.kwds, cmap=cmap,edgecolor=self.edge_color,
+                        linewidth=self.edge_lw, norm=normalize)
+        __ = ax.pcolor(_color_df, **kwds)
 
         y_labels = _color_df.index
         x_labels = _color_df.columns
