@@ -12,6 +12,7 @@ from typing import Union, Optional, List, Sequence, Iterable
 
 from .._utils import savefig_or_show
 from ..._utils import _doc_params, sanitize_anndata, subsample
+from ..._compat import Literal
 from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
@@ -334,6 +335,7 @@ def _rank_genes_groups_plot(
     n_genes: int = 10,
     groupby: Optional[str] = None,
     values_to_plot: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -361,8 +363,6 @@ def _rank_genes_groups_plot(
     if key is None:
         key = 'rank_genes_groups'
 
-    # if 'dendrogram' not in kwds:
-    #     kwds['dendrogram'] = True
     if groupby is None:
         groupby = str(adata.uns[key]['params']['groupby'])
     group_names = (adata.uns[key]['names'].dtype.names
@@ -373,8 +373,15 @@ def _rank_genes_groups_plot(
     group_positions = []
     group_names_valid = []
     for group in group_names:
-        # get all genes that are 'not-nan'
-        genes_list = [gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)][:n_genes]
+        if min_logfoldchange is not None:
+            df = rank_genes_groups_df(adata, group, key=key)
+            # select genes with given log_fold change
+            genes_list = df[df.logfoldchanges > min_logfoldchange].names.tolist()[:n_genes]
+        else:
+            # get all genes that are 'non-nan'
+            genes_list = [gene for gene in adata.uns[key]['names'][group] if
+                          not pd.isnull(gene)][:n_genes]
+
         if len(genes_list) == 0:
             logg.warning(f'No genes found for group {group}')
             continue
@@ -384,40 +391,24 @@ def _rank_genes_groups_plot(
         group_names_valid.append(group)
         start = end
 
-    # TODO: this works only for dotplot and matrix plot, add check
-    values_df = None
-
-    if values_to_plot is not None:
-        # by default, the values to plot are the expression
-        # values. However, if rank_genes_groups has been computed
-        # then, also pvalues and logfold change can be plotted
-        df_list = []
-        for group in group_names:
-            # df = rank_genes_groups_df(adata, group, key=key)
-            # TODO: other means of filtering genes are needed.
-            # maybe do it in place for the image
-            df = rank_genes_groups_df(adata, group, key='rank_genes_groups')
-            df['group'] = group
-            df_list.append(df)
-
-        values_df = pd.concat(df_list)
-        values_df = pd.pivot(values_df, index='names', columns='group',
-                             values=values_to_plot).fillna(1)
-
-        if values_to_plot in ['pvals', 'pvals_adj']:
-            values_df = -1 * np.log10(values_df)
-            kwds.setdefault('color_title', "-log10(pvalue")
-
-        # TODO. n_genes for tl.rank_genes needs to be larger to get good results
-        values_df = values_df.loc[gene_names].T
-
     group_names = group_names_valid
-    if plot_type == 'dotplot':
-        from .._anndata import dotplot
-        return dotplot(adata, gene_names, groupby, var_group_labels=group_names,
+
+    if plot_type in 'dotplot':
+        color_title = None
+        values_df = None
+        if values_to_plot is not None:
+            values_df = _get_values_to_plot(adata, values_to_plot, gene_names, group_names, key=key)
+            color_title = values_to_plot
+
+        from .._anndata import DotPlot
+        pl = DotPlot(adata, gene_names, groupby, var_group_labels=group_names,
                 var_group_positions=group_positions,
-                dot_color_df=values_df,
-                show=show, save=save, **kwds)
+                dot_color_df=values_df, **kwds).add_dendrogram()
+
+        if color_title is not None:
+            pl.legend(color_title=color_title.replace("_", " "))
+        pl.show(show=show, save=save)
+        return pl
 
     elif plot_type == 'heatmap':
         from .._anndata import heatmap
@@ -435,10 +426,11 @@ def _rank_genes_groups_plot(
                        var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'matrixplot':
-        from .._anndata import matrixplot
-        matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
-                   var_group_positions=group_positions, show=show, save=save, **kwds)
-
+        from .._anndata import MatrixPlot
+        pl = MatrixPlot(adata, gene_names, groupby, var_group_labels=group_names,
+                   var_group_positions=group_positions, **kwds).add_dendrogram()
+        pl.show(show=show, save=save)
+        return pl
 
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_heatmap(
@@ -446,6 +438,7 @@ def rank_genes_groups_heatmap(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: str = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -468,6 +461,9 @@ def rank_genes_groups_heatmap(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     **kwds
@@ -494,6 +490,7 @@ def rank_genes_groups_tracksplot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -516,6 +513,9 @@ def rank_genes_groups_tracksplot(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     **kwds
@@ -542,7 +542,9 @@ def rank_genes_groups_dotplot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
-    values_to_plot: Optional[str] = 'pvals_adj',
+    values_to_plot: Optional[Literal[
+        'score', 'logfoldchanges', 'pvals', 'pvals_adj', 'log10_pvals', 'log10_pvals_adj']] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -565,6 +567,9 @@ def rank_genes_groups_dotplot(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.dotplot`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
@@ -580,6 +585,7 @@ def rank_genes_groups_dotplot(
         groupby=groupby,
         values_to_plot=values_to_plot,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
         **kwds,
@@ -592,6 +598,7 @@ def rank_genes_groups_stacked_violin(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -614,6 +621,9 @@ def rank_genes_groups_stacked_violin(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.stacked_violin`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
@@ -640,6 +650,7 @@ def rank_genes_groups_matrixplot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -662,6 +673,9 @@ def rank_genes_groups_matrixplot(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.matrixplot`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
@@ -1093,3 +1107,69 @@ def embedding_density(
     savefig_or_show(f"{key}_", show=show, save=save)
     if show is False:
         return ax
+
+
+def _get_values_to_plot(adata,
+                        values_to_plot: Literal['scores', 'logfoldchanges','pvals', 'pvals_adj', 'log10_pvals', 'log10_pvals_adj'],
+                        gene_names: Sequence[str],
+                        groups: Sequence[str],
+                        key: Optional[str]=None):
+    """
+    If rank_genes_groups has been called, this function
+    makes a dataframe of pvalues or logfoldchange to be ploted
+    as dotplot or matrixplot.
+
+    The dataframe index are the given groups and the columns are the gene_names
+
+    uset for rank_genes_groups_dotplot
+
+    Parameters
+    ----------
+    adata
+    values_to_plot
+        name of the value to plot
+    gene_names
+        gene names
+    groups
+        groupby categories
+    key
+        adata.uns key where the rank_genes_groups is stored. By default 'rank_genes_groups'
+    Returns
+    -------
+    pandas DataFrame index=groups, columns=gene_names
+
+    """
+    values_df = None
+    check_done = False
+    if values_to_plot is not None:
+
+        df_list = []
+        for group in groups:
+            df = rank_genes_groups_df(adata, group, key=key)
+            # check that all genes are present as by default rank_genes_groups
+            # only report the top 100 genes per category
+            if not check_done:
+                if df.shape[0] < adata.shape[1]:
+                    message = ("Please run `sc.tl.rank_genes_groups` with "
+                               "'n_genes=adata.shape[1]' to save all gene "
+                               f"scores. Currently, only {df.shape[0]} "
+                               "are found")
+                    logg.error(message)
+                    raise ValueError(message)
+            df['group'] = group
+            df_list.append(df)
+
+        values_df = pd.concat(df_list)
+        if values_to_plot.startswith('log10'):
+            column = values_to_plot.replace('log10_', '')
+        else:
+            column = values_to_plot
+        values_df = pd.pivot(values_df, index='names', columns='group',
+                             values=column).fillna(1)
+
+        if values_to_plot in ['log10_pvals', 'log10_pvals_adj']:
+            values_df = -1 * np.log10(values_df)
+
+        values_df = values_df.loc[gene_names].T
+
+    return values_df
