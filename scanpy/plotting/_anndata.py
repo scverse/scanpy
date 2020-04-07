@@ -4008,11 +4008,22 @@ class DotPlot(BasePlot):
                            "the data frame used for the dot size. Both data frames need"
                            "to have the same index and columns")
 
-            # get the same order for rows and columns in the color values using the order
-            # in the fraction (size) values. Because genes (columns) can be duplicated
-            # they need to be removed first. Otherwise, the duplicate genes are further
-            # duplicated (that is the reason for the funny `.T.drop_duplicates` .
-            dot_color_df = dot_color_df.loc[dot_size_df.index].T.drop_duplicates().T[dot_size_df.columns]
+            # Because genes (columns) can be duplicated (e.g. when the
+            # same gene is reported as marker gene in two clusters)
+            # they need to be removed first,
+            # otherwise, the duplicated genes are further duplicated when reordering
+            # Eg. A df with columns ['a', 'b', 'a'] after reordering columns
+            # with df[['a', 'a', 'b']], results in a df with columns:
+            # ['a', 'a', 'a', 'a', 'b']
+
+            unique_var_names, unique_idx = np.unique(dot_color_df.columns, return_index=True)
+            # remove duplicate columns
+            if len(unique_var_names) != len(self.var_names):
+                dot_color_df = dot_color_df.iloc[:, unique_idx]
+
+            # get the same order for rows and columns in the dot_color_df
+            # using the order from the doc_size_df
+            dot_color_df = dot_color_df.loc[dot_size_df.index][dot_size_df.columns]
 
         # set default values for style
         self.style()
