@@ -3611,7 +3611,6 @@ class BasePlot(object):
         None, updates color_legend_ax
 
         """
-        import matplotlib.ticker as ticker
         cmap = pl.get_cmap(self.cmap)
         import matplotlib.colorbar
         matplotlib.colorbar.ColorbarBase(color_legend_ax,
@@ -3621,7 +3620,7 @@ class BasePlot(object):
         color_legend_ax.set_title(self.color_legend_title,
                                   fontsize='small')
 
-        color_legend_ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
+        color_legend_ax.xaxis.set_tick_params(labelsize='small')
 
     def _plot_legend(self,
         legend_ax,
@@ -4200,7 +4199,6 @@ class DotPlot(BasePlot):
         labels = ["{}".format(int(x*100)) for x in size_range]
         if dot_max < 1:
             labels[-1] = ">" + labels[-1]
-        size_legend_ax.set_xticklabels(labels)
         size_legend_ax.set_xticklabels(["{}".format(int(x*100)) for x in size_range],
                                        fontsize='small')
 
