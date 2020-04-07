@@ -3630,22 +3630,19 @@ class BasePlot(object):
     ):
 
         # to maintain the fixed height size of the legends, a
-        # spacer of variable height is added at top and bottom. The structure for the legends
-        # is:
-        # first row: spacer
+        # spacer of variable height is added at top and bottom.
+        # The structure for the legends is:
+        # first row: variable space to keep the first rows of the same size
         # second row: size legend
-        # third row raw: variable space to keep the first three rows of the same size
 
         legend_height = self.min_figure_height * 0.08
-        top_spacer = self.group_extra_size if self.are_axes_swapped else 0.01
         height_ratios = [
-            top_spacer,
+            self.height - legend_height,
             legend_height,
-            self.height - top_spacer - legend_height,
             ]
         fig, legend_gs = make_grid_spec(
             legend_ax,
-            nrows=3,
+            nrows=2,
             ncols=1,
             height_ratios=height_ratios,
         )
@@ -3781,10 +3778,10 @@ class BasePlot(object):
         )
 
         # the main plot is divided into three rows and two columns
-        # first row is for brackets (if needed),
-        # second row is for mainplot and dendrogram (if needed)
-        # third row is an spacer, that is adjusted in case the
-        # legends need more height than the main plot
+        # first row is an spacer, that is adjusted in case the
+        #           legends need more height than the main plot
+        # second row is for brackets (if needed),
+        # third row is for mainplot and dendrogram (if needed)
         if self.has_var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
             if self.are_axes_swapped:
@@ -3798,11 +3795,11 @@ class BasePlot(object):
         mainplot_width = mainplot_width - self.group_extra_size
         spacer_height = self.height - var_groups_height - mainplot_height
         if not self.are_axes_swapped:
-            height_ratios = [var_groups_height, mainplot_height, spacer_height]
+            height_ratios = [spacer_height, var_groups_height, mainplot_height]
             width_ratios = [mainplot_width, self.group_extra_size]
 
         else:
-            height_ratios = [self.group_extra_size, mainplot_height, spacer_height]
+            height_ratios = [spacer_height, self.group_extra_size, mainplot_height]
             width_ratios = [mainplot_width, var_groups_height]
             # gridspec is the same but rows and columns are swapped
 
@@ -3815,22 +3812,22 @@ class BasePlot(object):
             width_ratios=width_ratios,
             height_ratios=height_ratios
         )
-        main_ax = fig.add_subplot(mainplot_gs[1, 0])
+        main_ax = fig.add_subplot(mainplot_gs[2, 0])
         return_ax_dict['mainplot_ax'] = main_ax
 
         if not self.are_axes_swapped:
             if self.plot_group_extra is not None:
-                group_extra_ax = fig.add_subplot(mainplot_gs[1, 1], sharey=main_ax)
+                group_extra_ax = fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
                 group_extra_orientation = 'right'
             if self.has_var_groups:
-                gene_groups_ax = fig.add_subplot(mainplot_gs[0, 0], sharex=main_ax)
+                gene_groups_ax = fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
                 var_group_orientation = 'top'
         else:
             if self.plot_group_extra:
-                group_extra_ax = fig.add_subplot(mainplot_gs[0, 0], sharex=main_ax)
+                group_extra_ax = fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
                 group_extra_orientation = 'top'
             if self.has_var_groups:
-                gene_groups_ax = fig.add_subplot(mainplot_gs[1, 1], sharey=main_ax)
+                gene_groups_ax = fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
                 var_group_orientation = 'right'
 
         if self.plot_group_extra is not None:
@@ -4224,25 +4221,24 @@ class DotPlot(BasePlot):
             # to maintain the fixed height size of the legends, a
             # spacer of variable height is added at the bottom. The structure for the legends
             # is:
-            # first row: size legend
-            # second row: spacer to avoid ax titles to overlap
-            # third row: colorbar
-            # fourth raw: variable space to keep the first three rows of the same size
+            # first row: variable space to keep the other rows of the same size (avoid stretching)
+            # second row: legend for dot size
+            # third row: spacer to avoid color and size legend titles to overlap
+            # fourth row: colorbar
 
             cbar_legend_height = self.min_figure_height * 0.08
             size_legend_height = self.min_figure_height * 0.27
             spacer_height = self.min_figure_height * 0.3
-            top_spacer = self.group_extra_size if self.are_axes_swapped else 0.01
+
             height_ratios = [
-                top_spacer,
+                self.height - size_legend_height - cbar_legend_height - spacer_height,
                 size_legend_height,
                 spacer_height,
                 cbar_legend_height,
-                self.height - size_legend_height - cbar_legend_height - spacer_height,
                 ]
             fig, legend_gs = make_grid_spec(
                 legend_ax,
-                nrows=5,
+                nrows=4,
                 ncols=1,
                 height_ratios=height_ratios,
             )
@@ -4259,7 +4255,10 @@ class DotPlot(BasePlot):
                 return_ax_dict['color_legend_ax'] = color_legend_ax
 
     def _mainplot(self, ax):
-        # work on a copy of the dataframes
+        # work on a copy of the dataframes. This is to avoid changes
+        # on the original data frames after repetitive calls to the
+        # DotPlot object, for example once with swap_axes and other without
+
         _color_df = self.dot_color_df.copy()
         _size_df = self.dot_size_df.copy()
         if self.var_names_idx_order is not None:
@@ -4442,7 +4441,10 @@ class MatrixPlot(BasePlot):
         return self
 
     def _mainplot(self, ax):
-        # work on a copy of the dataframe
+        # work on a copy of the dataframes. This is to avoid changes
+        # on the original data frames after repetitive calls to the
+        # DotPlot object, for example once with swap_axes and other without
+
         _color_df = self.mean_obs.copy()
         if self.var_names_idx_order is not None:
             _color_df = _color_df.iloc[:, self.var_names_idx_order]
