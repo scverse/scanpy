@@ -157,7 +157,7 @@ class _RankGenesGroups:
                 X_rest = self.X[mask_rest]
                 self.means_rest[imask], self.vars_rest[imask] = _get_mean_var(X_rest)
                 # this can be costly for sparse data
-                #self.pts_rest[imask] = get_nonzeros(X_rest) / X_rest.shape[0]
+                self.pts_rest[imask] = get_nonzeros(X_rest) / X_rest.shape[0]
                 # deleting the next line causes a memory leak for some reason
                 del X_rest
 
