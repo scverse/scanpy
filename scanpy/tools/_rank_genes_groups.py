@@ -480,7 +480,7 @@ def rank_genes_groups(
         corr_method=corr_method,
     )
 
-    test_obj = _RankGenesGroups(adata, groups, groupby, reference, use_raw, layer)
+    test_obj = _RankGenesGroups(adata, groups_order, groupby, reference, use_raw, layer)
 
     # for clarity, rename variable
     n_genes_user = n_genes
