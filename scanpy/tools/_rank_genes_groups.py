@@ -75,7 +75,6 @@ def _ranks(X, mask=None, mask_rest=None):
 
 
 class _RankGenesGroups:
-
     def __init__(self, adata, groups, groupby, reference, use_raw, layer):
 
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
@@ -83,7 +82,9 @@ class _RankGenesGroups:
         else:
             self.expm1_func = np.expm1
 
-        self.groups_order, self.groups_masks = _utils.select_groups(adata, groups, groupby)
+        self.groups_order, self.groups_masks = _utils.select_groups(
+            adata, groups, groupby
+        )
 
         adata_comp = adata
         if layer is not None:
@@ -133,7 +134,9 @@ class _RankGenesGroups:
         else:
             mask_rest = self.groups_masks[self.ireference]
             X_rest = self.X[mask_rest]
-            self.means[self.ireference], self.vars[self.ireference] = _get_mean_var(X_rest)
+            self.means[self.ireference], self.vars[self.ireference] = _get_mean_var(
+                X_rest
+            )
             # deleting the next line causes a memory leak for some reason
             del X_rest
 
@@ -264,6 +267,7 @@ class _RankGenesGroups:
         # if reference is not set, then the groups listed will be compared to the rest
         # if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
+
         # Indexing with a series causes issues, possibly segfault
         X = self.X[self.grouping_mask.values, :]
 
@@ -311,7 +315,9 @@ class _RankGenesGroups:
                     from statsmodels.stats.multitest import multipletests
 
                     pvals[np.isnan(pvals)] = 1
-                    _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+                    _, pvals_adj, _, _ = multipletests(
+                        pvals, alpha=0.05, method='fdr_bh'
+                    )
                 elif corr_method == 'bonferroni':
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
                 self.d['pvals_adj'][group_name] = pvals_adj[global_indices]
@@ -327,7 +333,9 @@ class _RankGenesGroups:
                 )  # add small value to remove 0's
                 if 'logfoldchanges' not in self.d:
                     self.d['logfoldchanges'] = {}
-                self.d['logfoldchanges'][group_name] = np.log2(foldchanges[global_indices])
+                self.d['logfoldchanges'][group_name] = np.log2(
+                    foldchanges[global_indices]
+                )
 
             self.d['scores'][group_name] = scores[global_indices]
             self.d['names'][group_name] = self.var_names[global_indices]
