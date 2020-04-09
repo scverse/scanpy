@@ -3273,7 +3273,7 @@ class BasePlot(object):
         var_group_labels: Optional[Sequence[str]] = None,
         var_group_rotation: Optional[float] = None,
         layer: Optional[str] = None,
-        ax: Optional[Axes] = None,
+        ax: Optional[_AxesSubplot] = None,
         **kwds
     ):
         if use_raw is None and adata.raw is not None:
@@ -3913,10 +3913,6 @@ class DotPlot(BasePlot):
     **kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
-    Returns
-    -------
-    List of :class:`~matplotlib.axes.Axes`
-
     Examples
     -------
     >>> adata = sc.datasets.pbmc68k_reduced()
@@ -3951,7 +3947,7 @@ class DotPlot(BasePlot):
         standard_scale: Literal['var', 'group'] = None,
         dot_color_df: Optional[pd.DataFrame] = None,
         dot_size_df: Optional[pd.DataFrame] = None,
-        ax: Optional[Axes] = None,
+        ax: Optional[_AxesSubplot] = None,
         **kwds
     ):
         BasePlot.__init__(self,
@@ -4339,10 +4335,6 @@ class MatrixPlot(BasePlot):
     **kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
-    Returns
-    -------
-    List of :class:`~matplotlib.axes.Axes`
-
     Examples
     -------
     >>> adata = sc.datasets.pbmc68k_reduced()
@@ -4373,7 +4365,7 @@ class MatrixPlot(BasePlot):
         var_group_rotation: Optional[float] = None,
         layer: Optional[str] = None,
         standard_scale: Literal['var', 'group'] = None,
-        ax: Optional[Axes] = None,
+        ax: Optional[_AxesSubplot] = None,
         **kwds
     ):
         BasePlot.__init__(self,
