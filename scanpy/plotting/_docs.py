@@ -189,6 +189,9 @@ num_categories
     Only used if groupby observation is not categorical. This value
     determines the number of groups into which the groupby observation
     should be subdivided.
+categories_order
+    Order in which to show the categories. Note: add_dendrogram or add_totals
+    can change the categories order.
 figsize
     Figure size when `multi_panel=True`.
     Otherwise the `rcParam['figure.figsize]` value is used.

@@ -3261,21 +3261,22 @@ class BasePlot(object):
 
     """
     def __init__(self,
-        adata: AnnData,
-        var_names: Union[_VarNames, Mapping[str, _VarNames]],
-        groupby: Optional[str] = None,
-        use_raw: Optional[bool] = None,
-        log: bool = False,
-        num_categories: int = 7,
-        figsize: Optional[Tuple[float, float]] = None,
-        gene_symbols: Optional[str] = None,
-        var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
-        var_group_labels: Optional[Sequence[str]] = None,
-        var_group_rotation: Optional[float] = None,
-        layer: Optional[str] = None,
-        ax: Optional[_AxesSubplot] = None,
-        **kwds
-    ):
+                 adata: AnnData,
+                 var_names: Union[_VarNames, Mapping[str, _VarNames]],
+                 groupby: Optional[str] = None,
+                 use_raw: Optional[bool] = None,
+                 log: bool = False,
+                 num_categories: int = 7,
+                 categories_order: Optional[Sequence[str]] = None,
+                 figsize: Optional[Tuple[float, float]] = None,
+                 gene_symbols: Optional[str] = None,
+                 var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
+                 var_group_labels: Optional[Sequence[str]] = None,
+                 var_group_rotation: Optional[float] = None,
+                 layer: Optional[str] = None,
+                 ax: Optional[_AxesSubplot] = None,
+                 **kwds
+                 ):
         if use_raw is None and adata.raw is not None:
             use_raw = True
         var_names, var_group_labels, var_group_positions = _check_var_names_type(
@@ -3291,6 +3292,19 @@ class BasePlot(object):
             layer=layer,
             gene_symbols=gene_symbols,
         )
+
+        if categories_order is not None:
+            if set(self.obs_tidy.index.categories) != set(categories_order):
+                logg.error(
+                    "Please check that the categories given by "
+                    "the `order` parameter match the categories that "
+                    "want to be reordered.\n\n"
+                    f"Mismatch: {set(obs_tidy.index.categories).difference(categories_order)}\n\n"
+                    f"Given order categories: {categories_order}\n\n"
+                    f"{groupby} categories: {list(obs_tidy.index.categories)}\n"
+                )
+                return
+
         self.adata = adata
         self.groupby = groupby
 
@@ -3302,7 +3316,7 @@ class BasePlot(object):
 
         # style default parameters
         self.are_axes_swapped = False
-        self.categories_order = None
+        self.categories_order = categories_order
         self.var_names_idx_order = None
 
         self.var_names = var_names
@@ -3936,6 +3950,7 @@ class DotPlot(BasePlot):
         use_raw: Optional[bool] = None,
         log: bool = False,
         num_categories: int = 7,
+        categories_order: Optional[Sequence[str]] = None,
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -3957,6 +3972,7 @@ class DotPlot(BasePlot):
                           use_raw=use_raw,
                           log=log,
                           num_categories=num_categories,
+                          categories_order=categories_order,
                           figsize=figsize,
                           gene_symbols=gene_symbols,
                           var_group_positions=var_group_positions,
@@ -4358,6 +4374,7 @@ class MatrixPlot(BasePlot):
         use_raw: Optional[bool] = None,
         log: bool = False,
         num_categories: int = 7,
+        categories_order: Optional[Sequence[str]] = None,
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -4375,6 +4392,7 @@ class MatrixPlot(BasePlot):
                           use_raw=use_raw,
                           log=log,
                           num_categories=num_categories,
+                          categories_order=categories_order,
                           figsize=figsize,
                           gene_symbols=gene_symbols,
                           var_group_positions=var_group_positions,
