@@ -950,393 +950,31 @@ def stacked_violin(
     --------
     rank_genes_groups_stacked_violin: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
-    import seaborn as sns  # Slow import, only import if called
 
-    ax_parent = ax
-    del ax
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
-    var_names, var_group_labels, var_group_positions = _check_var_names_type(
-        var_names, var_group_labels, var_group_positions
+    dp = StackedViolin(
+            adata,
+            var_names,
+            groupby=groupby,
+            use_raw=use_raw,
+            log=log,
+            num_categories=num_categories,
+            standard_scale=standard_scale,
+            figsize=figsize,
+            gene_symbols=gene_symbols,
+            var_group_positions=var_group_positions,
+            var_group_labels=var_group_labels,
+            var_group_rotation=var_group_rotation,
+            layer=layer,
+            ** kwds,
     )
-    has_var_groups = (
-        True
-        if var_group_positions is not None and len(var_group_positions) > 0
-        else False
-    )
-    categories, obs_tidy = _prepare_dataframe(
-        adata,
-        var_names,
-        groupby,
-        use_raw,
-        log,
-        num_categories,
-        gene_symbols=gene_symbols,
-        layer=layer,
-    )
-
-    if standard_scale == 'obs':
-        obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
-        obs_tidy = obs_tidy.div(obs_tidy.max(1), axis=0).fillna(0)
-    elif standard_scale == 'var':
-        obs_tidy -= obs_tidy.min(0)
-        obs_tidy = (obs_tidy / obs_tidy.max(0)).fillna(0)
-    elif standard_scale is None:
-        pass
-    else:
-        logg.warning('Unknown type for standard_scale, ignored')
-
-    if 'color' in kwds:
-        row_palette = kwds['color']
-        # remove color from kwds in case is set to avoid an error caused by
-        # double parameters
-        del kwds['color']
-    if 'linewidth' not in kwds:
-        # for the tiny violin plots used, is best
-        # to use a thin lindwidth.
-        kwds['linewidth'] = 0.5
-
-    # set by default the violin plot cut=0 to limit the extend
-    # of the violin plot as this produces better plots that wont extend
-    # to negative values for example. From seaborn.violin documentation:
-    #
-    # cut: Distance, in units of bandwidth size, to extend the density past
-    # the extreme datapoints. Set to 0 to limit the violin range within
-    # the range of the observed data (i.e., to have the same effect as
-    # trim=True in ggplot.
-    kwds.setdefault('cut', 0)
-    kwds.setdefault('inner')
-
-    if groupby is None or len(categories) <= 1:
-        # dendrogram can only be computed  between groupby categories
-        dendrogram = False
 
     if dendrogram:
-        dendro_data = _reorder_categories_after_dendrogram(
-            adata,
-            groupby,
-            dendrogram,
-            var_names=var_names,
-            var_group_labels=var_group_labels,
-            var_group_positions=var_group_positions,
-        )
-
-        var_group_labels = dendro_data['var_group_labels']
-        var_group_positions = dendro_data['var_group_positions']
-
-        # reorder obs_tidy
-        if dendro_data['var_names_idx_ordered'] is not None:
-            obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
-            var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
-
-        obs_tidy.index = obs_tidy.index.reorder_categories(
-            [categories[x] for x in dendro_data['categories_idx_ordered']],
-            ordered=True,
-        )
-        categories = [categories[x] for x in dendro_data['categories_idx_ordered']]
-
-        # set order to None, to avoid a different order in case this is given
-        # by the user as the dendrogram order takes precedence.
-        if order is not None:
-            logg.warning(
-                "The `order` and `dendrogram` parameters are both set. "
-                "Categories will only be ordered by the order"
-                "given by the dendrogram"
-            )
-
-    elif order is not None:
-        if set(obs_tidy.index.categories) != set(order):
-            logg.error(
-                "Please check that the categories given by "
-                "the `order` parameter match the categories that "
-                "want to be reordered.\n\n"
-                f"Mismatch: {set(obs_tidy.index.categories).difference(order)}\n\n"
-                f"Given order categories: {order}\n\n"
-                f"{groupby} categories: {list(obs_tidy.index.categories)}\n"
-            )
-            return
-
-        else:
-            obs_tidy.index = obs_tidy.index.reorder_categories(order, ordered=True)
-    global count
-    count = 0
-
-    def rename_cols_to_int(value):
-        global count
-        count += 1
-        return count
-
-    # All columns should have a unique name, otherwise the
-    # pd.melt object that is passed to seaborn will merge non-unique columns.
-    # Here, I simply rename the columns using a count from 1..n using the
-    # mapping function `rename_cols_to_int` to solve the problem.
-    obs_tidy.rename(rename_cols_to_int, axis='columns', inplace=True)
-
-    if not swap_axes:
-        # plot image in which x = var_names and y = groupby categories
-
-        dendro_width = 1.4 if dendrogram else 0
-
-        if figsize is None:
-            height = len(categories) * 0.2 + 3
-            width = len(var_names) * 0.2 + 1 + dendro_width
-        else:
-            width, height = figsize
-
-        num_rows = len(categories)
-        height_ratios = None
-        if has_var_groups:
-            # add some space in case 'brackets' want to be plotted on top of the image
-            num_rows += 2  # +2 to add the row for the brackets and a spacer
-            height_ratios = [0.2, 0.05] + [height / len(categories)] * len(categories)
-            categories = [None, None] + list(categories)
-
-        # define a layout of nrows = len(categories) rows x 2 columns
-        # each row is one violin plot. Second column is reserved for dendrogram (if any)
-        # if var_group_positions is defined, a new row is added
-        fig, gs = make_grid_spec(
-            ax_parent or (width, height),
-            nrows=num_rows,
-            ncols=2,
-            hspace=0,
-            height_ratios=height_ratios,
-            wspace=0.08,
-            width_ratios=[width, dendro_width],
-        )
-
-        axs_list = []
-        if dendrogram:
-            first_plot_idx = 1 if has_var_groups else 0
-            dendro_ax = fig.add_subplot(gs[first_plot_idx:, 1])
-            _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=dendrogram)
-            axs_list.append(dendro_ax)
-        ax0 = None
-        if is_color_like(row_palette):
-            row_colors = [row_palette] * len(categories)
-        else:
-            row_colors = sns.color_palette(row_palette, n_colors=len(categories))
-        # Iterate in reverse to start on the bottom plot.
-        # This facilitates adding the brackets plot (if
-        # needed) by sharing the x axis with a previous
-        # violin plot.
-        for idx in range(num_rows)[::-1]:
-            category = categories[idx]
-            if has_var_groups and idx <= 1:
-                # if var_group_positions is given, gs[0] and gs[1] are the location for the
-                # brackets and a spacer (gs[1])
-                if idx == 0:
-                    brackets_ax = fig.add_subplot(gs[0], sharex=ax0)
-                    _plot_gene_groups_brackets(
-                        brackets_ax,
-                        group_positions=var_group_positions,
-                        group_labels=var_group_labels,
-                        rotation=var_group_rotation,
-                    )
-
-                continue
-
-            df = pd.melt(
-                obs_tidy[obs_tidy.index == category], value_vars=obs_tidy.columns,
-            )
-            if ax0 is None:
-                ax = fig.add_subplot(gs[idx, 0])
-                ax0 = ax
-
-            else:
-                ax = fig.add_subplot(gs[idx, 0])
-
-            axs_list.append(ax)
-
-            ax = sns.violinplot(
-                'variable',
-                y='value',
-                data=df,
-                orient='vertical',
-                scale=scale,
-                ax=ax,
-                color=row_colors[idx],
-                **kwds,
-            )
-
-            if stripplot:
-                ax = sns.stripplot(
-                    'variable',
-                    y='value',
-                    data=df,
-                    jitter=jitter,
-                    color='black',
-                    size=size,
-                    ax=ax,
-                )
-
-            # remove the grids because in such a compact plot are unnecessary
-            ax.grid(False)
-
-            ax.tick_params(
-                axis='y',
-                left=False,
-                right=True,
-                labelright=True,
-                labelleft=False,
-                labelsize='x-small',
-                length=1,
-                pad=1,
-            )
-
-            ax.set_ylabel(
-                category,
-                rotation=0,
-                fontsize='small',
-                labelpad=8,
-                ha='right',
-                va='center',
-            )
-            ax.set_xlabel('')
-            if log:
-                ax.set_yscale('log')
-
-            if idx < num_rows - 1:
-                # remove the xticks labels except for the last processed plot (first from bottom-up).
-                # Because the plots share the x axis it is redundant and less compact to plot the
-                # axis ticks and labels for each plot
-                ax.set_xticklabels([])
-                ax.tick_params(
-                    axis='x',
-                    bottom=False,
-                    top=False,
-                    labeltop=False,
-                    labelbottom=False,
-                )
-            else:
-                ax.set_xticklabels(var_names)
-
-        ax0.tick_params(axis='x', labelrotation=90, labelsize='small')
-    else:
-        # plot image in which x = group by and y = var_names
-        dendro_height = 3 if dendrogram else 0
-        vargroups_width = 0.45 if has_var_groups else 0
-        if figsize is None:
-            height = len(var_names) * 0.3 + dendro_height
-            width = len(categories) * 0.4 + vargroups_width
-        else:
-            width, height = figsize
-
-        # define a layout of nrows = var_names x 1 columns
-        # if plot dendrogram a row is added
-        # each row is one violin plot.
-        num_rows = len(var_names) + 1  # +1 to account for dendrogram
-        height_ratios = [dendro_height] + ([1] * len(var_names))
-
-        fig, gs = make_grid_spec(
-            ax_parent or (width, height),
-            nrows=num_rows,
-            ncols=2,
-            hspace=0,  # This will also affect the gap between dendrogram and plots
-            height_ratios=height_ratios,
-            wspace=0.2,
-            width_ratios=[width - vargroups_width, vargroups_width],
-        )
-
-        axs_list = []
-        if dendrogram:
-            dendro_ax = fig.add_subplot(gs[0])
-            _plot_dendrogram(
-                dendro_ax, adata, groupby, orientation='top', dendrogram_key=dendrogram,
-            )
-            axs_list.append(dendro_ax)
-        first_ax = None
-        if is_color_like(row_palette):
-            row_colors = [row_palette] * len(var_names)
-        else:
-            row_colors = sns.color_palette(row_palette, n_colors=len(var_names))
-        for idx, y in enumerate(obs_tidy.columns):
-            ax_idx = idx + 1  # +1 to account that idx 0 is the dendrogram
-            if first_ax is None:
-                ax = fig.add_subplot(gs[ax_idx, 0])
-                first_ax = ax
-            else:
-                ax = fig.add_subplot(gs[ax_idx, 0])
-            axs_list.append(ax)
-            ax = sns.violinplot(
-                x=obs_tidy.index,
-                y=y,
-                data=obs_tidy,
-                orient='vertical',
-                scale=scale,
-                ax=ax,
-                color=row_colors[idx],
-                **kwds,
-            )
-            if stripplot:
-                ax = sns.stripplot(
-                    x=obs_tidy.index,
-                    y=y,
-                    data=obs_tidy,
-                    jitter=jitter,
-                    color='black',
-                    size=size,
-                    ax=ax,
-                )
-
-            ax.set_ylabel(
-                var_names[idx],
-                rotation=0,
-                fontsize='small',
-                labelpad=8,
-                ha='right',
-                va='center',
-            )
-            # remove the grids because in such a compact plot are unnecessary
-            ax.grid(False)
-            ax.tick_params(
-                axis='y',
-                right=True,
-                labelright=True,
-                left=False,
-                labelleft=False,
-                labelrotation=0,
-                labelsize='x-small',
-            )
-            ax.tick_params(axis='x', labelsize='small')
-
-            # remove the xticks labels except for the last processed plot (first from bottom-up).
-            # Because the plots share the x axis it is redundant and less compact to plot the
-            # axis for each plot
-            if idx < len(var_names) - 1:
-                ax.tick_params(
-                    labelbottom=False, labeltop=False, bottom=False, top=False
-                )
-                ax.set_xlabel('')
-            if log:
-                ax.set_yscale('log')
-
-            if max([len(x) for x in categories]) > 1:
-                ax.tick_params(axis='x', labelrotation=90)
-
-        if has_var_groups:
-            start = 1 if dendrogram else 0
-            gene_groups_ax = fig.add_subplot(gs[start:, 1])
-            arr = []
-            for idx, pos in enumerate(var_group_positions):
-                arr += [idx] * (pos[1] + 1 - pos[0])
-            _plot_gene_groups_brackets(
-                gene_groups_ax,
-                var_group_positions,
-                var_group_labels,
-                left_adjustment=0.3,
-                right_adjustment=0.7,
-                orientation='right',
-            )
-            gene_groups_ax.set_ylim(len(var_names), 0)
-            axs_list.append(gene_groups_ax)
-
-    # remove the spacing between subplots
-    if ax_parent is None:
-        fig.subplots_adjust(wspace=0, hspace=0)
-
-    _utils.savefig_or_show('stacked_violin', show=show, save=save)
-
-    return axs_list
+        dp.add_dendrogram(dendrogram_key=dendrogram)
+    if swap_axes:
+        dp.swap_axes()
+    dp = dp.style(stripplot=stripplot, jitter=jitter, jitter_size=size,
+                  row_palette=row_palette, scale=scale)
+    return dp.show(show=show, save=save)
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
@@ -1356,6 +994,7 @@ def heatmap(
     standard_scale: Optional[Literal['var', 'obs']] = None,
     swap_axes: bool = False,
     show_gene_labels: Optional[bool] = None,
+
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     figsize: Optional[Tuple[float, float]] = None,
@@ -3307,6 +2946,8 @@ class BasePlot(object):
 
         self.adata = adata
         self.groupby = groupby
+        self.log = log
+        self.kwds = kwds
 
         self.has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
 
@@ -3330,7 +2971,6 @@ class BasePlot(object):
         self.group_extra_size = 0
         self.plot_group_extra = None
         self.ax = ax
-        self.kwds = kwds
 
     def swap_axes(self, swap_axes: Optional[bool] = True):
         """
@@ -3773,11 +3413,8 @@ class BasePlot(object):
         return_ax_dict = {}
         # define a layout of 1 rows x 2 columns
         #   first ax is for the main figure.
-        #   second ax is to plot the size and colobar legend
+        #   second ax is to plot legends
         legends_width_spacer = 0.7 / self.width
-
-        # fig = pl.figure(figsize=(self.width, self.height))
-        # gs = gridspec.GridSpec(
 
         fig, gs = make_grid_spec(
             self.ax or (self.width, self.height),
@@ -3979,7 +3616,8 @@ class DotPlot(BasePlot):
                           var_group_labels=var_group_labels,
                           var_group_rotation=var_group_rotation,
                           layer=layer,
-                          ax=ax)
+                          ax=ax,
+                          **kwds)
 
         # for if category defined by groupby (if any) compute for each var_name
         # 1. the fraction of cells in the category having a value >expression_cutoff
@@ -4036,12 +3674,8 @@ class DotPlot(BasePlot):
             # using the order from the doc_size_df
             dot_color_df = dot_color_df.loc[dot_size_df.index][dot_size_df.columns]
 
-        # set default values for style
-        self.style()
-
         self.dot_color_df = dot_color_df
         self.dot_size_df = dot_size_df
-        self.kwds = kwds
 
     def style(self,
               cmap: str = 'RdBu_r',
@@ -4399,7 +4033,8 @@ class MatrixPlot(BasePlot):
                           var_group_labels=var_group_labels,
                           var_group_rotation=var_group_rotation,
                           layer=layer,
-                          ax=ax)
+                          ax=ax,
+                          **kwds)
 
         # 2. compute mean value
         mean_obs = self.obs_tidy.groupby(level=0).mean()
@@ -4415,11 +4050,7 @@ class MatrixPlot(BasePlot):
         else:
             logg.warning('Unknown type for standard_scale, ignored')
 
-        # set default values for style
-        self.style()
-
         self.mean_obs = mean_obs
-        self.kwds = kwds
 
     def style(self,
               cmap: str = 'RdBu_r',
@@ -4512,3 +4143,421 @@ class MatrixPlot(BasePlot):
         ax.set_xlim(0, len(x_labels))
 
         return normalize
+
+
+@_doc_params(common_plot_args=doc_common_plot_args)
+class StackedViolin(BasePlot):
+    """\
+    Stacked violin plots.
+
+    Makes a compact image composed of individual violin plots
+    (from :func:`~seaborn.violinplot`) stacked on top of each other.
+    Useful to visualize gene expression per cluster.
+
+    Wraps :func:`seaborn.violinplot` for :class:`~anndata.AnnData`.
+
+    Parameters
+    ----------
+    {common_plot_args}
+    stripplot
+        Add a stripplot on top of the violin plot.
+        See :func:`~seaborn.stripplot`.
+    jitter
+        Add jitter to the stripplot (only when stripplot is True)
+        See :func:`~seaborn.stripplot`.
+    size
+        Size of the jitter points.
+    order
+        Order in which to show the categories. Note: if `dendrogram=True`
+        the categories order will be given by the dendrogram and `order`
+        will be ignored.
+    scale
+        The method used to scale the width of each violin.
+        If 'width' (the default), each violin will have the same width.
+        If 'area', each violin will have the same area.
+        If 'count', a violin’s width corresponds to the number of observations.
+    row_palette
+        The row palette determines the colors to use for the stacked violins.
+        The value should be a valid seaborn or matplotlib palette name
+        (see :func:`~seaborn.color_palette`).
+        Alternatively, a single color name or hex value can be passed,
+        e.g. `'red'` or `'#cc33ff'`.
+    standard_scale
+        Whether or not to standardize a dimension between 0 and 1,
+        meaning for each variable or observation,
+        subtract the minimum and divide each by its maximum.
+    swap_axes
+         By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby` categories.
+         By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
+         axes var_group_positions are no longer used
+    **kwds
+        Are passed to :func:`~seaborn.violinplot`.
+
+    Examples
+    -------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    Using var_names as dict:
+
+    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    See also
+    --------
+    :func:`~scanpy.tl.violin` and
+    rank_genes_groups_stacked_violin: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    """
+
+    def __init__(self,
+        adata: AnnData,
+        var_names: Union[_VarNames, Mapping[str, _VarNames]],
+        groupby: Optional[str] = None,
+        use_raw: Optional[bool] = None,
+        log: bool = False,
+        num_categories: int = 7,
+        categories_order: Optional[Sequence[str]] = None,
+        figsize: Optional[Tuple[float, float]] = None,
+        gene_symbols: Optional[str] = None,
+        var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
+        var_group_labels: Optional[Sequence[str]] = None,
+        var_group_rotation: Optional[float] = None,
+        layer: Optional[str] = None,
+        standard_scale: Literal['var', 'group'] = None,
+        ax: Optional[_AxesSubplot] = None,
+        **kwds
+    ):
+        BasePlot.__init__(self,
+                          adata,
+                          var_names,
+                          groupby=groupby,
+                          use_raw=use_raw,
+                          log=log,
+                          num_categories=num_categories,
+                          categories_order=categories_order,
+                          figsize=figsize,
+                          gene_symbols=gene_symbols,
+                          var_group_positions=var_group_positions,
+                          var_group_labels=var_group_labels,
+                          var_group_rotation=var_group_rotation,
+                          layer=layer,
+                          ax=ax,
+                          **kwds)
+
+        if standard_scale == 'obs':
+            self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
+            self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
+        elif standard_scale == 'var':
+            self.obs_tidy -= self.obs_tidy.min(0)
+            self.obs_tidy = (self.obs_tidy / self.obs_tidy.max(0)).fillna(0)
+        elif standard_scale is None:
+            pass
+        else:
+            logg.warning('Unknown type for standard_scale, ignored')
+
+    def style(self,
+              stripplot: Optional[bool] = False,
+              jitter: Optional[Union[float, bool]] = False,
+              jitter_size: Optional[int] = 1,
+              linewidth: Optional[float] = 0.5,
+              row_palette: Optional[str] = 'muted',
+              scale: Optional[Literal['area', 'count', 'width']] = 'width',
+              yticklabels: Optional[bool] = False,
+              ylim: Optional[Tuple[float, float]] = None,
+              ):
+        """
+        Modifies plot graphical parameters
+
+        Parameters
+        ----------
+        stripplot
+            Add a stripplot on top of the violin plot.
+            See :func:`~seaborn.stripplot`.
+        jitter
+            Add jitter to the stripplot (only when stripplot is True)
+            See :func:`~seaborn.stripplot`.
+        jitter_size
+            Size of the jitter points.
+        linewidth
+            linewidth for the violin plots.
+        row_palette
+            The row palette determines the colors to use for the stacked violins.
+            The value should be a valid seaborn or matplotlib palette name
+            (see :func:`~seaborn.color_palette`).
+            Alternatively, a single color name or hex value can be passed,
+            e.g. `'red'` or `'#cc33ff'`.
+        scale
+            The method used to scale the width of each violin.
+            If 'width' (the default), each violin will have the same width.
+            If 'area', each violin will have the same area.
+            If 'count', a violin’s width corresponds to the number of observations.
+        yticklabels
+            Because the plots are on top of each other the yticks labels tend to
+            overlap and are not plotted. Set to true to view the labels.
+        ylim
+            minimum and maximum values for the y-axis. If set. All rows will have
+            the same y-axis range. Example: ylim=(0, 5)
+
+        Returns
+        -------
+        StackedViolin
+
+        Examples
+        -------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+
+        Change color map and turn off edges
+        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
+        ...               .style(row_palette='Blues', linewisth=0).show()
+
+        """
+
+        self.row_palette = row_palette
+        self.stripplot = stripplot
+        self.jitter = jitter
+        self.jitter_size = jitter_size
+        self.yticklabels = yticklabels
+        self.ylim = ylim
+
+        self.kwds['linewidth'] = linewidth
+        self.kwds['scale'] = scale
+
+        # set by default the violin plot cut=0 to limit the extend
+        # of the violin plot as this produces better plots that wont extend
+        # to negative values for example. From seaborn.violin documentation:
+        #
+        # cut: Distance, in units of bandwidth size, to extend the density past
+        # the extreme datapoints. Set to 0 to limit the violin range within
+        # the range of the observed data (i.e., to have the same effect as
+        # trim=True in ggplot.
+        self.kwds.setdefault('cut', 0)
+        self.kwds.setdefault('inner')
+        return self
+
+    def _mainplot(self, ax):
+
+        # work on a copy of the dataframes. This is to avoid changes
+        # on the original data frames after repetitive calls to the
+        # DotPlot object, for example once with swap_axes and other without
+        _matrix = self.obs_tidy.copy()
+
+        global count
+        count = 0
+
+        def rename_cols_to_int(value):
+            global count
+            count += 1
+            return count
+
+        if self.var_names_idx_order is not None:
+            _matrix = _matrix.iloc[:, self.var_names_idx_order]
+
+        if self.categories_order is not None:
+            _matrix.index = _matrix.index.reorder_categories(self.categories_order, ordered=True)
+
+        row_palette = self.kwds.get('color', self.row_palette)
+        if 'color' in self.kwds:
+            del self.kwds['color']
+
+        # All columns should have a unique name, yet, frequently
+        # gene names are repeated in self.var_names.  otherwise the
+        # pd.melt object that is passed to seaborn will merge non-unique columns.
+        # Here, I simply rename the columns using a count from 1..n using the
+        # mapping function `rename_cols_to_int` to solve the problem.
+        _matrix.rename(rename_cols_to_int, axis='columns', inplace=True)
+
+        # set y and x limits to guarantee the dendrogram and var_groups
+        # align to the main plot
+        if self.are_axes_swapped:
+            ax.set_ylim(len(self.var_names), 0)
+            ax.set_xlim(0, len(self.categories))
+        else:
+            ax.set_ylim(len(self.categories), 0)
+            ax.set_xlim(0, len(self.var_names))
+
+        if not self.are_axes_swapped:
+            self._plot_categories_x_genes(ax, _matrix, row_palette)
+        else:
+            self._plot_genes_x_categories(ax, _matrix, row_palette)
+
+        return None
+
+    def _plot_categories_x_genes(self, ax, _matrix, row_palette):
+        import seaborn as sns  # Slow import, only import if called
+        if is_color_like(row_palette):
+            row_colors = [row_palette] * len(self.categories)
+        else:
+            row_colors = sns.color_palette(self.row_palette, n_colors=len(self.categories))
+
+        categories = _matrix.index.categories.tolist()
+        # the ax need to be subdivided
+        # define a layout of nrows = len(categories) rows
+        # each row is one violin plot.
+        num_rows = len(self.categories)
+        fig, gs = make_grid_spec(
+            ax,
+            nrows=num_rows,
+            ncols=1,
+            hspace=0,
+        )
+
+        axs_list = []
+        for idx, category in enumerate(categories):
+
+            df = pd.melt(
+                _matrix[_matrix.index == category], value_vars=_matrix.columns,
+            )
+            row_ax = fig.add_subplot(gs[idx, 0])
+
+            axs_list.append(row_ax)
+            row_ax = sns.violinplot(
+                'variable',
+                y='value',
+                data=df,
+                orient='vertical',
+                ax=row_ax,
+                color=row_colors[idx],
+                **self.kwds,
+            )
+
+            if self.stripplot:
+                row_ax = sns.stripplot(
+                    'variable',
+                    y='value',
+                    data=df,
+                    jitter=self.jitter,
+                    color='black',
+                    size=self.jitter_size,
+                    ax=row_ax,
+                )
+
+            self._setup_violin_axes_ticks(row_ax, label=category)
+
+        # add labels to bottom plot
+        if self.var_names_idx_order:
+            labels = [self.var_names[x] for x in self.var_names_idx_order]
+        else:
+            labels = self.var_names
+        row_ax.set_xticklabels(labels)
+
+        row_ax.tick_params(axis='x', labelsize='small', labelbottom=True, bottom=True)
+        # rotate x tick labels if they are longer than 2 characters
+        if max([len(x) for x in labels]) > 2:
+            row_ax.tick_params(axis='x', labelrotation=90)
+
+    def _plot_genes_x_categories(self, ax, _matrix, row_palette):
+        import seaborn as sns  # Slow import, only import if called
+        if is_color_like(row_palette):
+            row_colors = [row_palette] * len(self.var_names)
+        else:
+            row_colors = sns.color_palette(self.row_palette, n_colors=len(self.var_names))
+
+        # the ax need to be subdivided
+        # define a layout of nrows = len(genes) rows
+        num_rows = len(self.var_names)
+        fig, gs = make_grid_spec(
+            ax,
+            nrows=num_rows,
+            ncols=1,
+            hspace=0,
+        )
+        axs_list = []
+        for idx, y in enumerate(_matrix.columns):
+            row_ax = fig.add_subplot(gs[idx, 0])
+            axs_list.append(row_ax)
+            row_ax = sns.violinplot(
+                x=_matrix.index,
+                y=y,
+                data=_matrix,
+                orient='vertical',
+                ax=row_ax,
+                color=row_colors[idx],
+                **self.kwds,
+            )
+            if self.stripplot:
+                row_ax = sns.stripplot(
+                    x=_matrix.index,
+                    y=y,
+                    data=_matrix,
+                    jitter=self.jitter,
+                    color='black',
+                    size=self.jitter_size,
+                    ax=row_ax,
+                )
+
+            self._setup_violin_axes_ticks(row_ax, label=self.var_names[idx])
+
+        # add labels to bottom plot
+        row_ax.set_xticklabels(_matrix.index.categories.tolist())
+
+        row_ax.tick_params(axis='x', labelsize='small',
+                           labelbottom=True)
+
+        # rotate x tick labels if they are longer than 2 characters
+        if max([len(x) for x in self.categories]) > 2:
+            row_ax.tick_params(axis='x', labelrotation=90)
+
+    def _setup_violin_axes_ticks(self, row_ax, label=None):
+        """
+        Configures each of the violin plot axes ticks like remove or add labels etc.
+
+        """
+        # remove the default seaborn grids because in such a compact
+        # plot are unnecessary
+        row_ax.grid(False)
+        if self.ylim is not None:
+            row_ax.set_ylim(self.ylim)
+        if self.log:
+            row_ax.set_yscale('log')
+        if self.yticklabels:
+            row_ax.tick_params(
+                axis='y',
+                left=True,
+                right=False,
+                labelright=False,
+                labelleft=True,
+                labelsize='x-small',
+                length=1,
+                pad=1,
+            )
+        else:
+            # remove labels
+            row_ax.set_yticklabels([])
+            row_ax.tick_params(
+                axis='y',
+                left=False,
+                right=False,
+            )
+
+        row_ax.set_ylabel(
+            label,
+            rotation=0,
+            fontsize='small',
+            labelpad=8 if self.yticklabels else 0,
+            ha='right',
+            va='center',
+        )
+
+        row_ax.set_xlabel('')
+
+        # remove the xticks labels except for the bottom plot
+        row_ax.set_xticklabels([])
+        row_ax.tick_params(
+            axis='x',
+            bottom=False,
+            top=False,
+            labeltop=False,
+            labelbottom=False,
+        )
+
+    def _plot_legend(self, legend_ax, return_ax_dict, normalize):
+        pass
+
+    def legend(self,
+               show: Optional[bool] = True,
+               width: Optional[float] = 1.5
+               ):
+        self.legends_width = 0

@@ -1159,6 +1159,7 @@ def make_grid_spec(
         return fig, gridspec.GridSpec(nrows, ncols, **kw)
     else:
         ax = ax_or_figsize
+        ax.axis('off')
         ax.set_frame_on(False)
         ax.set_xticks([])
         ax.set_yticks([])
