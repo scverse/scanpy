@@ -1228,7 +1228,8 @@ def _scale(X, zero_center=True):
             if zero_center: raise ValueError('Cannot zero-center sparse matrix.')
             sparsefuncs.inplace_column_scale(X, 1/scale)
         else:
-            X -= mean
+            if zero_center:
+                X -= mean
             scale[scale == 0] = 1e-12
             X /= scale
     else:
