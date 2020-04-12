@@ -620,7 +620,7 @@ def violin(
     order: Optional[Sequence[str]] = None,
     multi_panel: Optional[bool] = None,
     xlabel: str = '',
-    ylabel: Optional[str, Sequence[str]] = None,
+    ylabel: Optional[Union[str, Sequence[str]]] = None,
     rotation: Optional[float] = None,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
@@ -695,11 +695,14 @@ def violin(
         ylabel = [ylabel] * (1 if groupby is None else len(keys))
     if groupby is None:
         if len(ylabel) != 1:
-            raise ValueError(f'Expected number of y-labels to be `1`, '
-                             f'found `{len(ylabel)}`.')
+            raise ValueError(
+                f'Expected number of y-labels to be `1`, ' f'found `{len(ylabel)}`.'
+            )
     elif len(ylabel) != len(keys):
-        raise ValueError(f'Expected number of y-labels to be `{len(keys)}`, '
-                         f'found `{len(ylabel)}`.')
+        raise ValueError(
+            f'Expected number of y-labels to be `{len(keys)}`, '
+            f'found `{len(ylabel)}`.'
+        )
 
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
