@@ -2,6 +2,7 @@
 """
 import collections.abc as cabc
 from itertools import product
+from collections import OrderedDict
 from typing import Optional, Union, Mapping  # Special
 from typing import Sequence, Collection, Iterable  # ABCs
 from typing import Tuple, List  # Classes
@@ -619,6 +620,7 @@ def violin(
     order: Optional[Sequence[str]] = None,
     multi_panel: Optional[bool] = None,
     xlabel: str = '',
+    ylabel: Optional[str, Sequence[str]] = None,
     rotation: Optional[float] = None,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
@@ -667,6 +669,9 @@ def violin(
     xlabel
         Label of the x axis. Defaults to `groupby` if `rotation` is `None`,
         otherwise, no label is shown.
+    ylabel
+        Label of the y axis. If `None` and `groupby` is `None`, defaults
+        to `'value'`. If `None` and `groubpy` is not `None`, defaults to `keys`.
     rotation
         Rotation of xtick labels.
     {show_save_ax}
@@ -684,6 +689,18 @@ def violin(
         use_raw = True
     if isinstance(keys, str):
         keys = [keys]
+    keys = list(OrderedDict.fromkeys(keys))  # remove duplicates, preserving the order
+
+    if isinstance(ylabel, (str, type(None))):
+        ylabel = [ylabel] * (1 if groupby is None else len(keys))
+    if groupby is None:
+        if len(ylabel) != 1:
+            raise ValueError(f'Expected number of y-labels to be `1`, '
+                             f'found `{len(ylabel)}`.')
+    elif len(ylabel) != len(keys):
+        raise ValueError(f'Expected number of y-labels to be `{len(keys)}`, '
+                         f'found `{len(ylabel)}`.')
+
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
         if kwds.get('palette', None) is None:
@@ -747,7 +764,7 @@ def violin(
             )
         else:
             axs = [ax]
-        for ax, y in zip(axs, ys):
+        for ax, y, ylab in zip(axs, ys, ylabel):
             ax = sns.violinplot(
                 x,
                 y=y,
@@ -772,6 +789,9 @@ def violin(
             if xlabel == '' and groupby is not None and rotation is None:
                 xlabel = groupby.replace('_', ' ')
             ax.set_xlabel(xlabel)
+            if ylab is not None:
+                ax.set_ylabel(ylab)
+
             if log:
                 ax.set_yscale('log')
             if rotation is not None:
