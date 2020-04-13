@@ -12,10 +12,11 @@ from .. import _utils
 from .._utils import _doc_params, AnyRandom, NeighborsView
 from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
+from .. import settings
 
 
 N_DCS = 15  # default number of diffusion components
-N_PCS = 50  # default number of PCs
+N_PCS = settings.N_PCS  # Backwards compat, constants should be defined in only one place.
 
 
 _Method = Literal['umap', 'gauss', 'rapids']

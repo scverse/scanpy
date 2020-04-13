@@ -85,6 +85,7 @@ class ScanpyConfig:
         _frameon: bool = True,
         _vector_friendly: bool = False,
         _low_resolution_warning: bool = True,
+        n_pcs=50,
     ):
         # logging
         self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
@@ -121,6 +122,9 @@ class ScanpyConfig:
 
         self._previous_memory_usage = -1
         """Stores the previous memory usage."""
+
+        self.N_PCS = n_pcs
+        """Default number of principal components to use."""
 
     @property
     def verbosity(self) -> Verbosity:

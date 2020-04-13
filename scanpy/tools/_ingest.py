@@ -8,7 +8,7 @@ from sklearn.utils import check_random_state
 from scipy.sparse import issparse
 from anndata import AnnData
 
-from ..preprocessing._simple import N_PCS
+from .. import settings
 from ..neighbors import _rp_forest_generate
 from .. import logging as logg
 from .._utils import pkg_version, NeighborsView
@@ -277,9 +277,9 @@ class Ingest:
             self._use_rep = 'X_pca'
             self._n_pcs = neighbors['params']['n_pcs']
             self._rep = adata.obsm['X_pca'][:, : self._n_pcs]
-        elif adata.n_vars > N_PCS and 'X_pca' in adata.obsm.keys():
+        elif adata.n_vars > settings.N_PCS and 'X_pca' in adata.obsm.keys():
             self._use_rep = 'X_pca'
-            self._rep = adata.obsm['X_pca'][:, :N_PCS]
+            self._rep = adata.obsm['X_pca'][:, :settings.N_PCS]
             self._n_pcs = self._rep.shape[1]
 
         if 'metric_kwds' in neighbors['params']:
