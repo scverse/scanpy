@@ -277,7 +277,7 @@ class _RankGenesGroups:
         clf = LogisticRegression(**kwds)
         clf.fit(X, self.grouping.cat.codes)
         scores_all = clf.coef_
-        for igroup, group_name in enumerate(self.groups_order):
+        for igroup, _ in enumerate(self.groups_order):
             if len(self.groups_order) <= 2:  # binary logistic regression
                 scores = scores_all[0]
             else:
