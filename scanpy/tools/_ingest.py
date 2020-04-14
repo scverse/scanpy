@@ -206,6 +206,9 @@ class Ingest:
             self._umap._tree_init = self._tree_init
             self._umap._search = self._search
 
+        if self._dist_func is not None:
+            self._umap._input_distance_func = self._dist_func
+
         self._umap._rp_forest = self._rp_forest
 
         self._umap._search_graph = self._search_graph
@@ -215,9 +218,10 @@ class Ingest:
 
         self._umap._input_hash = None
 
-    def _init_search(self, dist_func, dist_args):
+    def _init_dist_search(self, dist_args):
         from functools import partial
         from umap.nndescent import initialise_search
+        from umap.distances import named_distances
 
         self._random_init = None
         self._tree_init = None
@@ -225,7 +229,11 @@ class Ingest:
         self._initialise_search = None
         self._search = None
 
-        if pkg_version('umap-learn') < version.parse("0.4.0rc1"):
+        self._dist_func = None
+
+        dist_func = named_distances[self._metric]
+
+        if pkg_version('umap-learn') < version.parse("0.4.0"):
             from umap.nndescent import (
                 make_initialisations,
                 make_initialized_nnd_search,
@@ -246,19 +254,18 @@ class Ingest:
             from umap.nndescent import initialized_nnd_search
 
             @njit
-            def _partial_dist_func(x, y):
+            def partial_dist_func(x, y):
                 return dist_func(x, y, *dist_args)
 
-            _dist_func = _partial_dist_func
-            _initialise_search = partial(initialise_search, dist=_dist_func)
-            _search = partial(initialized_nnd_search, dist=_dist_func)
+            _initialise_search = partial(initialise_search, dist=partial_dist_func)
+            _search = partial(initialized_nnd_search, dist=partial_dist_func)
+
+            self._dist_func = partial_dist_func
 
         self._initialise_search = _initialise_search
         self._search = _search
 
     def _init_neighbors(self, adata, neighbors_key):
-        from umap.distances import named_distances
-
         neighbors = NeighborsView(adata, neighbors_key)
 
         self._n_neighbors = neighbors['params']['n_neighbors']
@@ -283,9 +290,8 @@ class Ingest:
             dist_args = ()
 
         self._metric = neighbors['params']['metric']
-        dist_func = named_distances[self._metric]
 
-        self._init_search(dist_func, dist_args)
+        self._init_dist_search(dist_args)
 
         search_graph = neighbors['distances'].copy()
         search_graph.data = (search_graph.data > 0).astype(np.int8)
