@@ -2899,6 +2899,10 @@ class BasePlot(object):
     understand how to adapt the visual parameter if the plot is rotated
 
     """
+    DEFAULT_COLORMAP = 'RdBu_r'
+    DEFAULT_LEGENDS_WIDTH = 1.5
+    DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
+
     def __init__(self,
                  adata: AnnData,
                  var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2952,8 +2956,11 @@ class BasePlot(object):
         self.has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
 
         # set default values for legend
-        self.legend()
-        self.style()
+        self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
+        self.legends_width = self.DEFAULT_LEGENDS_WIDTH
+
+        # set style defaults
+        self.cmap = self.DEFAULT_COLORMAP
 
         # style default parameters
         self.are_axes_swapped = False
@@ -3131,13 +3138,13 @@ class BasePlot(object):
                                  }
         return self
 
-    def style(self, cmap: Optional[str] = 'RdBu_r'):
+    def style(self, cmap: Optional[str] = DEFAULT_COLORMAP):
         self.cmap = cmap
 
     def legend(self,
                show: Optional[bool] = True,
-               title: Optional[str] = 'Expression\nlevel in group',
-               width: Optional[float] = 1.5
+               title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
+               width: Optional[float] = DEFAULT_LEGENDS_WIDTH
                ):
         """
         Configure legend parameters.
@@ -3580,6 +3587,23 @@ class DotPlot(BasePlot):
     :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
     :func:`~scanpy.tl.rank_genes_groups` function.
     """
+
+    # default style parameters
+    DEFAULT_COLORMAP = 'RdBu_r'
+    DEFAULT_COLOR_ON = 'dot'
+    DEFAULT_DOT_MAX = None
+    DEFAULT_DOT_MIN = None
+    DEFAULT_SMALLEST_DOT = 0.0
+    DEFAULT_LARGEST_DOT = 200.0
+    DEFAULT_DOT_EDGECOLOR = None
+    DEFAULT_DOT_EDGELW = None
+    DEFAULT_SIZE_EXPONENT = 1.5
+
+    # default legend parameters
+    DEFAULT_SIZE_LEGEND_TITLE = 'Fraction of cells\nin group (%)'
+    DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
+    DEFAULT_LEGENDS_WIDTH = 1.5
+
     def __init__(self,
         adata: AnnData,
         var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -3677,16 +3701,35 @@ class DotPlot(BasePlot):
         self.dot_color_df = dot_color_df
         self.dot_size_df = dot_size_df
 
+        # Set default style parameters
+        self.cmap = self.DEFAULT_COLORMAP
+        self.dot_max = self.DEFAULT_DOT_MAX
+        self.dot_min = self.DEFAULT_DOT_MIN
+        self.smallest_dot = self.DEFAULT_SMALLEST_DOT
+        self.largest_dot = self.DEFAULT_LARGEST_DOT
+        self.color_on = self.DEFAULT_COLOR_ON
+        self.size_exponent = self.DEFAULT_SIZE_EXPONENT
+
+        self.dot_edge_color = self.DEFAULT_DOT_EDGECOLOR
+        self.dot_edge_lw = self.DEFAULT_DOT_EDGELW
+
+        # set legend defaults
+        self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
+        self.size_title = self.DEFAULT_SIZE_LEGEND_TITLE
+        self.legends_width = self.DEFAULT_LEGENDS_WIDTH
+        self.show_size_legend = True
+        self.show_colorbar = True
+
     def style(self,
-              cmap: str = 'RdBu_r',
-              color_on: Optional[Literal['dot', 'square']] = 'dot',
-              dot_max: Optional[float] = None,
-              dot_min: Optional[float] = None,
-              smallest_dot: Optional[float] = 0.0,
-              largest_dot: Optional[float] = 200,
-              dot_edge_color: Optional[ColorLike] = None,
-              dot_edge_lw: Optional[float] = None,
-              size_exponent: Optional[float] = 1.5
+              cmap: str = DEFAULT_COLORMAP,
+              color_on: Optional[Literal['dot', 'square']] = DEFAULT_COLOR_ON,
+              dot_max: Optional[float] = DEFAULT_DOT_MAX,
+              dot_min: Optional[float] = DEFAULT_DOT_MIN,
+              smallest_dot: Optional[float] = DEFAULT_SMALLEST_DOT,
+              largest_dot: Optional[float] = DEFAULT_LARGEST_DOT,
+              dot_edge_color: Optional[ColorLike] = DEFAULT_DOT_EDGECOLOR,
+              dot_edge_lw: Optional[float] = DEFAULT_DOT_EDGELW,
+              size_exponent: Optional[float] = DEFAULT_SIZE_EXPONENT
               ):
         """
         Modifies plot style
@@ -3761,9 +3804,9 @@ class DotPlot(BasePlot):
                show: Optional[bool] = True,
                show_size_legend: Optional[bool] = True,
                show_colorbar: Optional[bool] = True,
-               size_title: Optional[str] = 'Fraction of cells\nin group (%)',
-               color_title: Optional[str] = 'Expression\nlevel in group',
-               width: Optional[float] = 1.5
+               size_title: Optional[str] = DEFAULT_SIZE_LEGEND_TITLE,
+               color_title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
+               width: Optional[float] = DEFAULT_LEGENDS_WIDTH
                ):
         """
         Configure legend parameters.
@@ -4001,6 +4044,12 @@ class MatrixPlot(BasePlot):
     :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
     :func:`~scanpy.tl.rank_genes_groups` function.
     """
+
+    # default style parameters
+    DEFAULT_COLORMAP = 'RdBu_r'
+    DEFAULT_EDGE_COLOR = 'gray'
+    DEFAULT_EDGE_LW = 0.1
+
     def __init__(self,
         adata: AnnData,
         var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -4036,7 +4085,7 @@ class MatrixPlot(BasePlot):
                           ax=ax,
                           **kwds)
 
-        # 2. compute mean value
+        # compute mean value
         mean_obs = self.obs_tidy.groupby(level=0).mean()
 
         if standard_scale == 'group':
@@ -4052,10 +4101,14 @@ class MatrixPlot(BasePlot):
 
         self.mean_obs = mean_obs
 
+        self.cmap = self.DEFAULT_COLORMAP
+        self.edge_color = self.DEFAULT_EDGE_COLOR
+        self.edge_lw = self.DEFAULT_EDGE_LW
+
     def style(self,
-              cmap: str = 'RdBu_r',
-              edge_color: Optional[ColorLike] = 'gray',
-              edge_lw: Optional[float] = 0.1,
+              cmap: str = DEFAULT_COLORMAP,
+              edge_color: Optional[ColorLike] = DEFAULT_EDGE_COLOR,
+              edge_lw: Optional[float] = DEFAULT_EDGE_LW,
               ):
         """
         Modifies plot graphical parameters
@@ -4210,6 +4263,14 @@ class StackedViolin(BasePlot):
     :func:`~scanpy.tl.violin` and
     rank_genes_groups_stacked_violin: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
+    DEFAULT_STRIPPLOT = False
+    DEFAULT_JITTER = False
+    DEFAULT_JITTER_SIZE = 1
+    DEFAULT_LINE_WIDTH = 0.5
+    DEFAULT_ROW_PALETTE = 'muted'
+    DEFAULT_SCALE = 'width'
+    DEFAULT_PLOT_YTICKLABELS = False
+    DEFAULT_YLIM = None
 
     def __init__(self,
         adata: AnnData,
@@ -4257,15 +4318,28 @@ class StackedViolin(BasePlot):
         else:
             logg.warning('Unknown type for standard_scale, ignored')
 
+        self.row_palette = self.DEFAULT_ROW_PALETTE
+        self.stripplot = self.DEFAULT_STRIPPLOT
+        self.jitter = self.DEFAULT_JITTER
+        self.jitter_size = self.DEFAULT_JITTER_SIZE
+        self.plot_yticklabels = self.DEFAULT_PLOT_YTICKLABELS
+        self.ylim = self.DEFAULT_YLIM
+
+        self.kwds['linewidth'] = self.DEFAULT_LINE_WIDTH
+        self.kwds['scale'] = self.DEFAULT_SCALE
+
+        # turn of legends
+        self.legends_width = 0
+
     def style(self,
-              stripplot: Optional[bool] = False,
-              jitter: Optional[Union[float, bool]] = False,
-              jitter_size: Optional[int] = 1,
-              linewidth: Optional[float] = 0.5,
-              row_palette: Optional[str] = 'muted',
-              scale: Optional[Literal['area', 'count', 'width']] = 'width',
-              yticklabels: Optional[bool] = False,
-              ylim: Optional[Tuple[float, float]] = None,
+              stripplot: Optional[bool] = DEFAULT_STRIPPLOT,
+              jitter: Optional[Union[float, bool]] = DEFAULT_JITTER,
+              jitter_size: Optional[int] = DEFAULT_JITTER_SIZE,
+              linewidth: Optional[float] = DEFAULT_LINE_WIDTH,
+              row_palette: Optional[str] = DEFAULT_ROW_PALETTE,
+              scale: Optional[Literal['area', 'count', 'width']] = DEFAULT_SCALE,
+              yticklabels: Optional[bool] = DEFAULT_PLOT_YTICKLABELS,
+              ylim: Optional[Tuple[float, float]] = DEFAULT_YLIM,
               ):
         """
         Modifies plot graphical parameters
@@ -4319,7 +4393,7 @@ class StackedViolin(BasePlot):
         self.stripplot = stripplot
         self.jitter = jitter
         self.jitter_size = jitter_size
-        self.yticklabels = yticklabels
+        self.plot_yticklabels = yticklabels
         self.ylim = ylim
 
         self.kwds['linewidth'] = linewidth
@@ -4512,7 +4586,7 @@ class StackedViolin(BasePlot):
             row_ax.set_ylim(self.ylim)
         if self.log:
             row_ax.set_yscale('log')
-        if self.yticklabels:
+        if self.plot_yticklabels:
             row_ax.tick_params(
                 axis='y',
                 left=True,
@@ -4536,7 +4610,7 @@ class StackedViolin(BasePlot):
             label,
             rotation=0,
             fontsize='small',
-            labelpad=8 if self.yticklabels else 0,
+            labelpad=8 if self.plot_yticklabels else 0,
             ha='right',
             va='center',
         )
@@ -4555,9 +4629,3 @@ class StackedViolin(BasePlot):
 
     def _plot_legend(self, legend_ax, return_ax_dict, normalize):
         pass
-
-    def legend(self,
-               show: Optional[bool] = True,
-               width: Optional[float] = 1.5
-               ):
-        self.legends_width = 0
