@@ -4325,6 +4325,17 @@ class StackedViolin(BasePlot):
         self.plot_yticklabels = self.DEFAULT_PLOT_YTICKLABELS
         self.ylim = self.DEFAULT_YLIM
 
+        # set by default the violin plot cut=0 to limit the extend
+        # of the violin plot as this produces better plots that wont extend
+        # to negative values for example. From seaborn.violin documentation:
+        #
+        # cut: Distance, in units of bandwidth size, to extend the density past
+        # the extreme datapoints. Set to 0 to limit the violin range within
+        # the range of the observed data (i.e., to have the same effect as
+        # trim=True in ggplot.
+        self.kwds.setdefault('cut', 0)
+        self.kwds.setdefault('inner')
+
         self.kwds['linewidth'] = self.DEFAULT_LINE_WIDTH
         self.kwds['scale'] = self.DEFAULT_SCALE
 
@@ -4399,16 +4410,6 @@ class StackedViolin(BasePlot):
         self.kwds['linewidth'] = linewidth
         self.kwds['scale'] = scale
 
-        # set by default the violin plot cut=0 to limit the extend
-        # of the violin plot as this produces better plots that wont extend
-        # to negative values for example. From seaborn.violin documentation:
-        #
-        # cut: Distance, in units of bandwidth size, to extend the density past
-        # the extreme datapoints. Set to 0 to limit the violin range within
-        # the range of the observed data (i.e., to have the same effect as
-        # trim=True in ggplot.
-        self.kwds.setdefault('cut', 0)
-        self.kwds.setdefault('inner')
         return self
 
     def _mainplot(self, ax):
