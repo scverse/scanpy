@@ -279,7 +279,7 @@ class Ingest:
             self._rep = adata.obsm['X_pca'][:, : self._n_pcs]
         elif adata.n_vars > settings.N_PCS and 'X_pca' in adata.obsm.keys():
             self._use_rep = 'X_pca'
-            self._rep = adata.obsm['X_pca'][:, :settings.N_PCS]
+            self._rep = adata.obsm['X_pca'][:, : settings.N_PCS]
             self._n_pcs = self._rep.shape[1]
 
         if 'metric_kwds' in neighbors['params']:
