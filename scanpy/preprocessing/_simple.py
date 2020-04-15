@@ -9,7 +9,7 @@ import numba
 import numpy as np
 import scipy as sp
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
-from sklearn.utils import sparsefuncs, check_random_state
+from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 
