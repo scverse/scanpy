@@ -5,7 +5,7 @@ from sklearn.neighbors import KDTree
 from umap import UMAP
 
 import scanpy as sc
-from scanpy.preprocessing._simple import N_PCS
+from scanpy import settings
 from scanpy._utils import pkg_version
 
 
@@ -45,7 +45,7 @@ def test_representation(adatas):
     ing.fit(adata_new)
 
     assert ing._use_rep == 'X_pca'
-    assert ing._obsm['rep'].shape == (adata_new.n_obs, N_PCS)
+    assert ing._obsm['rep'].shape == (adata_new.n_obs, settings.N_PCS)
     assert ing._pca_centered
 
     sc.pp.pca(adata_ref, n_comps=30, zero_center=False)

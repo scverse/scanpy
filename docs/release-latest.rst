@@ -1,6 +1,13 @@
 .. role:: small
 .. role:: smaller
 
+On master
+~~~~~~~~~~
+
+.. rubric:: Performance
+
+- :func:`~scanpy.pp.pca` now uses efficient implicit centering for sparse matrices. This can lead to signifigantly improved performance for large datasets :pr:`1066` :smaller:`A Tarashansky`
+
 1.4.6 :small:`2020-03-17`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. rubric:: Functionality in `external`
