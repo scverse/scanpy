@@ -6,9 +6,22 @@ from scipy.sparse import csr_matrix
 import scanpy as sc
 
 # test "data" for 3 cells * 4 genes
-X = [[-1, 2, 0, 0], [1, 2, 4, 0], [0, 2, 2, 0]] # with gene std 1,nan,2,nan and center 0,2,2,0
-X_scaled = [[-1, 2, 0, 0], [1, 2, 2, 0], [0, 2, 1, 0]] # with gene std 1,nan,1,nan and center 0,2,1,0
-X_centered = [[-1, 0, -1, 0], [1, 0, 1, 0], [0, 0, 0, 0]] # with gene std 1,nan,1,nan and center 0,0,0,0
+X = [
+    [-1, 2, 0, 0],
+    [1, 2, 4, 0],
+    [0, 2, 2, 0],
+]  # with gene std 1,nan,2,nan and center 0,2,2,0
+X_scaled = [
+    [-1, 2, 0, 0],
+    [1, 2, 2, 0],
+    [0, 2, 1, 0],
+]  # with gene std 1,nan,1,nan and center 0,2,1,0
+X_centered = [
+    [-1, 0, -1, 0],
+    [1, 0, 1, 0],
+    [0, 0, 0, 0],
+]  # with gene std 1,nan,1,nan and center 0,0,0,0
+
 
 @pytest.mark.parametrize('typ', [np.array, csr_matrix], ids=lambda x: x.__name__)
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
@@ -39,4 +52,3 @@ def test_scale(typ, dtype):
     data2 = typ(X, dtype=dtype)
     cdata2 = sc.pp.scale(data2, zero_center=False, copy=True)
     assert np.allclose(csr_matrix(cdata2).toarray(), X_scaled)
-
