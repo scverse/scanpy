@@ -688,8 +688,8 @@ def scale(
 
     .. note::
         Variables (genes) that do not display any variation (are constant across
-        all observations) are retained and set to 0 during this operation. In
-        the future, they might be set to NaNs.
+        all observations) are retained and (for zero_center==True) set to 0
+        during this operation. In the future, they might be set to NaNs.
 
     Parameters
     ----------
@@ -719,6 +719,15 @@ def scale(
                 'densified and may lead to large memory consumption.'
             )
             adata.X = adata.X.toarray()
+        if np.issubdtype(adata.X.dtype, np.integer):
+            logg.debug(
+                '... scale_data: as scaling leads to float results, integer '
+                'input is cast to float, returning copy.'
+            )
+            if issparse(adata.X):
+                adata.X = adata.X.__class__(adata.X, dtype=np.float) # keep the identical sparse matrix type but with float data
+            else:
+                adata.X = np.array(adata.X, dtype=np.float) # keep dense array but with float data
         scale(adata.X, zero_center=zero_center, max_value=max_value, copy=False)
         return adata if copy else None
     X = data.copy() if copy else data  # proceed with the data matrix
@@ -736,6 +745,16 @@ def scale(
             'and may lead to large memory consumption, returning copy.'
         )
         X = X.toarray()
+        copy = True
+    if np.issubdtype(X.dtype, np.integer):
+        logg.debug(
+            '... scale_data: as scaling leads to float results, integer '
+            'input is cast to float, returning copy.'
+        )
+        if issparse(X):
+            X = X.__class__(X, dtype=np.float) # keep the identical sparse matrix type but with float data
+        else:
+            X = np.array(X, dtype=np.float) # keep dense array but with float data
         copy = True
     _scale(X, zero_center)
     if max_value is not None:
@@ -1026,13 +1045,13 @@ def _scale(X, zero_center=True):
     if True:
         mean, var = _get_mean_var(X)
         scale = np.sqrt(var)
+        scale[scale == 0] = 1
         if issparse(X):
             if zero_center: raise ValueError('Cannot zero-center sparse matrix.')
             sparsefuncs.inplace_column_scale(X, 1/scale)
         else:
             if zero_center:
                 X -= mean
-            scale[scale == 0] = 1e-12
             X /= scale
     else:
         from sklearn.preprocessing import StandardScaler
