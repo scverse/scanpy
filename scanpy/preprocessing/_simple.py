@@ -2,6 +2,7 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+from functools import singledispatch
 import warnings
 from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
 
@@ -17,6 +18,7 @@ from .. import logging as logg
 from .._settings import settings as sett
 from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, AnyRandom
 from .._compat import Literal
+from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 
@@ -677,12 +679,8 @@ def _regress_out_chunk(data):
     return np.vstack(responses_chunk_list)
 
 
-def scale(
-    data: Union[AnnData, np.ndarray, spmatrix],
-    zero_center: bool = True,
-    max_value: Optional[float] = None,
-    copy: bool = False,
-) -> Optional[AnnData]:
+@singledispatch
+def scale(X, *args, **kwargs):
     """\
     Scale data to unit variance and zero mean.
 
@@ -704,43 +702,98 @@ def scale(
     copy
         If an :class:`~anndata.AnnData` is passed,
         determines whether a copy is returned.
+    layer
+        If provided, which element of layers to scale.
+    obsm
+        If provided, which element of obsm to scale.
 
     Returns
     -------
-    Depending on `copy` returns or updates `adata` with a scaled `adata.X`.
+    Depending on `copy` returns or updates `adata` with a scaled `adata.X`,
+    annotated with `'mean'` and `'std'` in `adata.var`.
     """
-    if isinstance(data, AnnData):
-        adata = data.copy() if copy else data
-        view_to_actual(adata)
-        # need to add the following here to make inplace logic work
-        if zero_center and issparse(adata.X):
-            logg.debug(
-                '... scale_data: as `zero_center=True`, sparse input is '
-                'densified and may lead to large memory consumption.'
-            )
-            adata.X = adata.X.toarray()
-        scale(adata.X, zero_center=zero_center, max_value=max_value, copy=False)
-        return adata if copy else None
-    X = data.copy() if copy else data  # proceed with the data matrix
-    zero_center = not issparse(X) if zero_center is None else zero_center
+    return scale_array(X, *args, **kwargs)
+
+
+@scale.register(np.ndarray)
+def scale_array(
+    X,
+    zero_center: bool = True,
+    max_value: Optional[float] = None,
+    copy: bool = False,
+    return_mean_std: bool = False,
+):
+    if copy:
+        X = X.copy()
     if not zero_center and max_value is not None:
-        logg.debug(
-            '... scale_data: be careful when using `max_value` '
+        logg.info(  # Be careful of what? This should be more specific
+            '... be careful when using `max_value` '
             'without `zero_center`.'
         )
+
+    mean, var = _get_mean_var(X)
+    std = np.sqrt(var)
+    if issparse(X):
+        if zero_center: raise ValueError('Cannot zero-center sparse matrix.')
+        sparsefuncs.inplace_column_scale(X, 1/std)
+    else:
+        X -= mean
+        std[std == 0] = 1e-12
+        X /= std
+
+    # do the clipping
     if max_value is not None:
         logg.debug(f'... clipping at max_value {max_value}')
-    if zero_center and issparse(X):
-        logg.debug(
-            '... scale_data: as `zero_center=True`, sparse input is densified '
-            'and may lead to large memory consumption, returning copy.'
+        X[X > max_value] = max_value
+
+    if return_mean_std:
+        return X, mean, std
+    else:
+        return X
+
+
+@scale.register(spmatrix)
+def scale_sparse(
+    X,
+    *,
+    zero_center: bool = True,
+    copy: bool = False,
+    **kwargs
+):
+    # need to add the following here to make inplace logic work
+    if zero_center:
+        logg.info(
+            '... as `zero_center=True`, sparse input is '
+            'densified and may lead to large memory consumption'
         )
         X = X.toarray()
-        copy = True
-    _scale(X, zero_center)
-    if max_value is not None:
-        X[X > max_value] = max_value
-    return X if copy else None
+        copy = False  # Since the data has been copied
+    return scale_array(X, zero_center=zero_center, copy=copy, **kwargs)
+
+
+@scale.register(AnnData)
+def scale_anndata(
+    adata: AnnData,
+    *,
+    zero_center: bool = True,
+    max_value: Optional[float] = None,
+    layer=None,
+    obsm=None,
+    copy: bool = False,
+) -> Optional[AnnData]:
+    adata = adata.copy() if copy else adata
+    view_to_actual(adata)
+    X = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    X, adata.var["mean"], adata.var["std"] = scale(
+        X,
+        zero_center=zero_center,
+        max_value=max_value,
+        copy=False,  # because a copy has already been made, if it were to be made
+        return_mean_std=True,
+    )
+    _set_obs_rep(adata, X, layer=layer, obsm=obsm)
+    if copy:
+        return adata
 
 
 def subsample(
@@ -1017,25 +1070,3 @@ def _pca_fallback(data, n_comps=2):
     # project data points on eigenvectors
     return np.dot(evecs.T, data.T).T
 
-
-def _scale(X, zero_center=True):
-    # - using sklearn.StandardScaler throws an error related to
-    #   int to long trafo for very large matrices
-    # - using X.multiply is slower
-    #   the result differs very slightly, why?
-    if True:
-        mean, var = _get_mean_var(X)
-        scale = np.sqrt(var)
-        if issparse(X):
-            if zero_center: raise ValueError('Cannot zero-center sparse matrix.')
-            sparsefuncs.inplace_column_scale(X, 1/scale)
-        else:
-            X -= mean
-            scale[scale == 0] = 1e-12
-            X /= scale
-    else:
-        from sklearn.preprocessing import StandardScaler
-        scaler = StandardScaler(with_mean=zero_center, copy=False).partial_fit(X)
-        # user R convention (unbiased estimator)
-        scaler.scale_ *= np.sqrt(X.shape[0]/(X.shape[0]-1))
-        scaler.transform(X)
