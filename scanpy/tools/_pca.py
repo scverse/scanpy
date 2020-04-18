@@ -1,3 +1,1 @@
-from ..preprocessing import _simple as pp
-
-pca = pp.pca
+from ..preprocessing import pca
