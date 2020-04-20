@@ -743,16 +743,95 @@ def scale(
     return X if copy else None
 
 
+def sample(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    fraction: Optional[float] = None,
+    n: Optional[int] = None,
+    random_state: AnyRandom = 0,
+    copy: bool = False,
+    replace: bool = False,
+    axis: int = 0,
+) -> Optional[AnnData]:
+    """\
+    Sample observations or variables with or without replacement.
+
+    Parameters
+    ----------
+    data
+        The (annotated) data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
+    fraction
+        Subsample to this `fraction` of the number of observations or variables.
+        See `axis`.
+    n
+        Sample to this number of observations or variables. See `axis`.
+    random_state
+        Random seed to change subsampling.
+    copy
+        If an :class:`~anndata.AnnData` is passed,
+        determines whether a copy is returned.
+    replace
+        If True, samples are drawn with replacement.
+    axis
+        Sample observations (axis=0) or variables (axis=1). Default is 0.
+
+    Returns
+    -------
+    Returns `X[indices] or X[:, indices], indices` depending on the axis
+    argument if data is array-like, otherwise samples the passed
+    :class:`~anndata.AnnData` (`copy == False`) or returns a sampled
+    copy of it (`copy == True`).
+    """
+    np.random.seed(random_state)
+    old_n = data.shape[axis]
+    if axis not in (0, 1):
+        raise ValueError(f'`axis` must be either 0 or 1.')
+    if fraction is None and n is None:
+        raise ValueError(f'Either `fraction` or `n` must be set.')
+    if fraction is not None and n is not None:
+        raise ValueError(f'Providing both `fraction` and `n` is not allowed.')
+    if n is not None:
+        new_n = n
+    elif fraction is not None:
+        if fraction < 0:
+            raise ValueError(f'`fraction needs to be nonnegative`, not {fraction}')
+        if not replace and fraction > 1:
+            raise ValueError(
+                f'If replace=False, `fraction` needs to be within [0, 1], not {fraction}'
+            )
+        new_n = int(fraction * old_n)
+        obs_or_var_str = 'observations' if axis == 0 else 'variables'
+        logg.debug(f'... sampled to {new_n} {obs_or_var_str}')
+    else:
+        raise ValueError('Either pass `n_obs` or `fraction`.')
+    indices = np.random.choice(old_n, size=new_n, replace=replace)
+    if isinstance(data, AnnData):
+        if copy:
+            view = data[indices] if axis == 0 else data[:, indices]
+            return view.copy()
+        else:
+            if axis == 0:
+                data._inplace_subset_obs(indices)
+            else:
+                data._inplace_subset_var(indices)
+    else:
+        X = data
+        return X[indices] if axis == 0 else X[:, indices], indices
+
+
 def subsample(
     data: Union[AnnData, np.ndarray, spmatrix],
     fraction: Optional[float] = None,
     n_obs: Optional[int] = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
-    replace: bool = False,
 ) -> Optional[AnnData]:
     """\
     Subsample to a fraction of the number of observations.
+
+    .. warning::
+        .. deprecated:: 1.4.7
+            Use :func:`~scanpy.pp.sample` instead.
 
     Parameters
     ----------
@@ -768,8 +847,6 @@ def subsample(
     copy
         If an :class:`~anndata.AnnData` is passed,
         determines whether a copy is returned.
-    replace
-        If True, samples are drawn with replacement.
 
     Returns
     -------
@@ -777,28 +854,15 @@ def subsample(
     subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
     returns a subsampled copy of it (`copy == True`).
     """
-    np.random.seed(random_state)
-    old_n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
-    if n_obs is not None:
-        new_n_obs = n_obs
-    elif fraction is not None:
-        if fraction > 1 or fraction < 0:
-            raise ValueError(
-                f'`fraction` needs to be within [0, 1], not {fraction}'
-            )
-        new_n_obs = int(fraction * old_n_obs)
-        logg.debug(f'... subsampled to {new_n_obs} data points')
-    else:
-        raise ValueError('Either pass `n_obs` or `fraction`.')
-    obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=replace)
-    if isinstance(data, AnnData):
-        if copy:
-            return data[obs_indices].copy()
-        else:
-            data._inplace_subset_obs(obs_indices)
-    else:
-        X = data
-        return X[obs_indices], obs_indices
+    return sample(
+        data=data,
+        fraction=fraction,
+        n=n_obs,
+        random_state=random_state,
+        copy=copy,
+        replace=False,
+        axis=0,
+    )
 
 
 @deprecated_arg_names({"target_counts": "counts_per_cell"})
@@ -970,7 +1034,6 @@ def _downsample_array(
             geneptr += 1
         col[geneptr] += 1
     return col
-
 
 
 def zscore_deprecated(X: np.ndarray) -> np.ndarray:

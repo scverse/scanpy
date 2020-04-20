@@ -91,20 +91,37 @@ def test_normalize_per_cell():
         axis=1).A1.tolist()
 
 
-def test_subsample():
+def test_sample():
     adata = AnnData(np.ones((200, 10)))
-    sc.pp.subsample(adata, n_obs=40)
+    sc.pp.sample(adata, n=40)
     assert adata.n_obs == 40
-    sc.pp.subsample(adata, fraction=0.1)
+    sc.pp.sample(adata, fraction=0.1)
     assert adata.n_obs == 4
-    sc.pp.subsample(adata, n_obs=201, replace=True)
+    sc.pp.sample(adata, n=201, replace=True)
     assert adata.n_obs == 201
+    sc.pp.sample(adata, n=10, axis=1)
+    assert adata.n_vars == 10
+    sc.pp.sample(adata, n=11, axis=1, replace=True)
+    assert adata.n_vars == 11
+    sc.pp.sample(adata, fraction=2.0, axis=1, replace=True)
+    assert adata.n_vars == 22
+
+    adata = AnnData(sp.csr_matrix(np.ones((200, 10))))
+    sc.pp.sample(adata, fraction=2.0, axis=1, replace=True)
+    assert adata.n_vars == 20
 
 
-def test_subsample_copy():
+def test_sample_copy():
     adata = AnnData(np.ones((200, 10)))
-    assert sc.pp.subsample(adata, n_obs=40, copy=True).shape == (40, 10)
-    assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
+    assert sc.pp.sample(adata, n=40, copy=True).shape == (40, 10)
+    assert sc.pp.sample(adata, fraction=0.1, copy=True).shape == (20, 10)
+    assert sc.pp.sample(adata, fraction=0.1, copy=True).shape == (20, 10)
+    X = sc.pp.sample(adata, fraction=2.0, axis=1, replace=True, copy=True)
+    assert X.shape == (200, 20)
+
+    adata = AnnData(sp.csr_matrix(np.ones((200, 10))))
+    X = sc.pp.sample(adata, fraction=2.0, axis=1, replace=True, copy=True)
+    assert X.shape == (200, 20)
 
 
 def test_scale():
