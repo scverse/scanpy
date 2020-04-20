@@ -30,3 +30,7 @@ def test_umap_init_paga(layout):
     sc.tl.paga(pbmc)
     sc.pl.paga(pbmc, layout=layout, show=False)
     sc.tl.umap(pbmc, init_pos="paga")
+
+    sc.tl.paga(pbmc, key_added='some_key')
+    sc.pl.paga(pbmc, show=False, key='some_key')
+    sc.tl.umap(pbmc, init_pos="paga", init_pos_paga_key='some_key')

@@ -773,6 +773,56 @@ def test_paga(image_comparer):
     sc.pl.paga_compare(pbmc, basis='X_pca', legend_fontweight='normal', **common)
     save_and_compare_images('master_paga_compare_pca')
 
+    # tests for key_added
+    sc.tl.paga(pbmc, groups='bulk_labels', key_added='key')
+    sc.pl.paga(pbmc, threshold=0.5, max_edge_width=1.0, show=False, key='key')
+    save_and_compare_images('master_paga')
+
+    sc.pl.paga(
+        pbmc, color='CST3', threshold=0.5, max_edge_width=1.0, show=False, key='key',
+    )
+    save_and_compare_images('master_paga_continuous')
+
+    sc.pl.paga(
+        pbmc,
+        color='cool_feature',
+        threshold=0.5,
+        max_edge_width=1.0,
+        show=False,
+        key='key',
+    )
+    save_and_compare_images('master_paga_continuous_obs')
+
+    sc.pl.paga(
+        pbmc,
+        color=['CST3', 'GATA2'],
+        threshold=0.5,
+        max_edge_width=1.0,
+        show=False,
+        key='key',
+    )
+    save_and_compare_images('master_paga_continuous_multiple')
+
+    sc.pl.paga_compare(
+        pbmc,
+        legend_fontoutline=2,
+        threshold=0.5,
+        max_edge_width=1.0,
+        show=False,
+        key='key',
+    )
+    save_and_compare_images('master_paga_compare')
+
+    sc.pl.paga_compare(
+        pbmc,
+        basis='X_pca',
+        legend_fontweight='normal',
+        threshold=0.5,
+        show=False,
+        key='key',
+    )
+    save_and_compare_images('master_paga_compare_pca')
+
 
 def test_no_copy():
     # https://github.com/theislab/scanpy/issues/1000

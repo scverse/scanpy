@@ -19,6 +19,7 @@ def paga(
     groups: Optional[str] = None,
     use_rna_velocity: bool = False,
     model: Literal['v1.2', 'v1.0'] = 'v1.2',
+    key_added: Optional[str] = None,
     copy: bool = False,
 ):
     """\
@@ -60,16 +61,19 @@ def paga(
         to change in the future.
     model
         The PAGA connectivity model.
+    key_added
+        `adata.uns['paga']` key under which to add the PAGA connectivity information.
     copy
         Copy `adata` before computation and return a copy. Otherwise, perform
         computation inplace and return `None`.
 
     Returns
     -------
-    **connectivities** : :class:`numpy.ndarray` (adata.uns['connectivities'])
+    **connectivities** : :class:`numpy.ndarray` (adata.uns['paga']['connectivities'] or adata.uns['paga'][key_added]['connectivities'])
         The full adjacency matrix of the abstracted graph, weights correspond to
         confidence in the connectivities of partitions.
-    **connectivities_tree** : :class:`scipy.sparse.csr_matrix` (adata.uns['connectivities_tree'])
+    **connectivities_tree** : :class:`scipy.sparse.csr_matrix` (adata.uns['paga']['connectivities_tree'] \
+or adata.uns['paga'][key_added]['connectivities_tree'])
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
 
@@ -107,29 +111,35 @@ def paga(
     _utils.sanitize_anndata(adata)
     start = logg.info('running PAGA')
     paga = PAGA(adata, groups, model=model)
+
     # only add if not present
     if 'paga' not in adata.uns:
         adata.uns['paga'] = {}
+    if key_added is not None and key_added not in adata.uns['paga']:
+        adata.uns['paga'][key_added] = {}
+    uns = adata.uns['paga'] if key_added is None else adata.uns['paga'][key_added]
+
     if not use_rna_velocity:
         paga.compute_connectivities()
-        adata.uns['paga']['connectivities'] = paga.connectivities
-        adata.uns['paga']['connectivities_tree'] = paga.connectivities_tree
-        # adata.uns['paga']['expected_n_edges_random'] = paga.expected_n_edges_random
-        adata.uns[groups + '_sizes'] = np.array(paga.ns)
+        uns['connectivities'] = paga.connectivities
+        uns['connectivities_tree'] = paga.connectivities_tree
+        # uns['expected_n_edges_random'] = paga.expected_n_edges_random
+        uns[groups + '_sizes'] = np.array(paga.ns)
     else:
         paga.compute_transitions()
-        adata.uns['paga']['transitions_confidence'] = paga.transitions_confidence
-        # adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
-    adata.uns['paga']['groups'] = groups
+        uns['transitions_confidence'] = paga.transitions_confidence
+        # uns['transitions_ttest'] = paga.transitions_ttest
+    uns['groups'] = groups
+    key_added_str = key_added + '/' if key_added is not None else ''
     logg.info(
         '    finished',
         time=start,
         deep='added\n' + (
-            "    'paga/transitions_confidence', connectivities adjacency (adata.uns)"
+            f"    'paga/{key_added_str}transitions_confidence', connectivities adjacency (adata.uns)"
             # "    'paga/transitions_ttest', t-test on transitions (adata.uns)"
             if use_rna_velocity else
-            "    'paga/connectivities', connectivities adjacency (adata.uns)\n"
-            "    'paga/connectivities_tree', connectivities subtree (adata.uns)"
+            f"    'paga/{key_added_str}connectivities', connectivities adjacency (adata.uns)\n"
+            f"    'paga/{key_added_str}connectivities_tree', connectivities subtree (adata.uns)"
         ),
     )
     return adata if copy else None
@@ -360,39 +370,45 @@ class PAGA:
         self.transitions_confidence = transitions_confidence.T
 
 
-def paga_degrees(adata: AnnData) -> List[int]:
+def paga_degrees(adata: AnnData, key: Optional[str] = None) -> List[int]:
     """Compute the degree of each node in the abstracted graph.
 
     Parameters
     ----------
     adata
         Annotated data matrix.
+    key
+        `adata.uns['paga']` key under which the PAGA connectivity information is stored.
 
     Returns
     -------
     List of degrees for each node.
     """
     import networkx as nx
-    g = nx.Graph(adata.uns['paga']['connectivities'])
+    uns = adata.uns['paga'] if key is None else adata.uns['paga'][key]
+    g = nx.Graph(uns['connectivities'])
     degrees = [d for _, d in g.degree(weight='weight')]
     return degrees
 
 
-def paga_expression_entropies(adata) -> List[float]:
+def paga_expression_entropies(adata: AnnData, key: Optional[str] = None) -> List[float]:
     """Compute the median expression entropy for each node-group.
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix.
+    key
+        `adata.uns['paga']` key under which the PAGA connectivity information is stored.
 
     Returns
     -------
     Entropies of median expressions for each node.
     """
     from scipy.stats import entropy
+    uns = adata.uns['paga'] if key is None else adata.uns['paga'][key]
     groups_order, groups_masks = _utils.select_groups(
-        adata, key=adata.uns['paga']['groups']
+        adata, key=uns['groups']
     )
     entropies = []
     for mask in groups_masks:
@@ -413,6 +429,8 @@ class PAGAComparePathsResult(NamedTuple):
 def paga_compare_paths(
     adata1: AnnData,
     adata2: AnnData,
+    key: Optional[str] = None,
+    key2: Optional[str] = None,
     adjacency_key: str = 'connectivities',
     adjacency_key2: Optional[str] = None,
 ) -> PAGAComparePathsResult:
@@ -430,6 +448,9 @@ def paga_compare_paths(
     ----------
     adata1, adata2
         Annotated data matrices to compare.
+    key, key2
+        `uns['paga']` key under which the PAGA connectivity information is stored in
+        adata1 and adata2.
     adjacency_key
         Key for indexing the adjacency matrices in `.uns['paga']` to be used in
         adata1 and adata2.
@@ -439,7 +460,7 @@ def paga_compare_paths(
     Returns
     -------
     NamedTuple with attributes
-    
+
     frac_steps
         fraction of consistent steps
     n_steps
@@ -450,11 +471,13 @@ def paga_compare_paths(
         Number of paths
     """
     import networkx as nx
-    g1 = nx.Graph(adata1.uns['paga'][adjacency_key])
-    g2 = nx.Graph(adata2.uns['paga'][adjacency_key2 if adjacency_key2 is not None else adjacency_key])
+    uns1 = adata1.uns['paga'] if key is None else adata1.uns['paga'][key]
+    uns2 = adata2.uns['paga'] if key2 is None else adata2.uns['paga'][key]
+    g1 = nx.Graph(uns1[adjacency_key])
+    g2 = nx.Graph(uns2[adjacency_key2 if adjacency_key2 is not None else adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.debug(f'leaf nodes in graph 1: {leaf_nodes1}')
-    paga_groups = adata1.uns['paga']['groups']
+    paga_groups = uns1['groups']
     asso_groups1 = _utils.identify_groups(
         adata1.obs[paga_groups].values,
         adata2.obs[paga_groups].values,

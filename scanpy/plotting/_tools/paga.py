@@ -28,6 +28,7 @@ def paga_compare(
     color=None,
     alpha=None,
     groups=None,
+    key=None,
     components=None,
     projection: Literal['2d', '3d'] = '2d',
     legend_loc='on data',
@@ -62,6 +63,8 @@ def paga_compare(
     ----------
     adata
         Annotated data matrix.
+    key
+        adata.uns['paga'] key under which the PAGA connectivity information is stored.
     kwds_scatter
         Keywords for :func:`~scanpy.pl.scatter`.
     kwds_paga
@@ -75,8 +78,9 @@ def paga_compare(
         panels=[0, 1],
         right_margin=right_margin,
     )
+    uns = adata.uns['paga'] if key is None else adata.uns['paga'][key]
     if color is None:
-        color = adata.uns['paga']['groups']
+        color = uns['groups']
     suptitle = None  # common title for entire figure
     if title_graph is None:
         suptitle = color if title is None else title
@@ -115,10 +119,10 @@ def paga_compare(
         save=False,
     )
     if 'pos' not in paga_graph_params:
-        if color == adata.uns['paga']['groups']:
+        if color == uns['groups']:
             paga_graph_params['pos'] = _utils._tmp_cluster_pos
         else:
-            paga_graph_params['pos'] = adata.uns['paga']['pos']
+            paga_graph_params['pos'] = uns['pos']
     xlim, ylim = axs[0].get_xlim(), axs[0].get_ylim()
     axs[1].set_xlim(xlim)
     axs[1].set_ylim(ylim)
@@ -286,6 +290,7 @@ def paga(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
+    key: Optional[str] = None,
 ) -> Union[Axes, List[Axes], None]:
     """\
     Plot the PAGA graph through thresholding low-connectivity edges.
@@ -343,7 +348,7 @@ def paga(
     transitions
         Key for `.uns['paga']` that specifies the matrix that – for instance
         `'transistions_confidence'` – that specifies the matrix that stores the
-        arrows.
+        arrows. See also `key`.
     solid_edges
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn solid black.
@@ -399,6 +404,8 @@ def paga(
         Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
     ax
         A matplotlib axes object.
+    key
+        adata.uns['paga'] key under which the PAGA connectivity information is stored.
 
     Returns
     -------
@@ -425,8 +432,10 @@ def paga(
         logg.warning('`groups` is deprecated in `pl.paga`: use `labels` instead')
     if colors is None:
         colors = color
-
-    groups_key = adata.uns['paga']['groups']
+    if key is not None and key not in adata.uns['paga']:
+        raise ValueError('Key not found in adata.uns["paga"]')
+    uns = adata.uns['paga'] if key is None else adata.uns['paga'][key]
+    groups_key = uns['groups']
 
     def is_flat(x):
         has_one_per_category = (
@@ -472,7 +481,7 @@ def paga(
         root = [list(labels).index(r) for r in root]
 
     # define the adjacency matrices
-    adjacency_solid = adata.uns['paga'][solid_edges].copy()
+    adjacency_solid = uns[solid_edges].copy()
     adjacency_dashed = None
     if threshold is None:
         threshold = 0.01  # default threshold
@@ -480,7 +489,7 @@ def paga(
         adjacency_solid.data[adjacency_solid.data < threshold] = 0
         adjacency_solid.eliminate_zeros()
     if dashed_edges is not None:
-        adjacency_dashed = adata.uns['paga'][dashed_edges].copy()
+        adjacency_dashed = uns[dashed_edges].copy()
         if threshold > 0:
             adjacency_dashed.data[adjacency_dashed.data < threshold] = 0
             adjacency_dashed.eliminate_zeros()
@@ -489,7 +498,7 @@ def paga(
     if pos is None:
         adj_tree = None
         if layout in {'rt', 'rt_circular', 'eq_tree'}:
-            adj_tree = adata.uns['paga']['connectivities_tree']
+            adj_tree = uns['connectivities_tree']
         pos = _compute_pos(
             adjacency_solid,
             layout=layout, random_state=random_state, init_pos=init_pos,
@@ -512,6 +521,7 @@ def paga(
             sct = _paga_graph(
                 adata,
                 axs[icolor],
+                key=key,
                 colors=c,
                 solid_edges=solid_edges,
                 dashed_edges=dashed_edges,
@@ -560,7 +570,7 @@ def paga(
                     cax=ax_cb,
                 )
     if add_pos:
-        adata.uns['paga']['pos'] = pos
+        uns['pos'] = pos
         logg.hint("added 'pos', the PAGA positions (adata.uns['paga'])")
     if plot:
         _utils.savefig_or_show('paga', show=show, save=save)
@@ -572,6 +582,7 @@ def paga(
 def _paga_graph(
     adata,
     ax,
+    key=None,
     solid_edges=None,
     dashed_edges=None,
     adjacency_solid=None,
@@ -604,13 +615,12 @@ def _paga_graph(
 ):
     import networkx as nx
 
+    uns = adata.uns['paga'] if key is None else adata.uns['paga'][key]
     node_labels = labels  # rename for clarity
-    if (node_labels is not None
-        and isinstance(node_labels, str)
-        and node_labels != adata.uns['paga']['groups']):
+    if node_labels is not None and isinstance(node_labels, str) and node_labels != uns['groups']:
         raise ValueError('Provide a list of group labels for the PAGA groups {}, not {}.'
-                         .format(adata.uns['paga']['groups'], node_labels))
-    groups_key = adata.uns['paga']['groups']
+                         .format(uns['groups'], node_labels))
+    groups_key = uns['groups']
     if node_labels is None:
         node_labels = adata.obs[groups_key].cat.categories
 
@@ -758,7 +768,7 @@ def _paga_graph(
             nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
     # draw directed edges
     else:
-        adjacency_transitions = adata.uns['paga'][transitions].copy()
+        adjacency_transitions = uns[transitions].copy()
         if threshold is None: threshold = 0.01
         adjacency_transitions.data[adjacency_transitions.data < threshold] = 0
         adjacency_transitions.eliminate_zeros()
@@ -791,8 +801,8 @@ def _paga_graph(
     ax.set_yticks([])
 
     # groups sizes
-    if groups_key is not None and groups_key + '_sizes' in adata.uns:
-        groups_sizes = adata.uns[groups_key + '_sizes']
+    if groups_key is not None and groups_key + '_sizes' in uns:
+        groups_sizes = uns[groups_key + '_sizes']
     else:
         groups_sizes = np.ones(len(node_labels))
     base_scale_scatter = 2000
@@ -877,8 +887,9 @@ def paga_path(
     use_raw: bool = True,
     annotations: Sequence[str] = ('dpt_pseudotime',),
     color_map: Union[str, Colormap, None] = None,
-    color_maps_annotations: Mapping[str, Union[str, Colormap]] =
-        MappingProxyType(dict(dpt_pseudotime='Greys')),
+    color_maps_annotations: Mapping[
+        str, Union[str, Colormap]
+    ] = MappingProxyType(dict(dpt_pseudotime='Greys')),
     palette_groups: Optional[Sequence[str]] = None,
     n_avg: int = 1,
     groups_key: Optional[str] = None,
@@ -898,6 +909,7 @@ def paga_path(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
+    key: Optional[str] = None,
 ) -> Optional[Axes]:
     """\
     Gene expression and annotation changes along paths in the abstracted graph.
@@ -951,6 +963,8 @@ def paga_path(
         Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
     ax
          A matplotlib axes object.
+    key
+        adata.uns['paga'] key under which the PAGA connectivity information is stored.
 
     Returns
     -------
@@ -958,14 +972,16 @@ def paga_path(
     If `return_data`, return the timeseries data in addition to an axes.
     """
     ax_was_none = ax is None
-
+    if key is not None and key not in adata.uns['paga']:
+        raise ValueError('Key not found in adata.uns["paga"]')
+    uns = adata.uns['paga'] if key is None else adata.uns['paga'][key]
     if groups_key is None:
-        if 'groups' not in adata.uns['paga']:
+        if 'groups' not in uns:
             raise KeyError(
                 'Pass the key of the grouping with which you ran PAGA, '
                 'using the parameter `groups_key`.'
             )
-        groups_key = adata.uns['paga']['groups']
+        groups_key = uns['groups']
     groups_names = adata.obs[groups_key].cat.categories
 
     if 'dpt_pseudotime' not in adata.obs.keys():
@@ -1185,10 +1201,12 @@ def paga_adjacency(
     color_map=None,
     show=None,
     save=None,
+    key=None,
 ):
     """Connectivity of paga groups."""
-    connectivity = adata.uns[adjacency].toarray()
-    connectivity_select = adata.uns[adjacency_tree]
+    uns = adata.uns['paga'] if key is None else adata.uns['paga'][key]
+    connectivity = uns[adjacency].toarray()
+    connectivity_select = uns[adjacency_tree]
     if as_heatmap:
         matrix(connectivity, color_map=color_map, show=False)
         for i in range(connectivity_select.shape[0]):

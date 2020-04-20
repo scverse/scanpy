@@ -24,6 +24,7 @@ def umap(
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
     init_pos: Union[_InitPos, np.ndarray, None] = 'spectral',
+    init_pos_paga_key: Optional[None] = None,
     random_state: AnyRandom = 0,
     a: Optional[float] = None,
     b: Optional[float] = None,
@@ -83,6 +84,8 @@ def umap(
         * 'spectral': use a spectral embedding of the graph.
         * 'random': assign initial embedding positions at random.
         * A numpy array of initial embedding positions.
+    init_pos_paga_key
+        Use the PAGA representation under adata.uns['paga'][init_pos_paga_key].
     random_state
         If `int`, `random_state` is the seed used by the random number generator;
         If `RandomState` or `Generator`, `random_state` is the random number generator;
@@ -139,7 +142,12 @@ def umap(
     if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(adata, random_state=random_state, neighbors_key=neighbors_key)
+        init_coords = get_init_pos_from_paga(
+          adata,
+          random_state=random_state,
+          neighbors_key=neighbors_key,
+          key=init_pos_paga_key,
+        )
     else:
         init_coords = init_pos  # Let umap handle it
     if hasattr(init_coords, "dtype"):

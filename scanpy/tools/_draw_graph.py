@@ -20,6 +20,7 @@ def draw_graph(
     adata: AnnData,
     layout: _Layout = 'fa',
     init_pos: Union[str, bool, None] = None,
+    init_pos_paga_key: Optional[str] = None,
     root: Optional[int] = None,
     random_state: AnyRandom = 0,
     n_jobs: Optional[int] = None,
@@ -75,6 +76,8 @@ def draw_graph(
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
+    init_pos_paga_key
+        Use the PAGA representation under adata.uns['paga'][init_pos_paga_key].
     neighbors_key
         If not specified, draw_graph looks .obsp['connectivities'] for connectivities
         (default storage place for pp.neighbors).
@@ -113,6 +116,7 @@ def draw_graph(
             adata,
             adjacency,
             random_state=random_state,
+            key=init_pos_paga_key,
             neighbors_key=neighbors_key,
             obsp=obsp,
         )
