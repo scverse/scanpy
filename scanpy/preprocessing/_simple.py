@@ -761,8 +761,9 @@ def sample(
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     fraction
-        Subsample to this `fraction` of the number of observations or variables.
-        See `axis`.
+        Sample to this `fraction` of the number of observations or variables.
+        This can be larger than 1.0, if replace=True.
+        See `axis` and `replace`.
     n
         Sample to this number of observations or variables. See `axis`.
     random_state
