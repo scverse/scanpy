@@ -186,9 +186,10 @@ def read_10x_h5(
                 list(map(lambda x: x == 'Gene Expression', adata.var['feature_types'])),
             ]
         if adata.is_view:
-            return adata.copy()
+            adata = adata.copy()
     else:
-        return _read_legacy_10x_h5(filename, genome=genome, start=start)
+        adata = _read_legacy_10x_h5(filename, genome=genome, start=start)
+    return adata
 
 
 def _read_legacy_10x_h5(filename, *, genome=None, start=None):
@@ -278,12 +279,15 @@ def _read_v3_10x_h5(filename, *, start=None):
 
 
 def read_visium(
-    filename: Union[str, Path],
+    path: Union[str, Path],
     genome: Optional[str] = None,
+    *,
+    count_file: str = "filtered_feature_bc_matrix.h5",
+    library_id: str = None,
     load_images: Optional[bool] = True,
 ) -> AnnData:
     """\
-    Read 10x-Genomics-formatted hdf5 file.
+    Read 10x-Genomics-formatted visum dataset.
 
     In addition to reading regular 10x output,
     this looks for the `spatial` folder and loads images,
@@ -296,10 +300,15 @@ def read_visium(
 
     Parameters
     ----------
-    filename
-        Path to a 10x hdf5 file.
+    path
+        Path to directory for visium datafiles.
     genome
         Filter expression to genes within this genome.
+    count_file
+        Which file in the passed directory to use as the count file. Typically would be one of:
+        'filtered_feature_bc_matrix.h5' or 'raw_feature_bc_matrix.h5'.
+    library_id
+        Identifier for the visium library. Can be modified when concatenating multiple adata objects.
 
     Returns
     -------
@@ -316,25 +325,37 @@ def read_visium(
         Gene IDs
     :attr:`~anndata.AnnData.var`\\ `['feature_types']`
         Feature types
-    :attr:`~anndata.AnnData.uns`\\ `['images']`
+    :attr:`~anndata.AnnData.uns`\\ `['spatial']`
+        Dict of spaceranger output files with 'library_id' as key
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['images']`
         Dict of images (`'hires'` and `'lowres'`)
-    :attr:`~anndata.AnnData.uns`\\ `['scalefactors']`
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['scalefactors']`
         Scale factors for the spots
-    :attr:`~anndata.AnnData.obsm`\\ `['X_spatial']`
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
+        Files metadata: 'chemistry_description', 'software_version'
+    :attr:`~anndata.AnnData.obsm`\\ `['coords']`
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
-    adata = read_10x_h5(filename, genome)
+    path = Path(path)
+    adata = read_10x_h5(path / count_file, genome=genome)
+
+    adata.uns["spatial"] = dict()
+
+    from h5py import File
+
+    with File(path / count_file, mode="r") as f:
+        attrs = dict(f.attrs)
+    if library_id is None:
+        library_id = str(attrs.pop("library_ids")[0], "utf-8")
+
+    adata.uns["spatial"][library_id] = dict()
 
     if load_images:
-        if not isinstance(filename, Path):
-            filename = Path(filename)
-
-        filedir = filename.parents[0]
         files = dict(
-            tissue_positions_file=filedir / Path('spatial/tissue_positions_list.csv'),
-            scalefactors_json_file=filedir / Path('spatial/scalefactors_json.json'),
-            hires_image=filedir / Path('spatial/tissue_hires_image.png'),
-            lowres_image=filedir / Path('spatial/tissue_lowres_image.png'),
+            tissue_positions_file=path / 'spatial/tissue_positions_list.csv',
+            scalefactors_json_file=path / 'spatial/scalefactors_json.json',
+            hires_image=path / 'spatial/tissue_hires_image.png',
+            lowres_image=path / 'spatial/tissue_lowres_image.png',
         )
 
         # check if files exists, continue if images are missing
@@ -346,19 +367,27 @@ def read_visium(
                         f"Could not find '{f}'."
                     )
                 else:
-                    raise ValueError(f"Could not find '{f}'")
+                    raise OSError(f"Could not find '{f}'")
 
-        adata.uns['images'] = dict()
+        adata.uns["spatial"][library_id]['images'] = dict()
         for res in ['hires', 'lowres']:
             try:
-                adata.uns['images'][res] = imread(str(files[f'{res}_image']))
+                adata.uns["spatial"][library_id]['images'][res] = imread(
+                    str(files[f'{res}_image'])
+                )
             except Exception:
-                pass
+                raise OSError(f"Could not find '{res}_image'")
 
         # read json scalefactors
-        adata.uns['scalefactors'] = json.loads(
+        adata.uns["spatial"][library_id]['scalefactors'] = json.loads(
             files['scalefactors_json_file'].read_bytes()
         )
+
+        adata.uns["spatial"][library_id]["metadata"] = {
+            k: (str(attrs[k], "utf-8") if isinstance(attrs[k], bytes) else attrs[k])
+            for k in ("chemistry_description", "software_version")
+            if k in attrs
+        }
 
         # read coordinates
         positions = pd.read_csv(files['tissue_positions_file'], header=None)
@@ -374,7 +403,7 @@ def read_visium(
 
         adata.obs = adata.obs.join(positions, how="left")
 
-        adata.obsm['X_spatial'] = adata.obs[
+        adata.obsm['coords'] = adata.obs[
             ['pxl_row_in_fullres', 'pxl_col_in_fullres']
         ].to_numpy()
         adata.obs.drop(
@@ -382,7 +411,7 @@ def read_visium(
             inplace=True,
         )
 
-    return adata.copy()
+    return adata
 
 
 def read_10x_mtx(
@@ -876,7 +905,8 @@ def _download(url: str, path: Path):
             urlretrieve(url, str(path), reporthook=update_to)
         except Exception:
             # Make sure file doesn’t exist half-downloaded
-            path.unlink(missing_ok=True)
+            if path.is_file():
+                path.unlink()
             raise
 
 

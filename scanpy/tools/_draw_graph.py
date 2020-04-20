@@ -1,6 +1,7 @@
 from typing import Union, Optional
 
 import numpy as np
+import random
 from anndata import AnnData
 from scipy.sparse import spmatrix
 
@@ -8,7 +9,7 @@ from .. import _utils
 from .. import logging as logg
 from ._utils import get_init_pos_from_paga
 from .._compat import Literal
-from .._utils import AnyRandom
+from .._utils import AnyRandom, _choose_graph
 
 
 _LAYOUTS = ('fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa')
@@ -24,6 +25,8 @@ def draw_graph(
     n_jobs: Optional[int] = None,
     adjacency: Optional[spmatrix] = None,
     key_added_ext: Optional[str] = None,
+    neighbors_key: Optional[str] = None,
+    obsp: Optional[str] = None,
     copy: bool = False,
     **kwds,
 ):
@@ -63,8 +66,7 @@ def draw_graph(
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, no seed is set.
     adjacency
-        Sparse adjacency matrix of the graph, defaults to
-        `adata.uns['neighbors']['connectivities']`.
+        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     key_added_ext
         By default, append `layout`.
     proceed
@@ -73,6 +75,14 @@ def draw_graph(
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
+    neighbors_key
+        If not specified, draw_graph looks .obsp['connectivities'] for connectivities
+        (default storage place for pp.neighbors).
+        If specified, draw_graph looks
+        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+    obsp
+        Use .obsp[obsp] as adjacency. You can't specify both
+        `obsp` and `neighbors_key` at the same time.
     copy
         Return a copy instead of writing to adata.
     **kwds
@@ -93,18 +103,18 @@ def draw_graph(
     if layout not in _LAYOUTS:
         raise ValueError(f'Provide a valid layout, one of {_LAYOUTS}.')
     adata = adata.copy() if copy else adata
-    if adjacency is None and 'neighbors' not in adata.uns:
-        raise ValueError(
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
-        )
     if adjacency is None:
-        adjacency = adata.uns['neighbors']['connectivities']
+        adjacency = _choose_graph(adata, obsp, neighbors_key)
     # init coordinates
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif init_pos == 'paga' or init_pos:
         init_coords = get_init_pos_from_paga(
-            adata, adjacency, random_state=random_state
+            adata,
+            adjacency,
+            random_state=random_state,
+            neighbors_key=neighbors_key,
+            obsp=obsp,
         )
     else:
         np.random.seed(random_state)
@@ -151,6 +161,9 @@ def draw_graph(
         )
         positions = np.array(positions)
     else:
+        # igraph doesn't use numpy seed
+        random.seed(random_state)
+
         g = _utils.get_igraph_from_adjacency(adjacency)
         if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
             ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)

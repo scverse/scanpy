@@ -89,9 +89,17 @@ def test_error_missing_genome():
         sc.read_10x_h5(v3_pth, genome="not a genome")
 
 
-def test_read_visium():
-    spec_genome_v3 = sc.read_10x_h5(
-        ROOT / 'visium' / 'V1_Human_Heart_subsampled.h5', genome='GRCh38',
-    )
-    nospec_genome_v3 = sc.read_10x_h5(ROOT / 'visium' / 'V1_Human_Heart_subsampled.h5')
+def test_read_visium_counts():
+    # TODO: What is the purpose of this test?
+    h5_pth = ROOT / '../visium_data/1.0.0/filtered_feature_bc_matrix.h5'
+    spec_genome_v3 = sc.read_10x_h5(h5_pth, genome='GRCh38')
+    nospec_genome_v3 = sc.read_10x_h5(h5_pth)
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
+
+
+def test_10x_h5_gex():
+    # Tests that gex option doesn't, say, make the function return None
+    h5_pth = ROOT / '3.0.0' / 'filtered_feature_bc_matrix.h5'
+    assert_anndata_equal(
+        sc.read_10x_h5(h5_pth, gex_only=True), sc.read_10x_h5(h5_pth, gex_only=False)
+    )
