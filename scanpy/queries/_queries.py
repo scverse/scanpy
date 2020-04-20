@@ -56,9 +56,7 @@ def simple_query(
     elif isinstance(attrs, cabc.Iterable):
         attrs = list(attrs)
     else:
-        raise TypeError(
-            f"attrs must be of type list or str, was {type(attrs)}."
-        )
+        raise TypeError(f"attrs must be of type list or str, was {type(attrs)}.")
     try:
         from pybiomart import Server
     except ImportError:
@@ -237,6 +235,9 @@ def enrich(
     {doc_org}
     gprofiler_kwargs
         Keyword arguments to pass to `GProfiler.profile`, see gprofiler_.
+    **kwargs
+        All other keyword arguments are passed to `sc.get.rank_genes_groups_df`. E.g.
+        pval_cutoff, log2fc_min.
 
     Returns
     -------
@@ -295,7 +296,7 @@ def _enrich_anndata(
         gene_symbols=gene_symbols,
     )
     if gene_symbols is not None:
-        gene_list = list(de[gene_symbols])
+        gene_list = list(de[gene_symbols].dropna())
     else:
-        gene_list = list(de["names"])
+        gene_list = list(de["names"].dropna())
     return enrich(gene_list, org=org, gprofiler_kwargs=gprofiler_kwargs)

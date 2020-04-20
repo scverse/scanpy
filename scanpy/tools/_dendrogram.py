@@ -118,9 +118,7 @@ def dendrogram(
         gene_names = adata.raw.var_names if use_raw else adata.var_names
         from ..plotting._anndata import _prepare_dataframe
 
-        categories, rep_df = _prepare_dataframe(
-            adata, gene_names, groupby, use_raw
-        )
+        categories, rep_df = _prepare_dataframe(adata, gene_names, groupby, use_raw)
 
     # aggregate values within categories using 'mean'
     mean_df = rep_df.groupby(level=0).mean()

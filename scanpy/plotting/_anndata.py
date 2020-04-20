@@ -25,8 +25,8 @@ from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes
-from ._utils import ColorLike, _FontWeight, _FontSize
+from ._utils import scatter_base, scatter_group, setup_axes, make_grid_spec
+from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
 
@@ -72,9 +72,7 @@ def scatter(
     legend_fontweight: Union[int, _FontWeight, None] = None,
     legend_fontoutline: float = None,
     color_map: Union[str, Colormap] = None,
-    palette: Union[
-        Cycler, ListedColormap, ColorLike, Sequence[ColorLike]
-    ] = None,
+    palette: Union[Cycler, ListedColormap, ColorLike, Sequence[ColorLike]] = None,
     frameon: Optional[bool] = None,
     right_margin: Optional[float] = None,
     left_margin: Optional[float] = None,
@@ -125,21 +123,13 @@ def scatter(
     if (
         (x in adata.obs.keys() or x in adata.var.index)
         and (y in adata.obs.keys() or y in adata.var.index)
-        and (
-            color is None
-            or color in adata.obs.keys()
-            or color in adata.var.index
-        )
+        and (color is None or color in adata.obs.keys() or color in adata.var.index)
     ):
         return _scatter_obs(**args)
     if (
         (x in adata.var.keys() or x in adata.obs.index)
         and (y in adata.var.keys() or y in adata.obs.index)
-        and (
-            color is None
-            or color in adata.var.keys()
-            or color in adata.obs.index
-        )
+        and (color is None or color in adata.var.keys() or color in adata.obs.index)
     ):
         adata_T = adata.T
         axs = _scatter_obs(
@@ -220,11 +210,12 @@ def _scatter_obs(
     if isinstance(components, str):
         components = components.split(',')
     components = np.array(components).astype(int) - 1
+    # color can be a obs column name or a matplotlib color specification
     keys = (
         ['grey']
         if color is None
         else [color]
-        if isinstance(color, str)
+        if isinstance(color, str) or is_color_like(color)
         else color
     )
     if title is not None and isinstance(title, str):
@@ -343,8 +334,7 @@ def _scatter_obs(
             right_margin = 0.5
     if title is None and keys[0] is not None:
         title = [
-            key.replace('_', ' ') if not is_color_like(key) else ''
-            for key in keys
+            key.replace('_', ' ') if not is_color_like(key) else '' for key in keys
         ]
 
     axs = scatter_base(
@@ -430,12 +420,7 @@ def _scatter_obs(
             if projection == '3d':
                 data.append(Y[mask_remaining, 2])
             axs[ikey].scatter(
-                *data,
-                marker='.',
-                c='lightgrey',
-                s=size,
-                edgecolors='none',
-                zorder=-1,
+                *data, marker='.', c='lightgrey', s=size, edgecolors='none', zorder=-1,
             )
         legend = None
         if legend_loc.startswith('on data'):
@@ -443,9 +428,7 @@ def _scatter_obs(
                 legend_fontweight = 'bold'
             if legend_fontoutline is not None:
                 path_effect = [
-                    patheffects.withStroke(
-                        linewidth=legend_fontoutline, foreground='w'
-                    )
+                    patheffects.withStroke(linewidth=legend_fontoutline, foreground='w')
                 ]
             else:
                 path_effect = None
@@ -504,9 +487,7 @@ def _scatter_obs(
             ax.set_frame_on(False)
 
     show = settings.autoshow if show is None else show
-    _utils.savefig_or_show(
-        'scatter' if basis is None else basis, show=show, save=save
-    )
+    _utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
     if not show:
         return axs if len(keys) > 1 else axs[0]
 
@@ -704,9 +685,17 @@ def violin(
     if isinstance(keys, str):
         keys = [keys]
     if groupby is not None:
-        obs_df = get.obs_df(
-            adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw
-        )
+        obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
+        if kwds.get('palette', None) is None:
+            if not is_categorical_dtype(adata.obs[groupby]):
+                raise ValueError(
+                    f'The column `adata.obs[{groupby!r}]` needs to be categorical, '
+                    f'but is of dtype {adata.obs[groupby].dtype}.'
+                )
+            _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
+            kwds['palette'] = dict(
+                zip(obs_df[groupby].cat.categories, adata.uns[f'{groupby}_colors'])
+            )
     else:
         obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
     if groupby is None:
@@ -720,8 +709,8 @@ def violin(
 
     # set by default the violin plot cut=0 to limit the extend
     # of the violin plot (see stacked_violin code) for more info.
-    if 'cut' not in kwds:
-        kwds['cut'] = 0
+    kwds.setdefault('cut', 0)
+    kwds.setdefault('inner')
 
     if multi_panel and groupby is None and len(ys) == 1:
         # This is a quick and dirty way for adapting scales across several
@@ -730,13 +719,7 @@ def violin(
         g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
         # don't really know why this gives a warning without passing `order`
         g = g.map(
-            sns.violinplot,
-            y,
-            inner=None,
-            orient='vertical',
-            scale=scale,
-            order=keys,
-            **kwds,
+            sns.violinplot, y, orient='vertical', scale=scale, order=keys, **kwds,
         )
         if stripplot:
             g = g.map(
@@ -769,7 +752,6 @@ def violin(
                 x,
                 y=y,
                 data=obs_tidy,
-                inner=None,
                 order=order,
                 orient='vertical',
                 scale=scale,
@@ -860,9 +842,7 @@ def clustermap(
         row_colors = adata.obs[obs_keys]
         _utils.add_colors_for_categorical_sample_annotation(adata, obs_keys)
         # do this more efficiently... just a quick solution
-        lut = dict(
-            zip(row_colors.cat.categories, adata.uns[obs_keys + '_colors'])
-        )
+        lut = dict(zip(row_colors.cat.categories, adata.uns[obs_keys + '_colors']))
         row_colors = adata.obs[obs_keys].map(lut)
         g = sns.clustermap(df, row_colors=row_colors.values, **kwds)
     else:
@@ -875,9 +855,7 @@ def clustermap(
         return g
 
 
-@_doc_params(
-    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
-)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def stacked_violin(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -902,6 +880,7 @@ def stacked_violin(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     row_palette: str = 'muted',
+    ax: Optional[_AxesSubplot] = None,
     **kwds,
 ):
     """\
@@ -973,6 +952,8 @@ def stacked_violin(
     """
     import seaborn as sns  # Slow import, only import if called
 
+    ax_parent = ax
+    del ax
     if use_raw is None and adata.raw is not None:
         use_raw = True
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
@@ -1023,8 +1004,9 @@ def stacked_violin(
     # the extreme datapoints. Set to 0 to limit the violin range within
     # the range of the observed data (i.e., to have the same effect as
     # trim=True in ggplot.
-    if 'cut' not in kwds:
-        kwds['cut'] = 0
+    kwds.setdefault('cut', 0)
+    kwds.setdefault('inner')
+
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
@@ -1045,17 +1027,13 @@ def stacked_violin(
         # reorder obs_tidy
         if dendro_data['var_names_idx_ordered'] is not None:
             obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
-            var_names = [
-                var_names[x] for x in dendro_data['var_names_idx_ordered']
-            ]
+            var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
 
         obs_tidy.index = obs_tidy.index.reorder_categories(
             [categories[x] for x in dendro_data['categories_idx_ordered']],
             ordered=True,
         )
-        categories = [
-            categories[x] for x in dendro_data['categories_idx_ordered']
-        ]
+        categories = [categories[x] for x in dendro_data['categories_idx_ordered']]
 
         # set order to None, to avoid a different order in case this is given
         # by the user as the dendrogram order takes precedence.
@@ -1079,9 +1057,7 @@ def stacked_violin(
             return
 
         else:
-            obs_tidy.index = obs_tidy.index.reorder_categories(
-                order, ordered=True
-            )
+            obs_tidy.index = obs_tidy.index.reorder_categories(order, ordered=True)
     global count
     count = 0
 
@@ -1112,37 +1088,33 @@ def stacked_violin(
         if has_var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
             num_rows += 2  # +2 to add the row for the brackets and a spacer
-            height_ratios = [0.2, 0.05] + [
-                float(height) / len(categories)
-            ] * len(categories)
+            height_ratios = [0.2, 0.05] + [height / len(categories)] * len(categories)
             categories = [None, None] + list(categories)
-        fig = pl.figure(figsize=(width, height))
 
         # define a layout of nrows = len(categories) rows x 2 columns
         # each row is one violin plot. Second column is reserved for dendrogram (if any)
         # if var_group_positions is defined, a new row is added
-        axs = gridspec.GridSpec(
+        fig, gs = make_grid_spec(
+            ax_parent or (width, height),
             nrows=num_rows,
             ncols=2,
+            hspace=0,
             height_ratios=height_ratios,
-            width_ratios=[width, dendro_width],
             wspace=0.08,
+            width_ratios=[width, dendro_width],
         )
+
         axs_list = []
         if dendrogram:
             first_plot_idx = 1 if has_var_groups else 0
-            dendro_ax = fig.add_subplot(axs[first_plot_idx:, 1])
-            _plot_dendrogram(
-                dendro_ax, adata, groupby, dendrogram_key=dendrogram
-            )
+            dendro_ax = fig.add_subplot(gs[first_plot_idx:, 1])
+            _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=dendrogram)
             axs_list.append(dendro_ax)
         ax0 = None
         if is_color_like(row_palette):
             row_colors = [row_palette] * len(categories)
         else:
-            row_colors = sns.color_palette(
-                row_palette, n_colors=len(categories)
-            )
+            row_colors = sns.color_palette(row_palette, n_colors=len(categories))
         # Iterate in reverse to start on the bottom plot.
         # This facilitates adding the brackets plot (if
         # needed) by sharing the x axis with a previous
@@ -1150,10 +1122,10 @@ def stacked_violin(
         for idx in range(num_rows)[::-1]:
             category = categories[idx]
             if has_var_groups and idx <= 1:
-                # if var_group_positions is given, axs[0] and axs[1] are the location for the
-                # brackets and a spacer (axs[1])
+                # if var_group_positions is given, gs[0] and gs[1] are the location for the
+                # brackets and a spacer (gs[1])
                 if idx == 0:
-                    brackets_ax = fig.add_subplot(axs[0], sharex=ax0)
+                    brackets_ax = fig.add_subplot(gs[0], sharex=ax0)
                     _plot_gene_groups_brackets(
                         brackets_ax,
                         group_positions=var_group_positions,
@@ -1164,15 +1136,14 @@ def stacked_violin(
                 continue
 
             df = pd.melt(
-                obs_tidy[obs_tidy.index == category],
-                value_vars=obs_tidy.columns,
+                obs_tidy[obs_tidy.index == category], value_vars=obs_tidy.columns,
             )
             if ax0 is None:
-                ax = fig.add_subplot(axs[idx, 0])
+                ax = fig.add_subplot(gs[idx, 0])
                 ax0 = ax
 
             else:
-                ax = fig.add_subplot(axs[idx, 0])
+                ax = fig.add_subplot(gs[idx, 0])
 
             axs_list.append(ax)
 
@@ -1180,7 +1151,6 @@ def stacked_violin(
                 'variable',
                 y='value',
                 data=df,
-                inner=None,
                 orient='vertical',
                 scale=scale,
                 ax=ax,
@@ -1241,7 +1211,6 @@ def stacked_violin(
                 ax.set_xticklabels(var_names)
 
         ax0.tick_params(axis='x', labelrotation=90, labelsize='small')
-
     else:
         # plot image in which x = group by and y = var_names
         dendro_height = 3 if dendrogram else 0
@@ -1252,17 +1221,17 @@ def stacked_violin(
         else:
             width, height = figsize
 
-        fig = pl.figure(figsize=(width, height))
-
         # define a layout of nrows = var_names x 1 columns
         # if plot dendrogram a row is added
         # each row is one violin plot.
         num_rows = len(var_names) + 1  # +1 to account for dendrogram
         height_ratios = [dendro_height] + ([1] * len(var_names))
 
-        axs = gridspec.GridSpec(
+        fig, gs = make_grid_spec(
+            ax_parent or (width, height),
             nrows=num_rows,
             ncols=2,
+            hspace=0,  # This will also affect the gap between dendrogram and plots
             height_ratios=height_ratios,
             wspace=0.2,
             width_ratios=[width - vargroups_width, vargroups_width],
@@ -1270,13 +1239,9 @@ def stacked_violin(
 
         axs_list = []
         if dendrogram:
-            dendro_ax = fig.add_subplot(axs[0])
+            dendro_ax = fig.add_subplot(gs[0])
             _plot_dendrogram(
-                dendro_ax,
-                adata,
-                groupby,
-                orientation='top',
-                dendrogram_key=dendrogram,
+                dendro_ax, adata, groupby, orientation='top', dendrogram_key=dendrogram,
             )
             axs_list.append(dendro_ax)
         first_ax = None
@@ -1287,16 +1252,15 @@ def stacked_violin(
         for idx, y in enumerate(obs_tidy.columns):
             ax_idx = idx + 1  # +1 to account that idx 0 is the dendrogram
             if first_ax is None:
-                ax = fig.add_subplot(axs[ax_idx, 0])
+                ax = fig.add_subplot(gs[ax_idx, 0])
                 first_ax = ax
             else:
-                ax = fig.add_subplot(axs[ax_idx, 0])
+                ax = fig.add_subplot(gs[ax_idx, 0])
             axs_list.append(ax)
             ax = sns.violinplot(
                 x=obs_tidy.index,
                 y=y,
                 data=obs_tidy,
-                inner=None,
                 orient='vertical',
                 scale=scale,
                 ax=ax,
@@ -1351,7 +1315,7 @@ def stacked_violin(
 
         if has_var_groups:
             start = 1 if dendrogram else 0
-            gene_groups_ax = fig.add_subplot(axs[start:, 1])
+            gene_groups_ax = fig.add_subplot(gs[start:, 1])
             arr = []
             for idx, pos in enumerate(var_group_positions):
                 arr += [idx] * (pos[1] + 1 - pos[0])
@@ -1367,16 +1331,15 @@ def stacked_violin(
             axs_list.append(gene_groups_ax)
 
     # remove the spacing between subplots
-    pl.subplots_adjust(wspace=0, hspace=0)
+    if ax_parent is None:
+        fig.subplots_adjust(wspace=0, hspace=0)
 
     _utils.savefig_or_show('stacked_violin', show=show, save=save)
 
     return axs_list
 
 
-@_doc_params(
-    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
-)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def heatmap(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -1499,9 +1462,7 @@ def heatmap(
         # reorder obs_tidy
         if dendro_data['var_names_idx_ordered'] is not None:
             obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
-            var_names = [
-                var_names[x] for x in dendro_data['var_names_idx_ordered']
-            ]
+            var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
 
         obs_tidy.index = obs_tidy.index.reorder_categories(
             [categories[x] for x in dendro_data['categories_idx_ordered']],
@@ -1574,7 +1535,9 @@ def heatmap(
         )
 
         heatmap_ax = fig.add_subplot(axs[1, 1])
-        im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', **kwds)
+        im = heatmap_ax.imshow(
+            obs_tidy.values, aspect='auto', interpolation="nearest", **kwds
+        )
         heatmap_ax.set_ylim(obs_tidy.shape[0] - 0.5, -0.5)
         heatmap_ax.set_xlim(-0.5, obs_tidy.shape[1] - 0.5)
         heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
@@ -1614,11 +1577,7 @@ def heatmap(
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(
-                dendro_ax,
-                adata,
-                groupby,
-                ticks=ticks,
-                dendrogram_key=dendrogram,
+                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram,
             )
 
         # plot group legends on top of heatmap_ax (if given)
@@ -1676,7 +1635,9 @@ def heatmap(
         # plot heatmap
         heatmap_ax = fig.add_subplot(axs[1, 0])
 
-        im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
+        im = heatmap_ax.imshow(
+            obs_tidy.T.values, aspect='auto', interpolation="nearest", **kwds
+        )
         heatmap_ax.set_xlim(0, obs_tidy.shape[0])
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
@@ -1692,10 +1653,7 @@ def heatmap(
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
             ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
-                groupby_ax,
-                obs_tidy,
-                colors=groupby_colors,
-                orientation='bottom',
+                groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom',
             )
             # add lines to main heatmap
             line_positions = (
@@ -1741,9 +1699,7 @@ def heatmap(
     return axs
 
 
-@_doc_params(
-    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
-)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -1836,7 +1792,7 @@ def dotplot(
 
     See also
     --------
-    rank_genes_groups_dotplot: to plot marker genes identified using the
+    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
     :func:`~scanpy.tl.rank_genes_groups` function.
     """
     if use_raw is None and adata.raw is not None:
@@ -1866,9 +1822,7 @@ def dotplot(
     # compute the sum per group which in the boolean matrix this is the number
     # of values >expression_cutoff, and divide the result by the total number of
     # values in the group (given by `count()`)
-    fraction_obs = (
-        obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
-    )
+    fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
 
     # 2. compute mean value
     if mean_only_expressed:
@@ -1907,10 +1861,7 @@ def dotplot(
     else:
         width, height = figsize
         heatmap_width = width - (
-            colorbar_width
-            + size_legend_width
-            + dendro_width
-            + colorbar_width_spacer
+            colorbar_width + size_legend_width + dendro_width + colorbar_width_spacer
         )
 
     # colorbar ax width should not change with differences in the width of the image
@@ -1952,10 +1903,7 @@ def dotplot(
         # need to be larger than the main plot, otherwise they would look
         # compressed. For this, the dotplot ax is split into two:
         axs2 = gridspec.GridSpecFromSubplotSpec(
-            2,
-            1,
-            subplot_spec=axs[1, 0],
-            height_ratios=[len(categories) * 0.3, 1],
+            2, 1, subplot_spec=axs[1, 0], height_ratios=[len(categories) * 0.3, 1],
         )
         dot_ax = fig.add_subplot(axs2[0])
     else:
@@ -1985,15 +1933,11 @@ def dotplot(
             # reorder columns (usually genes) if needed. This only happens when
             # var_group_positions and var_group_labels is set
             mean_obs = mean_obs.iloc[:, dendro_data['var_names_idx_ordered']]
-            fraction_obs = fraction_obs.iloc[
-                :, dendro_data['var_names_idx_ordered']
-            ]
+            fraction_obs = fraction_obs.iloc[:, dendro_data['var_names_idx_ordered']]
 
         # reorder rows (categories) to match the dendrogram order
         mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
-        fraction_obs = fraction_obs.iloc[
-            dendro_data['categories_idx_ordered'], :
-        ]
+        fraction_obs = fraction_obs.iloc[dendro_data['categories_idx_ordered'], :]
 
         y_ticks = range(mean_obs.shape[0])
         dendro_ax = fig.add_subplot(axs[1, 1], sharey=dot_ax)
@@ -2056,14 +2000,7 @@ def dotplot(
     )
     colors = cmap(normalize(mean_flat))
     dot_ax.scatter(
-        x,
-        y,
-        color=colors,
-        s=size,
-        cmap=cmap,
-        norm=None,
-        edgecolor='none',
-        **kwds,
+        x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none', **kwds,
     )
     y_ticks = range(mean_obs.shape[0])
     dot_ax.set_yticks(y_ticks)
@@ -2071,9 +2008,7 @@ def dotplot(
 
     x_ticks = range(mean_obs.shape[1])
     dot_ax.set_xticks(x_ticks)
-    dot_ax.set_xticklabels(
-        [mean_obs.columns[idx] for idx in x_ticks], rotation=90
-    )
+    dot_ax.set_xticklabels([mean_obs.columns[idx] for idx in x_ticks], rotation=90)
     dot_ax.tick_params(axis='both', labelsize='small')
     dot_ax.grid(False)
     dot_ax.set_xlim(-0.5, len(var_names) + 0.5)
@@ -2121,16 +2056,13 @@ def dotplot(
     size = (fracs_values * 10) ** 2
     size += smallest_dot
     color = [
-        cmap(normalize(value))
-        for value in np.repeat(max(mean_flat) * 0.7, len(size))
+        cmap(normalize(value)) for value in np.repeat(max(mean_flat) * 0.7, len(size))
     ]
 
     # plot size bar
     size_legend = fig.add_subplot(axs3[0])
 
-    size_legend.scatter(
-        np.repeat(0, len(size)), range(len(size)), s=size, color=color
-    )
+    size_legend.scatter(np.repeat(0, len(size)), range(len(size)), s=size, color=color)
     size_legend.set_yticks(range(len(size)))
     labels = ["{:.0%}".format(x) for x in fracs_legends]
     if dot_max < 1:
@@ -2138,9 +2070,7 @@ def dotplot(
     size_legend.set_yticklabels(labels)
     size_legend.set_yticklabels(["{:.0%}".format(x) for x in fracs_legends])
 
-    size_legend.tick_params(
-        axis='y', left=False, labelleft=False, labelright=True
-    )
+    size_legend.tick_params(axis='y', left=False, labelleft=False, labelright=True)
 
     # remove x ticks and labels
     size_legend.tick_params(axis='x', bottom=False, labelbottom=False)
@@ -2159,9 +2089,7 @@ def dotplot(
     return axs
 
 
-@_doc_params(
-    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
-)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def matrixplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2319,11 +2247,7 @@ def matrixplot(
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
             _plot_dendrogram(
-                dendro_ax,
-                adata,
-                groupby,
-                dendrogram_key=dendrogram,
-                ticks=y_ticks,
+                dendro_ax, adata, groupby, dendrogram_key=dendrogram, ticks=y_ticks,
             )
 
         pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
@@ -2334,8 +2258,7 @@ def matrixplot(
         x_ticks = np.arange(mean_obs.shape[1]) + 0.5
         matrix_ax.set_xticks(x_ticks)
         matrix_ax.set_xticklabels(
-            [mean_obs.columns[idx] for idx in range(mean_obs.shape[1])],
-            rotation=90,
+            [mean_obs.columns[idx] for idx in range(mean_obs.shape[1])], rotation=90,
         )
         matrix_ax.tick_params(axis='both', labelsize='small')
         matrix_ax.grid(False)
@@ -2404,8 +2327,7 @@ def matrixplot(
         x_ticks = np.arange(mean_obs.shape[1]) + 0.5
         matrix_ax.set_xticks(x_ticks)
         matrix_ax.set_xticklabels(
-            [mean_obs.columns[idx] for idx in range(mean_obs.shape[1])],
-            rotation=90,
+            [mean_obs.columns[idx] for idx in range(mean_obs.shape[1])], rotation=90,
         )
         matrix_ax.tick_params(axis='both', labelsize='small')
         matrix_ax.grid(False)
@@ -2445,9 +2367,7 @@ def matrixplot(
     return axs
 
 
-@_doc_params(
-    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
-)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def tracksplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2502,10 +2422,7 @@ def tracksplot(
     pl.rank_genes_groups_tracksplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
-    if (
-        groupby not in adata.obs_keys()
-        or adata.obs[groupby].dtype.name != 'category'
-    ):
+    if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':
         raise ValueError(
             'groupby has to be a valid categorical observation. '
             f'Given value: {groupby}, valid categorical observations: '
@@ -2549,17 +2466,13 @@ def tracksplot(
         # reorder obs_tidy
         if dendro_data['var_names_idx_ordered'] is not None:
             obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
-            var_names = [
-                var_names[x] for x in dendro_data['var_names_idx_ordered']
-            ]
+            var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
 
         obs_tidy.index = obs_tidy.index.reorder_categories(
             [categories[x] for x in dendro_data['categories_idx_ordered']],
             ordered=True,
         )
-        categories = [
-            categories[x] for x in dendro_data['categories_idx_ordered']
-        ]
+        categories = [categories[x] for x in dendro_data['categories_idx_ordered']]
 
         groupby_colors = [
             groupby_colors[x] for x in dendro_data['categories_idx_ordered']
@@ -2583,13 +2496,9 @@ def tracksplot(
         track_height = 0.25
     else:
         width, height = figsize
-        track_height = (height - (dendro_height + groupby_height)) / len(
-            var_names
-        )
+        track_height = (height - (dendro_height + groupby_height)) / len(var_names)
 
-    height_ratios = (
-        [dendro_height] + [track_height] * len(var_names) + [groupby_height]
-    )
+    height_ratios = [dendro_height] + [track_height] * len(var_names) + [groupby_height]
     height = sum(height_ratios)
 
     obs_tidy = obs_tidy.T
@@ -2627,9 +2536,7 @@ def tracksplot(
         # Because the plots share the x axis it is redundant and less compact
         # to plot the axis for each plot
         if idx < len(var_names) - 1:
-            ax.tick_params(
-                labelbottom=False, labeltop=False, bottom=False, top=False
-            )
+            ax.tick_params(labelbottom=False, labeltop=False, bottom=False, top=False)
             ax.set_xlabel('')
         if log:
             ax.set_yscale('log')
@@ -2653,9 +2560,7 @@ def tracksplot(
             labelleft=False,
             direction='in',
         )
-        ax.set_ylabel(
-            var, rotation=0, fontsize='small', ha='right', va='bottom'
-        )
+        ax.set_ylabel(var, rotation=0, fontsize='small', ha='right', va='bottom')
         ax.yaxis.set_label_coords(-0.005, 0.1)
     ax.set_xlim(0, x_end)
     ax.tick_params(axis='x', bottom=False, labelbottom=False)
@@ -2822,9 +2727,7 @@ def correlation_matrix(
         dendrogram = ax is None
     if dendrogram:
         if ax is not None:
-            raise ValueError(
-                'Can only plot dendrogram when not plotting to an axis'
-            )
+            raise ValueError('Can only plot dendrogram when not plotting to an axis')
         assert (len(index)) == corr_matrix.shape[0]
         corr_matrix = corr_matrix[index, :]
         corr_matrix = corr_matrix[:, index]
@@ -2903,9 +2806,7 @@ def correlation_matrix(
     corr_matrix_ax.set_xticklabels(labels, rotation=45, ha='left')
 
     for ax_name in 'xy':
-        corr_matrix_ax.tick_params(
-            axis=ax_name, which='both', bottom=False, top=False
-        )
+        corr_matrix_ax.tick_params(axis=ax_name, which='both', bottom=False, top=False)
 
     if show_correlation_numbers:
         for row, col in product(range(num_rows), repeat=2):
@@ -3034,9 +2935,7 @@ def _prepare_dataframe(
     if gene_symbols is not None:
         # translate the column names to the symbol names
         obs_tidy.rename(
-            columns=dict(
-                [(var_names[x], symbols[x]) for x in range(len(var_names))]
-            ),
+            columns=dict([(var_names[x], symbols[x]) for x in range(len(var_names))]),
             inplace=True,
         )
     categories = obs_tidy.index.categories
@@ -3248,9 +3147,7 @@ def _reorder_categories_after_dendrogram(
             for idx in categories_idx_ordered:
                 position = var_group_positions[idx]
                 _var_names = var_names[position[0] : position[1] + 1]
-                var_names_idx_ordered.extend(
-                    range(position[0], position[1] + 1)
-                )
+                var_names_idx_ordered.extend(range(position[0], position[1] + 1))
                 positions_ordered.append(
                     (position_start, position_start + len(_var_names) - 1)
                 )

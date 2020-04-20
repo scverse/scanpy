@@ -34,24 +34,25 @@ def download_experiment(accession: str):
     sniff_url(accession)
 
     base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}"
-    download_url = f"{base_url}/download/zip?accessKey=&fileType="
+    design_url = f"{base_url}/download?accessKey=&fileType="
+    mtx_url = f"{base_url}/download/zip?accessKey=&fileType="
 
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     _download(
-        download_url + "experiment-design",
-        experiment_dir / "experimental_design.tsv",
+        design_url + "experiment-design", experiment_dir / "experimental_design.tsv",
     )
     _download(
-        download_url + "quantification-filtered",
-        experiment_dir / "expression_archive.zip",
+        mtx_url + "quantification-raw", experiment_dir / "expression_archive.zip",
     )
 
 
 def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
-    stream.readline()
-    n, m, _ = (int(x) for x in stream.readline()[:-1].split(b" "))
+    curline = stream.readline()
+    while curline.startswith(b"%"):
+        curline = stream.readline()
+    n, m, _ = (int(x) for x in curline[:-1].split(b" "))
     data = pd.read_csv(
         stream,
         sep=r"\s+",
@@ -123,9 +124,7 @@ def ebi_expression_atlas(
 
     with ZipFile(experiment_dir / "expression_archive.zip", "r") as f:
         adata = read_expression_from_archive(f)
-    obs = pd.read_csv(
-        experiment_dir / "experimental_design.tsv", sep="\t", index_col=0
-    )
+    obs = pd.read_csv(experiment_dir / "experimental_design.tsv", sep="\t", index_col=0)
 
     adata.obs[obs.columns] = obs
     adata.write(dataset_path, compression="gzip")  # To be kind to disk space

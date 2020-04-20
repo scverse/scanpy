@@ -4,18 +4,19 @@ from typing import Union, Optional, Any, Mapping, Callable, NamedTuple, Generato
 import numpy as np
 import scipy
 from anndata import AnnData
-from numpy.random import RandomState
 from scipy.sparse import issparse, coo_matrix, csr_matrix
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .. import _utils
-from .._utils import _doc_params
+from .._utils import _doc_params, AnyRandom, NeighborsView
 from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
+from .. import settings
+
 
 N_DCS = 15  # default number of diffusion components
-N_PCS = 50  # default number of PCs
+N_PCS = settings.N_PCS  # Backwards compat, constants should be defined in only one place.
 
 
 _Method = Literal['umap', 'gauss', 'rapids']
@@ -40,10 +41,11 @@ def neighbors(
     n_pcs: Optional[int] = None,
     use_rep: Optional[str] = None,
     knn: bool = True,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     method: Optional[_Method] = 'umap',
     metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+    key_added: Optional[str] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -85,6 +87,13 @@ def neighbors(
         A known metric’s name or a callable that returns a distance.
     metric_kwds
         Options for the metric.
+    key_added
+        If not specified, the neighbors data is stored in .uns['neighbors'],
+        distances and connectivities are stored in .obsp['distances'] and
+        .obsp['connectivities'] respectively.
+        If specified, the neighbors data is added to .uns[key_added],
+        distances are stored in .obsp[key_added+'_distances'] and
+        connectivities in .obsp[key_added+'_connectivities'].
     copy
         Return a copy instead of writing to adata.
 
@@ -101,7 +110,7 @@ def neighbors(
     """
     start = logg.info('computing neighbors')
     adata = adata.copy() if copy else adata
-    if adata.isview:  # we shouldn't need this here...
+    if adata.is_view:  # we shouldn't need this here...
         adata._init_as_actual(adata.copy())
     neighbors = Neighbors(adata)
     neighbors.compute_neighbors(
@@ -109,26 +118,43 @@ def neighbors(
         method=method, metric=metric, metric_kwds=metric_kwds,
         random_state=random_state,
     )
-    adata.uns['neighbors'] = {}
-    adata.uns['neighbors']['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
-    adata.uns['neighbors']['params']['metric'] = metric
+
+    if key_added is None:
+        key_added = 'neighbors'
+        conns_key = 'connectivities'
+        dists_key = 'distances'
+    else:
+        conns_key = key_added + '_connectivities'
+        dists_key = key_added + '_distances'
+
+    adata.uns[key_added] = {}
+
+    neighbors_dict = adata.uns[key_added]
+
+    neighbors_dict['connectivities_key'] = conns_key
+    neighbors_dict['distances_key'] = dists_key
+
+    neighbors_dict['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
+    neighbors_dict['params']['metric'] = metric
     if metric_kwds:
-        adata.uns['neighbors']['params']['metric_kwds'] = metric_kwds
+        neighbors_dict['params']['metric_kwds'] = metric_kwds
     if use_rep is not None:
-        adata.uns['neighbors']['params']['use_rep'] = use_rep
+        neighbors_dict['params']['use_rep'] = use_rep
     if n_pcs is not None:
-        adata.uns['neighbors']['params']['n_pcs'] = n_pcs
-    adata.uns['neighbors']['distances'] = neighbors.distances
-    adata.uns['neighbors']['connectivities'] = neighbors.connectivities
+        neighbors_dict['params']['n_pcs'] = n_pcs
+
+    adata.obsp[dists_key] = neighbors.distances
+    adata.obsp[conns_key] = neighbors.connectivities
+
     if neighbors.rp_forest is not None:
-        adata.uns['neighbors']['rp_forest'] = neighbors.rp_forest
+        neighbors_dict['rp_forest'] = neighbors.rp_forest
     logg.info(
         '    finished',
         time=start,
         deep=(
-            'added to `.uns[\'neighbors\']`\n'
-            '    \'distances\', distances for each pair of neighbors\n'
-            '    \'connectivities\', weighted adjacency matrix'
+            f'added to `.uns[{key_added!r}]`\n'
+            f'    `.obsp[{dists_key!r}]`, distances for each pair of neighbors\n'
+            f'    `.obsp[{conns_key!r}]`, weighted adjacency matrix'
         ),
     )
     return adata if copy else None
@@ -166,7 +192,7 @@ def _rp_forest_generate(rp_forest_dict: RPForestDict) -> Generator[FlatTree, Non
 def compute_neighbors_umap(
     X: Union[np.ndarray, csr_matrix],
     n_neighbors: int,
-    random_state: Optional[Union[int, RandomState]] = None,
+    random_state: AnyRandom = None,
     metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     angular: bool = False,
@@ -487,9 +513,11 @@ class Neighbors:
         Annotated data object.
     n_dcs
         Number of diffusion components to use.
+    neighbors_key
+        Where to look in .uns and .obsp for neighbors data
     """
 
-    def __init__(self, adata: AnnData, n_dcs: Optional[int] = None):
+    def __init__(self, adata: AnnData, n_dcs: Optional[int] = None, neighbors_key: Optional[str] = None):
         self._adata = adata
         self._init_iroot()
         # use the graph in adata
@@ -500,17 +528,20 @@ class Neighbors:
         self._transitions_sym: Union[np.ndarray, csr_matrix, None] = None
         self._number_connected_components: Optional[int] = None
         self._rp_forest: Optional[RPForestDict] = None
-        if 'neighbors' in adata.uns:
-            if 'distances' in adata.uns['neighbors']:
-                self.knn = issparse(adata.uns['neighbors']['distances'])
-                self._distances = adata.uns['neighbors']['distances']
-            if 'connectivities' in adata.uns['neighbors']:
-                self.knn = issparse(adata.uns['neighbors']['connectivities'])
-                self._connectivities = adata.uns['neighbors']['connectivities']
-            if 'rp_forest' in adata.uns['neighbors']:
-                self._rp_forest = adata.uns['neighbors']['rp_forest']
-            if 'params' in adata.uns['neighbors']:
-                self.n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+        if neighbors_key is None:
+            neighbors_key = 'neighbors'
+        if neighbors_key in adata.uns:
+            neighbors = NeighborsView(adata, neighbors_key)
+            if 'distances' in neighbors:
+                self.knn = issparse(neighbors['distances'])
+                self._distances = neighbors['distances']
+            if 'connectivities' in neighbors:
+                self.knn = issparse(neighbors['connectivities'])
+                self._connectivities = neighbors['connectivities']
+            if 'rp_forest' in neighbors:
+                self._rp_forest = neighbors['rp_forest']
+            if 'params' in neighbors:
+                self.n_neighbors = neighbors['params']['n_neighbors']
             else:
                 def count_nonzero(a: Union[np.ndarray, csr_matrix]) -> int:
                     return a.count_nonzero() if issparse(a) else np.count_nonzero(a)
@@ -630,7 +661,7 @@ class Neighbors:
         n_pcs: Optional[int] = None,
         use_rep: Optional[str] = None,
         method: _Method = 'umap',
-        random_state: Optional[Union[int, RandomState]] = 0,
+        random_state: AnyRandom = 0,
         write_knn_indices: bool = False,
         metric: _Metric = 'euclidean',
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),

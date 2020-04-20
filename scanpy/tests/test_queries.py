@@ -15,6 +15,10 @@ def test_enrich():
     enrich_list = sc.queries.enrich(list(de_genes))
     assert (enrich_anndata == enrich_list).all().all()
 
+    # theislab/scanpy/#1043
+    sc.tl.filter_rank_genes_groups(pbmc, min_fold_change=1)
+    sc.queries.enrich(pbmc, "1")
+
 
 @pytest.mark.internet
 def test_mito_genes():

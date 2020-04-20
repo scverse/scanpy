@@ -12,7 +12,6 @@ Import Scanpy as::
 
 .. note::
    Wrappers to external functionality are found in :mod:`scanpy.external`.
-   Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
 
 Preprocessing: `pp`
 -------------------
@@ -58,7 +57,7 @@ Recipes
 Batch effect correction
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Also see `Dataset integration`_. Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :class:`scanpy.external` for more.
+Also see `Data integration`_. Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :mod:`scanpy.external` for more.
 
 .. autosummary::
    :toctree: .
@@ -94,6 +93,13 @@ Embeddings
    tl.draw_graph
    tl.diffmap
 
+Compute densities on embeddings.
+
+.. autosummary::
+   :toctree: .
+
+   tl.embedding_density
+
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -106,8 +112,8 @@ Clustering and trajectory inference
    tl.dpt
    tl.paga
 
-Dataset integration
-~~~~~~~~~~~~~~~~~~~
+Data integration
+~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: .
@@ -177,8 +183,9 @@ Read 10x formatted hdf5 files and directories containing `.mtx` files using
 .. autosummary::
    :toctree: .
 
-    read_10x_h5
-    read_10x_mtx
+   read_10x_h5
+   read_10x_mtx
+   read_visium
 
 Read other formats using functions borrowed from :mod:`anndata`
 
@@ -315,6 +322,7 @@ Datasets
    datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch
+   datasets.visium_sge
 
 
 Further modules
@@ -323,7 +331,6 @@ Further modules
 .. autosummary::
    :toctree: .
 
-   api
    plotting
 
 

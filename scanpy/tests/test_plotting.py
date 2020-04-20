@@ -1,15 +1,19 @@
+from functools import partial
 from pathlib import Path
 from itertools import repeat, chain, combinations
 
 import pytest
 from matplotlib.testing import setup
+from packaging import version
+
+from scanpy._utils import pkg_version
 
 setup()
 
-from matplotlib.testing.compare import compare_images
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.testing.compare import compare_images
 from anndata import AnnData
 
 import scanpy as sc
@@ -32,12 +36,7 @@ def test_heatmap(image_comparer):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        show=False,
-        dendrogram=True,
+        adata, adata.var_names, 'cell_type', use_raw=False, show=False, dendrogram=True,
     )
     save_and_compare_images('master_heatmap')
 
@@ -96,15 +95,19 @@ def test_heatmap(image_comparer):
     save_and_compare_images('master_heatmap_std_scale_obs')
 
 
-def test_clustermap(image_comparer):
+@pytest.mark.skipif(
+    pkg_version("matplotlib") < version.parse('3.1'),
+    reason="https://github.com/mwaskom/seaborn/issues/1953",
+)
+@pytest.mark.parametrize(
+    "obs_keys,name",
+    [(None, "master_clustermap"), ("cell_type", "master_clustermap_withcolor")],
+)
+def test_clustermap(image_comparer, obs_keys, name):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-
     adata = sc.datasets.krumsiek11()
-    sc.pl.clustermap(adata)
-    save_and_compare_images('master_clustermap')
-
-    sc.pl.clustermap(adata, 'cell_type')
-    save_and_compare_images('master_clustermap_withcolor')
+    sc.pl.clustermap(adata, obs_keys)
+    save_and_compare_images(name)
 
 
 def test_dotplot(image_comparer):
@@ -112,12 +115,7 @@ def test_dotplot(image_comparer):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.dotplot(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
+        adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
     )
     save_and_compare_images('master_dotplot')
 
@@ -212,12 +210,7 @@ def test_matrixplot(image_comparer):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.matrixplot(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
+        adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
     )
     save_and_compare_images('master_matrixplot')
 
@@ -280,12 +273,7 @@ def test_stacked_violin(image_comparer, plt):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.stacked_violin(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        color='blue',
-        show=False,
+        adata, adata.var_names, 'cell_type', use_raw=False, color='blue', show=False,
     )
 
     plt.title("image may have cut labels.\nThis is ok for test")
@@ -430,9 +418,7 @@ def test_rank_genes_groups(image_comparer):
     save_and_compare_images('master_ranked_genes_matrixplot')
 
     # test ranked genes using matrixplot (swap_axes=True)
-    sc.pl.rank_genes_groups_matrixplot(
-        pbmc, n_genes=5, swap_axes=True, show=False
-    )
+    sc.pl.rank_genes_groups_matrixplot(pbmc, n_genes=5, swap_axes=True, show=False)
     save_and_compare_images('master_ranked_genes_matrixplot_swap_axes')
 
     # test ranked genes using tracks_plot
@@ -510,116 +496,116 @@ def test_rank_genes_symbols(image_comparer):
     save_and_compare_images('master_tracksplot_gene_symbols')
 
 
-def test_scatterplots(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-
+@pytest.fixture(scope="module")
+def pbmc_scatterplots():
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc.layers["sparse"] = pbmc.raw.X / 2
-
-    # test pca
-    sc.pl.pca(pbmc, color='bulk_labels', show=False)
-    save_and_compare_images('master_pca')
-
-    sc.pl.pca(
-        pbmc,
-        color=['bulk_labels', 'louvain'],
-        legend_loc='on data',
-        legend_fontoutline=2,
-        legend_fontweight='normal',
-        legend_fontsize=10,
-        show=False,
-    )
-    save_and_compare_images('master_pca_with_fonts')
-
-    # test projection='3d'
-    sc.pl.pca(pbmc, color='bulk_labels', projection='3d', show=False)
-    save_and_compare_images('master_3dprojection')
-
-    sc.pl.pca(
-        pbmc,
-        color=['CD3D', 'CD79A'],
-        components=['1,2', '1,3'],
-        vmax=5,
-        use_raw=False,
-        vmin=-5,
-        cmap='seismic',
-        show=False,
-    )
-    save_and_compare_images('master_multipanel')
-
-    sc.pl.pca(
-        pbmc,
-        color=['CD3D', 'CD79A'],
-        layer="sparse",
-        cmap='viridis',
-        show=False,
-    )
-    save_and_compare_images('master_pca_sparse_layer')
-
-    # test tsne
-    # I am removing this test because  slight differences are present even
-    # after setting a random_state.
-    # sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
-    # sc.pl.tsne(pbmc, color=['CD3D', 'louvain'], show=False)
-    # save_and_compare_images('master_tsne', tolerance=tolerance)
-
-    # Test umap with no colors
-    sc.pl.umap(pbmc, show=False)
-    save_and_compare_images('master_umap_nocolor')
-
-    # test umap with louvain clusters and palette with custom colors
-    sc.pl.umap(
-        pbmc,
-        color=['louvain'],
-        palette=['b', 'grey80', 'r', 'yellow', 'black', 'gray', 'lightblue'],
-        frameon=False,
-        show=False,
-    )
-    save_and_compare_images('master_umap')
-
-    # test umap with gene expression
-    sc.pl.umap(
-        pbmc,
-        color=np.array(['LYZ', 'CD79A']),
-        s=20,
-        alpha=0.5,
-        frameon=False,
-        title=['gene1', 'gene2'],
-        show=False,
-    )
-    save_and_compare_images('master_umap_gene_expr')
-
-    # test umap using layer
-    pbmc.layers['test'] = pbmc.X.copy() + 100
-    sc.pl.umap(
-        pbmc,
-        color=np.array(['LYZ', 'CD79A']),
-        s=20,
-        alpha=0.5,
-        frameon=False,
-        title=['gene1', 'gene2'],
-        layer='test',
-        show=False,
-        vmin=100,
-    )
-    save_and_compare_images('master_umap_layer')
-
-    # test edges = True
-    sc.pp.neighbors(pbmc)
-    sc.pl.umap(
-        pbmc, color='louvain', edges=True, edges_width=0.1, s=50, show=False
-    )
-    save_and_compare_images('master_umap_with_edges', tolerance=35)
-
-    # test diffmap
-    # sc.tl.diffmap(pbmc)
-    # sc.pl.diffmap(pbmc, components='all', color=['CD3D'], show=False)
-    # save_and_compare_images('master_diffmap', tolerance=tolerance)
-
-    # test gene_symbols
+    pbmc.layers["test"] = pbmc.X.copy() + 100
     pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
-    sc.pl.umap(pbmc, color=['1', '2', '3'], gene_symbols="numbers", show=False)
-    save_and_compare_images('master_umap_symbols')
+    sc.pp.neighbors(pbmc)
+    sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
+    sc.tl.diffmap(pbmc)
+    return pbmc
+
+
+@pytest.mark.parametrize(
+    "id,fn",
+    [
+        ("pca", partial(sc.pl.pca, color='bulk_labels')),
+        (
+            "pca_with_fonts",
+            partial(
+                sc.pl.pca,
+                color=['bulk_labels', 'louvain'],
+                legend_loc='on data',
+                legend_fontoutline=2,
+                legend_fontweight='normal',
+                legend_fontsize=10,
+            ),
+        ),
+        pytest.param(
+            "3dprojection", partial(sc.pl.pca, color='bulk_labels', projection='3d'),
+        ),
+        (
+            "multipanel",
+            partial(
+                sc.pl.pca,
+                color=['CD3D', 'CD79A'],
+                components=['1,2', '1,3'],
+                vmax=5,
+                use_raw=False,
+                vmin=-5,
+                cmap='seismic',
+            ),
+        ),
+        (
+            "pca_sparse_layer",
+            partial(
+                sc.pl.pca, color=['CD3D', 'CD79A'], layer="sparse", cmap='viridis',
+            ),
+        ),
+        pytest.param(
+            "tsne",
+            partial(sc.pl.tsne, color=['CD3D', 'louvain']),
+            marks=pytest.mark.xfail(
+                reason="slight differences even after setting random_state."
+            ),
+        ),
+        ("umap_nocolor", sc.pl.umap),
+        (
+            "umap",
+            partial(
+                sc.pl.umap,
+                color=['louvain'],
+                palette=['b', 'grey80', 'r', 'yellow', 'black', 'gray', 'lightblue'],
+                frameon=False,
+            ),
+        ),
+        (
+            "umap_gene_expr",
+            partial(
+                sc.pl.umap,
+                color=np.array(['LYZ', 'CD79A']),
+                s=20,
+                alpha=0.5,
+                frameon=False,
+                title=['gene1', 'gene2'],
+            ),
+        ),
+        (
+            "umap_layer",
+            partial(
+                sc.pl.umap,
+                color=np.array(['LYZ', 'CD79A']),
+                s=20,
+                alpha=0.5,
+                frameon=False,
+                title=['gene1', 'gene2'],
+                layer='test',
+                vmin=100,
+            ),
+        ),
+        (
+            "umap_with_edges",
+            partial(sc.pl.umap, color='louvain', edges=True, edges_width=0.1, s=50),
+        ),
+        # ("diffmap", partial(sc.pl.diffmap, components='all', color=['CD3D'])),
+        (
+            "umap_symbols",
+            partial(sc.pl.umap, color=['1', '2', '3'], gene_symbols="numbers"),
+        ),
+    ],
+)
+def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+
+    if id == "3dprojection":
+        # check if this still happens so we can remove our checks once mpl is fixed
+        with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
+            fn(pbmc_scatterplots, show=False)
+    else:
+        fn(pbmc_scatterplots, show=False)
+        save_and_compare_images(f"master_{id}")
 
 
 def test_scatter_embedding_groups_and_size(image_comparer):
@@ -642,7 +628,6 @@ def test_scatter_embedding_groups_and_size(image_comparer):
 def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
-    from functools import partial
 
     sc.pl.embedding(
         pbmc,
@@ -716,9 +701,7 @@ def test_scatter_rep(tmpdir):
     }
     states = pd.DataFrame.from_records(
         zip(
-            list(
-                chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])
-            ),
+            list(chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])),
             list(chain.from_iterable(repeat("abc", 3))),
             [1, 2, 3, 3, 1, 2, 2, 3, 1],
         ),
@@ -728,9 +711,7 @@ def test_scatter_rep(tmpdir):
         TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"
         for state in states.itertuples()
     ]
-    pattern = np.array(
-        list(chain.from_iterable(repeat(i, 5) for i in range(3)))
-    )
+    pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))
     coords = np.c_[np.arange(15) % 5, pattern]
 
     adata = AnnData(
@@ -755,70 +736,88 @@ def test_scatter_rep(tmpdir):
         if s1.result == s2.result:
             assert comp is None, comp
         else:
-            assert (
-                "Error" in comp
-            ), f"{s1.outpth}, {s2.outpth} aren't supposed to match"
+            assert "Error" in comp, f"{s1.outpth}, {s2.outpth} aren't supposed to match"
 
 
 def test_paga(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
+    # Sometimes things shift a pixel or so, resulting in diffs up to ~27
+    # The 1px-edges aren’t that good actually as they’re ignored at this tol …
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.tl.paga(pbmc, groups='bulk_labels')
 
+    common = dict(threshold=0.5, max_edge_width=1.0, random_state=0, show=False)
+
     # delete bulk_labels_colors to test the creation of color list by paga
     del pbmc.uns['bulk_labels_colors']
-    sc.pl.paga(pbmc, threshold=0.5, max_edge_width=1.0, show=False)
+    sc.pl.paga(pbmc, **common)
     save_and_compare_images('master_paga')
 
-    sc.pl.paga(
-        pbmc, color='CST3', threshold=0.5, max_edge_width=1.0, show=False
-    )
+    sc.pl.paga(pbmc, color='CST3', **common)
     save_and_compare_images('master_paga_continuous')
 
     pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze()
-    sc.pl.paga(
-        pbmc,
-        color='cool_feature',
-        threshold=0.5,
-        max_edge_width=1.0,
-        show=False,
-    )
+    sc.pl.paga(pbmc, color='cool_feature', **common)
     save_and_compare_images('master_paga_continuous_obs')
 
-    sc.pl.paga(
-        pbmc,
-        color=['CST3', 'GATA2'],
-        threshold=0.5,
-        max_edge_width=1.0,
-        show=False,
-    )
+    sc.pl.paga(pbmc, color=['CST3', 'GATA2'], **common)
     save_and_compare_images('master_paga_continuous_multiple')
 
-    sc.pl.paga_compare(
-        pbmc,
-        legend_fontoutline=2,
-        threshold=0.5,
-        max_edge_width=1.0,
-        show=False,
-    )
+    sc.pl.paga_compare(pbmc, legend_fontoutline=2, **common)
     save_and_compare_images('master_paga_compare')
 
-    sc.pl.paga_compare(
-        pbmc,
-        color='CST3',
-        legend_fontsize=5,
-        threshold=0.5,
-        max_edge_width=1.0,
-        show=False,
-    )
+    sc.pl.paga_compare(pbmc, color='CST3', legend_fontsize=5, **common)
     save_and_compare_images('master_paga_compare_continuous')
 
-    sc.pl.paga_compare(
-        pbmc,
-        basis='X_pca',
-        legend_fontweight='normal',
-        threshold=0.5,
-        show=False,
-    )
+    sc.pl.paga_compare(pbmc, basis='X_pca', legend_fontweight='normal', **common)
     save_and_compare_images('master_paga_compare_pca')
+
+
+def test_no_copy():
+    # https://github.com/theislab/scanpy/issues/1000
+    # Tests that plotting functions don't make a copy from a view unless they
+    # actually have to
+    actual = sc.datasets.pbmc68k_reduced()
+    sc.pl.umap(actual, color=["bulk_labels", "louvain"], show=False)  # Set colors
+
+    view = actual[np.random.choice(actual.obs_names, size=actual.shape[0] // 5), :]
+
+    sc.pl.umap(view, color=["bulk_labels", "louvain"], show=False)
+    assert view.is_view
+
+    rank_genes_groups_plotting_funcs = [
+        sc.pl.rank_genes_groups,
+        sc.pl.rank_genes_groups_dotplot,
+        sc.pl.rank_genes_groups_heatmap,
+        sc.pl.rank_genes_groups_matrixplot,
+        sc.pl.rank_genes_groups_stacked_violin,
+        # TODO: raises ValueError about empty distance matrix – investigate
+        # sc.pl.rank_genes_groups_tracksplot,
+        sc.pl.rank_genes_groups_violin,
+    ]
+
+    # Only plotting one group at a time to avoid generating dendrogram
+    # TODO: Generating a dendrogram modifies the object, this should be
+    # optional and also maybe not modify the object.
+    for plotfunc in rank_genes_groups_plotting_funcs:
+        view = actual[actual.obs["bulk_labels"] == "Dendritic"]
+        plotfunc(view, ["Dendritic"], show=False)
+        assert view.is_view
+
+
+def test_visium_circles(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
+    adata.obs = adata.obs.astype({'array_row': 'str'})
+
+    sc.pl.spatial(
+        adata,
+        color="array_row",
+        groups=["24", "33"],
+        crop_coord=(100, 400, 400, 100),
+        alpha=0.5,
+        size=1.3,
+    )
+
+    save_and_compare_images('master_spatial_visium')

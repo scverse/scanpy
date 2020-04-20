@@ -7,18 +7,16 @@ import scanpy as sc
 from sklearn.utils.testing import assert_allclose
 import pytest
 from anndata import AnnData
+from anndata.tests.helpers import assert_equal
 
 
-HERE = Path(__file__).parent
-
-
-def test_log1p():
+def test_log1p(tmp_path):
     A = np.random.rand(200, 10)
     A_l = np.log1p(A)
     ad = AnnData(A)
     ad2 = AnnData(A)
     ad3 = AnnData(A)
-    ad3.filename = HERE / 'test.h5ad'
+    ad3.filename = tmp_path / 'test.h5ad'
     sc.pp.log1p(ad)
     assert np.allclose(ad.X, A_l)
     sc.pp.log1p(ad2, chunked=True)
@@ -101,15 +99,21 @@ def test_subsample():
     assert adata.n_obs == 4
 
 
+def test_subsample_copy():
+    adata = AnnData(np.ones((200, 10)))
+    assert sc.pp.subsample(adata, n_obs=40, copy=True).shape == (40, 10)
+    assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
+
+
 def test_scale():
     adata = sc.datasets.pbmc68k_reduced()
     adata.X = adata.raw.X
     v = adata[:, 0:adata.shape[1] // 2]
     # Should turn view to copy https://github.com/theislab/anndata/issues/171#issuecomment-508689965
-    assert v.isview
+    assert v.is_view
     with pytest.warns(Warning, match="view"):
         sc.pp.scale(v)
-    assert not v.isview
+    assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
 
@@ -138,6 +142,20 @@ def test_regress_out_ordinal():
         adata, keys=['n_counts', 'percent_mito'], n_jobs=8, copy=True)
 
     np.testing.assert_array_equal(single.X, multi.X)
+
+
+def test_regress_out_view():
+    from scipy.sparse import random
+    adata = AnnData(random(500, 1100, density=0.2, format='csr'))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    subset_adata = adata[:, :1050]
+    subset_adata_copy = subset_adata.copy()
+
+    sc.pp.regress_out(subset_adata, keys=['n_counts', 'percent_mito'])
+    sc.pp.regress_out(subset_adata_copy, keys=['n_counts', 'percent_mito'])
+    assert_equal(subset_adata, subset_adata_copy)
+    assert not subset_adata.is_view
 
 
 def test_regress_out_categorical():

@@ -13,9 +13,7 @@ def pytest_addoption(parser):
 
 def pytest_collection_modifyitems(config, items):
     run_internet = config.getoption("--internet-tests")
-    skip_internet = pytest.mark.skip(
-        reason="need --internet-tests option to run"
-    )
+    skip_internet = pytest.mark.skip(reason="need --internet-tests option to run")
     for item in items:
         # All tests marked with `pytest.mark.internet` get skipped unless
         # `--run-internet` passed

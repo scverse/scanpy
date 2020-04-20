@@ -1,10 +1,12 @@
 import pytest
 import numpy as np
-import scanpy as sc
-from scanpy.preprocessing._simple import N_PCS
 
 from sklearn.neighbors import KDTree
 from umap import UMAP
+
+import scanpy as sc
+from scanpy import settings
+from scanpy._utils import pkg_version
 
 
 X = np.array(
@@ -43,7 +45,7 @@ def test_representation(adatas):
     ing.fit(adata_new)
 
     assert ing._use_rep == 'X_pca'
-    assert ing._obsm['rep'].shape == (adata_new.n_obs, N_PCS)
+    assert ing._obsm['rep'].shape == (adata_new.n_obs, settings.N_PCS)
     assert ing._pca_centered
 
     sc.pp.pca(adata_ref, n_comps=30, zero_center=False)
@@ -85,6 +87,10 @@ def test_neighbors(adatas):
     assert percent_correct > 0.99
 
 
+@pytest.mark.skipif(
+    pkg_version("anndata") < sc.tl._ingest.ANNDATA_MIN_VERSION,
+    reason="`AnnData.concatenate` does not concatenate `.obsm` in old anndata versions",
+)
 def test_ingest_function(adatas):
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()
@@ -113,19 +119,6 @@ def test_ingest_function(adatas):
     assert 'X_umap' in ad.obsm
     assert 'X_pca' in ad.obsm
 
-    ad = sc.tl.ingest(
-        adata_new,
-        adata_ref,
-        obs='bulk_labels',
-        embedding_method=['umap', 'pca'],
-        return_joint=True,
-    )
-
-    assert ad.shape == (adata_new.n_obs + adata_ref.n_obs, adata_ref.n_vars)
-    assert 'bulk_labels' in ad.obs
-    assert 'X_umap' in ad.obsm
-    assert 'X_pca' in ad.obsm
-
 
 def test_ingest_map_embedding_umap():
     adata_ref = sc.AnnData(X)
@@ -142,6 +135,6 @@ def test_ingest_map_embedding_umap():
 
     reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4)
     reducer.fit(X)
-    umap_transformed_T = reducer.transform(T)
+    umap_transformed_t = reducer.transform(T)
 
-    assert np.allclose(ing._obsm['X_umap'], umap_transformed_T)
+    assert np.allclose(ing._obsm['X_umap'], umap_transformed_t)

@@ -24,14 +24,14 @@ setup(
     license='BSD',
     python_requires='>=3.6',
     install_requires=[
-        l.strip()
-        for l in Path('requirements.txt').read_text('utf-8').splitlines()
+        l.strip() for l in Path('requirements.txt').read_text('utf-8').splitlines()
     ],
     extras_require=dict(
         louvain=['python-igraph', 'louvain>=0.6'],
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
-        rapids=['cudf', 'cuml', 'cugraph'],
+        rapids=['cudf>=0.9', 'cuml>=0.9', 'cugraph>=0.9'],
+        magic=['magic-impute>=2.0'],
         doc=[
             'sphinx',
             'sphinx_rtd_theme',
@@ -50,6 +50,7 @@ setup(
         ],
     ),
     packages=find_packages(),
+    include_package_data=True,
     entry_points=dict(console_scripts=['scanpy=scanpy.cli:console_main']),
     zip_safe=False,
     classifiers=[
