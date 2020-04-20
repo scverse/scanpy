@@ -51,3 +51,42 @@ def test_pca_transform(typ):
 
     sc.pp.pca(adata, n_comps=4, zero_center=False, dtype='float64', random_state=14)
     assert np.linalg.norm(A_svd_abs[:, :4]-np.abs(adata.obsm['X_pca'])) < 2e-05
+
+
+def test_pca_shapes():
+    """Tests that n_comps behaves correctly"""
+    # https://github.com/theislab/scanpy/issues/1051
+    adata = AnnData(np.random.randn(30, 20))
+    sc.pp.pca(adata)
+    assert adata.obsm["X_pca"].shape == (30, 19)
+
+    adata = AnnData(np.random.randn(20, 30))
+    sc.pp.pca(adata)
+    assert adata.obsm["X_pca"].shape == (20, 19)
+
+    with pytest.raises(ValueError):
+        sc.pp.pca(adata, n_comps=100)
+
+
+def test_pca_sparse():
+    """
+    Tests that implicitly centered pca on sparse arrays returns equivalent results to
+    explicit centering on dense arrays.
+    """
+    pbmc = sc.datasets.pbmc3k()
+    pbmc.X = pbmc.X.astype(np.float64)
+    sc.pp.filter_genes(pbmc, min_cells=1)
+    sc.pp.log1p(pbmc)
+
+    pbmc_dense = pbmc.copy()
+    pbmc_dense.X = pbmc_dense.X.toarray()
+
+    implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
+    explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, copy=True)
+
+    assert np.allclose(implicit.uns["pca"]["variance"], explicit.uns["pca"]["variance"])
+    assert np.allclose(
+        implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"]
+    )
+    assert np.allclose(implicit.obsm['X_pca'], explicit.obsm['X_pca'])
+    assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])

@@ -6,6 +6,7 @@ import scanpy as sc
 import numpy as np
 import pytest
 from pathlib import Path
+from anndata.tests.helpers import assert_adata_equal
 
 
 @pytest.fixture(scope="module")
@@ -70,3 +71,24 @@ def test_toggleswitch():
 
 def test_pbmc68k_reduced():
     sc.datasets.pbmc68k_reduced()
+
+
+@pytest.mark.internet
+def test_visium_datasets(tmp_dataset_dir, tmpdir):
+    # Tests that reading/ downloading works and is does not have global effects
+    hheart = sc.datasets.visium_sge("V1_Human_Heart")
+    mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
+    hheart_again = sc.datasets.visium_sge("V1_Human_Heart")
+    assert_adata_equal(hheart, hheart_again)
+
+    # Test that changing the dataset dir doesn't break reading
+    sc.settings.datasetdir = Path(tmpdir)
+    mbrain_again = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
+    assert_adata_equal(mbrain, mbrain_again)
+
+
+def test_download_failure():
+    from urllib.error import HTTPError
+
+    with pytest.raises(HTTPError):
+        sc.datasets.ebi_expression_atlas("not_a_real_accession")

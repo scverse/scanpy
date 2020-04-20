@@ -829,9 +829,10 @@ def sim(
 @_doc_params(vminmax=doc_vminmax, panels=doc_panels, show_save_ax=doc_show_save_ax)
 def embedding_density(
     adata: AnnData,
-    basis: str,
-    key: str,
-    *,
+    # on purpose, there is no asterisk here (for backward compat)
+    basis: str = 'umap',  # was positional before 1.4.5
+    key: Optional[str] = None,  # was positional before 1.4.5
+    groupby: Optional[str] = None,
     group: Optional[Union[str, List[str], None]] = 'all',
     color_map: Union[Colormap, str] = 'YlOrRd',
     bg_dotsize: Optional[int] = 80,
@@ -849,7 +850,7 @@ def embedding_density(
     **kwargs,
 ) -> Union[Figure, Axes, None]:
     """\
-    Plot the density of cells in an embedding (per condition)
+    Plot the density of cells in an embedding (per condition).
 
     Plots the gaussian kernel density estimates (over condition) from the
     `sc.tl.embedding_density()` output.
@@ -865,7 +866,9 @@ def embedding_density(
         The embedding over which the density was calculated. This embedded
         representation should be found in `adata.obsm['X_[basis]']``.
     key
-        Name of the `.obs` covariate that contains the density estimates
+        Name of the `.obs` covariate that contains the density estimates. Alternatively, pass `groupby`.
+    groupby
+        Name of the condition used in `tl.embedding_density`. Alternatively, pass `key`.
     group
         The category in the categorical observation annotation to be plotted.
         For example, 'G1' in the cell cycle 'phase' covariate. If all categories
@@ -907,6 +910,14 @@ def embedding_density(
 
     if basis == 'fa':
         basis = 'draw_graph_fa'
+
+    if key is not None and groupby is not None:
+        raise ValueError('either pass key or groupby but not both')
+
+    if key is None:
+        key = 'umap_density'
+    if groupby is not None:
+        key += f'_{groupby}'
 
     if f'X_{basis}' not in adata.obsm_keys():
         raise ValueError(

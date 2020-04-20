@@ -6,9 +6,12 @@ Anaconda
 If you do not have a working installation of Python 3.6 (or later), consider
 installing Miniconda_ (see `Installing Miniconda`_). Then run::
 
-    conda install -c bioconda scanpy
+    conda install seaborn scikit-learn statsmodels numba pytables
+    conda install -c conda-forge python-igraph leiden	
 
-Alternatively, you might want to pull Scanpy `from PyPI`_.
+Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pip3`` to access Python 3)::
+
+    pip install scanpy
 
 .. _from PyPI: https://pypi.org/project/scanpy
 

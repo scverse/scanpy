@@ -17,9 +17,7 @@ def trimap(
     n_inliers: int = 10,
     n_outliers: int = 5,
     n_random: int = 5,
-    metric: Literal[
-        'angular', 'euclidean', 'hamming', 'manhattan'
-    ] = 'euclidean',
+    metric: Literal['angular', 'euclidean', 'hamming', 'manhattan'] = 'euclidean',
     weight_adj: float = 500.0,
     lr: float = 1000.0,
     n_iters: int = 400,
@@ -89,9 +87,7 @@ def trimap(
     try:
         from trimap import TRIMAP
     except ImportError:
-        raise ImportError(
-            '\nplease install trimap: \n\n\tsudo pip install trimap'
-        )
+        raise ImportError('\nplease install trimap: \n\n\tsudo pip install trimap')
     adata = adata.copy() if copy else adata
     start = logg.info('computing TriMap')
     adata = adata.copy() if copy else adata

@@ -1,16 +1,16 @@
 from types import MappingProxyType
-from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Union
+from typing import Optional, Tuple, Sequence, Type, Mapping, Any
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 from natsort import natsorted
-from numpy.random.mtrand import RandomState
 from scipy.sparse import spmatrix
 
 from ._utils_clustering import rename_groups, restrict_adjacency
 from .. import _utils, logging as logg
 from .._compat import Literal
+from .._utils import _choose_graph
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -22,7 +22,7 @@ except ImportError:
 def louvain(
     adata: AnnData,
     resolution: Optional[float] = None,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: _utils.AnyRandom = 0,
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
     key_added: str = 'louvain',
     adjacency: Optional[spmatrix] = None,
@@ -31,6 +31,8 @@ def louvain(
     use_weights: bool = False,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    neighbors_key: Optional[str] = None,
+    obsp: Optional[str] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -61,8 +63,7 @@ def louvain(
     key_added
         Key under which to add the cluster labels. (default: ``'louvain'``)
     adjacency
-        Sparse adjacency matrix of the graph, defaults to
-        ``adata.uns['neighbors']['connectivities']``.
+        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     flavor
         Choose between to packages for computing the clustering.
         ``'vtraag'`` is much more powerful, and the default.
@@ -76,6 +77,15 @@ def louvain(
     partition_kwargs
         Key word arguments to pass to partitioning,
         if ``vtraag`` method is being used.
+    neighbors_key
+        Use neighbors connectivities as adjacency.
+        If not specified, louvain looks .obsp['connectivities'] for connectivities
+        (default storage place for pp.neighbors).
+        If specified, louvain looks
+        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+    obsp
+        Use .obsp[obsp] as adjacency. You can't specify both
+        `obsp` and `neighbors_key` at the same time.
     copy
         Copy adata or modify it inplace.
 
@@ -99,13 +109,8 @@ def louvain(
             'when `flavour` is "vtraag"'
         )
     adata = adata.copy() if copy else adata
-    if adjacency is None and 'neighbors' not in adata.uns:
-        raise ValueError(
-            'You need to run `pp.neighbors` first '
-            'to compute a neighborhood graph.'
-        )
     if adjacency is None:
-        adjacency = adata.uns['neighbors']['connectivities']
+        adjacency = _choose_graph(adata, obsp, neighbors_key)
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         adjacency, restrict_indices = restrict_adjacency(
@@ -163,7 +168,7 @@ def louvain(
         g = cugraph.Graph()
         g.add_adj_list(offsets, indices, weights)
         logg.info('    using the "louvain" package of rapids')
-        louvain_parts, _ = cugraph.nvLouvain(g)
+        louvain_parts, _ = cugraph.louvain(g)
         groups = louvain_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
     elif flavor == 'taynaud':
         # this is deprecated
@@ -190,7 +195,7 @@ def louvain(
         )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),
-        categories=natsorted(np.unique(groups).astype('U')),
+        categories=natsorted(map(str, np.unique(groups))),
     )
     adata.uns['louvain'] = {}
     adata.uns['louvain']['params'] = dict(
