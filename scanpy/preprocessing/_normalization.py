@@ -135,7 +135,7 @@ def normalize_total(
         )
 
     gene_subset = None
-    msg = 'Normalizing counts per cell.'
+    msg = 'normalizing counts per cell'
     if exclude_highly_expressed:
         counts_per_cell = adata.X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
@@ -190,8 +190,7 @@ def normalize_total(
             dat[layer_name] = _normalize_data(layer, counts, after, copy=True)
 
     logg.info(
-        '    finished ({time_passed}):'
-        'normalized adata.X',
+        '    finished ({time_passed})',
         time=start,
     )
     if key_added is not None:

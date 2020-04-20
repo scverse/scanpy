@@ -13,16 +13,12 @@ HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / 'extensions')]
 import scanpy  # noqa
 
-with warnings.catch_warnings():
-    warnings.filterwarnings('ignore', category=FutureWarning)
-    import scanpy.api
-
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 # -- General configuration ------------------------------------------------
 
 
-nitpicky = True  # Warn about broken links
+nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = '2.0'  # Nicer param docs
 suppress_warnings = ['ref.citation']
 
@@ -71,6 +67,8 @@ napoleon_custom_sections = [('Params', 'Parameters')]
 todo_include_todos = False
 api_dir = HERE / 'api'  # function_images
 
+scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
+
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
@@ -88,10 +86,7 @@ intersphinx_mapping = dict(
     scvelo=('https://scvelo.readthedocs.io/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
-    scanpy_tutorials=(
-        'https://scanpy-tutorials.readthedocs.io/en/latest',
-        None,
-    ),
+    scanpy_tutorials=(scanpy_tutorials_url, None),
 )
 
 
@@ -99,9 +94,7 @@ intersphinx_mapping = dict(
 
 
 html_theme = 'sphinx_rtd_theme'
-html_theme_options = dict(
-    navigation_depth=4, logo_only=True  # Only show the logo
-)
+html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the logo
 html_context = dict(
     display_github=True,  # Integrate GitHub
     github_user='theislab',  # Username
@@ -120,7 +113,6 @@ def setup(app):
 
 
 # -- Options for other output formats ------------------------------------------
-
 
 htmlhelp_basename = f'{project}doc'
 doc_title = f'{project} Documentation'
@@ -142,7 +134,9 @@ texinfo_documents = [
 # -- Suppress link warnings ----------------------------------------------------
 
 qualname_overrides = {
-    "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric"
+    "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
+    # If the docs are built with an old version of numpy, this will make it work:
+    "numpy.random.RandomState": "numpy.random.mtrand.RandomState",
 }
 
 nitpick_ignore = [
@@ -151,27 +145,6 @@ nitpick_ignore = [
     # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
     ('py:class', 'seaborn.ClusterGrid'),
     # Won’t be documented
-    ('py:class', 'scanpy.readwrite.Empty'),
+    ('py:class', 'scanpy.plotting._utils._AxesSubplot'),
+    ('py:class', 'scanpy._utils.Empty'),
 ]
-
-for mod_name in [
-    'pp',
-    'tl',
-    'pl',
-    'queries',
-    'logging',
-    'datasets',
-    'export_to',
-    None,
-]:
-    if mod_name is None:
-        mod = scanpy.api
-        mod_name = 'scanpy.api'
-    else:
-        mod = getattr(scanpy.api, mod_name)
-        mod_name = f'scanpy.api.{mod_name}'
-    for name, item in vars(mod).items():
-        if not callable(item):
-            continue
-        for kind in ['func', 'obj']:
-            nitpick_ignore.append((f'py:{kind}', f'{mod_name}.{name}'))
