@@ -4,6 +4,10 @@
 On master
 ~~~~~~~~~~
 
+.. rubric:: New functionality
+
+- :func:`~scanpy.pp.sample` supports both upsampling and downsampling of observations and variables. :func:`~scanpy.pp.subsample` is now deprecated.
+
 .. rubric:: Performance
 
 - :func:`~scanpy.pp.pca` now uses efficient implicit centering for sparse matrices. This can lead to signifigantly improved performance for large datasets :pr:`1066` :smaller:`A Tarashansky`
