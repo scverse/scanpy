@@ -143,8 +143,8 @@ def umap(
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == 'paga':
         init_coords = get_init_pos_from_paga(
-          adata, 
-          random_state=random_state, 
+          adata,
+          random_state=random_state,
           neighbors_key=neighbors_key,
           key=init_pos_paga_key,
         )
