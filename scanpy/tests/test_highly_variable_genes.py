@@ -25,6 +25,19 @@ def test_highly_variable_genes_basic():
     assert 'highly_variable_nbatches' in adata.var.columns
     assert adata.var['highly_variable'].sum() == 3
 
+    sc.pp.highly_variable_genes(adata)
+    no_batch_hvg = adata.var.highly_variable.copy()
+    assert no_batch_hvg.any()
+    adata.obs['batch'] = 'batch'
+    adata.obs['batch'] = adata.obs['batch'].astype('category')
+    sc.pp.highly_variable_genes(adata, batch_key='batch')
+    assert np.all(no_batch_hvg == adata.var.highly_variable)
+
+    adata.obs["batch"] = "a"
+    adata.obs["batch"][::2] = "b"
+    sc.pp.highly_variable_genes(adata, batch_key="batch")
+    assert adata.var["highly_variable"].any()
+
 
 def test_higly_variable_genes_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
