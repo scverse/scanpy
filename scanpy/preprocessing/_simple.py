@@ -3,6 +3,7 @@
 Compositions of these functions are found in sc.preprocess.recipes.
 """
 from functools import singledispatch
+from numbers import Number
 import warnings
 from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
 
@@ -10,7 +11,7 @@ import numba
 import numpy as np
 import scipy as sp
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
-from sklearn.utils import sparsefuncs
+from sklearn.utils import sparsefuncs, check_array
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 
@@ -249,13 +250,14 @@ def filter_genes(
     return gene_subset, number_per_gene
 
 
+@singledispatch
 def log1p(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    X: Union[AnnData, np.ndarray, spmatrix],
+    *,
     copy: bool = False,
-    chunked: bool = False,
-    chunk_size: Optional[int] = None,
-    base: Optional[float] = None,
-) -> Optional[AnnData]:
+    base: Optional[Number] = None,
+    **kwargs
+):
     """\
     Logarithmize the data matrix.
 
@@ -264,7 +266,7 @@ def log1p(
 
     Parameters
     ----------
-    data
+    X
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     copy
@@ -282,44 +284,65 @@ def log1p(
     -------
     Returns or updates `data`, depending on `copy`.
     """
-    if 'log1p' in data.uns_keys():
-        logg.warning('adata.X seems to be already log-transformed.')
+    return log1p_array(X, copy=copy, base=base, **kwargs)
 
+
+@log1p.register(spmatrix)
+def log1p_sparse(X, *, copy: bool = False, base: Optional[Number] = None):
+    X = check_array(
+        X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
+    )
+    X.data = log1p(X.data, copy=False, base=base)
+    return X
+
+
+@log1p.register(np.ndarray)
+def log1p_array(X, *, copy: bool = False, base: Optional[Number] = None):
+    # Can force arrays to be np.ndarrays, but would be useful
+    # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
-        if not isinstance(data, AnnData):
-            data = data.astype(np.floating)
+        if not np.issubdtype(X.dtype, np.floating):
+            X = X.astype(np.floating)
         else:
-            data = data.copy()
-    elif not isinstance(data, AnnData) and np.issubdtype(data.dtype, np.integer):
-        raise TypeError("Cannot perform inplace log1p on integer array")
+            X = X.copy()
+    np.log1p(X, out=X)
+    if base is not None:
+        np.divide(X, np.log(base), out=X)
+    return X
 
-    if isinstance(data, AnnData) and data.is_view:
-        view_to_actual(data)
 
-    def _log1p(X):
-        if issparse(X):
-            np.log1p(X.data, out=X.data)
-            if base is not None:
-                np.divide(X.data, np.log(base), out=X.data)
-        else:
-            np.log1p(X, out=X)
-            if base is not None:
-                np.divide(X, np.log(base), out=X)
-        return X
+@log1p.register(AnnData)
+def log1p_anndata(
+    adata,
+    *,
+    copy: bool = False,
+    base: Optional[Number] = None,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+    chunked: bool = False,
+    chunk_size: Optional[int] = None,
+) -> Optional[AnnData]:
+    if "log1p" in adata.uns_keys():
+        logg.warning("adata.X seems to be already log-transformed.")
 
-    if isinstance(data, AnnData):
-        if not np.issubdtype(data.X.dtype, np.floating):
-            data.X = data.X.astype(np.float32)
-        if chunked:
-            for chunk, start, end in data.chunked_X(chunk_size):
-                 data.X[start:end] = _log1p(chunk)
-        else:
-            _log1p(data.X)
+    adata = adata.copy() if copy else adata
+    view_to_actual(adata)
+
+    if chunked:
+        if (layer is not None) or (obsm is not None):
+            raise NotImplementedError(
+                "Currently cannot perform chunked operations on arrays not stored in X."
+            )
+        for chunk, start, end in adata.chunked_X(chunk_size):
+            adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
-        _log1p(data)
+        X = _get_obs_rep(adata, layer=layer, obsm=obsm)
+        X = log1p(X, copy=False, base=base)
+        _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
-    data.uns['log1p'] = {'base': base}
-    return data if copy else None
+    adata.uns["log1p"] = {"base": base}
+    if copy:
+        return adata
 
 
 def sqrt(
