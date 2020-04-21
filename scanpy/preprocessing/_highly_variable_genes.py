@@ -143,7 +143,7 @@ def highly_variable_genes(
     subset: bool = False,
     inplace: bool = True,
     batch_key: Optional[str] = None,
-) -> Optional[np.recarray]:
+) -> Optional[pd.DataFrame]:
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_.
 
@@ -197,7 +197,7 @@ def highly_variable_genes(
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics (:class:`~numpy.recarray`) or
+    Depending on `inplace` returns calculated metrics (:class:`~pandas.DataFrame`) or
     updates `.var` with the following fields
 
     highly_variable : bool
@@ -228,7 +228,7 @@ def highly_variable_genes(
     if not isinstance(adata, AnnData):
         raise ValueError(
             '`pp.highly_variable_genes` expects an `AnnData` argument, '
-            'pass `inplace=False` if you want to return a `np.recarray`.')
+            'pass `inplace=False` if you want to return a `pd.DataFrame`.')
 
     if batch_key is None:
         df = _highly_variable_genes_single_batch(
@@ -330,10 +330,4 @@ def highly_variable_genes(
         if subset:
             adata._inplace_subset_var(df['highly_variable'].values)
     else:
-        arrays = [
-             df['highly_variable'].values,
-             df['means'].values,
-             df['dispersions'].values,
-             df['dispersions_norm'].values.astype('float32', copy=False),
-        ]
         return df
