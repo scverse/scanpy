@@ -101,10 +101,12 @@ def neighbors(
     -------
     Depending on `copy`, updates or returns `adata` with the following:
 
-    **connectivities** : sparse matrix (`.uns['neighbors']`, dtype `float32`)
+    **connectivities** : sparse matrix with dtype `float32`.
+        See `key_added` parameter description for the storage path.
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    **distances** : sparse matrix (`.uns['neighbors']`, dtype `float32`)
+    **distances** : sparse matrix with dtype `float32`.
+        See `key_added` parameter description for the storage path.
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
     """
