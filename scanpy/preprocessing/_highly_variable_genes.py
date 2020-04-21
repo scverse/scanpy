@@ -336,19 +336,4 @@ def highly_variable_genes(
              df['dispersions'].values,
              df['dispersions_norm'].values.astype('float32', copy=False),
         ]
-        dtypes = [
-            ('highly_variable', np.bool_),
-            ('means', 'float32'),
-            ('dispersions', 'float32'),
-            ('dispersions_norm', 'float32'),
-        ]
-        if batch_key is not None:
-            arrays.extend([
-                df['highly_variable_nbatches'].values,
-                df['highly_variable_intersection'].values,
-            ])
-            dtypes.append([
-                ('highly_variable_nbatches', int),
-                ('highly_variable_intersection', np.bool_),
-            ])
-        return np.rec.fromarrays(arrays, dtype=dtypes)
+        return df
