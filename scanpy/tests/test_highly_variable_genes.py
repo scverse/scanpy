@@ -32,6 +32,7 @@ def test_highly_variable_genes_basic():
     adata.obs['batch'] = adata.obs['batch'].astype('category')
     sc.pp.highly_variable_genes(adata, batch_key='batch')
     assert np.all(no_batch_hvg == adata.var.highly_variable)
+    assert np.all(adata.var.highly_variable_intersection == adata.var.highly_variable)
 
     adata.obs["batch"] = "a"
     adata.obs.batch.loc[::2] = "b"
