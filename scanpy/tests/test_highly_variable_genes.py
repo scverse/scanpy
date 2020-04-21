@@ -38,6 +38,17 @@ def test_highly_variable_genes_basic():
     sc.pp.highly_variable_genes(adata, batch_key="batch")
     assert adata.var["highly_variable"].any()
 
+    colnames = [
+        'means',
+        'dispersions',
+        'dispersions_norm',
+        'highly_variable_nbatches',
+        'highly_variable_intersection',
+        'highly_variable',
+    ]
+    hvg_df = sc.pp.highly_variable_genes(adata, batch_key="batch", inplace=False)
+    assert np.all(np.isin(colnames, hvg_df.columns))
+
 
 def test_higly_variable_genes_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
@@ -153,3 +164,13 @@ def test_highly_variable_genes_batches():
         adata.var['dispersions_norm'][0],
         0.5*hvg2['dispersions_norm'][0]
     )
+
+    colnames = [
+        'means',
+        'dispersions',
+        'dispersions_norm',
+        'highly_variable',
+    ]
+
+    assert np.all(np.isin(colnames, hvg1.columns))
+
