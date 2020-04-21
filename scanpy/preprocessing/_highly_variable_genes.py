@@ -218,6 +218,11 @@ def highly_variable_genes(
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
     """
 
+    if min_disp is None: min_disp = 0.5
+    if min_mean is None: min_mean = 0.0125
+    if max_mean is None: max_mean = 3
+    if max_disp is None: max_disp = np.inf
+
     start = logg.info('extracting highly variable genes')
 
     if not isinstance(adata, AnnData):
