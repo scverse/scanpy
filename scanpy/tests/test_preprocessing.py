@@ -9,6 +9,8 @@ import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal, asarray
 
+from scanpy.tests.helpers import check_rep_mutation, check_rep_results
+
 
 def test_log1p(tmp_path):
     A = np.random.rand(200, 10)
@@ -28,6 +30,17 @@ def test_log1p(tmp_path):
     ad4 = AnnData(A)
     sc.pp.log1p(ad4, base=2)
     assert np.allclose(ad4.X, A_l/np.log(2))
+
+
+@pytest.fixture(params=[None, 2])
+def base(request):
+    return request.param
+
+
+def test_log1p_rep(count_matrix_format, base):
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    check_rep_mutation(sc.pp.log1p, X, base=base)
+    check_rep_results(sc.pp.log1p, X, base=base)
 
 
 def test_mean_var_sparse():
@@ -123,27 +136,13 @@ def zero_center(request):
     return request.param
 
 
-def test_scale_loc(count_matrix_format, zero_center):
+def test_scale_rep(count_matrix_format, zero_center):
     """
     Test that it doesn't matter where the array being scaled is in the anndata object.
     """
     X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
-    adata = sc.AnnData(X=X.copy(), layers={"layer": X.copy()}, obsm={"obsm": X.copy()}, dtype=np.float64)
-    adata_X = sc.pp.scale(adata, zero_center=zero_center, copy=True)
-    adata_layer = sc.pp.scale(adata, zero_center=zero_center, layer="layer", copy=True)
-    adata_obsm = sc.pp.scale(adata, zero_center=zero_center, obsm="obsm", copy=True)
-
-    assert np.array_equal(asarray(adata_X.X), asarray(adata_layer.layers["layer"]))
-    assert np.array_equal(asarray(adata_X.X), asarray(adata_obsm.obsm["obsm"]))
-
-    assert np.array_equal(asarray(adata_layer.X), asarray(adata_layer.obsm["obsm"]))
-    assert np.array_equal(asarray(adata_obsm.X), asarray(adata_obsm.layers["layer"]))
-    assert np.array_equal(asarray(adata_X.layers["layer"]), asarray(adata_X.obsm["obsm"]))
-
-    assert np.array_equal(adata_X.var["mean"], adata_layer.var["mean"])
-    assert np.array_equal(adata_X.var["mean"], adata_obsm.var["mean"])
-    assert np.array_equal(adata_X.var["std"], adata_layer.var["std"])
-    assert np.array_equal(adata_X.var["std"], adata_obsm.var["std"])
+    check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
+    check_rep_results(sc.pp.scale, X, zero_center=zero_center)
 
 
 def test_scale_array(count_matrix_format, zero_center):
