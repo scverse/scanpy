@@ -1,33 +1,25 @@
 """Plotting functions for AnnData.
 """
 import collections.abc as cabc
-from itertools import product
 from typing import Optional, Union, Mapping  # Special
-from typing import Sequence, Collection, Iterable  # ABCs
-from typing import Tuple, List  # Classes
+from typing import Sequence, Iterable  # ABCs
+from typing import Tuple # Classes
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from cycler import Cycler
 from matplotlib.axes import Axes
-from pandas.api.types import is_categorical_dtype
-from scipy.sparse import issparse
 from matplotlib import pyplot as pl
-from matplotlib import rcParams
 from matplotlib import gridspec
-from matplotlib import patheffects
-from matplotlib.colors import is_color_like, Colormap, ListedColormap
+from matplotlib.colors import is_color_like
 
-from .. import get
 from .. import logging as logg
-from .._settings import settings
-from .._utils import sanitize_anndata, _doc_params
+from .._utils import _doc_params
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes, make_grid_spec, fix_kwds
-from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
-from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
+from ._utils import make_grid_spec, fix_kwds
+from ._utils import ColorLike, _AxesSubplot
+from ._docs import doc_common_plot_args
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
 
 _VarNames = Union[str, Sequence[str]]
