@@ -28,6 +28,7 @@ from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes, make_grid_spec, fix_kwds
 from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
+from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
 
 _VarNames = Union[str, Sequence[str]]
 
@@ -67,7 +68,7 @@ class BasePlot(object):
     ):
         if use_raw is None and adata.raw is not None:
             use_raw = True
-        var_names, var_group_labels, var_group_positions = _check_var_names_type(
+        var_names, var_group_labels, var_group_positions = self._check_var_names_type(
             var_names, var_group_labels, var_group_positions
         )
         self.categories, self.obs_tidy = _prepare_dataframe(
@@ -127,6 +128,9 @@ class BasePlot(object):
 
         self.group_extra_size = 0
         self.plot_group_extra = None
+        # after show() is called ax_dict contains a dictionary of the axes used in
+        # the plot
+        self.ax_dict = None
         self.ax = ax
 
     def swap_axes(self, swap_axes: Optional[bool] = True):
@@ -337,6 +341,9 @@ class BasePlot(object):
             self.legends_width = width
 
         return self
+
+    def get_axes(self):
+        return self.ax_dict
 
     def _plot_totals(
         self, total_barplot_ax: Axes, orientation: Literal['top', 'right']
@@ -674,7 +681,7 @@ class BasePlot(object):
 
         # TODO change mainplot to a variable
         _utils.savefig_or_show('mainplot', show=show, save=save)
-
+        self.ax_dict = return_ax_dict
         if show is False:
             return return_ax_dict
 
@@ -686,7 +693,7 @@ class BasePlot(object):
         var_names=None,
         var_group_labels=None,
         var_group_positions=None,
-    ):
+    ) -> dict:
         """\
         Function used by plotting functions that need to reorder the the groupby
         observations based on the dendrogram results.
@@ -704,6 +711,13 @@ class BasePlot(object):
         'categories_idx_ordered', 'var_group_names_idx_ordered',
         'var_group_labels', and 'var_group_positions'
         """
+
+        def _format_first_three_categories(_categories):
+            "used to clean up warning message"
+            _categories = list(_categories)
+            if len(_categories) > 3:
+                _categories = _categories[:3] + ['etc.']
+            return ', '.join(_categories)
 
         key = _get_dendrogram_key(adata, dendrogram, groupby)
 
@@ -759,7 +773,8 @@ class BasePlot(object):
                     "Groups are not reordered because the `groupby` categories "
                     "and the `var_group_labels` are different.\n"
                     f"categories: {_format_first_three_categories(categories)}\n"
-                    f"var_group_labels: {_format_first_three_categories(var_group_labels)}"
+                    "var_group_labels: "
+                    f"{_format_first_three_categories(var_group_labels)}"
                 )
         else:
             var_names_idx_ordered = None
@@ -913,6 +928,42 @@ class BasePlot(object):
             axis='x', bottom=False, labelbottom=False, labeltop=False
         )
 
+    @staticmethod
+    def _check_var_names_type(var_names, var_group_labels, var_group_positions):
+        """
+        checks if var_names is a dict. Is this is the cases, then set the
+        correct values for var_group_labels and var_group_positions
+
+        Returns
+        -------
+        var_names, var_group_labels, var_group_positions
+
+        """
+        if isinstance(var_names, cabc.Mapping):
+            if var_group_labels is not None or var_group_positions is not None:
+                logg.warning(
+                    "`var_names` is a dictionary. This will reset the current "
+                    "value of `var_group_labels` and `var_group_positions`."
+                )
+            var_group_labels = []
+            _var_names = []
+            var_group_positions = []
+            start = 0
+            for label, vars_list in var_names.items():
+                if isinstance(vars_list, str):
+                    vars_list = [vars_list]
+                # use list() in case var_list is a numpy array or pandas series
+                _var_names.extend(list(vars_list))
+                var_group_labels.append(label)
+                var_group_positions.append((start, start + len(vars_list) - 1))
+                start += len(vars_list)
+            var_names = _var_names
+
+        elif isinstance(var_names, str):
+            var_names = [var_names]
+
+        return var_names, var_group_labels, var_group_positions
+
 
 @_doc_params(common_plot_args=doc_common_plot_args)
 class DotPlot(BasePlot):
@@ -990,7 +1041,7 @@ class DotPlot(BasePlot):
         self,
         adata: AnnData,
         var_names: Union[_VarNames, Mapping[str, _VarNames]],
-        groupby: Optional[str] = None,
+        groupby: str,
         use_raw: Optional[bool] = None,
         log: bool = False,
         num_categories: int = 7,
@@ -1013,7 +1064,7 @@ class DotPlot(BasePlot):
             self,
             adata,
             var_names,
-            groupby=groupby,
+            groupby,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
@@ -1102,6 +1153,7 @@ class DotPlot(BasePlot):
         self.largest_dot = self.DEFAULT_LARGEST_DOT
         self.color_on = self.DEFAULT_COLOR_ON
         self.size_exponent = self.DEFAULT_SIZE_EXPONENT
+        self.grid = False
 
         self.dot_edge_color = self.DEFAULT_DOT_EDGECOLOR
         self.dot_edge_lw = self.DEFAULT_DOT_EDGELW
@@ -1124,6 +1176,7 @@ class DotPlot(BasePlot):
         dot_edge_color: Optional[ColorLike] = DEFAULT_DOT_EDGECOLOR,
         dot_edge_lw: Optional[float] = DEFAULT_DOT_EDGELW,
         size_exponent: Optional[float] = DEFAULT_SIZE_EXPONENT,
+        grid: Optional[float] = False,
     ):
         """
         Modifies plot style
@@ -1163,7 +1216,10 @@ class DotPlot(BasePlot):
             `smallest_dot` and `largest_dot` size parameters.
             Using a different size exponent changes the relative sizes of the dots
             to each other.
-
+        grid
+            Set to true to show grid lines. By default grid lines are not shown.
+            Further configuration of the grid lines can be achived directly on the
+            returned ax.
         Returns
         -------
         DotPlot
@@ -1192,6 +1248,7 @@ class DotPlot(BasePlot):
 
         self.dot_edge_color = dot_edge_color
         self.dot_edge_lw = dot_edge_lw
+        self.grid = grid
         return self
 
     def legend(
@@ -1277,7 +1334,7 @@ class DotPlot(BasePlot):
             zorder=100,
         )
         size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
-        labels = ["{}".format(np.ceil(x * 100).astype(int)) for x in size_range]
+        labels = ["{}".format(np.floor(x * 100).astype(int)) for x in size_range]
         size_legend_ax.set_xticklabels(labels, fontsize='small')
 
         # remove y ticks and labels
@@ -1370,6 +1427,7 @@ class DotPlot(BasePlot):
             smallest_dot=self.smallest_dot,
             largest_dot=self.largest_dot,
             size_exponent=self.size_exponent,
+            grid=self.grid,
             **self.kwds,
         )
 
@@ -1392,6 +1450,7 @@ class DotPlot(BasePlot):
         size_exponent: Optional[float] = 2,
         edge_color: Optional[ColorLike] = None,
         edge_lw: Optional[float] = None,
+        grid: Optional[bool] = False,
         **kwds,
     ):
         """\
@@ -1437,7 +1496,8 @@ class DotPlot(BasePlot):
         edge_lw
             Dot edge line width. When `color_on='dot'` the default is no edge. When
             `color_on='square'`, line width = 1.5
-
+        grid
+            Adds a grid to the plot
         **kwds
             Are passed to :func:`matplotlib.pyplot.scatter`.
 
@@ -1575,6 +1635,10 @@ class DotPlot(BasePlot):
 
             dot_ax.set_xlim(-0.3, dot_color.shape[1] + 0.3)
 
+        if grid:
+            dot_ax.grid(True, color='gray', linewidth=0.1)
+            dot_ax.set_axisbelow(True)
+
         return normalize, dot_min, dot_max
 
 
@@ -1613,6 +1677,9 @@ class MatrixPlot(BasePlot):
         Whether or not to standardize that dimension between 0 and 1,
         meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
+    values_df
+        Optionally, a dataframe with the values to plot can be given. The
+        index should be the grouby categories and the columns the genes names.
 
     **kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
@@ -1643,7 +1710,7 @@ class MatrixPlot(BasePlot):
         self,
         adata: AnnData,
         var_names: Union[_VarNames, Mapping[str, _VarNames]],
-        groupby: Optional[str] = None,
+        groupby: str,
         use_raw: Optional[bool] = None,
         log: bool = False,
         num_categories: int = 7,
@@ -1656,13 +1723,14 @@ class MatrixPlot(BasePlot):
         layer: Optional[str] = None,
         standard_scale: Literal['var', 'group'] = None,
         ax: Optional[_AxesSubplot] = None,
+        values_df: Optional[pd.DataFrame] = None,
         **kwds,
     ):
         BasePlot.__init__(
             self,
             adata,
             var_names,
-            groupby=groupby,
+            groupby,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
@@ -1677,21 +1745,22 @@ class MatrixPlot(BasePlot):
             **kwds,
         )
 
-        # compute mean value
-        mean_obs = self.obs_tidy.groupby(level=0).mean()
+        if values_df is None:
+            # compute mean value
+            values_df = self.obs_tidy.groupby(level=0).mean()
 
-        if standard_scale == 'group':
-            mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
-            mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
-        elif standard_scale == 'var':
-            mean_obs -= mean_obs.min(0)
-            mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
-        elif standard_scale is None:
-            pass
-        else:
-            logg.warning('Unknown type for standard_scale, ignored')
+            if standard_scale == 'group':
+                values_df = values_df.sub(values_df.min(1), axis=0)
+                values_df = values_df.div(values_df.max(1), axis=0).fillna(0)
+            elif standard_scale == 'var':
+                values_df -= values_df.min(0)
+                values_df = (values_df / values_df.max(0)).fillna(0)
+            elif standard_scale is None:
+                pass
+            else:
+                logg.warning('Unknown type for standard_scale, ignored')
 
-        self.mean_obs = mean_obs
+        self.values_df = values_df
 
         self.cmap = self.DEFAULT_COLORMAP
         self.edge_color = self.DEFAULT_EDGE_COLOR
@@ -1741,7 +1810,7 @@ class MatrixPlot(BasePlot):
         # on the original data frames after repetitive calls to the
         # DotPlot object, for example once with swap_axes and other without
 
-        _color_df = self.mean_obs.copy()
+        _color_df = self.values_df.copy()
         if self.var_names_idx_order is not None:
             _color_df = _color_df.iloc[:, self.var_names_idx_order]
 
@@ -1874,7 +1943,7 @@ class StackedViolin(BasePlot):
         self,
         adata: AnnData,
         var_names: Union[_VarNames, Mapping[str, _VarNames]],
-        groupby: Optional[str] = None,
+        groupby: str,
         use_raw: Optional[bool] = None,
         log: bool = False,
         num_categories: int = 7,
@@ -1893,7 +1962,7 @@ class StackedViolin(BasePlot):
             self,
             adata,
             var_names,
-            groupby=groupby,
+            groupby,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,

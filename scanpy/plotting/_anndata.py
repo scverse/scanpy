@@ -28,7 +28,7 @@ from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes
 from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
-
+from ._groupby_plots import MatrixPlot, DotPlot, StackedViolin
 
 VALID_LEGENDLOCS = {
     'none',
@@ -942,9 +942,15 @@ def stacked_violin(
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
-
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    Get StackeViolin object for fine tuning
+    >>> vp = sc.pl.dotplot(adata, markers, 'bulk_labels', show=False)
+    >>> vp.add_totals().style(ylim=(0,5)).show()
+
+    The axes used can be obtained using the get_axes() method
+    >>> axes_dict = vp.get_axes()
 
     See also
     --------
@@ -974,7 +980,10 @@ def stacked_violin(
         dp.swap_axes()
     dp = dp.style(stripplot=stripplot, jitter=jitter, jitter_size=size,
                   row_palette=row_palette, scale=scale)
-    return dp.show(show=show, save=save)
+    if show is not False or save:
+        return dp.show(show=show, save=save)
+    else:
+        return dp
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
@@ -994,7 +1003,6 @@ def heatmap(
     standard_scale: Optional[Literal['var', 'obs']] = None,
     swap_axes: bool = False,
     show_gene_labels: Optional[bool] = None,
-
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     figsize: Optional[Tuple[float, float]] = None,
@@ -1367,7 +1375,7 @@ def dotplot(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwds,
-):
+) -> DotPlot:
     """\
     Makes a *dot plot* of the expression values of `var_names`.
 
@@ -1419,7 +1427,7 @@ def dotplot(
 
     Returns
     -------
-    List of :class:`~matplotlib.axes.Axes`
+    if `show` is False, returns a DotPlot object
 
     Examples
     -------
@@ -1429,9 +1437,15 @@ def dotplot(
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
-
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    Get DotPlot object for fine tuning
+    >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', show=False)
+    >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
+
+    The axes used can be obtained using the get_axes() method
+    >>> axes_dict = dp.get_axes()
 
     See also
     --------
@@ -1441,7 +1455,7 @@ def dotplot(
 
     dp = DotPlot(adata,
             var_names,
-            groupby=groupby,
+            groupby,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
@@ -1464,7 +1478,11 @@ def dotplot(
         dp.swap_axes()
 
     dp = dp.style(cmap=color_map, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot)
-    return dp.show(show=show, save=save)
+
+    if show is not False or save:
+        return dp.show(show=show, save=save)
+    else:
+        return dp
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
@@ -1484,11 +1502,12 @@ def matrixplot(
     var_group_rotation: Optional[float] = None,
     layer: Optional[str] = None,
     standard_scale: Literal['var', 'group'] = None,
+    values_df: Optional[pd.DataFrame] = None,
     swap_axes: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwds,
-):
+) -> MatrixPlot:
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
     If groupby is not given, the matrixplot assumes that all data belongs to a single
@@ -1506,7 +1525,7 @@ def matrixplot(
 
     Returns
     -------
-    List of :class:`~matplotlib.axes.Axes`
+    if `show` is False, returns a MatrixPlot object
 
     Examples
     --------
@@ -1516,9 +1535,15 @@ def matrixplot(
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
-
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    Get Matrix object for fine tuning
+    >>> mp = sc.pl.matrix(adata, markers, 'bulk_labels', show=False)
+    >>> mp.add_totals().style(edge_color='black').show()
+
+    The axes used can be obtained using the get_axes() method
+    >>> axes_dict = mp.get_axes()
 
     See also
     --------
@@ -1539,6 +1564,7 @@ def matrixplot(
             var_group_labels=var_group_labels,
             var_group_rotation=var_group_rotation,
             layer=layer,
+            values_df=values_df,
             ** kwds,
     )
 
@@ -1548,7 +1574,10 @@ def matrixplot(
         dp.swap_axes()
 
     dp = dp.style(cmap=kwds.get('cmap'))
-    return dp.show(show=show, save=save)
+    if show is not False or save:
+        return dp.show(show=show, save=save)
+    else:
+        return dp
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
@@ -2127,13 +2156,6 @@ def _prepare_dataframe(
     return categories, obs_tidy
 
 
-def _format_first_three_categories(categories):
-    categories = list(categories)
-    if len(categories) > 3:
-        categories = categories[:3] + ['etc.']
-    return ', '.join(categories)
-
-
 def _get_dendrogram_key(adata, dendrogram_key, groupby):
     # the `dendrogram_key` can be a bool an NoneType or the name of the
     # dendrogram key. By default the name of the dendrogram key is 'dendrogram'
@@ -2426,38 +2448,3 @@ def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
     pl.colorbar(mappable, cax=heatmap_cbar_ax)
     return heatmap_cbar_ax
 
-
-def _check_var_names_type(var_names, var_group_labels, var_group_positions):
-    """
-    checks if var_names is a dict. Is this is the cases, then set the
-    correct values for var_group_labels and var_group_positions
-
-    Returns
-    -------
-    var_names, var_group_labels, var_group_positions
-
-    """
-    if isinstance(var_names, cabc.Mapping):
-        if var_group_labels is not None or var_group_positions is not None:
-            logg.warning(
-                "`var_names` is a dictionary. This will reset the current "
-                "value of `var_group_labels` and `var_group_positions`."
-            )
-        var_group_labels = []
-        _var_names = []
-        var_group_positions = []
-        start = 0
-        for label, vars_list in var_names.items():
-            if isinstance(vars_list, str):
-                vars_list = [vars_list]
-            # use list() in case var_list is a numpy array or pandas series
-            _var_names.extend(list(vars_list))
-            var_group_labels.append(label)
-            var_group_positions.append((start, start + len(vars_list) - 1))
-            start += len(vars_list)
-        var_names = _var_names
-
-    elif isinstance(var_names, str):
-        var_names = [var_names]
-
-    return var_names, var_group_labels, var_group_positions

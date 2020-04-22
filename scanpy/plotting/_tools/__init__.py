@@ -393,6 +393,9 @@ def _rank_genes_groups_plot(
 
     group_names = group_names_valid
 
+    # by default add dendrogram to plots
+    kwds.setdefault('dendrogram', True)
+
     if plot_type == 'dotplot':
         color_title = None
         values_df = None
@@ -400,14 +403,15 @@ def _rank_genes_groups_plot(
             values_df = _get_values_to_plot(adata, values_to_plot, gene_names, group_names, key=key)
             color_title = values_to_plot
 
-        from .._anndata import DotPlot
-        pl = DotPlot(adata, gene_names, groupby, var_group_labels=group_names,
+        from .._anndata import dotplot
+        pl = dotplot(adata, gene_names, groupby, var_group_labels=group_names,
                 var_group_positions=group_positions,
-                dot_color_df=values_df, **kwds).add_dendrogram()
+                dot_color_df=values_df, show=False, **kwds)
 
         if color_title is not None:
             pl.legend(color_title=color_title.replace("_", " "))
-        pl.show(show=show, save=save)
+        if show is not False or save:
+            pl.show(show=show, save=save)
         return pl
 
     elif plot_type == 'heatmap':
@@ -417,8 +421,12 @@ def _rank_genes_groups_plot(
 
     elif plot_type == 'stacked_violin':
         from .._anndata import stacked_violin
-        return stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
-                       var_group_positions=group_positions, show=show, save=save, **kwds)
+        pl = stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
+                       var_group_positions=group_positions, show=False, **kwds)
+        if show is not False or save:
+            pl.show(show=show, save=save)
+
+        return pl
 
     elif plot_type == 'tracksplot':
         from .._anndata import tracksplot
@@ -426,11 +434,23 @@ def _rank_genes_groups_plot(
                        var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'matrixplot':
-        from .._anndata import MatrixPlot
-        pl = MatrixPlot(adata, gene_names, groupby, var_group_labels=group_names,
-                   var_group_positions=group_positions, **kwds).add_dendrogram()
-        pl.show(show=show, save=save)
+        from .._anndata import matrixplot
+        title = None
+        values_df = None
+        if values_to_plot is not None:
+            values_df = _get_values_to_plot(adata, values_to_plot, gene_names, group_names, key=key)
+            title = values_to_plot
+        pl = matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
+                        var_group_positions=group_positions,
+                        values_df=values_df, show=False, **kwds)
+        if title is not None:
+            pl.legend(title=title.replace("_", " "))
+
+        if show is not False or save:
+            pl.show(show=show, save=save)
+
         return pl
+
 
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_heatmap(
@@ -631,7 +651,7 @@ def rank_genes_groups_stacked_violin(
         Are passed to :func:`~scanpy.pl.stacked_violin`.
     """
 
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='stacked_violin',
         groups=groups,
@@ -683,7 +703,7 @@ def rank_genes_groups_matrixplot(
         Are passed to :func:`~scanpy.pl.matrixplot`.
     """
 
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='matrixplot',
         groups=groups,
