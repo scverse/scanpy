@@ -62,12 +62,12 @@ def paga(
     model
         The PAGA connectivity model.
     neighbors_key
-        If not specified, paga looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'], .obsp['distances'] for connectivities and
-        distances respectively (default storage places for pp.neighbors).
-        If specified, paga looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']],
-        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
+        If not specified, paga looks `.uns['neighbors']` for neighbors settings
+        and `.obsp['connectivities']`, `.obsp['distances']` for connectivities and
+        distances respectively (default storage places for `pp.neighbors`).
+        If specified, paga looks `.uns[neighbors_key]` for neighbors settings and
+        `.obsp[.uns[neighbors_key]['connectivities_key']]`,
+        `.obsp[.uns[neighbors_key]['distances_key']]` for connectivities and distances
         respectively.
     copy
         Copy `adata` before computation and return a copy. Otherwise, perform
