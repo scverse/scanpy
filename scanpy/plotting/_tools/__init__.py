@@ -403,7 +403,7 @@ def _rank_genes_groups_plot(
             values_df = _get_values_to_plot(adata, values_to_plot, gene_names, group_names, key=key)
             color_title = values_to_plot
 
-        from .._anndata import dotplot
+        from .._groupby_plots import dotplot
         pl = dotplot(adata, gene_names, groupby, var_group_labels=group_names,
                 var_group_positions=group_positions,
                 dot_color_df=values_df, show=False, **kwds)
@@ -415,12 +415,12 @@ def _rank_genes_groups_plot(
         return pl
 
     elif plot_type == 'heatmap':
-        from .._anndata import heatmap
+        from .._groupby_plots import heatmap
         heatmap(adata, gene_names, groupby, var_group_labels=group_names,
                 var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'stacked_violin':
-        from .._anndata import stacked_violin
+        from .._groupby_plots import stacked_violin
         pl = stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
                        var_group_positions=group_positions, show=False, **kwds)
         if show is not False or save:
@@ -434,7 +434,7 @@ def _rank_genes_groups_plot(
                        var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'matrixplot':
-        from .._anndata import matrixplot
+        from .._groupby_plots import matrixplot
         title = None
         values_df = None
         if values_to_plot is not None:
