@@ -385,7 +385,10 @@ def highly_variable_genes(
 
 
 def highly_variable_genes_seurat_v3(
-    adata: AnnData, n_top_genes: int = 2000, batch_key: Optional[str] = None
+    adata: AnnData,
+    n_top_genes: int = 2000,
+    batch_key: Optional[str] = None,
+    lowess_frac: Optional[float] = 0.15,
 ):
     """\
     Annotate highly variable genes [Stuart19]_.
@@ -406,6 +409,8 @@ def highly_variable_genes_seurat_v3(
         If specified, highly-variable genes are selected within each batch separately and merged.
         This simple process avoids the selection of batch-specific genes and acts as a
         lightweight batch correction method.
+    lowess_frac
+        The fraction of the data (cells) used when estimating the variance in the lowess model fit.
     """
     import statsmodels
 
@@ -426,7 +431,7 @@ def highly_variable_genes_seurat_v3(
         y = np.log10(var[not_const])
         x = np.log10(mean[not_const])
         # output is sorted by x
-        v = lowess(y, x, frac=0.15)
+        v = lowess(y, x, frac=lowess_frac)
         estimat_var[not_const][np.argsort(x)] = v[:, 1]
 
         # get normalized variance
@@ -457,7 +462,6 @@ def highly_variable_genes_seurat_v3(
     norm_gene_vars = np.concatenate(norm_gene_vars, axis=0)
     # argsort twice gives ranks
     ranked_norm_gene_vars = np.argsort(np.argsort(norm_gene_vars, axis=1), axis=1)
-    median_norm_gene_vars = np.median(norm_gene_vars, axis=0)
     median_ranked = np.median(ranked_norm_gene_vars, axis=0)
 
     num_batches_high_var = np.sum(
@@ -467,7 +471,6 @@ def highly_variable_genes_seurat_v3(
     df["highly_variable_nbatches"] = num_batches_high_var
     df["highly_variable_median_rank"] = median_ranked
 
-    df["highly_variable_median_variance"] = median_norm_gene_vars
     df.sort_values(
         ["highly_variable_nbatches", "highly_variable_median_rank"],
         ascending=False,
@@ -486,6 +489,3 @@ def highly_variable_genes_seurat_v3(
             "highly_variable_nbatches"
         ] == len(batches)
     adata.var["highly_variable_median_rank"] = df["highly_variable_median_rank"].values
-    adata.var["highly_variable_median_variance"] = df[
-        "highly_variable_median_variance"
-    ].values
