@@ -33,11 +33,6 @@ def _highly_variable_genes_single_batch(
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
 
-    if n_top_genes is not None and not all(m is None for m in [
-        min_disp, max_disp, min_mean, max_mean
-    ]):
-        logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
-
     if min_disp is None: min_disp = 0.5
     if min_mean is None: min_mean = 0.0125
     if max_mean is None: max_mean = 3
@@ -164,16 +159,16 @@ def highly_variable_genes(
         to cells and columns to genes.
     min_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
+        normalized dispersions are ignored. Default is 0.0125.
     max_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
+        normalized dispersions are ignored. Default is 3.
     min_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
+        normalized dispersions are ignored. Default is 0.5.
     max_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
+        normalized dispersions are ignored. Default is `np.inf`.
     n_top_genes
         Number of highly-variable genes to keep.
     n_bins
@@ -217,6 +212,11 @@ def highly_variable_genes(
     -----
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
     """
+
+    if n_top_genes is not None and not all(m is None for m in [
+        min_disp, max_disp, min_mean, max_mean
+    ]):
+        logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
 
     if min_disp is None: min_disp = 0.5
     if min_mean is None: min_mean = 0.0125
