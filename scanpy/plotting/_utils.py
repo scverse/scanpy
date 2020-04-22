@@ -1193,7 +1193,6 @@ def fix_kwds(kwds_dict, **kwargs):
 
     """
 
-    for key, value in kwargs.items():
-        kwds_dict[key] = kwds_dict.get(key, value)
+    kwargs.update(kwds_dict)
 
-    return kwds_dict
+    return kwargs

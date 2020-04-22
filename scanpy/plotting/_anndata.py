@@ -4167,7 +4167,7 @@ class MatrixPlot(BasePlot):
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(1.5)
 
-        kwds = fix_kwds(self.kwds, cmap=cmap,edgecolor=self.edge_color,
+        kwds = fix_kwds(self.kwds, cmap=cmap, edgecolor=self.edge_color,
                         linewidth=self.edge_lw, norm=normalize)
         __ = ax.pcolor(_color_df, **kwds)
 
@@ -4417,14 +4417,6 @@ class StackedViolin(BasePlot):
         # DotPlot object, for example once with swap_axes and other without
         _matrix = self.obs_tidy.copy()
 
-        global count
-        count = 0
-
-        def rename_cols_to_int(value):
-            global count
-            count += 1
-            return count
-
         if self.var_names_idx_order is not None:
             _matrix = _matrix.iloc[:, self.var_names_idx_order]
 
@@ -4436,12 +4428,12 @@ class StackedViolin(BasePlot):
             del self.kwds['color']
 
         # All columns should have a unique name, yet, frequently
-        # gene names are repeated in self.var_names.  otherwise the
+        # gene names are repeated in self.var_names.  Otherwise the
         # pd.melt object that is passed to seaborn will merge non-unique columns.
         # Here, I simply rename the columns using a count from 1..n using the
         # mapping function `rename_cols_to_int` to solve the problem.
-        _matrix.rename(rename_cols_to_int, axis='columns', inplace=True)
-
+        _matrix.rename(columns=dict(zip(_matrix.columns, range(len(_matrix.columns)))),
+                       inplace=True)
         # set y and x limits to guarantee the dendrogram and var_groups
         # align to the main plot
         if self.are_axes_swapped:

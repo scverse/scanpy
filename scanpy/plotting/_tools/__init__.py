@@ -393,7 +393,7 @@ def _rank_genes_groups_plot(
 
     group_names = group_names_valid
 
-    if plot_type in 'dotplot':
+    if plot_type == 'dotplot':
         color_title = None
         values_df = None
         if values_to_plot is not None:
