@@ -3885,10 +3885,8 @@ class DotPlot(BasePlot):
             edgecolor='black', zorder=100
         )
         size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
-        labels = ["{}".format(int(x*100)) for x in size_range]
-        if dot_max < 1:
-            labels[-1] = ">" + labels[-1]
-        size_legend_ax.set_xticklabels(["{}".format(int(x*100)) for x in size_range],
+        labels = ["{}".format(np.ceil(x*100).astype(int)) for x in size_range]
+        size_legend_ax.set_xticklabels(labels,
                                        fontsize='small')
 
         # remove y ticks and labels
