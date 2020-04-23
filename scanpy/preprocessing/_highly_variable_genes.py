@@ -5,6 +5,9 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
 from anndata import AnnData
+from scipy import linalg
+from numba import jit
+
 
 from .. import logging as logg
 from .._settings import settings, Verbosity
@@ -391,6 +394,7 @@ def highly_variable_genes_seurat_v3(
     lowess_frac: Optional[float] = 0.15,
     subset: bool = False,
     inplace: bool = True,
+    use_lowess: bool = False,
 ):
     """\
     Annotate highly variable genes [Stuart19]_.
@@ -419,6 +423,8 @@ def highly_variable_genes_seurat_v3(
         highly variable genes.
     inplace
         Whether to place calculated metrics in `.var` or return them.
+    use_lowess
+        Whether to use statsmodels lowess implementation
 
     Returns
     -------
@@ -450,7 +456,10 @@ def highly_variable_genes_seurat_v3(
 
         y = np.log10(var[not_const])
         x = np.log10(mean[not_const])
-        estimat_var[not_const] = lowess(y, x, frac=lowess_frac, return_sorted=False)
+        if use_lowess is True:
+            estimat_var[not_const] = lowess(y, x, frac=lowess_frac, return_sorted=False)
+        else:
+            estimat_var[not_const] = lowess_quadratic(y, x)
         reg_std = np.sqrt(10 ** estimat_var)
 
         batch_counts = adata[batch_info == b].X.astype(np.float64).copy()
@@ -566,3 +575,71 @@ def highly_variable_genes_seurat_v3(
                 ]
             )
         return np.rec.fromarrays(arrays, dtype=dtypes)
+
+
+# @jit(nopython=True)
+def lowess_quadratic(y, x, alpha=0.3, iter=1):
+    """\
+    Lowess smoother: Locally weighted regression.
+
+    This is an adaptation of
+     https://xavierbourretsicotte.github.io/loess.html#Implementation-in-python-(using-bell-shaped-kernel)
+
+    with additional use of quadratic polynomial.
+
+    Parameters
+    ----------
+    alpha
+        Smoothing span. A larger value for alpha will result in a
+        smoother curve.
+    iter
+        The number of robustifying iterations
+
+    Returns
+    -------
+    Estimated values from lowess fit
+
+
+    """
+    n = len(x)
+    r = int(np.ceil(alpha * n))
+    h = np.array([np.sort(np.abs(x - x[i]))[r] for i in range(n)])
+    w = np.clip(np.abs((x.reshape(-1, 1) - x.reshape(1, -1)) / h), 0.0, 1.0)
+    w = (1 - w ** 3) ** 3
+    yest = np.zeros(n)
+    delta = np.ones(n)
+    x_sq = np.square(x)
+    for iteration in range(iter):
+        for i in range(n):
+            weights = delta * w[:, i]
+            b = np.array(
+                [
+                    np.sum(weights * y),
+                    np.sum(weights * y * x),
+                    np.sum(weights * y * x_sq),
+                ]
+            )
+            A = np.array(
+                [
+                    [np.sum(weights), np.sum(weights * x), np.sum(weights * x_sq)],
+                    [
+                        np.sum(weights * x),
+                        np.sum(weights * x * x),
+                        np.sum(weights * x_sq * x),
+                    ],
+                    [
+                        np.sum(weights * x_sq),
+                        np.sum(weights * x * x_sq),
+                        np.sum(weights * x_sq * x_sq),
+                    ],
+                ]
+            )
+            beta = linalg.solve(A, b)
+            yest[i] = beta[0] + beta[1] * x[i] + beta[2] * x_sq[i]
+
+        residuals = y - yest
+        s = np.median(np.abs(residuals))
+        delta = np.clip(residuals / (6.0 * s), -1, 1)
+        delta = (1 - delta ** 2) ** 2
+
+    return yest
