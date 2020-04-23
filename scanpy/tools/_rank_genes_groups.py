@@ -18,7 +18,8 @@ _Method = Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']
 _CorrMethod = Literal['benjamini-hochberg', 'bonferroni']
 
 
-def _select_top_n(scores, n_top, n_from):
+def _select_top_n(scores, n_top):
+    n_from = scores.shape[0]
     reference_indices = np.arange(n_from, dtype=int)
     partition = np.argpartition(scores, -n_top)[-n_top:]
     partial_indices = np.argsort(scores[partition])[::-1]
@@ -112,8 +113,7 @@ class _RankGenesGroups:
         self.pts = None
         self.pts_rest = None
 
-        self.d = dict(scores={}, names={})
-        self.groups_names = []
+        self.stats = None
 
         # for logreg only
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
@@ -299,18 +299,26 @@ class _RankGenesGroups:
 
         for group_index, scores, pvals in generate_test_results:
             group_name = str(self.groups_order[group_index])
-            self.groups_names.append(group_name)
 
-            scores_sort = np.abs(scores) if rankby_abs else scores
-            global_indices = _select_top_n(scores_sort, n_genes_user, self.X.shape[1])
+            if n_genes_user is not None:
+                scores_sort = np.abs(scores) if rankby_abs else scores
+                global_indices = _select_top_n(scores_sort, n_genes_user)
+                first_col = 'names'
+            else:
+                global_indices = slice(None)
+                first_col = 'scores'
+
+            if self.stats is None:
+                idx = pd.MultiIndex.from_tuples([(group_name, first_col)])
+                self.stats = pd.DataFrame(columns=idx)
+
+            if n_genes_user is not None:
+                self.stats[group_name, 'names'] = self.var_names[global_indices]
+
+            self.stats[group_name, 'scores'] = scores[global_indices]
 
             if pvals is not None:
-                if 'pvals' not in self.d:
-                    self.d['pvals'] = {}
-                if 'pvals_adj' not in self.d:
-                    self.d['pvals_adj'] = {}
-
-                self.d['pvals'][group_name] = pvals[global_indices]
+                self.stats[group_name, 'pvals'] = pvals[global_indices]
                 if corr_method == 'benjamini-hochberg':
                     from statsmodels.stats.multitest import multipletests
 
@@ -320,7 +328,7 @@ class _RankGenesGroups:
                     )
                 elif corr_method == 'bonferroni':
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
-                self.d['pvals_adj'][group_name] = pvals_adj[global_indices]
+                self.stats[group_name, 'pvals_adj'] = pvals_adj[global_indices]
 
             if self.means is not None:
                 mean_group = self.means[group_index]
@@ -331,14 +339,12 @@ class _RankGenesGroups:
                 foldchanges = (self.expm1_func(mean_group) + 1e-9) / (
                     self.expm1_func(mean_rest) + 1e-9
                 )  # add small value to remove 0's
-                if 'logfoldchanges' not in self.d:
-                    self.d['logfoldchanges'] = {}
-                self.d['logfoldchanges'][group_name] = np.log2(
+                self.stats[group_name, 'logfoldchanges'] = np.log2(
                     foldchanges[global_indices]
                 )
 
-            self.d['scores'][group_name] = scores[global_indices]
-            self.d['names'][group_name] = self.var_names[global_indices]
+        if n_genes_user is None:
+            self.stats.index = self.var_names
 
 
 # TODO: Make arguments after groupby keyword only
@@ -348,7 +354,7 @@ def rank_genes_groups(
     use_raw: bool = True,
     groups: Union[Literal['all'], Iterable[str]] = 'all',
     reference: str = 'rest',
-    n_genes: int = 100,
+    n_genes: Optional[int] = None,
     rankby_abs: bool = False,
     key_added: Optional[str] = None,
     copy: bool = False,
@@ -378,6 +384,7 @@ def rank_genes_groups(
         If a group identifier, compare with respect to this group.
     n_genes
         The number of genes that appear in the returned tables.
+        Defaults to all genes.
     method
         The default 't-test_overestim_var' overestimates variance of each group,
         `'t-test'` uses t-test, `'wilcoxon'` uses Wilcoxon rank-sum,
@@ -485,7 +492,7 @@ def rank_genes_groups(
     # for clarity, rename variable
     n_genes_user = n_genes
     # make sure indices are not OoB in case there are less genes than n_genes
-    if n_genes_user > test_obj.X.shape[1]:
+    if n_genes_user is not None and n_genes_user > test_obj.X.shape[1]:
         n_genes_user = test_obj.X.shape[1]
 
     ns = np.count_nonzero(test_obj.groups_masks, axis=1)
@@ -505,19 +512,7 @@ def rank_genes_groups(
             test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
         )
 
-    groups_names = test_obj.groups_names
-    n_groups = len(groups_names)
-    dtypes = {
-        'names': ['U50'] * n_groups,
-        'scores': ['float32'] * n_groups,
-        'logfoldchanges': ['float32'] * n_groups,
-        'pvals': ['float64'] * n_groups,
-        'pvals_adj': ['float64'] * n_groups,
-    }
-    for k in test_obj.d:
-        adata.uns[key_added][k] = np.rec.fromarrays(
-            test_obj.d[k].values(), names=groups_names, formats=dtypes[k]
-        )
+    adata.uns[key_added]['stats'] = test_obj.stats
 
     logg.info(
         '    finished',
