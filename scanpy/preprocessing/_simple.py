@@ -254,9 +254,8 @@ def filter_genes(
 def log1p(
     X: Union[AnnData, np.ndarray, spmatrix],
     *,
-    copy: bool = False,
     base: Optional[Number] = None,
-    **kwargs
+    copy: bool = False,
 ):
     """\
     Logarithmize the data matrix.
@@ -269,26 +268,30 @@ def log1p(
     X
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
+    base
+        Base of the logarithm. Natural logarithm is used by default.
     copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
-    chunked
+    chunked : `bool` (default: `False`)
         Process the data matrix in chunks, which will save memory.
         Applies only to :class:`~anndata.AnnData`.
-    chunk_size
+    chunk_size : `Optional[int]`
         `n_obs` of the chunks to process the data in.
-    base
-        Base of the logarithm. Natural logarithm is used by default.
+    layer : `Optional[str]`
+        Entry of layers to tranform.
+    obsm : `Optional[str]`
+        Entry of obsm to transform.
 
     Returns
     -------
     Returns or updates `data`, depending on `copy`.
     """
-    return log1p_array(X, copy=copy, base=base, **kwargs)
+    return log1p_array(X, copy=copy, base=base)
 
 
 @log1p.register(spmatrix)
-def log1p_sparse(X, *, copy: bool = False, base: Optional[Number] = None):
+def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
     X = check_array(
         X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
@@ -297,7 +300,7 @@ def log1p_sparse(X, *, copy: bool = False, base: Optional[Number] = None):
 
 
 @log1p.register(np.ndarray)
-def log1p_array(X, *, copy: bool = False, base: Optional[Number] = None):
+def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
     # Can force arrays to be np.ndarrays, but would be useful
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
@@ -315,12 +318,12 @@ def log1p_array(X, *, copy: bool = False, base: Optional[Number] = None):
 def log1p_anndata(
     adata,
     *,
-    copy: bool = False,
     base: Optional[Number] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
+    copy: bool = False,
     chunked: bool = False,
     chunk_size: Optional[int] = None,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
 ) -> Optional[AnnData]:
     if "log1p" in adata.uns_keys():
         logg.warning("adata.X seems to be already log-transformed.")
@@ -703,7 +706,12 @@ def _regress_out_chunk(data):
 
 
 @singledispatch
-def scale(X, *args, **kwargs):
+def scale(
+    X: Union[AnnData, spmatrix, np.ndarray],
+    zero_center: bool = True,
+    max_value: Optional[float] = None,
+    copy: bool = False,
+):
     """\
     Scale data to unit variance and zero mean.
 
@@ -714,7 +722,7 @@ def scale(X, *args, **kwargs):
 
     Parameters
     ----------
-    data
+    X
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     zero_center
@@ -723,11 +731,11 @@ def scale(X, *args, **kwargs):
     max_value
         Clip (truncate) to this value after scaling. If `None`, do not clip.
     copy
-        If an :class:`~anndata.AnnData` is passed,
-        determines whether a copy is returned.
-    layer
+        Whether this function should be performed inplace. If an AnnData object
+        is passed, this also determines if a copy is returned.
+    layer : Optional[str]
         If provided, which element of layers to scale.
-    obsm
+    obsm : Optional[str]
         If provided, which element of obsm to scale.
 
     Returns
@@ -735,12 +743,13 @@ def scale(X, *args, **kwargs):
     Depending on `copy` returns or updates `adata` with a scaled `adata.X`,
     annotated with `'mean'` and `'std'` in `adata.var`.
     """
-    return scale_array(X, *args, **kwargs)
+    return scale_array(X, zero_center=zero_center, max_value=max_value, copy=copy)
 
 
 @scale.register(np.ndarray)
 def scale_array(
     X,
+    *,
     zero_center: bool = True,
     max_value: Optional[float] = None,
     copy: bool = False,
@@ -750,15 +759,15 @@ def scale_array(
         X = X.copy()
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
-            '... be careful when using `max_value` '
-            'without `zero_center`.'
+            "... be careful when using `max_value` " "without `zero_center`."
         )
 
     mean, var = _get_mean_var(X)
     std = np.sqrt(var)
     if issparse(X):
-        if zero_center: raise ValueError('Cannot zero-center sparse matrix.')
-        sparsefuncs.inplace_column_scale(X, 1/std)
+        if zero_center:
+            raise ValueError("Cannot zero-center sparse matrix.")
+        sparsefuncs.inplace_column_scale(X, 1 / std)
     else:
         X -= mean
         std[std == 0] = 1e-12
@@ -766,7 +775,7 @@ def scale_array(
 
     # do the clipping
     if max_value is not None:
-        logg.debug(f'... clipping at max_value {max_value}')
+        logg.debug(f"... clipping at max_value {max_value}")
         X[X > max_value] = max_value
 
     if return_mean_std:
@@ -780,18 +789,25 @@ def scale_sparse(
     X,
     *,
     zero_center: bool = True,
+    max_value: Optional[float] = None,
     copy: bool = False,
-    **kwargs
+    return_mean_std: bool = False,
 ):
     # need to add the following here to make inplace logic work
     if zero_center:
         logg.info(
-            '... as `zero_center=True`, sparse input is '
-            'densified and may lead to large memory consumption'
+            "... as `zero_center=True`, sparse input is "
+            "densified and may lead to large memory consumption"
         )
         X = X.toarray()
         copy = False  # Since the data has been copied
-    return scale_array(X, zero_center=zero_center, copy=copy, **kwargs)
+    return scale_array(
+        X,
+        zero_center=zero_center,
+        copy=copy,
+        max_value=max_value,
+        return_mean_std=return_mean_std,
+    )
 
 
 @scale.register(AnnData)
@@ -800,9 +816,9 @@ def scale_anndata(
     *,
     zero_center: bool = True,
     max_value: Optional[float] = None,
-    layer=None,
-    obsm=None,
     copy: bool = False,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
 ) -> Optional[AnnData]:
     adata = adata.copy() if copy else adata
     view_to_actual(adata)
