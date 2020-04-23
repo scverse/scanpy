@@ -4,6 +4,7 @@ import scanpy as sc
 from pathlib import Path
 
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
+FILE_V3 = Path(__file__).parent / Path('_scripts/seurat_hvg_v3.csv')
 
 
 def test_highly_variable_genes_basic():
@@ -35,23 +36,21 @@ def test_higly_variable_genes_compare_to_seurat():
 
     sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
     sc.pp.log1p(pbmc)
-    sc.pp.highly_variable_genes(pbmc, flavor='seurat', min_mean=0.0125, max_mean=3, min_disp=0.5, inplace=True)
+    sc.pp.highly_variable_genes(
+        pbmc, flavor='seurat', min_mean=0.0125, max_mean=3, min_disp=0.5, inplace=True
+    )
 
-    np.testing.assert_array_equal(seurat_hvg_info['highly_variable'], pbmc.var['highly_variable'])
+    np.testing.assert_array_equal(
+        seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
+    )
 
     # (still) Not equal to tolerance rtol=2e-05, atol=2e-05
     # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(
-        seurat_hvg_info['means'],
-        pbmc.var['means'],
-        rtol=2e-05,
-        atol=2e-05,
+        seurat_hvg_info['means'], pbmc.var['means'], rtol=2e-05, atol=2e-05,
     )
     np.testing.assert_allclose(
-        seurat_hvg_info['dispersions'],
-        pbmc.var['dispersions'],
-        rtol=2e-05,
-        atol=2e-05,
+        seurat_hvg_info['dispersions'], pbmc.var['dispersions'], rtol=2e-05, atol=2e-05,
     )
     np.testing.assert_allclose(
         seurat_hvg_info['dispersions_norm'],
@@ -59,6 +58,38 @@ def test_higly_variable_genes_compare_to_seurat():
         rtol=2e-05,
         atol=2e-05,
     )
+
+
+def test_higly_variable_genes_compare_to_seurat_v3():
+    FILE_V3 = "~/seurat_hvg_v3.csv"
+    seurat_hvg_info = pd.read_csv(FILE_V3, sep=' ')
+
+    pbmc = sc.datasets.pbmc3k()
+    pbmc.var_names_make_unique()
+
+    pbmc_dense = pbmc.copy()
+    pbmc_dense.X = pbmc_dense.X.toarray()
+
+    sc.pp.highly_variable_genes_seurat_v3(pbmc, n_top_genes=50, use_lowess=False)
+    sc.pp.highly_variable_genes_seurat_v3(pbmc_dense, n_top_genes=50, use_lowess=False)
+
+    for ad in [pbmc, pbmc_dense]:
+        np.testing.assert_array_equal(
+            seurat_hvg_info['highly_variable'], ad.var['highly_variable']
+        )
+
+        np.testing.assert_allclose(
+            seurat_hvg_info['means'], ad.var['means'], rtol=2e-05, atol=2e-05,
+        )
+        np.testing.assert_allclose(
+            seurat_hvg_info['variances'], ad.var['variances'], rtol=2e-05, atol=2e-05,
+        )
+        np.testing.assert_allclose(
+            seurat_hvg_info['variances_norm'],
+            ad.var['variances_norm'],
+            rtol=2e-02,
+            atol=2e-05,
+        )
 
 
 def test_filter_genes_dispersion_compare_to_seurat():
@@ -70,25 +101,26 @@ def test_filter_genes_dispersion_compare_to_seurat():
 
     sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
     sc.pp.filter_genes_dispersion(
-        pbmc, flavor='seurat', log=True, subset=False,
-        min_mean=0.0125, max_mean=3, min_disp=0.5,
+        pbmc,
+        flavor='seurat',
+        log=True,
+        subset=False,
+        min_mean=0.0125,
+        max_mean=3,
+        min_disp=0.5,
     )
 
-    np.testing.assert_array_equal(seurat_hvg_info['highly_variable'], pbmc.var['highly_variable'])
+    np.testing.assert_array_equal(
+        seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
+    )
 
     # (still) Not equal to tolerance rtol=2e-05, atol=2e-05:
     # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(
-        seurat_hvg_info['means'],
-        pbmc.var['means'],
-        rtol=2e-05,
-        atol=2e-05,
+        seurat_hvg_info['means'], pbmc.var['means'], rtol=2e-05, atol=2e-05,
     )
     np.testing.assert_allclose(
-        seurat_hvg_info['dispersions'],
-        pbmc.var['dispersions'],
-        rtol=2e-05,
-        atol=2e-05,
+        seurat_hvg_info['dispersions'], pbmc.var['dispersions'], rtol=2e-05, atol=2e-05,
     )
     np.testing.assert_allclose(
         seurat_hvg_info['dispersions_norm'],
@@ -100,43 +132,33 @@ def test_filter_genes_dispersion_compare_to_seurat():
 
 def test_highly_variable_genes_batches():
     adata = sc.datasets.pbmc68k_reduced()
-    adata[:100,:100].X = np.zeros((100,100))
+    adata[:100, :100].X = np.zeros((100, 100))
 
-    adata.obs['batch'] = ['0' if i<100 else '1' for i in range(adata.n_obs)]
-    adata_1 = adata[adata.obs.batch.isin(['0']),:]
-    adata_2 = adata[adata.obs.batch.isin(['1']),:]
+    adata.obs['batch'] = ['0' if i < 100 else '1' for i in range(adata.n_obs)]
+    adata_1 = adata[adata.obs.batch.isin(['0']), :]
+    adata_2 = adata[adata.obs.batch.isin(['1']), :]
 
     sc.pp.highly_variable_genes(
-        adata,
-        batch_key='batch',
-        flavor='cell_ranger',
-        n_top_genes=200,
+        adata, batch_key='batch', flavor='cell_ranger', n_top_genes=200,
     )
 
     sc.pp.filter_genes(adata_1, min_cells=1)
     sc.pp.filter_genes(adata_2, min_cells=1)
     hvg1 = sc.pp.highly_variable_genes(
-        adata_1,
-        flavor='cell_ranger',
-        n_top_genes=200,
-        inplace=False
+        adata_1, flavor='cell_ranger', n_top_genes=200, inplace=False
     )
     hvg2 = sc.pp.highly_variable_genes(
-        adata_2,
-        flavor='cell_ranger',
-        n_top_genes=200,
-        inplace=False
+        adata_2, flavor='cell_ranger', n_top_genes=200, inplace=False
     )
 
     assert np.isclose(
         adata.var['dispersions_norm'][100],
-        0.5*hvg1['dispersions_norm'][0] + 0.5*hvg2['dispersions_norm'][100]
+        0.5 * hvg1['dispersions_norm'][0] + 0.5 * hvg2['dispersions_norm'][100],
     )
     assert np.isclose(
         adata.var['dispersions_norm'][101],
-        0.5*hvg1['dispersions_norm'][1] + 0.5*hvg2['dispersions_norm'][101]
+        0.5 * hvg1['dispersions_norm'][1] + 0.5 * hvg2['dispersions_norm'][101],
     )
     assert np.isclose(
-        adata.var['dispersions_norm'][0],
-        0.5*hvg2['dispersions_norm'][0]
+        adata.var['dispersions_norm'][0], 0.5 * hvg2['dispersions_norm'][0]
     )
