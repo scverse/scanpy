@@ -3,10 +3,9 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+from numba import jit
 import scipy.sparse as sp_sparse
 from anndata import AnnData
-from scipy import linalg
-from numba import jit
 
 
 from .. import logging as logg
@@ -577,8 +576,8 @@ def highly_variable_genes_seurat_v3(
         return np.rec.fromarrays(arrays, dtype=dtypes)
 
 
-# @jit(nopython=True)
-def lowess_quadratic(y, x, alpha=0.3, iter=1):
+@jit(nopython=True)
+def lowess_quadratic(y, x, alpha=0.3):
     """\
     Lowess smoother: Locally weighted regression.
 
@@ -598,48 +597,45 @@ def lowess_quadratic(y, x, alpha=0.3, iter=1):
     Returns
     -------
     Estimated values from lowess fit
-
-
     """
     n = len(x)
     r = int(np.ceil(alpha * n))
-    h = np.array([np.sort(np.abs(x - x[i]))[r] for i in range(n)])
-    w = np.clip(np.abs((x.reshape(-1, 1) - x.reshape(1, -1)) / h), 0.0, 1.0)
+    h = 1 / np.array([np.sort(np.abs(x - x[i]))[r] for i in range(n)]).reshape(1, -1)
+    w = np.abs((x.reshape(-1, 1) - x.reshape(1, -1))) * h
+    out_w = np.empty_like(w)
+    for i in range(w.shape[0]):
+        for j in range(w.shape[1]):
+            if w[i, j] < 0:
+                out_w[i, j] = 0
+            elif w[i, j] > 1:
+                out_w[i, j] = 1
+            else:
+                out_w[i, j] = w[i, j]
+    w = out_w
     w = (1 - w ** 3) ** 3
     yest = np.zeros(n)
-    delta = np.ones(n)
     x_sq = np.square(x)
-    for iteration in range(iter):
-        for i in range(n):
-            weights = delta * w[:, i]
-            b = np.array(
+    for i in range(n):
+        weights = w[:, i]
+        b = np.array(
+            [np.sum(weights * y), np.sum(weights * y * x), np.sum(weights * y * x_sq),]
+        )
+        A = np.array(
+            [
+                [np.sum(weights), np.sum(weights * x), np.sum(weights * x_sq)],
                 [
-                    np.sum(weights * y),
-                    np.sum(weights * y * x),
-                    np.sum(weights * y * x_sq),
-                ]
-            )
-            A = np.array(
+                    np.sum(weights * x),
+                    np.sum(weights * x * x),
+                    np.sum(weights * x_sq * x),
+                ],
                 [
-                    [np.sum(weights), np.sum(weights * x), np.sum(weights * x_sq)],
-                    [
-                        np.sum(weights * x),
-                        np.sum(weights * x * x),
-                        np.sum(weights * x_sq * x),
-                    ],
-                    [
-                        np.sum(weights * x_sq),
-                        np.sum(weights * x * x_sq),
-                        np.sum(weights * x_sq * x_sq),
-                    ],
-                ]
-            )
-            beta = linalg.solve(A, b)
-            yest[i] = beta[0] + beta[1] * x[i] + beta[2] * x_sq[i]
-
-        residuals = y - yest
-        s = np.median(np.abs(residuals))
-        delta = np.clip(residuals / (6.0 * s), -1, 1)
-        delta = (1 - delta ** 2) ** 2
+                    np.sum(weights * x_sq),
+                    np.sum(weights * x * x_sq),
+                    np.sum(weights * x_sq * x_sq),
+                ],
+            ]
+        )
+        beta = np.linalg.solve(A, b)
+        yest[i] = beta[0] + beta[1] * x[i] + beta[2] * x_sq[i]
 
     return yest
