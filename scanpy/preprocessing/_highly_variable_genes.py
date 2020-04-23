@@ -460,13 +460,12 @@ def highly_variable_genes_seurat_v3(
         clip_val = reg_std * vmax + mean
         if sp_sparse.issparse(batch_counts):
             batch_counts = sp_sparse.csr_matrix(batch_counts)
-            mask = batch_counts.data > vmax
+            mask = batch_counts.data > clip_val[batch_counts.indices]
             batch_counts.data[mask] = clip_val[batch_counts.indices[mask]]
         else:
+            clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
             np.putmask(
-                batch_counts,
-                batch_counts > vmax,
-                np.broadcast_to(clip_val, batch_counts.shape),
+                batch_counts, batch_counts > clip_val_broad, clip_val_broad,
             )
 
         if sp_sparse.issparse(batch_counts):
