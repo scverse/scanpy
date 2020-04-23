@@ -434,9 +434,7 @@ def highly_variable_genes_seurat_v3(
     highly_variable_intersection : bool
         If batch_key is given, this denotes the genes that are highly variable in all batches
     """
-    import statsmodels.api as sm
-
-    lowess = sm.nonparametric.lowess
+    from statsmodels.nonparametric.smoothers_lowess import lowess
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -452,9 +450,7 @@ def highly_variable_genes_seurat_v3(
 
         y = np.log10(var[not_const])
         x = np.log10(mean[not_const])
-        # output is sorted by x
-        v = lowess(y, x, frac=lowess_frac)
-        estimat_var[not_const][np.argsort(x)] = v[:, 1]
+        estimat_var[not_const] = lowess(y, x, frac=lowess_frac, return_sorted=False)
         reg_std = np.sqrt(10 ** estimat_var)
 
         batch_counts = adata[batch_info == b].X.astype(np.float64).copy()
