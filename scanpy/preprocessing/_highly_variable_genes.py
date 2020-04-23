@@ -412,12 +412,10 @@ def highly_variable_genes_seurat_v3(
     lowess_frac
         The fraction of the data (cells) used when estimating the variance in the lowess model fit.
     """
-    import statsmodels
-
-    lowess = statsmodels.nonparametric.lowess
+    from statsmodels.nonparametric.smoothers_lowess import lowess
 
     if batch_key is None:
-        batch_info = pd.Categorical(np.zeros((adata.X.shape[0])).astype(int))
+        batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
     else:
         batch_info = adata.obs[batch_key]
 
@@ -426,7 +424,7 @@ def highly_variable_genes_seurat_v3(
 
         mean, var = materialize_as_ndarray(_get_mean_var(adata[batch_info == b].X))
         not_const = var > 0
-        estimat_var = np.zeros((adata.X.shape[1]))
+        estimat_var = np.zeros(adata.shape[1])
 
         y = np.log10(var[not_const])
         x = np.log10(mean[not_const])
