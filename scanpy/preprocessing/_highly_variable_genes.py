@@ -434,14 +434,22 @@ def highly_variable_genes_seurat_v3(
 
         # get normalized variance
         reg_std = np.sqrt(10 ** estimat_var)
-        batch_counts = adata[batch_info == b].X.copy()
+        batch_counts = adata[batch_info == b].X.astype(np.float64).copy()
         # clip large values as in Seurat
         N = np.sum(batch_info == b)
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
         # could be something faster here
-        for g in range(batch_counts.shape[1]):
-            batch_counts[:, g][batch_counts[:, g] > vmax] = clip_val[g]
+        if sp_sparse.issparse(batch_counts):
+            batch_counts = sp_sparse.csr_matrix(batch_counts)
+            mask = batch_counts.data > vmax
+            batch_counts.data[mask] = clip_val[batch_counts.indices[mask]]
+        else:
+            np.putmask(
+                batch_counts,
+                batch_counts > vmax,
+                np.broadcast_to(clip_val, batch_counts.shape),
+            )
 
         if sp_sparse.issparse(batch_counts):
             squared_batch_counts_sum = np.array(batch_counts.power(2).sum(axis=0))
