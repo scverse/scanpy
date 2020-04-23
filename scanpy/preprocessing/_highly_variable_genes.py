@@ -389,6 +389,8 @@ def highly_variable_genes_seurat_v3(
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
     lowess_frac: Optional[float] = 0.15,
+    subset: bool = False,
+    inplace: bool = True,
 ):
     """\
     Annotate highly variable genes [Stuart19]_.
@@ -398,6 +400,7 @@ def highly_variable_genes_seurat_v3(
     The major difference in this implementation is the use of lowess insted of loess.
 
     For further details of the sparse arithmetic see https://www.overleaf.com/read/ckptrbgzzzpg
+
     Parameters
     ----------
     adata
@@ -411,8 +414,29 @@ def highly_variable_genes_seurat_v3(
         lightweight batch correction method.
     lowess_frac
         The fraction of the data (cells) used when estimating the variance in the lowess model fit.
+    subset
+        Inplace subset to highly-variable genes if `True` otherwise merely indicate
+        highly variable genes.
+    inplace
+        Whether to place calculated metrics in `.var` or return them.
+
+    Returns
+    -------
+    Depending on `inplace` returns calculated metrics (:class:`~numpy.recarray`) or
+    updates `.var` with the following fields
+
+    highly_variable : bool
+        boolean indicator of highly-variable genes
+    **variances_norm**
+        normalized variance per gene, averaged in the case of multiple batches
+    highly_variable_nbatches : int
+        If batch_key is given, this denotes in how many batches genes are detected as HVG
+    highly_variable_intersection : bool
+        If batch_key is given, this denotes the genes that are highly variable in all batches
     """
-    from statsmodels.nonparametric.smoothers_lowess import lowess
+    import statsmodels.api as sm
+
+    lowess = sm.nonparametric.lowess
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -474,6 +498,9 @@ def highly_variable_genes_seurat_v3(
     df = pd.DataFrame(index=np.array(adata.var_names))
     df["highly_variable_nbatches"] = num_batches_high_var
     df["highly_variable_median_rank"] = median_ranked
+    df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
+    df["means"] = mean
+    df["variances"] = var
 
     df.sort_values(
         ["highly_variable_nbatches", "highly_variable_median_rank"],
@@ -482,7 +509,7 @@ def highly_variable_genes_seurat_v3(
         inplace=True,
     )
     df["highly_variable"] = False
-    df.loc[:n_top_genes, "highly_variable"] = True
+    df.loc[: int(n_top_genes), "highly_variable"] = True
     df = df.loc[adata.var_names]
 
     adata.var["highly_variable"] = df["highly_variable"].values
@@ -493,3 +520,54 @@ def highly_variable_genes_seurat_v3(
             "highly_variable_nbatches"
         ] == len(batches)
     adata.var["highly_variable_median_rank"] = df["highly_variable_median_rank"].values
+
+    if inplace or subset:
+        logg.hint(
+            'added\n'
+            '    \'highly_variable\', boolean vector (adata.var)\n'
+            '    \'means\', float vector (adata.var)\n'
+            '    \'variances\', float vector (adata.var)\n'
+            '    \'variances_norm\', float vector (adata.var)'
+        )
+        adata.var['highly_variable'] = df['highly_variable'].values
+        adata.var['means'] = df['means'].values
+        adata.var['variances'] = df['variances'].values
+        adata.var['variances_norm'] = df['variances_norm'].values.astype(
+            'float32', copy=False
+        )
+        if batch_key is not None:
+            adata.var['highly_variable_nbatches'] = df[
+                'highly_variable_nbatches'
+            ].values
+            adata.var['highly_variable_intersection'] = df[
+                'highly_variable_intersection'
+            ].values
+        if subset:
+            adata._inplace_subset_var(df['highly_variable'].values)
+    else:
+        arrays = [
+            df['highly_variable'].values,
+            df['means'].values,
+            df['variances'].values,
+            df['variances_norm'].values.astype('float32', copy=False),
+        ]
+        dtypes = [
+            ('highly_variable', np.bool_),
+            ('means', 'float32'),
+            ('variances', 'float32'),
+            ('variances_norm', 'float32'),
+        ]
+        if batch_key is not None:
+            arrays.extend(
+                [
+                    df['highly_variable_nbatches'].values,
+                    df['highly_variable_intersection'].values,
+                ]
+            )
+            dtypes.append(
+                [
+                    ('highly_variable_nbatches', int),
+                    ('highly_variable_intersection', np.bool_),
+                ]
+            )
+        return np.rec.fromarrays(arrays, dtype=dtypes)
