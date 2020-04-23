@@ -422,7 +422,7 @@ def highly_variable_genes_seurat_v3(
     norm_gene_vars = []
     for b in np.unique(batch_info):
 
-        mean, var = materialize_as_ndarray(_get_mean_var(adata[batch_info == b].X))
+        mean, var = _get_mean_var(adata[batch_info == b].X)
         not_const = var > 0
         estimat_var = np.zeros(adata.shape[1])
 
