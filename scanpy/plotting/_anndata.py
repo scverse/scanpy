@@ -1722,3 +1722,146 @@ def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
     pl.colorbar(mappable, cax=heatmap_cbar_ax)
     return heatmap_cbar_ax
 
+
+def _reorder_categories_after_dendrogram(
+    adata: AnnData,
+    groupby,
+    dendrogram,
+    var_names=None,
+    var_group_labels=None,
+    var_group_positions=None,
+) -> dict:
+    """\
+    Function used by plotting functions that need to reorder the the groupby
+    observations based on the dendrogram results.
+
+    The function checks if a dendrogram has already been precomputed.
+    If not, `sc.tl.dendrogram` is run with default parameters.
+
+    The results found in `.uns[dendrogram_key]` are used to reorder
+    `var_group_labels` and `var_group_positions`.
+
+
+    Returns
+    -------
+    dictionary with keys:
+    'categories_idx_ordered', 'var_group_names_idx_ordered',
+    'var_group_labels', and 'var_group_positions'
+    """
+
+    def _format_first_three_categories(_categories):
+        "used to clean up warning message"
+        _categories = list(_categories)
+        if len(_categories) > 3:
+            _categories = _categories[:3] + ['etc.']
+        return ', '.join(_categories)
+
+    key = _get_dendrogram_key(adata, dendrogram, groupby)
+
+    dendro_info = adata.uns[key]
+    if groupby != dendro_info['groupby']:
+        raise ValueError(
+            "Incompatible observations. The precomputed dendrogram contains "
+            f"information for the observation: '{groupby}' while the plot is "
+            f"made for the observation: '{dendro_info['groupby']}. "
+            "Please run `sc.tl.dendrogram` using the right observation.'"
+        )
+
+    categories = adata.obs[dendro_info['groupby']].cat.categories
+
+    # order of groupby categories
+    categories_idx_ordered = dendro_info['categories_idx_ordered']
+    categories_ordered = dendro_info['categories_ordered']
+
+    if len(categories) != len(categories_idx_ordered):
+        raise ValueError(
+            "Incompatible observations. Dendrogram data has "
+            f"{len(categories_idx_ordered)} categories but current groupby "
+            f"observation {groupby!r} contains {len(categories)} categories. "
+            "Most likely the underlying groupby observation changed after the "
+            "initial computation of `sc.tl.dendrogram`. "
+            "Please run `sc.tl.dendrogram` again.'"
+        )
+
+    # reorder var_groups (if any)
+    if var_names is not None:
+        var_names_idx_ordered = list(range(len(var_names)))
+
+    if var_group_positions:
+        if set(var_group_labels) == set(categories):
+            positions_ordered = []
+            labels_ordered = []
+            position_start = 0
+            var_names_idx_ordered = []
+            for cat_name in categories_ordered:
+                idx = var_group_labels.index(cat_name)
+                position = var_group_positions[idx]
+                _var_names = var_names[position[0] : position[1] + 1]
+                var_names_idx_ordered.extend(range(position[0], position[1] + 1))
+                positions_ordered.append(
+                    (position_start, position_start + len(_var_names) - 1)
+                )
+                position_start += len(_var_names)
+                labels_ordered.append(var_group_labels[idx])
+            var_group_labels = labels_ordered
+            var_group_positions = positions_ordered
+        else:
+            logg.warning(
+                "Groups are not reordered because the `groupby` categories "
+                "and the `var_group_labels` are different.\n"
+                f"categories: {_format_first_three_categories(categories)}\n"
+                "var_group_labels: "
+                f"{_format_first_three_categories(var_group_labels)}"
+            )
+    else:
+        var_names_idx_ordered = None
+
+    if var_names_idx_ordered is not None:
+        var_names_ordered = [var_names[x] for x in var_names_idx_ordered]
+    else:
+        var_names_ordered = None
+
+    return dict(
+        categories_idx_ordered=categories_idx_ordered,
+        categories_ordered=dendro_info['categories_ordered'],
+        var_names_idx_ordered=var_names_idx_ordered,
+        var_names_ordered=var_names_ordered,
+        var_group_labels=var_group_labels,
+        var_group_positions=var_group_positions,
+    )
+
+
+def _check_var_names_type(var_names, var_group_labels, var_group_positions):
+    """
+    checks if var_names is a dict. Is this is the cases, then set the
+    correct values for var_group_labels and var_group_positions
+
+    Returns
+    -------
+    var_names, var_group_labels, var_group_positions
+
+    """
+    if isinstance(var_names, cabc.Mapping):
+        if var_group_labels is not None or var_group_positions is not None:
+            logg.warning(
+                "`var_names` is a dictionary. This will reset the current "
+                "value of `var_group_labels` and `var_group_positions`."
+            )
+        var_group_labels = []
+        _var_names = []
+        var_group_positions = []
+        start = 0
+        for label, vars_list in var_names.items():
+            if isinstance(vars_list, str):
+                vars_list = [vars_list]
+            # use list() in case var_list is a numpy array or pandas series
+            _var_names.extend(list(vars_list))
+            var_group_labels.append(label)
+            var_group_positions.append((start, start + len(vars_list) - 1))
+            start += len(vars_list)
+        var_names = _var_names
+
+    elif isinstance(var_names, str):
+        var_names = [var_names]
+
+    return var_names, var_group_labels, var_group_positions

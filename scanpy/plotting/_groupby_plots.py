@@ -36,6 +36,8 @@ class BasePlot(object):
 
     """
 
+    MIN_FIGURE_HEIGHT = 2.5
+
     DEFAULT_COLORMAP = 'RdBu_r'
     DEFAULT_LEGENDS_WIDTH = 1.5
     DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
@@ -58,14 +60,26 @@ class BasePlot(object):
         ax: Optional[_AxesSubplot] = None,
         **kwds,
     ):
+        self.var_names = var_names
+        self.var_group_labels = var_group_labels
+        self.var_group_positions = var_group_positions
+        self.var_group_rotation = var_group_rotation
+        self.width, self.height = figsize if figsize is not None else (None, None)
+
         if use_raw is None and adata.raw is not None:
             use_raw = True
-        var_names, var_group_labels, var_group_positions = self._check_var_names_type(
-            var_names, var_group_labels, var_group_positions
+
+        self.has_var_groups = (
+            True
+            if var_group_positions is not None and len(var_group_positions) > 0
+            else False
         )
+
+        self._update_var_groups()
+
         self.categories, self.obs_tidy = _prepare_dataframe(
             adata,
-            var_names,
+            self.var_names,
             groupby,
             use_raw,
             log,
@@ -92,12 +106,6 @@ class BasePlot(object):
         self.log = log
         self.kwds = kwds
 
-        self.has_var_groups = (
-            True
-            if var_group_positions is not None and len(var_group_positions) > 0
-            else False
-        )
-
         # set default values for legend
         self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
         self.legends_width = self.DEFAULT_LEGENDS_WIDTH
@@ -110,13 +118,8 @@ class BasePlot(object):
         self.categories_order = categories_order
         self.var_names_idx_order = None
 
-        self.var_names = var_names
-        self.var_group_labels = var_group_labels
-        self.var_group_positions = var_group_positions
-        self.var_group_rotation = var_group_rotation
-        self.width, self.height = figsize if figsize is not None else (None, None)
         # minimum height required for legends to plot properly
-        self.min_figure_height = 2.5
+        self.min_figure_height = self.MIN_FIGURE_HEIGHT
 
         self.group_extra_size = 0
         self.plot_group_extra = None
@@ -207,20 +210,7 @@ class BasePlot(object):
 
         # to correctly plot the dendrogram the categories need to be ordered
         # according to the dendrogram ordering.
-        dendro_data = self._reorder_categories_after_dendrogram(
-            self.adata,
-            self.groupby,
-            dendrogram_key,
-            var_names=self.var_names,
-            var_group_labels=self.var_group_labels,
-            var_group_positions=self.var_group_positions,
-        )
-
-        self.var_group_labels = dendro_data['var_group_labels']
-        self.var_group_positions = dendro_data['var_group_positions']
-
-        self.categories_order = dendro_data['categories_ordered']
-        self.var_names_idx_order = dendro_data['var_names_idx_ordered']
+        self._reorder_categories_after_dendrogram(dendrogram_key)
 
         dendro_ticks = np.arange(len(self.categories)) + 0.5
 
@@ -648,7 +638,7 @@ class BasePlot(object):
 
         # plot group legends on top or left of main_ax (if given)
         if self.has_var_groups:
-            self._plot_gene_groups_brackets(
+            self._plot_var_groups_brackets(
                 gene_groups_ax,
                 group_positions=self.var_group_positions,
                 group_labels=self.var_group_labels,
@@ -677,15 +667,10 @@ class BasePlot(object):
         if show is False:
             return return_ax_dict
 
-    @staticmethod
     def _reorder_categories_after_dendrogram(
-        adata: AnnData,
-        groupby,
+        self,
         dendrogram,
-        var_names=None,
-        var_group_labels=None,
-        var_group_positions=None,
-    ) -> dict:
+    ):
         """\
         Function used by plotting functions that need to reorder the the groupby
         observations based on the dendrogram results.
@@ -699,22 +684,22 @@ class BasePlot(object):
 
         Returns
         -------
-        dictionary with keys:
+        None internally updates
         'categories_idx_ordered', 'var_group_names_idx_ordered',
-        'var_group_labels', and 'var_group_positions'
+        'var_group_labels' and 'var_group_positions'
         """
 
         def _format_first_three_categories(_categories):
-            "used to clean up warning message"
+            """used to clean up warning message"""
             _categories = list(_categories)
             if len(_categories) > 3:
                 _categories = _categories[:3] + ['etc.']
             return ', '.join(_categories)
 
-        key = _get_dendrogram_key(adata, dendrogram, groupby)
+        key = _get_dendrogram_key(self.adata, dendrogram, self.groupby)
 
-        dendro_info = adata.uns[key]
-        if groupby != dendro_info['groupby']:
+        dendro_info = self.adata.uns[key]
+        if self.groupby != dendro_info['groupby']:
             raise ValueError(
                 "Incompatible observations. The precomputed dendrogram contains "
                 f"information for the observation: '{groupby}' while the plot is "
@@ -722,71 +707,63 @@ class BasePlot(object):
                 "Please run `sc.tl.dendrogram` using the right observation.'"
             )
 
-        categories = adata.obs[dendro_info['groupby']].cat.categories
-
         # order of groupby categories
         categories_idx_ordered = dendro_info['categories_idx_ordered']
         categories_ordered = dendro_info['categories_ordered']
 
-        if len(categories) != len(categories_idx_ordered):
+        if len(self.categories) != len(categories_idx_ordered):
             raise ValueError(
                 "Incompatible observations. Dendrogram data has "
                 f"{len(categories_idx_ordered)} categories but current groupby "
-                f"observation {groupby!r} contains {len(categories)} categories. "
+                f"observation {groupby!r} contains {len(self.categories)} categories. "
                 "Most likely the underlying groupby observation changed after the "
                 "initial computation of `sc.tl.dendrogram`. "
                 "Please run `sc.tl.dendrogram` again.'"
             )
 
         # reorder var_groups (if any)
-        if var_names is not None:
-            var_names_idx_ordered = list(range(len(var_names)))
+        if self.var_names is not None:
+            var_names_idx_ordered = list(range(len(self.var_names)))
 
-        if var_group_positions:
-            if set(var_group_labels) == set(categories):
+        if self.has_var_groups:
+            if set(self.var_group_labels) == set(self.categories):
                 positions_ordered = []
                 labels_ordered = []
                 position_start = 0
                 var_names_idx_ordered = []
                 for cat_name in categories_ordered:
-                    idx = var_group_labels.index(cat_name)
-                    position = var_group_positions[idx]
-                    _var_names = var_names[position[0] : position[1] + 1]
+                    idx = self.var_group_labels.index(cat_name)
+                    position = self.var_group_positions[idx]
+                    _var_names = self.var_names[position[0]:position[1] + 1]
                     var_names_idx_ordered.extend(range(position[0], position[1] + 1))
                     positions_ordered.append(
                         (position_start, position_start + len(_var_names) - 1)
                     )
                     position_start += len(_var_names)
-                    labels_ordered.append(var_group_labels[idx])
-                var_group_labels = labels_ordered
-                var_group_positions = positions_ordered
+                    labels_ordered.append(self.var_group_labels[idx])
+                self.var_group_labels = labels_ordered
+                self.var_group_positions = positions_ordered
             else:
                 logg.warning(
                     "Groups are not reordered because the `groupby` categories "
                     "and the `var_group_labels` are different.\n"
-                    f"categories: {_format_first_three_categories(categories)}\n"
+                    f"categories: {_format_first_three_categories(self.categories)}\n"
                     "var_group_labels: "
-                    f"{_format_first_three_categories(var_group_labels)}"
+                    f"{_format_first_three_categories(self.var_group_labels)}"
                 )
-        else:
-            var_names_idx_ordered = None
 
         if var_names_idx_ordered is not None:
-            var_names_ordered = [var_names[x] for x in var_names_idx_ordered]
+            var_names_ordered = [self.var_names[x] for x in var_names_idx_ordered]
         else:
             var_names_ordered = None
 
-        return dict(
-            categories_idx_ordered=categories_idx_ordered,
-            categories_ordered=dendro_info['categories_ordered'],
-            var_names_idx_ordered=var_names_idx_ordered,
-            var_names_ordered=var_names_ordered,
-            var_group_labels=var_group_labels,
-            var_group_positions=var_group_positions,
-        )
+        self.categories_idx_ordered = categories_idx_ordered
+        self.categories_order = dendro_info['categories_ordered']
+        self.var_names_idx_order = var_names_idx_ordered
+        self.var_names_ordered = var_names_ordered
 
     @staticmethod
-    def _plot_gene_groups_brackets(
+    def _plot_var_groups_brackets(
         gene_groups_ax: Axes,
         group_positions: Iterable[Tuple[int, int]],
         group_labels: Sequence[str],
@@ -920,28 +897,29 @@ class BasePlot(object):
             axis='x', bottom=False, labelbottom=False, labeltop=False
         )
 
-    @staticmethod
-    def _check_var_names_type(var_names, var_group_labels, var_group_positions):
+    def _update_var_groups(self):
         """
         checks if var_names is a dict. Is this is the cases, then set the
         correct values for var_group_labels and var_group_positions
 
+        updates var_names, var_group_labels, var_group_positions
+
         Returns
         -------
-        var_names, var_group_labels, var_group_positions
+        None
 
         """
-        if isinstance(var_names, cabc.Mapping):
-            if var_group_labels is not None or var_group_positions is not None:
+        if isinstance(self.var_names, cabc.Mapping):
+            if self.has_var_groups:
                 logg.warning(
                     "`var_names` is a dictionary. This will reset the current "
-                    "value of `var_group_labels` and `var_group_positions`."
+                    "values of `var_group_labels` and `var_group_positions`."
                 )
             var_group_labels = []
             _var_names = []
             var_group_positions = []
             start = 0
-            for label, vars_list in var_names.items():
+            for label, vars_list in self.var_names.items():
                 if isinstance(vars_list, str):
                     vars_list = [vars_list]
                 # use list() in case var_list is a numpy array or pandas series
@@ -949,12 +927,13 @@ class BasePlot(object):
                 var_group_labels.append(label)
                 var_group_positions.append((start, start + len(vars_list) - 1))
                 start += len(vars_list)
-            var_names = _var_names
+            self.var_names = _var_names
+            self.var_group_labels = var_group_labels
+            self.var_group_positions = var_group_positions
+            self.has_var_groups = True
 
-        elif isinstance(var_names, str):
-            var_names = [var_names]
-
-        return var_names, var_group_labels, var_group_positions
+        elif isinstance(self.var_names, str):
+            self.var_names = [self.var_names]
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -2364,6 +2343,7 @@ class HeatMap(BasePlot):
         )
 
         if standard_scale == 'obs':
+
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
         elif standard_scale == 'var':
