@@ -368,10 +368,8 @@ def _rank_genes_groups_plot(
     group_names = (adata.uns[key]['names'].dtype.names
                    if groups is None else groups)
 
+    var_names = {}  # dict in which each group is the key and the n_genes are the values
     gene_names = []
-    start = 0
-    group_positions = []
-    group_names_valid = []
     for group in group_names:
         if min_logfoldchange is not None:
             df = rank_genes_groups_df(adata, group, key=key)
@@ -385,71 +383,64 @@ def _rank_genes_groups_plot(
         if len(genes_list) == 0:
             logg.warning(f'No genes found for group {group}')
             continue
+        var_names[group] = genes_list
         gene_names.extend(genes_list)
-        end = start + len(genes_list)
-        group_positions.append((start, end -1))
-        group_names_valid.append(group)
-        start = end
-
-    group_names = group_names_valid
 
     # by default add dendrogram to plots
     kwds.setdefault('dendrogram', True)
 
-    if plot_type == 'dotplot':
-        color_title = None
-        values_df = None
-        if values_to_plot is not None:
-            values_df = _get_values_to_plot(adata, values_to_plot, gene_names, group_names, key=key)
-            color_title = values_to_plot
-
-        from .._groupby_plots import dotplot
-        pl = dotplot(adata, gene_names, groupby, var_group_labels=group_names,
-                var_group_positions=group_positions,
-                dot_color_df=values_df, show=False, **kwds)
-
-        if color_title is not None:
-            pl.legend(color_title=color_title.replace("_", " "))
-        if show is not False or save:
-            pl.show(show=show, save=save)
-        return pl
-
-    elif plot_type == 'heatmap':
-        from .._groupby_plots import heatmap
-        heatmap(adata, gene_names, groupby, var_group_labels=group_names,
-                var_group_positions=group_positions, show=show, save=save, **kwds)
-
-    elif plot_type == 'stacked_violin':
-        from .._groupby_plots import stacked_violin
-        pl = stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
-                       var_group_positions=group_positions, show=False, **kwds)
-        if show is not False or save:
-            pl.show(show=show, save=save)
-
-        return pl
-
-    elif plot_type == 'tracksplot':
-        from .._anndata import tracksplot
-        return tracksplot(adata, gene_names, groupby, var_group_labels=group_names,
-                       var_group_positions=group_positions, show=show, save=save, **kwds)
-
-    elif plot_type == 'matrixplot':
-        from .._groupby_plots import matrixplot
+    if plot_type in ['dotplot', 'matrixplot']:
+        # this two types of plots can plots can also
+        # show other values as logfoldchange and pvalues.
         title = None
         values_df = None
         if values_to_plot is not None:
-            values_df = _get_values_to_plot(adata, values_to_plot, gene_names, group_names, key=key)
+            values_df = _get_values_to_plot(
+                adata,
+                values_to_plot,
+                gene_names,
+                group_names,
+                key=key)
             title = values_to_plot
-        pl = matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
-                        var_group_positions=group_positions,
-                        values_df=values_df, show=False, **kwds)
-        if title is not None:
-            pl.legend(title=title.replace("_", " "))
 
+        if plot_type == 'dotplot':
+            from .._groupby_plots import dotplot
+            _pl = dotplot(adata, var_names, groupby,
+                         dot_color_df=values_df, show=False, **kwds)
+
+            if title is not None:
+                _pl.legend(color_title=title.replace("_", " "))
+            if show is not False or save:
+                _pl.show(show=show, save=save)
+            return _pl
+        elif plot_type == 'matrixplot':
+            from .._groupby_plots import matrixplot
+            _pl = matrixplot(adata, var_names, groupby,
+                            values_df=values_df, show=False, **kwds)
+            if title is not None:
+                _pl.legend(title=title.replace("_", " "))
+
+            if show is not False or save:
+                _pl.show(show=show, save=save)
+
+            return _pl
+
+    elif plot_type == 'heatmap':
+        from .._anndata import heatmap
+        heatmap(adata, var_names, groupby,  show=show, save=save, **kwds)
+
+    elif plot_type == 'stacked_violin':
+        from .._groupby_plots import stacked_violin
+        _pl = stacked_violin(adata, var_names, groupby, show=False, **kwds)
         if show is not False or save:
-            pl.show(show=show, save=save)
+            _pl.show(show=show, save=save)
 
-        return pl
+        return _pl
+
+    elif plot_type == 'tracksplot':
+        from .._anndata import tracksplot
+        return tracksplot(adata, var_names, groupby,  show=show, save=save, **kwds)
+
 
 
 @_doc_params(show_save_ax=doc_show_save_ax)
@@ -1136,7 +1127,7 @@ def _get_values_to_plot(adata,
                         key: Optional[str]=None):
     """
     If rank_genes_groups has been called, this function
-    makes a dataframe of pvalues or logfoldchange to be ploted
+    makes a dataframe of pvalues or logfoldchange to be plotted
     as dotplot or matrixplot.
 
     The dataframe index are the given groups and the columns are the gene_names
