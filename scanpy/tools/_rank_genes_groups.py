@@ -75,7 +75,7 @@ def _ranks(X, mask=None, mask_rest=None):
         left = right
 
 
-class _RankGenesGroups:
+class _RankGenes:
     def __init__(self, adata, groups, groupby, reference, use_raw, layer):
 
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
@@ -272,7 +272,7 @@ class _RankGenesGroups:
         X = self.X[self.grouping_mask.values, :]
 
         if len(self.groups_order) == 1:
-            raise Exception('Cannot perform logistic regression on a single cluster.')
+            raise ValueError('Cannot perform logistic regression on a single cluster.')
 
         clf = LogisticRegression(**kwds)
         clf.fit(X, self.grouping.cat.codes)
@@ -469,7 +469,7 @@ def rank_genes_groups(
             groups_order = [str(n) for n in groups_order]
         if reference != 'rest' and reference not in set(groups_order):
             groups_order += [reference]
-    if reference != 'rest' and reference not in set(adata.obs[groupby].cat.categories):
+    if reference != 'rest' and reference not in adata.obs[groupby].cat.categories:
         cats = adata.obs[groupby].cat.categories.tolist()
         raise ValueError(
             f'reference = {reference} needs to be one of groupby = {cats}.'
@@ -487,7 +487,7 @@ def rank_genes_groups(
         corr_method=corr_method,
     )
 
-    test_obj = _RankGenesGroups(adata, groups_order, groupby, reference, use_raw, layer)
+    test_obj = _RankGenes(adata, groups_order, groupby, reference, use_raw, layer)
 
     # for clarity, rename variable
     n_genes_user = n_genes
