@@ -836,7 +836,7 @@ def _paga_graph(
                 color_single = list(color_single)
                 color_single.append('grey')
                 fracs.append(1 - sum(fracs))
-            elif np.isclose(total, 1):
+            elif not np.isclose(total, 1):
                 raise ValueError(f'Expected fractions for node `{ix}` to be '
                                  f'close to 1, found `{total}`.')
 
