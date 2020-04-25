@@ -20,3 +20,4 @@ umap-learn>=0.3.10
 legacy-api-wrap
 setuptools_scm
 packaging
+scikit-misc

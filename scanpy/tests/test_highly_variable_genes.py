@@ -69,8 +69,8 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     pbmc_dense = pbmc.copy()
     pbmc_dense.X = pbmc_dense.X.toarray()
 
-    sc.pp.highly_variable_genes_seurat_v3(pbmc, n_top_genes=50, use_lowess=False)
-    sc.pp.highly_variable_genes_seurat_v3(pbmc_dense, n_top_genes=50, use_lowess=False)
+    sc.pp.highly_variable_genes_seurat_v3(pbmc, n_top_genes=50)
+    sc.pp.highly_variable_genes_seurat_v3(pbmc_dense, n_top_genes=50)
 
     for ad in [pbmc, pbmc_dense]:
         np.testing.assert_array_equal(
@@ -86,7 +86,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         np.testing.assert_allclose(
             seurat_hvg_info['variances_norm'],
             ad.var['variances_norm'],
-            rtol=2e-02,
+            rtol=2e-03,
             atol=2e-05,
         )
 

@@ -3,7 +3,6 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from numba import jit
 import scipy.sparse as sp_sparse
 from anndata import AnnData
 
@@ -390,19 +389,21 @@ def highly_variable_genes_seurat_v3(
     adata: AnnData,
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
-    lowess_frac: Optional[float] = 0.15,
+    span: Optional[float] = 0.3,
     subset: bool = False,
     inplace: bool = True,
-    use_lowess: bool = False,
 ):
     """\
     Annotate highly variable genes [Stuart19]_.
 
     Expects raw count data.
 
-    The major difference in this implementation is the use of lowess insted of loess.
+    Computes for each gene a normalized variance. First, the data is standardized
+    (i.e., z-score normalization per feature) with a regularized standard deviation.
+    Next, the normalized variance is computed as the variance of each gene after the transformation.
+    Genes are ranked by the normalized variance.
 
-    For further details of the sparse arithmetic see https://www.overleaf.com/read/ckptrbgzzzpg
+    For further implemenation details see https://www.overleaf.com/read/ckptrbgzzzpg
 
     Parameters
     ----------
@@ -415,15 +416,13 @@ def highly_variable_genes_seurat_v3(
         If specified, highly-variable genes are selected within each batch separately and merged.
         This simple process avoids the selection of batch-specific genes and acts as a
         lightweight batch correction method.
-    lowess_frac
-        The fraction of the data (cells) used when estimating the variance in the lowess model fit.
+    span
+        The fraction of the data (cells) used when estimating the variance in the loess model fit.
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
     inplace
         Whether to place calculated metrics in `.var` or return them.
-    use_lowess
-        Whether to use statsmodels lowess implementation
 
     Returns
     -------
@@ -439,7 +438,6 @@ def highly_variable_genes_seurat_v3(
     highly_variable_intersection : bool
         If batch_key is given, this denotes the genes that are highly variable in all batches
     """
-    from statsmodels.nonparametric.smoothers_lowess import lowess
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -455,10 +453,7 @@ def highly_variable_genes_seurat_v3(
 
         y = np.log10(var[not_const])
         x = np.log10(mean[not_const])
-        if use_lowess is True:
-            estimat_var[not_const] = lowess(y, x, frac=lowess_frac, return_sorted=False)
-        else:
-            estimat_var[not_const] = lowess_quadratic(y, x)
+        estimat_var[not_const] = _loess(y, x, span=span)
         reg_std = np.sqrt(10 ** estimat_var)
 
         batch_counts = adata[batch_info == b].X.astype(np.float64).copy()
@@ -576,66 +571,12 @@ def highly_variable_genes_seurat_v3(
         return np.rec.fromarrays(arrays, dtype=dtypes)
 
 
-@jit(nopython=True)
-def lowess_quadratic(y, x, alpha=0.3):
-    """\
-    Lowess smoother: Locally weighted regression.
+def _loess(y, x, span=0.3):
 
-    This is an adaptation of
-     https://xavierbourretsicotte.github.io/loess.html#Implementation-in-python-(using-bell-shaped-kernel)
+    from skmisc.loess import loess
 
-    with additional use of quadratic polynomial.
+    model = loess(x, y, span=span, degree=2)
+    model.fit()
+    y_est = model.predict(x).values
 
-    Parameters
-    ----------
-    alpha
-        Smoothing span. A larger value for alpha will result in a
-        smoother curve.
-    iter
-        The number of robustifying iterations
-
-    Returns
-    -------
-    Estimated values from lowess fit
-    """
-    n = len(x)
-    r = int(np.ceil(alpha * n))
-    h = 1 / np.array([np.sort(np.abs(x - x[i]))[r] for i in range(n)]).reshape(1, -1)
-    w = np.abs((x.reshape(-1, 1) - x.reshape(1, -1))) * h
-    out_w = np.empty_like(w)
-    for i in range(w.shape[0]):
-        for j in range(w.shape[1]):
-            if w[i, j] < 0:
-                out_w[i, j] = 0
-            elif w[i, j] > 1:
-                out_w[i, j] = 1
-            else:
-                out_w[i, j] = w[i, j]
-    w = out_w
-    w = (1 - w ** 3) ** 3
-    yest = np.zeros(n)
-    x_sq = np.square(x)
-    for i in range(n):
-        weights = w[:, i]
-        b = np.array(
-            [np.sum(weights * y), np.sum(weights * y * x), np.sum(weights * y * x_sq),]
-        )
-        A = np.array(
-            [
-                [np.sum(weights), np.sum(weights * x), np.sum(weights * x_sq)],
-                [
-                    np.sum(weights * x),
-                    np.sum(weights * x * x),
-                    np.sum(weights * x_sq * x),
-                ],
-                [
-                    np.sum(weights * x_sq),
-                    np.sum(weights * x * x_sq),
-                    np.sum(weights * x_sq * x_sq),
-                ],
-            ]
-        )
-        beta = np.linalg.solve(A, b)
-        yest[i] = beta[0] + beta[1] * x[i] + beta[2] * x_sq[i]
-
-    return yest
+    return y_est
