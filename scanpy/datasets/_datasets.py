@@ -313,7 +313,7 @@ def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
     url_prefix = f'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/{sample_id}/'
 
     sample_dir = base_dir / sample_id
-    sample_dir.mkdir(exist_ok=True)
+    sample_dir.mkdir(exist_ok=True, parents=True)
 
     # Download spatial data
     tar_filename = f"{sample_id}_spatial.tar.gz"
