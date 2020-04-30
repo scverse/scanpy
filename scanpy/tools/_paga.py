@@ -19,6 +19,7 @@ def paga(
     groups: Optional[str] = None,
     use_rna_velocity: bool = False,
     model: Literal['v1.2', 'v1.0'] = 'v1.2',
+    neighbors_key: Optional[str] = None,
     copy: bool = False,
 ):
     """\
@@ -60,6 +61,14 @@ def paga(
         to change in the future.
     model
         The PAGA connectivity model.
+    neighbors_key
+        If not specified, paga looks `.uns['neighbors']` for neighbors settings
+        and `.obsp['connectivities']`, `.obsp['distances']` for connectivities and
+        distances respectively (default storage places for `pp.neighbors`).
+        If specified, paga looks `.uns[neighbors_key]` for neighbors settings and
+        `.obsp[.uns[neighbors_key]['connectivities_key']]`,
+        `.obsp[.uns[neighbors_key]['distances_key']]` for connectivities and distances
+        respectively.
     copy
         Copy `adata` before computation and return a copy. Otherwise, perform
         computation inplace and return `None`.
@@ -87,7 +96,8 @@ def paga(
     pl.paga_path
     pl.paga_compare
     """
-    if 'neighbors' not in adata.uns: raise ValueError(
+    check_neighbors = 'neighbors' if neighbors_key is None else neighbors_key
+    if check_neighbors not in adata.uns: raise ValueError(
         'You need to run `pp.neighbors` first to compute a neighborhood graph.'
     )
     if groups is None:
@@ -106,7 +116,7 @@ def paga(
     adata = adata.copy() if copy else adata
     _utils.sanitize_anndata(adata)
     start = logg.info('running PAGA')
-    paga = PAGA(adata, groups, model=model)
+    paga = PAGA(adata, groups, model=model, neighbors_key=neighbors_key)
     # only add if not present
     if 'paga' not in adata.uns:
         adata.uns['paga'] = {}
@@ -136,10 +146,10 @@ def paga(
 
 
 class PAGA:
-    def __init__(self, adata, groups, model='v1.2'):
+    def __init__(self, adata, groups, model='v1.2', neighbors_key=None):
         assert groups in adata.obs.columns
         self._adata = adata
-        self._neighbors = Neighbors(adata)
+        self._neighbors = Neighbors(adata, neighbors_key=neighbors_key)
         self._model = model
         self._groups_key = groups
 
@@ -439,7 +449,7 @@ def paga_compare_paths(
     Returns
     -------
     NamedTuple with attributes
-    
+
     frac_steps
         fraction of consistent steps
     n_steps
