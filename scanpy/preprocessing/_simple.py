@@ -2,6 +2,8 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+from functools import singledispatch
+from numbers import Number
 import warnings
 from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
 
@@ -9,14 +11,15 @@ import numba
 import numpy as np
 import scipy as sp
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
-from sklearn.utils import sparsefuncs
+from sklearn.utils import sparsefuncs, check_array
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 
 from .. import logging as logg
 from .._settings import settings as sett
-from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, AnyRandom
+from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, AnyRandom, _check_array_function_arguments
 from .._compat import Literal
+from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 
@@ -247,13 +250,17 @@ def filter_genes(
     return gene_subset, number_per_gene
 
 
+@singledispatch
 def log1p(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    X: Union[AnnData, np.ndarray, spmatrix],
+    *,
+    base: Optional[Number] = None,
     copy: bool = False,
-    chunked: bool = False,
+    chunked: bool = None,
     chunk_size: Optional[int] = None,
-    base: Optional[float] = None,
-) -> Optional[AnnData]:
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+):
     """\
     Logarithmize the data matrix.
 
@@ -262,9 +269,11 @@ def log1p(
 
     Parameters
     ----------
-    data
+    X
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
+    base
+        Base of the logarithm. Natural logarithm is used by default.
     copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
@@ -273,51 +282,77 @@ def log1p(
         Applies only to :class:`~anndata.AnnData`.
     chunk_size
         `n_obs` of the chunks to process the data in.
-    base
-        Base of the logarithm. Natural logarithm is used by default.
+    layer
+        Entry of layers to tranform.
+    obsm
+        Entry of obsm to transform.
 
     Returns
     -------
     Returns or updates `data`, depending on `copy`.
     """
-    if 'log1p' in data.uns_keys():
-        logg.warning('adata.X seems to be already log-transformed.')
+    _check_array_function_arguments(
+        chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
+    )
+    return log1p_array(X, copy=copy, base=base)
 
+
+@log1p.register(spmatrix)
+def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
+    X = check_array(
+        X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
+    )
+    X.data = log1p(X.data, copy=False, base=base)
+    return X
+
+
+@log1p.register(np.ndarray)
+def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
+    # Can force arrays to be np.ndarrays, but would be useful
+    # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
-        if not isinstance(data, AnnData):
-            data = data.astype(np.floating)
+        if not np.issubdtype(X.dtype, np.floating):
+            X = X.astype(np.floating)
         else:
-            data = data.copy()
-    elif not isinstance(data, AnnData) and np.issubdtype(data.dtype, np.integer):
-        raise TypeError("Cannot perform inplace log1p on integer array")
+            X = X.copy()
+    np.log1p(X, out=X)
+    if base is not None:
+        np.divide(X, np.log(base), out=X)
+    return X
 
-    if isinstance(data, AnnData) and data.is_view:
-        view_to_actual(data)
 
-    def _log1p(X):
-        if issparse(X):
-            np.log1p(X.data, out=X.data)
-            if base is not None:
-                np.divide(X.data, np.log(base), out=X.data)
-        else:
-            np.log1p(X, out=X)
-            if base is not None:
-                np.divide(X, np.log(base), out=X)
-        return X
+@log1p.register(AnnData)
+def log1p_anndata(
+    adata,
+    *,
+    base: Optional[Number] = None,
+    copy: bool = False,
+    chunked: bool = False,
+    chunk_size: Optional[int] = None,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+) -> Optional[AnnData]:
+    if "log1p" in adata.uns_keys():
+        logg.warning("adata.X seems to be already log-transformed.")
 
-    if isinstance(data, AnnData):
-        if not np.issubdtype(data.X.dtype, np.floating):
-            data.X = data.X.astype(np.float32)
-        if chunked:
-            for chunk, start, end in data.chunked_X(chunk_size):
-                 data.X[start:end] = _log1p(chunk)
-        else:
-            _log1p(data.X)
+    adata = adata.copy() if copy else adata
+    view_to_actual(adata)
+
+    if chunked:
+        if (layer is not None) or (obsm is not None):
+            raise NotImplementedError(
+                "Currently cannot perform chunked operations on arrays not stored in X."
+            )
+        for chunk, start, end in adata.chunked_X(chunk_size):
+            adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
-        _log1p(data)
+        X = _get_obs_rep(adata, layer=layer, obsm=obsm)
+        X = log1p(X, copy=False, base=base)
+        _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
-    data.uns['log1p'] = {'base': base}
-    return data if copy else None
+    adata.uns["log1p"] = {"base": base}
+    if copy:
+        return adata
 
 
 def sqrt(
@@ -677,12 +712,15 @@ def _regress_out_chunk(data):
     return np.vstack(responses_chunk_list)
 
 
+@singledispatch
 def scale(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    X: Union[AnnData, spmatrix, np.ndarray],
     zero_center: bool = True,
     max_value: Optional[float] = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+):
     """\
     Scale data to unit variance and zero mean.
 
@@ -693,7 +731,7 @@ def scale(
 
     Parameters
     ----------
-    data
+    X
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     zero_center
@@ -702,64 +740,119 @@ def scale(
     max_value
         Clip (truncate) to this value after scaling. If `None`, do not clip.
     copy
-        If an :class:`~anndata.AnnData` is passed,
-        determines whether a copy is returned.
+        Whether this function should be performed inplace. If an AnnData object
+        is passed, this also determines if a copy is returned.
+    layer
+        If provided, which element of layers to scale.
+    obsm
+        If provided, which element of obsm to scale.
 
     Returns
     -------
-    Depending on `copy` returns or updates `adata` with a scaled `adata.X`.
+    Depending on `copy` returns or updates `adata` with a scaled `adata.X`,
+    annotated with `'mean'` and `'std'` in `adata.var`.
     """
-    if isinstance(data, AnnData):
-        adata = data.copy() if copy else data
-        view_to_actual(adata)
-        # need to add the following here to make inplace logic work
-        if zero_center and issparse(adata.X):
-            logg.debug(
-                '... scale_data: as `zero_center=True`, sparse input is '
-                'densified and may lead to large memory consumption.'
-            )
-            adata.X = adata.X.toarray()
-        if np.issubdtype(adata.X.dtype, np.integer):
-            logg.debug(
-                '... scale_data: as scaling leads to float results, integer '
-                'input is cast to float, returning copy.'
-            )
-            if issparse(adata.X):
-                adata.X = adata.X.__class__(adata.X, dtype=np.float) # keep the identical sparse matrix type but with float data
-            else:
-                adata.X = np.array(adata.X, dtype=np.float) # keep dense array but with float data
-        scale(adata.X, zero_center=zero_center, max_value=max_value, copy=False)
-        return adata if copy else None
-    X = data.copy() if copy else data  # proceed with the data matrix
-    zero_center = not issparse(X) if zero_center is None else zero_center
+    _check_array_function_arguments(layer=layer, obsm=obsm)
+    return scale_array(data, zero_center=zero_center, max_value=max_value, copy=copy)
+
+
+@scale.register(np.ndarray)
+def scale_array(
+    X,
+    *,
+    zero_center: bool = True,
+    max_value: Optional[float] = None,
+    copy: bool = False,
+    return_mean_std: bool = False,
+):
+    if copy:
+        X = X.copy()
     if not zero_center and max_value is not None:
-        logg.debug(
-            '... scale_data: be careful when using `max_value` '
-            'without `zero_center`.'
+        logg.info(  # Be careful of what? This should be more specific
+            "... be careful when using `max_value` " "without `zero_center`."
         )
-    if max_value is not None:
-        logg.debug(f'... clipping at max_value {max_value}')
-    if zero_center and issparse(X):
-        logg.debug(
-            '... scale_data: as `zero_center=True`, sparse input is densified '
-            'and may lead to large memory consumption, returning copy.'
-        )
-        X = X.toarray()
-        copy = True
+      
     if np.issubdtype(X.dtype, np.integer):
-        logg.debug(
+        logg.info(
             '... scale_data: as scaling leads to float results, integer '
             'input is cast to float, returning copy.'
         )
-        if issparse(X):
+        if issparse(X): # TODO: never reaches this codepath, as we are in the np.ndarray specialization
             X = X.__class__(X, dtype=np.float) # keep the identical sparse matrix type but with float data
         else:
             X = np.array(X, dtype=np.float) # keep dense array but with float data
-        copy = True
-    _scale(X, zero_center)
+
+    mean, var = _get_mean_var(X)
+    std = np.sqrt(var)
+    std[std == 0] = 1
+    if issparse(X): # TODO: never reaches this codepath, as we are in the np.ndarray specialization
+        if zero_center:
+            raise ValueError("Cannot zero-center sparse matrix.")
+        sparsefuncs.inplace_column_scale(X, 1 / std)
+    else:
+        if zero_center:
+            X -= mean
+        X /= std
+
+    # do the clipping
     if max_value is not None:
+        logg.debug(f"... clipping at max_value {max_value}")
         X[X > max_value] = max_value
-    return X if copy else None
+
+    if return_mean_std:
+        return X, mean, std
+    else:
+        return X
+
+
+@scale.register(spmatrix)
+def scale_sparse(
+    X,
+    *,
+    zero_center: bool = True,
+    max_value: Optional[float] = None,
+    copy: bool = False,
+    return_mean_std: bool = False,
+):
+    # need to add the following here to make inplace logic work
+    if zero_center:
+        logg.info(
+            "... as `zero_center=True`, sparse input is "
+            "densified and may lead to large memory consumption"
+        )
+        X = X.toarray()
+        copy = False  # Since the data has been copied
+    return scale_array( # TODO: should lead to infinity loop, if zero_center == False
+        X,
+        zero_center=zero_center,
+        copy=copy,
+        max_value=max_value,
+        return_mean_std=return_mean_std,
+    )
+
+@scale.register(AnnData)
+def scale_anndata(
+    adata: AnnData,
+    *,
+    zero_center: bool = True,
+    max_value: Optional[float] = None,
+    copy: bool = False,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+) -> Optional[AnnData]:
+    adata = adata.copy() if copy else adata
+    view_to_actual(adata)
+    X = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    X, adata.var["mean"], adata.var["std"] = scale(
+        X,
+        zero_center=zero_center,
+        max_value=max_value,
+        copy=False,  # because a copy has already been made, if it were to be made
+        return_mean_std=True,
+    )
+    _set_obs_rep(adata, X, layer=layer, obsm=obsm)
+    if copy:
+        return adata
 
 
 def subsample(
@@ -1036,26 +1129,3 @@ def _pca_fallback(data, n_comps=2):
     # project data points on eigenvectors
     return np.dot(evecs.T, data.T).T
 
-
-def _scale(X, zero_center=True):
-    # - using sklearn.StandardScaler throws an error related to
-    #   int to long trafo for very large matrices
-    # - using X.multiply is slower
-    #   the result differs very slightly, why?
-    if True:
-        mean, var = _get_mean_var(X)
-        scale = np.sqrt(var)
-        scale[scale == 0] = 1
-        if issparse(X):
-            if zero_center: raise ValueError('Cannot zero-center sparse matrix.')
-            sparsefuncs.inplace_column_scale(X, 1/scale)
-        else:
-            if zero_center:
-                X -= mean
-            X /= scale
-    else:
-        from sklearn.preprocessing import StandardScaler
-        scaler = StandardScaler(with_mean=zero_center, copy=False).partial_fit(X)
-        # user R convention (unbiased estimator)
-        scaler.scale_ *= np.sqrt(X.shape[0]/(X.shape[0]-1))
-        scaler.transform(X)
