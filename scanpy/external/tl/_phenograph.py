@@ -228,7 +228,7 @@ def phenograph(
         n_iterations=n_iterations,
         use_weights=use_weights,
         seed=seed,
-        kargs=kargs,
+        **kargs,
     )
 
     logg.info("    finished", time=start)
