@@ -777,7 +777,7 @@ def scale_array(
             '... scale_data: as scaling leads to float results, integer '
             'input is cast to float, returning copy.'
         )
-        if issparse(X): # TODO: never reaches this codepath, as we are in the np.ndarray specialization
+        if issparse(X):
             X = X.__class__(X, dtype=np.float) # keep the identical sparse matrix type but with float data
         else:
             X = np.array(X, dtype=np.float) # keep dense array but with float data
@@ -785,7 +785,7 @@ def scale_array(
     mean, var = _get_mean_var(X)
     std = np.sqrt(var)
     std[std == 0] = 1
-    if issparse(X): # TODO: never reaches this codepath, as we are in the np.ndarray specialization
+    if issparse(X):
         if zero_center:
             raise ValueError("Cannot zero-center sparse matrix.")
         sparsefuncs.inplace_column_scale(X, 1 / std)
@@ -822,7 +822,7 @@ def scale_sparse(
         )
         X = X.toarray()
         copy = False  # Since the data has been copied
-    return scale_array( # TODO: should lead to infinity loop, if zero_center == False
+    return scale_array(
         X,
         zero_center=zero_center,
         copy=copy,
