@@ -10,17 +10,17 @@ X = [
     [-1, 2, 0, 0],
     [1, 2, 4, 0],
     [0, 2, 2, 0],
-]  # with gene std 1,nan,2,nan and center 0,2,2,0
+]  # with gene std 1,0,2,0 and center 0,2,2,0
 X_scaled = [
     [-1, 2, 0, 0],
     [1, 2, 2, 0],
     [0, 2, 1, 0],
-]  # with gene std 1,nan,1,nan and center 0,2,1,0
+]  # with gene std 1,0,1,0 and center 0,2,1,0
 X_centered = [
     [-1, 0, -1, 0],
     [1, 0, 1, 0],
     [0, 0, 0, 0],
-]  # with gene std 1,nan,1,nan and center 0,0,0,0
+]  # with gene std 1,0,1,0 and center 0,0,0,0
 
 
 @pytest.mark.parametrize('typ', [np.array, csr_matrix], ids=lambda x: x.__name__)
