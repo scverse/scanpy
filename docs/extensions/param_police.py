@@ -36,9 +36,8 @@ def show_param_warnings(app, exception):
             file_name,
             line,
         )
-    # TODO: Figure out with @flying-sheep what to do about these
-    # if param_warnings:
-    #     raise RuntimeError('Encountered text parameter type. Use annotations.')
+    if param_warnings:
+        raise RuntimeError('Encountered text parameter type. Use annotations.')
 
 
 def setup(app: Sphinx):

@@ -17,7 +17,7 @@ from anndata import AnnData
 
 from .. import logging as logg
 from .._settings import settings as sett
-from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, AnyRandom
+from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, AnyRandom, _check_array_function_arguments
 from .._compat import Literal
 from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
@@ -256,6 +256,10 @@ def log1p(
     *,
     base: Optional[Number] = None,
     copy: bool = False,
+    chunked: bool = None,
+    chunk_size: Optional[int] = None,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
 ):
     """\
     Logarithmize the data matrix.
@@ -273,20 +277,23 @@ def log1p(
     copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
-    chunked : `bool` (default: `False`)
+    chunked
         Process the data matrix in chunks, which will save memory.
         Applies only to :class:`~anndata.AnnData`.
-    chunk_size : `Optional[int]`
+    chunk_size
         `n_obs` of the chunks to process the data in.
-    layer : `Optional[str]`
+    layer
         Entry of layers to tranform.
-    obsm : `Optional[str]`
+    obsm
         Entry of obsm to transform.
 
     Returns
     -------
     Returns or updates `data`, depending on `copy`.
     """
+    _check_array_function_arguments(
+        chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
+    )
     return log1p_array(X, copy=copy, base=base)
 
 
@@ -711,6 +718,8 @@ def scale(
     zero_center: bool = True,
     max_value: Optional[float] = None,
     copy: bool = False,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
 ):
     """\
     Scale data to unit variance and zero mean.
@@ -733,9 +742,9 @@ def scale(
     copy
         Whether this function should be performed inplace. If an AnnData object
         is passed, this also determines if a copy is returned.
-    layer : Optional[str]
+    layer
         If provided, which element of layers to scale.
-    obsm : Optional[str]
+    obsm
         If provided, which element of obsm to scale.
 
     Returns
@@ -743,7 +752,8 @@ def scale(
     Depending on `copy` returns or updates `adata` with a scaled `adata.X`,
     annotated with `'mean'` and `'std'` in `adata.var`.
     """
-    return scale_array(X, zero_center=zero_center, max_value=max_value, copy=copy)
+    _check_array_function_arguments(layer=layer, obsm=obsm)
+    return scale_array(data, zero_center=zero_center, max_value=max_value, copy=copy)
 
 
 @scale.register(np.ndarray)
