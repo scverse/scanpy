@@ -771,7 +771,7 @@ def scale_array(
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` " "without `zero_center`."
         )
-      
+
     if np.issubdtype(X.dtype, np.integer):
         logg.info(
             '... scale_data: as scaling leads to float results, integer '
