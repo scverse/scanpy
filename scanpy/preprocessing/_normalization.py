@@ -7,6 +7,7 @@ from sklearn.utils import sparsefuncs
 
 from .. import logging as logg
 from .._compat import Literal
+from .._utils import view_to_actual
 
 
 def _normalize_data(X, counts, after=None, copy=False):
@@ -133,6 +134,8 @@ def normalize_total(
         raise ValueError(
             f"`layers` needs to be a list of strings or 'all', not {layers!r}"
         )
+
+    view_to_actual(adata)
 
     gene_subset = None
     msg = 'normalizing counts per cell'
