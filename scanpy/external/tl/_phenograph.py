@@ -29,9 +29,11 @@ def phenograph(
     nn_method: Literal['kdtree', 'brute'] = 'kdtree',
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     resolution_parameter: float = 1,
+    n_iterations: int = -1,
     use_weights: bool = True,
-    seed: int = 0,
+    seed: Optional[int] = None,
     copy: bool = False,
+    **kargs,
 ) -> Tuple[Optional[np.ndarray], spmatrix, Optional[float]]:
     """\
     PhenoGraph clustering [Levine15]_.
@@ -76,11 +78,9 @@ def phenograph(
         Distance metric to define nearest neighbors.
         Note that performance will be slower for correlation and cosine.
     n_jobs
-        Nearest Neighbors and Jaccard coefficients will be computed in parallel
-        using `n_jobs`. If `n_jobs=-1`, it is determined automatically. This parameter
-        is passed to Leiden as `n_iterations`, the number of iterations to run the
-        Leiden algorithm. If the number of iterations is negative, the Leiden algorithm
-        is run until an iteration in which there was no improvement.
+        Nearest Neighbors and Jaccard coefficients will be computed in parallel using
+        n_jobs. If 1 is given, no parallelism is used. If set to -1, all CPUs are used.
+        For n_jobs below -1, `n_cpus + 1 + n_jobs` are used.
     q_tol
         Tolerance (i.e., precision) for monitoring modularity optimization.
     louvain_time_limit
@@ -92,17 +92,25 @@ def phenograph(
         (with parallel computation) performs faster than kdtree.
     partition_type
         Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`. For the
-        available options, consult the documentation for :func:`~leidenalg.find_partition`.
+        available options, consult the documentation for
+        :func:`~leidenalg.find_partition`.
     resolution_parameter
         A parameter value controlling the coarseness of the clustering in Leiden. Higher
         values lead to more clusters. Set to `None` if overriding `partition_type` to
         one that doesn’t accept a `resolution_parameter`.
+    n_iterations
+        Number of iterations to run the Leiden algorithm. If the number of iterations is
+        negative, the Leiden algorithm is run until an iteration in which there was no
+        improvement.
     use_weights
         Use vertices in the Leiden computation.
     seed
         Leiden initialization of the optimization.
     copy
         Return a copy or write to `adata`.
+    kargs
+        Additional arguments passed to :func:`~leidenalg.find_partition` and the
+        constructor of the `partition_type`.
 
     Returns
     -------
@@ -217,8 +225,10 @@ def phenograph(
         nn_method=nn_method,
         partition_type=partition_type,
         resolution_parameter=resolution_parameter,
+        n_iterations=n_iterations,
         use_weights=use_weights,
         seed=seed,
+        kargs=kargs,
     )
 
     logg.info("    finished", time=start)
