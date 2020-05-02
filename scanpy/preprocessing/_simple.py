@@ -696,6 +696,12 @@ def _regress_out_chunk(data):
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
     for col_index in range(data_chunk.shape[1]):
+
+        # if all values are identical, the statsmodel.api.GLM throws an error; but then no regression is necessary anyways...
+        if (data_chunk[:, col_index] != data_chunk[0, col_index]).sum() == 0:
+            responses_chunk_list.append(data_chunk[:, col_index])
+            continue
+
         if variable_is_categorical:
             regres = np.c_[np.ones(regressors.shape[0]), regressors[:, col_index]]
         else:
