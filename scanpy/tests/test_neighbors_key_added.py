@@ -2,14 +2,16 @@ import scanpy as sc
 import numpy as np
 import pytest
 
-X = np.array([[1, 0], [3, 0], [5, 6], [0, 4]])
-n_neighbors = 3
+n_neighbors = 5
 key = 'test'
 
 
-def test_neighbors_key_added():
-    adata = sc.AnnData(X)
+@pytest.fixture
+def adata():
+    return sc.AnnData(sc.datasets.pbmc68k_reduced().X)
 
+
+def test_neighbors_key_added(adata):
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0, key_added=key)
 
@@ -27,21 +29,13 @@ def test_neighbors_key_added():
 
 # test functions with neighbors_key and obsp
 @pytest.mark.parametrize('field', ['neighbors_key', 'obsp'])
-def test_neighbors_key_obsp(field):
-    adata = sc.AnnData(X)
+def test_neighbors_key_obsp(adata, field):
     adata1 = adata.copy()
 
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)
     sc.pp.neighbors(adata1, n_neighbors=n_neighbors, random_state=0, key_added=key)
 
-    # no obsp in umap
     if field == 'neighbors_key':
-        sc.tl.umap(adata, random_state=0)
-        sc.tl.umap(adata1, random_state=0, neighbors_key=key)
-
-        assert adata.uns['umap']['params'] == adata1.uns['umap']['params']
-        assert np.allclose(adata.obsm['X_umap'], adata1.obsm['X_umap'])
-
         arg = {field: key}
     else:
         arg = {field: adata1.uns[key]['connectivities_key']}
@@ -63,3 +57,23 @@ def test_neighbors_key_obsp(field):
 
     assert adata.uns['louvain']['params'] == adata1.uns['louvain']['params']
     assert np.all(adata.obs['louvain'] == adata1.obs['louvain'])
+
+    # no obsp in umap, paga
+    if field == 'neighbors_key':
+        sc.tl.umap(adata, random_state=0)
+        sc.tl.umap(adata1, random_state=0, neighbors_key=key)
+
+        assert adata.uns['umap']['params'] == adata1.uns['umap']['params']
+        assert np.allclose(adata.obsm['X_umap'], adata1.obsm['X_umap'])
+
+        sc.tl.paga(adata, groups='leiden')
+        sc.tl.paga(adata1, groups='leiden', neighbors_key=key)
+
+        assert np.allclose(
+            adata.uns['paga']['connectivities'].toarray(),
+            adata1.uns['paga']['connectivities'].toarray(),
+        )
+        assert np.allclose(
+            adata.uns['paga']['connectivities_tree'].toarray(),
+            adata1.uns['paga']['connectivities_tree'].toarray(),
+        )

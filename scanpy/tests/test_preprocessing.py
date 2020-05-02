@@ -7,7 +7,9 @@ import scanpy as sc
 from sklearn.utils.testing import assert_allclose
 import pytest
 from anndata import AnnData
-from anndata.tests.helpers import assert_equal
+from anndata.tests.helpers import assert_equal, asarray
+
+from scanpy.tests.helpers import check_rep_mutation, check_rep_results
 
 
 def test_log1p(tmp_path):
@@ -28,6 +30,17 @@ def test_log1p(tmp_path):
     ad4 = AnnData(A)
     sc.pp.log1p(ad4, base=2)
     assert np.allclose(ad4.X, A_l/np.log(2))
+
+
+@pytest.fixture(params=[None, 2])
+def base(request):
+    return request.param
+
+
+def test_log1p_rep(count_matrix_format, base):
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    check_rep_mutation(sc.pp.log1p, X, base=base)
+    check_rep_results(sc.pp.log1p, X, base=base)
 
 
 def test_mean_var_sparse():
@@ -116,6 +129,32 @@ def test_scale():
     assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
+
+
+@pytest.fixture(params=[True, False])
+def zero_center(request):
+    return request.param
+
+
+def test_scale_rep(count_matrix_format, zero_center):
+    """
+    Test that it doesn't matter where the array being scaled is in the anndata object.
+    """
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
+    check_rep_results(sc.pp.scale, X, zero_center=zero_center)
+
+
+def test_scale_array(count_matrix_format, zero_center):
+    """
+    Test that running sc.pp.scale on an anndata object and an array returns the same results.
+    """
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    adata = sc.AnnData(X=X.copy(), dtype=np.float64)
+
+    sc.pp.scale(adata, zero_center=zero_center)
+    scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
+    assert np.array_equal(asarray(scaled_X), asarray(adata.X))
 
 
 def test_recipe_plotting():
