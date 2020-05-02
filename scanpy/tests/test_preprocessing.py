@@ -170,6 +170,16 @@ def test_regress_out_categorical():
     assert adata.X.shape == multi.X.shape
 
 
+def test_regress_out_constants():
+    adata = AnnData(np.hstack((np.full((10,1),0.0),np.full((10,1),1.0))))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    adata_copy = adata.copy()
+
+    sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'])
+    assert_equal(adata, adata_copy)
+
+
 @pytest.fixture(params=[lambda x: x.copy(), sp.csr_matrix, sp.csc_matrix])
 def count_matrix_format(request):
     return request.param
