@@ -11,6 +11,54 @@ from .. import logging as logg
 from .._utils import AnyRandom
 
 
+def _sparse_nanmean(X, axis):
+    """
+    np.nanmean equivalent for sparse matrices
+
+    # testing:
+    >>> import numpy as np
+    >>> from scipy.sparse import csr_matrix
+    >>> R, C = 60, 50
+    >>> A = np.random.rand(R,C) * (np.random.rand(R,C) < 0.3)
+    >>> S = csr_matrix(A)
+
+    # col sum
+    >>> np.testing.assert_allclose(A.mean(0),np.array(_sparse_nanmean(S,0)).flatten())
+
+    # rowsum
+    >>> np.testing.assert_allclose(A.mean(1), np.array(_sparse_nanmean(S,1)).flatten())
+
+    # now with nan
+    >>> A = np.random.rand(R,C) * (np.random.rand(R,C) < 0.3)
+    >>> masknan = (np.random.rand(R,C) < 0.3)
+    >>> A[masknan] = np.nan
+
+    >>> np.testing.assert_allclose(np.nanmean(A,1), np.array(_sparse_nanmean(csr_matrix(A),1)).flatten())
+    >>> np.testing.assert_allclose(np.nanmean(A,0), np.array(_sparse_nanmean(csr_matrix(A),0)).flatten())
+
+    # edge case of only NaNs per row
+    >>> A = np.full((10,1), np.nan)
+    >>> np.testing.assert_allclose(np.nanmean(A,0), np.array(_sparse_nanmean(csr_matrix(A),0)).flatten())
+    """
+
+    # count the number of nan elements per row/column (dep. on axis)
+    Z = X.copy()
+    Z.data = np.isnan(Z.data)
+    Z.eliminate_zeros()
+    n_elements = Z.shape[axis] - Z.sum(axis)
+
+    # set the nans to, so that a normal .sum() works
+    Y = X.copy()
+    Y.data[np.isnan(Y.data)] = 0
+    Y.eliminate_zeros()
+
+    # the average
+    s = Y.sum(axis)
+    m = s / n_elements
+
+    return m
+
+
 def score_genes(
     adata: AnnData,
     gene_list: Sequence[str],
@@ -128,10 +176,16 @@ def score_genes(
     gene_list = list(gene_list)
 
     X_list = _adata[:, gene_list].X
-    if issparse(X_list): X_list = X_list.toarray()
+    if issparse(X_list):
+        X_list = np.array(_sparse_nanmean(X_list, axis=1)).flatten()
+    else:
+        X_list = np.nanmean(X_list, axis=1)
+
     X_control = _adata[:, control_genes].X
-    if issparse(X_control): X_control = X_control.toarray()
-    X_control = np.nanmean(X_control, axis=1)
+    if issparse(X_control):
+        X_control = np.array(_sparse_nanmean(X_control, axis=1)).flatten()
+    else:
+        X_control = np.nanmean(X_control, axis=1)
 
     if len(gene_list) == 0:
         # We shouldn't even get here, but just in case
@@ -147,7 +201,7 @@ def score_genes(
             vector =  _adata[:, gene_list].X  # old anndata
         score = vector - X_control
     else:
-        score = np.nanmean(X_list, axis=1) - X_control
+        score = X_list - X_control
 
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 
