@@ -3,7 +3,6 @@ from typing import List, Iterable, Union
 from itertools import repeat
 
 import scanpy as sc
-import leidenalg
 import igraph
 
 import pandas as pd
@@ -95,6 +94,7 @@ def cluster_joint(
 ):
     """Actually do the clustering.
     """
+    import leidenalg
     partitions = [
         leidenalg.RBConfigurationVertexPartition(
             rep, weights="weight", resolution_parameter=res
