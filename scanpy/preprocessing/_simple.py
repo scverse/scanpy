@@ -774,13 +774,10 @@ def scale_array(
 
     if np.issubdtype(X.dtype, np.integer):
         logg.info(
-            '... scale_data: as scaling leads to float results, integer '
+            '... as scaling leads to float results, integer '
             'input is cast to float, returning copy.'
         )
-        if issparse(X):
-            X = X.__class__(X, dtype=np.float) # keep the identical sparse matrix type but with float data
-        else:
-            X = np.array(X, dtype=np.float) # keep dense array but with float data
+        X = X.astype(float)
 
     mean, var = _get_mean_var(X)
     std = np.sqrt(var)
@@ -1128,4 +1125,3 @@ def _pca_fallback(data, n_comps=2):
     evecs = evecs[:, :n_comps]
     # project data points on eigenvectors
     return np.dot(evecs.T, data.T).T
-
