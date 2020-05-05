@@ -61,6 +61,7 @@ def test_higly_variable_genes_compare_to_seurat():
 
 
 def test_higly_variable_genes_compare_to_seurat_v3():
+    sc.settings.datasetdir = ".test/data/"
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=' ', dtype={"variances_norm": np.float32}
     )
