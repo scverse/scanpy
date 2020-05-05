@@ -61,7 +61,6 @@ def test_higly_variable_genes_compare_to_seurat():
 
 
 def test_higly_variable_genes_compare_to_seurat_v3():
-    sc.settings.datasetdir = ".test/data/"
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=' ', dtype={"variances_norm": np.float32}
     )
@@ -75,23 +74,28 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     sc.pp.highly_variable_genes_seurat_v3(pbmc, n_top_genes=50)
     sc.pp.highly_variable_genes_seurat_v3(pbmc_dense, n_top_genes=50)
 
-    for ad in [pbmc, pbmc_dense]:
-        np.testing.assert_array_equal(
-            seurat_hvg_info['highly_variable'], ad.var['highly_variable']
-        )
+    np.testing.assert_array_equal(
+        seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
+    )
 
-        np.testing.assert_allclose(
-            seurat_hvg_info['means'], ad.var['means'], rtol=2e-05, atol=2e-05,
-        )
-        np.testing.assert_allclose(
-            seurat_hvg_info['variances'], ad.var['variances'], rtol=2e-05, atol=2e-05,
-        )
-        np.testing.assert_allclose(
-            seurat_hvg_info['variances_norm'],
-            ad.var['variances_norm'],
-            rtol=2e-05,
-            atol=2e-05,
-        )
+    np.testing.assert_allclose(
+        seurat_hvg_info['means'], pbmc.var['means'], rtol=2e-05, atol=2e-05,
+    )
+    np.testing.assert_allclose(
+        seurat_hvg_info['variances'], pbmc.var['variances'], rtol=2e-05, atol=2e-05,
+    )
+    np.testing.assert_allclose(
+        seurat_hvg_info['variances_norm'],
+        pbmc.var['variances_norm'],
+        rtol=2e-05,
+        atol=2e-05,
+    )
+    np.testing.assert_allclose(
+        pbmc_dense.var['variances_norm'],
+        pbmc.var['variances_norm'],
+        rtol=2e-05,
+        atol=2e-05,
+    )
 
 
 def test_filter_genes_dispersion_compare_to_seurat():
