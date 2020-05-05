@@ -61,7 +61,9 @@ def test_higly_variable_genes_compare_to_seurat():
 
 
 def test_higly_variable_genes_compare_to_seurat_v3():
-    seurat_hvg_info = pd.read_csv(FILE_V3, sep=' ')
+    seurat_hvg_info = pd.read_csv(
+        FILE_V3, sep=' ', dtype={"variances_norm": np.float32}
+    )
 
     pbmc = sc.datasets.pbmc3k()
     pbmc.var_names_make_unique()
@@ -86,7 +88,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         np.testing.assert_allclose(
             seurat_hvg_info['variances_norm'],
             ad.var['variances_norm'],
-            rtol=2e-03,
+            rtol=2e-05,
             atol=2e-05,
         )
 
