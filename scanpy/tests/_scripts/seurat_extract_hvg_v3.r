@@ -9,7 +9,7 @@ ad$X <- ad$X$toarray()
 
 ad$var_names_make_unique()
 
-sc$pp$highly_variable_genes_seurat_v3(ad, n_top_genes=2000)
+sc$pp$highly_variable_genes_seurat_v3(ad, n_top_genes=1000)
 
 
 X <- py_to_r(ad$X$T)
@@ -22,7 +22,7 @@ sr <- CreateSeuratObject(counts = X)
 ad_hvg <- py_to_r(ad$var["highly_variable"])
 ad_hvg <- names(ad_hvg[ad_hvg])
 
-sr <- FindVariableFeatures(object = sr, selection.method = "vst", nfeatures = 2000)
+sr <- FindVariableFeatures(object = sr, selection.method = "vst", nfeatures = 1000)
 sr_hvg <- sr@assays$RNA@var.features
 
 print(all(sr_hvg==ad_hvg))
