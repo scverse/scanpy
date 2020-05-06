@@ -10,7 +10,7 @@ ad$X <- ad$X$toarray()
 ad$var_names_make_unique()
 
 sc$pp$highly_variable_genes_seurat_v3(ad, n_top_genes=1000)
-
+sc$pp$filter_genes(ad, min_cells=3)
 
 X <- py_to_r(ad$X$T)
 bc <- py_to_r(ad$obs_names$tolist())

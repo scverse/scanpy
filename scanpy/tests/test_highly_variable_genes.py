@@ -67,6 +67,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
 
     pbmc = sc.datasets.pbmc3k()
     pbmc.var_names_make_unique()
+    sc.pp.filter_genes(pbmc, min_cells=3)
 
     pbmc_dense = pbmc.copy()
     pbmc_dense.X = pbmc_dense.X.toarray()
