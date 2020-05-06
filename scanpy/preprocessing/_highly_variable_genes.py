@@ -557,6 +557,6 @@ def _loess(y, x, span=0.3):
 
     model = loess(x, y, span=span, degree=2)
     model.fit()
-    y_est = model.predict(x).values
+    y_est = model.outputs.fitted_values
 
     return y_est
