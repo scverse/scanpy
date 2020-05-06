@@ -726,8 +726,8 @@ def scale(
 
     .. note::
         Variables (genes) that do not display any variation (are constant across
-        all observations) are retained and set to 0 during this operation. In
-        the future, they might be set to NaNs.
+        all observations) are retained and (for zero_center==True) set to 0
+        during this operation. In the future, they might be set to NaNs.
 
     Parameters
     ----------
@@ -772,15 +772,23 @@ def scale_array(
             "... be careful when using `max_value` " "without `zero_center`."
         )
 
+    if np.issubdtype(X.dtype, np.integer):
+        logg.info(
+            '... as scaling leads to float results, integer '
+            'input is cast to float, returning copy.'
+        )
+        X = X.astype(float)
+
     mean, var = _get_mean_var(X)
     std = np.sqrt(var)
+    std[std == 0] = 1
     if issparse(X):
         if zero_center:
             raise ValueError("Cannot zero-center sparse matrix.")
         sparsefuncs.inplace_column_scale(X, 1 / std)
     else:
-        X -= mean
-        std[std == 0] = 1e-12
+        if zero_center:
+            X -= mean
         X /= std
 
     # do the clipping
@@ -818,7 +826,6 @@ def scale_sparse(
         max_value=max_value,
         return_mean_std=return_mean_std,
     )
-
 
 @scale.register(AnnData)
 def scale_anndata(
@@ -1118,4 +1125,3 @@ def _pca_fallback(data, n_comps=2):
     evecs = evecs[:, :n_comps]
     # project data points on eigenvectors
     return np.dot(evecs.T, data.T).T
-
