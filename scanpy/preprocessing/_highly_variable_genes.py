@@ -414,6 +414,8 @@ def highly_variable_genes_seurat_v3(
         If batch_key is given, this denotes the genes that are highly variable in all batches
     """
 
+    from skmisc.loess import loess
+
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
     else:
@@ -428,7 +430,9 @@ def highly_variable_genes_seurat_v3(
 
         y = np.log10(var[not_const])
         x = np.log10(mean[not_const])
-        estimat_var[not_const] = _loess(y, x, span=span)
+        model = loess(x, y, span=span, degree=2)
+        model.fit()
+        estimat_var[not_const] = model.outputs.fitted_values
         reg_std = np.sqrt(10 ** estimat_var)
 
         batch_counts = adata[batch_info == b].X.astype(np.float64).copy()
@@ -549,14 +553,3 @@ def highly_variable_genes_seurat_v3(
                 ]
             )
         return np.rec.fromarrays(arrays, dtype=dtypes)
-
-
-def _loess(y, x, span=0.3):
-
-    from skmisc.loess import loess
-
-    model = loess(x, y, span=span, degree=2)
-    model.fit()
-    y_est = model.outputs.fitted_values
-
-    return y_est
