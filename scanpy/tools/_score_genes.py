@@ -14,32 +14,9 @@ from .._utils import AnyRandom
 def _sparse_nanmean(X, axis):
     """
     np.nanmean equivalent for sparse matrices
-
-    # testing:
-    >>> import numpy as np
-    >>> from scipy.sparse import csr_matrix
-    >>> R, C = 60, 50
-    >>> A = np.random.rand(R,C) * (np.random.rand(R,C) < 0.3)
-    >>> S = csr_matrix(A)
-
-    # col sum
-    >>> np.testing.assert_allclose(A.mean(0),np.array(_sparse_nanmean(S,0)).flatten())
-
-    # rowsum
-    >>> np.testing.assert_allclose(A.mean(1), np.array(_sparse_nanmean(S,1)).flatten())
-
-    # now with nan
-    >>> A = np.random.rand(R,C) * (np.random.rand(R,C) < 0.3)
-    >>> masknan = (np.random.rand(R,C) < 0.3)
-    >>> A[masknan] = np.nan
-
-    >>> np.testing.assert_allclose(np.nanmean(A,1), np.array(_sparse_nanmean(csr_matrix(A),1)).flatten())
-    >>> np.testing.assert_allclose(np.nanmean(A,0), np.array(_sparse_nanmean(csr_matrix(A),0)).flatten())
-
-    # edge case of only NaNs per row
-    >>> A = np.full((10,1), np.nan)
-    >>> np.testing.assert_allclose(np.nanmean(A,0), np.array(_sparse_nanmean(csr_matrix(A),0)).flatten())
     """
+    if not issparse(X):
+        raise TypeError("X must be a sparse matrix")
 
     # count the number of nan elements per row/column (dep. on axis)
     Z = X.copy()
@@ -54,7 +31,7 @@ def _sparse_nanmean(X, axis):
 
     # the average
     s = Y.sum(axis)
-    m = s / n_elements
+    m = s / n_elements.astype('float32') # if we dont cast the int32 to float32, this will result in float64...
 
     return m
 
@@ -153,7 +130,7 @@ def score_genes(
     _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
     if issparse(_adata_subset.X):
         obs_avg = pd.Series(
-            np.array(_adata_subset.X.mean(axis=0)).flatten(), index=gene_pool)  # average expression of genes
+            np.array(_sparse_nanmean(_adata_subset.X, axis=0)).flatten(), index=gene_pool)  # average expression of genes
     else:
         obs_avg = pd.Series(
             np.nanmean(_adata_subset.X, axis=0), index=gene_pool)  # average expression of genes
@@ -198,7 +175,7 @@ def score_genes(
         if _adata[:, gene_list].X.ndim == 2:
             vector = _adata[:, gene_list].X.toarray()[:, 0] # new anndata
         else:
-            vector =  _adata[:, gene_list].X  # old anndata
+            vector = _adata[:, gene_list].X  # old anndata
         score = vector - X_control
     else:
         score = X_list - X_control
