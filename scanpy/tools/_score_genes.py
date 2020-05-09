@@ -24,7 +24,7 @@ def _sparse_nanmean(X, axis):
     Z.eliminate_zeros()
     n_elements = Z.shape[axis] - Z.sum(axis)
 
-    # set the nans to, so that a normal .sum() works
+    # set the nans to 0, so that a normal .sum() works
     Y = X.copy()
     Y.data[np.isnan(Y.data)] = 0
     Y.eliminate_zeros()
