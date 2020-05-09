@@ -6,17 +6,24 @@ from functools import lru_cache, partial
 from pathlib import Path
 from shutil import which
 from subprocess import run, CompletedProcess
-from typing import Optional, Generator, FrozenSet, Sequence, List, Tuple, Dict, Any, Mapping
+from typing import (
+    Optional,
+    Generator,
+    FrozenSet,
+    Sequence,
+    List,
+    Tuple,
+    Dict,
+    Any,
+    Mapping,
+)
 
 
 class _DelegatingSubparsersAction(_SubParsersAction):
     """Like a normal subcommand action, but uses a delegator for more choices"""
+
     def __init__(
-        self,
-        *args,
-        _command: str,
-        _runargs: Dict[str, Any],
-        **kwargs,
+        self, *args, _command: str, _runargs: Dict[str, Any], **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.command = _command
@@ -30,11 +37,9 @@ class _CommandDelegator(cabc.MutableMapping):
     Provide the ability to delegate,
     but don’t calculate the whole list until necessary
     """
+
     def __init__(
-        self,
-        command: str,
-        action: _DelegatingSubparsersAction,
-        **runargs,
+        self, command: str, action: _DelegatingSubparsersAction, **runargs,
     ):
         self.command = command
         self.action = action
@@ -82,7 +87,7 @@ class _CommandDelegator(cabc.MutableMapping):
     @lru_cache()
     def commands(self) -> FrozenSet[str]:
         return frozenset(
-            binary.name[len(self.command) + 1:]
+            binary.name[len(self.command) + 1 :]
             for bin_dir in os.environ['PATH'].split(os.pathsep)
             for binary in Path(bin_dir).glob(f'{self.command}-*')
             if os.access(binary, os.X_OK)
@@ -91,6 +96,7 @@ class _CommandDelegator(cabc.MutableMapping):
 
 class _DelegatingParser(ArgumentParser):
     """Just sets parse_args().func to run the subcommand"""
+
     def __init__(self, cd: _CommandDelegator, subcmd: str):
         super().__init__(f'{cd.command}-{subcmd}', add_help=False)
         self.cd = cd
@@ -101,23 +107,20 @@ class _DelegatingParser(ArgumentParser):
         args: Optional[Sequence[str]] = None,
         namespace: Optional[Namespace] = None,
     ) -> Tuple[Namespace, List[str]]:
-        assert args is not None and namespace is None, \
-            'Only use DelegatingParser as subparser'
-        return Namespace(
-            func=partial(run, [self.prog, *args], **self.cd.runargs)
-        ), []
+        assert (
+            args is not None and namespace is None
+        ), 'Only use DelegatingParser as subparser'
+        return Namespace(func=partial(run, [self.prog, *args], **self.cd.runargs)), []
 
 
 def _cmd_settings() -> None:
     from . import settings
+
     print(settings)
 
 
 def main(
-    argv: Optional[Sequence[str]] = None,
-    *,
-    check: bool = True,
-    **runargs,
+    argv: Optional[Sequence[str]] = None, *, check: bool = True, **runargs,
 ) -> Optional[CompletedProcess]:
     """\
     Run a builtin scanpy command or a scanpy-* subcommand.
@@ -125,10 +128,12 @@ def main(
     Uses :func:`subcommand.run` for the latter:
     `~run(['scanpy', *argv], **runargs)`
     """
-    parser = ArgumentParser(description=(
-        "There are a few packages providing commands. "
-        "Try e.g. `pip install scanpy-scripts`!"
-    ))
+    parser = ArgumentParser(
+        description=(
+            "There are a few packages providing commands. "
+            "Try e.g. `pip install scanpy-scripts`!"
+        )
+    )
     parser.set_defaults(func=parser.print_help)
 
     subparsers: _DelegatingSubparsersAction = parser.add_subparsers(
