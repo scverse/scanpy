@@ -152,7 +152,7 @@ def pca(
         else:
             n_comps = settings.N_PCS
 
-    logg.info('    with n_comps={n_comps}')
+    logg.info(f'    with n_comps={n_comps}')
 
     random_state = check_random_state(random_state)
 
