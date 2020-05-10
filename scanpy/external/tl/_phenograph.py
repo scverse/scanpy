@@ -114,14 +114,18 @@ def phenograph(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields:
+    Depending on `copy`, returns or updates `adata` with the following fields.
 
-    communities : `numpy.ndarray` (`adata.obs[comm_key]`)
-        Integer array of community assignments for each row in data.
-    graph : `spmatrix` (`adata.uns[ig_key]`)
-        The graph that was used for clustering.
-    Q : `float` (`adata.uns[q_key]`)
-        The modularity score for communities on graph.
+    **communities** : :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obs`,
+    dtype `int`)
+        integer array of community assignments for each row in data.
+
+    **graph** : :class:`scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`,
+    dtype `float`)
+        the graph that was used for clustering.
+
+    **Q** : `float` (:attr:`~anndata.AnnData.uns`, dtype `float`)
+        the modularity score for communities on graph.
 
     Example
     -------
@@ -236,7 +240,7 @@ def phenograph(
     if copy:
         return communities, graph, Q
     else:
-        adata.uns[ig_key] = graph
+        adata.obsp[ig_key] = graph
         if comm_key:
             adata.obs[comm_key] = pd.Categorical(communities)
         if Q:
