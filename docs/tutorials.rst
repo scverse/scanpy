@@ -60,6 +60,12 @@ Map labels and embeddings of reference data to new data: :tutorial:`integrating-
    :width: 350px
 
 
+Spatial data
+------------
+
+Basic analysis of spatial data: :tutorial:`spatial/basic-analysis`.
+
+
 Further Tutorials
 -----------------
 
