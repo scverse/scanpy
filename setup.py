@@ -27,9 +27,10 @@ setup(
         l.strip() for l in Path('requirements.txt').read_text('utf-8').splitlines()
     ],
     extras_require=dict(
-        louvain=['python-igraph', 'louvain>=0.6'],
+        louvain=['python-igraph', 'louvain>=0.6,!=0.6.2'],
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
+        scvi=['scvi>=0.6.3'],
         rapids=['cudf>=0.9', 'cuml>=0.9', 'cugraph>=0.9'],
         magic=['magic-impute>=2.0'],
         doc=[

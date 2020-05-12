@@ -1080,7 +1080,7 @@ def make_projection_available(projection):
         )
 
 
-def circles(x, y, s, marker=None, c='b', vmin=None, vmax=None, **kwargs):
+def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
     """
     Taken from here: https://gist.github.com/syrte/592a062c562cd2a98a83
     Make a scatter plot of circles.
@@ -1132,9 +1132,7 @@ def circles(x, y, s, marker=None, c='b', vmin=None, vmax=None, **kwargs):
     else:
         collection.set_facecolor(c)
 
-    ax = pl.gca()
     ax.add_collection(collection)
-    ax.autoscale_view()
 
     return collection
 
