@@ -858,7 +858,7 @@ def clustermap(
 def heatmap(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: str,
+    groupby: Union[str, Sequence[str]],
     use_raw: Optional[bool] = None,
     log: bool = False,
     num_categories: int = 7,
@@ -1218,7 +1218,7 @@ def heatmap(
 def tracksplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: str,
+    groupby: Union[str, Sequence[str]],
     use_raw: Optional[bool] = None,
     log: bool = False,
     dendrogram: Union[bool, str] = False,
@@ -1682,7 +1682,7 @@ def correlation_matrix(
 def _prepare_dataframe(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: Optional[str] = None,
+    groupby: Optional[str, Sequence[str]] = None,
     use_raw: Optional[bool] = None,
     log: bool = False,
     num_categories: int = 7,
@@ -1727,11 +1727,15 @@ def _prepare_dataframe(
         var_names = [var_names]
 
     if groupby is not None:
-        if groupby not in adata.obs_keys():
-            raise ValueError(
-                'groupby has to be a valid observation. '
-                f'Given {groupby}, valid observations: {adata.obs_keys()}'
-            )
+        if isinstance(groupby, str):
+            # if not a list, turn into a list
+            groupby = [groupby]
+        for group in groupby:
+            if group not in adata.obs_keys():
+                raise ValueError(
+                    'groupby has to be a valid observation. '
+                    f'Given {group}, is not in observations: {adata.obs_keys()}'
+                )
 
     if gene_symbols is not None and gene_symbols in adata.var.columns:
         # translate gene_symbols to var_names
@@ -1771,14 +1775,21 @@ def _prepare_dataframe(
         groupby = ''
         categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
     else:
-        if not is_categorical_dtype(adata.obs[groupby]):
+        if len(groupby) == 1 and not is_categorical_dtype(adata.obs[groupby[0]]):
             # if the groupby column is not categorical, turn it into one
             # by subdividing into  `num_categories` categories
-            categorical = pd.cut(adata.obs[groupby], num_categories)
+            categorical = pd.cut(adata.obs[groupby[0]], num_categories)
         else:
-            categorical = adata.obs[groupby]
-
-    obs_tidy.set_index(categorical, groupby, inplace=True)
+            categorical = adata.obs[groupby[0]]
+            if len(groupby) > 1:
+                for group in groupby[1:]:
+                    # create new category by merging the given groupby categories
+                    categorical = (
+                        categorical.astype(str) + "_" +
+                        adata.obs[group].astype(str)
+                    ).astype('category')
+            categorical.name = "_".join(groupby)
+    obs_tidy.set_index(categorical, inplace=True)
     if gene_symbols is not None:
         # translate the column names to the symbol names
         obs_tidy.rename(
