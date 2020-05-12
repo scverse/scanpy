@@ -175,7 +175,7 @@ References
 .. [Plass18] Plass (2018),
    *Cell type atlas and lineage tree of a whole complex animal by single-cell transcriptomics*
    `Science <https://doi.org/10.1126/science.aaq1723>`__.
-   
+
 .. [Scialdone15] Scialdone *et al.* (2015),
    *Computational assignment of cell-cycle stage from single-cell transcriptome data*
    `Methods <https://doi.org/10.1016/j.ymeth.2015.06.021>`__.
