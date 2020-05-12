@@ -1682,7 +1682,7 @@ def correlation_matrix(
 def _prepare_dataframe(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: Optional[str, Sequence[str]] = None,
+    groupby: Optional[Union[str, Sequence[str]]] = None,
     use_raw: Optional[bool] = None,
     log: bool = False,
     num_categories: int = 7,

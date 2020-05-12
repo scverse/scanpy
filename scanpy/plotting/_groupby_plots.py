@@ -10,7 +10,7 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib import pyplot as pl
-from matplotlib import gridspec
+from matplotlib import gridspec, rcParams
 from matplotlib.colors import is_color_like
 
 from .. import logging as logg
@@ -37,6 +37,8 @@ class BasePlot(object):
     """
 
     MIN_FIGURE_HEIGHT = 2.5
+    DEFAULT_CATEGORY_HEIGHT = 0.35
+    DEFAULT_CATEGORY_WIDTH = 0.37
 
     DEFAULT_COLORMAP = 'winter'
     DEFAULT_LEGENDS_WIDTH = 1.5
@@ -145,6 +147,10 @@ class BasePlot(object):
         BasePlot
 
         """
+        self.DEFAULT_CATEGORY_HEIGHT, self.DEFAULT_CATEGORY_WIDTH = (
+            self.DEFAULT_CATEGORY_WIDTH,
+            self.DEFAULT_CATEGORY_HEIGHT,
+        )
 
         self.are_axes_swapped = swap_axes
         return self
@@ -268,7 +274,6 @@ class BasePlot(object):
         counts_df = self.adata.obs[self.groupby].value_counts(
             sort=_sort, ascending=_ascending
         )
-        counts_df = counts_df.loc[self.categories]
 
         if _sort:
             self.categories_order = counts_df.index
@@ -531,8 +536,8 @@ class BasePlot(object):
         >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').show(save='plot.pdf')
 
         """
-        category_height = 0.35
-        category_width = 0.37
+        category_height = self.DEFAULT_CATEGORY_HEIGHT
+        category_width = self.DEFAULT_CATEGORY_WIDTH
 
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
@@ -1351,7 +1356,7 @@ class DotPlot(BasePlot):
 
         if self.show_size_legend:
             size_legend_ax = fig.add_subplot(legend_gs[1])
-            self._plot_size_legend(size_legend_ax, self.dot_min, self.dot_max)
+            self._plot_size_legend(size_legend_ax)
             return_ax_dict['size_legend_ax'] = size_legend_ax
 
         if self.show_colorbar:
@@ -1670,7 +1675,7 @@ class MatrixPlot(BasePlot):
     """
 
     # default style parameters
-    DEFAULT_COLORMAP = 'winter'
+    DEFAULT_COLORMAP = rcParams['image.cmap']
     DEFAULT_EDGE_COLOR = 'gray'
     DEFAULT_EDGE_LW = 0.1
 
@@ -1898,6 +1903,9 @@ class StackedViolin(BasePlot):
     rank_genes_groups_stacked_violin: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
+    DEFAULT_CATEGORY_HEIGHT = 0.5
+    DEFAULT_CATEGORY_WIDTH = 0.3
+
     DEFAULT_STRIPPLOT = False
     DEFAULT_JITTER = False
     DEFAULT_JITTER_SIZE = 1
@@ -2040,6 +2048,7 @@ class StackedViolin(BasePlot):
         """
 
         self.row_palette = row_palette
+        self.kwds['color'] = self.row_palette
         self.stripplot = stripplot
         self.jitter = jitter
         self.jitter_size = jitter_size
@@ -2260,7 +2269,7 @@ class StackedViolin(BasePlot):
 def dotplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: Optional[str, Sequence[str]] = None,
+    groupby: Union[str, Sequence[str]],
     use_raw: Optional[bool] = None,
     log: bool = False,
     num_categories: int = 7,
@@ -2270,9 +2279,9 @@ def dotplot(
     dot_max: Optional[float] = None,
     dot_min: Optional[float] = None,
     standard_scale: Literal['var', 'group'] = None,
-    smallest_dot: float = 0.0,
-    color_title: Optional[str] = 'Expression\nlevel in group',
-    size_title: Optional[str] = 'Fraction of cells\nin group (%)',
+    smallest_dot: float = DotPlot.DEFAULT_SMALLEST_DOT,
+    color_title: Optional[str] = DotPlot.DEFAULT_COLOR_LEGEND_TITLE,
+    size_title: Optional[str] = DotPlot.DEFAULT_SIZE_LEGEND_TITLE,
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
     gene_symbols: Optional[str] = None,
@@ -2310,6 +2319,10 @@ def dotplot(
     Parameters
     ----------
     {common_plot_args}
+    color_title
+        Title for the color bar. New line character (\\n) can be used.
+    size_title
+        Title for the size legend. New line character (\\n) can be used.
     expression_cutoff
         Expression cutoff that is used for binarizing the gene expression and
         determining the fraction of cells expressing given genes. A gene is
@@ -2396,8 +2409,8 @@ def dotplot(
         dp.swap_axes()
 
     dp = dp.style(
-        cmap=color_map, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot
-    )
+        cmap=color_map, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot,
+    ).legend(color_title=color_title, size_title=size_title,)
 
     if return_fig:
         return dp
@@ -2409,13 +2422,14 @@ def dotplot(
 def matrixplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: Optional[str] = None,
+    groupby: Union[str, Sequence[str]],
     use_raw: Optional[bool] = None,
     log: bool = False,
     num_categories: int = 7,
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
     plot_totals: Union[bool, str] = False,
+    color_title: Optional[str] = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
     gene_symbols: Optional[str] = None,
     var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
     var_group_labels: Optional[Sequence[str]] = None,
@@ -2438,6 +2452,8 @@ def matrixplot(
     Parameters
     ----------
     {common_plot_args}
+    color_title
+        Title for the color bar. New line character (\\n) can be used.
     standard_scale
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
@@ -2499,7 +2515,7 @@ def matrixplot(
     if swap_axes:
         mp.swap_axes()
 
-    mp = mp.style(cmap=kwds.get('cmap'))
+    mp = mp.style(cmap=kwds.get('cmap')).legend(title=color_title)
     if return_fig:
         return mp
     else:
@@ -2510,7 +2526,7 @@ def matrixplot(
 def stacked_violin(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: Optional[str] = None,
+    groupby: Union[str, Sequence[str]],
     log: bool = False,
     use_raw: Optional[bool] = None,
     num_categories: int = 7,

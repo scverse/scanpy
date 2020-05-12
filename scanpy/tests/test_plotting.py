@@ -158,7 +158,6 @@ def test_dotplot(image_comparer):
         color_map='hot_r',
         var_group_positions=[(0, 1), (11, 12)],
         var_group_labels=['B cells', 'dendritic'],
-        figsize=(7, 2.5),
         dendrogram=True,
         show=False,
     )
@@ -173,23 +172,27 @@ def test_dotplot(image_comparer):
         dot_max=0.7,
         dot_min=0.1,
         color_map='winter',
-        figsize=(7, 2.5),
         dendrogram=True,
         show=False,
     )
     save_and_compare_images('master_dotplot_dict')
 
-    # test var/group standardization smallest_dot
-    sc.pl.dotplot(
+    # test var standardization, smallest_dot, color title, size_title and dot_edge
+    plot = sc.pl.dotplot(
         adata,
         adata.var_names,
         'cell_type',
         use_raw=False,
         dendrogram=True,
-        show=False,
+        return_fig=True,
         standard_scale='var',
         smallest_dot=40,
+        color_title='scaled column max',
+        size_title='Fraction of cells',
     )
+    plot.style(
+        dot_edge_color='black', dot_edge_lw=0.1, cmap='Reds'
+    ).show()
     save_and_compare_images('master_dotplot_std_scale_var')
 
     sc.pl.dotplot(
@@ -209,8 +212,13 @@ def test_matrixplot(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     adata = sc.datasets.krumsiek11()
-    sc.pl.matrixplot(
-        adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
+    plot = sc.pl.matrixplot(
+        adata, adata.var_names, 'cell_type', use_raw=False, return_fig=True,
+    )
+    axes = (
+        plot.add_totals(sort='descending')
+        .style(edge_color='white', edge_lw=0.5)
+        .show(show=False)
     )
     save_and_compare_images('master_matrixplot')
 
@@ -226,18 +234,21 @@ def test_matrixplot(image_comparer):
     )
     save_and_compare_images('master_matrixplot_swap_axes')
 
-    # test var/group standardization and layer
-    adata.layers['test'] = -1 * adata.X.copy()
+    # test var/group standardization, layer, brackets and color_title
+    pbmc = sc.datasets.pbmc68k_reduced()
+    markers_dict = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
+    pbmc.layers['test'] = -1 * pbmc.X.copy()
     sc.pl.matrixplot(
-        adata,
-        adata.var_names,
-        'cell_type',
+        pbmc,
+        markers_dict,
+        'bulk_labels',
         use_raw=False,
         dendrogram=True,
         show=False,
         standard_scale='var',
         layer='test',
         cmap='Blues_r',
+        color_title="Scaled expression"
     )
     save_and_compare_images('master_matrixplot_std_scale_var')
 
@@ -262,7 +273,7 @@ def test_matrixplot(image_comparer):
         use_raw=False,
         num_categories=4,
         figsize=(8, 2.5),
-        cmap='viridis',
+        cmap='RdBu_r',
         show=False,
     )
     save_and_compare_images('master_matrixplot2')
@@ -271,22 +282,24 @@ def test_matrixplot(image_comparer):
 def test_stacked_violin(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=26)
 
-    adata = sc.datasets.krumsiek11()
-    sc.pl.stacked_violin(
-        adata, adata.var_names, 'cell_type', use_raw=False, color='blue', show=False,
+    pbmc = sc.datasets.pbmc68k_reduced()
+    markers = {'T-cell': ['CD3D', 'CD3E', 'IL32'],
+               'B-cell': ['CD79A', 'CD79B', 'MS4A1'], 'myeloid': ['CST3', 'LYZ']}
+    plot = sc.pl.stacked_violin(
+        pbmc, markers, 'bulk_labels', use_raw=False, return_fig=True,
     )
-
-    plt.title("image may have cut labels.\nThis is ok for test")
+    plot.add_totals().style(row_palette='tab20').show(show=False)
     save_and_compare_images('master_stacked_violin')
 
-    # test swapped axes
+    # test swapped axes, and brackets
     sc.pl.stacked_violin(
-        adata,
-        adata.var_names,
-        'cell_type',
+        pbmc,
+        markers,
+        'bulk_labels',
         use_raw=False,
         swap_axes=True,
         figsize=(3, 5),
+        dendrogram=True,
         show=False,
     )
     save_and_compare_images('master_stacked_violin_swapped_axes')
