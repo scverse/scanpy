@@ -38,7 +38,7 @@ class BasePlot(object):
 
     MIN_FIGURE_HEIGHT = 2.5
 
-    DEFAULT_COLORMAP = 'RdBu_r'
+    DEFAULT_COLORMAP = 'winter'
     DEFAULT_LEGENDS_WIDTH = 1.5
     DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
 
@@ -990,7 +990,7 @@ class DotPlot(BasePlot):
     """
 
     # default style parameters
-    DEFAULT_COLORMAP = 'RdBu_r'
+    DEFAULT_COLORMAP = 'winter'
     DEFAULT_COLOR_ON = 'dot'
     DEFAULT_DOT_MAX = None
     DEFAULT_DOT_MIN = None
@@ -1670,7 +1670,7 @@ class MatrixPlot(BasePlot):
     """
 
     # default style parameters
-    DEFAULT_COLORMAP = 'RdBu_r'
+    DEFAULT_COLORMAP = 'winter'
     DEFAULT_EDGE_COLOR = 'gray'
     DEFAULT_EDGE_LW = 0.1
 
