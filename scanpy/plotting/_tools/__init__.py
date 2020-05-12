@@ -327,7 +327,6 @@ def rank_genes_groups(
     savefig_or_show(writekey, show=show, save=save)
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
 def _rank_genes_groups_plot(
     adata: AnnData,
     plot_type: str = 'heatmap',
@@ -339,26 +338,11 @@ def _rank_genes_groups_plot(
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
 ):
     """\
-    Plot ranking of genes using the specified plot type
-
-    Parameters
-    ----------
-    adata
-        Annotated data matrix.
-    groups
-        The groups for which to show the gene ranking.
-    n_genes
-        Number of genes to show.
-    groupby
-        The key of the observation grouping to consider. By default,
-        the groupby is chosen from the rank genes groups parameter but
-        other groupby options can be used.
-    key
-        Key used to store the ranking results in `adata.uns`.
-    {show_save_ax}
+    Common function to call the different rank_genes_groups_* plots
     """
     if key is None:
         key = 'rank_genes_groups'
@@ -390,7 +374,7 @@ def _rank_genes_groups_plot(
     kwds.setdefault('dendrogram', True)
 
     if plot_type in ['dotplot', 'matrixplot']:
-        # this two types of plots can plots can also
+        # this two types of plots can also
         # show other values as logfoldchange and pvalues.
         title = None
         values_df = None
@@ -406,36 +390,33 @@ def _rank_genes_groups_plot(
         if plot_type == 'dotplot':
             from .._groupby_plots import dotplot
             _pl = dotplot(adata, var_names, groupby,
-                         dot_color_df=values_df, show=False, **kwds)
+                         dot_color_df=values_df, return_fig=True, **kwds)
 
             if title is not None:
                 _pl.legend(color_title=title.replace("_", " "))
-            if show is not False or save:
-                _pl.show(show=show, save=save)
-            return _pl
         elif plot_type == 'matrixplot':
             from .._groupby_plots import matrixplot
             _pl = matrixplot(adata, var_names, groupby,
-                            values_df=values_df, show=False, **kwds)
+                            values_df=values_df, return_fig=True, **kwds)
             if title is not None:
                 _pl.legend(title=title.replace("_", " "))
 
-            if show is not False or save:
-                _pl.show(show=show, save=save)
-
+        if return_fig:
             return _pl
+        else:
+            return _pl.show(show=show, save=save)
+
+    elif plot_type == 'stacked_violin':
+        from .._groupby_plots import stacked_violin
+        _pl = stacked_violin(adata, var_names, groupby, return_fig=True, **kwds)
+        if return_fig:
+            return _pl
+        else:
+            return _pl.show(show=show, save=save)
 
     elif plot_type == 'heatmap':
         from .._anndata import heatmap
         heatmap(adata, var_names, groupby,  show=show, save=save, **kwds)
-
-    elif plot_type == 'stacked_violin':
-        from .._groupby_plots import stacked_violin
-        _pl = stacked_violin(adata, var_names, groupby, show=False, **kwds)
-        if show is not False or save:
-            _pl.show(show=show, save=save)
-
-        return _pl
 
     elif plot_type == 'tracksplot':
         from .._anndata import tracksplot
@@ -559,6 +540,7 @@ def rank_genes_groups_dotplot(
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
 ):
     """\
@@ -584,8 +566,29 @@ def rank_genes_groups_dotplot(
     key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
+    return_fig
+        Returns :class:`DotPlot` object. Useful for fine-tuning
+        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`~scanpy.pl.dotplot`.
+
+    Returns
+    -------
+    If `return_fig` is `True`, returns a :class:`DotPlot` object,
+    else if `show` is false, return axes dict
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    Plot `logfoldchanges`, set manually min value to plot as -4 and max as 4
+    and plot only genes in each group that have a minimum log fold change of 3
+    >>> sc.pl.rank_genes_groups_dotplot(adata,
+    ... n_genes=4, values_to_plot="logfoldchanges",
+    ... vmin=-5, vmax=5, min_logfoldchange=3)
+
     """
 
     return _rank_genes_groups_plot(
@@ -599,6 +602,7 @@ def rank_genes_groups_dotplot(
         min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
+        return_fig=return_fig,
         **kwds,
     )
 
@@ -613,10 +617,12 @@ def rank_genes_groups_stacked_violin(
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
 ):
     """\
-    Plot ranking of genes using stacked_violin plot (see :func:`~scanpy.pl.stacked_violin`)
+    Plot ranking of genes using stacked_violin plot
+    (see :func:`~scanpy.pl.stacked_violin`)
 
     Parameters
     ----------
@@ -638,8 +644,26 @@ def rank_genes_groups_stacked_violin(
     key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
+    return_fig
+        Returns :class:`StackedViolin` object. Useful for fine-tuning
+        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`~scanpy.pl.stacked_violin`.
+
+    Returns
+    -------
+    If `return_fig` is `True`, returns a :class:`StackedViolin` object,
+    else if `show` is false, return axes dict
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    >>> sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=4,
+    ... min_logfoldchange=4, figsize=(8,6))
+
     """
 
     return _rank_genes_groups_plot(
@@ -649,8 +673,10 @@ def rank_genes_groups_stacked_violin(
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
+        return_fig=return_fig,
         **kwds,
     )
 
@@ -665,6 +691,7 @@ def rank_genes_groups_matrixplot(
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
 ):
     """\
@@ -690,8 +717,29 @@ def rank_genes_groups_matrixplot(
     key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
+    return_fig
+        Returns :class:`MatrixPlot` object. Useful for fine-tuning
+        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`~scanpy.pl.matrixplot`.
+
+    Returns
+    -------
+    If `return_fig` is `True`, returns a :class:`MatrixPlot` object,
+    else if `show` is false, return axes dict
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    Plot `logfoldchanges`, set manually min value to plot as -4 and max as 4
+    and plot only genes in each group that have a minimum log fold change of 3
+    >>> sc.pl.rank_genes_groups_matrixplot(adata,
+    ... n_genes=4, values_to_plot="logfoldchanges",
+    ... vmin=-5, vmax=5, min_logfoldchange=3)
+
     """
 
     return _rank_genes_groups_plot(
@@ -701,8 +749,10 @@ def rank_genes_groups_matrixplot(
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
+        return_fig=return_fig,
         **kwds,
     )
 

@@ -702,7 +702,7 @@ class BasePlot(object):
         if self.groupby != dendro_info['groupby']:
             raise ValueError(
                 "Incompatible observations. The precomputed dendrogram contains "
-                f"information for the observation: '{groupby}' while the plot is "
+                f"information for the observation: '{self.groupby}' while the plot is "
                 f"made for the observation: '{dendro_info['groupby']}. "
                 "Please run `sc.tl.dendrogram` using the right observation.'"
             )
@@ -715,7 +715,7 @@ class BasePlot(object):
             raise ValueError(
                 "Incompatible observations. Dendrogram data has "
                 f"{len(categories_idx_ordered)} categories but current groupby "
-                f"observation {groupby!r} contains {len(self.categories)} categories. "
+                f"observation {self.groupby!r} contains {len(self.categories)} categories. "
                 "Most likely the underlying groupby observation changed after the "
                 "initial computation of `sc.tl.dendrogram`. "
                 "Please run `sc.tl.dendrogram` again.'"
@@ -780,8 +780,6 @@ class BasePlot(object):
         The gene_groups_ax should share the x axis with the main ax.
 
         Eg: gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=dot_ax)
-
-        This function is used by dotplot, heatmap etc.
 
         Parameters
         ----------
@@ -1779,7 +1777,7 @@ class MatrixPlot(BasePlot):
     def _mainplot(self, ax):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
-        # DotPlot object, for example once with swap_axes and other without
+        # MatrixPlot object, for example once with swap_axes and other without
 
         _color_df = self.values_df.copy()
         if self.var_names_idx_order is not None:
@@ -2058,7 +2056,7 @@ class StackedViolin(BasePlot):
 
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
-        # DotPlot object, for example once with swap_axes and other without
+        # StackedViolin object, for example once with swap_axes and other without
         _matrix = self.obs_tidy.copy()
 
         if self.var_names_idx_order is not None:
@@ -2378,7 +2376,7 @@ class HeatMap(BasePlot):
 
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
-        # DotPlot object, for example once with swap_axes and other without
+        # HeatMap object, for example once with swap_axes and other without
         _matrix = self.obs_tidy.copy()
 
         if self.var_names_idx_order is not None:
@@ -2835,8 +2833,9 @@ def dotplot(
     dot_color_df: Optional[pd.DataFrame] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
-) -> DotPlot:
+) -> Union[DotPlot, dict, None]:
     """\
     Makes a *dot plot* of the expression values of `var_names`.
 
@@ -2852,7 +2851,10 @@ def dotplot(
 
     An example of dotplot usage is to visualize, for multiple marker genes,
     the mean value and the percentage of cells expressing the gene
-    accross multiple clusters.
+    across  multiple clusters.
+
+    This function provides a convenient interface to the :class:`DotPlot`
+    class. If you need more flexibility, you should use :class:`DotPlot` directly.
 
     Parameters
     ----------
@@ -2881,14 +2883,17 @@ def dotplot(
     smallest_dot
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
-
     {show_save_ax}
+    return_fig
+        Returns :class:`DotPlot` object. Useful for fine-tuning
+        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
     Returns
     -------
-    if `show` is False, returns a DotPlot object
+    If `return_fig` is `True`, returns a :class:`DotPlot` object,
+    else if `show` is false, return axes dict
 
     Examples
     -------
@@ -2902,7 +2907,7 @@ def dotplot(
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get DotPlot object for fine tuning
-    >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', show=False)
+    >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
     >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
 
     The axes used can be obtained using the get_axes() method
@@ -2910,8 +2915,8 @@ def dotplot(
 
     See also
     --------
-    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
-    :func:`~scanpy.tl.rank_genes_groups` function.
+    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes
+    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
     dp = DotPlot(adata,
@@ -2940,10 +2945,10 @@ def dotplot(
 
     dp = dp.style(cmap=color_map, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot)
 
-    if show is not False or save:
-        return dp.show(show=show, save=save)
-    else:
+    if return_fig:
         return dp
+    else:
+        return dp.show(show=show, save=save)
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
@@ -2967,12 +2972,14 @@ def matrixplot(
     swap_axes: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
-) -> MatrixPlot:
+) -> Union[MatrixPlot, dict, None]:
     """\
-    Creates a heatmap of the mean expression values per cluster of each var_names
-    If groupby is not given, the matrixplot assumes that all data belongs to a single
-    category.
+    Creates a heatmap of the mean expression values per cluster of each var_names.
+
+    This function provides a convenient interface to the :class:`MatrixPlot`
+    class. If you need more flexibility, you should use :class:`MatrixPlot` directly.
 
     Parameters
     ----------
@@ -2981,12 +2988,15 @@ def matrixplot(
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
     {show_save_ax}
+    return_fig
+        Returns :class:`MatrixPlot` object. Useful for fine-tuning
+        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`matplotlib.pyplot.pcolor`.
 
     Returns
     -------
-    if `show` is False, returns a MatrixPlot object
+    if `show` is `False`, returns a :class:`MatrixPlot` object
 
     Examples
     --------
@@ -3000,7 +3010,7 @@ def matrixplot(
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get Matrix object for fine tuning
-    >>> mp = sc.pl.matrix(adata, markers, 'bulk_labels', show=False)
+    >>> mp = sc.pl.matrix(adata, markers, 'bulk_labels', return_fig=True)
     >>> mp.add_totals().style(edge_color='black').show()
 
     The axes used can be obtained using the get_axes() method
@@ -3008,11 +3018,11 @@ def matrixplot(
 
     See also
     --------
-    :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes identified using the
-    :func:`~scanpy.tl.rank_genes_groups` function.
+    :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes
+    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
-    dp = MatrixPlot(adata,
+    mp = MatrixPlot(adata,
             var_names,
             groupby=groupby,
             use_raw=use_raw,
@@ -3030,15 +3040,15 @@ def matrixplot(
     )
 
     if dendrogram:
-        dp.add_dendrogram(dendrogram_key=dendrogram)
+        mp.add_dendrogram(dendrogram_key=dendrogram)
     if swap_axes:
-        dp.swap_axes()
+        mp.swap_axes()
 
-    dp = dp.style(cmap=kwds.get('cmap'))
-    if show is not False or save:
-        return dp.show(show=show, save=save)
+    mp = mp.style(cmap=kwds.get('cmap'))
+    if return_fig:
+        return mp
     else:
-        return dp
+        return mp.show(show=show, save=save)
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
@@ -3065,10 +3075,11 @@ def stacked_violin(
     swap_axes: bool = False,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
+    return_fig: Optional[bool] = False,
     row_palette: str = 'muted',
     ax: Optional[_AxesSubplot] = None,
     **kwds,
-):
+) -> Union[StackedViolin, dict, None]:
     """\
     Stacked violin plots.
 
@@ -3077,6 +3088,9 @@ def stacked_violin(
     Useful to visualize gene expression per cluster.
 
     Wraps :func:`seaborn.violinplot` for :class:`~anndata.AnnData`.
+
+    This function provides a convenient interface to the :class:`StackedViolin`
+    class. If you need more flexibility, you should use :class:`StackedViolin` directly.
 
     Parameters
     ----------
@@ -3109,16 +3123,17 @@ def stacked_violin(
         meaning for each variable or observation,
         subtract the minimum and divide each by its maximum.
     swap_axes
-         By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby` categories.
-         By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
-         axes var_group_positions are no longer used
+         By default, the x axis contains `var_names` (e.g. genes) and the y axis
+         the `groupby` categories. By setting `swap_axes` then x are the
+         `groupby` categories and y the `var_names`.
     {show_save_ax}
     **kwds
         Are passed to :func:`~seaborn.violinplot`.
 
     Returns
     -------
-    List of :class:`~matplotlib.axes.Axes`
+    If `return_fig` is `True`, returns a :class:`StackedViolin` object,
+    else if `show` is false, return axes dict
 
     Examples
     -------
@@ -3132,7 +3147,7 @@ def stacked_violin(
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get StackeViolin object for fine tuning
-    >>> vp = sc.pl.dotplot(adata, markers, 'bulk_labels', show=False)
+    >>> vp = sc.pl.stacked_violin(adata, markers, 'bulk_labels', return_fig=True)
     >>> vp.add_totals().style(ylim=(0,5)).show()
 
     The axes used can be obtained using the get_axes() method
@@ -3140,10 +3155,11 @@ def stacked_violin(
 
     See also
     --------
-    rank_genes_groups_stacked_violin: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    rank_genes_groups_stacked_violin: to plot marker genes identified using
+    the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
-    dp = StackedViolin(
+    vp = StackedViolin(
             adata,
             var_names,
             groupby=groupby,
@@ -3161,15 +3177,15 @@ def stacked_violin(
     )
 
     if dendrogram:
-        dp.add_dendrogram(dendrogram_key=dendrogram)
+        vp.add_dendrogram(dendrogram_key=dendrogram)
     if swap_axes:
-        dp.swap_axes()
-    dp = dp.style(stripplot=stripplot, jitter=jitter, jitter_size=size,
+        vp.swap_axes()
+    vp = vp.style(stripplot=stripplot, jitter=jitter, jitter_size=size,
                   row_palette=row_palette, scale=scale)
-    if show is not False or save:
-        return dp.show(show=show, save=save)
+    if return_fig:
+        return vp
     else:
-        return dp
+        return vp.show(show=show, save=save)
 
 
 def _plot_categories_as_colorblocks(
