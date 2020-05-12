@@ -120,6 +120,7 @@ _DEPENDENCIES_NUMERICS = [
     'statsmodels',
     ('igraph', 'python-igraph'),
     'louvain',
+    'leidenalg',
 ]
 
 
