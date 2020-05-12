@@ -39,9 +39,13 @@ def phenograph(
     PhenoGraph clustering [Levine15]_.
 
     **PhenoGraph** is a clustering method designed for high-dimensional single-cell
-    data. It works by creating a graph representing phenotypic similarities
+    data. It works by creating a graph ("network") representing phenotypic similarities
     between cells and then identifying communities in this graph. It supports both
-    Louvain and Leiden algorithms for community detection.
+    Louvain_ and Leiden_ algorithms for community detection.
+
+    .. _Louvain: https://louvain-igraph.readthedocs.io/en/latest/
+
+    .. _Leiden: https://leidenalg.readthedocs.io/en/latest/reference.html
 
     .. note::
        More information and bug reports `here
