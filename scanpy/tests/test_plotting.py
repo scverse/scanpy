@@ -110,31 +110,181 @@ def test_clustermap(image_comparer, obs_keys, name):
     save_and_compare_images(name)
 
 
-def test_dotplot(image_comparer):
+@pytest.mark.parametrize(
+    "id,fn",
+    [
+        (
+            "dotplot",
+            partial(
+                sc.pl.dotplot, groupby='cell_type', title='dotplot', dendrogram=True
+            ),
+        ),
+        (
+            "dotplot2",
+            partial(
+                sc.pl.dotplot,
+                groupby='Gata2',
+                use_raw=False,
+                num_categories=7,
+                title='non categorical obs',
+                figsize=(7, 2.5),
+            ),
+        ),
+        (
+            "dotplot3",
+            partial(
+                sc.pl.dotplot,
+                groupby='cell_type',
+                dot_max=0.7,
+                dot_min=0.1,
+                color_map='hot_r',
+                title='dot_max=0.7 dot_min=0.1, var_groups',
+                var_group_positions=[(0, 1), (9, 10)],
+                var_group_labels=['A', 'B'],
+                dendrogram=True,
+            ),
+        ),
+        (
+            "dotplot_std_scale_group",
+            partial(
+                sc.pl.dotplot,
+                groupby='cell_type',
+                use_raw=False,
+                dendrogram=True,
+                layer='test',
+                swap_axes=True,
+                title='swap_axes, layer=-1*X, scale=group\nsmallest_dot=10',
+                standard_scale='group',
+                smallest_dot=10,
+            ),
+        ),
+        (
+            "dotplot_dict",
+            partial(
+                sc.pl.dotplot,
+                groupby='cell_type',
+                dot_max=0.7,
+                dot_min=0.1,
+                color_map='winter',
+                title='var as dict',
+                dendrogram=True,
+            ),
+        ),
+        (
+            "matrixplot",
+            partial(
+                sc.pl.matrixplot,
+                groupby='cell_type',
+                use_raw=False,
+                title='matrixplot',
+                dendrogram=True,
+            ),
+        ),
+        (
+            "matrixplot_std_scale_var_dict",
+            partial(
+                sc.pl.matrixplot,
+                groupby='cell_type',
+                dendrogram=True,
+                standard_scale='var',
+                layer='test',
+                cmap='Blues_r',
+                title='scale var, custom colorbar_title, layer="test"',
+                colorbar_title="Scaled expression",
+            ),
+        ),
+        (
+            "matrixplot_std_scale_group",
+            partial(
+                sc.pl.matrixplot,
+                groupby='cell_type',
+                use_raw=False,
+                standard_scale='group',
+                title='scale_group, swap_axes',
+                swap_axes=True,
+            ),
+        ),
+        (
+            "matrixplot2",
+            partial(
+                sc.pl.matrixplot,
+                groupby='Gata2',
+                use_raw=False,
+                num_categories=4,
+                title='non-categorical obs, custom figsize',
+                figsize=(8, 2.5),
+                cmap='RdBu_r',
+            ),
+        ),
+        (
+            "stacked_violin",
+            partial(
+                sc.pl.stacked_violin,
+                groupby='cell_type',
+                use_raw=False,
+                title='stacked_violin',
+                dendrogram=True,
+            ),
+        ),
+        (
+            "stacked_violin_std_scale_var_dict",
+            partial(
+                sc.pl.stacked_violin,
+                groupby='cell_type',
+                dendrogram=True,
+                standard_scale='var',
+                layer='test',
+                title='scale var, layer="test"',
+            ),
+        ),
+        (
+            "stacked_violin_std_scale_group",
+            partial(
+                sc.pl.stacked_violin,
+                groupby='cell_type',
+                use_raw=False,
+                standard_scale='group',
+                title='scale_group\nswap_axes',
+                swap_axes=True,
+            ),
+        ),
+        (
+            "stacked_violin_no_cat_obs",
+            partial(
+                sc.pl.stacked_violin,
+                groupby='Gata2',
+                use_raw=False,
+                num_categories=4,
+                title='non-categorical obs, custom figsize',
+                figsize=(8, 2.5),
+            ),
+        ),
+    ],
+)
+def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     adata = sc.datasets.krumsiek11()
-    sc.pl.dotplot(
-        adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
-    )
-    save_and_compare_images('master_dotplot')
-
-    # test dotplot numeric column():
     adata.obs['Gata2'] = adata.X[:, 0]
-    sc.pl.dotplot(
-        adata,
-        adata.var_names,
-        'Gata2',
-        use_raw=False,
-        num_categories=7,
-        figsize=(7, 2.5),
-        show=False,
-    )
-    save_and_compare_images('master_dotplot2')
+    adata.layers['test'] = -1 * adata.X.copy()
+    genes_dict = {
+        'group a': ['Gata2', 'Gata1'],
+        'group b': ['Fog1', 'EKLF', 'Fli1', 'SCL'],
+        'group c': ['Cebpa', 'Pu.1', 'cJun', 'EgrNab', 'Gfi1'],
+    }
 
+    if id.endswith("dict"):
+        fn(adata, genes_dict, show=False)
+    else:
+        fn(adata, adata.var_names, show=False)
+    save_and_compare_images(f"master_{id}")
+
+
+def test_dotplot_obj(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     # test dotplot dot_min, dot_max, color_map, and var_groups
     pbmc = sc.datasets.pbmc68k_reduced()
-    marker_genes = [
+    genes = [
         'CD79A',
         'MS4A1',
         'CD8A',
@@ -149,68 +299,28 @@ def test_dotplot(image_comparer):
         'FCER1A',
         'CST3',
     ]
-    sc.pl.dotplot(
-        pbmc,
-        marker_genes,
-        groupby='louvain',
-        dot_max=0.7,
-        dot_min=0.1,
-        color_map='hot_r',
-        var_group_positions=[(0, 1), (11, 12)],
-        var_group_labels=['B cells', 'dendritic'],
-        dendrogram=True,
-        show=False,
-    )
-    save_and_compare_images('master_dotplot3')
-
-    # test dict as markers input
-    markers_dict = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-    sc.pl.dotplot(
-        pbmc,
-        markers_dict,
-        groupby='bulk_labels',
-        dot_max=0.7,
-        dot_min=0.1,
-        color_map='winter',
-        dendrogram=True,
-        show=False,
-    )
-    save_and_compare_images('master_dotplot_dict')
-
-    # test var standardization, smallest_dot, color title, size_title and dot_edge
+    # test layer, var standardization, smallest_dot,
+    # color title, size_title return_fig and dot_edge
+    pbmc.layers['test'] = pbmc.X * -1
     plot = sc.pl.dotplot(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
+        pbmc,
+        genes,
+        'bulk_labels',
+        layer='test',
         dendrogram=True,
         return_fig=True,
         standard_scale='var',
         smallest_dot=40,
-        color_title='scaled column max',
+        colorbar_title='scaled column max',
         size_title='Fraction of cells',
     )
-    plot.style(
-        dot_edge_color='black', dot_edge_lw=0.1, cmap='Reds'
-    ).show()
+    plot.style(dot_edge_color='black', dot_edge_lw=0.1, cmap='Reds').show()
+
     save_and_compare_images('master_dotplot_std_scale_var')
 
-    sc.pl.dotplot(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        standard_scale='group',
-        smallest_dot=10,
-    )
-    save_and_compare_images('master_dotplot_std_scale_group')
 
-
-def test_matrixplot(image_comparer):
+def test_matrixplot_obj(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-
     adata = sc.datasets.krumsiek11()
     plot = sc.pl.matrixplot(
         adata, adata.var_names, 'cell_type', use_raw=False, return_fig=True,
@@ -221,88 +331,28 @@ def test_matrixplot(image_comparer):
         .show(show=False)
     )
     save_and_compare_images('master_matrixplot')
-
-    # test swap_axes
-    sc.pl.matrixplot(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        swap_axes=True,
-    )
-    save_and_compare_images('master_matrixplot_swap_axes')
-
-    # test var/group standardization, layer, brackets and color_title
-    pbmc = sc.datasets.pbmc68k_reduced()
-    markers_dict = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-    pbmc.layers['test'] = -1 * pbmc.X.copy()
-    sc.pl.matrixplot(
-        pbmc,
-        markers_dict,
-        'bulk_labels',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        standard_scale='var',
-        layer='test',
-        cmap='Blues_r',
-        color_title="Scaled expression"
-    )
-    save_and_compare_images('master_matrixplot_std_scale_var')
-
-    sc.pl.matrixplot(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        standard_scale='group',
-        swap_axes=True,
-    )
-    save_and_compare_images('master_matrixplot_std_scale_group')
-
-    # test matrixplot numeric column and alternative cmap
-    adata.obs['Gata2'] = adata.X[:, 0]
-    sc.pl.matrixplot(
-        adata,
-        adata.var_names,
-        'Gata2',
-        use_raw=False,
-        num_categories=4,
-        figsize=(8, 2.5),
-        cmap='RdBu_r',
-        show=False,
-    )
-    save_and_compare_images('master_matrixplot2')
+    assert 'mainplot_ax' in axes, 'mainplot_ax not found in returned axes dict'
 
 
-def test_stacked_violin(image_comparer, plt):
+def test_stacked_violin_obj(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=26)
 
     pbmc = sc.datasets.pbmc68k_reduced()
-    markers = {'T-cell': ['CD3D', 'CD3E', 'IL32'],
-               'B-cell': ['CD79A', 'CD79B', 'MS4A1'], 'myeloid': ['CST3', 'LYZ']}
+    markers = {
+        'T-cell': ['CD3D', 'CD3E', 'IL32'],
+        'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
+        'myeloid': ['CST3', 'LYZ'],
+    }
     plot = sc.pl.stacked_violin(
-        pbmc, markers, 'bulk_labels', use_raw=False, return_fig=True,
-    )
-    plot.add_totals().style(row_palette='tab20').show(show=False)
-    save_and_compare_images('master_stacked_violin')
-
-    # test swapped axes, and brackets
-    sc.pl.stacked_violin(
         pbmc,
         markers,
         'bulk_labels',
         use_raw=False,
-        swap_axes=True,
-        figsize=(3, 5),
-        dendrogram=True,
-        show=False,
+        title="return_fig. add_totals",
+        return_fig=True,
     )
-    save_and_compare_images('master_stacked_violin_swapped_axes')
+    plot.add_totals().style(row_palette='tab20').show(show=False)
+    save_and_compare_images('master_stacked_violin_return_fig')
 
 
 def test_tracksplot(image_comparer):
@@ -444,7 +494,17 @@ def test_rank_genes_groups(image_comparer):
     # save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=tolerance)
 
 
-def test_rank_genes_symbols(image_comparer):
+@pytest.mark.parametrize(
+    "id,fn",
+    [
+        ("heatmap", sc.pl.heatmap,),
+        ("dotplot", sc.pl.dotplot,),
+        ("matrixplot", sc.pl.matrixplot,),
+        ("stacked_violin", sc.pl.stacked_violin,),
+        ("tracksplot", sc.pl.tracksplot,),
+    ],
+)
+def test_genes_symbols(image_comparer, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     adata = sc.datasets.krumsiek11()
@@ -452,61 +512,9 @@ def test_rank_genes_symbols(image_comparer):
     # add a 'symbols' column
     adata.var['symbols'] = adata.var.index.map(lambda x: "symbol_{}".format(x))
     symbols = ["symbol_{}".format(x) for x in adata.var_names]
-    sc.pl.heatmap(
-        adata,
-        symbols,
-        'cell_type',
-        use_raw=False,
-        show=False,
-        dendrogram=True,
-        gene_symbols='symbols',
-    )
-    save_and_compare_images('master_heatmap_gene_symbols')
 
-    sc.pl.dotplot(
-        adata,
-        symbols,
-        'cell_type',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        gene_symbols='symbols',
-    )
-
-    save_and_compare_images('master_dotplot_gene_symbols')
-
-    sc.pl.matrixplot(
-        adata,
-        symbols,
-        'cell_type',
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        gene_symbols='symbols',
-    )
-
-    save_and_compare_images('master_matrixplot_gene_symbols')
-
-    sc.pl.stacked_violin(
-        adata,
-        symbols,
-        'cell_type',
-        use_raw=False,
-        color='blue',
-        show=False,
-        gene_symbols='symbols',
-    )
-    save_and_compare_images('master_stacked_violin_gene_symbols', tolerance=21)
-
-    sc.pl.tracksplot(
-        adata,
-        symbols,
-        'cell_type',
-        dendrogram=True,
-        use_raw=False,
-        gene_symbols='symbols',
-    )
-    save_and_compare_images('master_tracksplot_gene_symbols')
+    fn(adata, symbols, 'cell_type', dendrogram=True, gene_symbols='symbols', show=False)
+    save_and_compare_images(f"master_{id}_gene_symbols")
 
 
 @pytest.fixture(scope="module")
