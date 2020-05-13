@@ -333,7 +333,7 @@ def read_visium(
         Scale factors for the spots
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
         Files metadata: 'chemistry_description', 'software_version'
-    :attr:`~anndata.AnnData.obsm`\\ `['coords']`
+    :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
     path = Path(path)
@@ -403,7 +403,7 @@ def read_visium(
 
         adata.obs = adata.obs.join(positions, how="left")
 
-        adata.obsm['coords'] = adata.obs[
+        adata.obsm['spatial'] = adata.obs[
             ['pxl_row_in_fullres', 'pxl_col_in_fullres']
         ].to_numpy()
         adata.obs.drop(
