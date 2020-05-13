@@ -35,7 +35,7 @@ class BasePlot(object):
     understand how to adapt the visual parameter if the plot is rotated
 
     """
-
+    DEFAULT_SAVE_PREFIX = 'baseplot_'
     MIN_FIGURE_HEIGHT = 2.5
     DEFAULT_CATEGORY_HEIGHT = 0.35
     DEFAULT_CATEGORY_WIDTH = 0.37
@@ -53,6 +53,7 @@ class BasePlot(object):
         log: bool = False,
         num_categories: int = 7,
         categories_order: Optional[Sequence[str]] = None,
+        title: Optional['str'] = None,
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -122,6 +123,8 @@ class BasePlot(object):
 
         # minimum height required for legends to plot properly
         self.min_figure_height = self.MIN_FIGURE_HEIGHT
+
+        self.fig_title = title
 
         self.group_extra_size = 0
         self.plot_group_extra = None
@@ -317,7 +320,7 @@ class BasePlot(object):
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
-        >>> dp.legend(color_title='log(UMI counts + 1)').show()
+        >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
         """
 
         if not show:
@@ -599,6 +602,16 @@ class BasePlot(object):
             width_ratios = [mainplot_width, var_groups_height]
             # gridspec is the same but rows and columns are swapped
 
+        if self.fig_title is not None and self.fig_title.strip() != '':
+            # for the figure title use the ax that contains
+            # all the main graphical elements (main plot, dendrogram etc)
+            # otherwise the title may overlay with the figure.
+            # also, this puts the title centered on the main figure and not
+            # centered between the main figure and the legends
+            _ax = fig.add_subplot(gs[0, 0])
+            _ax.axis('off')
+            _ax.set_title(self.fig_title)
+
         mainplot_gs = gridspec.GridSpecFromSubplotSpec(
             nrows=3,
             ncols=2,
@@ -654,6 +667,7 @@ class BasePlot(object):
             )
             return_ax_dict['gene_group_ax'] = gene_groups_ax
 
+
         # plot the mainplot
         normalize = self._mainplot(main_ax)
 
@@ -666,9 +680,9 @@ class BasePlot(object):
             legend_ax = fig.add_subplot(gs[0, 1])
             self._plot_legend(legend_ax, return_ax_dict, normalize)
 
-        # TODO change mainplot to a variable
-        _utils.savefig_or_show('mainplot', show=show, save=save)
+        _utils.savefig_or_show(self.DEFAULT_SAVE_PREFIX, show=show, save=save)
         self.ax_dict = return_ax_dict
+
         if show is False:
             return return_ax_dict
 
@@ -962,6 +976,8 @@ class DotPlot(BasePlot):
     Parameters
     ----------
     {common_plot_args}
+    title
+        Title for the figure
     expression_cutoff
         Expression cutoff that is used for binarizing the gene expression and
         determining the fraction of cells expressing given genes. A gene is
@@ -994,6 +1010,7 @@ class DotPlot(BasePlot):
     :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
+    DEFAULT_SAVE_PREFIX = 'dotplot_'
     # default style parameters
     DEFAULT_COLORMAP = 'winter'
     DEFAULT_COLOR_ON = 'dot'
@@ -1019,6 +1036,7 @@ class DotPlot(BasePlot):
         log: bool = False,
         num_categories: int = 7,
         categories_order: Optional[Sequence[str]] = None,
+        title: Optional[str] = None,
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -1042,6 +1060,7 @@ class DotPlot(BasePlot):
             log=log,
             num_categories=num_categories,
             categories_order=categories_order,
+            title=title,
             figsize=figsize,
             gene_symbols=gene_symbols,
             var_group_positions=var_group_positions,
@@ -1230,7 +1249,7 @@ class DotPlot(BasePlot):
         show_size_legend: Optional[bool] = True,
         show_colorbar: Optional[bool] = True,
         size_title: Optional[str] = DEFAULT_SIZE_LEGEND_TITLE,
-        color_title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
+        colorbar_title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
         width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
     ):
         """
@@ -1246,7 +1265,7 @@ class DotPlot(BasePlot):
             Set to `False` to hide the the colorbar
         size_title
             Title for the dot size legend. Use "\n" to add line breaks.
-        color_title
+        colorbar_title
             Title for the color bar. Use "\n" to add line breaks.
         width
             Width of the legends.
@@ -1260,14 +1279,14 @@ class DotPlot(BasePlot):
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
-        >>> dp.legend(color_title='log(UMI counts + 1)').show()
+        >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
         """
 
         if not show:
             # turn of legends by setting width to 0
             self.legends_width = 0
         else:
-            self.color_legend_title = color_title
+            self.color_legend_title = colorbar_title
             self.size_title = size_title
             self.legends_width = width
             self.show_size_legend = show_size_legend
@@ -1639,6 +1658,8 @@ class MatrixPlot(BasePlot):
     Parameters
     ----------
     {common_plot_args}
+    title
+        Title for the figure
     expression_cutoff
         Expression cutoff that is used for binarizing the gene expression and
         determining the fraction of cells expressing given genes. A gene is
@@ -1674,6 +1695,8 @@ class MatrixPlot(BasePlot):
     :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
+    DEFAULT_SAVE_PREFIX = 'matrixplot_'
+
     # default style parameters
     DEFAULT_COLORMAP = rcParams['image.cmap']
     DEFAULT_EDGE_COLOR = 'gray'
@@ -1688,6 +1711,7 @@ class MatrixPlot(BasePlot):
         log: bool = False,
         num_categories: int = 7,
         categories_order: Optional[Sequence[str]] = None,
+        title: Optional[str] = None,
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -1708,6 +1732,7 @@ class MatrixPlot(BasePlot):
             log=log,
             num_categories=num_categories,
             categories_order=categories_order,
+            title=title,
             figsize=figsize,
             gene_symbols=gene_symbols,
             var_group_positions=var_group_positions,
@@ -1851,6 +1876,8 @@ class StackedViolin(BasePlot):
     Parameters
     ----------
     {common_plot_args}
+    title
+        Title for the figure
     stripplot
         Add a stripplot on top of the violin plot.
         See :func:`~seaborn.stripplot`.
@@ -1903,6 +1930,9 @@ class StackedViolin(BasePlot):
     rank_genes_groups_stacked_violin: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
+    DEFAULT_SAVE_PREFIX = 'stacked_violin_'
+
+    # violin plots look better thin
     DEFAULT_CATEGORY_HEIGHT = 0.5
     DEFAULT_CATEGORY_WIDTH = 0.3
 
@@ -1924,6 +1954,7 @@ class StackedViolin(BasePlot):
         log: bool = False,
         num_categories: int = 7,
         categories_order: Optional[Sequence[str]] = None,
+        title: Optional[str] = None,
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -1943,6 +1974,7 @@ class StackedViolin(BasePlot):
             log=log,
             num_categories=num_categories,
             categories_order=categories_order,
+            title=title,
             figsize=figsize,
             gene_symbols=gene_symbols,
             var_group_positions=var_group_positions,
@@ -2278,9 +2310,10 @@ def dotplot(
     color_map: str = 'Reds',
     dot_max: Optional[float] = None,
     dot_min: Optional[float] = None,
-    standard_scale: Literal['var', 'group'] = None,
-    smallest_dot: float = DotPlot.DEFAULT_SMALLEST_DOT,
-    color_title: Optional[str] = DotPlot.DEFAULT_COLOR_LEGEND_TITLE,
+    standard_scale: Optional[Literal['var', 'group']] = None,
+    smallest_dot: Optional[float] = DotPlot.DEFAULT_SMALLEST_DOT,
+    title: Optional[str] = None,
+    colorbar_title: Optional[str] = DotPlot.DEFAULT_COLOR_LEGEND_TITLE,
     size_title: Optional[str] = DotPlot.DEFAULT_SIZE_LEGEND_TITLE,
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
@@ -2293,6 +2326,7 @@ def dotplot(
     dot_color_df: Optional[pd.DataFrame] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    ax: Optional[_AxesSubplot] = None,
     return_fig: Optional[bool] = False,
     **kwds,
 ) -> Union[DotPlot, dict, None]:
@@ -2319,7 +2353,9 @@ def dotplot(
     Parameters
     ----------
     {common_plot_args}
-    color_title
+    title
+        Title for the figure
+    colorbar_title
         Title for the color bar. New line character (\\n) can be used.
     size_title
         Title for the size legend. New line character (\\n) can be used.
@@ -2393,6 +2429,7 @@ def dotplot(
         expression_cutoff=expression_cutoff,
         mean_only_expressed=mean_only_expressed,
         standard_scale=standard_scale,
+        title=title,
         figsize=figsize,
         gene_symbols=gene_symbols,
         var_group_positions=var_group_positions,
@@ -2400,6 +2437,7 @@ def dotplot(
         var_group_rotation=var_group_rotation,
         layer=layer,
         dot_color_df=dot_color_df,
+        ax=ax,
         **kwds,
     )
 
@@ -2410,7 +2448,7 @@ def dotplot(
 
     dp = dp.style(
         cmap=color_map, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot,
-    ).legend(color_title=color_title, size_title=size_title,)
+    ).legend(colorbar_title=colorbar_title, size_title=size_title,)
 
     if return_fig:
         return dp
@@ -2429,7 +2467,8 @@ def matrixplot(
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
     plot_totals: Union[bool, str] = False,
-    color_title: Optional[str] = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
+    title: Optional[str] = None,
+    colorbar_title: Optional[str] = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
     gene_symbols: Optional[str] = None,
     var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
     var_group_labels: Optional[Sequence[str]] = None,
@@ -2440,6 +2479,7 @@ def matrixplot(
     swap_axes: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    ax: Optional[_AxesSubplot] = None,
     return_fig: Optional[bool] = False,
     **kwds,
 ) -> Union[MatrixPlot, dict, None]:
@@ -2452,7 +2492,9 @@ def matrixplot(
     Parameters
     ----------
     {common_plot_args}
-    color_title
+    title
+        Title for the figure
+    colorbar_title
         Title for the color bar. New line character (\\n) can be used.
     standard_scale
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
@@ -2500,6 +2542,7 @@ def matrixplot(
         log=log,
         num_categories=num_categories,
         standard_scale=standard_scale,
+        title=title,
         figsize=figsize,
         gene_symbols=gene_symbols,
         var_group_positions=var_group_positions,
@@ -2507,6 +2550,7 @@ def matrixplot(
         var_group_rotation=var_group_rotation,
         layer=layer,
         values_df=values_df,
+        ax=ax,
         **kwds,
     )
 
@@ -2515,7 +2559,7 @@ def matrixplot(
     if swap_axes:
         mp.swap_axes()
 
-    mp = mp.style(cmap=kwds.get('cmap')).legend(title=color_title)
+    mp = mp.style(cmap=kwds.get('cmap')).legend(title=colorbar_title)
     if return_fig:
         return mp
     else:
@@ -2530,6 +2574,7 @@ def stacked_violin(
     log: bool = False,
     use_raw: Optional[bool] = None,
     num_categories: int = 7,
+    title: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
     gene_symbols: Optional[str] = None,
@@ -2566,6 +2611,8 @@ def stacked_violin(
     Parameters
     ----------
     {common_plot_args}
+    title
+        Title for the figure
     stripplot
         Add a stripplot on top of the violin plot.
         See :func:`~seaborn.stripplot`.
@@ -2638,12 +2685,14 @@ def stacked_violin(
         log=log,
         num_categories=num_categories,
         standard_scale=standard_scale,
+        title=title,
         figsize=figsize,
         gene_symbols=gene_symbols,
         var_group_positions=var_group_positions,
         var_group_labels=var_group_labels,
         var_group_rotation=var_group_rotation,
         layer=layer,
+        ax=ax,
         **kwds,
     )
 
