@@ -843,61 +843,54 @@ class BasePlot(object):
                     rotation = 90
                 else:
                     rotation = 0
-            for idx in range(len(left)):
-                verts.append((left[idx], 0))  # lower-left
-                verts.append((left[idx], 0.6))  # upper-left
-                verts.append((right[idx], 0.6))  # upper-right
-                verts.append((right[idx], 0))  # lower-right
+            for idx, (left_coor, right_coor) in enumerate(zip(left, right)):
+                verts.append((left_coor, 0))  # lower-left
+                verts.append((left_coor, 0.6))  # upper-left
+                verts.append((right_coor, 0.6))  # upper-right
+                verts.append((right_coor, 0))  # lower-right
 
                 codes.append(Path.MOVETO)
                 codes.append(Path.LINETO)
                 codes.append(Path.LINETO)
                 codes.append(Path.LINETO)
 
-                try:
-                    group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
-                    gene_groups_ax.text(
-                        group_x_center,
-                        1.1,
-                        group_labels[idx],
-                        ha='center',
-                        va='bottom',
-                        rotation=rotation,
-                    )
-                except:
-                    pass
+                group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
+                gene_groups_ax.text(
+                    group_x_center,
+                    1.1,
+                    group_labels[idx],
+                    ha='center',
+                    va='bottom',
+                    rotation=rotation,
+                )
         else:
             top = left
             bottom = right
-            for idx in range(len(top)):
-                verts.append((0, top[idx]))  # upper-left
-                verts.append((0.15, top[idx]))  # upper-right
-                verts.append((0.15, bottom[idx]))  # lower-right
-                verts.append((0, bottom[idx]))  # lower-left
+            for idx, (top_coor, bottom_coor) in enumerate(zip(top, bottom)):
+                verts.append((0, top_coor))  # upper-left
+                verts.append((0.4, top_coor))  # upper-right
+                verts.append((0.4, bottom_coor))  # lower-right
+                verts.append((0, bottom_coor))  # lower-left
 
                 codes.append(Path.MOVETO)
                 codes.append(Path.LINETO)
                 codes.append(Path.LINETO)
                 codes.append(Path.LINETO)
 
-                try:
-                    diff = bottom[idx] - top[idx]
-                    group_y_center = top[idx] + float(diff) / 2
-                    if diff * 2 < len(group_labels[idx]):
-                        # cut label to fit available space
-                        group_labels[idx] = group_labels[idx][: int(diff * 2)] + "."
-                    gene_groups_ax.text(
-                        0.6,
-                        group_y_center,
-                        group_labels[idx],
-                        ha='right',
-                        va='center',
-                        rotation=270,
-                        fontsize='small',
-                    )
-                except Exception as e:
-                    print('problems {}'.format(e))
-                    pass
+                diff = bottom[idx] - top[idx]
+                group_y_center = top[idx] + float(diff) / 2
+                if diff * 2 < len(group_labels[idx]):
+                    # cut label to fit available space
+                    group_labels[idx] = group_labels[idx][: int(diff * 2)] + "."
+                gene_groups_ax.text(
+                    1.1,
+                    group_y_center,
+                    group_labels[idx],
+                    ha='right',
+                    va='center',
+                    rotation=270,
+                    fontsize='small',
+                )
 
         path = Path(verts, codes)
 
@@ -1341,7 +1334,7 @@ class DotPlot(BasePlot):
         size_legend_ax.spines['bottom'].set_visible(False)
         size_legend_ax.grid(False)
 
-        ymin, ymax = size_legend_ax.get_ylim()
+        ymax = size_legend_ax.get_ylim()[1]
         size_legend_ax.set_ylim(-1.05 - self.largest_dot * 0.003, 4)
         size_legend_ax.set_title(self.size_title, y=ymax + 0.25, size='small')
 

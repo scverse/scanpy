@@ -26,7 +26,7 @@ from .._utils import sanitize_anndata, _doc_params
 from .._compat import Literal
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes
-from ._utils import ColorLike, _FontWeight, _FontSize, _AxesSubplot
+from ._utils import ColorLike, _FontWeight, _FontSize
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
 VALID_LEGENDLOCS = {
