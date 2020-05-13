@@ -35,6 +35,7 @@ class BasePlot(object):
     understand how to adapt the visual parameter if the plot is rotated
 
     """
+
     DEFAULT_SAVE_PREFIX = 'baseplot_'
     MIN_FIGURE_HEIGHT = 2.5
     DEFAULT_CATEGORY_HEIGHT = 0.35
@@ -666,7 +667,6 @@ class BasePlot(object):
                 orientation=var_group_orientation,
             )
             return_ax_dict['gene_group_ax'] = gene_groups_ax
-
 
         # plot the mainplot
         normalize = self._mainplot(main_ax)

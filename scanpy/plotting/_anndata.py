@@ -1785,8 +1785,7 @@ def _prepare_dataframe(
                 for group in groupby[1:]:
                     # create new category by merging the given groupby categories
                     categorical = (
-                        categorical.astype(str) + "_" +
-                        adata.obs[group].astype(str)
+                        categorical.astype(str) + "_" + adata.obs[group].astype(str)
                     ).astype('category')
             categorical.name = "_".join(groupby)
     obs_tidy.set_index(categorical, inplace=True)
@@ -2032,7 +2031,7 @@ def _reorder_categories_after_dendrogram(
         var_names_idx_ordered=var_names_idx_ordered,
         var_names_ordered=var_names_ordered,
         var_group_labels=var_group_labels,
-        var_group_positions=var_group_positions
+        var_group_positions=var_group_positions,
     )
 
 
