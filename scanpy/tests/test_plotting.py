@@ -365,6 +365,49 @@ def test_tracksplot(image_comparer):
     save_and_compare_images('master_tracksplot')
 
 
+def test_multiple_plots(image_comparer):
+    # only testing stacked_violin, matrixplot and dotplot
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+
+    adata = sc.datasets.pbmc68k_reduced()
+    markers = {
+        'T-cell': ['CD3D', 'CD3E', 'IL32'],
+        'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
+        'myeloid': ['CST3', 'LYZ'],
+    }
+    fig, (ax1, ax2, ax3) = plt.subplots(
+        1, 3, figsize=(20, 5), gridspec_kw={'width_ratios': [0.8, 1, 1], 'wspace': 0.7}
+    )
+    __ = sc.pl.stacked_violin(
+        adata,
+        markers,
+        groupby='bulk_labels',
+        ax=ax1,
+        title='stacked_violin',
+        dendrogram=True,
+        show=False,
+    )
+    __ = sc.pl.dotplot(
+        adata,
+        markers,
+        groupby='bulk_labels',
+        ax=ax2,
+        title='dotplot',
+        dendrogram=True,
+        show=False,
+    )
+    __ = sc.pl.matrixplot(
+        adata,
+        markers,
+        groupby='bulk_labels',
+        ax=ax3,
+        title='matrixplot',
+        dendrogram=True,
+        show=False,
+    )
+    save_and_compare_images('master_multiple_plots')
+
+
 def test_violin(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=40)
 
