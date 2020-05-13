@@ -9,7 +9,6 @@ from anndata import AnnData
 pytest.importorskip("scvi", minversion=sce.pp._scvi.MIN_VERSION)
 
 
-@pytest.mark.skipif(sys.version_info < (3, 7), reason="requires python3.7 or higher")
 def test_scvi_linear():
     n_samples = 4
     n_genes = 7
@@ -39,7 +38,6 @@ def test_scvi_linear():
     assert set(adata.uns['ldvae_loadings'].index) == set(gene_subset)
 
 
-@pytest.mark.skipif(sys.version_info < (3, 7), reason="requires python3.7 or higher")
 def test_scvi():
     n_samples = 4
     n_genes = 7
