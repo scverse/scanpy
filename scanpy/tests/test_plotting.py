@@ -323,14 +323,19 @@ def test_matrixplot_obj(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.datasets.krumsiek11()
     plot = sc.pl.matrixplot(
-        adata, adata.var_names, 'cell_type', use_raw=False, return_fig=True,
+        adata,
+        adata.var_names,
+        'cell_type',
+        use_raw=False,
+        title='added totals',
+        return_fig=True,
     )
     axes = (
         plot.add_totals(sort='descending')
         .style(edge_color='white', edge_lw=0.5)
         .show(show=False)
     )
-    save_and_compare_images('master_matrixplot')
+    save_and_compare_images('master_matrixplot_with_totals')
     assert 'mainplot_ax' in axes, 'mainplot_ax not found in returned axes dict'
 
 
@@ -470,71 +475,121 @@ def test_correlation(image_comparer):
     save_and_compare_images('correlation')
 
 
-def test_rank_genes_groups(image_comparer):
+@pytest.mark.parametrize(
+    "name,fn",
+    [
+        (
+            "ranked_genes_sharey",
+            partial(
+                sc.pl.rank_genes_groups, n_genes=12, n_panels_per_row=3, show=False
+            ),
+        ),
+        (
+            "ranked_genes",
+            partial(
+                sc.pl.rank_genes_groups,
+                n_genes=12,
+                n_panels_per_row=3,
+                sharey=False,
+                show=False,
+            ),
+        ),
+        (
+            "ranked_genes_heatmap",
+            partial(
+                sc.pl.rank_genes_groups_heatmap, n_genes=4, cmap='YlGnBu', show=False
+            ),
+        ),
+        (
+            "ranked_genes_heatmap_swap_axes",
+            partial(
+                sc.pl.rank_genes_groups_heatmap,
+                n_genes=20,
+                swap_axes=True,
+                use_raw=False,
+                show_gene_labels=False,
+                show=False,
+                vmin=-3,
+                vmax=3,
+                cmap='bwr',
+            ),
+        ),
+        (
+            "ranked_genes_stacked_violin",
+            partial(sc.pl.rank_genes_groups_stacked_violin, n_genes=3, show=False),
+        ),
+        (
+            "ranked_genes_dotplot",
+            partial(sc.pl.rank_genes_groups_dotplot, n_genes=4, show=False),
+        ),
+        (
+            "ranked_genes_dotplot_logfoldchange",
+            partial(
+                sc.pl.rank_genes_groups_dotplot,
+                n_genes=4,
+                values_to_plot="logfoldchanges",
+                vmin=-5,
+                vmax=5,
+                min_logfoldchange=3,
+                cmap='RdBu_r',
+                swap_axes=True,
+                title='log fold changes swap_axes',
+                show=False,
+            ),
+        ),
+        (
+            "ranked_genes_matrixplot",
+            partial(
+                sc.pl.rank_genes_groups_matrixplot,
+                n_genes=5,
+                show=False,
+                title='matrixplot',
+            ),
+        ),
+        (
+            "ranked_genes_matrixplot_swap_axes",
+            partial(
+                sc.pl.rank_genes_groups_matrixplot,
+                n_genes=5,
+                show=False,
+                swap_axes=True,
+                values_to_plot='logfoldchanges',
+                vmin=-6,
+                vmax=6,
+                cmap='bwr',
+                title='log fold changes swap_axes',
+            ),
+        ),
+        (
+            "ranked_genes_tracksplot",
+            partial(sc.pl.rank_genes_groups_tracksplot, n_genes=5, show=False,),
+        ),
+        (
+            "ranked_genes_violin",
+            partial(
+                sc.pl.rank_genes_groups_violin,
+                groups='0',
+                n_genes=5,
+                jitter=False,
+                strip=False,
+                show=False,
+            ),
+        ),
+    ],
+)
+def test_rank_genes_groups(image_comparer, name, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     pbmc = sc.datasets.pbmc68k_reduced()
-
+    sc.tl.rank_genes_groups(pbmc, 'louvain', n_genes=pbmc.raw.shape[1])
     from matplotlib import rcParams
 
     rcParams['axes.grid'] = True
     rcParams['figure.figsize'] = 4, 4
 
-    sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3, show=False)
-    save_and_compare_images('master_ranked_genes_sharey')
-
-    # test ranked genes panels sharey = False
-    sc.pl.rank_genes_groups(
-        pbmc, n_genes=12, n_panels_per_row=3, sharey=False, show=False
-    )
-    save_and_compare_images('master_ranked_genes')
-
-    # test ranked genes using heatmap
-    sc.pl.rank_genes_groups_heatmap(pbmc, n_genes=5, cmap='YlGnBu', show=False)
-    save_and_compare_images('master_ranked_genes_heatmap')
-
-    # test ranked genes using heatmap (swap_axes=True show_gene_labels=False)
-    sc.pl.rank_genes_groups_heatmap(
-        pbmc,
-        n_genes=20,
-        swap_axes=True,
-        use_raw=False,
-        show_gene_labels=False,
-        show=False,
-        vmin=-3,
-        vmax=3,
-        cmap='bwr',
-    )
-    save_and_compare_images('master_ranked_genes_heatmap_swap_axes')
-
-    # test ranked genes using stacked violin plots
-    sc.pl.rank_genes_groups_stacked_violin(pbmc, n_genes=3, show=False)
-    save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=20)
-
-    # test ranked genes using dotplot
-    sc.pl.rank_genes_groups_dotplot(pbmc, n_genes=4, show=False)
-    save_and_compare_images('master_ranked_genes_dotplot')
-
-    # test ranked genes using matrixplot
-    sc.pl.rank_genes_groups_matrixplot(pbmc, n_genes=5, show=False)
-    save_and_compare_images('master_ranked_genes_matrixplot')
-
-    # test ranked genes using matrixplot
-    sc.pl.rank_genes_groups_matrixplot(pbmc, n_genes=5, show=False)
-    save_and_compare_images('master_ranked_genes_matrixplot')
-
-    # test ranked genes using matrixplot (swap_axes=True)
-    sc.pl.rank_genes_groups_matrixplot(pbmc, n_genes=5, swap_axes=True, show=False)
-    save_and_compare_images('master_ranked_genes_matrixplot_swap_axes')
-
-    # test ranked genes using tracks_plot
-    sc.pl.rank_genes_groups_tracksplot(pbmc, n_genes=5, show=False)
-    save_and_compare_images('master_ranked_genes_tracksplot')
-
-    # # test ranked genes using violin plots
-    # sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5,
-    #                                jitter=False, strip=False, show=False)
-    # save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=tolerance)
+    fn(pbmc)
+    save_and_compare_images(f"master_{name}")
+    plt.close()
 
 
 @pytest.mark.parametrize(

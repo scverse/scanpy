@@ -393,7 +393,7 @@ def _rank_genes_groups_plot(
                          dot_color_df=values_df, return_fig=True, **kwds)
 
             if title is not None:
-                _pl.legend(color_title=title.replace("_", " "))
+                _pl.legend(colorbar_title=title.replace("_", " "))
         elif plot_type == 'matrixplot':
             from .._groupby_plots import matrixplot
             _pl = matrixplot(adata, var_names, groupby,
