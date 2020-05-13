@@ -778,7 +778,7 @@ def spatial(
 
     return embedding(
         adata,
-        'coords',
+        'spatial',
         img_key=img_key,
         crop_coord=crop_coord,
         alpha_img=alpha_img,
