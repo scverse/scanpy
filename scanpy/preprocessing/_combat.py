@@ -202,7 +202,7 @@ def combat(
 
     # construct a pandas series of the batch annotation
     model = adata.obs[[key] + (covariates if covariates else [])]
-    batch_info = model.groupby(key).groups.values()
+    batch_info = model.groupby(key).indices.values()
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
     n_array = float(sum(n_batches))
@@ -220,7 +220,7 @@ def combat(
 
     # first estimate for the multiplicative batch effect
     for i, batch_idxs in enumerate(batch_info):
-        delta_hat.append(s_data[batch_idxs].var(axis=1))
+        delta_hat.append(s_data.iloc[:, batch_idxs].var(axis=1))
 
     # empirically fix the prior hyperparameters
     gamma_bar = gamma_hat.mean(axis=1)
@@ -238,7 +238,7 @@ def combat(
         # temp[0] is the additive batch effect
         # temp[1] is the multiplicative batch effect
         gamma, delta = _it_sol(
-            s_data[batch_idxs].values,
+            s_data.iloc[:, batch_idxs].values,
             gamma_hat[i],
             delta_hat[i].values,
             gamma_bar[i],
@@ -264,8 +264,8 @@ def combat(
         dsq = np.sqrt(delta_star[j,:])
         dsq = dsq.reshape((len(dsq), 1))
         denom =  np.dot(dsq, np.ones((1, n_batches[j])))
-        numer = np.array(bayesdata[batch_idxs] - np.dot(batch_design.loc[batch_idxs], gamma_star).T)
-        bayesdata[batch_idxs] = numer / denom
+        numer = np.array(bayesdata.iloc[:, batch_idxs] - np.dot(batch_design.iloc[batch_idxs], gamma_star).T)
+        bayesdata.iloc[:, batch_idxs] = numer / denom
 
     vpsq = np.sqrt(var_pooled).reshape((len(var_pooled), 1))
     bayesdata = bayesdata * np.dot(vpsq, np.ones((1, int(n_array)))) + stand_mean
