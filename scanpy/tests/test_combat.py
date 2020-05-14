@@ -14,17 +14,16 @@ def test_norm():
     # load in data
     adata = sc.datasets.blobs()
     key = 'blobs'
-    data = pd.DataFrame(data=adata.X.T, index=adata.var_names,
-                        columns=adata.obs_names)
+    data = pd.DataFrame(data=adata.X.T, index=adata.var_names, columns=adata.obs_names)
 
     # construct a pandas series of the batch annotation
     batch = pd.Series(adata.obs[key])
     model = pd.DataFrame({'batch': batch})
 
     # standardize the data
-    s_data, design, var_pooled,  stand_mean = _standardize_data(model, data, 'batch')
+    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, 'batch')
 
-    assert np.allclose(s_data.mean(axis = 1), np.zeros(s_data.shape[0]))
+    assert np.allclose(s_data.mean(axis=1), np.zeros(s_data.shape[0]))
 
 
 def test_covariates():
@@ -38,7 +37,9 @@ def test_covariates():
     adata.obs['cat2'] = np.random.binomial(2, 0.1, size=(adata.n_obs))
     adata.obs['num1'] = np.random.normal(size=(adata.n_obs))
 
-    X2 = sc.pp.combat(adata, key=key, covariates=['cat1', 'cat2', 'num1'], inplace=False)
+    X2 = sc.pp.combat(
+        adata, key=key, covariates=['cat1', 'cat2', 'num1'], inplace=False
+    )
     sc.pp.combat(adata, key=key, covariates=['cat1', 'cat2', 'num1'], inplace=True)
 
     assert X1.shape == X2.shape
@@ -55,7 +56,7 @@ def test_combat_obs_names():
     X = np.random.random((200, 100))
     obs = pd.DataFrame(
         {"batch": pd.Categorical(np.random.randint(0, 2, 200))},
-        index=np.repeat(np.arange(100), 2).astype(str)  # Non-unique index
+        index=np.repeat(np.arange(100), 2).astype(str),  # Non-unique index
     )
     a = sc.AnnData(X, obs)
     b = a.copy()
@@ -85,6 +86,6 @@ def test_silhouette():
     X_pca = adata.obsm['X_pca']
 
     # compute silhouette coefficient in pca
-    sh = silhouette_score(X_pca[:, :2], adata.obs['blobs'].values )
+    sh = silhouette_score(X_pca[:, :2], adata.obs['blobs'].values)
 
     assert sh < 0.1
