@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 from anndata import AnnData
@@ -159,6 +161,9 @@ def test_restore_n_neighbors(neigh, conv):
     neigh.compute_neighbors(method='gauss', n_neighbors=n_neighbors)
 
     ad = AnnData(np.array(X))
-    ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
+    # Allow deprecated usage for now
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1
