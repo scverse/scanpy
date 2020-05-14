@@ -1336,7 +1336,7 @@ class DotPlot(BasePlot):
 
         ymax = size_legend_ax.get_ylim()[1]
         size_legend_ax.set_ylim(-1.05 - self.largest_dot * 0.003, 4)
-        size_legend_ax.set_title(self.size_title, y=ymax + 0.25, size='small')
+        size_legend_ax.set_title(self.size_title, y=ymax + 0.45, size='small')
 
         xmin, xmax = size_legend_ax.get_xlim()
         size_legend_ax.set_xlim(xmin, xmax + 0.5)
