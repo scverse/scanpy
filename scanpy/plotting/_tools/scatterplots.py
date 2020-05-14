@@ -206,7 +206,7 @@ def embedding(
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
-    elif img_key is not None:
+    elif basis is "spatial":
         size = 1.0
     else:
         size = 120000 / adata.shape[0]
@@ -301,10 +301,13 @@ def embedding(
                 ax.imshow(img_processed, cmap=cmap_img, alpha=alpha_img)
                 ax.set_xlim(img_coord[0], img_coord[1])
                 ax.set_ylim(img_coord[3], img_coord[2])
+            elif img_key is None and basis is "spatial":
+                # order of magnitude similar to public visium
+                size_spot = 70 * size
 
             scatter = (
                 partial(ax.scatter, s=size)
-                if img_key is None
+                if basis is not "spatial"
                 else partial(circles, s=size_spot, ax=ax)
             )
 
@@ -369,7 +372,7 @@ def embedding(
                     in_groups_size = not_in_groups_size = size
 
                 # only show grey points if no image is below
-                if img_key is None:
+                if basis is not "spatial":
                     ax.scatter(
                         _data_points[~in_groups, 0],
                         _data_points[~in_groups, 1],
@@ -893,7 +896,7 @@ def _get_data_points(
                 tuple(number - 1 for number in comp) for comp in components_list
             ]
     else:
-        data_points = [adata.obsm[basis_key][:, offset : offset + n_dims]]
+        data_points = [np.array(adata.obsm[basis_key])[:, offset : offset + n_dims]]
         components_list = []
 
     if img_key is not None:
@@ -908,6 +911,10 @@ def _get_data_points(
                 f"Could not find entry in `adata.uns[spatial][{library_id}]` for '{img_key}'.\n"
                 f"Available keys are: {list(spatial_data['images'].keys())}."
             )
+    elif img_key is None and basis_key is "spatial":
+        data_points[0][:, 1] = np.abs(
+            np.subtract(data_points[0][:, 1], np.max(data_points[0][:, 1]))
+        )
 
     return data_points, components_list
 
