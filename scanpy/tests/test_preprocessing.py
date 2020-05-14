@@ -233,6 +233,8 @@ def test_regress_out_constants_equivalent():
     sc.pp.regress_out(b, "cat")
 
     np.testing.assert_equal(a[:, b.var_names].X, b.X)
+
+
 @pytest.fixture(params=[lambda x: x.copy(), sp.csr_matrix, sp.csc_matrix])
 def count_matrix_format(request):
     return request.param
