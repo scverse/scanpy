@@ -11,9 +11,7 @@ from .._utils import sanitize_anndata
 
 
 def _design_matrix(
-        model: pd.DataFrame,
-        batch_key: str,
-        batch_levels: Collection[str],
+    model: pd.DataFrame, batch_key: str, batch_levels: Collection[str],
 ) -> pd.DataFrame:
     """\
     Computes a simple design matrix.
@@ -46,9 +44,9 @@ def _design_matrix(
 
     if other_cols:
         col_repr = " + ".join("Q('{}')".format(x) for x in other_cols)
-        factor_matrix = patsy.dmatrix("~ 0 + {}".format(col_repr),
-                                      model[other_cols],
-                                      return_type="dataframe")
+        factor_matrix = patsy.dmatrix(
+            "~ 0 + {}".format(col_repr), model[other_cols], return_type="dataframe"
+        )
 
         design = pd.concat((design, factor_matrix), axis=1)
         logg.info(f"Found {len(other_cols)} categorical variables:")
@@ -65,9 +63,7 @@ def _design_matrix(
 
 
 def _standardize_data(
-    model: pd.DataFrame,
-    data: pd.DataFrame,
-    batch_key: str,
+    model: pd.DataFrame, data: pd.DataFrame, batch_key: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
     """\
     Standardizes the data per gene.
@@ -107,26 +103,26 @@ def _standardize_data(
     # compute pooled variance estimator
     B_hat = np.dot(np.dot(la.inv(np.dot(design.T, design)), design.T), data.T)
     grand_mean = np.dot((n_batches / n_array).T, B_hat[:n_batch, :])
-    var_pooled = (data - np.dot(design, B_hat).T)**2
+    var_pooled = (data - np.dot(design, B_hat).T) ** 2
     var_pooled = np.dot(var_pooled, np.ones((int(n_array), 1)) / int(n_array))
 
     # Compute the means
     if np.sum(var_pooled == 0) > 0:
-        print(
-            'Found {} genes with zero variance.'
-            .format(np.sum(var_pooled == 0))
-        )
-    stand_mean = np.dot(grand_mean.T.reshape((len(grand_mean), 1)), np.ones((1, int(n_array))))
+        print(f'Found {np.sum(var_pooled == 0)} genes with zero variance.')
+    stand_mean = np.dot(
+        grand_mean.T.reshape((len(grand_mean), 1)), np.ones((1, int(n_array)))
+    )
     tmp = np.array(design.copy())
     tmp[:, :n_batch] = 0
     stand_mean += np.dot(tmp, B_hat).T
 
     # need to be a bit careful with the zero variance genes
     # just set the zero variance genes to zero in the standardized data
-    s_data = np.where(var_pooled == 0, 0, (
-        (data - stand_mean) /
-        np.dot(np.sqrt(var_pooled), np.ones((1, int(n_array))))
-    ))
+    s_data = np.where(
+        var_pooled == 0,
+        0,
+        ((data - stand_mean) / np.dot(np.sqrt(var_pooled), np.ones((1, int(n_array))))),
+    )
     s_data = pd.DataFrame(s_data, index=data.index, columns=data.columns)
 
     return s_data, design, var_pooled, stand_mean
@@ -179,7 +175,9 @@ def combat(
         cov_exist = np.isin(covariates, adata.obs_keys())
         if np.any(~cov_exist):
             missing_cov = np.array(covariates)[~cov_exist].tolist()
-            raise ValueError('Could not find the covariate(s) {!r} in adata.obs'.format(missing_cov))
+            raise ValueError(
+                'Could not find the covariate(s) {!r} in adata.obs'.format(missing_cov)
+            )
 
         if key in covariates:
             raise ValueError('Batch key and covariates cannot overlap')
@@ -192,17 +190,13 @@ def combat(
         X = adata.X.A.T
     else:
         X = adata.X.T
-    data = pd.DataFrame(
-        data=X,
-        index=adata.var_names,
-        columns=adata.obs_names,
-    )
+    data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names,)
 
     sanitize_anndata(adata)
 
     # construct a pandas series of the batch annotation
     model = adata.obs[[key] + (covariates if covariates else [])]
-    batch_info = model.groupby(key).groups.values()
+    batch_info = model.groupby(key).indices.values()
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
     n_array = float(sum(n_batches))
@@ -215,12 +209,14 @@ def combat(
     logg.info("Fitting L/S model and finding priors\n")
     batch_design = design[design.columns[:n_batch]]
     # first estimate of the additive batch effect
-    gamma_hat = np.dot(np.dot(la.inv(np.dot(batch_design.T, batch_design)), batch_design.T), s_data.T)
+    gamma_hat = (
+        la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T
+    ).values
     delta_hat = []
 
     # first estimate for the multiplicative batch effect
     for i, batch_idxs in enumerate(batch_info):
-        delta_hat.append(s_data[batch_idxs].var(axis=1))
+        delta_hat.append(s_data.iloc[:, batch_idxs].var(axis=1))
 
     # empirically fix the prior hyperparameters
     gamma_bar = gamma_hat.mean(axis=1)
@@ -238,7 +234,7 @@ def combat(
         # temp[0] is the additive batch effect
         # temp[1] is the multiplicative batch effect
         gamma, delta = _it_sol(
-            s_data[batch_idxs].values,
+            s_data.iloc[:, batch_idxs].values,
             gamma_hat[i],
             delta_hat[i].values,
             gamma_bar[i],
@@ -261,11 +257,14 @@ def combat(
         # we basically substract the additive batch effect, rescale by the ratio
         # of multiplicative batch effect to pooled variance and add the overall gene
         # wise mean
-        dsq = np.sqrt(delta_star[j,:])
+        dsq = np.sqrt(delta_star[j, :])
         dsq = dsq.reshape((len(dsq), 1))
-        denom =  np.dot(dsq, np.ones((1, n_batches[j])))
-        numer = np.array(bayesdata[batch_idxs] - np.dot(batch_design.loc[batch_idxs], gamma_star).T)
-        bayesdata[batch_idxs] = numer / denom
+        denom = np.dot(dsq, np.ones((1, n_batches[j])))
+        numer = np.array(
+            bayesdata.iloc[:, batch_idxs]
+            - np.dot(batch_design.iloc[batch_idxs], gamma_star).T
+        )
+        bayesdata.iloc[:, batch_idxs] = numer / denom
 
     vpsq = np.sqrt(var_pooled).reshape((len(var_pooled), 1))
     bayesdata = bayesdata * np.dot(vpsq, np.ones((1, int(n_array)))) + stand_mean
@@ -329,13 +328,17 @@ def _it_sol(
     # we place a normally distributed prior on gamma and and inverse gamma prior on delta
     # in the loop, gamma and delta are updated together. they depend on each other. we iterate until convergence.
     while change > conv:
-        g_new = (t2*n*g_hat + d_old*g_bar) / (t2*n + d_old)
-        sum2 = s_data - g_new.reshape((g_new.shape[0], 1)) @ np.ones((1, s_data.shape[1]))
+        g_new = (t2 * n * g_hat + d_old * g_bar) / (t2 * n + d_old)
+        sum2 = s_data - g_new.reshape((g_new.shape[0], 1)) @ np.ones(
+            (1, s_data.shape[1])
+        )
         sum2 = sum2 ** 2
         sum2 = sum2.sum(axis=1)
-        d_new = (0.5*sum2 + b) / (n/2.0 + a-1.0)
+        d_new = (0.5 * sum2 + b) / (n / 2.0 + a - 1.0)
 
-        change = max((abs(g_new - g_old) / g_old).max(), (abs(d_new - d_old) / d_old).max())
+        change = max(
+            (abs(g_new - g_old) / g_old).max(), (abs(d_new - d_old) / d_old).max()
+        )
         g_old = g_new  # .copy()
         d_old = d_new  # .copy()
         count = count + 1
@@ -346,10 +349,10 @@ def _it_sol(
 def _aprior(delta_hat):
     m = delta_hat.mean()
     s2 = delta_hat.var()
-    return (2*s2 + m**2) / s2
+    return (2 * s2 + m ** 2) / s2
 
 
 def _bprior(delta_hat):
     m = delta_hat.mean()
     s2 = delta_hat.var()
-    return (m*s2 + m**3) / s2
+    return (m * s2 + m ** 3) / s2

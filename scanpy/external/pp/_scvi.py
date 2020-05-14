@@ -5,7 +5,7 @@ import scipy as sp
 from typing import Optional, Sequence, Union
 from anndata import AnnData
 
-MIN_VERSION = "0.6.3"
+MIN_VERSION = "0.6.5"
 
 
 def scvi(
