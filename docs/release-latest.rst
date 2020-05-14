@@ -27,6 +27,12 @@ On master
 - fix PAGA for new igraph :pr:`1037` :smaller:`P Angerer`
 - fix rapids compat of louvain :pr:`1079` :smaller:`LouisFaure`
 
+.. rubric:: New functionality
+
+- :func:`~scanpy.read_visium` read function for Visium data :pr:`1034` :smaller:`G Palla, P Angerer, I Virshup` :tutorial:`spatial/basic-analysis`
+- :func:`~scanpy.datasets.visium_sge` download and import Visium datasets from 10x genomics website :pr:`1013` :smaller:`M Mirkazemi, G Palla, P Angerer` :tutorial:`spatial/basic-analysis`
+- :func:`~scanpy.pl.spatial` plot Visium data :pr:`1012` :smaller:`G Palla, P Angerer` :tutorial:`spatial/basic-analysis` :tutorial:`spatial/integration-scanorama`
+
 1.4.5 :small:`2019-12-30`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
