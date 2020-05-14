@@ -697,7 +697,8 @@ def _regress_out_chunk(data):
 
     for col_index in range(data_chunk.shape[1]):
 
-        # if all values are identical, the statsmodel.api.GLM throws an error; but then no regression is necessary anyways...
+        # if all values are identical, the statsmodel.api.GLM throws an error;
+        # but then no regression is necessary anyways...
         if not (data_chunk[:, col_index] != data_chunk[0, col_index]).any():
             responses_chunk_list.append(data_chunk[:, col_index])
             continue
