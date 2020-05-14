@@ -219,6 +219,19 @@ def test_regress_out_constants():
     assert_equal(adata, adata_copy)
 
 
+def test_regress_out_constants_equivalent():
+    # Tests that constant values don't change results
+    # (since support for constant values is implemented by us)
+    from sklearn.datasets import make_blobs
+
+    X, cat = make_blobs(100, 20)
+    a = sc.AnnData(np.hstack([X, np.zeros((100, 5))]), obs={"cat": pd.Categorical(cat)})
+    b = sc.AnnData(X, obs={"cat": pd.Categorical(cat)})
+
+    sc.pp.regress_out(a, "cat")
+    sc.pp.regress_out(b, "cat")
+
+    np.testing.assert_equal(a[:, b.var_names].X, b.X)
 @pytest.fixture(params=[lambda x: x.copy(), sp.csr_matrix, sp.csc_matrix])
 def count_matrix_format(request):
     return request.param
