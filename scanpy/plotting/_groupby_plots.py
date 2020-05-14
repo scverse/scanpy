@@ -2459,7 +2459,6 @@ def matrixplot(
     num_categories: int = 7,
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
-    plot_totals: Union[bool, str] = False,
     title: Optional[str] = None,
     colorbar_title: Optional[str] = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
     gene_symbols: Optional[str] = None,
