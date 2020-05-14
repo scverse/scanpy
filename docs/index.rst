@@ -32,8 +32,8 @@ Bioconda, Seurat, Bioconductor, and others.
 .. _32 projects: https://chanzuckerberg.com/eoss/proposals/
 
 
-Latest release
---------------
+Latest additions
+----------------
 
 .. include:: release-latest.rst
 
