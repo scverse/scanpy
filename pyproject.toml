@@ -19,7 +19,6 @@ exclude = '''
     |external/(exporting|tl/_palantir)
     |preprocessing/(
         _qc
-        |_combat
         |_simple
         |_recipes
         |_normalization
@@ -49,7 +48,6 @@ exclude = '''
     |tests/(
         test_get
         |test_pca
-        |test_combat
         |test_neighbors
         |test_readwrite
         |test_clustering

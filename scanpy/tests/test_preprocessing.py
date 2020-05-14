@@ -2,6 +2,7 @@ from itertools import product
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from scipy import sparse as sp
 import scanpy as sc
 from sklearn.utils.testing import assert_allclose
@@ -207,6 +208,31 @@ def test_regress_out_categorical():
 
     multi = sc.pp.regress_out(adata, keys='batch', n_jobs=8, copy=True)
     assert adata.X.shape == multi.X.shape
+
+
+def test_regress_out_constants():
+    adata = AnnData(np.hstack((np.full((10,1),0.0),np.full((10,1),1.0))))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    adata_copy = adata.copy()
+
+    sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'])
+    assert_equal(adata, adata_copy)
+
+
+def test_regress_out_constants_equivalent():
+    # Tests that constant values don't change results
+    # (since support for constant values is implemented by us)
+    from sklearn.datasets import make_blobs
+
+    X, cat = make_blobs(100, 20)
+    a = sc.AnnData(np.hstack([X, np.zeros((100, 5))]), obs={"cat": pd.Categorical(cat)})
+    b = sc.AnnData(X, obs={"cat": pd.Categorical(cat)})
+
+    sc.pp.regress_out(a, "cat")
+    sc.pp.regress_out(b, "cat")
+
+    np.testing.assert_equal(a[:, b.var_names].X, b.X)
 
 
 @pytest.fixture(params=[lambda x: x.copy(), sp.csr_matrix, sp.csc_matrix])
