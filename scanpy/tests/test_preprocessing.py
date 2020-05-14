@@ -2,6 +2,7 @@ from itertools import product
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from scipy import sparse as sp
 import scanpy as sc
 from sklearn.utils.testing import assert_allclose
