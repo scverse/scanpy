@@ -125,63 +125,6 @@ def phenograph(
     **Q** : `float` (:attr:`~anndata.AnnData.uns`, dtype `float`)
         the modularity score for communities on graph.
 
-    Example
-    -------
-    >>> from anndata import AnnData
-    >>> import scanpy as sc
-    >>> import scanpy.external as sce
-    >>> import numpy as np
-    >>> import pandas as pd
-
-    With annotated data as input:
-
-    >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.normalize_per_cell(adata)
-
-    Then do PCA:
-
-    >>> sc.tl.pca(adata, n_comps=100)
-
-    Compute phenograph clusters:
-
-    **Louvain** community detection
-
-    >>> sce.tl.phenograph(adata, clustering_algo="louvain", k=30)
-
-    **Leiden** community detection
-
-    >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=30)
-
-    Return only `Graph` object
-
-    >>> sce.tl.phenograph(adata, clustering_algo=None, k=30)
-
-    Now to show phenograph on tSNE (for example):
-
-    Compute tSNE:
-
-    >>> sc.tl.tsne(adata, random_state=7)
-
-    Plot phenograph clusters on tSNE:
-
-    >>> sc.pl.tsne(
-    ...     adata, color = ["pheno_louvain", "pheno_leiden"], s = 100,
-    ...     palette = sc.pl.palettes.vega_20_scanpy, legend_fontsize = 10
-    ... )
-
-    Cluster and cluster centroids for input Numpy ndarray
-
-    >>> df = np.random.rand(1000, 40)
-    >>> dframe = pd.DataFrame(df)
-    >>> dframe.index, dframe.columns = (map(str, dframe.index), map(str, dframe.columns))
-    >>> adata = AnnData(dframe)
-    >>> sc.tl.pca(adata, n_comps=20)
-    >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
-    >>> sc.tl.tsne(adata, random_state=1)
-    >>> sc.pl.tsne(
-    ...     adata, color=['pheno_leiden'], s=100,
-    ...     palette=sc.pl.palettes.vega_20_scanpy, legend_fontsize=10
-    ... )
     """
     start = logg.info("PhenoGraph clustering")
 
