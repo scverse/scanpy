@@ -1,18 +1,16 @@
 .. role:: small
 .. role:: smaller
 
-On master
-~~~~~~~~~~
+1.5.0 :small:`2020-05-15`
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. rubric:: Performance
+The `1.5.0` release adds a lot of new functionality, much of which takes advantage updates made to :mod:`anndata`. A few highlights of this release include support for 10X's visium platform, a more efficient PCA, and a generalization of how we handle cell by cell graphs. Thanks to all the contributors who made this possible!
 
-.. warning::
+.. rubric:: New functionality – 10X Visium support
 
-   The new :func:`~scanpy.pp.pca` implementation can result in slightly different results than previous releases when passed a sparse matrix. See the pr (:pr:`1066`) and documentation for more info.
-
-- :func:`~scanpy.pp.pca` now uses efficient implicit centering for sparse matrices. This can lead to signifigantly improved performance for large datasets :pr:`1066` :smaller:`A Tarashansky`
-- :func:`~scanpy.tl.score_genes` now has an efficient implementation for sparse matrices with missing values. :pr:`1196` :smaller:`redst4r`.
-
+- :func:`~scanpy.read_visium` read function for Visium data :pr:`1034` :smaller:`G Palla, P Angerer, I Virshup`
+- :func:`~scanpy.datasets.visium_sge` download and import Visium datasets from 10x genomics website :pr:`1013` :smaller:`M Mirkazemi, G Palla, P Angerer`
+- :func:`~scanpy.pl.spatial` plot Visium data :pr:`1012` :smaller:`G Palla, P Angerer` :tutorial:`spatial/basic-analysis` :tutorial:`spatial/integration-scanorama`
 
 .. rubric:: New functionality
 
@@ -27,6 +25,15 @@ On master
 - Added :func:`~scanpy.external.pp.scvi` for fitting scVI model :pr:`1085` :smaller:`G Xing`
 - Added a guide for using :ref:`Scanpy in R <conversion_to_r>` :pr:`1186` :smaller:`L Zappia`
 - Updates to :func:`~scanpy.external.tl.harmony_timeseries` :pr:`#1091` :smaller:`A Mousa`
+
+.. rubric:: Performance
+
+.. warning::
+
+   The new :func:`~scanpy.pp.pca` implementation can result in slightly different results than previous releases when passed a sparse matrix. See the pr (:pr:`1066`) and documentation for more info.
+
+- :func:`~scanpy.pp.pca` now uses efficient implicit centering for sparse matrices. This can lead to signifigantly improved performance for large datasets :pr:`1066` :smaller:`A Tarashansky`
+- :func:`~scanpy.tl.score_genes` now has an efficient implementation for sparse matrices with missing values. :pr:`1196` :smaller:`redst4r`.
 
 .. rubric:: Bug fixes
 
@@ -58,12 +65,6 @@ On master
 - compat with matplotlib 3.1 and 3.2 :pr:`1090` :smaller:`I Virshup, P Angerer`
 - fix PAGA for new igraph :pr:`1037` :smaller:`P Angerer`
 - fix rapids compat of louvain :pr:`1079` :smaller:`LouisFaure`
-
-.. rubric:: New functionality
-
-- :func:`~scanpy.read_visium` read function for Visium data :pr:`1034` :smaller:`G Palla, P Angerer, I Virshup` :tutorial:`spatial/basic-analysis`
-- :func:`~scanpy.datasets.visium_sge` download and import Visium datasets from 10x genomics website :pr:`1013` :smaller:`M Mirkazemi, G Palla, P Angerer` :tutorial:`spatial/basic-analysis`
-- :func:`~scanpy.pl.spatial` plot Visium data :pr:`1012` :smaller:`G Palla, P Angerer` :tutorial:`spatial/basic-analysis` :tutorial:`spatial/integration-scanorama`
 
 1.4.5 :small:`2019-12-30`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
