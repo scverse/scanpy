@@ -1339,7 +1339,7 @@ class DotPlot(BasePlot):
         size_legend_ax.set_title(self.size_title, y=ymax + 0.45, size='small')
 
         xmin, xmax = size_legend_ax.get_xlim()
-        size_legend_ax.set_xlim(xmin, xmax + 0.5)
+        size_legend_ax.set_xlim(xmin-0.15, xmax + 0.5)
 
     def _plot_legend(self, legend_ax, return_ax_dict, normalize):
 
