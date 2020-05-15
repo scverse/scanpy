@@ -10,7 +10,8 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 
 - :func:`~scanpy.read_visium` read function for Visium data :pr:`1034` :smaller:`G Palla, P Angerer, I Virshup`
 - :func:`~scanpy.datasets.visium_sge` download and import Visium datasets from 10x genomics website :pr:`1013` :smaller:`M Mirkazemi, G Palla, P Angerer`
-- :func:`~scanpy.pl.spatial` plot Visium data :pr:`1012` :smaller:`G Palla, P Angerer` :tutorial:`spatial/basic-analysis` :tutorial:`spatial/integration-scanorama`
+- :func:`~scanpy.pl.spatial` plot Visium data :pr:`1012` :smaller:`G Palla, P Angerer`
+- New spatial data tutorials for basic analysis :tutorial:`spatial/basic-analysis` and integration with single cell data :tutorial:`spatial/integration-scanorama`
 
 .. rubric:: New functionality
 
