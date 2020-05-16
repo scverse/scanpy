@@ -9,7 +9,6 @@ from anndata import AnnData
 from leidenalg.VertexPartition import MutableVertexPartition
 from scipy.sparse import spmatrix
 
-from ...neighbors import _Metric
 from ..._compat import Literal
 from ... import logging as logg
 
@@ -22,7 +21,9 @@ def phenograph(
     prune: bool = False,
     min_cluster_size: int = 10,
     jaccard: bool = True,
-    primary_metric: _Metric = 'euclidean',
+    primary_metric: Union[
+        "euclidean", "manhattan", "correlation", "cosine"
+    ] = "euclidean",
     n_jobs: int = -1,
     q_tol: float = 1e-3,
     louvain_time_limit: int = 2000,
