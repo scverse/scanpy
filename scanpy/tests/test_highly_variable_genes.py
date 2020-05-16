@@ -102,26 +102,8 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     np.testing.assert_array_equal(
         seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
     )
-
-    np.testing.assert_allclose(
-        seurat_hvg_info['means'], pbmc.var['means'], rtol=2e-05, atol=2e-05,
-    )
     np.testing.assert_allclose(
         seurat_hvg_info['variances'], pbmc.var['variances'], rtol=2e-05, atol=2e-05,
-    )
-    error = np.abs(
-        seurat_hvg_info['variances_norm'].values - pbmc.var['variances_norm'].values
-    )
-    ind = np.argmax(error)
-    assert (
-        np.max(error) < 0.001
-    ), "Top mismatch {}; scan val {}; seurat val {}; total above error {}, reg std {}, var {}".format(
-        pbmc.var_names[ind],
-        pbmc.var['variances_norm'].values[ind],
-        seurat_hvg_info['variances_norm'].values[ind],
-        np.sum(error >= 0.001),
-        pbmc.var["regularized_std"].values[ind],
-        pbmc.var["variances"].values[ind],
     )
     np.testing.assert_allclose(
         seurat_hvg_info['variances_norm'],
