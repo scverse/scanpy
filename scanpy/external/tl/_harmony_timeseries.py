@@ -12,7 +12,13 @@ from anndata import AnnData
 from ... import logging as logg
 
 
-def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 1000):
+def harmony_timeseries(
+    adata: AnnData,
+    tp: str,
+    n_neighbors: int = 30,
+    n_components: Optional[int] = 1000,
+    n_jobs: int = -2,
+):
     """\
     Harmony time series for data visualization with augmented affinity matrix
     at discrete time points [Nowotschin18i]_.
@@ -40,9 +46,13 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
         where replicates of the same time point are consecutive in order.
     tp
         key name of observation annotation `.obs` representing time points.
+    n_neighbors
+        Number of nearest neighbors for graph construction.
     n_components
         Minimum number of principal components to use. Specify `None` to use
         pre-computed components.
+    n_jobs
+        Nearest Neighbors will be computed in parallel using n_jobs.
 
     Returns
     -------
@@ -110,10 +120,7 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
     try:
         import harmony
     except ImportError:
-        raise ImportError(
-            "\nplease install harmony:\n\n"
-            "\tpip install git+https://github.com/dpeerlab/Harmony.git"
-        )
+        raise ImportError("\nplease install harmony:\n\n\tpip install harmonyTS")
 
     logg.info("Harmony augmented affinity matrix")
 
@@ -122,7 +129,12 @@ def harmony_timeseries(adata: AnnData, tp: str, n_components: Optional[int] = 10
 
     # compute the augmented and non-augmented affinity matrices
     aug_aff, aff = harmony.core.augmented_affinity_matrix(
-        adata.to_df(), adata.obs[tp], timepoint_connections, pc_components=n_components,
+        data_df=adata.to_df(),
+        timepoints=adata.obs[tp],
+        timepoint_connections=timepoint_connections,
+        n_neighbors=n_neighbors,
+        n_jobs=n_jobs,
+        pc_components=n_components,
     )
 
     # Force directed layouts
