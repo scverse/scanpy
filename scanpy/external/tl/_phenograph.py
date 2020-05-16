@@ -1,7 +1,7 @@
 """\
 Perform clustering using PhenoGraph
 """
-from typing import Union, Tuple, Optional, Type
+from typing import Union, Tuple, Optional, Type, Any
 
 import numpy as np
 import pandas as pd
@@ -21,8 +21,8 @@ def phenograph(
     prune: bool = False,
     min_cluster_size: int = 10,
     jaccard: bool = True,
-    primary_metric: Union[
-        "euclidean", "manhattan", "correlation", "cosine"
+    primary_metric: Literal[
+        'euclidean', 'manhattan', 'correlation', 'cosine',
     ] = "euclidean",
     n_jobs: int = -1,
     q_tol: float = 1e-3,
@@ -34,7 +34,7 @@ def phenograph(
     use_weights: bool = True,
     seed: Optional[int] = None,
     copy: bool = False,
-    **kargs,
+    **kargs: Any,
 ) -> Tuple[Optional[np.ndarray], spmatrix, Optional[float]]:
     """\
     PhenoGraph clustering [Levine15]_.
