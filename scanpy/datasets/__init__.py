@@ -10,6 +10,7 @@ from ._datasets import (
     pbmc68k_reduced,
     pbmc3k,
     pbmc3k_processed,
+    pbmc5k_cite_filtered,
     visium_sge,
 )
 from ._ebi_expression_atlas import ebi_expression_atlas

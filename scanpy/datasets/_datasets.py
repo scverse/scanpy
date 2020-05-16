@@ -300,6 +300,29 @@ def pbmc3k_processed() -> AnnData:
         )
 
 
+def pbmc5k_cite_filtered() -> AnnData:
+    """Filtered 5k PBMCs from 10x Genomics.
+
+    Filtered as in [Gayoso20]_ `script <https://github.com/YosefLab/totalVI_reproducibility/blob/master/data/data_filtering_scripts/pbmc_5k_v3/pbmc_5k_v3.py>`__.
+    This uses basic filters on RNA library size, protein library size, and doublets.
+
+    Data sourced from from this `webpage
+    <https://support.10xgenomics.com/single-cell-gene-expression/datasets/3.1.0/5k_pbmc_protein_v3>`__.
+
+    Raw protein counts stored in `.obsm["protein_expression]`. Protein names in `.uns["protein_names"]`
+
+    Returns
+    -------
+    Annotated data matrix.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        return read(
+            settings.datasetdir / 'pbmc_5k_protein_v3.h5ad',
+            backup_url='https://github.com/YosefLab/scVI-data/raw/master/pbmc_5k_protein_v3.h5ad?raw=true',
+        )
+
+
 def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
     """
     Params

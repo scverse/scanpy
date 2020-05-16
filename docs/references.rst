@@ -54,6 +54,10 @@ References
    *Construction of a genetic toggle switch in Escherichia coli*,
    `Nature <https://doi.org/10.1038/35002131>`__.
 
+.. [Gayoso20] Gayoso *et al.* (2020)
+   *Joint probabilistic modeling of paired transcriptome and proteome measurements in single cells*,
+   `bioRxiv <https://www.biorxiv.org/content/10.1101/2020.05.08.083337v2>`__.
+
 .. [Hagberg08] Hagberg *et al.* (2008),
    *Exploring Network Structure, Dynamics, and Function using NetworkX*,
    `Scipy Conference <http://conference.scipy.org/proceedings/SciPy2008/paper_2/>`__.
@@ -190,7 +194,7 @@ References
 
 .. [Svensson20] Svensson *et al.* (2020),
    *Interpretable factor models of single-cell RNA-seq via variational autoencoders*
-   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__. 
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__.
 
 .. [Nowotschin18i] Nowotschin *et al.* (2018),
    *The emergent landscape of the mouse gut endoderm at single-cell resolution*
