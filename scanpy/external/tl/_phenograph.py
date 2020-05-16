@@ -62,34 +62,35 @@ def phenograph(
     k
         Number of nearest neighbors to use in first step of graph construction.
     directed
-        Whether to use a symmetric (default) or asymmetric (“directed”) graph.
-        The graph construction process produces a directed graph,
-        which is symmetrized by one of two methods (see below).
+        Whether to use a symmetric (default) or asymmetric (`'directed'`) graph.
+        The graph construction process produces a directed graph, which is symmetrized
+        by one of two methods (see `prune` below).
     prune
-        Whether to symmetrize by taking the average (`prune=False`) or product
-        (`prune=True`) between the graph and its transpose.
+        `prune=False`, symmetrize by taking the average between the graph and its
+        transpose. `prune=True`, symmetrize by taking the product between the graph
+        and its transpose.
     min_cluster_size
-        Cells that end up in a cluster smaller than min_cluster_size are
-        considered outliers and are assigned to -1 in the cluster labels.
+        Cells that end up in a cluster smaller than min_cluster_size are considered
+        outliers and are assigned to -1 in the cluster labels.
     jaccard
-        If `True`, use Jaccard metric between k-neighborhoods to build graph.
-        If `False`, use a Gaussian kernel.
+        If `True`, use Jaccard metric between k-neighborhoods to build graph. If
+        `False`, use a Gaussian kernel.
     primary_metric
-        Distance metric to define nearest neighbors.
-        Note that performance will be slower for correlation and cosine.
+        Distance metric to define nearest neighbors. Note that performance will be
+        slower for correlation and cosine.
     n_jobs
         Nearest Neighbors and Jaccard coefficients will be computed in parallel using
         n_jobs. If 1 is given, no parallelism is used. If set to -1, all CPUs are used.
         For n_jobs below -1, `n_cpus + 1 + n_jobs` are used.
     q_tol
-        Tolerance (i.e., precision) for monitoring modularity optimization.
+        Tolerance, i.e. precision, for monitoring modularity optimization.
     louvain_time_limit
-        Maximum number of seconds to run modularity optimization.
-        If exceeded the best result so far is returned.
+        Maximum number of seconds to run modularity optimization. If exceeded the best
+        result so far is returned.
     nn_method
         Whether to use brute force or kdtree for nearest neighbor search.
-        For very large high-dimensional data sets, brute force
-        (with parallel computation) performs faster than kdtree.
+        For very large high-dimensional data sets, brute force, with parallel
+        computation, performs faster than kdtree.
     partition_type
         Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`. For the
         available options, consult the documentation for
@@ -97,7 +98,7 @@ def phenograph(
     resolution_parameter
         A parameter value controlling the coarseness of the clustering in Leiden. Higher
         values lead to more clusters. Set to `None` if overriding `partition_type` to
-        one that doesn’t accept a `resolution_parameter`.
+        one that does not accept a `resolution_parameter`.
     n_iterations
         Number of iterations to run the Leiden algorithm. If the number of iterations is
         negative, the Leiden algorithm is run until an iteration in which there was no
