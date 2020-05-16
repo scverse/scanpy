@@ -834,4 +834,3 @@ def test_visium_empty_img_key(image_comparer):
 
     sc.pl.embedding(adata, basis="spatial", color="array_row")
     save_and_compare_images('master_spatial_visium_embedding')
-
