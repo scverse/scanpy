@@ -51,6 +51,7 @@ def describe_obs(
     percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
     layer: Optional[str] = None,
     use_raw: bool = False,
+    log1p: Optional[str] = True,
     inplace: bool = False,
     X=None,
     parallel=None,
@@ -70,6 +71,8 @@ def describe_obs(
     {doc_qc_metric_naming}
     {doc_obs_qc_args}
     {doc_expr_reps}
+    log1p
+        Add `log1p` transformed metrics.
     inplace
         Whether to place calculated metrics in `adata.obs`.
     X
@@ -99,11 +102,13 @@ def describe_obs(
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
     else:
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
-    obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
-        obs_metrics[f"n_{var_type}_by_{expr_type}"]
-    )
+    if log1p:
+        obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
+            obs_metrics[f"n_{var_type}_by_{expr_type}"]
+        )
     obs_metrics[f"total_{expr_type}"] = X.sum(axis=1)
-    obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(obs_metrics[f"total_{expr_type}"])
+    if log1p:
+        obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(obs_metrics[f"total_{expr_type}"])
     if percent_top:
         percent_top = sorted(percent_top)
         proportions = top_segment_proportions(X, percent_top)
@@ -115,9 +120,10 @@ def describe_obs(
         obs_metrics[f"total_{expr_type}_{qc_var}"] = (
             X[:, adata.var[qc_var].values].sum(axis=1)
         )
-        obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
-            obs_metrics[f"total_{expr_type}_{qc_var}"]
-        )
+        if log1p:
+            obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
+                obs_metrics[f"total_{expr_type}_{qc_var}"]
+            )
         obs_metrics[f"pct_{expr_type}_{qc_var}"] = (
             obs_metrics[f"total_{expr_type}_{qc_var}"]
             / obs_metrics[f"total_{expr_type}"]
