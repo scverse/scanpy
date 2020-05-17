@@ -56,7 +56,7 @@ def test_pbmc3k_processed(tmp_dataset_dir):
 @pytest.mark.internet
 def test_pbmc5k_cite_filtered(tmp_dataset_dir):
     adata = sc.datasets.pbmc5k_cite_filtered()
-    adata.obsm["protein_expression"]
+    assert "protein_expression" in adata.obsm.keys()
 
 
 @pytest.mark.internet
