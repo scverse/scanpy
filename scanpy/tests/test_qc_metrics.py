@@ -113,7 +113,8 @@ def test_qc_metrics():
     )
     adata.var["negative"] = False
     sc.pp.calculate_qc_metrics(adata, qc_vars=["mito", "negative"], log1p=False, inplace=True)
-    assert "log1p_total_counts" not in adata.obs.keys()
+    assert not np.any(adata.obs.columns.str.startswith("log1p_"))
+    assert not np.any(adata.var.columns.str.startswith("log1p_"))
 
 
 def adata_mito():
