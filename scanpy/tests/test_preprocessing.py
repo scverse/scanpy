@@ -2,12 +2,15 @@ from itertools import product
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from scipy import sparse as sp
 import scanpy as sc
 from sklearn.utils.testing import assert_allclose
 import pytest
 from anndata import AnnData
-from anndata.tests.helpers import assert_equal
+from anndata.tests.helpers import assert_equal, asarray
+
+from scanpy.tests.helpers import check_rep_mutation, check_rep_results
 
 
 def test_log1p(tmp_path):
@@ -28,6 +31,17 @@ def test_log1p(tmp_path):
     ad4 = AnnData(A)
     sc.pp.log1p(ad4, base=2)
     assert np.allclose(ad4.X, A_l/np.log(2))
+
+
+@pytest.fixture(params=[None, 2])
+def base(request):
+    return request.param
+
+
+def test_log1p_rep(count_matrix_format, base):
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    check_rep_mutation(sc.pp.log1p, X, base=base)
+    check_rep_results(sc.pp.log1p, X, base=base)
 
 
 def test_mean_var_sparse():
@@ -118,6 +132,32 @@ def test_scale():
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
 
 
+@pytest.fixture(params=[True, False])
+def zero_center(request):
+    return request.param
+
+
+def test_scale_rep(count_matrix_format, zero_center):
+    """
+    Test that it doesn't matter where the array being scaled is in the anndata object.
+    """
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
+    check_rep_results(sc.pp.scale, X, zero_center=zero_center)
+
+
+def test_scale_array(count_matrix_format, zero_center):
+    """
+    Test that running sc.pp.scale on an anndata object and an array returns the same results.
+    """
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    adata = sc.AnnData(X=X.copy(), dtype=np.float64)
+
+    sc.pp.scale(adata, zero_center=zero_center)
+    scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
+    assert np.array_equal(asarray(scaled_X), asarray(adata.X))
+
+
 def test_recipe_plotting():
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
@@ -168,6 +208,31 @@ def test_regress_out_categorical():
 
     multi = sc.pp.regress_out(adata, keys='batch', n_jobs=8, copy=True)
     assert adata.X.shape == multi.X.shape
+
+
+def test_regress_out_constants():
+    adata = AnnData(np.hstack((np.full((10,1),0.0),np.full((10,1),1.0))))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    adata_copy = adata.copy()
+
+    sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'])
+    assert_equal(adata, adata_copy)
+
+
+def test_regress_out_constants_equivalent():
+    # Tests that constant values don't change results
+    # (since support for constant values is implemented by us)
+    from sklearn.datasets import make_blobs
+
+    X, cat = make_blobs(100, 20)
+    a = sc.AnnData(np.hstack([X, np.zeros((100, 5))]), obs={"cat": pd.Categorical(cat)})
+    b = sc.AnnData(X, obs={"cat": pd.Categorical(cat)})
+
+    sc.pp.regress_out(a, "cat")
+    sc.pp.regress_out(b, "cat")
+
+    np.testing.assert_equal(a[:, b.var_names].X, b.X)
 
 
 @pytest.fixture(params=[lambda x: x.copy(), sp.csr_matrix, sp.csc_matrix])

@@ -60,6 +60,12 @@ Map labels and embeddings of reference data to new data: :tutorial:`integrating-
    :width: 350px
 
 
+Spatial data
+------------
+
+Basic analysis of spatial data: :tutorial:`spatial/basic-analysis`.
+
+
 Further Tutorials
 -----------------
 
@@ -69,6 +75,13 @@ Conversion: AnnData, SingleCellExperiment, and Seurat objects
 See the `Seurat to AnnData`_ notebook for a tutorial on `anndata2ri`.
 
 .. _Seurat to AnnData: https://github.com/LuckyMD/Code_snippets/blob/master/Seurat_to_anndata.ipynb
+
+See the `Scanpy in R`_ guide for a tutorial on interacting with Scanpy from R.
+
+.. _Scanpy in R: https://theislab.github.io/scanpy-in-R/
+
+.. image:: https://github.com/theislab/scanpy-in-R/raw/master/logo.png
+   :width: 350px
 
 Regressing out cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~~~
