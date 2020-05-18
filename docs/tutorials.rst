@@ -73,6 +73,8 @@ Spatial data
 Further Tutorials
 -----------------
 
+.. _conversion_to_r:
+
 Conversion: AnnData, SingleCellExperiment, and Seurat objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
