@@ -106,6 +106,17 @@ def test_qc_metrics():
         assert np.allclose(adata.obs[col], old_obs[col])
     for col in adata.var:
         assert np.allclose(adata.var[col], old_var[col])
+    # with log1p=False
+    adata = AnnData(X=sparse.csr_matrix(np.random.binomial(100, 0.005, (1000, 1000))))
+    adata.var["mito"] = np.concatenate(
+        (np.ones(100, dtype=bool), np.zeros(900, dtype=bool))
+    )
+    adata.var["negative"] = False
+    sc.pp.calculate_qc_metrics(
+        adata, qc_vars=["mito", "negative"], log1p=False, inplace=True
+    )
+    assert not np.any(adata.obs.columns.str.startswith("log1p_"))
+    assert not np.any(adata.var.columns.str.startswith("log1p_"))
 
 
 def adata_mito():

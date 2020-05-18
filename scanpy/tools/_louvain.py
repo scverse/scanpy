@@ -6,6 +6,7 @@ import pandas as pd
 from anndata import AnnData
 from natsort import natsorted
 from scipy.sparse import spmatrix
+from packaging import version
 
 from ._utils_clustering import rename_groups, restrict_adjacency
 from .. import _utils, logging as logg
@@ -140,8 +141,11 @@ def louvain(
                 partition_kwargs["resolution_parameter"] = resolution
             if use_weights:
                 partition_kwargs["weights"] = weights
+            if version.parse(louvain.__version__) < version.parse("0.7.0"):
+                louvain.set_rng_seed(random_state)
+            else:
+                partition_kwargs["seed"] = random_state
             logg.info('    using the "louvain" package of Traag (2017)')
-            louvain.set_rng_seed(random_state)
             part = louvain.find_partition(
                 g, partition_type,
                 **partition_kwargs,
