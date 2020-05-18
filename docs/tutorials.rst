@@ -63,7 +63,11 @@ Map labels and embeddings of reference data to new data: :tutorial:`integrating-
 Spatial data
 ------------
 
-Basic analysis of spatial data: :tutorial:`spatial/basic-analysis`.
+Basic analysis of spatial data: :tutorial:`spatial/basic-analysis`
+Integrating spatial data with scRNA-seq using scanorama: :tutorial:`spatial/integration-scanorama`
+
+.. image:: https://scanpy-tutorials.readthedocs.io/en/latest/_images/spatial_integration-scanorama_22_1.png
+   :width: 350px
 
 
 Further Tutorials
