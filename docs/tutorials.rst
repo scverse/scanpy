@@ -24,9 +24,6 @@ known marker genes.
 
 For more possibilities on visualizing marker genes: :tutorial:`visualizing-marker-genes`
 
-.. image:: https://scanpy-tutorials.readthedocs.io/en/latest//_images/visualizing-marker-genes_21_0.png
-   :width: 250px
-
 
 Trajectory inference
 --------------------
@@ -63,25 +60,30 @@ Map labels and embeddings of reference data to new data: :tutorial:`integrating-
 Spatial data
 ------------
 
-Basic analysis of spatial data: :tutorial:`spatial/basic-analysis`.
+* Basic analysis of spatial data: :tutorial:`spatial/basic-analysis`
+* Integrating spatial data with scRNA-seq using scanorama: :tutorial:`spatial/integration-scanorama`
+
+.. image:: https://scanpy-tutorials.readthedocs.io/en/latest/_images/spatial_integration-scanorama_23_0.png
+   :width: 350px
 
 
 Further Tutorials
 -----------------
 
+.. _conversion_to_r:
+
 Conversion: AnnData, SingleCellExperiment, and Seurat objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-See the `Seurat to AnnData`_ notebook for a tutorial on `anndata2ri`.
+.. image:: https://github.com/theislab/scanpy-in-R/raw/master/logo.png
+   :width: 200px
+   :align: right
+
+* See `Seurat to AnnData`_ for a tutorial on `anndata2ri`.
+* See the `Scanpy in R`_ guide for a tutorial on interacting with Scanpy from R.
 
 .. _Seurat to AnnData: https://github.com/LuckyMD/Code_snippets/blob/master/Seurat_to_anndata.ipynb
-
-See the `Scanpy in R`_ guide for a tutorial on interacting with Scanpy from R.
-
 .. _Scanpy in R: https://theislab.github.io/scanpy-in-R/
-
-.. image:: https://github.com/theislab/scanpy-in-R/raw/master/logo.png
-   :width: 350px
 
 Regressing out cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -97,7 +99,7 @@ Scaling Computations
    :width: 120px
    :align: right
 
-Visualize and cluster `1.3M neurons`_ from 10x Genomics.
+* Visualize and cluster `1.3M neurons`_ from 10x Genomics.
 
 .. _1.3M neurons: https://github.com/theislab/scanpy_usage/tree/master/170522_visualizing_one_million_cells
 
@@ -113,8 +115,8 @@ Simulating single cells using literature-curated gene regulatory networks [Wittm
    :width: 100px
    :align: right
 
-- Notebook for `myeloid differentiation`_
-- Notebook for simple toggleswitch_
+* Notebook for `myeloid differentiation`_
+* Notebook for simple toggleswitch_
 
 .. _myeloid differentiation: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170430_krumsiek11/krumsiek11.ipynb
 .. _toggleswitch: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170430_krumsiek11/toggleswitch.ipynb
@@ -125,7 +127,6 @@ Images
 See pseudotime-time inference on deep-learning based features for `cell cycle reconstruction`_ from image data [Eulenberg17]_.
 
 .. _cell cycle reconstruction: https://github.com/theislab/scanpy_usage/tree/master/170529_images
-
 
 ..
     User Examples
