@@ -37,7 +37,7 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 - :func:`~scanpy.pl.stacked_violin` can now be used as a subplot :pr:`1084` :smaller:`P Angerer`
 - :func:`~scanpy.tl.score_genes` has improved logging :pr:`1119` :smaller:`G Eraslan`
 - :func:`~scanpy.pp.scale` now saves mean and standard deviation in the :attr:`~anndata.AnnData.var` :pr:`1173` :smaller:`A Wolf`
-- :func:`~scanpy.external.tl.harmony_timeseries` :pr:`#1091` :smaller:`A Mousa`
+- :func:`~scanpy.external.tl.harmony_timeseries` :pr:`1091` :smaller:`A Mousa`
 
 .. rubric:: Bug fixes
 
