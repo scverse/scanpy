@@ -63,8 +63,8 @@ Spatial data
 * Basic analysis of spatial data: :tutorial:`spatial/basic-analysis`
 * Integrating spatial data with scRNA-seq using scanorama: :tutorial:`spatial/integration-scanorama`
 
-.. image:: https://scanpy-tutorials.readthedocs.io/en/latest/_images/spatial_integration-scanorama_23_0.png
-   :width: 350px
+.. image:: _static/img/spatial-basic-analysis.png
+   :width: 250px
 
 
 Further Tutorials
@@ -92,12 +92,13 @@ See the `cell cycle`_ notebook.
 
 .. _cell cycle: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb
 
-Scaling Computations
-~~~~~~~~~~~~~~~~~~~~
-
 .. image:: http://falexwolf.de/img/scanpy_usage/170522_visualizing_one_million_cells/tsne_1.3M.png
    :width: 120px
    :align: right
+
+
+Scaling Computations
+~~~~~~~~~~~~~~~~~~~~
 
 * Visualize and cluster `1.3M neurons`_ from 10x Genomics.
 
@@ -110,9 +111,6 @@ Simulating single cells using literature-curated gene regulatory networks [Wittm
 
 .. image:: http://falexwolf.de/img/scanpy_usage/170430_krumsiek11/timeseries.png
    :width: 200px
-   :align: right
-.. image:: http://falexwolf.de/img/scanpy_usage/170430_krumsiek11/draw_graph.png
-   :width: 100px
    :align: right
 
 * Notebook for `myeloid differentiation`_
