@@ -4,7 +4,7 @@
 1.5.0 :small:`2020-05-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The `1.5.0` release adds a lot of new functionality, much of which takes advantage of :mod:`anndata` updates `0.7.0 - 0.7.2`.
+The `1.5.0` release adds a lot of new functionality, much of which takes advantage of :mod:`anndata` updates `0.7.0 - 0.7.2`. Highlights of this release include support for spatial data, dedicated handling of graphs in AnnData, sparse PCA, an interface with scvi, and others.
 
 .. rubric:: Spatial data support
 
@@ -47,7 +47,7 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 - :func:`~scanpy.pp.normalize_total` errored if the passed object was a view :pr:`1200` :smaller:`I Virshup`
 - :func:`~scanpy.pp.neighbors` sometimes ignored the `n_pcs` param :pr:`1124` :smaller:`V Bergen`
 - :func:`~scanpy.datasets.ebi_expression_atlas` which contained some out-of-date URLs :pr:`1102` :smaller:`I Virshup`
-- :func:`~scanpy.tl.ingest` for UMAP `v0.4+` :pr:`1165` :smaller:`S Rybakov`
-- :func:`~scanpy.tl.louvain` for louvain `v0.6+` :pr:`1197` :smaller:`I Virshup`
+- :func:`~scanpy.tl.ingest` for UMAP `0.4` :pr:`1165` :smaller:`S Rybakov`
+- :func:`~scanpy.tl.louvain` for Louvain `0.6` :pr:`1197` :smaller:`I Virshup`
 - :func:`~scanpy.pp.highly_variable_genes` which could lead to incorrect results when the `batch_key` argument was used :pr:`1180` :smaller:`G Eraslan`
 - :func:`~scanpy.tl.ingest` where an inconsistent number of neighbors was used :pr:`1111` :smaller:`S Rybakov`
