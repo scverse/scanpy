@@ -24,9 +24,6 @@ known marker genes.
 
 For more possibilities on visualizing marker genes: :tutorial:`visualizing-marker-genes`
 
-.. image:: https://scanpy-tutorials.readthedocs.io/en/latest//_images/visualizing-marker-genes_21_0.png
-   :width: 250px
-
 
 Trajectory inference
 --------------------
