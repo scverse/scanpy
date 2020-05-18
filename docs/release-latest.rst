@@ -4,9 +4,9 @@
 1.5.0 :small:`2020-05-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The `1.5.0` release adds a lot of new functionality, much of which takes advantage updates made to :mod:`anndata`. A few highlights of this release include support for 10X's visium platform, a more efficient PCA, and a generalization of how we handle cell by cell graphs. Thanks to all the contributors who made this possible!
+The `1.5.0` release adds a lot of new functionality, much of which takes advantage updates made to :mod:`anndata`. A few highlights of this release include support for 10x's visium platform, a more efficient PCA, and a generalization of how we handle cell by cell graphs.
 
-.. rubric:: New functionality – 10X Visium support
+.. rubric:: New functionality – 10x Visium support
 
 - :func:`~scanpy.read_visium` read function for Visium data :pr:`1034` :smaller:`G Palla, P Angerer, I Virshup`
 - :func:`~scanpy.datasets.visium_sge` download and import Visium datasets from 10x genomics website :pr:`1013` :smaller:`M Mirkazemi, G Palla, P Angerer`
