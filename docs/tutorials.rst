@@ -69,6 +69,8 @@ Basic analysis of spatial data: :tutorial:`spatial/basic-analysis`.
 Further Tutorials
 -----------------
 
+.. _conversion_to_r:
+
 Conversion: AnnData, SingleCellExperiment, and Seurat objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
