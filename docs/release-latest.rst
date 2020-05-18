@@ -46,3 +46,5 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 - Fixed out of date urls in :func:`~scanpy.datasets.ebi_expression_atlas` :pr:`1102` :smaller:`I Virshup`
 - Fix :func:`~scanpy.tl.ingest` for UMAP `v0.4+` :pr:`1165` :smaller:`S Rybakov`
 - Fix :func:`~scanpy.tl.louvain` for louvain `v0.6+` :pr:`1197` :smaller:`I Virshup`
+- Fixed a bug in :func:`~scanpy.pp.highly_variable_genes` which could lead to incorrect results when the `batch_key` argument was used :pr:`1180` :smaller:`G Eraslan`
+- Fixed a bug in :func:`~scanpy.tl.ingest` where the wrong number of neighbors was used :pr:`1111` :smaller:`S Rybakov`
