@@ -66,7 +66,7 @@ Spatial data
 * Basic analysis of spatial data: :tutorial:`spatial/basic-analysis`
 * Integrating spatial data with scRNA-seq using scanorama: :tutorial:`spatial/integration-scanorama`
 
-.. image:: https://scanpy-tutorials.readthedocs.io/en/latest/_images/spatial_integration-scanorama_22_1.png
+.. image:: https://scanpy-tutorials.readthedocs.io/en/latest/_images/spatial_integration-scanorama_23_0.png
    :width: 350px
 
 
