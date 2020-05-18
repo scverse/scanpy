@@ -112,7 +112,9 @@ def test_qc_metrics():
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool))
     )
     adata.var["negative"] = False
-    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito", "negative"], log1p=False, inplace=True)
+    sc.pp.calculate_qc_metrics(
+        adata, qc_vars=["mito", "negative"], log1p=False, inplace=True
+    )
     assert not np.any(adata.obs.columns.str.startswith("log1p_"))
     assert not np.any(adata.var.columns.str.startswith("log1p_"))
 
