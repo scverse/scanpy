@@ -87,6 +87,19 @@ def test_neighbors(adatas):
     assert percent_correct > 0.99
 
 
+@pytest.mark.parametrize('n', [3, 4])
+def test_neighbors_defaults(adatas, n):
+    adata_ref = adatas[0].copy()
+    adata_new = adatas[1].copy()
+
+    sc.pp.neighbors(adata_ref, n_neighbors=n)
+
+    ing = sc.tl.Ingest(adata_ref)
+    ing.fit(adata_new)
+    ing.neighbors()
+    assert ing._indices.shape[1] == n
+
+
 @pytest.mark.skipif(
     pkg_version("anndata") < sc.tl._ingest.ANNDATA_MIN_VERSION,
     reason="`AnnData.concatenate` does not concatenate `.obsm` in old anndata versions",
