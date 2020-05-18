@@ -186,9 +186,11 @@ class Ingest:
     """
 
     def _init_umap(self, adata):
-        from umap import UMAP
+        import umap as u
 
-        self._umap = UMAP(
+        u.umap_._HAVE_PYNNDESCENT = False
+
+        self._umap = u.UMAP(
             metric=self._metric,
             random_state=adata.uns['umap']['params'].get('random_state', 0),
         )
