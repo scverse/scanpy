@@ -9,7 +9,6 @@ skip-string-normalization = true
 exclude = '''
 /build/.*
 |/scanpy/(
-    get
     |__init__
     |logging
     |_utils
