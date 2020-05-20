@@ -118,13 +118,13 @@ def phenograph(
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    **communities** : :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obs`, dtype `int`)
+    **communities** :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obs`, dtype `int`)
         integer array of community assignments for each row in data.
 
-    **graph** : :class:`scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
+    **graph** :class:`scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
         the graph that was used for clustering.
 
-    **Q** : `float` (:attr:`~anndata.AnnData.uns`, dtype `float`)
+    **Q** `float` (:attr:`~anndata.AnnData.uns`, dtype `float`)
         the modularity score for communities on graph.
 
     Example
