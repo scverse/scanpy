@@ -6,10 +6,10 @@ from typing import Union, Tuple, Optional, Type, Any
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from leidenalg.VertexPartition import MutableVertexPartition
 from scipy.sparse import spmatrix
 
 from ..._compat import Literal
+from ...tools._leiden import MutableVertexPartition
 from ... import logging as logg
 
 
