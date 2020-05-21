@@ -2,8 +2,11 @@ import pytest
 import numpy as np
 from anndata import AnnData
 from scipy.sparse import csr_matrix
+from scipy import sparse
 
 import scanpy as sc
+from scanpy.tests.fixtures import array_type, float_dtype
+from anndata.tests.helpers import assert_equal
 
 A_list = [
     [0, 0, 7, 0, 0],
@@ -33,9 +36,8 @@ A_svd = np.array([
 ])
 
 
-@pytest.mark.parametrize('typ', [np.array, csr_matrix])
-def test_pca_transform(typ):
-    A = typ(A_list, dtype='float32')
+def test_pca_transform(array_type):
+    A = array_type(A_list).astype('float32')
     A_pca_abs = np.abs(A_pca)
     A_svd_abs = np.abs(A_svd)
 
@@ -68,15 +70,12 @@ def test_pca_shapes():
         sc.pp.pca(adata, n_comps=100)
 
 
-def test_pca_sparse():
+def test_pca_sparse(pbmc3k_normalized):
     """
     Tests that implicitly centered pca on sparse arrays returns equivalent results to
     explicit centering on dense arrays.
     """
-    pbmc = sc.datasets.pbmc3k()
-    pbmc.X = pbmc.X.astype(np.float64)
-    sc.pp.filter_genes(pbmc, min_cells=1)
-    sc.pp.log1p(pbmc)
+    pbmc = pbmc3k_normalized
 
     pbmc_dense = pbmc.copy()
     pbmc_dense.X = pbmc_dense.X.toarray()
@@ -90,3 +89,18 @@ def test_pca_sparse():
     )
     assert np.allclose(implicit.obsm['X_pca'], explicit.obsm['X_pca'])
     assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
+
+
+# This will take a while to run, but irreproducibility may
+# not show up for float32 unless the matrix is large enough
+def test_pca_reproducible(pbmc3k_normalized, array_type, float_dtype):
+    pbmc = pbmc3k_normalized
+    pbmc.X = array_type(pbmc.X)
+
+    a = sc.pp.pca(pbmc, copy=True, dtype=float_dtype, random_state=42)
+    b = sc.pp.pca(pbmc, copy=True, dtype=float_dtype, random_state=42)
+    c = sc.pp.pca(pbmc, copy=True, dtype=float_dtype, random_state=0)
+
+    assert_equal(a, b)
+    # Test that changing random seed changes result
+    assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
