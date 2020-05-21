@@ -1,6 +1,13 @@
 .. role:: small
 .. role:: smaller
 
+On master
+~~~~~~~~~
+
+.. rubric:: Bug fixes
+
+- Fixed a bug in :func:`~scanpy.pp.pca`, where `random_state` did not have an effect for sparse input :pr:`1240` :smaller:`I Virshup`
+
 1.5.0 :small:`2020-05-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
