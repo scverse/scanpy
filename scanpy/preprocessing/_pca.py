@@ -94,9 +94,6 @@ def pca(
     chunk_size
         Number of observations to include in each chunk.
         Required if `chunked=True` was passed.
-    pca_sparse
-        If `True`, uses the `'arpack'` solver in `scipy.sparse.linalg.svds`
-        with implicit mean centering on the sparse data.
 
     Returns
     -------
