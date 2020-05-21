@@ -47,7 +47,6 @@ exclude = '''
     )
     |tests/(
         test_get
-        |test_pca
         |test_neighbors
         |test_readwrite
         |test_clustering
