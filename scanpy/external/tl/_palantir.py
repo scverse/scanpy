@@ -186,14 +186,16 @@ def palantir(
     things.
     """
 
-    logg.info('Palantir diffusion maps')
+    _check_import()
+    from palantir.utils import (
+        run_diffusion_maps,
+        determine_multiscale_space,
+        run_magic_imputation,
+    )
 
-    try:
-        import palantir
-    except ImportError:
-        raise ImportError('\nplease install palantir:\n\tpip install palantir')
     adata = adata.copy() if copy else adata
-    logg.info('Diffusion maps in progress ...')
+
+    logg.info('Palantir Diffusion Maps in progress ...')
 
     if use_adjacency_matrix:
         df = adata.obsp[distances_key] if distances_key else adata.obsp["distances"]
@@ -201,16 +203,14 @@ def palantir(
         df = pd.DataFrame(adata.obsm['X_pca'], index=adata.obs_names)
 
     # Diffusion maps
-    dm_res = palantir.utils.run_diffusion_maps(
+    dm_res = run_diffusion_maps(
         data_df=df, n_components=n_components, knn=knn, alpha=alpha,
     )
     # Determine the multi scale space of the data
-    ms_data = palantir.utils.determine_multiscale_space(dm_res=dm_res, n_eigs=n_eigs)
+    ms_data = determine_multiscale_space(dm_res=dm_res, n_eigs=n_eigs)
 
     # MAGIC imputation
-    imp_df = palantir.utils.run_magic_imputation(
-        data=adata.to_df(), dm_res=dm_res, n_steps=n_steps,
-    )
+    imp_df = run_magic_imputation(data=adata.to_df(), dm_res=dm_res, n_steps=n_steps)
 
     (
         adata.obsm['palantir_diff_comp'],
@@ -279,13 +279,11 @@ def palantir_results(
     """
     logg.info('Palantir computing waypoints..')
 
-    try:
-        import palantir
-    except ImportError:
-        raise ImportError('\nplease install palantir:\n\tpip install palantir')
+    _check_import()
+    from palantir.core import run_palantir
 
     ms_data = pd.DataFrame(adata.obsm[ms_data], index=adata.obs_names)
-    pr_res = palantir.core.run_palantir(
+    pr_res = run_palantir(
         ms_data=ms_data,
         early_cell=early_cell,
         terminal_states=terminal_states,
@@ -298,3 +296,11 @@ def palantir_results(
     )
 
     return pr_res
+
+
+def _check_import():
+    try:
+        import palantir
+    except ImportError:
+        raise ImportError('\nplease install palantir:\n\tpip install palantir')
+
