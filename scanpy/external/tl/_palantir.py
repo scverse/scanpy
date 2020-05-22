@@ -124,11 +124,11 @@ def palantir(
     Palantir determines the diffusion maps of the data as an estimate of the low
     dimensional phenotypic manifold of the data.
 
-    >>> sce.tl.palantir.palantir_dm(adata, n_components=5, knn=30)
+    >>> sce.tl.palantir(adata, n_components=5, knn=30)
 
     if pre-computed distances are to be used,
 
-    >>> sce.tl.palantir.palantir(
+    >>> sce.tl.palantir(
     ...     adata,
     ...     n_components=5,
     ...     knn=30,
@@ -167,7 +167,7 @@ def palantir(
     `termine_states` parameter.
 
     >>> start_cell = 'Run5_164698952452459'
-    >>> pr_res = sce.tl.palantir.palantir_results(
+    >>> pr_res = sce.tl.palantir_results(
     ...     adata,
     ...     early_cell=start_cell,
     ...     ms_data='palantir_multiscale',
@@ -287,7 +287,7 @@ def palantir_results(
     ms_data = pd.DataFrame(adata.obsm[ms_data], index=adata.obs_names)
     pr_res = palantir.core.run_palantir(
         ms_data=ms_data,
-        start_cell=early_cell,
+        early_cell=early_cell,
         terminal_states=terminal_states,
         knn=knn,
         num_waypoints=num_waypoints,
