@@ -17,6 +17,7 @@ def palantir(
     use_adjacency_matrix: bool = False,
     distances_key: Optional[str] = None,
     n_eigs: int = None,
+    impute_data: bool = True,
     n_steps: int = 3,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -54,6 +55,8 @@ def palantir(
         Number of eigen vectors to use. If `None` specified, the number of eigen
         vectors will be determined using eigen gap. Passed to
         `palantir.utils.determine_multiscale_space`.
+    impute_data
+        Impute data using MAGIC.
     n_steps
         Number of steps in the diffusion operator. Passed to
         `palantir.utils.run_magic_imputation`.
@@ -210,20 +213,24 @@ def palantir(
     ms_data = determine_multiscale_space(dm_res=dm_res, n_eigs=n_eigs)
 
     # MAGIC imputation
-    imp_df = run_magic_imputation(data=adata.to_df(), dm_res=dm_res, n_steps=n_steps)
+    if impute_data:
+        imp_df = run_magic_imputation(
+            data=adata.to_df(),
+            dm_res=dm_res,
+            n_steps=n_steps
+        )
+        adata.layers['palantir_imp'] = imp_df
 
     (
         adata.obsm['palantir_diff_comp'],
         adata.uns['palantir_EigenValues'],
         adata.obsp['palantir_diff_op'],
         adata.obsm['palantir_multiscale'],
-        adata.layers['palantir_imp'],
     ) = (
         dm_res['EigenVectors'].to_numpy(),
         dm_res['EigenValues'].to_numpy(),
         dm_res['T'],
         ms_data.to_numpy(),
-        imp_df,
     )
 
     return adata if copy else None
