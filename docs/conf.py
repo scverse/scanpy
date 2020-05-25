@@ -147,4 +147,5 @@ nitpick_ignore = [
     # Won’t be documented
     ('py:class', 'scanpy.plotting._utils._AxesSubplot'),
     ('py:class', 'scanpy._utils.Empty'),
+    ('py:class', 'numpy.random.mtrand.RandomState'),
 ]

@@ -1,6 +1,21 @@
 .. role:: small
 .. role:: smaller
 
+On master
+~~~~~~~~~~~~
+
+.. rubric:: Bug fixes
+
+- Bumped version requirement of `scipy` to `scipy>1.4` to support `rmatmat` argument of `LinearOperator` :issue:`1246`
+
+1.5.1 :small:`2020-05-21`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Bug fixes
+
+- Fixed a bug in :func:`~scanpy.pp.pca`, where `random_state` did not have an effect for sparse input :pr:`1240` :smaller:`I Virshup`
+- Fixed docstring in :func:`~scanpy.pp.pca` which included an unused argument :pr:`1240` :smaller:`I Virshup`
+
 1.5.0 :small:`2020-05-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
