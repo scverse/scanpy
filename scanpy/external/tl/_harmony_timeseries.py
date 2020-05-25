@@ -58,20 +58,22 @@ def harmony_timeseries(
         variance.
     n_jobs
         Nearest Neighbors will be computed in parallel using n_jobs.
+    copy
+        Return a copy instead of writing to `adata`.
 
     Returns
     -------
-    Updates `.obsm`, `.obsp` and `.uns` with the following:
+    Depending on `copy`, returns or updates `.obsm`, `.obsp` and `.uns` with the following:
 
-    `.obsm['X_harmony']`
+    **X_harmony** - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obsm`, dtype `float`)
         force directed layout
-    `.obsp['harmony_aff']`
+    **harmony_aff** - :class:`~scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
         affinity matrix
-    `.obsp['harmony_aff_aug']`
+    **harmony_aff_aug** - :class:`~scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
         augmented affinity matrix
-    `.uns['harmony_timepoint_var']`
+    **harmony_timepoint_var** - `str` (:attr:`~anndata.AnnData.uns`)
         The name of the variable passed as `tp`
-    `.uns['harmony_timepoint_connections']`
+    **harmony_timepoint_connections** - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.uns`, dtype `str`)
         The links between time points
 
     Example
