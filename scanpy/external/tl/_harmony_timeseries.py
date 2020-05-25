@@ -18,7 +18,8 @@ def harmony_timeseries(
     n_neighbors: int = 30,
     n_components: Optional[int] = 1000,
     n_jobs: int = -2,
-):
+    copy: bool = False,
+) -> Optional[AnnData]:
     """\
     Harmony time series for data visualization with augmented affinity matrix
     at discrete time points [Nowotschin18i]_.
@@ -45,12 +46,16 @@ def harmony_timeseries(
         cells and columns to genes. Rows represent two or more time points,
         where replicates of the same time point are consecutive in order.
     tp
-        key name of observation annotation `.obs` representing time points.
+        key name of observation annotation `.obs` representing time points. Time
+        points should be categorical of `dtype=category`. The unique categories for
+        the categorical will be used as the time points to construct the timepoint
+        connections.
     n_neighbors
         Number of nearest neighbors for graph construction.
     n_components
         Minimum number of principal components to use. Specify `None` to use
-        pre-computed components.
+        pre-computed components. The higher the value the better to capture 85% of the
+        variance.
     n_jobs
         Nearest Neighbors will be computed in parallel using n_jobs.
 
@@ -73,6 +78,7 @@ def harmony_timeseries(
     -------
 
     >>> from itertools import product
+    >>> import pandas as pd
     >>> from anndata import AnnData
     >>> import scanpy as sc
     >>> import scanpy.external as sce
@@ -93,7 +99,10 @@ def harmony_timeseries(
     ...     batch_key="sample",
     ...     batch_categories=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
     ... )
-    >>> adata.obs["time_points"] = adata.obs["sample"].str.split("_", expand=True)[0]
+    >>> time_points = adata.obs["sample"].str.split("_", expand=True)[0]
+    >>> adata.obs["time_points"] = pd.Categorical(
+    ....    time_points, categories=['sa1', 'sa2', 'sa3']
+    ... )
 
     Normalize and filter for highly expressed genes
 
@@ -103,7 +112,7 @@ def harmony_timeseries(
 
     Run harmony_timeseries
 
-    >>> sce.tl.harmony_timeseries(adata, tp="time_points", n_components=None)
+    >>> sce.tl.harmony_timeseries(adata, tp="time_points", n_components=500)
 
     Plot time points:
 
@@ -122,9 +131,12 @@ def harmony_timeseries(
     except ImportError:
         raise ImportError("\nplease install harmony:\n\n\tpip install harmonyTS")
 
+    adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")
 
-    timepoints = adata.obs[tp].unique().tolist()
+    if adata.obs[tp].dtype.name != 'category':
+        raise ValueError(f'{tp!r} column does not contain Categorical data')
+    timepoints = adata.obs[tp].cat.categories.tolist()
     timepoint_connections = pd.DataFrame(np.array([timepoints[:-1], timepoints[1:]]).T)
 
     # compute the augmented and non-augmented affinity matrices
@@ -145,3 +157,5 @@ def harmony_timeseries(
     adata.obsp["harmony_aff_aug"] = aug_aff
     adata.uns["harmony_timepoint_var"] = tp
     adata.uns["harmony_timepoint_connections"] = np.asarray(timepoint_connections)
+
+    return adata if copy else None
