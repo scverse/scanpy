@@ -148,7 +148,7 @@ def palantir(
     Palantir constructs the tSNE map in the embedded space since these maps better
     represent the differentiation trajectories.
 
-    >>> sc.tl.tsne(adata, n_pcs=2, use_rep='palantir_multiscale', perplexity=150)
+    >>> sc.tl.tsne(adata, n_pcs=2, use_rep='X_palantir_multiscale', perplexity=150)
 
     *tsne by cell size*
 
@@ -173,7 +173,7 @@ def palantir(
     >>> pr_res = sce.tl.palantir_results(
     ...     adata,
     ...     early_cell=start_cell,
-    ...     ms_data='palantir_multiscale',
+    ...     ms_data='X_palantir_multiscale',
     ...     num_waypoints=500,
     ... )
 
@@ -239,7 +239,7 @@ def palantir(
 def palantir_results(
     adata: AnnData,
     early_cell: str,
-    ms_data: str = 'palantir_multiscale',
+    ms_data: str = 'X_palantir_multiscale',
     terminal_states: List = None,
     knn: int = 30,
     num_waypoints: int = 1200,
