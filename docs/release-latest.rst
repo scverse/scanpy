@@ -1,6 +1,13 @@
 .. role:: small
 .. role:: smaller
 
+On master
+~~~~~~~~~~~~
+
+.. rubric:: Bug fixes
+
+- Bumped version requirement of `scipy` to `scipy>1.4` to support `rmatmat` argument of `LinearOperator` :issue:`1246`
+
 1.5.1 :small:`2020-05-21`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
