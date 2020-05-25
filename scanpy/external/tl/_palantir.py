@@ -70,7 +70,7 @@ def palantir(
     **Diffusion maps**,
         used for magic imputation, and to generate multi-scale data matrix,
 
-        - palantir_diff_comp - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obsm`, dtype `float`)
+        - X_palantir_diff_comp - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obsm`, dtype `float`)
             Array of Diffusion components.
         - palantir_EigenValues - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.uns`, dtype `float`)
             Array of corresponding eigen values.
@@ -81,7 +81,7 @@ def palantir(
         used to build tsne on diffusion components, and to compute branch probabilities
         and waypoints,
 
-        - palantir_multiscale - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obsm`, dtype `float`)
+        - X_palantir_multiscale - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obsm`, dtype `float`)
             Multi scale data matrix.
 
     **MAGIC imputation**,
@@ -222,10 +222,10 @@ def palantir(
         adata.layers['palantir_imp'] = imp_df
 
     (
-        adata.obsm['palantir_diff_comp'],
+        adata.obsm['X_palantir_diff_comp'],
         adata.uns['palantir_EigenValues'],
         adata.obsp['palantir_diff_op'],
-        adata.obsm['palantir_multiscale'],
+        adata.obsm['X_palantir_multiscale'],
     ) = (
         dm_res['EigenVectors'].to_numpy(),
         dm_res['EigenValues'].to_numpy(),
