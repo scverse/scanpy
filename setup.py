@@ -42,7 +42,7 @@ setup(
         ],
         test=[
             'pytest>=4.4',
-            'dask[array]',
+            'dask[array]!=2.17.0',
             'fsspec',
             'zappy',
             'zarr',
