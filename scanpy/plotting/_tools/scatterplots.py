@@ -778,7 +778,7 @@ def spatial(
             (k for k in ['hires', 'lowres'] if k in spatial_data['images']), None,
         )
 
-    if img_key is None and size is None:
+    if size is None:
         size = 1.0
 
     return embedding(
