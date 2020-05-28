@@ -5,7 +5,6 @@ import warnings
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from tqdm.auto import tqdm
 
 from .. import logging as logg, _utils
 from .._compat import Literal
