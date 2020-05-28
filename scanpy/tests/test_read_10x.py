@@ -4,6 +4,7 @@ import h5py
 import numpy as np
 import pytest
 import scanpy as sc
+import shutil
 
 
 ROOT = Path(__file__).parent
@@ -30,8 +31,18 @@ def assert_anndata_equal(a1, a2):
         ),
     ],
 )
-def test_read_10x(tmp_path, mtx_path, h5_path):
-    mtx = sc.read_10x_mtx(mtx_path, var_names="gene_symbols")
+@pytest.mark.parametrize('prefix', [None, "prefix_"])
+def test_read_10x(tmp_path, mtx_path, h5_path, prefix):
+    if prefix is not None:
+        # Build files named "prefix_XXX.xxx" in a temporary directory.
+        mtx_path_orig = mtx_path
+        mtx_path = tmp_path / "filtered_gene_bc_matrices_prefix"
+        mtx_path.mkdir()
+        for item in mtx_path_orig.iterdir():
+            if item.is_file():
+                shutil.copyfile(item, mtx_path / f"{prefix}{item.name}")
+
+    mtx = sc.read_10x_mtx(mtx_path, var_names="gene_symbols", prefix=prefix)
     h5 = sc.read_10x_h5(h5_path)
 
     # Drop genome column for comparing v3
