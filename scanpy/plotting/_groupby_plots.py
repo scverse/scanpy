@@ -1928,13 +1928,13 @@ class StackedViolin(BasePlot):
     DEFAULT_SAVE_PREFIX = 'stacked_violin_'
 
     # violin plots look better thin
-    DEFAULT_CATEGORY_HEIGHT = 0.5
+    DEFAULT_CATEGORY_HEIGHT = 0.30
     DEFAULT_CATEGORY_WIDTH = 0.3
 
     DEFAULT_STRIPPLOT = False
     DEFAULT_JITTER = False
     DEFAULT_JITTER_SIZE = 1
-    DEFAULT_LINE_WIDTH = 0.5
+    DEFAULT_LINE_WIDTH = 0.0
     DEFAULT_ROW_PALETTE = 'muted'
     DEFAULT_SCALE = 'width'
     DEFAULT_PLOT_YTICKLABELS = False
@@ -2102,6 +2102,18 @@ class StackedViolin(BasePlot):
                 self.categories_order, ordered=True
             )
 
+        # get mean values for color and transform to color values
+        # using colormap
+        _color_df = _matrix.groupby(level=0).mean()
+        if self.are_axes_swapped:
+            _color_df = _color_df.T
+        import matplotlib.colors
+        norm = matplotlib.colors.Normalize(
+            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+        )
+        cmap = pl.get_cmap(self.kwds.get('cmap', 'Reds'))
+        colormap_array = cmap(norm(_color_df.values))
+
         row_palette = self.kwds.get('color', self.row_palette)
         if 'color' in self.kwds:
             del self.kwds['color']
@@ -2109,8 +2121,7 @@ class StackedViolin(BasePlot):
         # All columns should have a unique name, yet, frequently
         # gene names are repeated in self.var_names.  Otherwise the
         # pd.melt object that is passed to seaborn will merge non-unique columns.
-        # Here, I simply rename the columns using a count from 1..n using the
-        # mapping function `rename_cols_to_int` to solve the problem.
+        # Here, I simply rename the columns using a count from 1..n
         _matrix.rename(
             columns=dict(zip(_matrix.columns, range(len(_matrix.columns)))),
             inplace=True,
@@ -2118,20 +2129,41 @@ class StackedViolin(BasePlot):
         # set y and x limits to guarantee the dendrogram and var_groups
         # align to the main plot
         if self.are_axes_swapped:
-            ax.set_ylim(len(self.var_names), 0)
-            ax.set_xlim(0, len(self.categories))
+            self._plot_genes_x_categories(ax, _matrix, row_palette, colormap_array)
         else:
             ax.set_ylim(len(self.categories), 0)
             ax.set_xlim(0, len(self.var_names))
+            self._plot_categories_x_genes(ax, _matrix, row_palette, colormap_array)
 
-        if not self.are_axes_swapped:
-            self._plot_categories_x_genes(ax, _matrix, row_palette)
-        else:
-            self._plot_genes_x_categories(ax, _matrix, row_palette)
+        # turn on axis for `ax` as this is turned off
+        # by make_grid_spec when the axis is subdivided earlier.
+        ax.set_frame_on(True)
+        ax.axis('on')
+        ax.patch.set_alpha(0.0)
+
+        # add tick labels
+        ax.set_ylim(_color_df.shape[0], 0)
+        ax.set_xlim(0, _color_df.shape[1])
+
+        y_ticks = np.arange(_color_df.shape[0]) + 0.5
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels(
+            [_color_df.index[idx] for idx, _ in enumerate(y_ticks)], minor=False
+        )
+
+        x_ticks = np.arange(_color_df.shape[1]) + 0.5
+        ax.set_xticks(x_ticks)
+        labels = _color_df.columns
+        ax.set_xticklabels(labels, minor=False, ha='center')
+        # rotate x tick labels if they are longer than 2 characters
+        if max([len(x) for x in labels]) > 2:
+            ax.tick_params(axis='x', labelrotation=90)
+        ax.tick_params(axis='both', labelsize='small')
+        ax.grid(False)
 
         return None
 
-    def _plot_categories_x_genes(self, ax, _matrix, row_palette):
+    def _plot_categories_x_genes(self, ax, _matrix, row_palette, colormap_array):
         import seaborn as sns  # Slow import, only import if called
 
         if is_color_like(row_palette):
@@ -2155,7 +2187,7 @@ class StackedViolin(BasePlot):
                 _matrix[_matrix.index == category], value_vars=_matrix.columns,
             )
             row_ax = fig.add_subplot(gs[idx, 0])
-
+            row_ax.axis('off')
             axs_list.append(row_ax)
             row_ax = sns.violinplot(
                 'variable',
@@ -2163,7 +2195,8 @@ class StackedViolin(BasePlot):
                 data=df,
                 orient='vertical',
                 ax=row_ax,
-                color=row_colors[idx],
+
+                palette=colormap_array[idx, :],
                 **self.kwds,
             )
 
@@ -2180,19 +2213,7 @@ class StackedViolin(BasePlot):
 
             self._setup_violin_axes_ticks(row_ax, label=category)
 
-        # add labels to bottom plot
-        if self.var_names_idx_order:
-            labels = [self.var_names[x] for x in self.var_names_idx_order]
-        else:
-            labels = self.var_names
-        row_ax.set_xticklabels(labels)
-
-        row_ax.tick_params(axis='x', labelsize='small', labelbottom=True, bottom=True)
-        # rotate x tick labels if they are longer than 2 characters
-        if max([len(x) for x in labels]) > 2:
-            row_ax.tick_params(axis='x', labelrotation=90)
-
-    def _plot_genes_x_categories(self, ax, _matrix, row_palette):
+    def _plot_genes_x_categories(self, ax, _matrix, row_palette, colormap_array):
         import seaborn as sns  # Slow import, only import if called
 
         if is_color_like(row_palette):
@@ -2209,6 +2230,7 @@ class StackedViolin(BasePlot):
         axs_list = []
         for idx, y in enumerate(_matrix.columns):
             row_ax = fig.add_subplot(gs[idx, 0])
+            row_ax.axis('off')
             axs_list.append(row_ax)
             row_ax = sns.violinplot(
                 x=_matrix.index,
@@ -2216,7 +2238,7 @@ class StackedViolin(BasePlot):
                 data=_matrix,
                 orient='vertical',
                 ax=row_ax,
-                color=row_colors[idx],
+                palette=colormap_array[idx, :],
                 **self.kwds,
             )
             if self.stripplot:
@@ -2231,15 +2253,6 @@ class StackedViolin(BasePlot):
                 )
 
             self._setup_violin_axes_ticks(row_ax, label=self.var_names[idx])
-
-        # add labels to bottom plot
-        row_ax.set_xticklabels(_matrix.index.categories.tolist())
-
-        row_ax.tick_params(axis='x', labelsize='small', labelbottom=True)
-
-        # rotate x tick labels if they are longer than 2 characters
-        if max([len(x) for x in self.categories]) > 2:
-            row_ax.tick_params(axis='x', labelrotation=90)
 
     def _setup_violin_axes_ticks(self, row_ax, label=None):
         """

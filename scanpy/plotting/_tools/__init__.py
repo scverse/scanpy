@@ -1270,7 +1270,7 @@ def _get_values_to_plot(
 ):
     """
     If rank_genes_groups has been called, this function
-    prepared a dataframe containing scores, pvalues, logfoldchange etc to be plotted
+    prepares a dataframe containing scores, pvalues, logfoldchange etc to be plotted
     as dotplot or matrixplot.
 
     The dataframe index are the given groups and the columns are the gene_names
