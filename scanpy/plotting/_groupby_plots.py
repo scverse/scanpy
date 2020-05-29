@@ -2168,18 +2168,20 @@ class StackedViolin(BasePlot):
         else:
             row_colors = [None] * _color_df.shape[0]
 
-        # remove duplicated genes.
-        _matrix = _matrix.loc[:, ~_matrix.columns.duplicated()]
+        # All columns should have a unique name, yet, frequently
+        # gene names are repeated in self.var_names,  otherwise the
+        # violin plot will not distinguish those genes
+        _matrix.columns = [f"{x}_{idx}" for idx, x in enumerate(_matrix.columns)]
 
         # transform the  dataframe into a dataframe having three columns:
         # the categories name (from groupby),
         # the gene name
         # the expression value
-        # This format is covenient to aggregate per gene or per category
+        # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
 
         df = (
-            pd.DataFrame(_matrix.stack())
+            pd.DataFrame(_matrix.stack(dropna=False))
             .reset_index()
             .rename(
                 columns={
@@ -2189,6 +2191,9 @@ class StackedViolin(BasePlot):
                 }
             )
         )
+        df['genes'] = df['genes'].astype('category').cat.reorder_categories(_matrix.columns)
+        df['categories'] = df['categories'].astype('category').cat.reorder_categories(
+             _matrix.index.categories)
 
         # the ax need to be subdivided
         # define a layout of nrows = len(categories) rows
