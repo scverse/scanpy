@@ -381,7 +381,7 @@ def test_multiple_plots(image_comparer):
         'myeloid': ['CST3', 'LYZ'],
     }
     fig, (ax1, ax2, ax3) = plt.subplots(
-        1, 3, figsize=(20, 5), gridspec_kw={'width_ratios': [0.8, 1, 1], 'wspace': 0.7}
+        1, 3, figsize=(20, 5), gridspec_kw={'wspace': 0.7}
     )
     __ = sc.pl.stacked_violin(
         adata,
