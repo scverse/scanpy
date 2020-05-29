@@ -2229,7 +2229,12 @@ class StackedViolin(BasePlot):
                 _df = df[df.categories == row_label]
             else:
                 x = 'categories'
-                _df = df[df.genes == row_label]
+                # because of the renamed matrix columns here
+                # we need to use this instead of the 'row_label'
+                # (in _color_df the values are not renamed as those
+                # values will be used to label the ticks)
+                _df = df[df.genes == _matrix.columns[idx]]
+
             row_ax = sns.violinplot(
                 x=x,
                 y='values',
