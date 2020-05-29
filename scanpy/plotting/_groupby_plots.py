@@ -2121,8 +2121,8 @@ class StackedViolin(BasePlot):
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
         colormap_array = cmap(norm(_color_df.values))
-
-        self._make_rows_of_violinplots(ax, _matrix, colormap_array, _color_df)
+        spacer_size = 0.5
+        self._make_rows_of_violinplots(ax, _matrix, colormap_array, _color_df, spacer_size)
 
         # turn on axis for `ax` as this is turned off
         # by make_grid_spec when the axis is subdivided earlier.
@@ -2131,8 +2131,8 @@ class StackedViolin(BasePlot):
         ax.patch.set_alpha(0.0)
 
         # add tick labels
-        ax.set_ylim(_color_df.shape[0] + 0.5, 0 - 0.5)
-        ax.set_xlim(0 -0.5, _color_df.shape[1] + 0.5)
+        ax.set_ylim(_color_df.shape[0] + spacer_size, 0 - spacer_size)
+        ax.set_xlim(0 - spacer_size, _color_df.shape[1] + spacer_size)
 
         y_ticks = np.arange(_color_df.shape[0]) + 0.5
         ax.set_yticks(y_ticks)
@@ -2152,7 +2152,7 @@ class StackedViolin(BasePlot):
 
         return norm
 
-    def _make_rows_of_violinplots(self, ax, _matrix, colormap_array, _color_df):
+    def _make_rows_of_violinplots(self, ax, _matrix, colormap_array, _color_df, spacer_size):
         import seaborn as sns  # Slow import, only import if called
         row_palette = self.kwds.get('color', self.row_palette)
         if 'color' in self.kwds:
@@ -2185,12 +2185,12 @@ class StackedViolin(BasePlot):
         # define a layout of nrows = len(categories) rows
         # each row is one violin plot.
         num_rows, num_cols = _color_df.shape
-        spacer = 0.5
-        height_ratios = [spacer] + [1] * num_rows + [spacer]
-        width_ratios = [spacer] + [1] * num_cols + [spacer]
+        height_ratios = [spacer_size] + [1] * num_rows + [spacer_size]
+        width_ratios = [spacer_size] + [1] * num_cols + [spacer_size]
 
         fig, gs = make_grid_spec(ax, nrows=num_rows + 2,
                                  ncols=num_cols + 2, hspace=0,
+                                 wspace=0,
                                  height_ratios=height_ratios,
                                  width_ratios=width_ratios)
 
