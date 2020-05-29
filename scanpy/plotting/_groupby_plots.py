@@ -1927,6 +1927,7 @@ class StackedViolin(BasePlot):
 
     DEFAULT_SAVE_PREFIX = 'stacked_violin_'
 
+    DEFAULT_COLORMAP = 'Reds'
     DEFAULT_STRIPPLOT = False
     DEFAULT_JITTER = False
     DEFAULT_JITTER_SIZE = 1
@@ -1987,6 +1988,8 @@ class StackedViolin(BasePlot):
         else:
             logg.warning('Unknown type for standard_scale, ignored')
 
+        # Set default style parameters
+        self.cmap = self.DEFAULT_COLORMAP
         self.row_palette = self.DEFAULT_ROW_PALETTE
         self.stripplot = self.DEFAULT_STRIPPLOT
         self.jitter = self.DEFAULT_JITTER
@@ -2009,10 +2012,11 @@ class StackedViolin(BasePlot):
         self.kwds['scale'] = self.DEFAULT_SCALE
 
         # turn of legends
-        self.legends_width = 0
+        #self.legends_width = 0
 
     def style(
         self,
+        cmap: str = DEFAULT_COLORMAP,
         stripplot: Optional[bool] = DEFAULT_STRIPPLOT,
         jitter: Optional[Union[float, bool]] = DEFAULT_JITTER,
         jitter_size: Optional[int] = DEFAULT_JITTER_SIZE,
@@ -2027,6 +2031,8 @@ class StackedViolin(BasePlot):
 
         Parameters
         ----------
+        cmap
+            String denoting matplotlib color map.
         stripplot
             Add a stripplot on top of the violin plot.
             See :func:`~seaborn.stripplot`.
@@ -2070,6 +2076,7 @@ class StackedViolin(BasePlot):
 
         """
 
+        self.cmap = cmap
         self.row_palette = row_palette
         self.kwds['color'] = self.row_palette
         self.stripplot = stripplot
@@ -2103,21 +2110,19 @@ class StackedViolin(BasePlot):
 
         # get mean values for color and transform to color values
         # using colormap
-        _color_df = _matrix.groupby(level=0).mean()
+        _color_df = _matrix.groupby(level=0).median()
         if self.are_axes_swapped:
             _color_df = _color_df.T
         import matplotlib.colors
         norm = matplotlib.colors.Normalize(
             vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
         )
-        cmap = pl.get_cmap(self.kwds.get('cmap', 'Reds'))
+        cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
+        if 'cmap' in self.kwds:
+            del self.kwds['cmap']
         colormap_array = cmap(norm(_color_df.values))
 
-        row_palette = self.kwds.get('color', self.row_palette)
-        if 'color' in self.kwds:
-            del self.kwds['color']
-
-        self._make_rows_of_violinplots(ax, _matrix, row_palette, colormap_array, _color_df)
+        self._make_rows_of_violinplots(ax, _matrix, colormap_array, _color_df)
 
         # turn on axis for `ax` as this is turned off
         # by make_grid_spec when the axis is subdivided earlier.
@@ -2145,17 +2150,22 @@ class StackedViolin(BasePlot):
         ax.tick_params(axis='both', labelsize='small')
         ax.grid(False)
 
-        return None
+        return norm
 
-    def _make_rows_of_violinplots(self, ax, _matrix, row_palette, colormap_array, _color_df):
+    def _make_rows_of_violinplots(self, ax, _matrix, colormap_array, _color_df):
         import seaborn as sns  # Slow import, only import if called
-
-        if is_color_like(row_palette):
-            row_colors = [row_palette] * len(self.categories)
+        row_palette = self.kwds.get('color', self.row_palette)
+        if 'color' in self.kwds:
+            del self.kwds['color']
+        if row_palette is not None:
+            if is_color_like(row_palette):
+                row_colors = [row_palette] * _color_df.shape[0]
+            else:
+                row_colors = sns.color_palette(
+                    row_palette, n_colors=_color_df.shape[0]
+                )
         else:
-            row_colors = sns.color_palette(
-                self.row_palette, n_colors=len(self.categories)
-            )
+            row_colors = [None] * _color_df.shape[0]
 
         # remove duplicated genes.
         _matrix = _matrix.loc[:, ~_matrix.columns.duplicated()]
@@ -2191,6 +2201,11 @@ class StackedViolin(BasePlot):
             row_ax.axis('off')
             axs_list.append(row_ax)
 
+            if row_colors[idx] is None:
+                palette_colors = colormap_array[idx, :]
+            else:
+                palette_colors = None
+
             if not self.are_axes_swapped:
                 x = 'genes'
                 _df = df[df.categories == row_label]
@@ -2203,8 +2218,8 @@ class StackedViolin(BasePlot):
                 data=_df,
                 orient='vertical',
                 ax=row_ax,
-
-                palette=colormap_array[idx, :],
+                palette=palette_colors,
+                color=row_colors[idx],
                 **self.kwds,
             )
 
@@ -2260,11 +2275,22 @@ class StackedViolin(BasePlot):
             axis='x', bottom=False, top=False, labeltop=False, labelbottom=False,
         )
 
-    def _plot_legend(self, legend_ax, return_ax_dict, normalize):
-        pass
 
+doc_common_groupby_plot_args = """\
+title
+    Title for the figure
+colorbar_title
+    Title for the color bar. New line character (\\n) can be used.
+cmap
+    String denoting matplotlib color map.
+return_fig
+    Returns :class:`DotPlot` object. Useful for fine-tuning
+    the plot. Takes precedence over `show=False`.
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+"""
+
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args,
+             groupby_plots_args=doc_common_groupby_plot_args)
 def dotplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2274,7 +2300,7 @@ def dotplot(
     num_categories: int = 7,
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
-    color_map: str = 'Reds',
+    cmap: str = 'Reds',
     dot_max: Optional[float] = None,
     dot_min: Optional[float] = None,
     standard_scale: Optional[Literal['var', 'group']] = None,
@@ -2320,10 +2346,7 @@ def dotplot(
     Parameters
     ----------
     {common_plot_args}
-    title
-        Title for the figure
-    colorbar_title
-        Title for the color bar. New line character (\\n) can be used.
+    {groupby_plots_args}
     size_title
         Title for the size legend. New line character (\\n) can be used.
     expression_cutoff
@@ -2333,8 +2356,6 @@ def dotplot(
     mean_only_expressed
         If True, gene expression is averaged only over the cells
         expressing the given genes.
-    color_map
-        String denoting matplotlib color map.
     dot_max
         If none, the maximum dot size is set to the maximum fraction value found
         (e.g. 0.6). If given, the value should be a number between 0 and 1.
@@ -2351,9 +2372,6 @@ def dotplot(
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
     {show_save_ax}
-    return_fig
-        Returns :class:`DotPlot` object. Useful for fine-tuning
-        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
@@ -2386,6 +2404,10 @@ def dotplot(
     identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
+    # backwards compatibily: previous version of dotplot used `color_map`
+    # instead of `cmap`
+    cmap = kwds.get('color_map', cmap)
+
     dp = DotPlot(
         adata,
         var_names,
@@ -2414,7 +2436,7 @@ def dotplot(
         dp.swap_axes()
 
     dp = dp.style(
-        cmap=color_map, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot,
+        cmap=cmap, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot,
     ).legend(colorbar_title=colorbar_title, size_title=size_title,)
 
     if return_fig:
@@ -2423,7 +2445,8 @@ def dotplot(
         return dp.show(show=show, save=save)
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args,
+             groupby_plots_args=doc_common_groupby_plot_args)
 def matrixplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2434,6 +2457,7 @@ def matrixplot(
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
     title: Optional[str] = None,
+    cmap: Optional[str] = MatrixPlot.DEFAULT_COLORMAP,
     colorbar_title: Optional[str] = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
     gene_symbols: Optional[str] = None,
     var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -2458,17 +2482,11 @@ def matrixplot(
     Parameters
     ----------
     {common_plot_args}
-    title
-        Title for the figure
-    colorbar_title
-        Title for the color bar. New line character (\\n) can be used.
+    {groupby_plots_args}
     standard_scale
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
     {show_save_ax}
-    return_fig
-        Returns :class:`MatrixPlot` object. Useful for fine-tuning
-        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`matplotlib.pyplot.pcolor`.
 
@@ -2525,14 +2543,15 @@ def matrixplot(
     if swap_axes:
         mp.swap_axes()
 
-    mp = mp.style(cmap=kwds.get('cmap')).legend(title=colorbar_title)
+    mp = mp.style(cmap=cmap).legend(title=colorbar_title)
     if return_fig:
         return mp
     else:
         return mp.show(show=show, save=save)
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args,
+             groupby_plots_args=doc_common_groupby_plot_args)
 def stacked_violin(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2541,6 +2560,7 @@ def stacked_violin(
     use_raw: Optional[bool] = None,
     num_categories: int = 7,
     title: Optional[str] = None,
+    colorbar_title: Optional[str] = StackedViolin.DEFAULT_COLOR_LEGEND_TITLE,
     figsize: Optional[Tuple[float, float]] = None,
     dendrogram: Union[bool, str] = False,
     gene_symbols: Optional[str] = None,
@@ -2558,7 +2578,8 @@ def stacked_violin(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     return_fig: Optional[bool] = False,
-    row_palette: str = 'muted',
+    row_palette: Optional[str] = None,
+    cmap: Optional[str] = StackedViolin.DEFAULT_COLORMAP,
     ax: Optional[_AxesSubplot] = None,
     **kwds,
 ) -> Union[StackedViolin, dict, None]:
@@ -2577,8 +2598,7 @@ def stacked_violin(
     Parameters
     ----------
     {common_plot_args}
-    title
-        Title for the figure
+    {groupby_plots_args}
     stripplot
         Add a stripplot on top of the violin plot.
         See :func:`~seaborn.stripplot`.
@@ -2597,7 +2617,9 @@ def stacked_violin(
         If 'area', each violin will have the same area.
         If 'count', a violin’s width corresponds to the number of observations.
     row_palette
-        The row palette determines the colors to use for the stacked violins.
+        Be default, median values are mapped to the violin color using a
+        color map (see `cmap` argument). Alternatively, a 'row_palette` can
+        be given to color each violin plot row using a different colors.
         The value should be a valid seaborn or matplotlib palette name
         (see :func:`~seaborn.color_palette`).
         Alternatively, a single color name or hex value can be passed,
@@ -2667,12 +2689,13 @@ def stacked_violin(
     if swap_axes:
         vp.swap_axes()
     vp = vp.style(
+        cmap=cmap,
         stripplot=stripplot,
         jitter=jitter,
         jitter_size=size,
         row_palette=row_palette,
         scale=scale,
-    )
+    ).legend(title=colorbar_title)
     if return_fig:
         return vp
     else:
