@@ -1927,10 +1927,6 @@ class StackedViolin(BasePlot):
 
     DEFAULT_SAVE_PREFIX = 'stacked_violin_'
 
-    # violin plots look better thin
-    DEFAULT_CATEGORY_HEIGHT = 0.30
-    DEFAULT_CATEGORY_WIDTH = 0.3
-
     DEFAULT_STRIPPLOT = False
     DEFAULT_JITTER = False
     DEFAULT_JITTER_SIZE = 1
@@ -2088,6 +2084,9 @@ class StackedViolin(BasePlot):
         return self
 
     def _mainplot(self, ax):
+        # to make the stacked violin plots, the
+        # `ax` is subdivided horizontally and in each horizontal sub ax
+        # a seaborn violin plot is added.
 
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
@@ -2118,22 +2117,7 @@ class StackedViolin(BasePlot):
         if 'color' in self.kwds:
             del self.kwds['color']
 
-        # All columns should have a unique name, yet, frequently
-        # gene names are repeated in self.var_names.  Otherwise the
-        # pd.melt object that is passed to seaborn will merge non-unique columns.
-        # Here, I simply rename the columns using a count from 1..n
-        _matrix.rename(
-            columns=dict(zip(_matrix.columns, range(len(_matrix.columns)))),
-            inplace=True,
-        )
-        # set y and x limits to guarantee the dendrogram and var_groups
-        # align to the main plot
-        if self.are_axes_swapped:
-            self._plot_genes_x_categories(ax, _matrix, row_palette, colormap_array)
-        else:
-            ax.set_ylim(len(self.categories), 0)
-            ax.set_xlim(0, len(self.var_names))
-            self._plot_categories_x_genes(ax, _matrix, row_palette, colormap_array)
+        self._make_rows_of_violinplots(ax, _matrix, row_palette, colormap_array, _color_df)
 
         # turn on axis for `ax` as this is turned off
         # by make_grid_spec when the axis is subdivided earlier.
@@ -2142,8 +2126,8 @@ class StackedViolin(BasePlot):
         ax.patch.set_alpha(0.0)
 
         # add tick labels
-        ax.set_ylim(_color_df.shape[0], 0)
-        ax.set_xlim(0, _color_df.shape[1])
+        ax.set_ylim(_color_df.shape[0] + 0.5, 0 - 0.5)
+        ax.set_xlim(0 -0.5, _color_df.shape[1] + 0.5)
 
         y_ticks = np.arange(_color_df.shape[0]) + 0.5
         ax.set_yticks(y_ticks)
@@ -2163,7 +2147,7 @@ class StackedViolin(BasePlot):
 
         return None
 
-    def _plot_categories_x_genes(self, ax, _matrix, row_palette, colormap_array):
+    def _make_rows_of_violinplots(self, ax, _matrix, row_palette, colormap_array, _color_df):
         import seaborn as sns  # Slow import, only import if called
 
         if is_color_like(row_palette):
@@ -2173,26 +2157,50 @@ class StackedViolin(BasePlot):
                 self.row_palette, n_colors=len(self.categories)
             )
 
-        categories = _matrix.index.categories.tolist()
+        # remove duplicated genes.
+        _matrix = _matrix.loc[:, ~_matrix.columns.duplicated()]
+
+        # transform the  dataframe into a dataframe having three columns:
+        # the categories name (from groupby),
+        # the gene name
+        # the expression value
+        # This format is covenient to aggregate per gene or per category
+        # while making the violin plots.
+
+        df = pd.DataFrame(_matrix.stack()).reset_index().rename(
+            columns={'level_1': 'genes', _matrix.index.name:'categories',
+                     0: 'values'})
+
         # the ax need to be subdivided
         # define a layout of nrows = len(categories) rows
         # each row is one violin plot.
-        num_rows = len(self.categories)
-        fig, gs = make_grid_spec(ax, nrows=num_rows, ncols=1, hspace=0,)
+        num_rows, num_cols = _color_df.shape
+        spacer = 0.5
+        height_ratios = [spacer] + [1] * num_rows + [spacer]
+        width_ratios = [spacer] + [1] * num_cols + [spacer]
+
+        fig, gs = make_grid_spec(ax, nrows=num_rows + 2,
+                                 ncols=num_cols + 2, hspace=0,
+                                 height_ratios=height_ratios,
+                                 width_ratios=width_ratios)
 
         axs_list = []
-        for idx, category in enumerate(categories):
+        for idx, row_label in enumerate(_color_df.index):
 
-            df = pd.melt(
-                _matrix[_matrix.index == category], value_vars=_matrix.columns,
-            )
-            row_ax = fig.add_subplot(gs[idx, 0])
+            row_ax = fig.add_subplot(gs[idx + 1, 1:-1])
             row_ax.axis('off')
             axs_list.append(row_ax)
+
+            if not self.are_axes_swapped:
+                x = 'genes'
+                _df = df[df.categories == row_label]
+            else:
+                x = 'categories'
+                _df = df[df.genes == row_label]
             row_ax = sns.violinplot(
-                'variable',
-                y='value',
-                data=df,
+                x=x,
+                y='values',
+                data=_df,
                 orient='vertical',
                 ax=row_ax,
 
@@ -2202,59 +2210,18 @@ class StackedViolin(BasePlot):
 
             if self.stripplot:
                 row_ax = sns.stripplot(
-                    'variable',
-                    y='value',
-                    data=df,
+                    x=x,
+                    y='values',
+                    data=_df,
                     jitter=self.jitter,
                     color='black',
                     size=self.jitter_size,
                     ax=row_ax,
                 )
 
-            self._setup_violin_axes_ticks(row_ax, label=category)
+            self._setup_violin_axes_ticks(row_ax)
 
-    def _plot_genes_x_categories(self, ax, _matrix, row_palette, colormap_array):
-        import seaborn as sns  # Slow import, only import if called
-
-        if is_color_like(row_palette):
-            row_colors = [row_palette] * len(self.var_names)
-        else:
-            row_colors = sns.color_palette(
-                self.row_palette, n_colors=len(self.var_names)
-            )
-
-        # the ax need to be subdivided
-        # define a layout of nrows = len(genes) rows
-        num_rows = len(self.var_names)
-        fig, gs = make_grid_spec(ax, nrows=num_rows, ncols=1, hspace=0,)
-        axs_list = []
-        for idx, y in enumerate(_matrix.columns):
-            row_ax = fig.add_subplot(gs[idx, 0])
-            row_ax.axis('off')
-            axs_list.append(row_ax)
-            row_ax = sns.violinplot(
-                x=_matrix.index,
-                y=y,
-                data=_matrix,
-                orient='vertical',
-                ax=row_ax,
-                palette=colormap_array[idx, :],
-                **self.kwds,
-            )
-            if self.stripplot:
-                row_ax = sns.stripplot(
-                    x=_matrix.index,
-                    y=y,
-                    data=_matrix,
-                    jitter=self.jitter,
-                    color='black',
-                    size=self.jitter_size,
-                    ax=row_ax,
-                )
-
-            self._setup_violin_axes_ticks(row_ax, label=self.var_names[idx])
-
-    def _setup_violin_axes_ticks(self, row_ax, label=None):
+    def _setup_violin_axes_ticks(self, row_ax):
         """
         Configures each of the violin plot axes ticks like remove or add labels etc.
 
@@ -2284,18 +2251,10 @@ class StackedViolin(BasePlot):
                 axis='y', left=False, right=False,
             )
 
-        row_ax.set_ylabel(
-            label,
-            rotation=0,
-            fontsize='small',
-            labelpad=8 if self.plot_yticklabels else 0,
-            ha='right',
-            va='center',
-        )
+        row_ax.set_ylabel('')
 
         row_ax.set_xlabel('')
 
-        # remove the xticks labels except for the bottom plot
         row_ax.set_xticklabels([])
         row_ax.tick_params(
             axis='x', bottom=False, top=False, labeltop=False, labelbottom=False,
