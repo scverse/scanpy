@@ -2439,6 +2439,8 @@ def dotplot(
     # backwards compatibily: previous version of dotplot used `color_map`
     # instead of `cmap`
     cmap = kwds.get('color_map', cmap)
+    if 'color_map' in kwds:
+        del kwds['color_map']
 
     dp = DotPlot(
         adata,

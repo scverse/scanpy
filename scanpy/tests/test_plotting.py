@@ -137,7 +137,7 @@ def test_clustermap(image_comparer, obs_keys, name):
                 groupby='cell_type',
                 dot_max=0.7,
                 dot_min=0.1,
-                color_map='hot_r',
+                cmap='hot_r',
                 title='dot_max=0.7 dot_min=0.1, var_groups',
                 var_group_positions=[(0, 1), (9, 10)],
                 var_group_labels=['A', 'B'],
