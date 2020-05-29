@@ -2011,9 +2011,6 @@ class StackedViolin(BasePlot):
         self.kwds['linewidth'] = self.DEFAULT_LINE_WIDTH
         self.kwds['scale'] = self.DEFAULT_SCALE
 
-        # turn of legends
-        #self.legends_width = 0
-
     def style(
         self,
         cmap: str = DEFAULT_COLORMAP,
@@ -2114,6 +2111,7 @@ class StackedViolin(BasePlot):
         if self.are_axes_swapped:
             _color_df = _color_df.T
         import matplotlib.colors
+
         norm = matplotlib.colors.Normalize(
             vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
         )
@@ -2122,7 +2120,9 @@ class StackedViolin(BasePlot):
             del self.kwds['cmap']
         colormap_array = cmap(norm(_color_df.values))
         spacer_size = 0.5
-        self._make_rows_of_violinplots(ax, _matrix, colormap_array, _color_df, spacer_size)
+        self._make_rows_of_violinplots(
+            ax, _matrix, colormap_array, _color_df, spacer_size
+        )
 
         # turn on axis for `ax` as this is turned off
         # by make_grid_spec when the axis is subdivided earlier.
@@ -2152,8 +2152,11 @@ class StackedViolin(BasePlot):
 
         return norm
 
-    def _make_rows_of_violinplots(self, ax, _matrix, colormap_array, _color_df, spacer_size):
+    def _make_rows_of_violinplots(
+        self, ax, _matrix, colormap_array, _color_df, spacer_size
+    ):
         import seaborn as sns  # Slow import, only import if called
+
         row_palette = self.kwds.get('color', self.row_palette)
         if 'color' in self.kwds:
             del self.kwds['color']
@@ -2161,9 +2164,7 @@ class StackedViolin(BasePlot):
             if is_color_like(row_palette):
                 row_colors = [row_palette] * _color_df.shape[0]
             else:
-                row_colors = sns.color_palette(
-                    row_palette, n_colors=_color_df.shape[0]
-                )
+                row_colors = sns.color_palette(row_palette, n_colors=_color_df.shape[0])
         else:
             row_colors = [None] * _color_df.shape[0]
 
@@ -2177,9 +2178,17 @@ class StackedViolin(BasePlot):
         # This format is covenient to aggregate per gene or per category
         # while making the violin plots.
 
-        df = pd.DataFrame(_matrix.stack()).reset_index().rename(
-            columns={'level_1': 'genes', _matrix.index.name:'categories',
-                     0: 'values'})
+        df = (
+            pd.DataFrame(_matrix.stack())
+            .reset_index()
+            .rename(
+                columns={
+                    'level_1': 'genes',
+                    _matrix.index.name: 'categories',
+                    0: 'values',
+                }
+            )
+        )
 
         # the ax need to be subdivided
         # define a layout of nrows = len(categories) rows
@@ -2188,11 +2197,15 @@ class StackedViolin(BasePlot):
         height_ratios = [spacer_size] + [1] * num_rows + [spacer_size]
         width_ratios = [spacer_size] + [1] * num_cols + [spacer_size]
 
-        fig, gs = make_grid_spec(ax, nrows=num_rows + 2,
-                                 ncols=num_cols + 2, hspace=0,
-                                 wspace=0,
-                                 height_ratios=height_ratios,
-                                 width_ratios=width_ratios)
+        fig, gs = make_grid_spec(
+            ax,
+            nrows=num_rows + 2,
+            ncols=num_cols + 2,
+            hspace=0,
+            wspace=0,
+            height_ratios=height_ratios,
+            width_ratios=width_ratios,
+        )
 
         axs_list = []
         for idx, row_label in enumerate(_color_df.index):
@@ -2283,14 +2296,25 @@ colorbar_title
     Title for the color bar. New line character (\\n) can be used.
 cmap
     String denoting matplotlib color map.
+standard_scale
+    Whether or not to standardize the given dimension between 0 and 1, meaning for 
+    each variable or group, subtract the minimum and divide each by its maximum.
+swap_axes
+     By default, the x axis contains `var_names` (e.g. genes) and the y axis
+     the `groupby` categories. By setting `swap_axes` then x are the
+     `groupby` categories and y the `var_names`.
 return_fig
     Returns :class:`DotPlot` object. Useful for fine-tuning
     the plot. Takes precedence over `show=False`.
 
 """
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args,
-             groupby_plots_args=doc_common_groupby_plot_args)
+
+@_doc_params(
+    show_save_ax=doc_show_save_ax,
+    common_plot_args=doc_common_plot_args,
+    groupby_plots_args=doc_common_groupby_plot_args,
+)
 def dotplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2364,10 +2388,6 @@ def dotplot(
         If none, the minimum dot size is set to 0. If given,
         the value should be a number between 0 and 1.
         All fractions smaller than dot_min are clipped to this value.
-    standard_scale
-        Whether or not to standardize that dimension between 0 and 1,
-        meaning for each variable or group,
-        subtract the minimum and divide each by its maximum.
     smallest_dot
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
@@ -2445,8 +2465,11 @@ def dotplot(
         return dp.show(show=show, save=save)
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args,
-             groupby_plots_args=doc_common_groupby_plot_args)
+@_doc_params(
+    show_save_ax=doc_show_save_ax,
+    common_plot_args=doc_common_plot_args,
+    groupby_plots_args=doc_common_groupby_plot_args,
+)
 def matrixplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2483,9 +2506,6 @@ def matrixplot(
     ----------
     {common_plot_args}
     {groupby_plots_args}
-    standard_scale
-        Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
-        subtract the minimum and divide each by its maximum.
     {show_save_ax}
     **kwds
         Are passed to :func:`matplotlib.pyplot.pcolor`.
@@ -2550,8 +2570,11 @@ def matrixplot(
         return mp.show(show=show, save=save)
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args,
-             groupby_plots_args=doc_common_groupby_plot_args)
+@_doc_params(
+    show_save_ax=doc_show_save_ax,
+    common_plot_args=doc_common_plot_args,
+    groupby_plots_args=doc_common_groupby_plot_args,
+)
 def stacked_violin(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2624,14 +2647,6 @@ def stacked_violin(
         (see :func:`~seaborn.color_palette`).
         Alternatively, a single color name or hex value can be passed,
         e.g. `'red'` or `'#cc33ff'`.
-    standard_scale
-        Whether or not to standardize a dimension between 0 and 1,
-        meaning for each variable or observation,
-        subtract the minimum and divide each by its maximum.
-    swap_axes
-         By default, the x axis contains `var_names` (e.g. genes) and the y axis
-         the `groupby` categories. By setting `swap_axes` then x are the
-         `groupby` categories and y the `var_names`.
     {show_save_ax}
     **kwds
         Are passed to :func:`~seaborn.violinplot`.
@@ -2652,7 +2667,7 @@ def stacked_violin(
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
-    Get StackeViolin object for fine tuning
+    Get StackedViolin object for fine tuning
     >>> vp = sc.pl.stacked_violin(adata, markers, 'bulk_labels', return_fig=True)
     >>> vp.add_totals().style(ylim=(0,5)).show()
 
