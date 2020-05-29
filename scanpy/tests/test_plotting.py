@@ -246,6 +246,7 @@ def test_clustermap(image_comparer, obs_keys, name):
                 standard_scale='group',
                 title='scale_group\nswap_axes',
                 swap_axes=True,
+                cmap='Blues',
             ),
         ),
         (

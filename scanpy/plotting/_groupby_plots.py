@@ -2165,6 +2165,8 @@ class StackedViolin(BasePlot):
                 row_colors = [row_palette] * _color_df.shape[0]
             else:
                 row_colors = sns.color_palette(row_palette, n_colors=_color_df.shape[0])
+            # when row_palette is used, there is no need for a legend
+            self.legends_width = 0.0
         else:
             row_colors = [None] * _color_df.shape[0]
 
