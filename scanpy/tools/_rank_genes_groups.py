@@ -76,7 +76,7 @@ def _ranks(X, mask=None, mask_rest=None):
 
 
 class _RankGenes:
-    def __init__(self, adata, groups, groupby, reference, use_raw, layer):
+    def __init__(self, adata, groups, groupby, reference, use_raw, layer, comp_pts):
 
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
@@ -110,6 +110,7 @@ class _RankGenes:
         self.means_rest = None
         self.vars_rest = None
 
+        self.comp_pts = comp_pts
         self.pts = None
         self.pts_rest = None
 
@@ -125,12 +126,12 @@ class _RankGenes:
 
         self.means = np.zeros((n_groups, n_genes))
         self.vars = np.zeros((n_groups, n_genes))
-        self.pts = np.zeros((n_groups, n_genes))
+        self.pts = np.zeros((n_groups, n_genes)) if self.comp_pts else None
 
         if self.ireference is None:
             self.means_rest = np.zeros((n_groups, n_genes))
             self.vars_rest = np.zeros((n_groups, n_genes))
-            self.pts_rest = np.zeros((n_groups, n_genes))
+            self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
         else:
             mask_rest = self.groups_masks[self.ireference]
             X_rest = self.X[mask_rest]
@@ -148,7 +149,8 @@ class _RankGenes:
         for imask, mask in enumerate(self.groups_masks):
             X_mask = self.X[mask]
 
-            self.pts[imask] = get_nonzeros(X_mask) / X_mask.shape[0]
+            if self.comp_pts:
+                self.pts[imask] = get_nonzeros(X_mask) / X_mask.shape[0]
 
             if self.ireference is not None and imask == self.ireference:
                 continue
@@ -160,7 +162,8 @@ class _RankGenes:
                 X_rest = self.X[mask_rest]
                 self.means_rest[imask], self.vars_rest[imask] = _get_mean_var(X_rest)
                 # this can be costly for sparse data
-                self.pts_rest[imask] = get_nonzeros(X_rest) / X_rest.shape[0]
+                if self.comp_pts:
+                    self.pts_rest[imask] = get_nonzeros(X_rest) / X_rest.shape[0]
                 # deleting the next line causes a memory leak for some reason
                 del X_rest
 
@@ -356,6 +359,7 @@ def rank_genes_groups(
     reference: str = 'rest',
     n_genes: Optional[int] = None,
     rankby_abs: bool = False,
+    pts: bool = False,
     key_added: Optional[str] = None,
     copy: bool = False,
     method: _Method = 't-test',
@@ -487,7 +491,7 @@ def rank_genes_groups(
         corr_method=corr_method,
     )
 
-    test_obj = _RankGenes(adata, groups_order, groupby, reference, use_raw, layer)
+    test_obj = _RankGenes(adata, groups_order, groupby, reference, use_raw, layer, pts)
 
     # for clarity, rename variable
     n_genes_user = n_genes
