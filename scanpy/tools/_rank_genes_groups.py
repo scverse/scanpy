@@ -167,26 +167,30 @@ class _RankGenes:
                 # deleting the next line causes a memory leak for some reason
                 del X_rest
 
-            yield imask, mask, mask_rest
-
     def t_test(self, method):
         from scipy import stats
 
-        for group_index, mask, mask_rest in self._basic_stats():
+        self._basic_stats()
+
+        for group_index, mask in enumerate(self.groups_masks):
+            if self.ireference is not None and group_index == self.ireference:
+                continue
 
             mean_group = self.means[group_index]
             var_group = self.vars[group_index]
+            ns_group = np.count_nonzero(mask)
 
-            if self.ireference is None:
-                mean_rest = self.means_rest[group_index]
-                var_rest = self.vars_rest[group_index]
-            else:
+            if self.ireference is not None:
                 mean_rest = self.means[self.ireference]
                 var_rest = self.vars[self.ireference]
+                ns_other = np.count_nonzero(self.groups_masks[self.ireference])
+            else:
+                mean_rest = self.means_rest[group_index]
+                var_rest = self.vars_rest[group_index]
+                ns_other = self.X.shape[0] - ns_group
 
-            ns_group = np.count_nonzero(mask)
             if method == 't-test':
-                ns_rest = np.count_nonzero(mask_rest)
+                ns_rest = ns_other
             elif method == 't-test_overestim_var':
                 # hack for overestimating the variance for small groups
                 ns_rest = ns_group
@@ -216,13 +220,20 @@ class _RankGenes:
     def wilcoxon(self):
         from scipy import stats
 
+        self._basic_stats()
+
         n_genes = self.X.shape[1]
         # initialize space for z-scores
         scores = np.zeros(n_genes)
         # First loop: Loop over all genes
         if self.ireference is not None:
 
-            for group_index, mask, mask_rest in self._basic_stats():
+            for group_index, mask in enumerate(self.groups_masks):
+                if group_index == self.ireference:
+                    continue
+
+                mask_rest = self.groups_masks[self.ireference]
+
                 n_active = np.count_nonzero(mask)
                 m_active = np.count_nonzero(mask_rest)
 
@@ -255,7 +266,7 @@ class _RankGenes:
                 for imask, mask in enumerate(self.groups_masks):
                     scores[imask, left:right] = np.sum(ranks.loc[mask, :])
 
-            for group_index, mask, _ in self._basic_stats():
+            for group_index, mask in enumerate(self.groups_masks):
                 n_active = np.count_nonzero(mask)
 
                 scores[group_index, :] = (
