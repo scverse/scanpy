@@ -66,7 +66,7 @@ def _ranks(X, mask=None, mask_rest=None):
 
     left = 0
     # Calculate rank sums for each chunk for the current mask
-    for chunk_index, right in enumerate(chunk):
+    for right in chunk:
 
         df = pd.DataFrame(data=get_chunk(X, left, right))
         ranks = df.rank()
@@ -223,8 +223,8 @@ class _RankGenes:
         if self.ireference is not None:
 
             for group_index, mask, mask_rest in self._basic_stats():
-                n_active = X_mask.shape[0]
-                m_active = X_rest.shape[0]
+                n_active = np.count_nonzero(mask)
+                m_active = np.count_nonzero(mask_rest)
 
                 if n_active <= 25 or m_active <= 25:
                     logg.hint(
