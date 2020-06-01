@@ -14,7 +14,7 @@ from anndata import AnnData
 from pandas.api.types import is_categorical
 
 from ..preprocessing._utils import _get_mean_var
-
+from .._utils import NeighborsView
 
 def spring_project(
     adata: AnnData,
