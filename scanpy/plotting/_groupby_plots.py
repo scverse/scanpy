@@ -2193,9 +2193,14 @@ class StackedViolin(BasePlot):
                 }
             )
         )
-        df['genes'] = df['genes'].astype('category').cat.reorder_categories(_matrix.columns)
-        df['categories'] = df['categories'].astype('category').cat.reorder_categories(
-             _matrix.index.categories)
+        df['genes'] = (
+            df['genes'].astype('category').cat.reorder_categories(_matrix.columns)
+        )
+        df['categories'] = (
+            df['categories']
+            .astype('category')
+            .cat.reorder_categories(_matrix.index.categories)
+        )
 
         # the ax need to be subdivided
         # define a layout of nrows = len(categories) rows
