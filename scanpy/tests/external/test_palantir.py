@@ -6,7 +6,7 @@ import scanpy.external as sce
 pytest.importorskip("palantir")
 
 
-def test_load_timepoints_from_anndata_list():
+def test_palantir_core():
     adata = sc.datasets.pbmc3k_processed()
 
     sce.tl.palantir(adata=adata, n_components=5, knn=30)
