@@ -401,8 +401,9 @@ def rank_genes_groups(
         The number of genes that appear in the returned tables.
         Defaults to all genes.
     method
-        The default 't-test_overestim_var' overestimates variance of each group,
-        `'t-test'` uses t-test, `'wilcoxon'` uses Wilcoxon rank-sum,
+        The default method is `'t-test'`,
+        `'t-test_overestim_var'` overestimates variance of each group,
+        `'wilcoxon'` uses Wilcoxon rank-sum,
         `'logreg'` uses logistic regression. See [Ntranos18]_,
         `here <https://github.com/theislab/scanpy/issues/95>`__ and `here
         <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
@@ -413,6 +414,8 @@ def rank_genes_groups(
     rankby_abs
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
+    pts
+        Compute the fraction of cells expressing the genes.
     key_added
         The key in `adata.uns` information is saved to.
     **kwds
@@ -440,6 +443,12 @@ def rank_genes_groups(
         p-values.
     **pvals_adj** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Corrected p-values.
+    **pts** : `pandas.DataFrame` (`.uns['rank_genes_groups']`)
+        Fraction of cells expressing the genes for each group.
+    **pts_rest** : `pandas.DataFrame` (`.uns['rank_genes_groups']`)
+        Only if `reference` is set to `'rest'`.
+        Fraction of cells from the union of the rest of each group
+        expressing the genes.
 
     Notes
     -----
