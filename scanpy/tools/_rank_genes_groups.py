@@ -515,6 +515,9 @@ def rank_genes_groups(
     logg.debug(f'with sizes: {ns}')
     del ns
 
+    # all genes with sorted scores and names for every group
+    n_genes_user = 0 if n_genes_user is None else n_genes_user
+
     test_obj.compute_statistics(method, corr_method, n_genes_user, rankby_abs, **kwds)
 
     if test_obj.pts is not None:
@@ -527,7 +530,18 @@ def rank_genes_groups(
             test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
         )
 
-    adata.uns[key_added]['stats'] = test_obj.stats
+    test_obj.stats.columns = test_obj.stats.columns.swaplevel()
+
+    dtypes = {
+        'names': 'U50',
+        'scores': 'float32',
+        'logfoldchanges': 'float32',
+        'pvals': 'float64',
+        'pvals_adj': 'float64',
+    }
+
+    for col in test_obj.stats.columns.levels[0]:
+        adata.uns[key_added][col] = test_obj.stats[col].to_records(index=False, column_dtypes=dtypes[col])
 
     logg.info(
         '    finished',
