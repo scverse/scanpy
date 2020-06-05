@@ -541,7 +541,9 @@ def rank_genes_groups(
     }
 
     for col in test_obj.stats.columns.levels[0]:
-        adata.uns[key_added][col] = test_obj.stats[col].to_records(index=False, column_dtypes=dtypes[col])
+        adata.uns[key_added][col] = test_obj.stats[col].to_records(
+            index=False, column_dtypes=dtypes[col]
+        )
 
     logg.info(
         '    finished',
