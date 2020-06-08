@@ -2011,15 +2011,12 @@ def dotplot(
     dot_ax.set_xticklabels([mean_obs.columns[idx] for idx in x_ticks], rotation=90)
     dot_ax.tick_params(axis='both', labelsize='small')
     dot_ax.grid(False)
-    dot_ax.set_xlim(-0.5, len(var_names) + 0.5)
     dot_ax.set_ylabel(groupby)
 
     # to be consistent with the heatmap plot, is better to
     # invert the order of the y-axis, such that the first group is on
     # top
-    ymin, ymax = dot_ax.get_ylim()
-    dot_ax.set_ylim(ymax + 0.5, ymin - 0.5)
-
+    dot_ax.set_ylim(df.shape[0], -0.5)
     dot_ax.set_xlim(-1, len(var_names))
 
     # plot group legends on top of dot_ax (if given)
