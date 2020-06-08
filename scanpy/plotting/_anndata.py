@@ -2016,7 +2016,7 @@ def dotplot(
     # to be consistent with the heatmap plot, is better to
     # invert the order of the y-axis, such that the first group is on
     # top
-    dot_ax.set_ylim(df.shape[0], -0.5)
+    dot_ax.set_ylim(df.shape[0], -1)
     dot_ax.set_xlim(-1, len(var_names))
 
     # plot group legends on top of dot_ax (if given)
