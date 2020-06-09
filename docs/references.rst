@@ -75,6 +75,10 @@ References
    *Batch effects in single-cell RNA-sequencing data are corrected by matching mutual nearest neighbors*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.4091>`__.
 
+.. [Hafemeister19] Hafemeister *et al.* (2019),
+   *Normalization and variance stabilization of single-cell RNA-seq data using regularized negative binomial regression*,
+   `Genome Biology <https://doi.org/10.1186/s13059-019-1874-1>`__.
+
 .. [Huber15] Huber *et al.* (2015),
    *Orchestrating high-throughput genomic analysis with Bioconductor*,
    `Nature Methods <https://doi.org/10.1038/nmeth.3252>`__.
