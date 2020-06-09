@@ -11,16 +11,8 @@ matrix:
     - name: "anndata dev"
       python: "3.7"
       before_install:
-        - |
-          sudo apt-key adv \
-            --keyserver keyserver.ubuntu.com \
-            --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
-          sudo add-apt-repository \
-            --yes \
-            "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
-          cat /etc/apt/sources.list
           sudo apt-get update -qq
-          sudo apt-get install -y r-base r-cran-matrix r-cran-rcppeigen
+          sudo apt-get install -y r-base r-cran-matrix r-cran-rcppeigen r-cran-ggplot2
         - sudo Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
       install:
         - pip install docutils sphinx
@@ -36,15 +28,8 @@ cache:
   - directories: data
 before_install:
   - |
-    sudo apt-key adv \
-      --keyserver keyserver.ubuntu.com \
-      --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
-    sudo add-apt-repository \
-      --yes \
-      "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
-    cat /etc/apt/sources.list
     sudo apt-get update -qq
-    sudo apt-get install -y r-base r-cran-matrix r-cran-rcppeigen
+    sudo apt-get install -y r-base r-cran-matrix r-cran-rcppeigen r-cran-ggplot2
   - sudo Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
 install:
   - pip install docutils sphinx
