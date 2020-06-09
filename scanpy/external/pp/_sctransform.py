@@ -106,7 +106,7 @@ def sctransform(
 
     `adata.layers['sct_corrected']` stores normalized representation of gene expression.
     `adata.var['highly_variable']` stores highly variable genes.
-    `adata.vat['highly_variable_sct_residual_var']` stores the residual variances that
+    `adata.var['highly_variable_sct_residual_var']` stores the residual variances that
     are also used for ranking genes by variability.
 
     """
