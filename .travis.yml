@@ -20,7 +20,7 @@ matrix:
             "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
           cat /etc/apt/sources.list
           sudo apt-get update -qq
-          sudo apt-get install -y r-base r-cran-matrix r-cran-rcppeigen r-cran-ggplot2
+          sudo apt-get install -y r-base r-cran-matrix r-cran-rcppeigen
         - sudo Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
       install:
         - pip install docutils sphinx
@@ -44,7 +44,7 @@ before_install:
       "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
     cat /etc/apt/sources.list
     sudo apt-get update -qq
-    sudo apt-get install -y r-base r-cran-matrix r-cran-rcppeigen r-cran-ggplot2
+    sudo apt-get install -y r-base r-cran-matrix r-cran-rcppeigen
   - sudo Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
 install:
   - pip install docutils sphinx
