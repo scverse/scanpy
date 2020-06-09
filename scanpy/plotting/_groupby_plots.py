@@ -275,7 +275,7 @@ class BasePlot(object):
 
         _sort = True if sort is not None else False
         _ascending = True if sort == 'ascending' else False
-        counts_df = self.adata.obs[self.groupby].value_counts(
+        counts_df = self.obs_tidy.index.value_counts(
             sort=_sort, ascending=_ascending
         )
 
