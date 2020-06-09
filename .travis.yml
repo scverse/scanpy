@@ -10,9 +10,21 @@ matrix:
       after_success: skip
     - name: "anndata dev"
       python: "3.7"
+      before_install:
+        - |
+          sudo apt-key adv \
+            --keyserver keyserver.ubuntu.com \
+            --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+          sudo add-apt-repository \
+            --yes \
+            "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
+          cat /etc/apt/sources.list
+          sudo apt-get update -qq
+          sudo apt-get install -y r-base
+        - Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
       install:
         - pip install docutils sphinx
-        - pip install -e .[test,louvain,leiden,magic,scvi]
+        - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
         # also test new umap. remove once umap 0.4+ is used by other runs as well
         - pip install umap-learn>=0.4 git+https://github.com/theislab/anndata
 python:
@@ -22,9 +34,21 @@ python:
 cache:
   - pip
   - directories: data
+before_install:
+  - |
+    sudo apt-key adv \
+      --keyserver keyserver.ubuntu.com \
+      --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+    sudo add-apt-repository \
+      --yes \
+      "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
+    cat /etc/apt/sources.list
+    sudo apt-get update -qq
+    sudo apt-get install -y r-base
+  - Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
 install:
   - pip install docutils sphinx
-  - pip install -e .[test,louvain,leiden,magic,scvi]
+  - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
 env:
   - MPLBACKEND=Agg
 script:
