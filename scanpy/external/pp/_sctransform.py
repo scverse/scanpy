@@ -104,8 +104,8 @@ def sctransform(
     If `inplace` is False, anndata is returned.
     If `store_residuals` is True, residuals are stored in adata.layers['sct_residuals'].
 
-    `adata.layers['sct_corrected']` stores the latent representations
-    `adata.var['highly_variable']` stores highly variable genes
+    `adata.layers['sct_corrected']` stores normalized representation of gene expression.
+    `adata.var['highly_variable']` stores highly variable genes.
     `adata.vat['highly_variable_sct_residual_var']` stores the residual variances that
     are also used for ranking genes by variability.
 
