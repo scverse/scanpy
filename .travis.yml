@@ -21,7 +21,7 @@ matrix:
           cat /etc/apt/sources.list
           sudo apt-get update -qq
           sudo apt-get install -y r-base
-        - Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
+        - sudo Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
       install:
         - pip install docutils sphinx
         - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
@@ -45,7 +45,7 @@ before_install:
     cat /etc/apt/sources.list
     sudo apt-get update -qq
     sudo apt-get install -y r-base
-  - Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
+  - sudo Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
 install:
   - pip install docutils sphinx
   - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
