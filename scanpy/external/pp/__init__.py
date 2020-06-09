@@ -3,3 +3,4 @@ from ._bbknn import bbknn
 from ._dca import dca
 from ._magic import magic
 from ._scvi import scvi
+from ._sctransform import sctransform
