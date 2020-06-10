@@ -137,6 +137,7 @@ Note that the fundamental limitations of imputation are still under debate
    pp.dca
    pp.magic
    pp.scvi
+   pp.sctransform
 
 Neighbors
 ~~~~~~~~~
