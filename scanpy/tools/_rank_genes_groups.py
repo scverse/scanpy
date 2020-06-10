@@ -97,6 +97,10 @@ class _RankGenes:
                 adata_comp = adata.raw
             X = adata_comp.X
 
+        # for correct getnnz calculation
+        if issparse(X):
+            X.eliminate_zeros()
+
         self.X = X
         self.var_names = adata_comp.var_names
 
