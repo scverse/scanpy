@@ -36,6 +36,7 @@ cache:
   - pip
   - directories: 
     - data
+    - $HOME/R
 before_install:
   - |
     sudo apt-key adv \
@@ -54,7 +55,7 @@ install:
   - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
 env:
   - MPLBACKEND=Agg
-  - R_LIBS_USER=$HOME/R/Library
+  - R_LIBS_USER=$HOME/R
 script:
   - pytest --ignore=scanpy/tests/_images
   - python setup.py check --restructuredtext --strict
