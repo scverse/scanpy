@@ -21,7 +21,8 @@ matrix:
           cat /etc/apt/sources.list
           sudo apt-get update -qq
           sudo apt-get install -y r-base r-cran-matrix gfortran libblas-dev liblapack-dev
-        - sudo Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
+        - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings = FALSE, recursive = TRUE)'
+        - Rscript -e 'install.packages("sctransform", lib = Sys.getenv("R_LIBS_USER"), repos = "https://cran.rstudio.com/")'
       install:
         - pip install docutils sphinx
         - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
@@ -35,7 +36,6 @@ cache:
   - pip
   - directories: 
     - data
-    - /usr/local/lib/R/site-library/
 before_install:
   - |
     sudo apt-key adv \
@@ -47,7 +47,8 @@ before_install:
     cat /etc/apt/sources.list
     sudo apt-get update -qq
     sudo apt-get install -y r-base r-cran-matrix gfortran libblas-dev liblapack-dev
-  - sudo Rscript -e "install.packages(\"sctransform\", repos=\"https://cran.rstudio.com\")"
+  - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings = FALSE, recursive = TRUE)'
+  - Rscript -e 'install.packages("sctransform", lib = Sys.getenv("R_LIBS_USER"), repos = "https://cran.rstudio.com/")'
 install:
   - pip install docutils sphinx
   - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
