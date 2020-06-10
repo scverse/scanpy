@@ -20,7 +20,7 @@ matrix:
             "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
           cat /etc/apt/sources.list
           sudo apt-get update -qq
-          sudo apt-get install -y r-base r-cran-matrix gfortran libblas-dev liblapack-dev
+          sudo travis_retry apt-get install -y r-base r-cran-matrix gfortran libblas-dev liblapack-dev
         - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings = FALSE, recursive = TRUE)'
         - Rscript -e 'install.packages("sctransform", lib = Sys.getenv("R_LIBS_USER"), repos = "https://cran.rstudio.com/")'
       install:
@@ -47,7 +47,7 @@ before_install:
       "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
     cat /etc/apt/sources.list
     sudo apt-get update -qq
-    sudo apt-get install -y r-base r-cran-matrix gfortran libblas-dev liblapack-dev
+    sudo travis_retry apt-get install -y r-base r-cran-matrix gfortran libblas-dev liblapack-dev
   - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings = FALSE, recursive = TRUE)'
   - Rscript -e 'install.packages("sctransform", lib = Sys.getenv("R_LIBS_USER"), repos = "https://cran.rstudio.com/")'
 install:
