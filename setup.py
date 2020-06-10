@@ -33,7 +33,7 @@ setup(
         scvi=['scvi>=0.6.5'],
         rapids=['cudf>=0.9', 'cuml>=0.9', 'cugraph>=0.9'],
         magic=['magic-impute>=2.0'],
-        sctransform=['rpy2', 'anndata2ri'],
+        sctransform=['rpy2>=3.3', 'anndata2ri'],
         doc=[
             'sphinx',
             'sphinx_rtd_theme',
