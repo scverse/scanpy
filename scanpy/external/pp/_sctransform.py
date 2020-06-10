@@ -67,8 +67,8 @@ def sctransform(
     variables if given) it ranks the genes based on their residual variances and therefore
     also acts as a HVG selection method.
 
-    This function replaces sc.pp.normalize_total and sc.pp.highly_variable_genes and requires
-    raw counts in ``adata.X``.
+    This function replaces `sc.pp.normalize_total` and `sc.pp.highly_variable_genes` and requires
+    raw counts in `adata.X`.
 
     .. note::
         More information and bug reports `here <https://github.com/ChristophH/sctransform>`__.
