@@ -59,10 +59,8 @@ def sctransform(
     inplace: bool = True,
 ) -> Optional[AnnData]:
     """\
-    sctransform [Hafemeister19]_.
-
-    Normalization and variance stabilization of single-cell RNA-seq data using regularized
-    negative binomial regression
+    Normalization and variance stabilization of scRNA-seq data using regularized
+    negative binomial regression [Hafemeister19]_.
 
     sctransform uses Pearson residuals from “regularized negative binomial regression,” to
     correct for the sequencing depth. After regressing out total number of UMIs (and other
