@@ -55,7 +55,6 @@ install:
   - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
 env:
   - MPLBACKEND=Agg
-  - R_LIBS_USER=$HOME/R
 script:
   - pytest --ignore=scanpy/tests/_images
   - python setup.py check --restructuredtext --strict
