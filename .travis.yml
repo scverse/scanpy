@@ -33,7 +33,9 @@ python:
   #- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
 cache:
   - pip
-  - directories: data
+  - directories: 
+    - data
+    - /usr/local/lib/R/site-library/
 before_install:
   - |
     sudo apt-key adv \

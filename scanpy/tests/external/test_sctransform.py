@@ -1,6 +1,7 @@
 import scanpy as sc
 import scanpy.external as sce
 
+
 def test_sct():
     ad = sc.datasets.paul15()[:200, :2001].copy()
 
@@ -12,16 +13,10 @@ def test_sct():
     ad.obs['batch'] = 'A'
     ad.obs.batch.iloc[:100] = 'B'
     ad.var.drop(
-        ['highly_variable', 'highly_variable_sct_residual_var'],
-        axis=1,
-        inplace=True,
+        ['highly_variable', 'highly_variable_sct_residual_var'], axis=1, inplace=True,
     )
     ad = sce.pp.sctransform(
-        ad,
-        batch_key='batch',
-        store_residuals=True,
-        verbose=False,
-        inplace=False,
+        ad, batch_key='batch', store_residuals=True, verbose=False, inplace=False,
     )
 
     assert ad.var.highly_variable.sum() > 1000
