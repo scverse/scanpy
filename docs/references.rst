@@ -48,7 +48,7 @@ References
 
 .. [Fruchterman91] Fruchterman & Reingold (1991),
    *Graph drawing by force-directed placement*,
-   `Software: Practice & Experience <http://doi.org:10.1002/spe.4380211102>`__.
+   `Software: Practice & Experience <https://doi.org/10.1002/spe.4380211102>`__.
 
 .. [Gardner00] Gardner *et al.*, (2000)
    *Construction of a genetic toggle switch in Escherichia coli*,
@@ -154,7 +154,7 @@ References
 .. [Murphy12]
    Murphy (2012,
    *Machine Learning: A Probabilisitc Perspective*,
-   `MIT Press <https://mitpress.mit.edu/books/machine-learning-0>`__.
+   `MIT Press <https://mitpress.mit.edu/books/machine-learning-1>`__.
 
 .. [Ntranos18] Ntranos *et al.* (2018),
    *Identification of transcriptional signatures for cell types from single-cell RNA-Seq*,
