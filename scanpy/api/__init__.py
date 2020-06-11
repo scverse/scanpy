@@ -100,6 +100,7 @@ For visual quality control, see :func:`~scanpy.api.pl.highest_expr_genes` and
    pp.scale
    pp.subsample
    pp.downsample_counts
+   pp.sctransform
 
 Recipes
 ~~~~~~~
@@ -137,7 +138,6 @@ Note that the fundamental limitations of imputation are still under debate
    pp.dca
    pp.magic
    pp.scvi
-   pp.sctransform
 
 Neighbors
 ~~~~~~~~~

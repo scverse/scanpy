@@ -24,6 +24,14 @@ If you'd like to see your tool included here, please open a `pull request <https
 Preprocessing: PP
 ------------------
 
+Nnormalization and HVG selection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   pp.sctransform
+
 Data integration
 ~~~~~~~~~~~~~~~~
 
@@ -45,7 +53,6 @@ Note that the fundamental limitations of imputation are still under `debate
    pp.dca
    pp.magic
    pp.scvi
-   pp.sctransform
 
 
 Tools: TL
