@@ -25,7 +25,7 @@ matrix:
         - Rscript -e 'install.packages("sctransform", lib = Sys.getenv("R_LIBS_USER"), repos = "https://cran.rstudio.com/")'
       install:
         - pip install docutils sphinx
-        - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
+        - pip install -e .[test,louvain,leiden,magic,scvi,rtools]
         # also test new umap. remove once umap 0.4+ is used by other runs as well
         - pip install umap-learn>=0.4 git+https://github.com/theislab/anndata
 python:
@@ -52,7 +52,7 @@ before_install:
   - Rscript -e 'install.packages("sctransform", lib = Sys.getenv("R_LIBS_USER"), repos = "https://cran.rstudio.com/")'
 install:
   - pip install docutils sphinx
-  - pip install -e .[test,louvain,leiden,magic,scvi,sctransform]
+  - pip install -e .[test,louvain,leiden,magic,scvi,rtools]
 env:
   - MPLBACKEND=Agg
 script:
