@@ -1,9 +1,19 @@
 import scanpy as sc
 import scanpy.external as sce
+import scipy.sparse as sp
 
 
 def test_sct():
     ad = sc.datasets.paul15()[:200, :500].copy()
+
+    sce.pp.sctransform(ad, verbose=False, n_top_genes=10)
+    assert ad.var.highly_variable.sum() == 10
+    assert 'highly_variable_sct_residual_var' in ad.var_keys()
+    assert 'sct_corrected' in ad.layers
+
+    # test sparse matrix
+    ad = sc.datasets.paul15()[:200, :500].copy()
+    ad.X = sp.csr_matrix(ad.X)
 
     sce.pp.sctransform(ad, verbose=False, n_top_genes=10)
     assert ad.var.highly_variable.sum() == 10
