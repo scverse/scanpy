@@ -3,10 +3,10 @@ import scanpy.external as sce
 
 
 def test_sct():
-    ad = sc.datasets.paul15()[:200, :2001].copy()
+    ad = sc.datasets.paul15()[:200, :500].copy()
 
-    sce.pp.sctransform(ad, verbose=False)
-    assert ad.var.highly_variable.sum() > 1000
+    sce.pp.sctransform(ad, verbose=False, n_top_genes=10)
+    assert ad.var.highly_variable.sum() == 10
     assert 'highly_variable_sct_residual_var' in ad.var_keys()
     assert 'sct_corrected' in ad.layers
 
@@ -16,10 +16,15 @@ def test_sct():
         ['highly_variable', 'highly_variable_sct_residual_var'], axis=1, inplace=True,
     )
     ad = sce.pp.sctransform(
-        ad, batch_key='batch', store_residuals=True, verbose=False, inplace=False,
+        ad,
+        batch_key='batch',
+        store_residuals=True,
+        verbose=False,
+        inplace=False,
+        n_top_genes=10,
     )
 
-    assert ad.var.highly_variable.sum() > 1000
+    assert ad.var.highly_variable.sum() == 10
     assert 'highly_variable_sct_residual_var' in ad.var_keys()
     assert 'sct_corrected' in ad.layers
     assert 'sct_residuals' in ad.layers

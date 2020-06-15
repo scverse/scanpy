@@ -33,6 +33,13 @@ def _set_seed(seed):
     set_seed(seed)
 
 
+def _set_logger_level(level):
+    _check_rpy2()
+
+    import rpy2.rinterface_lib.callbacks
+    rpy2.rinterface_lib.callbacks.logger.setLevel(level)
+
+
 def _py2r(x):
     _check_rpy2()
     _check_anndata2ri()

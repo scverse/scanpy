@@ -31,7 +31,7 @@ def sctransform(
     Normalization and variance stabilization of scRNA-seq data using regularized
     negative binomial regression [Hafemeister19]_.
 
-    sctransform uses Pearson residuals from “regularized negative binomial regression,” to
+    sctransform uses Pearson residuals from regularized negative binomial regression to
     correct for the sequencing depth. After regressing out total number of UMIs (and other
     variables if given) it ranks the genes based on their residual variances and therefore
     also acts as a HVG selection method.
