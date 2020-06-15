@@ -6,7 +6,14 @@ from typing import Optional, Sequence
 from anndata import AnnData
 
 from ...preprocessing import filter_genes
-from ..rtools import _check_rpy2, _check_anndata2ri, _is_installed, _py2r, _r2py, _set_seed
+from ..rtools import (
+    _check_rpy2,
+    _check_anndata2ri,
+    _is_installed,
+    _py2r,
+    _r2py,
+    _set_seed,
+)
 
 
 def sctransform(

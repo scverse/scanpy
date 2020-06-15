@@ -1,5 +1,6 @@
 import scipy.sparse as sp
 
+
 def _check_rpy2():
     try:
         import rpy2.robjects as ro
@@ -28,6 +29,7 @@ def _set_seed(seed):
     _check_rpy2()
 
     from rpy2.robjects import r
+
     set_seed = r('set.seed')
     set_seed(seed)
 
@@ -76,4 +78,3 @@ def _r2py(x):
         x = anndata2ri.scipy2ri.rpy2py(x)
 
     return x
-
