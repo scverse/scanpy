@@ -6,46 +6,7 @@ from typing import Optional, Sequence
 from anndata import AnnData
 
 from ...preprocessing import filter_genes
-
-
-def _py2r(x):
-    import rpy2.robjects as ro
-    from rpy2.robjects import numpy2ri, pandas2ri
-    from rpy2.robjects.conversion import localconverter
-    import anndata2ri
-
-    if sp.issparse(x):
-        # workaround for: https://github.com/theislab/anndata2ri/issues/47
-        return anndata2ri.scipy2ri.py2rpy(x)
-
-    with localconverter(
-        ro.default_converter + numpy2ri.converter + pandas2ri.converter
-    ):
-        x = ro.conversion.py2rpy(x)
-
-    return x
-
-
-def _r2py(x):
-    import rpy2.robjects as ro
-    from rpy2.robjects import numpy2ri, pandas2ri
-    from rpy2.robjects.conversion import localconverter
-    import anndata2ri
-
-    try:
-        with localconverter(
-            ro.default_converter
-            + numpy2ri.converter
-            + pandas2ri.converter
-            + anndata2ri.scipy2ri.converter
-        ):
-            x = ro.conversion.rpy2py(x)
-
-    except TypeError:
-        # workaround for: https://github.com/theislab/anndata2ri/issues/47
-        x = anndata2ri.scipy2ri.rpy2py(x)
-
-    return x
+from ..rtools import _check_rpy2, _check_anndata2ri, _is_installed, _py2r, _r2py, _set_seed
 
 
 def sctransform(
@@ -57,6 +18,7 @@ def sctransform(
     store_residuals: bool = False,
     verbose: bool = True,
     inplace: bool = True,
+    seed: int = 0,
 ) -> Optional[AnnData]:
     """\
     Normalization and variance stabilization of scRNA-seq data using regularized
@@ -96,6 +58,8 @@ def sctransform(
         Show progress bar during normalization.
     inplace
         Save HVGs and corrected UMIs inplace. Default is True.
+    seed
+        Random seed for R RNG. Default is 0.
 
     Returns
     -------
@@ -109,19 +73,16 @@ def sctransform(
 
     """
 
-    try:
-        import rpy2
-        from rpy2.robjects import r
-        from rpy2.robjects.packages import importr, isinstalled
-    except ImportError:
-        raise ImportError("Please install rpy2 package.")
-    try:
-        import anndata2ri
-    except ImportError:
-        raise ImportError("Please install anndata2ri package.")
+    _check_rpy2()
+    _check_anndata2ri()
 
-    if not isinstalled('sctransform'):
-        raise ImportError("Please install sctransform R package.")
+    import rpy2
+    from rpy2.robjects import r
+    from rpy2.robjects.packages import importr
+    import anndata2ri
+
+    _is_installed('sctransform')
+    _set_seed(seed)
 
     # check if observations are unnormalized using first 10
     if len(adata) > 10:
