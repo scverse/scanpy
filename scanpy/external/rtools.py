@@ -3,7 +3,7 @@ import scipy.sparse as sp
 
 def _check_rpy2():
     try:
-        import rpy2.robjects as ro
+        import rpy2
     except ImportError:
         raise ImportError("Please install rpy2 package.")
 
@@ -18,7 +18,6 @@ def _check_anndata2ri():
 def _is_installed(package_name):
     _check_rpy2()
 
-    import rpy2
     from rpy2.robjects.packages import isinstalled
 
     if not isinstalled(package_name):
