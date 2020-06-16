@@ -524,10 +524,8 @@ def rank_genes_groups(
     if n_genes_user is None or n_genes_user > test_obj.X.shape[1]:
         n_genes_user = test_obj.X.shape[1]
 
-    ns = np.count_nonzero(test_obj.groups_masks, axis=1)
     logg.debug(f'consider {groupby!r} groups:')
-    logg.debug(f'with sizes: {ns}')
-    del ns
+    logg.debug(f'with sizes: {np.count_nonzero(test_obj.groups_masks, axis=1)}')
 
     test_obj.compute_statistics(method, corr_method, n_genes_user, rankby_abs, **kwds)
 
