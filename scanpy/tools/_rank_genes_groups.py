@@ -520,16 +520,14 @@ def rank_genes_groups(
     # for clarity, rename variable
     n_genes_user = n_genes
     # make sure indices are not OoB in case there are less genes than n_genes
-    if n_genes_user is not None and n_genes_user > test_obj.X.shape[1]:
+    # defaults to all genes
+    if n_genes_user is None or n_genes_user > test_obj.X.shape[1]:
         n_genes_user = test_obj.X.shape[1]
 
     ns = np.count_nonzero(test_obj.groups_masks, axis=1)
     logg.debug(f'consider {groupby!r} groups:')
     logg.debug(f'with sizes: {ns}')
     del ns
-
-    # all genes with sorted scores and names for every group
-    n_genes_user = 0 if n_genes_user is None else n_genes_user
 
     test_obj.compute_statistics(method, corr_method, n_genes_user, rankby_abs, **kwds)
 
