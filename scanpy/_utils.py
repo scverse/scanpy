@@ -14,6 +14,7 @@ from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple
 
 import numpy as np
 from numpy import random
+from scipy import sparse
 from anndata import AnnData
 from textwrap import dedent
 from packaging import version
@@ -463,6 +464,21 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
+def check_nonnegative_integers(X: Union[np.ndarray, sparse.csr_matrix]):
+    """Checks values of X to ensure it is count data
+    """
+
+    data = X if type(X) is np.ndarray else X.data
+    # Check no negatives
+    if np.any(data < 0):
+        return False
+    # Check all are integers
+    elif np.any(~np.equal(np.mod(data, 1), 0)):
+        return False
+    else:
+        return True
+
+
 def select_groups(adata, groups_order_subset='all', key='groups'):
     """Get subset of groups in adata.obs[key].
     """
@@ -718,8 +734,7 @@ def _choose_graph(adata, obsp, neighbors_key):
     """Choose connectivities from neighbbors or another obsp column"""
     if obsp is not None and neighbors_key is not None:
         raise ValueError(
-            'You can\'t specify both obsp, neighbors_key. '
-            'Please select only one.'
+            'You can\'t specify both obsp, neighbors_key. ' 'Please select only one.'
         )
 
     if obsp is not None:
