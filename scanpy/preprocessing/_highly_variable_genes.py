@@ -86,7 +86,7 @@ def _highly_variable_genes_seurat_v3(
         estimat_var[not_const] = model.outputs.fitted_values
         reg_std = np.sqrt(10 ** estimat_var)
 
-        batch_counts = adata[batch_info == b].X.astype(np.float64).copy()
+        batch_counts = X[batch_info == b].astype(np.float64).copy()
         # clip large values as in Seurat
         N = np.sum(batch_info == b)
         vmax = np.sqrt(N)
