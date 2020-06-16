@@ -96,8 +96,8 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     pbmc_dense = pbmc.copy()
     pbmc_dense.X = pbmc_dense.X.toarray()
 
-    sc.pp.highly_variable_genes_norm_variance(pbmc, n_top_genes=1000)
-    sc.pp.highly_variable_genes_norm_variance(pbmc_dense, n_top_genes=1000)
+    sc.pp.highly_variable_genes(pbmc, n_top_genes=1000, flavor='seurat_v3')
+    sc.pp.highly_variable_genes(pbmc_dense, n_top_genes=1000, flavor='seurat_v3')
 
     np.testing.assert_array_equal(
         seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
@@ -198,4 +198,3 @@ def test_highly_variable_genes_batches():
     ]
 
     assert np.all(np.isin(colnames, hvg1.columns))
-
