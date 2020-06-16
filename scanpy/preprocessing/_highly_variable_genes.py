@@ -43,7 +43,7 @@ def _highly_variable_genes_seurat_v3(
         variance per gene
     **variances_norm**
         normalized variance per gene, averaged in the case of multiple batches
-    highly_variable_rank : int
+    highly_variable_rank : float
         Rank of the gene according to normalized variance, median rank in the case of multiple batches
     highly_variable_nbatches : int
         If batch_key is given, this denotes in how many batches genes are detected as HVG
@@ -144,7 +144,7 @@ def _highly_variable_genes_seurat_v3(
         logg.hint(
             'added\n'
             '    \'highly_variable\', boolean vector (adata.var)\n'
-            '    \'highly_variable_rank\', int vector (adata.var)\n'
+            '    \'highly_variable_rank\', float vector (adata.var)\n'
             '    \'means\', float vector (adata.var)\n'
             '    \'variances\', float vector (adata.var)\n'
             '    \'variances_norm\', float vector (adata.var)'
@@ -366,7 +366,10 @@ def highly_variable_genes(
     batch_key
         If specified, highly-variable genes are selected within each batch separately and merged.
         This simple process avoids the selection of batch-specific genes and acts as a
-        lightweight batch correction method.
+        lightweight batch correction method. For the dispersion-based methods, genes are first sorted
+        by how many batches they are a HVG, and ties are broken by normalized dispersion.
+        If `flavor = 'seurat_v3'`, genes are first sorted by how many batches they are a HVG and ties are
+        broken by the median (across batches) rank based on within-batch normalized variance.
 
     Returns
     -------
@@ -386,7 +389,7 @@ def highly_variable_genes(
     **variances_norm**
         For `flavor='seurat_v3'`, normalized variance per gene, averaged in
         the case of multiple batches
-    highly_variable_rank : int
+    highly_variable_rank : float
         For `flavor='seurat_v3'`, rank of the gene according to normalized
         variance, median rank in the case of multiple batches
     highly_variable_nbatches : int
