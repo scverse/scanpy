@@ -464,11 +464,11 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-def check_nonnegative_integers(X: Union[np.ndarray, sparse.csr_matrix]):
+def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
     """Checks values of X to ensure it is count data
     """
 
-    data = X if type(X) is np.ndarray else X.data
+    data = X if isinstance(X, np.ndarray) else X.data
     # Check no negatives
     if np.any(data < 0):
         return False
