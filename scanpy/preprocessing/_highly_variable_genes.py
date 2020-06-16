@@ -366,10 +366,10 @@ def highly_variable_genes(
     batch_key
         If specified, highly-variable genes are selected within each batch separately and merged.
         This simple process avoids the selection of batch-specific genes and acts as a
-        lightweight batch correction method. For the dispersion-based methods, genes are first sorted
-        by how many batches they are a HVG, and ties are broken by normalized dispersion.
-        If `flavor = 'seurat_v3'`, genes are first sorted by how many batches they are a HVG and ties are
-        broken by the median (across batches) rank based on within-batch normalized variance.
+        lightweight batch correction method. For all flavors, genes are first sorted
+        by how many batches they are a HVG. For dispersion-based flavors ties are broken
+        by normalized dispersion. If `flavor = 'seurat_v3'`, ties are broken by the median
+        (across batches) rank based on within-batch normalized variance.
 
     Returns
     -------
