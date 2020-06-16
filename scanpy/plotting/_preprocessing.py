@@ -13,7 +13,7 @@ from . import _utils
 
 
 def highly_variable_genes(
-    adata_or_result: Union[AnnData, pd.DataFrame],
+    adata_or_result: Union[AnnData, pd.DataFrame, np.recarray],
     log: bool = False,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
@@ -42,7 +42,10 @@ def highly_variable_genes(
         seurat_v3_flavor = adata_or_result.uns["hvg"]["flavor"] == "seurat_v3"
     else:
         result = adata_or_result
-        seurat_v3_flavor = "variances_norm" in result.columns
+        if isinstance(result, pd.DataFrame):
+            seurat_v3_flavor = "variances_norm" in result.columns
+        else:
+            seurat_v3_flavor = False
     if highly_variable_genes:
         gene_subset = result.highly_variable
     else:
