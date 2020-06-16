@@ -9,7 +9,7 @@ from anndata import AnnData
 
 from .. import logging as logg
 from .._settings import settings, Verbosity
-from .._utils import sanitize_anndata
+from .._utils import sanitize_anndata, check_nonnegative_integers
 from .._compat import Literal
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray
@@ -18,6 +18,7 @@ from ._simple import filter_genes
 
 def _highly_variable_genes_seurat_v3(
     adata: AnnData,
+    layer: Optional[str] = None,
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
     span: Optional[float] = None,
@@ -55,6 +56,14 @@ def _highly_variable_genes_seurat_v3(
             'Please install skmisc package via `pip install --user scikit-misc'
         )
 
+    X = adata.layers[layer] if layer is not None else adata.X
+
+    if check_nonnegative_integers(X) is False:
+        raise ValueError(
+            "`pp.highly_variable_genes` with `flavor='seurat_v3'` expects "
+            "raw count data."
+        )
+
     if span is None:
         span = 0.3
 
@@ -66,7 +75,7 @@ def _highly_variable_genes_seurat_v3(
     norm_gene_vars = []
     for b in np.unique(batch_info):
 
-        mean, var = _get_mean_var(adata[batch_info == b].X)
+        mean, var = _get_mean_var(X[batch_info == b])
         not_const = var > 0
         estimat_var = np.zeros(adata.shape[1], dtype=np.float64)
 
@@ -161,6 +170,7 @@ def _highly_variable_genes_seurat_v3(
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
+    layer: Optional[str] = None,
     min_disp: Optional[float] = None,
     max_disp: Optional[float] = None,
     min_mean: Optional[float] = None,
@@ -187,7 +197,7 @@ def _highly_variable_genes_single_batch(
     if max_disp is None:
         max_disp = np.inf
 
-    X = adata.X
+    X = adata.layers[layer] if layer is not None else adata.X
     if flavor == 'seurat':
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
             X *= np.log(adata.uns['log1p']['base'])
@@ -282,12 +292,13 @@ def _highly_variable_genes_single_batch(
 
 def highly_variable_genes(
     adata: AnnData,
+    layer: Optional[str] = None,
+    n_top_genes: Optional[int] = None,
     min_disp: Optional[float] = None,
     max_disp: Optional[float] = None,
     min_mean: Optional[float] = None,
     max_mean: Optional[float] = None,
     span: Optional[float] = None,
-    n_top_genes: Optional[int] = None,
     n_bins: int = 20,
     flavor: Literal['seurat', 'cell_ranger', 'seurat_v3'] = 'seurat',
     subset: bool = False,
@@ -319,6 +330,10 @@ def highly_variable_genes(
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
+    layer
+        If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
+    n_top_genes
+        Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'`.
     min_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
         normalized dispersions are ignored. Default is 0.0125. Ignored if `flavor='seurat_v3'`.
@@ -334,8 +349,6 @@ def highly_variable_genes(
     span
         The fraction of the data (cells) used when estimating the variance in the loess model fit.
         Default is 0.3.
-    n_top_genes
-        Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'`.
     n_bins
         Number of bins for binning the mean gene expression. Normalization is
         done with respect to each bin. If just a single gene falls into a bin,
@@ -408,9 +421,12 @@ def highly_variable_genes(
             'pass `inplace=False` if you want to return a `pd.DataFrame`.'
         )
 
+    adata.uns["hvg"] = {"flavor": flavor}
+
     if flavor == 'seurat_v3':
         return _highly_variable_genes_seurat_v3(
             adata,
+            layer=layer,
             n_top_genes=n_top_genes,
             batch_key=batch_key,
             span=span,
@@ -421,6 +437,7 @@ def highly_variable_genes(
     if batch_key is None:
         df = _highly_variable_genes_single_batch(
             adata,
+            layer=layer,
             min_disp=min_disp,
             max_disp=max_disp,
             min_mean=min_mean,
