@@ -57,7 +57,6 @@ def _highly_variable_genes_seurat_v3(
         )
 
     X = adata.layers[layer] if layer is not None else adata.X
-
     if check_nonnegative_integers(X) is False:
         raise ValueError(
             "`pp.highly_variable_genes` with `flavor='seurat_v3'` expects "
@@ -70,12 +69,15 @@ def _highly_variable_genes_seurat_v3(
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
     else:
-        batch_info = adata.obs[batch_key]
+        batch_info = adata.obs[batch_key].values
 
     norm_gene_vars = []
     for b in np.unique(batch_info):
 
-        mean, var = _get_mean_var(X[batch_info == b])
+        ad = adata[batch_info == b]
+        X = ad.layers[layer] if layer is not None else ad.X
+
+        mean, var = _get_mean_var(X)
         not_const = var > 0
         estimat_var = np.zeros(adata.shape[1], dtype=np.float64)
 
@@ -86,7 +88,7 @@ def _highly_variable_genes_seurat_v3(
         estimat_var[not_const] = model.outputs.fitted_values
         reg_std = np.sqrt(10 ** estimat_var)
 
-        batch_counts = X[batch_info == b].astype(np.float64).copy()
+        batch_counts = X.astype(np.float64).copy()
         # clip large values as in Seurat
         N = np.sum(batch_info == b)
         vmax = np.sqrt(N)
@@ -116,12 +118,16 @@ def _highly_variable_genes_seurat_v3(
         norm_gene_vars.append(norm_gene_var.reshape(1, -1))
 
     norm_gene_vars = np.concatenate(norm_gene_vars, axis=0)
-    # argsort twice gives ranks
-    ranked_norm_gene_vars = np.argsort(np.argsort(norm_gene_vars, axis=1), axis=1)
-    median_ranked = np.median(ranked_norm_gene_vars, axis=0)
+    # argsort twice gives ranks, small rank means most variable
+    ranked_norm_gene_vars = np.argsort(np.argsort(-norm_gene_vars, axis=1), axis=1)
+
+    # this is done in SelectIntegrationFeatures() in Seurat v3
+    ranked_norm_gene_vars = ranked_norm_gene_vars.astype(np.float32)
+    ranked_norm_gene_vars[ranked_norm_gene_vars >= n_top_genes] = np.nan
+    median_ranked = np.nanmedian(ranked_norm_gene_vars, axis=0)
 
     num_batches_high_var = np.sum(
-        ranked_norm_gene_vars >= (adata.X.shape[1] - n_top_genes), axis=0
+        (ranked_norm_gene_vars < n_top_genes).astype(int), axis=0
     )
     df = pd.DataFrame(index=np.array(adata.var_names))
     df["highly_variable_nbatches"] = num_batches_high_var
@@ -131,8 +137,8 @@ def _highly_variable_genes_seurat_v3(
     df["variances"] = var
 
     df.sort_values(
-        ["highly_variable_nbatches", "highly_variable_rank"],
-        ascending=False,
+        ["highly_variable_rank", "highly_variable_nbatches"],
+        ascending=[True, False],
         na_position="last",
         inplace=True,
     )
@@ -154,7 +160,7 @@ def _highly_variable_genes_seurat_v3(
         adata.var['means'] = df['means'].values
         adata.var['variances'] = df['variances'].values
         adata.var['variances_norm'] = df['variances_norm'].values.astype(
-            'float32', copy=False
+            'float64', copy=False
         )
         if batch_key is not None:
             adata.var['highly_variable_nbatches'] = df[

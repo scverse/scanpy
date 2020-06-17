@@ -1,6 +1,6 @@
+library(Seurat)
 library(reticulate)
 use_python("/usr/local/bin/python3")
-library(Seurat)
 
 sc <- import("scanpy", convert=FALSE)
 
@@ -9,7 +9,7 @@ ad$X <- ad$X$toarray()
 
 ad$var_names_make_unique()
 
-sc$pp$highly_variable_genes_seurat_v3(ad, n_top_genes=1000)
+sc$pp$highly_variable_genes(ad, n_top_genes=1000, flavor="seurat_v3")
 
 
 X <- py_to_r(ad$X$T)
@@ -32,3 +32,17 @@ hvg_info <- cbind(hvg_info, rownames(hvg_info) %in% sr_hvg)
 colnames(hvg_info) <- c("means", "variances", "variances_norm", "highly_variable")
 
 write.table(hvg_info, "seurat_hvg_v3.csv")
+
+X_1 = X[, 1:1500]
+X_2 = X[, 1501:ncol(X)]
+
+sr1 <- CreateSeuratObject(counts = X_1)
+sr2 <- CreateSeuratObject(counts = X_2)
+
+sr1 <- FindVariableFeatures(object = sr1, selection.method = "vst", nfeatures = 4000)
+sr2 <- FindVariableFeatures(object = sr2, selection.method = "vst", nfeatures = 4000)
+
+srs = list(sr1, sr2)
+
+features <- SelectIntegrationFeatures(srs, nfeatures=4000)
+write.table(features, "seurat_hvg_v3_batch.csv")

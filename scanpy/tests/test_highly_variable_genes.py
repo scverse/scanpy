@@ -5,6 +5,7 @@ from pathlib import Path
 
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
 FILE_V3 = Path(__file__).parent / Path('_scripts/seurat_hvg_v3.csv')
+FILE_V3_BATCH = Path(__file__).parent / Path('_scripts/seurat_hvg_v3_batch.csv')
 
 
 def test_highly_variable_genes_basic():
@@ -87,7 +88,7 @@ def test_higly_variable_genes_compare_to_seurat():
 
 def test_higly_variable_genes_compare_to_seurat_v3():
     seurat_hvg_info = pd.read_csv(
-        FILE_V3, sep=' ', dtype={"variances_norm": np.float32}
+        FILE_V3, sep=' ', dtype={"variances_norm": np.float64}
     )
 
     pbmc = sc.datasets.pbmc3k()
@@ -117,6 +118,27 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         rtol=2e-05,
         atol=2e-05,
     )
+
+    batch = np.zeros((len(pbmc)), dtype=int)
+    batch[1500:] = 1
+    pbmc.obs["batch"] = batch
+    df = sc.pp.highly_variable_genes(
+        pbmc, n_top_genes=4000, flavor='seurat_v3', batch_key="batch", inplace=False
+    )
+    df.sort_values(
+        ["highly_variable_nbatches", "highly_variable_rank"],
+        ascending=[False, True],
+        na_position="last",
+        inplace=True,
+    )
+    df = df.iloc[:4000]
+    seurat_hvg_info_batch = pd.read_csv(
+        FILE_V3_BATCH, sep=' ', dtype={"variances_norm": np.float64}
+    )
+
+    # ranks might be slightly different due to many genes having same normalized var
+    seu = pd.Index(seurat_hvg_info_batch['x'].values)
+    assert len(seu.intersection(df.index)) / 4000 > 0.95
 
 
 def test_filter_genes_dispersion_compare_to_seurat():
