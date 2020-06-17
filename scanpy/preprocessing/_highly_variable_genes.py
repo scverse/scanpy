@@ -21,7 +21,7 @@ def _highly_variable_genes_seurat_v3(
     layer: Optional[str] = None,
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
-    span: Optional[float] = None,
+    span: Optional[float] = 0.3,
     subset: bool = False,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
@@ -62,9 +62,6 @@ def _highly_variable_genes_seurat_v3(
             "`pp.highly_variable_genes` with `flavor='seurat_v3'` expects "
             "raw count data."
         )
-
-    if span is None:
-        span = 0.3
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -130,23 +127,24 @@ def _highly_variable_genes_seurat_v3(
         (ranked_norm_gene_vars < n_top_genes).astype(int), axis=0
     )
     df = pd.DataFrame(index=np.array(adata.var_names))
-    df["highly_variable_nbatches"] = num_batches_high_var
-    df["highly_variable_rank"] = median_ranked
-    df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
-    df["means"] = mean
-    df["variances"] = var
+    df['highly_variable_nbatches'] = num_batches_high_var
+    df['highly_variable_rank'] = median_ranked
+    df['variances_norm'] = np.mean(norm_gene_vars, axis=0)
+    df['means'] = mean
+    df['variances'] = var
 
     df.sort_values(
-        ["highly_variable_rank", "highly_variable_nbatches"],
+        ['highly_variable_rank', 'highly_variable_nbatches'],
         ascending=[True, False],
-        na_position="last",
+        na_position='last',
         inplace=True,
     )
-    df["highly_variable"] = False
-    df.loc[: int(n_top_genes), "highly_variable"] = True
+    df['highly_variable'] = False
+    df.loc[: int(n_top_genes), 'highly_variable'] = True
     df = df.loc[adata.var_names]
 
     if inplace or subset:
+        adata.uns['hvg'] = {'flavor': 'seurat_v3'}
         logg.hint(
             'added\n'
             '    \'highly_variable\', boolean vector (adata.var)\n'
@@ -177,10 +175,10 @@ def _highly_variable_genes_seurat_v3(
 def _highly_variable_genes_single_batch(
     adata: AnnData,
     layer: Optional[str] = None,
-    min_disp: Optional[float] = None,
-    max_disp: Optional[float] = None,
-    min_mean: Optional[float] = None,
-    max_mean: Optional[float] = None,
+    min_disp: Optional[float] = 0.5,
+    max_disp: Optional[float] = np.inf,
+    min_mean: Optional[float] = 0.0125,
+    max_mean: Optional[float] = 3,
     n_top_genes: Optional[int] = None,
     n_bins: int = 20,
     flavor: Literal['seurat', 'cell_ranger'] = 'seurat',
@@ -193,15 +191,6 @@ def _highly_variable_genes_single_batch(
     A DataFrame that contains the columns
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
-
-    if min_disp is None:
-        min_disp = 0.5
-    if min_mean is None:
-        min_mean = 0.0125
-    if max_mean is None:
-        max_mean = 3
-    if max_disp is None:
-        max_disp = np.inf
 
     X = adata.layers[layer] if layer is not None else adata.X
     if flavor == 'seurat':
@@ -300,11 +289,11 @@ def highly_variable_genes(
     adata: AnnData,
     layer: Optional[str] = None,
     n_top_genes: Optional[int] = None,
-    min_disp: Optional[float] = None,
-    max_disp: Optional[float] = None,
-    min_mean: Optional[float] = None,
-    max_mean: Optional[float] = None,
-    span: Optional[float] = None,
+    min_disp: Optional[float] = 0.5,
+    max_disp: Optional[float] = np.inf,
+    min_mean: Optional[float] = 0.0125,
+    max_mean: Optional[float] = 3,
+    span: Optional[float] = 0.3,
     n_bins: int = 20,
     flavor: Literal['seurat', 'cell_ranger', 'seurat_v3'] = 'seurat',
     subset: bool = False,
@@ -342,19 +331,19 @@ def highly_variable_genes(
         Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'`.
     min_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Default is 0.0125. Ignored if `flavor='seurat_v3'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
     max_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Default is 3. Ignored if `flavor='seurat_v3'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
     min_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Default is 0.5. Ignored if `flavor='seurat_v3'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
     max_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Default is `np.inf`. Ignored if `flavor='seurat_v3'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
     span
-        The fraction of the data (cells) used when estimating the variance in the loess model fit.
-        Default is 0.3.
+        The fraction of the data (cells) used when estimating the variance in the loess
+        model fit if `flavor='seurat_v3'`.
     n_bins
         Number of bins for binning the mean gene expression. Normalization is
         done with respect to each bin. If just a single gene falls into a bin,
@@ -413,15 +402,6 @@ def highly_variable_genes(
     ):
         logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
 
-    if min_disp is None:
-        min_disp = 0.5
-    if min_mean is None:
-        min_mean = 0.0125
-    if max_mean is None:
-        max_mean = 3
-    if max_disp is None:
-        max_disp = np.inf
-
     start = logg.info('extracting highly variable genes')
 
     if not isinstance(adata, AnnData):
@@ -429,8 +409,6 @@ def highly_variable_genes(
             '`pp.highly_variable_genes` expects an `AnnData` argument, '
             'pass `inplace=False` if you want to return a `pd.DataFrame`.'
         )
-
-    adata.uns["hvg"] = {"flavor": flavor}
 
     if flavor == 'seurat_v3':
         return _highly_variable_genes_seurat_v3(
@@ -541,6 +519,7 @@ def highly_variable_genes(
     logg.info('    finished', time=start)
 
     if inplace or subset:
+        adata.uns['hvg'] = {'flavor': flavor}
         logg.hint(
             'added\n'
             '    \'highly_variable\', boolean vector (adata.var)\n'
