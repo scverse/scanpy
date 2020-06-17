@@ -37,6 +37,7 @@ def _set_logger_level(level):
     _check_rpy2()
 
     import rpy2.rinterface_lib.callbacks
+
     rpy2.rinterface_lib.callbacks.logger.setLevel(level)
 
 
