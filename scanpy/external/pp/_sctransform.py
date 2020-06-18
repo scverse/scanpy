@@ -7,8 +7,8 @@ from anndata import AnnData
 
 from ...preprocessing import filter_genes
 from ..rtools import (
-    _check_rpy2,
-    _check_anndata2ri,
+    rpy2_import,
+    anndata2ri_import,
     _is_installed,
     _py2r,
     _r2py,
@@ -16,6 +16,8 @@ from ..rtools import (
 )
 
 
+@rpy2_import
+@anndata2ri_import
 def sctransform(
     adata: AnnData,
     regress_out: Sequence = ('log_umi',),
@@ -79,9 +81,6 @@ def sctransform(
     are also used for ranking genes by variability.
 
     """
-
-    _check_rpy2()
-    _check_anndata2ri()
 
     import rpy2
     from rpy2.robjects import r

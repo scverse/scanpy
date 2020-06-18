@@ -1,50 +1,57 @@
+import functools
 import scipy.sparse as sp
 
 
-def _check_rpy2():
-    try:
-        import rpy2
-    except ImportError:
-        raise ImportError("Please install rpy2 package.")
+def rpy2_import(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            import rpy2
+        except ImportError:
+            raise ImportError("Please install rpy2 package.")
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
-def _check_anndata2ri():
-    try:
-        import anndata2ri
-    except ImportError:
-        raise ImportError("Please install anndata2ri package.")
+def anndata2ri_import(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            import anndata2ri
+        except ImportError:
+            raise ImportError("Please install anndata2ri package.")
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
+@rpy2_import
 def _is_installed(package_name):
-    _check_rpy2()
-
     from rpy2.robjects.packages import isinstalled
 
     if not isinstalled(package_name):
         raise ImportError(f"Please install {package_name} R package.")
 
 
+@rpy2_import
 def _set_seed(seed):
-    _check_rpy2()
-
     from rpy2.robjects import r
 
     set_seed = r('set.seed')
     set_seed(seed)
 
 
+@rpy2_import
 def _set_logger_level(level):
-    _check_rpy2()
-
     import rpy2.rinterface_lib.callbacks
 
     rpy2.rinterface_lib.callbacks.logger.setLevel(level)
 
 
+@rpy2_import
+@anndata2ri_import
 def _py2r(x):
-    _check_rpy2()
-    _check_anndata2ri()
-
     import rpy2.robjects as ro
     from rpy2.robjects import numpy2ri, pandas2ri
     from rpy2.robjects.conversion import localconverter
@@ -62,10 +69,9 @@ def _py2r(x):
     return x
 
 
+@rpy2_import
+@anndata2ri_import
 def _r2py(x):
-    _check_rpy2()
-    _check_anndata2ri()
-
     import rpy2.robjects as ro
     from rpy2.robjects import numpy2ri, pandas2ri
     from rpy2.robjects.conversion import localconverter
