@@ -7,17 +7,17 @@ from anndata import AnnData
 
 from ...preprocessing import filter_genes
 from ..rtools import (
-    rpy2_import,
-    anndata2ri_import,
-    _is_installed,
-    _py2r,
-    _r2py,
-    _set_seed,
+    anndata2ri_check,
+    py2r,
+    r2py,
+    rpy2_check,
+    r_is_installed,
+    r_set_seed,
 )
 
 
-@rpy2_import
-@anndata2ri_import
+@rpy2_check
+@anndata2ri_check
 def sctransform(
     adata: AnnData,
     regress_out: Sequence = ('log_umi',),
@@ -87,8 +87,8 @@ def sctransform(
     from rpy2.robjects.packages import importr
     import anndata2ri
 
-    _is_installed('sctransform')
-    _set_seed(seed)
+    r_is_installed('sctransform')
+    r_set_seed(seed)
 
     # check if observations are unnormalized using first 10
     if len(adata) > 10:
@@ -111,7 +111,7 @@ def sctransform(
     mat = adata.X.T
     if sp.issparse(mat):
         mat.sort_indices()
-    mat = _py2r(mat)
+    mat = py2r(mat)
 
     set_colnames = r('`colnames<-`')
     set_rownames = r('`rownames<-`')
@@ -123,7 +123,7 @@ def sctransform(
         regress_out, collections.abc.Sequence
     ), 'regress_out is not a sequence'
     obs_keys = [x for x in regress_out if x != 'log_umi']
-    regress_out = _py2r(np.array(regress_out))
+    regress_out = py2r(np.array(regress_out))
 
     if batch_key is not None:
         obs_keys += [batch_key]
@@ -135,7 +135,7 @@ def sctransform(
             np.isin(obs_keys, adata.obs.columns)
         ), 'Some regress_out or batch_key values are not found in adata.obs'
         cell_attr = adata.obs[obs_keys]
-        cell_attr = _py2r(cell_attr)
+        cell_attr = py2r(cell_attr)
     else:
         cell_attr = rpy2.rinterface.NULL
 
@@ -153,14 +153,14 @@ def sctransform(
         show_progress=verbose,
     )
 
-    res_var = _r2py(sct.get_residual_var(vst_out, mat))
-    corrected = _r2py(sct.correct_counts(vst_out, mat)).T
+    res_var = r2py(sct.get_residual_var(vst_out, mat))
+    corrected = r2py(sct.correct_counts(vst_out, mat)).T
 
     adata.layers['sct_corrected'] = corrected
     adata.var['highly_variable_sct_residual_var'] = res_var
 
     if store_residuals:
-        adata.layers['sct_residuals'] = _r2py(vst_out.rx2('y')).T
+        adata.layers['sct_residuals'] = r2py(vst_out.rx2('y')).T
 
     top_genes = (
         adata.var['highly_variable_sct_residual_var']

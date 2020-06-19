@@ -2,7 +2,9 @@ import functools
 import scipy.sparse as sp
 
 
-def rpy2_import(func):
+def rpy2_check(func):
+    '''Decorator to check whether rpy2 is installed at runtime'''
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -14,7 +16,9 @@ def rpy2_import(func):
     return wrapper
 
 
-def anndata2ri_import(func):
+def anndata2ri_check(func):
+    '''Decorator to check whether anndata2ri is installed at runtime'''
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -26,32 +30,36 @@ def anndata2ri_import(func):
     return wrapper
 
 
-@rpy2_import
-def _is_installed(package_name):
+@rpy2_check
+def r_is_installed(package_name):
+    '''Checks whether a given R package is installed'''
     from rpy2.robjects.packages import isinstalled
 
     if not isinstalled(package_name):
         raise ImportError(f"Please install {package_name} R package.")
 
 
-@rpy2_import
-def _set_seed(seed):
+@rpy2_check
+def r_set_seed(seed):
+    '''Set the seed of R random number generator'''
     from rpy2.robjects import r
 
     set_seed = r('set.seed')
     set_seed(seed)
 
 
-@rpy2_import
-def _set_logger_level(level):
+@rpy2_check
+def r_set_logger_level(level):
+    '''Set the logger level of rpy2'''
     import rpy2.rinterface_lib.callbacks
 
     rpy2.rinterface_lib.callbacks.logger.setLevel(level)
 
 
-@rpy2_import
-@anndata2ri_import
-def _py2r(x):
+@rpy2_check
+@anndata2ri_check
+def py2r(x):
+    '''Convert a Python object to an R object using rpy2'''
     import rpy2.robjects as ro
     from rpy2.robjects import numpy2ri, pandas2ri
     from rpy2.robjects.conversion import localconverter
@@ -69,9 +77,10 @@ def _py2r(x):
     return x
 
 
-@rpy2_import
-@anndata2ri_import
-def _r2py(x):
+@rpy2_check
+@anndata2ri_check
+def r2py(x):
+    '''Convert an rpy2 (R)  object to a Python object'''
     import rpy2.robjects as ro
     from rpy2.robjects import numpy2ri, pandas2ri
     from rpy2.robjects.conversion import localconverter
