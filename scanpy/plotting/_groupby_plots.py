@@ -49,7 +49,7 @@ class BasePlot(object):
         self,
         adata: AnnData,
         var_names: Union[_VarNames, Mapping[str, _VarNames]],
-        groupby: str,
+        groupby: Union[str, Sequence[str]],
         use_raw: Optional[bool] = None,
         log: bool = False,
         num_categories: int = 7,
@@ -106,7 +106,7 @@ class BasePlot(object):
                 return
 
         self.adata = adata
-        self.groupby = groupby
+        self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.log = log
         self.kwds = kwds
 
@@ -275,9 +275,7 @@ class BasePlot(object):
 
         _sort = True if sort is not None else False
         _ascending = True if sort == 'ascending' else False
-        counts_df = self.obs_tidy.index.value_counts(
-            sort=_sort, ascending=_ascending
-        )
+        counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
 
         if _sort:
             self.categories_order = counts_df.index
@@ -1191,10 +1189,11 @@ class DotPlot(BasePlot):
             All expression fractions with `dot_max` are plotted with this size.
         dot_edge_color
             Dot edge color. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, edge color is white
+            `color_on='square'`, edge color is white for darker colors and black
+            for lighter background square colors.
         dot_edge_lw
             Dot edge line width. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, line width = 1.5
+            `color_on='square'`, line width = 1.5.
         size_exponent
             Dot size is computed as:
             fraction  ** size exponent and afterwards scaled to match the
@@ -1558,9 +1557,22 @@ class DotPlot(BasePlot):
         )
 
         if color_on == 'square':
-            edge_color = 'white' if edge_color is None else edge_color
+            if edge_color is None:
+                from seaborn.utils import relative_luminance
+
+                # use either black or white for the edge color
+                # depending on the luminance of the background
+                # square color
+                edge_color = []
+                for color_value in cmap(normalize(mean_flat)):
+                    lum = relative_luminance(color_value)
+                    edge_color.append(".15" if lum > 0.408 else "w")
+
             edge_lw = 1.5 if edge_lw is None else edge_lw
-            # makes first a 'matrixplot' (squares with the asigned colormap
+
+            # first make a heatmap similar to `sc.pl.matrixplot`
+            # (squares with the asigned colormap). Circles will be plotted
+            # on top
             dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
             for axis in ['top', 'bottom', 'left', 'right']:
                 dot_ax.spines[axis].set_linewidth(1.5)
