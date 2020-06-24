@@ -410,7 +410,7 @@ def _rank_genes_groups_plot(
             title = values_to_plot
 
         if plot_type == 'dotplot':
-            from .._groupby_plots import dotplot
+            from .._dotplot import dotplot
 
             _pl = dotplot(
                 adata,
@@ -424,7 +424,7 @@ def _rank_genes_groups_plot(
             if title is not None:
                 _pl.legend(colorbar_title=title.replace("_", " "))
         elif plot_type == 'matrixplot':
-            from .._groupby_plots import matrixplot
+            from .._matrixplot import matrixplot
 
             _pl = matrixplot(
                 adata, var_names, groupby, values_df=values_df, return_fig=True, **kwds
@@ -438,7 +438,7 @@ def _rank_genes_groups_plot(
             return _pl.show(show=show, save=save)
 
     elif plot_type == 'stacked_violin':
-        from .._groupby_plots import stacked_violin
+        from .._stacked_violin import stacked_violin
 
         _pl = stacked_violin(adata, var_names, groupby, return_fig=True, **kwds)
         if return_fig:
