@@ -140,7 +140,7 @@ def dendrogram(
     z_var = sch.linkage(
         corr_matrix, method=linkage_method, optimal_ordering=optimal_ordering
     )
-    dendro_info = sch.dendrogram(z_var, labels=categories, no_plot=True)
+    dendro_info = sch.dendrogram(z_var, labels=list(categories), no_plot=True)
 
     dat = dict(
         linkage=z_var,

@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import Optional
+import warnings
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from tqdm.auto import tqdm
 
 from .. import logging as logg, _utils
 from .._compat import Literal
@@ -235,7 +235,9 @@ def pbmc68k_reduced() -> AnnData:
     """
 
     filename = HERE / '10x_pbmc68k_reduced.h5ad'
-    return read(filename)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        return read(filename)
 
 
 def pbmc3k() -> AnnData:
@@ -289,11 +291,12 @@ def pbmc3k_processed() -> AnnData:
     -------
     Annotated data matrix.
     """
-    adata = read(
-        settings.datasetdir / 'pbmc3k_processed.h5ad',
-        backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
-    )
-    return adata
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        return read(
+            settings.datasetdir / 'pbmc3k_processed.h5ad',
+            backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
+        )
 
 
 def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):

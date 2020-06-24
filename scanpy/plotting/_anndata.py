@@ -1742,15 +1742,21 @@ def _prepare_dataframe(
         # translate gene_symbols to var_names
         # slow method but gives a meaningful error if no gene symbol is found:
         translated_var_names = []
+        # if we're using raw to plot, we should also do gene symbol translations
+        # using raw
+        if use_raw:
+            adata_or_raw = adata.raw
+        else:
+            adata_or_raw = adata
         for symbol in var_names:
-            if symbol not in adata.var[gene_symbols].values:
+            if symbol not in adata_or_raw.var[gene_symbols].values:
                 logg.error(
                     f"Gene symbol {symbol!r} not found in given "
                     f"gene_symbols column: {gene_symbols!r}"
                 )
                 return
             translated_var_names.append(
-                adata.var[adata.var[gene_symbols] == symbol].index[0]
+                adata_or_raw.var[adata_or_raw.var[gene_symbols] == symbol].index[0]
             )
         symbols = var_names
         var_names = translated_var_names
