@@ -969,6 +969,7 @@ def heatmap(
             var_names=var_names,
             var_group_labels=var_group_labels,
             var_group_positions=var_group_positions,
+            categories=categories,
         )
 
         var_group_labels = dendro_data['var_group_labels']
@@ -1296,7 +1297,6 @@ def tracksplot(
         from ._utils import _set_default_colors_for_categorical_obs
 
         _set_default_colors_for_categorical_obs(adata, groupby)
-
     groupby_colors = adata.uns[groupby + "_colors"]
 
     if dendrogram:
@@ -1309,6 +1309,7 @@ def tracksplot(
             var_names=var_names,
             var_group_labels=var_group_labels,
             var_group_positions=var_group_positions,
+            categories=categories,
         )
         # reorder obs_tidy
         if dendro_data['var_names_idx_ordered'] is not None:
@@ -1942,6 +1943,7 @@ def _reorder_categories_after_dendrogram(
     var_names=None,
     var_group_labels=None,
     var_group_positions=None,
+    categories=None,
 ):
     """\
     Function used by plotting functions that need to reorder the the groupby
@@ -1963,6 +1965,9 @@ def _reorder_categories_after_dendrogram(
 
     key = _get_dendrogram_key(adata, dendrogram, groupby)
 
+    if isinstance(groupby, str):
+        groupby = [groupby]
+
     dendro_info = adata.uns[key]
     if groupby != dendro_info['groupby']:
         raise ValueError(
@@ -1972,7 +1977,8 @@ def _reorder_categories_after_dendrogram(
             "Please run `sc.tl.dendrogram` using the right observation.'"
         )
 
-    categories = adata.obs[dendro_info['groupby']].cat.categories
+    if categories is None:
+        categories = adata.obs[dendro_info['groupby']].cat.categories
 
     # order of groupby categories
     categories_idx_ordered = dendro_info['categories_idx_ordered']
