@@ -1218,6 +1218,7 @@ def heatmap(
         return_ax_dict['gene_groups_ax'] = gene_groups_ax
 
     _utils.savefig_or_show('heatmap', show=show, save=save)
+    show = settings.autoshow if show is None else show
     if not show:
         return return_ax_dict
 
@@ -1467,6 +1468,7 @@ def tracksplot(
         return_ax_dict['gene_groups_ax'] = gene_groups_ax
 
     _utils.savefig_or_show('tracksplot', show=show, save=save)
+    show = settings.autoshow if show is None else show
     if not show:
         return return_ax_dict
 

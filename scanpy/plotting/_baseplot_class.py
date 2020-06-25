@@ -16,9 +16,30 @@ from .._compat import Literal
 from . import _utils
 from ._utils import make_grid_spec
 from ._utils import ColorLike, _AxesSubplot
+from .._settings import settings
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
 
 _VarNames = Union[str, Sequence[str]]
+
+doc_common_groupby_plot_args = """\
+title
+    Title for the figure
+colorbar_title
+    Title for the color bar. New line character (\\n) can be used.
+cmap
+    String denoting matplotlib color map.
+standard_scale
+    Whether or not to standardize the given dimension between 0 and 1, meaning for 
+    each variable or group, subtract the minimum and divide each by its maximum.
+swap_axes
+     By default, the x axis contains `var_names` (e.g. genes) and the y axis
+     the `groupby` categories. By setting `swap_axes` then x are the
+     `groupby` categories and y the `var_names`.
+return_fig
+    Returns :class:`DotPlot` object. Useful for fine-tuning
+    the plot. Takes precedence over `show=False`.
+
+"""
 
 
 class BasePlot(object):
@@ -680,8 +701,8 @@ class BasePlot(object):
 
         _utils.savefig_or_show(self.DEFAULT_SAVE_PREFIX, show=show, save=save)
         self.ax_dict = return_ax_dict
-
-        if show is False:
+        show = settings.autoshow if show is None else show
+        if not show :
             return return_ax_dict
 
     def _reorder_categories_after_dendrogram(
@@ -942,23 +963,3 @@ class BasePlot(object):
         elif isinstance(self.var_names, str):
             self.var_names = [self.var_names]
 
-
-doc_common_groupby_plot_args = """\
-title
-    Title for the figure
-colorbar_title
-    Title for the color bar. New line character (\\n) can be used.
-cmap
-    String denoting matplotlib color map.
-standard_scale
-    Whether or not to standardize the given dimension between 0 and 1, meaning for 
-    each variable or group, subtract the minimum and divide each by its maximum.
-swap_axes
-     By default, the x axis contains `var_names` (e.g. genes) and the y axis
-     the `groupby` categories. By setting `swap_axes` then x are the
-     `groupby` categories and y the `var_names`.
-return_fig
-    Returns :class:`DotPlot` object. Useful for fine-tuning
-    the plot. Takes precedence over `show=False`.
-
-"""
