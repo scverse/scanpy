@@ -51,28 +51,15 @@ def _ranks(X, mask=None, mask_rest=None):
         n_cells = X.shape[0]
         get_chunk = lambda X, left, right: adapt(X[:, left:right])
 
-    # Now calculate gene expression ranking in chunkes:
-    chunk = []
     # Calculate chunk frames
-    n_genes_max_chunk = floor(CONST_MAX_SIZE / n_cells)
-    if n_genes_max_chunk < n_genes:
-        chunk_index = n_genes_max_chunk
-        while chunk_index < n_genes:
-            chunk.append(chunk_index)
-            chunk_index = chunk_index + n_genes_max_chunk
-        chunk.append(n_genes)
-    else:
-        chunk.append(n_genes)
+    max_chunk = floor(CONST_MAX_SIZE / n_cells)
 
-    left = 0
-    # Calculate rank sums for each chunk for the current mask
-    for right in chunk:
+    for left in range(0, n_genes, max_chunk):
+        right = min(left + max_chunk, n_genes)
 
         df = pd.DataFrame(data=get_chunk(X, left, right))
         ranks = df.rank()
         yield ranks, left, right
-
-        left = right
 
 
 class _RankGenes:
