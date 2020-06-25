@@ -449,7 +449,7 @@ def _rank_genes_groups_plot(
     elif plot_type == 'heatmap':
         from .._anndata import heatmap
 
-        heatmap(adata, var_names, groupby, show=show, save=save, **kwds)
+        return heatmap(adata, var_names, groupby, show=show, save=save, **kwds)
 
     elif plot_type == 'tracksplot':
         from .._anndata import tracksplot
@@ -495,8 +495,7 @@ def rank_genes_groups_heatmap(
         Are passed to :func:`~scanpy.pl.heatmap`.
     {show_save_ax}
     """
-
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='heatmap',
         groups=groups,
@@ -548,7 +547,7 @@ def rank_genes_groups_tracksplot(
     {show_save_ax}
     """
 
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='tracksplot',
         groups=groups,

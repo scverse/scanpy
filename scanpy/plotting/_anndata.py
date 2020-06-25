@@ -1209,9 +1209,17 @@ def heatmap(
         # plot colorbar
         _plot_colorbar(im, fig, axs[1, 2])
 
-    _utils.savefig_or_show('heatmap', show=show, save=save)
+    return_ax_dict = {'heatmap_ax': heatmap_ax}
+    if categorical:
+        return_ax_dict['groupby_ax'] = groupby_ax
+    if dendrogram:
+        return_ax_dict['dendrogram_ax'] = dendro_ax
+    if var_group_positions is not None and len(var_group_positions) > 0:
+        return_ax_dict['gene_groups_ax'] = gene_groups_ax
 
-    return axs
+    _utils.savefig_or_show('heatmap', show=show, save=save)
+    if not show:
+        return return_ax_dict
 
 
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
@@ -1440,7 +1448,6 @@ def tracksplot(
             orientation='top',
             ticks=ticks,
         )
-        axs_list.append(dendro_ax)
 
     if var_group_positions is not None and len(var_group_positions) > 0:
         gene_groups_ax = fig.add_subplot(axs[1:-1, 1])
@@ -1452,10 +1459,16 @@ def tracksplot(
             np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm
         )
         gene_groups_ax.axis('off')
-        axs_list.append(gene_groups_ax)
+
+    return_ax_dict = {'track_axes': axs_list, 'groupby_ax': groupby_ax}
+    if dendrogram:
+        return_ax_dict['dendrogram_ax'] = dendro_ax
+    if var_group_positions is not None and len(var_group_positions) > 0:
+        return_ax_dict['gene_groups_ax'] = gene_groups_ax
 
     _utils.savefig_or_show('tracksplot', show=show, save=save)
-    return axs_list
+    if not show:
+        return return_ax_dict
 
 
 @_doc_params(show_save_ax=doc_show_save_ax)
