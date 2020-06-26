@@ -859,10 +859,12 @@ def rank_genes_groups_violin(
     axs = []
     for group_name in groups_names:
         if gene_names is None:
-            gene_names = adata.uns[key]['names'][group_name][:n_genes]
+            _gene_names = adata.uns[key]['names'][group_name][:n_genes]
+        else:
+            _gene_names = gene_names
         df = pd.DataFrame()
         new_gene_names = []
-        for g in gene_names:
+        for g in _gene_names:
             if adata.raw is not None and use_raw:
                 X_col = adata.raw[:, g].X
                 if gene_symbols:

@@ -962,4 +962,3 @@ class BasePlot(object):
 
         elif isinstance(self.var_names, str):
             self.var_names = [self.var_names]
-
