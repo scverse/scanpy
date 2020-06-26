@@ -702,7 +702,7 @@ class BasePlot(object):
         _utils.savefig_or_show(self.DEFAULT_SAVE_PREFIX, show=show, save=save)
         self.ax_dict = return_ax_dict
         show = settings.autoshow if show is None else show
-        if not show :
+        if not show:
             return return_ax_dict
 
     def _reorder_categories_after_dendrogram(
