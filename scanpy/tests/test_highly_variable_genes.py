@@ -4,7 +4,7 @@ import scanpy as sc
 from pathlib import Path
 
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
-FILE_V3 = Path(__file__).parent / Path('_scripts/seurat_hvg_v3.csv')
+FILE_V3 = Path(__file__).parent / Path('_scripts/seurat_hvg_v3.csv.gz')
 FILE_V3_BATCH = Path(__file__).parent / Path('_scripts/seurat_hvg_v3_batch.csv')
 
 
