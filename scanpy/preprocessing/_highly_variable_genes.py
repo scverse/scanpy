@@ -360,23 +360,24 @@ def highly_variable_genes(
         return df
 
 
-def highly_variable_genes_seurat_v3(
+def highly_variable_genes_norm_variance(
     adata: AnnData,
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
     span: Optional[float] = 0.3,
     subset: bool = False,
     inplace: bool = True,
-):
+) -> Optional[pd.DataFrame]:
     """\
-    Annotate highly variable genes [Stuart19]_.
+    Annotate highly variable genes (HVGs) as in Seurat v3 [Stuart19]_.
 
     Expects raw count data.
 
     Computes for each gene a normalized variance. First, the data is standardized
     (i.e., z-score normalization per feature) with a regularized standard deviation.
     Next, the normalized variance is computed as the variance of each gene after the transformation.
-    Genes are ranked by the normalized variance.
+    Genes are ranked by the normalized variance. Optionally, HVGs are merged from different batches
+    as a form of lightweight batch correction.
 
     For further implemenation details see https://www.overleaf.com/read/ckptrbgzzzpg
 
@@ -401,20 +402,29 @@ def highly_variable_genes_seurat_v3(
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics (:class:`~numpy.recarray`) or
+    Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`) or
     updates `.var` with the following fields
 
     highly_variable : bool
         boolean indicator of highly-variable genes
+    **means**
+        means per gene
+    **variances**
+        variance per gene
     **variances_norm**
         normalized variance per gene, averaged in the case of multiple batches
+    highly_variable_rank : int
+        Rank of the gene according to normalized variance, median rank in the case of multiple batches
     highly_variable_nbatches : int
         If batch_key is given, this denotes in how many batches genes are detected as HVG
-    highly_variable_intersection : bool
-        If batch_key is given, this denotes the genes that are highly variable in all batches
     """
 
-    from skmisc.loess import loess
+    try:
+        from skmisc.loess import loess
+    except ImportError:
+        raise ImportError(
+            'Please install skmisc package via `pip install --user scikit-misc'
+        )
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -474,14 +484,13 @@ def highly_variable_genes_seurat_v3(
     )
     df = pd.DataFrame(index=np.array(adata.var_names))
     df["highly_variable_nbatches"] = num_batches_high_var
-    df["highly_variable_median_rank"] = median_ranked
+    df["highly_variable_rank"] = median_ranked
     df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
     df["means"] = mean
     df["variances"] = var
-    df["regularized_std"] = reg_std
 
     df.sort_values(
-        ["highly_variable_nbatches", "highly_variable_median_rank"],
+        ["highly_variable_nbatches", "highly_variable_rank"],
         ascending=False,
         na_position="last",
         inplace=True,
@@ -490,66 +499,29 @@ def highly_variable_genes_seurat_v3(
     df.loc[: int(n_top_genes), "highly_variable"] = True
     df = df.loc[adata.var_names]
 
-    adata.var["highly_variable"] = df["highly_variable"].values
-    if batch_key is not None:
-        batches = adata.obs[batch_key].cat.categories
-        adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"].values
-        adata.var["highly_variable_intersection"] = df[
-            "highly_variable_nbatches"
-        ] == len(batches)
-    adata.var["highly_variable_median_rank"] = df["highly_variable_median_rank"].values
-
     if inplace or subset:
         logg.hint(
             'added\n'
             '    \'highly_variable\', boolean vector (adata.var)\n'
+            '    \'highly_variable_rank\', int vector (adata.var)\n'
             '    \'means\', float vector (adata.var)\n'
             '    \'variances\', float vector (adata.var)\n'
             '    \'variances_norm\', float vector (adata.var)'
-            '    \'regularized_std\', float vector (adata.var)'
         )
         adata.var['highly_variable'] = df['highly_variable'].values
+        adata.var['highly_variable_rank'] = df['highly_variable_rank'].values
         adata.var['means'] = df['means'].values
         adata.var['variances'] = df['variances'].values
         adata.var['variances_norm'] = df['variances_norm'].values.astype(
-            'float32', copy=False
-        )
-        adata.var['regularized_std'] = df['regularized_std'].values.astype(
             'float32', copy=False
         )
         if batch_key is not None:
             adata.var['highly_variable_nbatches'] = df[
                 'highly_variable_nbatches'
             ].values
-            adata.var['highly_variable_intersection'] = df[
-                'highly_variable_intersection'
-            ].values
         if subset:
             adata._inplace_subset_var(df['highly_variable'].values)
     else:
-        arrays = [
-            df['highly_variable'].values,
-            df['means'].values,
-            df['variances'].values,
-            df['variances_norm'].values.astype('float32', copy=False),
-        ]
-        dtypes = [
-            ('highly_variable', np.bool_),
-            ('means', 'float32'),
-            ('variances', 'float32'),
-            ('variances_norm', 'float32'),
-        ]
-        if batch_key is not None:
-            arrays.extend(
-                [
-                    df['highly_variable_nbatches'].values,
-                    df['highly_variable_intersection'].values,
-                ]
-            )
-            dtypes.append(
-                [
-                    ('highly_variable_nbatches', int),
-                    ('highly_variable_intersection', np.bool_),
-                ]
-            )
-        return np.rec.fromarrays(arrays, dtype=dtypes)
+        if batch_key is None:
+            df = df.drop(['highly_variable_nbatches'], axis=1)
+        return df
