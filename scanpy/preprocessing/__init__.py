@@ -3,7 +3,7 @@ from ._simple import filter_cells, filter_genes
 from ._deprecated.highly_variable_genes import filter_genes_dispersion
 from ._highly_variable_genes import (
     highly_variable_genes,
-    highly_variable_genes_seurat_v3,
+    highly_variable_genes_norm_variance,
 )
 from ._simple import log1p, sqrt, scale, subsample
 from ._simple import normalize_per_cell, regress_out, downsample_counts
