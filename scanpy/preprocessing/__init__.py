@@ -1,7 +1,10 @@
 from ._recipes import recipe_zheng17, recipe_weinreb17, recipe_seurat
 from ._simple import filter_cells, filter_genes
 from ._deprecated.highly_variable_genes import filter_genes_dispersion
-from ._highly_variable_genes import highly_variable_genes
+from ._highly_variable_genes import (
+    highly_variable_genes,
+    highly_variable_genes_seurat_v3,
+)
 from ._simple import log1p, sqrt, scale, subsample
 from ._simple import normalize_per_cell, regress_out, downsample_counts
 from ._pca import pca
