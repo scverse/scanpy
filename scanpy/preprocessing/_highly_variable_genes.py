@@ -121,11 +121,13 @@ def _highly_variable_genes_seurat_v3(
     # this is done in SelectIntegrationFeatures() in Seurat v3
     ranked_norm_gene_vars = ranked_norm_gene_vars.astype(np.float32)
     ranked_norm_gene_vars[ranked_norm_gene_vars >= n_top_genes] = np.nan
-    median_ranked = np.nanmedian(ranked_norm_gene_vars, axis=0)
-
+    ranked_norm_gene_vars = np.ma.masked_invalid(ranked_norm_gene_vars)
+    median_ranked = np.median(ranked_norm_gene_vars, axis=0)
     num_batches_high_var = np.sum(
         (ranked_norm_gene_vars < n_top_genes).astype(int), axis=0
     )
+    ranked_norm_gene_vars = np.ma.filled(ranked_norm_gene_vars, fill_value=np.nan)
+
     df = pd.DataFrame(index=np.array(adata.var_names))
     df['highly_variable_nbatches'] = num_batches_high_var
     df['highly_variable_rank'] = median_ranked
