@@ -1,5 +1,7 @@
-from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot, dendrogram, correlation_matrix
-
+from ._anndata import scatter, violin, ranking, clustermap, tracksplot, dendrogram, correlation_matrix, heatmap
+from ._dotplot import dotplot
+from ._matrixplot import matrixplot
+from ._stacked_violin import stacked_violin
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
 
 from ._tools.scatterplots import embedding, pca, diffmap, draw_graph, tsne, umap, spatial
