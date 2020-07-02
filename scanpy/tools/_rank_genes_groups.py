@@ -14,7 +14,7 @@ from ..preprocessing._simple import _get_mean_var
 from .._compat import Literal
 
 
-_Method = Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']
+_Method = Optional[Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']]
 _CorrMethod = Literal['benjamini-hochberg', 'bonferroni']
 
 
@@ -364,7 +364,7 @@ def rank_genes_groups(
     pts: bool = False,
     key_added: Optional[str] = None,
     copy: bool = False,
-    method: _Method = 't-test',
+    method: _Method = None,
     corr_method: _CorrMethod = 'benjamini-hochberg',
     layer: Optional[str] = None,
     **kwds,
@@ -455,9 +455,11 @@ def rank_genes_groups(
     # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-    logg.warning(
-        "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
-    )
+    if method is None:
+        logg.warning(
+            "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+        )
+        method = 't-test'
 
     if 'only_positive' in kwds:
         rankby_abs = not kwds.pop('only_positive')  # backwards compat
