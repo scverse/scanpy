@@ -695,7 +695,7 @@ def violin(
     if groupby is None:
         if len(ylabel) != 1:
             raise ValueError(
-                f'Expected number of y-labels to be `1`, ' f'found `{len(ylabel)}`.'
+                f'Expected number of y-labels to be `1`, found `{len(ylabel)}`.'
             )
     elif len(ylabel) != len(keys):
         raise ValueError(

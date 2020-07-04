@@ -434,6 +434,7 @@ def test_violin(image_comparer):
     sc.pl.violin(
         pbmc,
         ['n_genes', 'percent_mito', 'n_counts'],
+        ylabel=["foo", "bar", "baz"],
         groupby='bulk_labels',
         stripplot=True,
         multi_panel=True,
