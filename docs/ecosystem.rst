@@ -31,6 +31,12 @@ RNA velocity
 * `scVelo <https://scvelo.org>`__ :small:`Helmholtz Munich`
 
 
+Fate mapping
+------------
+
+* `CellRank <http://cellrank.org>`__ :small:`Helmholtz Munich`
+
+
 Differential expression
 -----------------------
 
