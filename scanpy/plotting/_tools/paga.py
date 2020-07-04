@@ -436,7 +436,6 @@ def paga(
         has_one_per_category = isinstance(x, cabc.Collection) and len(x) == len(
             adata.obs[groups_key].cat.categories
         )
-        print(has_one_per_category)
         return has_one_per_category or x is None or isinstance(x, str)
 
     if isinstance(colors, cabc.Mapping) and isinstance(
@@ -733,9 +732,10 @@ def _paga_graph(
         )
         colors = asso_colors
 
-    if len(colors) < len(node_labels):
+    if len(colors) != len(node_labels):
         raise ValueError(
-            '`color` list need to be at least as long as `groups`/`node_labels` list.'
+            f'Expected `colors` to be of length `{len(node_labels)}`, '
+            f'found `{len(colors)}`.'
         )
 
     # count number of connected components
