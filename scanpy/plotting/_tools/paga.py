@@ -1042,9 +1042,7 @@ def paga_path(
         return _sc_utils.moving_average(a, n_avg)
 
     ax = pl.gca() if ax is None else ax
-    from matplotlib import transforms
 
-    trans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
     X = []
     x_tick_locs = [0]
     x_tick_labels = []
@@ -1101,7 +1099,6 @@ def paga_path(
                         series = series.cat.codes
                     anno_dict[anno] += list(series.values[idcs])
         if n_avg > 1:
-            old_len_x = len(x)
             x = moving_average(x)
             if ikey == 0:
                 for key in annotations:
