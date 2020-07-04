@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import Optional
+import warnings
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from tqdm.auto import tqdm
 
 from .. import logging as logg, _utils
 from .._compat import Literal
@@ -235,7 +235,9 @@ def pbmc68k_reduced() -> AnnData:
     """
 
     filename = HERE / '10x_pbmc68k_reduced.h5ad'
-    return read(filename)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        return read(filename)
 
 
 def pbmc3k() -> AnnData:
@@ -289,11 +291,12 @@ def pbmc3k_processed() -> AnnData:
     -------
     Annotated data matrix.
     """
-    adata = read(
-        settings.datasetdir / 'pbmc3k_processed.h5ad',
-        backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
-    )
-    return adata
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        return read(
+            settings.datasetdir / 'pbmc3k_processed.h5ad',
+            backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
+        )
 
 
 def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
@@ -313,7 +316,7 @@ def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
     url_prefix = f'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/{sample_id}/'
 
     sample_dir = base_dir / sample_id
-    sample_dir.mkdir(exist_ok=True)
+    sample_dir.mkdir(exist_ok=True, parents=True)
 
     # Download spatial data
     tar_filename = f"{sample_id}_spatial.tar.gz"

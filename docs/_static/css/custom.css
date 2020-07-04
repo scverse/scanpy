@@ -11,7 +11,7 @@
 /* Custom classes */
 
 .small { font-size:40% }
-.smaller, .pr { font-size:70% }
+.smaller, .pr, .issue { font-size:70% }
 
 
 /* Custom classes with bootstrap buttons */

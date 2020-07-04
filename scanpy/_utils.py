@@ -169,6 +169,19 @@ def _doc_params(**kwds):
     return dec
 
 
+def _check_array_function_arguments(**kwargs):
+    """Checks for invalid arguments when an array is passed.
+
+    Helper for functions that work on either AnnData objects or array-likes.
+    """
+    # TODO: Figure out a better solution for documenting dispatched functions
+    invalid_args = [k for k, v in kwargs.items() if v is not None]
+    if len(invalid_args) > 0:
+        raise TypeError(
+            f"Arguments {invalid_args} are only valid if an AnnData object is passed."
+        )
+
+
 # --------------------------------------------------------------------------------
 # Graph stuff
 # --------------------------------------------------------------------------------

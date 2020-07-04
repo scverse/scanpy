@@ -93,24 +93,35 @@ def dendrogram(
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
-    if groupby not in adata.obs_keys():
-        raise ValueError(
-            'groupby has to be a valid observation. '
-            f'Given value: {groupby}, valid observations: {adata.obs_keys()}'
-        )
-    if not is_categorical_dtype(adata.obs[groupby]):
-        # if the groupby column is not categorical, turn it into one
-        # by subdividing into  `num_categories` categories
-        raise ValueError(
-            'groupby has to be a categorical observation. '
-            f'Given value: {groupby}, Column type: {adata.obs[groupby].dtype}'
-        )
+    if isinstance(groupby, str):
+        # if not a list, turn into a list
+        groupby = [groupby]
+    for group in groupby:
+        if group not in adata.obs_keys():
+            raise ValueError(
+                'groupby has to be a valid observation. '
+                f'Given value: {group}, valid observations: {adata.obs_keys()}'
+            )
+        if not is_categorical_dtype(adata.obs[group]):
+            raise ValueError(
+                'groupby has to be a categorical observation. '
+                f'Given value: {group}, Column type: {adata.obs[group].dtype}'
+            )
 
     if var_names is None:
         rep_df = pd.DataFrame(
             _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
         )
-        rep_df.set_index(adata.obs[groupby], inplace=True)
+        categorical = adata.obs[groupby[0]]
+        if len(groupby) > 1:
+            for group in groupby[1:]:
+                # create new category by merging the given groupby categories
+                categorical = (
+                    categorical.astype(str) + "_" + adata.obs[group].astype(str)
+                ).astype('category')
+        categorical.name = "_".join(groupby)
+
+        rep_df.set_index(categorical, inplace=True)
         categories = rep_df.index.categories
     else:
         if use_raw is None and adata.raw is not None:
@@ -129,10 +140,7 @@ def dendrogram(
     z_var = sch.linkage(
         corr_matrix, method=linkage_method, optimal_ordering=optimal_ordering
     )
-    dendro_info = sch.dendrogram(z_var, labels=categories, no_plot=True)
-
-    # order of groupby categories
-    categories_idx_ordered = dendro_info['leaves']
+    dendro_info = sch.dendrogram(z_var, labels=list(categories), no_plot=True)
 
     dat = dict(
         linkage=z_var,
@@ -140,7 +148,8 @@ def dendrogram(
         use_rep=use_rep,
         cor_method=cor_method,
         linkage_method=linkage_method,
-        categories_idx_ordered=categories_idx_ordered,
+        categories_ordered=dendro_info['ivl'],
+        categories_idx_ordered=dendro_info['leaves'],
         dendrogram_info=dendro_info,
         correlation_matrix=corr_matrix.values,
     )

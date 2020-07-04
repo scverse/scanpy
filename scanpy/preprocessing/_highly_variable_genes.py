@@ -33,11 +33,6 @@ def _highly_variable_genes_single_batch(
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
 
-    if n_top_genes is not None and not all(m is None for m in [
-        min_disp, max_disp, min_mean, max_mean
-    ]):
-        logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
-
     if min_disp is None: min_disp = 0.5
     if min_mean is None: min_mean = 0.0125
     if max_mean is None: max_mean = 3
@@ -143,7 +138,7 @@ def highly_variable_genes(
     subset: bool = False,
     inplace: bool = True,
     batch_key: Optional[str] = None,
-) -> Optional[np.recarray]:
+) -> Optional[pd.DataFrame]:
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_.
 
@@ -164,16 +159,16 @@ def highly_variable_genes(
         to cells and columns to genes.
     min_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
+        normalized dispersions are ignored. Default is 0.0125.
     max_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
+        normalized dispersions are ignored. Default is 3.
     min_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
+        normalized dispersions are ignored. Default is 0.5.
     max_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
+        normalized dispersions are ignored. Default is `np.inf`.
     n_top_genes
         Number of highly-variable genes to keep.
     n_bins
@@ -197,7 +192,7 @@ def highly_variable_genes(
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics (:class:`~numpy.recarray`) or
+    Depending on `inplace` returns calculated metrics (:class:`~pandas.DataFrame`) or
     updates `.var` with the following fields
 
     highly_variable : bool
@@ -218,12 +213,22 @@ def highly_variable_genes(
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
     """
 
+    if n_top_genes is not None and not all(m is None for m in [
+        min_disp, max_disp, min_mean, max_mean
+    ]):
+        logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
+
+    if min_disp is None: min_disp = 0.5
+    if min_mean is None: min_mean = 0.0125
+    if max_mean is None: max_mean = 3
+    if max_disp is None: max_disp = np.inf
+
     start = logg.info('extracting highly variable genes')
 
     if not isinstance(adata, AnnData):
         raise ValueError(
             '`pp.highly_variable_genes` expects an `AnnData` argument, '
-            'pass `inplace=False` if you want to return a `np.recarray`.')
+            'pass `inplace=False` if you want to return a `pd.DataFrame`.')
 
     if batch_key is None:
         df = _highly_variable_genes_single_batch(
@@ -325,25 +330,4 @@ def highly_variable_genes(
         if subset:
             adata._inplace_subset_var(df['highly_variable'].values)
     else:
-        arrays = [
-             df['highly_variable'].values,
-             df['means'].values,
-             df['dispersions'].values,
-             df['dispersions_norm'].values.astype('float32', copy=False),
-        ]
-        dtypes = [
-            ('highly_variable', np.bool_),
-            ('means', 'float32'),
-            ('dispersions', 'float32'),
-            ('dispersions_norm', 'float32'),
-        ]
-        if batch_key is not None:
-            arrays.extend([
-                df['highly_variable_nbatches'].values,
-                df['highly_variable_intersection'].values,
-            ])
-            dtypes.append([
-                ('highly_variable_nbatches', int),
-                ('highly_variable_intersection', np.bool_),
-            ])
-        return np.rec.fromarrays(arrays, dtype=dtypes)
+        return df

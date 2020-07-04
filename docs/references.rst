@@ -115,6 +115,10 @@ References
    *Data-Driven Phenotypic Dissection of AML Reveals Progenitor--like Cells that Correlate with Prognosis*,
    `Cell <https://doi.org/10.1016/j.cell.2015.05.047>`__.
 
+.. [Lopez18] Lopez *et al.* (2018),
+   *Deep generative modeling for single-cell transcriptomics*
+   `Nature Methods <https://doi.org/10.1038/s41592-018-0229-2>`__.
+
 .. [Maaten08] Maaten & Hinton (2008),
    *Visualizing data using t-SNE*,
    `JMLR <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
@@ -183,6 +187,10 @@ References
 .. [Setty18] Setty *et al.* (2018),
    *Palantir characterizes cell fate continuities in human hematopoiesis*
    `Nature Biotechnology <https://www.nature.com/articles/s41587-019-0068-4>`__.
+
+.. [Svensson20] Svensson *et al.* (2020),
+   *Interpretable factor models of single-cell RNA-seq via variational autoencoders*
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__. 
 
 .. [Nowotschin18i] Nowotschin *et al.* (2018),
    *The emergent landscape of the mouse gut endoderm at single-cell resolution*
