@@ -19,13 +19,13 @@ PyPI only
 ~~~~~~~~~
 If you prefer to exclusively use PyPI run::
 
-    pip install scanpy[louvain]
+    pip install scanpy[leiden]
 
-The extra `[louvain]` installs two packages that are needed for popular
-parts of scanpy but aren't requirements: python-igraph_ [Csardi06]_ and louvain_ [Traag17]_.
+The extra `[leiden]` installs two packages that are needed for popular
+parts of scanpy but aren't requirements: python-igraph_ [Csardi06]_ and leiden_ [Traag18]_.
 
 .. _python-igraph: http://igraph.org/python/
-.. _louvain: https://github.com/vtraag/louvain-igraph
+.. _leiden: https://leidenalg.readthedocs.io
 
 Development Version
 ~~~~~~~~~~~~~~~~~~~

@@ -421,6 +421,8 @@ def read_10x_mtx(
     cache: bool = False,
     cache_compression: Union[Literal['gzip', 'lzf'], None, Empty] = _empty,
     gex_only: bool = True,
+    *,
+    prefix: str = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted mtx directory.
@@ -443,13 +445,19 @@ def read_10x_mtx(
     gex_only
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
+    prefix
+        Any prefix before `matrix.mtx`, `genes.tsv` and `barcodes.tsv`. For instance,
+        if the files are named `patientA_matrix.mtx`, `patientA_genes.tsv` and
+        `patientA_barcodes.tsv` the prefix is `patientA_`.
+        (Default: no prefix)
 
     Returns
     -------
     An :class:`~anndata.AnnData` object
     """
     path = Path(path)
-    genefile_exists = (path / 'genes.tsv').is_file()
+    prefix = "" if prefix is None else prefix
+    genefile_exists = (path / f'{prefix}genes.tsv').is_file()
     read = _read_legacy_10x_mtx if genefile_exists else _read_v3_10x_mtx
     adata = read(
         str(path),
@@ -457,6 +465,7 @@ def read_10x_mtx(
         make_unique=make_unique,
         cache=cache,
         cache_compression=cache_compression,
+        prefix=prefix,
     )
     if genefile_exists or not gex_only:
         return adata
@@ -473,15 +482,17 @@ def _read_legacy_10x_mtx(
     make_unique=True,
     cache=False,
     cache_compression=_empty,
+    *,
+    prefix="",
 ):
     """
     Read mex from output from Cell Ranger v2 or earlier versions
     """
     path = Path(path)
     adata = read(
-        path / 'matrix.mtx', cache=cache, cache_compression=cache_compression,
+        path / f'{prefix}matrix.mtx', cache=cache, cache_compression=cache_compression,
     ).T  # transpose the data
-    genes = pd.read_csv(path / 'genes.tsv', header=None, sep='\t')
+    genes = pd.read_csv(path / f'{prefix}genes.tsv', header=None, sep='\t')
     if var_names == 'gene_symbols':
         var_names = genes[1].values
         if make_unique:
@@ -493,7 +504,7 @@ def _read_legacy_10x_mtx(
         adata.var['gene_symbols'] = genes[1].values
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
-    adata.obs_names = pd.read_csv(path / 'barcodes.tsv', header=None)[0].values
+    adata.obs_names = pd.read_csv(path / f'{prefix}barcodes.tsv', header=None)[0].values
     return adata
 
 
@@ -503,15 +514,19 @@ def _read_v3_10x_mtx(
     make_unique=True,
     cache=False,
     cache_compression=_empty,
+    *,
+    prefix="",
 ):
     """
-    Read mex from output from Cell Ranger v3 or later versions
+    Read mtx from output from Cell Ranger v3 or later versions
     """
     path = Path(path)
     adata = read(
-        path / 'matrix.mtx.gz', cache=cache, cache_compression=cache_compression
+        path / f'{prefix}matrix.mtx.gz',
+        cache=cache,
+        cache_compression=cache_compression,
     ).T  # transpose the data
-    genes = pd.read_csv(path / 'features.tsv.gz', header=None, sep='\t')
+    genes = pd.read_csv(path / f'{prefix}features.tsv.gz', header=None, sep='\t')
     if var_names == 'gene_symbols':
         var_names = genes[1].values
         if make_unique:
@@ -524,7 +539,9 @@ def _read_v3_10x_mtx(
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
     adata.var['feature_types'] = genes[2].values
-    adata.obs_names = pd.read_csv(path / 'barcodes.tsv.gz', header=None)[0].values
+    adata.obs_names = pd.read_csv(path / f'{prefix}barcodes.tsv.gz', header=None)[
+        0
+    ].values
     return adata
 
 
@@ -890,7 +907,11 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 
 def _download(url: str, path: Path):
-    from tqdm.auto import tqdm
+    try:
+        import ipywidgets
+        from tqdm.auto import tqdm
+    except ModuleNotFoundError:
+        from tqdm import tqdm
     from urllib.request import urlretrieve
 
     path.parent.mkdir(parents=True, exist_ok=True)
