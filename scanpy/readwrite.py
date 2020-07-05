@@ -914,7 +914,10 @@ def _download(url: str, path: Path):
         from tqdm import tqdm
     from urllib.request import urlretrieve
 
+    if not path.parent.is_dir():
+        logg.info(f'creating directory {path.parent}/ for saving data')
     path.parent.mkdir(parents=True, exist_ok=True)
+
     with tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t:
 
         def update_to(b=1, bsize=1, tsize=None):
@@ -943,9 +946,6 @@ def _check_datafile_present_and_download(path, backup_url=None):
         f'try downloading from url\n{backup_url}\n'
         '... this may take a while but only happens once'
     )
-    if not path.parent.is_dir():
-        logg.info(f'creating directory {path.parent}/ for saving data')
-        path.parent.mkdir(parents=True)
 
     _download(backup_url, path)
     return True
