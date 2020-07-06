@@ -14,7 +14,7 @@ from ..preprocessing._simple import _get_mean_var
 from .._compat import Literal
 
 
-_Method = Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']
+_Method = Optional[Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']]
 _CorrMethod = Literal['benjamini-hochberg', 'bonferroni']
 
 
@@ -51,28 +51,15 @@ def _ranks(X, mask=None, mask_rest=None):
         n_cells = X.shape[0]
         get_chunk = lambda X, left, right: adapt(X[:, left:right])
 
-    # Now calculate gene expression ranking in chunkes:
-    chunk = []
     # Calculate chunk frames
-    n_genes_max_chunk = floor(CONST_MAX_SIZE / n_cells)
-    if n_genes_max_chunk < n_genes:
-        chunk_index = n_genes_max_chunk
-        while chunk_index < n_genes:
-            chunk.append(chunk_index)
-            chunk_index = chunk_index + n_genes_max_chunk
-        chunk.append(n_genes)
-    else:
-        chunk.append(n_genes)
+    max_chunk = floor(CONST_MAX_SIZE / n_cells)
 
-    left = 0
-    # Calculate rank sums for each chunk for the current mask
-    for right in chunk:
+    for left in range(0, n_genes, max_chunk):
+        right = min(left + max_chunk, n_genes)
 
         df = pd.DataFrame(data=get_chunk(X, left, right))
         ranks = df.rank()
         yield ranks, left, right
-
-        left = right
 
 
 class _RankGenes:
@@ -377,7 +364,7 @@ def rank_genes_groups(
     pts: bool = False,
     key_added: Optional[str] = None,
     copy: bool = False,
-    method: _Method = 't-test',
+    method: _Method = None,
     corr_method: _CorrMethod = 'benjamini-hochberg',
     layer: Optional[str] = None,
     **kwds,
@@ -468,9 +455,11 @@ def rank_genes_groups(
     # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-    logg.warning(
-        "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
-    )
+    if method is None:
+        logg.warning(
+            "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+        )
+        method = 't-test'
 
     if 'only_positive' in kwds:
         rankby_abs = not kwds.pop('only_positive')  # backwards compat
