@@ -13,6 +13,7 @@ Viewers
 Interactive manifold viewers.
 
 * `cellxgene <https://github.com/chanzuckerberg/cellxgene>`__ via direct reading of `.h5ad` :small:`CZI`
+* `cirrocumulus <https://cirrocumulus.readthedocs.io/>`__ via direct reading of `.h5ad` :small:`Broad Inst.`
 * `cell browser <https://cells.ucsc.edu/>`__ via exporing through :func:`~scanpy.external.exporting.cellbrowser` :small:`UCSC`
 * `SPRING <https://github.com/AllonKleinLab/SPRING>`__ via exporting through :func:`~scanpy.external.exporting.spring_project` :small:`Harvard Med`
 
