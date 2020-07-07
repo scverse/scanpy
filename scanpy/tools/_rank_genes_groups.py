@@ -240,7 +240,9 @@ class _RankGenes:
 
                 std_dev = sqrt((n_active * m_active / 12 * (n_active + m_active + 1)))
 
-                scores = (scores - (n_active * ((n_active + m_active + 1) / 2))) / std_dev
+                scores = (
+                    scores - (n_active * ((n_active + m_active + 1) / 2))
+                ) / std_dev
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores))
 
