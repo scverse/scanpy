@@ -114,3 +114,35 @@ def test_pca_reproducible(pbmc3k_normalized, array_type, float_dtype):
     assert_equal(a, b)
     # Test that changing random seed changes result
     assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
+
+
+def test_pca_layer(array_type):
+    A = array_type(A_list).astype('float32')
+
+    adata = AnnData(A)
+    adata.layers['A_L'] = A * 0.5
+
+    A_pca_abs = np.abs(A_pca * 0.5)
+    A_svd_abs = np.abs(A_svd * 0.5)
+
+    sc.pp.pca(
+        adata,
+        n_comps=4,
+        zero_center=True,
+        layer='A_L',
+        dtype='float64',
+        random_state=6,
+    )
+
+    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
+
+    sc.pp.pca(
+        adata,
+        n_comps=4,
+        zero_center=False,
+        layer='A_L',
+        dtype='float64',
+        random_state=6,
+    )
+
+    assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
