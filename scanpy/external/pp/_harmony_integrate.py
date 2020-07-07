@@ -77,7 +77,7 @@ def harmony_integrate(
         raise ImportError('\nplease install harmonypy:\n\n\tpip install harmonypy')
 
     harmony_out = harmonypy.run_harmony(
-        adata.obsm[obsm_in_field], adata.obs, key, **kwargs)
+        adata.obsm[obsm_in_field], adata.obs, key, **kwargs
+    )
 
     adata.obsm[obsm_out_field] = harmony_out.Z_corr.T
-
