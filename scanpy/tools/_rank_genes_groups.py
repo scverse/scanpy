@@ -537,7 +537,7 @@ def rank_genes_groups(
     test_obj.stats.columns = test_obj.stats.columns.swaplevel()
 
     dtypes = {
-        'names': 'U50',
+        'names': 'O',
         'scores': 'float32',
         'logfoldchanges': 'float32',
         'pvals': 'float64',
