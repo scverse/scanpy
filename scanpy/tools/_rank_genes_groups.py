@@ -6,7 +6,7 @@ from typing import Iterable, Union, Optional
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from scipy.sparse import issparse
+from scipy.sparse import issparse, vstack
 
 from .. import _utils
 from .. import logging as logg
