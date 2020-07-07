@@ -166,6 +166,9 @@ def pca(
         if not zero_center or random_state or svd_solver != 'arpack':
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
+        # Store correct parameter value
+        zero_center = True
+
         from sklearn.decomposition import IncrementalPCA
 
         X_pca = np.zeros((X.shape[0], n_comps), X.dtype)
