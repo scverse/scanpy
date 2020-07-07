@@ -306,6 +306,8 @@ class _RankGenes:
         elif method == 'logreg':
             generate_test_results = self.logreg(**kwds)
 
+        self.stats = None
+
         for group_index, scores, pvals in generate_test_results:
             group_name = str(self.groups_order[group_index])
 
