@@ -22,6 +22,7 @@ def pca(
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
+    layer: Optional[str] = None,
     dtype: str = 'float32',
     copy: bool = False,
     chunked: bool = False,
@@ -126,6 +127,8 @@ def pca(
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
+        if layer is not None:
+            raise ValueError('You can specify a layer only for an AnnData object')
         adata = AnnData(data)
 
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
@@ -153,9 +156,13 @@ def pca(
 
     random_state = check_random_state(random_state)
 
-    X = adata_comp.X
+    X = adata_comp.X if layer is None else adata_comp.layers[layer]
 
     if chunked:
+        if layer is not None:
+            raise NotImplementedError(
+                "Currently cannot perform chunked operations on arrays not stored in X."
+            )
         if not zero_center or random_state or svd_solver != 'arpack':
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
@@ -232,6 +239,8 @@ def pca(
             'zero_center': zero_center,
             'use_highly_variable': use_highly_variable,
         }
+        if layer is not None:
+            adata.uns['pca']['params']['layer'] = layer
         if use_highly_variable:
             adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
             adata.varm['PCs'][adata.var['highly_variable']] = pca_.components_.T
