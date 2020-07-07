@@ -55,7 +55,7 @@ class DotPlot(BasePlot):
         meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
 
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
     Examples
@@ -797,7 +797,7 @@ def dotplot(
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
     {show_save_ax}
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
     Returns

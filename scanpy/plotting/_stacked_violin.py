@@ -64,7 +64,7 @@ class StackedViolin(BasePlot):
          By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby` categories.
          By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
          axes var_group_positions are no longer used
-    **kwds
+    kwds
         Are passed to :func:`~seaborn.violinplot`.
 
     Examples
@@ -544,7 +544,7 @@ def stacked_violin(
         Alternatively, a single color name or hex value can be passed,
         e.g. `'red'` or `'#cc33ff'`.
     {show_save_ax}
-    **kwds
+    kwds
         Are passed to :func:`~seaborn.violinplot`.
 
     Returns

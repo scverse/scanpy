@@ -58,7 +58,7 @@ class MatrixPlot(BasePlot):
         Optionally, a dataframe with the values to plot can be given. The
         index should be the grouby categories and the columns the genes names.
 
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
     Examples
@@ -287,7 +287,7 @@ def matrixplot(
     {common_plot_args}
     {groupby_plots_args}
     {show_save_ax}
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.pcolor`.
 
     Returns
