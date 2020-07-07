@@ -59,11 +59,17 @@ def test_results_dense():
     true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='t-test')
+
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups']['names'].astype(true_names_t_test.dtype)
+
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name])
     assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
+
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups']['names'].astype(true_names_wilcoxon.dtype)
+
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(true_scores_wilcoxon[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
     assert np.array_equal(true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7])
@@ -79,12 +85,16 @@ def test_results_sparse():
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='t-test')
 
-    rank_genes_groups(adata, 'true_groups', n_genes=20, method='t-test')
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups']['names'].astype(true_names_t_test.dtype)
+
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name])
     assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
+
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups']['names'].astype(true_names_wilcoxon.dtype)
+
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(true_scores_wilcoxon[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
     assert np.array_equal(true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7])
