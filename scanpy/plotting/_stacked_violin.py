@@ -563,7 +563,7 @@ def stacked_violin(
     :class:`~scanpy.pl.StackedViolin`
 
     :func:`~scanpy.pl.rank_genes_groups_stacked_violin` to plot marker genes identified
-    using the :func:`~scanpy.tl.rank_genes_groups` function.
+        using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     Examples
     -------
