@@ -302,14 +302,17 @@ def matrixplot(
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
-    Get Matrix object for fine tuning
+    Get Matrix object for fine tuning:
+
     >>> mp = sc.pl.matrix(adata, markers, 'bulk_labels', return_fig=True)
     >>> mp.add_totals().style(edge_color='black').show()
 
     The axes used can be obtained using the get_axes() method
+
     >>> axes_dict = mp.get_axes()
 
     See also

@@ -188,7 +188,7 @@ class BasePlot(object):
         dendrogram_key: Optional[str] = None,
         size: Optional[float] = 0.8,
     ):
-        """
+        """\
         Show dendrogram based on the hierarchical clustering between the `groupby`
         categories. Categories are reordered to match the dendrogram order.
 
@@ -202,6 +202,7 @@ class BasePlot(object):
         `var_names` are reordered to produce a more pleasing output if:
             * The data contains `var_groups`
             * the `var_groups` match the categories.
+
         The previous conditions happen by default when using Plot
         to show the results from :func:`sc.tl.rank_genes_groups` (aka gene markers), by
         calling `sc.tl.rank_genes_groups_(plot_name)`.
@@ -268,7 +269,7 @@ class BasePlot(object):
         size: Optional[float] = 0.8,
         color: Optional[Union[ColorLike, Sequence[ColorLike]]] = None,
     ):
-        """
+        """\
         Show barplot for the number of cells in in `groupby` category.
 
         The barplot is by default shown on the right side of the plot or on top
@@ -287,7 +288,8 @@ class BasePlot(object):
             the right of the plot, or height when shown on top.
         color
             Color for the bar plots or list of colors for each of the bar plots.
-            By default, each bar plot uses the colors assigned in `adata.uns[{groupby}_colors.
+            By default, each bar plot uses the colors assigned in
+            `adata.uns[{groupby}_colors]`.
 
 
         Returns
@@ -334,29 +336,30 @@ class BasePlot(object):
         title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
         width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
     ):
-        """
-        Configure legend parameters.
-
-        Parameters
-        ----------
-        show
-            Set to `False` to hide the default plot of the legend.
-        title
-            Title for the dot size legend. Use "\n" to add line breaks.
-        width
-            Width of the legend.
-
-        Returns
-        -------
-        BasePlot
-
-        Examples
-        --------
-        >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
-        >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
-        """
+        # """\
+        # Configure legend parameters.
+        #
+        # Parameters
+        # ----------
+        # show
+        #     Set to 'False' to hide the default plot of the legend.
+        # title
+        #     Title for the dot size legend. Use "\n" to add line breaks.
+        # width
+        #     Width of the legend. Set to 0 to remove legend.
+        #
+        # Returns
+        # -------
+        # BasePlot
+        #
+        # Examples
+        # --------
+        #
+        # >>> adata = sc.datasets.pbmc68k_reduced()
+        # >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        # >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
+        # >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
+        # """
 
         if not show:
             # turn of legends by setting width to 0
