@@ -74,7 +74,7 @@ class StackedViolin(BasePlot):
     :func:`~scanpy.pl.stacked_violin` simpler way to call StackedViolin but with less
         options.
     :func:`~scanpy.pl.violin` and :func:`~scanpy.pl.rank_genes_groups_stacked_violin`
-    to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+        to plot marker genes identified using :func:`~scanpy.tl.rank_genes_groups`
 
     Examples
     -------
@@ -562,7 +562,7 @@ def stacked_violin(
     --------
     :class:`~scanpy.pl.StackedViolin`
 
-    :func:~scanpy.pl.rank_genes_groups_stacked_violin: to plot marker genes identified
+    :func:`~scanpy.pl.rank_genes_groups_stacked_violin` to plot marker genes identified
     using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     Examples
