@@ -63,6 +63,7 @@ These classes allow fine tuning of visual parameters.
     pl.MatrixPlot
     pl.StackedViolin
 
+
 Preprocessing
 -------------
 

@@ -61,8 +61,9 @@ class StackedViolin(BasePlot):
         meaning for each variable or observation,
         subtract the minimum and divide each by its maximum.
     swap_axes
-         By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby` categories.
-         By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
+         By default, the x axis contains `var_names` (e.g. genes) and the y axis
+         the `groupby` categories. By setting `swap_axes` then x are the `groupby`
+         categories and y the `var_names`. When swapping
          axes var_group_positions are no longer used
     kwds
         Are passed to :func:`~seaborn.violinplot`.
@@ -70,6 +71,8 @@ class StackedViolin(BasePlot):
 
     See also
     --------
+    :func:`~scanpy.pl.stacked_violin` simpler way to call StackedViolin but with less
+        options.
     :func:`~scanpy.pl.violin` and :func:`~scanpy.pl.rank_genes_groups_stacked_violin`
     to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
 
@@ -503,7 +506,7 @@ def stacked_violin(
     cmap: Optional[str] = StackedViolin.DEFAULT_COLORMAP,
     ax: Optional[_AxesSubplot] = None,
     **kwds,
-) -> Union[StackedViolin, dict, None]:
+):  #-> Union[StackedViolin, dict, None]:
     """\
     Stacked violin plots.
 
@@ -513,9 +516,9 @@ def stacked_violin(
 
     Wraps :func:`seaborn.violinplot` for :class:`~anndata.AnnData`.
 
-    # This function provides a convenient interface to the
-    # :func:`~scanpy.pl.StackedViolin` class. If you need more flexibility,
-    # you should use :func:`~scanpy.pl.StackedViolin` directly.
+    This function provides a convenient interface to the
+    :class:`~scanpy.pl.StackedViolin` class. If you need more flexibility,
+    you should use :class:`~scanpy.pl.StackedViolin` directly.
 
     Parameters
     ----------
@@ -552,12 +555,12 @@ def stacked_violin(
 
     Returns
     -------
-    # If `return_fig` is `True`, returns a :func:`~scanpy.pl.StackedViolin` object,
-    # else if `show` is false, return axes dict
+    If `return_fig` is `True`, returns a :class:`~scanpy.pl.StackedViolin` object,
+    else if `show` is false, return axes dict
 
     See also
     --------
-    # :func:`~scanpy.pl.StackedViolin`
+    :class:`~scanpy.pl.StackedViolin`
 
     :func:~scanpy.pl.rank_genes_groups_stacked_violin: to plot marker genes identified
     using the :func:`~scanpy.tl.rank_genes_groups` function.

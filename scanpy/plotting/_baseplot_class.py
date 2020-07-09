@@ -38,7 +38,6 @@ swap_axes
 return_fig
     Returns :class:`DotPlot` object. Useful for fine-tuning
     the plot. Takes precedence over `show=False`.
-
 """
 
 
