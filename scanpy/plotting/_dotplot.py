@@ -38,6 +38,7 @@ class DotPlot(BasePlot):
     the mean value and the percentage of cells expressing the gene
     across multiple clusters.
 
+
     Parameters
     ----------
     {common_plot_args}
@@ -54,25 +55,34 @@ class DotPlot(BasePlot):
         Whether or not to standardize that dimension between 0 and 1,
         meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
-
     kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
-    Examples
-    -------
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
-
-    Using var_names as dict:
-
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
 
     See also
     --------
-    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
-    :func:`~scanpy.tl.rank_genes_groups` function.
+    :func:`~scanpy.pl.dotplot`: Simpler way to call DotPlot but with less options.
+    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker
+        genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
+
+    Examples
+    --------
+
+    ..plot::
+        :context: close-figs
+            >>> import scanpy as sc
+            >>> adata = sc.datasets.pbmc68k_reduced()
+            >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+            >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
+    Using var_names as dict:
+
+    ..plot::
+        :context: close-figs
+            >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+            >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
     """
 
     DEFAULT_SAVE_PREFIX = 'dotplot_'
@@ -286,11 +296,9 @@ class DotPlot(BasePlot):
         -------
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-
         Change color map and apply it to the square behind the dot
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(cmap='RdBu_r', color_on='square').show()
-
         Add edge to dots
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(dot_edge_color='black',  dot_edge_lw=1).show()
@@ -769,8 +777,8 @@ def dotplot(
     the mean value and the percentage of cells expressing the gene
     across  multiple clusters.
 
-    This function provides a convenient interface to the :class:`DotPlot`
-    class. If you need more flexibility, you should use :class:`DotPlot` directly.
+    This function provides a convenient interface to the :class:`sc.pl.DotPlot`
+    class. If you need more flexibility, you should use :class:`sc.pl.DotPlot` directly.
 
     Parameters
     ----------
@@ -802,34 +810,54 @@ def dotplot(
 
     Returns
     -------
-    If `return_fig` is `True`, returns a :class:`DotPlot` object,
+    If `return_fig` is `True`, returns a :class:`sc.pl.DotPlot` object,
     else if `show` is false, return axes dict
 
-    Examples
-    -------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
-
-    Using var_names as dict:
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
-
-    Get DotPlot object for fine tuning
-    >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
-    >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
-
-    The axes used can be obtained using the get_axes() method
-    >>> axes_dict = dp.get_axes()
 
     See also
     --------
+    :func:`~scanpy.pl.Dotplot`: The DotPlot class can be used to to control
+        several visual parameters not available in this function.
+
     :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+        identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
+    Examples
+    -------
+
+
+    Create a dot plot using the given markers and the PBMC example dataset:
+
+    ..plot::
+        :context: close-figs
+            >>> import scanpy as sc
+            >>> adata = sc.datasets.pbmc68k_reduced()
+            >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+            >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    Using var_names as dict:
+
+    ..plot::
+        :context: close-figs
+            >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+            >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    Get DotPlot object for fine tuning
+
+
+    >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
+    >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
+
+
+    The axes used can be obtained using the get_axes() method
+
+
+    >>> axes_dict = dp.get_axes()
+    >>> print(axes_dict)
+
     """
 
-    # backwards compatibily: previous version of dotplot used `color_map`
+    # backwards compatibility: previous version of dotplot used `color_map`
     # instead of `cmap`
     cmap = kwds.get('color_map', cmap)
     if 'color_map' in kwds:

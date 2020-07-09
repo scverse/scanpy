@@ -165,7 +165,9 @@ class BasePlot(object):
 
         Parameters
         ----------
-        swap_axes : bool, default: True
+        swap_axes
+            Boolean to turn on (True) or off (False) 'add_dendrogram'. Default True
+
 
         Returns
         -------
@@ -201,21 +203,26 @@ class BasePlot(object):
             * The data contains `var_groups`
             * the `var_groups` match the categories.
         The previous conditions happen by default when using Plot
-        to show the results from `sc.tl.rank_genes_groups` (aka gene markers), by
+        to show the results from :func:`sc.tl.rank_genes_groups` (aka gene markers), by
         calling `sc.tl.rank_genes_groups_(plot_name)`.
+
 
         Parameters
         ----------
-        show : bool, default True
-        dendrogram_key : str, default None
+        show
+            Boolean to turn on (True) or off (False) 'add_dendrogram'
+        dendrogram_key
             Needed if `sc.tl.dendrogram` saved the dendrogram using a key different
             than the default name.
-        size : size of the dendrogram. Corresponds to width when dendrogram shown on
+        size
+            size of the dendrogram. Corresponds to width when dendrogram shown on
             the right of the plot, or height when shown on top.
+
 
         Returns
         -------
         BasePlot
+
 
         Examples
         --------
@@ -267,18 +274,26 @@ class BasePlot(object):
         The barplot is by default shown on the right side of the plot or on top
         if the axes are swapped.
 
+
         Parameters
         ----------
-        show : bool, default True
-        sort : Set to either 'ascending' or 'descending' to reorder the categories
+        show
+            Boolean to turn on (True) or off (False) 'add_dendrogram'
+        sort
+            Set to either 'ascending' or 'descending' to reorder the categories
             by cell number
-        size : size of the barplot. Corresponds to width when shown on
+        size
+            size of the barplot. Corresponds to width when shown on
             the right of the plot, or height when shown on top.
-        color: Color for the bar plots or list of colors for each of the bar plots.
+        color
+            Color for the bar plots or list of colors for each of the bar plots.
             By default, each bar plot uses the colors assigned in `adata.uns[{groupby}_colors.
+
+
         Returns
         -------
         BasePlot
+
 
         Examples
         --------

@@ -552,6 +552,13 @@ def stacked_violin(
     If `return_fig` is `True`, returns a :class:`StackedViolin` object,
     else if `show` is false, return axes dict
 
+    See also
+    --------
+    :class:`StackedViolin`
+
+    rank_genes_groups_stacked_violin: to plot marker genes identified using
+    the :func:`~scanpy.tl.rank_genes_groups` function.
+
     Examples
     -------
     >>> import scanpy as sc
@@ -570,10 +577,6 @@ def stacked_violin(
     The axes used can be obtained using the get_axes() method
     >>> axes_dict = vp.get_axes()
 
-    See also
-    --------
-    rank_genes_groups_stacked_violin: to plot marker genes identified using
-    the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
     vp = StackedViolin(
