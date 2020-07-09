@@ -67,8 +67,15 @@ class StackedViolin(BasePlot):
     kwds
         Are passed to :func:`~seaborn.violinplot`.
 
+
+    See also
+    --------
+    :func:`~scanpy.pl.violin` and :func:`~scanpy.pl.rank_genes_groups_stacked_violin`
+    to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
     Examples
     -------
+
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
@@ -78,11 +85,6 @@ class StackedViolin(BasePlot):
 
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)
-
-    See also
-    --------
-    :func:`~scanpy.tl.violin` and
-    rank_genes_groups_stacked_violin: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
     DEFAULT_SAVE_PREFIX = 'stacked_violin_'
@@ -511,8 +513,9 @@ def stacked_violin(
 
     Wraps :func:`seaborn.violinplot` for :class:`~anndata.AnnData`.
 
-    This function provides a convenient interface to the :class:`StackedViolin`
-    class. If you need more flexibility, you should use :class:`StackedViolin` directly.
+    # This function provides a convenient interface to the
+    # :func:`~scanpy.pl.StackedViolin` class. If you need more flexibility,
+    # you should use :func:`~scanpy.pl.StackedViolin` directly.
 
     Parameters
     ----------
@@ -549,32 +552,36 @@ def stacked_violin(
 
     Returns
     -------
-    If `return_fig` is `True`, returns a :class:`StackedViolin` object,
-    else if `show` is false, return axes dict
+    # If `return_fig` is `True`, returns a :func:`~scanpy.pl.StackedViolin` object,
+    # else if `show` is false, return axes dict
 
     See also
     --------
-    :class:`StackedViolin`
+    # :func:`~scanpy.pl.StackedViolin`
 
-    rank_genes_groups_stacked_violin: to plot marker genes identified using
-    the :func:`~scanpy.tl.rank_genes_groups` function.
+    :func:~scanpy.pl.rank_genes_groups_stacked_violin: to plot marker genes identified
+    using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     Examples
     -------
+
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get StackedViolin object for fine tuning
+
     >>> vp = sc.pl.stacked_violin(adata, markers, 'bulk_labels', return_fig=True)
     >>> vp.add_totals().style(ylim=(0,5)).show()
 
-    The axes used can be obtained using the get_axes() method
+    The axes used can be obtained using the get_axes() method:
+
     >>> axes_dict = vp.get_axes()
 
     """
