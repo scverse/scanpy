@@ -137,6 +137,9 @@ qualname_overrides = {
     "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
     # If the docs are built with an old version of numpy, this will make it work:
     "numpy.random.RandomState": "numpy.random.mtrand.RandomState",
+    "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.plotting.MatrixPlot",
+    "scanpy.plotting._dotplot.DotPlot": "scanpy.plotting.DotPlot",
+    "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.plotting.StackedViolin",
 }
 
 nitpick_ignore = [

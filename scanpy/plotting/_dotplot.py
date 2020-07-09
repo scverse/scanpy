@@ -296,10 +296,14 @@ class DotPlot(BasePlot):
         -------
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+
         Change color map and apply it to the square behind the dot
+
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(cmap='RdBu_r', color_on='square').show()
+
         Add edge to dots
+
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(dot_edge_color='black',  dot_edge_lw=1).show()
 
@@ -528,6 +532,7 @@ class DotPlot(BasePlot):
 
         The dots are plotted
         using matplotlib.pyplot.scatter. Thus, additional arguments can be passed.
+
         Parameters
         ----------
         dot_size: Data frame containing the dot_size.
@@ -566,7 +571,7 @@ class DotPlot(BasePlot):
             `color_on='square'`, line width = 1.5
         grid
             Adds a grid to the plot
-        **kwds
+        kwds
             Are passed to :func:`matplotlib.pyplot.scatter`.
 
         Returns
@@ -777,8 +782,9 @@ def dotplot(
     the mean value and the percentage of cells expressing the gene
     across  multiple clusters.
 
-    This function provides a convenient interface to the :class:`sc.pl.DotPlot`
-    class. If you need more flexibility, you should use :class:`sc.pl.DotPlot` directly.
+    This function provides a convenient interface to the :class:`~scanpy.pl.DotPlot`
+    class. If you need more flexibility, you should use :class:`~scanpy.pl.DotPlot`
+    directly.
 
     Parameters
     ----------
@@ -810,21 +816,18 @@ def dotplot(
 
     Returns
     -------
-    If `return_fig` is `True`, returns a :class:`sc.pl.DotPlot` object,
+    If `return_fig` is `True`, returns a :class:`~scanpy.pl.DotPlot` object,
     else if `show` is false, return axes dict
-
 
     See also
     --------
-    :func:`~scanpy.pl.Dotplot`: The DotPlot class can be used to to control
+    :class:`~scanpy.pl.Dotplot`: The DotPlot class can be used to to control
         several visual parameters not available in this function.
-
     :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes
         identified using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     Examples
-    -------
-
+    --------
 
     Create a dot plot using the given markers and the PBMC example dataset:
 
@@ -843,7 +846,6 @@ def dotplot(
             >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get DotPlot object for fine tuning
-
 
     >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
     >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()

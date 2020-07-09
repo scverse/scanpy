@@ -279,8 +279,9 @@ def matrixplot(
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names.
 
-    This function provides a convenient interface to the :class:`MatrixPlot`
-    class. If you need more flexibility, you should use :class:`MatrixPlot` directly.
+    This function provides a convenient interface to the :class:`~scanpy.pl.MatrixPlot`
+    class. If you need more flexibility, you should use :class:`~scanpy.pl.MatrixPlot`
+    directly.
 
     Parameters
     ----------
@@ -292,7 +293,7 @@ def matrixplot(
 
     Returns
     -------
-    if `show` is `False`, returns a :class:`MatrixPlot` object
+    if `show` is `False`, returns a :class:`~scanpy.pl.MatrixPlot` object
 
     Examples
     --------
@@ -318,7 +319,7 @@ def matrixplot(
     See also
     --------
     :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+        identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
     mp = MatrixPlot(

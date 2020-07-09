@@ -506,7 +506,7 @@ def stacked_violin(
     cmap: Optional[str] = StackedViolin.DEFAULT_COLORMAP,
     ax: Optional[_AxesSubplot] = None,
     **kwds,
-):  #-> Union[StackedViolin, dict, None]:
+) -> Union[StackedViolin, dict, None]:
     """\
     Stacked violin plots.
 
