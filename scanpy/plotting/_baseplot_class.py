@@ -204,8 +204,8 @@ class BasePlot(object):
             * the `var_groups` match the categories.
 
         The previous conditions happen by default when using Plot
-        to show the results from :func:`sc.tl.rank_genes_groups` (aka gene markers), by
-        calling `sc.tl.rank_genes_groups_(plot_name)`.
+        to show the results from :func:`~scanpy.tl.rank_genes_groups` (aka gene markers), by
+        calling `scanpy.tl.rank_genes_groups_(plot_name)`.
 
 
         Parameters
