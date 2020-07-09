@@ -821,7 +821,7 @@ def dotplot(
 
     See also
     --------
-    :class:`~scanpy.pl.Dotplot`: The DotPlot class can be used to to control
+    :class:`~scanpy.pl.DotPlot`: The DotPlot class can be used to to control
         several visual parameters not available in this function.
     :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes
         identified using the :func:`~scanpy.tl.rank_genes_groups` function.
