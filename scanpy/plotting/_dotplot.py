@@ -348,8 +348,7 @@ class DotPlot(BasePlot):
             Title for the color bar. Use '\\n' to add line breaks. Appears on top of the
             color bar
         width
-            Width of the legends area. The value is a proportion with respect
-            to the figure width. E.g. 0.5 means the legend width is 50% of the figure
+            Width of the legends area. The unit is the same as in matplotlib (inches).
 
         Returns
         -------
