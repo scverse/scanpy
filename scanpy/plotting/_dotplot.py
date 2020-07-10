@@ -54,25 +54,34 @@ class DotPlot(BasePlot):
         Whether or not to standardize that dimension between 0 and 1,
         meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
-
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
-    Examples
-    -------
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
-
-    Using var_names as dict:
-
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
 
     See also
     --------
-    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
-    :func:`~scanpy.tl.rank_genes_groups` function.
+    :func:`~scanpy.pl.dotplot`: Simpler way to call DotPlot but with less options.
+    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker
+        genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
+
+    Examples
+    --------
+
+    ..plot::
+        :context: close-figs
+            >>> import scanpy as sc
+            >>> adata = sc.datasets.pbmc68k_reduced()
+            >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+            >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
+    Using var_names as dict:
+
+    ..plot::
+        :context: close-figs
+            >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+            >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+
     """
 
     DEFAULT_SAVE_PREFIX = 'dotplot_'
@@ -235,8 +244,8 @@ class DotPlot(BasePlot):
         size_exponent: Optional[float] = DEFAULT_SIZE_EXPONENT,
         grid: Optional[float] = False,
     ):
-        """
-        Modifies plot style
+        """\
+        Modifies plot visual parameters
 
         Parameters
         ----------
@@ -276,22 +285,26 @@ class DotPlot(BasePlot):
             to each other.
         grid
             Set to true to show grid lines. By default grid lines are not shown.
-            Further configuration of the grid lines can be achived directly on the
+            Further configuration of the grid lines can be achieved directly on the
             returned ax.
+
         Returns
         -------
-        DotPlot
+        :class:`~scanpy.pl.DotPlot`
 
         Examples
         -------
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
         Change color map and apply it to the square behind the dot
+
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(cmap='RdBu_r', color_on='square').show()
 
         Add edge to dots
+
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(dot_edge_color='black',  dot_edge_lw=1).show()
 
@@ -318,30 +331,37 @@ class DotPlot(BasePlot):
         colorbar_title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
         width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
     ):
-        """
-        Configure legend parameters.
+        """\
+        Configures dot size and the colorbar legends
 
         Parameters
         ----------
         show
-            Set to `False` to hide the default plot of the legends.
+            Set to `False` to hide the default plot of the legends. This sets the
+            legend width to zero, which will result in a wider main plot.
         show_size_legend
-            Set to `False` to hide the the size legend
+            Set to `False` to hide the dot size legend
         show_colorbar
-            Set to `False` to hide the the colorbar
+            Set to `False` to hide the colorbar legend
         size_title
-            Title for the dot size legend. Use "\n" to add line breaks.
+            Title for the dot size legend. Use '\\n' to add line breaks. Appears on top
+            of dot sizes
         colorbar_title
-            Title for the color bar. Use "\n" to add line breaks.
+            Title for the color bar. Use '\\n' to add line breaks. Appears on top of the
+            color bar
         width
-            Width of the legends.
+            Width of the legends area. The value is a proportion with respect
+            to the figure width. E.g. 0.5 means the legend width is 50% of the figure
 
         Returns
         -------
-        DotPlot
+        :class:`~scanpy.pl.DotPlot`
 
         Examples
         --------
+
+        Set color bar title:
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
@@ -518,8 +538,9 @@ class DotPlot(BasePlot):
         the doc size and other containing the dot color. The indices and
         columns of the data frame are used to label the output image
 
-        The dots are plotted
-        using matplotlib.pyplot.scatter. Thus, additional arguments can be passed.
+        The dots are plotted using :func:`matplotlib.pyplot.scatter`. Thus, additional
+        arguments can be passed.
+
         Parameters
         ----------
         dot_size: Data frame containing the dot_size.
@@ -558,7 +579,7 @@ class DotPlot(BasePlot):
             `color_on='square'`, line width = 1.5
         grid
             Adds a grid to the plot
-        **kwds
+        kwds
             Are passed to :func:`matplotlib.pyplot.scatter`.
 
         Returns
@@ -769,8 +790,9 @@ def dotplot(
     the mean value and the percentage of cells expressing the gene
     across  multiple clusters.
 
-    This function provides a convenient interface to the :class:`DotPlot`
-    class. If you need more flexibility, you should use :class:`DotPlot` directly.
+    This function provides a convenient interface to the :class:`~scanpy.pl.DotPlot`
+    class. If you need more flexibility, you should use :class:`~scanpy.pl.DotPlot`
+    directly.
 
     Parameters
     ----------
@@ -797,39 +819,55 @@ def dotplot(
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
     {show_save_ax}
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
     Returns
     -------
-    If `return_fig` is `True`, returns a :class:`DotPlot` object,
+    If `return_fig` is `True`, returns a :class:`~scanpy.pl.DotPlot` object,
     else if `show` is false, return axes dict
-
-    Examples
-    -------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
-
-    Using var_names as dict:
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
-
-    Get DotPlot object for fine tuning
-    >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
-    >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
-
-    The axes used can be obtained using the get_axes() method
-    >>> axes_dict = dp.get_axes()
 
     See also
     --------
+    :class:`~scanpy.pl.DotPlot`: The DotPlot class can be used to to control
+        several visual parameters not available in this function.
     :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+        identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
+    Examples
+    --------
+
+    Create a dot plot using the given markers and the PBMC example dataset:
+
+    ..plot::
+        :context: close-figs
+            >>> import scanpy as sc
+            >>> adata = sc.datasets.pbmc68k_reduced()
+            >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+            >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    Using var_names as dict:
+
+    ..plot::
+        :context: close-figs
+            >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+            >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    Get DotPlot object for fine tuning
+
+    >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
+    >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
+
+
+    The axes used can be obtained using the get_axes() method
+
+
+    >>> axes_dict = dp.get_axes()
+    >>> print(axes_dict)
+
     """
 
-    # backwards compatibily: previous version of dotplot used `color_map`
+    # backwards compatibility: previous version of dotplot used `color_map`
     # instead of `cmap`
     cmap = kwds.get('color_map', cmap)
     if 'color_map' in kwds:

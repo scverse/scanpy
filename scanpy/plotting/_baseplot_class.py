@@ -38,7 +38,6 @@ swap_axes
 return_fig
     Returns :class:`DotPlot` object. Useful for fine-tuning
     the plot. Takes precedence over `show=False`.
-
 """
 
 
@@ -165,7 +164,9 @@ class BasePlot(object):
 
         Parameters
         ----------
-        swap_axes : bool, default: True
+        swap_axes
+            Boolean to turn on (True) or off (False) 'add_dendrogram'. Default True
+
 
         Returns
         -------
@@ -186,7 +187,7 @@ class BasePlot(object):
         dendrogram_key: Optional[str] = None,
         size: Optional[float] = 0.8,
     ):
-        """
+        """\
         Show dendrogram based on the hierarchical clustering between the `groupby`
         categories. Categories are reordered to match the dendrogram order.
 
@@ -200,22 +201,28 @@ class BasePlot(object):
         `var_names` are reordered to produce a more pleasing output if:
             * The data contains `var_groups`
             * the `var_groups` match the categories.
+
         The previous conditions happen by default when using Plot
-        to show the results from `sc.tl.rank_genes_groups` (aka gene markers), by
-        calling `sc.tl.rank_genes_groups_(plot_name)`.
+        to show the results from :func:`~scanpy.tl.rank_genes_groups` (aka gene markers), by
+        calling `scanpy.tl.rank_genes_groups_(plot_name)`.
+
 
         Parameters
         ----------
-        show : bool, default True
-        dendrogram_key : str, default None
+        show
+            Boolean to turn on (True) or off (False) 'add_dendrogram'
+        dendrogram_key
             Needed if `sc.tl.dendrogram` saved the dendrogram using a key different
             than the default name.
-        size : size of the dendrogram. Corresponds to width when dendrogram shown on
+        size
+            size of the dendrogram. Corresponds to width when dendrogram shown on
             the right of the plot, or height when shown on top.
+
 
         Returns
         -------
         BasePlot
+
 
         Examples
         --------
@@ -261,24 +268,33 @@ class BasePlot(object):
         size: Optional[float] = 0.8,
         color: Optional[Union[ColorLike, Sequence[ColorLike]]] = None,
     ):
-        """
+        """\
         Show barplot for the number of cells in in `groupby` category.
 
         The barplot is by default shown on the right side of the plot or on top
         if the axes are swapped.
 
+
         Parameters
         ----------
-        show : bool, default True
-        sort : Set to either 'ascending' or 'descending' to reorder the categories
+        show
+            Boolean to turn on (True) or off (False) 'add_dendrogram'
+        sort
+            Set to either 'ascending' or 'descending' to reorder the categories
             by cell number
-        size : size of the barplot. Corresponds to width when shown on
+        size
+            size of the barplot. Corresponds to width when shown on
             the right of the plot, or height when shown on top.
-        color: Color for the bar plots or list of colors for each of the bar plots.
-            By default, each bar plot uses the colors assigned in `adata.uns[{groupby}_colors.
+        color
+            Color for the bar plots or list of colors for each of the bar plots.
+            By default, each bar plot uses the colors assigned in
+            `adata.uns[{groupby}_colors]`.
+
+
         Returns
         -------
         BasePlot
+
 
         Examples
         --------
@@ -311,6 +327,19 @@ class BasePlot(object):
         return self
 
     def style(self, cmap: Optional[str] = DEFAULT_COLORMAP):
+        """\
+        Set visual style parameters
+
+        Parameters
+        ----------
+        cmap
+            colormap
+
+        Returns
+        -------
+        BasePlot
+        """
+
         self.cmap = cmap
 
     def legend(
@@ -319,24 +348,31 @@ class BasePlot(object):
         title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
         width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
     ):
-        """
-        Configure legend parameters.
+        """\
+        Configure legend parameters
 
         Parameters
         ----------
         show
-            Set to `False` to hide the default plot of the legend.
+            Set to 'False' to hide the default plot of the legend. This sets the
+            legend width to zero which will result in a wider main plot.
         title
-            Title for the dot size legend. Use "\n" to add line breaks.
+            Legend title. Appears on top of the color bar. Use '\\n' to add line breaks.
         width
-            Width of the legend.
+            Width of the legend. The value is a proportion with respect
+            to the figure width. E.g. 0.5 means the legend width is 50% of the figure
+            width.
 
         Returns
         -------
         BasePlot
 
+
         Examples
         --------
+
+        Set legend title:
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
