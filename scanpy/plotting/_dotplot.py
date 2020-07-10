@@ -38,7 +38,6 @@ class DotPlot(BasePlot):
     the mean value and the percentage of cells expressing the gene
     across multiple clusters.
 
-
     Parameters
     ----------
     {common_plot_args}
@@ -245,8 +244,8 @@ class DotPlot(BasePlot):
         size_exponent: Optional[float] = DEFAULT_SIZE_EXPONENT,
         grid: Optional[float] = False,
     ):
-        """
-        Modifies plot style
+        """\
+        Modifies plot visual parameters
 
         Parameters
         ----------
@@ -286,14 +285,16 @@ class DotPlot(BasePlot):
             to each other.
         grid
             Set to true to show grid lines. By default grid lines are not shown.
-            Further configuration of the grid lines can be achived directly on the
+            Further configuration of the grid lines can be achieved directly on the
             returned ax.
+
         Returns
         -------
-        DotPlot
+        :class:`~scanpy.pl.DotPlot`
 
         Examples
         -------
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
@@ -330,35 +331,42 @@ class DotPlot(BasePlot):
         colorbar_title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
         width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
     ):
-        # """\
-        # Configure legend parameters.
-        #
-        # Parameters
-        # ----------
-        # show
-        #     Set to `False` to hide the default plot of the legends.
-        # show_size_legend
-        #     Set to `False` to hide the the size legend
-        # show_colorbar
-        #     Set to `False` to hide the the colorbar
-        # size_title
-        #     Title for the dot size legend. Use "\n" to add line breaks.
-        # colorbar_title
-        #     Title for the color bar. Use "\n" to add line breaks.
-        # width
-        #     Width of the legends.
-        #
-        # Returns
-        # -------
-        # DotPlot
-        #
-        # Examples
-        # --------
-        # >>> adata = sc.datasets.pbmc68k_reduced()
-        # >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        # >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
-        # >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
-        # """
+        """\
+        Configures dot size and the colorbar legends
+
+        Parameters
+        ----------
+        show
+            Set to `False` to hide the default plot of the legends. This sets the
+            legend width to zero, which will result in a wider main plot.
+        show_size_legend
+            Set to `False` to hide the dot size legend
+        show_colorbar
+            Set to `False` to hide the colorbar legend
+        size_title
+            Title for the dot size legend. Use '\\n' to add line breaks. Appears on top
+            of dot sizes
+        colorbar_title
+            Title for the color bar. Use '\\n' to add line breaks. Appears on top of the
+            color bar
+        width
+            Width of the legends area. The value is a proportion with respect
+            to the figure width. E.g. 0.5 means the legend width is 50% of the figure
+
+        Returns
+        -------
+        :class:`~scanpy.pl.DotPlot`
+
+        Examples
+        --------
+
+        Set color bar title:
+
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
+        >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
+        """
 
         if not show:
             # turn of legends by setting width to 0
@@ -530,8 +538,8 @@ class DotPlot(BasePlot):
         the doc size and other containing the dot color. The indices and
         columns of the data frame are used to label the output image
 
-        The dots are plotted
-        using matplotlib.pyplot.scatter. Thus, additional arguments can be passed.
+        The dots are plotted using :func:`matplotlib.pyplot.scatter`. Thus, additional
+        arguments can be passed.
 
         Parameters
         ----------

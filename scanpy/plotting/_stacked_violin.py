@@ -188,8 +188,8 @@ class StackedViolin(BasePlot):
         yticklabels: Optional[bool] = DEFAULT_PLOT_YTICKLABELS,
         ylim: Optional[Tuple[float, float]] = DEFAULT_YLIM,
     ):
-        """
-        Modifies plot graphical parameters
+        """\
+        Modifies plot visual parameters
 
         Parameters
         ----------
@@ -225,7 +225,7 @@ class StackedViolin(BasePlot):
 
         Returns
         -------
-        StackedViolin
+        :class:`~scanpy.pl.StackedViolin`
 
         Examples
         -------
@@ -233,8 +233,9 @@ class StackedViolin(BasePlot):
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
         Change color map and turn off edges
+
         >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(row_palette='Blues', linewisth=0).show()
+        ...               .style(row_palette='Blues', linewidth=0).show()
 
         """
 

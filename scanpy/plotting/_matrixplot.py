@@ -153,8 +153,8 @@ class MatrixPlot(BasePlot):
         edge_color: Optional[ColorLike] = DEFAULT_EDGE_COLOR,
         edge_lw: Optional[float] = DEFAULT_EDGE_LW,
     ):
-        """
-        Modifies plot graphical parameters
+        """\
+        Modifies plot visual parameters.
 
         Parameters
         ----------
@@ -167,14 +167,16 @@ class MatrixPlot(BasePlot):
 
         Returns
         -------
-        MatrixPlot
+        :class:`~scanpy.pl.MatrixPlot`
 
         Examples
         -------
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
-        Change color map and turn off edges
+        Change color map and turn off edges:
+
         >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(cmap='Blues', edge_color='none').show()
 
@@ -293,10 +295,12 @@ def matrixplot(
 
     Returns
     -------
-    if `show` is `False`, returns a :class:`~scanpy.pl.MatrixPlot` object
+    If `return_fig` is `True`, returns a :class:`~scanpy.pl.MatrixPlot` object,
+    else if `show` is false, return axes dict
 
     Examples
     --------
+
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
