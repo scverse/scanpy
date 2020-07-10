@@ -172,9 +172,13 @@ class MatrixPlot(BasePlot):
 
         """
 
-        self.cmap = cmap
-        self.edge_color = edge_color
-        self.edge_lw = edge_lw
+        # change only the values that had changed
+        if cmap != self.cmap:
+            self.cmap = cmap
+        if edge_color != self.edge_color:
+            self.edge_color = edge_color
+        if edge_lw != self.edge_lw:
+            self.edge_lw = edge_lw
 
         return self
 

@@ -97,7 +97,7 @@ class StackedViolin(BasePlot):
     DEFAULT_JITTER = False
     DEFAULT_JITTER_SIZE = 1
     DEFAULT_LINE_WIDTH = 0.0
-    DEFAULT_ROW_PALETTE = 'muted'
+    DEFAULT_ROW_PALETTE = None
     DEFAULT_SCALE = 'width'
     DEFAULT_PLOT_YTICKLABELS = False
     DEFAULT_YLIM = None
@@ -163,6 +163,8 @@ class StackedViolin(BasePlot):
         self.jitter_size = self.DEFAULT_JITTER_SIZE
         self.plot_yticklabels = self.DEFAULT_PLOT_YTICKLABELS
         self.ylim = self.DEFAULT_YLIM
+        self.plot_x_padding = self.DEFAULT_PLOT_X_PADDING
+        self.plot_y_padding = self.DEFAULT_PLOT_Y_PADDING
 
         # set by default the violin plot cut=0 to limit the extend
         # of the violin plot as this produces better plots that wont extend
@@ -180,7 +182,7 @@ class StackedViolin(BasePlot):
 
     def style(
         self,
-        cmap: str = DEFAULT_COLORMAP,
+        cmap: Optional[str] = DEFAULT_COLORMAP,
         stripplot: Optional[bool] = DEFAULT_STRIPPLOT,
         jitter: Optional[Union[float, bool]] = DEFAULT_JITTER,
         jitter_size: Optional[int] = DEFAULT_JITTER_SIZE,
@@ -249,19 +251,30 @@ class StackedViolin(BasePlot):
 
         """
 
-        self.cmap = cmap
-        self.row_palette = row_palette
-        self.kwds['color'] = self.row_palette
-        self.stripplot = stripplot
-        self.jitter = jitter
-        self.jitter_size = jitter_size
-        self.plot_yticklabels = yticklabels
-        self.ylim = ylim
-        self.plot_x_padding = x_padding
-        self.plot_y_padding = y_padding
-
-        self.kwds['linewidth'] = linewidth
-        self.kwds['scale'] = scale
+        # modify only values that had changed
+        if cmap != self.cmap:
+            self.cmap = cmap
+        if row_palette != self.row_palette:
+            self.row_palette = row_palette
+            self.kwds['color'] = self.row_palette
+        if stripplot != self.stripplot:
+            self.stripplot = stripplot
+        if jitter != self.jitter:
+            self.jitter = jitter
+        if jitter_size != self.jitter_size:
+            self.jitter_size = jitter_size
+        if yticklabels != self.plot_yticklabels:
+            self.plot_yticklabels = yticklabels
+        if ylim != self.ylim:
+            self.ylim = ylim
+        if x_padding != self.plot_x_padding:
+            self.plot_x_padding = x_padding
+        if y_padding != self.plot_y_padding:
+            self.plot_y_padding = y_padding
+        if linewidth != self.kwds['linewidth']:
+            self.kwds['linewidth'] = linewidth
+        if scale != self.kwds['scale']:
+            self.kwds['scale'] = scale
 
         return self
 
@@ -310,8 +323,8 @@ class StackedViolin(BasePlot):
         ax.patch.set_alpha(0.0)
 
         # add tick labels
-        ax.set_ylim(_color_df.shape[0] + y_spacer_size, - y_spacer_size)
-        ax.set_xlim(- x_spacer_size, _color_df.shape[1] + x_spacer_size)
+        ax.set_ylim(_color_df.shape[0] + y_spacer_size, -y_spacer_size)
+        ax.set_xlim(-x_spacer_size, _color_df.shape[1] + x_spacer_size)
 
         # 0.5 to position the ticks on the center of the violins
         y_ticks = np.arange(_color_df.shape[0]) + 0.5
@@ -509,16 +522,16 @@ def stacked_violin(
     standard_scale: Optional[Literal['var', 'obs']] = None,
     var_group_rotation: Optional[float] = None,
     layer: Optional[str] = None,
-    stripplot: bool = False,
-    jitter: Union[float, bool] = False,
-    size: int = 1,
-    scale: Literal['area', 'count', 'width'] = 'width',
+    stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
+    jitter: Union[float, bool] = StackedViolin.DEFAULT_JITTER,
+    size: int = StackedViolin.DEFAULT_JITTER_SIZE,
+    scale: Literal['area', 'count', 'width'] = StackedViolin.DEFAULT_SCALE,
     order: Optional[Sequence[str]] = None,
     swap_axes: bool = False,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     return_fig: Optional[bool] = False,
-    row_palette: Optional[str] = None,
+    row_palette: Optional[str] = StackedViolin.DEFAULT_ROW_PALETTE,
     cmap: Optional[str] = StackedViolin.DEFAULT_COLORMAP,
     ax: Optional[_AxesSubplot] = None,
     **kwds,

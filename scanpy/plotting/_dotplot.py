@@ -320,19 +320,32 @@ class DotPlot(BasePlot):
         ...               .show()
 
         """
-        self.cmap = cmap
-        self.dot_max = dot_max
-        self.dot_min = dot_min
-        self.smallest_dot = smallest_dot
-        self.largest_dot = largest_dot
-        self.color_on = color_on
-        self.size_exponent = size_exponent
 
-        self.dot_edge_color = dot_edge_color
-        self.dot_edge_lw = dot_edge_lw
-        self.grid = grid
-        self.plot_x_padding = x_padding
-        self.plot_y_padding = y_padding
+        # change only the values that had changed
+        if cmap != self.cmap:
+            self.cmap = cmap
+        if dot_max != self.dot_max:
+            self.dot_max = dot_max
+        if dot_min != self.dot_min:
+            self.dot_min = dot_min
+        if dot_min != self.dot_min:
+            self.smallest_dot = dot_min
+        if largest_dot != self.largest_dot:
+            self.largest_dot = largest_dot
+        if color_on != self.color_on:
+            self.color_on = color_on
+        if size_exponent != self.size_exponent:
+            self.size_exponent = size_exponent
+        if dot_edge_color != self.dot_edge_color:
+            self.dot_edge_color = dot_edge_color
+        if dot_edge_lw != self.dot_edge_lw:
+            self.dot_edge_lw = dot_edge_lw
+        if grid != self.grid:
+            self.grid = grid
+        if x_padding != self.plot_x_padding:
+            self.plot_x_padding = x_padding
+        if y_padding != self.plot_y_padding:
+            self.plot_y_padding = y_padding
 
         return self
 
@@ -780,8 +793,8 @@ def dotplot(
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
     cmap: str = 'Reds',
-    dot_max: Optional[float] = None,
-    dot_min: Optional[float] = None,
+    dot_max: Optional[float] = DotPlot.DEFAULT_DOT_MAX,
+    dot_min: Optional[float] = DotPlot.DEFAULT_DOT_MIN,
     standard_scale: Optional[Literal['var', 'group']] = None,
     smallest_dot: Optional[float] = DotPlot.DEFAULT_SMALLEST_DOT,
     title: Optional[str] = None,
