@@ -633,10 +633,10 @@ class BasePlot(object):
         )
 
         # the main plot is divided into three rows and two columns
-        # first row is an spacer, that is adjusted in case the
+        # first row is an spacer that is adjusted in case the
         #           legends need more height than the main plot
         # second row is for brackets (if needed),
-        # third row is for mainplot and dendrogram (if needed)
+        # third row is for mainplot and dendrogram/totals (if needed)
         if self.has_var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
             if self.are_axes_swapped:

@@ -71,9 +71,9 @@ class StackedViolin(BasePlot):
 
     See also
     --------
-    :func:`~scanpy.pl.stacked_violin` simpler way to call StackedViolin but with less
+    :func:`~scanpy.pl.stacked_violin`: simpler way to call StackedViolin but with less
         options.
-    :func:`~scanpy.pl.violin` and :func:`~scanpy.pl.rank_genes_groups_stacked_violin`
+    :func:`~scanpy.pl.violin` and :func:`~scanpy.pl.rank_genes_groups_stacked_violin`:
         to plot marker genes identified using :func:`~scanpy.tl.rank_genes_groups`
 
     Examples
@@ -561,20 +561,23 @@ def stacked_violin(
 
     See also
     --------
-    :class:`~scanpy.pl.StackedViolin`
-
+    :class:`~scanpy.pl.StackedViolin`: The StackedViolin class can be used to to control
+        several visual parameters not available in this function.
     :func:`~scanpy.pl.rank_genes_groups_stacked_violin` to plot marker genes identified
         using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     Examples
     -------
 
+    Visualization of violin plots of a few genes grouped by the category 'bulk_labels':
+
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
-    Using var_names as dict:
+    Same visualization but passing var_names as dict, which adds a grouping of
+    the genes on top of the image:
 
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)

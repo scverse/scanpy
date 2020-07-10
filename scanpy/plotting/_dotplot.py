@@ -57,13 +57,11 @@ class DotPlot(BasePlot):
     kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
-
     See also
     --------
     :func:`~scanpy.pl.dotplot`: Simpler way to call DotPlot but with less options.
     :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker
         genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
-
 
     Examples
     --------
@@ -837,7 +835,8 @@ def dotplot(
     Examples
     --------
 
-    Create a dot plot using the given markers and the PBMC example dataset:
+    Create a dot plot using the given markers and the PBMC example dataset grouped by
+    the category 'bulk_labels'.
 
     ..plot::
         :context: close-figs
