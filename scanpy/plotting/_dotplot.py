@@ -97,7 +97,9 @@ class DotPlot(BasePlot):
     # default legend parameters
     DEFAULT_SIZE_LEGEND_TITLE = 'Fraction of cells\nin group (%)'
     DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
-    DEFAULT_LEGENDS_WIDTH = 1.5
+    DEFAULT_LEGENDS_WIDTH = 1.5  # inches
+    DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
+    DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
 
     def __init__(
         self,
@@ -218,6 +220,8 @@ class DotPlot(BasePlot):
         self.color_on = self.DEFAULT_COLOR_ON
         self.size_exponent = self.DEFAULT_SIZE_EXPONENT
         self.grid = False
+        self.plot_x_padding = self.DEFAULT_PLOT_X_PADDING
+        self.plot_y_padding = self.DEFAULT_PLOT_Y_PADDING
 
         self.dot_edge_color = self.DEFAULT_DOT_EDGECOLOR
         self.dot_edge_lw = self.DEFAULT_DOT_EDGELW
@@ -241,6 +245,8 @@ class DotPlot(BasePlot):
         dot_edge_lw: Optional[float] = DEFAULT_DOT_EDGELW,
         size_exponent: Optional[float] = DEFAULT_SIZE_EXPONENT,
         grid: Optional[float] = False,
+        x_padding: Optional[float] = DEFAULT_PLOT_X_PADDING,
+        y_padding: Optional[float] = DEFAULT_PLOT_Y_PADDING,
     ):
         """\
         Modifies plot visual parameters
@@ -285,6 +291,12 @@ class DotPlot(BasePlot):
             Set to true to show grid lines. By default grid lines are not shown.
             Further configuration of the grid lines can be achieved directly on the
             returned ax.
+        x_paddding
+            Space between the plot left/right borders and the dots center. A unit
+            is the distance between the x ticks. Only applied when color_on = dot
+        y_paddding
+            Space between the plot top/bottom borders and the dots center. A unit is
+            the distance between the y ticks. Only applied when color_on = dot
 
         Returns
         -------
@@ -301,10 +313,11 @@ class DotPlot(BasePlot):
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(cmap='RdBu_r', color_on='square').show()
 
-        Add edge to dots
+        Add edge to dots and plot a grid
 
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(dot_edge_color='black',  dot_edge_lw=1).show()
+        ...               .style(dot_edge_color='black', dot_edge_lw=1, grid=True)\
+        ...               .show()
 
         """
         self.cmap = cmap
@@ -318,6 +331,9 @@ class DotPlot(BasePlot):
         self.dot_edge_color = dot_edge_color
         self.dot_edge_lw = dot_edge_lw
         self.grid = grid
+        self.plot_x_padding = x_padding
+        self.plot_y_padding = y_padding
+
         return self
 
     def legend(
@@ -505,6 +521,8 @@ class DotPlot(BasePlot):
             largest_dot=self.largest_dot,
             size_exponent=self.size_exponent,
             grid=self.grid,
+            x_padding=self.plot_x_padding,
+            y_padding=self.plot_y_padding,
             **self.kwds,
         )
 
@@ -528,6 +546,8 @@ class DotPlot(BasePlot):
         edge_color: Optional[ColorLike] = None,
         edge_lw: Optional[float] = None,
         grid: Optional[bool] = False,
+        x_padding: Optional[float] = 0.8,
+        y_padding: Optional[float] = 1.0,
         **kwds,
     ):
         """\
@@ -544,7 +564,6 @@ class DotPlot(BasePlot):
         dot_color: Data frame containing the dot_color, should have the same,
                 shape, columns and indices as dot_size.
         dot_ax: matplotlib axis
-        y_lebel:
         cmap
             String denoting matplotlib color map.
         color_on
@@ -576,6 +595,12 @@ class DotPlot(BasePlot):
             `color_on='square'`, line width = 1.5
         grid
             Adds a grid to the plot
+        x_paddding
+            Space between the plot left/right borders and the dots center. A unit
+            is the distance between the x ticks. Only applied when color_on = dot
+        y_paddding
+            Space between the plot top/bottom borders and the dots center. A unit is
+            the distance between the y ticks. Only applied when color_on = dot
         kwds
             Are passed to :func:`matplotlib.pyplot.scatter`.
 
@@ -612,6 +637,9 @@ class DotPlot(BasePlot):
         # size = fraction
         # color = mean expression
 
+        # +0.5 in y and x to set the dot center at 0.5 multiples
+        # this facilitates dendrogram and totals alignment for
+        # matrixplot, dotplot and stackec_violin using the same coordinates.
         y, x = np.indices(dot_color.shape)
         y = y.flatten() + 0.5
         x = x.flatten() + 0.5
@@ -720,11 +748,15 @@ class DotPlot(BasePlot):
         dot_ax.set_xlim(0, dot_color.shape[1])
 
         if color_on == 'dot':
-            # add more distance to the x and y lims with the color is on the
-            # dots
-            dot_ax.set_ylim(dot_color.shape[0] + 0.5, -0.5)
+            # add padding to the x and y lims when the color is not in the square
+            # default y range goes from 0.5 to num cols + 0.5
+            # and default x range goes from 0.5 to num rows + 0.5, thus
+            # the padding needs to be corrected.
+            x_padding = x_padding - 0.5
+            y_padding = y_padding - 0.5
+            dot_ax.set_ylim(dot_color.shape[0] + y_padding, -y_padding)
 
-            dot_ax.set_xlim(-0.3, dot_color.shape[1] + 0.3)
+            dot_ax.set_xlim(-x_padding, dot_color.shape[1] + x_padding)
 
         if grid:
             dot_ax.grid(True, color='gray', linewidth=0.1)

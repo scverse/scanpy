@@ -101,6 +101,8 @@ class StackedViolin(BasePlot):
     DEFAULT_SCALE = 'width'
     DEFAULT_PLOT_YTICKLABELS = False
     DEFAULT_YLIM = None
+    DEFAULT_PLOT_X_PADDING = 0.5  # a unit is the distance between two x-axis ticks
+    DEFAULT_PLOT_Y_PADDING = 0.5  # a unit is the distance between two y-axis ticks
 
     def __init__(
         self,
@@ -187,6 +189,8 @@ class StackedViolin(BasePlot):
         scale: Optional[Literal['area', 'count', 'width']] = DEFAULT_SCALE,
         yticklabels: Optional[bool] = DEFAULT_PLOT_YTICKLABELS,
         ylim: Optional[Tuple[float, float]] = DEFAULT_YLIM,
+        x_padding: Optional[float] = DEFAULT_PLOT_X_PADDING,
+        y_padding: Optional[float] = DEFAULT_PLOT_Y_PADDING,
     ):
         """\
         Modifies plot visual parameters
@@ -222,6 +226,12 @@ class StackedViolin(BasePlot):
         ylim
             minimum and maximum values for the y-axis. If set. All rows will have
             the same y-axis range. Example: ylim=(0, 5)
+        x_paddding
+            Space between the plot left/right borders and the violins. A unit
+            is the distance between the x ticks.
+        y_paddding
+            Space between the plot top/bottom borders and the violins. A unit is
+            the distance between the y ticks.
 
         Returns
         -------
@@ -247,6 +257,8 @@ class StackedViolin(BasePlot):
         self.jitter_size = jitter_size
         self.plot_yticklabels = yticklabels
         self.ylim = ylim
+        self.plot_x_padding = x_padding
+        self.plot_y_padding = y_padding
 
         self.kwds['linewidth'] = linewidth
         self.kwds['scale'] = scale
@@ -285,9 +297,10 @@ class StackedViolin(BasePlot):
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
         colormap_array = cmap(norm(_color_df.values))
-        spacer_size = 0.5
+        x_spacer_size = self.plot_x_padding
+        y_spacer_size = self.plot_y_padding
         self._make_rows_of_violinplots(
-            ax, _matrix, colormap_array, _color_df, spacer_size
+            ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
         )
 
         # turn on axis for `ax` as this is turned off
@@ -297,15 +310,17 @@ class StackedViolin(BasePlot):
         ax.patch.set_alpha(0.0)
 
         # add tick labels
-        ax.set_ylim(_color_df.shape[0] + spacer_size, 0 - spacer_size)
-        ax.set_xlim(0 - spacer_size, _color_df.shape[1] + spacer_size)
+        ax.set_ylim(_color_df.shape[0] + y_spacer_size, - y_spacer_size)
+        ax.set_xlim(- x_spacer_size, _color_df.shape[1] + x_spacer_size)
 
+        # 0.5 to position the ticks on the center of the violins
         y_ticks = np.arange(_color_df.shape[0]) + 0.5
         ax.set_yticks(y_ticks)
         ax.set_yticklabels(
             [_color_df.index[idx] for idx, _ in enumerate(y_ticks)], minor=False
         )
 
+        # 0.5 to position the ticks on the center of the violins
         x_ticks = np.arange(_color_df.shape[1]) + 0.5
         ax.set_xticks(x_ticks)
         labels = _color_df.columns
@@ -319,7 +334,7 @@ class StackedViolin(BasePlot):
         return norm
 
     def _make_rows_of_violinplots(
-        self, ax, _matrix, colormap_array, _color_df, spacer_size
+        self, ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
     ):
         import seaborn as sns  # Slow import, only import if called
 
@@ -372,8 +387,8 @@ class StackedViolin(BasePlot):
         # define a layout of nrows = len(categories) rows
         # each row is one violin plot.
         num_rows, num_cols = _color_df.shape
-        height_ratios = [spacer_size] + [1] * num_rows + [spacer_size]
-        width_ratios = [spacer_size] + [1] * num_cols + [spacer_size]
+        height_ratios = [y_spacer_size] + [1] * num_rows + [y_spacer_size]
+        width_ratios = [x_spacer_size] + [1] * num_cols + [x_spacer_size]
 
         fig, gs = make_grid_spec(
             ax,
