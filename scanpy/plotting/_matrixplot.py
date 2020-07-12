@@ -58,7 +58,7 @@ class MatrixPlot(BasePlot):
         Optionally, a dataframe with the values to plot can be given. The
         index should be the grouby categories and the columns the genes names.
 
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
     Examples
@@ -153,8 +153,8 @@ class MatrixPlot(BasePlot):
         edge_color: Optional[ColorLike] = DEFAULT_EDGE_COLOR,
         edge_lw: Optional[float] = DEFAULT_EDGE_LW,
     ):
-        """
-        Modifies plot graphical parameters
+        """\
+        Modifies plot visual parameters.
 
         Parameters
         ----------
@@ -167,14 +167,16 @@ class MatrixPlot(BasePlot):
 
         Returns
         -------
-        MatrixPlot
+        :class:`~scanpy.pl.MatrixPlot`
 
         Examples
         -------
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
-        Change color map and turn off edges
+        Change color map and turn off edges:
+
         >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(cmap='Blues', edge_color='none').show()
 
@@ -279,43 +281,49 @@ def matrixplot(
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names.
 
-    This function provides a convenient interface to the :class:`MatrixPlot`
-    class. If you need more flexibility, you should use :class:`MatrixPlot` directly.
+    This function provides a convenient interface to the :class:`~scanpy.pl.MatrixPlot`
+    class. If you need more flexibility, you should use :class:`~scanpy.pl.MatrixPlot`
+    directly.
 
     Parameters
     ----------
     {common_plot_args}
     {groupby_plots_args}
     {show_save_ax}
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.pcolor`.
 
     Returns
     -------
-    if `show` is `False`, returns a :class:`MatrixPlot` object
+    If `return_fig` is `True`, returns a :class:`~scanpy.pl.MatrixPlot` object,
+    else if `show` is false, return axes dict
 
     Examples
     --------
+
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
-    Get Matrix object for fine tuning
+    Get Matrix object for fine tuning:
+
     >>> mp = sc.pl.matrix(adata, markers, 'bulk_labels', return_fig=True)
     >>> mp.add_totals().style(edge_color='black').show()
 
     The axes used can be obtained using the get_axes() method
+
     >>> axes_dict = mp.get_axes()
 
     See also
     --------
     :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+        identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
     mp = MatrixPlot(
