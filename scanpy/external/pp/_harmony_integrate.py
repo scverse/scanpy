@@ -14,7 +14,7 @@ def harmony_integrate(
     obsm_out_field: str = 'X_pca_harmony',
     **kwargs,
 ):
-    """
+    """\
     Use harmonypy [Korsunsky19]_ to integrate different experiments.
 
     Harmony [Korunsky19]_ is an algorithm for integrating single-cell
