@@ -37,7 +37,7 @@ see :issue:`1210`
 .. rubric:: **Other visualization changes**
 
 - Added title for colorbar and positioned as in dotplot for :func:`~scanpy.pl.matrixplot`
-- :func:`~scanpy.pl.heatmap` and :func:`~scanpy.pl.trackplots` now return a dictionary of axes when `show=False` as for the other plots.
+- :func:`~scanpy.pl.heatmap` and :func:`~scanpy.pl.trackplot` now return a dictionary of axes when `show=False` as for the other plots.
 - `interpolation` can be passed as parameter for :func:`~scanpy.pl.heatmap`
 
 
