@@ -13,8 +13,7 @@ matrix:
       install:
         - pip install docutils sphinx
         - pip install -e .[test,louvain,leiden,magic,scvi]
-        # also test new umap. remove once umap 0.4+ is used by other runs as well
-        - pip install umap-learn>=0.4 git+https://github.com/theislab/anndata
+        - pip install git+https://github.com/theislab/anndata
 python:
   - '3.6'
   - '3.7'
