@@ -31,6 +31,17 @@ RNA velocity
 * `scVelo <https://scvelo.org>`__ :small:`Helmholtz Munich`
 
 
+Fate mapping
+------------
+
+* `CellRank <http://cellrank.org>`__ :small:`Helmholtz Munich`
+
+    | CellRank is a toolkit to uncover cellular dynamics based on scRNA-seq data with
+      RNA velocity annotation by detecting initial and terminal populations, inferring
+      fate potentials and uncovering gene expression trends towards specific
+      terminal populations.
+
+
 Differential expression
 -----------------------
 
