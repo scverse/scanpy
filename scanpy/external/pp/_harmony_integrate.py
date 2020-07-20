@@ -76,8 +76,6 @@ def harmony_integrate(
     except ImportError:
         raise ImportError('\nplease install harmonypy:\n\n\tpip install harmonypy')
 
-    harmony_out = harmonypy.run_harmony(
-        adata.obsm[basis], adata.obs, key, **kwargs
-    )
+    harmony_out = harmonypy.run_harmony(adata.obsm[basis], adata.obs, key, **kwargs)
 
     adata.obsm[adjusted_basis] = harmony_out.Z_corr.T
