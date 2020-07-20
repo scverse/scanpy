@@ -5,8 +5,9 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This release includes several new visualization options and improvements after an
-overhaul of the dotplot, matrixplot and stacked_violin functions. For more details
-see :PR:`1210`
+overhaul of the dotplot, matrixplot and stacked_violin functions (see :pr:`1210` :small:`F Ramirez`).
+Also, this release improves significantly the internals for the
+differential expression code (:func:`~scanpy.tl.rank_genes_groups`, :pr:`1156` :small:`SR Koncopd`).
 
 .. rubric:: **Plotting improvements for** :func:`~scanpy.pl.dotplot`, :func:`~scanpy.pl.matrixplot` and :func:`~scanpy.pl.stacked_violin`
 
@@ -18,7 +19,7 @@ see :PR:`1210`
 - Set a title to the image.
 - Legend can be removed
 - `groupby` can be a list of categories. E.g. `groupby=[‘tissue’, ‘cell type’]`
-- Added padding parameter to dotplot and stacked_violin to address :PR:`1270`
+- Added padding parameter to dotplot and stacked_violin to address :pr:`1270`
 - Updated documentation and tutorial
 
 .. rubric:: :func:`~scanpy.pl.dotplot` **changes**
@@ -41,9 +42,21 @@ see :PR:`1210`
 - `interpolation` can be passed as parameter for :func:`~scanpy.pl.heatmap`
 
 
-.. rubric:: Bug fixes
+.. rubric:: **Bug fixes**
 
-- Bumped version requirement of `scipy` to `scipy>1.4` to support `rmatmat` argument of `LinearOperator` :issue:`1246`
+- Avoid warning in :func:`~scanpy.tl.rank_genes_groups` if 't-test' is passed :pr:`1303`  :smaller:`A Wolf`
+- Restrict sphinx version to < 3.1, > 3.0 :pr:`1297`  :smaller:`I Virshup`
+- Clean up _ranks and fix dendrogram for scipy 1.5 :pr:`1290`  :smaller:`SR Koncopd`
+- Use raw to translate gene symbols if applicable :pr:`1278`  :smaller:`E Rice`
+- Fix diffmap (:issue:`1262`)  :smaller:`G Eraslan`
+- Fix neighbors in spring_project :issue:`1260`  :smaller:`SR Koncopd `
+- Fix default size of dot in spatial plots :pr:`1255` :issue:`1253`  :smaller:`giovp`
+- Allow prefix  (:pr:`1250`  :smaller:`G Sturm`) and add backup_url option (:pr:`1296`  :smaller:`Adam Gayoso`) to :func:`~scanpy.read_10x_mtx`  :smaller:``
+- Bumped version requirement of `scipy` to `scipy>1.4` to support `rmatmat` argument of `LinearOperator` :issue:`1246` :smaller:`I Virshup`
+
+.. rubric:: **Additions**
+
+- Add [CellRank](https://github.com/theislab/cellrank/) :pr:`1304`
 
 1.5.1 :small:`2020-05-21`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
