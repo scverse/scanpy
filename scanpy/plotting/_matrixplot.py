@@ -20,29 +20,13 @@ from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 @_doc_params(common_plot_args=doc_common_plot_args)
 class MatrixPlot(BasePlot):
     """\
-    Allows the visualization of two values that are encoded as
-    dot size and color. The size usually represents the fraction
-    of cells (obs) that have a non-zero value for genes (var).
-
-    For each var_name and each `groupby` category a dot is plotted.
-    Each dot represents two values: mean expression within each category
-    (visualized by color) and fraction of cells expressing the `var_name` in the
-    category (visualized by the size of the dot). If `groupby` is not given,
-    the dotplot assumes that all data belongs to a single category.
-
-    .. note::
-       A gene is considered expressed if the expression value in the `adata` (or
-       `adata.raw`) is above the specified threshold which is zero by default.
-
-    An example of dotplot usage is to visualize, for multiple marker genes,
-    the mean value and the percentage of cells expressing the gene
-    across multiple clusters.
+    Allows the visualization of values using a color map.
 
     Parameters
     ----------
     {common_plot_args}
     title
-        Title for the figure
+        Title for the figure.
     expression_cutoff
         Expression cutoff that is used for binarizing the gene expression and
         determining the fraction of cells expressing given genes. A gene is
@@ -58,24 +42,30 @@ class MatrixPlot(BasePlot):
         Optionally, a dataframe with the values to plot can be given. The
         index should be the grouby categories and the columns the genes names.
 
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
-
-    Examples
-    -------
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
-
-    Using var_names as dict:
-
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
 
     See also
     --------
-    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
-    :func:`~scanpy.tl.rank_genes_groups` function.
+    :func:`~scanpy.pl.matrixplot`: Simpler way to call MatrixPlot but with less options.
+    :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes identified
+        using the :func:`~scanpy.tl.rank_genes_groups` function.
+
+    Examples
+    --------
+
+    Simple visualization of the average expression of a few genes grouped by
+    the category 'bulk_labels'.
+
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
+
+    Same visualization but passing var_names as dict, which adds a grouping of
+    the genes on top of the image:
+
+    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+    >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
     """
 
     DEFAULT_SAVE_PREFIX = 'matrixplot_'
@@ -153,36 +143,42 @@ class MatrixPlot(BasePlot):
         edge_color: Optional[ColorLike] = DEFAULT_EDGE_COLOR,
         edge_lw: Optional[float] = DEFAULT_EDGE_LW,
     ):
-        """
-        Modifies plot graphical parameters
+        """\
+        Modifies plot visual parameters.
 
         Parameters
         ----------
         cmap
             String denoting matplotlib color map.
         edge_color
-            Edge color betweem the squares of matrix plot. Default is gray
+            Edge color between the squares of matrix plot. Default is gray
         edge_lw
             Edge line width.
 
         Returns
         -------
-        MatrixPlot
+        :class:`~scanpy.pl.MatrixPlot`
 
         Examples
         -------
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
-        Change color map and turn off edges
+        Change color map and turn off edges:
+
         >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(cmap='Blues', edge_color='none').show()
 
         """
 
-        self.cmap = cmap
-        self.edge_color = edge_color
-        self.edge_lw = edge_lw
+        # change only the values that had changed
+        if cmap != self.cmap:
+            self.cmap = cmap
+        if edge_color != self.edge_color:
+            self.edge_color = edge_color
+        if edge_lw != self.edge_lw:
+            self.edge_lw = edge_lw
 
         return self
 
@@ -277,45 +273,53 @@ def matrixplot(
     **kwds,
 ) -> Union[MatrixPlot, dict, None]:
     """\
-    Creates a heatmap of the mean expression values per cluster of each var_names.
+    Creates a heatmap of the mean expression values per group of each var_names.
 
-    This function provides a convenient interface to the :class:`MatrixPlot`
-    class. If you need more flexibility, you should use :class:`MatrixPlot` directly.
+    This function provides a convenient interface to the :class:`~scanpy.pl.MatrixPlot`
+    class. If you need more flexibility, you should use :class:`~scanpy.pl.MatrixPlot`
+    directly.
 
     Parameters
     ----------
     {common_plot_args}
     {groupby_plots_args}
     {show_save_ax}
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.pcolor`.
 
     Returns
     -------
-    if `show` is `False`, returns a :class:`MatrixPlot` object
+    If `return_fig` is `True`, returns a :class:`~scanpy.pl.MatrixPlot` object,
+    else if `show` is false, return axes dict
+
+    See also
+    --------
+    :class:`~scanpy.pl.MatrixPlot`: The MatrixPlot class can be used to to control
+        several visual parameters not available in this function.
+    :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes
+        identified using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     Examples
     --------
+
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
-    Get Matrix object for fine tuning
+    Get Matrix object for fine tuning:
+
     >>> mp = sc.pl.matrix(adata, markers, 'bulk_labels', return_fig=True)
     >>> mp.add_totals().style(edge_color='black').show()
 
     The axes used can be obtained using the get_axes() method
-    >>> axes_dict = mp.get_axes()
 
-    See also
-    --------
-    :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    >>> axes_dict = mp.get_axes()
     """
 
     mp = MatrixPlot(
