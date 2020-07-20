@@ -5,9 +5,9 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This release includes several new visualization options and improvements after an
-overhaul of the dotplot, matrixplot and stacked_violin functions (see :pr:`1210` :small:`F Ramirez`).
+overhaul of the dotplot, matrixplot and stacked_violin functions (see :pr:`1210` :smaller:`F Ramirez`).
 Also, this release improves significantly the internals for the
-differential expression code (:func:`~scanpy.tl.rank_genes_groups`, :pr:`1156` :small:`SR Koncopd`).
+differential expression code (:func:`~scanpy.tl.rank_genes_groups`, :pr:`1156` :smaller:`SR Koncopd`).
 
 .. rubric:: **Plotting improvements for** :func:`~scanpy.pl.dotplot`, :func:`~scanpy.pl.matrixplot` and :func:`~scanpy.pl.stacked_violin`
 
@@ -49,14 +49,15 @@ differential expression code (:func:`~scanpy.tl.rank_genes_groups`, :pr:`1156` :
 - Clean up _ranks and fix dendrogram for scipy 1.5 :pr:`1290`  :smaller:`SR Koncopd`
 - Use raw to translate gene symbols if applicable :pr:`1278`  :smaller:`E Rice`
 - Fix diffmap (:issue:`1262`)  :smaller:`G Eraslan`
-- Fix neighbors in spring_project :issue:`1260`  :smaller:`SR Koncopd `
+- Fix neighbors in spring_project :issue:`1260`  :smaller:`SR Koncopd`
 - Fix default size of dot in spatial plots :pr:`1255` :issue:`1253`  :smaller:`giovp`
-- Allow prefix  (:pr:`1250`  :smaller:`G Sturm`) and add backup_url option (:pr:`1296`  :smaller:`Adam Gayoso`) to :func:`~scanpy.read_10x_mtx`  :smaller:``
 - Bumped version requirement of `scipy` to `scipy>1.4` to support `rmatmat` argument of `LinearOperator` :issue:`1246` :smaller:`I Virshup`
 
 .. rubric:: **Additions**
 
-- Add [CellRank](https://github.com/theislab/cellrank/) :pr:`1304`
+- Add `CellRank <https://github.com/theislab/cellrank/>`_ to scanpy ecosystem :pr:`1304` :smaller:`giovp`
+- Add backup_url option to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`Adam Gayoso`
+- Allow prefix for :func:`~scanpy.read_10x_mtx` :pr:`1250`  :smaller:`G Sturm`
 
 1.5.1 :small:`2020-05-21`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
