@@ -10,12 +10,12 @@ from anndata import AnnData
 def harmony_integrate(
     adata: AnnData,
     key: str,
-    obsm_in_field: str = 'X_pca',
-    obsm_out_field: str = 'X_pca_harmony',
+    basis: str = 'X_pca',
+    adjusted_basis: str = 'X_pca_harmony',
     **kwargs,
 ):
     """\
-    Use harmonypy [Korsunsky19]_ to integrate different experiments.
+    Use harmonypy [Korunsky19]_ to integrate different experiments.
 
     Harmony [Korunsky19]_ is an algorithm for integrating single-cell
     data from multiple experiments. This function uses the python
@@ -32,15 +32,15 @@ def harmony_integrate(
     key
         The name of the column in ``adata.obs`` that differentiates
         among experiments/batches.
-    obsm_in_field
+    basis
         The name of the field in ``adata.obsm`` where the PCA table is
         stored. Defaults to ``'X_pca'``, which is the default for
         ``sc.tl.pca()``.
-    obsm_out_field
+    adjusted_basis
         The name of the field in ``adata.obsm`` where the adjusted PCA
         table will be stored after running this function. Defaults to
         ``X_pca_harmony``.
-    **kwargs
+    kwargs
         Any additional arguments will be passed to
         ``harmonypy.run_harmony()``.
 
@@ -77,7 +77,7 @@ def harmony_integrate(
         raise ImportError('\nplease install harmonypy:\n\n\tpip install harmonypy')
 
     harmony_out = harmonypy.run_harmony(
-        adata.obsm[obsm_in_field], adata.obs, key, **kwargs
+        adata.obsm[basis], adata.obs, key, **kwargs
     )
 
-    adata.obsm[obsm_out_field] = harmony_out.Z_corr.T
+    adata.obsm[adjusted_basis] = harmony_out.Z_corr.T
