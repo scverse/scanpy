@@ -136,7 +136,10 @@ def read(
 
 
 def read_10x_h5(
-    filename: Union[str, Path], genome: Optional[str] = None, gex_only: bool = True,
+    filename: Union[str, Path],
+    genome: Optional[str] = None,
+    gex_only: bool = True,
+    backup_url: Optional[str] = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted hdf5 file.
@@ -151,6 +154,8 @@ def read_10x_h5(
     gex_only
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
+    backup_url
+        Retrieve the file from an URL if not present on disk.
 
     Returns
     -------
@@ -169,6 +174,9 @@ def read_10x_h5(
         Feature types
     """
     start = logg.info(f'reading {filename}')
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url,)
+    if not is_present:
+        logg.debug(f'... did not find original file {filename}')
     with tables.open_file(str(filename), 'r') as f:
         v3 = '/matrix' in f
     if v3:
