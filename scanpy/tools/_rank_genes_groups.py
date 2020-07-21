@@ -446,6 +446,9 @@ def rank_genes_groups(
     corr_method
         p-value correction method.
         Used only for `'t-test'`, `'t-test_overestim_var'`, and `'wilcoxon'`.
+    tie_correct
+        Use tie correction for `'wilcoxon'` scores.
+        Used only for `'wilcoxon'`.
     rankby_abs
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
