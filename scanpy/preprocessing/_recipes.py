@@ -3,7 +3,7 @@ from typing import Optional
 
 from anndata import AnnData
 
-from . import _simple as pp
+from .. import preprocessing as pp
 from ._deprecated.highly_variable_genes import filter_genes_dispersion, filter_genes_cv_deprecated
 from ._normalization import normalize_total
 from .. import logging as logg
@@ -35,12 +35,13 @@ def recipe_weinreb17(
     copy
         Return a copy if true.
     """
+    from ._deprecated import normalize_per_cell_weinreb16_deprecated, zscore_deprecated
     from scipy.sparse import issparse
     if issparse(adata.X):
         raise ValueError('`recipe_weinreb16 does not support sparse matrices.')
     if copy: adata = adata.copy()
     if log: pp.log1p(adata)
-    adata.X = pp.normalize_per_cell_weinreb16_deprecated(
+    adata.X = normalize_per_cell_weinreb16_deprecated(
         adata.X, max_fraction=0.05, mult_with_mean=True
     )
     gene_subset = filter_genes_cv_deprecated(
@@ -48,7 +49,7 @@ def recipe_weinreb17(
     )
     adata._inplace_subset_var(gene_subset)  # this modifies the object itself
     X_pca = pp.pca(
-        pp.zscore_deprecated(adata.X),
+        zscore_deprecated(adata.X),
         n_comps=n_pcs,
         svd_solver=svd_solver,
         random_state=random_state,
