@@ -10,8 +10,8 @@ from anndata import AnnData
 def harmony_integrate(
     adata: AnnData,
     key: str,
-    basis: str = 'X_pca',
-    adjusted_basis: str = 'X_pca_harmony',
+    basis: str = "X_pca",
+    adjusted_basis: str = "X_pca_harmony",
     **kwargs,
 ):
     """\
@@ -53,6 +53,7 @@ def harmony_integrate(
     Example
     -------
     First, load libraries and example dataset, and preprocess.
+
     >>> import scanpy as sc
     >>> import scanpy.external as sce
     >>> adata = sc.datasets.pbmc3k()
@@ -63,10 +64,12 @@ def harmony_integrate(
     for the sake of example, but during real usage there would already
     be a column in ``adata.obs`` giving the experiment each cell came
     from.
+
     >>> adata.obs['batch'] = 1350*['a'] + 1350*['b']
 
     Finally, run harmony. Afterwards, there will be a new table in
     ``adata.obsm`` containing the adjusted PC's.
+
     >>> sce.pp.harmony_integrate(adata, 'batch')
     >>> 'X_pca_harmony' in adata.obsm
     True
@@ -74,7 +77,7 @@ def harmony_integrate(
     try:
         import harmonypy
     except ImportError:
-        raise ImportError('\nplease install harmonypy:\n\n\tpip install harmonypy')
+        raise ImportError("\nplease install harmonypy:\n\n\tpip install harmonypy")
 
     harmony_out = harmonypy.run_harmony(adata.obsm[basis], adata.obs, key, **kwargs)
 
