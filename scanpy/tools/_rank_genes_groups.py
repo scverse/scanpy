@@ -1,6 +1,6 @@
 """Rank genes according to differential expression.
 """
-from math import sqrt, floor
+from math import floor
 from typing import Iterable, Union, Optional
 
 import numpy as np
@@ -60,6 +60,20 @@ def _ranks(X, mask=None, mask_rest=None):
         df = pd.DataFrame(data=get_chunk(X, left, right))
         ranks = df.rank()
         yield ranks, left, right
+
+
+def _tiecorrect(ranks):
+    size = np.float64(ranks.shape[0])
+    if size < 2:
+        return np.repeat(ranks.shape[1], 1.0)
+
+    arr = np.sort(ranks, axis=0)
+    tf = np.insert(arr[1:] != arr[:-1], (0, arr.shape[0] - 1), True, axis=0)
+    idx = np.where(tf, np.arange(tf.shape[0])[:, None], 0)
+    idx = np.sort(idx, axis=0)
+    cnt = np.diff(idx, axis=0).astype(np.float64)
+
+    return 1.0 - (cnt ** 3 - cnt).sum(axis=0) / (size ** 3 - size)
 
 
 class _RankGenes:
@@ -208,16 +222,21 @@ class _RankGenes:
 
             yield group_index, scores, pvals
 
-    def wilcoxon(self):
+    def wilcoxon(self, tie_correct):
         from scipy import stats
 
         self._basic_stats()
 
         n_genes = self.X.shape[1]
-        # initialize space for z-scores
-        scores = np.zeros(n_genes)
         # First loop: Loop over all genes
         if self.ireference is not None:
+            # initialize space for z-scores
+            scores = np.zeros(n_genes)
+            # initialize space for tie correction coefficients
+            if tie_correct:
+                T = np.zeros(n_genes)
+            else:
+                T = 1
 
             for group_index, mask in enumerate(self.groups_masks):
                 if group_index == self.ireference:
@@ -237,11 +256,15 @@ class _RankGenes:
                 # Calculate rank sums for each chunk for the current mask
                 for ranks, left, right in _ranks(self.X, mask, mask_rest):
                     scores[left:right] = np.sum(ranks.iloc[0:n_active, :])
+                    if tie_correct:
+                        T[left:right] = _tiecorrect(ranks)
 
-                std_dev = sqrt((n_active * m_active / 12 * (n_active + m_active + 1)))
+                std_dev = np.sqrt(
+                    T * n_active * m_active * (n_active + m_active + 1) / 12.0
+                )
 
                 scores = (
-                    scores - (n_active * ((n_active + m_active + 1) / 2))
+                    scores - (n_active * ((n_active + m_active + 1) / 2.))
                 ) / std_dev
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores))
@@ -254,18 +277,30 @@ class _RankGenes:
             scores = np.zeros((n_groups, n_genes))
             n_cells = self.X.shape[0]
 
+            if tie_correct:
+                T = np.zeros((n_groups, n_genes))
+
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
                 for imask, mask in enumerate(self.groups_masks):
                     scores[imask, left:right] = np.sum(ranks.iloc[mask, :])
+                    if tie_correct:
+                        T[imask, left:right] = _tiecorrect(ranks)
 
             for group_index, mask in enumerate(self.groups_masks):
                 n_active = np.count_nonzero(mask)
 
-                std_dev = sqrt((n_active * (n_cells - n_active) / 12 * (n_cells + 1)))
+                if tie_correct:
+                    T_i = T[group_index]
+                else:
+                    T_i = 1
+
+                std_dev = np.sqrt(
+                    T_i * n_active * (n_cells - n_active) * (n_cells + 1) / 12.0
+                )
 
                 scores[group_index, :] = (
-                    scores[group_index, :] - (n_active * (n_cells + 1) / 2)
+                    scores[group_index, :] - (n_active * (n_cells + 1) / 2.)
                 ) / std_dev
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[group_index, :]))
@@ -297,12 +332,14 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def compute_statistics(self, method, corr_method, n_genes_user, rankby_abs, **kwds):
+    def compute_statistics(
+        self, method, corr_method, n_genes_user, rankby_abs, tie_correct, **kwds
+    ):
 
         if method in {'t-test', 't-test_overestim_var'}:
             generate_test_results = self.t_test(method)
         elif method == 'wilcoxon':
-            generate_test_results = self.wilcoxon()
+            generate_test_results = self.wilcoxon(tie_correct)
         elif method == 'logreg':
             generate_test_results = self.logreg(**kwds)
 
@@ -372,6 +409,7 @@ def rank_genes_groups(
     copy: bool = False,
     method: _Method = None,
     corr_method: _CorrMethod = 'benjamini-hochberg',
+    tie_correct: bool = False,
     layer: Optional[str] = None,
     **kwds,
 ) -> Optional[AnnData]:
@@ -522,7 +560,9 @@ def rank_genes_groups(
     logg.debug(f'consider {groupby!r} groups:')
     logg.debug(f'with sizes: {np.count_nonzero(test_obj.groups_masks, axis=1)}')
 
-    test_obj.compute_statistics(method, corr_method, n_genes_user, rankby_abs, **kwds)
+    test_obj.compute_statistics(
+        method, corr_method, n_genes_user, rankby_abs, tie_correct, **kwds
+    )
 
     if test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
