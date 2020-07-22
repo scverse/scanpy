@@ -13,6 +13,9 @@ from .._utils import _doc_params
 from .._compat import Literal
 from ._utils import make_grid_spec, fix_kwds
 from ._utils import ColorLike, _AxesSubplot
+from ._utils import savefig_or_show
+from .._settings import settings
+
 from ._docs import doc_common_plot_args, doc_show_save_ax
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
@@ -92,7 +95,7 @@ class DotPlot(BasePlot):
 
     # default legend parameters
     DEFAULT_SIZE_LEGEND_TITLE = 'Fraction of cells\nin group (%)'
-    DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
+    DEFAULT_COLOR_LEGEND_TITLE = 'Mean expression\nin group'
     DEFAULT_LEGENDS_WIDTH = 1.5  # inches
     DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
@@ -940,4 +943,8 @@ def dotplot(
     if return_fig:
         return dp
     else:
-        return dp.show(show=show, save=save)
+        dp.render()
+        savefig_or_show(DotPlot.DEFAULT_SAVE_PREFIX, show=show, save=save)
+        show = settings.autoshow if show is None else show
+        if not show:
+            return dp.get_axes()
