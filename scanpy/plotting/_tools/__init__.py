@@ -16,6 +16,7 @@ from ..._compat import Literal
 from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from ..._settings import settings
 from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax, doc_panels
 from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
@@ -429,13 +430,18 @@ def _rank_genes_groups_plot(
             _pl = matrixplot(
                 adata, var_names, groupby, values_df=values_df, return_fig=True, **kwds
             )
+
             if title is not None:
                 _pl.legend(title=title.replace("_", " "))
 
         if return_fig:
             return _pl
         else:
-            return _pl.show(show=show, save=save)
+            _pl.render()
+            savefig_or_show(_pl.DEFAULT_SAVE_PREFIX, show=show, save=save)
+            show = settings.autoshow if show is None else show
+            if not show:
+                return _pl.get_axes()
 
     elif plot_type == 'stacked_violin':
         from .._stacked_violin import stacked_violin
@@ -444,7 +450,11 @@ def _rank_genes_groups_plot(
         if return_fig:
             return _pl
         else:
-            return _pl.show(show=show, save=save)
+            _pl.render()
+            savefig_or_show(_pl.DEFAULT_SAVE_PREFIX, show=show, save=save)
+            show = settings.autoshow if show is None else show
+            if not show:
+                return _pl.get_axes()
 
     elif plot_type == 'heatmap':
         from .._anndata import heatmap

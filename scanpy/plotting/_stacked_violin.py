@@ -7,12 +7,14 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
-
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
 from ._utils import make_grid_spec
 from ._utils import _AxesSubplot
+from ._utils import savefig_or_show
+from .._settings import settings
+
 from ._docs import doc_common_plot_args, doc_show_save_ax
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
@@ -91,6 +93,7 @@ class StackedViolin(BasePlot):
     """
 
     DEFAULT_SAVE_PREFIX = 'stacked_violin_'
+    DEFAULT_COLOR_LEGEND_TITLE = 'Median expression\nin group'
 
     DEFAULT_COLORMAP = 'Reds'
     DEFAULT_STRIPPLOT = False
@@ -103,6 +106,23 @@ class StackedViolin(BasePlot):
     DEFAULT_YLIM = None
     DEFAULT_PLOT_X_PADDING = 0.5  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 0.5  # a unit is the distance between two y-axis ticks
+
+    # set by default the violin plot cut=0 to limit the extend
+    # of the violin plot as this produces better plots that wont extend
+    # to negative values for example. From seaborn.violin documentation:
+    #
+    # cut: Distance, in units of bandwidth size, to extend the density past
+    # the extreme datapoints. Set to 0 to limit the violin range within
+    # the range of the observed data (i.e., to have the same effect as
+    # trim=True in ggplot.
+    DEFAULT_CUT = 0
+
+    # inner{“box”, “quartile”, “point”, “stick”, None} (Default seaborn: box)
+    # Representation of the datapoints in the violin interior. If box, draw a
+    # miniature boxplot. If quartiles, draw the quartiles of the distribution.
+    # If point or stick, show each underlying datapoint. Using
+    # None will draw unadorned violins.
+    DEFAULT_INNER = None
 
     def __init__(
         self,
@@ -166,19 +186,10 @@ class StackedViolin(BasePlot):
         self.plot_x_padding = self.DEFAULT_PLOT_X_PADDING
         self.plot_y_padding = self.DEFAULT_PLOT_Y_PADDING
 
-        # set by default the violin plot cut=0 to limit the extend
-        # of the violin plot as this produces better plots that wont extend
-        # to negative values for example. From seaborn.violin documentation:
-        #
-        # cut: Distance, in units of bandwidth size, to extend the density past
-        # the extreme datapoints. Set to 0 to limit the violin range within
-        # the range of the observed data (i.e., to have the same effect as
-        # trim=True in ggplot.
-        self.kwds.setdefault('cut', 0)
-        self.kwds.setdefault('inner')
-
-        self.kwds['linewidth'] = self.DEFAULT_LINE_WIDTH
-        self.kwds['scale'] = self.DEFAULT_SCALE
+        self.kwds.setdefault('cut', self.DEFAULT_CUT)
+        self.kwds.setdefault('inner', self.DEFAULT_INNER)
+        self.kwds.setdefault('linewidth', self.DEFAULT_LINE_WIDTH)
+        self.kwds.setdefault('scale', self.DEFAULT_SCALE)
 
     def style(
         self,
@@ -650,9 +661,14 @@ def stacked_violin(
         jitter=jitter,
         jitter_size=size,
         row_palette=row_palette,
-        scale=scale,
+        scale=kwds.get('scale', scale),
+        linewidth=kwds.get('linewidth', StackedViolin.DEFAULT_LINE_WIDTH),
     ).legend(title=colorbar_title)
     if return_fig:
         return vp
     else:
-        return vp.show(show=show, save=save)
+        vp.render()
+        savefig_or_show(StackedViolin.DEFAULT_SAVE_PREFIX, show=show, save=save)
+        show = settings.autoshow if show is None else show
+        if not show:
+            return vp.get_axes()
