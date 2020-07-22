@@ -143,7 +143,7 @@ Version 1.3
 
 .. rubric:: New functionality
 
-- :func:`~scanpy.pp.combat` reimplements Combat for batch effect correction [Johnson07]_ [Leek12]_, heavily based on the Python implementation of [Pedersen12]_, but with performance improvements :pr:`398 :smaller:`M Lange`
+- :func:`~scanpy.pp.combat` reimplements Combat for batch effect correction [Johnson07]_ [Leek12]_, heavily based on the Python implementation of [Pedersen12]_, but with performance improvements :pr:`398` :smaller:`M Lange`
 - :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_ :smaller:`A Mousa`
 
 1.3.6 :small:`2018-12-11`
@@ -151,7 +151,7 @@ Version 1.3
 .. rubric:: Major updates
 
 - a new plotting gallery for :doc:`visualizing-marker-genes` :smaller:`F Ramirez`
-- tutorials are integrated on ReadTheDocs, :doc:`pbmc3k` and :doc:`paga-paul15`
+- tutorials are integrated on ReadTheDocs, :doc:`pbmc3k` and :doc:`paga-paul15` :smaller:`A Wolf`
 
 .. rubric:: Interactive exploration of analysis results through *manifold viewers*
 
@@ -163,7 +163,7 @@ Version 1.3
 
 .. rubric:: Code design
 
-- :func:`~scanpy.pp.highly_variable_genes` supersedes :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn’t subset
+- :func:`~scanpy.pp.highly_variable_genes` supersedes :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn’t subset :smaller:`A Wolf`
 
 1.3.5 :small:`2018-12-09`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -200,7 +200,7 @@ Version 1.3
 .. rubric:: RNA velocity in single cells [Manno18]_
 
 - Scanpy and AnnData support loom’s layers so that computations for single-cell RNA velocity [Manno18]_ become feasible :smaller:`S Rybakov and V Bergen`
-- scvelo_ perfectly harmonizes with Scanpy and is able to process loom files with splicing information produced by Velocyto [Manno18]_, it runs a lot faster than the count matrix analysis of Velocyto and provides several conceptual developments
+- scvelo_ harmonizes with Scanpy and is able to process loom files with splicing information produced by Velocyto [Manno18]_, it runs a lot faster than the count matrix analysis of Velocyto and provides several conceptual developments
 
 .. _scvelo: https://github.com/theislab/scvelo
 
