@@ -4,7 +4,7 @@
    * `Isaac Virshup`_: anndata overhaul, diverse contributions ☀
    * Gökcen Eraslan: diverse contributions ☀
    * Sergei Rybakov: diverse contributions ☀
-   * Fidel Ramirez: plotting ☀
+   * `Fidel Ramirez`_: plotting ☀
    * `Tom White`_: distributed computing
    * Philipp Angerer: initial anndata conception/development, software quality ☀
    * `Alex Wolf`_: initial anndata & scanpy conception/development ☀
@@ -15,4 +15,5 @@
 .. _Isaac Virshup: https://twitter.com/ivirshup
 .. _Tom White: https://twitter.com/tom_e_white
 .. _Alex Wolf: https://twitter.com/falexwolf
-.. _Fabian Theis: https://twitter.com/fabian_theis              
+.. _Fabian Theis: https://twitter.com/fabian_theis
+.. _Fidel Ramirez: https://github.com/fidelram

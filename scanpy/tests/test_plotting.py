@@ -435,6 +435,7 @@ def test_violin(image_comparer):
     sc.pl.violin(
         pbmc,
         ['n_genes', 'percent_mito', 'n_counts'],
+        ylabel=["foo", "bar", "baz"],
         groupby='bulk_labels',
         stripplot=True,
         multi_panel=True,
@@ -951,6 +952,16 @@ def test_visium_circles(image_comparer):
     )
 
     save_and_compare_images('master_spatial_visium')
+
+
+def test_visium_default(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
+    adata.obs = adata.obs.astype({'array_row': 'str'})
+
+    sc.pl.spatial(adata,)
+
+    save_and_compare_images('master_spatial_visium_default')
 
 
 def test_visium_empty_img_key(image_comparer):

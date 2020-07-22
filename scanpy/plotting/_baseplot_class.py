@@ -216,8 +216,8 @@ class BasePlot(object):
             than the default name.
         size
             size of the dendrogram. Corresponds to width when dendrogram shown on
-            the right of the plot, or height when shown on top.
-
+            the right of the plot, or height when shown on top. The unit is the same
+            as in matplotlib (inches).
 
         Returns
         -------
@@ -284,7 +284,8 @@ class BasePlot(object):
             by cell number
         size
             size of the barplot. Corresponds to width when shown on
-            the right of the plot, or height when shown on top.
+            the right of the plot, or height when shown on top. The unit is the same
+            as in matplotlib (inches).
         color
             Color for the bar plots or list of colors for each of the bar plots.
             By default, each bar plot uses the colors assigned in
@@ -359,9 +360,7 @@ class BasePlot(object):
         title
             Legend title. Appears on top of the color bar. Use '\\n' to add line breaks.
         width
-            Width of the legend. The value is a proportion with respect
-            to the figure width. E.g. 0.5 means the legend width is 50% of the figure
-            width.
+            Width of the legend. The unit is the same as in matplotlib (inches)
 
         Returns
         -------
@@ -633,10 +632,10 @@ class BasePlot(object):
         )
 
         # the main plot is divided into three rows and two columns
-        # first row is an spacer, that is adjusted in case the
+        # first row is an spacer that is adjusted in case the
         #           legends need more height than the main plot
         # second row is for brackets (if needed),
-        # third row is for mainplot and dendrogram (if needed)
+        # third row is for mainplot and dendrogram/totals (if needed)
         if self.has_var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
             if self.are_axes_swapped:
