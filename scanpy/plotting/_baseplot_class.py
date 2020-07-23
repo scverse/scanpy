@@ -388,7 +388,7 @@ class BasePlot(object):
 
     def get_axes(self):
         if self.ax_dict is None:
-            self.render()
+            self.make_figure()
         return self.ax_dict
 
     def _plot_totals(
@@ -559,7 +559,7 @@ class BasePlot(object):
 
         return normalize
 
-    def render(self):
+    def make_figure(self):
         """
         Renders the image but does not call :func:`matplotlib.pyplot.show`. Useful
         when several plots are put together into one figure.
@@ -577,8 +577,8 @@ class BasePlot(object):
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         >>> fig, (ax0, ax1) = plt.subplots(1, 2)
         >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels', ax=ax0)\
-        ...               .style(cmap='Blues', edge_color='none').render()
-        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels', ax=ax1).render()
+        ...               .style(cmap='Blues', edge_color='none').make_figure()
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels', ax=ax1).make_figure()
         """
 
         category_height = self.DEFAULT_CATEGORY_HEIGHT
@@ -751,7 +751,7 @@ class BasePlot(object):
 
         """
 
-        self.render()
+        self.make_figure()
 
         if return_axes:
             return self.ax_dict
@@ -784,7 +784,7 @@ class BasePlot(object):
         >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').savefig('plot.pdf')
 
         """
-        self.render()
+        self.make_figure()
         pl.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
     def _reorder_categories_after_dendrogram(

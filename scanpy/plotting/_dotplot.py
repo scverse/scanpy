@@ -943,7 +943,7 @@ def dotplot(
     if return_fig:
         return dp
     else:
-        dp.render()
+        dp.make_figure()
         savefig_or_show(DotPlot.DEFAULT_SAVE_PREFIX, show=show, save=save)
         show = settings.autoshow if show is None else show
         if not show:

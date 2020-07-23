@@ -667,7 +667,7 @@ def stacked_violin(
     if return_fig:
         return vp
     else:
-        vp.render()
+        vp.make_figure()
         savefig_or_show(StackedViolin.DEFAULT_SAVE_PREFIX, show=show, save=save)
         show = settings.autoshow if show is None else show
         if not show:
