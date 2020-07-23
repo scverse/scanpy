@@ -170,7 +170,6 @@ def test_wilcoxon_tie_correction():
     pbmc = pbmc68k_reduced()
 
     groups = ['CD14+ Monocyte', 'Dendritic']
-    refers = 'Dendritic'
     groupby = 'bulk_labels'
 
     _, groups_masks = select_groups(pbmc, groups, groupby)
@@ -188,7 +187,7 @@ def test_wilcoxon_tie_correction():
         except ValueError:
             pvals[i] = 1
 
-    test_obj = _RankGenes(pbmc, groups, groupby, 'Dendritic')
+    test_obj = _RankGenes(pbmc, groups, groupby, reference=groups[1])
     test_obj.compute_statistics('wilcoxon', tie_correct=True)
 
-    assert np.allclose(test_obj.stats['CD14+ Monocyte']['pvals'], pvals)
+    assert np.allclose(test_obj.stats[groups[0]]['pvals'], pvals)
