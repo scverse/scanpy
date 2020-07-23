@@ -345,6 +345,8 @@ class _RankGenes:
 
         self.stats = None
 
+        n_genes = self.X.shape[1]
+
         for group_index, scores, pvals in generate_test_results:
             group_name = str(self.groups_order[group_index])
 
