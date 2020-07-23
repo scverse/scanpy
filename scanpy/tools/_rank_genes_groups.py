@@ -77,7 +77,16 @@ def _tiecorrect(ranks):
 
 
 class _RankGenes:
-    def __init__(self, adata, groups, groupby, reference, use_raw, layer, comp_pts):
+    def __init__(
+        self,
+        adata,
+        groups,
+        groupby,
+        reference='rest',
+        use_raw=True,
+        layer=None,
+        comp_pts=False,
+    ):
 
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
@@ -264,7 +273,7 @@ class _RankGenes:
                 )
 
                 scores = (
-                    scores - (n_active * ((n_active + m_active + 1) / 2.))
+                    scores - (n_active * ((n_active + m_active + 1) / 2.0))
                 ) / std_dev
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores))
@@ -300,7 +309,7 @@ class _RankGenes:
                 )
 
                 scores[group_index, :] = (
-                    scores[group_index, :] - (n_active * (n_cells + 1) / 2.)
+                    scores[group_index, :] - (n_active * (n_cells + 1) / 2.0)
                 ) / std_dev
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[group_index, :]))
@@ -333,7 +342,13 @@ class _RankGenes:
                 break
 
     def compute_statistics(
-        self, method, corr_method, n_genes_user, rankby_abs, tie_correct, **kwds
+        self,
+        method,
+        corr_method='benjamini-hochberg',
+        n_genes_user=None,
+        rankby_abs=False,
+        tie_correct=False,
+        **kwds,
     ):
 
         if method in {'t-test', 't-test_overestim_var'}:
