@@ -34,6 +34,7 @@ setup(
         rapids=['cudf>=0.9', 'cuml>=0.9', 'cugraph>=0.9'],
         magic=['magic-impute>=2.0'],
         harmony=['harmonypy'],
+        scanorama=['scanorama'],
         doc=[
             'sphinx',
             'sphinx_rtd_theme',

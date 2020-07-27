@@ -33,6 +33,7 @@ Data integration
    pp.bbknn
    pp.harmony_integrate
    pp.mnn_correct
+   pp.scanorama_integrate
 
 Imputation
 ~~~~~~~~~~

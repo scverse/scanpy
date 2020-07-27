@@ -75,6 +75,10 @@ References
    *Batch effects in single-cell RNA-sequencing data are corrected by matching mutual nearest neighbors*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.4091>`__.
 
+.. [Hie19] Hie *et al.* (2019),
+   *Efficient integration of heterogeneous single-cell transcriptomes using Scanorama*,
+   `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0113-3>`__.
+
 .. [Huber15] Huber *et al.* (2015),
    *Orchestrating high-throughput genomic analysis with Bioconductor*,
    `Nature Methods <https://doi.org/10.1038/nmeth.3252>`__.
@@ -194,7 +198,7 @@ References
 
 .. [Svensson20] Svensson *et al.* (2020),
    *Interpretable factor models of single-cell RNA-seq via variational autoencoders*
-   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__. 
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__.
 
 .. [Nowotschin18i] Nowotschin *et al.* (2018),
    *The emergent landscape of the mouse gut endoderm at single-cell resolution*
