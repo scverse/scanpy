@@ -89,8 +89,8 @@ class DotPlot(BasePlot):
     DEFAULT_DOT_MIN = None
     DEFAULT_SMALLEST_DOT = 0.0
     DEFAULT_LARGEST_DOT = 200.0
-    DEFAULT_DOT_EDGECOLOR = None
-    DEFAULT_DOT_EDGELW = None
+    DEFAULT_DOT_EDGECOLOR = 'black'
+    DEFAULT_DOT_EDGELW = 0.2
     DEFAULT_SIZE_EXPONENT = 1.5
 
     # default legend parameters
@@ -290,10 +290,10 @@ class DotPlot(BasePlot):
             Set to true to show grid lines. By default grid lines are not shown.
             Further configuration of the grid lines can be achieved directly on the
             returned ax.
-        x_paddding
+        x_padding
             Space between the plot left/right borders and the dots center. A unit
             is the distance between the x ticks. Only applied when color_on = dot
-        y_paddding
+        y_padding
             Space between the plot top/bottom borders and the dots center. A unit is
             the distance between the y ticks. Only applied when color_on = dot
 
@@ -720,7 +720,7 @@ class DotPlot(BasePlot):
             dot_ax.scatter(x, y, **kwds)
         else:
             edge_color = 'none' if edge_color is None else edge_color
-            edge_lw = 0.5 if edge_lw is None else edge_lw
+            edge_lw = 0.0 if edge_lw is None else edge_lw
 
             color = cmap(normalize(mean_flat))
             kwds = fix_kwds(

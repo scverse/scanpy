@@ -95,11 +95,11 @@ class StackedViolin(BasePlot):
     DEFAULT_SAVE_PREFIX = 'stacked_violin_'
     DEFAULT_COLOR_LEGEND_TITLE = 'Median expression\nin group'
 
-    DEFAULT_COLORMAP = 'Reds'
+    DEFAULT_COLORMAP = 'Blues'
     DEFAULT_STRIPPLOT = False
     DEFAULT_JITTER = False
     DEFAULT_JITTER_SIZE = 1
-    DEFAULT_LINE_WIDTH = 0.0
+    DEFAULT_LINE_WIDTH = 0.2
     DEFAULT_ROW_PALETTE = None
     DEFAULT_SCALE = 'width'
     DEFAULT_PLOT_YTICKLABELS = False
@@ -239,10 +239,10 @@ class StackedViolin(BasePlot):
         ylim
             minimum and maximum values for the y-axis. If set. All rows will have
             the same y-axis range. Example: ylim=(0, 5)
-        x_paddding
+        x_padding
             Space between the plot left/right borders and the violins. A unit
             is the distance between the x ticks.
-        y_paddding
+        y_padding
             Space between the plot top/bottom borders and the violins. A unit is
             the distance between the y ticks.
 
@@ -282,9 +282,9 @@ class StackedViolin(BasePlot):
             self.plot_x_padding = x_padding
         if y_padding != self.plot_y_padding:
             self.plot_y_padding = y_padding
-        if linewidth != self.kwds['linewidth']:
+        if linewidth != self.kwds['linewidth'] and linewidth != self.DEFAULT_LINE_WIDTH:
             self.kwds['linewidth'] = linewidth
-        if scale != self.kwds['scale']:
+        if scale != self.kwds['scale'] and scale != self.DEFAULT_SCALE:
             self.kwds['scale'] = scale
 
         return self
