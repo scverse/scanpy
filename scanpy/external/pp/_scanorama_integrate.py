@@ -11,7 +11,7 @@ def scanorama_integrate(
     basis: str = 'X_pca',
     adjusted_basis: str = 'X_pca_scanorama',
     knn: int = 20,
-    sigma: int = 15,
+    sigma: float = 15,
     approx: bool = True,
     alpha: float = 0.10,
     batch_size: int = 5000,
@@ -41,16 +41,16 @@ def scanorama_integrate(
         The name of the field in ``adata.obsm`` where the adjusted PCA
         table will be stored after running this function. Defaults to
         ``X_pca_scanorama``.
-    knn: `int`, optional (default: 20)
+    knn
         Number of nearest neighbors to use for matching.
-    sigma: `float`, optional (default: 15)
+    sigma
         Correction smoothing parameter on Gaussian kernel.
-    approx: `bool`, optional (default: `True`)
+    approx
         Use approximate nearest neighbors with Python ``annoy``;
         greatly speeds up matching runtime.
-    alpha: `float`, optional (default: 0.10)
+    alpha
         Alignment score minimum cutoff.
-    batch_size: `int`, optional (default: `5000`)
+    batch_size
         The batch size used in the alignment vector computation. Useful
         when integrating very large (>100k samples) datasets. Set to
         large value that runs within available memory.
