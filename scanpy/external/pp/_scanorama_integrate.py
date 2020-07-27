@@ -3,7 +3,7 @@ Use Scanorama to integrate cells from different experiments.
 """
 
 from anndata import AnnData
-
+import numpy as np
 
 def scanorama_integrate(
     adata: AnnData,
