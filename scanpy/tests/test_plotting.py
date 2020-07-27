@@ -11,6 +11,7 @@ from scanpy._utils import pkg_version
 setup()
 
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
 from matplotlib.testing.compare import compare_images
@@ -891,6 +892,15 @@ def test_paga(image_comparer):
 
     sc.pl.paga_compare(pbmc, basis='X_pca', legend_fontweight='normal', **common)
     save_and_compare_images('master_paga_compare_pca')
+
+    colors = {
+        c: {cm.Set1(_): 0.33 for _ in range(3)}
+        for c in pbmc.obs["bulk_labels"].cat.categories
+    }
+    colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
+
+    sc.pl.paga(pbmc, color=colors, colorbar=False)
+    save_and_compare_images('master_paga_pie')
 
 
 def test_no_copy():
