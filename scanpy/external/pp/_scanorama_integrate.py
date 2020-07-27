@@ -5,6 +5,7 @@ Use Scanorama to integrate cells from different experiments.
 from anndata import AnnData
 import numpy as np
 
+
 def scanorama_integrate(
     adata: AnnData,
     key: str,
@@ -104,21 +105,24 @@ def scanorama_integrate(
             if batch_name in batch_names:
                 # Contiguous batches important for preserving cell order.
                 raise ValueError('Detected non-contiguous batches.')
-            batch_names.append(batch_name) # Preserve name order.
+            batch_names.append(batch_name)  # Preserve name order.
             name2idx[batch_name] = []
         name2idx[batch_name].append(idx)
 
     # Separate batches.
     datasets_dimred = [
-        adata.obsm[basis][name2idx[batch_name]]
-        for batch_name in batch_names
+        adata.obsm[basis][name2idx[batch_name]] for batch_name in batch_names
     ]
 
     # Integrate.
     integrated = scanorama.assemble(
-        datasets_dimred, # Assemble in low dimensional space.
-        knn=knn, sigma=sigma, approx=approx, alpha=alpha,
-        ds_names=batch_names, **kwargs,
+        datasets_dimred,  # Assemble in low dimensional space.
+        knn=knn,
+        sigma=sigma,
+        approx=approx,
+        alpha=alpha,
+        ds_names=batch_names,
+        **kwargs,
     )
 
     adata.obsm[adjusted_basis] = np.concatenate(integrated)
