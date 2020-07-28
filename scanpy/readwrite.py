@@ -931,7 +931,16 @@ def _download(url: str, path: Path):
             t.update(b * bsize - t.n)
 
         try:
-            urlretrieve(url, str(path), reporthook=update_to)
+            try:
+                urlretrieve(url, str(path), reporthook=update_to)
+            except:
+                from urllib.request import build_opener, install_opener
+                urlopener = build_opener()
+                _user_agent = 'scanpy-user'
+                urlopener.addheaders = [('User-agent', _user_agent)]
+                install_opener(urlopener)
+                urlretrieve(url, str(path), reporthook=update_to)
+                logg.info(f'Changing user-agent to {_user_agent}')
         except Exception:
             # Make sure file doesn’t exist half-downloaded
             if path.is_file():
