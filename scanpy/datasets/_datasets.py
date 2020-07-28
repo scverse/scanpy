@@ -365,3 +365,27 @@ def visium_sge(
     """
     _download_visium_dataset(sample_id)
     return read_visium(settings.datasetdir / sample_id)
+
+
+def starfish_to_anndata(exp_matrix, images: Optional[dict] = dict()) -> AnnData:
+    """\
+    Convert Starfish type data into AnnData object
+    
+    Parameters
+    ----------
+    exp_matrix
+         Starfish Expression Matrix. The object type should be
+         starfish.core.expression_matrix.expression_matrix.ExpressionMatrix
+         
+    images
+        A dictionary consists of images and their name
+    
+    Returns
+    -------
+    Annotated data matrix.   
+    """
+    _row_attrs = {k: exp_matrix['cells'][k].values for k in exp_matrix['cells'].coords}
+    _col_attrs = {k: exp_matrix['genes'][k].values for k in exp_matrix['genes'].coords}
+    adata = AnnData(exp_matrix.data, _row_attrs, _col_attrs)
+    
+    return adata
