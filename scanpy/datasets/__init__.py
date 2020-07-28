@@ -11,5 +11,6 @@ from ._datasets import (
     pbmc3k,
     pbmc3k_processed,
     visium_sge,
+    starfish_to_anndata,
 )
 from ._ebi_expression_atlas import ebi_expression_atlas
