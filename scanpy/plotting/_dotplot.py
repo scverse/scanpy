@@ -434,6 +434,7 @@ class DotPlot(BasePlot):
             s=size,
             color='gray',
             edgecolor='black',
+            linewidth=self.dot_edge_lw,
             zorder=100,
         )
         size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
@@ -938,6 +939,7 @@ def dotplot(
 
     dp = dp.style(
         cmap=cmap, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot,
+        dot_edge_lw=kwds.pop('linewidth', DotPlot.DEFAULT_DOT_EDGELW),
     ).legend(colorbar_title=colorbar_title, size_title=size_title,)
 
     if return_fig:
