@@ -297,34 +297,28 @@ def rank_genes_groups(
         else:
             ax = fig.add_subplot(gs[count])
 
-        gene_names = adata.uns[key]['names'][group_name]
-        scores = adata.uns[key]['scores'][group_name]
-        for ig, g in enumerate(gene_names[:n_genes]):
-            gene_name = gene_names[ig]
+        gene_names = adata.uns[key]['names'][group_name][:n_genes]
+        scores = adata.uns[key]['scores'][group_name][:n_genes]
+
+        # Mapping to gene_symbols
+        if gene_symbols is not None:
             if adata.raw is not None and adata.uns[key]['params']['use_raw']:
-                ax.text(
-                    ig,
-                    scores[ig],
-                    gene_name
-                    if gene_symbols is None
-                    else adata.raw.var[gene_symbols][gene_name],
-                    rotation='vertical',
-                    verticalalignment='bottom',
-                    horizontalalignment='center',
-                    fontsize=fontsize,
-                )
+                gene_names = adata.raw.var[gene_symbols][gene_names]
             else:
-                ax.text(
-                    ig,
-                    scores[ig],
-                    gene_name
-                    if gene_symbols is None
-                    else adata.var[gene_symbols][gene_name],
-                    rotation='vertical',
-                    verticalalignment='bottom',
-                    horizontalalignment='center',
-                    fontsize=fontsize,
-                )
+                gene_names = adata.var[gene_symbols][gene_names]
+
+        # Making labels
+        for ig, gene_name in enumerate(gene_names):
+            ax.text(
+                ig,
+                scores[ig],
+                gene_name,
+                rotation='vertical',
+                verticalalignment='bottom',
+                horizontalalignment='center',
+                fontsize=fontsize,
+            )
+
         ax.set_title('{} vs. {}'.format(group_name, reference))
         if count >= n_panels_x * (n_panels_y - 1):
             ax.set_xlabel('ranking')
