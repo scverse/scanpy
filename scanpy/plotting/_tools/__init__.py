@@ -16,6 +16,7 @@ from ..._compat import Literal
 from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from ..._settings import settings
 from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax, doc_panels
 from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
@@ -351,6 +352,20 @@ def rank_genes_groups(
     savefig_or_show(writekey, show=show, save=save)
 
 
+def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
+    """
+     Decides what to return
+     """
+    if return_fig:
+        return plot_obj
+    else:
+        plot_obj.make_figure()
+        savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
+        show = settings.autoshow if show is None else show
+        if not show:
+            return plot_obj.get_axes()
+
+
 def _rank_genes_groups_plot(
     adata: AnnData,
     plot_type: str = 'heatmap',
@@ -429,22 +444,17 @@ def _rank_genes_groups_plot(
             _pl = matrixplot(
                 adata, var_names, groupby, values_df=values_df, return_fig=True, **kwds
             )
+
             if title is not None:
                 _pl.legend(title=title.replace("_", " "))
 
-        if return_fig:
-            return _pl
-        else:
-            return _pl.show(show=show, save=save)
+        return _fig_show_save_or_axes(_pl, return_fig, show, save)
 
     elif plot_type == 'stacked_violin':
         from .._stacked_violin import stacked_violin
 
         _pl = stacked_violin(adata, var_names, groupby, return_fig=True, **kwds)
-        if return_fig:
-            return _pl
-        else:
-            return _pl.show(show=show, save=save)
+        return _fig_show_save_or_axes(_pl, return_fig, show, save)
 
     elif plot_type == 'heatmap':
         from .._anndata import heatmap
@@ -502,6 +512,7 @@ def rank_genes_groups_heatmap(
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
         **kwds,
@@ -554,6 +565,7 @@ def rank_genes_groups_tracksplot(
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
         **kwds,

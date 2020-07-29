@@ -13,6 +13,9 @@ from .._utils import _doc_params
 from .._compat import Literal
 from ._utils import make_grid_spec, fix_kwds
 from ._utils import ColorLike, _AxesSubplot
+from ._utils import savefig_or_show
+from .._settings import settings
+
 from ._docs import doc_common_plot_args, doc_show_save_ax
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
@@ -86,13 +89,13 @@ class DotPlot(BasePlot):
     DEFAULT_DOT_MIN = None
     DEFAULT_SMALLEST_DOT = 0.0
     DEFAULT_LARGEST_DOT = 200.0
-    DEFAULT_DOT_EDGECOLOR = None
-    DEFAULT_DOT_EDGELW = None
+    DEFAULT_DOT_EDGECOLOR = 'black'
+    DEFAULT_DOT_EDGELW = 0.2
     DEFAULT_SIZE_EXPONENT = 1.5
 
     # default legend parameters
     DEFAULT_SIZE_LEGEND_TITLE = 'Fraction of cells\nin group (%)'
-    DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
+    DEFAULT_COLOR_LEGEND_TITLE = 'Mean expression\nin group'
     DEFAULT_LEGENDS_WIDTH = 1.5  # inches
     DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
@@ -287,10 +290,10 @@ class DotPlot(BasePlot):
             Set to true to show grid lines. By default grid lines are not shown.
             Further configuration of the grid lines can be achieved directly on the
             returned ax.
-        x_paddding
+        x_padding
             Space between the plot left/right borders and the dots center. A unit
             is the distance between the x ticks. Only applied when color_on = dot
-        y_paddding
+        y_padding
             Space between the plot top/bottom borders and the dots center. A unit is
             the distance between the y ticks. Only applied when color_on = dot
 
@@ -431,6 +434,7 @@ class DotPlot(BasePlot):
             s=size,
             color='gray',
             edgecolor='black',
+            linewidth=self.dot_edge_lw,
             zorder=100,
         )
         size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
@@ -717,7 +721,7 @@ class DotPlot(BasePlot):
             dot_ax.scatter(x, y, **kwds)
         else:
             edge_color = 'none' if edge_color is None else edge_color
-            edge_lw = 0.5 if edge_lw is None else edge_lw
+            edge_lw = 0.0 if edge_lw is None else edge_lw
 
             color = cmap(normalize(mean_flat))
             kwds = fix_kwds(
@@ -934,10 +938,18 @@ def dotplot(
         dp.swap_axes()
 
     dp = dp.style(
-        cmap=cmap, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot,
+        cmap=cmap,
+        dot_max=dot_max,
+        dot_min=dot_min,
+        smallest_dot=smallest_dot,
+        dot_edge_lw=kwds.pop('linewidth', DotPlot.DEFAULT_DOT_EDGELW),
     ).legend(colorbar_title=colorbar_title, size_title=size_title,)
 
     if return_fig:
         return dp
     else:
-        return dp.show(show=show, save=save)
+        dp.make_figure()
+        savefig_or_show(DotPlot.DEFAULT_SAVE_PREFIX, show=show, save=save)
+        show = settings.autoshow if show is None else show
+        if not show:
+            return dp.get_axes()

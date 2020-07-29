@@ -41,6 +41,12 @@ differential expression code (:func:`~scanpy.tl.rank_genes_groups`, :pr:`1156` :
 - :func:`~scanpy.pl.heatmap` and :func:`~scanpy.pl.tracksplot` now return a dictionary of axes when `show=False` as for the other plots.
 - `interpolation` can be passed as parameter for :func:`~scanpy.pl.heatmap`
 
+.. rubric:: **Additions**
+
+- Added highly variable gene selection strategy from Seurat v3 :pr:`1204` :smaller:`A Gayoso`
+- Add `CellRank <https://github.com/theislab/cellrank/>`_ to scanpy ecosystem :pr:`1304` :smaller:`giovp`
+- Add backup_url option to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`A Gayoso`
+- Allow prefix for :func:`~scanpy.read_10x_mtx` :pr:`1250`  :smaller:`G Sturm`
 
 .. rubric:: **Bug fixes**
 
@@ -52,12 +58,6 @@ differential expression code (:func:`~scanpy.tl.rank_genes_groups`, :pr:`1156` :
 - Fix neighbors in spring_project :issue:`1260`  :smaller:`SR Koncopd`
 - Fix default size of dot in spatial plots :pr:`1255` :issue:`1253`  :smaller:`giovp`
 - Bumped version requirement of `scipy` to `scipy>1.4` to support `rmatmat` argument of `LinearOperator` :issue:`1246` :smaller:`I Virshup`
-
-.. rubric:: **Additions**
-
-- Add `CellRank <https://github.com/theislab/cellrank/>`_ to scanpy ecosystem :pr:`1304` :smaller:`giovp`
-- Add backup_url option to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`Adam Gayoso`
-- Allow prefix for :func:`~scanpy.read_10x_mtx` :pr:`1250`  :smaller:`G Sturm`
 
 1.5.1 :small:`2020-05-21`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
