@@ -43,6 +43,7 @@ differential expression code (:func:`~scanpy.tl.rank_genes_groups`, :pr:`1156` :
 
 .. rubric:: **Additions**
 
+- Add `Scanorama <https://github.com/brianhie/scanorama>`_ integration to scanpy external api :pr:`1332` :smaller:`B Hie`
 - Added highly variable gene selection strategy from Seurat v3 :pr:`1204` :smaller:`A Gayoso`
 - Add `CellRank <https://github.com/theislab/cellrank/>`_ to scanpy ecosystem :pr:`1304` :smaller:`giovp`
 - Add backup_url option to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`A Gayoso`

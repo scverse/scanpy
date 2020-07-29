@@ -10,7 +10,7 @@ def scanorama_integrate(
     adata: AnnData,
     key: str,
     basis: str = 'X_pca',
-    adjusted_basis: str = 'X_pca_scanorama',
+    adjusted_basis: str = 'X_scanorama',
     knn: int = 20,
     sigma: float = 15,
     approx: bool = True,
@@ -39,9 +39,9 @@ def scanorama_integrate(
         stored. Defaults to ``'X_pca'``, which is the default for
         ``sc.tl.pca()``.
     adjusted_basis
-        The name of the field in ``adata.obsm`` where the adjusted PCA
-        table will be stored after running this function. Defaults to
-        ``X_pca_scanorama``.
+        The name of the field in ``adata.obsm`` where the integrated
+        embeddings will be stored after running this function. Defaults
+        to ``X_scanorama``.
     knn
         Number of nearest neighbors to use for matching.
     sigma
@@ -86,7 +86,7 @@ def scanorama_integrate(
     ``adata.obsm`` containing the Scanorama embeddings.
 
     >>> sce.pp.scanorama_integrate(adata, 'batch')
-    >>> 'X_pca_scanorama' in adata.obsm
+    >>> 'X_scanorama' in adata.obsm
     True
     """
     try:
