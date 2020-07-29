@@ -15,4 +15,4 @@ def test_scanorama_integrate():
     sc.tl.pca(adata)
     adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
     sce.pp.scanorama_integrate(adata, 'batch')
-    assert adata.obsm['X_pca_scanorama'].shape == adata.obsm['X_pca'].shape
+    assert adata.obsm['X_scanorama'].shape == adata.obsm['X_pca'].shape
