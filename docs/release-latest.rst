@@ -47,7 +47,7 @@ In addition, the internals for the differential expression code were overhauled 
 - Add backup_url option to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`A Gayoso`
 - Allow prefix for :func:`~scanpy.read_10x_mtx` :pr:`1250`  :smaller:`G Sturm`
 
-.. rubric:: **Bug fixes**
+.. rubric:: Bug fixes
 
 - Avoid warning in :func:`~scanpy.tl.rank_genes_groups` if 't-test' is passed :pr:`1303`  :smaller:`A Wolf`
 - Restrict sphinx version to < 3.1, > 3.0 :pr:`1297`  :smaller:`I Virshup`
