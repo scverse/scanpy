@@ -1,3 +1,5 @@
+import pytest
+
 from pathlib import Path
 import pickle
 
@@ -166,7 +168,8 @@ def test_wilcoxon_symmetry():
     assert np.allclose(np.abs(stats_mono), np.abs(stats_dend))
 
 
-def test_wilcoxon_tie_correction():
+@pytest.mark.parametrize('reference', [True, False])
+def test_wilcoxon_tie_correction(reference):
     pbmc = pbmc68k_reduced()
 
     groups = ['CD14+ Monocyte', 'Dendritic']
@@ -175,7 +178,9 @@ def test_wilcoxon_tie_correction():
     _, groups_masks = select_groups(pbmc, groups, groupby)
 
     X = pbmc.raw.X[groups_masks[0]].toarray()
-    Y = pbmc.raw.X[groups_masks[1]].toarray()
+
+    mask_rest = groups_masks[1] if reference else ~groups_masks[0]
+    Y = pbmc.raw.X[mask_rest].toarray()
 
     n_genes = X.shape[1]
 
@@ -187,7 +192,13 @@ def test_wilcoxon_tie_correction():
         except ValueError:
             pvals[i] = 1
 
-    test_obj = _RankGenes(pbmc, groups, groupby, reference=groups[1])
+    if reference:
+        ref = groups[1]
+    else:
+        ref = 'rest'
+        groups = groups[:1]
+
+    test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
     test_obj.compute_statistics('wilcoxon', tie_correct=True)
 
     assert np.allclose(test_obj.stats[groups[0]]['pvals'], pvals)
