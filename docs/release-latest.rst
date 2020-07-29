@@ -46,6 +46,7 @@ In addition, the internals for the differential expression code were overhauled 
 - Add `CellRank <https://github.com/theislab/cellrank/>`_ to scanpy ecosystem :pr:`1304` :smaller:`giovp`
 - Add backup_url option to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`A Gayoso`
 - Allow prefix for :func:`~scanpy.read_10x_mtx` :pr:`1250`  :smaller:`G Sturm`
+- Add optional tie correction for the 'wilcoxon' method in :func:`~scanpy.tl.rank_genes_groups` :pr:`1330`  :smaller:`S Rybakov`
 
 .. rubric:: Bug fixes
 
@@ -57,3 +58,5 @@ In addition, the internals for the differential expression code were overhauled 
 - Fix neighbors in spring_project :issue:`1260`  :smaller:`S Rybakov`
 - Fix default size of dot in spatial plots :pr:`1255` :issue:`1253`  :smaller:`giovp`
 - Bumped version requirement of `scipy` to `scipy>1.4` to support `rmatmat` argument of `LinearOperator` :issue:`1246` :smaller:`I Virshup`
+- Fix asymmetry of scores for the 'wilcoxon' method in :func:`~scanpy.tl.rank_genes_groups` :issue:`754`  :smaller:`S Rybakov`
+- Avoid trimming of gene names in :func:`~scanpy.tl.rank_genes_groups` :issue:`753`  :smaller:`S Rybakov`
