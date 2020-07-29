@@ -467,12 +467,15 @@ def update_params(
 def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
     """Checks values of X to ensure it is count data
     """
+    from numbers import Integral
 
     data = X if isinstance(X, np.ndarray) else X.data
     # Check no negatives
-    if np.any(data < 0):
+    if np.signbit(data).any():
         return False
     # Check all are integers
+    elif issubclass(data.dtype.type, Integral):
+        return True
     elif np.any(~np.equal(np.mod(data, 1), 0)):
         return False
     else:
