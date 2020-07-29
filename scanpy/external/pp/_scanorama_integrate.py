@@ -26,6 +26,9 @@ def scanorama_integrate(
     function should be run after performing PCA but before computing
     the neighbor graph, as illustrated in the example below.
 
+    This uses the implementation of `scanorama
+    <https://github.com/brianhie/scanorama>`__ [Hie19]_.
+
     Parameters
     ----------
     adata
