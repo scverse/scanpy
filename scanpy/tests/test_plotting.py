@@ -516,7 +516,12 @@ def test_correlation(image_comparer):
         ),
         (
             "ranked_genes_stacked_violin",
-            partial(sc.pl.rank_genes_groups_stacked_violin, n_genes=3, show=False),
+            partial(
+                sc.pl.rank_genes_groups_stacked_violin,
+                n_genes=3,
+                show=False,
+                groups=['3', '0', '5'],
+            ),
         ),
         (
             "ranked_genes_dotplot",
@@ -562,7 +567,12 @@ def test_correlation(image_comparer):
         ),
         (
             "ranked_genes_tracksplot",
-            partial(sc.pl.rank_genes_groups_tracksplot, n_genes=5, show=False,),
+            partial(
+                sc.pl.rank_genes_groups_tracksplot,
+                n_genes=3,
+                show=False,
+                groups=['3', '2', '1'],
+            ),
         ),
         (
             "ranked_genes_violin",
