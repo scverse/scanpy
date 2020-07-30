@@ -21,8 +21,8 @@ matrix:
           cat /etc/apt/sources.list
           sudo apt-get update -qq
           travis_retry sudo apt-get install -y r-base gfortran libblas-dev liblapack-dev --no-install-recommends
-        - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings = FALSE, recursive = TRUE)'
-        - Rscript -e 'install.packages("sctransform", lib = Sys.getenv("R_LIBS_USER"), repos = "https://cran.rstudio.com/")'
+        - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings=F, recursive=T)'
+        - Rscript -e 'if(length(find.package("sctransform", quiet=T,lib.loc=Sys.getenv("R_LIBS_USER")))==0){install.packages("sctransform", lib=Sys.getenv("R_LIBS_USER"), repos="https://cran.rstudio.com/")}'
       install:
         - pip install docutils sphinx
         - pip install -e .[test,louvain,leiden,magic,scvi,harmony,skmisc,rtools]
@@ -48,7 +48,7 @@ before_install:
     sudo apt-get update -qq
     travis_retry sudo apt-get install -y r-base gfortran libblas-dev liblapack-dev --no-install-recommends
   - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings = FALSE, recursive = TRUE)'
-  - Rscript -e 'install.packages("sctransform", lib = Sys.getenv("R_LIBS_USER"), repos = "https://cran.rstudio.com/")'
+  - Rscript -e 'if(length(find.package("sctransform", quiet=T,lib.loc=Sys.getenv("R_LIBS_USER")))==0){install.packages("sctransform", lib=Sys.getenv("R_LIBS_USER"), repos="https://cran.rstudio.com/")}'
 install:
   - pip install docutils sphinx
   - pip install -e .[test,louvain,leiden,magic,scvi,harmony,skmisc,rtools]
