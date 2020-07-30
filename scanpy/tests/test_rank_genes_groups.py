@@ -1,15 +1,20 @@
+import pytest
+
 from pathlib import Path
 import pickle
 
 import numpy as np
 import pandas as pd
 from scipy import sparse as sp
+from scipy.stats import mannwhitneyu
 from numpy.random import negative_binomial, binomial, seed
 
 from anndata import AnnData
 from scanpy.tools import rank_genes_groups
+from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
 from scanpy.datasets import pbmc68k_reduced
+from scanpy._utils import select_groups
 
 
 HERE = Path(__file__).parent / Path('_data/')
@@ -161,3 +166,39 @@ def test_wilcoxon_symmetry():
     stats_dend = rank_genes_groups_df(pbmc, group="Dendritic").drop(columns="names").to_numpy()
 
     assert np.allclose(np.abs(stats_mono), np.abs(stats_dend))
+
+
+@pytest.mark.parametrize('reference', [True, False])
+def test_wilcoxon_tie_correction(reference):
+    pbmc = pbmc68k_reduced()
+
+    groups = ['CD14+ Monocyte', 'Dendritic']
+    groupby = 'bulk_labels'
+
+    _, groups_masks = select_groups(pbmc, groups, groupby)
+
+    X = pbmc.raw.X[groups_masks[0]].toarray()
+
+    mask_rest = groups_masks[1] if reference else ~groups_masks[0]
+    Y = pbmc.raw.X[mask_rest].toarray()
+
+    n_genes = X.shape[1]
+
+    pvals = np.zeros(n_genes)
+
+    for i in range(n_genes):
+        try:
+            _, pvals[i] = mannwhitneyu(X[:, i], Y[:, i], False, 'two-sided')
+        except ValueError:
+            pvals[i] = 1
+
+    if reference:
+        ref = groups[1]
+    else:
+        ref = 'rest'
+        groups = groups[:1]
+
+    test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
+    test_obj.compute_statistics('wilcoxon', tie_correct=True)
+
+    assert np.allclose(test_obj.stats[groups[0]]['pvals'], pvals)
