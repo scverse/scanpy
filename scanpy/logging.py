@@ -1,12 +1,14 @@
 """Logging and Profiling
 """
 import logging
+import sys
 from functools import update_wrapper, partial
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import anndata.logging
+from sinfo import sinfo
 
 
 HINT = (INFO + DEBUG) // 2
@@ -110,24 +112,6 @@ print_memory_usage = anndata.logging.print_memory_usage
 get_memory_usage = anndata.logging.get_memory_usage
 
 
-_DEPENDENCIES_NUMERICS = [
-    'anndata',  # anndata actually shouldn't, but as long as it's in development
-    'umap',
-    'numpy',
-    'scipy',
-    'pandas',
-    ('sklearn', 'scikit-learn'),
-    'statsmodels',
-    ('igraph', 'python-igraph'),
-    'louvain',
-    'leidenalg',
-    'numba',
-]
-
-
-_DEPENDENCIES_PLOTTING = ['matplotlib', 'seaborn']
-
-
 def _versions_dependencies(dependencies):
     # this is not the same as the requirements!
     for mod in dependencies:
@@ -146,11 +130,12 @@ def print_versions():
     Matplotlib and Seaborn are excluded from this.
     """
     from ._settings import settings
-    modules = ['scanpy'] + _DEPENDENCIES_NUMERICS
-    print(' '.join(
-        f'{mod}=={ver}'
-        for mod, ver in _versions_dependencies(modules)
-    ), file=settings.logfile)
+    stdout = sys.stdout
+    try:
+        sys.stdout = settings.logfile
+        sinfo(dependencies=True)
+    finally:
+        sys.stdout = stdout
 
 
 def print_version_and_date():
