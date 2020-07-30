@@ -920,23 +920,50 @@ def _download(url: str, path: Path):
         from tqdm.auto import tqdm
     except ModuleNotFoundError:
         from tqdm import tqdm
-    from urllib.request import urlretrieve
+    from urllib.request import urlopen, Request
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t:
+    req = Request(url, headers={"User-agent": "scanpy-user"})
 
-        def update_to(b=1, bsize=1, tsize=None):
-            if tsize is not None:
-                t.total = tsize
-            t.update(b * bsize - t.n)
+    bs = 1024 * 8
+    size = -1
+    read = 0
+    blocknum = 0
 
-        try:
-            urlretrieve(url, str(path), reporthook=update_to)
-        except Exception:
-            # Make sure file doesn’t exist half-downloaded
-            if path.is_file():
-                path.unlink()
-            raise
+    try:
+        # This is mostly copied from urllib.request.urlretrieve, but that won't
+        # let us set headers.
+        # The '\'s are ugly, but parenthesis are not allowed here
+        # fmt: off
+        with \
+            tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t, \
+            path.open("wb") as f, \
+            urlopen(req) as resp:
+
+            def update_to(b=1, bsize=1, tsize=None):
+                if tsize is not None:
+                    t.total = tsize
+                t.update(b * bsize - t.n)
+
+            headers = resp.info()
+            # This capitalization was copied from the stdlib too
+            if "content-length" in headers:
+                size = int(headers["Content-Length"])
+
+            update_to(blocknum, bs, size)
+            while True:
+                block = resp.read(bs)
+                if not block:
+                    break
+                read += len(block)
+                f.write(block)
+                blocknum += 1
+                update_to(blocknum, bs, size)
+        # fmt: on
+    except Exception:
+        # Make sure file doesn’t exist half-downloaded
+        if path.is_file():
+            path.unlink()
+        raise
 
 
 def _check_datafile_present_and_download(path, backup_url=None):
