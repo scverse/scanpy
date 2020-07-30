@@ -229,7 +229,7 @@ def rank_genes_groups(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 20,
     gene_symbols: Optional[str] = None,
-    key: Optional[str] = None,
+    key: Optional[str] = 'rank_genes_groups',
     fontsize: int = 8,
     ncols: int = 4,
     sharey: bool = True,
@@ -265,8 +265,6 @@ def rank_genes_groups(
         n_panels_per_row = kwds['n_panels_per_row']
     else:
         n_panels_per_row = ncols
-    if key is None:
-        key = 'rank_genes_groups'
     reference = str(adata.uns[key]['params']['reference'])
     group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
     # one panel for each group
@@ -288,17 +286,28 @@ def rank_genes_groups(
     ymin = np.Inf
     ymax = -np.Inf
     for count, group_name in enumerate(group_names):
-        if sharey is True:
+        gene_names = adata.uns[key]['names'][group_name][:n_genes]
+        scores = adata.uns[key]['scores'][group_name][:n_genes]
+
+        # Setting up axis, calculating y bounds
+        if sharey:
+            ymin = min(ymin, np.min(scores))
+            ymax = max(ymax, np.max(scores))
+
             if ax0 is None:
                 ax = fig.add_subplot(gs[count])
                 ax0 = ax
             else:
                 ax = fig.add_subplot(gs[count], sharey=ax0)
         else:
-            ax = fig.add_subplot(gs[count])
+            ymin = np.min(scores)
+            ymax = np.max(scores)
+            ymax += 0.3 * (ymax - ymin)
 
-        gene_names = adata.uns[key]['names'][group_name][:n_genes]
-        scores = adata.uns[key]['scores'][group_name][:n_genes]
+            ax = fig.add_subplot(gs[count])
+            ax.set_ylim(ymin, ymax)
+
+        ax.set_xlim(-0.9, n_genes - 0.1)
 
         # Mapping to gene_symbols
         if gene_symbols is not None:
@@ -326,17 +335,6 @@ def rank_genes_groups(
         # print the 'score' label only on the first panel per row.
         if count % n_panels_x == 0:
             ax.set_ylabel('score')
-
-        ax.set_xlim(-0.9, ig + 1 - 0.1)
-
-        if sharey is True:
-            ymin = min(ymin, np.min(scores))
-            ymax = max(ymax, np.max(scores))
-        else:
-            ymin = np.min(scores)
-            ymax = np.max(scores)
-            ymax += 0.3 * (np.max(scores) - np.min(scores))
-            ax.set_ylim(ymin, ymax)
 
     if sharey is True:
         ymax += 0.3 * (ymax - ymin)
