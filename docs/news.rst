@@ -4,7 +4,7 @@
 COVID-19 datasets distributed as `h5ad` :small:`2020-04-01`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We're happy to see that in a joint initiative, the Wellcome Sanger Institute, the Human Cell Atlas, and CZI distribute datasets related to COVID-19 as anndata's `h5ad` files: `covid19cellatlas.org <https://www.covid19cellatlas.org/>`__. It wasn't anticipated that the `initial idea <https://falexwolf.de/blog/2017-12-23-anndata-indexing-views-HDF5-backing/>`__ of enabling sharing and backing on-disk versions of the primarily in-memory `AnnData` objects would become so widely adopted. Curious? Read up more on the `format <https://anndata.readthedocs.io/en/latest/fileformat-prose.html>`__.
+In a joint initiative, the Wellcome Sanger Institute, the Human Cell Atlas, and CZI distribute datasets related to COVID-19 as anndata's `h5ad` files: `covid19cellatlas.org <https://www.covid19cellatlas.org/>`__. It wasn't anticipated that the `initial idea <https://falexwolf.de/blog/2017-12-23-anndata-indexing-views-HDF5-backing/>`__ of sharing and backing an on-disk representation of `AnnData` would become so widely adopted. Curious? Read up more on the `format <https://anndata.readthedocs.io/en/latest/fileformat-prose.html>`__.
 
 
 CZI grant :small:`2019-11-14`
