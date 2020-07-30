@@ -33,7 +33,9 @@ setup(
         scvi=['scvi>=0.6.5'],
         rapids=['cudf>=0.9', 'cuml>=0.9', 'cugraph>=0.9'],
         magic=['magic-impute>=2.0'],
-        rtools=['rpy2>=3.3', 'anndata2ri'],
+        skmisc=['scikit-misc>=0.1.3'],
+        harmony=['harmonypy'],
+        rtools=['rpy2>=3.3', 'anndata2ri'],      
         doc=[
             'sphinx',
             'sphinx_rtd_theme',

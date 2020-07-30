@@ -13,6 +13,9 @@ from .._utils import _doc_params
 from .._compat import Literal
 from ._utils import make_grid_spec, fix_kwds
 from ._utils import ColorLike, _AxesSubplot
+from ._utils import savefig_or_show
+from .._settings import settings
+
 from ._docs import doc_common_plot_args, doc_show_save_ax
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
@@ -54,12 +57,19 @@ class DotPlot(BasePlot):
         Whether or not to standardize that dimension between 0 and 1,
         meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
-
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
+    See also
+    --------
+    :func:`~scanpy.pl.dotplot`: Simpler way to call DotPlot but with less options.
+    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker
+        genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
     Examples
-    -------
+    --------
+
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
@@ -69,10 +79,6 @@ class DotPlot(BasePlot):
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
 
-    See also
-    --------
-    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes identified using the
-    :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
     DEFAULT_SAVE_PREFIX = 'dotplot_'
@@ -83,14 +89,16 @@ class DotPlot(BasePlot):
     DEFAULT_DOT_MIN = None
     DEFAULT_SMALLEST_DOT = 0.0
     DEFAULT_LARGEST_DOT = 200.0
-    DEFAULT_DOT_EDGECOLOR = None
-    DEFAULT_DOT_EDGELW = None
+    DEFAULT_DOT_EDGECOLOR = 'black'
+    DEFAULT_DOT_EDGELW = 0.2
     DEFAULT_SIZE_EXPONENT = 1.5
 
     # default legend parameters
     DEFAULT_SIZE_LEGEND_TITLE = 'Fraction of cells\nin group (%)'
-    DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
-    DEFAULT_LEGENDS_WIDTH = 1.5
+    DEFAULT_COLOR_LEGEND_TITLE = 'Mean expression\nin group'
+    DEFAULT_LEGENDS_WIDTH = 1.5  # inches
+    DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
+    DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
 
     def __init__(
         self,
@@ -211,6 +219,8 @@ class DotPlot(BasePlot):
         self.color_on = self.DEFAULT_COLOR_ON
         self.size_exponent = self.DEFAULT_SIZE_EXPONENT
         self.grid = False
+        self.plot_x_padding = self.DEFAULT_PLOT_X_PADDING
+        self.plot_y_padding = self.DEFAULT_PLOT_Y_PADDING
 
         self.dot_edge_color = self.DEFAULT_DOT_EDGECOLOR
         self.dot_edge_lw = self.DEFAULT_DOT_EDGELW
@@ -234,9 +244,11 @@ class DotPlot(BasePlot):
         dot_edge_lw: Optional[float] = DEFAULT_DOT_EDGELW,
         size_exponent: Optional[float] = DEFAULT_SIZE_EXPONENT,
         grid: Optional[float] = False,
+        x_padding: Optional[float] = DEFAULT_PLOT_X_PADDING,
+        y_padding: Optional[float] = DEFAULT_PLOT_Y_PADDING,
     ):
-        """
-        Modifies plot style
+        """\
+        Modifies plot visual parameters
 
         Parameters
         ----------
@@ -276,37 +288,64 @@ class DotPlot(BasePlot):
             to each other.
         grid
             Set to true to show grid lines. By default grid lines are not shown.
-            Further configuration of the grid lines can be achived directly on the
+            Further configuration of the grid lines can be achieved directly on the
             returned ax.
+        x_padding
+            Space between the plot left/right borders and the dots center. A unit
+            is the distance between the x ticks. Only applied when color_on = dot
+        y_padding
+            Space between the plot top/bottom borders and the dots center. A unit is
+            the distance between the y ticks. Only applied when color_on = dot
+
         Returns
         -------
-        DotPlot
+        :class:`~scanpy.pl.DotPlot`
 
         Examples
         -------
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
         Change color map and apply it to the square behind the dot
+
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
         ...               .style(cmap='RdBu_r', color_on='square').show()
 
-        Add edge to dots
+        Add edge to dots and plot a grid
+
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(dot_edge_color='black',  dot_edge_lw=1).show()
+        ...               .style(dot_edge_color='black', dot_edge_lw=1, grid=True)\
+        ...               .show()
 
         """
-        self.cmap = cmap
-        self.dot_max = dot_max
-        self.dot_min = dot_min
-        self.smallest_dot = smallest_dot
-        self.largest_dot = largest_dot
-        self.color_on = color_on
-        self.size_exponent = size_exponent
 
-        self.dot_edge_color = dot_edge_color
-        self.dot_edge_lw = dot_edge_lw
-        self.grid = grid
+        # change only the values that had changed
+        if cmap != self.cmap:
+            self.cmap = cmap
+        if dot_max != self.dot_max:
+            self.dot_max = dot_max
+        if dot_min != self.dot_min:
+            self.dot_min = dot_min
+        if dot_min != self.dot_min:
+            self.smallest_dot = dot_min
+        if largest_dot != self.largest_dot:
+            self.largest_dot = largest_dot
+        if color_on != self.color_on:
+            self.color_on = color_on
+        if size_exponent != self.size_exponent:
+            self.size_exponent = size_exponent
+        if dot_edge_color != self.dot_edge_color:
+            self.dot_edge_color = dot_edge_color
+        if dot_edge_lw != self.dot_edge_lw:
+            self.dot_edge_lw = dot_edge_lw
+        if grid != self.grid:
+            self.grid = grid
+        if x_padding != self.plot_x_padding:
+            self.plot_x_padding = x_padding
+        if y_padding != self.plot_y_padding:
+            self.plot_y_padding = y_padding
+
         return self
 
     def legend(
@@ -318,30 +357,36 @@ class DotPlot(BasePlot):
         colorbar_title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
         width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
     ):
-        """
-        Configure legend parameters.
+        """\
+        Configures dot size and the colorbar legends
 
         Parameters
         ----------
         show
-            Set to `False` to hide the default plot of the legends.
+            Set to `False` to hide the default plot of the legends. This sets the
+            legend width to zero, which will result in a wider main plot.
         show_size_legend
-            Set to `False` to hide the the size legend
+            Set to `False` to hide the dot size legend
         show_colorbar
-            Set to `False` to hide the the colorbar
+            Set to `False` to hide the colorbar legend
         size_title
-            Title for the dot size legend. Use "\n" to add line breaks.
+            Title for the dot size legend. Use '\\n' to add line breaks. Appears on top
+            of dot sizes
         colorbar_title
-            Title for the color bar. Use "\n" to add line breaks.
+            Title for the color bar. Use '\\n' to add line breaks. Appears on top of the
+            color bar
         width
-            Width of the legends.
+            Width of the legends area. The unit is the same as in matplotlib (inches).
 
         Returns
         -------
-        DotPlot
+        :class:`~scanpy.pl.DotPlot`
 
         Examples
         --------
+
+        Set color bar title:
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
@@ -389,6 +434,7 @@ class DotPlot(BasePlot):
             s=size,
             color='gray',
             edgecolor='black',
+            linewidth=self.dot_edge_lw,
             zorder=100,
         )
         size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
@@ -488,6 +534,8 @@ class DotPlot(BasePlot):
             largest_dot=self.largest_dot,
             size_exponent=self.size_exponent,
             grid=self.grid,
+            x_padding=self.plot_x_padding,
+            y_padding=self.plot_y_padding,
             **self.kwds,
         )
 
@@ -511,6 +559,8 @@ class DotPlot(BasePlot):
         edge_color: Optional[ColorLike] = None,
         edge_lw: Optional[float] = None,
         grid: Optional[bool] = False,
+        x_padding: Optional[float] = 0.8,
+        y_padding: Optional[float] = 1.0,
         **kwds,
     ):
         """\
@@ -518,15 +568,15 @@ class DotPlot(BasePlot):
         the doc size and other containing the dot color. The indices and
         columns of the data frame are used to label the output image
 
-        The dots are plotted
-        using matplotlib.pyplot.scatter. Thus, additional arguments can be passed.
+        The dots are plotted using :func:`matplotlib.pyplot.scatter`. Thus, additional
+        arguments can be passed.
+
         Parameters
         ----------
         dot_size: Data frame containing the dot_size.
         dot_color: Data frame containing the dot_color, should have the same,
                 shape, columns and indices as dot_size.
         dot_ax: matplotlib axis
-        y_lebel:
         cmap
             String denoting matplotlib color map.
         color_on
@@ -558,7 +608,13 @@ class DotPlot(BasePlot):
             `color_on='square'`, line width = 1.5
         grid
             Adds a grid to the plot
-        **kwds
+        x_paddding
+            Space between the plot left/right borders and the dots center. A unit
+            is the distance between the x ticks. Only applied when color_on = dot
+        y_paddding
+            Space between the plot top/bottom borders and the dots center. A unit is
+            the distance between the y ticks. Only applied when color_on = dot
+        kwds
             Are passed to :func:`matplotlib.pyplot.scatter`.
 
         Returns
@@ -594,6 +650,9 @@ class DotPlot(BasePlot):
         # size = fraction
         # color = mean expression
 
+        # +0.5 in y and x to set the dot center at 0.5 multiples
+        # this facilitates dendrogram and totals alignment for
+        # matrixplot, dotplot and stackec_violin using the same coordinates.
         y, x = np.indices(dot_color.shape)
         y = y.flatten() + 0.5
         x = x.flatten() + 0.5
@@ -662,7 +721,7 @@ class DotPlot(BasePlot):
             dot_ax.scatter(x, y, **kwds)
         else:
             edge_color = 'none' if edge_color is None else edge_color
-            edge_lw = 0.5 if edge_lw is None else edge_lw
+            edge_lw = 0.0 if edge_lw is None else edge_lw
 
             color = cmap(normalize(mean_flat))
             kwds = fix_kwds(
@@ -702,11 +761,15 @@ class DotPlot(BasePlot):
         dot_ax.set_xlim(0, dot_color.shape[1])
 
         if color_on == 'dot':
-            # add more distance to the x and y lims with the color is on the
-            # dots
-            dot_ax.set_ylim(dot_color.shape[0] + 0.5, -0.5)
+            # add padding to the x and y lims when the color is not in the square
+            # default y range goes from 0.5 to num cols + 0.5
+            # and default x range goes from 0.5 to num rows + 0.5, thus
+            # the padding needs to be corrected.
+            x_padding = x_padding - 0.5
+            y_padding = y_padding - 0.5
+            dot_ax.set_ylim(dot_color.shape[0] + y_padding, -y_padding)
 
-            dot_ax.set_xlim(-0.3, dot_color.shape[1] + 0.3)
+            dot_ax.set_xlim(-x_padding, dot_color.shape[1] + x_padding)
 
         if grid:
             dot_ax.grid(True, color='gray', linewidth=0.1)
@@ -730,8 +793,8 @@ def dotplot(
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
     cmap: str = 'Reds',
-    dot_max: Optional[float] = None,
-    dot_min: Optional[float] = None,
+    dot_max: Optional[float] = DotPlot.DEFAULT_DOT_MAX,
+    dot_min: Optional[float] = DotPlot.DEFAULT_DOT_MIN,
     standard_scale: Optional[Literal['var', 'group']] = None,
     smallest_dot: Optional[float] = DotPlot.DEFAULT_SMALLEST_DOT,
     title: Optional[str] = None,
@@ -769,8 +832,9 @@ def dotplot(
     the mean value and the percentage of cells expressing the gene
     across  multiple clusters.
 
-    This function provides a convenient interface to the :class:`DotPlot`
-    class. If you need more flexibility, you should use :class:`DotPlot` directly.
+    This function provides a convenient interface to the :class:`~scanpy.pl.DotPlot`
+    class. If you need more flexibility, you should use :class:`~scanpy.pl.DotPlot`
+    directly.
 
     Parameters
     ----------
@@ -797,39 +861,50 @@ def dotplot(
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
     {show_save_ax}
-    **kwds
+    kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
     Returns
     -------
-    If `return_fig` is `True`, returns a :class:`DotPlot` object,
+    If `return_fig` is `True`, returns a :class:`~scanpy.pl.DotPlot` object,
     else if `show` is false, return axes dict
 
+    See also
+    --------
+    :class:`~scanpy.pl.DotPlot`: The DotPlot class can be used to to control
+        several visual parameters not available in this function.
+    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes
+        identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
     Examples
-    -------
+    --------
+
+    Create a dot plot using the given markers and the PBMC example dataset grouped by
+    the category 'bulk_labels'.
+
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get DotPlot object for fine tuning
+
     >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
     >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
 
     The axes used can be obtained using the get_axes() method
-    >>> axes_dict = dp.get_axes()
 
-    See also
-    --------
-    :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    >>> axes_dict = dp.get_axes()
+    >>> print(axes_dict)
+
     """
 
-    # backwards compatibily: previous version of dotplot used `color_map`
+    # backwards compatibility: previous version of dotplot used `color_map`
     # instead of `cmap`
     cmap = kwds.get('color_map', cmap)
     if 'color_map' in kwds:
@@ -863,10 +938,18 @@ def dotplot(
         dp.swap_axes()
 
     dp = dp.style(
-        cmap=cmap, dot_max=dot_max, dot_min=dot_min, smallest_dot=smallest_dot,
+        cmap=cmap,
+        dot_max=dot_max,
+        dot_min=dot_min,
+        smallest_dot=smallest_dot,
+        dot_edge_lw=kwds.pop('linewidth', DotPlot.DEFAULT_DOT_EDGELW),
     ).legend(colorbar_title=colorbar_title, size_title=size_title,)
 
     if return_fig:
         return dp
     else:
-        return dp.show(show=show, save=save)
+        dp.make_figure()
+        savefig_or_show(DotPlot.DEFAULT_SAVE_PREFIX, show=show, save=save)
+        show = settings.autoshow if show is None else show
+        if not show:
+            return dp.get_axes()
