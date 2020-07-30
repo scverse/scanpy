@@ -275,6 +275,12 @@ class StackedViolin(BasePlot):
             self.jitter_size = jitter_size
         if yticklabels != self.plot_yticklabels:
             self.plot_yticklabels = yticklabels
+            if self.plot_yticklabels:
+                # space needs to be added to avoid overlapping
+                # of labels and legend or dendrogram/totals.
+                self.wspace = 0.4
+            else:
+                self.wspace = StackedViolin.DEFAULT_WSPACE
         if ylim != self.ylim:
             self.ylim = ylim
         if x_padding != self.plot_x_padding:
