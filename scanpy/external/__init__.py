@@ -24,7 +24,7 @@ If you'd like to see your tool included here, please open a `pull request <https
 Preprocessing: PP
 ------------------
 
-Nnormalization and HVG selection
+Normalization and HVG selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
