@@ -234,8 +234,7 @@ class StackedViolin(BasePlot):
             If 'area', each violin will have the same area.
             If 'count', a violin’s width corresponds to the number of observations.
         yticklabels
-            Because the plots are on top of each other the yticks labels tend to
-            overlap and are not plotted. Set to true to view the labels.
+            Set to true to view the y tick labels.
         ylim
             minimum and maximum values for the y-axis. If set. All rows will have
             the same y-axis range. Example: ylim=(0, 5)
@@ -544,6 +543,7 @@ def stacked_violin(
     jitter: Union[float, bool] = StackedViolin.DEFAULT_JITTER,
     size: int = StackedViolin.DEFAULT_JITTER_SIZE,
     scale: Literal['area', 'count', 'width'] = StackedViolin.DEFAULT_SCALE,
+    yticklabels: Optional[bool] = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     order: Optional[Sequence[str]] = None,
     swap_axes: bool = False,
     show: Optional[bool] = None,
@@ -588,6 +588,8 @@ def stacked_violin(
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
         If 'count', a violin’s width corresponds to the number of observations.
+    yticklabels
+        Set to true to view the y tick labels.
     row_palette
         Be default, median values are mapped to the violin color using a
         color map (see `cmap` argument). Alternatively, a 'row_palette` can
@@ -669,6 +671,7 @@ def stacked_violin(
         jitter_size=size,
         row_palette=row_palette,
         scale=kwds.get('scale', scale),
+        yticklabels=yticklabels,
         linewidth=kwds.get('linewidth', StackedViolin.DEFAULT_LINE_WIDTH),
     ).legend(title=colorbar_title)
     if return_fig:
