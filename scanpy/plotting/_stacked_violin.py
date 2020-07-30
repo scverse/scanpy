@@ -418,17 +418,15 @@ class StackedViolin(BasePlot):
             ax,
             nrows=num_rows + 2,
             ncols=num_cols + 2,
-            hspace=0,
+            hspace=0.3 if self.plot_yticklabels else 0,
             wspace=0,
             height_ratios=height_ratios,
             width_ratios=width_ratios,
         )
-
         axs_list = []
         for idx, row_label in enumerate(_color_df.index):
 
             row_ax = fig.add_subplot(gs[idx + 1, 1:-1])
-            row_ax.axis('off')
             axs_list.append(row_ax)
 
             if row_colors[idx] is None:
@@ -469,32 +467,41 @@ class StackedViolin(BasePlot):
                     ax=row_ax,
                 )
 
-            self._setup_violin_axes_ticks(row_ax)
+            self._setup_violin_axes_ticks(row_ax, num_cols)
 
-    def _setup_violin_axes_ticks(self, row_ax):
+    def _setup_violin_axes_ticks(self, row_ax, num_cols):
         """
         Configures each of the violin plot axes ticks like remove or add labels etc.
 
         """
         # remove the default seaborn grids because in such a compact
         # plot are unnecessary
+
         row_ax.grid(False)
         if self.ylim is not None:
             row_ax.set_ylim(self.ylim)
         if self.log:
             row_ax.set_yscale('log')
+
         if self.plot_yticklabels:
+            for spine in ['top', 'bottom', 'left']:
+                row_ax.spines[spine].set_visible(False)
+
+            # make line a bit ticker to see the extend of the yaxis in the
+            # final plot
+            row_ax.spines['right'].set_linewidth(1.5)
+            row_ax.spines['right'].set_position(('data', num_cols))
+
             row_ax.tick_params(
                 axis='y',
-                left=True,
-                right=False,
-                labelright=False,
-                labelleft=True,
+                left=False,
+                right=True,
+                labelright=True,
+                labelleft=False,
                 labelsize='x-small',
-                length=1,
-                pad=1,
             )
         else:
+            row_ax.axis('off')
             # remove labels
             row_ax.set_yticklabels([])
             row_ax.tick_params(
