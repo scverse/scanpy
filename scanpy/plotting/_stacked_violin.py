@@ -278,7 +278,7 @@ class StackedViolin(BasePlot):
             if self.plot_yticklabels:
                 # space needs to be added to avoid overlapping
                 # of labels and legend or dendrogram/totals.
-                self.wspace = 0.4
+                self.wspace = 0.3
             else:
                 self.wspace = StackedViolin.DEFAULT_WSPACE
         if ylim != self.ylim:
@@ -423,7 +423,7 @@ class StackedViolin(BasePlot):
             ax,
             nrows=num_rows + 2,
             ncols=num_cols + 2,
-            hspace=0.3 if self.plot_yticklabels else 0,
+            hspace=0.2 if self.plot_yticklabels else 0,
             wspace=0,
             height_ratios=height_ratios,
             width_ratios=width_ratios,
@@ -505,6 +505,21 @@ class StackedViolin(BasePlot):
                 labelleft=False,
                 labelsize='x-small',
             )
+            # use only the smallest and the largest y ticks
+            # and align the firts label on top of the tick and
+            # the second below the tick. This avoid overlapping
+            # of nearby ticks
+            import matplotlib.ticker as ticker
+
+            # use MaxNLocator to set 2 ticks
+            row_ax.yaxis.set_major_locator(
+                ticker.MaxNLocator(nbins=2, steps=[1, 1.2, 10])
+            )
+            yticks = row_ax.get_yticks()
+            row_ax.set_yticks([yticks[0], yticks[-1]])
+            ticklabels = row_ax.get_yticklabels()
+            ticklabels[0].set_va("bottom")
+            ticklabels[-1].set_va("top")
         else:
             row_ax.axis('off')
             # remove labels
