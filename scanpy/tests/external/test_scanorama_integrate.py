@@ -10,9 +10,8 @@ def test_scanorama_integrate():
     integrate wrapper succesfully added a new field to ``adata.obsm``
     and makes sure it has the same dimensions as the original PCA table.
     """
-    adata = sc.datasets.pbmc3k()
-    sc.pp.recipe_zheng17(adata)
+    adata = sc.datasets.pbmc68k_reduced()
     sc.tl.pca(adata)
-    adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
+    adata.obs['batch'] = 350 * ['a'] + 350 * ['b']
     sce.pp.scanorama_integrate(adata, 'batch')
     assert adata.obsm['X_scanorama'].shape == adata.obsm['X_pca'].shape
