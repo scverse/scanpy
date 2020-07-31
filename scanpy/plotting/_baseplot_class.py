@@ -13,10 +13,8 @@ from matplotlib import gridspec
 
 from .. import logging as logg
 from .._compat import Literal
-from . import _utils
 from ._utils import make_grid_spec
 from ._utils import ColorLike, _AxesSubplot
-from .._settings import settings
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
 
 _VarNames = Union[str, Sequence[str]]
@@ -38,7 +36,6 @@ swap_axes
 return_fig
     Returns :class:`DotPlot` object. Useful for fine-tuning
     the plot. Takes precedence over `show=False`.
-
 """
 
 
@@ -150,8 +147,9 @@ class BasePlot(object):
 
         self.group_extra_size = 0
         self.plot_group_extra = None
-        # after show() is called ax_dict contains a dictionary of the axes used in
-        # the plot
+        # after .render() is called the fig value is assigned and ax_dict
+        # contains a dictionary of the axes used in the plot
+        self.fig = None
         self.ax_dict = None
         self.ax = ax
 
@@ -165,7 +163,9 @@ class BasePlot(object):
 
         Parameters
         ----------
-        swap_axes : bool, default: True
+        swap_axes
+            Boolean to turn on (True) or off (False) 'add_dendrogram'. Default True
+
 
         Returns
         -------
@@ -186,7 +186,7 @@ class BasePlot(object):
         dendrogram_key: Optional[str] = None,
         size: Optional[float] = 0.8,
     ):
-        """
+        """\
         Show dendrogram based on the hierarchical clustering between the `groupby`
         categories. Categories are reordered to match the dendrogram order.
 
@@ -200,22 +200,28 @@ class BasePlot(object):
         `var_names` are reordered to produce a more pleasing output if:
             * The data contains `var_groups`
             * the `var_groups` match the categories.
+
         The previous conditions happen by default when using Plot
-        to show the results from `sc.tl.rank_genes_groups` (aka gene markers), by
-        calling `sc.tl.rank_genes_groups_(plot_name)`.
+        to show the results from :func:`~scanpy.tl.rank_genes_groups` (aka gene markers), by
+        calling `scanpy.tl.rank_genes_groups_(plot_name)`.
+
 
         Parameters
         ----------
-        show : bool, default True
-        dendrogram_key : str, default None
+        show
+            Boolean to turn on (True) or off (False) 'add_dendrogram'
+        dendrogram_key
             Needed if `sc.tl.dendrogram` saved the dendrogram using a key different
             than the default name.
-        size : size of the dendrogram. Corresponds to width when dendrogram shown on
-            the right of the plot, or height when shown on top.
+        size
+            size of the dendrogram. Corresponds to width when dendrogram shown on
+            the right of the plot, or height when shown on top. The unit is the same
+            as in matplotlib (inches).
 
         Returns
         -------
         BasePlot
+
 
         Examples
         --------
@@ -261,24 +267,34 @@ class BasePlot(object):
         size: Optional[float] = 0.8,
         color: Optional[Union[ColorLike, Sequence[ColorLike]]] = None,
     ):
-        """
+        """\
         Show barplot for the number of cells in in `groupby` category.
 
         The barplot is by default shown on the right side of the plot or on top
         if the axes are swapped.
 
+
         Parameters
         ----------
-        show : bool, default True
-        sort : Set to either 'ascending' or 'descending' to reorder the categories
+        show
+            Boolean to turn on (True) or off (False) 'add_dendrogram'
+        sort
+            Set to either 'ascending' or 'descending' to reorder the categories
             by cell number
-        size : size of the barplot. Corresponds to width when shown on
-            the right of the plot, or height when shown on top.
-        color: Color for the bar plots or list of colors for each of the bar plots.
-            By default, each bar plot uses the colors assigned in `adata.uns[{groupby}_colors.
+        size
+            size of the barplot. Corresponds to width when shown on
+            the right of the plot, or height when shown on top. The unit is the same
+            as in matplotlib (inches).
+        color
+            Color for the bar plots or list of colors for each of the bar plots.
+            By default, each bar plot uses the colors assigned in
+            `adata.uns[{groupby}_colors]`.
+
+
         Returns
         -------
         BasePlot
+
 
         Examples
         --------
@@ -311,6 +327,19 @@ class BasePlot(object):
         return self
 
     def style(self, cmap: Optional[str] = DEFAULT_COLORMAP):
+        """\
+        Set visual style parameters
+
+        Parameters
+        ----------
+        cmap
+            colormap
+
+        Returns
+        -------
+        BasePlot
+        """
+
         self.cmap = cmap
 
     def legend(
@@ -319,24 +348,29 @@ class BasePlot(object):
         title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
         width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
     ):
-        """
-        Configure legend parameters.
+        """\
+        Configure legend parameters
 
         Parameters
         ----------
         show
-            Set to `False` to hide the default plot of the legend.
+            Set to 'False' to hide the default plot of the legend. This sets the
+            legend width to zero which will result in a wider main plot.
         title
-            Title for the dot size legend. Use "\n" to add line breaks.
+            Legend title. Appears on top of the color bar. Use '\\n' to add line breaks.
         width
-            Width of the legend.
+            Width of the legend. The unit is the same as in matplotlib (inches)
 
         Returns
         -------
         BasePlot
 
+
         Examples
         --------
+
+        Set legend title:
+
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
@@ -353,6 +387,8 @@ class BasePlot(object):
         return self
 
     def get_axes(self):
+        if self.ax_dict is None:
+            self.make_figure()
         return self.ax_dict
 
     def _plot_totals(
@@ -523,42 +559,28 @@ class BasePlot(object):
 
         return normalize
 
-    def show(
-        self, show: Optional[bool] = None, save: Union[str, bool, None] = None,
-    ):
+    def make_figure(self):
         """
-        Render the image
+        Renders the image but does not call :func:`matplotlib.pyplot.show`. Useful
+        when several plots are put together into one figure.
 
-        Parameters
-        ----------
-        show
-             Show the plot, do not return axis. If false, plot is not shown
-             and axes returned.
-        save
-            If `True` or a `str`, save the figure.
-            A string is appended to the default filename.
-            Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
-
-        Returns
-        -------
-        If `show=False`: Dict of :class:`~matplotlib.axes.Axes`. The dict key indicates the
-        type of ax (eg. mainplot_ax)
+        See also
+        --------
+        `show()`: Renders and shows the plot.
+        `savefig()`: Saves the plot.
 
         Examples
-        -------
+        --------
+
+        >>> import matplotlib.pyplot as plt
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').show()
-
-        Get the axes
-        >>> axes_dict = sc.pl.Plot(adata, markers, groupby='bulk_labels').show(show=False)
-        >>> axes_dict['mainplot_ax'].grid(True)
-        >>> plt.show()
-
-        Save image
-        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').show(save='plot.pdf')
-
+        >>> fig, (ax0, ax1) = plt.subplots(1, 2)
+        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels', ax=ax0)\
+        ...               .style(cmap='Blues', edge_color='none').make_figure()
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels', ax=ax1).make_figure()
         """
+
         category_height = self.DEFAULT_CATEGORY_HEIGHT
         category_width = self.DEFAULT_CATEGORY_WIDTH
 
@@ -588,7 +610,7 @@ class BasePlot(object):
         #   second ax is to plot legends
         legends_width_spacer = 0.7 / self.width
 
-        fig, gs = make_grid_spec(
+        self.fig, gs = make_grid_spec(
             self.ax or (self.width, self.height),
             nrows=1,
             ncols=2,
@@ -597,10 +619,10 @@ class BasePlot(object):
         )
 
         # the main plot is divided into three rows and two columns
-        # first row is an spacer, that is adjusted in case the
+        # first row is an spacer that is adjusted in case the
         #           legends need more height than the main plot
         # second row is for brackets (if needed),
-        # third row is for mainplot and dendrogram (if needed)
+        # third row is for mainplot and dendrogram/totals (if needed)
         if self.has_var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
             if self.are_axes_swapped:
@@ -628,7 +650,7 @@ class BasePlot(object):
             # otherwise the title may overlay with the figure.
             # also, this puts the title centered on the main figure and not
             # centered between the main figure and the legends
-            _ax = fig.add_subplot(gs[0, 0])
+            _ax = self.fig.add_subplot(gs[0, 0])
             _ax.axis('off')
             _ax.set_title(self.fig_title)
 
@@ -641,22 +663,22 @@ class BasePlot(object):
             width_ratios=width_ratios,
             height_ratios=height_ratios,
         )
-        main_ax = fig.add_subplot(mainplot_gs[2, 0])
+        main_ax = self.fig.add_subplot(mainplot_gs[2, 0])
         return_ax_dict['mainplot_ax'] = main_ax
 
         if not self.are_axes_swapped:
             if self.plot_group_extra is not None:
-                group_extra_ax = fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
+                group_extra_ax = self.fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
                 group_extra_orientation = 'right'
             if self.has_var_groups:
-                gene_groups_ax = fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
+                gene_groups_ax = self.fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
                 var_group_orientation = 'top'
         else:
             if self.plot_group_extra:
-                group_extra_ax = fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
+                group_extra_ax = self.fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
                 group_extra_orientation = 'top'
             if self.has_var_groups:
-                gene_groups_ax = fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
+                gene_groups_ax = self.fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
                 var_group_orientation = 'right'
 
         if self.plot_group_extra is not None:
@@ -696,14 +718,74 @@ class BasePlot(object):
         main_ax.xaxis.set_tick_params(which='minor', top=False, bottom=False, length=0)
         main_ax.set_zorder(100)
         if self.legends_width > 0:
-            legend_ax = fig.add_subplot(gs[0, 1])
+            legend_ax = self.fig.add_subplot(gs[0, 1])
             self._plot_legend(legend_ax, return_ax_dict, normalize)
 
-        _utils.savefig_or_show(self.DEFAULT_SAVE_PREFIX, show=show, save=save)
         self.ax_dict = return_ax_dict
-        show = settings.autoshow if show is None else show
-        if not show:
-            return return_ax_dict
+
+    def show(self, return_axes: Optional[bool] = None):
+        """
+        Show the figure
+
+        Parameters
+        ----------
+        return_axes
+             If true return a dictionary with the figure axes. When return_axes is true
+             then :func:`matplotlib.pyplot.show` is not called.
+
+        Returns
+        -------
+        If `return_axes=True`: Dict of :class:`matplotlib.axes.Axes`. The dict key
+        indicates the type of ax (eg. `mainplot_ax`)
+
+        See also
+        --------
+        `render()`: Renders the plot but does not call :func:`matplotlib.pyplot.show`
+        `savefig()`: Saves the plot.
+
+        Examples
+        -------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').show()
+
+        """
+
+        self.make_figure()
+
+        if return_axes:
+            return self.ax_dict
+        else:
+            pl.show()
+
+    def savefig(self, filename: str, bbox_inches: Optional[str] = 'tight', **kwargs):
+        """
+        Save the current figure
+
+        Parameters
+        ----------
+        filename
+            Figure filename. Figure *format* is taken from the file ending unless
+            the parameter `format` is given.
+        bbox_inches
+            By default is set to 'tight' to avoid cropping of the legends.
+        kwargs
+            Passed to :func:`matplotlib.pyplot.savefig`
+
+        See also
+        --------
+        `render()`: Renders the plot but does not call :func:`matplotlib.pyplot.show`
+        `show()`: Renders and shows the plot
+
+        Examples
+        -------
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').savefig('plot.pdf')
+
+        """
+        self.make_figure()
+        pl.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
     def _reorder_categories_after_dendrogram(
         self, dendrogram,
