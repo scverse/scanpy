@@ -112,38 +112,30 @@ print_memory_usage = anndata.logging.print_memory_usage
 get_memory_usage = anndata.logging.get_memory_usage
 
 
-def _versions_dependencies(dependencies):
-    # this is not the same as the requirements!
-    for mod in dependencies:
-        mod_name, dist_name = mod if isinstance(mod, tuple) else (mod, mod)
-        try:
-            imp = __import__(mod_name)
-            yield dist_name, imp.__version__
-        except (ImportError, AttributeError):
-            pass
-
-
-def print_versions():
+def print_versions(*, file=None):
     """Print print versions of imported packages"""
-    from ._settings import settings
-    stdout = sys.stdout
-    try:
-        sys.stdout = settings.logfile
+    if file is None:
         sinfo(dependencies=True)
-    finally:
-        sys.stdout = stdout
+    else:
+        stdout = sys.stdout
+        try:
+            sys.stdout = file
+            sinfo(dependencies=True)
+        finally:
+            sys.stdout = stdout
 
 
-def print_version_and_date():
+def print_version_and_date(*, file=None):
     """\
     Useful for starting a notebook so you see when you started working.
     """
     from . import __version__
-    from ._settings import settings
+    if file is None:
+        file = sys.stdout
     print(
         f'Running Scanpy {__version__}, '
         f'on {datetime.now():%Y-%m-%d %H:%M}.',
-        file=settings.logfile,
+        file=file,
     )
 
 
