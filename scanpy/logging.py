@@ -124,11 +124,7 @@ def _versions_dependencies(dependencies):
 
 
 def print_versions():
-    """\
-    Versions that might influence the numerical results.
-
-    Matplotlib and Seaborn are excluded from this.
-    """
+    """Print print versions of imported packages"""
     from ._settings import settings
     stdout = sys.stdout
     try:
