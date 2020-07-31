@@ -922,42 +922,27 @@ def _download(url: str, path: Path):
         from tqdm import tqdm
     from urllib.request import urlopen, Request
 
-    req = Request(url, headers={"User-agent": "scanpy-user"})
-
-    bs = 1024 * 8
-    size = -1
-    read = 0
+    blocksize = 1024 * 8
     blocknum = 0
 
     try:
-        # This is mostly copied from urllib.request.urlretrieve, but that won't
-        # let us set headers.
+        # This is a modified urllib.request.urlretrieve, but that won't let us
+        # set headers.
         # The '\'s are ugly, but parenthesis are not allowed here
         # fmt: off
         with \
             tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t, \
             path.open("wb") as f, \
-            urlopen(req) as resp:
+            urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
 
-            def update_to(b=1, bsize=1, tsize=None):
-                if tsize is not None:
-                    t.total = tsize
-                t.update(b * bsize - t.n)
+            t.total = int(resp.info().get("content-length", 0))
 
-            headers = resp.info()
-            # This capitalization was copied from the stdlib too
-            if "content-length" in headers:
-                size = int(headers["Content-Length"])
-
-            update_to(blocknum, bs, size)
-            while True:
-                block = resp.read(bs)
-                if not block:
-                    break
-                read += len(block)
+            block = resp.read(blocksize)
+            while block:
                 f.write(block)
                 blocknum += 1
-                update_to(blocknum, bs, size)
+                t.update(blocknum * blocksize - t.n)
+                block = resp.read(blocksize)
         # fmt: on
     except Exception:
         # Make sure file doesn’t exist half-downloaded
