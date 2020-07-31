@@ -47,6 +47,7 @@ In addition, the internals for the differential expression code were overhauled 
 - Add backup_url option to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`A Gayoso`
 - Allow prefix for :func:`~scanpy.read_10x_mtx` :pr:`1250`  :smaller:`G Sturm`
 - Add optional tie correction for the 'wilcoxon' method in :func:`~scanpy.tl.rank_genes_groups` :pr:`1330`  :smaller:`S Rybakov`
+- :func:`~anndata.concat` is now exported from scanpy. See :doc:`anndata:concatenation` for more info. :pr:`1338` :smaller:`I Virshup`
 
 .. rubric:: Bug fixes
 
