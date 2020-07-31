@@ -39,7 +39,7 @@ setup(
             'sphinx',
             'sphinx_rtd_theme',
             'sphinx_autodoc_typehints',
-            'scanpydoc>=0.4.3',
+            'scanpydoc>=0.5',
             'typing_extensions; python_version < "3.8"',  # for `Literal`
         ],
         test=[
