@@ -56,7 +56,7 @@ def test_pbmc3k_processed(tmp_dataset_dir):
 @pytest.mark.internet
 def test_ebi_expression_atlas(tmp_dataset_dir):
     adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
-    assert adata.shape == (2315, 23852)
+    assert adata.shape == (2315, 24051)  # This changes sometimes
 
 
 def test_krumsiek11(tmp_dataset_dir):
