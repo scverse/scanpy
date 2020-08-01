@@ -10,6 +10,7 @@ from .. import logging as logg, _utils
 from .._compat import Literal
 from .._settings import settings
 from ..readwrite import read, read_visium
+from ._utils import check_datasetdir_exists
 
 HERE = Path(__file__).parent
 
@@ -52,6 +53,7 @@ def blobs(
     return AnnData(X, obs=dict(blobs=y.astype(str)))
 
 
+@check_datasetdir_exists
 def burczynski06() -> AnnData:
     """\
     Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
@@ -107,6 +109,7 @@ def krumsiek11() -> AnnData:
     return adata
 
 
+@check_datasetdir_exists
 def moignard15() -> AnnData:
     """\
     Hematopoiesis in early mouse embryos [Moignard15]_.
@@ -144,6 +147,7 @@ def moignard15() -> AnnData:
     return adata
 
 
+@check_datasetdir_exists
 def paul15() -> AnnData:
     """\
     Development of Myeloid Progenitors [Paul15]_.
@@ -165,6 +169,7 @@ def paul15() -> AnnData:
     import h5py
 
     filename = settings.datasetdir / 'paul15/paul15.h5'
+    filename.parent.mkdir(exist_ok=True)
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, 'r') as f:
@@ -240,6 +245,7 @@ def pbmc68k_reduced() -> AnnData:
         return read(filename)
 
 
+@check_datasetdir_exists
 def pbmc3k() -> AnnData:
     """\
     3k PBMCs from 10x Genomics.
@@ -282,6 +288,7 @@ def pbmc3k() -> AnnData:
     return adata
 
 
+@check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
     """Processed 3k PBMCs from 10x Genomics.
 
@@ -316,7 +323,7 @@ def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
     url_prefix = f'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/{sample_id}/'
 
     sample_dir = base_dir / sample_id
-    sample_dir.mkdir(exist_ok=True, parents=True)
+    sample_dir.mkdir(exist_ok=True)
 
     # Download spatial data
     tar_filename = f"{sample_id}_spatial.tar.gz"
@@ -336,6 +343,7 @@ def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
     )
 
 
+@check_datasetdir_exists
 def visium_sge(
     sample_id: Literal[
         'V1_Breast_Cancer_Block_A_Section_1',
