@@ -920,23 +920,35 @@ def _download(url: str, path: Path):
         from tqdm.auto import tqdm
     except ModuleNotFoundError:
         from tqdm import tqdm
-    from urllib.request import urlretrieve
+    from urllib.request import urlopen, Request
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t:
+    blocksize = 1024 * 8
+    blocknum = 0
 
-        def update_to(b=1, bsize=1, tsize=None):
-            if tsize is not None:
-                t.total = tsize
-            t.update(b * bsize - t.n)
+    try:
+        # This is a modified urllib.request.urlretrieve, but that won't let us
+        # set headers.
+        # The '\'s are ugly, but parenthesis are not allowed here
+        # fmt: off
+        with \
+            tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t, \
+            path.open("wb") as f, \
+            urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
 
-        try:
-            urlretrieve(url, str(path), reporthook=update_to)
-        except Exception:
-            # Make sure file doesn’t exist half-downloaded
-            if path.is_file():
-                path.unlink()
-            raise
+            t.total = int(resp.info().get("content-length", 0))
+
+            block = resp.read(blocksize)
+            while block:
+                f.write(block)
+                blocknum += 1
+                t.update(blocknum * blocksize - t.n)
+                block = resp.read(blocksize)
+        # fmt: on
+    except Exception:
+        # Make sure file doesn’t exist half-downloaded
+        if path.is_file():
+            path.unlink()
+        raise
 
 
 def _check_datafile_present_and_download(path, backup_url=None):
