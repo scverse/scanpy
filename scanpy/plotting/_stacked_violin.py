@@ -234,8 +234,7 @@ class StackedViolin(BasePlot):
             If 'area', each violin will have the same area.
             If 'count', a violin’s width corresponds to the number of observations.
         yticklabels
-            Because the plots are on top of each other the yticks labels tend to
-            overlap and are not plotted. Set to true to view the labels.
+            Set to true to view the y tick labels.
         ylim
             minimum and maximum values for the y-axis. If set. All rows will have
             the same y-axis range. Example: ylim=(0, 5)
@@ -276,6 +275,12 @@ class StackedViolin(BasePlot):
             self.jitter_size = jitter_size
         if yticklabels != self.plot_yticklabels:
             self.plot_yticklabels = yticklabels
+            if self.plot_yticklabels:
+                # space needs to be added to avoid overlapping
+                # of labels and legend or dendrogram/totals.
+                self.wspace = 0.3
+            else:
+                self.wspace = StackedViolin.DEFAULT_WSPACE
         if ylim != self.ylim:
             self.ylim = ylim
         if x_padding != self.plot_x_padding:
@@ -418,17 +423,15 @@ class StackedViolin(BasePlot):
             ax,
             nrows=num_rows + 2,
             ncols=num_cols + 2,
-            hspace=0,
+            hspace=0.2 if self.plot_yticklabels else 0,
             wspace=0,
             height_ratios=height_ratios,
             width_ratios=width_ratios,
         )
-
         axs_list = []
         for idx, row_label in enumerate(_color_df.index):
 
             row_ax = fig.add_subplot(gs[idx + 1, 1:-1])
-            row_ax.axis('off')
             axs_list.append(row_ax)
 
             if row_colors[idx] is None:
@@ -469,32 +472,56 @@ class StackedViolin(BasePlot):
                     ax=row_ax,
                 )
 
-            self._setup_violin_axes_ticks(row_ax)
+            self._setup_violin_axes_ticks(row_ax, num_cols)
 
-    def _setup_violin_axes_ticks(self, row_ax):
+    def _setup_violin_axes_ticks(self, row_ax, num_cols):
         """
         Configures each of the violin plot axes ticks like remove or add labels etc.
 
         """
         # remove the default seaborn grids because in such a compact
         # plot are unnecessary
+
         row_ax.grid(False)
         if self.ylim is not None:
             row_ax.set_ylim(self.ylim)
         if self.log:
             row_ax.set_yscale('log')
+
         if self.plot_yticklabels:
+            for spine in ['top', 'bottom', 'left']:
+                row_ax.spines[spine].set_visible(False)
+
+            # make line a bit ticker to see the extend of the yaxis in the
+            # final plot
+            row_ax.spines['right'].set_linewidth(1.5)
+            row_ax.spines['right'].set_position(('data', num_cols))
+
             row_ax.tick_params(
                 axis='y',
-                left=True,
-                right=False,
-                labelright=False,
-                labelleft=True,
+                left=False,
+                right=True,
+                labelright=True,
+                labelleft=False,
                 labelsize='x-small',
-                length=1,
-                pad=1,
             )
+            # use only the smallest and the largest y ticks
+            # and align the firts label on top of the tick and
+            # the second below the tick. This avoid overlapping
+            # of nearby ticks
+            import matplotlib.ticker as ticker
+
+            # use MaxNLocator to set 2 ticks
+            row_ax.yaxis.set_major_locator(
+                ticker.MaxNLocator(nbins=2, steps=[1, 1.2, 10])
+            )
+            yticks = row_ax.get_yticks()
+            row_ax.set_yticks([yticks[0], yticks[-1]])
+            ticklabels = row_ax.get_yticklabels()
+            ticklabels[0].set_va("bottom")
+            ticklabels[-1].set_va("top")
         else:
+            row_ax.axis('off')
             # remove labels
             row_ax.set_yticklabels([])
             row_ax.tick_params(
@@ -537,6 +564,7 @@ def stacked_violin(
     jitter: Union[float, bool] = StackedViolin.DEFAULT_JITTER,
     size: int = StackedViolin.DEFAULT_JITTER_SIZE,
     scale: Literal['area', 'count', 'width'] = StackedViolin.DEFAULT_SCALE,
+    yticklabels: Optional[bool] = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     order: Optional[Sequence[str]] = None,
     swap_axes: bool = False,
     show: Optional[bool] = None,
@@ -581,6 +609,8 @@ def stacked_violin(
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
         If 'count', a violin’s width corresponds to the number of observations.
+    yticklabels
+        Set to true to view the y tick labels.
     row_palette
         Be default, median values are mapped to the violin color using a
         color map (see `cmap` argument). Alternatively, a 'row_palette` can
@@ -662,6 +692,7 @@ def stacked_violin(
         jitter_size=size,
         row_palette=row_palette,
         scale=kwds.get('scale', scale),
+        yticklabels=yticklabels,
         linewidth=kwds.get('linewidth', StackedViolin.DEFAULT_LINE_WIDTH),
     ).legend(title=colorbar_title)
     if return_fig:

@@ -59,6 +59,9 @@ class BasePlot(object):
     DEFAULT_CATEGORY_HEIGHT = 0.35
     DEFAULT_CATEGORY_WIDTH = 0.37
 
+    # gridspec parameter. Sets the space between mainplot, dendrogram and legend
+    DEFAULT_WSPACE = 0
+
     DEFAULT_COLORMAP = 'winter'
     DEFAULT_LEGENDS_WIDTH = 1.5
     DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
@@ -139,6 +142,8 @@ class BasePlot(object):
         self.are_axes_swapped = False
         self.categories_order = categories_order
         self.var_names_idx_order = None
+
+        self.wspace = self.DEFAULT_WSPACE
 
         # minimum height required for legends to plot properly
         self.min_figure_height = self.MIN_FIGURE_HEIGHT
@@ -618,11 +623,6 @@ class BasePlot(object):
             width_ratios=[mainplot_width + self.group_extra_size, self.legends_width],
         )
 
-        # the main plot is divided into three rows and two columns
-        # first row is an spacer that is adjusted in case the
-        #           legends need more height than the main plot
-        # second row is for brackets (if needed),
-        # third row is for mainplot and dendrogram/totals (if needed)
         if self.has_var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
             if self.are_axes_swapped:
@@ -654,10 +654,16 @@ class BasePlot(object):
             _ax.axis('off')
             _ax.set_title(self.fig_title)
 
+        # the main plot is divided into three rows and two columns
+        # first row is an spacer that is adjusted in case the
+        #           legends need more height than the main plot
+        # second row is for brackets (if needed),
+        # third row is for mainplot and dendrogram/totals (legend goes in gs[0,1]
+        # defined earlier)
         mainplot_gs = gridspec.GridSpecFromSubplotSpec(
             nrows=3,
             ncols=2,
-            wspace=0.0,
+            wspace=self.wspace,
             hspace=0.0,
             subplot_spec=gs[0, 0],
             width_ratios=width_ratios,
@@ -665,7 +671,6 @@ class BasePlot(object):
         )
         main_ax = self.fig.add_subplot(mainplot_gs[2, 0])
         return_ax_dict['mainplot_ax'] = main_ax
-
         if not self.are_axes_swapped:
             if self.plot_group_extra is not None:
                 group_extra_ax = self.fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
