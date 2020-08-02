@@ -16,6 +16,7 @@ from ..._compat import Literal
 from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from ..._settings import settings
 from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax, doc_panels
 from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
@@ -228,7 +229,7 @@ def rank_genes_groups(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 20,
     gene_symbols: Optional[str] = None,
-    key: Optional[str] = None,
+    key: Optional[str] = 'rank_genes_groups',
     fontsize: int = 8,
     ncols: int = 4,
     sharey: bool = True,
@@ -264,8 +265,6 @@ def rank_genes_groups(
         n_panels_per_row = kwds['n_panels_per_row']
     else:
         n_panels_per_row = ncols
-    if key is None:
-        key = 'rank_genes_groups'
     reference = str(adata.uns[key]['params']['reference'])
     group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
     # one panel for each group
@@ -287,43 +286,48 @@ def rank_genes_groups(
     ymin = np.Inf
     ymax = -np.Inf
     for count, group_name in enumerate(group_names):
-        if sharey is True:
+        gene_names = adata.uns[key]['names'][group_name][:n_genes]
+        scores = adata.uns[key]['scores'][group_name][:n_genes]
+
+        # Setting up axis, calculating y bounds
+        if sharey:
+            ymin = min(ymin, np.min(scores))
+            ymax = max(ymax, np.max(scores))
+
             if ax0 is None:
                 ax = fig.add_subplot(gs[count])
                 ax0 = ax
             else:
                 ax = fig.add_subplot(gs[count], sharey=ax0)
         else:
-            ax = fig.add_subplot(gs[count])
+            ymin = np.min(scores)
+            ymax = np.max(scores)
+            ymax += 0.3 * (ymax - ymin)
 
-        gene_names = adata.uns[key]['names'][group_name]
-        scores = adata.uns[key]['scores'][group_name]
-        for ig, g in enumerate(gene_names[:n_genes]):
-            gene_name = gene_names[ig]
+            ax = fig.add_subplot(gs[count])
+            ax.set_ylim(ymin, ymax)
+
+        ax.set_xlim(-0.9, n_genes - 0.1)
+
+        # Mapping to gene_symbols
+        if gene_symbols is not None:
             if adata.raw is not None and adata.uns[key]['params']['use_raw']:
-                ax.text(
-                    ig,
-                    scores[ig],
-                    gene_name
-                    if gene_symbols is None
-                    else adata.raw.var[gene_symbols][gene_name],
-                    rotation='vertical',
-                    verticalalignment='bottom',
-                    horizontalalignment='center',
-                    fontsize=fontsize,
-                )
+                gene_names = adata.raw.var[gene_symbols][gene_names]
             else:
-                ax.text(
-                    ig,
-                    scores[ig],
-                    gene_name
-                    if gene_symbols is None
-                    else adata.var[gene_symbols][gene_name],
-                    rotation='vertical',
-                    verticalalignment='bottom',
-                    horizontalalignment='center',
-                    fontsize=fontsize,
-                )
+                gene_names = adata.var[gene_symbols][gene_names]
+
+        # Making labels
+        for ig, gene_name in enumerate(gene_names):
+            ax.text(
+                ig,
+                scores[ig],
+                gene_name,
+                rotation='vertical',
+                verticalalignment='bottom',
+                horizontalalignment='center',
+                fontsize=fontsize,
+            )
+
         ax.set_title('{} vs. {}'.format(group_name, reference))
         if count >= n_panels_x * (n_panels_y - 1):
             ax.set_xlabel('ranking')
@@ -332,23 +336,26 @@ def rank_genes_groups(
         if count % n_panels_x == 0:
             ax.set_ylabel('score')
 
-        ax.set_xlim(-0.9, ig + 1 - 0.1)
-
-        if sharey is True:
-            ymin = min(ymin, np.min(scores))
-            ymax = max(ymax, np.max(scores))
-        else:
-            ymin = np.min(scores)
-            ymax = np.max(scores)
-            ymax += 0.3 * (np.max(scores) - np.min(scores))
-            ax.set_ylim(ymin, ymax)
-
     if sharey is True:
         ymax += 0.3 * (ymax - ymin)
         ax.set_ylim(ymin, ymax)
 
     writekey = f"rank_genes_groups_{adata.uns[key]['params']['groupby']}"
     savefig_or_show(writekey, show=show, save=save)
+
+
+def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
+    """
+     Decides what to return
+     """
+    if return_fig:
+        return plot_obj
+    else:
+        plot_obj.make_figure()
+        savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
+        show = settings.autoshow if show is None else show
+        if not show:
+            return plot_obj.get_axes()
 
 
 def _rank_genes_groups_plot(
@@ -429,22 +436,17 @@ def _rank_genes_groups_plot(
             _pl = matrixplot(
                 adata, var_names, groupby, values_df=values_df, return_fig=True, **kwds
             )
+
             if title is not None:
                 _pl.legend(title=title.replace("_", " "))
 
-        if return_fig:
-            return _pl
-        else:
-            return _pl.show(show=show, save=save)
+        return _fig_show_save_or_axes(_pl, return_fig, show, save)
 
     elif plot_type == 'stacked_violin':
         from .._stacked_violin import stacked_violin
 
         _pl = stacked_violin(adata, var_names, groupby, return_fig=True, **kwds)
-        if return_fig:
-            return _pl
-        else:
-            return _pl.show(show=show, save=save)
+        return _fig_show_save_or_axes(_pl, return_fig, show, save)
 
     elif plot_type == 'heatmap':
         from .._anndata import heatmap
@@ -502,6 +504,7 @@ def rank_genes_groups_heatmap(
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
         **kwds,
@@ -554,6 +557,7 @@ def rank_genes_groups_tracksplot(
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
         **kwds,

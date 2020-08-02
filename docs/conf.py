@@ -93,7 +93,7 @@ intersphinx_mapping = dict(
 # -- Options for HTML output ----------------------------------------------
 
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'scanpydoc'
 html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the logo
 html_context = dict(
     display_github=True,  # Integrate GitHub
@@ -109,7 +109,6 @@ html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 
 def setup(app):
     app.warningiserror = on_rtd
-    app.add_stylesheet('css/custom.css')
 
 
 # -- Options for other output formats ------------------------------------------

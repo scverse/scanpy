@@ -31,6 +31,7 @@ Data integration
    :toctree: .
 
    pp.bbknn
+   pp.harmony_integrate
    pp.mnn_correct
 
 Imputation

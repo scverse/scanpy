@@ -344,3 +344,13 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
         )
         assert (adata.X == X).all()
     assert X.dtype == adata.X.dtype
+
+
+def test_recipe_weinreb():
+    # Just tests for failure for now
+    adata = sc.datasets.pbmc68k_reduced().raw.to_adata()
+    adata.X = adata.X.toarray()
+
+    orig = adata.copy()
+    sc.pp.recipe_weinreb17(adata, log=False, copy=True)
+    assert_equal(orig, adata)
