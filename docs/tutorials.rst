@@ -22,7 +22,14 @@ known marker genes.
 .. image:: http://falexwolf.de/img/scanpy_usage/170505_seurat/cell_types.png
    :width: 200px
 
-For more possibilities on visualizing marker genes: :tutorial:`visualizing-marker-genes`
+
+Visualization
+-------------
+
+This tutorial shows how to visually explore genes using scanpy. :tutorial:`plotting/core`
+
+.. image:: _static/img/stacked_violin_dotplot_matrixplot.png
+   :width: 550px
 
 
 Trajectory inference

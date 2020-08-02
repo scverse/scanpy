@@ -11,6 +11,7 @@ from scanpy._utils import pkg_version
 setup()
 
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
 from matplotlib.testing.compare import compare_images
@@ -331,12 +332,10 @@ def test_matrixplot_obj(image_comparer):
         title='added totals',
         return_fig=True,
     )
-    axes = (
-        plot.add_totals(sort='descending')
-        .style(edge_color='white', edge_lw=0.5)
-        .show(show=False)
-    )
+    plot.add_totals(sort='descending').style(edge_color='white', edge_lw=0.5).show()
     save_and_compare_images('master_matrixplot_with_totals')
+
+    axes = plot.get_axes()
     assert 'mainplot_ax' in axes, 'mainplot_ax not found in returned axes dict'
 
 
@@ -357,7 +356,7 @@ def test_stacked_violin_obj(image_comparer, plt):
         title="return_fig. add_totals",
         return_fig=True,
     )
-    plot.add_totals().style(row_palette='tab20').show(show=False)
+    plot.add_totals().style(row_palette='tab20').show()
     save_and_compare_images('master_stacked_violin_return_fig')
 
 
@@ -434,6 +433,7 @@ def test_violin(image_comparer):
     sc.pl.violin(
         pbmc,
         ['n_genes', 'percent_mito', 'n_counts'],
+        ylabel=["foo", "bar", "baz"],
         groupby='bulk_labels',
         stripplot=True,
         multi_panel=True,
@@ -517,7 +517,12 @@ def test_correlation(image_comparer):
         ),
         (
             "ranked_genes_stacked_violin",
-            partial(sc.pl.rank_genes_groups_stacked_violin, n_genes=3, show=False),
+            partial(
+                sc.pl.rank_genes_groups_stacked_violin,
+                n_genes=3,
+                show=False,
+                groups=['3', '0', '5'],
+            ),
         ),
         (
             "ranked_genes_dotplot",
@@ -563,7 +568,12 @@ def test_correlation(image_comparer):
         ),
         (
             "ranked_genes_tracksplot",
-            partial(sc.pl.rank_genes_groups_tracksplot, n_genes=5, show=False,),
+            partial(
+                sc.pl.rank_genes_groups_tracksplot,
+                n_genes=3,
+                show=False,
+                groups=['3', '2', '1'],
+            ),
         ),
         (
             "ranked_genes_violin",
@@ -892,6 +902,15 @@ def test_paga(image_comparer):
 
     sc.pl.paga_compare(pbmc, basis='X_pca', legend_fontweight='normal', **common)
     save_and_compare_images('master_paga_compare_pca')
+
+    colors = {
+        c: {cm.Set1(_): 0.33 for _ in range(3)}
+        for c in pbmc.obs["bulk_labels"].cat.categories
+    }
+    colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
+
+    sc.pl.paga(pbmc, color=colors, colorbar=False)
+    save_and_compare_images('master_paga_pie')
 
 
 def test_no_copy():
