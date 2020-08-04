@@ -2,6 +2,7 @@ import collections.abc as cabc
 from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
 
 import numpy as np
+import pandas as pd
 from anndata import AnnData
 from cycler import Cycler
 from matplotlib.axes import Axes
@@ -1056,16 +1057,22 @@ def _get_color_values(
         else:
             _utils._validate_palette(adata, value_to_plot)
 
-        color_vector = np.asarray(adata.uns[color_key])[values.codes]
+        color_map = dict(zip(values.categories, adata.uns[color_key]))
 
-        # Handle groups
-        if groups:
-            color_vector = np.fromiter(
-                map(colors.to_hex, color_vector), '<U15', len(color_vector)
-            )
-            # set color to 'light gray' for all values
-            # that are not in the groups
-            color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
+        # Set excluded groups to missing
+        if groups is None:
+            groups = values.categories  # pd.Index
+        else:
+            groups = pd.Index(groups)
+        for group in values.categories.difference(groups):
+            values = values.replace(group, np.nan)
+
+        color_vector = values.map(color_map).map(colors.to_hex)
+
+        # Set color to 'light gray' for all missing values
+        if color_vector.isna().any():
+            color_vector = color_vector.add_categories([colors.to_hex("lightgray")])
+            color_vector = color_vector.fillna(colors.to_hex("lightgray"))
         return color_vector, True
 
 
