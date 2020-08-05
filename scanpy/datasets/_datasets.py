@@ -382,10 +382,34 @@ def starfish_to_anndata(exp_matrix, images: Optional[dict] = dict()) -> AnnData:
     
     Returns
     -------
-    Annotated data matrix.   
+    Annotated data matrix, where observations/cells/segmentaition are named by
+    cell_id and variables/genes by gene name. Stores the following information:
+ 
+    :attr:`~anndata.AnnData.X`
+        The data matrix is stored
+    :attr:`~anndata.AnnData.obs_names`
+        Cell ids
+    :attr:`~anndata.AnnData.var_names`
+        Gene names
+    :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
+        Spatial spot coordinates.
     """
+    
+    # converting exp_matrix to anndata object
     _row_attrs = {k: exp_matrix['cells'][k].values for k in exp_matrix['cells'].coords}
     _col_attrs = {k: exp_matrix['genes'][k].values for k in exp_matrix['genes'].coords}
     adata = AnnData(exp_matrix.data, _row_attrs, _col_attrs)
+    
+    # reconfiguring anndata.obs and anndata.obsm
+    adata.obs.index = adata.obs['cell_id']
+    adata.obsm['spatial'] = adata.obs[['x', 'y']].to_numpy()
+    adata.obs.drop(
+            columns=['x', 'y', 'z', 'cell_id'],
+            inplace=True,
+    )
+    
+    # reconfiguring anndata.var
+    adata.var.index = adata.var['genes']
+    adata.var.drop(columns=['genes'], inplace=True)
     
     return adata
