@@ -367,7 +367,7 @@ def visium_sge(
     return read_visium(settings.datasetdir / sample_id)
 
 
-def starfish_to_anndata(exp_matrix, images: Optional[dict] = dict()) -> AnnData:
+def starfish_to_anndata(exp_matrix) -> AnnData:
     """\
     Convert Starfish type data into AnnData object
     
@@ -376,9 +376,6 @@ def starfish_to_anndata(exp_matrix, images: Optional[dict] = dict()) -> AnnData:
     exp_matrix
          Starfish Expression Matrix. The object type should be
          starfish.core.expression_matrix.expression_matrix.ExpressionMatrix
-         
-    images
-        A dictionary consists of images and their name
     
     Returns
     -------
