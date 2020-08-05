@@ -398,8 +398,7 @@ def starfish_to_anndata(exp_matrix) -> AnnData:
         Gene names
     :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
         Spatial spot coordinates.
-    """
-    
+    """   
     # converting exp_matrix to anndata object
     _row_attrs = {k: exp_matrix['cells'][k].values for k in exp_matrix['cells'].coords}
     _col_attrs = {k: exp_matrix['genes'][k].values for k in exp_matrix['genes'].coords}
