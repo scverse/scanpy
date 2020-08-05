@@ -48,9 +48,10 @@ def describe_obs(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Collection[int] = (50, 100, 200, 500),
+    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
     layer: Optional[str] = None,
     use_raw: bool = False,
+    log1p: Optional[str] = True,
     inplace: bool = False,
     X=None,
     parallel=None,
@@ -70,6 +71,8 @@ def describe_obs(
     {doc_qc_metric_naming}
     {doc_obs_qc_args}
     {doc_expr_reps}
+    log1p
+        Add `log1p` transformed metrics.
     inplace
         Whether to place calculated metrics in `adata.obs`.
     X
@@ -99,11 +102,13 @@ def describe_obs(
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
     else:
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
-    obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
-        obs_metrics[f"n_{var_type}_by_{expr_type}"]
-    )
+    if log1p:
+        obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
+            obs_metrics[f"n_{var_type}_by_{expr_type}"]
+        )
     obs_metrics[f"total_{expr_type}"] = X.sum(axis=1)
-    obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(obs_metrics[f"total_{expr_type}"])
+    if log1p:
+        obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(obs_metrics[f"total_{expr_type}"])
     if percent_top:
         percent_top = sorted(percent_top)
         proportions = top_segment_proportions(X, percent_top)
@@ -115,9 +120,10 @@ def describe_obs(
         obs_metrics[f"total_{expr_type}_{qc_var}"] = (
             X[:, adata.var[qc_var].values].sum(axis=1)
         )
-        obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
-            obs_metrics[f"total_{expr_type}_{qc_var}"]
-        )
+        if log1p:
+            obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
+                obs_metrics[f"total_{expr_type}_{qc_var}"]
+            )
         obs_metrics[f"pct_{expr_type}_{qc_var}"] = (
             obs_metrics[f"total_{expr_type}_{qc_var}"]
             / obs_metrics[f"total_{expr_type}"]
@@ -143,6 +149,7 @@ def describe_var(
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace=False,
+    log1p=True,
     X=None,
 ) -> Optional[pd.DataFrame]:
     """\
@@ -183,12 +190,14 @@ def describe_var(
     else:
         var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
         var_metrics["mean_{expr_type}"] = X.mean(axis=0)
-    var_metrics["log1p_mean_{expr_type}"] = np.log1p(var_metrics["mean_{expr_type}"])
+    if log1p:
+        var_metrics["log1p_mean_{expr_type}"] = np.log1p(var_metrics["mean_{expr_type}"])
     var_metrics["pct_dropout_by_{expr_type}"] = (
         1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]
     ) * 100
     var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
-    var_metrics["log1p_total_{expr_type}"] = np.log1p(var_metrics["total_{expr_type}"])
+    if log1p:
+        var_metrics["log1p_total_{expr_type}"] = np.log1p(var_metrics["total_{expr_type}"])
     # Relabel
     new_colnames = []
     for col in var_metrics.columns:
@@ -214,10 +223,11 @@ def calculate_qc_metrics(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Collection[int] = (50, 100, 200, 500),
+    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace: bool = False,
+    log1p: bool = True,
     parallel: Optional[bool] = None,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """\
@@ -238,6 +248,8 @@ def calculate_qc_metrics(
     {doc_expr_reps}
     inplace
         Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
+    log1p
+        Set to `False` to skip computing `log1p` transformed annotations.
 
     Returns
     -------
@@ -281,9 +293,10 @@ def calculate_qc_metrics(
         percent_top=percent_top,
         inplace=inplace,
         X=X,
+        log1p=log1p,
     )
     var_metrics = describe_var(
-        adata, expr_type=expr_type, var_type=var_type, inplace=inplace, X=X
+        adata, expr_type=expr_type, var_type=var_type, inplace=inplace, X=X, log1p=log1p,
     )
 
     if not inplace:
@@ -388,6 +401,8 @@ def top_segment_proportions_dense(
 
 @numba.njit(cache=True, parallel=True)
 def top_segment_proportions_sparse_csr(data, indptr, ns):
+    # work around https://github.com/numba/numba/issues/5056
+    indptr = indptr.astype(np.int64)
     ns = np.sort(ns)
     maxidx = ns[-1]
     sums = np.zeros((indptr.size - 1), dtype=data.dtype)
@@ -405,8 +420,9 @@ def top_segment_proportions_sparse_csr(data, indptr, ns):
     partitioned = partitioned[:, ::-1][:, :ns[-1]]
     acc = np.zeros((indptr.size - 1), dtype=data.dtype)
     prev = 0
-    for j, n in enumerate(ns):
-        acc += partitioned[:, prev:n].sum(axis=1)
+    # can’t use enumerate due to https://github.com/numba/numba/issues/2625
+    for j in range(ns.size):
+        acc += partitioned[:, prev:ns[j]].sum(axis=1)
         values[:, j] = acc
-        prev = n
+        prev = ns[j]
     return values / sums.reshape((indptr.size - 1, 1))

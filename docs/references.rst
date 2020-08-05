@@ -95,6 +95,10 @@ References
    *Python Implementation of MNN correct*,
    `GitHub <https://github.com/chriscainx/mnnpy>`__.
 
+.. [Korunsky19] Korunsky *et al.* (2019),
+   *Fast, sensitive and accurate integration of single-cell data with Harmony*,
+   `Nature Methods <https://doi.org/10.1038/s41592-019-0619-0>` __.
+
 .. [Krumsiek10] Krumsiek *et al.* (2010),
    *Odefy – From discrete to continuous models*,
    `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-233>`__.
@@ -114,6 +118,10 @@ References
 .. [Levine15] Levine *et al.* (2015),
    *Data-Driven Phenotypic Dissection of AML Reveals Progenitor--like Cells that Correlate with Prognosis*,
    `Cell <https://doi.org/10.1016/j.cell.2015.05.047>`__.
+
+.. [Lopez18] Lopez *et al.* (2018),
+   *Deep generative modeling for single-cell transcriptomics*
+   `Nature Methods <https://doi.org/10.1038/s41592-018-0229-2>`__.
 
 .. [Maaten08] Maaten & Hinton (2008),
    *Visualizing data using t-SNE*,
@@ -176,13 +184,33 @@ References
    *Computational assignment of cell-cycle stage from single-cell transcriptome data*
    `Methods <https://doi.org/10.1016/j.ymeth.2015.06.021>`__.
 
+.. [Setty16] Setty *et al.* (2016),
+   *Wishbone identifies bifurcating developmental trajectories from single-cell data*
+   `Nature Biotechnology <https://doi.org/10.1038/nbt.3569>`__.
+
 .. [Setty18] Setty *et al.* (2018),
    *Palantir characterizes cell fate continuities in human hematopoiesis*
-   `bioRxiv <https://doi.org/10.1101/385328>`__.
+   `Nature Biotechnology <https://www.nature.com/articles/s41587-019-0068-4>`__.
 
-.. [Traag17] Traag (2017),
+.. [Stuart19] Stuart *et al.* (2019),
+   *Comprehensive integration of single-cell data*
+   `Cell <https://www.sciencedirect.com/science/article/pii/S0092867419305598>`__.
+
+.. [Svensson20] Svensson *et al.* (2020),
+   *Interpretable factor models of single-cell RNA-seq via variational autoencoders*
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__. 
+
+.. [Nowotschin18i] Nowotschin *et al.* (2018),
+   *The emergent landscape of the mouse gut endoderm at single-cell resolution*
+   `Nature <https://www.nature.com/articles/s41586-019-1127-1>`__.
+
+.. [Traag17]  (2017),
    *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
+
+.. [Tarashansky19] Tarashansky (2019),
+   *Self-assembling manifolds in single-cell RNA sequencing data*,
+   `Elife <https://doi.org/10.7554/eLife.48994>`__.
 
 .. [Traag18] Traag *et al.* (2018),
    *From Louvain to Leiden: guaranteeing well-connected communities*

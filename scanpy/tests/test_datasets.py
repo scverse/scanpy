@@ -6,6 +6,7 @@ import scanpy as sc
 import numpy as np
 import pytest
 from pathlib import Path
+from anndata.tests.helpers import assert_adata_equal
 
 
 @pytest.fixture(scope="module")
@@ -43,9 +44,19 @@ def test_pbmc3k(tmp_dataset_dir):
 
 
 @pytest.mark.internet
+def test_pbmc3k_processed(tmp_dataset_dir):
+    with pytest.warns(None) as records:
+        adata = sc.datasets.pbmc3k_processed()
+    assert adata.shape == (2638, 1838)
+    assert adata.raw.shape == (2638, 13714)
+
+    assert len(records) == 0
+
+
+@pytest.mark.internet
 def test_ebi_expression_atlas(tmp_dataset_dir):
     adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
-    assert adata.shape == (2315, 23852)
+    assert adata.shape == (2315, 24051)  # This changes sometimes
 
 
 def test_krumsiek11(tmp_dataset_dir):
@@ -69,4 +80,27 @@ def test_toggleswitch():
 
 
 def test_pbmc68k_reduced():
-    sc.datasets.pbmc68k_reduced()
+    with pytest.warns(None) as records:
+        sc.datasets.pbmc68k_reduced()
+    assert len(records) == 0  # Test that loading a dataset does not warn
+
+
+@pytest.mark.internet
+def test_visium_datasets(tmp_dataset_dir, tmpdir):
+    # Tests that reading/ downloading works and is does not have global effects
+    hheart = sc.datasets.visium_sge("V1_Human_Heart")
+    mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
+    hheart_again = sc.datasets.visium_sge("V1_Human_Heart")
+    assert_adata_equal(hheart, hheart_again)
+
+    # Test that changing the dataset dir doesn't break reading
+    sc.settings.datasetdir = Path(tmpdir)
+    mbrain_again = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
+    assert_adata_equal(mbrain, mbrain_again)
+
+
+def test_download_failure():
+    from urllib.error import HTTPError
+
+    with pytest.raises(HTTPError):
+        sc.datasets.ebi_expression_atlas("not_a_real_accession")

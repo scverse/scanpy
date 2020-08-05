@@ -2,9 +2,9 @@ from types import MappingProxyType
 from typing import Optional, Sequence, Union, Mapping, Any
 
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 
 from ..._compat import Literal
+from ..._utils import AnyRandom
 
 
 _AEType = Literal['zinb-conddisp', 'zinb', 'nb-conddisp', 'nb']
@@ -30,7 +30,7 @@ def dca(
     early_stop: int = 15,
     batch_size: int = 32,
     optimizer: str = 'rmsprop',
-    random_state: Union[int, RandomState] = 0,
+    random_state: AnyRandom = 0,
     threads: Optional[int] = None,
     learning_rate: Optional[float] = None,
     verbose: bool = False,
@@ -149,9 +149,7 @@ def dca(
     try:
         from dca.api import dca
     except ImportError:
-        raise ImportError(
-            'Please install dca package (>= 0.2.1) via `pip install dca`'
-        )
+        raise ImportError('Please install dca package (>= 0.2.1) via `pip install dca`')
 
     return dca(
         adata,

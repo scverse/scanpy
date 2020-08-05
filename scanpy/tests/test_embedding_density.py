@@ -8,9 +8,7 @@ def test_embedding_density():
     # Test that density values are scaled
     # Test that the highest value is in the middle for a grid layout
     test_data = AnnData(X=np.ones((9, 10)))
-    test_data.obsm['X_test'] = np.array(
-        [[x, y] for x in range(3) for y in range(3)]
-    )
+    test_data.obsm['X_test'] = np.array([[x, y] for x in range(3) for y in range(3)])
     sc.tl.embedding_density(test_data, 'test')
 
     max_dens = np.max(test_data.obs['test_density'])

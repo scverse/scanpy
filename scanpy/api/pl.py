@@ -2,7 +2,7 @@ from ..plotting._anndata import scatter, violin, ranking, clustermap, stacked_vi
 
 from ..plotting._preprocessing import filter_genes_dispersion, highly_variable_genes
 
-from ..plotting._tools.scatterplots import embedding, pca, diffmap, draw_graph, tsne, phate, umap, trimap
+from ..plotting._tools.scatterplots import embedding, pca, diffmap, draw_graph, tsne, umap
 from ..plotting._tools import pca_loadings, pca_scatter, pca_overview, pca_variance_ratio
 from ..plotting._tools.paga import paga, paga_adjacency, paga_compare, paga_path
 from ..plotting._tools import dpt_timeseries, dpt_groups_pseudotime

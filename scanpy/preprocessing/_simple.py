@@ -2,22 +2,24 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+from functools import singledispatch
+from numbers import Number
 import warnings
 from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
 
 import numba
 import numpy as np
 import scipy as sp
-from numpy.random.mtrand import RandomState
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
-from sklearn.utils import sparsefuncs
+from sklearn.utils import sparsefuncs, check_array
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 
 from .. import logging as logg
 from .._settings import settings as sett
-from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual
+from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, AnyRandom, _check_array_function_arguments
 from .._compat import Literal
+from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 
@@ -26,8 +28,6 @@ try:
     import dask.array as da
 except ImportError:
     da = None
-
-N_PCS = 50  # default number of PCs
 
 # backwards compat
 from ._deprecated.highly_variable_genes import filter_genes_dispersion
@@ -250,13 +250,17 @@ def filter_genes(
     return gene_subset, number_per_gene
 
 
+@singledispatch
 def log1p(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    X: Union[AnnData, np.ndarray, spmatrix],
+    *,
+    base: Optional[Number] = None,
     copy: bool = False,
-    chunked: bool = False,
+    chunked: bool = None,
     chunk_size: Optional[int] = None,
-    base: Optional[float] = None,
-) -> Optional[AnnData]:
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+):
     """\
     Logarithmize the data matrix.
 
@@ -265,9 +269,11 @@ def log1p(
 
     Parameters
     ----------
-    data
+    X
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
+    base
+        Base of the logarithm. Natural logarithm is used by default.
     copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
@@ -276,51 +282,77 @@ def log1p(
         Applies only to :class:`~anndata.AnnData`.
     chunk_size
         `n_obs` of the chunks to process the data in.
-    base
-        Base of the logarithm. Natural logarithm is used by default.
+    layer
+        Entry of layers to tranform.
+    obsm
+        Entry of obsm to transform.
 
     Returns
     -------
     Returns or updates `data`, depending on `copy`.
     """
-    if 'log1p' in data.uns_keys():
-        logg.warning('adata.X seems to be already log-transformed.')
+    _check_array_function_arguments(
+        chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
+    )
+    return log1p_array(X, copy=copy, base=base)
 
+
+@log1p.register(spmatrix)
+def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
+    X = check_array(
+        X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
+    )
+    X.data = log1p(X.data, copy=False, base=base)
+    return X
+
+
+@log1p.register(np.ndarray)
+def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
+    # Can force arrays to be np.ndarrays, but would be useful
+    # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
-        if not isinstance(data, AnnData):
-            data = data.astype(np.floating)
+        if not np.issubdtype(X.dtype, np.floating):
+            X = X.astype(np.floating)
         else:
-            data = data.copy()
-    elif not isinstance(data, AnnData) and np.issubdtype(data.dtype, np.integer):
-        raise TypeError("Cannot perform inplace log1p on integer array")
+            X = X.copy()
+    np.log1p(X, out=X)
+    if base is not None:
+        np.divide(X, np.log(base), out=X)
+    return X
 
-    if isinstance(data, AnnData) and data.isview:
-        view_to_actual(data)
 
-    def _log1p(X):
-        if issparse(X):
-            np.log1p(X.data, out=X.data)
-            if base is not None:
-                np.divide(X.data, np.log(base), out=X.data)
-        else:
-            np.log1p(X, out=X)
-            if base is not None:
-                np.divide(X, np.log(base), out=X)
-        return X
+@log1p.register(AnnData)
+def log1p_anndata(
+    adata,
+    *,
+    base: Optional[Number] = None,
+    copy: bool = False,
+    chunked: bool = False,
+    chunk_size: Optional[int] = None,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+) -> Optional[AnnData]:
+    if "log1p" in adata.uns_keys():
+        logg.warning("adata.X seems to be already log-transformed.")
 
-    if isinstance(data, AnnData):
-        if not np.issubdtype(data.X.dtype, np.floating):
-            data.X = data.X.astype(np.float32)
-        if chunked:
-            for chunk, start, end in data.chunked_X(chunk_size):
-                 data.X[start:end] = _log1p(chunk)
-        else:
-            _log1p(data.X)
+    adata = adata.copy() if copy else adata
+    view_to_actual(adata)
+
+    if chunked:
+        if (layer is not None) or (obsm is not None):
+            raise NotImplementedError(
+                "Currently cannot perform chunked operations on arrays not stored in X."
+            )
+        for chunk, start, end in adata.chunked_X(chunk_size):
+            adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
-        _log1p(data)
+        X = _get_obs_rep(adata, layer=layer, obsm=obsm)
+        X = log1p(X, copy=False, base=base)
+        _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
-    data.uns['log1p'] = {'base': base}
-    return data if copy else None
+    adata.uns["log1p"] = {"base": base}
+    if copy:
+        return adata
 
 
 def sqrt(
@@ -365,202 +397,6 @@ def sqrt(
         return np.sqrt(X)
     else:
         return X.sqrt()
-
-
-def pca(
-    data: Union[AnnData, np.ndarray, spmatrix],
-    n_comps: int = N_PCS,
-    zero_center: Optional[bool] = True,
-    svd_solver: str = 'arpack',
-    random_state: Optional[Union[int, RandomState]] = 0,
-    return_info: bool = False,
-    use_highly_variable: Optional[bool] = None,
-    dtype: str = 'float32',
-    copy: bool = False,
-    chunked: bool = False,
-    chunk_size: Optional[int] = None,
-) -> Union[AnnData, np.ndarray, spmatrix]:
-    """\
-    Principal component analysis [Pedregosa11]_.
-
-    Computes PCA coordinates, loadings and variance decomposition.
-    Uses the implementation of *scikit-learn* [Pedregosa11]_.
-
-    Parameters
-    ----------
-    data
-        The (annotated) data matrix of shape `n_obs` × `n_vars`.
-        Rows correspond to cells and columns to genes.
-    n_comps
-        Number of principal components to compute.
-    zero_center
-        If `True`, compute standard PCA from covariance matrix.
-        If `False`, omit zero-centering variables
-        (uses :class:`~sklearn.decomposition.TruncatedSVD`),
-        which allows to handle sparse input efficiently.
-        Passing `None` decides automatically based on sparseness of the data.
-    svd_solver
-        SVD solver to use:
-
-        `'arpack'`
-          for the ARPACK wrapper in SciPy (:func:`~scipy.sparse.linalg.svds`)
-        `'randomized'`
-          for the randomized algorithm due to Halko (2009).
-        `'auto'` (the default)
-          chooses automatically depending on the size of the problem.
-
-        .. versionchanged:: 1.4.5
-           Default value changed from `'auto'` to `'arpack'`.
-
-    random_state
-        Change to use different initial states for the optimization.
-    return_info
-        Only relevant when not passing an :class:`~anndata.AnnData`:
-        see “**Returns**”.
-    use_highly_variable
-        Whether to use highly variable genes only, stored in
-        `.var['highly_variable']`.
-        By default uses them if they have been determined beforehand.
-    dtype
-        Numpy data type string to which to convert the result.
-    copy
-        If an :class:`~anndata.AnnData` is passed, determines whether a copy
-        is returned. Is ignored otherwise.
-    chunked
-        If `True`, perform an incremental PCA on segments of `chunk_size`.
-        The incremental PCA automatically zero centers and ignores settings of
-        `random_seed` and `svd_solver`. If `False`, perform a full PCA.
-    chunk_size
-        Number of observations to include in each chunk.
-        Required if `chunked=True` was passed.
-
-    Returns
-    -------
-    X_pca : :class:`~scipy.sparse.spmatrix`, :class:`~numpy.ndarray`
-        If `data` is array-like and `return_info=False` was passed,
-        this function only returns `X_pca`…
-    adata : anndata.AnnData
-        …otherwise if `copy=True` it returns or else adds fields to `adata`:
-
-        `.obsm['X_pca']`
-             PCA representation of data.
-        `.varm['PCs']`
-             The principal components containing the loadings.
-        `.uns['pca']['variance_ratio']`
-             Ratio of explained variance.
-        `.uns['pca']['variance']`
-             Explained variance, equivalent to the eigenvalues of the
-             covariance matrix.
-    """
-    # chunked calculation is not randomized, anyways
-    if svd_solver in {'auto', 'randomized'} and not chunked:
-        logg.info(
-            'Note that scikit-learn\'s randomized PCA might not be exactly '
-            'reproducible across different computational platforms. For exact '
-            'reproducibility, choose `svd_solver=\'arpack\'.` This will likely '
-            'become the Scanpy default in the future.'
-        )
-
-    data_is_AnnData = isinstance(data, AnnData)
-    if data_is_AnnData:
-        adata = data.copy() if copy else data
-    else:
-        adata = AnnData(data)
-
-    start = logg.info(f'computing PCA with n_comps = {n_comps}')
-
-    if adata.n_vars < n_comps:
-        n_comps = adata.n_vars - 1
-        logg.debug(
-            f'reducing number of computed PCs to {n_comps} '
-            f'as dim of data is only {adata.n_vars}'
-        )
-
-    if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
-        raise ValueError('Did not find adata.var[\'highly_variable\']. '
-                         'Either your data already only consists of highly-variable genes '
-                         'or consider running `pp.highly_variable_genes` first.')
-    if use_highly_variable is None:
-        use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
-    if use_highly_variable:
-        logg.info('    on highly variable genes')
-    adata_comp = adata[:, adata.var['highly_variable']] if use_highly_variable else adata
-
-    if chunked:
-        if not zero_center or random_state or svd_solver != 'arpack':
-            logg.debug('Ignoring zero_center, random_state, svd_solver')
-
-        from sklearn.decomposition import IncrementalPCA
-
-        X_pca = np.zeros((adata_comp.X.shape[0], n_comps), adata_comp.X.dtype)
-
-        pca_ = IncrementalPCA(n_components=n_comps)
-
-        for chunk, _, _ in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if issparse(chunk) else chunk
-            pca_.partial_fit(chunk)
-
-        for chunk, start, end in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if issparse(chunk) else chunk
-            X_pca[start:end] = pca_.transform(chunk)
-    else:
-        if zero_center is None:
-            zero_center = not issparse(adata_comp.X)
-        if zero_center:
-            from sklearn.decomposition import PCA
-            if issparse(adata_comp.X):
-                logg.debug(
-                    '    as `zero_center=True`, '
-                    'sparse input is densified and may '
-                    'lead to huge memory consumption',
-                )
-                X = adata_comp.X.toarray()  # Copying the whole adata_comp.X here, could cause memory problems
-            else:
-                X = adata_comp.X
-            pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
-        else:
-            from sklearn.decomposition import TruncatedSVD
-            logg.debug(
-                '    without zero-centering: \n'
-                '    the explained variance does not correspond to the exact statistical defintion\n'
-                '    the first component, e.g., might be heavily influenced by different means\n'
-                '    the following components often resemble the exact PCA very closely'
-            )
-            pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
-            X = adata_comp.X
-        X_pca = pca_.fit_transform(X)
-
-    if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
-
-    if data_is_AnnData:
-        adata.obsm['X_pca'] = X_pca
-        adata.uns['pca'] = {}
-        adata.uns['pca']['params'] = {
-            'zero_center': zero_center,
-            'use_highly_variable': use_highly_variable
-        }
-        if use_highly_variable:
-            adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm['PCs'][adata.var['highly_variable']] = pca_.components_.T
-        else:
-            adata.varm['PCs'] = pca_.components_.T
-        adata.uns['pca']['variance'] = pca_.explained_variance_
-        adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
-        logg.info('    finished', time=start)
-        logg.debug(
-            'and added\n'
-            '    \'X_pca\', the PCA coordinates (adata.obs)\n'
-            '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
-            '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
-            '    \'pca_variance_ratio\', the variance ratio (adata.uns)'
-        )
-        return adata if copy else None
-    else:
-        logg.info('    finished', time=start)
-        if return_info:
-            return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
-        else:
-            return X_pca
 
 
 def normalize_per_cell(
@@ -694,48 +530,6 @@ def normalize_per_cell(
     return X if copy else None
 
 
-def normalize_per_cell_weinreb16_deprecated(
-    X: np.ndarray,
-    max_fraction: float = 1,
-    mult_with_mean: bool = False,
-) -> np.ndarray:
-    """\
-    Normalize each cell [Weinreb17]_.
-
-    This is a deprecated version. See `normalize_per_cell` instead.
-
-    Normalize each cell by UMI count, so that every cell has the same total
-    count.
-
-    Parameters
-    ----------
-    X
-        Expression matrix. Rows correspond to cells and columns to genes.
-    max_fraction
-        Only use genes that make up more than max_fraction of the total
-        reads in every cell.
-    mult_with_mean
-        Multiply the result with the mean of total counts.
-
-    Returns
-    -------
-    Normalized version of the original expression matrix.
-    """
-    if max_fraction < 0 or max_fraction > 1:
-        raise ValueError('Choose max_fraction between 0 and 1.')
-
-    counts_per_cell = X.sum(1).A1 if issparse(X) else X.sum(1)
-    gene_subset = np.all(X <= counts_per_cell[:, None] * max_fraction, axis=0)
-    if issparse(X): gene_subset = gene_subset.A1
-    tc_include = X[:, gene_subset].sum(1).A1 if issparse(X) else X[:, gene_subset].sum(1)
-
-    X_norm = X.multiply(csr_matrix(1/tc_include[:, None])) if issparse(X) else X / tc_include[:, None]
-    if mult_with_mean:
-        X_norm *= np.mean(counts_per_cell)
-
-    return X_norm
-
-
 def regress_out(
     adata: AnnData,
     keys: Union[str, Sequence[str]],
@@ -774,6 +568,10 @@ def regress_out(
     adata = adata.copy() if copy else adata
 
     sanitize_anndata(adata)
+
+    # TODO: This should throw an implicit modification warning
+    if adata.is_view:
+        adata._init_as_actual(adata.copy())
 
     if isinstance(keys, str):
         keys = [keys]
@@ -856,6 +654,13 @@ def _regress_out_chunk(data):
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
     for col_index in range(data_chunk.shape[1]):
+
+        # if all values are identical, the statsmodel.api.GLM throws an error;
+        # but then no regression is necessary anyways...
+        if not (data_chunk[:, col_index] != data_chunk[0, col_index]).any():
+            responses_chunk_list.append(data_chunk[:, col_index])
+            continue
+
         if variable_is_categorical:
             regres = np.c_[np.ones(regressors.shape[0]), regressors[:, col_index]]
         else:
@@ -872,23 +677,26 @@ def _regress_out_chunk(data):
     return np.vstack(responses_chunk_list)
 
 
+@singledispatch
 def scale(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    X: Union[AnnData, spmatrix, np.ndarray],
     zero_center: bool = True,
     max_value: Optional[float] = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+):
     """\
     Scale data to unit variance and zero mean.
 
     .. note::
         Variables (genes) that do not display any variation (are constant across
-        all observations) are retained and set to 0 during this operation. In
-        the future, they might be set to NaNs.
+        all observations) are retained and (for zero_center==True) set to 0
+        during this operation. In the future, they might be set to NaNs.
 
     Parameters
     ----------
-    data
+    X
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     zero_center
@@ -897,52 +705,123 @@ def scale(
     max_value
         Clip (truncate) to this value after scaling. If `None`, do not clip.
     copy
-        If an :class:`~anndata.AnnData` is passed,
-        determines whether a copy is returned.
+        Whether this function should be performed inplace. If an AnnData object
+        is passed, this also determines if a copy is returned.
+    layer
+        If provided, which element of layers to scale.
+    obsm
+        If provided, which element of obsm to scale.
 
     Returns
     -------
-    Depending on `copy` returns or updates `adata` with a scaled `adata.X`.
+    Depending on `copy` returns or updates `adata` with a scaled `adata.X`,
+    annotated with `'mean'` and `'std'` in `adata.var`.
     """
-    if isinstance(data, AnnData):
-        adata = data.copy() if copy else data
-        view_to_actual(adata)
-        # need to add the following here to make inplace logic work
-        if zero_center and issparse(adata.X):
-            logg.debug(
-                '... scale_data: as `zero_center=True`, sparse input is '
-                'densified and may lead to large memory consumption.'
-            )
-            adata.X = adata.X.toarray()
-        scale(adata.X, zero_center=zero_center, max_value=max_value, copy=False)
-        return adata if copy else None
-    X = data.copy() if copy else data  # proceed with the data matrix
-    zero_center = not issparse(X) if zero_center is None else zero_center
+    _check_array_function_arguments(layer=layer, obsm=obsm)
+    return scale_array(data, zero_center=zero_center, max_value=max_value, copy=copy)
+
+
+@scale.register(np.ndarray)
+def scale_array(
+    X,
+    *,
+    zero_center: bool = True,
+    max_value: Optional[float] = None,
+    copy: bool = False,
+    return_mean_std: bool = False,
+):
+    if copy:
+        X = X.copy()
     if not zero_center and max_value is not None:
-        logg.debug(
-            '... scale_data: be careful when using `max_value` '
-            'without `zero_center`.'
+        logg.info(  # Be careful of what? This should be more specific
+            "... be careful when using `max_value` " "without `zero_center`."
         )
+
+    if np.issubdtype(X.dtype, np.integer):
+        logg.info(
+            '... as scaling leads to float results, integer '
+            'input is cast to float, returning copy.'
+        )
+        X = X.astype(float)
+
+    mean, var = _get_mean_var(X)
+    std = np.sqrt(var)
+    std[std == 0] = 1
+    if issparse(X):
+        if zero_center:
+            raise ValueError("Cannot zero-center sparse matrix.")
+        sparsefuncs.inplace_column_scale(X, 1 / std)
+    else:
+        if zero_center:
+            X -= mean
+        X /= std
+
+    # do the clipping
     if max_value is not None:
-        logg.debug(f'... clipping at max_value {max_value}')
-    if zero_center and issparse(X):
-        logg.debug(
-            '... scale_data: as `zero_center=True`, sparse input is densified '
-            'and may lead to large memory consumption, returning copy.'
+        logg.debug(f"... clipping at max_value {max_value}")
+        X[X > max_value] = max_value
+
+    if return_mean_std:
+        return X, mean, std
+    else:
+        return X
+
+
+@scale.register(spmatrix)
+def scale_sparse(
+    X,
+    *,
+    zero_center: bool = True,
+    max_value: Optional[float] = None,
+    copy: bool = False,
+    return_mean_std: bool = False,
+):
+    # need to add the following here to make inplace logic work
+    if zero_center:
+        logg.info(
+            "... as `zero_center=True`, sparse input is "
+            "densified and may lead to large memory consumption"
         )
         X = X.toarray()
-        copy = True
-    _scale(X, zero_center)
-    if max_value is not None:
-        X[X > max_value] = max_value
-    return X if copy else None
+        copy = False  # Since the data has been copied
+    return scale_array(
+        X,
+        zero_center=zero_center,
+        copy=copy,
+        max_value=max_value,
+        return_mean_std=return_mean_std,
+    )
+
+@scale.register(AnnData)
+def scale_anndata(
+    adata: AnnData,
+    *,
+    zero_center: bool = True,
+    max_value: Optional[float] = None,
+    copy: bool = False,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+) -> Optional[AnnData]:
+    adata = adata.copy() if copy else adata
+    view_to_actual(adata)
+    X = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    X, adata.var["mean"], adata.var["std"] = scale(
+        X,
+        zero_center=zero_center,
+        max_value=max_value,
+        copy=False,  # because a copy has already been made, if it were to be made
+        return_mean_std=True,
+    )
+    _set_obs_rep(adata, X, layer=layer, obsm=obsm)
+    if copy:
+        return adata
 
 
 def subsample(
     data: Union[AnnData, np.ndarray, spmatrix],
     fraction: Optional[float] = None,
     n_obs: Optional[int] = None,
-    random_state: Union[int, RandomState] = 0,
+    random_state: AnyRandom = 0,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -984,9 +863,10 @@ def subsample(
         raise ValueError('Either pass `n_obs` or `fraction`.')
     obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
     if isinstance(data, AnnData):
-        adata = data.copy() if copy else data
-        adata._inplace_subset_obs(obs_indices)
-        return adata if copy else None
+        if copy:
+            return data[obs_indices].copy()
+        else:
+            data._inplace_subset_obs(obs_indices)
     else:
         X = data
         return X[obs_indices], obs_indices
@@ -998,7 +878,7 @@ def downsample_counts(
     counts_per_cell: Optional[Union[int, Collection[int]]] = None,
     total_counts: Optional[int] = None,
     *,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     replace: bool = False,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -1135,7 +1015,7 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
 def _downsample_array(
     col: np.ndarray,
     target: int,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     replace: bool = True,
     inplace: bool = False,
 ):
@@ -1163,29 +1043,6 @@ def _downsample_array(
     return col
 
 
-
-def zscore_deprecated(X: np.ndarray) -> np.ndarray:
-    """\
-    Z-score standardize each variable/gene in X.
-
-    Use `scale` instead.
-
-    Reference: Weinreb et al. (2017).
-
-    Parameters
-    ----------
-    X
-        Data matrix. Rows correspond to cells and columns to genes.
-
-    Returns
-    -------
-    Z-score standardized version of the data matrix.
-    """
-    means = np.tile(np.mean(X, axis=0)[None, :], (X.shape[0], 1))
-    stds = np.tile(np.std(X, axis=0)[None, :], (X.shape[0], 1))
-    return (X - means) / (stds + .0001)
-
-
 # --------------------------------------------------------------------------------
 # Helper Functions
 # --------------------------------------------------------------------------------
@@ -1210,26 +1067,3 @@ def _pca_fallback(data, n_comps=2):
     evecs = evecs[:, :n_comps]
     # project data points on eigenvectors
     return np.dot(evecs.T, data.T).T
-
-
-def _scale(X, zero_center=True):
-    # - using sklearn.StandardScaler throws an error related to
-    #   int to long trafo for very large matrices
-    # - using X.multiply is slower
-    #   the result differs very slightly, why?
-    if True:
-        mean, var = _get_mean_var(X)
-        scale = np.sqrt(var)
-        if issparse(X):
-            if zero_center: raise ValueError('Cannot zero-center sparse matrix.')
-            sparsefuncs.inplace_column_scale(X, 1/scale)
-        else:
-            X -= mean
-            scale[scale == 0] = 1e-12
-            X /= scale
-    else:
-        from sklearn.preprocessing import StandardScaler
-        scaler = StandardScaler(with_mean=zero_center, copy=False).partial_fit(X)
-        # user R convention (unbiased estimator)
-        scaler.scale_ *= np.sqrt(X.shape[0]/(X.shape[0]-1))
-        scaler.transform(X)

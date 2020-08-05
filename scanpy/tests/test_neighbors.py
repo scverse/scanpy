@@ -1,8 +1,11 @@
+import warnings
+
 import numpy as np
 import pytest
 from anndata import AnnData
 from scipy.sparse import csr_matrix
 
+import scanpy as sc
 from scanpy import Neighbors
 
 # the input data
@@ -143,11 +146,24 @@ def test_metrics_argument():
     assert not np.allclose(no_knn_euclidean.distances, no_knn_manhattan.distances)
 
 
+def test_use_rep_argument():
+    adata = AnnData(np.random.randn(30, 300))
+    sc.pp.pca(adata)
+    neigh_pca = Neighbors(adata)
+    neigh_pca.compute_neighbors(n_pcs=5, use_rep='X_pca')
+    neigh_none = Neighbors(adata)
+    neigh_none.compute_neighbors(n_pcs=5, use_rep=None)
+    assert np.allclose(neigh_pca.distances.toarray(), neigh_none.distances.toarray())
+
+
 @pytest.mark.parametrize('conv', [csr_matrix.toarray, csr_matrix])
 def test_restore_n_neighbors(neigh, conv):
     neigh.compute_neighbors(method='gauss', n_neighbors=n_neighbors)
 
     ad = AnnData(np.array(X))
-    ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
+    # Allow deprecated usage for now
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1

@@ -1,24 +1,28 @@
-import pandas as pd
-import numpy as np
-from sklearn.utils import check_random_state
-from scipy.sparse import issparse
 from collections.abc import MutableMapping
 from typing import Iterable, Union, Optional
-from anndata import AnnData
-from distutils.version import LooseVersion
 
-from ..preprocessing._simple import N_PCS
+import pandas as pd
+import numpy as np
+from packaging import version
+from sklearn.utils import check_random_state
+from scipy.sparse import issparse
+from anndata import AnnData
+
+from .. import settings
 from ..neighbors import _rp_forest_generate
 from .. import logging as logg
-from .._utils import version
+from .._utils import pkg_version, NeighborsView
+
+ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
     obs: Optional[Union[str, Iterable[str]]] = None,
-    embedding_method: Union[str, Iterable[str]] = ['umap', 'pca'],
+    embedding_method: Union[str, Iterable[str]] = ('umap', 'pca'),
     labeling_method: str = 'knn',
+    neighbors_key: Optional[str] = None,
     inplace: bool = True,
     **kwargs,
 ):
@@ -66,6 +70,13 @@ def ingest(
     labeling_method
         The method to map labels in `adata_ref.obs` to `adata.obs`.
         The only supported value is 'knn'.
+    neighbors_key
+        If not specified, ingest looks adata_ref.uns['neighbors']
+        for neighbors settings and adata_ref.obsp['distances'] for
+        distances (default storage places for pp.neighbors).
+        If specified, ingest looks adata_ref.uns[neighbors_key] for
+        neighbors settings and
+        adata_ref.obsp[adata_ref.uns[neighbors_key]['distances_key']] for distances.
     inplace
         Only works if `return_joint=False`.
         Add labels and embeddings to the passed `adata` (if `True`)
@@ -82,6 +93,7 @@ def ingest(
     -------
     Call sequence:
 
+    >>> import scanpy as sc
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
     >>> sc.tl.ingest(adata, adata_ref, obs='cell_type')
@@ -90,35 +102,31 @@ def ingest(
     .. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
     """
     # anndata version check
-    anndata_version = version("anndata")
-    if anndata_version <= LooseVersion('0.6.23'):
+    anndata_version = pkg_version("anndata")
+    if anndata_version < ANNDATA_MIN_VERSION:
         raise ValueError(
-            f'ingest only works correctly with anndata>=0.7rc2 (you have {anndata_version}) '
-            'as prior to 0.7rc2, `AnnData.concatenate` did not concatenate `.obsm`'
+            f'ingest only works correctly with anndata>={ANNDATA_MIN_VERSION} '
+            f'(you have {anndata_version}) as prior to {ANNDATA_MIN_VERSION}, '
+            '`AnnData.concatenate` did not concatenate `.obsm`.'
         )
 
     start = logg.info('running ingest')
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
-        [embedding_method]
-        if isinstance(embedding_method, str)
-        else embedding_method
+        [embedding_method] if isinstance(embedding_method, str) else embedding_method
     )
     labeling_method = (
-        [labeling_method]
-        if isinstance(labeling_method, str)
-        else labeling_method
+        [labeling_method] if isinstance(labeling_method, str) else labeling_method
     )
 
     if len(labeling_method) == 1 and len(obs or []) > 1:
         labeling_method = labeling_method * len(obs)
 
-    ing = Ingest(adata_ref)
+    ing = Ingest(adata_ref, neighbors_key)
     ing.fit(adata)
 
-    if embedding_method is not None:
-        for method in embedding_method:
-            ing.map_embedding(method)
+    for method in embedding_method:
+        ing.map_embedding(method)
 
     if obs is not None:
         ing.neighbors(**kwargs)
@@ -178,25 +186,30 @@ class Ingest:
     """
 
     def _init_umap(self, adata):
-        from umap import UMAP
+        import umap as u
 
-        self._umap = UMAP(metric=adata.uns['neighbors']['params']['metric'])
+        u.umap_._HAVE_PYNNDESCENT = False
+
+        self._umap = u.UMAP(
+            metric=self._metric,
+            random_state=adata.uns['umap']['params'].get('random_state', 0),
+        )
 
         self._umap.embedding_ = adata.obsm['X_umap']
         self._umap._raw_data = self._rep
         self._umap._sparse_data = issparse(self._rep)
         self._umap._small_data = self._rep.shape[0] < 4096
-        self._umap._metric_kwds = adata.uns['neighbors']['params'].get(
-            'metric_kwds', {}
-        )
-        self._umap._n_neighbors = adata.uns['neighbors']['params'][
-            'n_neighbors'
-        ]
+        self._umap._metric_kwds = self._metric_kwds
+        self._umap._n_neighbors = self._n_neighbors
         self._umap._initial_alpha = self._umap.learning_rate
 
-        self._umap._random_init = self._random_init
-        self._umap._tree_init = self._tree_init
-        self._umap._search = self._search
+        if self._random_init is not None or self._tree_init is not None:
+            self._umap._random_init = self._random_init
+            self._umap._tree_init = self._tree_init
+            self._umap._search = self._search
+
+        if self._dist_func is not None:
+            self._umap._input_distance_func = self._dist_func
 
         self._umap._rp_forest = self._rp_forest
 
@@ -207,47 +220,87 @@ class Ingest:
 
         self._umap._input_hash = None
 
-    def _init_neighbors(self, adata):
+    def _init_dist_search(self, dist_args):
+        from functools import partial
+        from umap.nndescent import initialise_search
         from umap.distances import named_distances
-        from umap.nndescent import (
-            make_initialisations,
-            make_initialized_nnd_search,
-        )
 
-        if 'use_rep' in adata.uns['neighbors']['params']:
-            self._use_rep = adata.uns['neighbors']['params']['use_rep']
-            self._rep = (
-                adata.X if self._use_rep == 'X' else adata.obsm[self._use_rep]
+        self._random_init = None
+        self._tree_init = None
+
+        self._initialise_search = None
+        self._search = None
+
+        self._dist_func = None
+
+        dist_func = named_distances[self._metric]
+
+        if pkg_version('umap-learn') < version.parse("0.4.0"):
+            from umap.nndescent import (
+                make_initialisations,
+                make_initialized_nnd_search,
             )
-        elif 'n_pcs' in adata.uns['neighbors']['params']:
+
+            self._random_init, self._tree_init = make_initialisations(
+                dist_func, dist_args
+            )
+            _initialise_search = partial(
+                initialise_search,
+                init_from_random=self._random_init,
+                init_from_tree=self._tree_init,
+            )
+            _search = make_initialized_nnd_search(dist_func, dist_args)
+
+        else:
+            from numba import njit
+            from umap.nndescent import initialized_nnd_search
+
+            @njit
+            def partial_dist_func(x, y):
+                return dist_func(x, y, *dist_args)
+
+            _initialise_search = partial(initialise_search, dist=partial_dist_func)
+            _search = partial(initialized_nnd_search, dist=partial_dist_func)
+
+            self._dist_func = partial_dist_func
+
+        self._initialise_search = _initialise_search
+        self._search = _search
+
+    def _init_neighbors(self, adata, neighbors_key):
+        neighbors = NeighborsView(adata, neighbors_key)
+
+        self._n_neighbors = neighbors['params']['n_neighbors']
+
+        if 'use_rep' in neighbors['params']:
+            self._use_rep = neighbors['params']['use_rep']
+            self._rep = adata.X if self._use_rep == 'X' else adata.obsm[self._use_rep]
+        elif 'n_pcs' in neighbors['params']:
             self._use_rep = 'X_pca'
-            self._n_pcs = adata.uns['neighbors']['params']['n_pcs']
+            self._n_pcs = neighbors['params']['n_pcs']
             self._rep = adata.obsm['X_pca'][:, : self._n_pcs]
-        elif adata.n_vars > N_PCS and 'X_pca' in adata.obsm.keys():
+        elif adata.n_vars > settings.N_PCS and 'X_pca' in adata.obsm.keys():
             self._use_rep = 'X_pca'
-            self._rep = adata.obsm['X_pca'][:, :N_PCS]
+            self._rep = adata.obsm['X_pca'][:, : settings.N_PCS]
             self._n_pcs = self._rep.shape[1]
 
-        if 'metric_kwds' in adata.uns['neighbors']['params']:
-            dist_args = tuple(
-                adata.uns['neighbors']['params']['metric_kwds'].values()
-            )
+        if 'metric_kwds' in neighbors['params']:
+            self._metric_kwds = neighbors['params']['metric_kwds']
+            dist_args = tuple(self._metric_kwds.values())
         else:
+            self._metric_kwds = {}
             dist_args = ()
-        dist_func = named_distances[adata.uns['neighbors']['params']['metric']]
-        self._random_init, self._tree_init = make_initialisations(
-            dist_func, dist_args
-        )
-        self._search = make_initialized_nnd_search(dist_func, dist_args)
 
-        search_graph = adata.uns['neighbors']['distances'].copy()
+        self._metric = neighbors['params']['metric']
+
+        self._init_dist_search(dist_args)
+
+        search_graph = neighbors['distances'].copy()
         search_graph.data = (search_graph.data > 0).astype(np.int8)
         self._search_graph = search_graph.maximum(search_graph.transpose())
 
-        if 'rp_forest' in adata.uns['neighbors']:
-            self._rp_forest = _rp_forest_generate(
-                adata.uns['neighbors']['rp_forest']
-            )
+        if 'rp_forest' in neighbors:
+            self._rp_forest = _rp_forest_generate(neighbors['rp_forest'])
         else:
             self._rp_forest = None
 
@@ -263,7 +316,7 @@ class Ingest:
         else:
             self._pca_basis = adata.varm['PCs']
 
-    def __init__(self, adata):
+    def __init__(self, adata, neighbors_key=None):
         # assume rep is X if all initializations fail to identify it
         self._rep = adata.X
         self._use_rep = 'X'
@@ -276,8 +329,16 @@ class Ingest:
         if 'pca' in adata.uns:
             self._init_pca(adata)
 
-        if 'neighbors' in adata.uns:
-            self._init_neighbors(adata)
+        if neighbors_key is None:
+            neighbors_key = 'neighbors'
+
+        if neighbors_key in adata.uns:
+            self._init_neighbors(adata, neighbors_key)
+        else:
+            raise ValueError(
+                f'There is no neighbors data in `adata.uns["{neighbors_key}"]`.\n'
+                'Please run pp.neighbors.'
+            )
 
         if 'X_umap' in adata.obsm:
             self._init_umap(adata)
@@ -337,41 +398,31 @@ class Ingest:
         self._adata_new = adata_new
         self._obsm['rep'] = self._same_rep()
 
-    def neighbors(self, k=10, queue_size=5, random_state=0):
+    def neighbors(self, k=None, queue_size=5, random_state=0):
         """\
         Calculate neighbors of `adata_new` observations in `adata`.
 
         This function calculates `k` neighbors in `adata` for
         each observation of `adata_new`.
         """
-        from umap.nndescent import initialise_search
         from umap.utils import deheap_sort
         from umap.umap_ import INT32_MAX, INT32_MIN
 
         random_state = check_random_state(random_state)
-        rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(
-            np.int64
-        )
+        rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
 
         train = self._rep
         test = self._obsm['rep']
 
-        init = initialise_search(
-            self._rp_forest,
-            train,
-            test,
-            int(k * queue_size),
-            self._random_init,
-            self._tree_init,
-            rng_state,
+        if k is None:
+            k = self._n_neighbors
+
+        init = self._initialise_search(
+            self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state,
         )
 
         result = self._search(
-            train,
-            self._search_graph.indptr,
-            self._search_graph.indices,
-            init,
-            test,
+            train, self._search_graph.indptr, self._search_graph.indices, init, test,
         )
         indices, dists = deheap_sort(result)
         self._indices, self._distances = indices[:, :k], dists[:, :k]
@@ -401,9 +452,7 @@ class Ingest:
             'category'
         )  # ensure it's categorical
         values = [cat_array[inds].mode()[0] for inds in self._indices]
-        return pd.Categorical(
-            values=values, categories=cat_array.cat.categories
-        )
+        return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):
         """\

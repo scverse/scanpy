@@ -17,11 +17,11 @@ import sklearn
 
 
 def _gradient_descent(
-    objective: Callable[[np.ndarray, ...], Tuple[int, np.ndarray]],
+    objective: Callable[..., Tuple[int, np.ndarray]],
     p0: np.ndarray,
     it: int,
     n_iter: int,
-    objective_error: Optional[Callable[[np.ndarray, ...], float]] = None,
+    objective_error: Optional[Callable[..., float]] = None,
     n_iter_check: int = 1,
     n_iter_without_progress: int = 50,
     momentum: float = 0.5,

@@ -6,13 +6,12 @@ Anaconda
 If you do not have a working installation of Python 3.6 (or later), consider
 installing Miniconda_ (see `Installing Miniconda`_). Then run::
 
-    conda install -c bioconda scanpy
+    conda install seaborn scikit-learn statsmodels numba pytables
+    conda install -c conda-forge python-igraph leidenalg	
 
-Install the Leiden clustering package [Traag18]_ (improved Louvain clustering) via::
+Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pip3`` to access Python 3)::
 
-    conda install -c conda-forge leidenalg
-
-Alternatively, you might want to pull Scanpy `from PyPI`_.
+    pip install scanpy
 
 .. _from PyPI: https://pypi.org/project/scanpy
 
@@ -20,13 +19,13 @@ PyPI only
 ~~~~~~~~~
 If you prefer to exclusively use PyPI run::
 
-    pip install scanpy[louvain]
+    pip install scanpy[leiden]
 
-The extra `[louvain]` installs two packages that are needed for popular
-parts of scanpy but aren't requirements: python-igraph_ [Csardi06]_ and louvain_ [Traag17]_.
+The extra `[leiden]` installs two packages that are needed for popular
+parts of scanpy but aren't requirements: python-igraph_ [Csardi06]_ and leiden_ [Traag18]_.
 
 .. _python-igraph: http://igraph.org/python/
-.. _louvain: https://github.com/vtraag/louvain-igraph
+.. _leiden: https://leidenalg.readthedocs.io
 
 Development Version
 ~~~~~~~~~~~~~~~~~~~

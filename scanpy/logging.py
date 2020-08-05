@@ -1,12 +1,14 @@
 """Logging and Profiling
 """
 import logging
+import sys
 from functools import update_wrapper, partial
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import anndata.logging
+from sinfo import sinfo
 
 
 HINT = (INFO + DEBUG) // 2
@@ -110,57 +112,30 @@ print_memory_usage = anndata.logging.print_memory_usage
 get_memory_usage = anndata.logging.get_memory_usage
 
 
-_DEPENDENCIES_NUMERICS = [
-    'anndata',  # anndata actually shouldn't, but as long as it's in development
-    'umap',
-    'numpy',
-    'scipy',
-    'pandas',
-    ('sklearn', 'scikit-learn'),
-    'statsmodels',
-    ('igraph', 'python-igraph'),
-    'louvain',
-]
-
-
-_DEPENDENCIES_PLOTTING = ['matplotlib', 'seaborn']
-
-
-def _versions_dependencies(dependencies):
-    # this is not the same as the requirements!
-    for mod in dependencies:
-        mod_name, dist_name = mod if isinstance(mod, tuple) else (mod, mod)
+def print_versions(*, file=None):
+    """Print print versions of imported packages"""
+    if file is None:
+        sinfo(dependencies=True)
+    else:
+        stdout = sys.stdout
         try:
-            imp = __import__(mod_name)
-            yield dist_name, imp.__version__
-        except (ImportError, AttributeError):
-            pass
+            sys.stdout = file
+            sinfo(dependencies=True)
+        finally:
+            sys.stdout = stdout
 
 
-def print_versions():
-    """\
-    Versions that might influence the numerical results.
-
-    Matplotlib and Seaborn are excluded from this.
-    """
-    from ._settings import settings
-    modules = ['scanpy'] + _DEPENDENCIES_NUMERICS
-    print(' '.join(
-        f'{mod}=={ver}'
-        for mod, ver in _versions_dependencies(modules)
-    ), file=settings.logfile)
-
-
-def print_version_and_date():
+def print_version_and_date(*, file=None):
     """\
     Useful for starting a notebook so you see when you started working.
     """
     from . import __version__
-    from ._settings import settings
+    if file is None:
+        file = sys.stdout
     print(
         f'Running Scanpy {__version__}, '
         f'on {datetime.now():%Y-%m-%d %H:%M}.',
-        file=settings.logfile,
+        file=file,
     )
 
 

@@ -183,8 +183,9 @@ Read 10x formatted hdf5 files and directories containing `.mtx` files using
 .. autosummary::
    :toctree: .
 
-    read_10x_h5
-    read_10x_mtx
+   read_10x_h5
+   read_10x_mtx
+   read_visium
 
 Read other formats using functions borrowed from :mod:`anndata`
 
@@ -321,6 +322,7 @@ Datasets
    datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch
+   datasets.visium_sge
 
 
 Further modules

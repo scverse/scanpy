@@ -2,23 +2,24 @@ from itertools import product
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from scipy import sparse as sp
 import scanpy as sc
 from sklearn.utils.testing import assert_allclose
 import pytest
 from anndata import AnnData
+from anndata.tests.helpers import assert_equal, asarray
+
+from scanpy.tests.helpers import check_rep_mutation, check_rep_results
 
 
-HERE = Path(__file__).parent
-
-
-def test_log1p():
+def test_log1p(tmp_path):
     A = np.random.rand(200, 10)
     A_l = np.log1p(A)
     ad = AnnData(A)
     ad2 = AnnData(A)
     ad3 = AnnData(A)
-    ad3.filename = HERE / 'test.h5ad'
+    ad3.filename = tmp_path / 'test.h5ad'
     sc.pp.log1p(ad)
     assert np.allclose(ad.X, A_l)
     sc.pp.log1p(ad2, chunked=True)
@@ -30,6 +31,17 @@ def test_log1p():
     ad4 = AnnData(A)
     sc.pp.log1p(ad4, base=2)
     assert np.allclose(ad4.X, A_l/np.log(2))
+
+
+@pytest.fixture(params=[None, 2])
+def base(request):
+    return request.param
+
+
+def test_log1p_rep(count_matrix_format, base):
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    check_rep_mutation(sc.pp.log1p, X, base=base)
+    check_rep_results(sc.pp.log1p, X, base=base)
 
 
 def test_mean_var_sparse():
@@ -101,17 +113,49 @@ def test_subsample():
     assert adata.n_obs == 4
 
 
+def test_subsample_copy():
+    adata = AnnData(np.ones((200, 10)))
+    assert sc.pp.subsample(adata, n_obs=40, copy=True).shape == (40, 10)
+    assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
+
+
 def test_scale():
     adata = sc.datasets.pbmc68k_reduced()
     adata.X = adata.raw.X
     v = adata[:, 0:adata.shape[1] // 2]
     # Should turn view to copy https://github.com/theislab/anndata/issues/171#issuecomment-508689965
-    assert v.isview
+    assert v.is_view
     with pytest.warns(Warning, match="view"):
         sc.pp.scale(v)
-    assert not v.isview
+    assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
+
+
+@pytest.fixture(params=[True, False])
+def zero_center(request):
+    return request.param
+
+
+def test_scale_rep(count_matrix_format, zero_center):
+    """
+    Test that it doesn't matter where the array being scaled is in the anndata object.
+    """
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
+    check_rep_results(sc.pp.scale, X, zero_center=zero_center)
+
+
+def test_scale_array(count_matrix_format, zero_center):
+    """
+    Test that running sc.pp.scale on an anndata object and an array returns the same results.
+    """
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    adata = sc.AnnData(X=X.copy(), dtype=np.float64)
+
+    sc.pp.scale(adata, zero_center=zero_center)
+    scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
+    assert np.array_equal(asarray(scaled_X), asarray(adata.X))
 
 
 def test_recipe_plotting():
@@ -140,6 +184,20 @@ def test_regress_out_ordinal():
     np.testing.assert_array_equal(single.X, multi.X)
 
 
+def test_regress_out_view():
+    from scipy.sparse import random
+    adata = AnnData(random(500, 1100, density=0.2, format='csr'))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    subset_adata = adata[:, :1050]
+    subset_adata_copy = subset_adata.copy()
+
+    sc.pp.regress_out(subset_adata, keys=['n_counts', 'percent_mito'])
+    sc.pp.regress_out(subset_adata_copy, keys=['n_counts', 'percent_mito'])
+    assert_equal(subset_adata, subset_adata_copy)
+    assert not subset_adata.is_view
+
+
 def test_regress_out_categorical():
     from scipy.sparse import random
     import pandas as pd
@@ -150,6 +208,31 @@ def test_regress_out_categorical():
 
     multi = sc.pp.regress_out(adata, keys='batch', n_jobs=8, copy=True)
     assert adata.X.shape == multi.X.shape
+
+
+def test_regress_out_constants():
+    adata = AnnData(np.hstack((np.full((10,1),0.0),np.full((10,1),1.0))))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    adata_copy = adata.copy()
+
+    sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'])
+    assert_equal(adata, adata_copy)
+
+
+def test_regress_out_constants_equivalent():
+    # Tests that constant values don't change results
+    # (since support for constant values is implemented by us)
+    from sklearn.datasets import make_blobs
+
+    X, cat = make_blobs(100, 20)
+    a = sc.AnnData(np.hstack([X, np.zeros((100, 5))]), obs={"cat": pd.Categorical(cat)})
+    b = sc.AnnData(X, obs={"cat": pd.Categorical(cat)})
+
+    sc.pp.regress_out(a, "cat")
+    sc.pp.regress_out(b, "cat")
+
+    np.testing.assert_equal(a[:, b.var_names].X, b.X)
 
 
 @pytest.fixture(params=[lambda x: x.copy(), sp.csr_matrix, sp.csc_matrix])
@@ -261,3 +344,13 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
         )
         assert (adata.X == X).all()
     assert X.dtype == adata.X.dtype
+
+
+def test_recipe_weinreb():
+    # Just tests for failure for now
+    adata = sc.datasets.pbmc68k_reduced().raw.to_adata()
+    adata.X = adata.X.toarray()
+
+    orig = adata.copy()
+    sc.pp.recipe_weinreb17(adata, log=False, copy=True)
+    assert_equal(orig, adata)
