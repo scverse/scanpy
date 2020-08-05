@@ -377,7 +377,11 @@ def visium_sge(
 
 def starfish_to_anndata(exp_matrix) -> AnnData:
     """\
-    Convert Starfish type data into AnnData object
+    Converts Starfish type data into AnnData object.
+    
+    For an example of Starfish expression matrix object, please see following 
+    Starfish tutorial: 
+    https://spacetx-starfish.readthedocs.io/en/latest/gallery/quick_start/plot_quick_start.html
     
     Parameters
     ----------
