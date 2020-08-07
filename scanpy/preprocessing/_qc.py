@@ -376,7 +376,7 @@ def top_segment_proportions(
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
         return top_segment_proportions_sparse_csr(
-            mtx.data, mtx.indptr, np.array(ns, dtype=np.int)
+            mtx.data, mtx.indptr, np.array(ns, dtype=np.int64)
         )
     else:
         return top_segment_proportions_dense(mtx, ns)
