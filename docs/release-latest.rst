@@ -4,14 +4,14 @@
 1.6.0 :small:`2020-08-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This release includes an overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.pl.matrixplot`, and :func:`~scanpy.pl.stacked_violin` (:pr:`1210` :smaller:`F Ramirez`), and of the internals of :func:`~scanpy.tl.rank_genes_groups` were overhauled (:pr:`1156` :smaller:`S Rybakov`).
+This release includes an overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.pl.matrixplot`, and :func:`~scanpy.pl.stacked_violin` (:pr:`1210` :smaller:`F Ramirez`), and of the internals of :func:`~scanpy.tl.rank_genes_groups` (:pr:`1156` :smaller:`S Rybakov`).
 
 .. rubric:: Overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.pl.matrixplot`, and :func:`~scanpy.pl.stacked_violin` :pr:`1210` :smaller:`F Ramirez`
 
 - An overhauled tutorial :tutorial:`plotting/core`.
 - New plotting classes can be accessed directly (e.g., :class:`~scanpy.pl.DotPlot`) or using the `return_fig` param.
-- If the plots are called after :func:`scanpy.tl.rank_genes_groups` (eg. :func:`~scanpy.pl.rank_genes_groups_dotplot`), now it is also possible to plot log fold change and p-values.
-- Added `ax` parameter which allows embedding the plot in other images
+- It is possible to plot log fold change and p-values in the :func:`~scanpy.pl.rank_genes_groups_dotplot` family of functions.
+- Added `ax` parameter which allows embedding the plot in other images.
 - Added option to include a bar plot instead of the dendrogram containing the cell/observation totals per category.
 - Return a dictionary of axes for further manipulation. This includes the main plot, legend and dendrogram to totals
 - Legends can be removed.
@@ -19,18 +19,18 @@ This release includes an overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.
 - Added padding parameter to `dotplot` and `stacked_violin`. :pr:`1270`
 - Added title for colorbar and positioned as in dotplot for :func:`~scanpy.pl.matrixplot`.
 
-- :func:`~scanpy.pl.dotplot` changes
+- :func:`~scanpy.pl.dotplot` changes:
 
-   * Improved the colorbar and size legend for dotplots. Now the colorbar and size have titles, which can be modified using the colorbar_title and size_title arguments. They also align at the bottom of the image and do not shrink if the dotplot image is smaller.
+   * Improved the colorbar and size legend for dotplots. Now the colorbar and size have titles, which can be modified using the `colorbar_title` and `size_title` params. They also align at the bottom of the image and do not shrink if the dotplot image is smaller.
    * Allow plotting genes in rows and categories in columns (`swap_axes`).
-   * Using the :class:`~scanpy.pl.DotPlot` object the `dot_edge_color` and line width can be set up, a grid added as well as several other features
-   * New style was added in which the dots are replaced by an empty circle and the square behind the circle is colored (like in matrixplots).
+   * Using :class:`~scanpy.pl.DotPlot`, the `dot_edge_color` and line width can be modified, a grid can be added, and other modifications are enabled.
+   * A new style was added in which the dots are replaced by an empty circle and the square behind the circle is colored (like in matrixplots).
 
-- :func:`~scanpy.pl.stacked_violin` changes
+- :func:`~scanpy.pl.stacked_violin` changes:
 
-   * violin colors can be colored based on average gene expression as in dotplots
-   * made the linewidth of the violin plots smaller.
-   * removed the tics for the y axis as they tend to overlap with each other. Using the style method they can be visualized if needed.
+   * Violin colors can be colored based on average gene expression as in dotplots.
+   * The linewidth of the violin plots is thinner.
+   * Removed the tics for the y-axis as they tend to overlap with each other. Using the style method they can be displayed if needed.
 
 
 .. rubric:: Additions
