@@ -153,6 +153,8 @@ def print_header(*, file=None):
 
 def print_versions(*, file=None):
     """Print print versions of imported packages"""
+    if file is None:  # Inform people about the behavior change
+        warning('If you miss a compact list, please try `print_header`!')
     stdout = sys.stdout
     try:
         buf = sys.stdout = io.StringIO()
