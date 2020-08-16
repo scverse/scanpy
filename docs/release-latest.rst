@@ -18,6 +18,7 @@ This release includes an overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.
 - The `groupby` param can take a list of categories, e.g., `groupby=[‘tissue’, ‘cell type’]`.
 - Added padding parameter to `dotplot` and `stacked_violin`. :pr:`1270`
 - Added title for colorbar and positioned as in dotplot for :func:`~scanpy.pl.matrixplot`.
+- Use `sinfo` for :func:`~scanpy.logging.print_versions` and add :func:`~scanpy.logging.print_header` to do what it previously did.
 
 - :func:`~scanpy.pl.dotplot` changes:
 
