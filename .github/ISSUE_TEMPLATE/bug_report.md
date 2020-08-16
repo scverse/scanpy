@@ -29,6 +29,6 @@ assignees: ''
 
 <details>
 
-[Paste the output of scanpy.logging.print_versions(deps=True) leaving a blank line after the details tag]
+[Paste the output of scanpy.logging.print_versions() leaving a blank line after the details tag]
 
 </details>
