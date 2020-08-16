@@ -1,5 +1,6 @@
 """Logging and Profiling
 """
+import io
 import logging
 import sys
 from functools import update_wrapper, partial
@@ -112,17 +113,16 @@ print_memory_usage = anndata.logging.print_memory_usage
 get_memory_usage = anndata.logging.get_memory_usage
 
 
-def print_versions(*, file=None):
+def print_versions(*, deps=False, file=None):
     """Print print versions of imported packages"""
-    if file is None:
-        sinfo(dependencies=True)
-    else:
-        stdout = sys.stdout
-        try:
-            sys.stdout = file
-            sinfo(dependencies=True)
-        finally:
-            sys.stdout = stdout
+    stdout = sys.stdout
+    try:
+        buf = sys.stdout = io.StringIO()
+        sinfo(dependencies=deps)
+    finally:
+        sys.stdout = stdout
+    output = buf.getvalue()
+    print(output, file=file)
 
 
 def print_version_and_date(*, file=None):
