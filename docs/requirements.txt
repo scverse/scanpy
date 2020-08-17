@@ -1,2 +1,0 @@
-# TODO: get stuff from pyproject.toml
-..[doc]
