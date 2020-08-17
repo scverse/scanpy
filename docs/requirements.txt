@@ -5,4 +5,4 @@ scanpydoc>=0.4.5
 typing_extensions; python_version < '3.8'
 # TODO: get stuff from pyproject.toml
 scanpy
-pytoml
+pytoml  # just for getting the version and stuff
