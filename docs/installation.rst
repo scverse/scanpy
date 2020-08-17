@@ -7,7 +7,7 @@ If you do not have a working installation of Python 3.6 (or later), consider
 installing Miniconda_ (see `Installing Miniconda`_). Then run::
 
     conda install seaborn scikit-learn statsmodels numba pytables
-    conda install -c conda-forge python-igraph leidenalg	
+    conda install -c conda-forge python-igraph leidenalg
 
 Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pip3`` to access Python 3)::
 
@@ -33,7 +33,9 @@ To work with the latest version `on GitHub`_: clone the repository and `cd` into
 its root directory. To install using symbolic links (stay up to date with your
 cloned version after you update with `git pull`) call::
 
-    pip install -e .
+    pip install .
+    # or
+    flit install
 
 .. _on GitHub: https://github.com/theislab/scanpy
 
