@@ -1,8 +1,2 @@
-sphinx_rtd_theme>=0.3.1
-sphinx<3.1, >3
-sphinx-autodoc-typehints
-scanpydoc>=0.4.5
-typing_extensions; python_version < '3.8'
 # TODO: get stuff from pyproject.toml
-scanpy
-pytoml  # just for getting the version and stuff
+..[doc]
