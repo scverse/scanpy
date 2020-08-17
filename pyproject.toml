@@ -97,6 +97,14 @@ scanpy = 'scanpy.cli:console_main'
 [tool.flit.sdist]
 exclude = ['scanpy/tests']
 
+[tool.pytest.ini_options]
+python_files = 'test_*.py'
+testpaths = 'scanpy/tests/'
+xfail_strict = true
+markers = [
+    'internet: tests which rely on internet resources (enable with `--internet-tests`)',
+]
+
 [tool.black]
 line-length = 88
 target-version = ['py36']
