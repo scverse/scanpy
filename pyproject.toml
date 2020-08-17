@@ -85,6 +85,7 @@ test = [
     'zarr',
     'black',
     'profimp',
+    'docutils',  # for rst2html.py
 ]
 
 [tool.flit.metadata.urls]

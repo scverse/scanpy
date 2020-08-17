@@ -26,5 +26,4 @@ env:
   - MPLBACKEND=Agg
 script:
   - pytest --ignore=scanpy/tests/_images
-  - python setup.py check --restructuredtext --strict
   - rst2html.py --halt=2 README.rst >/dev/null
