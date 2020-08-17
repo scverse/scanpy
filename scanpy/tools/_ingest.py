@@ -8,10 +8,10 @@ from sklearn.utils import check_random_state
 from scipy.sparse import issparse
 from anndata import AnnData
 
-from .. import settings
+from .. import settings, logging as logg
 from ..neighbors import _rp_forest_generate
-from .. import logging as logg
-from .._utils import pkg_version, NeighborsView
+from .._compat import pkg_version
+from .._utils import NeighborsView
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 

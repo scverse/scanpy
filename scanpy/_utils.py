@@ -20,7 +20,7 @@ from textwrap import dedent
 from packaging import version
 
 from ._settings import settings
-from ._compat import Literal
+from ._compat import Literal, pkg_version
 from . import logging as logg
 
 
@@ -34,14 +34,6 @@ _empty = Empty.token
 AnyRandom = Union[None, int, random.RandomState]  # maybe in the future random.Generator
 
 EPS = 1e-15
-
-
-def pkg_version(package):
-    try:
-        from importlib.metadata import version as v
-    except ImportError:  # < Python 3.8: Use backport module
-        from importlib_metadata import version as v
-    return version.parse(v(package))
 
 
 def check_versions():
