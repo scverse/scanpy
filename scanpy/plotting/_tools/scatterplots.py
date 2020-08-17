@@ -122,6 +122,14 @@ def embedding(
         if isinstance(groups, str):
             groups = [groups]
 
+    # Setting color for missing values
+    if library_id is None:
+        # Light gray for most cases
+        missing_color = colors.to_hex("lightgray", keep_alpha=True)
+    else:
+        # Clear for spatial
+        missing_color = colors.to_hex((0, 0, 0, 0), keep_alpha=True)
+
     make_projection_available(projection)
     args_3d = dict(projection='3d') if projection == '3d' else {}
 
@@ -226,28 +234,38 @@ def embedding(
     for count, (value_to_plot, component_idx) in enumerate(
         itertools.product(color, idx_components)
     ):
-        color_vector, categorical = _get_color_values(
+        color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
             layer=layer,
-            groups=groups,
-            palette=palette,
             use_raw=use_raw,
             gene_symbols=gene_symbols,
         )
+        color_vector, categorical = _color_vector(
+            adata,
+            value_to_plot,
+            color_source_vector,
+            groups=groups,
+            palette=palette,
+            missing_color=missing_color,
+        )
 
-        # check if higher value points should be plot on top
+        ### Order points
+        order = slice(None)
         if sort_order is True and value_to_plot is not None and categorical is False:
-            order = np.argsort(color_vector)
-            color_vector = color_vector[order]
-            _data_points = data_points[component_idx][order, :]
-
-            # check if 'size' is given (stored in kwargs['s']
-            # and reorder it.
-            if isinstance(size, np.ndarray):
-                size = np.array(size)[order]
-        else:
-            _data_points = data_points[component_idx]
+            # Higher values plotted on top
+            order = np.argsort(color_vector, kind="stable")
+        elif sort_order and categorical and groups is not None:
+            # Left out groups go on bottom
+            order = np.argsort(color_source_vector.isin(groups), kind="stable")
+        elif sort_order and categorical:
+            # Null points go on bottom
+            order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
+        # Set orders
+        if isinstance(size, np.ndarray):
+            size = np.array(size)[order]
+        color_vector = color_vector[order]
+        _data_points = data_points[component_idx][order, :]
 
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
@@ -356,50 +374,14 @@ def embedding(
                 # if user did not set alpha, set alpha to 0.7
                 kwargs['alpha'] = 0.7 if alpha is None else alpha
 
-            if groups:
-                # first plot non-groups and then plot the
-                # required groups on top
-
-                in_groups = np.array(adata.obs[value_to_plot].isin(groups))
-
-                if isinstance(size, np.ndarray):
-                    in_groups_size = size[in_groups]
-                    not_in_groups_size = size[~in_groups]
-                elif img_key is not None:
-                    in_groups_size = not_in_groups_size = size_spot
-                else:
-                    in_groups_size = not_in_groups_size = size
-
-                # only show grey points if no image is below
-                if library_id is None:
-                    ax.scatter(
-                        _data_points[~in_groups, 0],
-                        _data_points[~in_groups, 1],
-                        s=not_in_groups_size,
-                        marker=".",
-                        c=color_vector[~in_groups],
-                        rasterized=settings._vector_friendly,
-                        **kwargs,
-                    )
-                cax = scatter(
-                    _data_points[in_groups, 0],
-                    _data_points[in_groups, 1],
-                    s=in_groups_size,
-                    marker=".",
-                    c=color_vector[in_groups],
-                    rasterized=settings._vector_friendly,
-                    **kwargs,
-                )
-
-            else:
-                cax = scatter(
-                    _data_points[:, 0],
-                    _data_points[:, 1],
-                    marker=".",
-                    c=color_vector,
-                    rasterized=settings._vector_friendly,
-                    **kwargs,
-                )
+            cax = scatter(
+                _data_points[:, 0],
+                _data_points[:, 1],
+                marker=".",
+                c=color_vector,
+                rasterized=settings._vector_friendly,
+                **kwargs,
+            )
 
         # remove y and x ticks
         ax.set_yticks([])
@@ -1000,31 +982,18 @@ def _add_legend_or_colorbar(
         pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
 
 
-def _get_color_values(
-    adata,
-    value_to_plot,
-    groups=None,
-    palette: Union[str, Sequence[str], Cycler, None] = None,
-    use_raw=False,
-    gene_symbols=None,
-    layer=None,
-) -> Tuple[Union[np.ndarray, str], bool]:
+def _get_color_source_vector(
+    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None
+):
     """
-    Returns the value or color associated to each data point.
-    For categorical data, the return value is list of colors taken
-    from the category palette or from the given `palette` value.
-
-    For non-categorical data, the values are returned
-
-    Returns
-    -------
-    values
-        Values to plot
-    is_categorical
-        Are the values categorical?
+    Get array from adata that colors will be based on.
     """
     if value_to_plot is None:
-        return "lightgray", False
+        # TODO: Let null color be handled with missing_color
+        # values = np.empty(adata.shape[0], dtype=float)
+        # values.fill(np.nan)
+        # return values
+        return "lightgray"
     if (
         gene_symbols is not None
         and value_to_plot not in adata.obs.columns
@@ -1038,24 +1007,38 @@ def _get_color_values(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
+    return values
 
+
+def _color_vector(
+    adata, values_key: str, values, groups: list, palette, missing_color="lightgray"
+) -> Tuple[np.ndarray, bool]:
+    """
+    Map array of values to array of hex (plus alpha) codes.
+
+    For categorical data, the return value is list of colors taken
+    from the category palette or from the given `palette` value.
+
+    For continuous values, the input array is returned (may change in future).
+    """
     ###
     # when plotting, the color of the dots is determined for each plot
     # the data is either categorical or continuous and the data could be in
     # 'obs' or in 'var'
+    to_hex = partial(colors.to_hex, keep_alpha=True)
     if not is_categorical_dtype(values):
         return values, False
     else:  # is_categorical_dtype(values)
-        color_key = f"{value_to_plot}_colors"
+        color_key = f"{values_key}_colors"
         if palette:
-            _utils._set_colors_for_categorical_obs(adata, value_to_plot, palette)
+            _utils._set_colors_for_categorical_obs(adata, values_key, palette)
         elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
             values.categories
         ):
             #  set a default palette in case that no colors or few colors are found
-            _utils._set_default_colors_for_categorical_obs(adata, value_to_plot)
+            _utils._set_default_colors_for_categorical_obs(adata, values_key)
         else:
-            _utils._validate_palette(adata, value_to_plot)
+            _utils._validate_palette(adata, values_key)
 
         color_map = dict(zip(values.categories, adata.uns[color_key]))
 
@@ -1067,12 +1050,12 @@ def _get_color_values(
         for group in values.categories.difference(groups):
             values = values.replace(group, np.nan)
 
-        color_vector = values.map(color_map).map(colors.to_hex)
+        color_vector = values.map(color_map).map(to_hex)
 
         # Set color to 'light gray' for all missing values
         if color_vector.isna().any():
-            color_vector = color_vector.add_categories([colors.to_hex("lightgray")])
-            color_vector = color_vector.fillna(colors.to_hex("lightgray"))
+            color_vector = color_vector.add_categories([to_hex(missing_color)])
+            color_vector = color_vector.fillna(to_hex(missing_color))
         return color_vector, True
 
 
