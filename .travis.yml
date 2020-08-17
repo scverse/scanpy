@@ -7,6 +7,7 @@ matrix:
       script:
         - black . --check --diff
         - python -m scanpy.tests.blackdiff 10
+        - rst2html.py --halt=2 README.rst >/dev/null
       after_success: skip
     - name: "anndata dev"
       python: "3.7"
@@ -26,4 +27,3 @@ env:
   - MPLBACKEND=Agg
 script:
   - pytest --ignore=scanpy/tests/_images
-  - rst2html.py --halt=2 README.rst >/dev/null
