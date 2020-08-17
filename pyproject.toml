@@ -57,6 +57,7 @@ requires = [
     'legacy-api-wrap',
     'setuptools_scm',
     'packaging',
+    'pytoml',
     'sinfo',
 ]
 
