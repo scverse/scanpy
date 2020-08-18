@@ -42,9 +42,17 @@ cloned version after you update with `git pull`) call::
 If you want to let conda_ handle the installations of dependencies, do::
 
     pip install beni
-    conda env create -f <(beni pyproject.toml)
+    beni pyproject.toml > environment.yml
+    conda env create -f environment.yml
     conda activate scanpy
     flit install -s
+
+On Windows, you might have to use `flit install --pth-file`
+if you are not able to give yourself the `create symbolic links`_ privilege.
+Be aware that a `conda bug`_ might prevent `conda list` from working then.
+
+.. _create symbolic links: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
+.. _conda bug: https://github.com/conda/conda/issues/9074
 
 Docker
 ~~~~~~
