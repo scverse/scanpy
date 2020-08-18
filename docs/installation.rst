@@ -42,7 +42,7 @@ cloned version after you update with `git pull`) call::
 If you want to let conda_ handle the installations of dependencies, do::
 
     pip install beni
-    conda env create -f $(beni pyproject.toml)
+    conda env create -f <(beni pyproject.toml)
     conda activate scanpy
     flit install -s
 
