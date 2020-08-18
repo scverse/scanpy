@@ -15,7 +15,7 @@ from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple
 import numpy as np
 from numpy import random
 from scipy import sparse
-from anndata import AnnData
+from anndata import AnnData, __version__ as ad_version
 from textwrap import dedent
 from packaging import version
 
@@ -37,7 +37,7 @@ EPS = 1e-15
 
 
 def check_versions():
-    anndata_version = pkg_version("anndata")
+    anndata_version = version.parse(ad_version)
     umap_version = pkg_version("umap-learn")
 
     if anndata_version < version.parse('0.6.10'):
