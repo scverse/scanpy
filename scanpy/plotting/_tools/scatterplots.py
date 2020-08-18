@@ -1,4 +1,5 @@
 import collections.abc as cabc
+from copy import copy
 from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
 
 import numpy as np
@@ -9,6 +10,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from pandas.api.types import is_categorical_dtype
 from matplotlib import pyplot as pl, colors
+from matplotlib.cm import get_cmap
 from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import Colormap
@@ -68,6 +70,7 @@ def embedding(
     library_id: str = None,
     #
     color_map: Union[Colormap, str, None] = None,
+    cmap: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
     size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
@@ -88,6 +91,7 @@ def embedding(
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
     return_fig: Optional[bool] = None,
+    _missing_color="lightgray",  # Keeping private for now
     **kwargs,
 ) -> Union[Figure, Axes, None]:
     """\
@@ -108,8 +112,17 @@ def embedding(
     """
 
     sanitize_anndata(adata)
+
+    # Setting up color map for continuous values
     if color_map is not None:
-        kwargs['cmap'] = color_map
+        if cmap is not None:
+            raise ValueError("Cannot specify both `color_map` and `cmap`.")
+        else:
+            cmap = color_map
+    cmap = copy(get_cmap(cmap))
+    cmap.set_bad(_missing_color)
+    kwargs["cmap"] = cmap
+
     if size is not None:
         kwargs['s'] = size
     if 'edgecolor' not in kwargs:
@@ -121,14 +134,6 @@ def embedding(
     if groups:
         if isinstance(groups, str):
             groups = [groups]
-
-    # Setting color for missing values
-    if library_id is None:
-        # Light gray for most cases
-        missing_color = colors.to_hex("lightgray", keep_alpha=True)
-    else:
-        # Clear for spatial
-        missing_color = colors.to_hex((0, 0, 0, 0), keep_alpha=True)
 
     make_projection_available(projection)
     args_3d = dict(projection='3d') if projection == '3d' else {}
@@ -247,14 +252,14 @@ def embedding(
             color_source_vector,
             groups=groups,
             palette=palette,
-            missing_color=missing_color,
+            missing_color=_missing_color,
         )
 
         ### Order points
         order = slice(None)
         if sort_order is True and value_to_plot is not None and categorical is False:
-            # Higher values plotted on top
-            order = np.argsort(color_vector, kind="stable")
+            # Higher values plotted on top, null values on bottom
+            order = np.argsort(-color_vector, kind="stable")[::-1]
         elif sort_order and categorical and groups is not None:
             # Left out groups go on bottom
             order = np.argsort(color_source_vector.isin(groups), kind="stable")
@@ -323,7 +328,7 @@ def embedding(
                 size_spot = 70 * size
 
             scatter = (
-                partial(ax.scatter, s=size)
+                partial(ax.scatter, s=size, plotnonfinite=True)
                 if library_id is None
                 else partial(circles, s=size_spot, ax=ax)
             )
@@ -534,7 +539,7 @@ def _get_vmin_vmax(
                         f"Please check the correct format for percentiles."
                     )
                 # interpret value of vmin/vmax as quantile with the following syntax 'p99.9'
-                v_value = np.percentile(color_vector, q=float(v_value[1:]))
+                v_value = np.nanpercentile(color_vector, q=float(v_value[1:]))
             elif callable(v_value):
                 # interpret vmin/vmax as function
                 v_value = v_value(color_vector)
@@ -773,6 +778,7 @@ def spatial(
         bw=bw,
         library_id=library_id,
         size=size,
+        _missing_color=(0, 0, 0, 0),
         **kwargs,
     )
 
