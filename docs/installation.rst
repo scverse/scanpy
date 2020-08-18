@@ -33,9 +33,9 @@ To work with the latest version `on GitHub`_: clone the repository and `cd` into
 its root directory. To install using symbolic links (stay up to date with your
 cloned version after you update with `git pull`) call::
 
-    pip install .
+    flit install -s  # from an activated venv
     # or
-    flit install
+    flit install -s --python path/to/venv/bin/python
 
 .. _on GitHub: https://github.com/theislab/scanpy
 

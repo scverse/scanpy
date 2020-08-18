@@ -13,7 +13,7 @@ try:
     __version__ = get_version(root='..', relative_to=__file__)
     __author__ = metadata['author']
     __email__ = metadata['author-email']
-except LookupError:
+except (LookupError, FileNotFoundError):
     from ._compat import pkg_metadata
 
     metadata = pkg_metadata(here.name)
