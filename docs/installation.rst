@@ -33,11 +33,18 @@ To work with the latest version `on GitHub`_: clone the repository and `cd` into
 its root directory. To install using symbolic links (stay up to date with your
 cloned version after you update with `git pull`) call::
 
-    flit install -s  # from an activated venv
+    flit install -s  # from an activated venv or conda env
     # or
     flit install -s --python path/to/venv/bin/python
 
 .. _on GitHub: https://github.com/theislab/scanpy
+
+If you want to let conda_ handle the installations of dependencies, do::
+
+    pip install beni
+    conda env create -f $(beni pyproject.toml)
+    conda activate scanpy
+    flit install -s
 
 Docker
 ~~~~~~
@@ -72,6 +79,8 @@ Download those and install them using `pip install ./path/to/file.whl`
 
 .. _compiling igraph: https://stackoverflow.com/q/29589696/247482
 .. _unofficial binaries: https://www.lfd.uci.edu/~gohlke/pythonlibs/
+
+.. _conda:
 
 Installing Miniconda
 ~~~~~~~~~~~~~~~~~~~~
