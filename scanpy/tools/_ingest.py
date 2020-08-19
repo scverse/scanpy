@@ -9,9 +9,10 @@ from scipy.sparse import issparse
 from anndata import AnnData
 
 from .. import settings
-from ..neighbors import _rp_forest_generate
 from .. import logging as logg
-from .._utils import pkg_version, NeighborsView
+from ..neighbors import _rp_forest_generate
+from .._utils import NeighborsView
+from .._compat import pkg_version
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 

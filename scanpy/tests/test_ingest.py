@@ -6,7 +6,7 @@ from umap import UMAP
 
 import scanpy as sc
 from scanpy import settings
-from scanpy._utils import pkg_version
+from scanpy._compat import pkg_version
 
 
 X = np.array(
