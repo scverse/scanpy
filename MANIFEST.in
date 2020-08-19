@@ -1,0 +1,4 @@
+# Exclude everything not needed for importing, building, and tests
+exclude .coveragerc .editorconfig .gitattributes .gitignore .readthedocs.yml .travis.yml
+exclude CONTRIBUTING.md
+prune docs
