@@ -995,11 +995,10 @@ def _get_color_source_vector(
     Get array from adata that colors will be based on.
     """
     if value_to_plot is None:
-        # TODO: Let null color be handled with missing_color
-        # values = np.empty(adata.shape[0], dtype=float)
-        # values.fill(np.nan)
-        # return values
-        return "lightgray"
+        # Points will be plotted with `missing_color`. Ideally this would return an
+        # array of np.nan, but that throws a warning. _color_vector handles this.
+        # https://github.com/matplotlib/matplotlib/issues/18294
+        return None
     if (
         gene_symbols is not None
         and value_to_plot not in adata.obs.columns
@@ -1032,6 +1031,8 @@ def _color_vector(
     # the data is either categorical or continuous and the data could be in
     # 'obs' or in 'var'
     to_hex = partial(colors.to_hex, keep_alpha=True)
+    if values is None:
+        return np.broadcast_to(to_hex(missing_color), adata.n_obs), False
     if not is_categorical_dtype(values):
         return values, False
     else:  # is_categorical_dtype(values)
