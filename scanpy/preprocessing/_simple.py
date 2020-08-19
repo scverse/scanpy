@@ -861,7 +861,7 @@ def subsample(
         logg.debug(f'... subsampled to {new_n_obs} data points')
     else:
         raise ValueError('Either pass `n_obs` or `fraction`.')
-    obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
+    obs_indices = np.sort(np.random.choice(old_n_obs, size=new_n_obs, replace=False))
     if isinstance(data, AnnData):
         if copy:
             return data[obs_indices].copy()
