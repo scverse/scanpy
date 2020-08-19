@@ -123,6 +123,9 @@ def embedding(
     cmap.set_bad(_missing_color)
     kwargs["cmap"] = cmap
 
+    # Prevents warnings during legend creation
+    _missing_color = colors.to_hex(_missing_color, keep_alpha=True)
+
     if size is not None:
         kwargs['s'] = size
     if 'edgecolor' not in kwargs:
@@ -430,12 +433,13 @@ def embedding(
             _add_categorical_legend(
                 ax,
                 color_source_vector,
-                color_vector,
+                palette=_get_palette(adata, value_to_plot),
                 scatter_array=_data_points,
                 legend_loc=legend_loc,
                 legend_fontweight=legend_fontweight,
                 legend_fontsize=legend_fontsize,
                 legend_fontoutline=path_effect,
+                missing_color=_missing_color,
                 multi_panel=bool(grid),
             )
         else:
@@ -912,12 +916,13 @@ def _get_data_points(
 def _add_categorical_legend(
     ax,
     color_source_vector,
-    color_vector,
-    legend_loc,
+    palette: dict,
+    legend_loc: str,
     legend_fontweight,
     legend_fontsize,
     legend_fontoutline,
     multi_panel,
+    missing_color,
     scatter_array=None,
 ):
     """Add a legend to the passed Axes."""
@@ -927,7 +932,8 @@ def _add_categorical_legend(
                 "No fallback for null labels has been defined if NA already in categories."
             )
         color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
-    palette = dict(zip(color_source_vector.unique(), color_vector.unique()))
+        palette = palette.copy()
+        palette["NA"] = missing_color
     cats = color_source_vector.categories
 
     if multi_panel is True:
@@ -977,10 +983,11 @@ def _get_color_source_vector(
     Get array from adata that colors will be based on.
     """
     if value_to_plot is None:
-        # Points will be plotted with `missing_color`. Ideally this would return an
-        # array of np.nan, but that throws a warning. _color_vector handles this.
+        # Points will be plotted with `missing_color`. Ideally this would work
+        # with the "bad color" in a color map but that throws a warning. Instead
+        # _color_vector handles this.
         # https://github.com/matplotlib/matplotlib/issues/18294
-        return None
+        return np.broadcast_to(np.nan, adata.n_obs)
     if (
         gene_symbols is not None
         and value_to_plot not in adata.obs.columns
@@ -999,6 +1006,21 @@ def _get_color_source_vector(
     return values
 
 
+def _get_palette(adata, values_key: str, palette=None):
+    color_key = f"{values_key}_colors"
+    values = pd.Categorical(adata.obs[values_key])
+    if palette:
+        _utils._set_colors_for_categorical_obs(adata, values_key, palette)
+    elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
+        values.categories
+    ):
+        #  set a default palette in case that no colors or few colors are found
+        _utils._set_default_colors_for_categorical_obs(adata, values_key)
+    else:
+        _utils._validate_palette(adata, values_key)
+    return dict(zip(values.categories, adata.uns[color_key]))
+
+
 def _color_vector(
     adata, values_key: str, values, palette, missing_color="lightgray"
 ) -> Tuple[np.ndarray, bool]:
@@ -1015,23 +1037,12 @@ def _color_vector(
     # the data is either categorical or continuous and the data could be in
     # 'obs' or in 'var'
     to_hex = partial(colors.to_hex, keep_alpha=True)
-    if values is None:
+    if values_key is None:
         return np.broadcast_to(to_hex(missing_color), adata.n_obs), False
     if not is_categorical_dtype(values):
         return values, False
     else:  # is_categorical_dtype(values)
-        color_key = f"{values_key}_colors"
-        if palette:
-            _utils._set_colors_for_categorical_obs(adata, values_key, palette)
-        elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
-            values.categories
-        ):
-            #  set a default palette in case that no colors or few colors are found
-            _utils._set_default_colors_for_categorical_obs(adata, values_key)
-        else:
-            _utils._validate_palette(adata, values_key)
-
-        color_map = dict(zip(values.categories, adata.uns[color_key]))
+        color_map = _get_palette(adata, values_key, palette=palette)
         color_vector = values.map(color_map).map(to_hex)
 
         # Set color to 'missing color' for all missing values
