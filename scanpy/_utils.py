@@ -15,12 +15,12 @@ from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple
 import numpy as np
 from numpy import random
 from scipy import sparse
-from anndata import AnnData, __version__ as ad_version
+from anndata import AnnData
 from textwrap import dedent
 from packaging import version
 
 from ._settings import settings
-from ._compat import Literal, pkg_version
+from ._compat import Literal
 from . import logging as logg
 
 
@@ -36,8 +36,16 @@ AnyRandom = Union[None, int, random.RandomState]  # maybe in the future random.G
 EPS = 1e-15
 
 
+def pkg_version(package):
+    try:
+        from importlib.metadata import version as v
+    except ImportError:  # < Python 3.8: Use backport module
+        from importlib_metadata import version as v
+    return version.parse(v(package))
+
+
 def check_versions():
-    anndata_version = version.parse(ad_version)
+    anndata_version = pkg_version("anndata")
     umap_version = pkg_version("umap-learn")
 
     if anndata_version < version.parse('0.6.10'):

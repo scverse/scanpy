@@ -6,7 +6,7 @@ import pytest
 from matplotlib.testing import setup
 from packaging import version
 
-from scanpy._compat import pkg_version
+from scanpy._utils import pkg_version
 
 setup()
 
