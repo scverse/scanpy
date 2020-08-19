@@ -37,7 +37,7 @@ setup(
         magic=['magic-impute>=2.0'],
         skmisc=['scikit-misc>=0.1.3'],
         harmony=['harmonypy'],
-        dev=['setuptools_scm', 'pytoml'],
+        dev=['setuptools_scm', 'pytoml', 'black'],
         doc=[
             'sphinx<3.1, >3',
             'sphinx_rtd_theme>=0.3.1',
@@ -51,7 +51,6 @@ setup(
             'fsspec',
             'zappy',
             'zarr',
-            'black',
             'profimp',
         ],
     ),
