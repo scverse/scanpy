@@ -398,7 +398,6 @@ def embedding(
             axis_labels = [name + str(x + 1) for x in components_list[component_idx]]
         elif projection == '3d':
             axis_labels = [name + str(x + 1) for x in range(3)]
-
         else:
             axis_labels = [name + str(x + 1) for x in range(2)]
 
@@ -426,20 +425,21 @@ def embedding(
         else:
             path_effect = None
 
-        _add_legend_or_colorbar(
-            adata,
-            ax,
-            cax,
-            categorical,
-            value_to_plot,
-            legend_loc,
-            _data_points,
-            legend_fontweight,
-            legend_fontsize,
-            path_effect,
-            groups,
-            bool(grid),
-        )
+        # Adding legends
+        if categorical:
+            _add_categorical_legend(
+                ax,
+                color_source_vector,
+                color_vector,
+                scatter_array=_data_points,
+                legend_loc=legend_loc,
+                legend_fontweight=legend_fontweight,
+                legend_fontsize=legend_fontsize,
+                legend_fontoutline=path_effect,
+                multi_panel=bool(grid),
+            )
+        else:
+            pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
 
     if return_fig is True:
         return fig
@@ -909,81 +909,65 @@ def _get_data_points(
     return data_points, components_list
 
 
-def _add_legend_or_colorbar(
-    adata,
+def _add_categorical_legend(
     ax,
-    cax,
-    categorical,
-    value_to_plot,
+    color_source_vector,
+    color_vector,
     legend_loc,
-    scatter_array,
     legend_fontweight,
     legend_fontsize,
     legend_fontoutline,
-    groups,
     multi_panel,
+    scatter_array=None,
 ):
-    """
-    Adds a color bar or a legend to the given ax. A legend is added when the
-    data is categorical and a color bar is added when a continuous value was used.
-
-    """
-    # add legends or colorbars
-    if categorical is True:
-        # add legend to figure
-        categories = list(adata.obs[value_to_plot].cat.categories)
-        colors = adata.uns[value_to_plot + '_colors']
-
-        if multi_panel is True:
-            # Shrink current axis by 10% to fit legend and match
-            # size of plots that are not categorical
-            box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width * 0.91, box.height])
-
-        if groups is not None:
-            # only label groups with the respective color
-            colors = [colors[categories.index(x)] for x in groups]
-            categories = groups
-
-        if legend_loc == 'right margin':
-            for idx, label in enumerate(categories):
-                color = colors[idx]
-                # use empty scatter to set labels
-                ax.scatter([], [], c=color, label=label)
-            ax.legend(
-                frameon=False,
-                loc='center left',
-                bbox_to_anchor=(1, 0.5),
-                ncol=(
-                    1 if len(categories) <= 14 else 2 if len(categories) <= 30 else 3
-                ),
-                fontsize=legend_fontsize,
+    """Add a legend to the passed Axes."""
+    if pd.isnull(color_source_vector).any():
+        if "NA" in color_source_vector:
+            raise NotImplementedError(
+                "No fallback for null labels has been defined if NA already in categories."
             )
+        color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
+    palette = dict(zip(color_source_vector.unique(), color_vector.unique()))
+    cats = color_source_vector.categories
 
-        if legend_loc == 'on data':
-            # identify centroids to put labels
-            all_pos = np.zeros((len(categories), 2))
-            for ilabel, label in enumerate(categories):
-                _scatter = scatter_array[adata.obs[value_to_plot] == label, :]
-                x_pos, y_pos = np.median(_scatter, axis=0)
+    if multi_panel is True:
+        # Shrink current axis by 10% to fit legend and match
+        # size of plots that are not categorical
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.91, box.height])
 
-                ax.text(
-                    x_pos,
-                    y_pos,
-                    label,
-                    weight=legend_fontweight,
-                    verticalalignment='center',
-                    horizontalalignment='center',
-                    fontsize=legend_fontsize,
-                    path_effects=legend_fontoutline,
-                )
+    if legend_loc == 'right margin':
+        for label in cats:
+            ax.scatter([], [], c=palette[label], label=label)
+        ax.legend(
+            frameon=False,
+            loc='center left',
+            bbox_to_anchor=(1, 0.5),
+            ncol=(1 if len(cats) <= 14 else 2 if len(cats) <= 30 else 3),
+            fontsize=legend_fontsize,
+        )
+    elif legend_loc == 'on data':
+        # identify centroids to put labels
+        all_pos = (
+            pd.DataFrame(scatter_array, columns=["x", "y"])
+            .groupby(color_source_vector, observed=True)
+            .median()
+        )
 
-                all_pos[ilabel] = [x_pos, y_pos]
-            # this is temporary storage for access by other tools
-            _utils._tmp_cluster_pos = all_pos
-    else:
-        # add colorbar to figure
-        pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
+        for label, x_pos, y_pos in all_pos.itertuples():
+            ax.text(
+                x_pos,
+                y_pos,
+                label,
+                weight=legend_fontweight,
+                verticalalignment='center',
+                horizontalalignment='center',
+                fontsize=legend_fontsize,
+                path_effects=legend_fontoutline,
+            )
+        # TODO: wtf
+        # this is temporary storage for access by other tools
+        _utils._tmp_cluster_pos = all_pos.values
 
 
 def _get_color_source_vector(
