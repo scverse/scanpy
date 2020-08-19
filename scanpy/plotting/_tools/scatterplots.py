@@ -245,12 +245,12 @@ def embedding(
             layer=layer,
             use_raw=use_raw,
             gene_symbols=gene_symbols,
+            groups=groups,
         )
         color_vector, categorical = _color_vector(
             adata,
             value_to_plot,
             color_source_vector,
-            groups=groups,
             palette=palette,
             missing_color=_missing_color,
         )
@@ -260,15 +260,13 @@ def embedding(
         if sort_order is True and value_to_plot is not None and categorical is False:
             # Higher values plotted on top, null values on bottom
             order = np.argsort(-color_vector, kind="stable")[::-1]
-        elif sort_order and categorical and groups is not None:
-            # Left out groups go on bottom
-            order = np.argsort(color_source_vector.isin(groups), kind="stable")
         elif sort_order and categorical:
             # Null points go on bottom
             order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
         # Set orders
         if isinstance(size, np.ndarray):
             size = np.array(size)[order]
+        color_source_vector = color_source_vector[order]
         color_vector = color_vector[order]
         _data_points = data_points[component_idx][order, :]
 
@@ -989,7 +987,7 @@ def _add_legend_or_colorbar(
 
 
 def _get_color_source_vector(
-    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None
+    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None, groups=None,
 ):
     """
     Get array from adata that colors will be based on.
@@ -1012,11 +1010,13 @@ def _get_color_source_vector(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
+    if groups and is_categorical_dtype(values):
+        values = values.replace(values.categories.difference(groups), np.nan,)
     return values
 
 
 def _color_vector(
-    adata, values_key: str, values, groups: list, palette, missing_color="lightgray"
+    adata, values_key: str, values, palette, missing_color="lightgray"
 ) -> Tuple[np.ndarray, bool]:
     """
     Map array of values to array of hex (plus alpha) codes.
@@ -1048,18 +1048,9 @@ def _color_vector(
             _utils._validate_palette(adata, values_key)
 
         color_map = dict(zip(values.categories, adata.uns[color_key]))
-
-        # Set excluded groups to missing
-        if groups is None:
-            groups = values.categories  # pd.Index
-        else:
-            groups = pd.Index(groups)
-        for group in values.categories.difference(groups):
-            values = values.replace(group, np.nan)
-
         color_vector = values.map(color_map).map(to_hex)
 
-        # Set color to 'light gray' for all missing values
+        # Set color to 'missing color' for all missing values
         if color_vector.isna().any():
             color_vector = color_vector.add_categories([to_hex(missing_color)])
             color_vector = color_vector.fillna(to_hex(missing_color))
