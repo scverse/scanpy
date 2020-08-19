@@ -49,8 +49,8 @@ def test_paga_paul15_subsampled(image_comparer, plt):
     sc.tl.paga(adata, groups='louvain_anno')
 
     PAGA_CONNECTIVITIES = np.array([
-        [0., 0.128553, 0., 0.07825,  0., 0., 0.238741, 0., 0., 0.657049],
-        [0.128553, 0., 0.480676, 0.257505, 0.533036, 0.043871, 0., 0.032903, 0., 0.087743]])
+        [0. , 0.080112, 0. , 0. , 0.204732, 0., 0.228130, 0., 0., 0., 0.672692],
+        [0.0801127214, 0., 0., 0., 0.080112, 0., 0., 0.591601, 0.336473, 0.528743, 0.534084]])
 
     assert np.allclose(
         adata.uns['paga']['connectivities'].toarray()[:2],
