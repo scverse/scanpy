@@ -1,5 +1,6 @@
 """Logging and Profiling
 """
+import io
 import logging
 import sys
 from functools import update_wrapper, partial
@@ -112,17 +113,56 @@ print_memory_usage = anndata.logging.print_memory_usage
 get_memory_usage = anndata.logging.get_memory_usage
 
 
+_DEPENDENCIES_NUMERICS = [
+    'anndata',  # anndata actually shouldn't, but as long as it's in development
+    'umap',
+    'numpy',
+    'scipy',
+    'pandas',
+    ('sklearn', 'scikit-learn'),
+    'statsmodels',
+    ('igraph', 'python-igraph'),
+    'louvain',
+    'leidenalg',
+]
+
+
+def _versions_dependencies(dependencies):
+    # this is not the same as the requirements!
+    for mod in dependencies:
+        mod_name, dist_name = mod if isinstance(mod, tuple) else (mod, mod)
+        try:
+            imp = __import__(mod_name)
+            yield dist_name, imp.__version__
+        except (ImportError, AttributeError):
+            pass
+
+
+def print_header(*, file=None):
+    """\
+    Versions that might influence the numerical results.
+    Matplotlib and Seaborn are excluded from this.
+    """
+
+    modules = ['scanpy'] + _DEPENDENCIES_NUMERICS
+    print(' '.join(
+        f'{mod}=={ver}'
+        for mod, ver in _versions_dependencies(modules)
+    ), file=file or sys.stdout)
+
+
 def print_versions(*, file=None):
     """Print print versions of imported packages"""
-    if file is None:
+    if file is None:  # Inform people about the behavior change
+        warning('If you miss a compact list, please try `print_header`!')
+    stdout = sys.stdout
+    try:
+        buf = sys.stdout = io.StringIO()
         sinfo(dependencies=True)
-    else:
-        stdout = sys.stdout
-        try:
-            sys.stdout = file
-            sinfo(dependencies=True)
-        finally:
-            sys.stdout = stdout
+    finally:
+        sys.stdout = stdout
+    output = buf.getvalue()
+    print(output, file=file)
 
 
 def print_version_and_date(*, file=None):
