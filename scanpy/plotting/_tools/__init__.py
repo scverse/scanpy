@@ -572,7 +572,7 @@ def rank_genes_groups_dotplot(
     groupby: Optional[str] = None,
     values_to_plot: Optional[
         Literal[
-            'score',
+            'scores',
             'logfoldchanges',
             'pvals',
             'pvals_adj',
