@@ -731,6 +731,7 @@ def spatial(
     alpha_img: float = 1.0,
     bw: bool = False,
     size: float = None,
+    _missing_color=(0, 0, 0, 0),
     **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
@@ -780,7 +781,7 @@ def spatial(
         bw=bw,
         library_id=library_id,
         size=size,
-        _missing_color=(0, 0, 0, 0),
+        _missing_color=_missing_color,
         **kwargs,
     )
 
