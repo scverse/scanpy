@@ -91,7 +91,7 @@ palette
     If provided, values of `adata.uns["{var}_colors"]` will be set.
 na_color
     Color to use for null or masked values. Can be anything matplotlib accepts as a
-    color.
+    color. Used for all points if `color=None`.
 na_in_legend
     If there are missing values, whether they get an entry in the legend. Currently
     only implemented for categorical legends.
