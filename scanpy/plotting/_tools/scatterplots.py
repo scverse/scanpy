@@ -72,6 +72,8 @@ def embedding(
     color_map: Union[Colormap, str, None] = None,
     cmap: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
+    na_color: Any = "lightgray",
+    na_in_legend: bool = True,
     size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
     legend_fontsize: Union[int, float, _FontSize, None] = None,
@@ -91,7 +93,6 @@ def embedding(
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
     return_fig: Optional[bool] = None,
-    _missing_color="lightgray",  # Keeping private for now
     **kwargs,
 ) -> Union[Figure, Axes, None]:
     """\
@@ -120,11 +121,11 @@ def embedding(
         else:
             cmap = color_map
     cmap = copy(get_cmap(cmap))
-    cmap.set_bad(_missing_color)
+    cmap.set_bad(na_color)
     kwargs["cmap"] = cmap
 
     # Prevents warnings during legend creation
-    _missing_color = colors.to_hex(_missing_color, keep_alpha=True)
+    na_color = colors.to_hex(na_color, keep_alpha=True)
 
     if size is not None:
         kwargs['s'] = size
@@ -255,7 +256,7 @@ def embedding(
             value_to_plot,
             color_source_vector,
             palette=palette,
-            missing_color=_missing_color,
+            na_color=na_color,
         )
 
         ### Order points
@@ -439,10 +440,12 @@ def embedding(
                 legend_fontweight=legend_fontweight,
                 legend_fontsize=legend_fontsize,
                 legend_fontoutline=path_effect,
-                missing_color=_missing_color,
+                na_color=na_color,
+                na_in_legend=na_in_legend,
                 multi_panel=bool(grid),
             )
         else:
+            # TODO: na_in_legend should have some effect here
             pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
 
     if return_fig is True:
@@ -731,7 +734,7 @@ def spatial(
     alpha_img: float = 1.0,
     bw: bool = False,
     size: float = None,
-    _missing_color=(0, 0, 0, 0),
+    na_color=(0, 0, 0, 0),
     **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
@@ -781,7 +784,7 @@ def spatial(
         bw=bw,
         library_id=library_id,
         size=size,
-        _missing_color=_missing_color,
+        na_color=na_color,
         **kwargs,
     )
 
@@ -923,18 +926,19 @@ def _add_categorical_legend(
     legend_fontsize,
     legend_fontoutline,
     multi_panel,
-    missing_color,
+    na_color,
+    na_in_legend: bool,
     scatter_array=None,
 ):
     """Add a legend to the passed Axes."""
-    if pd.isnull(color_source_vector).any():
+    if na_in_legend and pd.isnull(color_source_vector).any():
         if "NA" in color_source_vector:
             raise NotImplementedError(
                 "No fallback for null labels has been defined if NA already in categories."
             )
         color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
         palette = palette.copy()
-        palette["NA"] = missing_color
+        palette["NA"] = na_color
     cats = color_source_vector.categories
 
     if multi_panel is True:
@@ -984,7 +988,7 @@ def _get_color_source_vector(
     Get array from adata that colors will be based on.
     """
     if value_to_plot is None:
-        # Points will be plotted with `missing_color`. Ideally this would work
+        # Points will be plotted with `na_color`. Ideally this would work
         # with the "bad color" in a color map but that throws a warning. Instead
         # _color_vector handles this.
         # https://github.com/matplotlib/matplotlib/issues/18294
@@ -1023,7 +1027,7 @@ def _get_palette(adata, values_key: str, palette=None):
 
 
 def _color_vector(
-    adata, values_key: str, values, palette, missing_color="lightgray"
+    adata, values_key: str, values, palette, na_color="lightgray"
 ) -> Tuple[np.ndarray, bool]:
     """
     Map array of values to array of hex (plus alpha) codes.
@@ -1039,7 +1043,7 @@ def _color_vector(
     # 'obs' or in 'var'
     to_hex = partial(colors.to_hex, keep_alpha=True)
     if values_key is None:
-        return np.broadcast_to(to_hex(missing_color), adata.n_obs), False
+        return np.broadcast_to(to_hex(na_color), adata.n_obs), False
     if not is_categorical_dtype(values):
         return values, False
     else:  # is_categorical_dtype(values)
@@ -1048,8 +1052,8 @@ def _color_vector(
 
         # Set color to 'missing color' for all missing values
         if color_vector.isna().any():
-            color_vector = color_vector.add_categories([to_hex(missing_color)])
-            color_vector = color_vector.fillna(to_hex(missing_color))
+            color_vector = color_vector.add_categories([to_hex(na_color)])
+            color_vector = color_vector.fillna(to_hex(na_color))
         return color_vector, True
 
 
