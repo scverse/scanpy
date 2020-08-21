@@ -80,7 +80,7 @@ def test_rank_genes_groups_df():
         ),
         var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
     )
-    sc.tl.rank_genes_groups(adata, groupby="celltype", method="wilcoxon")
+    sc.tl.rank_genes_groups(adata, groupby="celltype", method="wilcoxon", pts=True)
     dedf = sc.get.rank_genes_groups_df(adata, "a")
     assert dedf["pvals"].value_counts()[1.] == 2
     assert sc.get.rank_genes_groups_df(adata, "a", log2fc_max=.1).shape[0] == 2
