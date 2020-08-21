@@ -79,10 +79,14 @@ def fixture_request(request):
 
 
 @pytest.fixture(
-    params=[(0, 0, 0, 1), "red", None],
-    ids=["missing.black_tup", "missing.red_str", "missing.default"],
+    params=[(0, 0, 0, 1), None], ids=["na_color.black_tup", "na_color.default"],
 )
-def missing_color(request):
+def na_color(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=["na_in_legend.True", "na_in_legend.False"])
+def na_in_legend(request):
     return request.param
 
 
@@ -120,7 +124,8 @@ def test_missing_values_categorical(
     image_comparer,
     adata,
     plotfunc,
-    missing_color,
+    na_color,
+    na_in_legend,
     legend_loc,
     groupsfunc,
 ):
@@ -133,8 +138,9 @@ def test_missing_values_categorical(
     kwargs = {}
     kwargs["legend_loc"] = legend_loc
     kwargs["groups"] = groupsfunc(adata.obs["label"])
-    if missing_color is not None:
-        kwargs["_missing_color"] = missing_color
+    if na_color is not None:
+        kwargs["na_color"] = na_color
+    kwargs["na_in_legend"] = na_in_legend
 
     plotfunc(
         adata, color=["label", "label_missing"], **kwargs,
@@ -144,13 +150,7 @@ def test_missing_values_categorical(
 
 
 def test_missing_values_continuous(
-    fixture_request,
-    image_comparer,
-    adata,
-    plotfunc,
-    missing_color,
-    legend_loc,
-    vbounds,
+    fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds,
 ):
     save_and_compare_images = image_comparer(
         MISSING_VALUES_ROOT, MISSING_VALUES_FIGS, tol=15
@@ -161,8 +161,8 @@ def test_missing_values_continuous(
     kwargs = {}
     kwargs["vmin"], kwargs["vmax"] = vbounds
     kwargs["legend_loc"] = legend_loc
-    if missing_color is not None:
-        kwargs["_missing_color"] = missing_color
+    if na_color is not None:
+        kwargs["na_color"] = na_color
 
     plotfunc(
         adata, color=["1", "1_missing"], **kwargs,
