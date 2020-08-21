@@ -56,6 +56,10 @@ def rank_genes_groups_df(
     d = pd.DataFrame()
     for k in ['scores', 'names', 'logfoldchanges', 'pvals', 'pvals_adj']:
         d[k] = adata.uns[key][k][group]
+    if 'pts' in adata.uns[key].keys():
+        d['pts'] = adata.uns[key]['pts'][group]
+    if 'pts_rest' in adata.uns[key].keys():
+        d['pts_rest'] = adata.uns[key]['pts_rest'][group]
     if pval_cutoff is not None:
         d = d[d["pvals_adj"] < pval_cutoff]
     if log2fc_min is not None:
