@@ -22,6 +22,7 @@ from .._utils import (
     _FontWeight,
     _FontSize,
     circles,
+    ColorLike,
     make_projection_available,
 )
 from .._docs import (
@@ -72,7 +73,7 @@ def embedding(
     color_map: Union[Colormap, str, None] = None,
     cmap: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
-    na_color: Any = "lightgray",
+    na_color: ColorLike = "lightgray",
     na_in_legend: bool = True,
     size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
@@ -734,7 +735,7 @@ def spatial(
     alpha_img: float = 1.0,
     bw: bool = False,
     size: float = None,
-    na_color=(0, 0, 0, 0),
+    na_color: ColorLike = (0.0, 0.0, 0.0, 0.0),
     **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
