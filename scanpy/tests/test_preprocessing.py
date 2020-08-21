@@ -112,6 +112,10 @@ def test_subsample():
     sc.pp.subsample(adata, fraction=0.1)
     assert adata.n_obs == 4
 
+def test_subsample_shuffle():
+    adata = AnnData(np.ones((200, 10)))
+    sc.pp.subsample(adata, n_obs=40, shuffle=True)
+
 
 def test_subsample_copy():
     adata = AnnData(np.ones((200, 10)))

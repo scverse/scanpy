@@ -821,6 +821,7 @@ def subsample(
     data: Union[AnnData, np.ndarray, spmatrix],
     fraction: Optional[float] = None,
     n_obs: Optional[int] = None,
+    shuffle: bool = False,
     random_state: AnyRandom = 0,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -861,7 +862,9 @@ def subsample(
         logg.debug(f'... subsampled to {new_n_obs} data points')
     else:
         raise ValueError('Either pass `n_obs` or `fraction`.')
-    obs_indices = np.sort(np.random.choice(old_n_obs, size=new_n_obs, replace=False))
+    obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
+    if shuffle == False:
+        obs_indices = np.sort(obs_indices)
     if isinstance(data, AnnData):
         if copy:
             return data[obs_indices].copy()
