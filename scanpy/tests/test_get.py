@@ -88,9 +88,11 @@ def test_rank_genes_groups_df():
     assert sc.get.rank_genes_groups_df(adata, "a", pval_cutoff=.9).shape[0] == 1
     del adata.uns["rank_genes_groups"]
     sc.tl.rank_genes_groups(
-        adata, groupby="celltype", method="wilcoxon", key_added="different_key"
+        adata, groupby="celltype", method="wilcoxon", key_added="different_key", pts=True,
     )
     with pytest.raises(KeyError):
         sc.get.rank_genes_groups_df(adata, "a")
     dedf2 = sc.get.rank_genes_groups_df(adata, "a", key="different_key")
     pd.testing.assert_frame_equal(dedf, dedf2)
+    assert 'pts' in dedf2.columns
+    assert 'pts_rest' in dedf2.columns
