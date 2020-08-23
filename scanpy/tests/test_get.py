@@ -96,3 +96,8 @@ def test_rank_genes_groups_df():
     pd.testing.assert_frame_equal(dedf, dedf2)
     assert 'fraction_group' in dedf2.columns
     assert 'fraction_rest' in dedf2.columns
+    
+    # get all groups
+    dedf3 = sc.get.rank_genes_groups_df(adata, key="different_key")
+    assert 'a' in dedf2['group'].unique()
+    assert 'b' in dedf2['group'].unique()    
