@@ -1,11 +1,12 @@
 """This module contains helper functions for accessing data."""
-from typing import Optional, Iterable, Tuple
+from typing import Optional, Iterable, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import spmatrix
 
 from anndata import AnnData
+from ._utils import sanitize_anndata
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -15,8 +16,8 @@ from anndata import AnnData
 # TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
-    group: str,  # Can this be something other than a str?
     *,
+    group: Optional[Union[str, Iterable[str]]] = None,
     key: str = "rank_genes_groups",
     pval_cutoff: Optional[float] = None,
     log2fc_min: Optional[float] = None,
@@ -33,7 +34,8 @@ def rank_genes_groups_df(
         Object to get results from.
     group
         Which group (as in :func:`scanpy.tl.rank_genes_groups`'s `groupby`
-        argument) to return results from.
+        argument) to return results from. Can be a list. All groups are
+        returned by default.
     key
         Key differential expression groups were stored under.
     pval_cutoff
@@ -50,16 +52,23 @@ def rank_genes_groups_df(
     -------
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True, n_genes=pbmc.shape[1])
+    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True)
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
     """
-    d = pd.DataFrame()
-    for k in ['scores', 'names', 'logfoldchanges', 'pvals', 'pvals_adj']:
-        d[k] = adata.uns[key][k][group]
-    if 'pts' in adata.uns[key].keys():
-        d['pts'] = adata.uns[key]['pts'][group]
-    if 'pts_rest' in adata.uns[key].keys():
-        d['pts_rest'] = adata.uns[key]['pts_rest'][group]
+    sanitize_anndata(adata)
+    
+    if isinstance(group, str):
+        group = [group]
+    if group is None:
+        group = list(adata.uns[key]['names'].dtype.names)
+    colnames = ['names', 'scores', 'logfoldchanges', 'pvals', 'pvals_adj']
+
+    d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
+    d = d.concat(d, axis=1, names=[None, 'group'], keys=colnames)
+    d = d.stack(level=1).reset_index('group')
+    d['group'] = pd.Categorical(d['group'], categories=group)
+    d = d.sort_values(['group', 'scores'], ascending=[True, False])
+
     if pval_cutoff is not None:
         d = d[d["pvals_adj"] < pval_cutoff]
     if log2fc_min is not None:
@@ -68,8 +77,21 @@ def rank_genes_groups_df(
         d = d[d["logfoldchanges"] < log2fc_max]
     if gene_symbols is not None:
         d = d.join(adata.var[gene_symbols], on="names")
-    return d
+        
+    if 'pts' in adata.uns[key]:
+        pts = adata.uns[key]['pts'][group].reset_index().melt(
+            id_vars='index', 
+            var_name='group', 
+            value_name='pts').rename(columns={'index': 'names'})
+        d = d.merge(pts)
+    if 'pts_rest' in adata.uns[key]:
+        ptsr = adata.uns[key]['pts_rest'][group].reset_index().melt(
+            id_vars='index', 
+            var_name='group', 
+            value_name='pts_rest').rename(columns={'index': 'names'})
+        d = d.merge(ptsr)
 
+    return d.reset_index(drop=True)
 
 def obs_df(
     adata: AnnData,
