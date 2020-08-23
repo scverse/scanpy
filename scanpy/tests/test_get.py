@@ -99,5 +99,5 @@ def test_rank_genes_groups_df():
     
     # get all groups
     dedf3 = sc.get.rank_genes_groups_df(adata, key="different_key")
-    assert 'a' in dedf2['group'].unique()
-    assert 'b' in dedf2['group'].unique()    
+    assert 'a' in dedf3['group'].unique()
+    assert 'b' in dedf3['group'].unique()    
