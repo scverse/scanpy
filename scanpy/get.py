@@ -90,6 +90,10 @@ def rank_genes_groups_df(
             var_name='group', 
             value_name='pts_rest').rename(columns={'index': 'names'})
         d = d.merge(ptsr)
+        
+     # remove group column for backward compat if len(group) == 1
+    if len(group) == 1:
+        d.drop('group', axis=1, inplace=True)
 
     return d.reset_index(drop=True)
 
