@@ -16,8 +16,8 @@ from ._utils import sanitize_anndata
 # TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
-    *,
     group: Optional[Union[str, Iterable[str]]] = None,
+    *,
     key: str = "rank_genes_groups",
     pval_cutoff: Optional[float] = None,
     log2fc_min: Optional[float] = None,
