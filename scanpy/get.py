@@ -6,7 +6,6 @@ import pandas as pd
 from scipy.sparse import spmatrix
 
 from anndata import AnnData
-from ._utils import sanitize_anndata
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -55,8 +54,6 @@ def rank_genes_groups_df(
     >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True)
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
     """
-    sanitize_anndata(adata)
-    
     if isinstance(group, str):
         group = [group]
     if group is None:
@@ -65,9 +62,9 @@ def rank_genes_groups_df(
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, 'group'], keys=colnames)
-    d = d.stack(level=1).reset_index('group')
+    d = d.stack(level=1).reset_index()
     d['group'] = pd.Categorical(d['group'], categories=group)
-    d = d.sort_values(['group', 'scores'], ascending=[True, False])
+    d = d.sort_values(['group', 'level_0']).drop(columns='level_0')
 
     if pval_cutoff is not None:
         d = d[d["pvals_adj"] < pval_cutoff]
@@ -93,7 +90,7 @@ def rank_genes_groups_df(
         
      # remove group column for backward compat if len(group) == 1
     if len(group) == 1:
-        d.drop('group', axis=1, inplace=True)
+        d.drop(columns='group', inplace=True)
 
     return d.reset_index(drop=True)
 
