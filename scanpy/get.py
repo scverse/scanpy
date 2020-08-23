@@ -79,13 +79,13 @@ def rank_genes_groups_df(
         pts = adata.uns[key]['pts'][group].reset_index().melt(
             id_vars='index', 
             var_name='group', 
-            value_name='pts').rename(columns={'index': 'names'})
+            value_name='fraction_group').rename(columns={'index': 'names'})
         d = d.merge(pts)
     if 'pts_rest' in adata.uns[key]:
         ptsr = adata.uns[key]['pts_rest'][group].reset_index().melt(
             id_vars='index', 
             var_name='group', 
-            value_name='pts_rest').rename(columns={'index': 'names'})
+            value_name='fraction_rest').rename(columns={'index': 'names'})
         d = d.merge(ptsr)
         
      # remove group column for backward compat if len(group) == 1
