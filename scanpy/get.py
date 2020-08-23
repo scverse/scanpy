@@ -64,7 +64,7 @@ def rank_genes_groups_df(
     colnames = ['names', 'scores', 'logfoldchanges', 'pvals', 'pvals_adj']
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
-    d = d.concat(d, axis=1, names=[None, 'group'], keys=colnames)
+    d = pd.concat(d, axis=1, names=[None, 'group'], keys=colnames)
     d = d.stack(level=1).reset_index('group')
     d['group'] = pd.Categorical(d['group'], categories=group)
     d = d.sort_values(['group', 'scores'], ascending=[True, False])
