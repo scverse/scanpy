@@ -7,7 +7,7 @@ try:
     import pytoml
 
     proj = pytoml.loads((here.parent / 'pyproject.toml').read_text())
-    metadata = proj['tool']['flit']['metadata']
+    metadata = proj['tool']['scanpy']
 
     __version__ = get_version(root='..', relative_to=__file__)
     __author__ = metadata['author']

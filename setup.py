@@ -12,7 +12,7 @@ except ImportError:
     sys.exit('Please use `pip install .` or install pytoml first.')
 
 proj = pytoml.loads(Path('pyproject.toml').read_text())
-metadata = proj['tool']['flit']['metadata']
+metadata = proj['tool']['scanpy']
 
 setup(
     name='scanpy',
