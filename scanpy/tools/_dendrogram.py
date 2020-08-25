@@ -128,7 +128,9 @@ def dendrogram(
         if use_raw is None and adata.raw is not None:
             use_raw = True
         gene_names = adata.raw.var_names if use_raw else adata.var_names
-        categories, rep_df = get._indexed_expression_df(adata, gene_names, groupby, use_raw)
+        categories, rep_df = get._indexed_expression_df(
+                adata, gene_names, groupby, use_raw
+        )
 
     # aggregate values within categories using 'mean'
     mean_df = rep_df.groupby(level=0).mean()
