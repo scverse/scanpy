@@ -308,7 +308,7 @@ def var_df(
 def grouped_expression_df(
     adata: AnnData,
     groupby: Optional[Union[str, Sequence[str]]] = None,
-    ops: Optional[Literal['mean_expressed', 'var_expressed', 'fraction']] = ('mean_expressed', 'var_expressed', 'fraction'),
+    ops: Optional[Literal['mean_expressed', 'var_expressed', 'fraction']] = None,
     long_format: bool = True,
     var_names: Optional[Union[_VarNames, Mapping[str, _VarNames]]] = None,
     use_raw: Optional[bool] = None,
