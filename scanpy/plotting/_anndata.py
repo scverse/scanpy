@@ -1847,7 +1847,7 @@ def _prepare_dataframe(
         else:
             assert all(is_categorical_dtype(adata.obs[group]) for group in groupby)
             if concat_indices:
-                obs_tidy_index = adata.obs[groupby[0]]
+                obs_tidy_idx = adata.obs[groupby[0]]
                 if len(groupby) > 1:
                     for group in groupby[1:]:
                         # create new category by merging the given groupby categories
