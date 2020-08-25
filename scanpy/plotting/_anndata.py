@@ -1858,7 +1858,7 @@ def _prepare_dataframe(
                 idx_categories = obs_tidy_idx.cat.categories
             else:
                 obs_tidy_idx = [adata.obs[group] for group in groupby] # keep as multiindex
-                idx_categories = [x.categories for x in obs_tidy.index.levels]
+                idx_categories = [x.cat.categories for x in obs_tidy_idx]
 
     obs_tidy.set_index(obs_tidy_idx, inplace=True)
     if gene_symbols is not None:
