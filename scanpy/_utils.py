@@ -379,6 +379,7 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
 
 # backwards compat... remove this in the future
 def sanitize_anndata(adata):
+    """Transform string annotations to categoricals."""
     adata._sanitize()
 
 

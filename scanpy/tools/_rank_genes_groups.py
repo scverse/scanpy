@@ -9,6 +9,7 @@ from anndata import AnnData
 from scipy.sparse import issparse, vstack
 
 from .. import _utils
+from .. import get
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
 from .._compat import Literal

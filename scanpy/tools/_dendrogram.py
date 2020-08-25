@@ -9,6 +9,7 @@ from anndata import AnnData
 from pandas.api.types import is_categorical_dtype
 
 from .. import logging as logg
+from .. import get
 from .._utils import _doc_params
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 
@@ -127,9 +128,7 @@ def dendrogram(
         if use_raw is None and adata.raw is not None:
             use_raw = True
         gene_names = adata.raw.var_names if use_raw else adata.var_names
-        from ..plotting._anndata import _prepare_dataframe
-
-        categories, rep_df = _prepare_dataframe(adata, gene_names, groupby, use_raw)
+        categories, rep_df = get._prepare_dataframe(adata, gene_names, groupby, use_raw)
 
     # aggregate values within categories using 'mean'
     mean_df = rep_df.groupby(level=0).mean()

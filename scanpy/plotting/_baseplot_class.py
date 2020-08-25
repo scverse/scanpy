@@ -12,10 +12,11 @@ from matplotlib import pyplot as pl
 from matplotlib import gridspec
 
 from .. import logging as logg
+from .. import get
 from .._compat import Literal
 from ._utils import make_grid_spec
 from ._utils import ColorLike, _AxesSubplot
-from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
+from ._anndata import _plot_dendrogram, _get_dendrogram_key
 
 _VarNames = Union[str, Sequence[str]]
 
@@ -102,7 +103,7 @@ class BasePlot(object):
 
         self._update_var_groups()
 
-        self.categories, self.obs_tidy = _prepare_dataframe(
+        self.categories, self.obs_tidy = get._prepare_dataframe(
             adata,
             self.var_names,
             groupby,
