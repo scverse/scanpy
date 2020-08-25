@@ -328,7 +328,7 @@ def summarized_expression_df(
         specified threshold (`mean_expressed` and `var_expressed`) and fraction of cells expressing
         given genes above threshold (`fraction`)  by default.
     long_format
-        Whether to keep group names in columns (False) or in rows (True). True by default.
+        Whether to keep the gene names in columns (False) or in rows (True). True by default.
     var_names
         `var_names` should be a valid subset of `adata.var_names`. All genes are used if no
         given.
