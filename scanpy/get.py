@@ -324,9 +324,10 @@ def summarized_expression_df(
         The key of the observation grouping to consider. It is expected that
         groupby is a categorical.
     ops
-        Operations to execute on the grouped dataframe. mean and variance of expression above the 
-        specified threshold (`mean_expressed` and `var_expressed`) and fraction of cells expressing
-        given genes above threshold (`fraction`)  by default.
+        Operations to execute on the grouped dataframe. By default mean and variance of
+        expression above the specified threshold (`mean_expressed` and `var_expressed`)
+        and fraction of cells expressing given genes above threshold (`fraction`) are
+        returned.
     long_format
         Whether to keep the gene names in columns (False) or in rows (True). True by default.
     var_names
@@ -340,10 +341,6 @@ def summarized_expression_df(
         Layer to use instead of adata.X.
     threshold
         Expression threshold for mean_expressed and var_expressed ops.
-    num_categories
-        Only used if groupby observation is not categorical. This value
-        determines the number of groups into which the groupby observation
-        should be subdivided.
     gene_symbols
         Key for field in .var that stores gene symbols.
 
@@ -563,6 +560,7 @@ def _indexed_expression_df(
     if groupby is None:
         groupby = ''
         obs_tidy_idx = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
+        idx_categories = obs_tidy_idx.cat.categories
     else:
         if len(groupby) == 1 and not is_categorical_dtype(adata.obs[groupby[0]]):
             # if the groupby column is not categorical, turn it into one
