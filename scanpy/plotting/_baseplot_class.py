@@ -103,7 +103,7 @@ class BasePlot(object):
 
         self._update_var_groups()
 
-        self.categories, self.obs_tidy = get._prepare_dataframe(
+        self.categories, self.obs_tidy = get._indexed_expression_df(
             adata,
             self.var_names,
             groupby,

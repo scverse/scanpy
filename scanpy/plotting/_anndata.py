@@ -967,7 +967,7 @@ def heatmap(
         var_names, var_group_labels, var_group_positions
     )
 
-    categories, obs_tidy = get._prepare_dataframe(
+    categories, obs_tidy = get._indexed_expression_df(
         adata,
         var_names,
         groupby,
@@ -1329,7 +1329,7 @@ def tracksplot(
         var_names, var_group_labels, var_group_positions
     )
 
-    categories, obs_tidy = get._prepare_dataframe(
+    categories, obs_tidy = get._indexed_expression_df(
         adata,
         var_names,
         groupby,

@@ -1,5 +1,5 @@
 """This module contains helper functions for accessing data."""
-from typing import Optional, Iterable, Tuple, Mapping, Union, Sequence
+from typing import Optional, Iterable, Tuple, Mapping, Union, Sequence, Literal
 
 import numpy as np
 import pandas as pd
@@ -298,6 +298,90 @@ def var_df(
     return df
 
 
+def grouped_expression_df(
+    adata: AnnData,
+    groupby: Optional[Union[str, Sequence[str]]] = None,
+    ops: Optional[Literal['mean_expressed', 'var_expressed', 'fraction']] = ('mean_expressed', 'var_expressed', 'fraction'),
+    long_format: bool = True,
+    var_names: Optional[Union[_VarNames, Mapping[str, _VarNames]]] = None,
+    use_raw: Optional[bool] = None,
+    log: bool = False,
+    layer: Optional[str] = None,
+    threshold: float = 0.,
+    gene_symbols: Optional[str] = None,
+) -> pd.DataFrame:
+    """\
+    Creates a dataframe where gene expression is grouped by key(s) in adata.obs (`groupby`)
+    and aggregated using given functions (`ops`).
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    groupby
+        The key of the observation grouping to consider. It is expected that
+        groupby is a categorical.
+    ops
+        Operations to execute on the grouped dataframe. mean and variance of expression above the 
+        specified threshold (`mean_expressed` and `var_expressed`) and fraction of cells expressing
+        given genes above threshold (`fraction`)  by default.
+    long_format
+        Whether to keep group names in columns (False) or in rows (True). True by default.
+    var_names
+        `var_names` should be a valid subset of `adata.var_names`. All genes are used if no
+        given.
+    use_raw
+        Use `raw` attribute of `adata` if present.
+    log
+        Use the log of the values
+    layer
+        Layer to use instead of adata.X.
+    threshold
+        Expression threshold for mean_expressed and var_expressed ops.
+    num_categories
+        Only used if groupby observation is not categorical. This value
+        determines the number of groups into which the groupby observation
+        should be subdivided.
+    gene_symbols
+        Key for field in .var that stores gene symbols.
+    Returns
+    -------
+    `pandas.DataFrame`
+    """
+    assert all(is_categorical_dtype(adata.obs[group]) for group in groupby)
+    _, df = _indexed_expression_df(
+        adata,
+        groupby=groupby,
+        var_names=var_names,
+        use_raw=use_raw,
+        log=log,
+        layer=layer,
+        gene_symbols=gene_symbols,
+        concat_indices=False,
+    )
+
+    assert all(np.isin(ops, ['mean_expressed', 'var_expressed', 'fraction'])), 'Undefined op'
+    assert len(ops) > 0, 'No ops given'
+
+    res = {}
+    # .agg is super slow even for mean and var, so do it separately using .mean and .var
+    if 'mean_expressed' in ops or 'var_expressed' in ops:
+        nonzero_group = df.mask(df<=threshold).groupby(level=df.index.names, observed=True)
+        if 'mean_expressed' in ops:
+            res['mean_expressed'] = nonzero_group.mean()
+        if 'var_expressed' in ops:
+            res['var_expressed'] = nonzero_group.var()
+    if 'fraction' in ops:
+        res['fraction'] = (df>threshold).groupby(level=df.index.names, observed=True).mean()
+
+    res = pd.concat(res.values(), axis=1, keys=res.keys(), names=[None, 'Genes'])
+
+    if long_format:
+        res = res.stack(level=1)
+
+    return res
+
+
 def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     """
     Choose array aligned with obs annotation.
@@ -352,7 +436,7 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
         )
 
 
-def _prepare_dataframe(
+def _indexed_expression_df(
     adata: AnnData,
     var_names: Optional[Union[_VarNames, Mapping[str, _VarNames]]] = None,
     groupby: Optional[Union[str, Sequence[str]]] = None,
