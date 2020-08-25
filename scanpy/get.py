@@ -300,9 +300,9 @@ def var_df(
     return df
 
 
-def grouped_expression_df(
+def summarized_expression_df(
     adata: AnnData,
-    groupby: Optional[Union[str, Sequence[str]]] = None,
+    groupby: Union[str, Sequence[str]],
     ops: Optional[Literal['mean_expressed', 'var_expressed', 'fraction']] = None,
     long_format: bool = True,
     var_names: Optional[Union[_VarNames, Mapping[str, _VarNames]]] = None,
@@ -350,6 +350,8 @@ def grouped_expression_df(
     -------
     `pandas.DataFrame`
     """
+    if isinstance(groupby, str):
+        groupby = [groupby]
     assert all(is_categorical_dtype(adata.obs[group]) for group in groupby)
     _, df = _indexed_expression_df(
         adata,
@@ -378,10 +380,10 @@ def grouped_expression_df(
     if 'fraction' in ops:
         res['fraction'] = (df>threshold).groupby(level=df.index.names, observed=True).mean()
 
-    res = pd.concat(res.values(), axis=1, keys=res.keys(), names=[None, 'Genes'])
+    res = pd.concat(res.values(), axis=1, keys=res.keys(), names=[None, 'gene'])
 
     if long_format:
-        res = res.stack(level=1)
+        res = res.stack(level=1).reset_index('gene')
 
     return res
 
