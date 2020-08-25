@@ -1734,7 +1734,6 @@ def correlation_matrix(
         return axs
 
 
-
 def _plot_gene_groups_brackets(
     gene_groups_ax: Axes,
     group_positions: Iterable[Tuple[int, int]],
