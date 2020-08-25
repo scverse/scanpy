@@ -1851,8 +1851,8 @@ def _prepare_dataframe(
                 if len(groupby) > 1:
                     for group in groupby[1:]:
                         # create new category by merging the given groupby categories
-                        obs_tidy_index = (
-                            obs_tidy_index.astype(str) + "_" + adata.obs[group].astype(str)
+                        obs_tidy_idx = (
+                            obs_tidy_idx.astype(str) + "_" + adata.obs[group].astype(str)
                         ).astype('category')
                 obs_tidy_idx.name = "_".join(groupby)
                 idx_categories = obs_tidy.index.categories
