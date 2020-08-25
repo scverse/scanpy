@@ -1127,7 +1127,7 @@ def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
     patches = [Circle((x_, y_), s_) for x_, y_, s_ in zipped]
     collection = PatchCollection(patches, **kwargs)
     if isinstance(c, np.ndarray) and np.issubdtype(c.dtype, np.number):
-        collection.set_array(c)
+        collection.set_array(np.ma.masked_invalid(c))
         collection.set_clim(vmin, vmax)
     else:
         collection.set_facecolor(c)
