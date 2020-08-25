@@ -433,6 +433,8 @@ def rank_genes_groups(
     """\
     Rank genes for characterizing groups.
 
+    Expects logarithmized data.
+
     Parameters
     ----------
     adata
@@ -631,11 +633,10 @@ def filter_rank_genes_groups(
     adata: AnnData,
     key=None,
     groupby=None,
-    use_raw=True,
-    log=True,
+    use_raw=None,
     key_added='rank_genes_groups_filtered',
     min_in_group_fraction=0.25,
-    min_fold_change=2,
+    min_fold_change=1,
     max_out_group_fraction=0.5,
 ) -> None:
     """\
@@ -656,8 +657,6 @@ def filter_rank_genes_groups(
     key
     groupby
     use_raw
-    log
-        If true, it means that the values to work with are in log scale
     key_added
     min_in_group_fraction
     min_fold_change
@@ -683,86 +682,118 @@ def filter_rank_genes_groups(
         key = 'rank_genes_groups'
 
     if groupby is None:
-        groupby = str(adata.uns[key]['params']['groupby'])
+        groupby = adata.uns[key]['params']['groupby']
+
+    if use_raw is None:
+        use_raw = adata.uns[key]['params']['use_raw']
+
+    same_params = (
+        adata.uns[key]['params']['groupby'] == groupby
+        and adata.uns[key]['params']['reference'] == 'rest'
+        and adata.uns[key]['params']['use_raw'] == use_raw
+    )
+
+    use_logfolds = same_params and 'logfoldchanges' in adata.uns[key]
+    use_fraction = same_params and 'pts_rest' in adata.uns[key]
 
     # convert structured numpy array into DataFrame
     gene_names = pd.DataFrame(adata.uns[key]['names'])
 
     fraction_in_cluster_matrix = pd.DataFrame(
-        np.zeros(gene_names.shape),
-        columns=gene_names.columns,
-        index=gene_names.index,
-    )
-    fold_change_matrix = pd.DataFrame(
-        np.zeros(gene_names.shape),
-        columns=gene_names.columns,
-        index=gene_names.index,
+        np.zeros(gene_names.shape), columns=gene_names.columns, index=gene_names.index,
     )
     fraction_out_cluster_matrix = pd.DataFrame(
-        np.zeros(gene_names.shape),
-        columns=gene_names.columns,
-        index=gene_names.index,
+        np.zeros(gene_names.shape), columns=gene_names.columns, index=gene_names.index,
     )
+
+    if use_logfolds:
+        fold_change_matrix = pd.DataFrame(adata.uns[key]['logfoldchanges'])
+    else:
+        fold_change_matrix = pd.DataFrame(
+            np.zeros(gene_names.shape),
+            columns=gene_names.columns,
+            index=gene_names.index,
+        )
+
+        if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
+            expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
+        else:
+            expm1_func = np.expm1
+
     logg.info(
         f"Filtering genes using: "
         f"min_in_group_fraction: {min_in_group_fraction} "
         f"min_fold_change: {min_fold_change}, "
         f"max_out_group_fraction: {max_out_group_fraction}"
     )
+
     from ..plotting._anndata import _prepare_dataframe
+
     for cluster in gene_names.columns:
         # iterate per column
         var_names = gene_names[cluster].values
 
-        # add column to adata as __is_in_cluster__. This facilitates to measure
-        # fold change of each gene with respect to all other clusters
-        adata.obs['__is_in_cluster__'] = pd.Categorical(adata.obs[groupby] == cluster)
-
-        # obs_tidy has rows=groupby, columns=var_names
-        categories, obs_tidy = _prepare_dataframe(
-            adata,
-            var_names,
-            groupby='__is_in_cluster__',
-            use_raw=use_raw,
-        )
-
-        # for if category defined by groupby (if any) compute for each var_name
-        # 1. the mean value over the category
-        # 2. the fraction of cells in the category having a value > 0
-
-        # 1. compute mean value
-        mean_obs = obs_tidy.groupby(level=0).mean()
-
-        # 2. compute fraction of cells having value >0
-        # transform obs_tidy into boolean matrix
-        obs_bool = obs_tidy.astype(bool)
-
-        # compute the sum per group which in the boolean matrix this is the number
-        # of values >0, and divide the result by the total number of values in the group
-        # (given by `count()`)
-        fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
-
-        # Because the dataframe groupby is based on the '__is_in_cluster__' column,
-        # in this context, [True] means __is_in_cluster__.
-        # Also, in this context, fraction_obs.loc[True].values is the row of values
-        # that is assigned *as column* to fraction_in_cluster_matrix to follow the
-        # structure of the gene_names dataFrame
-        fraction_in_cluster_matrix.loc[:, cluster] = fraction_obs.loc[True].values
-        fraction_out_cluster_matrix.loc[:, cluster] = fraction_obs.loc[False].values
-
-        # compute fold change.
-        if log:
-            fold_change_matrix.loc[:, cluster] = (np.exp(mean_obs.loc[True]) / np.exp(mean_obs.loc[False])).values
+        if use_fraction:
+            fraction_in_cluster_matrix.loc[:, cluster] = (
+                adata.uns[key]['pts'][cluster].loc[var_names].values
+            )
+            fraction_out_cluster_matrix.loc[:, cluster] = (
+                adata.uns[key]['pts_rest'][cluster].loc[var_names].values
+            )
         else:
-            fold_change_matrix.loc[:, cluster] = (mean_obs.loc[True] / mean_obs.loc[False]).values
+            # add column to adata as __is_in_cluster__. This facilitates to measure
+            # fold change of each gene with respect to all other clusters
+            adata.obs['__is_in_cluster__'] = pd.Categorical(
+                adata.obs[groupby] == cluster
+            )
+
+            # obs_tidy has rows=groupby, columns=var_names
+            categories, obs_tidy = _prepare_dataframe(
+                adata, var_names, groupby='__is_in_cluster__', use_raw=use_raw,
+            )
+
+            # for if category defined by groupby (if any) compute for each var_name
+            # 1. the fraction of cells in the category having a value > 0
+            # 2. the mean value over the category
+
+            # 1. compute fraction of cells having value >0
+            # transform obs_tidy into boolean matrix
+            obs_bool = obs_tidy.astype(bool)
+
+            # compute the sum per group which in the boolean matrix this is the number
+            # of values >0, and divide the result by the total number of values in the group
+            # (given by `count()`)
+            fraction_obs = (
+                obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+            )
+
+            # Because the dataframe groupby is based on the '__is_in_cluster__' column,
+            # in this context, [True] means __is_in_cluster__.
+            # Also, in this context, fraction_obs.loc[True].values is the row of values
+            # that is assigned *as column* to fraction_in_cluster_matrix to follow the
+            # structure of the gene_names dataFrame
+            fraction_in_cluster_matrix.loc[:, cluster] = fraction_obs.loc[True].values
+            fraction_out_cluster_matrix.loc[:, cluster] = fraction_obs.loc[False].values
+
+        if not use_logfolds:
+            # 2. compute mean value
+            mean_obs = obs_tidy.groupby(level=0).mean()
+            # compute fold change.
+            fold_change_matrix.loc[:, cluster] = np.log2(
+                (
+                    (expm1_func(mean_obs.loc[True]) + 1e-9)
+                    / (expm1_func(mean_obs.loc[False]) + 1e-9)
+                ).values
+            )
 
     # remove temporary columns
-    adata.obs.drop(columns='__is_in_cluster__')
+    if '__is_in_cluster__' in adata.obs.columns:
+        adata.obs.drop(columns='__is_in_cluster__', inplace=True)
     # filter original_matrix
     gene_names = gene_names[
-        (fraction_in_cluster_matrix > min_in_group_fraction) &
-        (fraction_out_cluster_matrix < max_out_group_fraction) &
-        (fold_change_matrix > min_fold_change)
+        (fraction_in_cluster_matrix > min_in_group_fraction)
+        & (fraction_out_cluster_matrix < max_out_group_fraction)
+        & (fold_change_matrix > min_fold_change)
     ]
     # create new structured array using 'key_added'.
     adata.uns[key_added] = adata.uns[key].copy()
