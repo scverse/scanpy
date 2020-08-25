@@ -367,6 +367,8 @@ def grouped_expression_df(
         concat_indices=False,
     )
 
+    if ops is None:
+        ops = ['mean_expressed', 'var_expressed', 'fraction']
     assert all(np.isin(ops, ['mean_expressed', 'var_expressed', 'fraction'])), 'Undefined op'
     assert len(ops) > 0, 'No ops given'
 
