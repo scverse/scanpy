@@ -570,14 +570,30 @@ def _get_vmin_vmax(
 
 
 def _wraps_plot_scatter(wrapper):
-    annots_orig = {
-        k: v for k, v in wrapper.__annotations__.items() if k not in {'adata', 'kwargs'}
+    import inspect
+
+    params = inspect.signature(embedding).parameters.copy()
+    wrapper_sig = inspect.signature(wrapper)
+    wrapper_params = wrapper_sig.parameters.copy()
+
+    params.pop("basis")
+    params.pop("kwargs")
+    wrapper_params.pop("adata")
+
+    params.update(wrapper_params)
+    annotations = {
+        k: v.annotation
+        for k, v in params.items()
+        if v.annotation != inspect.Parameter.empty
     }
-    annots_scatter = {
-        k: v for k, v in embedding.__annotations__.items() if k != 'basis'
-    }
-    wrapper.__annotations__ = {**annots_scatter, **annots_orig}
-    wrapper.__wrapped__ = embedding
+    if wrapper_sig.return_annotation is not inspect.Signature.empty:
+        annotations["return"] = wrapper_sig.return_annotation
+
+    wrapper.__signature__ = inspect.Signature(
+        list(params.values()), return_annotation=wrapper_sig.return_annotation
+    )
+    wrapper.__annotations__ = annotations
+
     return wrapper
 
 
@@ -665,7 +681,7 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     show_save_ax=doc_show_save_ax,
 )
 def draw_graph(
-    adata: AnnData, layout: Optional[_IGraphLayout] = None, **kwargs,
+    adata: AnnData, *, layout: Optional[_IGraphLayout] = None, **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
