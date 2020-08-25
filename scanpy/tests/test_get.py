@@ -231,7 +231,6 @@ def test_summarized_expression_df():
     adata = sc.datasets.paul15()
     adata.obs['somecat'] = pd.Categorical(adata.obs.paul15_clusters == '3Ery')
     df = sc.get.summarized_expression_df(adata, groupby=['paul15_clusters', 'somecat'])
-
     assert len(df.index.levels) == 2
     assert df.fraction.max() <= 1.
     assert df.fraction.min() >= 0.
@@ -243,3 +242,10 @@ def test_summarized_expression_df():
     assert all(df.columns.levels[1].isin(adata.var_names))
     assert all(df.columns.levels[0].isin(['mean_expressed', 'var_expressed', 'fraction']))
     assert len(df.columns.levels) == 2
+
+    df = sc.get.summarized_expression_df(adata, groupby='paul15_clusters', ops='fraction')
+    assert pd.api.types.is_categorical_dtype(df.index)
+    assert df.fraction.max() <= 1.
+    assert df.fraction.min() >= 0.
+    assert df.columns[-1] == 'fraction'
+    assert len(df.columns) == 2

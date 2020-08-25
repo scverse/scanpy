@@ -346,9 +346,17 @@ def summarized_expression_df(
         should be subdivided.
     gene_symbols
         Key for field in .var that stores gene symbols.
+
     Returns
     -------
     `pandas.DataFrame`
+
+    Example
+    -------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.paul15()
+    >>> adata.obs['somecat'] = pd.Categorical(['A' if x == '3Ery' else 'B' for x in adata.obs.paul15_clusters])
+    >>> df = sc.get.summarized_expression_df(adata, groupby=['paul15_clusters', 'somecat'])
     """
     if isinstance(groupby, str):
         groupby = [groupby]
@@ -366,6 +374,8 @@ def summarized_expression_df(
 
     if ops is None:
         ops = ['mean_expressed', 'var_expressed', 'fraction']
+    if isinstance(ops, str):
+        ops = [ops]
     assert all(np.isin(ops, ['mean_expressed', 'var_expressed', 'fraction'])), 'Undefined op'
     assert len(ops) > 0, 'No ops given'
 
