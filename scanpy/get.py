@@ -1,12 +1,7 @@
 """This module contains helper functions for accessing data."""
 from typing import Optional, Iterable, Tuple, Mapping, Union, Sequence
 
-try:
-    from typing import Literal
-except ImportError:
-    try:
-        from typing_extensions import Literal
-    except ImportError:
+from ._compat import Literal
 
 import numpy as np
 import pandas as pd
