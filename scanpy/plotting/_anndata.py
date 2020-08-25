@@ -1741,8 +1741,9 @@ def _prepare_dataframe(
     use_raw: Optional[bool] = None,
     log: bool = False,
     num_categories: int = 7,
-    layer=None,
+    layer: Optional[str] = None,
     gene_symbols: Optional[str] = None,
+    concat_indices: bool = True,
 ):
     """
     Given the anndata object, prepares a data frame in which the row index are the categories
@@ -1768,6 +1769,9 @@ def _prepare_dataframe(
         should be subdivided.
     gene_symbols
         Key for field in .var that stores gene symbols.
+    concat_indices
+        Concatenates categorical indices into a single categorical index, if 
+        groupby is a sequence. True by default.
 
     Returns
     -------
@@ -1834,31 +1838,37 @@ def _prepare_dataframe(
     obs_tidy = pd.DataFrame(matrix, columns=var_names)
     if groupby is None:
         groupby = ''
-        categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
+        obs_tidy_index = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
     else:
         if len(groupby) == 1 and not is_categorical_dtype(adata.obs[groupby[0]]):
             # if the groupby column is not categorical, turn it into one
             # by subdividing into  `num_categories` categories
-            categorical = pd.cut(adata.obs[groupby[0]], num_categories)
+            obs_tidy_index = pd.cut(adata.obs[groupby[0]], num_categories)
         else:
-            categorical = adata.obs[groupby[0]]
-            if len(groupby) > 1:
-                for group in groupby[1:]:
-                    # create new category by merging the given groupby categories
-                    categorical = (
-                        categorical.astype(str) + "_" + adata.obs[group].astype(str)
-                    ).astype('category')
-            categorical.name = "_".join(groupby)
-    obs_tidy.set_index(categorical, inplace=True)
+            assert all(is_categorical_dtype(adata.obs[group]) for group in groupby)
+            if concat_indices:
+                obs_tidy_index = adata.obs[groupby[0]]
+                if len(groupby) > 1:
+                    for group in groupby[1:]:
+                        # create new category by merging the given groupby categories
+                        obs_tidy_index = (
+                            obs_tidy_index.astype(str) + "_" + adata.obs[group].astype(str)
+                        ).astype('category')
+                obs_tidy_idx.name = "_".join(groupby)
+                idx_categories = obs_tidy.index.categories
+            else:
+                obs_tidy_idx = [adata.obs[group] for group in groupby] # keep as multiindex
+                idx_categories = [x.categories for x in obs_tidy.index.levels]
+
+    obs_tidy.set_index(obs_tidy_idx, inplace=True)
     if gene_symbols is not None:
         # translate the column names to the symbol names
         obs_tidy.rename(
             columns={var_names[x]: symbols[x] for x in range(len(var_names))},
             inplace=True,
         )
-    categories = obs_tidy.index.categories
 
-    return categories, obs_tidy
+    return idx_categories, obs_tidy
 
 
 def _plot_gene_groups_brackets(
