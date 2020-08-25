@@ -1855,7 +1855,7 @@ def _prepare_dataframe(
                             obs_tidy_idx.astype(str) + "_" + adata.obs[group].astype(str)
                         ).astype('category')
                 obs_tidy_idx.name = "_".join(groupby)
-                idx_categories = obs_tidy_idx.categories
+                idx_categories = obs_tidy_idx.cat.categories
             else:
                 obs_tidy_idx = [adata.obs[group] for group in groupby] # keep as multiindex
                 idx_categories = [x.categories for x in obs_tidy.index.levels]
