@@ -9,11 +9,7 @@ requires = [
 
 [tool.flit.metadata]
 module = 'scanpy'
-author = '''
-Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup,
-Sergei Rybakov, Gokcen Eraslan, Tom White, Malte Luecken,
-Davide Cittaro, Tobias Callies, Marius Lange, Andrés R. Muñoz-Rojas
-'''
+author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup, Sergei Rybakov, Gokcen Eraslan, Tom White, Malte Luecken, Davide Cittaro, Tobias Callies, Marius Lange, Andrés R. Muñoz-Rojas'
 # We don’t need all emails, the main authors are sufficient.
 author-email = 'f.alex.wolf@gmx.de, philipp.angerer@helmholtz-muenchen.de'
 description-file = 'README.rst'
