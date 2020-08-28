@@ -48,7 +48,6 @@ exclude = '''
         |_paga
         |_umap
         |_utils
-        |_leiden
         |_louvain
         |_tsne_fix
         |_top_genes
