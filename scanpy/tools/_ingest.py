@@ -419,11 +419,11 @@ class Ingest:
             k = self._n_neighbors
 
         init = self._initialise_search(
-            self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state,
+            self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state
         )
 
         result = self._search(
-            train, self._search_graph.indptr, self._search_graph.indices, init, test,
+            train, self._search_graph.indptr, self._search_graph.indices, init, test
         )
         indices, dists = deheap_sort(result)
         self._indices, self._distances = indices[:, :k], dists[:, :k]

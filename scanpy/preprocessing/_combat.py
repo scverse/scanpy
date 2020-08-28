@@ -11,7 +11,7 @@ from .._utils import sanitize_anndata
 
 
 def _design_matrix(
-    model: pd.DataFrame, batch_key: str, batch_levels: Collection[str],
+    model: pd.DataFrame, batch_key: str, batch_levels: Collection[str]
 ) -> pd.DataFrame:
     """\
     Computes a simple design matrix.
@@ -63,7 +63,7 @@ def _design_matrix(
 
 
 def _standardize_data(
-    model: pd.DataFrame, data: pd.DataFrame, batch_key: str,
+    model: pd.DataFrame, data: pd.DataFrame, batch_key: str
 ) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
     """\
     Standardizes the data per gene.
@@ -190,7 +190,7 @@ def combat(
         X = adata.X.A.T
     else:
         X = adata.X.T
-    data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names,)
+    data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names)
 
     sanitize_anndata(adata)
 

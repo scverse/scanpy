@@ -219,9 +219,7 @@ def embedding(
 
         if (
             size is not None
-            and isinstance(
-                size, (cabc.Sequence, pandas.core.series.Series, np.ndarray,)
-            )
+            and isinstance(size, (cabc.Sequence, pandas.core.series.Series, np.ndarray))
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
@@ -425,7 +423,7 @@ def embedding(
 
         if legend_fontoutline is not None:
             path_effect = [
-                patheffects.withStroke(linewidth=legend_fontoutline, foreground='w',)
+                patheffects.withStroke(linewidth=legend_fontoutline, foreground='w')
             ]
         else:
             path_effect = None
@@ -681,7 +679,7 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     show_save_ax=doc_show_save_ax,
 )
 def draw_graph(
-    adata: AnnData, *, layout: Optional[_IGraphLayout] = None, **kwargs,
+    adata: AnnData, *, layout: Optional[_IGraphLayout] = None, **kwargs
 ) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
@@ -786,7 +784,8 @@ def spatial(
     spatial_data = adata.uns['spatial'][library_id]
     if img_key is _empty:
         img_key = next(
-            (k for k in ['hires', 'lowres'] if k in spatial_data['images']), None,
+            (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
+            None,
         )
 
     if size is None:
@@ -919,7 +918,7 @@ def _get_data_points(
         if f"tissue_{img_key}_scalef" in spatial_data['scalefactors'].keys():
             scalef_key = f"tissue_{img_key}_scalef"
             data_points[0] = np.multiply(
-                data_points[0], spatial_data['scalefactors'][scalef_key],
+                data_points[0], spatial_data['scalefactors'][scalef_key]
             )
         else:
             raise KeyError(
@@ -999,7 +998,7 @@ def _add_categorical_legend(
 
 
 def _get_color_source_vector(
-    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None, groups=None,
+    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None, groups=None
 ):
     """
     Get array from adata that colors will be based on.
@@ -1024,7 +1023,7 @@ def _get_color_source_vector(
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
     if groups and is_categorical_dtype(values):
-        values = values.replace(values.categories.difference(groups), np.nan,)
+        values = values.replace(values.categories.difference(groups), np.nan)
     return values
 
 

@@ -3,7 +3,9 @@ from scipy.sparse import issparse, csr_matrix
 
 
 def normalize_per_cell_weinreb16_deprecated(
-    X: np.ndarray, max_fraction: float = 1, mult_with_mean: bool = False,
+    X: np.ndarray,
+    max_fraction: float = 1,
+    mult_with_mean: bool = False,
 ) -> np.ndarray:
     """\
     Normalize each cell [Weinreb17]_.

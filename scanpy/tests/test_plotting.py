@@ -37,7 +37,12 @@ def test_heatmap(image_comparer):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.heatmap(
-        adata, adata.var_names, 'cell_type', use_raw=False, show=False, dendrogram=True,
+        adata,
+        adata.var_names,
+        'cell_type',
+        use_raw=False,
+        show=False,
+        dendrogram=True,
     )
     save_and_compare_images('master_heatmap')
 
@@ -606,11 +611,11 @@ def test_rank_genes_groups(image_comparer, name, fn):
 @pytest.mark.parametrize(
     "id,fn",
     [
-        ("heatmap", sc.pl.heatmap,),
-        ("dotplot", sc.pl.dotplot,),
-        ("matrixplot", sc.pl.matrixplot,),
-        ("stacked_violin", sc.pl.stacked_violin,),
-        ("tracksplot", sc.pl.tracksplot,),
+        ("heatmap", sc.pl.heatmap),
+        ("dotplot", sc.pl.dotplot),
+        ("matrixplot", sc.pl.matrixplot),
+        ("stacked_violin", sc.pl.stacked_violin),
+        ("tracksplot", sc.pl.tracksplot),
     ],
 )
 def test_genes_symbols(image_comparer, id, fn):
@@ -639,11 +644,11 @@ def pbmc_scatterplots():
 
 
 @pytest.mark.parametrize(
-    "id,fn",
+    'id,fn',
     [
-        ("pca", partial(sc.pl.pca, color='bulk_labels')),
+        ('pca', partial(sc.pl.pca, color='bulk_labels')),
         (
-            "pca_with_fonts",
+            'pca_with_fonts',
             partial(
                 sc.pl.pca,
                 color=['bulk_labels', 'louvain'],
@@ -654,10 +659,11 @@ def pbmc_scatterplots():
             ),
         ),
         pytest.param(
-            "3dprojection", partial(sc.pl.pca, color='bulk_labels', projection='3d'),
+            '3dprojection',
+            partial(sc.pl.pca, color='bulk_labels', projection='3d'),
         ),
         (
-            "multipanel",
+            'multipanel',
             partial(
                 sc.pl.pca,
                 color=['CD3D', 'CD79A'],
@@ -669,21 +675,19 @@ def pbmc_scatterplots():
             ),
         ),
         (
-            "pca_sparse_layer",
-            partial(
-                sc.pl.pca, color=['CD3D', 'CD79A'], layer="sparse", cmap='viridis',
-            ),
+            'pca_sparse_layer',
+            partial(sc.pl.pca, color=['CD3D', 'CD79A'], layer='sparse', cmap='viridis'),
         ),
         pytest.param(
-            "tsne",
+            'tsne',
             partial(sc.pl.tsne, color=['CD3D', 'louvain']),
             marks=pytest.mark.xfail(
-                reason="slight differences even after setting random_state."
+                reason='slight differences even after setting random_state.'
             ),
         ),
-        ("umap_nocolor", sc.pl.umap),
+        ('umap_nocolor', sc.pl.umap),
         (
-            "umap",
+            'umap',
             partial(
                 sc.pl.umap,
                 color=['louvain'],
@@ -692,7 +696,7 @@ def pbmc_scatterplots():
             ),
         ),
         (
-            "umap_gene_expr",
+            'umap_gene_expr',
             partial(
                 sc.pl.umap,
                 color=np.array(['LYZ', 'CD79A']),
@@ -703,7 +707,7 @@ def pbmc_scatterplots():
             ),
         ),
         (
-            "umap_layer",
+            'umap_layer',
             partial(
                 sc.pl.umap,
                 color=np.array(['LYZ', 'CD79A']),
@@ -716,13 +720,13 @@ def pbmc_scatterplots():
             ),
         ),
         (
-            "umap_with_edges",
+            'umap_with_edges',
             partial(sc.pl.umap, color='louvain', edges=True, edges_width=0.1, s=50),
         ),
-        # ("diffmap", partial(sc.pl.diffmap, components='all', color=['CD3D'])),
+        # ('diffmap', partial(sc.pl.diffmap, components='all', color=['CD3D'])),
         (
-            "umap_symbols",
-            partial(sc.pl.umap, color=['1', '2', '3'], gene_symbols="numbers"),
+            'umap_symbols',
+            partial(sc.pl.umap, color=['1', '2', '3'], gene_symbols='numbers'),
         ),
     ],
 )
@@ -967,7 +971,7 @@ def test_visium_default(image_comparer):
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
 
-    sc.pl.spatial(adata,)
+    sc.pl.spatial(adata)
 
     save_and_compare_images('master_spatial_visium_default')
 

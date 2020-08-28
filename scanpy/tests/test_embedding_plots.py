@@ -71,7 +71,7 @@ def adata():
 
 @pytest.fixture
 def fixture_request(request):
-    """Returns a Request object. 
+    """Returns a Request object.
 
     Allows you to access names of parameterized tests from within a test.
     """
@@ -79,7 +79,8 @@ def fixture_request(request):
 
 
 @pytest.fixture(
-    params=[(0, 0, 0, 1), None], ids=["na_color.black_tup", "na_color.default"],
+    params=[(0, 0, 0, 1), None],
+    ids=["na_color.black_tup", "na_color.default"],
 )
 def na_color(request):
     return request.param
@@ -142,15 +143,13 @@ def test_missing_values_categorical(
         kwargs["na_color"] = na_color
     kwargs["na_in_legend"] = na_in_legend
 
-    plotfunc(
-        adata, color=["label", "label_missing"], **kwargs,
-    )
+    plotfunc(adata, color=["label", "label_missing"], **kwargs)
 
     save_and_compare_images(base_name)
 
 
 def test_missing_values_continuous(
-    fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds,
+    fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds
 ):
     save_and_compare_images = image_comparer(
         MISSING_VALUES_ROOT, MISSING_VALUES_FIGS, tol=15
@@ -164,8 +163,6 @@ def test_missing_values_continuous(
     if na_color is not None:
         kwargs["na_color"] = na_color
 
-    plotfunc(
-        adata, color=["1", "1_missing"], **kwargs,
-    )
+    plotfunc(adata, color=["1", "1_missing"], **kwargs)
 
     save_and_compare_images(base_name)

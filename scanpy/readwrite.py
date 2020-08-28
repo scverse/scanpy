@@ -174,7 +174,7 @@ def read_10x_h5(
         Feature types
     """
     start = logg.info(f'reading {filename}')
-    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url,)
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f'... did not find original file {filename}')
     with tables.open_file(str(filename), 'r') as f:
@@ -233,7 +233,8 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
                 data = dsets['data'].view('float32')
                 data[:] = dsets['data']
             matrix = csr_matrix(
-                (data, dsets['indices'], dsets['indptr']), shape=(N, M),
+                (data, dsets['indices'], dsets['indptr']),
+                shape=(N, M),
             )
             # the csc matrix is automatically the transposed csr matrix
             # as scanpy expects it, so, no need for a further transpostion
@@ -268,7 +269,8 @@ def _read_v3_10x_h5(filename, *, start=None):
                 data = dsets['data'].view('float32')
                 data[:] = dsets['data']
             matrix = csr_matrix(
-                (data, dsets['indices'], dsets['indptr']), shape=(N, M),
+                (data, dsets['indices'], dsets['indptr']),
+                shape=(N, M),
             )
             adata = AnnData(
                 matrix,
@@ -498,7 +500,9 @@ def _read_legacy_10x_mtx(
     """
     path = Path(path)
     adata = read(
-        path / f'{prefix}matrix.mtx', cache=cache, cache_compression=cache_compression,
+        path / f'{prefix}matrix.mtx',
+        cache=cache,
+        cache_compression=cache_compression,
     ).T  # transpose the data
     genes = pd.read_csv(path / f'{prefix}genes.tsv', header=None, sep='\t')
     if var_names == 'gene_symbols':
@@ -610,7 +614,7 @@ def write(
 
 
 def read_params(
-    filename: Union[Path, str], asheader: bool = False,
+    filename: Union[Path, str], asheader: bool = False
 ) -> Dict[str, Union[int, float, bool, str, None]]:
     """\
     Read parameter dictionary from text file.
@@ -691,7 +695,7 @@ def _read(
         )
     else:
         ext = is_valid_filename(filename, return_ext=True)
-    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url,)
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f'... did not find original file {filename}')
     # read hdf5 files
@@ -849,8 +853,7 @@ def is_float(string: str) -> float:
 
 
 def is_int(string: str) -> bool:
-    """Check whether string is integer.
-    """
+    """Check whether string is integer."""
     try:
         int(string)
         return True
@@ -859,8 +862,7 @@ def is_int(string: str) -> bool:
 
 
 def convert_bool(string: str) -> Tuple[bool, bool]:
-    """Check whether string is boolean.
-    """
+    """Check whether string is boolean."""
     if string == 'True':
         return True, True
     elif string == 'False':
@@ -870,8 +872,7 @@ def convert_bool(string: str) -> Tuple[bool, bool]:
 
 
 def convert_string(string: str) -> Union[int, float, bool, str, None]:
-    """Convert string to int, float or bool.
-    """
+    """Convert string to int, float or bool."""
     if is_int(string):
         return int(string)
     elif is_float(string):
@@ -952,8 +953,7 @@ def _download(url: str, path: Path):
 
 
 def _check_datafile_present_and_download(path, backup_url=None):
-    """Check whether the file is present, otherwise download.
-    """
+    """Check whether the file is present, otherwise download."""
     path = Path(path)
     if path.is_file():
         return True
