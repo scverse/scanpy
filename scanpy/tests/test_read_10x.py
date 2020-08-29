@@ -64,7 +64,8 @@ def test_read_10x(tmp_path, mtx_path, h5_path, prefix):
 
 def test_read_10x_h5_v1():
     spec_genome_v1 = sc.read_10x_h5(
-        ROOT / '1.2.0' / 'filtered_gene_bc_matrices_h5.h5', genome='hg19_chr21',
+        ROOT / '1.2.0' / 'filtered_gene_bc_matrices_h5.h5',
+        genome='hg19_chr21',
     )
     nospec_genome_v1 = sc.read_10x_h5(
         ROOT / '1.2.0' / 'filtered_gene_bc_matrices_h5.h5'
@@ -74,7 +75,8 @@ def test_read_10x_h5_v1():
 
 def test_read_10x_h5():
     spec_genome_v3 = sc.read_10x_h5(
-        ROOT / '3.0.0' / 'filtered_feature_bc_matrix.h5', genome='GRCh38_chr21',
+        ROOT / '3.0.0' / 'filtered_feature_bc_matrix.h5',
+        genome='GRCh38_chr21',
     )
     nospec_genome_v3 = sc.read_10x_h5(ROOT / '3.0.0' / 'filtered_feature_bc_matrix.h5')
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)

@@ -1,5 +1,8 @@
 dist: xenial
 language: python
+branches:
+  only:
+    - master  # All other branches should become (draft) PRs and be build that way
 matrix:
   include:
   - name: "static analysis"

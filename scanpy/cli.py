@@ -22,9 +22,7 @@ from typing import (
 class _DelegatingSubparsersAction(_SubParsersAction):
     """Like a normal subcommand action, but uses a delegator for more choices"""
 
-    def __init__(
-        self, *args, _command: str, _runargs: Dict[str, Any], **kwargs,
-    ):
+    def __init__(self, *args, _command: str, _runargs: Dict[str, Any], **kwargs):
         super().__init__(*args, **kwargs)
         self.command = _command
         self._name_parser_map = self.choices = _CommandDelegator(
@@ -38,9 +36,7 @@ class _CommandDelegator(cabc.MutableMapping):
     but don’t calculate the whole list until necessary
     """
 
-    def __init__(
-        self, command: str, action: _DelegatingSubparsersAction, **runargs,
-    ):
+    def __init__(self, command: str, action: _DelegatingSubparsersAction, **runargs):
         self.command = command
         self.action = action
         self.parser_map = {}
@@ -120,7 +116,7 @@ def _cmd_settings() -> None:
 
 
 def main(
-    argv: Optional[Sequence[str]] = None, *, check: bool = True, **runargs,
+    argv: Optional[Sequence[str]] = None, *, check: bool = True, **runargs
 ) -> Optional[CompletedProcess]:
     """\
     Run a builtin scanpy command or a scanpy-* subcommand.

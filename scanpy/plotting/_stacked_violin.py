@@ -524,9 +524,7 @@ class StackedViolin(BasePlot):
             row_ax.axis('off')
             # remove labels
             row_ax.set_yticklabels([])
-            row_ax.tick_params(
-                axis='y', left=False, right=False,
-            )
+            row_ax.tick_params(axis='y', left=False, right=False)
 
         row_ax.set_ylabel('')
 
@@ -534,7 +532,7 @@ class StackedViolin(BasePlot):
 
         row_ax.set_xticklabels([])
         row_ax.tick_params(
-            axis='x', bottom=False, top=False, labeltop=False, labelbottom=False,
+            axis='x', bottom=False, top=False, labeltop=False, labelbottom=False
         )
 
 
