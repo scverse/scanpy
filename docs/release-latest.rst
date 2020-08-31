@@ -1,6 +1,13 @@
 .. role:: small
 .. role:: smaller
 
+On master
+~~~~~~~~~
+
+.. rubric:: Bugfixes
+
+* Fixed `log1p` inplace on integer dense arrays :pr:`1400` :smaller:`I Virshup`
+
 1.6.0 :small:`2020-08-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -38,8 +38,10 @@ def base(request):
     return request.param
 
 
-def test_log1p_rep(count_matrix_format, base):
-    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+def test_log1p_rep(count_matrix_format, base, dtype):
+    X = count_matrix_format(
+        np.abs(sp.random(100, 200, density=0.3, dtype=dtype)).toarray()
+    )
     check_rep_mutation(sc.pp.log1p, X, base=base)
     check_rep_results(sc.pp.log1p, X, base=base)
 
