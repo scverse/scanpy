@@ -21,6 +21,6 @@ def multi_batch_pca(adata, weights=None, batch_key='batch', **kwargs):
 
     X_proc = (adata.X - means)/scales[:, None]
 
-    comps = pca(X_proc, return_info=True, **kwargs)[1]
+    comps = pca(X_proc, return_info=True, zero_center=False, **kwargs)[1]
 
     adata.obsm['X_multi_batch_pca'] = adata.X.dot(comps.T)
