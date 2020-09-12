@@ -723,7 +723,8 @@ class Neighbors:
                     X = pairwise_distances(X, metric=metric, **metric_kwds)
                 except ValueError: # metric is not supported by sklearn
                     import umap.distances
-                    X = umap.distances.pairwise_special_metric(X, metric=metric)
+                    x_array = X.toarray() if issparse(X) else X
+                    X = umap.distances.pairwise_special_metric(x_array, metric=metric)
                 metric = 'precomputed'
             knn_indices, knn_distances, forest = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
