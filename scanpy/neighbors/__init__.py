@@ -719,7 +719,11 @@ class Neighbors:
         else:
             # non-euclidean case and approx nearest neighbors
             if X.shape[0] < 4096:
-                X = pairwise_distances(X, metric=metric, **metric_kwds)
+                try:
+                    X = pairwise_distances(X, metric=metric, **metric_kwds)
+                except ValueError: # metric is not supported by sklearn
+                    import umap.distances
+                    X = umap.distances.pairwise_special_metric(X, metric=metric)
                 metric = 'precomputed'
             knn_indices, knn_distances, forest = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
