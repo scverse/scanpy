@@ -2,7 +2,7 @@ import scanpy as sc
 import pytest
 
 
-@pytest.mark.parametrize('metric', ['cosine', 'euclidean'])
+@pytest.mark.parametrize('metric', ['cosine', 'euclidean', 'hellinger', 'll_dirichlet'])
 def test_neighbors_metric(metric):
     adata = sc.datasets.pbmc68k_reduced()
     sc.pp.neighbors(adata, random_state=0, use_rep="X", metric=metric)
