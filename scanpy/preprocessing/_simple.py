@@ -662,15 +662,8 @@ def regress_out(
             regres = regressors
         tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
 
-    if n_jobs > 1 and n_chunks > 1:
-        import multiprocessing
-
-        pool = multiprocessing.Pool(n_jobs)
-        res = pool.map_async(_regress_out_chunk, tasks).get(9999999)
-        pool.close()
-
-    else:
-        res = list(map(_regress_out_chunk, tasks))
+    from joblib import Parallel, delayed
+    res = Parallel(n_jobs=n_jobs)(delayed(_regress_out_chunk)(task) for task in tasks)
 
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
