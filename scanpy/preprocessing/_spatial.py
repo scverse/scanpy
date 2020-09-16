@@ -14,7 +14,7 @@ def spatial_connectivity(
     radius: Optional[float] = None,
     coord_type: str = "visium",
 ):
-    """
+    """\
     Creates graph from spatial coordinates
 
     Params
