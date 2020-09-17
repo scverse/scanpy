@@ -731,28 +731,34 @@ def violin(
         x = groupby
         ys = keys
 
-    # set by default the violin plot cut=0 to limit the extend
-    # of the violin plot (see stacked_violin code) for more info.
-    kwds.setdefault('cut', 0)
-    kwds.setdefault('inner')
-
     if multi_panel and groupby is None and len(ys) == 1:
         # This is a quick and dirty way for adapting scales across several
         # keys if groupby is None.
         y = ys[0]
-        g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
-        # don't really know why this gives a warning without passing `order`
-        g = g.map(sns.violinplot, y, orient='vertical', scale=scale, order=keys, **kwds)
+
+        g = sns.catplot(
+            y=y,
+            data=obs_tidy,
+            kind="violin",
+            col=x,
+            col_order=keys,
+            sharey=False,
+            order=keys,
+            **kwds,
+        )
+
         if stripplot:
-            g = g.map(
-                sns.stripplot,
-                y,
-                orient='vertical',
-                jitter=jitter,
-                size=size,
-                order=keys,
-                color='black',
-            )
+            grouped_df = obs_tidy.groupby(x)
+            for ax_id, key in zip(range(g.axes.shape[1]), keys):
+                sns.stripplot(
+                    y=y,
+                    data=grouped_df.get_group(key),
+                    jitter=jitter,
+                    size=size,
+                    color="black",
+                    ax=g.axes[0, ax_id],
+                    **kwds,
+                )
         if log:
             g.set(yscale='log')
         g.set_titles(col_template='{col_name}').set_xlabels('')
@@ -760,6 +766,11 @@ def violin(
             for ax in g.axes[0]:
                 ax.tick_params(axis='x', labelrotation=rotation)
     else:
+        # set by default the violin plot cut=0 to limit the extend
+        # of the violin plot (see stacked_violin code) for more info.
+        kwds.setdefault('cut', 0)
+        kwds.setdefault('inner')
+
         if ax is None:
             axs, _, _, _ = setup_axes(
                 ax=ax,
