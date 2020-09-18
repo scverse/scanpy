@@ -782,7 +782,7 @@ def violin(
             axs = [ax]
         for ax, y, ylab in zip(axs, ys, ylabel):
             ax = sns.violinplot(
-                x,
+                x=x,
                 y=y,
                 data=obs_tidy,
                 order=order,
@@ -793,7 +793,7 @@ def violin(
             )
             if stripplot:
                 ax = sns.stripplot(
-                    x,
+                    x=x,
                     y=y,
                     data=obs_tidy,
                     order=order,
