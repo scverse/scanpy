@@ -740,10 +740,13 @@ def violin(
             y=y,
             data=obs_tidy,
             kind="violin",
+            scale=scale,
             col=x,
             col_order=keys,
             sharey=False,
             order=keys,
+            cut=0,
+            inner=None,
             **kwds,
         )
 
