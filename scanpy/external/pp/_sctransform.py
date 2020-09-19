@@ -21,10 +21,13 @@ from ..rtools import (
 def sctransform(
     adata: AnnData,
     regress_out: Sequence = ('log_umi',),
+    method='poisson',
     batch_key: Optional[str] = None,
     n_top_genes: int = 3000,
+    regress_out_nonreg: Optional[Sequence] = None,
     min_cells: int = 5,
     store_residuals: bool = False,
+    correct_counts: bool = True,
     verbose: bool = True,
     inplace: bool = True,
     seed: int = 0,
@@ -32,18 +35,14 @@ def sctransform(
     """\
     Normalization and variance stabilization of scRNA-seq data using regularized
     negative binomial regression [Hafemeister19]_.
-
     sctransform uses Pearson residuals from regularized negative binomial regression to
     correct for the sequencing depth. After regressing out total number of UMIs (and other
     variables if given) it ranks the genes based on their residual variances and therefore
     also acts as a HVG selection method.
-
     This function replaces `sc.pp.normalize_total` and `sc.pp.highly_variable_genes` and requires
     raw counts in `adata.X`.
-
     .. note::
         More information and bug reports `here <https://github.com/ChristophH/sctransform>`__.
-
     Parameters
     ----------
     adata
@@ -63,23 +62,22 @@ def sctransform(
         Store Pearson residuals in adata.layers['sct_residuals']. These values represent
         batch corrected and depth-normalized gene expression values. Due to potential
         high memory use for big matrices, they are not stored by default.
+    correct_counts
+        Store corrected counts in adata.layers['sct_corrected']. Default is True.
     verbose
         Show progress bar during normalization.
     inplace
         Save HVGs and corrected UMIs inplace. Default is True.
     seed
         Random seed for R RNG. Default is 0.
-
     Returns
     -------
     If `inplace` is False, anndata is returned.
     If `store_residuals` is True, residuals are stored in adata.layers['sct_residuals'].
-
     `adata.layers['sct_corrected']` stores normalized representation of gene expression.
     `adata.var['highly_variable']` stores highly variable genes.
     `adata.var['highly_variable_sct_residual_var']` stores the residual variances that
     are also used for ranking genes by variability.
-
     """
 
     import rpy2
@@ -122,8 +120,18 @@ def sctransform(
     assert isinstance(
         regress_out, collections.abc.Sequence
     ), 'regress_out is not a sequence'
+    
     obs_keys = [x for x in regress_out if x != 'log_umi']
     regress_out = py2r(np.array(regress_out))
+    if regress_out_nonreg is not None:
+        assert isinstance(
+            regress_out_nonreg, collections.abc.Sequence
+        ), 'regress_out_nonreg is not a sequence'
+
+        obs_keys += list(regress_out_nonreg)
+        regress_out_nonreg = py2r(np.array(regress_out_nonreg))
+    else:
+        regress_out_nonreg = rpy2.rinterface.NULL
 
     if batch_key is not None:
         obs_keys += [batch_key]
@@ -147,16 +155,20 @@ def sctransform(
         cell_attr=cell_attr,
         batch_var=batch_key,
         latent_var=regress_out,
+        latent_var_nonreg=regress_out_nonreg,
         residual_type=residual_type,
         return_cell_attr=True,
         min_cells=min_cells,
+        method=method,
         show_progress=verbose,
     )
 
     res_var = r2py(sct.get_residual_var(vst_out, mat))
-    corrected = r2py(sct.correct_counts(vst_out, mat)).T
 
-    adata.layers['sct_corrected'] = corrected
+    if correct_counts:
+        corrected = r2py(sct.correct_counts(vst_out, mat)).T
+        adata.layers['sct_corrected'] = corrected
+
     adata.var['highly_variable_sct_residual_var'] = res_var
 
     if store_residuals:
