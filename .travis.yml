@@ -1,60 +1,63 @@
 dist: xenial
 language: python
+branches:
+  only:
+    - master  # All other branches should become (draft) PRs and be build that way
 matrix:
   include:
-    - name: "static analysis"
-      python: "3.7"
-      script:
-        - black . --check --diff
-        - python -m scanpy.tests.blackdiff 10
-      after_success: skip
-    - name: "anndata dev"
-      python: "3.7"
-      before_install:
-        - |
-          sudo apt-key adv \
-            --keyserver keyserver.ubuntu.com \
-            --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
-          sudo add-apt-repository \
-            --yes \
-            "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
-          cat /etc/apt/sources.list
-          sudo apt-get update -qq
-          travis_retry sudo apt-get install -y r-base gfortran libblas-dev liblapack-dev --no-install-recommends
-        - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings=F, recursive=T)'
-        - Rscript -e 'if(length(find.package("sctransform", quiet=T,lib.loc=Sys.getenv("R_LIBS_USER")))==0){install.packages("sctransform", lib=Sys.getenv("R_LIBS_USER"), repos="https://cran.rstudio.com/")}'
-      install:
-        - pip install docutils sphinx
-        - pip install -e .[test,louvain,leiden,magic,scvi,harmony,skmisc,rtools]
-        - pip install git+https://github.com/theislab/anndata
+  - name: "static analysis"
+    python: "3.7"
+    install:
+    - pip install .[dev,doc]
+    script:
+    - black . --check --diff
+    - python -m scanpy.tests.blackdiff 10
+    - python setup.py check --restructuredtext --strict
+    - rst2html.py --halt=2 README.rst >/dev/null
+    after_success: skip
+  - name: "anndata dev"
+    python: "3.7"
+    before_install:
+    - |
+      sudo apt-key adv \
+        --keyserver keyserver.ubuntu.com \
+        --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+      sudo add-apt-repository \
+        --yes \
+        "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
+      cat /etc/apt/sources.list
+      sudo apt-get update -qq
+      travis_retry sudo apt-get install -y r-base gfortran libblas-dev liblapack-dev --no-install-recommends
+    - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings=F, recursive=T)'
+    - Rscript -e 'if(length(find.package("sctransform", quiet=T,lib.loc=Sys.getenv("R_LIBS_USER")))==0){install.packages("sctransform", lib=Sys.getenv("R_LIBS_USER"), repos="https://cran.rstudio.com/")}'
+    install:
+    - pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc,rtools]
+    - pip install git+https://github.com/theislab/anndata
 python:
-  - '3.6'
-  - '3.7'
-  #- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
+- '3.6'
+- '3.7'
+#- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
 cache:
-  - pip
-  - directories: 
-    - data
-    - $HOME/R
+- pip
+- directories:
+  - data
+  - $HOME/R
 before_install:
-  - |
-    sudo apt-key adv \
-      --keyserver keyserver.ubuntu.com \
-      --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
-    sudo add-apt-repository \
-      --yes \
-      "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
-    cat /etc/apt/sources.list
-    sudo apt-get update -qq
-    travis_retry sudo apt-get install -y r-base gfortran libblas-dev liblapack-dev --no-install-recommends
-  - Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings = FALSE, recursive = TRUE)'
-  - Rscript -e 'if(length(find.package("sctransform", quiet=T,lib.loc=Sys.getenv("R_LIBS_USER")))==0){install.packages("sctransform", lib=Sys.getenv("R_LIBS_USER"), repos="https://cran.rstudio.com/")}'
+- |
+  sudo apt-key adv \
+    --keyserver keyserver.ubuntu.com \
+    --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+  sudo add-apt-repository \
+    --yes \
+    "deb https://cloud.r-project.org/bin/linux/ubuntu/ $(lsb_release -c -s)-cran35/"
+  cat /etc/apt/sources.list
+  sudo apt-get update -qq
+  travis_retry sudo apt-get install -y r-base gfortran libblas-dev liblapack-dev --no-install-recommends
+- Rscript -e 'dir.create(path = Sys.getenv("R_LIBS_USER"), showWarnings = FALSE, recursive = TRUE)'
+- Rscript -e 'if(length(find.package("sctransform", quiet=T,lib.loc=Sys.getenv("R_LIBS_USER")))==0){install.packages("sctransform", lib=Sys.getenv("R_LIBS_USER"), repos="https://cran.rstudio.com/")}'
 install:
-  - pip install docutils sphinx
-  - pip install -e .[test,louvain,leiden,magic,scvi,harmony,skmisc,rtools]
+- pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc,rtools]
 env:
-  - MPLBACKEND=Agg
+- MPLBACKEND=Agg
 script:
-  - pytest --ignore=scanpy/tests/_images
-  - python setup.py check --restructuredtext --strict
-  - rst2html.py --halt=2 README.rst >/dev/null
+- pytest --ignore=scanpy/tests/_images

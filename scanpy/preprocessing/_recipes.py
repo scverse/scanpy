@@ -64,7 +64,7 @@ def recipe_weinreb17(
 
 
 def recipe_seurat(
-    adata: AnnData, log: bool = True, plot: bool = False, copy: bool = False,
+    adata: AnnData, log: bool = True, plot: bool = False, copy: bool = False
 ) -> Optional[AnnData]:
     """\
     Normalization and filtering as of Seurat [Satija15]_.

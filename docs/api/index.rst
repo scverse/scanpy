@@ -301,6 +301,7 @@ Print versions of packages that might influence numerical results.
 .. autosummary::
    :toctree: .
 
+   logging.print_header
    logging.print_versions
 
 

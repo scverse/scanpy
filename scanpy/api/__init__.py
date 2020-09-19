@@ -277,6 +277,7 @@ Print versions of packages that might influence numerical results.
 
 .. autosummary::
 
+   logging.print_header
    logging.print_versions
 
 

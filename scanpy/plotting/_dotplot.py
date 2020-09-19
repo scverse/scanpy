@@ -484,7 +484,7 @@ class DotPlot(BasePlot):
             cbar_legend_height,
         ]
         fig, legend_gs = make_grid_spec(
-            legend_ax, nrows=4, ncols=1, height_ratios=height_ratios,
+            legend_ax, nrows=4, ncols=1, height_ratios=height_ratios
         )
 
         if self.show_size_legend:
@@ -943,7 +943,7 @@ def dotplot(
         dot_min=dot_min,
         smallest_dot=smallest_dot,
         dot_edge_lw=kwds.pop('linewidth', DotPlot.DEFAULT_DOT_EDGELW),
-    ).legend(colorbar_title=colorbar_title, size_title=size_title,)
+    ).legend(colorbar_title=colorbar_title, size_title=size_title)
 
     if return_fig:
         return dp

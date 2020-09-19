@@ -420,7 +420,12 @@ def _scatter_obs(
             if projection == '3d':
                 data.append(Y[mask_remaining, 2])
             axs[ikey].scatter(
-                *data, marker='.', c='lightgrey', s=size, edgecolors='none', zorder=-1,
+                *data,
+                marker='.',
+                c='lightgrey',
+                s=size,
+                edgecolors='none',
+                zorder=-1,
             )
         legend = None
         if legend_loc.startswith('on data'):
@@ -737,9 +742,7 @@ def violin(
         y = ys[0]
         g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
         # don't really know why this gives a warning without passing `order`
-        g = g.map(
-            sns.violinplot, y, orient='vertical', scale=scale, order=keys, **kwds,
-        )
+        g = g.map(sns.violinplot, y, orient='vertical', scale=scale, order=keys, **kwds)
         if stripplot:
             g = g.map(
                 sns.stripplot,
@@ -1116,7 +1119,7 @@ def heatmap(
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(
-                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram,
+                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram
             )
 
         # plot group legends on top of heatmap_ax (if given)
@@ -1191,7 +1194,7 @@ def heatmap(
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
             ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
-                groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom',
+                groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom'
             )
             # add lines to main heatmap
             line_positions = (
@@ -1836,7 +1839,7 @@ def _prepare_dataframe(
     if gene_symbols is not None:
         # translate the column names to the symbol names
         obs_tidy.rename(
-            columns=dict([(var_names[x], symbols[x]) for x in range(len(var_names))]),
+            columns={var_names[x]: symbols[x] for x in range(len(var_names))},
             inplace=True,
         )
     categories = obs_tidy.index.categories

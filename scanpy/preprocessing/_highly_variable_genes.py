@@ -501,7 +501,7 @@ def highly_variable_genes(
                 inplace=True,
             )
             df['highly_variable'] = False
-            df.loc[:n_top_genes, 'highly_variable'] = True
+            df.highly_variable.iloc[:n_top_genes] = True
             df = df.loc[adata.var_names]
         else:
             df = df.loc[adata.var_names]

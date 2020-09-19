@@ -308,13 +308,17 @@ def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
 
 @log1p.register(np.ndarray)
 def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
-    # Can force arrays to be np.ndarrays, but would be useful
+    # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
         if not np.issubdtype(X.dtype, np.floating):
             X = X.astype(np.floating)
         else:
             X = X.copy()
+    elif not (
+        np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, np.complex)
+    ):
+        X = X.astype(np.floating)
     np.log1p(X, out=X)
     if base is not None:
         np.divide(X, np.log(base), out=X)
