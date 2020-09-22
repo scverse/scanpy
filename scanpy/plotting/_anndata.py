@@ -1242,7 +1242,7 @@ def heatmap(
                 arr += [idx] * (pos[1] + 1 - pos[0])
 
             gene_groups_ax.imshow(
-                np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm
+                np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
             )
             gene_groups_ax.axis('off')
 
@@ -1497,7 +1497,7 @@ def tracksplot(
             arr += [idx] * (pos[1] + 1 - pos[0])
 
         gene_groups_ax.imshow(
-            np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm
+            np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
         )
         gene_groups_ax.axis('off')
 
@@ -2311,7 +2311,7 @@ def _plot_categories_as_colorblocks(
 
     if orientation == 'left':
         groupby_ax.imshow(
-            np.matrix([label2code[lab] for lab in obs_tidy.index]).T,
+            np.array([[label2code[lab] for lab in obs_tidy.index]]).T,
             aspect='auto',
             cmap=groupby_cmap,
             norm=norm,
@@ -2334,7 +2334,7 @@ def _plot_categories_as_colorblocks(
         groupby_ax.set_ylabel(groupby)
     else:
         groupby_ax.imshow(
-            np.matrix([label2code[lab] for lab in obs_tidy.index]),
+            np.array([[label2code[lab] for lab in obs_tidy.index]]),
             aspect='auto',
             cmap=groupby_cmap,
             norm=norm,
