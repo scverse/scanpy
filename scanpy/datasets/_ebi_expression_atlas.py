@@ -11,6 +11,7 @@ from scipy import sparse
 from ..readwrite import _download
 from .._settings import settings
 from .. import logging as logg
+from ._utils import check_datasetdir_exists
 
 
 def _filter_boring(dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -30,6 +31,7 @@ def sniff_url(accession: str):
         raise
 
 
+@check_datasetdir_exists
 def download_experiment(accession: str):
     sniff_url(accession)
 
@@ -41,10 +43,12 @@ def download_experiment(accession: str):
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     _download(
-        design_url + "experiment-design", experiment_dir / "experimental_design.tsv",
+        design_url + "experiment-design",
+        experiment_dir / "experimental_design.tsv",
     )
     _download(
-        mtx_url + "quantification-raw", experiment_dir / "expression_archive.zip",
+        mtx_url + "quantification-raw",
+        experiment_dir / "expression_archive.zip",
     )
 
 

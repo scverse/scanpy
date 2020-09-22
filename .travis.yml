@@ -1,33 +1,36 @@
 dist: xenial
 language: python
+branches:
+  only:
+    - master  # All other branches should become (draft) PRs and be build that way
 matrix:
   include:
-    - name: "static analysis"
-      python: "3.7"
-      script:
-        - black . --check --diff
-        - python -m scanpy.tests.blackdiff 10
-      after_success: skip
-    - name: "anndata dev"
-      python: "3.7"
-      install:
-        - pip install docutils sphinx
-        - pip install -e .[test,louvain,leiden,magic,scvi]
-        # also test new umap. remove once umap 0.4+ is used by other runs as well
-        - pip install umap-learn>=0.4 git+https://github.com/theislab/anndata
+  - name: "static analysis"
+    python: "3.7"
+    install:
+    - pip install .[dev,doc]
+    script:
+    - black . --check --diff
+    - python -m scanpy.tests.blackdiff 10
+    - python setup.py check --restructuredtext --strict
+    - rst2html.py --halt=2 README.rst >/dev/null
+    after_success: skip
+  - name: "anndata dev"
+    python: "3.7"
+    install:
+    - pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc]
+    - pip install git+https://github.com/theislab/anndata
 python:
-  - '3.6'
-  - '3.7'
-  #- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
+- '3.6'
+- '3.7'
+#- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
 cache:
-  - pip
-  - directories: data
+- pip
+- directories:
+  - data
 install:
-  - pip install docutils sphinx
-  - pip install -e .[test,louvain,leiden,magic,scvi]
+- pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc]
 env:
-  - MPLBACKEND=Agg
+- MPLBACKEND=Agg
 script:
-  - pytest --ignore=scanpy/tests/_images
-  - python setup.py check --restructuredtext --strict
-  - rst2html.py --halt=2 README.rst >/dev/null
+- pytest --ignore=scanpy/tests/_images

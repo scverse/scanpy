@@ -308,13 +308,17 @@ def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
 
 @log1p.register(np.ndarray)
 def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
-    # Can force arrays to be np.ndarrays, but would be useful
+    # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
         if not np.issubdtype(X.dtype, np.floating):
             X = X.astype(np.floating)
         else:
             X = X.copy()
+    elif not (
+        np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, np.complex)
+    ):
+        X = X.astype(np.floating)
     np.log1p(X, out=X)
     if base is not None:
         np.divide(X, np.log(base), out=X)
@@ -528,48 +532,6 @@ def normalize_per_cell(
         if not issparse(X): X /= materialize_as_ndarray(counts_per_cell[:, np.newaxis])
         else: sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
     return X if copy else None
-
-
-def normalize_per_cell_weinreb16_deprecated(
-    X: np.ndarray,
-    max_fraction: float = 1,
-    mult_with_mean: bool = False,
-) -> np.ndarray:
-    """\
-    Normalize each cell [Weinreb17]_.
-
-    This is a deprecated version. See `normalize_per_cell` instead.
-
-    Normalize each cell by UMI count, so that every cell has the same total
-    count.
-
-    Parameters
-    ----------
-    X
-        Expression matrix. Rows correspond to cells and columns to genes.
-    max_fraction
-        Only use genes that make up more than max_fraction of the total
-        reads in every cell.
-    mult_with_mean
-        Multiply the result with the mean of total counts.
-
-    Returns
-    -------
-    Normalized version of the original expression matrix.
-    """
-    if max_fraction < 0 or max_fraction > 1:
-        raise ValueError('Choose max_fraction between 0 and 1.')
-
-    counts_per_cell = X.sum(1).A1 if issparse(X) else X.sum(1)
-    gene_subset = np.all(X <= counts_per_cell[:, None] * max_fraction, axis=0)
-    if issparse(X): gene_subset = gene_subset.A1
-    tc_include = X[:, gene_subset].sum(1).A1 if issparse(X) else X[:, gene_subset].sum(1)
-
-    X_norm = X.multiply(csr_matrix(1/tc_include[:, None])) if issparse(X) else X / tc_include[:, None]
-    if mult_with_mean:
-        X_norm *= np.mean(counts_per_cell)
-
-    return X_norm
 
 
 def regress_out(
@@ -1083,29 +1045,6 @@ def _downsample_array(
             geneptr += 1
         col[geneptr] += 1
     return col
-
-
-
-def zscore_deprecated(X: np.ndarray) -> np.ndarray:
-    """\
-    Z-score standardize each variable/gene in X.
-
-    Use `scale` instead.
-
-    Reference: Weinreb et al. (2017).
-
-    Parameters
-    ----------
-    X
-        Data matrix. Rows correspond to cells and columns to genes.
-
-    Returns
-    -------
-    Z-score standardized version of the data matrix.
-    """
-    means = np.tile(np.mean(X, axis=0)[None, :], (X.shape[0], 1))
-    stds = np.tile(np.std(X, axis=0)[None, :], (X.shape[0], 1))
-    return (X - means) / (stds + .0001)
 
 
 # --------------------------------------------------------------------------------

@@ -12,10 +12,13 @@ from typing import Union, Optional, List, Sequence, Iterable
 
 from .._utils import savefig_or_show
 from ..._utils import _doc_params, sanitize_anndata, subsample
+from ..._compat import Literal
 from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from ..._settings import settings
 from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax, doc_panels
+from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
 from matplotlib.colors import Colormap
 
@@ -50,7 +53,8 @@ def pca_overview(adata: AnnData, **params):
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     """
     show = params['show'] if 'show' in params else None
-    if 'show' in params: del params['show']
+    if 'show' in params:
+        del params['show']
     scatterplots.pca(adata, **params, show=False)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
@@ -86,18 +90,16 @@ def pca_loadings(
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
     """
-    if components is None: components = [1, 2, 3]
-    elif isinstance(components, str): components = [int(x) for x in components.split(',')]
+    if components is None:
+        components = [1, 2, 3]
+    elif isinstance(components, str):
+        components = [int(x) for x in components.split(',')]
     components = np.array(components) - 1
     if np.any(components < 0):
         logg.error("Component indices must be greater than zero.")
         return
     ranking(
-        adata,
-        'varm',
-        'PCs',
-        indices=components,
-        include_lowest=include_lowest,
+        adata, 'varm', 'PCs', indices=components, include_lowest=include_lowest,
     )
     savefig_or_show('pca_loadings', show=show, save=save)
 
@@ -125,7 +127,15 @@ def pca_variance_ratio(
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
     """
-    ranking(adata, 'uns', 'variance_ratio', n_points=n_pcs, dictionary='pca', labels='PC', log=log)
+    ranking(
+        adata,
+        'uns',
+        'variance_ratio',
+        n_points=n_pcs,
+        dictionary='pca',
+        labels='PC',
+        log=log,
+    )
     savefig_or_show('pca_variance_ratio', show=show, save=save)
 
 
@@ -170,7 +180,7 @@ def dpt_timeseries(
             adata.X[adata.obs['dpt_order_indices'].values],
             var_names=adata.var_names,
             highlights_x=adata.uns['dpt_changepoints'],
-            xlim=[0, 1.3*adata.X.shape[0]],
+            xlim=[0, 1.3 * adata.X.shape[0]],
         )
     pl.xlabel('dpt order')
     savefig_or_show('dpt_timeseries', save=save, show=show)
@@ -193,7 +203,8 @@ def dpt_groups_pseudotime(
         ylabel='dpt groups',
         yticks=(
             np.arange(len(adata.obs['dpt_groups'].cat.categories), dtype=int)
-            if len(adata.obs['dpt_groups'].cat.categories) < 5 else None
+            if len(adata.obs['dpt_groups'].cat.categories) < 5
+            else None
         ),
         palette=palette,
         ax=ax_grp,
@@ -218,7 +229,7 @@ def rank_genes_groups(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 20,
     gene_symbols: Optional[str] = None,
-    key: Optional[str] = None,
+    key: Optional[str] = 'rank_genes_groups',
     fontsize: int = 8,
     ncols: int = 4,
     sharey: bool = True,
@@ -250,54 +261,73 @@ def rank_genes_groups(
         `sharey=False`, each panel has its own y-axis range.
     {show_save_ax}
     """
-    if 'n_panels_per_row' in kwds:  n_panels_per_row  = kwds['n_panels_per_row']
-    else: n_panels_per_row = ncols
-    if key is None: key = 'rank_genes_groups'
+    if 'n_panels_per_row' in kwds:
+        n_panels_per_row = kwds['n_panels_per_row']
+    else:
+        n_panels_per_row = ncols
     reference = str(adata.uns[key]['params']['reference'])
-    group_names = (adata.uns[key]['names'].dtype.names
-                   if groups is None else groups)
+    group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
     # one panel for each group
     # set up the figure
     n_panels_x = min(n_panels_per_row, len(group_names))
     n_panels_y = np.ceil(len(group_names) / n_panels_x).astype(int)
 
     from matplotlib import gridspec
-    fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0],
-                             n_panels_y * rcParams['figure.figsize'][1]))
-    gs = gridspec.GridSpec(nrows=n_panels_y,
-                           ncols=n_panels_x,
-                           wspace=0.22,
-                           hspace=0.3)
+
+    fig = pl.figure(
+        figsize=(
+            n_panels_x * rcParams['figure.figsize'][0],
+            n_panels_y * rcParams['figure.figsize'][1],
+        )
+    )
+    gs = gridspec.GridSpec(nrows=n_panels_y, ncols=n_panels_x, wspace=0.22, hspace=0.3)
 
     ax0 = None
     ymin = np.Inf
     ymax = -np.Inf
     for count, group_name in enumerate(group_names):
-        if sharey is True:
+        gene_names = adata.uns[key]['names'][group_name][:n_genes]
+        scores = adata.uns[key]['scores'][group_name][:n_genes]
+
+        # Setting up axis, calculating y bounds
+        if sharey:
+            ymin = min(ymin, np.min(scores))
+            ymax = max(ymax, np.max(scores))
+
             if ax0 is None:
                 ax = fig.add_subplot(gs[count])
                 ax0 = ax
             else:
                 ax = fig.add_subplot(gs[count], sharey=ax0)
         else:
-            ax = fig.add_subplot(gs[count])
+            ymin = np.min(scores)
+            ymax = np.max(scores)
+            ymax += 0.3 * (ymax - ymin)
 
-        gene_names = adata.uns[key]['names'][group_name]
-        scores = adata.uns[key]['scores'][group_name]
-        for ig, g in enumerate(gene_names[:n_genes]):
-            gene_name = gene_names[ig]
+            ax = fig.add_subplot(gs[count])
+            ax.set_ylim(ymin, ymax)
+
+        ax.set_xlim(-0.9, n_genes - 0.1)
+
+        # Mapping to gene_symbols
+        if gene_symbols is not None:
             if adata.raw is not None and adata.uns[key]['params']['use_raw']:
-                ax.text(
-                    ig, scores[ig],
-                    gene_name if gene_symbols is None else adata.raw.var[gene_symbols][gene_name],
-                    rotation='vertical', verticalalignment='bottom',
-                    horizontalalignment='center', fontsize=fontsize)
+                gene_names = adata.raw.var[gene_symbols][gene_names]
             else:
-                ax.text(
-                    ig, scores[ig],
-                    gene_name if gene_symbols is None else adata.var[gene_symbols][gene_name],
-                    rotation='vertical', verticalalignment='bottom',
-                    horizontalalignment='center', fontsize=fontsize)
+                gene_names = adata.var[gene_symbols][gene_names]
+
+        # Making labels
+        for ig, gene_name in enumerate(gene_names):
+            ax.text(
+                ig,
+                scores[ig],
+                gene_name,
+                rotation='vertical',
+                verticalalignment='bottom',
+                horizontalalignment='center',
+                fontsize=fontsize,
+            )
+
         ax.set_title('{} vs. {}'.format(group_name, reference))
         if count >= n_panels_x * (n_panels_y - 1):
             ax.set_xlabel('ranking')
@@ -306,107 +336,127 @@ def rank_genes_groups(
         if count % n_panels_x == 0:
             ax.set_ylabel('score')
 
-        ax.set_xlim(-0.9, ig + 1-0.1)
-
-        if sharey is True:
-            ymin = min(ymin, np.min(scores))
-            ymax = max(ymax, np.max(scores))
-        else:
-            ymin = np.min(scores)
-            ymax = np.max(scores)
-            ymax += 0.3*(np.max(scores)-np.min(scores))
-            ax.set_ylim(ymin, ymax)
-
     if sharey is True:
-        ymax += 0.3*(ymax-ymin)
+        ymax += 0.3 * (ymax - ymin)
         ax.set_ylim(ymin, ymax)
 
     writekey = f"rank_genes_groups_{adata.uns[key]['params']['groupby']}"
     savefig_or_show(writekey, show=show, save=save)
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
+def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
+    """
+     Decides what to return
+     """
+    if return_fig:
+        return plot_obj
+    else:
+        plot_obj.make_figure()
+        savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
+        show = settings.autoshow if show is None else show
+        if not show:
+            return plot_obj.get_axes()
+
+
 def _rank_genes_groups_plot(
     adata: AnnData,
     plot_type: str = 'heatmap',
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    values_to_plot: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
 ):
     """\
-    Plot ranking of genes using the specified plot type
-
-    Parameters
-    ----------
-    adata
-        Annotated data matrix.
-    groups
-        The groups for which to show the gene ranking.
-    n_genes
-        Number of genes to show.
-    groupby
-        The key of the observation grouping to consider. By default,
-        the groupby is chosen from the rank genes groups parameter but
-        other groupby options can be used.
-    key
-        Key used to store the ranking results in `adata.uns`.
-    {show_save_ax}
+    Common function to call the different rank_genes_groups_* plots
     """
     if key is None:
         key = 'rank_genes_groups'
 
-    if 'dendrogram' not in kwds:
-        kwds['dendrogram'] = True
     if groupby is None:
         groupby = str(adata.uns[key]['params']['groupby'])
-    group_names = (adata.uns[key]['names'].dtype.names
-                   if groups is None else groups)
+    group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
 
+    var_names = {}  # dict in which each group is the key and the n_genes are the values
     gene_names = []
-    start = 0
-    group_positions = []
-    group_names_valid = []
     for group in group_names:
-        # get all genes that are 'not-nan'
-        genes_list = [gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)][:n_genes]
+        if min_logfoldchange is not None:
+            df = rank_genes_groups_df(adata, group, key=key)
+            # select genes with given log_fold change
+            genes_list = df[df.logfoldchanges > min_logfoldchange].names.tolist()[
+                :n_genes
+            ]
+        else:
+            # get all genes that are 'non-nan'
+            genes_list = [
+                gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)
+            ][:n_genes]
+
         if len(genes_list) == 0:
             logg.warning(f'No genes found for group {group}')
             continue
+        var_names[group] = genes_list
         gene_names.extend(genes_list)
-        end = start + len(genes_list)
-        group_positions.append((start, end -1))
-        group_names_valid.append(group)
-        start = end
 
-    group_names = group_names_valid
-    if plot_type == 'dotplot':
-        from .._anndata import dotplot
-        dotplot(adata, gene_names, groupby, var_group_labels=group_names,
-                var_group_positions=group_positions, show=show, save=save, **kwds)
+    # by default add dendrogram to plots
+    kwds.setdefault('dendrogram', True)
+
+    if plot_type in ['dotplot', 'matrixplot']:
+        # these two types of plots can also
+        # show score, logfoldchange and pvalues, in general any value from rank
+        # genes groups
+        title = None
+        values_df = None
+        if values_to_plot is not None:
+            values_df = _get_values_to_plot(adata, values_to_plot, gene_names, key=key)
+            title = values_to_plot
+
+        if plot_type == 'dotplot':
+            from .._dotplot import dotplot
+
+            _pl = dotplot(
+                adata,
+                var_names,
+                groupby,
+                dot_color_df=values_df,
+                return_fig=True,
+                **kwds,
+            )
+
+            if title is not None:
+                _pl.legend(colorbar_title=title.replace("_", " "))
+        elif plot_type == 'matrixplot':
+            from .._matrixplot import matrixplot
+
+            _pl = matrixplot(
+                adata, var_names, groupby, values_df=values_df, return_fig=True, **kwds
+            )
+
+            if title is not None:
+                _pl.legend(title=title.replace("_", " "))
+
+        return _fig_show_save_or_axes(_pl, return_fig, show, save)
+
+    elif plot_type == 'stacked_violin':
+        from .._stacked_violin import stacked_violin
+
+        _pl = stacked_violin(adata, var_names, groupby, return_fig=True, **kwds)
+        return _fig_show_save_or_axes(_pl, return_fig, show, save)
 
     elif plot_type == 'heatmap':
         from .._anndata import heatmap
-        heatmap(adata, gene_names, groupby, var_group_labels=group_names,
-                var_group_positions=group_positions, show=show, save=save, **kwds)
 
-    elif plot_type == 'stacked_violin':
-        from .._anndata import stacked_violin
-        return stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
-                       var_group_positions=group_positions, show=show, save=save, **kwds)
+        return heatmap(adata, var_names, groupby, show=show, save=save, **kwds)
 
     elif plot_type == 'tracksplot':
         from .._anndata import tracksplot
-        return tracksplot(adata, gene_names, groupby, var_group_labels=group_names,
-                       var_group_positions=group_positions, show=show, save=save, **kwds)
 
-    elif plot_type == 'matrixplot':
-        from .._anndata import matrixplot
-        matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
-                   var_group_positions=group_positions, show=show, save=save, **kwds)
+        return tracksplot(adata, var_names, groupby, show=show, save=save, **kwds)
 
 
 @_doc_params(show_save_ax=doc_show_save_ax)
@@ -415,6 +465,7 @@ def rank_genes_groups_heatmap(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: str = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -437,20 +488,23 @@ def rank_genes_groups_heatmap(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     **kwds
         Are passed to :func:`~scanpy.pl.heatmap`.
     {show_save_ax}
     """
-
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='heatmap',
         groups=groups,
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
         **kwds,
@@ -463,6 +517,7 @@ def rank_genes_groups_tracksplot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
@@ -485,6 +540,9 @@ def rank_genes_groups_tracksplot(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     **kwds
@@ -492,13 +550,14 @@ def rank_genes_groups_tracksplot(
     {show_save_ax}
     """
 
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='tracksplot',
         groups=groups,
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
         **kwds,
@@ -511,9 +570,21 @@ def rank_genes_groups_dotplot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    values_to_plot: Optional[
+        Literal[
+            'scores',
+            'logfoldchanges',
+            'pvals',
+            'pvals_adj',
+            'log10_pvals',
+            'log10_pvals_adj',
+        ]
+    ] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
 ):
     """\
@@ -533,22 +604,49 @@ def rank_genes_groups_dotplot(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.dotplot`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
+    return_fig
+        Returns :class:`DotPlot` object. Useful for fine-tuning
+        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`~scanpy.pl.dotplot`.
+
+    Returns
+    -------
+    If `return_fig` is `True`, returns a :class:`DotPlot` object,
+    else if `show` is false, return axes dict
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    Plot `logfoldchanges`, set manually min value to plot as -4 and max as 4
+    and plot only genes in each group that have a minimum log fold change of 3
+    >>> sc.pl.rank_genes_groups_dotplot(adata,
+    ... n_genes=4, values_to_plot="logfoldchanges",
+    ... vmin=-5, vmax=5, min_logfoldchange=3)
+
     """
 
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='dotplot',
         groups=groups,
         n_genes=n_genes,
         groupby=groupby,
+        values_to_plot=values_to_plot,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
+        return_fig=return_fig,
         **kwds,
     )
 
@@ -559,13 +657,16 @@ def rank_genes_groups_stacked_violin(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
 ):
     """\
-    Plot ranking of genes using stacked_violin plot (see :func:`~scanpy.pl.stacked_violin`)
+    Plot ranking of genes using stacked_violin plot
+    (see :func:`~scanpy.pl.stacked_violin`)
 
     Parameters
     ----------
@@ -581,22 +682,45 @@ def rank_genes_groups_stacked_violin(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.stacked_violin`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
+    return_fig
+        Returns :class:`StackedViolin` object. Useful for fine-tuning
+        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`~scanpy.pl.stacked_violin`.
+
+    Returns
+    -------
+    If `return_fig` is `True`, returns a :class:`StackedViolin` object,
+    else if `show` is false, return axes dict
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    >>> sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=4,
+    ... min_logfoldchange=4, figsize=(8,6))
+
     """
 
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='stacked_violin',
         groups=groups,
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
+        return_fig=return_fig,
         **kwds,
     )
 
@@ -607,9 +731,11 @@ def rank_genes_groups_matrixplot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
+    return_fig: Optional[bool] = False,
     **kwds,
 ):
     """\
@@ -629,22 +755,48 @@ def rank_genes_groups_matrixplot(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.matrixplot`).
+    min_logfoldchange
+        Value to filter genes in groups if their logfoldchange is less than the
+        min_logfoldchange
     key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
+    return_fig
+        Returns :class:`MatrixPlot` object. Useful for fine-tuning
+        the plot. Takes precedence over `show=False`.
     **kwds
         Are passed to :func:`~scanpy.pl.matrixplot`.
+
+    Returns
+    -------
+    If `return_fig` is `True`, returns a :class:`MatrixPlot` object,
+    else if `show` is false, return axes dict
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    Plot `logfoldchanges`, set manually min value to plot as -4 and max as 4
+    and plot only genes in each group that have a minimum log fold change of 3
+    >>> sc.pl.rank_genes_groups_matrixplot(adata,
+    ... n_genes=4, values_to_plot="logfoldchanges",
+    ... vmin=-5, vmax=5, min_logfoldchange=3)
+
     """
 
-    _rank_genes_groups_plot(
+    return _rank_genes_groups_plot(
         adata,
         plot_type='matrixplot',
         groups=groups,
         n_genes=n_genes,
         groupby=groupby,
         key=key,
+        min_logfoldchange=min_logfoldchange,
         show=show,
         save=save,
+        return_fig=return_fig,
         **kwds,
     )
 
@@ -705,17 +857,18 @@ def rank_genes_groups_violin(
     if use_raw is None:
         use_raw = bool(adata.uns[key]['params']['use_raw'])
     reference = str(adata.uns[key]['params']['reference'])
-    groups_names = (adata.uns[key]['names'].dtype.names
-                    if groups is None else groups)
-    if isinstance(groups_names, str): groups_names = [groups_names]
+    groups_names = adata.uns[key]['names'].dtype.names if groups is None else groups
+    if isinstance(groups_names, str):
+        groups_names = [groups_names]
     axs = []
     for group_name in groups_names:
         if gene_names is None:
-            gene_names = adata.uns[
-                key]['names'][group_name][:n_genes]
+            _gene_names = adata.uns[key]['names'][group_name][:n_genes]
+        else:
+            _gene_names = gene_names
         df = pd.DataFrame()
         new_gene_names = []
-        for g in gene_names:
+        for g in _gene_names:
             if adata.raw is not None and use_raw:
                 X_col = adata.raw[:, g].X
                 if gene_symbols:
@@ -724,7 +877,8 @@ def rank_genes_groups_violin(
                 X_col = adata[:, g].X
                 if gene_symbols:
                     g = adata.var[gene_symbols][g]
-            if issparse(X_col): X_col = X_col.toarray().flatten()
+            if issparse(X_col):
+                X_col = X_col.toarray().flatten()
             new_gene_names.append(g)
             df[g] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
@@ -738,13 +892,32 @@ def rank_genes_groups_violin(
         y = 'value'
         hue_order = [group_name, reference]
         import seaborn as sns
-        _ax = sns.violinplot(x=x, y=y, data=df_tidy, inner=None,
-                             hue_order=hue_order, hue='hue', split=split,
-                             scale=scale, orient='vertical', ax=ax)
+
+        _ax = sns.violinplot(
+            x=x,
+            y=y,
+            data=df_tidy,
+            inner=None,
+            hue_order=hue_order,
+            hue='hue',
+            split=split,
+            scale=scale,
+            orient='vertical',
+            ax=ax,
+        )
         if strip:
-            _ax = sns.stripplot(x=x, y=y, data=df_tidy,
-                                hue='hue', dodge=True, hue_order=hue_order,
-                                jitter=jitter, color='black', size=size, ax=_ax)
+            _ax = sns.stripplot(
+                x=x,
+                y=y,
+                data=df_tidy,
+                hue='hue',
+                dodge=True,
+                hue_order=hue_order,
+                jitter=jitter,
+                color='black',
+                size=size,
+                ax=_ax,
+            )
         _ax.set_xlabel('genes')
         _ax.set_title('{} vs. {}'.format(group_name, reference))
         _ax.legend_.remove()
@@ -757,7 +930,8 @@ def rank_genes_groups_violin(
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
-    if show == False: return axs
+    if show == False:
+        return axs
 
 
 def sim(
@@ -787,17 +961,20 @@ def sim(
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     """
-    if tmax_realization is not None: tmax = tmax_realization
-    elif 'tmax_write' in adata.uns: tmax = adata.uns['tmax_write']
-    else: tmax = adata.n_obs
-    n_realizations = adata.n_obs/tmax
+    if tmax_realization is not None:
+        tmax = tmax_realization
+    elif 'tmax_write' in adata.uns:
+        tmax = adata.uns['tmax_write']
+    else:
+        tmax = adata.n_obs
+    n_realizations = adata.n_obs / tmax
     if not shuffle:
         if not as_heatmap:
             timeseries(
                 adata.X,
                 var_names=adata.var_names,
-                xlim=[0, 1.25*adata.n_obs],
-                highlights_x=np.arange(tmax, n_realizations*tmax, tmax),
+                xlim=[0, 1.25 * adata.n_obs],
+                highlights_x=np.arange(tmax, n_realizations * tmax, tmax),
                 xlabel='realizations',
             )
         else:
@@ -805,10 +982,10 @@ def sim(
             timeseries_as_heatmap(
                 adata.X,
                 var_names=adata.var_names,
-                highlights_x=np.arange(tmax, n_realizations*tmax, tmax),
+                highlights_x=np.arange(tmax, n_realizations * tmax, tmax),
             )
         pl.xticks(
-            np.arange(0, n_realizations*tmax, tmax),
+            np.arange(0, n_realizations * tmax, tmax),
             np.arange(n_realizations).astype(int) + 1,
         )
         savefig_or_show('sim', save=save, show=show)
@@ -819,8 +996,8 @@ def sim(
         timeseries(
             X,
             var_names=adata.var_names,
-            xlim=[0, 1.25*adata.n_obs],
-            highlights_x=np.arange(tmax, n_realizations*tmax, tmax),
+            xlim=[0, 1.25 * adata.n_obs],
+            highlights_x=np.arange(tmax, n_realizations * tmax, tmax),
             xlabel='index (arbitrary order)',
         )
         savefig_or_show('sim_shuffled', save=save, show=show)
@@ -836,9 +1013,9 @@ def embedding_density(
     group: Optional[Union[str, List[str], None]] = 'all',
     color_map: Union[Colormap, str] = 'YlOrRd',
     bg_dotsize: Optional[int] = 80,
-    fg_dotsize:  Optional[int] = 180,
-    vmax:  Optional[int] = 1,
-    vmin:  Optional[int] = 0,
+    fg_dotsize: Optional[int] = 180,
+    vmax: Optional[int] = 1,
+    vmin: Optional[int] = 0,
     ncols: Optional[int] = 4,
     hspace: Optional[float] = 0.25,
     wspace: Optional[None] = None,
@@ -994,9 +1171,7 @@ def embedding_density(
         and isinstance(group, cabc.Sequence)
     ):
         if ax is not None:
-            raise ValueError(
-                "Can only specify `ax` if no `group` sequence is given."
-            )
+            raise ValueError("Can only specify `ax` if no `group` sequence is given.")
         fig, gs = _panel_grid(hspace, wspace, ncols, len(group))
 
         axs = []
@@ -1011,7 +1186,7 @@ def embedding_density(
             ax = pl.subplot(gs[count])
             # Define plotting data
             dot_sizes = np.ones(adata.n_obs) * bg_dotsize
-            group_mask = (adata.obs[groupby] == group_name)
+            group_mask = adata.obs[groupby] == group_name
             dens_values = -np.ones(adata.n_obs)
             dens_values[group_mask] = adata.obs[key][group_mask]
             adata.obs[density_col_name] = dens_values
@@ -1023,9 +1198,19 @@ def embedding_density(
                 _title = title
 
             ax = embedding(
-                adata, basis, components=components, color=density_col_name,
-                color_map=color_map, norm=norm, size=dot_sizes, vmax=vmax,
-                vmin=vmin, save=False, title=_title, ax=ax, show=False,
+                adata,
+                basis,
+                components=components,
+                color=density_col_name,
+                color_map=color_map,
+                norm=norm,
+                size=dot_sizes,
+                vmax=vmax,
+                vmin=vmin,
+                save=False,
+                title=_title,
+                ax=ax,
+                show=False,
                 **kwargs,
             )
             axs.append(ax)
@@ -1033,7 +1218,7 @@ def embedding_density(
         ax = axs
     else:
         dens_values = adata.obs[key]
-        dot_sizes = np.ones(adata.n_obs)*fg_dotsize
+        dot_sizes = np.ones(adata.n_obs) * fg_dotsize
 
         adata.obs[density_col_name] = dens_values
 
@@ -1043,14 +1228,26 @@ def embedding_density(
 
         # Plot the graph
         fig_or_ax = embedding(
-            adata, basis, components=components, color=density_col_name,
-            color_map=color_map, norm=norm, size=dot_sizes, vmax=vmax,
-            vmin=vmin, save=False, show=False, title=title,
-            ax=ax, return_fig=return_fig,
+            adata,
+            basis,
+            components=components,
+            color=density_col_name,
+            color_map=color_map,
+            norm=norm,
+            size=dot_sizes,
+            vmax=vmax,
+            vmin=vmin,
+            save=False,
+            show=False,
+            title=title,
+            ax=ax,
+            return_fig=return_fig,
             **kwargs,
         )
-        if return_fig: fig = fig_or_ax
-        else: ax = fig_or_ax
+        if return_fig:
+            fig = fig_or_ax
+        else:
+            ax = fig_or_ax
 
     # remove temporary column name
     adata.obs = adata.obs.drop(columns=[density_col_name])
@@ -1060,3 +1257,83 @@ def embedding_density(
     savefig_or_show(f"{key}_", show=show, save=save)
     if show is False:
         return ax
+
+
+def _get_values_to_plot(
+    adata,
+    values_to_plot: Literal[
+        'scores',
+        'logfoldchanges',
+        'pvals',
+        'pvals_adj',
+        'log10_pvals',
+        'log10_pvals_adj',
+    ],
+    gene_names: Sequence[str],
+    groups: Optional[Sequence[str]] = None,
+    key: Optional[str] = 'rank_genes_groups',
+):
+    """
+    If rank_genes_groups has been called, this function
+    prepares a dataframe containing scores, pvalues, logfoldchange etc to be plotted
+    as dotplot or matrixplot.
+
+    The dataframe index are the given groups and the columns are the gene_names
+
+    uset for rank_genes_groups_dotplot
+
+    Parameters
+    ----------
+    adata
+    values_to_plot
+        name of the value to plot
+    gene_names
+        gene names
+    groups
+        groupby categories
+    key
+        adata.uns key where the rank_genes_groups is stored. By default 'rank_genes_groups'
+    Returns
+    -------
+    pandas DataFrame index=groups, columns=gene_names
+
+    """
+    values_df = None
+    check_done = False
+    if groups is None:
+        groups = adata.uns[key]['names'].dtype.names
+    if values_to_plot is not None:
+
+        df_list = []
+        for group in groups:
+            df = rank_genes_groups_df(adata, group, key=key)
+            # check that all genes are present as by default rank_genes_groups
+            # only report the top 100 genes per category
+            if not check_done:
+                if df.shape[0] < adata.shape[1]:
+                    message = (
+                        "Please run `sc.tl.rank_genes_groups` with "
+                        "'n_genes=adata.shape[1]' to save all gene "
+                        f"scores. Currently, only {df.shape[0]} "
+                        "are found"
+                    )
+                    logg.error(message)
+                    raise ValueError(message)
+            df['group'] = group
+            df_list.append(df)
+
+        values_df = pd.concat(df_list)
+        if values_to_plot.startswith('log10'):
+            column = values_to_plot.replace('log10_', '')
+        else:
+            column = values_to_plot
+        values_df = pd.pivot(
+            values_df, index='names', columns='group', values=column
+        ).fillna(1)
+
+        if values_to_plot in ['log10_pvals', 'log10_pvals_adj']:
+            values_df = -1 * np.log10(values_df)
+
+        values_df = values_df.loc[gene_names].T
+
+    return values_df

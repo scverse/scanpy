@@ -1,12 +1,15 @@
 """Logging and Profiling
 """
+import io
 import logging
+import sys
 from functools import update_wrapper, partial
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import anndata.logging
+from sinfo import sinfo
 
 
 HINT = (INFO + DEBUG) // 2
@@ -124,9 +127,6 @@ _DEPENDENCIES_NUMERICS = [
 ]
 
 
-_DEPENDENCIES_PLOTTING = ['matplotlib', 'seaborn']
-
-
 def _versions_dependencies(dependencies):
     # this is not the same as the requirements!
     for mod in dependencies:
@@ -138,30 +138,44 @@ def _versions_dependencies(dependencies):
             pass
 
 
-def print_versions():
+def print_header(*, file=None):
     """\
     Versions that might influence the numerical results.
-
     Matplotlib and Seaborn are excluded from this.
     """
-    from ._settings import settings
+
     modules = ['scanpy'] + _DEPENDENCIES_NUMERICS
     print(' '.join(
         f'{mod}=={ver}'
         for mod, ver in _versions_dependencies(modules)
-    ), file=settings.logfile)
+    ), file=file or sys.stdout)
 
 
-def print_version_and_date():
+def print_versions(*, file=None):
+    """Print print versions of imported packages"""
+    if file is None:  # Inform people about the behavior change
+        warning('If you miss a compact list, please try `print_header`!')
+    stdout = sys.stdout
+    try:
+        buf = sys.stdout = io.StringIO()
+        sinfo(dependencies=True)
+    finally:
+        sys.stdout = stdout
+    output = buf.getvalue()
+    print(output, file=file)
+
+
+def print_version_and_date(*, file=None):
     """\
     Useful for starting a notebook so you see when you started working.
     """
     from . import __version__
-    from ._settings import settings
+    if file is None:
+        file = sys.stdout
     print(
         f'Running Scanpy {__version__}, '
         f'on {datetime.now():%Y-%m-%d %H:%M}.',
-        file=settings.logfile,
+        file=file,
     )
 
 

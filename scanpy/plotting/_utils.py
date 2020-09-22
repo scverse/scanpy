@@ -155,7 +155,7 @@ def timeseries_subplot(
 
 
 def timeseries_as_heatmap(
-    X: np.ndarray, var_names: Collection[str] = (), highlights_x=(), color_map=None,
+    X: np.ndarray, var_names: Collection[str] = (), highlights_x=(), color_map=None
 ):
     """\
     Plot timeseries as heatmap.
@@ -357,7 +357,7 @@ def _validate_palette(adata, key):
 
 
 def _set_colors_for_categorical_obs(
-    adata, value_to_plot, palette: Union[str, Sequence[str], Cycler],
+    adata, value_to_plot, palette: Union[str, Sequence[str], Cycler]
 ):
     """
     Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
@@ -541,8 +541,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
 
 
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
-    """Scatter of group using representation of data Y.
-    """
+    """Scatter of group using representation of data Y."""
     mask = adata.obs[key].cat.categories[imask] == adata.obs[key].values
     color = adata.uns[key + '_colors'][imask]
     if not isinstance(color[0], str):
@@ -576,8 +575,7 @@ def setup_axes(
     projection: Literal['2d', '3d'] = '2d',
     show_ticks=False,
 ):
-    """Grid of axes for plotting, legends and colorbars.
-    """
+    """Grid of axes for plotting, legends and colorbars."""
     make_projection_available(projection)
     if left_margin is not None:
         raise NotImplementedError('We currently don’t support `left_margin`.')
@@ -738,7 +736,7 @@ def scatter_base(
             fig = pl.gcf()
             ax_cb = fig.add_axes(rectangle)
             cb = pl.colorbar(
-                sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb,
+                sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
             )
         # set the title
         if title is not None:
@@ -814,9 +812,7 @@ def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
     ax.set_yticks([])
 
 
-def arrows_transitions(
-    ax: Axes, X: np.ndarray, indices: Sequence[int], weight=None,
-):
+def arrows_transitions(ax: Axes, X: np.ndarray, indices: Sequence[int], weight=None):
     """
     Plot arrows of transitions in data matrix.
 
@@ -876,14 +872,12 @@ def ticks_formatter(x, pos):
 
 
 def pimp_axis(x_or_y_ax):
-    """Remove trailing zeros.
-    """
+    """Remove trailing zeros."""
     x_or_y_ax.set_major_formatter(ticker.FuncFormatter(ticks_formatter))
 
 
 def scale_to_zero_one(x):
-    """Take some 1d data and scale it so that min matches 0 and max 1.
-    """
+    """Take some 1d data and scale it so that min matches 0 and max 1."""
     xscaled = x - np.min(x)
     xscaled /= np.max(xscaled)
     return xscaled
@@ -892,28 +886,27 @@ def scale_to_zero_one(x):
 def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     """Tree layout for networkx graph.
 
-       See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
-       answer by burubum.
+    See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
+    answer by burubum.
 
-       If there is a cycle that is reachable from root, then this will see
-       infinite recursion.
+    If there is a cycle that is reachable from root, then this will see
+    infinite recursion.
 
-       Parameters
-       ----------
-       G: the graph
-       root: the root node
-       levels: a dictionary
-               key: level number (starting from 0)
-               value: number of nodes in this level
-       width: horizontal space allocated for drawing
-       height: vertical space allocated for drawing
+    Parameters
+    ----------
+    G: the graph
+    root: the root node
+    levels: a dictionary
+            key: level number (starting from 0)
+            value: number of nodes in this level
+    width: horizontal space allocated for drawing
+    height: vertical space allocated for drawing
     """
     TOTAL = "total"
     CURRENT = "current"
 
     def make_levels(levels, node=root, currentLevel=0, parent=None):
-        """Compute the number of nodes for each level
-        """
+        """Compute the number of nodes for each level"""
         if currentLevel not in levels:
             levels[currentLevel] = {TOTAL: 0, CURRENT: 0}
         levels[currentLevel][TOTAL] += 1
@@ -1127,7 +1120,7 @@ def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
     patches = [Circle((x_, y_), s_) for x_, y_, s_ in zipped]
     collection = PatchCollection(patches, **kwargs)
     if isinstance(c, np.ndarray) and np.issubdtype(c.dtype, np.number):
-        collection.set_array(c)
+        collection.set_array(np.ma.masked_invalid(c))
         collection.set_clim(vmin, vmax)
     else:
         collection.set_facecolor(c)
@@ -1157,7 +1150,40 @@ def make_grid_spec(
         return fig, gridspec.GridSpec(nrows, ncols, **kw)
     else:
         ax = ax_or_figsize
+        ax.axis('off')
         ax.set_frame_on(False)
         ax.set_xticks([])
         ax.set_yticks([])
         return ax.figure, ax.get_subplotspec().subgridspec(nrows, ncols, **kw)
+
+
+def fix_kwds(kwds_dict, **kwargs):
+    """
+    Given a dictionary of plot parameters (kwds_dict) and a dict of kwds,
+    merge the parameters into a single consolidated dictionary to avoid
+    argument duplication errors.
+
+    If kwds_dict an kwargs have the same key, only the value in kwds_dict is kept.
+
+    Parameters
+    ----------
+    kwds_dict kwds_dictionary
+    kwargs
+
+    Returns
+    -------
+    kwds_dict merged with kwargs
+
+    Examples
+    --------
+
+    >>> def _example(**kwds):
+    ...     return fix_kwds(kwds, key1="value1", key2="value2")
+    >>> example(key1="value10", key3="value3")
+        {'key1': 'value10, 'key2': 'value2', 'key3': 'value3'}
+
+    """
+
+    kwargs.update(kwds_dict)
+
+    return kwargs

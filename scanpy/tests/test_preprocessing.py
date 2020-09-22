@@ -38,8 +38,10 @@ def base(request):
     return request.param
 
 
-def test_log1p_rep(count_matrix_format, base):
-    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+def test_log1p_rep(count_matrix_format, base, dtype):
+    X = count_matrix_format(
+        np.abs(sp.random(100, 200, density=0.3, dtype=dtype)).toarray()
+    )
     check_rep_mutation(sc.pp.log1p, X, base=base)
     check_rep_results(sc.pp.log1p, X, base=base)
 
@@ -344,3 +346,13 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
         )
         assert (adata.X == X).all()
     assert X.dtype == adata.X.dtype
+
+
+def test_recipe_weinreb():
+    # Just tests for failure for now
+    adata = sc.datasets.pbmc68k_reduced().raw.to_adata()
+    adata.X = adata.X.toarray()
+
+    orig = adata.copy()
+    sc.pp.recipe_weinreb17(adata, log=False, copy=True)
+    assert_equal(orig, adata)

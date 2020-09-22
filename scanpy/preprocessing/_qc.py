@@ -376,7 +376,7 @@ def top_segment_proportions(
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
         return top_segment_proportions_sparse_csr(
-            mtx.data, mtx.indptr, np.array(ns, dtype=np.int)
+            mtx.data, mtx.indptr, np.array(ns)
         )
     else:
         return top_segment_proportions_dense(mtx, ns)
@@ -390,7 +390,7 @@ def top_segment_proportions_dense(
     sums = mtx.sum(axis=1)
     partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][:, :ns[-1]]
     values = np.zeros((mtx.shape[0], len(ns)))
-    acc = np.zeros((mtx.shape[0]))
+    acc = np.zeros(mtx.shape[0])
     prev = 0
     for j, n in enumerate(ns):
         acc += partitioned[:, prev:n].sum(axis=1)
@@ -403,6 +403,7 @@ def top_segment_proportions_dense(
 def top_segment_proportions_sparse_csr(data, indptr, ns):
     # work around https://github.com/numba/numba/issues/5056
     indptr = indptr.astype(np.int64)
+    ns = ns.astype(np.int64)
     ns = np.sort(ns)
     maxidx = ns[-1]
     sums = np.zeros((indptr.size - 1), dtype=data.dtype)

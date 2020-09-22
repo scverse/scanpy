@@ -1,13 +1,16 @@
 import collections.abc as cabc
+from copy import copy
 from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
 
 import numpy as np
+import pandas as pd
 from anndata import AnnData
 from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from pandas.api.types import is_categorical_dtype
 from matplotlib import pyplot as pl, colors
+from matplotlib.cm import get_cmap
 from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import Colormap
@@ -19,6 +22,7 @@ from .._utils import (
     _FontWeight,
     _FontSize,
     circles,
+    ColorLike,
     make_projection_available,
 )
 from .._docs import (
@@ -67,7 +71,10 @@ def embedding(
     library_id: str = None,
     #
     color_map: Union[Colormap, str, None] = None,
+    cmap: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
+    na_color: ColorLike = "lightgray",
+    na_in_legend: bool = True,
     size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
     legend_fontsize: Union[int, float, _FontSize, None] = None,
@@ -107,8 +114,20 @@ def embedding(
     """
 
     sanitize_anndata(adata)
+
+    # Setting up color map for continuous values
     if color_map is not None:
-        kwargs['cmap'] = color_map
+        if cmap is not None:
+            raise ValueError("Cannot specify both `color_map` and `cmap`.")
+        else:
+            cmap = color_map
+    cmap = copy(get_cmap(cmap))
+    cmap.set_bad(na_color)
+    kwargs["cmap"] = cmap
+
+    # Prevents warnings during legend creation
+    na_color = colors.to_hex(na_color, keep_alpha=True)
+
     if size is not None:
         kwargs['s'] = size
     if 'edgecolor' not in kwargs:
@@ -200,9 +219,7 @@ def embedding(
 
         if (
             size is not None
-            and isinstance(
-                size, (cabc.Sequence, pandas.core.series.Series, np.ndarray,)
-            )
+            and isinstance(size, (cabc.Sequence, pandas.core.series.Series, np.ndarray))
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
@@ -225,28 +242,36 @@ def embedding(
     for count, (value_to_plot, component_idx) in enumerate(
         itertools.product(color, idx_components)
     ):
-        color_vector, categorical = _get_color_values(
+        color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
             layer=layer,
-            groups=groups,
-            palette=palette,
             use_raw=use_raw,
             gene_symbols=gene_symbols,
+            groups=groups,
+        )
+        color_vector, categorical = _color_vector(
+            adata,
+            value_to_plot,
+            color_source_vector,
+            palette=palette,
+            na_color=na_color,
         )
 
-        # check if higher value points should be plot on top
+        ### Order points
+        order = slice(None)
         if sort_order is True and value_to_plot is not None and categorical is False:
-            order = np.argsort(color_vector)
-            color_vector = color_vector[order]
-            _data_points = data_points[component_idx][order, :]
-
-            # check if 'size' is given (stored in kwargs['s']
-            # and reorder it.
-            if isinstance(size, np.ndarray):
-                size = np.array(size)[order]
-        else:
-            _data_points = data_points[component_idx]
+            # Higher values plotted on top, null values on bottom
+            order = np.argsort(-color_vector, kind="stable")[::-1]
+        elif sort_order and categorical:
+            # Null points go on bottom
+            order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
+        # Set orders
+        if isinstance(size, np.ndarray):
+            size = np.array(size)[order]
+        color_source_vector = color_source_vector[order]
+        color_vector = color_vector[order]
+        _data_points = data_points[component_idx][order, :]
 
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
@@ -304,7 +329,7 @@ def embedding(
                 size_spot = 70 * size
 
             scatter = (
-                partial(ax.scatter, s=size)
+                partial(ax.scatter, s=size, plotnonfinite=True)
                 if library_id is None
                 else partial(circles, s=size_spot, ax=ax)
             )
@@ -355,50 +380,14 @@ def embedding(
                 # if user did not set alpha, set alpha to 0.7
                 kwargs['alpha'] = 0.7 if alpha is None else alpha
 
-            if groups:
-                # first plot non-groups and then plot the
-                # required groups on top
-
-                in_groups = np.array(adata.obs[value_to_plot].isin(groups))
-
-                if isinstance(size, np.ndarray):
-                    in_groups_size = size[in_groups]
-                    not_in_groups_size = size[~in_groups]
-                elif img_key is not None:
-                    in_groups_size = not_in_groups_size = size_spot
-                else:
-                    in_groups_size = not_in_groups_size = size
-
-                # only show grey points if no image is below
-                if library_id is None:
-                    ax.scatter(
-                        _data_points[~in_groups, 0],
-                        _data_points[~in_groups, 1],
-                        s=not_in_groups_size,
-                        marker=".",
-                        c=color_vector[~in_groups],
-                        rasterized=settings._vector_friendly,
-                        **kwargs,
-                    )
-                cax = scatter(
-                    _data_points[in_groups, 0],
-                    _data_points[in_groups, 1],
-                    s=in_groups_size,
-                    marker=".",
-                    c=color_vector[in_groups],
-                    rasterized=settings._vector_friendly,
-                    **kwargs,
-                )
-
-            else:
-                cax = scatter(
-                    _data_points[:, 0],
-                    _data_points[:, 1],
-                    marker=".",
-                    c=color_vector,
-                    rasterized=settings._vector_friendly,
-                    **kwargs,
-                )
+            cax = scatter(
+                _data_points[:, 0],
+                _data_points[:, 1],
+                marker=".",
+                c=color_vector,
+                rasterized=settings._vector_friendly,
+                **kwargs,
+            )
 
         # remove y and x ticks
         ax.set_yticks([])
@@ -412,7 +401,6 @@ def embedding(
             axis_labels = [name + str(x + 1) for x in components_list[component_idx]]
         elif projection == '3d':
             axis_labels = [name + str(x + 1) for x in range(3)]
-
         else:
             axis_labels = [name + str(x + 1) for x in range(2)]
 
@@ -435,25 +423,29 @@ def embedding(
 
         if legend_fontoutline is not None:
             path_effect = [
-                patheffects.withStroke(linewidth=legend_fontoutline, foreground='w',)
+                patheffects.withStroke(linewidth=legend_fontoutline, foreground='w')
             ]
         else:
             path_effect = None
 
-        _add_legend_or_colorbar(
-            adata,
-            ax,
-            cax,
-            categorical,
-            value_to_plot,
-            legend_loc,
-            _data_points,
-            legend_fontweight,
-            legend_fontsize,
-            path_effect,
-            groups,
-            bool(grid),
-        )
+        # Adding legends
+        if categorical:
+            _add_categorical_legend(
+                ax,
+                color_source_vector,
+                palette=_get_palette(adata, value_to_plot),
+                scatter_array=_data_points,
+                legend_loc=legend_loc,
+                legend_fontweight=legend_fontweight,
+                legend_fontsize=legend_fontsize,
+                legend_fontoutline=path_effect,
+                na_color=na_color,
+                na_in_legend=na_in_legend,
+                multi_panel=bool(grid),
+            )
+        else:
+            # TODO: na_in_legend should have some effect here
+            pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
 
     if return_fig is True:
         return fig
@@ -551,7 +543,7 @@ def _get_vmin_vmax(
                         f"Please check the correct format for percentiles."
                     )
                 # interpret value of vmin/vmax as quantile with the following syntax 'p99.9'
-                v_value = np.percentile(color_vector, q=float(v_value[1:]))
+                v_value = np.nanpercentile(color_vector, q=float(v_value[1:]))
             elif callable(v_value):
                 # interpret vmin/vmax as function
                 v_value = v_value(color_vector)
@@ -576,14 +568,30 @@ def _get_vmin_vmax(
 
 
 def _wraps_plot_scatter(wrapper):
-    annots_orig = {
-        k: v for k, v in wrapper.__annotations__.items() if k not in {'adata', 'kwargs'}
+    import inspect
+
+    params = inspect.signature(embedding).parameters.copy()
+    wrapper_sig = inspect.signature(wrapper)
+    wrapper_params = wrapper_sig.parameters.copy()
+
+    params.pop("basis")
+    params.pop("kwargs")
+    wrapper_params.pop("adata")
+
+    params.update(wrapper_params)
+    annotations = {
+        k: v.annotation
+        for k, v in params.items()
+        if v.annotation != inspect.Parameter.empty
     }
-    annots_scatter = {
-        k: v for k, v in embedding.__annotations__.items() if k != 'basis'
-    }
-    wrapper.__annotations__ = {**annots_scatter, **annots_orig}
-    wrapper.__wrapped__ = embedding
+    if wrapper_sig.return_annotation is not inspect.Signature.empty:
+        annotations["return"] = wrapper_sig.return_annotation
+
+    wrapper.__signature__ = inspect.Signature(
+        list(params.values()), return_annotation=wrapper_sig.return_annotation
+    )
+    wrapper.__annotations__ = annotations
+
     return wrapper
 
 
@@ -671,7 +679,7 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     show_save_ax=doc_show_save_ax,
 )
 def draw_graph(
-    adata: AnnData, layout: Optional[_IGraphLayout] = None, **kwargs,
+    adata: AnnData, *, layout: Optional[_IGraphLayout] = None, **kwargs
 ) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
@@ -741,6 +749,7 @@ def spatial(
     alpha_img: float = 1.0,
     bw: bool = False,
     size: float = None,
+    na_color: ColorLike = (0.0, 0.0, 0.0, 0.0),
     **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
@@ -775,10 +784,11 @@ def spatial(
     spatial_data = adata.uns['spatial'][library_id]
     if img_key is _empty:
         img_key = next(
-            (k for k in ['hires', 'lowres'] if k in spatial_data['images']), None,
+            (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
+            None,
         )
 
-    if img_key is None and size is None:
+    if size is None:
         size = 1.0
 
     return embedding(
@@ -790,6 +800,7 @@ def spatial(
         bw=bw,
         library_id=library_id,
         size=size,
+        na_color=na_color,
         **kwargs,
     )
 
@@ -907,14 +918,14 @@ def _get_data_points(
         if f"tissue_{img_key}_scalef" in spatial_data['scalefactors'].keys():
             scalef_key = f"tissue_{img_key}_scalef"
             data_points[0] = np.multiply(
-                data_points[0], spatial_data['scalefactors'][scalef_key],
+                data_points[0], spatial_data['scalefactors'][scalef_key]
             )
         else:
             raise KeyError(
                 f"Could not find entry in `adata.uns[spatial][{library_id}]` for '{img_key}'.\n"
                 f"Available keys are: {list(spatial_data['images'].keys())}."
             )
-    elif img_key is None and basis is "spatial":
+    elif img_key is None and basis == "spatial":
         data_points[0][:, 1] = np.abs(
             np.subtract(data_points[0][:, 1], np.max(data_points[0][:, 1]))
         )
@@ -922,108 +933,82 @@ def _get_data_points(
     return data_points, components_list
 
 
-def _add_legend_or_colorbar(
-    adata,
+def _add_categorical_legend(
     ax,
-    cax,
-    categorical,
-    value_to_plot,
-    legend_loc,
-    scatter_array,
+    color_source_vector,
+    palette: dict,
+    legend_loc: str,
     legend_fontweight,
     legend_fontsize,
     legend_fontoutline,
-    groups,
     multi_panel,
+    na_color,
+    na_in_legend: bool,
+    scatter_array=None,
+):
+    """Add a legend to the passed Axes."""
+    if na_in_legend and pd.isnull(color_source_vector).any():
+        if "NA" in color_source_vector:
+            raise NotImplementedError(
+                "No fallback for null labels has been defined if NA already in categories."
+            )
+        color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
+        palette = palette.copy()
+        palette["NA"] = na_color
+    cats = color_source_vector.categories
+
+    if multi_panel is True:
+        # Shrink current axis by 10% to fit legend and match
+        # size of plots that are not categorical
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.91, box.height])
+
+    if legend_loc == 'right margin':
+        for label in cats:
+            ax.scatter([], [], c=palette[label], label=label)
+        ax.legend(
+            frameon=False,
+            loc='center left',
+            bbox_to_anchor=(1, 0.5),
+            ncol=(1 if len(cats) <= 14 else 2 if len(cats) <= 30 else 3),
+            fontsize=legend_fontsize,
+        )
+    elif legend_loc == 'on data':
+        # identify centroids to put labels
+        all_pos = (
+            pd.DataFrame(scatter_array, columns=["x", "y"])
+            .groupby(color_source_vector, observed=True)
+            .median()
+        )
+
+        for label, x_pos, y_pos in all_pos.itertuples():
+            ax.text(
+                x_pos,
+                y_pos,
+                label,
+                weight=legend_fontweight,
+                verticalalignment='center',
+                horizontalalignment='center',
+                fontsize=legend_fontsize,
+                path_effects=legend_fontoutline,
+            )
+        # TODO: wtf
+        # this is temporary storage for access by other tools
+        _utils._tmp_cluster_pos = all_pos.values
+
+
+def _get_color_source_vector(
+    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None, groups=None
 ):
     """
-    Adds a color bar or a legend to the given ax. A legend is added when the
-    data is categorical and a color bar is added when a continuous value was used.
-
-    """
-    # add legends or colorbars
-    if categorical is True:
-        # add legend to figure
-        categories = list(adata.obs[value_to_plot].cat.categories)
-        colors = adata.uns[value_to_plot + '_colors']
-
-        if multi_panel is True:
-            # Shrink current axis by 10% to fit legend and match
-            # size of plots that are not categorical
-            box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width * 0.91, box.height])
-
-        if groups is not None:
-            # only label groups with the respective color
-            colors = [colors[categories.index(x)] for x in groups]
-            categories = groups
-
-        if legend_loc == 'right margin':
-            for idx, label in enumerate(categories):
-                color = colors[idx]
-                # use empty scatter to set labels
-                ax.scatter([], [], c=color, label=label)
-            ax.legend(
-                frameon=False,
-                loc='center left',
-                bbox_to_anchor=(1, 0.5),
-                ncol=(
-                    1 if len(categories) <= 14 else 2 if len(categories) <= 30 else 3
-                ),
-                fontsize=legend_fontsize,
-            )
-
-        if legend_loc == 'on data':
-            # identify centroids to put labels
-            all_pos = np.zeros((len(categories), 2))
-            for ilabel, label in enumerate(categories):
-                _scatter = scatter_array[adata.obs[value_to_plot] == label, :]
-                x_pos, y_pos = np.median(_scatter, axis=0)
-
-                ax.text(
-                    x_pos,
-                    y_pos,
-                    label,
-                    weight=legend_fontweight,
-                    verticalalignment='center',
-                    horizontalalignment='center',
-                    fontsize=legend_fontsize,
-                    path_effects=legend_fontoutline,
-                )
-
-                all_pos[ilabel] = [x_pos, y_pos]
-            # this is temporary storage for access by other tools
-            _utils._tmp_cluster_pos = all_pos
-    else:
-        # add colorbar to figure
-        pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
-
-
-def _get_color_values(
-    adata,
-    value_to_plot,
-    groups=None,
-    palette: Union[str, Sequence[str], Cycler, None] = None,
-    use_raw=False,
-    gene_symbols=None,
-    layer=None,
-) -> Tuple[Union[np.ndarray, str], bool]:
-    """
-    Returns the value or color associated to each data point.
-    For categorical data, the return value is list of colors taken
-    from the category palette or from the given `palette` value.
-
-    For non-categorical data, the values are returned
-
-    Returns
-    -------
-    values
-        Values to plot
-    is_categorical
-        Are the values categorical?
+    Get array from adata that colors will be based on.
     """
     if value_to_plot is None:
-        return "lightgray", False
+        # Points will be plotted with `na_color`. Ideally this would work
+        # with the "bad color" in a color map but that throws a warning. Instead
+        # _color_vector handles this.
+        # https://github.com/matplotlib/matplotlib/issues/18294
+        return np.broadcast_to(np.nan, adata.n_obs)
     if (
         gene_symbols is not None
         and value_to_plot not in adata.obs.columns
@@ -1037,35 +1022,54 @@ def _get_color_values(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
+    if groups and is_categorical_dtype(values):
+        values = values.replace(values.categories.difference(groups), np.nan)
+    return values
 
+
+def _get_palette(adata, values_key: str, palette=None):
+    color_key = f"{values_key}_colors"
+    values = pd.Categorical(adata.obs[values_key])
+    if palette:
+        _utils._set_colors_for_categorical_obs(adata, values_key, palette)
+    elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
+        values.categories
+    ):
+        #  set a default palette in case that no colors or few colors are found
+        _utils._set_default_colors_for_categorical_obs(adata, values_key)
+    else:
+        _utils._validate_palette(adata, values_key)
+    return dict(zip(values.categories, adata.uns[color_key]))
+
+
+def _color_vector(
+    adata, values_key: str, values, palette, na_color="lightgray"
+) -> Tuple[np.ndarray, bool]:
+    """
+    Map array of values to array of hex (plus alpha) codes.
+
+    For categorical data, the return value is list of colors taken
+    from the category palette or from the given `palette` value.
+
+    For continuous values, the input array is returned (may change in future).
+    """
     ###
     # when plotting, the color of the dots is determined for each plot
     # the data is either categorical or continuous and the data could be in
     # 'obs' or in 'var'
+    to_hex = partial(colors.to_hex, keep_alpha=True)
+    if values_key is None:
+        return np.broadcast_to(to_hex(na_color), adata.n_obs), False
     if not is_categorical_dtype(values):
         return values, False
     else:  # is_categorical_dtype(values)
-        color_key = f"{value_to_plot}_colors"
-        if palette:
-            _utils._set_colors_for_categorical_obs(adata, value_to_plot, palette)
-        elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
-            values.categories
-        ):
-            #  set a default palette in case that no colors or few colors are found
-            _utils._set_default_colors_for_categorical_obs(adata, value_to_plot)
-        else:
-            _utils._validate_palette(adata, value_to_plot)
+        color_map = _get_palette(adata, values_key, palette=palette)
+        color_vector = values.map(color_map).map(to_hex)
 
-        color_vector = np.asarray(adata.uns[color_key])[values.codes]
-
-        # Handle groups
-        if groups:
-            color_vector = np.fromiter(
-                map(colors.to_hex, color_vector), '<U15', len(color_vector)
-            )
-            # set color to 'light gray' for all values
-            # that are not in the groups
-            color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
+        # Set color to 'missing color' for all missing values
+        if color_vector.isna().any():
+            color_vector = color_vector.add_categories([to_hex(na_color)])
+            color_vector = color_vector.fillna(to_hex(na_color))
         return color_vector, True
 
 

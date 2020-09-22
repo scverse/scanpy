@@ -1,4 +1,6 @@
 anndata>=0.7
+# numpy needs a version due to #1320
+numpy>=1.17.0
 # Matplotlib 3.1 causes an error in 3d scatter plots (https://github.com/matplotlib/matplotlib/issues/14298)
 # But matplotlib 3.0 causes one in heatmaps
 matplotlib>=3.1.2
@@ -12,11 +14,11 @@ importlib_metadata>=0.7; python_version < '3.8'
 scikit-learn>=0.21.2
 statsmodels>=0.10.0rc2
 patsy
-networkx
+networkx>=2.3
 natsort
 joblib
 numba>=0.41.0
 umap-learn>=0.3.10
 legacy-api-wrap
-setuptools_scm
 packaging
+sinfo
