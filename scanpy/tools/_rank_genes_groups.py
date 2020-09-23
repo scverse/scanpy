@@ -515,8 +515,7 @@ def rank_genes_groups(
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
-
-    # to visualize the results
+    >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
     if method is None:
