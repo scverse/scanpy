@@ -493,7 +493,7 @@ def normalize_per_cell(
             adata.obs[key_n_counts] = counts_per_cell
             adata._inplace_subset_obs(cell_subset)
             counts_per_cell=counts_per_cell[cell_subset]
-        normalize_per_cell(adata.X, counts_per_cell_after, counts_per_cell)
+        adata.X = _normalize_per_cell(adata.X, counts_per_cell_after, counts_per_cell)
 
         layers = adata.layers.keys() if layers == 'all' else layers
         if use_rep == 'after':
@@ -506,7 +506,7 @@ def normalize_per_cell(
         for layer in layers:
             subset, counts = filter_cells(adata.layers[layer],
                     min_counts=min_counts)
-            temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
+            temp = _normalize_per_cell(adata.layers[layer], after, counts, copy=True)
             adata.layers[layer] = temp
 
         logg.info(
@@ -515,8 +515,27 @@ def normalize_per_cell(
             time=start,
         )
         return adata if copy else None
-    # proceed with data matrix
-    X = data.copy() if copy else data
+    else:
+        return _normalize_per_cell(
+            data,
+            counts_per_cell_after=counts_per_cell_after,
+            counts_per_cell=counts_per_cell,
+            copy=copy,
+            min_counts=min_counts
+        )
+
+
+def _normalize_per_cell(
+    X: Union[np.ndarray, spmatrix],
+    counts_per_cell_after: Optional[float] = None,
+    counts_per_cell: Optional[np.ndarray] = None,
+    copy: bool = False,
+    min_counts: int = 1,
+):
+    """Internal function that performs the normalization."""
+    X = check_array(
+        X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
+    )
     if counts_per_cell is None:
         if copy == False:
             raise ValueError('Can only be run with copy=True')
@@ -525,13 +544,17 @@ def normalize_per_cell(
         counts_per_cell = counts_per_cell[cell_subset]
     if counts_per_cell_after is None:
         counts_per_cell_after = np.median(counts_per_cell)
+    # Conversion in case counts per cell has int values
+    counts_per_cell = counts_per_cell.astype(
+        np.promote_types(counts_per_cell.dtype, np.float32), copy=False
+    )
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
         if not issparse(X): X /= materialize_as_ndarray(counts_per_cell[:, np.newaxis])
         else: sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
-    return X if copy else None
+    return X
 
 
 def regress_out(

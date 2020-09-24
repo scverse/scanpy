@@ -103,8 +103,7 @@ def test_normalize_per_cell():
         sp.csr_matrix([[1, 0], [3, 0], [5, 6]]))
     sc.pp.normalize_per_cell(adata)
     sc.pp.normalize_per_cell(adata_sparse)
-    assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(
-        axis=1).A1.tolist()
+    assert np.allclose(adata.X.sum(axis=1), adata_sparse.X.sum(axis=1))
 
 
 def test_subsample():
