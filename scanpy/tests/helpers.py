@@ -19,7 +19,6 @@ def check_rep_mutation(func, X, **kwargs):
         X=X.copy(),
         layers={"layer": X.copy()},
         obsm={"obsm": X.copy()},
-        dtype=X.dtype,
     )
     adata_X = func(adata, copy=True, **kwargs)
     adata_layer = func(adata, layer="layer", copy=True, **kwargs)

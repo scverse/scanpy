@@ -13,7 +13,7 @@ X_frac = [[1, 0, 1], [3, 0, 1], [5, 6, 1]]
 @pytest.mark.parametrize('typ', [np.array, csr_matrix], ids=lambda x: x.__name__)
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 def test_normalize_total(typ, dtype):
-    adata = AnnData(typ(X_total), dtype=dtype)
+    adata = AnnData(typ(X_total, dtype=dtype))
     sc.pp.normalize_total(adata, key_added='n_counts')
     assert np.allclose(np.ravel(adata.X.sum(axis=1)), [3.0, 3.0, 3.0])
     sc.pp.normalize_total(adata, target_sum=1, key_added='n_counts2')
@@ -27,7 +27,7 @@ def test_normalize_total(typ, dtype):
 @pytest.mark.parametrize('typ', [np.array, csr_matrix], ids=lambda x: x.__name__)
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 def test_normalize_total_layers(typ, dtype):
-    adata = AnnData(typ(X_total), dtype=dtype)
+    adata = AnnData(typ(X_total, dtype=dtype))
     adata.layers["layer"] = adata.X.copy()
     sc.pp.normalize_total(adata, layers=["layer"])
     assert np.allclose(adata.layers["layer"].sum(axis=1), [3.0, 3.0, 3.0])
@@ -36,7 +36,7 @@ def test_normalize_total_layers(typ, dtype):
 @pytest.mark.parametrize('typ', [np.array, csr_matrix], ids=lambda x: x.__name__)
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 def test_normalize_total_view(typ, dtype):
-    adata = AnnData(typ(X_total), dtype=dtype)
+    adata = AnnData(typ(X_total, dtype=dtype))
     v = adata[:, :]
 
     sc.pp.normalize_total(v)
