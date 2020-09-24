@@ -16,9 +16,9 @@ from scanpy.tests.helpers import check_rep_mutation, check_rep_results
 def test_log1p(tmp_path):
     A = np.random.rand(200, 10)
     A_l = np.log1p(A)
-    ad = AnnData(A)
-    ad2 = AnnData(A)
-    ad3 = AnnData(A)
+    ad = AnnData(A.copy())
+    ad2 = AnnData(A.copy())
+    ad3 = AnnData(A.copy())
     ad3.filename = tmp_path / 'test.h5ad'
     sc.pp.log1p(ad)
     assert np.allclose(ad.X, A_l)
@@ -28,7 +28,7 @@ def test_log1p(tmp_path):
     assert np.allclose(ad3.X, ad.X)
 
     # Test base
-    ad4 = AnnData(A)
+    ad4 = AnnData(A.copy())
     sc.pp.log1p(ad4, base=2)
     assert np.allclose(ad4.X, A_l/np.log(2))
 
