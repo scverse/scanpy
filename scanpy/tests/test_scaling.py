@@ -28,15 +28,15 @@ X_centered = [
 def test_scale(typ, dtype):
     ## test AnnData arguments
     # test scaling with default zero_center == True
-    adata0 = AnnData(typ(X), dtype=dtype)
+    adata0 = AnnData(typ(X, dtype=dtype))
     sc.pp.scale(adata0)
     assert np.allclose(csr_matrix(adata0.X).toarray(), X_centered)
     # test scaling with explicit zero_center == True
-    adata1 = AnnData(typ(X), dtype=dtype)
+    adata1 = AnnData(typ(X, dtype=dtype))
     sc.pp.scale(adata1, zero_center=True)
     assert np.allclose(csr_matrix(adata1.X).toarray(), X_centered)
     # test scaling with explicit zero_center == False
-    adata2 = AnnData(typ(X), dtype=dtype)
+    adata2 = AnnData(typ(X, dtype=dtype))
     sc.pp.scale(adata2, zero_center=False)
     assert np.allclose(csr_matrix(adata2.X).toarray(), X_scaled)
     ## test bare count arguments, for simplicity only with explicit copy=True
