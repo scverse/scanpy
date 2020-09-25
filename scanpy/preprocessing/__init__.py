@@ -8,5 +8,6 @@ from ._pca import pca
 from ._qc import calculate_qc_metrics
 from ._combat import combat
 from ._normalization import normalize_total
+from ._cell_hashing import hashsolo
 
 from ..neighbors import neighbors

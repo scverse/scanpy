@@ -228,12 +228,10 @@ def hashsolo(cell_hashing_adata: anndata.AnnData,
         if inplace is False returns AnnData with demultiplexing results
         in .obs attribute otherwise does is in place
     '''
-    print("Please cite HashSolo paper: \n
+    print("Please cite HashSolo paper: \n \
            https://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2")
 
-    data = cell_hashing_adata.obs[cell_hashing_columns]
-    if issparse(data.X):
-        data.X = np.array(data.X.todense())
+    data = cell_hashing_adata.obs[cell_hashing_columns].values
     num_of_cells = cell_hashing_adata.shape[0]
     results = pd.DataFrame(np.zeros((num_of_cells, 6)),
                            columns=['most_likely_hypothesis',
@@ -282,8 +280,8 @@ def hashsolo(cell_hashing_adata: anndata.AnnData,
     cell_hashing_adata.obs.loc[cell_hashing_adata.obs['most_likely_hypothesis']
                                == 0, 'Classification'] = 'Negative'
     all_sings = cell_hashing_adata.obs['most_likely_hypothesis'] == 1
-    singlet_sample_index = np.argmax(cell_hashing_adata.X[all_sings], axis=1)
+    singlet_sample_index = np.argmax(cell_hashing_adata.obs.loc[all_sings, cell_hashing_columns].values, axis=1)
     cell_hashing_adata.obs.loc[all_sings,
-                               'Classification'] = cell_hashing_adata.var_names[singlet_sample_index]
+                               'Classification'] = cell_hashing_adata.obs[cell_hashing_columns].columns[singlet_sample_index]
 
     return cell_hashing_adata if not inplace else None
