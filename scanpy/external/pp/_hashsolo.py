@@ -195,9 +195,10 @@ def hashsolo(cell_hashing_adata: anndata.AnnData,
              number_of_noise_barcodes: int = None,
              inplace: bool = True,
              ):
-    '''Demultiplex cell hashing dataset using HashSolo method
-    from Bernstein et al. (2020)
-    https://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2
+    '''Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
+
+    .. note::
+        More information and bug reports `here <https://github.com/calico/solo>`__.
     Parameters
     ----------
     cell_hashing_adata : anndata.AnnData
