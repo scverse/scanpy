@@ -1,16 +1,9 @@
 #!/usr/bin/env python
-import os
-import json
-
 from scipy.stats import norm
 from itertools import product
 import anndata
 import numpy as np
 import pandas as pd
-import scanpy as sc
-
-from scipy.sparse import issparse
-from sklearn.metrics import calinski_harabasz_score
 
 '''
 HashSolo script provides a probabilistic cell hashing demultiplexing method
@@ -203,10 +196,12 @@ def hashsolo(cell_hashing_adata: anndata.AnnData,
              inplace: bool = True,
              ):
     '''Demultiplex cell hashing dataset using HashSolo method
+    from Bernstein et al. (2020)
+    https://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2
     Parameters
     ----------
     cell_hashing_adata : anndata.AnnData
-        Anndata object with cell hashes in obs columns
+        Anndata object with cell hashes in .obs columns
     cell_hashing_columns : list,
         list specifying which columns in cell_hashing_adata.obs
         are cell hashing counts
@@ -220,6 +215,7 @@ def hashsolo(cell_hashing_adata: anndata.AnnData,
         in the transcriptome space, e.g. UMI counts, pct mito reads, etc.
     pre_existing_clusters : str
         column in cell_hashing_adata.obs for how to break up demultiplexing
+        for example leiden or cell types, not batches though
     inplace : bool
         To do operation in place
     Returns
@@ -227,6 +223,13 @@ def hashsolo(cell_hashing_adata: anndata.AnnData,
     cell_hashing_adata : AnnData
         if inplace is False returns AnnData with demultiplexing results
         in .obs attribute otherwise does is in place
+
+    Examples
+    -------
+    >>> import anndata
+    >>> cell_hashing_data = anndata.read("cell_hashing_counts.h5ad")
+    >>> hashsolo.hashsolo(cell_hashing_data)
+    >>> cell_hashing_data.obs.head()
     '''
     print("Please cite HashSolo paper: \n \
            https://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2")
