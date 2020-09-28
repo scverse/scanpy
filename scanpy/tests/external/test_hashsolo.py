@@ -1,6 +1,6 @@
 from anndata import AnnData
 import numpy as np
-import scanpy as sc
+import scanpy.external as sce
 
 
 def test_cell_demultiplexing():
@@ -19,7 +19,7 @@ def test_cell_demultiplexing():
         x[idx, col_pos] = signal_count
 
     test_data = AnnData(np.random.randint(0, 100, size=x.shape), obs=x)
-    sc.pp.hashsolo(test_data, test_data.obs.columns)
+    sce.pp.hashsolo(test_data, test_data.obs.columns)
 
     doublets = ['Doublet'] * 10
     classes = list(np.repeat(np.arange(10), 98).reshape(98, 10,
