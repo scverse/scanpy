@@ -248,8 +248,6 @@ def hashsolo(
     cell_hashing_columns: list,
     priors: list = [0.01, 0.8, 0.19],
     pre_existing_clusters: str = None,
-    clustering_data: anndata.AnnData = None,
-    resolutions: list = [0.1, 0.25, 0.5, 0.75, 1],
     number_of_noise_barcodes: int = None,
     inplace: bool = True,
 ):
@@ -275,6 +273,9 @@ def hashsolo(
     pre_existing_clusters : str
         column in cell_hashing_adata.obs for how to break up demultiplexing
         for example leiden or cell types, not batches though
+    number_of_noise_barcodes : int,
+        Use this if you wish change the number of barcodes used to create the
+        noise distribution. The default is number of cell hashes - 2.
     inplace : bool
         To do operation in place
     Returns
@@ -286,8 +287,9 @@ def hashsolo(
     Examples
     -------
     >>> import anndata
+    >>> import scanpy.external as sce
     >>> cell_hashing_data = anndata.read("cell_hashing_counts.h5ad")
-    >>> hashsolo.hashsolo(cell_hashing_data)
+    >>> sce.pp.hashsolo(cell_hashing_data)
     >>> cell_hashing_data.obs.head()
     """
     print(
@@ -295,6 +297,8 @@ def hashsolo(
     )
 
     data = cell_hashing_adata.obs[cell_hashing_columns].values
+    if np.any(data < 0):
+        raise ValueError("Cell hashing counts must be non-negative")
     num_of_cells = cell_hashing_adata.shape[0]
     results = pd.DataFrame(
         np.zeros((num_of_cells, 6)),
