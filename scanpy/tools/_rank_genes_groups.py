@@ -709,10 +709,14 @@ def filter_rank_genes_groups(
     gene_names = pd.DataFrame(adata.uns[key]['names'])
 
     fraction_in_cluster_matrix = pd.DataFrame(
-        np.zeros(gene_names.shape), columns=gene_names.columns, index=gene_names.index,
+        np.zeros(gene_names.shape),
+        columns=gene_names.columns,
+        index=gene_names.index,
     )
     fraction_out_cluster_matrix = pd.DataFrame(
-        np.zeros(gene_names.shape), columns=gene_names.columns, index=gene_names.index,
+        np.zeros(gene_names.shape),
+        columns=gene_names.columns,
+        index=gene_names.index,
     )
 
     if use_logfolds:
@@ -763,7 +767,8 @@ def filter_rank_genes_groups(
             mean_out_cluster = np.ravel(X_out.mean(0))
             # compute fold change
             fold_change_matrix.loc[:, cluster] = np.log2(
-                (expm1_func(mean_in_cluster) + 1e-9) / (expm1_func(mean_out_cluster) + 1e-9)
+                (expm1_func(mean_in_cluster) + 1e-9)
+                / (expm1_func(mean_out_cluster) + 1e-9)
             )
 
     # filter original_matrix
