@@ -19,7 +19,7 @@ PyPI only
 ~~~~~~~~~
 If you prefer to exclusively use PyPI run::
 
-    pip install scanpy[leiden]
+    pip install 'scanpy[leiden]'
 
 The extra `[leiden]` installs two packages that are needed for popular
 parts of scanpy but aren't requirements: python-igraph_ [Csardi06]_ and leiden_ [Traag18]_.
