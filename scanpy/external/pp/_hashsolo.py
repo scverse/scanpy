@@ -158,7 +158,6 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         log_noise_signal_probs = np.log(
             norm.pdf(
                 data_subset[:, noise_sample_idx],
-                *signal_noise_params[:-2],
                 loc=signal_noise_params[-2],
                 scale=signal_noise_params[-1],
             )
@@ -168,7 +167,6 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         log_noise_noise_probs = np.log(
             norm.pdf(
                 data_subset[:, noise_sample_idx],
-                *noise_params[:-2],
                 loc=noise_params[-2],
                 scale=noise_params[-1],
             )
@@ -177,7 +175,6 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         log_signal_noise_probs = np.log(
             norm.pdf(
                 data_subset[:, signal_sample_idx],
-                *noise_params[:-2],
                 loc=noise_params[-2],
                 scale=noise_params[-1],
             )
