@@ -736,15 +736,12 @@ def filter_rank_genes_groups(
         f"max_out_group_fraction: {max_out_group_fraction}"
     )
 
-    from ..plotting._anndata import _prepare_dataframe
-
     for cluster in gene_names.columns:
         # iterate per column
         var_names = gene_names[cluster].values
 
         if not use_logfolds or not use_fraction:
-            sub_adata = adata[:, var_names]
-            sub_X = _get_obs_rep(sub_adata, use_raw=use_raw).copy()
+            sub_X = adata.raw[:, var_names].X if use_raw else adata[:, var_names].X
             in_group = adata.obs[groupby] == cluster
             X_in = sub_X[in_group]
             X_out = sub_X[~in_group]
