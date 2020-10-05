@@ -630,7 +630,7 @@ def rank_genes_groups(
     return adata if copy else None
 
 
-def _calc_frac_present(X):
+def _calc_frac(X):
     if issparse(X):
         n_nonzero = X.getnnz(axis=0)
     else:
@@ -754,8 +754,8 @@ def filter_rank_genes_groups(
                 adata.uns[key]['pts_rest'][cluster].loc[var_names].values
             )
         else:
-            fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac_present(X_in)
-            fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac_present(X_out)
+            fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(X_in)
+            fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac(X_out)
 
         if not use_logfolds:
             # compute mean value
