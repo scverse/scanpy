@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from scipy.stats import norm
+from scanpy._utils import check_nonnegative_integers
 from itertools import product
 import anndata
 import numpy as np
@@ -244,7 +245,7 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
 
 
 def hashsolo(
-    cell_hashing_adata: anndata.AnnData,
+    adata: anndata.AnnData,
     cell_hashing_columns: list,
     priors: list = [0.01, 0.8, 0.19],
     pre_existing_clusters: str = None,
@@ -257,10 +258,10 @@ def hashsolo(
         More information and bug reports `here <https://github.com/calico/solo>`__.
     Parameters
     ----------
-    cell_hashing_adata : anndata.AnnData
+    adata : anndata.AnnData
         Anndata object with cell hashes in .obs columns
     cell_hashing_columns : list,
-        list specifying which columns in cell_hashing_adata.obs
+        list specifying which columns in adata.obs
         are cell hashing counts
     priors : list,
         a list of your prior for each hypothesis
@@ -271,7 +272,7 @@ def hashsolo(
         in your cell hashing matrix are those cells which have passed QC
         in the transcriptome space, e.g. UMI counts, pct mito reads, etc.
     pre_existing_clusters : str
-        column in cell_hashing_adata.obs for how to break up demultiplexing
+        column in adata.obs for how to break up demultiplexing
         for example leiden or cell types, not batches though
     number_of_noise_barcodes : int,
         Use this if you wish change the number of barcodes used to create the
@@ -280,7 +281,7 @@ def hashsolo(
         To do operation in place
     Returns
     -------
-    cell_hashing_adata : AnnData
+    adata : AnnData
         if inplace is False returns AnnData with demultiplexing results
         in .obs attribute otherwise does is in place
 
@@ -288,18 +289,18 @@ def hashsolo(
     -------
     >>> import anndata
     >>> import scanpy.external as sce
-    >>> cell_hashing_data = anndata.read("cell_hashing_counts.h5ad")
-    >>> sce.pp.hashsolo(cell_hashing_data)
-    >>> cell_hashing_data.obs.head()
+    >>> data = anndata.read("data.h5ad")
+    >>> sce.pp.hashsolo(data)
+    >>> data.obs.head()
     """
     print(
         "Please cite HashSolo paper: \nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
     )
 
-    data = cell_hashing_adata.obs[cell_hashing_columns].values
-    if np.any(data < 0):
+    data = adata.obs[cell_hashing_columns].values
+    if not check_nonnegative_integers(data):
         raise ValueError("Cell hashing counts must be non-negative")
-    num_of_cells = cell_hashing_adata.shape[0]
+    num_of_cells = adata.shape[0]
     results = pd.DataFrame(
         np.zeros((num_of_cells, 6)),
         columns=[
@@ -310,13 +311,13 @@ def hashsolo(
             "singlet_hypothesis_probability",
             "doublet_hypothesis_probability",
         ],
-        index=cell_hashing_adata.obs_names,
+        index=adata.obs_names,
     )
     if pre_existing_clusters is not None:
         cluster_features = pre_existing_clusters
-        unique_cluster_features = np.unique(cell_hashing_adata.obs[cluster_features])
+        unique_cluster_features = np.unique(adata.obs[cluster_features])
         for cluster_feature in unique_cluster_features:
-            cluster_feature_bool_vector = cell_hashing_adata.obs[
+            cluster_feature_bool_vector = adata.obs[
                 cluster_features == cluster_feature
             ]
             posterior_dict = _calculate_bayes_rule(
@@ -353,35 +354,35 @@ def hashsolo(
             "probs_hypotheses"
         ][:, 2]
 
-    cell_hashing_adata.obs["most_likely_hypothesis"] = results.loc[
-        cell_hashing_adata.obs_names, "most_likely_hypothesis"
+    adata.obs["most_likely_hypothesis"] = results.loc[
+        adata.obs_names, "most_likely_hypothesis"
     ]
-    cell_hashing_adata.obs["cluster_feature"] = results.loc[
-        cell_hashing_adata.obs_names, "cluster_feature"
+    adata.obs["cluster_feature"] = results.loc[
+        adata.obs_names, "cluster_feature"
     ]
-    cell_hashing_adata.obs["negative_hypothesis_probability"] = results.loc[
-        cell_hashing_adata.obs_names, "negative_hypothesis_probability"
+    adata.obs["negative_hypothesis_probability"] = results.loc[
+        adata.obs_names, "negative_hypothesis_probability"
     ]
-    cell_hashing_adata.obs["singlet_hypothesis_probability"] = results.loc[
-        cell_hashing_adata.obs_names, "singlet_hypothesis_probability"
+    adata.obs["singlet_hypothesis_probability"] = results.loc[
+        adata.obs_names, "singlet_hypothesis_probability"
     ]
-    cell_hashing_adata.obs["doublet_hypothesis_probability"] = results.loc[
-        cell_hashing_adata.obs_names, "doublet_hypothesis_probability"
+    adata.obs["doublet_hypothesis_probability"] = results.loc[
+        adata.obs_names, "doublet_hypothesis_probability"
     ]
 
-    cell_hashing_adata.obs["Classification"] = None
-    cell_hashing_adata.obs.loc[
-        cell_hashing_adata.obs["most_likely_hypothesis"] == 2, "Classification"
+    adata.obs["Classification"] = None
+    adata.obs.loc[
+        adata.obs["most_likely_hypothesis"] == 2, "Classification"
     ] = "Doublet"
-    cell_hashing_adata.obs.loc[
-        cell_hashing_adata.obs["most_likely_hypothesis"] == 0, "Classification"
+    adata.obs.loc[
+        adata.obs["most_likely_hypothesis"] == 0, "Classification"
     ] = "Negative"
-    all_sings = cell_hashing_adata.obs["most_likely_hypothesis"] == 1
+    all_sings = adata.obs["most_likely_hypothesis"] == 1
     singlet_sample_index = np.argmax(
-        cell_hashing_adata.obs.loc[all_sings, cell_hashing_columns].values, axis=1
+        adata.obs.loc[all_sings, cell_hashing_columns].values, axis=1
     )
-    cell_hashing_adata.obs.loc[all_sings, "Classification"] = cell_hashing_adata.obs[
+    adata.obs.loc[all_sings, "Classification"] = adata.obs[
         cell_hashing_columns
     ].columns[singlet_sample_index]
 
-    return cell_hashing_adata if not inplace else None
+    return adata if not inplace else None
