@@ -420,7 +420,12 @@ def _scatter_obs(
             if projection == '3d':
                 data.append(Y[mask_remaining, 2])
             axs[ikey].scatter(
-                *data, marker='.', c='lightgrey', s=size, edgecolors='none', zorder=-1,
+                *data,
+                marker='.',
+                c='lightgrey',
+                s=size,
+                edgecolors='none',
+                zorder=-1,
             )
         legend = None
         if legend_loc.startswith('on data'):
@@ -726,30 +731,37 @@ def violin(
         x = groupby
         ys = keys
 
-    # set by default the violin plot cut=0 to limit the extend
-    # of the violin plot (see stacked_violin code) for more info.
-    kwds.setdefault('cut', 0)
-    kwds.setdefault('inner')
-
     if multi_panel and groupby is None and len(ys) == 1:
         # This is a quick and dirty way for adapting scales across several
         # keys if groupby is None.
         y = ys[0]
-        g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
-        # don't really know why this gives a warning without passing `order`
-        g = g.map(
-            sns.violinplot, y, orient='vertical', scale=scale, order=keys, **kwds,
+
+        g = sns.catplot(
+            y=y,
+            data=obs_tidy,
+            kind="violin",
+            scale=scale,
+            col=x,
+            col_order=keys,
+            sharey=False,
+            order=keys,
+            cut=0,
+            inner=None,
+            **kwds,
         )
+
         if stripplot:
-            g = g.map(
-                sns.stripplot,
-                y,
-                orient='vertical',
-                jitter=jitter,
-                size=size,
-                order=keys,
-                color='black',
-            )
+            grouped_df = obs_tidy.groupby(x)
+            for ax_id, key in zip(range(g.axes.shape[1]), keys):
+                sns.stripplot(
+                    y=y,
+                    data=grouped_df.get_group(key),
+                    jitter=jitter,
+                    size=size,
+                    color="black",
+                    ax=g.axes[0, ax_id],
+                    **kwds,
+                )
         if log:
             g.set(yscale='log')
         g.set_titles(col_template='{col_name}').set_xlabels('')
@@ -757,6 +769,11 @@ def violin(
             for ax in g.axes[0]:
                 ax.tick_params(axis='x', labelrotation=rotation)
     else:
+        # set by default the violin plot cut=0 to limit the extend
+        # of the violin plot (see stacked_violin code) for more info.
+        kwds.setdefault('cut', 0)
+        kwds.setdefault('inner')
+
         if ax is None:
             axs, _, _, _ = setup_axes(
                 ax=ax,
@@ -768,7 +785,7 @@ def violin(
             axs = [ax]
         for ax, y, ylab in zip(axs, ys, ylabel):
             ax = sns.violinplot(
-                x,
+                x=x,
                 y=y,
                 data=obs_tidy,
                 order=order,
@@ -779,7 +796,7 @@ def violin(
             )
             if stripplot:
                 ax = sns.stripplot(
-                    x,
+                    x=x,
                     y=y,
                     data=obs_tidy,
                     order=order,
@@ -1116,7 +1133,7 @@ def heatmap(
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(
-                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram,
+                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram
             )
 
         # plot group legends on top of heatmap_ax (if given)
@@ -1191,7 +1208,7 @@ def heatmap(
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
             ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
-                groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom',
+                groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom'
             )
             # add lines to main heatmap
             line_positions = (
@@ -1225,7 +1242,7 @@ def heatmap(
                 arr += [idx] * (pos[1] + 1 - pos[0])
 
             gene_groups_ax.imshow(
-                np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm
+                np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
             )
             gene_groups_ax.axis('off')
 
@@ -1480,7 +1497,7 @@ def tracksplot(
             arr += [idx] * (pos[1] + 1 - pos[0])
 
         gene_groups_ax.imshow(
-            np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm
+            np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
         )
         gene_groups_ax.axis('off')
 
@@ -2294,7 +2311,7 @@ def _plot_categories_as_colorblocks(
 
     if orientation == 'left':
         groupby_ax.imshow(
-            np.matrix([label2code[lab] for lab in obs_tidy.index]).T,
+            np.array([[label2code[lab] for lab in obs_tidy.index]]).T,
             aspect='auto',
             cmap=groupby_cmap,
             norm=norm,
@@ -2317,7 +2334,7 @@ def _plot_categories_as_colorblocks(
         groupby_ax.set_ylabel(groupby)
     else:
         groupby_ax.imshow(
-            np.matrix([label2code[lab] for lab in obs_tidy.index]),
+            np.array([[label2code[lab] for lab in obs_tidy.index]]),
             aspect='auto',
             cmap=groupby_cmap,
             norm=norm,

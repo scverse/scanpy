@@ -9,9 +9,10 @@ from scipy.sparse import issparse
 from anndata import AnnData
 
 from .. import settings
-from ..neighbors import _rp_forest_generate
 from .. import logging as logg
-from .._utils import pkg_version, NeighborsView
+from ..neighbors import _rp_forest_generate
+from .._utils import NeighborsView
+from .._compat import pkg_version
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
@@ -418,11 +419,11 @@ class Ingest:
             k = self._n_neighbors
 
         init = self._initialise_search(
-            self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state,
+            self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state
         )
 
         result = self._search(
-            train, self._search_graph.indptr, self._search_graph.indices, init, test,
+            train, self._search_graph.indptr, self._search_graph.indices, init, test
         )
         indices, dists = deheap_sort(result)
         self._indices, self._distances = indices[:, :k], dists[:, :k]

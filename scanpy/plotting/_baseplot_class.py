@@ -27,7 +27,7 @@ colorbar_title
 cmap
     String denoting matplotlib color map.
 standard_scale
-    Whether or not to standardize the given dimension between 0 and 1, meaning for 
+    Whether or not to standardize the given dimension between 0 and 1, meaning for
     each variable or group, subtract the minimum and divide each by its maximum.
 swap_axes
      By default, the x axis contains `var_names` (e.g. genes) and the y axis
@@ -515,7 +515,7 @@ class BasePlot(object):
             legend_height,
         ]
         fig, legend_gs = make_grid_spec(
-            legend_ax, nrows=2, ncols=1, height_ratios=height_ratios,
+            legend_ax, nrows=2, ncols=1, height_ratios=height_ratios
         )
 
         color_legend_ax = fig.add_subplot(legend_gs[1])
@@ -792,9 +792,7 @@ class BasePlot(object):
         self.make_figure()
         pl.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
-    def _reorder_categories_after_dendrogram(
-        self, dendrogram,
-    ):
+    def _reorder_categories_after_dendrogram(self, dendrogram):
         """\
         Function used by plotting functions that need to reorder the the groupby
         observations based on the dendrogram results.
