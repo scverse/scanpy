@@ -9,7 +9,18 @@ names_no_reference = np.array(
         ['CD3E', 'CD3D', 'nan', 'NKG7', 'CD3D', 'AIF1', 'CD79B', 'nan', 'GNLY', 'CST3'],
         ['IL32', 'RPL39', 'nan', 'CST7', 'nan', 'nan', 'nan', 'SNHG7', 'CD7', 'nan'],
         ['nan', 'SRSF7', 'IL32', 'GZMA', 'nan', 'LST1', 'IGJ', 'nan', 'CTSW', 'nan'],
-        ['nan', 'nan', 'CD2', 'CTSW', 'CD8B', 'TYROBP', 'ISG20', 'SNHG8', 'GZMB', 'nan'],
+        [
+            'nan',
+            'nan',
+            'CD2',
+            'CTSW',
+            'CD8B',
+            'TYROBP',
+            'ISG20',
+            'SNHG8',
+            'GZMB',
+            'nan',
+        ],
     ]
 )
 
@@ -23,6 +34,7 @@ names_reference = np.array(
     ]
 )
 
+
 def test_filter_rank_genes_groups():
     adata = pbmc68k_reduced()
 
@@ -32,7 +44,7 @@ def test_filter_rank_genes_groups():
         'key_added': 'rank_genes_groups_filtered',
         'min_in_group_fraction': 0.25,
         'min_fold_change': 1,
-        'max_out_group_fraction': 0.5
+        'max_out_group_fraction': 0.5,
     }
 
     rank_genes_groups(
