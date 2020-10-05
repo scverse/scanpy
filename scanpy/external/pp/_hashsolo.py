@@ -317,9 +317,7 @@ def hashsolo(
         cluster_features = pre_existing_clusters
         unique_cluster_features = np.unique(adata.obs[cluster_features])
         for cluster_feature in unique_cluster_features:
-            cluster_feature_bool_vector = adata.obs[
-                cluster_features == cluster_feature
-            ]
+            cluster_feature_bool_vector = adata.obs[cluster_features == cluster_feature]
             posterior_dict = _calculate_bayes_rule(
                 data[cluster_feature_bool_vector], priors, number_of_noise_barcodes
             )
@@ -357,9 +355,7 @@ def hashsolo(
     adata.obs["most_likely_hypothesis"] = results.loc[
         adata.obs_names, "most_likely_hypothesis"
     ]
-    adata.obs["cluster_feature"] = results.loc[
-        adata.obs_names, "cluster_feature"
-    ]
+    adata.obs["cluster_feature"] = results.loc[adata.obs_names, "cluster_feature"]
     adata.obs["negative_hypothesis_probability"] = results.loc[
         adata.obs_names, "negative_hypothesis_probability"
     ]
