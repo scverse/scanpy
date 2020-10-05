@@ -12,6 +12,7 @@ from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
 from .._compat import Literal
+from ..get import _get_obs_rep
 
 
 _Method = Optional[Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']]
@@ -629,6 +630,14 @@ def rank_genes_groups(
     return adata if copy else None
 
 
+def _calc_frac_present(X):
+    if issparse(X):
+        n_nonzero = X.getnnz(axis=0)
+    else:
+        n_nonzero = np.count_nonzero(X, axis=0)
+    return n_nonzero / X.shape[0]
+
+
 def filter_rank_genes_groups(
     adata: AnnData,
     key=None,
@@ -733,6 +742,13 @@ def filter_rank_genes_groups(
         # iterate per column
         var_names = gene_names[cluster].values
 
+        if not use_logfolds or not use_fraction:
+            sub_adata = adata[:, var_names]
+            sub_X = _get_obs_rep(sub_adata, use_raw=use_raw).copy()
+            in_group = adata.obs[groupby] == cluster
+            X_in = sub_X[in_group]
+            X_out = sub_X[~in_group]
+
         if use_fraction:
             fraction_in_cluster_matrix.loc[:, cluster] = (
                 adata.uns[key]['pts'][cluster].loc[var_names].values
@@ -741,54 +757,18 @@ def filter_rank_genes_groups(
                 adata.uns[key]['pts_rest'][cluster].loc[var_names].values
             )
         else:
-            # add column to adata as __is_in_cluster__. This facilitates to measure
-            # fold change of each gene with respect to all other clusters
-            adata.obs['__is_in_cluster__'] = pd.Categorical(
-                adata.obs[groupby] == cluster
-            )
-
-            # obs_tidy has rows=groupby, columns=var_names
-            categories, obs_tidy = _prepare_dataframe(
-                adata, var_names, groupby='__is_in_cluster__', use_raw=use_raw,
-            )
-
-            # for if category defined by groupby (if any) compute for each var_name
-            # 1. the fraction of cells in the category having a value > 0
-            # 2. the mean value over the category
-
-            # 1. compute fraction of cells having value >0
-            # transform obs_tidy into boolean matrix
-            obs_bool = obs_tidy.astype(bool)
-
-            # compute the sum per group which in the boolean matrix this is the number
-            # of values >0, and divide the result by the total number of values in the group
-            # (given by `count()`)
-            fraction_obs = (
-                obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
-            )
-
-            # Because the dataframe groupby is based on the '__is_in_cluster__' column,
-            # in this context, [True] means __is_in_cluster__.
-            # Also, in this context, fraction_obs.loc[True].values is the row of values
-            # that is assigned *as column* to fraction_in_cluster_matrix to follow the
-            # structure of the gene_names dataFrame
-            fraction_in_cluster_matrix.loc[:, cluster] = fraction_obs.loc[True].values
-            fraction_out_cluster_matrix.loc[:, cluster] = fraction_obs.loc[False].values
+            fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac_present(X_in)
+            fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac_present(X_out)
 
         if not use_logfolds:
-            # 2. compute mean value
-            mean_obs = obs_tidy.groupby(level=0).mean()
-            # compute fold change.
+            # compute mean value
+            mean_in_cluster = np.ravel(X_in.mean(0))
+            mean_out_cluster = np.ravel(X_out.mean(0))
+            # compute fold change
             fold_change_matrix.loc[:, cluster] = np.log2(
-                (
-                    (expm1_func(mean_obs.loc[True]) + 1e-9)
-                    / (expm1_func(mean_obs.loc[False]) + 1e-9)
-                ).values
+                (expm1_func(mean_in_cluster) + 1e-9) / (expm1_func(mean_out_cluster) + 1e-9)
             )
 
-    # remove temporary columns
-    if '__is_in_cluster__' in adata.obs.columns:
-        adata.obs.drop(columns='__is_in_cluster__', inplace=True)
     # filter original_matrix
     gene_names = gene_names[
         (fraction_in_cluster_matrix > min_in_group_fraction)
