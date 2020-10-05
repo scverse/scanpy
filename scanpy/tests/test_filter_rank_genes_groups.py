@@ -26,10 +26,19 @@ names_reference = np.array(
 def test_filter_rank_genes_groups():
     adata = pbmc68k_reduced()
 
+    # fix filter defaults
+    args = {
+        'adata': adata,
+        'key_added': 'rank_genes_groups_filtered',
+        'min_in_group_fraction': 0.25,
+        'min_fold_change': 1,
+        'max_out_group_fraction': 0.5
+    }
+
     rank_genes_groups(
         adata, 'bulk_labels', reference='Dendritic', method='wilcoxon', n_genes=5
     )
-    filter_rank_genes_groups(adata)
+    filter_rank_genes_groups(**args)
 
     assert np.array_equal(
         names_reference,
@@ -37,7 +46,7 @@ def test_filter_rank_genes_groups():
     )
 
     rank_genes_groups(adata, 'bulk_labels', method='wilcoxon', n_genes=5)
-    filter_rank_genes_groups(adata)
+    filter_rank_genes_groups(**args)
 
     assert np.array_equal(
         names_no_reference,
@@ -45,7 +54,7 @@ def test_filter_rank_genes_groups():
     )
 
     rank_genes_groups(adata, 'bulk_labels', method='wilcoxon', pts=True, n_genes=5)
-    filter_rank_genes_groups(adata)
+    filter_rank_genes_groups(**args)
 
     assert np.array_equal(
         names_no_reference,
