@@ -22,7 +22,10 @@ def phenograph(
     min_cluster_size: int = 10,
     jaccard: bool = True,
     primary_metric: Literal[
-        'euclidean', 'manhattan', 'correlation', 'cosine',
+        'euclidean',
+        'manhattan',
+        'correlation',
+        'cosine',
     ] = "euclidean",
     n_jobs: int = -1,
     q_tol: float = 1e-3,
