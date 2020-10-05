@@ -1,5 +1,9 @@
+import pytest
+
 import scanpy as sc
 import scanpy.external as sce
+
+pytest.importorskip("harmonypy")
 
 
 def test_harmony_integrate():
