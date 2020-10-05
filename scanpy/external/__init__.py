@@ -72,6 +72,7 @@ Clustering and trajectory inference
    tl.harmony_timeseries
    tl.wishbone
    tl.palantir
+   tl.palantir_results
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
