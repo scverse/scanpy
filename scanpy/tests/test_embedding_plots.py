@@ -13,8 +13,7 @@ MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
 MISSING_VALUES_FIGS = FIGS / "embedding-missing-values"
 
 
-@pytest.fixture(scope="module")
-def adata():
+def scanpy_adata():
     """A bit cute."""
     from matplotlib.image import imread
     from sklearn.datasets import make_blobs
@@ -67,6 +66,11 @@ def adata():
     ] = np.nan
 
     return adata
+
+
+@pytest.fixture(scope="module")
+def adata():
+    return scanpy_adata()
 
 
 @pytest.fixture

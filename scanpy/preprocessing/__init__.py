@@ -4,7 +4,7 @@ from ._deprecated.highly_variable_genes import filter_genes_dispersion
 from ._highly_variable_genes import highly_variable_genes
 from ._simple import log1p, sqrt, scale, subsample
 from ._simple import normalize_per_cell, regress_out, downsample_counts
-from ._spatial import spatial_connectivity
+from ._spatial import visium_connectivity
 from ._pca import pca
 from ._qc import calculate_qc_metrics
 from ._combat import combat

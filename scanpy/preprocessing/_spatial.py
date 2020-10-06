@@ -1,38 +1,34 @@
-from ..get import _get_obs_rep
+import warnings
 
 import numpy as np
 from scipy import sparse
 from typing import Optional
 
+from anndata import AnnData
 
-def spatial_connectivity(
-    adata: "AnnData",
+from ..get import _get_obs_rep
+
+
+def visium_connectivity(
+    adata: AnnData,
+    *,
     obsm: str = "spatial",
     key_added: str = "spatial_connectivity",
-    n_rings: int = 1,
-    n_neigh: int = 6,
-    radius: Optional[float] = None,
-    coord_type: str = "visium",
+    n_steps: int = 1,
 ):
-    """\
-    Creates graph from spatial coordinates
+    """
+    Creates an adjacency matrix of wells for visium data.
 
     Params
     ------
     adata
         The AnnData object.
     obsm
-        Key to spatial coordinates.
+        Key in obsm which stores coordinates of wells.
     key_added
-        Key added to connectivity matrix in obsp.
-    n_rings
-        Number of rings of neighbors for Visium data
-    n_neigh
-        Number of neighborhoods to consider for non-Visium data
-    radius
-        Radius of neighbors for non-Visium data
-    coord_type
-        Type of coordinate system (Visium vs. general coordinates)
+        Key in obsp to add spatial graph as.
+    n_steps
+        How many steps from the starting node should be taken?
 
     Usage
     -----
@@ -52,49 +48,50 @@ def spatial_connectivity(
     obsm: 'spatial'
     obsp: 'spatial_connectivity'
     """
-    coords = _get_obs_rep(adata, obsm=obsm)
-    if coord_type == "visium":
-        Adj = _build_connectivity(coords, 6, None, True)
-        if n_rings > 1:
-            # get up to n_rings order connections
-            Adj += Adj ** n_rings
-            Adj.setdiag(0)
-            Adj.eliminate_zeros()
-            Adj.data[:] = 1.0
-        adata.obsp[key_added] = Adj
-    else:
-        adata.obsp[key_added] = _spatial_connectivity(coords, n_neigh, radius, False)
+    adj = _hex_connectivity(_get_obs_rep(adata, obsm=obsm))
+    if n_steps > 1:
+        adj = walk_nsteps(adj, n_steps - 1)
+    adata.obsp[key_added] = adj
 
 
-def _build_connectivity(
-    coords: np.ndarray, n_neigh: int, radius: float, neigh_correct: bool
-):
+def walk_nsteps(adj, n):
+    """Expand adjacency matrix adj by walking out n steps from each node."""
+    adj = adj.astype(bool)
+    cur_step = adj
+    result = adj.copy()
+    for i in range(n):
+        cur_step = adj @ cur_step
+        result = result + cur_step
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", sparse.SparseEfficiencyWarning)
+        result.setdiag(False)
+        result.eliminate_zeros()
+    return result
+
+
+def _hex_connectivity(coords: np.ndarray):
     """
-    Build connectivity matrix from spatial coordinates
+    Given the coordinates of hex based cells from a visium experiment, this
+    returns an adjacency matrix for those cells.
+
+    Usage
+    -----
+    >>> adata.obsp["spatial_connectivity"] = _hex_connectivity(adata.obsm["spatial"])
     """
     from sklearn.neighbors import NearestNeighbors
 
     N = coords.shape[0]
-
-    tree = NearestNeighbors(
-        n_neighbors=n_neigh or 6, radius=radius or 1, metric="euclidean"
+    dists, row_indices = (
+        x.reshape(-1)
+        for x in NearestNeighbors(n_neighbors=6, metric="euclidean")
+        .fit(coords)
+        .kneighbors()
     )
-    tree.fit(coords)
-
-    if radius is not None:
-        results = tree.radius_neighbors()
-        row_indices = np.concatenate(results[1])
-        lengths = [len(x) for x in results[1]]
-        col_indices = np.repeat(np.arange(N), lengths)
-    else:
-        results = tree.kneighbors()
-        dists, row_indices = (result.reshape(-1) for result in results)
-        col_indices = np.repeat(np.arange(N), n_neigh or 6)
-        if neigh_correct:
-            dist_cutoff = np.median(dists) * 1.3  # There's a small amount of sway
-            mask = dists < dist_cutoff
-            row_indices, col_indices = row_indices[mask], col_indices[mask]
-
+    col_indices = np.repeat(np.arange(N), 6)
+    dist_cutoff = np.median(dists) * 1.3  # There's a small amount of sway
+    mask = dists < dist_cutoff
     return sparse.csr_matrix(
-        (np.ones(len(row_indices)), (row_indices, col_indices)), shape=(N, N)
+        (np.ones(mask.sum(), dtype=bool), (row_indices[mask], col_indices[mask])),
+        shape=(N, N),
+        dtype=bool,
     )
