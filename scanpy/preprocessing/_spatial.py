@@ -95,3 +95,39 @@ def _hex_connectivity(coords: np.ndarray):
         shape=(N, N),
         dtype=bool,
     )
+
+
+# TODO: Test and document
+def radius_neighbors(
+    adata: AnnData,
+    radius: float,
+    *,
+    mode: str = "distance",
+    obsm: Optional[str] = None,
+    layers: Optional[str] = None,
+    key_added: Optional[str] = None,
+    **kwargs,
+):
+    """Create a neighbor graph for each cell using chosen represenation.
+
+    Params
+    ------
+    adata
+    radius
+        Radius to consider neighbors
+    obsm
+        Key for representation to find neighbors from.
+    layers
+        Key for representation to find neighbors from.
+    key_added
+        Key to add neighbors graph as in obsp.
+    """
+    from sklearn.neighbors import NearestNeighbors
+
+    if key_added is None:
+        key_added = f"{mode}_graph"
+
+    X = _get_obs_rep(adata, obsm=obsm, layers=layers)
+    nn = NearestNeighbors(radius=radius, **kwargs)
+    nn.fit(X)
+    adata.obsp[key_added] = nn.radius_neighbors_graph(mode=mode)
