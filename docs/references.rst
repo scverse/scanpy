@@ -13,6 +13,10 @@ References
    *destiny – diffusion maps for large-scale single-cell data in R*,
    `Bioinformatics <https://doi.org/10.1093/bioinformatics/btv715>`__.
 
+.. [Bernstein20] Bernstein *et al.* (2020),
+  *Solo: Doublet Identification in Single-Cell RNA-Seq via Semi-Supervised Deep Learning*,
+  `Cell Systems  <https://doi.org/10.1016/j.cels.2020.05.010>`__.
+
 .. [Blondel08] Blondel *et al.* (2008),
    *Fast unfolding of communities in large networks*,
    `J. Stat. Mech. <https://doi.org/10.1088/1742-5468/2008/10/P10008>`__.
@@ -198,7 +202,7 @@ References
 
 .. [Svensson20] Svensson *et al.* (2020),
    *Interpretable factor models of single-cell RNA-seq via variational autoencoders*
-   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__. 
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__.
 
 .. [Nowotschin18i] Nowotschin *et al.* (2018),
    *The emergent landscape of the mouse gut endoderm at single-cell resolution*
