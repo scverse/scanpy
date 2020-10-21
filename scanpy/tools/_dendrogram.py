@@ -159,7 +159,7 @@ def dendrogram(
             if len(groupby) == 1:
                 key_added = f'dendrogram_{groupby[0]}'
             else:
-                key_added = f'{dendropgram_{"_".join(groupby)}'
+                key_added = f'dendropgram_{"_".join(groupby)}'
         logg.info(f'Storing dendrogram info using `.uns[{key_added!r}]`')
         adata.uns[key_added] = dat
     else:
