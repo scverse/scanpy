@@ -10,6 +10,7 @@ key = 'test'
 def adata():
     return sc.AnnData(sc.datasets.pbmc68k_reduced())
 
+
 @pytest.mark.parametrize('groupby', ['bulk_labels', ['bulk_labels', 'phase']])
 @pytest.mark.parametrize('key_added', [None, "custom_key"])
 def test_dendrogram_key_added(adata, groupby, key_added):
