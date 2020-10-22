@@ -3,6 +3,7 @@ import collections.abc as cabc
 from abc import ABC
 from functools import lru_cache
 from typing import Union, List, Sequence, Tuple, Collection, Optional
+import anndata
 
 import numpy as np
 from matplotlib import pyplot as pl
@@ -495,12 +496,19 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
         raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
     neighbors = NeighborsView(adata, neighbors_key)
     g = nx.Graph(neighbors['connectivities'])
+    basis_key = _get_basis(adata, basis)
+    if basis_key == "spatial":
+        adata.obsm["spatial"][:, 1] = np.abs(
+            np.subtract(
+                adata.obsm["spatial"][:, 1], np.max(adata.obsm["spatial"][:, 1])
+            )
+        )
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for ax in axs:
             edge_collection = nx.draw_networkx_edges(
                 g,
-                adata.obsm['X_' + basis],
+                adata.obsm[basis_key],
                 ax=ax,
                 width=edges_width,
                 edge_color=edges_color,
@@ -526,7 +534,9 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
             'The module `scvelo` has improved plotting facilities. '
             'Prefer using `scv.pl.velocity_embedding` to `arrows=True`.'
         )
-    X = adata.obsm[f'X_{basis}']
+
+    basis_key = _get_basis(adata, basis)
+    X = adata.obsm[basis_key]
     V = adata.obsm[f'{v_prefix}_{basis}']
     for ax in axs:
         quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
@@ -1187,3 +1197,14 @@ def fix_kwds(kwds_dict, **kwargs):
     kwargs.update(kwds_dict)
 
     return kwargs
+
+
+def _get_basis(adata: anndata.AnnData, basis: str):
+
+    if basis in adata.obsm.keys():
+        basis_key = basis
+
+    elif f"X_{basis}" in adata.obsm.keys():
+        basis_key = f"X_{basis}"
+
+    return basis_key
