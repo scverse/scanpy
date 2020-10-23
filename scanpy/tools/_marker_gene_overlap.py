@@ -242,7 +242,6 @@ def marker_gene_overlap(
                 )
         # Use top 100 markers as default if top_n_markers = None
         else:
-            n_genes = min(top_n_markers, adata.uns[key]['names'].shape[0])
             data_markers[group] = set(adata.uns[key]['names'][group][:100])
 
     # Find overlaps
