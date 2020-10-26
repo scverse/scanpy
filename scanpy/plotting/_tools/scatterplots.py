@@ -90,6 +90,7 @@ def embedding(
     hspace: float = 0.25,
     wspace: Optional[float] = None,
     title: Union[str, Sequence[str], None] = None,
+    annotate_var_explained: bool = False,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
@@ -404,6 +405,14 @@ def embedding(
         else:
             axis_labels = [name + str(x + 1) for x in range(2)]
 
+        if name == 'PC' and annotate_var_explained:
+            axis_labels = ['{} ({}%)'.format(l,
+                                             round(
+                                                 adata.uns['pca'][
+                                                     'variance_ratio'][
+                                                     int(l[2:])-1]*100, 2))
+                           for l in axis_labels]
+
         ax.set_xlabel(axis_labels[0])
         ax.set_ylabel(axis_labels[1])
         if projection == '3d':
@@ -717,13 +726,17 @@ def draw_graph(
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
+def pca(adata, *, annotate_var_explained: bool = False,
+        **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in PCA coordinates.
+
+    Use the parameter `annotate_var_explained` to annotate the explained variance.
 
     Parameters
     ----------
     {adata_color_etc}
+    annotate_var_explained
     {scatter_bulk}
     {show_save_ax}
 
@@ -731,7 +744,8 @@ def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    return embedding(adata, 'pca', **kwargs)
+    return embedding(adata, 'pca', annotate_var_explained=annotate_var_explained,
+                     **kwargs)
 
 
 @_wraps_plot_scatter
