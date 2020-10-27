@@ -7,7 +7,8 @@ On master
 .. rubric:: Bugfixes
 
 * Fixed `log1p` inplace on integer dense arrays :pr:`1400` :smaller:`I Virshup`
-
+* Fixed `marker_gene_overlap` default value for `top_n_markers` :pr:`1464` :smaller:`MD Luecken`
+  
 1.6.0 :small:`2020-08-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
