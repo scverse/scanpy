@@ -306,7 +306,9 @@ def pbmc3k_processed() -> AnnData:
         )
 
 
-def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
+def _download_visium_dataset(
+    sample_id: str, spaceranger_version: str, base_dir: Optional[Path] = None
+):
     """
     Params
     ------
@@ -320,7 +322,7 @@ def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
     if base_dir is None:
         base_dir = settings.datasetdir
 
-    url_prefix = f'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/{sample_id}/'
+    url_prefix = f'https://cf.10xgenomics.com/samples/spatial-exp/{spaceranger_version}/{sample_id}/'
 
     sample_dir = base_dir / sample_id
     sample_dir.mkdir(exist_ok=True)
@@ -356,6 +358,24 @@ def visium_sge(
         'V1_Mouse_Brain_Sagittal_Posterior_Section_2',
         'V1_Mouse_Brain_Sagittal_Anterior',
         'V1_Mouse_Brain_Sagittal_Anterior_Section_2',
+        'V1_Human_Brain_Section_1',
+        'V1_Human_Brain_Section_2',
+        'V1_Adult_Mouse_Brain_Coronal_Section_1',
+        'V1_Adult_Mouse_Brain_Coronal_Section_2',
+        # spaceranger version 1.2.0
+        'Targeted_Visium_Human_Cerebellum_Neuroscience',
+        'Parent_Visium_Human_Cerebellum',
+        'Targeted_Visium_Human_SpinalCord_Neuroscience',
+        'Parent_Visium_Human_SpinalCord',
+        'Targeted_Visium_Human_Glioblastoma_Pan_Cancer',
+        'Parent_Visium_Human_Glioblastoma',
+        'Targeted_Visium_Human_BreastCancer_Immunology',
+        'Parent_Visium_Human_BreastCancer',
+        'Targeted_Visium_Human_OvarianCancer_Pan_Cancer',
+        'Targeted_Visium_Human_OvarianCancer_Immunology',
+        'Parent_Visium_Human_OvarianCancer',
+        'Targeted_Visium_Human_ColorectalCancer_GeneSignature',
+        'Parent_Visium_Human_ColorectalCancer',
     ] = 'V1_Breast_Cancer_Block_A_Section_1',
 ) -> AnnData:
     """\
@@ -371,5 +391,9 @@ def visium_sge(
     -------
     Annotated data matrix.
     """
-    _download_visium_dataset(sample_id)
+    if "V1_" in sample_id:
+        spaceranger_version = "1.1.0"
+    else:
+        spaceranger_version = "1.2.0"
+    _download_visium_dataset(sample_id, spaceranger_version)
     return read_visium(settings.datasetdir / sample_id)
