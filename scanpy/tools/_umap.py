@@ -195,6 +195,7 @@ def umap(
             a=a,
             b=b,
             verbose=settings.verbosity > 3,
+            random_state=random_state
         )
         X_umap = umap.fit_transform(X_contiguous)
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
