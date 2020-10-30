@@ -5,3 +5,4 @@ from ._harmony_integrate import harmony_integrate
 from ._magic import magic
 from ._scvi import scvi
 from ._hashsolo import hashsolo
+from ._scrublet import scrub_doublets, scrublet, simulate_doublets, plot_histogram 

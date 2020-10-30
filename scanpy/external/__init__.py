@@ -34,6 +34,11 @@ Data integration
    pp.harmony_integrate
    pp.mnn_correct
 
+Multiplet detection
+~~~~~~~~~~~~~~~~~~~
+
+   pp.scrub_doublet
+
 Imputation
 ~~~~~~~~~~
 
