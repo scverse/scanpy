@@ -28,7 +28,7 @@ def scrub_doublets(
     Union[AnnData, Tuple[AnnData, AnnData], Tuple[AnnData, AnnData, AnnData]]
 ]:
     """\
-    Predict doublets using Scrublet [Wolock2019]_
+    Predict doublets using Scrublet [Wolock2019]_.
 
     Predict cell doublets using a nearest-neighbor classifier of observed transcriptomes and simulated doublets. Works best if the input is a raw (unnormalized) counts matrix from a single sample or a collection of similar samples from the same experiment.
    
@@ -209,7 +209,7 @@ def scrublet(
     verbose: bool = True,
 ) -> AnnData:
     """\
-    Core function for predicting doublets using Scrublet [Wolock2019]_
+    Core function for predicting doublets using Scrublet [Wolock2019]_.
 
     Predict cell doublets using a nearest-neighbor classifier of observed transcriptomes and simulated doublets. This is a wrapper around the core functions of `Scrublet <https://github.com/swolock/scrublet>`__ to allow for flexibility in applying Scanpy filtering operations upstream. Unless you know what you're doing you should use scrub_doublets().    
     
@@ -448,7 +448,7 @@ def plot_histogram(
     adata, scale_hist_obs='log', scale_hist_sim='linear', fig_size=(8, 3)
 ):
     """\
-    Plot histogram of doublet scores for observed transcriptomes and simulated doublets 
+    Plot histogram of doublet scores for observed transcriptomes and simulated doublets. 
 
     The histogram for simulated doublets is useful for determining the correct doublet 
     score threshold. To set threshold to a new value, T, run call_doublets(threshold=T).
