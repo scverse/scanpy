@@ -5,25 +5,28 @@ import numpy as np
 from ... import logging as logg
 from ... import preprocessing as pp
 
+
 def scrub_doublets(
     adata: AnnData,
-    sim_doublet_ratio: float = 2.0, 
+    sim_doublet_ratio: float = 2.0,
     expected_doublet_rate: float = 0.05,
-    stdev_doublet_rate: float =  0.02,
-    synthetic_doublet_umi_subsampling: float = 1.0, 
-    knn_dist_metric: str = 'euclidean', 
-    normalize_variance: bool = True, 
+    stdev_doublet_rate: float = 0.02,
+    synthetic_doublet_umi_subsampling: float = 1.0,
+    knn_dist_metric: str = 'euclidean',
+    normalize_variance: bool = True,
     log_transform: bool = False,
     mean_center: bool = True,
     n_prin_comps: int = 30,
-    use_approx_neighbors: bool = True, 
-    get_doublet_neighbor_parents: bool = False, 
+    use_approx_neighbors: bool = True,
+    get_doublet_neighbor_parents: bool = False,
     n_neighbors: Optional[int] = None,
     threshold: Optional[float] = None,
     verbose: bool = True,
     copy: bool = False,
-    random_state: int = 0
-) -> Optional[Union[AnnData, Tuple[AnnData, AnnData], Tuple[AnnData, AnnData, AnnData]]]:
+    random_state: int = 0,
+) -> Optional[
+    Union[AnnData, Tuple[AnnData, AnnData], Tuple[AnnData, AnnData, AnnData]]
+]:
     """\
     Predict doublets using Scrublet [Wolock2019]_
 
@@ -119,7 +122,9 @@ def scrub_doublets(
     try:
         import scrublet as sl
     except ImportError:
-        raise ImportError('Please install scrublet: `pip install scrublet` or `conda install scrublet`.')
+        raise ImportError(
+            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
+        )
 
     if copy:
         adata = adata.copy()
@@ -128,8 +133,8 @@ def scrub_doublets(
 
     adata_obs = adata.copy()
 
-    pp.filter_genes(adata_obs, min_cells = 3)
-    pp.filter_cells(adata_obs, min_genes = 3)
+    pp.filter_genes(adata_obs, min_cells=3)
+    pp.filter_cells(adata_obs, min_genes=3)
 
     # Doublet simulation will be based on the un-normalised counts, but on the
     # selection of genes following normalisation and variability filtering. So
@@ -144,9 +149,9 @@ def scrub_doublets(
 
     if log_transform:
         pp.log1p(adata_obs)
-        pp.highly_variable_genes(adata_obs, subset = True)
+        pp.highly_variable_genes(adata_obs, subset=True)
     else:
-        logged = pp.log1p(adata_obs, copy = True)
+        logged = pp.log1p(adata_obs, copy=True)
         hvg = pp.highly_variable_genes(logged)
         adata_obs = adata_obs[:, logged.var['highly_variable']]
 
@@ -154,10 +159,10 @@ def scrub_doublets(
     # and filtered object.
 
     adata_sim = simulate_doublets(
-            adata_obs, 
-            raw_layer = 'raw',
-            sim_doublet_ratio = sim_doublet_ratio,
-            synthetic_doublet_umi_subsampling = synthetic_doublet_umi_subsampling
+        adata_obs,
+        raw_layer='raw',
+        sim_doublet_ratio=sim_doublet_ratio,
+        synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
     )
 
     # Now normalise simulated and observed in the same way
@@ -166,15 +171,15 @@ def scrub_doublets(
     pp.normalize_total(adata_sim, target_sum=1e6)
 
     adata_obs = scrublet(
-            adata_obs = adata_obs,
-            adata_sim = adata_sim,
-            n_neighbors = n_neighbors,
-            expected_doublet_rate = expected_doublet_rate,
-            stdev_doublet_rate = stdev_doublet_rate,
-            random_state = random_state
-            )
+        adata_obs=adata_obs,
+        adata_sim=adata_sim,
+        n_neighbors=n_neighbors,
+        expected_doublet_rate=expected_doublet_rate,
+        stdev_doublet_rate=stdev_doublet_rate,
+        random_state=random_state,
+    )
 
-    logg.info('    Scrublet finished', time = start)
+    logg.info('    Scrublet finished', time=start)
 
     # Copy outcomes to input object from our processed version
 
@@ -193,14 +198,14 @@ def scrublet(
     adata_sim: AnnData,
     n_neighbors: Optional[int] = None,
     expected_doublet_rate: float = 0.05,
-    stdev_doublet_rate: float =  0.02,
+    stdev_doublet_rate: float = 0.02,
     mean_center: bool = True,
-    normalize_variance: bool = True, 
+    normalize_variance: bool = True,
     n_prin_comps: int = 30,
-    use_approx_neighbors: bool = True, 
-    knn_dist_metric: str = 'euclidean', 
-    get_doublet_neighbor_parents: bool = False, 
-    random_state: int = 0, 
+    use_approx_neighbors: bool = True,
+    knn_dist_metric: str = 'euclidean',
+    get_doublet_neighbor_parents: bool = False,
+    random_state: int = 0,
     verbose: bool = True,
 ) -> AnnData:
     """\
@@ -286,56 +291,62 @@ def scrublet(
     try:
         import scrublet as sl
     except ImportError:
-        raise ImportError('Please install scrublet: `pip install scrublet` or `conda install scrublet`.')
+        raise ImportError(
+            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
+        )
 
-    # Estimate n_neighbors if not provided, and create scrublet object. 
-    
+    # Estimate n_neighbors if not provided, and create scrublet object.
+
     if n_neighbors is None:
-        n_neighbors = int(round(0.5*np.sqrt(adata_obs.shape[0])))
+        n_neighbors = int(round(0.5 * np.sqrt(adata_obs.shape[0])))
 
     scrub = sl.Scrublet(
         adata_obs.X,
-        n_neighbors = n_neighbors,
-        expected_doublet_rate = expected_doublet_rate,
-        stdev_doublet_rate = stdev_doublet_rate,
-        random_state = random_state
-        )
+        n_neighbors=n_neighbors,
+        expected_doublet_rate=expected_doublet_rate,
+        stdev_doublet_rate=stdev_doublet_rate,
+        random_state=random_state,
+    )
 
     scrub._E_obs_norm = adata_obs.X
     scrub._E_sim_norm = adata_sim.X
-    scrub.doublet_parents_ = adata_sim.obsm['doublet_parents'] 
-   
+    scrub.doublet_parents_ = adata_sim.obsm['doublet_parents']
+
     # Call scrublet-specific preprocessing where specified
 
     if mean_center and normalize_variance:
         sl.pipeline_zscore(scrub)
     elif mean_center:
         sl.pipeline_mean_center(scrub)
-    elif normalize_variance: 
+    elif normalize_variance:
         sl.pipeline_normalize_variance(scrub)
 
     # Do PCA. Scrublet fits to the observed matrix and decomposes both observed
     # and simulated based on that fit, so we'll just let it do its thing rather
     # than trying to use Scanpy's PCA wrapper of the same functions.
-    
+
     if mean_center:
         logg.info('Embedding transcriptomes using PCA...')
-        sl.pipeline_pca(scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state)
+        sl.pipeline_pca(
+            scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
+        )
     else:
         logg.info('Embedding transcriptomes using Truncated SVD...')
-        sl.pipeline_truncated_svd(scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state) 
+        sl.pipeline_truncated_svd(
+            scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
+        )
 
     # Score the doublets
 
     scrub.calculate_doublet_scores(
         use_approx_neighbors=use_approx_neighbors,
         distance_metric=knn_dist_metric,
-        get_doublet_neighbor_parents=get_doublet_neighbor_parents
+        get_doublet_neighbor_parents=get_doublet_neighbor_parents,
     )
 
     # Actually call doublets
 
-    scrub.call_doublets(verbose = verbose)
+    scrub.call_doublets(verbose=verbose)
 
     # Store results in AnnData for return
 
@@ -350,22 +361,27 @@ def scrublet(
     adata_obs.uns['scrublet']['doublet_parents'] = adata_sim.obsm['doublet_parents']
     adata_obs.uns['scrublet']['parameters'] = {
         'expected_doublet_rate': expected_doublet_rate,
-        'sim_doublet_ratio': adata_sim.uns['scrublet']['parameters']['sim_doublet_ratio'],
-        'n_neighbors': n_neighbors, 
-        'random_state': random_state
+        'sim_doublet_ratio': adata_sim.uns['scrublet']['parameters'][
+            'sim_doublet_ratio'
+        ],
+        'n_neighbors': n_neighbors,
+        'random_state': random_state,
     }
 
     if get_doublet_neighbor_parents:
-        adata_obs.uns['scrublet']['doublet_neighbor_parents'] = scrub.doublet_neighbor_parents_
-    
+        adata_obs.uns['scrublet'][
+            'doublet_neighbor_parents'
+        ] = scrub.doublet_neighbor_parents_
+
     return adata_obs
+
 
 def simulate_doublets(
     adata: AnnData,
     raw_layer: str = 'raw',
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
-    random_seed: int = 0
+    random_seed: int = 0,
 ) -> AnnData:
 
     """\
@@ -405,19 +421,20 @@ def simulate_doublets(
     try:
         import scrublet as sl
     except ImportError:
-        raise ImportError('Please install scrublet: `pip install scrublet` or `conda install scrublet`.')
+        raise ImportError(
+            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
+        )
 
     if raw_layer == 'X':
         scrub = sl.Scrublet(adata.X)
     else:
         scrub = sl.Scrublet(adata.layers[raw_layer])
-    
+
     scrub.simulate_doublets(
-            sim_doublet_ratio = sim_doublet_ratio,
-            synthetic_doublet_umi_subsampling =
-            synthetic_doublet_umi_subsampling
+        sim_doublet_ratio=sim_doublet_ratio,
+        synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
     )
-    
+
     adata_sim = AnnData(scrub._E_sim)
     adata_sim.obs['n_counts'] = scrub._total_counts_sim
     adata_sim.obsm['doublet_parents'] = scrub.doublet_parents_
@@ -426,19 +443,28 @@ def simulate_doublets(
     adata_sim.uns['scrublet']['parameters']['sim_doublet_ratio'] = sim_doublet_ratio
     return adata_sim
 
-def plot_histogram(adata, scale_hist_obs='log', scale_hist_sim='linear', fig_size = (8,3)):
+
+def plot_histogram(
+    adata, scale_hist_obs='log', scale_hist_sim='linear', fig_size=(8, 3)
+):
     """\
     Plot histogram of doublet scores for observed transcriptomes and simulated doublets 
 
     The histogram for simulated doublets is useful for determining the correct doublet 
     score threshold. To set threshold to a new value, T, run call_doublets(threshold=T).
     """
-    
+
     threshold = adata.uns['scrublet']['threshold']
     fig, axs = pl.subplots(1, 2, figsize=fig_size)
 
     ax = axs[0]
-    ax.hist(adata.obs['doublet_score'], np.linspace(0, 1, 50), color='gray', linewidth=0, density=True)
+    ax.hist(
+        adata.obs['doublet_score'],
+        np.linspace(0, 1, 50),
+        color='gray',
+        linewidth=0,
+        density=True,
+    )
     ax.set_yscale(scale_hist_obs)
     yl = ax.get_ylim()
     ax.set_ylim(yl)
@@ -448,7 +474,13 @@ def plot_histogram(adata, scale_hist_obs='log', scale_hist_sim='linear', fig_siz
     ax.set_ylabel('Prob. density')
 
     ax = axs[1]
-    ax.hist(adata.uns['scrublet']['doublet_scores_sim'], np.linspace(0, 1, 50), color='gray', linewidth=0, density=True)
+    ax.hist(
+        adata.uns['scrublet']['doublet_scores_sim'],
+        np.linspace(0, 1, 50),
+        color='gray',
+        linewidth=0,
+        density=True,
+    )
     ax.set_yscale(scale_hist_sim)
     yl = ax.get_ylim()
     ax.set_ylim(yl)
