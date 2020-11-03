@@ -73,11 +73,8 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
 
     all_indices = np.empty(data.shape[0])
     num_of_barcodes = data.shape[1]
-    number_of_non_noise_barcodes = (
-        num_of_barcodes - number_of_noise_barcodes
-        if number_of_noise_barcodes is not None
-        else 2
-    )
+    number_of_non_noise_barcodes = num_of_barcodes - number_of_noise_barcodes
+
     num_of_noise_barcodes = num_of_barcodes - number_of_non_noise_barcodes
 
     # assume log normal
@@ -246,7 +243,7 @@ def hashsolo(
     cell_hashing_columns: list,
     priors: list = [0.01, 0.8, 0.19],
     pre_existing_clusters: str = None,
-    number_of_noise_barcodes: int = None,
+    number_of_noise_barcodes: int = 2,
     inplace: bool = True,
 ):
     """Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
@@ -287,16 +284,22 @@ def hashsolo(
     >>> import anndata
     >>> import scanpy.external as sce
     >>> data = anndata.read("data.h5ad")
-    >>> sce.pp.hashsolo(data)
+    >>> sce.pp.hashsolo(data, ['Hash1', 'Hash2', 'Hash3'])
     >>> data.obs.head()
     """
     print(
-        "Please cite HashSolo paper: \nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
+        "Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
     )
 
     data = adata.obs[cell_hashing_columns].values
     if not check_nonnegative_integers(data):
         raise ValueError("Cell hashing counts must be non-negative")
+    if number_of_noise_barcodes >= len(cell_hashing_columns):
+        raise ValueError(
+            "number_of_noise_barcodes must be at least one less \
+        than the number of samples you have as determined by then number of \
+        cell hashing columns you've given as input  "
+        )
     num_of_cells = adata.shape[0]
     results = pd.DataFrame(
         np.zeros((num_of_cells, 6)),
@@ -314,7 +317,7 @@ def hashsolo(
         cluster_features = pre_existing_clusters
         unique_cluster_features = np.unique(adata.obs[cluster_features])
         for cluster_feature in unique_cluster_features:
-            cluster_feature_bool_vector = adata.obs[cluster_features == cluster_feature]
+            cluster_feature_bool_vector = adata.obs[cluster_features] == cluster_feature
             posterior_dict = _calculate_bayes_rule(
                 data[cluster_feature_bool_vector], priors, number_of_noise_barcodes
             )
