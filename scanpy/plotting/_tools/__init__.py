@@ -415,6 +415,10 @@ def _rank_genes_groups_plot(
         if values_to_plot is not None:
             values_df = _get_values_to_plot(adata, values_to_plot, gene_names, key=key)
             title = values_to_plot
+            if values_to_plot == 'logfoldchanges':
+                title = 'log fold change'
+            else:
+                title = values_to_plot.replace("_", " ").replace('pvals', 'p-value')
 
         if plot_type == 'dotplot':
             from .._dotplot import dotplot
@@ -427,9 +431,8 @@ def _rank_genes_groups_plot(
                 return_fig=True,
                 **kwds,
             )
-
-            if title is not None:
-                _pl.legend(colorbar_title=title.replace("_", " "))
+            if title is not None and 'colorbar_title' not in kwds:
+                _pl.legend(colorbar_title=title)
         elif plot_type == 'matrixplot':
             from .._matrixplot import matrixplot
 
@@ -437,8 +440,8 @@ def _rank_genes_groups_plot(
                 adata, var_names, groupby, values_df=values_df, return_fig=True, **kwds
             )
 
-            if title is not None:
-                _pl.legend(title=title.replace("_", " "))
+            if title is not None and 'colorbar_title' not in kwds:
+                _pl.legend(title=title)
 
         return _fig_show_save_or_axes(_pl, return_fig, show, save)
 
@@ -604,6 +607,10 @@ def rank_genes_groups_dotplot(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.dotplot`).
+    values_to_plot
+        The mean gene values are plotted by default. Alternatively, any other
+        values computed by `sc.rank_genes_groups` can be plotted. For example
+        log fold change or p-value.
     min_logfoldchange
         Value to filter genes in groups if their logfoldchange is less than the
         min_logfoldchange
@@ -627,11 +634,13 @@ def rank_genes_groups_dotplot(
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
 
-    Plot `logfoldchanges`, set manually min value to plot as -4 and max as 4
-    and plot only genes in each group that have a minimum log fold change of 3
+    Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
+    like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
+    and maximum values to plot are set to -4 and 4 respectively.
+    Also, only genes with a log fold change of 3 or more are shown.
     >>> sc.pl.rank_genes_groups_dotplot(adata,
-    ... n_genes=4, values_to_plot="logfoldchanges",
-    ... vmin=-5, vmax=5, min_logfoldchange=3)
+    ... n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
+    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
     """
 
@@ -731,6 +740,16 @@ def rank_genes_groups_matrixplot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    values_to_plot: Optional[
+        Literal[
+            'scores',
+            'logfoldchanges',
+            'pvals',
+            'pvals_adj',
+            'log10_pvals',
+            'log10_pvals_adj',
+        ]
+    ] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
@@ -755,6 +774,10 @@ def rank_genes_groups_matrixplot(
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.matrixplot`).
+    values_to_plot
+        The mean gene values are plotted by default. Alternatively, any other
+        values computed by `sc.rank_genes_groups` can be plotted. For example
+        log fold change or p-value.
     min_logfoldchange
         Value to filter genes in groups if their logfoldchange is less than the
         min_logfoldchange
@@ -778,11 +801,13 @@ def rank_genes_groups_matrixplot(
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
 
-    Plot `logfoldchanges`, set manually min value to plot as -4 and max as 4
-    and plot only genes in each group that have a minimum log fold change of 3
-    >>> sc.pl.rank_genes_groups_matrixplot(adata,
-    ... n_genes=4, values_to_plot="logfoldchanges",
-    ... vmin=-5, vmax=5, min_logfoldchange=3)
+    Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
+    like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
+    and maximum values to plot are set to -4 and 4 respectively.
+    Also, only genes with a log fold change of 3 or more are shown.
+    >>> sc.pl.rank_genes_groups_dotplot(adata,
+    ... n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
+    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
     """
 
@@ -792,6 +817,7 @@ def rank_genes_groups_matrixplot(
         groups=groups,
         n_genes=n_genes,
         groupby=groupby,
+        values_to_plot=values_to_plot,
         key=key,
         min_logfoldchange=min_logfoldchange,
         show=show,

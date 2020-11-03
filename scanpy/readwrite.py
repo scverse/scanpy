@@ -187,12 +187,9 @@ def read_10x_h5(
                     f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
                     f'Available genomes are: {list(adata.var["genome"].unique())}.'
                 )
-            adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
+            adata = adata[:, adata.var['genome'] == genome]
         if gex_only:
-            adata = adata[
-                :,
-                list(map(lambda x: x == 'Gene Expression', adata.var['feature_types'])),
-            ]
+            adata = adata[:, adata.var['feature_types'] == 'Gene Expression']
         if adata.is_view:
             adata = adata.copy()
     else:

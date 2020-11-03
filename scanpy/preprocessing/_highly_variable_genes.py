@@ -256,7 +256,7 @@ def _highly_variable_genes_single_batch(
             ) / disp_mad_bin[df['mean_bin'].values].values
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
-    dispersion_norm = df['dispersions_norm'].values.astype('float32')
+    dispersion_norm = df['dispersions_norm'].values
     if n_top_genes is not None:
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
         dispersion_norm[

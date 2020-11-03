@@ -2112,7 +2112,10 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
     # the `dendrogram_key` can be a bool an NoneType or the name of the
     # dendrogram key. By default the name of the dendrogram key is 'dendrogram'
     if not isinstance(dendrogram_key, str):
-        dendrogram_key = f'dendrogram_{groupby}'
+        if isinstance(groupby, str):
+            dendrogram_key = f'dendrogram_{groupby}'
+        elif isinstance(groupby, list):
+            dendrogram_key = f'dendrogram_{"_".join(groupby)}'
 
     if dendrogram_key not in adata.uns:
         from ..tools._dendrogram import dendrogram
