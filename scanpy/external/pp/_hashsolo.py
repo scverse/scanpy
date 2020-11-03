@@ -297,8 +297,8 @@ def hashsolo(
     if number_of_noise_barcodes >= len(cell_hashing_columns):
         raise ValueError(
             "number_of_noise_barcodes must be at least one less \
-        than the number of samples you have as determined by then number of \
-        cell hashing columns you've given as input  "
+        than the number of samples you have as determined by the number of \
+        cell_hashing_columns you've given as input  "
         )
     num_of_cells = adata.shape[0]
     results = pd.DataFrame(
