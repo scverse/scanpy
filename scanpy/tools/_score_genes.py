@@ -142,7 +142,7 @@ def score_genes(
     _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
     if issparse(x_or_layer(_adata_subset)):
         obs_avg = pd.Series(
-            np.array(_sparse_nanmean(x_or_layer(_adata_subset)).flatten(), index=gene_pool)  # average expression of genes
+            np.array(_sparse_nanmean(x_or_layer(_adata_subset), axis=0).flatten(), index=gene_pool)  # average expression of genes
     else:
         obs_avg = pd.Series(
             np.nanmean(x_or_layer(_adata_subset), axis=0), index=gene_pool)  # average expression of genes
