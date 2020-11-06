@@ -14,7 +14,8 @@ from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple
 
 import numpy as np
 from numpy import random
-from anndata import AnnData
+from scipy import sparse
+from anndata import AnnData, __version__ as anndata_version
 from textwrap import dedent
 from packaging import version
 
@@ -35,19 +36,12 @@ AnyRandom = Union[None, int, random.RandomState]  # maybe in the future random.G
 EPS = 1e-15
 
 
-def pkg_version(package):
-    try:
-        from importlib.metadata import version as v
-    except ImportError:  # < Python 3.8: Use backport module
-        from importlib_metadata import version as v
-    return version.parse(v(package))
-
-
 def check_versions():
-    anndata_version = pkg_version("anndata")
+    from ._compat import pkg_version
+
     umap_version = pkg_version("umap-learn")
 
-    if anndata_version < version.parse('0.6.10'):
+    if version.parse(anndata_version) < version.parse('0.6.10'):
         from . import __version__
 
         raise ImportError(
@@ -167,6 +161,19 @@ def _doc_params(**kwds):
         return obj
 
     return dec
+
+
+def _check_array_function_arguments(**kwargs):
+    """Checks for invalid arguments when an array is passed.
+
+    Helper for functions that work on either AnnData objects or array-likes.
+    """
+    # TODO: Figure out a better solution for documenting dispatched functions
+    invalid_args = [k for k, v in kwargs.items() if v is not None]
+    if len(invalid_args) > 0:
+        raise TypeError(
+            f"Arguments {invalid_args} are only valid if an AnnData object is passed."
+        )
 
 
 # --------------------------------------------------------------------------------
@@ -450,6 +457,24 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
+def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
+    """Checks values of X to ensure it is count data
+    """
+    from numbers import Integral
+
+    data = X if isinstance(X, np.ndarray) else X.data
+    # Check no negatives
+    if np.signbit(data).any():
+        return False
+    # Check all are integers
+    elif issubclass(data.dtype.type, Integral):
+        return True
+    elif np.any(~np.equal(np.mod(data, 1), 0)):
+        return False
+    else:
+        return True
+
+
 def select_groups(adata, groups_order_subset='all', key='groups'):
     """Get subset of groups in adata.obs[key].
     """
@@ -705,8 +730,7 @@ def _choose_graph(adata, obsp, neighbors_key):
     """Choose connectivities from neighbbors or another obsp column"""
     if obsp is not None and neighbors_key is not None:
         raise ValueError(
-            'You can\'t specify both obsp, neighbors_key. '
-            'Please select only one.'
+            'You can\'t specify both obsp, neighbors_key. ' 'Please select only one.'
         )
 
     if obsp is not None:

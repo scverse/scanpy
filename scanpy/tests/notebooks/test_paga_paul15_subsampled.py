@@ -33,6 +33,7 @@ def test_paga_paul15_subsampled(image_comparer, plt):
     sc.pl.draw_graph(adata, color='paul15_clusters', legend_loc='on data')
 
     sc.tl.diffmap(adata)
+    sc.tl.diffmap(adata) # See #1262
     sc.pp.neighbors(adata, n_neighbors=10, use_rep='X_diffmap')
     sc.tl.draw_graph(adata)
 

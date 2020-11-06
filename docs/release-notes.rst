@@ -12,10 +12,122 @@ Release Notes
 .. include:: _key_contributors.rst
 
 
-Version 1.4
+Version 1.6
 -----------
 
 .. include:: release-latest.rst
+
+Version 1.5
+-----------
+
+1.5.1 :small:`2020-05-21`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Bug fixes
+
+- Fixed a bug in :func:`~scanpy.pp.pca`, where `random_state` did not have an effect for sparse input :pr:`1240` :smaller:`I Virshup`
+- Fixed docstring in :func:`~scanpy.pp.pca` which included an unused argument :pr:`1240` :smaller:`I Virshup`
+
+1.5.0 :small:`2020-05-15`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The `1.5.0` release adds a lot of new functionality, much of which takes advantage of :mod:`anndata` updates `0.7.0 - 0.7.2`. Highlights of this release include support for spatial data, dedicated handling of graphs in AnnData, sparse PCA, an interface with scvi, and others.
+
+.. rubric:: Spatial data support
+
+- Basic analysis :tutorial:`spatial/basic-analysis` and integration with single cell data :tutorial:`spatial/integration-scanorama` :smaller:`G Palla`
+- :func:`~scanpy.read_visium` read 10x Visium data :pr:`1034` :smaller:`G Palla, P Angerer, I Virshup`
+- :func:`~scanpy.datasets.visium_sge` load Visium data directly from 10x Genomics :pr:`1013` :smaller:`M Mirkazemi, G Palla, P Angerer`
+- :func:`~scanpy.pl.spatial` plot spatial data :pr:`1012` :smaller:`G Palla, P Angerer`
+
+.. rubric:: New functionality
+
+- Many functions, like :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap`, now store cell-by-cell graphs in :attr:`~anndata.AnnData.obsp` :pr:`1118` :smaller:`S Rybakov`
+- :func:`~scanpy.pp.scale` and :func:`~scanpy.pp.log1p` can be used on any element in :attr:`~anndata.AnnData.layers` or :attr:`~anndata.AnnData.obsm` :pr:`1173` :smaller:`I Virshup`
+
+.. rubric:: External tools
+
+- :func:`~scanpy.external.pp.scvi` for preprocessing with scVI :pr:`1085` :smaller:`G Xing`
+- Guide for using :ref:`Scanpy in R <conversion_to_r>` :pr:`1186` :smaller:`L Zappia`
+
+.. rubric:: Performance
+
+- :func:`~scanpy.pp.pca` now uses efficient implicit centering for sparse matrices. This can lead to signifigantly improved performance for large datasets :pr:`1066` :smaller:`A Tarashansky`
+- :func:`~scanpy.tl.score_genes` now has an efficient implementation for sparse matrices with missing values :pr:`1196` :smaller:`redst4r`.
+
+.. warning::
+
+   The new :func:`~scanpy.pp.pca` implementation can result in slightly different results for sparse matrices. See the pr (:pr:`1066`) and documentation for more info.
+
+.. rubric:: Code design
+
+- :func:`~scanpy.pl.stacked_violin` can now be used as a subplot :pr:`1084` :smaller:`P Angerer`
+- :func:`~scanpy.tl.score_genes` has improved logging :pr:`1119` :smaller:`G Eraslan`
+- :func:`~scanpy.pp.scale` now saves mean and standard deviation in the :attr:`~anndata.AnnData.var` :pr:`1173` :smaller:`A Wolf`
+- :func:`~scanpy.external.tl.harmony_timeseries` :pr:`1091` :smaller:`A Mousa`
+
+.. rubric:: Bug fixes
+
+- :func:`~scanpy.pp.combat` now works when `obs_names` aren't unique. :pr:`1215` :smaller:`I Virshup`
+- :func:`~scanpy.pp.scale` can now be used on dense arrays without centering :pr:`1160` :smaller:`simonwm`
+- :func:`~scanpy.pp.regress_out` now works when some features are constant :pr:`1194` :smaller:`simonwm`
+- :func:`~scanpy.pp.normalize_total` errored if the passed object was a view :pr:`1200` :smaller:`I Virshup`
+- :func:`~scanpy.pp.neighbors` sometimes ignored the `n_pcs` param :pr:`1124` :smaller:`V Bergen`
+- :func:`~scanpy.datasets.ebi_expression_atlas` which contained some out-of-date URLs :pr:`1102` :smaller:`I Virshup`
+- :func:`~scanpy.tl.ingest` for UMAP `0.4` :pr:`1165` :smaller:`S Rybakov`
+- :func:`~scanpy.tl.louvain` for Louvain `0.6` :pr:`1197` :smaller:`I Virshup`
+- :func:`~scanpy.pp.highly_variable_genes` which could lead to incorrect results when the `batch_key` argument was used :pr:`1180` :smaller:`G Eraslan`
+- :func:`~scanpy.tl.ingest` where an inconsistent number of neighbors was used :pr:`1111` :smaller:`S Rybakov`
+
+
+Version 1.4
+-----------
+
+1.4.6 :small:`2020-03-17`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. rubric:: Functionality in `external`
+
+- :func:`~scanpy.external.tl.sam` self-assembling manifolds [Tarashansky19]_ :pr:`903` :smaller:`A Tarashansky`
+- :func:`~scanpy.external.tl.harmony_timeseries` for trajectory inference on discrete time points :pr:`994` :smaller:`A Mousa`
+- :func:`~scanpy.external.tl.wishbone` for trajectory inference (bifurcations) :pr:`1063` :smaller:`A Mousa`
+
+.. rubric:: Code design
+
+- :mod:`~scanpy.pl.violin` now reads `.uns['colors_...']` :pr:`1029` :smaller:`michalk8`
+
+.. rubric:: Bug fixes
+
+- adapt :func:`~scanpy.tl.ingest` for UMAP 0.4 :pr:`1038` :pr:`1106` :smaller:`S Rybakov`
+- compat with matplotlib 3.1 and 3.2 :pr:`1090` :smaller:`I Virshup, P Angerer`
+- fix PAGA for new igraph :pr:`1037` :smaller:`P Angerer`
+- fix rapids compat of louvain :pr:`1079` :smaller:`LouisFaure`
+
+1.4.5 :small:`2019-12-30`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please install `scanpy==1.4.5.post3` instead of `scanpy==1.4.5`.
+
+.. rubric:: New functionality
+
+- :func:`~scanpy.tl.ingest` maps labels and embeddings of reference data to new data :tutorial:`integrating-data-using-ingest` :pr:`651` :smaller:`S Rybakov, A Wolf`
+- :mod:`~scanpy.queries` recieved many updates including enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`I Virshup`
+- :func:`~scanpy.set_figure_params` allows setting `figsize` and accepts `facecolor='white'`, useful for working in dark mode  :smaller:`A Wolf`
+
+.. _gprofiler: https://biit.cs.ut.ee/gprofiler/
+
+.. rubric:: Code design
+
+- :mod:`~scanpy.pp.downsample_counts` now always preserves the dtype of it's input, instead of converting floats to ints :pr:`865` :smaller:`I Virshup`
+- allow specifying a base for :func:`~scanpy.pp.log1p` :pr:`931` :smaller:`G Eraslan`
+- run neighbors on a GPU using rapids :pr:`850` :smaller:`T White`
+- param docs from typed params :smaller:`P Angerer`
+- :func:`~scanpy.tl.embedding_density` now only takes one positional argument; similar for :func:`~scanpy.pl.embedding_density`, which gains a param `groupby` :pr:`965` :smaller:`A Wolf`
+- webpage overhaul, ecosystem page, release notes, tutorials overhaul :pr:`960` :pr:`966` :smaller:`A Wolf`
+
+.. warning::
+
+   * changed default `solver` in :func:`~scanpy.tl.pca` from `auto` to `arpack`
+   * changed default `use_raw` in :func:`~scanpy.tl.score_genes` from `False` to `None`
 
 1.4.4 :small:`2019-07-20`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -93,7 +205,7 @@ Version 1.3
 
 .. rubric:: New functionality
 
-- :func:`~scanpy.pp.combat` reimplements Combat for batch effect correction [Johnson07]_ [Leek12]_, heavily based on the Python implementation of [Pedersen12]_, but with performance improvements :pr:`398 :smaller:`M Lange`
+- :func:`~scanpy.pp.combat` reimplements Combat for batch effect correction [Johnson07]_ [Leek12]_, heavily based on the Python implementation of [Pedersen12]_, but with performance improvements :pr:`398` :smaller:`M Lange`
 - :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_ :smaller:`A Mousa`
 
 1.3.6 :small:`2018-12-11`
@@ -101,7 +213,7 @@ Version 1.3
 .. rubric:: Major updates
 
 - a new plotting gallery for :doc:`visualizing-marker-genes` :smaller:`F Ramirez`
-- tutorials are integrated on ReadTheDocs, :doc:`pbmc3k` and :doc:`paga-paul15`
+- tutorials are integrated on ReadTheDocs, :doc:`pbmc3k` and :doc:`paga-paul15` :smaller:`A Wolf`
 
 .. rubric:: Interactive exploration of analysis results through *manifold viewers*
 
@@ -113,7 +225,7 @@ Version 1.3
 
 .. rubric:: Code design
 
-- :func:`~scanpy.pp.highly_variable_genes` supersedes :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn’t subset
+- :func:`~scanpy.pp.highly_variable_genes` supersedes :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn’t subset :smaller:`A Wolf`
 
 1.3.5 :small:`2018-12-09`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -150,7 +262,7 @@ Version 1.3
 .. rubric:: RNA velocity in single cells [Manno18]_
 
 - Scanpy and AnnData support loom’s layers so that computations for single-cell RNA velocity [Manno18]_ become feasible :smaller:`S Rybakov and V Bergen`
-- the package scvelo_ perfectly harmonizes with Scanpy and is able to process loom files with splicing information produced by Velocyto [Manno18]_, it runs a lot faster than the count matrix analysis of Velocyto and provides several conceptual developments (preprint to come)
+- scvelo_ harmonizes with Scanpy and is able to process loom files with splicing information produced by Velocyto [Manno18]_, it runs a lot faster than the count matrix analysis of Velocyto and provides several conceptual developments
 
 .. _scvelo: https://github.com/theislab/scvelo
 
@@ -190,7 +302,7 @@ Version 1.1
 1.1.0 :small:`2018-06-01`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- :func:`~scanpy.set_figure_params` by default passes `vector_friendly=True` and allows you to produce reasonablly sized pdfs by rasterizing large scatter plots
+- :func:`~scanpy.set_figure_params` by default passes `vector_friendly=True` and allows you to produce reasonablly sized pdfs by rasterizing large scatter plots :smaller:`A Wolf`
 - :func:`~scanpy.tl.draw_graph` defaults to the ForceAtlas2 layout [Jacomy14]_ [Chippada18]_, which is often more visually appealing and whose computation is much faster :smaller:`S Wollock`
 - :func:`~scanpy.pl.scatter` also plots along variables axis :smaller:`MD Luecken`
 - :func:`~scanpy.pp.pca` and :func:`~scanpy.pp.log1p` support chunk processing :smaller:`S Rybakov`
@@ -211,10 +323,10 @@ Version 1.0
 .. rubric:: Major updates
 
 - Scanpy is much faster and more memory efficient: preprocess, cluster and
-  visualize 1.3M cells in 6h_, 130K cells in 14min_, and 68K cells in 3min_
+  visualize 1.3M cells in 6h_, 130K cells in 14min_, and 68K cells in 3min_ :smaller:`A Wolf`
 - the API gained a preprocessing function :func:`~scanpy.pp.neighbors` and a
   class :func:`~scanpy.Neighbors` to which all basic graph computations are
-  delegated
+  delegated :smaller:`A Wolf`
 
 .. _6h: https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/
 .. _14min: https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_130K.txt
@@ -254,25 +366,25 @@ Version 1.0
 - UMAP [McInnes18]_ can serve as a first visualization of the data just as tSNE,
   in contrast to tSNE, UMAP directly embeds the single-cell graph and is faster;
   UMAP is also used for measuring connectivities and computing neighbors,
-  see :func:`~scanpy.pp.neighbors`
+  see :func:`~scanpy.pp.neighbors` :smaller:`A Wolf`
 - graph abstraction: AGA is renamed to PAGA_: :func:`~scanpy.tl.paga`; now,
   it only measures connectivities between partitions of the single-cell graph,
   pseudotime and clustering need to be computed separately via
   :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.dpt`, the
-  connectivity measure has been improved
+  connectivity measure has been improved :smaller:`A Wolf`
 - logistic regression for finding marker genes
-  :func:`~scanpy.tl.rank_genes_groups` with parameter `method='logreg'`
+  :func:`~scanpy.tl.rank_genes_groups` with parameter `method='logreg'` :smaller:`A Wolf`
 - :func:`~scanpy.tl.louvain` provides a better implementation for
-  reclustering via `restrict_to`
+  reclustering via `restrict_to` :smaller:`A Wolf`
 - scanpy no longer modifies rcParams upon import, call
-  `settings.set_figure_params` to set the 'scanpy style'
+  `settings.set_figure_params` to set the 'scanpy style' :smaller:`A Wolf`
 - default cache directory is ``./cache/``, set `settings.cachedir` to change
-  this; nested directories in this are avoided
+  this; nested directories in this are avoided :smaller:`A Wolf`
 - show edges in scatter plots based on graph visualization
-  :func:`~scanpy.tl.draw_graph` and :func:`~scanpy.tl.umap` by passing `edges=True`
+  :func:`~scanpy.tl.draw_graph` and :func:`~scanpy.tl.umap` by passing `edges=True` :smaller:`A Wolf`
 - :func:`~scanpy.pp.downsample_counts` for downsampling counts :smaller:`MD Luecken`
-- default `'louvain_groups'` are called `'louvain'`
-- `'X_diffmap'` contains the zero component, plotting remains unchanged
+- default `'louvain_groups'` are called `'louvain'` :smaller:`A Wolf`
+- `'X_diffmap'` contains the zero component, plotting remains unchanged :smaller:`A Wolf`
 
 
 Version 0.4
@@ -290,20 +402,20 @@ Version 0.4
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - :func:`~scanpy.pl.clustermap`: heatmap from hierarchical clustering,
-  based on :func:`seaborn.clustermap` [Waskom16]_
+  based on :func:`seaborn.clustermap` [Waskom16]_ :smaller:`A Wolf`
 - only return :class:`matplotlib.axes.Axes` in plotting functions of `sc.pl`
-  when `show=False`, otherwise `None`
+  when `show=False`, otherwise `None` :smaller:`A Wolf`
 
 0.4.2 :small:`2018-01-07`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- amendments in PAGA_ and its plotting functions
+- amendments in PAGA_ and its plotting functions :smaller:`A Wolf`
 
 0.4.0 :small:`2017-12-23`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - export to SPRING_ [Weinreb17]_ for interactive visualization of data:
-  `spring tutorial`_
+  `spring tutorial`_ :smaller:`S Wollock`
 
 .. _SPRING: https://github.com/AllonKleinLab/SPRING/
 .. _spring tutorial: https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export
@@ -316,14 +428,14 @@ Version 0.3
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - finding marker genes via :func:`~scanpy.pl.rank_genes_groups_violin` improved,
-  see :issue:`51`
+  see :issue:`51` :smaller:`F Ramirez`
 
 0.3.0 :small:`2017-11-16`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- :class:`~anndata.AnnData` gains method :meth:`~anndata.AnnData.concatenate`
-- :class:`~anndata.AnnData` is available as the separate anndata_ package
-- results of PAGA_ simplified
+- :class:`~anndata.AnnData` gains method :meth:`~anndata.AnnData.concatenate` :smaller:`A Wolf`
+- :class:`~anndata.AnnData` is available as the separate anndata_ package :smaller:`P Angerer, A Wolf`
+- results of PAGA_ simplified :smaller:`A Wolf`
 
 .. _anndata: https://pypi.org/project/anndata/
 
@@ -336,9 +448,9 @@ Version 0.2
 
 .. rubric:: Initial release of the new trajectory inference method PAGA_
 
-- :func:`~scanpy.tl.paga` computes an abstracted, coarse-grained (PAGA) graph of the neighborhood graph
-- :func:`~scanpy.pl.paga_compare` plot this graph next an embedding
-- :func:`~scanpy.pl.paga_path` plots a heatmap through a node sequence in the PAGA graph
+- :func:`~scanpy.tl.paga` computes an abstracted, coarse-grained (PAGA) graph of the neighborhood graph :smaller:`A Wolf`
+- :func:`~scanpy.pl.paga_compare` plot this graph next an embedding :smaller:`A Wolf`
+- :func:`~scanpy.pl.paga_path` plots a heatmap through a node sequence in the PAGA graph :smaller:`A Wolf`
 
 0.2.1 :small:`2017-07-24`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -347,7 +459,7 @@ Scanpy includes preprocessing, visualization, clustering, pseudotime and
 trajectory inference, differential expression testing and simulation of gene
 regulatory networks. The implementation efficiently deals with `datasets of more
 than one million cells
-<https://github.com/theislab/scanpy_usage/tree/master/170522_visualizing_one_million_cells>`__.
+<https://github.com/theislab/scanpy_usage/tree/master/170522_visualizing_one_million_cells>`__. :smaller:`A Wolf, P Angerer`
 
 
 Version 0.1
@@ -360,4 +472,4 @@ Scanpy computationally outperforms and allows reproducing both the `Cell Ranger
 R kit's <https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17>`__
 and most of `Seurat’s
 <https://github.com/theislab/scanpy_usage/tree/master/170505_seurat>`__
-clustering workflows.
+clustering workflows. :smaller:`A Wolf, P Angerer`

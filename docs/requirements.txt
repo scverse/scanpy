@@ -1,6 +1,0 @@
--r ../requirements.txt
-sphinx_rtd_theme>=0.3.1
-sphinx>=2.0.1
-sphinx-autodoc-typehints
-scanpydoc>=0.4.5
-typing_extensions; python_version < '3.8'

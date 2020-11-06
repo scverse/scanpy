@@ -6,19 +6,29 @@ labels: bug
 assignees: ''
 ---
 
-<!-- Please give a clear and concise description of what the bug is: -->
-...
+- [ ] I have checked that this issue has not already been reported.
+- [ ] I have confirmed this bug exists on the latest version of scanpy.
+- [ ] (optional) I have confirmed this bug exists on the master branch of scanpy.
 
-<!-- Put a minimal reproducible example that reproduces the bug in the code block below: -->
+---
+
+**Note**: Please read [this guide](https://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports) detailing how to provide the necessary information for us to reproduce your bug.
+
+
+### Minimal code sample (that we can copy&paste without having any data)
+
 ```python
-...
+# Your code here
 ```
 
-<!-- Put your Error output in this code block (if applicable, else delete the block): -->
 ```pytb
-...
+[Paste the error output produced by the above code here]
 ```
 
-#### Versions:
-<!-- Output of scanpy.logging.print_versions() -->
-> ...
+#### Versions
+
+<details>
+
+[Paste the output of scanpy.logging.print_versions() leaving a blank line after the details tag]
+
+</details>

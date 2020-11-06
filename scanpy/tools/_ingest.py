@@ -9,9 +9,10 @@ from scipy.sparse import issparse
 from anndata import AnnData
 
 from .. import settings
-from ..neighbors import _rp_forest_generate
 from .. import logging as logg
-from .._utils import pkg_version, NeighborsView
+from ..neighbors import _rp_forest_generate
+from .._utils import NeighborsView
+from .._compat import pkg_version
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
@@ -186,9 +187,11 @@ class Ingest:
     """
 
     def _init_umap(self, adata):
-        from umap import UMAP
+        import umap as u
 
-        self._umap = UMAP(
+        u.umap_._HAVE_PYNNDESCENT = False
+
+        self._umap = u.UMAP(
             metric=self._metric,
             random_state=adata.uns['umap']['params'].get('random_state', 0),
         )
@@ -396,7 +399,7 @@ class Ingest:
         self._adata_new = adata_new
         self._obsm['rep'] = self._same_rep()
 
-    def neighbors(self, k=10, queue_size=5, random_state=0):
+    def neighbors(self, k=None, queue_size=5, random_state=0):
         """\
         Calculate neighbors of `adata_new` observations in `adata`.
 
@@ -412,12 +415,15 @@ class Ingest:
         train = self._rep
         test = self._obsm['rep']
 
+        if k is None:
+            k = self._n_neighbors
+
         init = self._initialise_search(
-            self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state,
+            self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state
         )
 
         result = self._search(
-            train, self._search_graph.indptr, self._search_graph.indices, init, test,
+            train, self._search_graph.indptr, self._search_graph.indices, init, test
         )
         indices, dists = deheap_sort(result)
         self._indices, self._distances = indices[:, :k], dists[:, :k]

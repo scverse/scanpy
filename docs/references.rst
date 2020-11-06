@@ -13,6 +13,10 @@ References
    *destiny – diffusion maps for large-scale single-cell data in R*,
    `Bioinformatics <https://doi.org/10.1093/bioinformatics/btv715>`__.
 
+.. [Bernstein20] Bernstein *et al.* (2020),
+  *Solo: Doublet Identification in Single-Cell RNA-Seq via Semi-Supervised Deep Learning*,
+  `Cell Systems  <https://doi.org/10.1016/j.cels.2020.05.010>`__.
+
 .. [Blondel08] Blondel *et al.* (2008),
    *Fast unfolding of communities in large networks*,
    `J. Stat. Mech. <https://doi.org/10.1088/1742-5468/2008/10/P10008>`__.
@@ -95,6 +99,10 @@ References
    *Python Implementation of MNN correct*,
    `GitHub <https://github.com/chriscainx/mnnpy>`__.
 
+.. [Korunsky19] Korunsky *et al.* (2019),
+   *Fast, sensitive and accurate integration of single-cell data with Harmony*,
+   `Nature Methods <https://doi.org/10.1038/s41592-019-0619-0>` __.
+
 .. [Krumsiek10] Krumsiek *et al.* (2010),
    *Odefy – From discrete to continuous models*,
    `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-233>`__.
@@ -114,6 +122,10 @@ References
 .. [Levine15] Levine *et al.* (2015),
    *Data-Driven Phenotypic Dissection of AML Reveals Progenitor--like Cells that Correlate with Prognosis*,
    `Cell <https://doi.org/10.1016/j.cell.2015.05.047>`__.
+
+.. [Lopez18] Lopez *et al.* (2018),
+   *Deep generative modeling for single-cell transcriptomics*
+   `Nature Methods <https://doi.org/10.1038/s41592-018-0229-2>`__.
 
 .. [Maaten08] Maaten & Hinton (2008),
    *Visualizing data using t-SNE*,
@@ -183,6 +195,14 @@ References
 .. [Setty18] Setty *et al.* (2018),
    *Palantir characterizes cell fate continuities in human hematopoiesis*
    `Nature Biotechnology <https://www.nature.com/articles/s41587-019-0068-4>`__.
+
+.. [Stuart19] Stuart *et al.* (2019),
+   *Comprehensive integration of single-cell data*
+   `Cell <https://www.sciencedirect.com/science/article/pii/S0092867419305598>`__.
+
+.. [Svensson20] Svensson *et al.* (2020),
+   *Interpretable factor models of single-cell RNA-seq via variational autoencoders*
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__.
 
 .. [Nowotschin18i] Nowotschin *et al.* (2018),
    *The emergent landscape of the mouse gut endoderm at single-cell resolution*

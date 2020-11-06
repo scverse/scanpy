@@ -20,9 +20,11 @@ We love code contributions! We have a couple guidelines we'd like you to follow 
 
 ### Tests
 
-Please write tests! You can refer to the [existing test suite](https://github.com/theislab/scanpy/tree/master/scanpy/tests) for examples. If you haven't written tests before, Software Carpentry has an [in-depth guide](http://katyhuff.github.io/python-testing/) on the topic.
+Please write tests! You can refer to the [existing test suite](https://github.com/theislab/scanpy/tree/master/scanpy/tests) for examples.
+If you haven't written tests before, Software Carpentry has an [in-depth guide](http://katyhuff.github.io/python-testing/) on the topic.
 
-Test are run by issuing the command `pytest` from the root of the repository. `pytest` as well as a few other testing dependencies can be installed by running `pip install ".[test]"` from the repository root, or `pip install scanpy[test]`.
+Test are run by issuing the command `pytest` from the root of the repository.
+`pytest` as well as a few other testing dependencies can be installed by running `pip install '.[test]'` from the repository root, or `pip install 'scanpy[test]'`.
 
 ### Coding style
 New code should follow [Black][] and Scanpy’s [EditorConfig][],

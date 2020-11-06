@@ -7,7 +7,7 @@ from sphinx.ext.autodoc import Options
 
 
 def insert_function_images(
-    app: Sphinx, what: str, name: str, obj: Any, options: Options, lines: List[str],
+    app: Sphinx, what: str, name: str, obj: Any, options: Options, lines: List[str]
 ):
     path = app.config.api_dir / f'{name}.png'
     if what != 'function' or not path.is_file():

@@ -6,7 +6,7 @@ from umap import UMAP
 
 import scanpy as sc
 from scanpy import settings
-from scanpy._utils import pkg_version
+from scanpy._compat import pkg_version
 
 
 X = np.array(
@@ -85,6 +85,19 @@ def test_neighbors(adatas):
     percent_correct = num_correct / (adata_new.n_obs * 10)
 
     assert percent_correct > 0.99
+
+
+@pytest.mark.parametrize('n', [3, 4])
+def test_neighbors_defaults(adatas, n):
+    adata_ref = adatas[0].copy()
+    adata_new = adatas[1].copy()
+
+    sc.pp.neighbors(adata_ref, n_neighbors=n)
+
+    ing = sc.tl.Ingest(adata_ref)
+    ing.fit(adata_new)
+    ing.neighbors()
+    assert ing._indices.shape[1] == n
 
 
 @pytest.mark.skipif(

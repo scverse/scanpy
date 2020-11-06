@@ -6,6 +6,7 @@ import pandas as pd
 from scipy.sparse import spmatrix
 
 from anndata import AnnData
+
 # --------------------------------------------------------------------------------
 # Plotting data helpers
 # --------------------------------------------------------------------------------
@@ -122,9 +123,13 @@ def obs_df(
     >>> mean, var = grouped.mean(), grouped.var()
     """
     if use_raw:
-        assert layer is None, "Cannot specify use_raw=True and a layer at the same time."
+        assert (
+            layer is None
+        ), "Cannot specify use_raw=True and a layer at the same time."
         if gene_symbols is not None:
-            gene_names = pd.Series(adata.raw.var_names, index=adata.raw.var[gene_symbols])
+            gene_names = pd.Series(
+                adata.raw.var_names, index=adata.raw.var[gene_symbols]
+            )
         else:
             gene_names = pd.Series(adata.raw.var_names, index=adata.raw.var_names)
     else:
@@ -146,12 +151,16 @@ def obs_df(
             if gene_symbols is None:
                 gene_error = "`adata.raw.var_names`"
             else:
-                gene_error = "gene_symbols column `adata.raw.var[{}].values`".format(gene_symbols)
+                gene_error = "gene_symbols column `adata.raw.var[{}].values`".format(
+                    gene_symbols
+                )
         else:
             if gene_symbols is None:
                 gene_error = "`adata.var_names`"
             else:
-                gene_error = "gene_symbols column `adata.var[{}].values`".format(gene_symbols)
+                gene_error = "gene_symbols column `adata.var[{}].values`".format(
+                    gene_symbols
+                )
         raise KeyError(
             f"Could not find keys '{not_found}' in columns of `adata.obs` or in"
             f" {gene_error}."
@@ -232,3 +241,57 @@ def var_df(
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
     return df
+
+
+def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
+    """
+    Choose array aligned with obs annotation.
+    """
+    is_layer = layer is not None
+    is_raw = use_raw is not False
+    is_obsm = obsm is not None
+    is_obsp = obsp is not None
+    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
+    assert choices_made <= 1
+    if choices_made == 0:
+        return adata.X
+    elif is_layer:
+        return adata.layers[layer]
+    elif use_raw:
+        return adata.raw.X
+    elif is_obsm:
+        return adata.obsm[obsm]
+    elif is_obsp:
+        return adata.obsp[obsp]
+    else:
+        assert False, (
+            "That was unexpected. Please report this bug at:\n\n\t"
+            " https://github.com/theislab/scanpy/issues"
+        )
+
+
+def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None):
+    """
+    Set value for observation rep.
+    """
+    is_layer = layer is not None
+    is_raw = use_raw is not False
+    is_obsm = obsm is not None
+    is_obsp = obsp is not None
+    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
+    assert choices_made <= 1
+    if choices_made == 0:
+        adata.X = val
+    elif is_layer:
+        adata.layers[layer] = val
+    elif use_raw:
+        adata.raw.X = val
+    elif is_obsm:
+        adata.obsm[obsm] = val
+    elif is_obsp:
+        adata.obsp[obsp] = val
+    else:
+        assert False, (
+            "That was unexpected. Please report this bug at:\n\n\t"
+            " https://github.com/theislab/scanpy/issues"
+        )

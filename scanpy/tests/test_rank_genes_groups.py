@@ -1,13 +1,20 @@
+import pytest
+
 from pathlib import Path
 import pickle
 
 import numpy as np
 import pandas as pd
 from scipy import sparse as sp
+from scipy.stats import mannwhitneyu
 from numpy.random import negative_binomial, binomial, seed
 
 from anndata import AnnData
 from scanpy.tools import rank_genes_groups
+from scanpy.tools._rank_genes_groups import _RankGenes
+from scanpy.get import rank_genes_groups_df
+from scanpy.datasets import pbmc68k_reduced
+from scanpy._utils import select_groups
 
 
 HERE = Path(__file__).parent / Path('_data/')
@@ -57,11 +64,17 @@ def test_results_dense():
     true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='t-test')
+
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups']['names'].astype(true_names_t_test.dtype)
+
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name])
     assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
+
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups']['names'].astype(true_names_wilcoxon.dtype)
+
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(true_scores_wilcoxon[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
     assert np.array_equal(true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7])
@@ -77,12 +90,16 @@ def test_results_sparse():
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='t-test')
 
-    rank_genes_groups(adata, 'true_groups', n_genes=20, method='t-test')
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups']['names'].astype(true_names_t_test.dtype)
+
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name])
-    assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])    
+    assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
+
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups']['names'].astype(true_names_wilcoxon.dtype)
+
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(true_scores_wilcoxon[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
     assert np.array_equal(true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7])
@@ -121,3 +138,67 @@ def test_results_layers():
     rank_genes_groups(adata, 'true_groups', method='t-test', n_genes=20)
     for name in true_scores_t_test.dtype.names:
         assert not np.allclose(true_scores_t_test[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
+
+
+def test_wilcoxon_symmetry():
+    pbmc = pbmc68k_reduced()
+
+    rank_genes_groups(
+        pbmc,
+        groupby="bulk_labels",
+        groups=["CD14+ Monocyte", "Dendritic"],
+        reference="Dendritic",
+        method='wilcoxon',
+        rankby_abs=True
+    )
+
+    stats_mono = rank_genes_groups_df(pbmc, group="CD14+ Monocyte").drop(columns="names").to_numpy()
+
+    rank_genes_groups(
+        pbmc,
+        groupby="bulk_labels",
+        groups=["CD14+ Monocyte", "Dendritic"],
+        reference="CD14+ Monocyte",
+        method='wilcoxon',
+        rankby_abs=True
+    )
+
+    stats_dend = rank_genes_groups_df(pbmc, group="Dendritic").drop(columns="names").to_numpy()
+
+    assert np.allclose(np.abs(stats_mono), np.abs(stats_dend))
+
+
+@pytest.mark.parametrize('reference', [True, False])
+def test_wilcoxon_tie_correction(reference):
+    pbmc = pbmc68k_reduced()
+
+    groups = ['CD14+ Monocyte', 'Dendritic']
+    groupby = 'bulk_labels'
+
+    _, groups_masks = select_groups(pbmc, groups, groupby)
+
+    X = pbmc.raw.X[groups_masks[0]].toarray()
+
+    mask_rest = groups_masks[1] if reference else ~groups_masks[0]
+    Y = pbmc.raw.X[mask_rest].toarray()
+
+    n_genes = X.shape[1]
+
+    pvals = np.zeros(n_genes)
+
+    for i in range(n_genes):
+        try:
+            _, pvals[i] = mannwhitneyu(X[:, i], Y[:, i], False, 'two-sided')
+        except ValueError:
+            pvals[i] = 1
+
+    if reference:
+        ref = groups[1]
+    else:
+        ref = 'rest'
+        groups = groups[:1]
+
+    test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
+    test_obj.compute_statistics('wilcoxon', tie_correct=True)
+
+    assert np.allclose(test_obj.stats[groups[0]]['pvals'], pvals)

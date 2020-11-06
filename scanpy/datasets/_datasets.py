@@ -1,15 +1,16 @@
 from pathlib import Path
 from typing import Optional
+import warnings
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from tqdm.auto import tqdm
 
 from .. import logging as logg, _utils
 from .._compat import Literal
 from .._settings import settings
 from ..readwrite import read, read_visium
+from ._utils import check_datasetdir_exists
 
 HERE = Path(__file__).parent
 
@@ -52,6 +53,7 @@ def blobs(
     return AnnData(X, obs=dict(blobs=y.astype(str)))
 
 
+@check_datasetdir_exists
 def burczynski06() -> AnnData:
     """\
     Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
@@ -107,6 +109,7 @@ def krumsiek11() -> AnnData:
     return adata
 
 
+@check_datasetdir_exists
 def moignard15() -> AnnData:
     """\
     Hematopoiesis in early mouse embryos [Moignard15]_.
@@ -144,6 +147,7 @@ def moignard15() -> AnnData:
     return adata
 
 
+@check_datasetdir_exists
 def paul15() -> AnnData:
     """\
     Development of Myeloid Progenitors [Paul15]_.
@@ -165,6 +169,7 @@ def paul15() -> AnnData:
     import h5py
 
     filename = settings.datasetdir / 'paul15/paul15.h5'
+    filename.parent.mkdir(exist_ok=True)
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, 'r') as f:
@@ -235,9 +240,12 @@ def pbmc68k_reduced() -> AnnData:
     """
 
     filename = HERE / '10x_pbmc68k_reduced.h5ad'
-    return read(filename)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        return read(filename)
 
 
+@check_datasetdir_exists
 def pbmc3k() -> AnnData:
     """\
     3k PBMCs from 10x Genomics.
@@ -280,6 +288,7 @@ def pbmc3k() -> AnnData:
     return adata
 
 
+@check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
     """Processed 3k PBMCs from 10x Genomics.
 
@@ -289,14 +298,17 @@ def pbmc3k_processed() -> AnnData:
     -------
     Annotated data matrix.
     """
-    adata = read(
-        settings.datasetdir / 'pbmc3k_processed.h5ad',
-        backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
-    )
-    return adata
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        return read(
+            settings.datasetdir / 'pbmc3k_processed.h5ad',
+            backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
+        )
 
 
-def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
+def _download_visium_dataset(
+    sample_id: str, spaceranger_version: str, base_dir: Optional[Path] = None
+):
     """
     Params
     ------
@@ -310,7 +322,7 @@ def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
     if base_dir is None:
         base_dir = settings.datasetdir
 
-    url_prefix = f'http://cf.10xgenomics.com/samples/spatial-exp/1.0.0/{sample_id}/'
+    url_prefix = f'https://cf.10xgenomics.com/samples/spatial-exp/{spaceranger_version}/{sample_id}/'
 
     sample_dir = base_dir / sample_id
     sample_dir.mkdir(exist_ok=True)
@@ -333,6 +345,7 @@ def _download_visium_dataset(sample_id: str, base_dir: Optional[Path] = None):
     )
 
 
+@check_datasetdir_exists
 def visium_sge(
     sample_id: Literal[
         'V1_Breast_Cancer_Block_A_Section_1',
@@ -345,6 +358,24 @@ def visium_sge(
         'V1_Mouse_Brain_Sagittal_Posterior_Section_2',
         'V1_Mouse_Brain_Sagittal_Anterior',
         'V1_Mouse_Brain_Sagittal_Anterior_Section_2',
+        'V1_Human_Brain_Section_1',
+        'V1_Human_Brain_Section_2',
+        'V1_Adult_Mouse_Brain_Coronal_Section_1',
+        'V1_Adult_Mouse_Brain_Coronal_Section_2',
+        # spaceranger version 1.2.0
+        'Targeted_Visium_Human_Cerebellum_Neuroscience',
+        'Parent_Visium_Human_Cerebellum',
+        'Targeted_Visium_Human_SpinalCord_Neuroscience',
+        'Parent_Visium_Human_SpinalCord',
+        'Targeted_Visium_Human_Glioblastoma_Pan_Cancer',
+        'Parent_Visium_Human_Glioblastoma',
+        'Targeted_Visium_Human_BreastCancer_Immunology',
+        'Parent_Visium_Human_BreastCancer',
+        'Targeted_Visium_Human_OvarianCancer_Pan_Cancer',
+        'Targeted_Visium_Human_OvarianCancer_Immunology',
+        'Parent_Visium_Human_OvarianCancer',
+        'Targeted_Visium_Human_ColorectalCancer_GeneSignature',
+        'Parent_Visium_Human_ColorectalCancer',
     ] = 'V1_Breast_Cancer_Block_A_Section_1',
 ) -> AnnData:
     """\
@@ -360,5 +391,9 @@ def visium_sge(
     -------
     Annotated data matrix.
     """
-    _download_visium_dataset(sample_id)
+    if "V1_" in sample_id:
+        spaceranger_version = "1.1.0"
+    else:
+        spaceranger_version = "1.2.0"
+    _download_visium_dataset(sample_id, spaceranger_version)
     return read_visium(settings.datasetdir / sample_id)

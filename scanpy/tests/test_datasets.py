@@ -44,9 +44,19 @@ def test_pbmc3k(tmp_dataset_dir):
 
 
 @pytest.mark.internet
+def test_pbmc3k_processed(tmp_dataset_dir):
+    with pytest.warns(None) as records:
+        adata = sc.datasets.pbmc3k_processed()
+    assert adata.shape == (2638, 1838)
+    assert adata.raw.shape == (2638, 13714)
+
+    assert len(records) == 0
+
+
+@pytest.mark.internet
 def test_ebi_expression_atlas(tmp_dataset_dir):
     adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
-    assert adata.shape == (2315, 23852)
+    assert adata.shape == (2315, 24051)  # This changes sometimes
 
 
 def test_krumsiek11(tmp_dataset_dir):
@@ -70,7 +80,9 @@ def test_toggleswitch():
 
 
 def test_pbmc68k_reduced():
-    sc.datasets.pbmc68k_reduced()
+    with pytest.warns(None) as records:
+        sc.datasets.pbmc68k_reduced()
+    assert len(records) == 0  # Test that loading a dataset does not warn
 
 
 @pytest.mark.internet

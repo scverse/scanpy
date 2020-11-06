@@ -12,7 +12,7 @@ from ..neighbors import Neighbors, OnFlySymMatrix
 
 def _diffmap(adata, n_comps=15, neighbors_key=None):
     start = logg.info(f'computing Diffusion Maps using n_comps={n_comps}(=n_dcs)')
-    dpt = DPT(adata, neighbors_key)
+    dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps)
     adata.obsm['X_diffmap'] = dpt.eigen_basis
@@ -183,7 +183,7 @@ class DPT(Neighbors):
 
     def __init__(self, adata, n_dcs=None, min_group_size=0.01,
                  n_branchings=0, allow_kendall_tau_shift=False, neighbors_key=None):
-        super(DPT, self).__init__(adata, n_dcs=n_dcs, neighbors_key=neighbors_key)
+        super().__init__(adata, n_dcs=n_dcs, neighbors_key=neighbors_key)
         self.flavor = 'haghverdi16'
         self.n_branchings = n_branchings
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self._adata.shape[0])

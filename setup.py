@@ -6,11 +6,13 @@ from pathlib import Path
 
 from setuptools import setup, find_packages
 
-
 try:
-    from scanpy import __author__, __email__
-except ImportError:  # Deps not yet installed
-    __author__ = __email__ = ''
+    import pytoml
+except ImportError:
+    sys.exit('Please use `pip install .` or install pytoml first.')
+
+proj = pytoml.loads(Path('pyproject.toml').read_text())
+metadata = proj['tool']['scanpy']
 
 setup(
     name='scanpy',
@@ -19,33 +21,36 @@ setup(
     description='Single-Cell Analysis in Python.',
     long_description=Path('README.rst').read_text('utf-8'),
     url='http://github.com/theislab/scanpy',
-    author=__author__,
-    author_email=__email__,
+    author=metadata['author'],
+    author_email=metadata['author-email'],
     license='BSD',
     python_requires='>=3.6',
     install_requires=[
         l.strip() for l in Path('requirements.txt').read_text('utf-8').splitlines()
     ],
     extras_require=dict(
-        louvain=['python-igraph', 'louvain>=0.6'],
+        louvain=['python-igraph', 'louvain>=0.6,!=0.6.2'],
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
+        scvi=['scvi>=0.6.5'],
         rapids=['cudf>=0.9', 'cuml>=0.9', 'cugraph>=0.9'],
         magic=['magic-impute>=2.0'],
+        skmisc=['scikit-misc>=0.1.3'],
+        harmony=['harmonypy'],
+        dev=['setuptools_scm', 'pytoml', 'black>=20.8b1'],
         doc=[
-            'sphinx',
-            'sphinx_rtd_theme',
+            'sphinx<3.1, >3',
+            'sphinx_rtd_theme>=0.3.1',
             'sphinx_autodoc_typehints',
-            'scanpydoc>=0.4.3',
+            'scanpydoc>=0.5',
             'typing_extensions; python_version < "3.8"',  # for `Literal`
         ],
         test=[
             'pytest>=4.4',
-            'dask[array]',
+            'dask[array]!=2.17.0',
             'fsspec',
             'zappy',
             'zarr',
-            'black',
             'profimp',
         ],
     ),

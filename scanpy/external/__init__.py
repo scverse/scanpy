@@ -31,6 +31,7 @@ Data integration
    :toctree: .
 
    pp.bbknn
+   pp.harmony_integrate
    pp.mnn_correct
 
 Imputation
@@ -44,6 +45,7 @@ Note that the fundamental limitations of imputation are still under `debate
 
    pp.dca
    pp.magic
+   pp.scvi
 
 
 Tools: TL
@@ -69,6 +71,8 @@ Clustering and trajectory inference
    tl.phenograph
    tl.harmony_timeseries
    tl.wishbone
+   tl.palantir
+   tl.palantir_results
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,7 +92,6 @@ Plotting: PL
 
    pl.phate
    pl.trimap
-   tl.palantir
    pl.sam
    pl.wishbone_marker_trajectory
 

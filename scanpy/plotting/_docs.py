@@ -83,12 +83,18 @@ color_map
 palette
     Colors to use for plotting categorical annotation groups.
     The palette can be a valid :class:`~matplotlib.colors.ListedColormap` name
-    (`'Set2'`, `'tab20'`, …), a :class:`~cycler.Cycler` object, or a sequence of
-    matplotlib colors like `['red', '#ccdd11', (0.1, 0.2, 1)]`
-    (see :func:`~matplotlib.colors.is_color_like`).
+    (`'Set2'`, `'tab20'`, …), a :class:`~cycler.Cycler` object, a dict mapping
+    categories to colors, or a sequence of colors. Colors must be valid to
+    matplotlib. (see :func:`~matplotlib.colors.is_color_like`).
     If `None`, `mpl.rcParams["axes.prop_cycle"]` is used unless the categorical
     variable already has colors stored in `adata.uns["{var}_colors"]`.
     If provided, values of `adata.uns["{var}_colors"]` will be set.
+na_color
+    Color to use for null or masked values. Can be anything matplotlib accepts as a
+    color. Used for all points if `color=None`.
+na_in_legend
+    If there are missing values, whether they get an entry in the legend. Currently
+    only implemented for categorical legends.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.set_figure_params`, defaults to `True`.
@@ -189,6 +195,9 @@ num_categories
     Only used if groupby observation is not categorical. This value
     determines the number of groups into which the groupby observation
     should be subdivided.
+categories_order
+    Order in which to show the categories. Note: add_dendrogram or add_totals
+    can change the categories order.
 figsize
     Figure size when `multi_panel=True`.
     Otherwise the `rcParam['figure.figsize]` value is used.

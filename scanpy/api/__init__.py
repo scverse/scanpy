@@ -1,4 +1,5 @@
 import warnings
+
 warnings.warn(
     "\n\n"
     "In a future version of Scanpy, `scanpy.api` will be removed.\n"
@@ -10,14 +11,29 @@ from anndata import AnnData
 from ..neighbors import Neighbors
 
 from anndata import read as read_h5ad
-from anndata import read_csv, read_excel, read_hdf, read_loom, read_mtx, read_text, read_umi_tools
+from anndata import (
+    read_csv,
+    read_excel,
+    read_hdf,
+    read_loom,
+    read_mtx,
+    read_text,
+    read_umi_tools,
+)
 
 from .. import __version__
 
 from . import tl
 from . import pl
 from . import pp
-from ..readwrite import read, read_10x_h5, read_10x_mtx, write, read_params, write_params
+from ..readwrite import (
+    read,
+    read_10x_h5,
+    read_10x_mtx,
+    write,
+    read_params,
+    write_params,
+)
 from . import datasets
 from . import export_to
 from . import logging
@@ -32,6 +48,7 @@ from .. import plotting
 # it would be nice to make the simple data types "properties of the
 # module"... putting setters and getters for all of them wouldn't be very nice
 from .._settings import settings
+
 # for now – or maybe as the permanently favored solution – put the single function here
 # from ..settings import set_figure_params
 set_figure_params = settings.set_figure_params
@@ -40,6 +57,7 @@ set_figure_params = settings.set_figure_params
 from .. import _utils
 
 import sys
+
 _utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
 del sys
 
@@ -118,6 +136,7 @@ Note that the fundamental limitations of imputation are still under debate
 
    pp.dca
    pp.magic
+   pp.scvi
 
 Neighbors
 ~~~~~~~~~
@@ -257,6 +276,7 @@ Print versions of packages that might influence numerical results.
 
 .. autosummary::
 
+   logging.print_header
    logging.print_versions
 
 

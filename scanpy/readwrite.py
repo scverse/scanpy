@@ -136,7 +136,10 @@ def read(
 
 
 def read_10x_h5(
-    filename: Union[str, Path], genome: Optional[str] = None, gex_only: bool = True,
+    filename: Union[str, Path],
+    genome: Optional[str] = None,
+    gex_only: bool = True,
+    backup_url: Optional[str] = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted hdf5 file.
@@ -151,6 +154,8 @@ def read_10x_h5(
     gex_only
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
+    backup_url
+        Retrieve the file from an URL if not present on disk.
 
     Returns
     -------
@@ -169,6 +174,9 @@ def read_10x_h5(
         Feature types
     """
     start = logg.info(f'reading {filename}')
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
+    if not is_present:
+        logg.debug(f'... did not find original file {filename}')
     with tables.open_file(str(filename), 'r') as f:
         v3 = '/matrix' in f
     if v3:
@@ -179,12 +187,9 @@ def read_10x_h5(
                     f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
                     f'Available genomes are: {list(adata.var["genome"].unique())}.'
                 )
-            adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
+            adata = adata[:, adata.var['genome'] == genome]
         if gex_only:
-            adata = adata[
-                :,
-                list(map(lambda x: x == 'Gene Expression', adata.var['feature_types'])),
-            ]
+            adata = adata[:, adata.var['feature_types'] == 'Gene Expression']
         if adata.is_view:
             adata = adata.copy()
     else:
@@ -225,7 +230,8 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
                 data = dsets['data'].view('float32')
                 data[:] = dsets['data']
             matrix = csr_matrix(
-                (data, dsets['indices'], dsets['indptr']), shape=(N, M),
+                (data, dsets['indices'], dsets['indptr']),
+                shape=(N, M),
             )
             # the csc matrix is automatically the transposed csr matrix
             # as scanpy expects it, so, no need for a further transpostion
@@ -260,7 +266,8 @@ def _read_v3_10x_h5(filename, *, start=None):
                 data = dsets['data'].view('float32')
                 data[:] = dsets['data']
             matrix = csr_matrix(
-                (data, dsets['indices'], dsets['indptr']), shape=(N, M),
+                (data, dsets['indices'], dsets['indptr']),
+                shape=(N, M),
             )
             adata = AnnData(
                 matrix,
@@ -333,7 +340,7 @@ def read_visium(
         Scale factors for the spots
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
         Files metadata: 'chemistry_description', 'software_version'
-    :attr:`~anndata.AnnData.obsm`\\ `['coords']`
+    :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
     path = Path(path)
@@ -403,7 +410,7 @@ def read_visium(
 
         adata.obs = adata.obs.join(positions, how="left")
 
-        adata.obsm['coords'] = adata.obs[
+        adata.obsm['spatial'] = adata.obs[
             ['pxl_row_in_fullres', 'pxl_col_in_fullres']
         ].to_numpy()
         adata.obs.drop(
@@ -421,6 +428,8 @@ def read_10x_mtx(
     cache: bool = False,
     cache_compression: Union[Literal['gzip', 'lzf'], None, Empty] = _empty,
     gex_only: bool = True,
+    *,
+    prefix: str = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted mtx directory.
@@ -443,13 +452,19 @@ def read_10x_mtx(
     gex_only
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
+    prefix
+        Any prefix before `matrix.mtx`, `genes.tsv` and `barcodes.tsv`. For instance,
+        if the files are named `patientA_matrix.mtx`, `patientA_genes.tsv` and
+        `patientA_barcodes.tsv` the prefix is `patientA_`.
+        (Default: no prefix)
 
     Returns
     -------
     An :class:`~anndata.AnnData` object
     """
     path = Path(path)
-    genefile_exists = (path / 'genes.tsv').is_file()
+    prefix = "" if prefix is None else prefix
+    genefile_exists = (path / f'{prefix}genes.tsv').is_file()
     read = _read_legacy_10x_mtx if genefile_exists else _read_v3_10x_mtx
     adata = read(
         str(path),
@@ -457,6 +472,7 @@ def read_10x_mtx(
         make_unique=make_unique,
         cache=cache,
         cache_compression=cache_compression,
+        prefix=prefix,
     )
     if genefile_exists or not gex_only:
         return adata
@@ -473,15 +489,19 @@ def _read_legacy_10x_mtx(
     make_unique=True,
     cache=False,
     cache_compression=_empty,
+    *,
+    prefix="",
 ):
     """
     Read mex from output from Cell Ranger v2 or earlier versions
     """
     path = Path(path)
     adata = read(
-        path / 'matrix.mtx', cache=cache, cache_compression=cache_compression,
+        path / f'{prefix}matrix.mtx',
+        cache=cache,
+        cache_compression=cache_compression,
     ).T  # transpose the data
-    genes = pd.read_csv(path / 'genes.tsv', header=None, sep='\t')
+    genes = pd.read_csv(path / f'{prefix}genes.tsv', header=None, sep='\t')
     if var_names == 'gene_symbols':
         var_names = genes[1].values
         if make_unique:
@@ -493,7 +513,7 @@ def _read_legacy_10x_mtx(
         adata.var['gene_symbols'] = genes[1].values
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
-    adata.obs_names = pd.read_csv(path / 'barcodes.tsv', header=None)[0].values
+    adata.obs_names = pd.read_csv(path / f'{prefix}barcodes.tsv', header=None)[0].values
     return adata
 
 
@@ -503,15 +523,19 @@ def _read_v3_10x_mtx(
     make_unique=True,
     cache=False,
     cache_compression=_empty,
+    *,
+    prefix="",
 ):
     """
-    Read mex from output from Cell Ranger v3 or later versions
+    Read mtx from output from Cell Ranger v3 or later versions
     """
     path = Path(path)
     adata = read(
-        path / 'matrix.mtx.gz', cache=cache, cache_compression=cache_compression
+        path / f'{prefix}matrix.mtx.gz',
+        cache=cache,
+        cache_compression=cache_compression,
     ).T  # transpose the data
-    genes = pd.read_csv(path / 'features.tsv.gz', header=None, sep='\t')
+    genes = pd.read_csv(path / f'{prefix}features.tsv.gz', header=None, sep='\t')
     if var_names == 'gene_symbols':
         var_names = genes[1].values
         if make_unique:
@@ -524,7 +548,9 @@ def _read_v3_10x_mtx(
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
     adata.var['feature_types'] = genes[2].values
-    adata.obs_names = pd.read_csv(path / 'barcodes.tsv.gz', header=None)[0].values
+    adata.obs_names = pd.read_csv(path / f'{prefix}barcodes.tsv.gz', header=None)[
+        0
+    ].values
     return adata
 
 
@@ -585,7 +611,7 @@ def write(
 
 
 def read_params(
-    filename: Union[Path, str], asheader: bool = False,
+    filename: Union[Path, str], asheader: bool = False
 ) -> Dict[str, Union[int, float, bool, str, None]]:
     """\
     Read parameter dictionary from text file.
@@ -666,7 +692,7 @@ def _read(
         )
     else:
         ext = is_valid_filename(filename, return_ext=True)
-    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url,)
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f'... did not find original file {filename}')
     # read hdf5 files
@@ -824,8 +850,7 @@ def is_float(string: str) -> float:
 
 
 def is_int(string: str) -> bool:
-    """Check whether string is integer.
-    """
+    """Check whether string is integer."""
     try:
         int(string)
         return True
@@ -834,8 +859,7 @@ def is_int(string: str) -> bool:
 
 
 def convert_bool(string: str) -> Tuple[bool, bool]:
-    """Check whether string is boolean.
-    """
+    """Check whether string is boolean."""
     if string == 'True':
         return True, True
     elif string == 'False':
@@ -845,8 +869,7 @@ def convert_bool(string: str) -> Tuple[bool, bool]:
 
 
 def convert_string(string: str) -> Union[int, float, bool, str, None]:
-    """Convert string to int, float or bool.
-    """
+    """Convert string to int, float or bool."""
     if is_int(string):
         return int(string)
     elif is_float(string):
@@ -890,29 +913,44 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 
 def _download(url: str, path: Path):
-    from tqdm.auto import tqdm
-    from urllib.request import urlretrieve
+    try:
+        import ipywidgets
+        from tqdm.auto import tqdm
+    except ModuleNotFoundError:
+        from tqdm import tqdm
+    from urllib.request import urlopen, Request
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t:
+    blocksize = 1024 * 8
+    blocknum = 0
 
-        def update_to(b=1, bsize=1, tsize=None):
-            if tsize is not None:
-                t.total = tsize
-            t.update(b * bsize - t.n)
+    try:
+        # This is a modified urllib.request.urlretrieve, but that won't let us
+        # set headers.
+        # The '\'s are ugly, but parenthesis are not allowed here
+        # fmt: off
+        with \
+            tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t, \
+            path.open("wb") as f, \
+            urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
 
-        try:
-            urlretrieve(url, str(path), reporthook=update_to)
-        except Exception:
-            # Make sure file doesn’t exist half-downloaded
-            if path.is_file():
-                path.unlink()
-            raise
+            t.total = int(resp.info().get("content-length", 0))
+
+            block = resp.read(blocksize)
+            while block:
+                f.write(block)
+                blocknum += 1
+                t.update(blocknum * blocksize - t.n)
+                block = resp.read(blocksize)
+        # fmt: on
+    except Exception:
+        # Make sure file doesn’t exist half-downloaded
+        if path.is_file():
+            path.unlink()
+        raise
 
 
 def _check_datafile_present_and_download(path, backup_url=None):
-    """Check whether the file is present, otherwise download.
-    """
+    """Check whether the file is present, otherwise download."""
     path = Path(path)
     if path.is_file():
         return True

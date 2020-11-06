@@ -11,6 +11,31 @@ from .. import logging as logg
 from .._utils import AnyRandom
 
 
+def _sparse_nanmean(X, axis):
+    """
+    np.nanmean equivalent for sparse matrices
+    """
+    if not issparse(X):
+        raise TypeError("X must be a sparse matrix")
+
+    # count the number of nan elements per row/column (dep. on axis)
+    Z = X.copy()
+    Z.data = np.isnan(Z.data)
+    Z.eliminate_zeros()
+    n_elements = Z.shape[axis] - Z.sum(axis)
+
+    # set the nans to 0, so that a normal .sum() works
+    Y = X.copy()
+    Y.data[np.isnan(Y.data)] = 0
+    Y.eliminate_zeros()
+
+    # the average
+    s = Y.sum(axis)
+    m = s / n_elements.astype('float32') # if we dont cast the int32 to float32, this will result in float64...
+
+    return m
+
+
 def score_genes(
     adata: AnnData,
     gene_list: Sequence[str],
@@ -117,7 +142,7 @@ def score_genes(
     _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
     if issparse(x_or_layer(_adata_subset)):
         obs_avg = pd.Series(
-            np.array(x_or_layer(_adata_subset).mean(axis=0)).flatten(), index=gene_pool)  # average expression of genes
+            np.array(_sparse_nanmean(x_or_layer(_adata_subset)).flatten(), index=gene_pool)  # average expression of genes
     else:
         obs_avg = pd.Series(
             np.nanmean(x_or_layer(_adata_subset), axis=0), index=gene_pool)  # average expression of genes
@@ -140,10 +165,16 @@ def score_genes(
     gene_list = list(gene_list)
 
     X_list = x_or_layer(_adata[:, gene_list])
-    if issparse(X_list): X_list = X_list.toarray()
+    if issparse(X_list):
+        X_list = np.array(_sparse_nanmean(X_list, axis=1)).flatten()
+    else:
+        X_list = np.nanmean(X_list, axis=1)
+
     X_control = x_or_layer(_adata[:, control_genes])
-    if issparse(X_control): X_control = X_control.toarray()
-    X_control = np.nanmean(X_control, axis=1)
+    if issparse(X_control):
+        X_control = np.array(_sparse_nanmean(X_control, axis=1)).flatten()
+    else:
+        X_control = np.nanmean(X_control, axis=1)
 
     if len(gene_list) == 0:
         # We shouldn't even get here, but just in case
@@ -159,7 +190,7 @@ def score_genes(
             vector =  x_or_layer(_adata[:, gene_list])  # old anndata
         score = vector - X_control
     else:
-        score = np.nanmean(X_list, axis=1) - X_control
+        score = X_list - X_control
 
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 

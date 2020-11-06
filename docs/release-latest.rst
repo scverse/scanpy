@@ -2,54 +2,64 @@
 .. role:: smaller
 
 On master
-~~~~~~~~~~
+~~~~~~~~~
 
-.. rubric:: Performance
+.. rubric:: Bugfixes
 
-- :func:`~scanpy.pp.pca` now uses efficient implicit centering for sparse matrices. This can lead to signifigantly improved performance for large datasets :pr:`1066` :smaller:`A Tarashansky`
+* Fixed `log1p` inplace on integer dense arrays :pr:`1400` :smaller:`I Virshup`
+* Fixed `marker_gene_overlap` default value for `top_n_markers` :pr:`1464` :smaller:`MD Luecken`
+  
+1.6.0 :small:`2020-08-15`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1.4.6 :small:`2020-03-17`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. rubric:: Functionality in `external`
+This release includes an overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.pl.matrixplot`, and :func:`~scanpy.pl.stacked_violin` (:pr:`1210` :smaller:`F Ramirez`), and of the internals of :func:`~scanpy.tl.rank_genes_groups` (:pr:`1156` :smaller:`S Rybakov`).
 
-- :func:`~scanpy.external.tl.sam` self-assembling manifolds [Tarashansky19]_ :pr:`903` :smaller:`A Tarashansky`
-- :func:`~scanpy.external.tl.harmony_timeseries` for trajectory inference on discrete time points :pr:`994` :smaller:`A Mousa`
-- :func:`~scanpy.external.tl.wishbone` for trajectory inference (bifurcations) :pr:`1063` :smaller:`A Mousa`
+.. rubric:: Overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.pl.matrixplot`, and :func:`~scanpy.pl.stacked_violin` :pr:`1210` :smaller:`F Ramirez`
 
-.. rubric:: Code design
+- An overhauled tutorial :tutorial:`plotting/core`.
+- New plotting classes can be accessed directly (e.g., :class:`~scanpy.pl.DotPlot`) or using the `return_fig` param.
+- It is possible to plot log fold change and p-values in the :func:`~scanpy.pl.rank_genes_groups_dotplot` family of functions.
+- Added `ax` parameter which allows embedding the plot in other images.
+- Added option to include a bar plot instead of the dendrogram containing the cell/observation totals per category.
+- Return a dictionary of axes for further manipulation. This includes the main plot, legend and dendrogram to totals
+- Legends can be removed.
+- The `groupby` param can take a list of categories, e.g., `groupby=[‘tissue’, ‘cell type’]`.
+- Added padding parameter to `dotplot` and `stacked_violin`. :pr:`1270`
+- Added title for colorbar and positioned as in dotplot for :func:`~scanpy.pl.matrixplot`.
 
-- :mod:`~scanpy.pl.violin` now reads `.uns['colors_...']` :pr:`1029` :smaller:`michalk8`
+- :func:`~scanpy.pl.dotplot` changes:
+
+   * Improved the colorbar and size legend for dotplots. Now the colorbar and size have titles, which can be modified using the `colorbar_title` and `size_title` params. They also align at the bottom of the image and do not shrink if the dotplot image is smaller.
+   * Allow plotting genes in rows and categories in columns (`swap_axes`).
+   * Using :class:`~scanpy.pl.DotPlot`, the `dot_edge_color` and line width can be modified, a grid can be added, and other modifications are enabled.
+   * A new style was added in which the dots are replaced by an empty circle and the square behind the circle is colored (like in matrixplots).
+
+- :func:`~scanpy.pl.stacked_violin` changes:
+
+   * Violin colors can be colored based on average gene expression as in dotplots.
+   * The linewidth of the violin plots is thinner.
+   * Removed the tics for the y-axis as they tend to overlap with each other. Using the style method they can be displayed if needed.
+
+
+.. rubric:: Additions
+
+- :func:`~anndata.concat` is now exported from scanpy, see :doc:`anndata:concatenation` for more info. :pr:`1338` :smaller:`I Virshup`
+- Added highly variable gene selection strategy from Seurat v3 :pr:`1204` :smaller:`A Gayoso`
+- Added `CellRank <https://github.com/theislab/cellrank/>`__ to scanpy ecosystem :pr:`1304` :smaller:`giovp`
+- Added `backup_url` param to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`A Gayoso`
+- Allow prefix for :func:`~scanpy.read_10x_mtx` :pr:`1250`  :smaller:`G Sturm`
+- Optional tie correction for the `'wilcoxon'` method in :func:`~scanpy.tl.rank_genes_groups` :pr:`1330`  :smaller:`S Rybakov`
+- Use `sinfo` for :func:`~scanpy.logging.print_versions` and add :func:`~scanpy.logging.print_header` to do what it previously did. :pr:`1338` :smaller:`I Virshup` :pr:`1373`
 
 .. rubric:: Bug fixes
 
-- adapt :func:`~scanpy.tl.ingest` for UMAP 0.4 :pr:`1038` :pr:`1106` :smaller:`S Rybakov`
-- compat with matplotlib 3.1 and 3.2 :pr:`1090` :smaller:`I Virshup, P Angerer`
-- fix PAGA for new igraph :pr:`1037` :smaller:`P Angerer`
-- fix rapids compat of louvain :pr:`1079` :smaller:`LouisFaure`
-
-1.4.5 :small:`2019-12-30`
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Please install `scanpy==1.4.5.post3` instead of `scanpy==1.4.5`.
-
-.. rubric:: New functionality
-
-- :func:`~scanpy.tl.ingest` maps labels and embeddings of reference data to new data :tutorial:`integrating-data-using-ingest` :pr:`651` :smaller:`S Rybakov, A Wolf`
-- :mod:`~scanpy.queries` recieved many updates including enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`I Virshup`
-- :func:`~scanpy.set_figure_params` allows setting `figsize` and accepts `facecolor='white'`, useful for working in dark mode  :smaller:`A Wolf`
-
-.. _gprofiler: https://biit.cs.ut.ee/gprofiler/
-
-.. rubric:: Code design
-
-- :mod:`~scanpy.pp.downsample_counts` now always preserves the dtype of it's input, instead of converting floats to ints :pr:`865` :smaller:`I Virshup`
-- allow specifying a base for :func:`~scanpy.pp.log1p` :pr:`931` :smaller:`G Eraslan`
-- run neighbors on a GPU using rapids :pr:`850` :smaller:`T White`
-- param docs from typed params :smaller:`P Angerer`
-- :func:`~scanpy.tl.embedding_density` now only takes one positional argument; similar for :func:`~scanpy.pl.embedding_density`, which gains a param `groupby` :pr:`965` :smaller:`A Wolf`
-- webpage overhaul, ecosystem page, release notes, tutorials overhaul :pr:`960` :pr:`966` :smaller:`A Wolf`
-
-.. warning::
-
-   * changed default `solver` in :func:`~scanpy.tl.pca` from `auto` to `arpack`
-   * changed default `use_raw` in :func:`~scanpy.tl.score_genes` from `False` to `None`
+- Avoid warning in :func:`~scanpy.tl.rank_genes_groups` if 't-test' is passed :pr:`1303` :smaller:`A Wolf`
+- Restrict sphinx version to <3.1, >3.0 :pr:`1297`  :smaller:`I Virshup`
+- Clean up `_ranks` and fix `dendrogram` for scipy 1.5 :pr:`1290` :smaller:`S Rybakov`
+- Use `.raw` to translate gene symbols if applicable :pr:`1278` :smaller:`E Rice`
+- Fix `diffmap` (:issue:`1262`) :smaller:`G Eraslan`
+- Fix `neighbors` in `spring_project` :issue:`1260`  :smaller:`S Rybakov`
+- Fix default size of dot in spatial plots :pr:`1255` :issue:`1253` :smaller:`giovp`
+- Bumped version requirement of `scipy` to `scipy>1.4` to support `rmatmat` argument of `LinearOperator` :issue:`1246` :smaller:`I Virshup`
+- Fix asymmetry of scores for the `'wilcoxon'` method in :func:`~scanpy.tl.rank_genes_groups` :issue:`754`  :smaller:`S Rybakov`
+- Avoid trimming of gene names in :func:`~scanpy.tl.rank_genes_groups` :issue:`753`  :smaller:`S Rybakov`

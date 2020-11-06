@@ -7,7 +7,7 @@ If you do not have a working installation of Python 3.6 (or later), consider
 installing Miniconda_ (see `Installing Miniconda`_). Then run::
 
     conda install seaborn scikit-learn statsmodels numba pytables
-    conda install -c conda-forge python-igraph leiden	
+    conda install -c conda-forge python-igraph leidenalg	
 
 Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pip3`` to access Python 3)::
 
@@ -19,13 +19,13 @@ PyPI only
 ~~~~~~~~~
 If you prefer to exclusively use PyPI run::
 
-    pip install scanpy[louvain]
+    pip install 'scanpy[leiden]'
 
-The extra `[louvain]` installs two packages that are needed for popular
-parts of scanpy but aren't requirements: python-igraph_ [Csardi06]_ and louvain_ [Traag17]_.
+The extra `[leiden]` installs two packages that are needed for popular
+parts of scanpy but aren't requirements: python-igraph_ [Csardi06]_ and leiden_ [Traag18]_.
 
 .. _python-igraph: http://igraph.org/python/
-.. _louvain: https://github.com/vtraag/louvain-igraph
+.. _leiden: https://leidenalg.readthedocs.io
 
 Development Version
 ~~~~~~~~~~~~~~~~~~~
