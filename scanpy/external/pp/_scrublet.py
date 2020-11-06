@@ -42,7 +42,7 @@ def scrub_doublets(
     adata
         The annotated data matrix of shape ``n_obs`` × ``n_vars``. Rows
         correspond to cells and columns to genes. Expected to be un-normalised. 
-    sim_doublet_ratio : float, optional (default: 2.0)
+    sim_doublet_ratio
         Number of doublets to simulate relative to the number of observed 
         transcriptomes.
     expected_doublet_rate
@@ -54,28 +54,28 @@ def scrub_doublets(
         doublet is created by simply adding the UMI counts from two randomly
         sampled observed transcriptomes. For values less than 1, the UMI counts
         are added and then randomly sampled at the specified rate. 
-    knn_dist_metric : str, optional (default: 'euclidean')
+    knn_dist_metric 
         Distance metric used when finding nearest neighbors. For list of
         valid values, see the documentation for annoy (if `use_approx_neighbors`
         is True) or sklearn.neighbors.NearestNeighbors (if `use_approx_neighbors`
         is False).
-    normalize_variance : bool, optional (default: True)
+    normalize_variance
         If True, normalize the data such that each gene has a variance of 1.
         `sklearn.decomposition.TruncatedSVD` will be used for dimensionality
         reduction, unless `mean_center` is True.
     log_transform
         Whether to use :func:``~scanpy.pp.log1p`` to log-transform the data prior to PCA.
-    mean_center : bool, optional (default: True)
+    mean_center
         If True, center the data such that each gene has a mean of 0.
         `sklearn.decomposition.PCA` will be used for dimensionality
         reduction.
-    n_prin_comps : int, optional (default: 30)
+    n_prin_comps 
         Number of principal components used to embed the transcriptomes prior
         to k-nearest-neighbor graph construction. 
-    use_approx_neighbors : bool, optional (default: True)
+    use_approx_neighbors
         Use approximate nearest neighbor method (annoy) for the KNN 
         classifier.
-    get_doublet_neighbor_parents : bool, optional (default: False)
+    get_doublet_neighbor_parents
         If True, return (in .uns) the parent transcriptomes that generated the
         doublet neighbors of each observed transcriptome. This information can
         be used to infer the cell states that generated a given doublet state. 
@@ -90,7 +90,8 @@ def scrub_doublets(
         practice to check the threshold visually using the
         `doublet_scores_sim_` histogram and/or based on co-localization of
         predicted doublets in a 2-D embedding.
-    verbose : bool, optional (default: True)
+    verbose
+        If True, print progress updates.
     copy
         If ``True``, return a copy of the input ``adata`` with Scrublet results added. Otherwise, Scrublet results are added in place.
     random_state
@@ -236,33 +237,33 @@ def scrublet(
         The estimated doublet rate for the experiment.
     stdev_doublet_rate
         Uncertainty in the expected doublet rate.
-    mean_center : bool, optional (default: True)
+    mean_center
         If True, center the data such that each gene has a mean of 0.
         `sklearn.decomposition.PCA` will be used for dimensionality
         reduction.
-    normalize_variance : bool, optional (default: True)
+    normalize_variance
         If True, normalize the data such that each gene has a variance of 1.
         `sklearn.decomposition.TruncatedSVD` will be used for dimensionality
         reduction, unless `mean_center` is True.
-    n_prin_comps : int, optional (default: 30)
+    n_prin_comps
         Number of principal components used to embed the transcriptomes prior
         to k-nearest-neighbor graph construction. 
-    use_approx_neighbors : bool, optional (default: True)
+    use_approx_neighbors
         Use approximate nearest neighbor method (annoy) for the KNN 
         classifier.
-    knn_dist_metric : str, optional (default: 'euclidean')
+    knn_dist_metric
         Distance metric used when finding nearest neighbors. For list of
         valid values, see the documentation for annoy (if `use_approx_neighbors`
         is True) or sklearn.neighbors.NearestNeighbors (if `use_approx_neighbors`
         is False).
-    get_doublet_neighbor_parents : bool, optional (default: False)
+    get_doublet_neighbor_parents
         If True, return the parent transcriptomes that generated the 
         doublet neighbors of each observed transcriptome. This information can 
         be used to infer the cell states that generated a given 
         doublet state. 
     random_state
         Initial state for doublet simulation and nearest neighbors.
-    verbose : bool, optional (default: True)
+    verbose 
         If True, print progress updates.
 
     Returns
@@ -395,14 +396,14 @@ def simulate_doublets(
         filtered for expression and variability, and the object should contain
         raw expression of the same dimensions. 
         
-    raw_layer : str, optional (default: 'raw')
+    raw_layer
         Layer of adata where raw values are stored, or 'X' if values are in .X. 
     
-    sim_doublet_ratio : float, optional (default: None)
+    sim_doublet_ratio
         Number of doublets to simulate relative to the number of observed 
         transcriptomes. If `None`, self.sim_doublet_ratio is used.
 
-    synthetic_doublet_umi_subsampling : float, optional (defuault: 1.0) 
+    synthetic_doublet_umi_subsampling
         Rate for sampling UMIs when creating synthetic doublets. If 1.0, 
         each doublet is created by simply adding the UMIs from two randomly 
         sampled observed transcriptomes. For values less than 1, the 
