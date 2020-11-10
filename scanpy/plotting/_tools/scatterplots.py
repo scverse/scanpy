@@ -90,7 +90,6 @@ def embedding(
     hspace: float = 0.25,
     wspace: Optional[float] = None,
     title: Union[str, Sequence[str], None] = None,
-    annotate_var_explained: bool = False,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
@@ -404,15 +403,6 @@ def embedding(
             axis_labels = [name + str(x + 1) for x in range(3)]
         else:
             axis_labels = [name + str(x + 1) for x in range(2)]
-
-        if name == 'PC' and annotate_var_explained:
-            axis_labels = [
-                '{} ({}%)'.format(
-                    l,
-                    round(adata.uns['pca']['variance_ratio'][int(l[2:]) - 1] * 100, 2),
-                )
-                for l in axis_labels
-            ]
 
         ax.set_xlabel(axis_labels[0])
         ax.set_ylabel(axis_labels[1])
@@ -728,7 +718,13 @@ def draw_graph(
     show_save_ax=doc_show_save_ax,
 )
 def pca(
-    adata, *, annotate_var_explained: bool = False, **kwargs
+    adata,
+    *,
+    annotate_var_explained: bool = False,
+    show: Optional[bool] = None,
+    return_fig: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+    **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in PCA coordinates.
@@ -746,9 +742,44 @@ def pca(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    return embedding(
-        adata, 'pca', annotate_var_explained=annotate_var_explained, **kwargs
-    )
+    if not annotate_var_explained:
+        return embedding(
+            adata, 'pca', show=show, return_fig=return_fig, save=save, **kwargs
+        )
+    else:
+
+        if 'pca' not in adata.obsm.keys() and f"X_pca" in adata.obsm.keys():
+            raise KeyError(
+                f"Could not find entry in `obsm` for 'pca'.\n"
+                f"Available keys are: {list(adata.obsm.keys())}."
+            )
+
+        label_dict = {
+            'PC{}'.format(i + 1): 'PC{} ({}%)'.format(i + 1, round(v * 100, 2))
+            for i, v in enumerate(adata.uns['pca']['variance_ratio'])
+        }
+
+        if return_fig is True:
+            # edit axis labels in returned figure
+            fig = embedding(adata, 'pca', return_fig=return_fig, **kwargs)
+            for ax in fig.axes:
+                ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
+                ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
+            return fig
+
+        else:
+            # get the axs, edit the labels and apply show and save from user
+            axs = embedding(adata, 'pca', show=False, save=False, **kwargs)
+            if isinstance(axs, list):
+                for ax in axs:
+                    ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
+                    ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
+            else:
+                axs.set_xlabel(label_dict[axs.xaxis.get_label().get_text()])
+                axs.set_ylabel(label_dict[axs.yaxis.get_label().get_text()])
+            _utils.savefig_or_show('pca', show=show, save=save)
+            if show is False:
+                return axs
 
 
 @_wraps_plot_scatter
