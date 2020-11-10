@@ -302,7 +302,7 @@ def pbmc3k_processed() -> AnnData:
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
         return read(
             settings.datasetdir / 'pbmc3k_processed.h5ad',
-            backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
+            backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad',
         )
 
 
