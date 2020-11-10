@@ -258,6 +258,12 @@ def embedding(
             na_color=na_color,
         )
 
+        # change the cmap if individually defined in adata.uns
+        if not categorical and f"{value_to_plot}_cmap" in adata.uns:
+            cmap_ind = copy(get_cmap(adata.uns[f"{value_to_plot}_cmap"]))
+            cmap_ind.set_bad(na_color)
+            kwargs["cmap"] = cmap_ind
+
         ### Order points
         order = slice(None)
         if sort_order is True and value_to_plot is not None and categorical is False:
@@ -388,6 +394,10 @@ def embedding(
                 rasterized=settings._vector_friendly,
                 **kwargs,
             )
+
+            # in case continous cmap was individual, change back to global cmap
+            if not categorical and cmap != kwargs['cmap']:
+                kwargs['cmap'] = cmap
 
         # remove y and x ticks
         ax.set_yticks([])
