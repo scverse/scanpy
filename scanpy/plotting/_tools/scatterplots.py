@@ -748,7 +748,7 @@ def pca(
         )
     else:
 
-        if 'pca' not in adata.obsm.keys() and f"X_pca" in adata.obsm.keys():
+        if 'pca' not in adata.obsm.keys() and f"X_pca" not in adata.obsm.keys():
             raise KeyError(
                 f"Could not find entry in `obsm` for 'pca'.\n"
                 f"Available keys are: {list(adata.obsm.keys())}."
