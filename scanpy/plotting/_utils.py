@@ -385,7 +385,8 @@ def _set_colors_for_categorical_obs(
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
         cmap = pl.get_cmap(palette)
         colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
-
+    elif isinstance(palette, cabc.Mapping):
+        colors_list = [to_hex(palette[k], keep_alpha=True) for k in categories]
     else:
         # check if palette is a list and convert it to a cycler, thus
         # it doesnt matter if the list is shorter than the categories length:

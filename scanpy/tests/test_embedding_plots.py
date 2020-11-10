@@ -1,9 +1,11 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.testing.compare import compare_images
 import numpy as np
 import pandas as pd
 import pytest
+import seaborn as sns
 
 import scanpy as sc
 
@@ -166,3 +168,22 @@ def test_missing_values_continuous(
     plotfunc(adata, color=["1", "1_missing"], **kwargs)
 
     save_and_compare_images(base_name)
+
+
+def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
+    tmpdir = Path(tmpdir)
+    base_name = fixture_request.node.name
+
+    categories = adata.obs["label"].cat.categories
+    colors_rgb = dict(zip(categories, sns.color_palette(n_colors=12)))
+
+    dict_pth = tmpdir / f"rgbdict_{base_name}.png"
+    list_pth = tmpdir / f"rgblist_{base_name}.png"
+
+    # making a copy so colors aren't saved
+    plotfunc(adata.copy(), color="label", palette=colors_rgb)
+    plt.savefig(dict_pth, dpi=40)
+    plotfunc(adata.copy(), color="label", palette=[colors_rgb[c] for c in categories])
+    plt.savefig(list_pth, dpi=40)
+
+    compare_images(dict_pth, list_pth, 15)
