@@ -30,12 +30,20 @@ def scrub_doublets(
     """\
     Predict doublets using Scrublet [Wolock2019]_.
 
-    Predict cell doublets using a nearest-neighbor classifier of observed transcriptomes and simulated doublets. Works best if the input is a raw (unnormalized) counts matrix from a single sample or a collection of similar samples from the same experiment.
+    Predict cell doublets using a nearest-neighbor classifier of observed
+    transcriptomes and simulated doublets. Works best if the input is a raw
+    (unnormalized) counts matrix from a single sample or a collection of
+    similar samples from the same experiment.
    
-    This function is a wrapper around functions that pre-process using Scanpy and directly call functions of Scrublet(). You may also undertake your own preprocessing, simulate doublets with scanpy.external.pp.scrublet.simulate_doublets(), and run the core scrublet function scanpy.external.pp.scrublet.scrublet(). 
+    This function is a wrapper around functions that pre-process using Scanpy
+    and directly call functions of Scrublet(). You may also undertake your own
+    preprocessing, simulate doublets with
+    scanpy.external.pp.scrublet.simulate_doublets(), and run the core scrublet
+    function scanpy.external.pp.scrublet.scrublet(). 
 
     .. note::
-        More information and bug reports `here <https://github.com/swolock/scrublet>`__.
+        More information and bug reports `here
+        <https://github.com/swolock/scrublet>`__.
     
     Parameters
     ----------
@@ -64,7 +72,8 @@ def scrub_doublets(
         `sklearn.decomposition.TruncatedSVD` will be used for dimensionality
         reduction, unless `mean_center` is True.
     log_transform
-        Whether to use :func:``~scanpy.pp.log1p`` to log-transform the data prior to PCA.
+        Whether to use :func:``~scanpy.pp.log1p`` to log-transform the data
+        prior to PCA.
     mean_center
         If True, center the data such that each gene has a mean of 0.
         `sklearn.decomposition.PCA` will be used for dimensionality
@@ -93,7 +102,8 @@ def scrub_doublets(
     verbose
         If True, print progress updates.
     copy
-        If ``True``, return a copy of the input ``adata`` with Scrublet results added. Otherwise, Scrublet results are added in place.
+        If ``True``, return a copy of the input ``adata`` with Scrublet results
+        added. Otherwise, Scrublet results are added in place.
     random_state
         Initial state for doublet simulation and nearest neighbors.
 
@@ -111,7 +121,8 @@ def scrub_doublets(
                 Doublet scores for each simulated doublet transcriptome
 
             ``adata.uns['scrublet']['doublet_parents']`` 
-                Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
+                Pairs of ``.obs_names`` used to generate each simulated doublet
+                transcriptome
 
             ``uns['scrublet']['parameters']``
                 Dictionary of Scrublet parameters
@@ -212,10 +223,15 @@ def scrublet(
     """\
     Core function for predicting doublets using Scrublet [Wolock2019]_.
 
-    Predict cell doublets using a nearest-neighbor classifier of observed transcriptomes and simulated doublets. This is a wrapper around the core functions of `Scrublet <https://github.com/swolock/scrublet>`__ to allow for flexibility in applying Scanpy filtering operations upstream. Unless you know what you're doing you should use scrub_doublets().    
+    Predict cell doublets using a nearest-neighbor classifier of observed
+    transcriptomes and simulated doublets. This is a wrapper around the core
+    functions of `Scrublet <https://github.com/swolock/scrublet>`__ to allow
+    for flexibility in applying Scanpy filtering operations upstream. Unless
+    you know what you're doing you should use scrub_doublets().    
     
     .. note::
-        More information and bug reports `here <https://github.com/swolock/scrublet>`__.
+        More information and bug reports `here
+        <https://github.com/swolock/scrublet>`__.
     
     Parameters
     ----------
