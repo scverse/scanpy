@@ -87,6 +87,7 @@ class _RankGenes:
         use_raw=True,
         layer=None,
         comp_pts=False,
+        min_groupsize=1,
     ):
 
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
@@ -95,7 +96,7 @@ class _RankGenes:
             self.expm1_func = np.expm1
 
         self.groups_order, self.groups_masks = _utils.select_groups(
-            adata, groups, groupby, min_groupsize = 2
+            adata, groups, groupby, min_groupsize
         )
 
         adata_comp = adata
@@ -419,6 +420,7 @@ def rank_genes_groups(
     groupby: str,
     use_raw: bool = True,
     groups: Union[Literal['all'], Iterable[str]] = 'all',
+    min_groupsize: int = 1,
     reference: str = 'rest',
     n_genes: Optional[int] = None,
     rankby_abs: bool = False,
@@ -449,6 +451,9 @@ def rank_genes_groups(
     groups
         Subset of groups, e.g. [`'g1'`, `'g2'`, `'g3'`], to which comparison
         shall be restricted, or `'all'` (default), for all groups.
+    min_groupsize
+        Where groups = 'all', filter the list of groups such that any with less
+        than this number of members are not considered. 
     reference
         If `'rest'`, compare each group to the union of the rest of the group.
         If a group identifier, compare with respect to this group.
@@ -570,7 +575,9 @@ def rank_genes_groups(
         corr_method=corr_method,
     )
 
-    test_obj = _RankGenes(adata, groups_order, groupby, reference, use_raw, layer, pts)
+    test_obj = _RankGenes(
+        adata, groups_order, groupby, reference, use_raw, layer, pts, min_groupsize
+    )
 
     # for clarity, rename variable
     n_genes_user = n_genes

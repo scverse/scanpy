@@ -385,7 +385,8 @@ def sanitize_anndata(adata):
 def view_to_actual(adata):
     if adata.is_view:
         warnings.warn(
-            "Revieved a view of an AnnData. Making a copy.", stacklevel=2,
+            "Revieved a view of an AnnData. Making a copy.",
+            stacklevel=2,
         )
         adata._init_as_actual(adata.copy())
 
@@ -416,7 +417,9 @@ def moving_average(a: np.ndarray, n: int):
 
 
 def update_params(
-    old_params: Mapping[str, Any], new_params: Mapping[str, Any], check=False,
+    old_params: Mapping[str, Any],
+    new_params: Mapping[str, Any],
+    check=False,
 ) -> Dict[str, Any]:
     """\
     Update old_params with new_params.
@@ -458,8 +461,7 @@ def update_params(
 
 
 def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
-    """Checks values of X to ensure it is count data
-    """
+    """Checks values of X to ensure it is count data"""
     from numbers import Integral
 
     data = X if isinstance(X, np.ndarray) else X.data
@@ -475,9 +477,8 @@ def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
         return True
 
 
-def select_groups(adata, groups_order_subset='all', key='groups', min_groupsize = 1):
-    """Get subset of groups in adata.obs[key].
-    """
+def select_groups(adata, groups_order_subset='all', key='groups', min_groupsize=1):
+    """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if key + '_masks' in adata.uns:
         groups_masks = adata.uns[key + '_masks']
@@ -513,14 +514,18 @@ def select_groups(adata, groups_order_subset='all', key='groups', min_groupsize 
                 f'groups_order (or indices) from {adata.obs[key].cat.categories}',
             )
             from sys import exit
+
             exit(0)
         groups_masks = groups_masks[groups_ids]
         groups_order_subset = adata.obs[key].cat.categories[groups_ids].values
     else:
         groups_counts = adata.obs[key].value_counts()
-        valid_groups = [ item in groups_counts.index[groups_counts >= min_groupsize] for item in groups_order ]
-        groups_order_subset = groups_order[ valid_groups ]
-        groups_masks = groups_masks[ valid_groups ]
+        valid_groups = [
+            item in groups_counts.index[groups_counts >= min_groupsize]
+            for item in groups_order
+        ]
+        groups_order_subset = groups_order[valid_groups]
+        groups_masks = groups_masks[valid_groups]
     return groups_order_subset, groups_masks
 
 
@@ -541,7 +546,9 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
 
 
 def subsample(
-    X: np.ndarray, subsample: int = 1, seed: int = 0,
+    X: np.ndarray,
+    subsample: int = 1,
+    seed: int = 0,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """\
     Subsample a fraction of 1/subsample samples from the rows of X.
