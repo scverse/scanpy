@@ -6,6 +6,7 @@ from typing import Union, List, Sequence, Tuple, Collection, Optional
 import anndata
 
 import numpy as np
+import matplotlib as mpl
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker, gridspec, axes
 from matplotlib.axes import Axes
@@ -587,7 +588,7 @@ def setup_axes(
     show_ticks=False,
 ):
     """Grid of axes for plotting, legends and colorbars."""
-    make_projection_available(projection)
+    check_projection(projection)
     if left_margin is not None:
         raise NotImplementedError('We currently don’t support `left_margin`.')
     if np.any(colorbars) and right_margin is None:
@@ -1051,37 +1052,19 @@ def data_to_axis_points(ax: Axes, points_data: np.ndarray):
     data_to_axis = axis_to_data.inverted()
     return data_to_axis(points_data)
 
-
-@lru_cache(None)
-def make_projection_available(projection):
-    avail_projections = {'2d', '3d'}
-    if projection not in avail_projections:
-        raise ValueError(f'choose projection from {avail_projections}')
-    if projection == '2d':
-        return
-
-    from io import BytesIO
-    from matplotlib import __version__ as mpl_version
-    from mpl_toolkits.mplot3d import Axes3D
-
-    fig = Figure()
-    ax = Axes3D(fig)
-
-    circles = PatchCollection([Circle((5, 1)), Circle((2, 2))])
-    ax.add_collection3d(circles, zs=[1, 2])
-
-    buf = BytesIO()
-    try:
-        fig.savefig(buf)
-    except ValueError as e:
-        if not 'operands could not be broadcast together' in str(e):
-            raise e
+def check_projection(projection):
+    """Validation for projection argument."""
+    if projection not in {"2d", "3d"}:
         raise ValueError(
-            'There is a known error with matplotlib 3d plotting, '
-            f'and your version ({mpl_version}) seems to be affected. '
-            'Please install matplotlib==3.0.2 or wait for '
-            'https://github.com/matplotlib/matplotlib/issues/14298'
+            f"Projection must be '2d' or '3d', was '{projection}'."
         )
+    if projection == "3d":
+        from packaging.version import parse
+        mpl_version = parse(mpl.__version__)
+        if mpl_version < parse("3.3.3"):
+            raise ImportError(
+                f"3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}"
+            )
 
 
 def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
