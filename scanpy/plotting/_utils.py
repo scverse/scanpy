@@ -1052,14 +1052,14 @@ def data_to_axis_points(ax: Axes, points_data: np.ndarray):
     data_to_axis = axis_to_data.inverted()
     return data_to_axis(points_data)
 
+
 def check_projection(projection):
     """Validation for projection argument."""
     if projection not in {"2d", "3d"}:
-        raise ValueError(
-            f"Projection must be '2d' or '3d', was '{projection}'."
-        )
+        raise ValueError(f"Projection must be '2d' or '3d', was '{projection}'.")
     if projection == "3d":
         from packaging.version import parse
+
         mpl_version = parse(mpl.__version__)
         if mpl_version < parse("3.3.3"):
             raise ImportError(
