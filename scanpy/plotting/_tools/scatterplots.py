@@ -23,7 +23,7 @@ from .._utils import (
     _FontSize,
     circles,
     ColorLike,
-    make_projection_available,
+    check_projection,
 )
 from .._docs import (
     doc_adata_color_etc,
@@ -112,7 +112,7 @@ def embedding(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-
+    check_projection(projection)
     sanitize_anndata(adata)
 
     # Setting up color map for continuous values
@@ -140,7 +140,6 @@ def embedding(
         if isinstance(groups, str):
             groups = [groups]
 
-    make_projection_available(projection)
     args_3d = dict(projection='3d') if projection == '3d' else {}
 
     # Deal with Raw
