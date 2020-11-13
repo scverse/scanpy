@@ -475,7 +475,7 @@ def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
         return True
 
 
-def select_groups(adata, groups_order_subset='all', key='groups', min_groupsize = 1):
+def select_groups(adata, groups_order_subset='all', key='groups'):
     """Get subset of groups in adata.obs[key].
     """
     groups_order = adata.obs[key].cat.categories
@@ -507,21 +507,18 @@ def select_groups(adata, groups_order_subset='all', key='groups', min_groupsize 
                     np.array(groups_order_subset),
                 )
             )[0]
-        if len(groups_ids) < min_groupsize:
+        if len(groups_ids) == 0:
             logg.debug(
                 f'{np.array(groups_order_subset)} invalid! specify valid '
                 f'groups_order (or indices) from {adata.obs[key].cat.categories}',
             )
             from sys import exit
+
             exit(0)
         groups_masks = groups_masks[groups_ids]
         groups_order_subset = adata.obs[key].cat.categories[groups_ids].values
     else:
-        groups_counts = adata.obs[key].value_counts()
-        valid_groups  = groups_counts.index[groups_counts >= min_groupsize]
-        valid_groups = [ item in groups_counts.index[groups_counts >= min_groupsize] for item in groups_order ]
-        groups_order_subset = groups_order[ valid_groups ]
-        groups_masks = groups_masks[ valid_groups ]
+        groups_order_subset = groups_order.values
     return groups_order_subset, groups_masks
 
 

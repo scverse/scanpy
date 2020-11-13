@@ -95,7 +95,7 @@ class _RankGenes:
             self.expm1_func = np.expm1
 
         self.groups_order, self.groups_masks = _utils.select_groups(
-            adata, groups, groupby, min_groupsize = 2
+            adata, groups, groupby
         )
 
         adata_comp = adata
