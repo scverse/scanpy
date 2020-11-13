@@ -34,7 +34,6 @@ def scrub_doublets(
     transcriptomes and simulated doublets. Works best if the input is a raw
     (unnormalized) counts matrix from a single sample or a collection of
     similar samples from the same experiment.
-   
     This function is a wrapper around functions that pre-process using Scanpy
     and directly call functions of Scrublet(). You may also undertake your own
     preprocessing, simulate doublets with
