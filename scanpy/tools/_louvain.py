@@ -170,7 +170,12 @@ def louvain(
         else:
             weights = None
         g = cugraph.Graph()
-        g.add_adj_list(offsets, indices, weights)
+
+        if hasattr(g, 'add_adj_list'):
+            g.add_adj_list(offsets, indices, weights)
+        else:
+            g.from_cudf_adjlist(offsets, indices, weights)
+
         logg.info('    using the "louvain" package of rapids')
         louvain_parts, _ = cugraph.louvain(g)
         groups = louvain_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
