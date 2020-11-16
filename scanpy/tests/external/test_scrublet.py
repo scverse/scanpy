@@ -14,7 +14,7 @@ def test_scrublet():
     """
     adata = sc.datasets.pbmc3k()
     sce.pp.scrublet(adata)
-   
+
     errors = []
 
     # replace assertions by conditions
@@ -24,7 +24,10 @@ def test_scrublet():
     if len(adata.obs_names[adata.obs.predicted_doublet]) == 0:
         errors.append("no doublets identified")
 
-    assert not errors, "errors occured in scrublet testing:\n{}".format("\n".join(errors))
+    assert not errors, "errors occured in scrublet testing:\n{}".format(
+        "\n".join(errors)
+    )
+
 
 def test_scrublet_simulate_doublets():
     """
@@ -43,9 +46,6 @@ def test_scrublet_simulate_doublets():
     hvg = sc.pp.highly_variable_genes(logged)
     adata_obs = adata_obs[:, logged.var['highly_variable']]
 
-    adata_sim = sce.pp.scrublet_simulate_doublets(
-        adata_obs,
-        raw_layer='raw'
-    )
+    adata_sim = sce.pp.scrublet_simulate_doublets(adata_obs, raw_layer='raw')
 
     assert 'doublet_parents' in adata_sim.obsm.keys()

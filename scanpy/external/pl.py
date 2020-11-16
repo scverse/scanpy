@@ -326,10 +326,10 @@ def wishbone_marker_trajectory(
 
 
 def scrublet_score_distribution(
-    adata, 
-    scale_hist_obs: str = 'log', 
-    scale_hist_sim: str = 'linear', 
-    figsize: Optional[Tuple[float, float]] = (8,3),
+    adata,
+    scale_hist_obs: str = 'log',
+    scale_hist_sim: str = 'linear',
+    figsize: Optional[Tuple[float, float]] = (8, 3),
 ):
     """\
     Plot histogram of doublet scores for observed transcriptomes and simulated doublets. 

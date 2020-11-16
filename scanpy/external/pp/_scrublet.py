@@ -485,4 +485,3 @@ def scrublet_simulate_doublets(
     adata_sim.uns['scrublet']['parameters'] = {}
     adata_sim.uns['scrublet']['parameters']['sim_doublet_ratio'] = sim_doublet_ratio
     return adata_sim
-
