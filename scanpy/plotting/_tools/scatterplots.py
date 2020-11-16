@@ -395,9 +395,9 @@ def embedding(
                 **kwargs,
             )
 
-            # in case continous cmap was individual, change back to global cmap
-            if not categorical and cmap != kwargs['cmap']:
-                kwargs['cmap'] = cmap
+        # in case continous cmap was individual, change back to global cmap
+        if not categorical and cmap != kwargs['cmap']:
+            kwargs['cmap'] = cmap
 
         # remove y and x ticks
         ax.set_yticks([])
