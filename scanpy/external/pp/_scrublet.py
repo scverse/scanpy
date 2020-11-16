@@ -201,7 +201,7 @@ def scrublet(
         pp.normalize_total(adata_obs, target_sum=1e6)
         pp.normalize_total(adata_sim, target_sum=1e6)
 
-    adata_obs = _call_doublets(
+    adata_obs = _scrublet_call_doublets(
         adata_obs=adata_obs,
         adata_sim=adata_sim,
         n_neighbors=n_neighbors,
@@ -224,7 +224,7 @@ def scrublet(
         return None
 
 
-def _call_doublets(
+def _scrublet_call_doublets(
     adata_obs: AnnData,
     adata_sim: AnnData,
     n_neighbors: Optional[int] = None,
