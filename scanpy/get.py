@@ -137,13 +137,16 @@ def obs_df(
             gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
         else:
             gene_names = pd.Series(adata.var_names, index=adata.var_names)
-    lookup_keys = []
+    obs_names = []
+    var_names = []
+    var_symbol = []
     not_found = []
     for key in keys:
         if key in adata.obs.columns:
-            lookup_keys.append(key)
+            obs_names.append(key)
         elif key in gene_names.index:
-            lookup_keys.append(gene_names[key])
+            var_names.append(gene_names[key])
+            var_symbol.append(key)
         else:
             not_found.append(key)
     if len(not_found) > 0:
@@ -167,12 +170,32 @@ def obs_df(
         )
 
     # Make df
-    df = pd.DataFrame(index=adata.obs_names)
-    for k, l in zip(keys, lookup_keys):
-        if not use_raw or k in adata.obs.columns:
-            df[k] = adata.obs_vector(l, layer=layer)
-        else:
-            df[k] = adata.raw.obs_vector(l)
+    # prepare var values
+    if layer is not None:
+        if layer not in adata.layers.keys():
+            raise KeyError(
+                f'Selected layer: {layer} is not in the layers list. '
+                f'The list of valid layers is: {adata.layers.keys()}'
+            )
+        matrix = adata[:, var_names].layers[layer]
+    elif use_raw:
+        matrix = adata.raw[:, var_names].X
+    else:
+        matrix = adata[:, var_names].X
+
+    from scipy.sparse import issparse
+
+    if issparse(matrix):
+        matrix = matrix.toarray()
+
+    df_var = pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index)
+
+    # prepare obs values
+    df_obs = adata.obs[obs_names]
+
+    # concatenate and reorder after given `keys`
+    df = pd.concat([df_obs, df_var], axis=1)[keys]
+
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
         val = adata.obsm[k]
