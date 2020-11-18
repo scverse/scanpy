@@ -21,16 +21,19 @@ def test_function_headers(f):
     assert f.__doc__ is not None, f"{name} has no docstring"
     lines = getattr(f, "__orig_doc__", f.__doc__).split("\n")
     assert lines[0], f"{name} needs a single-line summary"
-    broken = [i for i, l in enumerate(lines) if l and not l.startswith("    ")]
+    broken = [i for i, l in enumerate(lines) if l.strip() and not l.startswith("    ")]
     if any(broken):
         msg = f'''\
-Header of function `{name}`’s docstring should start with one-line description:
+Header of function `{name}`’s docstring should start with one-line description
+and be consistently indented like this:
 
 ␣␣␣␣"""\\
 ␣␣␣␣My one-line␣description.
 
 ␣␣␣␣…
 ␣␣␣␣"""
+
+The displayed line is under-indented.
 '''
         filename = inspect.getsourcefile(f)
         _, lineno = inspect.getsourcelines(f)

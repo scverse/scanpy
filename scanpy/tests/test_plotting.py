@@ -10,6 +10,7 @@ from scanpy._compat import pkg_version
 
 setup()
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
@@ -733,8 +734,8 @@ def pbmc_scatterplots():
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    if id == "3dprojection":
-        # check if this still happens so we can remove our checks once mpl is fixed
+    # https://github.com/theislab/scanpy/issues/849
+    if id == "3dprojection" and version.parse(mpl.__version__) < version.parse("3.3.3"):
         with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
             fn(pbmc_scatterplots, show=False)
     else:
