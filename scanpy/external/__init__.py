@@ -35,7 +35,8 @@ Data integration
    pp.mnn_correct
 
 Sample demultiplexing / Doublet detection
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. autosummary::
    :toctree: .
 
