@@ -34,8 +34,8 @@ Data integration
    pp.harmony_integrate
    pp.mnn_correct
 
-Sample demultiplexing / Doublet detection
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Sample demultiplexing, Doublet detection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: .
