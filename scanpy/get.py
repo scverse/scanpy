@@ -170,28 +170,32 @@ def obs_df(
         )
 
     # Make df
+    df_var = df_obs = None
+
     # prepare var values
-    if layer is not None:
-        if layer not in adata.layers.keys():
-            raise KeyError(
-                f'Selected layer: {layer} is not in the layers list. '
-                f'The list of valid layers is: {adata.layers.keys()}'
-            )
-        matrix = adata[:, var_names].layers[layer]
-    elif use_raw:
-        matrix = adata.raw[:, var_names].X
-    else:
-        matrix = adata[:, var_names].X
+    if len(var_names) > 0:
+        if layer is not None:
+            if layer not in adata.layers.keys():
+                raise KeyError(
+                    f'Selected layer: {layer} is not in the layers list. '
+                    f'The list of valid layers is: {adata.layers.keys()}'
+                )
+            matrix = adata[:, var_names].layers[layer]
+        elif use_raw:
+            matrix = adata.raw[:, var_names].X
+        else:
+            matrix = adata[:, var_names].X
 
-    from scipy.sparse import issparse
+        from scipy.sparse import issparse
 
-    if issparse(matrix):
-        matrix = matrix.toarray()
+        if issparse(matrix):
+            matrix = matrix.toarray()
 
-    df_var = pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index)
+        df_var = pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index)
 
     # prepare obs values
-    df_obs = adata.obs[obs_names]
+    if len(obs_names) > 0:
+        df_obs = adata.obs[obs_names]
 
     # concatenate and reorder after given `keys`
     df = pd.concat([df_obs, df_var], axis=1)[keys]
