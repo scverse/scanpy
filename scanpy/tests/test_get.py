@@ -88,6 +88,24 @@ def test_obs_df(adata):
     assert all(badkey_err.match(k) for k in badkeys)
 
 
+def test_obs_df_backed_vs_memory():
+    "compares backed vs. memory"
+    from pathlib import Path
+
+    # get location test h5ad file in datasets
+    HERE = Path(sc.__file__).parent
+    adata_file = HERE / "datasets/10x_pbmc68k_reduced.h5ad"
+    adata_backed = sc.read(adata_file, backed='r')
+    adata = sc.read_h5ad(adata_file,)
+
+    genes = list(adata.var_names[:10])
+    obs_names = ['bulk_labels', 'n_genes']
+    pd.testing.assert_frame_equal(
+        sc.get.obs_df(adata, keys=genes + obs_names),
+        sc.get.obs_df(adata_backed, keys=genes + obs_names),
+    )
+
+
 def test_var_df(adata):
     adata.varm["eye"] = np.eye(2, dtype=int)
     adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype='float64')
