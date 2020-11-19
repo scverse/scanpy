@@ -180,8 +180,10 @@ def obs_df(
 
     # add obs values
     if len(obs_names) > 0:
-        df.join(adata.obs[obs_names])
+        df = df.join(adata.obs[obs_names])
 
+    # reorder columns to given order
+    df = df[keys]
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
         val = adata.obsm[k]
@@ -200,6 +202,7 @@ def var_df(
     varm_keys: Iterable[Tuple[str, int]] = (),
     *,
     layer: str = None,
+    use_raw: bool = False,
 ) -> pd.DataFrame:
     """\
     Return values for observations in adata.
@@ -214,6 +217,8 @@ def var_df(
         Tuple of `(key from varm, column index of varm[key])`.
     layer
         Layer of `adata` to use as expression values.
+    use_raw
+        Whether to get expression values from `adata.raw`.
 
     Returns
     -------
@@ -221,13 +226,16 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
-    lookup_keys = []
+    obs_names = []
+    var_names = []
     not_found = []
     for key in keys:
-        if key in adata.var.columns:
-            lookup_keys.append(key)
-        elif key in adata.obs_names:
-            lookup_keys.append(key)
+        if key in adata.obs_names:
+            obs_names.append(key)
+        elif use_raw and key in adata.raw.var.columns:
+            var_names.append(key)
+        elif key in adata.var.columns:
+            var_names.append(key)
         else:
             not_found.append(key)
     if len(not_found) > 0:
@@ -236,10 +244,25 @@ def var_df(
             " in `adata.obs_names`."
         )
 
-    # Make df
-    df = pd.DataFrame(index=adata.var_names)
-    for k, l in zip(keys, lookup_keys):
-        df[k] = adata.var_vector(l, layer=layer)
+    # initialize df
+    df = pd.DataFrame(index=adata.var.index)
+
+    # add obs values
+    if len(obs_names) > 0:
+        X = _get_obs_rep(adata, layer=layer, use_raw=use_raw)
+        matrix = X[adata.obs_names.get_indexer(obs_names), :]
+        df = df.join(pd.DataFrame(matrix.T, columns=obs_names, index=adata.var.index))
+
+    # add obs values
+    if len(var_names) > 0:
+        if use_raw:
+            df = df.join(adata.raw.var[var_names])
+        else:
+            df = df.join(adata.var[var_names])
+
+    # reorder columns to given order
+    df = df[keys]
+
     for k, idx in varm_keys:
         added_k = f"{k}-{idx}"
         val = adata.varm[k]
