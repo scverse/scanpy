@@ -211,11 +211,7 @@ def combat(
             if key2 in covariates:
                 raise ValueError('Batch key and covariates cannot overlap.')
         # only works on dense matrices so far    
-        if issparse(adata2.X):
-            X = adata2.X.A.T
-        else:
-            X2 = adata2.X.T
-        data2 = pd.DataFrame(data=X2, index=adata2.var_names, columns=adata2.obs_names,)
+        data2 = adata2.to_df().T
 
         sc.utils.sanitize_anndata(adata2)
 
