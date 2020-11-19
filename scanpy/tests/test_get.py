@@ -11,6 +11,10 @@ import scanpy as sc
 
 @pytest.fixture
 def adata():
+    """
+    adata.X is np.ones((2, 2))
+    adata.layers['double'] is sparse np.ones((2,2)) * 2 to also test sparse matrices
+    """
     return AnnData(
         X=np.ones((2, 2)),
         obs=pd.DataFrame(
@@ -19,7 +23,7 @@ def adata():
         var=pd.DataFrame(
             {"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]
         ),
-        layers={"double": np.ones((2, 2), dtype=int) * 2},
+        layers={"double": sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},
         dtype=int,
     )
 
@@ -80,6 +84,11 @@ def test_obs_df(adata):
         sc.get.obs_df(adata, keys=["gene1", "gene2"]),
         pd.DataFrame({"gene1": [1, 1], "gene2": [1, 1]}, index=adata.obs_names),
     )
+    pd.testing.assert_frame_equal(
+        sc.get.obs_df(adata, keys=["gene1", "gene2"]),
+        pd.DataFrame({"gene1": [1, 1], "gene2": [1, 1]}, index=adata.obs_names),
+    )
+
     badkeys = ["badkey1", "badkey2"]
     with pytest.raises(KeyError) as badkey_err:
         sc.get.obs_df(adata, keys=badkeys)
