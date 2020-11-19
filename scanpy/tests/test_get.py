@@ -32,9 +32,13 @@ def test_obs_df(adata):
     adata.obsm["eye"] = np.eye(2, dtype=int)
     adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype='float64')
 
+    # make raw with different genes than adata
     adata.raw = AnnData(
-        X=np.zeros((2, 2)),
-        var=pd.DataFrame({"gene_symbols": ["raw1", "raw2"]}, index=["gene1", "gene2"]),
+        X=np.array([[1, 2, 3], [2, 4, 6]]),
+        var=pd.DataFrame(
+            {"gene_symbols": ["raw1", "raw2", 'raw3']},
+            index=["gene2", "gene3", "gene4"],
+        ),
         dtype='float64',
     )
     pd.testing.assert_frame_equal(
@@ -70,9 +74,15 @@ def test_obs_df(adata):
 
     pd.testing.assert_frame_equal(
         sc.get.obs_df(
-            adata, keys=["raw2", "obs1"], gene_symbols="gene_symbols", use_raw=True
+            adata,
+            keys=["raw2", "raw3", "obs1"],
+            gene_symbols="gene_symbols",
+            use_raw=True,
         ),
-        pd.DataFrame({"raw2": [0.0, 0.0], "obs1": [0, 1]}, index=adata.obs_names),
+        pd.DataFrame(
+            {"raw2": [2.0, 4.0], "raw3": [3.0, 6.0], "obs1": [0, 1]},
+            index=adata.obs_names,
+        ),
     )
     # test only obs
     pd.testing.assert_frame_equal(
