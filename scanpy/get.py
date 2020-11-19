@@ -174,23 +174,8 @@ def obs_df(
 
     # prepare var values
     if len(var_names) > 0:
-        if layer is not None:
-            if layer not in adata.layers.keys():
-                raise KeyError(
-                    f'Selected layer: {layer} is not in the layers list. '
-                    f'The list of valid layers is: {adata.layers.keys()}'
-                )
-            matrix = adata[:, var_names].layers[layer]
-        elif use_raw:
-            matrix = adata.raw[:, var_names].X
-        else:
-            matrix = adata[:, var_names].X
-
-        from scipy.sparse import issparse
-
-        if issparse(matrix):
-            matrix = matrix.toarray()
-
+        X = _get_obs_rep(adata, layer=layer, use_raw=use_raw)
+        matrix = X[:, adata.var_names.get_indexer(var_names)]
         df_var = pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index)
 
     # prepare obs values
