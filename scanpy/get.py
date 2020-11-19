@@ -170,20 +170,17 @@ def obs_df(
         )
 
     # Make df
-    df_var = df_obs = None
+    df = pd.DataFrame(index=adata.obs.index)
 
-    # prepare var values
+    # add var values
     if len(var_names) > 0:
         X = _get_obs_rep(adata, layer=layer, use_raw=use_raw)
         matrix = X[:, adata.var_names.get_indexer(var_names)]
-        df_var = pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index)
+        df = df.join(pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index))
 
-    # prepare obs values
+    # add obs values
     if len(obs_names) > 0:
-        df_obs = adata.obs[obs_names]
-
-    # concatenate and reorder after given `keys`
-    df = pd.concat([df_obs, df_var], axis=1)[keys]
+        df.join(adata.obs[obs_names])
 
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
