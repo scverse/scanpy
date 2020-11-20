@@ -191,7 +191,7 @@ def scrublet(
 
         adata_sim = scrublet_simulate_doublets(
             adata_obs,
-            raw_layer='raw',
+            layer='raw',
             sim_doublet_ratio=sim_doublet_ratio,
             synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
         )
@@ -431,7 +431,7 @@ def scrublet_simulate_doublets(
         filtered for expression and variability, and the object should contain
         raw expression of the same dimensions. 
         
-    raw_layer
+    layer
         Layer of adata where raw values are stored, or 'X' if values are in .X. 
     
     sim_doublet_ratio
@@ -468,10 +468,8 @@ def scrublet_simulate_doublets(
             'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
         )
 
-    if raw_layer == 'X':
-        scrub = sl.Scrublet(adata.X)
-    else:
-        scrub = sl.Scrublet(adata.layers[raw_layer])
+    X = sc.get._get_obs_rep(adata, layer=layer)
+    scrub = sl.Scrublet(X)
 
     scrub.simulate_doublets(
         sim_doublet_ratio=sim_doublet_ratio,
