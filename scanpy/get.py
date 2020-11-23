@@ -210,7 +210,6 @@ def var_df(
     varm_keys: Iterable[Tuple[str, int]] = (),
     *,
     layer: str = None,
-    use_raw: bool = False,
 ) -> pd.DataFrame:
     """\
     Return values for observations in adata.
@@ -225,8 +224,6 @@ def var_df(
         Tuple of `(key from varm, column index of varm[key])`.
     layer
         Layer of `adata` to use as expression values.
-    use_raw
-        Whether to get expression values from `adata.raw`.
 
     Returns
     -------
@@ -240,8 +237,6 @@ def var_df(
     for key in keys:
         if key in adata.obs_names:
             obs_names.append(key)
-        elif use_raw and key in adata.raw.var.columns:
-            var_names.append(key)
         elif key in adata.var.columns:
             var_names.append(key)
         else:
@@ -257,7 +252,7 @@ def var_df(
 
     # add obs values
     if len(obs_names) > 0:
-        X = _get_obs_rep(adata, layer=layer, use_raw=use_raw)
+        X = _get_obs_rep(adata, layer=layer)
         matrix = X[adata.obs_names.get_indexer(obs_names), :]
         from scipy.sparse import issparse
         if issparse(matrix):
@@ -267,10 +262,7 @@ def var_df(
 
     # add obs values
     if len(var_names) > 0:
-        if use_raw:
-            df = df.join(adata.raw.var[var_names])
-        else:
-            df = df.join(adata.var[var_names])
+        df = df.join(adata.var[var_names])
 
     # reorder columns to given order
     df = df[keys]
