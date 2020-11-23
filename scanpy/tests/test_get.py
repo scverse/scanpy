@@ -129,12 +129,6 @@ def test_var_df(adata):
     adata.varm["eye"] = np.eye(2, dtype=int)
     adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype='float64')
 
-    adata.raw = AnnData(
-        X=np.zeros((2, 2)),
-        var=pd.DataFrame({"gene_symbols": ["raw1", "raw2"]}, index=["gene1", "gene2"]),
-        dtype='float64',
-    )
-
     pd.testing.assert_frame_equal(
         sc.get.var_df(
             adata,
@@ -155,14 +149,6 @@ def test_var_df(adata):
         sc.get.var_df(adata, keys=["cell1", "gene_symbols"], layer="double"),
         pd.DataFrame(
             {"cell1": [2, 2], "gene_symbols": ["genesymbol1", "genesymbol2"]},
-            index=adata.var_names,
-        ),
-    )
-    # test use_raw=True
-    pd.testing.assert_frame_equal(
-        sc.get.var_df(adata, keys=["cell1", "gene_symbols"], use_raw=True),
-        pd.DataFrame(
-            {"cell1": [0.0, 0.0], "gene_symbols": ["raw1", "raw2"]},
             index=adata.var_names,
         ),
     )
