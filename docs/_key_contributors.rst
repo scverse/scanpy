@@ -1,19 +1,20 @@
 .. sidebar:: Key Contributors
    :subtitle: `anndata graph`_ | `scanpy graph`_ | ☀ = maintainer
 
-   * `Isaac Virshup`_: anndata overhaul, diverse contributions ☀
-   * Gökcen Eraslan: diverse contributions ☀
-   * Sergei Rybakov: diverse contributions ☀
-   * `Fidel Ramirez`_: plotting ☀
-   * `Tom White`_: distributed computing
-   * Philipp Angerer: initial anndata conception/development, software quality ☀
-   * `Alex Wolf`_: initial anndata & scanpy conception/development ☀
+   * `Isaac Virshup`_: lead developer since 2019 ☀
+   * Gökcen Eraslan: developer, diverse contributions ☀
+   * Sergei Rybakov: developer, diverse contributions ☀
+   * `Fidel Ramirez`_: developer, plotting ☀
+   * Giovanni Palla: developer, spatial data
+   * Tom White: developer 2018-2019, distributed computing
+   * Philipp Angerer: developer, software quality, initial anndata conception/development ☀
+   * `Alex Wolf`_: lead developer 2016-2019, initial anndata & scanpy conception/development
+   * Malte Luecken: community & forum
    * `Fabian Theis`_ & lab: enabling guidance, support and environment
 
 .. _anndata graph: https://github.com/theislab/anndata/graphs/contributors
 .. _scanpy graph: https://github.com/theislab/scanpy/graphs/contributors
 .. _Isaac Virshup: https://twitter.com/ivirshup
-.. _Tom White: https://twitter.com/tom_e_white
 .. _Alex Wolf: https://twitter.com/falexwolf
 .. _Fabian Theis: https://twitter.com/fabian_theis
 .. _Fidel Ramirez: https://github.com/fidelram
