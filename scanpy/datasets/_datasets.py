@@ -307,7 +307,10 @@ def pbmc3k_processed() -> AnnData:
 
 
 def _download_visium_dataset(
-    sample_id: str, spaceranger_version: str, base_dir: Optional[Path] = None
+    sample_id: str,
+    spaceranger_version: str,
+    base_dir: Optional[Path] = None,
+    download_image: bool = False,
 ):
     """
     Params
@@ -316,6 +319,8 @@ def _download_visium_dataset(
         String name of example visium dataset.
     base_dir
         Where to download the dataset to.
+    download_image
+        Whether to download the high-resolution tissue section.
     """
     import tarfile
 
@@ -343,6 +348,13 @@ def _download_visium_dataset(
         filename=sample_dir / "filtered_feature_bc_matrix.h5",
         backup_url=url_prefix + f"{sample_id}_filtered_feature_bc_matrix.h5",
     )
+
+    # Download image
+    if download_image:
+        _utils.check_presence_download(
+            filename=sample_dir / "image.tif",
+            backup_url=url_prefix + f"{sample_id}_image.tif",
+        )
 
 
 @check_datasetdir_exists
@@ -377,6 +389,7 @@ def visium_sge(
         'Targeted_Visium_Human_ColorectalCancer_GeneSignature',
         'Parent_Visium_Human_ColorectalCancer',
     ] = 'V1_Breast_Cancer_Block_A_Section_1',
+    return_image_path: bool = False,
 ) -> AnnData:
     """\
     Processed Visium Spatial Gene Expression data from 10x Genomics.
@@ -386,14 +399,24 @@ def visium_sge(
     ----------
     sample_id
         The ID of the data sample in 10x’s spatial database.
+    return_image_path
+        Whether to return the path to the high-resolution tissue image together 
+        with the annotated data matrix.
 
     Returns
     -------
-    Annotated data matrix.
+    Annotated data matrix. 
+    If `return_image_path` is `True`, returns annotated data matrix and path_to_image.
     """
     if "V1_" in sample_id:
         spaceranger_version = "1.1.0"
     else:
         spaceranger_version = "1.2.0"
-    _download_visium_dataset(sample_id, spaceranger_version)
-    return read_visium(settings.datasetdir / sample_id)
+    _download_visium_dataset(
+        sample_id, spaceranger_version, download_image=return_image_path
+    )
+
+    adata = read_visium(settings.datasetdir / sample_id)
+    if return_image_path:
+        return adata, settings.datasetdir / sample_id / "image.tif"
+    return adata

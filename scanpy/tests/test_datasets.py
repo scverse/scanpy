@@ -98,6 +98,12 @@ def test_visium_datasets(tmp_dataset_dir, tmpdir):
     mbrain_again = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
     assert_adata_equal(mbrain, mbrain_again)
 
+    # Test that downloading tissue image works
+    mbrain, mbrain_img = sc.datasets.visium_sge(
+        "V1_Adult_Mouse_Brain", return_image_path=True
+    )
+    assert mbrain_img == sc.settings.datasetdir / "V1_Adult_Mouse_Brain" / "image.tif"
+
 
 def test_download_failure():
     from urllib.error import HTTPError
