@@ -913,36 +913,26 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 
 def _download(url: str, path: Path):
-    try:
-        import ipywidgets
-        from tqdm.auto import tqdm
-    except ModuleNotFoundError:
-        from tqdm import tqdm
-    from urllib.request import urlopen, Request
-
-    blocksize = 1024 * 8
-    blocknum = 0
+    from tqdm.auto import tqdm
+    import requests
 
     try:
-        # This is a modified urllib.request.urlretrieve, but that won't let us
-        # set headers.
-        # The '\'s are ugly, but parenthesis are not allowed here
-        # fmt: off
-        with \
-            tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t, \
-            path.open("wb") as f, \
-            urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
-
-            t.total = int(resp.info().get("content-length", 0))
-
-            block = resp.read(blocksize)
-            while block:
-                f.write(block)
-                blocknum += 1
-                t.update(blocknum * blocksize - t.n)
-                block = resp.read(blocksize)
-        # fmt: on
-    except Exception:
+        with requests.get(
+            url, headers={"User-agent": "scanpy-user"}, stream=True
+        ) as resp:
+            resp.raise_for_status()
+            total = resp.headers.get("content-length", None)
+            with tqdm(
+                unit="B",
+                unit_scale=True,
+                miniters=1,
+                unit_divisor=1024,
+                total=total if total is None else int(total),
+            ) as t, path.open("wb") as f:
+                for chunk in resp.iter_content(chunk_size=8 * 1024):
+                    t.update(len(chunk))
+                    f.write(chunk)
+    except (KeyboardInterrupt, Exception):
         # Make sure file doesn’t exist half-downloaded
         if path.is_file():
             path.unlink()
