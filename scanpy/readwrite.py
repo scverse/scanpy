@@ -913,15 +913,20 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 
 def _download(url: str, path: Path):
-    from tqdm.auto import tqdm
-    import requests
+    try:
+        import ipywidgets
+        from tqdm.auto import tqdm
+    except ImportError:
+        from tqdm import tqdm
+
+    from urllib.request import urlopen, Request
+
+    blocksize = 1024 * 8
+    blocknum = 0
 
     try:
-        with requests.get(
-            url, headers={"User-agent": "scanpy-user"}, stream=True
-        ) as resp:
-            resp.raise_for_status()
-            total = resp.headers.get("content-length", None)
+        with urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
+            total = resp.info().get("content-length", None)
             with tqdm(
                 unit="B",
                 unit_scale=True,
@@ -929,9 +934,13 @@ def _download(url: str, path: Path):
                 unit_divisor=1024,
                 total=total if total is None else int(total),
             ) as t, path.open("wb") as f:
-                for chunk in resp.iter_content(chunk_size=8 * 1024):
-                    t.update(len(chunk))
-                    f.write(chunk)
+                block = resp.read(blocksize)
+                while block:
+                    f.write(block)
+                    blocknum += 1
+                    t.update(blocknum * blocksize - t.n)
+                    block = resp.read(blocksize)
+
     except (KeyboardInterrupt, Exception):
         # Make sure file doesn’t exist half-downloaded
         if path.is_file():
