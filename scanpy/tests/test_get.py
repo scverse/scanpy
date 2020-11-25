@@ -129,8 +129,30 @@ def test_backed_vs_memory():
     cell_indices = list(adata.obs_names[30::-2])
     pd.testing.assert_frame_equal(
         sc.get.var_df(adata, keys=cell_indices + ["highly_variable"]),
-        sc.get.var_df(adata_backed, keys=cell_indices + ["highly_variable"])
+        sc.get.var_df(adata_backed, keys=cell_indices + ["highly_variable"]),
     )
+
+
+def test_column_content():
+    "uses a larger dataset to test column order and content"
+    adata = sc.datasets.pbmc68k_reduced()
+
+    # test that columns content is correct for obs_df
+    query = ['CST3', 'NKG7', 'GNLY', 'louvain', 'n_counts', 'n_genes']
+    df = sc.get.obs_df(adata, query)
+    for col in query:
+        assert col in df
+        np.testing.assert_array_equal(query, df.columns)
+        np.testing.assert_array_equal(df[col].values, adata.obs_vector(col))
+
+    # test that columns content is correct for var_df
+    cell_ids = list(adata.obs.sample(5).index)
+    query = cell_ids + ['highly_variable', 'dispersions_norm', 'dispersions']
+    df = sc.get.var_df(adata, query)
+    for col in query:
+        assert col in df
+        np.testing.assert_array_equal(query, df.columns)
+        np.testing.assert_array_equal(df[col].values, adata.var_vector(col))
 
 
 def test_var_df(adata):
