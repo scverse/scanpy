@@ -6,6 +6,7 @@ On master
 
 .. rubric:: Bugfixes
 
+* Fixed the width of the progress bar when downloading data :pr:`1507` :smaller:`M Klein`
 * Fixed `log1p` inplace on integer dense arrays :pr:`1400` :smaller:`I Virshup`
 * Fixed `marker_gene_overlap` default value for `top_n_markers` :pr:`1464` :smaller:`MD Luecken`
 * Fixed download path of `pbmc3k_processed` :pr:`1472` :smaller:`D Strobl`
