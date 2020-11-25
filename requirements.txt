@@ -9,7 +9,7 @@ scipy>=1.4
 seaborn
 h5py>=2.10.0
 tables
-tqdm>=4.29.1
+tqdm
 importlib_metadata>=0.7; python_version < '3.8'
 scikit-learn>=0.21.2
 statsmodels>=0.10.0rc2
@@ -22,4 +22,3 @@ umap-learn>=0.3.10
 legacy-api-wrap
 packaging
 sinfo
-requests
