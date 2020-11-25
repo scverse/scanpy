@@ -400,7 +400,7 @@ def visium_sge(
     sample_id
         The ID of the data sample in 10x’s spatial database.
     add_image_path
-        Whether to add the path to the high-resolution tissue image to `adata.uns['spatial']['tif_image_path']`.
+        Whether to add the path to the high-resolution tissue image to `adata.uns['spatial'][sample_id]['tif_image_path']`.
         
     Returns
     -------
@@ -416,7 +416,7 @@ def visium_sge(
 
     adata = read_visium(settings.datasetdir / sample_id)
     if add_image_path:
-        adata.uns['spatial']['tif_image_path'] = (
+        adata.uns["spatial"][sample_id]["tif_image_path"] = (
             settings.datasetdir / sample_id / "image.tif"
         )
     return adata

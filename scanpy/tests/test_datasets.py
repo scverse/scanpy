@@ -102,10 +102,15 @@ def test_visium_datasets(tmp_dataset_dir, tmpdir):
     # Test that downloading tissue image works
     mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", add_image_path=True)
     expected_image_path = sc.settings.datasetdir / "V1_Adult_Mouse_Brain" / "image.tif"
-    assert mbrain.uns['spatial']['tif_image_path'] == expected_image_path
+    assert (
+        mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["tif_image_path"]
+        == expected_image_path
+    )
 
     # Test that tissue image exists and is a valid image file
-    assert os.path.exists(mbrain.uns['spatial']['tif_image_path'])
+    assert os.path.exists(
+        mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["tif_image_path"]
+    )
 
 
 def test_download_failure():
