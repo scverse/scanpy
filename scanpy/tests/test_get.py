@@ -107,7 +107,7 @@ def test_obs_df(adata):
     assert all(badkey_err.match(k) for k in badkeys)
 
 
-def test_obs_df_backed_vs_memory():
+def test_backed_vs_memory():
     "compares backed vs. memory"
     from pathlib import Path
 
@@ -117,11 +117,19 @@ def test_obs_df_backed_vs_memory():
     adata_backed = sc.read(adata_file, backed='r')
     adata = sc.read_h5ad(adata_file,)
 
-    genes = list(adata.var_names[:10])
+    # use non-sequential list of genes
+    genes = list(adata.var_names[20::-2])
     obs_names = ['bulk_labels', 'n_genes']
     pd.testing.assert_frame_equal(
         sc.get.obs_df(adata, keys=genes + obs_names),
         sc.get.obs_df(adata_backed, keys=genes + obs_names),
+    )
+
+    # use non-sequential list of cell indices
+    cell_indices = list(adata.obs_names[30::-2])
+    pd.testing.assert_frame_equal(
+        sc.get.var_df(adata, keys=cell_indices + ["highly_variable"]),
+        sc.get.var_df(adata_backed, keys=cell_indices + ["highly_variable"])
     )
 
 
