@@ -176,11 +176,11 @@ def obs_df(
     if len(var_names) > 0:
         X = _get_obs_rep(adata, layer=layer, use_raw=use_raw)
         if use_raw:
-            var_idx = adata.raw.var_names.get_indexer(var_names)
+            var_bool = adata.raw.var.index.isin(var_names)
             print(var_names, var_symbol)
         else:
-            var_idx = adata.var_names.get_indexer(var_names)
-        matrix = X[:, var_idx]
+            var_bool = adata.var.index.isin(var_names)
+        matrix = X[:, var_bool]
         from scipy.sparse import issparse
         if issparse(matrix):
             matrix = matrix.toarray()
@@ -253,7 +253,7 @@ def var_df(
     # add obs values
     if len(obs_names) > 0:
         X = _get_obs_rep(adata, layer=layer)
-        matrix = X[adata.obs_names.get_indexer(obs_names), :]
+        matrix = X[adata.obs.index.isin(obs_names), :]
         from scipy.sparse import issparse
         if issparse(matrix):
             matrix = matrix.toarray()
