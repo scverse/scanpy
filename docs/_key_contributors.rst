@@ -6,10 +6,9 @@
    * Sergei Rybakov: developer, diverse contributions ☀
    * `Fidel Ramirez`_: developer, plotting ☀
    * Giovanni Palla: developer, spatial data
-   * Tom White: developer 2018-2019, distributed computing
-   * Philipp Angerer: developer, software quality, initial anndata conception/development ☀
-   * `Alex Wolf`_: lead developer 2016-2019, initial anndata & scanpy conception/development
-   * Malte Luecken: community & forum
+   * Malte Luecken: developer, community & forum
+   * Philipp Angerer: developer, software quality, initial anndata conception ☀
+   * `Alex Wolf`_: lead developer 2016-2019, initial anndata & scanpy conception
    * `Fabian Theis`_ & lab: enabling guidance, support and environment
 
 .. _anndata graph: https://github.com/theislab/anndata/graphs/contributors
