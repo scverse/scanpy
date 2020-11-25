@@ -176,15 +176,22 @@ def obs_df(
     if len(var_names) > 0:
         X = _get_obs_rep(adata, layer=layer, use_raw=use_raw)
         if use_raw:
-            var_bool = adata.raw.var.index.isin(var_names)
-            print(var_names, var_symbol)
+            var_idx = adata.raw.var_names.get_indexer(var_names)
         else:
-            var_bool = adata.var.index.isin(var_names)
-        matrix = X[:, var_bool]
+            var_idx = adata.var_names.get_indexer(var_names)
+
+        # for backed AnnData is important that the indices are ordered
+        var_order = np.argsort(var_idx)
+        matrix = X[:, var_idx[var_order]]
         from scipy.sparse import issparse
+
         if issparse(matrix):
             matrix = matrix.toarray()
-        df = df.join(pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index))
+        df = df.join(
+            pd.DataFrame(
+                matrix, columns=np.array(var_symbol)[var_order], index=adata.obs.index
+            )
+        )
 
     # add obs values
     if len(obs_names) > 0:
@@ -253,12 +260,21 @@ def var_df(
     # add obs values
     if len(obs_names) > 0:
         X = _get_obs_rep(adata, layer=layer)
-        matrix = X[adata.obs.index.isin(obs_names), :]
+        obs_idx = adata.obs_names.get_indexer(obs_names)
+
+        # for backed AnnData is important that the indices are ordered
+        obs_order = np.argsort(obs_idx)
+        matrix = X[obs_idx[obs_order], :]
         from scipy.sparse import issparse
+
         if issparse(matrix):
             matrix = matrix.toarray()
 
-        df = df.join(pd.DataFrame(matrix.T, columns=obs_names, index=adata.var.index))
+        df = df.join(
+            pd.DataFrame(
+                matrix.T, columns=np.array(obs_names)[obs_order], index=adata.var.index
+            )
+        )
 
     # add obs values
     if len(var_names) > 0:
