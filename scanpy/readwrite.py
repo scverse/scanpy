@@ -938,7 +938,7 @@ def _download(url: str, path: Path):
                 while block:
                     f.write(block)
                     blocknum += 1
-                    t.update(blocknum * blocksize - t.n)
+                    t.update(len(block))
                     block = resp.read(blocksize)
 
     except (KeyboardInterrupt, Exception):
