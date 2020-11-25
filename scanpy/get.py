@@ -183,6 +183,7 @@ def obs_df(
         # for backed AnnData is important that the indices are ordered
         var_order = np.argsort(var_idx)
         matrix = X[:, var_idx[var_order]]
+
         from scipy.sparse import issparse
 
         if issparse(matrix):
