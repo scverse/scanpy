@@ -339,7 +339,7 @@ def read_visium(
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['scalefactors']`
         Scale factors for the spots
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
-        Files metadata: 'chemistry_description', 'software_version'
+        Files metadata: 'chemistry_description', 'software_version', 'tissue_image_path'
     :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
@@ -417,6 +417,21 @@ def read_visium(
             columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres'],
             inplace=True,
         )
+
+        # try to find path to high-res tissue image
+        cand_image_paths = [
+            path / ("image" + ext) for ext in ['.tif', '.tiff', '.jpg', '.jpeg']
+        ]
+        cand_image_paths += [
+            path / (library_id + "_image" + ext)
+            for ext in ['.tif', '.tiff', '.jpg', '.jpeg']
+        ]
+        for p in cand_image_paths:
+            if p.exists():
+                adata.uns["spatial"][library_id]["metadata"]["tissue_image_path"] = str(
+                    p.resolve()
+                )
+                break
 
     return adata
 

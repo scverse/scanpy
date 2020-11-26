@@ -8,6 +8,7 @@ import pytest
 from pathlib import Path
 from anndata.tests.helpers import assert_adata_equal
 import os
+import subprocess
 
 
 @pytest.fixture(scope="module")
@@ -100,17 +101,23 @@ def test_visium_datasets(tmp_dataset_dir, tmpdir):
     assert_adata_equal(mbrain, mbrain_again)
 
     # Test that downloading tissue image works
-    mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", add_image_path=True)
+    mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", download_tif=True)
     expected_image_path = sc.settings.datasetdir / "V1_Adult_Mouse_Brain" / "image.tif"
-    assert (
-        mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["tif_image_path"]
-        == expected_image_path
+    image_path = Path(
+        mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["metadata"]["tissue_image_path"]
     )
+    assert image_path == expected_image_path
 
     # Test that tissue image exists and is a valid image file
-    assert os.path.exists(
-        mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["tif_image_path"]
+    assert image_path.exists()
+
+    # Test that tissue image is a tif image file (using `file`)
+    process = subprocess.run(
+        ['file', '--mime-type', image_path], stdout=subprocess.PIPE
     )
+    output = process.stdout.strip().decode()  # make process output string
+    print(output)
+    assert output == str(image_path) + ': image/tiff'
 
 
 def test_download_failure():
