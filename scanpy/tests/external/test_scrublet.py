@@ -18,8 +18,8 @@ def test_scrublet():
     errors = []
 
     # replace assertions by conditions
-    if not set(['predicted_doublet', 'doublet_score']).issubset(adata.obs.columns):
-        errors.append("doublet columns not set in .obs")
+assert "predicted_doublet" in adata.obs.columns
+assert "doublet_score" in adata.obs.columns
 
     if len(adata.obs_names[adata.obs.predicted_doublet]) == 0:
         errors.append("no doublets identified")
