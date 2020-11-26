@@ -42,6 +42,6 @@ def test_scrublet_simulate_doublets():
     hvg = sc.pp.highly_variable_genes(logged)
     adata_obs = adata_obs[:, logged.var['highly_variable']]
 
-    adata_sim = sce.pp.scrublet_simulate_doublets(adata_obs, raw_layer='raw')
+    adata_sim = sce.pp.scrublet_simulate_doublets(adata_obs, layer='raw')
 
     assert 'doublet_parents' in adata_sim.obsm.keys()
