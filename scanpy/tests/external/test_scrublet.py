@@ -21,8 +21,7 @@ def test_scrublet():
 assert "predicted_doublet" in adata.obs.columns
 assert "doublet_score" in adata.obs.columns
 
-    if len(adata.obs_names[adata.obs.predicted_doublet]) == 0:
-        errors.append("no doublets identified")
+    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
     assert not errors, "errors occured in scrublet testing:\n{}".format(
         "\n".join(errors)
