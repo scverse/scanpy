@@ -23,9 +23,6 @@ assert "doublet_score" in adata.obs.columns
 
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
-    assert not errors, "errors occured in scrublet testing:\n{}".format(
-        "\n".join(errors)
-    )
 
 
 def test_scrublet_simulate_doublets():
