@@ -116,7 +116,6 @@ def test_visium_datasets(tmp_dataset_dir, tmpdir):
         ['file', '--mime-type', image_path], stdout=subprocess.PIPE
     )
     output = process.stdout.strip().decode()  # make process output string
-    print(output)
     assert output == str(image_path) + ': image/tiff'
 
 
