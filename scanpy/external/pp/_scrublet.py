@@ -4,7 +4,7 @@ import numpy as np
 
 from ... import logging as logg
 from ... import preprocessing as pp
-
+from ...get import _get_obs_rep
 
 def scrublet(
     adata: AnnData,
@@ -468,7 +468,7 @@ def scrublet_simulate_doublets(
             'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
         )
 
-    X = sc.get._get_obs_rep(adata, layer=layer)
+    X = _get_obs_rep(adata, layer=layer)
     scrub = sl.Scrublet(X)
 
     scrub.simulate_doublets(
