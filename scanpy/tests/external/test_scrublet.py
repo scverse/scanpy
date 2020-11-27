@@ -18,8 +18,8 @@ def test_scrublet():
     errors = []
 
     # replace assertions by conditions
-assert "predicted_doublet" in adata.obs.columns
-assert "doublet_score" in adata.obs.columns
+    assert "predicted_doublet" in adata.obs.columns
+    assert "doublet_score" in adata.obs.columns
 
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
