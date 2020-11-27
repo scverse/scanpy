@@ -820,23 +820,28 @@ def spatial(
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     if library_id is _empty:
-        library_id = next((i for i in adata.uns['spatial'].keys()))
+        try:
+            library_id = next((i for i in adata.uns['spatial'].keys()))
+        except AttributeError:
+            library_id = None
+        if library_id is not None:
+            spatial_data = adata.uns['spatial'][library_id]
+            if img_key is _empty:
+                img_key = next(
+                    (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
+                    None,
+                )
+            if size is None:
+                size = 1.0
+        else:
+            library_id = None
+            img_key = None
     else:
         if library_id not in adata.uns['spatial'].keys():
             raise KeyError(
                 f"Could not find '{library_id}' in adata.uns['spatial'].keys().\n"
                 f"Available keys are: {list(adata.uns['spatial'].keys())}."
             )
-
-    spatial_data = adata.uns['spatial'][library_id]
-    if img_key is _empty:
-        img_key = next(
-            (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
-            None,
-        )
-
-    if size is None:
-        size = 1.0
 
     return embedding(
         adata,
