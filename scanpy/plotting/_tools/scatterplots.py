@@ -821,13 +821,14 @@ def spatial(
     """
     if library_id is _empty:  # if it's empty, it searches for keys
         try:
-            library_id = next((i for i in adata.uns['spatial'].keys()))
-        except AttributeError:
+            uns_spatial = adata.uns['spatial']
+            library_id = next((i for i in uns_spatial.keys()))
+        except KeyError:
             library_id = None  # if search fails, then it's really empty!
         if (
             library_id is not None
         ):  # if there is a library id, is most likely Visium, search for img_key
-            spatial_data = adata.uns['spatial'][library_id]
+            spatial_data = uns_spatial[library_id]
             if img_key is _empty:
                 img_key = next(
                     (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
@@ -839,11 +840,11 @@ def spatial(
             img_key = None  # if not found, set img_key to None
     else:
         if (
-            library_id not in adata.uns['spatial'].keys()
+            library_id not in uns_spatial.keys()
         ):  # if library_id was mispecified, throw error!
             raise KeyError(
                 f"Could not find '{library_id}' in adata.uns['spatial'].keys().\n"
-                f"Available keys are: {list(adata.uns['spatial'].keys())}."
+                f"Available keys are: {list(uns_spatial.keys())}."
             )
 
     return embedding(
