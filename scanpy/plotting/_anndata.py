@@ -980,10 +980,10 @@ def heatmap(
 
     # check if var_group_labels are a subset of categories:
     if var_group_labels is not None:
-        if not set(var_group_labels).issubset(categories):
-            raise ValueError(
-                "The group labels given as keys in var_names should be a subset of your groupby categories."
-            )
+        if set(var_group_labels).issubset(categories):
+            var_groups_subset_of_groupby = True
+        else:
+            var_groups_subset_of_groupby = False
 
     if standard_scale == 'obs':
         obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
@@ -1256,8 +1256,13 @@ def heatmap(
         if var_group_positions is not None and len(var_group_positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
-            for label, pos in zip(var_group_labels, var_group_positions):
-                label_code = label2code[label]
+            for idx, (label, pos) in enumerate(
+                zip(var_group_labels, var_group_positions)
+            ):
+                if var_groups_subset_of_groupby:
+                    label_code = label2code[label]
+                else:
+                    label_code = idx
                 arr += [label_code] * (pos[1] + 1 - pos[0])
             gene_groups_ax.imshow(
                 np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
