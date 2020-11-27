@@ -820,18 +820,27 @@ def spatial(
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     if library_id is _empty:  # if it's empty, it searches for keys
-        try:
-            uns_spatial = adata.uns['spatial']
-            library_id = next((i for i in uns_spatial.keys()))
-        except KeyError:
+        try:  # check if key is empty
+            spatial_data = adata.uns['spatial']
+            library_id = next(
+                (
+                    i
+                    for i in spatial_data.keys()
+                    if i not in ["connectivities_key", "distances_key"]
+                )
+            )
+        except (KeyError, StopIteration) as e:
             library_id = None  # if search fails, then it's really empty!
         if (
             library_id is not None
         ):  # if there is a library id, is most likely Visium, search for img_key
-            spatial_data = uns_spatial[library_id]
             if img_key is _empty:
                 img_key = next(
-                    (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
+                    (
+                        k
+                        for k in ['hires', 'lowres']
+                        if k in spatial_data[library_id]['images']
+                    ),
                     None,
                 )
             if size is None:  # set fixed size for Visium
@@ -840,11 +849,11 @@ def spatial(
             img_key = None  # if not found, set img_key to None
     else:
         if (
-            library_id not in uns_spatial.keys()
+            library_id not in spatial_data.keys()
         ):  # if library_id was mispecified, throw error!
             raise KeyError(
                 f"Could not find '{library_id}' in adata.uns['spatial'].keys().\n"
-                f"Available keys are: {list(uns_spatial.keys())}."
+                f"Available keys are: {list(spatial_data.keys())}."
             )
 
     return embedding(
