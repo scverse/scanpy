@@ -24,7 +24,6 @@ def test_scrublet():
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
 
-
 def test_scrublet_simulate_doublets():
     """
     Test that standalone Scrublet doublet simulation works.
