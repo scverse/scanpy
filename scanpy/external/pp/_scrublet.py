@@ -6,6 +6,7 @@ from ... import logging as logg
 from ... import preprocessing as pp
 from ...get import _get_obs_rep
 
+
 def scrublet(
     adata: AnnData,
     adata_sim: Optional[AnnData] = None,
