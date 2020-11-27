@@ -978,6 +978,11 @@ def heatmap(
         layer=layer,
     )
 
+    # check if var_group_labels are a subset of categories:
+    if var_group_labels is not None:
+        if not set(var_group_labels).issubset(categories):
+            raise ValueError("The group labels given as keys in var_names should be a subset of your groupby categories.")
+
     if standard_scale == 'obs':
         obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
         obs_tidy = obs_tidy.div(obs_tidy.max(1), axis=0).fillna(0)
@@ -1107,13 +1112,12 @@ def heatmap(
             heatmap_ax.set_xticklabels(var_names, rotation=90)
         else:
             heatmap_ax.tick_params(axis='x', labelbottom=False, bottom=False)
-
         # plot colorbar
         _plot_colorbar(im, fig, axs[1, 3])
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+            label2code, ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
                 groupby_ax, obs_tidy, colors=groupby_colors, orientation='left'
             )
 
@@ -1207,7 +1211,7 @@ def heatmap(
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+            label2code, ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
                 groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom'
             )
             # add lines to main heatmap
@@ -1238,9 +1242,9 @@ def heatmap(
         if var_group_positions is not None and len(var_group_positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
-            for idx, pos in enumerate(var_group_positions):
-                arr += [idx] * (pos[1] + 1 - pos[0])
-
+            for label, pos in zip(var_group_labels, var_group_positions): 
+                label_code=label2code[label]
+                arr += [label_code] * (pos[1] + 1 - pos[0])
             gene_groups_ax.imshow(
                 np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
             )
@@ -1469,7 +1473,7 @@ def tracksplot(
 
     groupby_ax = fig.add_subplot(axs2[1])
 
-    ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+    label2code, ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks( 
         groupby_ax, obs_tidy.T, colors=groupby_colors, orientation='bottom'
     )
     # add lines to plot
@@ -2364,7 +2368,7 @@ def _plot_categories_as_colorblocks(
 
         groupby_ax.set_xlabel(groupby)
 
-    return ticks, labels, groupby_cmap, norm
+    return label2code, ticks, labels, groupby_cmap, norm
 
 
 def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
