@@ -389,7 +389,7 @@ def visium_sge(
         'Targeted_Visium_Human_ColorectalCancer_GeneSignature',
         'Parent_Visium_Human_ColorectalCancer',
     ] = 'V1_Breast_Cancer_Block_A_Section_1',
-    download_tif: bool = False,
+    download_tissue_image: bool = False,
 ) -> AnnData:
     """\
     Processed Visium Spatial Gene Expression data from 10x Genomics.
@@ -399,7 +399,7 @@ def visium_sge(
     ----------
     sample_id
         The ID of the data sample in 10x’s spatial database.
-    download_tif
+    download_tissue_image
         Whether to download the high-resolution tissue image. Its path will be available in `adata.uns["spatial"][sample_id]["metadata"]["tissue_image_path"]`.
         
     Returns
@@ -411,7 +411,7 @@ def visium_sge(
     else:
         spaceranger_version = "1.2.0"
     _download_visium_dataset(
-        sample_id, spaceranger_version, download_image=download_tif
+        sample_id, spaceranger_version, download_image=download_tissue_image
     )
 
     adata = read_visium(settings.datasetdir / sample_id)

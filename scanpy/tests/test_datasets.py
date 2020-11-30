@@ -101,7 +101,7 @@ def test_visium_datasets(tmp_dataset_dir, tmpdir):
     assert_adata_equal(mbrain, mbrain_again)
 
     # Test that downloading tissue image works
-    mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", download_tif=True)
+    mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", download_tissue_image=True)
     expected_image_path = sc.settings.datasetdir / "V1_Adult_Mouse_Brain" / "image.tif"
     image_path = Path(
         mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["metadata"]["tissue_image_path"]
