@@ -1,0 +1,79 @@
+trigger:
+- master
+
+jobs:
+  - job: PyTest
+    pool:
+        vmImage: 'ubuntu-16.04'
+    strategy:
+        matrix:
+            Python37:
+                python.version: '3.7'
+            Python36:
+                python.version: '3.6'    
+
+    steps:
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '$(python.version)'
+          displayName: 'Use Python $(python.version)'
+
+        - script: |
+            export MPLBACKEND="agg"
+            echo $MPLBACKEND
+          displayName: 'Set env'
+  
+        - script: |
+            python -m pip install --upgrade pip
+            pip install docutils sphinx
+            pip install -e .[test,louvain,leiden,magic,scvi,harmony]
+          displayName: 'Install dependencies'
+  
+        - script: |
+            pytest --ignore=scanpy/tests/_images
+          displayName: 'PyTest'
+  
+        - script: |
+            python setup.py check --restructuredtext --strict
+            rst2html.py --halt=2 README.rst >/dev/null
+          displayName: 'rst2html'
+  - job: static_analysis
+    displayName: static analysis
+    pool:
+        vmImage: 'ubuntu-16.04'
+        
+    steps:
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '3.7'
+          displayName: 'Use Python 3.7'
+          
+        - script: |
+            pip install black
+            pip install .[dev,doc]
+          displayName: 'Install dependencies'
+         
+        - script: |
+            black . --check --diff
+            python -m scanpy.tests.blackdiff 10
+            python setup.py check --restructuredtext --strict
+            rst2html.py --halt=2 README.rst >/dev/null
+  - job: anndata_dev
+    displayName: anndata dev
+    pool:
+        vmImage: 'ubuntu-16.04'
+        
+    steps:
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '3.7'
+          displayName: 'Use Python 3.7'
+          
+        - script: |
+            pip install .[dev,doc]
+          displayName: 'Install dependencies'
+         
+        - script: |
+            pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc]
+            pip install git+https://github.com/theislab/anndata
+          displayName: 'anndata installation'
