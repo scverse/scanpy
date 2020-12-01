@@ -438,8 +438,10 @@ def read_visium(
         # put image path in uns
         else:
             tissue_image_path = Path(tissue_image_path).resolve()
-        adata.uns["spatial"][library_id]["metadata"]["tissue_image_path"] = str(tissue_image_path)
-        
+        adata.uns["spatial"][library_id]["metadata"]["tissue_image_path"] = str(
+            tissue_image_path
+        )
+
     return adata
 
 
