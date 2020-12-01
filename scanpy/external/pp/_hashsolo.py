@@ -252,12 +252,12 @@ def hashsolo(
         More information and bug reports `here <https://github.com/calico/solo>`__.
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata
         Anndata object with cell hashes in .obs columns
-    cell_hashing_columns : list,
+    cell_hashing_columns
         list specifying which columns in adata.obs
         are cell hashing counts
-    priors : list,
+    priors
         a list of your prior for each hypothesis
         first element is your prior for the negative hypothesis
         second element is your prior for the singlet hypothesis
@@ -265,17 +265,17 @@ def hashsolo(
         We use [0.01, 0.8, 0.19] by default because we assume the barcodes
         in your cell hashing matrix are those cells which have passed QC
         in the transcriptome space, e.g. UMI counts, pct mito reads, etc.
-    pre_existing_clusters : str
+    pre_existing_clusters
         column in adata.obs for how to break up demultiplexing
         for example leiden or cell types, not batches though
-    number_of_noise_barcodes : int,
+    number_of_noise_barcodes
         Use this if you wish change the number of barcodes used to create the
         noise distribution. The default is number of cell hashes - 2.
-    inplace : bool
+    inplace
         To do operation in place
     Returns
     -------
-    adata : AnnData
+    adata
         if inplace is False returns AnnData with demultiplexing results
         in .obs attribute otherwise does is in place
 
