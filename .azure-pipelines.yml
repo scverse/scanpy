@@ -22,6 +22,13 @@ jobs:
             export MPLBACKEND="agg"
             echo $MPLBACKEND
           displayName: 'Set env'
+
+        - script: |
+            pip install black
+            pip install ".[dev, doc]"
+            black . --check --diff
+            python -m scanpy.tests.blackdiff 10
+          displayName: 'Black'
   
         - script: |
             python -m pip install --upgrade pip
@@ -37,27 +44,8 @@ jobs:
             python setup.py check --restructuredtext --strict
             rst2html.py --halt=2 README.rst >/dev/null
           displayName: 'rst2html'
-  - job: static_analysis
-    displayName: static analysis
-    pool:
-        vmImage: 'ubuntu-16.04'
-        
-    steps:
-        - task: UsePythonVersion@0
-          inputs:
-            versionSpec: '3.7'
-          displayName: 'Use Python 3.7'
-          
-        - script: |
-            pip install black
-            pip install .[dev,doc]
-          displayName: 'Install dependencies'
-         
-        - script: |
-            black . --check --diff
-            python -m scanpy.tests.blackdiff 10
-            python setup.py check --restructuredtext --strict
-            rst2html.py --halt=2 README.rst >/dev/null
+
+
   - job: anndata_dev
     displayName: anndata dev
     pool:
