@@ -1,16 +1,104 @@
 [build-system]
-requires = ['setuptools', 'setuptools_scm', 'wheel', 'pytoml']
-build-backend = 'setuptools.build_meta'
+build-backend = 'flit_core.buildapi'
+requires = [
+    'flit_core >=2,<4',
+    'setuptools_scm',
+    'pytoml',
+    'importlib_metadata>=0.7; python_version < "3.8"',
+]
 
-# uses the format of tool.flit.metadata because we’ll move to it anyway
-[tool.scanpy]
-author = '''
-Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup,
-Sergei Rybakov, Gokcen Eraslan, Tom White, Malte Luecken,
-Davide Cittaro, Tobias Callies, Marius Lange, Andrés R. Muñoz-Rojas
-'''
+[tool.flit.metadata]
+module = 'scanpy'
+author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup, Sergei Rybakov, Gokcen Eraslan, Tom White, Malte Luecken, Davide Cittaro, Tobias Callies, Marius Lange, Andrés R. Muñoz-Rojas'
 # We don’t need all emails, the main authors are sufficient.
 author-email = 'f.alex.wolf@gmx.de, philipp.angerer@helmholtz-muenchen.de'
+description-file = 'README.rst'
+home-page = 'http://github.com/theislab/scanpy'
+urls = { Documentation = 'https://scanpy.readthedocs.io/' }
+classifiers = [
+    'License :: OSI Approved :: BSD License',
+    'Development Status :: 5 - Production/Stable',
+    'Environment :: Console',
+    'Framework :: Jupyter',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Science/Research',
+    'Natural Language :: English',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: POSIX :: Linux',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Topic :: Scientific/Engineering :: Bio-Informatics',
+    'Topic :: Scientific/Engineering :: Visualization',
+]
+requires-python = '>=3.6'
+requires = [
+    'anndata>=0.7.4',
+    # numpy needs a version due to #1320
+    'numpy>=1.17.0',
+    # Matplotlib 3.1 causes an error in 3d scatter plots (https://github.com/matplotlib/matplotlib/issues/14298)
+    # But matplotlib 3.0 causes one in heatmaps
+    'matplotlib>=3.1.2',
+    'pandas>=0.21',
+    'scipy>=1.4',
+    'seaborn',
+    'h5py>=2.10.0',
+    'tables',
+    'tqdm',
+    'scikit-learn>=0.21.2',
+    'statsmodels>=0.10.0rc2',
+    'patsy',
+    'networkx>=2.3',
+    'natsort',
+    'joblib',
+    'numba>=0.41.0',
+    'umap-learn>=0.3.10',
+    'legacy-api-wrap',
+    'packaging',
+    'sinfo',
+    # for getting the stable version
+    'importlib_metadata>=0.7; python_version < "3.8"',
+]
+
+[tool.flit.metadata.requires-extra]
+louvain = ['python-igraph', 'louvain>=0.6,!=0.6.2']
+leiden = ['python-igraph', 'leidenalg']
+bbknn = ['bbknn']
+scvi = ['scvi>=0.6.5']
+rapids = ['cudf>=0.9', 'cuml>=0.9', 'cugraph>=0.9']
+magic = ['magic-impute>=2.0']
+skmisc = ['scikit-misc>=0.1.3']
+harmony = ['harmonypy']
+dev = [
+    # getting the dev version
+    'setuptools_scm',
+    'pytoml',
+    # static checking
+    'black>=20.8b1',
+    'docutils',
+]
+doc = [
+    'sphinx<3.1, >3',
+    'sphinx-rtd-theme>=0.3.1',
+    'sphinx-autodoc-typehints',
+    'scanpydoc>=0.5',
+    'typing_extensions; python_version < "3.8"',  # for `Literal`
+]
+test = [
+    'pytest>=4.4',
+    'dask[array]!=2.17.0',
+    'fsspec',
+    'zappy',
+    'zarr',
+    'profimp',
+]
+
+[tool.flit.scripts]
+scanpy = 'scanpy.cli:console_main'
+
+[tool.flit.sdist]
+exclude = ['scanpy/tests']
 
 [tool.pytest.ini_options]
 python_files = 'test_*.py'

@@ -12,7 +12,6 @@ matrix:
     script:
     - black . --check --diff
     - python -m scanpy.tests.blackdiff 10
-    - python setup.py check --restructuredtext --strict
     - rst2html.py --halt=2 README.rst >/dev/null
     after_success: skip
   - name: "anndata dev"
