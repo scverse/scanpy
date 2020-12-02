@@ -29,6 +29,7 @@ jobs:
         - script: |
             python -m pip install --upgrade pip
             pip install docutils sphinx
+            pip install pytest-azurepipelines
             pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
           displayName: 'Install dependencies'
 
@@ -51,28 +52,3 @@ jobs:
             python setup.py check --restructuredtext --strict
             rst2html.py --halt=2 README.rst >/dev/null
           displayName: 'rst2html'
-
-
-  # - job: anndata_dev
-  #   displayName: anndata dev
-  #   pool:
-  #       vmImage: 'ubuntu-16.04'
-        
-  #   steps:
-  #       - task: UsePythonVersion@0
-  #         inputs:
-  #           versionSpec: '3.7'
-  #         displayName: 'Use Python 3.7'
-          
-  #       - script: |
-  #           pip install .[dev,doc]
-  #         displayName: 'Install dependencies'
-         
-  #       - script: |
-  #           pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc]
-  #           pip install git+https://github.com/theislab/anndata
-  #         displayName: 'anndata installation'
-
-  #       - script: |
-  #           pytest --ignore=scanpy/tests/_images
-  #         displayName: 'PyTest'
