@@ -27,14 +27,14 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install pytest-azurepipelines
+      pip install pytest-azurepipelines wheel
       pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
     displayName: 'Install dependencies'
 
   - script: |
       pip install git+https://github.com/theislab/anndata
-    condition: eq(variables['ANNDATA_DEV'], 'yes')
     displayName: 'Install development anndata'
+    condition: eq(variables['ANNDATA_DEV'], 'yes')
 
   - script: |
       pip install black
