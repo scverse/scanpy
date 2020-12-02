@@ -10,7 +10,10 @@ jobs:
             Python37:
                 python.version: '3.7'
             Python36:
-                python.version: '3.6'    
+                python.version: '3.6'
+            anndata_dev:
+                python.version: '3.7'
+                ANNDATA_DEV: yes
 
     steps:
         - task: UsePythonVersion@0
@@ -24,44 +27,52 @@ jobs:
           displayName: 'Set env'
 
         - script: |
+            python -m pip install --upgrade pip
+            pip install docutils sphinx
+            pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
+          displayName: 'Install dependencies'
+
+        - script: |
+            pip install git+https://github.com/theislab/anndata
+          displayName: 'Install development anndata'
+          condition: eq(variables['ANNDATA_DEV'], 'yes')
+
+        - script: |
             pip install black
-            pip install ".[dev, doc]"
             black . --check --diff
             python -m scanpy.tests.blackdiff 10
           displayName: 'Black'
-  
-        - script: |
-            python -m pip install --upgrade pip
-            pip install docutils sphinx
-            pip install -e .[test,louvain,leiden,magic,scvi,harmony]
-          displayName: 'Install dependencies'
-  
+
         - script: |
             pytest --ignore=scanpy/tests/_images
           displayName: 'PyTest'
-  
+
         - script: |
             python setup.py check --restructuredtext --strict
             rst2html.py --halt=2 README.rst >/dev/null
           displayName: 'rst2html'
 
 
-  - job: anndata_dev
-    displayName: anndata dev
-    pool:
-        vmImage: 'ubuntu-16.04'
+  # - job: anndata_dev
+  #   displayName: anndata dev
+  #   pool:
+  #       vmImage: 'ubuntu-16.04'
         
-    steps:
-        - task: UsePythonVersion@0
-          inputs:
-            versionSpec: '3.7'
-          displayName: 'Use Python 3.7'
+  #   steps:
+  #       - task: UsePythonVersion@0
+  #         inputs:
+  #           versionSpec: '3.7'
+  #         displayName: 'Use Python 3.7'
           
-        - script: |
-            pip install .[dev,doc]
-          displayName: 'Install dependencies'
+  #       - script: |
+  #           pip install .[dev,doc]
+  #         displayName: 'Install dependencies'
          
-        - script: |
-            pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc]
-            pip install git+https://github.com/theislab/anndata
-          displayName: 'anndata installation'
+  #       - script: |
+  #           pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc]
+  #           pip install git+https://github.com/theislab/anndata
+  #         displayName: 'anndata installation'
+
+  #       - script: |
+  #           pytest --ignore=scanpy/tests/_images
+  #         displayName: 'PyTest'
