@@ -1,52 +1,54 @@
 trigger:
-- master
+  - master
 
 jobs:
-- job: PyTest
-  pool:
-    vmImage: 'ubuntu-16.04'
-  strategy:
-    matrix:
-      Python37:
-        python.version: '3.7'
-      Python36:
-        python.version: '3.6'
-      anndata_dev:
-        python.version: '3.7'
-        ANNDATA_DEV: yes
-  steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(python.version)'
-    displayName: 'Use Python $(python.version)'
+  - job: PyTest
+    pool:
+      vmImage: "ubuntu-16.04"
+    strategy:
+      matrix:
+        Python37:
+          python.version: "3.7"
+        Python36:
+          python.version: "3.6"
+        anndata_dev:
+          python.version: "3.7"
+          ANNDATA_DEV: yes
 
-  - script: |
-      export MPLBACKEND="agg"
-      echo $MPLBACKEND
-    displayName: 'Set env'
+    steps:
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: "$(python.version)"
+        displayName: "Use Python $(python.version)"
 
-  - script: |
-      python -m pip install --upgrade pip
-      pip install pytest-azurepipelines wheel
-      pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
-    displayName: 'Install dependencies'
+      - script: |
+          export MPLBACKEND="agg"
+          echo $MPLBACKEND
+        displayName: "Set env"
 
-  - script: |
-      pip install git+https://github.com/theislab/anndata
-    displayName: 'Install development anndata'
-    condition: eq(variables['ANNDATA_DEV'], 'yes')
+      - script: |
+          python -m pip install --upgrade pip
+          pip install docutils sphinx
+          pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
+        displayName: "Install dependencies"
 
-  - script: |
-      pip install black
-      black . --check --diff
-      python -m scanpy.tests.blackdiff 10
-    displayName: 'Black'
+      - script: |
+          pip install git+https://github.com/theislab/anndata
+        displayName: "Install development anndata"
+        condition: eq(variables['ANNDATA_DEV'], 'yes')
 
-  - script: |
-      pytest --ignore=scanpy/tests/_images
-    displayName: 'PyTest'
+      - script: |
+          pip install black
+          black . --check --diff
+          python -m scanpy.tests.blackdiff 10
+        displayName: "Black"
 
-  - script: |
-      python setup.py check --restructuredtext --strict
-      rst2html.py --halt=2 README.rst >/dev/null
-    displayName: 'rst2html'
+      - script: |
+          pip install pytest-azurepipelines pytest-cov
+          pytest --cov=. --cov-report=xml --cov-report=html
+        displayName: "PyTest"
+
+      - script: |
+          python setup.py check --restructuredtext --strict
+          rst2html.py --halt=2 README.rst >/dev/null
+        displayName: "rst2html"
