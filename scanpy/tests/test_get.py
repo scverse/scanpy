@@ -149,9 +149,8 @@ def test_column_content():
     cell_ids = list(adata.obs.sample(5).index)
     query = cell_ids + ['highly_variable', 'dispersions_norm', 'dispersions']
     df = sc.get.var_df(adata, query)
+    np.testing.assert_array_equal(query, df.columns)
     for col in query:
-        assert col in df
-        np.testing.assert_array_equal(query, df.columns)
         np.testing.assert_array_equal(df[col].values, adata.var_vector(col))
 
 
