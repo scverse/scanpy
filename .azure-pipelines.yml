@@ -15,38 +15,38 @@ jobs:
         python.version: '3.7'
         ANNDATA_DEV: yes
   steps:
-  - displayName: 'Use Python $(python.version)'
-    task: UsePythonVersion@0
+  - task: UsePythonVersion@0
     inputs:
       versionSpec: '$(python.version)'
+    displayName: 'Use Python $(python.version)'
 
-  - displayName: 'Set env'
-    script: |
+  - script: |
       export MPLBACKEND="agg"
       echo $MPLBACKEND
+    displayName: 'Set env'
 
-  - displayName: 'Install dependencies'
-    script: |
+  - script: |
       python -m pip install --upgrade pip
       pip install pytest-azurepipelines
       pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
+    displayName: 'Install dependencies'
 
-  - displayName: 'Install development anndata'
-    condition: eq(variables['ANNDATA_DEV'], 'yes')
-    script: |
+  - script: |
       pip install git+https://github.com/theislab/anndata
+    condition: eq(variables['ANNDATA_DEV'], 'yes')
+    displayName: 'Install development anndata'
 
-  - displayName: 'Black'
-    script: |
+  - script: |
       pip install black
       black . --check --diff
       python -m scanpy.tests.blackdiff 10
+    displayName: 'Black'
 
-  - displayName: 'PyTest'
-    script: |
+  - script: |
       pytest --ignore=scanpy/tests/_images
+    displayName: 'PyTest'
 
-  - displayName: 'rst2html'
-    script: |
+  - script: |
       python setup.py check --restructuredtext --strict
       rst2html.py --halt=2 README.rst >/dev/null
+    displayName: 'rst2html'
