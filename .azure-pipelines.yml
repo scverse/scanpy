@@ -2,53 +2,52 @@ trigger:
 - master
 
 jobs:
-  - job: PyTest
-    pool:
-        vmImage: 'ubuntu-16.04'
-    strategy:
-        matrix:
-            Python37:
-                python.version: '3.7'
-            Python36:
-                python.version: '3.6'
-            anndata_dev:
-                python.version: '3.7'
-                ANNDATA_DEV: yes
+- job: PyTest
+  pool:
+    vmImage: 'ubuntu-16.04'
+  strategy:
+    matrix:
+      Python37:
+        python.version: '3.7'
+      Python36:
+        python.version: '3.6'
+      anndata_dev:
+        python.version: '3.7'
+        ANNDATA_DEV: yes
+  steps:
+  - displayName: 'Use Python $(python.version)'
+    task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
 
-    steps:
-        - task: UsePythonVersion@0
-          inputs:
-            versionSpec: '$(python.version)'
-          displayName: 'Use Python $(python.version)'
+  - displayName: 'Set env'
+    script: |
+      export MPLBACKEND="agg"
+      echo $MPLBACKEND
 
-        - script: |
-            export MPLBACKEND="agg"
-            echo $MPLBACKEND
-          displayName: 'Set env'
+  - displayName: 'Install dependencies'
+    script: |
+      python -m pip install --upgrade pip
+      pip install docutils sphinx
+      pip install pytest-azurepipelines
+      pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
 
-        - script: |
-            python -m pip install --upgrade pip
-            pip install docutils sphinx
-            pip install pytest-azurepipelines
-            pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
-          displayName: 'Install dependencies'
+  - displayName: 'Install development anndata'
+    condition: eq(variables['ANNDATA_DEV'], 'yes')
+    script: |
+      pip install git+https://github.com/theislab/anndata
 
-        - script: |
-            pip install git+https://github.com/theislab/anndata
-          displayName: 'Install development anndata'
-          condition: eq(variables['ANNDATA_DEV'], 'yes')
+  - displayName: 'Black'
+    script: |
+      pip install black
+      black . --check --diff
+      python -m scanpy.tests.blackdiff 10
 
-        - script: |
-            pip install black
-            black . --check --diff
-            python -m scanpy.tests.blackdiff 10
-          displayName: 'Black'
+  - displayName: 'PyTest'
+    script: |
+      pytest --ignore=scanpy/tests/_images
 
-        - script: |
-            pytest --ignore=scanpy/tests/_images
-          displayName: 'PyTest'
-
-        - script: |
-            python setup.py check --restructuredtext --strict
-            rst2html.py --halt=2 README.rst >/dev/null
-          displayName: 'rst2html'
+  - displayName: 'rst2html'
+    script: |
+      python setup.py check --restructuredtext --strict
+      rst2html.py --halt=2 README.rst >/dev/null
