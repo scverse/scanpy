@@ -69,7 +69,6 @@ exclude = '''
         |test_rank_genes_groups
         |test_marker_gene_overlap
         |test_highly_variable_genes
-        |test_rank_genes_groups_logreg
         |notebooks/(test_paga_paul15_subsampled|test_pbmc3k)
     )
 ).py'''

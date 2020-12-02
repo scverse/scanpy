@@ -2,9 +2,10 @@
 # Hematopoiesis: trace myeloid and erythroid differentiation for data of [Paul *et al.* (2015)](http://doi.org/10.1016/j.cell.2015.11.013).
 #
 # This is the subsampled notebook for testing.
-
+from importlib.util import find_spec
 from pathlib import Path
 
+import pytest
 import numpy as np
 from matplotlib.testing import setup
 setup()
@@ -17,6 +18,7 @@ ROOT = HERE / '_images_paga_paul15_subsampled'
 FIGS = HERE / 'figures'
 
 
+@pytest.mark.skipif(not find_spec('louvain'), reason='needs package `louvain`')
 def test_paga_paul15_subsampled(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=25)
 
