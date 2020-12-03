@@ -38,12 +38,7 @@ def test_heatmap(image_comparer):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        'cell_type',
-        use_raw=False,
-        show=False,
-        dendrogram=True,
+        adata, adata.var_names, 'cell_type', use_raw=False, show=False, dendrogram=True
     )
     save_and_compare_images('master_heatmap')
 
@@ -535,6 +530,22 @@ def test_correlation(image_comparer):
             partial(sc.pl.rank_genes_groups_dotplot, n_genes=4, show=False),
         ),
         (
+            "ranked_genes_dotplot_gene_names",
+            partial(
+                sc.pl.rank_genes_groups_dotplot,
+                gene_names={
+                    'T-cell': ['CD3D', 'CD3E', 'IL32'],
+                    'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
+                    'myeloid': ['CST3', 'LYZ'],
+                },
+                values_to_plot='logfoldchanges',
+                cmap='bwr',
+                vmin=-3,
+                vmax=3,
+                show=False,
+            ),
+        ),
+        (
             "ranked_genes_dotplot_logfoldchange",
             partial(
                 sc.pl.rank_genes_groups_dotplot,
@@ -669,8 +680,7 @@ def pbmc_scatterplots():
             ),
         ),
         pytest.param(
-            '3dprojection',
-            partial(sc.pl.pca, color='bulk_labels', projection='3d'),
+            '3dprojection', partial(sc.pl.pca, color='bulk_labels', projection='3d')
         ),
         (
             'multipanel',

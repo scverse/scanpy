@@ -258,4 +258,11 @@ values_to_plot
     The mean gene values are plotted by default. Alternatively, any other
     values computed by `sc.rank_genes_groups` can be plotted. For example
     log fold change or p-value.
+gene_names
+    Genes to plot. Sometimes is useful to pass a specific list of genes to check their
+    fold changes or p-values instead of the top/bottom genes. If a list of
+    genes is given, this overwrites the `n_genes` option. The gene_names
+    could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or 
+    :func:`~scanpy.pl.matrixplot`
+
 """

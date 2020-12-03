@@ -8,7 +8,7 @@ from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, cm, colors
 from anndata import AnnData
-from typing import Union, Optional, List, Sequence, Iterable
+from typing import Union, Optional, List, Sequence, Iterable, Mapping
 
 from .._utils import savefig_or_show
 from ..._utils import _doc_params, sanitize_anndata, subsample
@@ -372,6 +372,7 @@ def _rank_genes_groups_plot(
     n_genes: int = 10,
     groupby: Optional[str] = None,
     values_to_plot: Optional[str] = None,
+    gene_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
@@ -389,28 +390,40 @@ def _rank_genes_groups_plot(
         groupby = str(adata.uns[key]['params']['groupby'])
     group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
 
-    var_names = {}  # dict in which each group is the key and the n_genes are the values
-    gene_names = []
-    for group in group_names:
-        if min_logfoldchange is not None:
-            df = rank_genes_groups_df(adata, group, key=key)
-            # select genes with given log_fold change
-            genes_list = df[df.logfoldchanges > min_logfoldchange].names.tolist()
+    if gene_names is not None:
+        var_names = gene_names
+        if isinstance(var_names, Mapping):
+            # get a single list of all gene names in the dictionary
+            gene_names = sum([list(x) for x in var_names.values()], [])
+        elif isinstance(var_names, str):
+            gene_names = [var_names]
         else:
-            # get all genes that are 'non-nan'
-            genes_list = [
-                gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)
-            ]
+            gene_names = var_names
+    else:
+        # dict in which each group is the key and the n_genes are the values
+        var_names = {}
+        gene_names = []
 
-        if len(genes_list) == 0:
-            logg.warning(f'No genes found for group {group}')
-            continue
-        if n_genes < 0:
-            genes_list = genes_list[n_genes:]
-        else:
-            genes_list = genes_list[:n_genes]
-        var_names[group] = genes_list
-        gene_names.extend(genes_list)
+        for group in group_names:
+            if min_logfoldchange is not None:
+                df = rank_genes_groups_df(adata, group, key=key)
+                # select genes with given log_fold change
+                genes_list = df[df.logfoldchanges > min_logfoldchange].names.tolist()
+            else:
+                # get all genes that are 'non-nan'
+                genes_list = [
+                    gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)
+                ]
+
+            if len(genes_list) == 0:
+                logg.warning(f'No genes found for group {group}')
+                continue
+            if n_genes < 0:
+                genes_list = genes_list[n_genes:]
+            else:
+                genes_list = genes_list[:n_genes]
+            var_names[group] = genes_list
+            gene_names.extend(genes_list)
 
     # by default add dendrogram to plots
     kwds.setdefault('dendrogram', True)
@@ -477,6 +490,7 @@ def rank_genes_groups_heatmap(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    gene_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     min_logfoldchange: Optional[float] = None,
     key: str = None,
     show: Optional[bool] = None,
@@ -499,6 +513,7 @@ def rank_genes_groups_heatmap(
         plot_type='heatmap',
         groups=groups,
         n_genes=n_genes,
+        gene_names=gene_names,
         groupby=groupby,
         key=key,
         min_logfoldchange=min_logfoldchange,
@@ -702,6 +717,7 @@ def rank_genes_groups_matrixplot(
             'log10_pvals_adj',
         ]
     ] = None,
+    gene_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
@@ -751,6 +767,7 @@ def rank_genes_groups_matrixplot(
         n_genes=n_genes,
         groupby=groupby,
         values_to_plot=values_to_plot,
+        gene_names=gene_names,
         key=key,
         min_logfoldchange=min_logfoldchange,
         show=show,
