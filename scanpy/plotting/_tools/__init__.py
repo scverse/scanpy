@@ -17,7 +17,14 @@ from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from ..._settings import settings
-from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax, doc_panels
+from .._docs import (
+    doc_scatter_embedding,
+    doc_show_save_ax,
+    doc_vminmax,
+    doc_panels,
+    doc_rank_genes_groups_plot_args,
+    doc_rank_genes_groups_values_to_plot,
+)
 from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
 from matplotlib.colors import Colormap
@@ -462,7 +469,7 @@ def _rank_genes_groups_plot(
         return tracksplot(adata, var_names, groupby, show=show, save=save, **kwds)
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_heatmap(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -479,23 +486,8 @@ def rank_genes_groups_heatmap(
 
     Parameters
     ----------
-    adata
-        Annotated data matrix.
-    groups
-        The groups for which to show the gene ranking.
-    n_genes
-        Number of genes to show.
-    groupby
-        The key of the observation grouping to consider. By default,
-        the groupby is chosen from the rank genes groups parameter but
-        other groupby options can be used.  It is expected that
-        groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
-    min_logfoldchange
-        Value to filter genes in groups if their logfoldchange is less than the
-        min_logfoldchange
-    key
-        Key used to store the ranking results in `adata.uns`.
+    {params}
+    {show_save_ax}
     **kwds
         Are passed to :func:`~scanpy.pl.heatmap`.
     {show_save_ax}
@@ -514,7 +506,7 @@ def rank_genes_groups_heatmap(
     )
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_tracksplot(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -531,23 +523,8 @@ def rank_genes_groups_tracksplot(
 
     Parameters
     ----------
-    adata
-        Annotated data matrix.
-    groups
-        The groups for which to show the gene ranking.
-    n_genes
-        Number of genes to show.
-    groupby
-        The key of the observation grouping to consider. By default,
-        the groupby is chosen from the rank genes groups parameter but
-        other groupby options can be used.  It is expected that
-        groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
-    min_logfoldchange
-        Value to filter genes in groups if their logfoldchange is less than the
-        min_logfoldchange
-    key
-        Key used to store the ranking results in `adata.uns`.
+    {params}
+    {show_save_ax}
     **kwds
         Are passed to :func:`~scanpy.pl.tracksplot`.
     {show_save_ax}
@@ -567,7 +544,11 @@ def rank_genes_groups_tracksplot(
     )
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(
+    params=doc_rank_genes_groups_plot_args,
+    vals_to_plot=doc_rank_genes_groups_values_to_plot,
+    show_save_ax=doc_show_save_ax,
+)
 def rank_genes_groups_dotplot(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -595,27 +576,8 @@ def rank_genes_groups_dotplot(
 
     Parameters
     ----------
-    adata
-        Annotated data matrix.
-    groups
-        The groups for which to show the gene ranking.
-    n_genes
-        Number of genes to show.
-    groupby
-        The key of the observation grouping to consider. By default,
-        the groupby is chosen from the rank genes groups parameter but
-        other groupby options can be used.  It is expected that
-        groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.dotplot`).
-    values_to_plot
-        The mean gene values are plotted by default. Alternatively, any other
-        values computed by `sc.rank_genes_groups` can be plotted. For example
-        log fold change or p-value.
-    min_logfoldchange
-        Value to filter genes in groups if their logfoldchange is less than the
-        min_logfoldchange
-    key
-        Key used to store the ranking results in `adata.uns`.
+    {params}
+    {vals_to_plot}
     {show_save_ax}
     return_fig
         Returns :class:`DotPlot` object. Useful for fine-tuning
@@ -660,7 +622,7 @@ def rank_genes_groups_dotplot(
     )
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_stacked_violin(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -679,23 +641,7 @@ def rank_genes_groups_stacked_violin(
 
     Parameters
     ----------
-    adata
-        Annotated data matrix.
-    groups
-        The groups for which to show the gene ranking.
-    n_genes
-        Number of genes to show.
-    groupby
-        The key of the observation grouping to consider. By default,
-        the groupby is chosen from the rank genes groups parameter but
-        other groupby options can be used.  It is expected that
-        groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.stacked_violin`).
-    min_logfoldchange
-        Value to filter genes in groups if their logfoldchange is less than the
-        min_logfoldchange
-    key
-        Key used to store the ranking results in `adata.uns`.
+    {params}
     {show_save_ax}
     return_fig
         Returns :class:`StackedViolin` object. Useful for fine-tuning
@@ -734,7 +680,11 @@ def rank_genes_groups_stacked_violin(
     )
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(
+    params=doc_rank_genes_groups_plot_args,
+    vals_to_plot=doc_rank_genes_groups_values_to_plot,
+    show_save_ax=doc_show_save_ax,
+)
 def rank_genes_groups_matrixplot(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -762,27 +712,8 @@ def rank_genes_groups_matrixplot(
 
     Parameters
     ----------
-    adata
-        Annotated data matrix.
-    groups
-        The groups for which to show the gene ranking.
-    n_genes
-        Number of genes to show.
-    groupby
-        The key of the observation grouping to consider. By default,
-        the groupby is chosen from the rank genes groups parameter but
-        other groupby options can be used.  It is expected that
-        groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.matrixplot`).
-    values_to_plot
-        The mean gene values are plotted by default. Alternatively, any other
-        values computed by `sc.rank_genes_groups` can be plotted. For example
-        log fold change or p-value.
-    min_logfoldchange
-        Value to filter genes in groups if their logfoldchange is less than the
-        min_logfoldchange
-    key
-        Key used to store the ranking results in `adata.uns`.
+    {params}
+    {vals_to_plot}
     {show_save_ax}
     return_fig
         Returns :class:`MatrixPlot` object. Useful for fine-tuning

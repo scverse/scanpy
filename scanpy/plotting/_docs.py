@@ -229,3 +229,31 @@ layer
     If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
     then the layer is plotted. `layer` takes precedence over `use_raw`.\
 """
+
+doc_rank_genes_groups_plot_args = """\
+adata
+    Annotated data matrix.
+groups
+    The groups for which to show the gene ranking.
+n_genes
+    Number of genes to show.
+groupby
+    The key of the observation grouping to consider. By default,
+    the groupby is chosen from the rank genes groups parameter but
+    other groupby options can be used.  It is expected that
+    groupby is a categorical. If groupby is not a categorical observation,
+    it would be subdivided into `num_categories` (see :func:`~scanpy.pl.dotplot`).
+min_logfoldchange
+    Value to filter genes in groups if their logfoldchange is less than the
+    min_logfoldchange
+key
+    Key used to store the ranking results in `adata.uns`.
+
+"""
+
+doc_rank_genes_groups_values_to_plot = """\
+values_to_plot
+    The mean gene values are plotted by default. Alternatively, any other
+    values computed by `sc.rank_genes_groups` can be plotted. For example
+    log fold change or p-value.
+"""
