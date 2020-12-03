@@ -64,7 +64,6 @@ exclude = '''
         test_get
         |test_neighbors
         |test_readwrite
-        |test_clustering
         |test_preprocessing
         |test_rank_genes_groups
         |test_marker_gene_overlap

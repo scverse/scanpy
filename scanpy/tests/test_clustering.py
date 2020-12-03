@@ -18,10 +18,13 @@ def test_leiden_basic(adata_neighbors):
     sc.tl.leiden(adata_neighbors)
 
 
-@pytest.mark.parametrize('clustering,key', [
-    pytest.param(sc.tl.louvain, 'louvain', marks=needs_louvain),
-    (sc.tl.leiden, 'leiden'),
-])
+@pytest.mark.parametrize(
+    'clustering,key',
+    [
+        pytest.param(sc.tl.louvain, 'louvain', marks=needs_louvain),
+        (sc.tl.leiden, 'leiden'),
+    ],
+)
 def test_clustering_subset(adata_neighbors, clustering, key):
     clustering(adata_neighbors, key_added=key)
 
