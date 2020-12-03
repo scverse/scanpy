@@ -9,7 +9,10 @@ import seaborn as sns
 
 import scanpy as sc
 
-from scanpy.tests.test_plotting import ROOT, FIGS
+
+HERE: Path = Path(__file__).parent
+ROOT = HERE / '_images'
+FIGS = HERE / 'figures'
 
 MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
 MISSING_VALUES_FIGS = FIGS / "embedding-missing-values"

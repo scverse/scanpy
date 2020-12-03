@@ -56,7 +56,8 @@ connectivities_gauss_knn = [
     [0.0, 0.8466368913650513, 0.0, 0.5660185813903809],
     [0.8466368913650513, 0.0, 0.4223647117614746, 0.4902938902378082],
     [0.0, 0.4223647117614746, 0.0, 0.5840492248535156],
-    [0.5660185813903809, 0.4902938902378082, 0.5840492248535156, 0.0]]
+    [0.5660185813903809, 0.4902938902378082, 0.5840492248535156, 0.0],
+]
 
 connectivities_gauss_noknn = [
     [1.0, 0.676927387714386, 0.024883469566702843, 0.1962655782699585],
@@ -73,9 +74,19 @@ transitions_sym_gauss_knn = [
 ]
 
 transitions_sym_gauss_noknn = [
-    [0.5093212127685547, 0.34393802285194397, 0.016115963459014893, 0.11607448011636734],
+    [
+        0.5093212127685547,
+        0.34393802285194397,
+        0.016115963459014893,
+        0.11607448011636734,
+    ],
     [0.34393805265426636, 0.506855845451355, 0.054364752024412155, 0.07984541356563568],
-    [0.016115965321660042, 0.054364752024412155, 0.8235670328140259, 0.12452481687068939],
+    [
+        0.016115965321660042,
+        0.054364752024412155,
+        0.8235670328140259,
+        0.12452481687068939,
+    ],
     [0.11607448011636734, 0.07984541356563568, 0.1245248094201088, 0.6867417693138123],
 ]
 
@@ -105,10 +116,8 @@ def neigh() -> Neighbors:
 
 def test_umap_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='umap', n_neighbors=n_neighbors)
-    assert np.allclose(
-        neigh.distances.toarray(), distances_euclidean)
-    assert np.allclose(
-        neigh.connectivities.toarray(), connectivities_umap)
+    assert np.allclose(neigh.distances.toarray(), distances_euclidean)
+    assert np.allclose(neigh.connectivities.toarray(), connectivities_umap)
     neigh.compute_transitions()
     assert np.allclose(neigh.transitions_sym.toarray(), transitions_sym_umap)
     assert np.allclose(neigh.transitions.toarray(), transitions_umap)
@@ -116,10 +125,8 @@ def test_umap_connectivities_euclidean(neigh):
 
 def test_gauss_noknn_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='gauss', knn=False, n_neighbors=3)
-    assert np.allclose(
-        neigh.distances, distances_euclidean_all)
-    assert np.allclose(
-        neigh.connectivities, connectivities_gauss_noknn)
+    assert np.allclose(neigh.distances, distances_euclidean_all)
+    assert np.allclose(neigh.connectivities, connectivities_gauss_noknn)
     neigh.compute_transitions()
     assert np.allclose(neigh.transitions_sym, transitions_sym_gauss_noknn)
     assert np.allclose(neigh.transitions, transitions_gauss_noknn)
@@ -127,10 +134,8 @@ def test_gauss_noknn_connectivities_euclidean(neigh):
 
 def test_gauss_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='gauss', n_neighbors=n_neighbors)
-    assert np.allclose(
-        neigh.distances.toarray(), distances_euclidean)
-    assert np.allclose(
-        neigh.connectivities.toarray(), connectivities_gauss_knn)
+    assert np.allclose(neigh.distances.toarray(), distances_euclidean)
+    assert np.allclose(neigh.connectivities.toarray(), connectivities_gauss_knn)
     neigh.compute_transitions()
     assert np.allclose(neigh.transitions_sym.toarray(), transitions_sym_gauss_knn)
     assert np.allclose(neigh.transitions.toarray(), transitions_gauss_knn)
@@ -138,11 +143,13 @@ def test_gauss_connectivities_euclidean(neigh):
 
 def test_metrics_argument():
     no_knn_euclidean = get_neighbors()
-    no_knn_euclidean.compute_neighbors(method="gauss", knn=False,
-        n_neighbors=n_neighbors, metric="euclidean")
+    no_knn_euclidean.compute_neighbors(
+        method="gauss", knn=False, n_neighbors=n_neighbors, metric="euclidean"
+    )
     no_knn_manhattan = get_neighbors()
-    no_knn_manhattan.compute_neighbors(method="gauss", knn=False,
-        n_neighbors=n_neighbors, metric="manhattan")
+    no_knn_manhattan.compute_neighbors(
+        method="gauss", knn=False, n_neighbors=n_neighbors, metric="manhattan"
+    )
     assert not np.allclose(no_knn_euclidean.distances, no_knn_manhattan.distances)
 
 

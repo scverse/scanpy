@@ -11,7 +11,7 @@ matrix:
     - pip install .[dev,doc]
     script:
     - black . --check --diff
-    - python -m scanpy.tests.blackdiff 10
+    - python -m tests.blackdiff 10
     - python setup.py check --restructuredtext --strict
     - rst2html.py --halt=2 README.rst >/dev/null
     after_success: skip
@@ -33,4 +33,4 @@ install:
 env:
 - MPLBACKEND=Agg
 script:
-- pytest --ignore=scanpy/tests/_images
+- pytest --ignore=tests/_images

@@ -115,7 +115,9 @@ def test_backed_vs_memory():
     HERE = Path(sc.__file__).parent
     adata_file = HERE / "datasets/10x_pbmc68k_reduced.h5ad"
     adata_backed = sc.read(adata_file, backed='r')
-    adata = sc.read_h5ad(adata_file,)
+    adata = sc.read_h5ad(
+        adata_file,
+    )
 
     # use non-sequential list of genes
     genes = list(adata.var_names[20::-2])
@@ -184,13 +186,17 @@ def test_var_df(adata):
     # test only cells
     pd.testing.assert_frame_equal(
         sc.get.var_df(adata, keys=["cell1", "cell2"]),
-        pd.DataFrame({"cell1": [1, 1], "cell2": [1, 1]}, index=adata.var_names,),
+        pd.DataFrame(
+            {"cell1": [1, 1], "cell2": [1, 1]},
+            index=adata.var_names,
+        ),
     )
     # test only var columns
     pd.testing.assert_frame_equal(
         sc.get.var_df(adata, keys=["gene_symbols"]),
         pd.DataFrame(
-            {"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=adata.var_names,
+            {"gene_symbols": ["genesymbol1", "genesymbol2"]},
+            index=adata.var_names,
         ),
     )
 

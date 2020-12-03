@@ -31,13 +31,11 @@ jobs:
       pip install .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
     displayName: 'Install dependencies'
 
-  - script: |
-      pip install -v git+https://github.com/theislab/anndata
+  - script: pip install -v git+https://github.com/theislab/anndata
     displayName: 'Install development anndata'
     condition: eq(variables['ANNDATA_DEV'], 'yes')
 
-  - script: |
-      pytest --ignore=scanpy/tests/_images
+  - script: pytest --ignore=tests/_images
     displayName: 'PyTest'
 
 - job: static_analysis
@@ -54,7 +52,7 @@ jobs:
 
   - script: |
       black . --check --diff
-      python -m scanpy.tests.blackdiff 10
+      python -m tests.blackdiff 10
     displayName: 'Black'
 
   - script: rst2html.py --halt=2 README.rst >/dev/null

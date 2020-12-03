@@ -1,11 +1,8 @@
 import pytest
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import csr_matrix
-from scipy import sparse
 
 import scanpy as sc
-from scanpy.tests.fixtures import array_type, float_dtype
 from anndata.tests.helpers import assert_equal
 
 A_list = [

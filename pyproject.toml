@@ -14,7 +14,7 @@ author-email = 'f.alex.wolf@gmx.de, philipp.angerer@helmholtz-muenchen.de'
 
 [tool.pytest.ini_options]
 python_files = 'test_*.py'
-testpaths = 'scanpy/tests/'
+testpaths = 'tests/'
 xfail_strict = true
 markers = [
     'internet: tests which rely on internet resources (enable with `--internet-tests`)',
