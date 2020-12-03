@@ -982,6 +982,14 @@ def test_no_copy():
         sc.pl.rank_genes_groups_violin,
     ]
 
+    # the pbmc68k was generated using rank_genes_groups with method='logreg'
+    # which does not generate 'logfoldchanges', although this field is
+    # required by `sc.get.rank_genes_groups_df`.
+    # After updating rank_genes_groups plots to use the latter function
+    # an error appears. Re-running rank_genes_groups with default method
+    # solves the problem.
+    sc.tl.rank_genes_groups(actual, 'bulk_labels')
+
     # Only plotting one group at a time to avoid generating dendrogram
     # TODO: Generating a dendrogram modifies the object, this should be
     # optional and also maybe not modify the object.
