@@ -395,18 +395,20 @@ def _rank_genes_groups_plot(
         if min_logfoldchange is not None:
             df = rank_genes_groups_df(adata, group, key=key)
             # select genes with given log_fold change
-            genes_list = df[df.logfoldchanges > min_logfoldchange].names.tolist()[
-                :n_genes
-            ]
+            genes_list = df[df.logfoldchanges > min_logfoldchange].names.tolist()
         else:
             # get all genes that are 'non-nan'
             genes_list = [
                 gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)
-            ][:n_genes]
+            ]
 
         if len(genes_list) == 0:
             logg.warning(f'No genes found for group {group}')
             continue
+        if n_genes < 0:
+            genes_list = genes_list[n_genes:]
+        else:
+            genes_list = genes_list[:n_genes]
         var_names[group] = genes_list
         gene_names.extend(genes_list)
 

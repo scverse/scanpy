@@ -236,7 +236,9 @@ adata
 groups
     The groups for which to show the gene ranking.
 n_genes
-    Number of genes to show.
+    Number of genes to show. This can be a negative number to show for
+    example the down regulated genes. eg: num_genes=-10. Is ignored if 
+    `gene_names` is passed.
 groupby
     The key of the observation grouping to consider. By default,
     the groupby is chosen from the rank genes groups parameter but
