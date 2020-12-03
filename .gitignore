@@ -33,7 +33,6 @@ __pycache__/
 /scanpy.egg-info/
 /*-env/
 /env-*/
-/setup.py
 
 # OS stuff
 .DS_Store
