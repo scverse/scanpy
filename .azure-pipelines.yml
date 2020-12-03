@@ -28,7 +28,7 @@ jobs:
   - script: |
       python -m pip install --upgrade pip
       pip install pytest-azurepipelines wheel
-      pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
+      pip install .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
     displayName: 'Install dependencies'
 
   - script: |
@@ -37,16 +37,25 @@ jobs:
     condition: eq(variables['ANNDATA_DEV'], 'yes')
 
   - script: |
-      pip install black
+      pytest --ignore=scanpy/tests/_images
+    displayName: 'PyTest'
+
+- job: static_analysis
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.8'
+    displayName: 'Use Python 3.8'
+
+  - script: pip install black docutils
+    displayName: 'Install dependencies'
+
+  - script: |
       black . --check --diff
       python -m scanpy.tests.blackdiff 10
     displayName: 'Black'
 
-  - script: |
-      pytest --ignore=scanpy/tests/_images
-    displayName: 'PyTest'
-
-  - script: |
-      python setup.py check --restructuredtext --strict
-      rst2html.py --halt=2 README.rst >/dev/null
+  - script: rst2html.py --halt=2 README.rst >/dev/null
     displayName: 'rst2html'
