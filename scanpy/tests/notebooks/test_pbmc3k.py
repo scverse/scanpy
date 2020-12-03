@@ -10,7 +10,6 @@
 # ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 
-from importlib.util import find_spec
 from pathlib import Path
 
 import pytest
@@ -26,8 +25,9 @@ ROOT = HERE / 'pbmc3k_images'
 FIGS = HERE / 'figures'
 
 
-@pytest.mark.skipif(not find_spec('louvain'), reason='needs package `louvain`')
 def test_pbmc3k(image_comparer):
+    pytest.importorskip('louvain')
+
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
 
     adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')

@@ -1,5 +1,3 @@
-from importlib.util import find_spec
-
 import scanpy as sc
 import numpy as np
 import pytest
@@ -30,10 +28,11 @@ def test_neighbors_key_added(adata):
     )
 
 
-@pytest.mark.skipif(not find_spec("louvain"), reason="needs package `louvain`")
 # test functions with neighbors_key and obsp
 @pytest.mark.parametrize('field', ['neighbors_key', 'obsp'])
 def test_neighbors_key_obsp(adata, field):
+    pytest.importorskip('louvain')
+
     adata1 = adata.copy()
 
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)

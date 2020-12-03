@@ -6,8 +6,6 @@ import pytest
 from matplotlib.testing import setup
 from packaging import version
 
-from scanpy._compat import pkg_version
-
 setup()
 
 import matplotlib as mpl
@@ -19,6 +17,7 @@ from matplotlib.testing.compare import compare_images
 from anndata import AnnData
 
 import scanpy as sc
+
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / '_images'
@@ -102,15 +101,17 @@ def test_heatmap(image_comparer):
     save_and_compare_images('master_heatmap_std_scale_obs')
 
 
-@pytest.mark.skipif(
-    pkg_version("matplotlib") < version.parse('3.1'),
-    reason="https://github.com/mwaskom/seaborn/issues/1953",
-)
 @pytest.mark.parametrize(
     "obs_keys,name",
     [(None, "master_clustermap"), ("cell_type", "master_clustermap_withcolor")],
 )
 def test_clustermap(image_comparer, obs_keys, name):
+    pytest.importorskip(
+        'matplotlib',
+        minversion='3.1',
+        reason='https://github.com/mwaskom/seaborn/issues/1953',
+    )
+
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.datasets.krumsiek11()
     sc.pl.clustermap(adata, obs_keys)

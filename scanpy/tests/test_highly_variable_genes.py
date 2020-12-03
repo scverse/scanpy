@@ -1,5 +1,3 @@
-from importlib.util import find_spec
-
 import pandas as pd
 import numpy as np
 import pytest
@@ -91,8 +89,9 @@ def test_higly_variable_genes_compare_to_seurat():
     )
 
 
-@pytest.mark.skipif(not find_spec('skmisc'), reason='needs package `scikit-misc`')
 def test_higly_variable_genes_compare_to_seurat_v3():
+    pytest.importorskip('skmisc', reason='needs package `scikit-misc`')
+
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=' ', dtype={"variances_norm": np.float64}
     )
