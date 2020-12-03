@@ -559,6 +559,15 @@ def test_correlation(image_comparer):
             ),
         ),
         (
+            "ranked_genes_matrixplot_n_genes_negative",
+            partial(
+                sc.pl.rank_genes_groups_matrixplot,
+                n_genes=-5,
+                show=False,
+                title='matrixplot n_genes=-5',
+            ),
+        ),
+        (
             "ranked_genes_matrixplot_swap_axes",
             partial(
                 sc.pl.rank_genes_groups_matrixplot,
