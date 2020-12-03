@@ -12,6 +12,10 @@ On master
 * Fixed download path of `pbmc3k_processed` :pr:`1472` :smaller:`D Strobl`
 * Fixed anndata version requirement for `sc.concat` :pr:`1491` :smaller:`I Virshup`
 
+.. rubric:: Performance
+
+* Sped up `sc.get.obs_df` signifigantly :pr:`1499` :smaller:`F Ramirez`
+
 1.6.0 :small:`2020-08-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
