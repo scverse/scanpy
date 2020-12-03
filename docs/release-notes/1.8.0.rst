@@ -3,6 +3,11 @@
 
 .. rubric:: Features
 
+- Switched to flit_ for building and deploying the package,
+  a simple tool with an easy to understand command line interface and metadata.
+
+.. _flit: https://flit.readthedocs.io/en/latest/
+
 .. rubric:: External tools
 
 .. rubric:: Performance enhancements
