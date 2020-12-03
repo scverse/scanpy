@@ -1,4 +1,3 @@
-import traceback
 from pathlib import Path
 
 here = Path(__file__).parent
@@ -8,7 +7,7 @@ try:
     import pytoml
 
     proj = pytoml.loads((here.parent / 'pyproject.toml').read_text())
-    metadata = proj['tool']['flit']['metadata']
+    metadata = proj['tool']['scanpy']
 
     __version__ = get_version(root='..', relative_to=__file__)
     __author__ = metadata['author']
@@ -20,10 +19,3 @@ except (ImportError, LookupError, FileNotFoundError):
     __version__ = metadata['Version']
     __author__ = metadata['Author']
     __email__ = metadata['Author-email']
-
-
-def within_flit():
-    for frame in traceback.extract_stack():
-        if frame.name == 'get_docstring_and_version_via_import':
-            return True
-    return False
