@@ -567,6 +567,26 @@ def test_correlation(image_comparer):
                 n_genes=5,
                 show=False,
                 title='matrixplot',
+                gene_symbols='symbol',
+                use_raw=False,
+            ),
+        ),
+        (
+            "ranked_genes_matrixplot_gene_names_symbol",
+            partial(
+                sc.pl.rank_genes_groups_matrixplot,
+                gene_names={
+                    'T-cell': ['CD3D__', 'CD3E__', 'IL32__'],
+                    'B-cell': ['CD79A__', 'CD79B__', 'MS4A1__'],
+                    'myeloid': ['CST3__', 'LYZ__'],
+                },
+                values_to_plot='logfoldchanges',
+                cmap='bwr',
+                vmin=-3,
+                vmax=3,
+                gene_symbols='symbol',
+                use_raw=False,
+                show=False,
             ),
         ),
         (
@@ -624,6 +644,8 @@ def test_rank_genes_groups(image_comparer, name, fn):
     rcParams['axes.grid'] = True
     rcParams['figure.figsize'] = 4, 4
 
+    # add gene symbol
+    pbmc.var['symbol'] = pbmc.var.index + "__"
     fn(pbmc)
     save_and_compare_images(f"master_{name}")
     plt.close()

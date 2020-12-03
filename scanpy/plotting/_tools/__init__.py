@@ -105,9 +105,7 @@ def pca_loadings(
     if np.any(components < 0):
         logg.error("Component indices must be greater than zero.")
         return
-    ranking(
-        adata, 'varm', 'PCs', indices=components, include_lowest=include_lowest,
-    )
+    ranking(adata, 'varm', 'PCs', indices=components, include_lowest=include_lowest)
     savefig_or_show('pca_loadings', show=show, save=save)
 
 
@@ -390,6 +388,8 @@ def _rank_genes_groups_plot(
         groupby = str(adata.uns[key]['params']['groupby'])
     group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
 
+    gene_symbols = kwds.get('gene_symbols', None)
+
     if gene_names is not None:
         var_names = gene_names
         if isinstance(var_names, Mapping):
@@ -403,17 +403,16 @@ def _rank_genes_groups_plot(
         # dict in which each group is the key and the n_genes are the values
         var_names = {}
         gene_names = []
-
         for group in group_names:
+            df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
             if min_logfoldchange is not None:
-                df = rank_genes_groups_df(adata, group, key=key)
                 # select genes with given log_fold change
-                genes_list = df[df.logfoldchanges > min_logfoldchange].names.tolist()
-            else:
-                # get all genes that are 'non-nan'
-                genes_list = [
-                    gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)
-                ]
+                df = df[df.logfoldchanges > min_logfoldchange]
+
+            if gene_symbols is not None:
+                df['names'] = df['symbol']
+
+            genes_list = df.names.tolist()
 
             if len(genes_list) == 0:
                 logg.warning(f'No genes found for group {group}')
@@ -435,7 +434,9 @@ def _rank_genes_groups_plot(
         title = None
         values_df = None
         if values_to_plot is not None:
-            values_df = _get_values_to_plot(adata, values_to_plot, gene_names, key=key)
+            values_df = _get_values_to_plot(
+                adata, values_to_plot, gene_names, key=key, gene_symbols=gene_symbols
+            )
             title = values_to_plot
             if values_to_plot == 'logfoldchanges':
                 title = 'log fold change'
@@ -581,6 +582,7 @@ def rank_genes_groups_dotplot(
             'log10_pvals_adj',
         ]
     ] = None,
+    gene_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
@@ -630,6 +632,7 @@ def rank_genes_groups_dotplot(
         n_genes=n_genes,
         groupby=groupby,
         values_to_plot=values_to_plot,
+        gene_names=gene_names,
         key=key,
         min_logfoldchange=min_logfoldchange,
         show=show,
@@ -1248,6 +1251,7 @@ def _get_values_to_plot(
     gene_names: Sequence[str],
     groups: Optional[Sequence[str]] = None,
     key: Optional[str] = 'rank_genes_groups',
+    gene_symbols: Optional[str] = None,
 ):
     """
     If rank_genes_groups has been called, this function
@@ -1256,7 +1260,7 @@ def _get_values_to_plot(
 
     The dataframe index are the given groups and the columns are the gene_names
 
-    uset for rank_genes_groups_dotplot
+    used by _rank_genes_groups_dotplot
 
     Parameters
     ----------
@@ -1268,7 +1272,10 @@ def _get_values_to_plot(
     groups
         groupby categories
     key
-        adata.uns key where the rank_genes_groups is stored. By default 'rank_genes_groups'
+        adata.uns key where the rank_genes_groups is stored.
+        By default 'rank_genes_groups'
+    gene_symbols
+        Key for field in .var that stores gene symbols.
     Returns
     -------
     pandas DataFrame index=groups, columns=gene_names
@@ -1282,7 +1289,9 @@ def _get_values_to_plot(
 
         df_list = []
         for group in groups:
-            df = rank_genes_groups_df(adata, group, key=key)
+            df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
+            if gene_symbols is not None:
+                df['names'] = df['symbol']
             # check that all genes are present as by default rank_genes_groups
             # only report the top 100 genes per category
             if not check_done:
