@@ -7,7 +7,7 @@ If you do not have a working installation of Python 3.6 (or later), consider
 installing Miniconda_ (see `Installing Miniconda`_). Then run::
 
     conda install seaborn scikit-learn statsmodels numba pytables
-    conda install -c conda-forge python-igraph leidenalg	
+    conda install -c conda-forge python-igraph leidenalg
 
 Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pip3`` to access Python 3)::
 
@@ -35,7 +35,9 @@ To work with the latest version `on GitHub`_: clone the repository and `cd` into
 its root directory. To install using symbolic links (stay up to date with your
 cloned version after you update with `git pull`) call::
 
-    pip install -e .
+    flit install -s  # from an activated venv or conda env
+    # or
+    flit install -s --python path/to/venv/bin/python
 
 If you intend to do development work, there are some extra dependencies you'll want.
 These can be install with `scanpy` via::
@@ -43,6 +45,21 @@ These can be install with `scanpy` via::
     pip install -e ".[dev,doc,test]"
 
 .. _on GitHub: https://github.com/theislab/scanpy
+
+If you want to let conda_ handle the installations of dependencies, do::
+
+    pip install beni
+    beni pyproject.toml > environment.yml
+    conda env create -f environment.yml
+    conda activate scanpy
+    flit install -s
+
+On Windows, you might have to use `flit install --pth-file`
+if you are not able to give yourself the `create symbolic links`_ privilege.
+Be aware that a `conda bug`_ might prevent `conda list` from working then.
+
+.. _create symbolic links: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
+.. _conda bug: https://github.com/conda/conda/issues/9074
 
 Docker
 ~~~~~~
@@ -77,6 +94,8 @@ Download those and install them using `pip install ./path/to/file.whl`
 
 .. _compiling igraph: https://stackoverflow.com/q/29589696/247482
 .. _unofficial binaries: https://www.lfd.uci.edu/~gohlke/pythonlibs/
+
+.. _conda:
 
 Installing Miniconda
 ~~~~~~~~~~~~~~~~~~~~
