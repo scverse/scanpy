@@ -8,6 +8,7 @@ from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import Literal
 
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -29,6 +30,7 @@ def leiden(
     random_state: _utils.AnyRandom = 0,
     key_added: str = 'leiden',
     adjacency: Optional[sparse.spmatrix] = None,
+    flavor: Literal['leidenalg','rapids'] = 'leidenalg',
     directed: bool = True,
     use_weights: bool = True,
     n_iterations: int = -1,
@@ -66,6 +68,8 @@ def leiden(
         `adata.obs` key under which to add the cluster labels.
     adjacency
         Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
+    flavor
+        Choose between to packages for computing the clustering.``'rapids'`` works only on gpu.
     directed
         Whether to treat the graph as directed or undirected.
     use_weights
@@ -104,12 +108,7 @@ def leiden(
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
-    try:
-        import leidenalg
-    except ImportError:
-        raise ImportError(
-            'Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`.'
-        )
+    
     partition_kwargs = dict(partition_kwargs)
 
     start = logg.info('running Leiden clustering')
@@ -125,25 +124,58 @@ def leiden(
             restrict_categories,
             adjacency,
         )
-    # convert it to igraph
-    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
-    # flip to the default partition type if not overriden by the user
-    if partition_type is None:
-        partition_type = leidenalg.RBConfigurationVertexPartition
-    # Prepare find_partition arguments as a dictionary,
-    # appending to whatever the user provided. It needs to be this way
-    # as this allows for the accounting of a None resolution
-    # (in the case of a partition variant that doesn't take it on input)
-    if use_weights:
-        partition_kwargs['weights'] = np.array(g.es['weight']).astype(np.float64)
-    partition_kwargs['n_iterations'] = n_iterations
-    partition_kwargs['seed'] = random_state
-    if resolution is not None:
-        partition_kwargs['resolution_parameter'] = resolution
-    # clustering proper
-    part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
-    # store output into adata.obs
-    groups = np.array(part.membership)
+        
+    if flavor == 'leidenalg':
+        try:
+            import leidenalg
+        except ImportError:
+            raise ImportError(
+                'Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`.'
+            )
+        # convert it to igraph
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
+        # flip to the default partition type if not overriden by the user
+        if partition_type is None:
+            partition_type = leidenalg.RBConfigurationVertexPartition
+        # Prepare find_partition arguments as a dictionary,
+        # appending to whatever the user provided. It needs to be this way
+        # as this allows for the accounting of a None resolution
+        # (in the case of a partition variant that doesn't take it on input)
+        if use_weights:
+            partition_kwargs['weights'] = np.array(g.es['weight']).astype(np.float64)
+        partition_kwargs['n_iterations'] = n_iterations
+        partition_kwargs['seed'] = random_state
+        if resolution is not None:
+            partition_kwargs['resolution_parameter'] = resolution
+        # clustering proper
+        part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
+        # store output into adata.obs
+        groups = np.array(part.membership)
+        
+    elif flavor == 'rapids':
+        import cudf
+        import cugraph
+        offsets = cudf.Series(adjacency.indptr)
+        indices = cudf.Series(adjacency.indices)
+        if use_weights:
+            sources, targets = adjacency.nonzero()
+            weights = adjacency[sources, targets]
+            if isinstance(weights, np.matrix):
+                weights = weights.A1
+            weights = cudf.Series(weights)
+        else:
+            weights = None
+        g = cugraph.Graph()
+
+        if hasattr(g, 'add_adj_list'):
+            g.add_adj_list(offsets, indices, weights)
+        else:
+            g.from_cudf_adjlist(offsets, indices, weights)
+
+        logg.info('    using cugraph')
+        leiden_parts, _ = cugraph.leiden(g,resolution=resolution)
+        groups = leiden_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
+        
     if restrict_to is not None:
         if key_added == 'leiden':
             key_added += '_R'
