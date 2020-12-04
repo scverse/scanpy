@@ -33,6 +33,8 @@ _MetricScipySpatial = Literal[
 ]
 _Metric = Union[_MetricSparseCapable, _MetricScipySpatial]
 
+_MetricRapids = ['l1', 'cityblock', 'taxicab', 'manhattan', 'euclidean', 'l2', 'braycurtis', 'canberra', 'minkowski', 'chebyshev', 'jensenshannon', 'cosine', 'correlation']
+
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def neighbors(
@@ -282,7 +284,8 @@ def compute_neighbors_umap(
 
 def compute_neighbors_rapids(
     X: np.ndarray,
-    n_neighbors: int
+    n_neighbors: int,
+    metric: _MetricRapids = 'euclidean'
 ):
     """Compute nearest neighbors using RAPIDS cuml.
 
@@ -292,17 +295,37 @@ def compute_neighbors_rapids(
         The data to compute nearest neighbors for.
     n_neighbors
         The number of neighbors to use.
+    metric
+        The metric to use to compute distances in high dimensional space.
+        If a string is passed it must match a valid predefined metric. If
+        a general metric is required a function that takes two 1d arrays and
+        returns a float can be provided. For performance purposes it is
+        required that this be a numba jit'd function. Valid string metrics
+        include:
+            * l1
+            * cityblock
+            * taxicab
+            * manhattan
+            * euclidean
+            * l2
+            * braycurtis
+            * canberra
+            * minkowski
+            * chebyshev
+            * jensenshannon
+            * cosine
+            * correlation
 
         Returns
     -------
     **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
     """
     from cuml.neighbors import NearestNeighbors
-    nn = NearestNeighbors(n_neighbors=n_neighbors)
+    nn = NearestNeighbors(n_neighbors=n_neighbors,metric=metric)
     X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
     nn.fit(X_contiguous)
-    knn_distsq, knn_indices = nn.kneighbors(X_contiguous)
-    return knn_indices, np.sqrt(knn_distsq) # cuml uses sqeuclidean metric so take sqrt
+    knn_dist, knn_indices = nn.kneighbors(X_contiguous)
+    return knn_indices,knn_dist 
 
 
 def _get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors):
@@ -687,15 +710,16 @@ class Neighbors:
         Also writes `.knn_indices` and `.knn_distances` if
         `write_knn_indices==True`.
         """
-        from sklearn.metrics import pairwise_distances
+        if method == 'rapids':
+            from cuml.metrics import pairwise_distances
+        else:
+            from sklearn.metrics import pairwise_distances
         start_neighbors = logg.debug('computing neighbors')
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
-        if method == 'rapids' and metric != 'euclidean':
-            raise ValueError("`method` 'rapids' only supports the 'euclidean' `metric`.")
         if method not in {'umap', 'gauss', 'rapids'}:
             raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
         if self._adata.shape[0] >= 10000 and not knn:
@@ -705,7 +729,7 @@ class Neighbors:
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         # neighbor search
         use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or knn == False
-        if use_dense_distances:
+        if use_dense_distances:            
             _distances = pairwise_distances(X, metric=metric, **metric_kwds)
             knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
                 _distances, n_neighbors)
@@ -714,15 +738,18 @@ class Neighbors:
                     knn_indices, knn_distances, X.shape[0], n_neighbors)
             else:
                 self._distances = _distances
-        elif method == 'rapids':
-            knn_indices, knn_distances = compute_neighbors_rapids(X, n_neighbors)
         else:
             # non-euclidean case and approx nearest neighbors
             if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
-            knn_indices, knn_distances, forest = compute_neighbors_umap(
-                X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
+                knn_indices, knn_distances, forest = compute_neighbors_umap(
+                    X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
+            elif (X.shape[0] >= 4096) & (method == 'rapids'):
+                knn_indices, knn_distances = compute_neighbors_rapids(X, n_neighbors,metric=metric)
+            else:
+                knn_indices, knn_distances, forest = compute_neighbors_umap(
+                    X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
             # very cautious here
             try:
                 if forest:
