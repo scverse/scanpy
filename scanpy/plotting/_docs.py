@@ -249,8 +249,7 @@ min_logfoldchange
     Value to filter genes in groups if their logfoldchange is less than the
     min_logfoldchange
 key
-    Key used to store the ranking results in `adata.uns`.
-
+    Key used to store the ranking results in `adata.uns`.\
 """
 
 doc_rank_genes_groups_values_to_plot = """\
@@ -263,6 +262,6 @@ gene_names
     fold changes or p-values instead of the top/bottom genes. If a list of
     genes is given, this overwrites the `n_genes` option. The gene_names
     could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or 
-    :func:`~scanpy.pl.matrixplot`
+    :func:`~scanpy.pl.matrixplot`\
 
 """
