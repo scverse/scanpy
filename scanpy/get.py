@@ -3,7 +3,7 @@ from typing import Optional, Iterable, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix
+from scipy.sparse import spmatrix, issparse
 
 from anndata import AnnData
 
@@ -137,13 +137,16 @@ def obs_df(
             gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
         else:
             gene_names = pd.Series(adata.var_names, index=adata.var_names)
-    lookup_keys = []
+    obs_names = []
+    var_names = []
+    var_symbol = []
     not_found = []
     for key in keys:
         if key in adata.obs.columns:
-            lookup_keys.append(key)
+            obs_names.append(key)
         elif key in gene_names.index:
-            lookup_keys.append(gene_names[key])
+            var_names.append(gene_names[key])
+            var_symbol.append(key)
         else:
             not_found.append(key)
     if len(not_found) > 0:
@@ -167,12 +170,35 @@ def obs_df(
         )
 
     # Make df
-    df = pd.DataFrame(index=adata.obs_names)
-    for k, l in zip(keys, lookup_keys):
-        if not use_raw or k in adata.obs.columns:
-            df[k] = adata.obs_vector(l, layer=layer)
+    df = pd.DataFrame(index=adata.obs.index)
+
+    # add var values
+    if len(var_names) > 0:
+        X = _get_obs_rep(adata, layer=layer, use_raw=use_raw)
+        if use_raw:
+            var_idx = adata.raw.var_names.get_indexer(var_names)
         else:
-            df[k] = adata.raw.obs_vector(l)
+            var_idx = adata.var_names.get_indexer(var_names)
+
+        # for backed AnnData is important that the indices are ordered
+        if adata.isbacked:
+            var_order = np.argsort(var_idx)
+            matrix = X[:, var_idx[var_order]][:, np.argsort(var_order)]
+        else:
+            matrix = X[:, var_idx]
+
+        from scipy.sparse import issparse
+
+        if issparse(matrix):
+            matrix = matrix.toarray()
+        df = df.join(pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index))
+
+    # add obs values
+    if len(obs_names) > 0:
+        df = df.join(adata.obs[obs_names])
+
+    # reorder columns to given order
+    df = df[keys]
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
         val = adata.obsm[k]
@@ -212,13 +238,14 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
-    lookup_keys = []
+    obs_names = []
+    var_names = []
     not_found = []
     for key in keys:
-        if key in adata.var.columns:
-            lookup_keys.append(key)
-        elif key in adata.obs_names:
-            lookup_keys.append(key)
+        if key in adata.obs_names:
+            obs_names.append(key)
+        elif key in adata.var.columns:
+            var_names.append(key)
         else:
             not_found.append(key)
     if len(not_found) > 0:
@@ -227,10 +254,34 @@ def var_df(
             " in `adata.obs_names`."
         )
 
-    # Make df
-    df = pd.DataFrame(index=adata.var_names)
-    for k, l in zip(keys, lookup_keys):
-        df[k] = adata.var_vector(l, layer=layer)
+    # initialize df
+    df = pd.DataFrame(index=adata.var.index)
+
+    # add obs values
+    if len(obs_names) > 0:
+        X = _get_obs_rep(adata, layer=layer)
+        obs_idx = adata.obs_names.get_indexer(obs_names)
+
+        # for backed AnnData is important that the indices are ordered
+        if adata.isbacked:
+            obs_order = np.argsort(obs_idx)
+            matrix = X[obs_idx[obs_order], :][np.argsort(obs_order)]
+        else:
+            matrix = X[obs_idx, :]
+        from scipy.sparse import issparse
+
+        if issparse(matrix):
+            matrix = matrix.toarray()
+
+        df = df.join(pd.DataFrame(matrix.T, columns=obs_names, index=adata.var.index))
+
+    # add obs values
+    if len(var_names) > 0:
+        df = df.join(adata.var[var_names])
+
+    # reorder columns to given order
+    df = df[keys]
+
     for k, idx in varm_keys:
         added_k = f"{k}-{idx}"
         val = adata.varm[k]
