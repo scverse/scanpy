@@ -27,6 +27,7 @@ def draw_graph(
     key_added_ext: Optional[str] = None,
     neighbors_key: Optional[str] = None,
     obsp: Optional[str] = None,
+    method: Literal['fa2', 'rapids'] = 'fa2',
     copy: bool = False,
     **kwds,
 ):
@@ -83,6 +84,8 @@ def draw_graph(
     obsp
         Use .obsp[obsp] as adjacency. You can't specify both
         `obsp` and `neighbors_key` at the same time.
+    method
+        Use the original 'fa2' implementation, or 'rapids' (using cugraph, GPU only)
     copy
         Return a copy instead of writing to adata.
     **kwds
@@ -120,7 +123,7 @@ def draw_graph(
         np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2))
     # see whether fa2 is installed
-    if layout == 'fa':
+    if (layout == 'fa') & (method == 'fa2'):
         try:
             from fa2 import ForceAtlas2
         except ImportError:
@@ -130,36 +133,68 @@ def draw_graph(
                 "install package 'fa2' (`pip install fa2`)."
             )
             layout = 'fr'
+
+            
     # actual drawing
     if layout == 'fa':
-        forceatlas2 = ForceAtlas2(
-            # Behavior alternatives
-            outboundAttractionDistribution=False,  # Dissuade hubs
-            linLogMode=False,  # NOT IMPLEMENTED
-            adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
-            edgeWeightInfluence=1.0,
-            # Performance
-            jitterTolerance=1.0,  # Tolerance
-            barnesHutOptimize=True,
-            barnesHutTheta=1.2,
-            multiThreaded=False,  # NOT IMPLEMENTED
-            # Tuning
-            scalingRatio=2.0,
-            strongGravityMode=False,
-            gravity=1.0,
-            # Log
-            verbose=False,
-        )
+        
         if 'maxiter' in kwds:
-            iterations = kwds['maxiter']
+                iterations = kwds['maxiter']
         elif 'iterations' in kwds:
             iterations = kwds['iterations']
         else:
             iterations = 500
-        positions = forceatlas2.forceatlas2(
-            adjacency, pos=init_coords, iterations=iterations
-        )
-        positions = np.array(positions)
+        
+        if method == 'fa2':
+            forceatlas2 = ForceAtlas2(
+                # Behavior alternatives
+                outboundAttractionDistribution=False,  # Dissuade hubs
+                linLogMode=False,  # NOT IMPLEMENTED
+                adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
+                edgeWeightInfluence=1.0,
+                # Performance
+                jitterTolerance=1.0,  # Tolerance
+                barnesHutOptimize=True,
+                barnesHutTheta=1.2,
+                multiThreaded=False,  # NOT IMPLEMENTED
+                # Tuning
+                scalingRatio=2.0,
+                strongGravityMode=False,
+                gravity=1.0,
+                # Log
+                verbose=False,
+            )
+            
+            positions = forceatlas2.forceatlas2(
+                adjacency, pos=init_coords, iterations=iterations
+            )
+            positions = np.array(positions)
+        
+        elif method == 'rapids':
+            import cugraph
+            import cudf
+            offsets = cudf.Series(adjacency.indptr)
+            indices = cudf.Series(adjacency.indices)
+            G = cugraph.Graph()
+            G.from_cudf_adjlist(offsets, indices, None)
+            
+            forceatlas2=cugraph.layout.force_atlas2(G,
+                max_iter=iterations,
+                pos_list=cudf.DataFrame({"vertex": np.arange(init_coords.shape[0]),
+                                         "x": init_coords[:,0],
+                                         "y": init_coords[:,1]}),
+                outbound_attraction_distribution=False,
+                lin_log_mode=False,
+                edge_weight_influence=1.0,
+                jitter_tolerance=1.0,
+                barnes_hut_optimize=True,
+                barnes_hut_theta=1.2,
+                scaling_ratio=2.0,
+                strong_gravity_mode=False,
+                gravity=1.0,
+                verbose=True)
+            positions=forceatlas2.to_pandas().loc[:,["x","y"]].values
+            
     else:
         # igraph doesn't use numpy seed
         random.seed(random_state)
