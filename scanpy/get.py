@@ -77,17 +77,20 @@ def rank_genes_groups_df(
 
     for pts, name in {'pts': 'pct_nz_group', 'pts_rest': 'pct_nz_reference'}.items():
         if pts in adata.uns[key]:
-            pts = adata.uns[key][pts][group].reset_index().melt(
-                id_vars='index',
-                var_name='group',
-                value_name=name).rename(columns={'index': 'names'})
+            pts = (
+                adata.uns[key][pts][group]
+                .reset_index()
+                .melt(id_vars='index', var_name='group', value_name=name)
+                .rename(columns={'index': 'names'})
+            )
             d = d.merge(pts)
 
-     # remove group column for backward compat if len(group) == 1
+    # remove group column for backward compat if len(group) == 1
     if len(group) == 1:
         d.drop(columns='group', inplace=True)
 
     return d.reset_index(drop=True)
+
 
 def obs_df(
     adata: AnnData,
