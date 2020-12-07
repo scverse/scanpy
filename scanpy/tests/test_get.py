@@ -94,10 +94,10 @@ def test_rank_genes_groups_df():
         sc.get.rank_genes_groups_df(adata, "a")
     dedf2 = sc.get.rank_genes_groups_df(adata, "a", key="different_key")
     pd.testing.assert_frame_equal(dedf, dedf2)
-    assert 'fraction_group' in dedf2.columns
-    assert 'fraction_rest' in dedf2.columns
+    assert 'pct_nz_group' in dedf2.columns
+    assert 'pct_nz_reference' in dedf2.columns
     
     # get all groups
-    dedf3 = sc.get.rank_genes_groups_df(adata, key="different_key")
+    dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
     assert 'a' in dedf3['group'].unique()
     assert 'b' in dedf3['group'].unique()    
