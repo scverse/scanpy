@@ -819,41 +819,28 @@ def spatial(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    if library_id is _empty:  # if it's empty, it searches for keys
-        try:  # check if key is empty
-            spatial_data = adata.uns['spatial']
-            library_id = next(
-                (
-                    i
-                    for i in spatial_data.keys()
-                    if i not in ["connectivities_key", "distances_key"]
-                )
-            )
-        except (KeyError, StopIteration) as e:
-            library_id = None  # if search fails, then it's really empty!
-        if (
-            library_id is not None
-        ):  # if there is a library id, is most likely Visium, search for img_key
+    if library_id is _empty:
+        try:  # check if it's Visium or other spatial data
+            library_id = next((i for i in adata.uns['spatial'].keys()))
+            spatial_data = adata.uns['spatial'][library_id]
             if img_key is _empty:
                 img_key = next(
-                    (
-                        k
-                        for k in ['hires', 'lowres']
-                        if k in spatial_data[library_id]['images']
-                    ),
+                    (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
                     None,
                 )
-            if size is None:  # set fixed size for Visium
+            if size is None:
                 size = 1.0
-        else:
-            img_key = None  # if not found, set img_key to None
+
+        except KeyError:  # it's not visium, simply plot scatterplot
+            library_id = None
+            img_key = None
+            na_color = "lightgray"  # if no image is plotted, default should be same as embedding
+
     else:
-        if (
-            library_id not in spatial_data.keys()
-        ):  # if library_id was mispecified, throw error!
+        if library_id not in adata.uns['spatial'].keys():
             raise KeyError(
                 f"Could not find '{library_id}' in adata.uns['spatial'].keys().\n"
-                f"Available keys are: {list(spatial_data.keys())}."
+                f"Available keys are: {list(adata.uns['spatial'].keys())}."
             )
 
     return embedding(
