@@ -977,7 +977,7 @@ def test_visium_default(image_comparer):
     save_and_compare_images('master_spatial_visium_default')
 
 
-def test_visium_empty_img_key(image_comparer):
+def test_visium_empty_img_key(image_comparer):  # visium coordinates but image empty
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
@@ -988,3 +988,19 @@ def test_visium_empty_img_key(image_comparer):
 
     sc.pl.embedding(adata, basis="spatial", color="array_row")
     save_and_compare_images('master_spatial_visium_embedding')
+
+
+def test_spatial_general(image_comparer):  # general coordinates
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
+    adata.obs = adata.obs.astype({'array_row': 'str'})
+    adata.uns.pop("spatial")  # spatial data don't have imgs, so remove entry from uns
+
+    sc.pl.spatial(adata)
+    save_and_compare_images('master_spatial_general_nocol')
+
+    sc.pl.spatial(adata, color="array_row")
+    save_and_compare_images('master_spatial_general_cat')
+
+    sc.pl.spatial(adata, color="array_col")
+    save_and_compare_images('master_spatial_general_cont')

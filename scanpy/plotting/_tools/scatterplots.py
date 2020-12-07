@@ -828,6 +828,14 @@ def spatial(
                     (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
                     None,
                 )
+            elif img_key is None:  # invert coordinate if img_key is None
+                adata.obsm["spatial"][:, 1] = np.abs(
+                    np.subtract(
+                        adata.obsm["spatial"][:, 1],
+                        np.max(adata.obsm["spatial"][:, 1]),
+                    )
+                )
+
             if size is None:
                 size = 1.0
 
@@ -977,10 +985,6 @@ def _get_data_points(
                 f"Could not find entry in `adata.uns[spatial][{library_id}]` for '{img_key}'.\n"
                 f"Available keys are: {list(spatial_data['images'].keys())}."
             )
-    elif img_key is None and basis == "spatial":
-        data_points[0][:, 1] = np.abs(
-            np.subtract(data_points[0][:, 1], np.max(data_points[0][:, 1]))
-        )
 
     return data_points, components_list
 
