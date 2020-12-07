@@ -1,11 +1,17 @@
 """This module contains helper functions for accessing data."""
-from typing import Optional, Iterable, Tuple
+from typing import Optional, Iterable, Tuple, Mapping, Union, Sequence
+
+from ._compat import Literal
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix, issparse
+from pandas.api.types import is_categorical_dtype
+from scipy.sparse import spmatrix
 
 from anndata import AnnData
+from ._utils import sanitize_anndata
+
+_VarNames = Union[str, Sequence[str]]
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -294,6 +300,101 @@ def var_df(
     return df
 
 
+def summarized_expression_df(
+    adata: AnnData,
+    groupby: Union[str, Sequence[str]],
+    ops: Optional[Literal['mean_expressed', 'var_expressed', 'fraction']] = None,
+    long_format: bool = True,
+    var_names: Optional[Union[_VarNames, Mapping[str, _VarNames]]] = None,
+    use_raw: Optional[bool] = None,
+    log: bool = False,
+    layer: Optional[str] = None,
+    threshold: float = 0.,
+    gene_symbols: Optional[str] = None,
+) -> pd.DataFrame:
+    """\
+    Creates a dataframe where gene expression is grouped by key(s) in adata.obs (`groupby`)
+    and aggregated using given functions (`ops`).
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    groupby
+        The key of the observation grouping to consider. It is expected that
+        groupby is a categorical.
+    ops
+        Operations to execute on the grouped dataframe. By default mean and variance of
+        expression above the specified threshold (`mean_expressed` and `var_expressed`)
+        and fraction of cells expressing given genes above threshold (`fraction`) are
+        returned.
+    long_format
+        Whether to keep the gene names in columns (False) or in rows (True). True by default.
+    var_names
+        `var_names` should be a valid subset of `adata.var_names`. All genes are used if no
+        given.
+    use_raw
+        Use `raw` attribute of `adata` if present.
+    log
+        Use the log of the values
+    layer
+        Layer to use instead of adata.X.
+    threshold
+        Expression threshold for mean_expressed and var_expressed ops.
+    gene_symbols
+        Key for field in .var that stores gene symbols.
+
+    Returns
+    -------
+    `pandas.DataFrame`
+
+    Example
+    -------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.paul15()
+    >>> adata.obs['somecat'] = pd.Categorical(['A' if x == '3Ery' else 'B' for x in adata.obs.paul15_clusters])
+    >>> df = sc.get.summarized_expression_df(adata, groupby=['paul15_clusters', 'somecat'])
+    """
+    if isinstance(groupby, str):
+        groupby = [groupby]
+    assert all(is_categorical_dtype(adata.obs[group]) for group in groupby)
+    _, df = _indexed_expression_df(
+        adata,
+        groupby=groupby,
+        var_names=var_names,
+        use_raw=use_raw,
+        log=log,
+        layer=layer,
+        gene_symbols=gene_symbols,
+        concat_indices=False,
+    )
+
+    if ops is None:
+        ops = ['mean_expressed', 'var_expressed', 'fraction']
+    if isinstance(ops, str):
+        ops = [ops]
+    assert all(np.isin(ops, ['mean_expressed', 'var_expressed', 'fraction'])), 'Undefined op'
+    assert len(ops) > 0, 'No ops given'
+
+    res = {}
+    # .agg is super slow even for mean and var, so do it separately using .mean and .var
+    if 'mean_expressed' in ops or 'var_expressed' in ops:
+        nonzero_group = df.mask(df<=threshold).groupby(level=df.index.names, observed=True)
+        if 'mean_expressed' in ops:
+            res['mean_expressed'] = nonzero_group.mean()
+        if 'var_expressed' in ops:
+            res['var_expressed'] = nonzero_group.var()
+    if 'fraction' in ops:
+        res['fraction'] = (df>threshold).groupby(level=df.index.names, observed=True).mean()
+
+    res = pd.concat(res.values(), axis=1, keys=res.keys(), names=[None, 'gene'])
+
+    if long_format:
+        res = res.stack(level=1).reset_index('gene')
+
+    return res
+
+
 def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     """
     Choose array aligned with obs annotation.
@@ -346,3 +447,150 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
             "That was unexpected. Please report this bug at:\n\n\t"
             " https://github.com/theislab/scanpy/issues"
         )
+
+
+def _indexed_expression_df(
+    adata: AnnData,
+    var_names: Optional[Union[_VarNames, Mapping[str, _VarNames]]] = None,
+    groupby: Optional[Union[str, Sequence[str]]] = None,
+    use_raw: Optional[bool] = None,
+    log: bool = False,
+    num_categories: int = 7,
+    layer: Optional[str] = None,
+    gene_symbols: Optional[str] = None,
+    concat_indices: bool = True,
+):
+    """
+    Given the anndata object, prepares a data frame in which the row index are the categories
+    defined by group by and the columns correspond to var_names.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    var_names
+        `var_names` should be a valid subset of `adata.var_names`. All genes are used if no
+        given.
+    groupby
+        The key of the observation grouping to consider. It is expected that
+        groupby is a categorical. If groupby is not a categorical observation,
+        it would be subdivided into `num_categories`.
+    use_raw
+        Use `raw` attribute of `adata` if present.
+    log
+        Use the log of the values
+    num_categories
+        Only used if groupby observation is not categorical. This value
+        determines the number of groups into which the groupby observation
+        should be subdivided.
+    gene_symbols
+        Key for field in .var that stores gene symbols.
+    concat_indices
+        Concatenates categorical indices into a single categorical index, if 
+        groupby is a sequence. True by default.
+
+    Returns
+    -------
+    Tuple of `pandas.DataFrame` and list of categories.
+    """
+    from scipy.sparse import issparse
+
+    sanitize_anndata(adata)
+    if use_raw is None and adata.raw is not None:
+        use_raw = True
+    if isinstance(var_names, str):
+        var_names = [var_names]
+    if var_names is None:
+        if use_raw:
+            var_names = adata.raw.var_names.values
+        else:
+            var_names = adata.var_names.values
+
+    if groupby is not None:
+        if isinstance(groupby, str):
+            # if not a list, turn into a list
+            groupby = [groupby]
+        for group in groupby:
+            if group not in adata.obs_keys():
+                raise ValueError(
+                    'groupby has to be a valid observation. '
+                    f'Given {group}, is not in observations: {adata.obs_keys()}'
+                )
+
+    if gene_symbols is not None and gene_symbols in adata.var.columns:
+        # translate gene_symbols to var_names
+        # slow method but gives a meaningful error if no gene symbol is found:
+        translated_var_names = []
+        # if we're using raw to plot, we should also do gene symbol translations
+        # using raw
+        if use_raw:
+            adata_or_raw = adata.raw
+        else:
+            adata_or_raw = adata
+        for symbol in var_names:
+            if symbol not in adata_or_raw.var[gene_symbols].values:
+                logg.error(
+                    f"Gene symbol {symbol!r} not found in given "
+                    f"gene_symbols column: {gene_symbols!r}"
+                )
+                return
+            translated_var_names.append(
+                adata_or_raw.var[adata_or_raw.var[gene_symbols] == symbol].index[0]
+            )
+        symbols = var_names
+        var_names = translated_var_names
+    if layer is not None:
+        if layer not in adata.layers.keys():
+            raise KeyError(
+                f'Selected layer: {layer} is not in the layers list. '
+                f'The list of valid layers is: {adata.layers.keys()}'
+            )
+        matrix = adata[:, var_names].layers[layer]
+    elif use_raw:
+        matrix = adata.raw[:, var_names].X
+    else:
+        matrix = adata[:, var_names].X
+
+    if issparse(matrix):
+        matrix = matrix.toarray()
+    if log:
+        matrix = np.log1p(matrix)
+
+    obs_tidy = pd.DataFrame(matrix, columns=var_names)
+    if groupby is None:
+        groupby = ''
+        obs_tidy_idx = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
+        idx_categories = obs_tidy_idx.cat.categories
+    else:
+        if len(groupby) == 1 and not is_categorical_dtype(adata.obs[groupby[0]]):
+            # if the groupby column is not categorical, turn it into one
+            # by subdividing into  `num_categories` categories
+            obs_tidy_idx = pd.cut(adata.obs[groupby[0]], num_categories)
+            idx_categories = obs_tidy_idx.cat.categories
+        else:
+            assert all(is_categorical_dtype(adata.obs[group]) for group in groupby)
+            if concat_indices:
+                obs_tidy_idx = adata.obs[groupby[0]]
+                if len(groupby) > 1:
+                    for group in groupby[1:]:
+                        # create new category by merging the given groupby categories
+                        obs_tidy_idx = (
+                            obs_tidy_idx.astype(str) + "_" + adata.obs[group].astype(str)
+                        ).astype('category')
+                obs_tidy_idx.name = "_".join(groupby)
+                idx_categories = obs_tidy_idx.cat.categories
+            else:
+                obs_tidy_idx = [adata.obs[group] for group in groupby] # keep as multiindex
+                idx_categories = [x.cat.categories for x in obs_tidy_idx]
+
+    obs_tidy.set_index(obs_tidy_idx, inplace=True)
+    if gene_symbols is not None:
+        # translate the column names to the symbol names
+        obs_tidy.rename(
+            columns={var_names[x]: symbols[x] for x in range(len(var_names))},
+            inplace=True,
+        )
+
+    return idx_categories, obs_tidy
+
+

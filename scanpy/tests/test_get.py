@@ -225,3 +225,27 @@ def test_rank_genes_groups_df():
         sc.get.rank_genes_groups_df(adata, "a")
     dedf2 = sc.get.rank_genes_groups_df(adata, "a", key="different_key")
     pd.testing.assert_frame_equal(dedf, dedf2)
+
+
+def test_summarized_expression_df():
+    adata = sc.datasets.paul15()
+    adata.obs['somecat'] = pd.Categorical(adata.obs.paul15_clusters == '3Ery')
+    df = sc.get.summarized_expression_df(adata, groupby=['paul15_clusters', 'somecat'])
+    assert len(df.index.levels) == 2
+    assert df.fraction.max() <= 1.
+    assert df.fraction.min() >= 0.
+    assert all(np.isin(df.index.levels[0].categories, (adata.obs['paul15_clusters']).cat.categories))
+    assert all(df.gene.isin(adata.var_names))
+    assert all(df.columns.isin(['gene', 'mean_expressed', 'var_expressed', 'fraction']))
+
+    df = sc.get.summarized_expression_df(adata, groupby=['paul15_clusters', 'somecat'], long_format=False)
+    assert all(df.columns.levels[1].isin(adata.var_names))
+    assert all(df.columns.levels[0].isin(['mean_expressed', 'var_expressed', 'fraction']))
+    assert len(df.columns.levels) == 2
+
+    df = sc.get.summarized_expression_df(adata, groupby='paul15_clusters', ops='fraction')
+    assert pd.api.types.is_categorical_dtype(df.index)
+    assert df.fraction.max() <= 1.
+    assert df.fraction.min() >= 0.
+    assert df.columns[-1] == 'fraction'
+    assert len(df.columns) == 2
