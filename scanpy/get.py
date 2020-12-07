@@ -15,7 +15,7 @@ from anndata import AnnData
 # TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
-    group: Optional[Union[str, Iterable[str]]] = None,
+    group: Union[str, Iterable[str]],
     *,
     key: str = "rank_genes_groups",
     pval_cutoff: Optional[float] = None,
@@ -34,7 +34,7 @@ def rank_genes_groups_df(
     group
         Which group (as in :func:`scanpy.tl.rank_genes_groups`'s `groupby`
         argument) to return results from. Can be a list. All groups are
-        returned by default.
+        returned if groups is `None`.
     key
         Key differential expression groups were stored under.
     pval_cutoff
@@ -74,20 +74,15 @@ def rank_genes_groups_df(
         d = d[d["logfoldchanges"] < log2fc_max]
     if gene_symbols is not None:
         d = d.join(adata.var[gene_symbols], on="names")
-        
-    if 'pts' in adata.uns[key]:
-        pts = adata.uns[key]['pts'][group].reset_index().melt(
-            id_vars='index', 
-            var_name='group', 
-            value_name='fraction_group').rename(columns={'index': 'names'})
-        d = d.merge(pts)
-    if 'pts_rest' in adata.uns[key]:
-        ptsr = adata.uns[key]['pts_rest'][group].reset_index().melt(
-            id_vars='index', 
-            var_name='group', 
-            value_name='fraction_rest').rename(columns={'index': 'names'})
-        d = d.merge(ptsr)
-        
+
+    for pts, name in {'pts': 'pct_nz_group', 'pts_rest': 'pct_nz_reference'}.items():
+        if pts in adata.uns[key]:
+            pts = adata.uns[key][pts][group].reset_index().melt(
+                id_vars='index',
+                var_name='group',
+                value_name=name).rename(columns={'index': 'names'})
+            d = d.merge(pts)
+
      # remove group column for backward compat if len(group) == 1
     if len(group) == 1:
         d.drop(columns='group', inplace=True)
