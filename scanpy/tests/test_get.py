@@ -101,3 +101,5 @@ def test_rank_genes_groups_df():
     dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
     assert 'a' in dedf3['group'].unique()
     assert 'b' in dedf3['group'].unique()    
+    adata.var_names.name = 'pr1388'
+    sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
