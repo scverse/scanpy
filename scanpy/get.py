@@ -79,9 +79,9 @@ def rank_genes_groups_df(
         if pts in adata.uns[key]:
             pts_df = (
                 adata.uns[key][pts][group]
+                .rename_axis(index='names')
                 .reset_index()
-                .melt(id_vars='index', var_name='group', value_name=name)
-                .rename(columns={'index': 'names'})
+                .melt(id_vars='names', var_name='group', value_name=name)
             )
             d = d.merge(pts_df)
 
