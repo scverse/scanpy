@@ -211,7 +211,7 @@ def test_rank_genes_groups_df():
         ),
         var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
     )
-    sc.tl.rank_genes_groups(adata, groupby="celltype", method="wilcoxon")
+    sc.tl.rank_genes_groups(adata, groupby="celltype", method="wilcoxon", pts=True)
     dedf = sc.get.rank_genes_groups_df(adata, "a")
     assert dedf["pvals"].value_counts()[1.0] == 2
     assert sc.get.rank_genes_groups_df(adata, "a", log2fc_max=0.1).shape[0] == 2
@@ -219,9 +219,18 @@ def test_rank_genes_groups_df():
     assert sc.get.rank_genes_groups_df(adata, "a", pval_cutoff=0.9).shape[0] == 1
     del adata.uns["rank_genes_groups"]
     sc.tl.rank_genes_groups(
-        adata, groupby="celltype", method="wilcoxon", key_added="different_key"
+        adata, groupby="celltype", method="wilcoxon", key_added="different_key", pts=True,
     )
     with pytest.raises(KeyError):
         sc.get.rank_genes_groups_df(adata, "a")
     dedf2 = sc.get.rank_genes_groups_df(adata, "a", key="different_key")
     pd.testing.assert_frame_equal(dedf, dedf2)
+    assert 'pct_nz_group' in dedf2.columns
+    assert 'pct_nz_reference' in dedf2.columns
+    
+    # get all groups
+    dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
+    assert 'a' in dedf3['group'].unique()
+    assert 'b' in dedf3['group'].unique()    
+    adata.var_names.name = 'pr1388'
+    sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
