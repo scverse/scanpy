@@ -42,6 +42,7 @@ jobs:
           black . --check --diff
           python -m scanpy.tests.blackdiff 10
         displayName: "Black"
+        continueOnError: 'true'
 
       - script: |
           pytest --ignore=scanpy/tests/_images
