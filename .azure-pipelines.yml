@@ -1,0 +1,53 @@
+trigger:
+  - master
+  - 1.6.x
+
+jobs:
+  - job: PyTest
+    pool:
+      vmImage: "ubuntu-18.04"
+    strategy:
+      matrix:
+        Python37:
+          python.version: "3.7"
+        Python36:
+          python.version: "3.6"
+        anndata_dev:
+          python.version: "3.7"
+          ANNDATA_DEV: yes
+    steps:
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: "$(python.version)"
+        displayName: "Use Python $(python.version)"
+
+      - script: |
+          export MPLBACKEND="agg"
+          echo $MPLBACKEND
+        displayName: "Set env"
+
+      - script: |
+          python -m pip install --upgrade pip
+          pip install pytest-azurepipelines wheel
+          pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony]
+        displayName: "Install dependencies"
+
+      - script: |
+          pip install -v git+https://github.com/theislab/anndata
+        displayName: "Install development anndata"
+        condition: eq(variables['ANNDATA_DEV'], 'yes')
+
+      - script: |
+          pip install black
+          black . --check --diff
+          python -m scanpy.tests.blackdiff 10
+        displayName: "Black"
+
+      - script: |
+          pytest --ignore=scanpy/tests/_images
+        displayName: "PyTest"
+
+      - script: |
+          python setup.py check --restructuredtext --strict
+          rst2html.py --halt=2 README.rst >/dev/null
+        displayName: "rst2html"
