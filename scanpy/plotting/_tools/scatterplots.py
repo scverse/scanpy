@@ -323,9 +323,11 @@ def embedding(
                 ax.imshow(img_processed, cmap=cmap_img, alpha=alpha_img)
                 ax.set_xlim(img_coord[0], img_coord[1])
                 ax.set_ylim(img_coord[3], img_coord[2])
-            elif img_key is None and library_id is not None:
-                # order of magnitude similar to public visium
-                size_spot = 70 * size
+            elif img_key is None and basis == "spatial":
+                # set size_spot for circle
+                size_spot = size
+                # invert axis when called spatial
+                ax.invert_yaxis()
 
             scatter = (
                 partial(ax.scatter, s=size, plotnonfinite=True)
@@ -808,6 +810,9 @@ def spatial(
     Also by default the first entry of `library_id` is attempted.
     Use `crop_coord`, `alpha_img`, and `bw` to control how it is displayed.
     Use `size` to scale the size of the Visium spots plotted on top.
+    This function call sets origin at top left for any coordinate system.
+    If your spatial coordinates are centered bottom left,
+    go ahead and us `pl.embedding(adata, basis="<your_coords>")`
 
     Parameters
     ----------
@@ -828,16 +833,11 @@ def spatial(
                     (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
                     None,
                 )
-            elif img_key is None:  # invert coordinate if img_key is None
-                adata.obsm["spatial"][:, 1] = np.abs(
-                    np.subtract(
-                        adata.obsm["spatial"][:, 1],
-                        np.max(adata.obsm["spatial"][:, 1]),
-                    )
-                )
-
             if size is None:
-                size = 1.0
+                if img_key is None:
+                    size = 70.0  # good heuristic for visium spots
+                else:
+                    size = 1
 
         except KeyError:  # it's not visium, simply plot scatterplot
             library_id = None
