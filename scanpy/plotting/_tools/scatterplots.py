@@ -812,7 +812,7 @@ def spatial(
     Use `size` to scale the size of the Visium spots plotted on top.
     This function call sets origin at top left for any coordinate system.
     If your spatial coordinates are centered bottom left,
-    go ahead and us `pl.embedding(adata, basis="<your_coords>")`
+    use `pl.embedding(adata, basis="<your_coords>")`
 
     Parameters
     ----------
