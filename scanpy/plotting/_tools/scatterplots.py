@@ -126,6 +126,10 @@ def embedding(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
+    #####################
+    # Argument handling #
+    #####################
+
     check_projection(projection)
     sanitize_anndata(adata)
 
@@ -133,37 +137,9 @@ def embedding(
     dimensions = _components_to_dimensions(
         components, dimensions, projection=projection, total_dims=basis_values.shape[1]
     )
-
-    # dimensions = _parse_components(components, projection)
-
-    # Setting up color map for continuous values
-    if color_map is not None:
-        if cmap is not None:
-            raise ValueError("Cannot specify both `color_map` and `cmap`.")
-        else:
-            cmap = color_map
-    cmap = copy(get_cmap(cmap))
-    cmap.set_bad(na_color)
-    kwargs["cmap"] = cmap
-
-    # Prevents warnings during legend creation
-    na_color = colors.to_hex(na_color, keep_alpha=True)
-
-    if size is not None:
-        kwargs['s'] = size
-    if 'edgecolor' not in kwargs:
-        # by default turn off edge color. Otherwise, for
-        # very small sizes the edge will not reduce its size
-        # (https://github.com/theislab/scanpy/issues/293)
-        kwargs['edgecolor'] = 'none'
-
-    if groups:
-        if isinstance(groups, str):
-            groups = [groups]
-
     args_3d = dict(projection='3d') if projection == '3d' else {}
 
-    # Deal with Raw
+    # Figure out if we're using raw
     if use_raw is None:
         # check if adata.raw is set
         use_raw = layer is None and adata.raw is not None
@@ -172,24 +148,72 @@ def embedding(
             "Cannot use both a layer and the raw representation. Was passed:"
             f"use_raw={use_raw}, layer={layer}."
         )
-
-    if wspace is None:
-        #  try to set a wspace that is not too large or too small given the
-        #  current figure size
-        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
-    if adata.raw is None and use_raw:
+    if use_raw and adata.raw is None:
         raise ValueError(
             "`use_raw` is set to True but AnnData object does not have raw. "
             "Please check."
         )
+
+    if isinstance(groups, str):
+        groups = [groups]
+
+    # Color map
+    if color_map is not None:
+        if cmap is not None:
+            raise ValueError("Cannot specify both `color_map` and `cmap`.")
+        else:
+            cmap = color_map
+    cmap = copy(get_cmap(cmap))
+    cmap.set_bad(na_color)
+    kwargs["cmap"] = cmap
+    # Prevents warnings during legend creation
+    na_color = colors.to_hex(na_color, keep_alpha=True)
+
+    if 'edgecolor' not in kwargs:
+        # by default turn off edge color. Otherwise, for
+        # very small sizes the edge will not reduce its size
+        # (https://github.com/theislab/scanpy/issues/293)
+        kwargs['edgecolor'] = 'none'
+
+    # Vectorized arguments
+
     # turn color into a python list
     color = [color] if isinstance(color, str) or color is None else list(color)
     if title is not None:
         # turn title into a python list if not None
         title = [title] if isinstance(title, str) else list(title)
 
-    # Setup layout.
+    # turn vmax and vmin into a sequence
+    if isinstance(vmax, str) or not isinstance(vmax, cabc.Sequence):
+        vmax = [vmax]
+    if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
+        vmin = [vmin]
+
+    # Size
+    if 's' in kwargs and size is None:
+        size = kwargs.pop('s')
+    if size is not None:
+        # check if size is any type of sequence, and if so
+        # set as ndarray
+        if (
+            size is not None
+            and isinstance(size, (cabc.Sequence, pd.Series, np.ndarray))
+            and len(size) == adata.shape[0]
+        ):
+            size = np.array(size, dtype=float)
+    else:
+        size = 120000 / adata.shape[0]
+
+    ##########
+    # Layout #
+    ##########
     # Most of the code is for the case when multiple plots are required
+
+    if wspace is None:
+        #  try to set a wspace that is not too large or too small given the
+        #  current figure size
+        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
+
     # 'color' is a list of names that want to be plotted.
     # Eg. ['Gene1', 'louvain', 'Gene2'].
     # component_list is a list of components [[0,1], [1,2]]
@@ -213,31 +237,9 @@ def embedding(
             fig = pl.figure()
             ax = fig.add_subplot(111, **args_3d)
 
-    # turn vmax and vmin into a sequence
-    if isinstance(vmax, str) or not isinstance(vmax, cabc.Sequence):
-        vmax = [vmax]
-    if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
-        vmin = [vmin]
-
-    if 's' in kwargs:
-        size = kwargs.pop('s')
-
-    if size is not None:
-        # check if size is any type of sequence, and if so
-        # set as ndarray
-        import pandas.core.series
-
-        if (
-            size is not None
-            and isinstance(size, (cabc.Sequence, pandas.core.series.Series, np.ndarray))
-            and len(size) == adata.shape[0]
-        ):
-            size = np.array(size, dtype=float)
-    else:
-        size = 120000 / adata.shape[0]
-
-    ###
-    # make the plots
+    ############
+    # Plotting #
+    ############
     axs = []
 
     # use itertools.product to make a plot for each color and for each component
