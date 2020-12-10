@@ -1226,7 +1226,7 @@ def embedding_density(
             ax = embedding(
                 adata,
                 basis,
-                components=components,
+                dimensions=np.array(components) - 1,  # Saved with 1 based indexing
                 color=density_col_name,
                 color_map=color_map,
                 norm=norm,
@@ -1256,7 +1256,7 @@ def embedding_density(
         fig_or_ax = embedding(
             adata,
             basis,
-            components=components,
+            dimensions=np.array(components) - 1,  # Saved with 1 based indexing
             color=density_col_name,
             color_map=color_map,
             norm=norm,

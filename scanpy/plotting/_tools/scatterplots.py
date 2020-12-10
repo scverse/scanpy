@@ -1,6 +1,19 @@
 import collections.abc as cabc
 from copy import copy
-from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
+from numbers import Integral
+import itertools
+from typing import (
+    Collection,
+    Type,
+    Union,
+    Optional,
+    Sequence,
+    Any,
+    Mapping,
+    List,
+    Tuple,
+    Callable,
+)
 
 import numpy as np
 import pandas as pd
@@ -61,6 +74,7 @@ def embedding(
     arrows_kwds: Optional[Mapping[str, Any]] = None,
     groups: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
+    dimensions=None,
     layer: Optional[str] = None,
     projection: Literal['2d', '3d'] = '2d',
     # image parameters
@@ -115,6 +129,13 @@ def embedding(
     check_projection(projection)
     sanitize_anndata(adata)
 
+    basis_values = _get_basis(adata, basis)
+    dimensions = _components_to_dimensions(
+        components, dimensions, projection=projection, total_dims=basis_values.shape[1]
+    )
+
+    # dimensions = _parse_components(components, projection)
+
     # Setting up color map for continuous values
     if color_map is not None:
         if cmap is not None:
@@ -167,12 +188,6 @@ def embedding(
         # turn title into a python list if not None
         title = [title] if isinstance(title, str) else list(title)
 
-    # get the points position and the components list
-    # (only if components is not None)
-    data_points, components_list = _get_data_points(
-        adata, basis, projection, components, img_key, library_id
-    )
-
     # Setup layout.
     # Most of the code is for the case when multiple plots are required
     # 'color' is a list of names that want to be plotted.
@@ -182,21 +197,17 @@ def embedding(
         not isinstance(color, str)
         and isinstance(color, cabc.Sequence)
         and len(color) > 1
-    ) or len(components_list) > 1:
+    ) or len(dimensions) > 1:
         if ax is not None:
             raise ValueError(
                 "Cannot specify `ax` when plotting multiple panels "
                 "(each for a given value of 'color')."
             )
-        if len(components_list) == 0:
-            components_list = [None]
 
         # each plot needs to be its own panel
-        num_panels = len(color) * len(components_list)
+        num_panels = len(color) * len(dimensions)  # Is this weird?
         fig, grid = _panel_grid(hspace, wspace, ncols, num_panels)
     else:
-        if len(components_list) == 0:
-            components_list = [None]
         grid = None
         if ax is None:
             fig = pl.figure()
@@ -228,9 +239,6 @@ def embedding(
     ###
     # make the plots
     axs = []
-    import itertools
-
-    idx_components = range(len(components_list))
 
     # use itertools.product to make a plot for each color and for each component
     # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
@@ -238,9 +246,7 @@ def embedding(
     #     color=gene1, components=[1,2], color=gene1, components=[2,3],
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
-    for count, (value_to_plot, component_idx) in enumerate(
-        itertools.product(color, idx_components)
-    ):
+    for count, (value_to_plot, dims) in enumerate(itertools.product(color, dimensions)):
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
@@ -270,7 +276,7 @@ def embedding(
             size = np.array(size)[order]
         color_source_vector = color_source_vector[order]
         color_vector = color_vector[order]
-        _data_points = data_points[component_idx][order, :]
+        coords = basis_values[:, dims][order, :]
 
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
@@ -305,9 +311,9 @@ def embedding(
         # make the scatter plot
         if projection == '3d':
             cax = ax.scatter(
-                _data_points[:, 0],
-                _data_points[:, 1],
-                _data_points[:, 2],
+                coords[:, 0],
+                coords[:, 1],
+                coords[:, 2],
                 marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
@@ -318,7 +324,7 @@ def embedding(
                 # had to return size_spot cause spot size is set according
                 # to the image to be plotted
                 img_processed, img_coord, size_spot, cmap_img = _process_image(
-                    adata, data_points, img_key, crop_coord, size, library_id, bw
+                    adata, coords, img_key, crop_coord, size, library_id, bw
                 )
                 ax.imshow(img_processed, cmap=cmap_img, alpha=alpha_img)
                 ax.set_xlim(img_coord[0], img_coord[1])
@@ -326,6 +332,7 @@ def embedding(
             elif img_key is None and library_id is not None:
                 # order of magnitude similar to public visium
                 size_spot = 70 * size
+                ax.invert_yaxis()
 
             scatter = (
                 partial(ax.scatter, s=size, plotnonfinite=True)
@@ -359,8 +366,8 @@ def embedding(
                 alpha = kwargs.pop('alpha') if 'alpha' in kwargs else None
 
                 ax.scatter(
-                    _data_points[:, 0],
-                    _data_points[:, 1],
+                    coords[:, 0],
+                    coords[:, 1],
                     s=bg_size,
                     marker=".",
                     c=bg_color,
@@ -368,8 +375,8 @@ def embedding(
                     **kwargs,
                 )
                 ax.scatter(
-                    _data_points[:, 0],
-                    _data_points[:, 1],
+                    coords[:, 0],
+                    coords[:, 1],
                     s=gap_size,
                     marker=".",
                     c=gap_color,
@@ -380,8 +387,8 @@ def embedding(
                 kwargs['alpha'] = 0.7 if alpha is None else alpha
 
             cax = scatter(
-                _data_points[:, 0],
-                _data_points[:, 1],
+                coords[:, 0],
+                coords[:, 1],
                 marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
@@ -396,12 +403,7 @@ def embedding(
 
         # set default axis_labels
         name = _basis2name(basis)
-        if components is not None:
-            axis_labels = [name + str(x + 1) for x in components_list[component_idx]]
-        elif projection == '3d':
-            axis_labels = [name + str(x + 1) for x in range(3)]
-        else:
-            axis_labels = [name + str(x + 1) for x in range(2)]
+        axis_labels = [name + str(d + 1) for d in dims]
 
         ax.set_xlabel(axis_labels[0])
         ax.set_ylabel(axis_labels[1])
@@ -433,7 +435,7 @@ def embedding(
                 ax,
                 color_source_vector,
                 palette=_get_palette(adata, value_to_plot),
-                scatter_array=_data_points,
+                scatter_array=coords,
                 legend_loc=legend_loc,
                 legend_fontweight=legend_fontweight,
                 legend_fontsize=legend_fontsize,
@@ -855,129 +857,38 @@ def spatial(
 # Helpers
 
 
-def _get_data_points(
-    adata, basis, projection, components, img_key, library_id
-) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
-    """
-    Returns the data points corresponding to the selected basis, projection and/or components.
+def _components_to_dimensions(
+    components: Optional[Union[str, Collection[str]]],
+    dimensions: Optional[Union[Collection[int], Collection[Collection[int]]]],
+    *,
+    projection: Literal["2d", "3d"] = "2d",
+    total_dims: int,
+) -> List[Collection[int]]:
+    """Normalize components/ dimensions args for embedding plots."""
+    ndims = {"2d": 2, "3d": 3}[projection]
+    if components is None and dimensions is None:
+        dimensions = [tuple(i for i in range(ndims))]
+    elif components is not None and dimensions is not None:
+        raise ValueError("Cannot provide both dimensions and components")
 
-    Because multiple components are given (eg components=['1,2', '2,3'] the
-    returned data are lists, containing each of the components. When only one component is plotted
-    the list length is 1.
-
-    Returns
-    -------
-    data_points
-        Each entry is a numpy array containing the data points
-    components
-        The cleaned list of components. Eg. [(0,1)] or [(0,1), (1,2)]
-        for components = [1,2] and components=['1,2', '2,3'] respectively
-    """
-
-    if basis in adata.obsm.keys():
-        basis_key = basis
-
-    elif f"X_{basis}" in adata.obsm.keys():
-        basis_key = f"X_{basis}"
-    else:
-        raise KeyError(
-            f"Could not find entry in `obsm` for '{basis}'.\n"
-            f"Available keys are: {list(adata.obsm.keys())}."
-        )
-
-    n_dims = 2
-    if projection == '3d':
-        # check if the data has a third dimension
-        if adata.obsm[basis_key].shape[1] == 2:
-            if settings._low_resolution_warning:
-                logg.warning(
-                    'Selected projections is "3d" but only two dimensions '
-                    'are available. Only these two dimensions will be plotted'
-                )
-        else:
-            n_dims = 3
-
-    if components == 'all':
-        from itertools import combinations
-
-        r_value = 3 if projection == '3d' else 2
-        _components_list = np.arange(adata.obsm[basis_key].shape[1]) + 1
-        components = [
-            ",".join(map(str, x)) for x in combinations(_components_list, r=r_value)
-        ]
-
-    components_list = []
-    offset = 0
-    if basis == 'diffmap':
-        offset = 1
-    if components is not None:
-        # components have different formats, either a list with integers, a string
-        # or a list of strings.
-
+    # TODO: Consider deprecating this
+    # If components is not None, parse them and set dimensions
+    if components == "all":
+        dimensions = list(itertools.combinations(range(total_dims), ndims))
+    elif components is not None:
         if isinstance(components, str):
-            # eg: components='1,2'
-            components_list.append(
-                tuple(int(x.strip()) - 1 + offset for x in components.split(','))
-            )
+            components = [components]
+        # Components use 1 based indexing
+        dimensions = [[int(dim) - 1 for dim in c.split(",")] for c in components]
 
-        elif isinstance(components, cabc.Sequence):
-            if isinstance(components[0], int):
-                # components=[1,2]
-                components_list.append(tuple(int(x) - 1 + offset for x in components))
-            else:
-                # in this case, the components are str
-                # eg: components=['1,2'] or components=['1,2', '2,3]
-                # More than one component can be given and is stored
-                # as a new item of components_list
-                for comp in components:
-                    components_list.append(
-                        tuple(int(x.strip()) - 1 + offset for x in comp.split(','))
-                    )
+    if all(isinstance(el, Integral) for el in dimensions):
+        dimensions = [dimensions]
+    # if all(isinstance(el, Collection) for el in dimensions):
+    for dims in dimensions:
+        if len(dims) != ndims or not all(isinstance(d, Integral) for d in dims):
+            raise ValueError()
 
-        else:
-            raise ValueError(
-                "Given components: '{}' are not valid. Please check. "
-                "A valid example is `components='2,3'`"
-            )
-        # check if the components are present in the data
-        try:
-            data_points = []
-            for comp in components_list:
-                data_points.append(adata.obsm[basis_key][:, comp])
-        except:
-            raise ValueError(
-                "Given components: '{}' are not valid. Please check. "
-                "A valid example is `components='2,3'`"
-            )
-
-        if basis == 'diffmap':
-            # remove the offset added in the case of diffmap, such that
-            # plot_scatter can print the labels correctly.
-            components_list = [
-                tuple(number - 1 for number in comp) for comp in components_list
-            ]
-    else:
-        data_points = [np.array(adata.obsm[basis_key])[:, offset : offset + n_dims]]
-        components_list = []
-
-    if img_key is not None:
-        spatial_data = adata.uns["spatial"][library_id]
-        if f"tissue_{img_key}_scalef" in spatial_data['scalefactors'].keys():
-            scalef_key = f"tissue_{img_key}_scalef"
-            data_points[0] = np.multiply(
-                data_points[0], spatial_data['scalefactors'][scalef_key]
-            )
-        else:
-            raise KeyError(
-                f"Could not find entry in `adata.uns[spatial][{library_id}]` for '{img_key}'.\n"
-                f"Available keys are: {list(spatial_data['images'].keys())}."
-            )
-    elif img_key is None and basis == "spatial":
-        data_points[0][:, 1] = np.abs(
-            np.subtract(data_points[0][:, 1], np.max(data_points[0][:, 1]))
-        )
-
-    return data_points, components_list
+    return dimensions
 
 
 def _add_categorical_legend(
@@ -1042,6 +953,16 @@ def _add_categorical_legend(
         # TODO: wtf
         # this is temporary storage for access by other tools
         _utils._tmp_cluster_pos = all_pos.values
+
+
+def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
+    """Get array for basis from anndata. Just tries to add 'X_'."""
+    if basis in adata.obsm:
+        return adata.obsm[basis]
+    elif f"X_{basis}" in adata.obsm:
+        return adata.obsm[f"X_{basis}"]
+    else:
+        raise KeyError(f"Could not find '{basis}' or 'X_{basis}' in .obsm")
 
 
 def _get_color_source_vector(
@@ -1142,7 +1063,7 @@ def _basis2name(basis):
 
 
 def _process_image(
-    adata, data_points, img_key, crop_coord, scale_spot, library_id, bw=False
+    adata, coords, img_key, crop_coord, scale_spot, library_id, bw=False
 ):
     offset = 100
     cmap_img = None
@@ -1150,6 +1071,7 @@ def _process_image(
     img = spatial_data['images'][img_key]
     scalef_key = f"tissue_{img_key}_scalef"
 
+    coords = np.multiply(coords, spatial_data['scalefactors'][scalef_key])
     # 0.5 needed for optimal matching with spot boundaries
     # checked with detected_tissue_image.png
     spot_size = (
@@ -1171,10 +1093,10 @@ def _process_image(
         )
     else:
         img_coord = [
-            data_points[0][:, 0].min() - offset,
-            data_points[0][:, 0].max() + offset,
-            data_points[0][:, 1].min() - offset,
-            data_points[0][:, 1].max() + offset,
+            coords[:, 0].min() - offset,
+            coords[:, 0].max() + offset,
+            coords[:, 1].min() - offset,
+            coords[:, 1].max() + offset,
         ]
 
     if bw:
