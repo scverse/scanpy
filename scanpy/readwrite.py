@@ -292,7 +292,7 @@ def read_visium(
     count_file: str = "filtered_feature_bc_matrix.h5",
     library_id: str = None,
     load_images: Optional[bool] = True,
-    tissue_image_path: Optional[Union[str, Path]] = None,
+    source_image_path: Optional[Union[str, Path]] = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted visum dataset.
@@ -317,9 +317,8 @@ def read_visium(
         'filtered_feature_bc_matrix.h5' or 'raw_feature_bc_matrix.h5'.
     library_id
         Identifier for the visium library. Can be modified when concatenating multiple adata objects.
-    tissue_image_path
+    source_image_path
         Path to the high-resolution tissue image. Will be saved in `uns`.
-        If None, tries to guess the path name by looking for a tif or jpg image in `path` with the name `"image"` or `<library_id>"_image"`.
 
     Returns
     -------
@@ -343,7 +342,7 @@ def read_visium(
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['scalefactors']`
         Scale factors for the spots
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
-        Files metadata: 'chemistry_description', 'software_version', 'tissue_image_path'
+        Files metadata: 'chemistry_description', 'software_version', 'source_image_path'
     :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
@@ -422,24 +421,12 @@ def read_visium(
             inplace=True,
         )
 
-        # try to find path to high-res tissue image
-        if tissue_image_path is None:
-            cand_image_paths = [
-                path / ("image" + ext) for ext in ['.tif', '.tiff', '.jpg', '.jpeg']
-            ]
-            cand_image_paths += [
-                path / (library_id + "_image" + ext)
-                for ext in ['.tif', '.tiff', '.jpg', '.jpeg']
-            ]
-            for p in cand_image_paths:
-                if p.exists():
-                    tissue_image_path = p.resolve()
-                    break
         # put image path in uns
-        else:
-            tissue_image_path = Path(tissue_image_path).resolve()
-        adata.uns["spatial"][library_id]["metadata"]["tissue_image_path"] = str(
-            tissue_image_path
+        if source_image_path is not None:
+            # get an absolute path
+            source_image_path = str(Path(source_image_path).resolve())
+        adata.uns["spatial"][library_id]["metadata"]["source_image_path"] = str(
+            source_image_path
         )
 
     return adata
