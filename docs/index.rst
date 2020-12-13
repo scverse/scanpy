@@ -46,3 +46,4 @@ Latest additions
    release-notes
    contributors
    references
+   dev/index
