@@ -18,7 +18,7 @@ networkx>=2.3
 natsort
 joblib
 numba>=0.41.0
-umap-learn>=0.3.10
+umap-learn>=0.3.10,<0.5
 legacy-api-wrap
 packaging
 sinfo
