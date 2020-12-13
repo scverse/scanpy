@@ -250,6 +250,7 @@ def hashsolo(
 
     .. note::
         More information and bug reports `here <https://github.com/calico/solo>`__.
+
     Parameters
     ----------
     adata
@@ -273,6 +274,7 @@ def hashsolo(
         noise distribution. The default is number of cell hashes - 2.
     inplace
         To do operation in place
+
     Returns
     -------
     adata
