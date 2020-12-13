@@ -17,7 +17,7 @@ Then follow these steps:
     # e.g. pip install dist/scanpy-{version}-py3-none-any.whl
 
     # Once you're confident the build looks good, push the tag to github
-    git push upstream 0.7.3
+    git push upstream {version}
 
     # Upload wheel and code distribution to pypi
     twine upload dist/scanpy-{version}
