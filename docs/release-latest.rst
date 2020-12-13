@@ -12,6 +12,7 @@ On master
 * Fixed download path of `pbmc3k_processed` :pr:`1472` :smaller:`D Strobl`
 * Fixed anndata version requirement for `sc.concat` :pr:`1491` :smaller:`I Virshup`
 * Fixed bug where `score_genes` would error if one gene was passed :pr:`1398` :smaller:`I Virshup`
+* Updated link for `moignard15` dataset :pr:`1542` :smaller:`I Virshup`
 
 .. rubric:: Performance
 
