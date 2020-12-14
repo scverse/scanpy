@@ -6,11 +6,19 @@ On master
 
 .. rubric:: Bugfixes
 
+* Fixed the width of the progress bar when downloading data :pr:`1507` :smaller:`M Klein`
 * Fixed `log1p` inplace on integer dense arrays :pr:`1400` :smaller:`I Virshup`
 * Fixed `marker_gene_overlap` default value for `top_n_markers` :pr:`1464` :smaller:`MD Luecken`
 * Fixed download path of `pbmc3k_processed` :pr:`1472` :smaller:`D Strobl`
 * Fixed anndata version requirement for `sc.concat` :pr:`1491` :smaller:`I Virshup`
+* Fixed bug where `score_genes` would error if one gene was passed :pr:`1398` :smaller:`I Virshup`
+* Updated link for `moignard15` dataset :pr:`1542` :smaller:`I Virshup`
 * Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
+
+.. rubric:: Performance
+
+* Sped up `sc.get.obs_df` signifigantly :pr:`1499` :smaller:`F Ramirez`
+
 
 1.6.0 :small:`2020-08-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
