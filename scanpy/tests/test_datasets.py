@@ -7,7 +7,6 @@ import numpy as np
 import pytest
 from pathlib import Path
 from anndata.tests.helpers import assert_adata_equal
-import os
 import subprocess
 
 

@@ -389,6 +389,7 @@ def visium_sge(
         'Targeted_Visium_Human_ColorectalCancer_GeneSignature',
         'Parent_Visium_Human_ColorectalCancer',
     ] = 'V1_Breast_Cancer_Block_A_Section_1',
+    *,
     include_hires_tiff: bool = False,
 ) -> AnnData:
     """\
@@ -401,7 +402,7 @@ def visium_sge(
         The ID of the data sample in 10x’s spatial database.
     include_hires_tiff
         Download and include the high-resolution tissue image (tiff) in `adata.uns["spatial"][sample_id]["metadata"]["source_image_path"]`.
-        
+
     Returns
     -------
     Annotated data matrix.
