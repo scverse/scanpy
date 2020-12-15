@@ -26,12 +26,14 @@ hypotheses in a bayesian fashion, and select the most probable hypothesis.
 
 def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     """Calculate log likelihoods for each hypothesis, negative, singlet, doublet
+
     Parameters
     ----------
     data : np.ndarray
         cells by hashing counts matrix
     number_of_noise_barcodes : int,
         number of barcodes to used to calculated noise distribution
+
     Returns
     -------
     log_likelihoods_for_each_hypothesis : np.ndarray
@@ -43,6 +45,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     def gaussian_updates(data, mu_o, std_o):
         """Update parameters of your gaussian
         https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
+
         Parameters
         ----------
         data : np.array
@@ -51,6 +54,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
             global mean for hashing count distribution
         std_o : float,
             global std for hashing count distribution
+
         Returns
         -------
         float
@@ -198,6 +202,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
 def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
     """
     Calculate bayes rule from log likelihoods
+
     Parameters
     ----------
     data : np.array
@@ -212,6 +217,7 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
         in the transcriptome space, e.g. UMI counts, pct mito reads, etc.
     number_of_noise_barcodes : int
         number of barcodes to used to calculated noise distribution
+
     Returns
     -------
     bayes_dict_results : dict
@@ -250,6 +256,7 @@ def hashsolo(
 
     .. note::
         More information and bug reports `here <https://github.com/calico/solo>`__.
+
     Parameters
     ----------
     adata
@@ -273,6 +280,7 @@ def hashsolo(
         noise distribution. The default is number of cell hashes - 2.
     inplace
         To do operation in place
+
     Returns
     -------
     adata
