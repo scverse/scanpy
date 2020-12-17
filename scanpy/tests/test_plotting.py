@@ -490,6 +490,28 @@ def test_violin(image_comparer):
     save_and_compare_images('master_violin_multi_panel_with_layer')
 
 
+# TODO: Generalize test to more plotting types
+def test_violin_without_raw(tmpdir):
+    # https://github.com/theislab/scanpy/issues/1546
+    TESTDIR = Path(tmpdir)
+
+    has_raw_pth = TESTDIR / "has_raw.png"
+    no_raw_pth = TESTDIR / "no_raw.png"
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc_no_raw = pbmc.raw.to_adata().copy()
+
+    sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", show=False)
+    plt.savefig(has_raw_pth)
+    plt.close()
+
+    sc.pl.violin(pbmc_no_raw, 'CST3', groupby="bulk_labels", show=False)
+    plt.savefig(no_raw_pth)
+    plt.close()
+
+    assert compare_images(has_raw_pth, no_raw_pth, tol=5) is None
+
+
 def test_dendrogram(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=10)
 
