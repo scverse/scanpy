@@ -1,12 +1,15 @@
-from ..preprocessing import pca
 from typing import Optional, Union
 import numpy as np
 from anndata import AnnData
 from .. import logging as logg
 from .._utils import AnyRandom
+from sklearn.utils.extmath import svd_flip
+from sklearn.utils import check_array
+from scipy.sparse import issparse
+from scipy.sparse.linalg import LinearOperator, svds
 
 def multi_batch_pca(adata: AnnData,                     
-                    n_comps: int = None,                    
+                    n_comps: int = 50,                    
                     weights: Optional[np.ndarray] = None,                     
                     batch_key: str = 'batch',                     
                     svd_solver: str = 'arpack',                    
@@ -20,7 +23,8 @@ def multi_batch_pca(adata: AnnData,
     ----------    
     adata        
         The (annotated) AnnData object with .X of shape `n_obs` × `n_vars`.    
-    
+    n_comps
+        Number of principal components to compute. Defaults to 50.
     weights        
         The weight of each batch in computation of aggregated princial componenets        
         of the adata.    
@@ -60,13 +64,15 @@ def multi_batch_pca(adata: AnnData,
              covariance matrix.
     """     
         
-    if not isinstance(data, AnnData):
+    if not isinstance(adata, AnnData):
         raise ValueError('`adata` must be an `AnnData` object.')    
         
     start = logg.info(f'computing multi-batch PCA')      
-    
-    batches = list(adata.obs[batch_key].unique())        
-    
+    try:
+        batches = list(adata.obs[batch_key].unique())        
+    except Exception:
+        raise KeyError(f'`adata.obs` dataframe has no `{batch_key}` column.')
+        
     if weights is None:        
         weights = np.ones(len(batches))            
     elif len(weights) != len(batches):
@@ -79,7 +85,7 @@ def multi_batch_pca(adata: AnnData,
 
     batch_inds = []
     for i, batch in enumerate(batches):        
-        batch_inds.appaned(adata.obs[batch_key] == batch)        
+        batch_inds.append(adata.obs[batch_key] == batch)        
         adata_batch = adata[batch_inds[-1]]
         
         means += weights[i] * np.ravel(adata_batch.X.mean(0))        
@@ -88,7 +94,7 @@ def multi_batch_pca(adata: AnnData,
     means /= sum(weights)         
     
     from sklearn.decomposition import PCA    
-    if not issparse(X):
+    if not issparse(adata.X):
 
         
         X_proc = (adata.X - means)/scales[:, None]
@@ -113,7 +119,7 @@ def multi_batch_pca(adata: AnnData,
             )
 
         adata.X = check_array(adata.X, accept_sparse=['csr', 'csc'])
-            
+        X = adata.X
         mdot = means.dot    
         mmat = mdot    
         mhdot = means.T.dot    
@@ -129,9 +135,9 @@ def multi_batch_pca(adata: AnnData,
         def matmat(x):        
             return (Xmat(x) - mmat(x)) / scales[:, None]
         def rmatvec(x):        
-            return (XHdot(x) - mhdot(ones(x)) / scales[:, None]
+            return (XHdot(x) - mhdot(ones(x))) / scales[:, None]
         def rmatmat(x):        
-            return (XHmat(x) - mhmat(ones(x)) / scales[:, None]
+            return (XHmat(x) - mhmat(ones(x))) / scales[:, None]
     
         XL = LinearOperator(
             matvec=matvec,
@@ -142,7 +148,7 @@ def multi_batch_pca(adata: AnnData,
             rmatmat=rmatmat
             )
     
-        u, s, v = svds(XL, solver=solver, k=npcs, v0=random_init)
+        u, s, v = svds(XL, solver=svd_solver, k=n_comps, v0=np.random.rand(np.min(X.shape)))
         u, v = svd_flip(u, v)
         idx = np.argsort(-s)
         v = v[idx, :]
