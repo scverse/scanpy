@@ -13,6 +13,7 @@ On master
 * Fixed anndata version requirement for `sc.concat` :pr:`1491` :smaller:`I Virshup`
 * Fixed bug where `score_genes` would error if one gene was passed :pr:`1398` :smaller:`I Virshup`
 * Updated link for `moignard15` dataset :pr:`1542` :smaller:`I Virshup`
+* Fixed bug where calling `set_figure_params` could block if IPython was installed, but not used. :pr:`1547` :smaller:`I Virshup`
 
 .. rubric:: Performance
 
