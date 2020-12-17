@@ -176,6 +176,21 @@ def _check_array_function_arguments(**kwargs):
         )
 
 
+def _check_use_raw(adata: AnnData, use_raw: Union[None, bool]) -> bool:
+    """
+    Normalize checking `use_raw`.
+
+    My intentention here is to also provide a single place to throw a deprecation warning from in future.
+    """
+    if use_raw is not None:
+        return use_raw
+    else:
+        if adata.raw is not None:
+            return True
+        else:
+            return False
+
+
 # --------------------------------------------------------------------------------
 # Graph stuff
 # --------------------------------------------------------------------------------
