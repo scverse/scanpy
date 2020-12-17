@@ -139,6 +139,20 @@ def test_results_layers():
     for name in true_scores_t_test.dtype.names:
         assert not np.allclose(true_scores_t_test[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
 
+def test_singlets():
+    pbmc = pbmc68k_reduced()
+    pbmc.obs['louvain'] = pbmc.obs['louvain'].cat.add_categories(['11'])
+    pbmc.obs['louvain'][0] = '11' 
+    
+    with pytest.raises(ValueError, match=rf"Could not calculate statistics.*{'11'}"):
+        rank_genes_groups(pbmc, groupby = 'louvain')
+
+def test_emptycat():
+    pbmc = pbmc68k_reduced()
+    pbmc.obs['louvain'] = pbmc.obs['louvain'].cat.add_categories(['11'])
+
+    with pytest.raises(ValueError, match=rf"Could not calculate statistics.*{'11'}"):
+        rank_genes_groups(pbmc, groupby = 'louvain')
 
 def test_wilcoxon_symmetry():
     pbmc = pbmc68k_reduced()
