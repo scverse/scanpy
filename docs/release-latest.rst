@@ -4,6 +4,10 @@
 On master
 ~~~~~~~~~
 
+.. rubric:: Features
+
+* Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
+
 .. rubric:: Bugfixes
 
 * Fixed the width of the progress bar when downloading data :pr:`1507` :smaller:`M Klein`
@@ -13,7 +17,6 @@ On master
 * Fixed anndata version requirement for `sc.concat` :pr:`1491` :smaller:`I Virshup`
 * Fixed bug where `score_genes` would error if one gene was passed :pr:`1398` :smaller:`I Virshup`
 * Updated link for `moignard15` dataset :pr:`1542` :smaller:`I Virshup`
-* Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
 
 .. rubric:: Performance
 
