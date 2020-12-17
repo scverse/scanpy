@@ -469,15 +469,9 @@ class ScanpyConfig:
 
     @staticmethod
     def _is_run_from_ipython():
-        """Determines whether run from Ipython.
-
-        Only affects progress bars.
-        """
-        try:
-            __IPYTHON__
-            return True
-        except NameError:
-            return False
+        """Determines whether we're currently in IPython."""
+        # https://stackoverflow.com/questions/40638507/testing-for-presence-of-ipython
+        return hasattr(__builtins__, "__IPYTHON__")
 
     def __str__(self) -> str:
         return '\n'.join(
