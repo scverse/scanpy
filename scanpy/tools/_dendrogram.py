@@ -124,8 +124,6 @@ def dendrogram(
         rep_df.set_index(categorical, inplace=True)
         categories = rep_df.index.categories
     else:
-        if use_raw is None and adata.raw is not None:
-            use_raw = True
         gene_names = adata.raw.var_names if use_raw else adata.var_names
         from ..plotting._anndata import _prepare_dataframe
 

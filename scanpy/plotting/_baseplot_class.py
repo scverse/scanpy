@@ -91,9 +91,6 @@ class BasePlot(object):
         self.var_group_rotation = var_group_rotation
         self.width, self.height = figsize if figsize is not None else (None, None)
 
-        if use_raw is None and adata.raw is not None:
-            use_raw = True
-
         self.has_var_groups = (
             True
             if var_group_positions is not None and len(var_group_positions) > 0
