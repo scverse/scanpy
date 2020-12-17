@@ -4,6 +4,10 @@
 On master
 ~~~~~~~~~
 
+.. rubric:: Features
+
+* Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
+
 .. rubric:: Bugfixes
 
 * Fixed the width of the progress bar when downloading data :pr:`1507` :smaller:`M Klein`
@@ -18,6 +22,7 @@ On master
 .. rubric:: Performance
 
 * Sped up `sc.get.obs_df` signifigantly :pr:`1499` :smaller:`F Ramirez`
+
 
 1.6.0 :small:`2020-08-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
