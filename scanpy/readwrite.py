@@ -319,7 +319,7 @@ def read_visium(
         Identifier for the visium library. Can be modified when concatenating multiple adata objects.
     source_image_path
         Path to the high-resolution tissue image. Path will be included in
-        `.uns["spatial"][sample_id]["metadata"]["source_image_path"]`.
+        `.uns["spatial"][library_id]["metadata"]["source_image_path"]`.
 
     Returns
     -------
