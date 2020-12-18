@@ -659,8 +659,6 @@ class DotPlot(BasePlot):
         frac = dot_size.values.flatten()
         mean_flat = dot_color.values.flatten()
         cmap = pl.get_cmap(kwds.get('cmap', cmap))
-        if 'cmap' in kwds:
-            del kwds['cmap']
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
         else:
@@ -685,9 +683,20 @@ class DotPlot(BasePlot):
 
         import matplotlib.colors
 
-        normalize = matplotlib.colors.Normalize(
-            vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
-        )
+        if 'vcenter' in kwds:
+            normalize = matplotlib.colors.TwoSlopeNorm(
+                vmin=kwds.get('vmin'),
+                vmax=kwds.get('vmax'),
+                vcenter=kwds.get('vcenter'),
+            )
+        else:
+            normalize = matplotlib.colors.Normalize(
+                vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
+            )
+
+        for key in ['cmap', 'vmin', 'vmax', 'vcenter']:
+            if key in kwds:
+                del kwds[key]
 
         if color_on == 'square':
             if edge_color is None:

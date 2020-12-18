@@ -18,7 +18,7 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
-from matplotlib.colors import is_color_like, Colormap, ListedColormap
+from matplotlib.colors import is_color_like, Colormap, ListedColormap, Normalize, TwoSlopeNorm
 
 from .. import get
 from .. import logging as logg
@@ -1058,6 +1058,22 @@ def heatmap(
 
     colorbar_width = 0.2
 
+    if 'vcenter' in kwds and kwds['vcenter'] is not None:
+        norm = TwoSlopeNorm(
+                vmin=kwds.get('vmin'),
+                vmax=kwds.get('vmax'),
+                vcenter=kwds.get('vcenter'),
+        )
+    else:
+        norm = Normalize(
+                vmin=kwds.get('vmin'),
+                vmax=kwds.get('vmax'),
+        )
+    kwds['norm'] = norm
+    for key in ['vmax', 'vmin', 'vcenter']:
+        if key in kwds:
+            del kwds[key]
+
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
         # first row is for 'brackets' (if no brackets needed, the height of this row
@@ -1638,7 +1654,7 @@ def correlation_matrix(
     **kwds
         Only if `show_correlation` is True:
         Are passed to :func:`matplotlib.pyplot.pcolormesh` when plotting the
-        correlation heatmap. Useful values to pas are `vmax`, `vmin` and `cmap`.
+        correlation heatmap. Useful values to pass are `vmax`, `vmin` and `cmap`.
 
     Returns
     -------

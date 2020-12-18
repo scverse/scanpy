@@ -1047,6 +1047,7 @@ def embedding_density(
     fg_dotsize: Optional[int] = 180,
     vmax: Optional[int] = 1,
     vmin: Optional[int] = 0,
+    vcenter: Optional[int] = None,
     ncols: Optional[int] = 4,
     hspace: Optional[float] = 0.25,
     wspace: Optional[None] = None,
@@ -1201,7 +1202,11 @@ def embedding_density(
     if isinstance(color_map, str):
         color_map = copy(cm.get_cmap(color_map))
 
-    norm = colors.Normalize(vmin=vmin, vmax=vmax)
+    if vcenter is None:
+        norm = colors.Normalize(vmin=vmin, vmax=vmax)
+    else:
+        norm = colors.TwoSlopeNorm(vcenter=vcenter, vmin=vmin, vmax=vmax)
+
     color_map.set_over('black')
     color_map.set_under('lightgray')
     # a name to store the density values is needed. To avoid

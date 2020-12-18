@@ -319,9 +319,16 @@ class StackedViolin(BasePlot):
             _color_df = _color_df.T
         import matplotlib.colors
 
-        norm = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
-        )
+        if 'vcenter' in self.kwds:
+            norm = matplotlib.colors.TwoSlopeNorm(
+                vmin=self.kwds.get('vmin'),
+                vmax=self.kwds.get('vmax'),
+                vcenter=self.kwds.get('vcenter'),
+            )
+        else:
+            norm = matplotlib.colors.Normalize(
+                vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+            )
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
         if 'cmap' in self.kwds:
             del self.kwds['cmap']

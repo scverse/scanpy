@@ -13,7 +13,7 @@ from matplotlib import pyplot as pl, colors
 from matplotlib.cm import get_cmap
 from matplotlib import rcParams
 from matplotlib import patheffects
-from matplotlib.colors import Colormap
+from matplotlib.colors import Colormap, Normalize, TwoSlopeNorm
 from functools import partial
 
 from .. import _utils
@@ -37,7 +37,7 @@ from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
 from ..._compat import Literal
 
-VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
+VMinMaxCenter = Union[str, float, Callable[[Sequence[float]], float]]
 
 
 @_doc_params(
@@ -76,8 +76,9 @@ def embedding(
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
-    vmax: Union[VMinMax, Sequence[VMinMax], None] = None,
-    vmin: Union[VMinMax, Sequence[VMinMax], None] = None,
+    vmax: Union[VMinMaxCenter, Sequence[VMinMaxCenter], None] = None,
+    vmin: Union[VMinMaxCenter, Sequence[VMinMaxCenter], None] = None,
+    vcenter: Union[VMinMaxCenter, Sequence[VMinMaxCenter], None] = None,
     add_outline: Optional[bool] = False,
     outline_width: Tuple[float, float] = (0.3, 0.05),
     outline_color: Tuple[str, str] = ('black', 'white'),
@@ -202,6 +203,8 @@ def embedding(
         vmax = [vmax]
     if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
         vmin = [vmin]
+    if isinstance(vcenter, str) or not isinstance(vcenter, cabc.Sequence):
+        vcenter = [vcenter]
 
     if 's' in kwargs:
         size = kwargs.pop('s')
@@ -291,11 +294,16 @@ def embedding(
 
         # check vmin and vmax options
         if categorical:
-            kwargs['vmin'] = kwargs['vmax'] = None
+            kwargs['norm'] = None
         else:
-            kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(
-                vmin, vmax, count, color_vector
+            vmin_next, vmax_next, vcenter_next = _get_vmin_vmax_vcenter(
+                vmin, vmax, vcenter, count, color_vector
             )
+            if vcenter_next is not None:
+                norm = TwoSlopeNorm(vmin=vmin_next, vmax=vmax_next, vcenter=vcenter_next)
+            else:
+                norm = Normalize(vmin=vmin_next, vmax=vmax_next)
+            kwargs['norm'] = norm
 
         # make the scatter plot
         if projection == '3d':
@@ -464,15 +472,16 @@ def _panel_grid(hspace, wspace, ncols, num_panels):
     return fig, gs
 
 
-def _get_vmin_vmax(
-    vmin: Sequence[VMinMax],
-    vmax: Sequence[VMinMax],
+def _get_vmin_vmax_vcenter(
+    vmin: Sequence[VMinMaxCenter],
+    vmax: Sequence[VMinMaxCenter],
+    vcenter: Sequence[VMinMaxCenter],
     index: int,
     color_vector: Sequence[float],
 ) -> Tuple[Union[float, None], Union[float, None]]:
 
     """
-    Evaluates the value of vmin and vmax, which could be a
+    Evaluates the value of vmin, vmax and vcenter, which could be a
     str in which case is interpreted as a percentile and should
     be specified in the form 'pN' where N is the percentile.
     Eg. for a percentile of 85 the format would be 'p85'.
@@ -494,11 +503,11 @@ def _get_vmin_vmax(
     Returns
     -------
 
-    (vmin, vmax) containing None or float values
+    (vmin, vmax, vcenter) containing None or float values
 
     """
     out = []
-    for v_name, v in [('vmin', vmin), ('vmax', vmax)]:
+    for v_name, v in [('vmin', vmin), ('vmax', vmax), ('vcenter', vcenter)]:
         if len(v) == 1:
             # this case usually happens when the user sets eg vmax=0.9, which
             # is internally converted into list of len=1, but is expected that this

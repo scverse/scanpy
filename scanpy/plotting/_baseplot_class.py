@@ -563,9 +563,16 @@ class BasePlot(object):
         ax.set_ylim(len(y_labels), 0)
         ax.set_xlim(0, len(x_labels))
 
-        normalize = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
-        )
+        if 'vcenter' in self.kwds:
+            normalize = matplotlib.colors.TwoSlopeNorm(
+                vmin=self.kwds.get('vmin'),
+                vmax=self.kwds.get('vmax'),
+                vcenter=self.kwds.get('vcenter'),
+            )
+        else:
+            normalize = matplotlib.colors.Normalize(
+                vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+            )
 
         return normalize
 

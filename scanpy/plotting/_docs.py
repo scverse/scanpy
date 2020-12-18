@@ -113,7 +113,10 @@ vmin
     as defined by matplotlib `scatter` function. When making multiple plots, vmin can
     be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]`
 vmax
-    Maximum value to plot. The format is the same as for `vmin`\
+    Maximum value to plot. The format is the same as for `vmin`.
+vcenter
+    Center value of the color scale. Useful for diverging colormaps. The format is the same as
+    for `vmin`\.
 """
 
 doc_outline = """\

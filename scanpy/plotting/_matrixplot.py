@@ -200,17 +200,25 @@ class MatrixPlot(BasePlot):
         if self.are_axes_swapped:
             _color_df = _color_df.T
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
-        if 'cmap' in self.kwds:
-            del self.kwds['cmap']
-
         import matplotlib.colors
 
-        normalize = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
-        )
+        if 'vcenter' in self.kwds:
+            normalize = matplotlib.colors.TwoSlopeNorm(
+                vmin=self.kwds.get('vmin'),
+                vmax=self.kwds.get('vmax'),
+                vcenter=self.kwds.get('vcenter'),
+            )
+        else:
+            normalize = matplotlib.colors.Normalize(
+                vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+            )
 
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(1.5)
+
+        for key in ['cmap', 'vmin', 'vmax', 'vcenter']:
+            if key in self.kwds:
+                del self.kwds[key]
 
         kwds = fix_kwds(
             self.kwds,
