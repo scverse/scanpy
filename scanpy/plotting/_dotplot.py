@@ -683,7 +683,7 @@ class DotPlot(BasePlot):
 
         import matplotlib.colors
 
-        if 'vcenter' in kwds:
+        if 'vcenter' in kwds and kwds['vcenter'] is not None:
             normalize = matplotlib.colors.TwoSlopeNorm(
                 vmin=kwds.get('vmin'),
                 vmax=kwds.get('vmax'),

@@ -202,7 +202,7 @@ class MatrixPlot(BasePlot):
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
         import matplotlib.colors
 
-        if 'vcenter' in self.kwds:
+        if 'vcenter' in self.kwds and self.kwds['vcenter'] is not None:
             normalize = matplotlib.colors.TwoSlopeNorm(
                 vmin=self.kwds.get('vmin'),
                 vmax=self.kwds.get('vmax'),
