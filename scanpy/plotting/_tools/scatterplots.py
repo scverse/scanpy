@@ -314,11 +314,13 @@ def embedding(
                 **kwargs,
             )
         else:
+            # plot img in background
             if img is not None and img is not _empty:
                 ax.imshow(img, cmap=cmap_img, alpha=alpha_img)
                 if crop_coord is not None:
                     ax.set_xlim(crop_coord[0], crop_coord[1])
                     ax.set_ylim(crop_coord[3], crop_coord[2])
+            # there's no img but coord system is top left
             if img is _empty:
                 ax.invert_yaxis()
 
@@ -841,7 +843,7 @@ def spatial(
                     ) = _process_image(
                         adata, "spatial", img_key, library_id, crop_coord, size, bw
                     )
-
+        # data is not visium (no image in background)
         if library_id is None or img_key is None:
             img_processed = _empty
             img_coord = None
@@ -968,7 +970,7 @@ def _get_data_points(
         data_points = [np.array(adata.obsm[basis_key])[:, offset : offset + n_dims]]
         components_list = []
 
-    if scale_basis is not None:
+    if scale_basis is not None:  # if basis need scale for img background
         data_points[0] = np.multiply(data_points[0], scale_basis)
 
     return data_points, components_list
@@ -1149,6 +1151,7 @@ def _process_image(
     spatial_data = adata.uns['spatial'][library_id]
     img = spatial_data['images'][img_key]
 
+    # get basis spatial
     if basis in adata.obsm.keys():
         data_points = adata.obsm[basis]
     else:
@@ -1157,6 +1160,7 @@ def _process_image(
             f"while calling plotting._tools._process_image."
         )
 
+    # get scale factor
     scalef_key = f"tissue_{img_key}_scalef"
     if scalef_key in spatial_data['scalefactors'].keys():
         scale_basis = spatial_data['scalefactors'][scalef_key]
@@ -1166,6 +1170,7 @@ def _process_image(
             f"Available keys are: {list(spatial_data['images'].keys())}."
         )
 
+    # scale radius for circles
     if scale_spot is None:
         scale_spot = 1.0
     spot_size = (
@@ -1174,6 +1179,7 @@ def _process_image(
         * scale_spot
     )
 
+    # handle coord cropping
     if crop_coord is not None:
         crop_coord = np.asarray(crop_coord)
         if len(crop_coord) != 4:
@@ -1184,14 +1190,13 @@ def _process_image(
         )
     else:
         img_coord = [
-            data_points[:, 0].min() - offset,
-            data_points[:, 0].max() + offset,
-            data_points[:, 1].min() - offset,
-            data_points[:, 1].max() + offset,
+            data_points[:, 0].min() * scale_basis - offset,
+            data_points[:, 0].max() * scale_basis + offset,
+            data_points[:, 1].min() * scale_basis - offset,
+            data_points[:, 1].max() * scale_basis + offset,
         ]
-        # resize coord for correct offset
-        img_coord = [i * scale_basis for i in img_coord]
 
+    # handle cmap img
     if bw:
         img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
         cmap_img = "gray"
