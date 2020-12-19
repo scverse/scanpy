@@ -1282,7 +1282,6 @@ def embedding_density(
             components=components,
             color=density_col_name,
             color_map=color_map,
-            norm=norm,
             size=dot_sizes,
             vmax=vmax,
             vmin=vmin,
