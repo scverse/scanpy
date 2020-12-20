@@ -300,7 +300,9 @@ def embedding(
                 vmin, vmax, vcenter, count, color_vector
             )
             if vcenter_next is not None:
-                norm = TwoSlopeNorm(vmin=vmin_next, vmax=vmax_next, vcenter=vcenter_next)
+                norm = TwoSlopeNorm(
+                    vmin=vmin_next, vmax=vmax_next, vcenter=vcenter_next
+                )
             else:
                 norm = Normalize(vmin=vmin_next, vmax=vmax_next)
             kwargs['norm'] = norm

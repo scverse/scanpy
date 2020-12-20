@@ -18,7 +18,13 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
-from matplotlib.colors import is_color_like, Colormap, ListedColormap, Normalize, TwoSlopeNorm
+from matplotlib.colors import (
+    is_color_like,
+    Colormap,
+    ListedColormap,
+    Normalize,
+    TwoSlopeNorm,
+)
 
 from .. import get
 from .. import logging as logg
@@ -1060,14 +1066,14 @@ def heatmap(
 
     if 'vcenter' in kwds and kwds['vcenter'] is not None:
         norm = TwoSlopeNorm(
-                vmin=kwds.get('vmin'),
-                vmax=kwds.get('vmax'),
-                vcenter=kwds.get('vcenter'),
+            vmin=kwds.get('vmin'),
+            vmax=kwds.get('vmax'),
+            vcenter=kwds.get('vcenter'),
         )
     else:
         norm = Normalize(
-                vmin=kwds.get('vmin'),
-                vmax=kwds.get('vmax'),
+            vmin=kwds.get('vmin'),
+            vmax=kwds.get('vmax'),
         )
     kwds['norm'] = norm
     for key in ['vmax', 'vmin', 'vcenter']:
