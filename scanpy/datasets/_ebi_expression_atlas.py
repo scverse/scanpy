@@ -43,10 +43,12 @@ def download_experiment(accession: str):
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     _download(
-        design_url + "experiment-design", experiment_dir / "experimental_design.tsv",
+        design_url + "experiment-design",
+        experiment_dir / "experimental_design.tsv",
     )
     _download(
-        mtx_url + "quantification-raw", experiment_dir / "expression_archive.zip",
+        mtx_url + "quantification-raw",
+        experiment_dir / "expression_archive.zip",
     )
 
 

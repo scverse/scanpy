@@ -52,7 +52,6 @@ Differential expression
 Data integration
 ----------------
 
-* `scVI <https://github.com/YosefLab/scVI>`__, see `comparison <https://nbviewer.jupyter.org/github/YosefLab/scVI/blob/master/tests/notebooks/scanpy_pbmc3k.ipynb>`__ :small:`Berkeley`
 * `scanaroma <https://github.com/brianhie/scanorama>`__ :small:`MIT`
 
 
@@ -60,3 +59,20 @@ Modeling perturbations
 ----------------------
 
 * `scGen <https://github.com/theislab/scgen>`__ / `trVAE <https://github.com/theislab/trvae>`__ :small:`Helmholtz Munich`
+
+
+scvi-tools
+----------
+
+* `scvi-tools <https://github.com/YosefLab/scvi-tools>`__ :small:`Berkeley`
+
+    | scvi-tools hosts deep generative models (DGM) for end-to-end analysis of single-cell
+      omics data (e.g., scVI, scANVI, totalVI). It also contains several primitives to build novel DGMs.
+      
+
+Adaptive immune receptor repertoire (AIRR)
+------------------------------------------
+
+* `scirpy <https://github.com/icbi-lab/scirpy>`__ :small:`Medical University of Innsbruck`
+    
+    | scirpy is a scanpy extension to expore single-cell T-cell receptor (TCR) and B-cell receptor (BCR) repertoires. 

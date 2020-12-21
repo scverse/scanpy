@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 from pathlib import Path
 from anndata.tests.helpers import assert_adata_equal
+import subprocess
 
 
 @pytest.fixture(scope="module")
@@ -97,6 +98,24 @@ def test_visium_datasets(tmp_dataset_dir, tmpdir):
     sc.settings.datasetdir = Path(tmpdir)
     mbrain_again = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
     assert_adata_equal(mbrain, mbrain_again)
+
+    # Test that downloading tissue image works
+    mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", include_hires_tiff=True)
+    expected_image_path = sc.settings.datasetdir / "V1_Adult_Mouse_Brain" / "image.tif"
+    image_path = Path(
+        mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["metadata"]["source_image_path"]
+    )
+    assert image_path == expected_image_path
+
+    # Test that tissue image exists and is a valid image file
+    assert image_path.exists()
+
+    # Test that tissue image is a tif image file (using `file`)
+    process = subprocess.run(
+        ['file', '--mime-type', image_path], stdout=subprocess.PIPE
+    )
+    output = process.stdout.strip().decode()  # make process output string
+    assert output == str(image_path) + ': image/tiff'
 
 
 def test_download_failure():

@@ -14,7 +14,10 @@ from ._utils_clustering import rename_groups, restrict_adjacency
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
 except ImportError:
-    class MutableVertexPartition: pass
+
+    class MutableVertexPartition:
+        pass
+
     MutableVertexPartition.__module__ = 'leidenalg.VertexPartition'
 
 

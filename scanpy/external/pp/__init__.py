@@ -5,3 +5,4 @@ from ._harmony_integrate import harmony_integrate
 from ._magic import magic
 from ._scanorama_integrate import scanorama_integrate
 from ._scvi import scvi
+from ._hashsolo import hashsolo

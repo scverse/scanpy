@@ -110,9 +110,7 @@ def score_genes(
     gene_list = set(gene_list_in_var[:])
 
     if len(gene_list) == 0:
-        logg.warning('provided gene list has length 0, scores as 0')
-        adata.obs[score_name] = 0
-        return adata if copy else None
+        raise ValueError("No valid genes were passed for scoring.")
 
     if gene_pool is None:
         gene_pool = list(var_names)
@@ -164,21 +162,7 @@ def score_genes(
     else:
         X_control = np.nanmean(X_control, axis=1)
 
-    if len(gene_list) == 0:
-        # We shouldn't even get here, but just in case
-        logg.hint(
-            f'could not add \n'
-            f'    {score_name!r}, score of gene set (adata.obs)'
-        )
-        return adata if copy else None
-    elif len(gene_list) == 1:
-        if _adata[:, gene_list].X.ndim == 2:
-            vector = _adata[:, gene_list].X.toarray()[:, 0] # new anndata
-        else:
-            vector = _adata[:, gene_list].X  # old anndata
-        score = vector - X_control
-    else:
-        score = X_list - X_control
+    score = X_list - X_control
 
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 

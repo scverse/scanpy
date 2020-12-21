@@ -174,7 +174,7 @@ def read_10x_h5(
         Feature types
     """
     start = logg.info(f'reading {filename}')
-    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url,)
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f'... did not find original file {filename}')
     with tables.open_file(str(filename), 'r') as f:
@@ -187,12 +187,9 @@ def read_10x_h5(
                     f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
                     f'Available genomes are: {list(adata.var["genome"].unique())}.'
                 )
-            adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
+            adata = adata[:, adata.var['genome'] == genome]
         if gex_only:
-            adata = adata[
-                :,
-                list(map(lambda x: x == 'Gene Expression', adata.var['feature_types'])),
-            ]
+            adata = adata[:, adata.var['feature_types'] == 'Gene Expression']
         if adata.is_view:
             adata = adata.copy()
     else:
@@ -233,7 +230,8 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
                 data = dsets['data'].view('float32')
                 data[:] = dsets['data']
             matrix = csr_matrix(
-                (data, dsets['indices'], dsets['indptr']), shape=(N, M),
+                (data, dsets['indices'], dsets['indptr']),
+                shape=(N, M),
             )
             # the csc matrix is automatically the transposed csr matrix
             # as scanpy expects it, so, no need for a further transpostion
@@ -268,7 +266,8 @@ def _read_v3_10x_h5(filename, *, start=None):
                 data = dsets['data'].view('float32')
                 data[:] = dsets['data']
             matrix = csr_matrix(
-                (data, dsets['indices'], dsets['indptr']), shape=(N, M),
+                (data, dsets['indices'], dsets['indptr']),
+                shape=(N, M),
             )
             adata = AnnData(
                 matrix,
@@ -293,6 +292,7 @@ def read_visium(
     count_file: str = "filtered_feature_bc_matrix.h5",
     library_id: str = None,
     load_images: Optional[bool] = True,
+    source_image_path: Optional[Union[str, Path]] = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted visum dataset.
@@ -317,6 +317,9 @@ def read_visium(
         'filtered_feature_bc_matrix.h5' or 'raw_feature_bc_matrix.h5'.
     library_id
         Identifier for the visium library. Can be modified when concatenating multiple adata objects.
+    source_image_path
+        Path to the high-resolution tissue image. Path will be included in
+        `.uns["spatial"][library_id]["metadata"]["source_image_path"]`.
 
     Returns
     -------
@@ -340,7 +343,7 @@ def read_visium(
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['scalefactors']`
         Scale factors for the spots
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
-        Files metadata: 'chemistry_description', 'software_version'
+        Files metadata: 'chemistry_description', 'software_version', 'source_image_path'
     :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
@@ -418,6 +421,14 @@ def read_visium(
             columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres'],
             inplace=True,
         )
+
+        # put image path in uns
+        if source_image_path is not None:
+            # get an absolute path
+            source_image_path = str(Path(source_image_path).resolve())
+            adata.uns["spatial"][library_id]["metadata"]["source_image_path"] = str(
+                source_image_path
+            )
 
     return adata
 
@@ -498,7 +509,9 @@ def _read_legacy_10x_mtx(
     """
     path = Path(path)
     adata = read(
-        path / f'{prefix}matrix.mtx', cache=cache, cache_compression=cache_compression,
+        path / f'{prefix}matrix.mtx',
+        cache=cache,
+        cache_compression=cache_compression,
     ).T  # transpose the data
     genes = pd.read_csv(path / f'{prefix}genes.tsv', header=None, sep='\t')
     if var_names == 'gene_symbols':
@@ -610,7 +623,7 @@ def write(
 
 
 def read_params(
-    filename: Union[Path, str], asheader: bool = False,
+    filename: Union[Path, str], asheader: bool = False
 ) -> Dict[str, Union[int, float, bool, str, None]]:
     """\
     Read parameter dictionary from text file.
@@ -691,7 +704,7 @@ def _read(
         )
     else:
         ext = is_valid_filename(filename, return_ext=True)
-    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url,)
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f'... did not find original file {filename}')
     # read hdf5 files
@@ -849,8 +862,7 @@ def is_float(string: str) -> float:
 
 
 def is_int(string: str) -> bool:
-    """Check whether string is integer.
-    """
+    """Check whether string is integer."""
     try:
         int(string)
         return True
@@ -859,8 +871,7 @@ def is_int(string: str) -> bool:
 
 
 def convert_bool(string: str) -> Tuple[bool, bool]:
-    """Check whether string is boolean.
-    """
+    """Check whether string is boolean."""
     if string == 'True':
         return True, True
     elif string == 'False':
@@ -870,8 +881,7 @@ def convert_bool(string: str) -> Tuple[bool, bool]:
 
 
 def convert_string(string: str) -> Union[int, float, bool, str, None]:
-    """Convert string to int, float or bool.
-    """
+    """Convert string to int, float or bool."""
     if is_int(string):
         return int(string)
     elif is_float(string):
@@ -918,33 +928,32 @@ def _download(url: str, path: Path):
     try:
         import ipywidgets
         from tqdm.auto import tqdm
-    except ModuleNotFoundError:
+    except ImportError:
         from tqdm import tqdm
+
     from urllib.request import urlopen, Request
 
     blocksize = 1024 * 8
     blocknum = 0
 
     try:
-        # This is a modified urllib.request.urlretrieve, but that won't let us
-        # set headers.
-        # The '\'s are ugly, but parenthesis are not allowed here
-        # fmt: off
-        with \
-            tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t, \
-            path.open("wb") as f, \
-            urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
-
-            t.total = int(resp.info().get("content-length", 0))
-
-            block = resp.read(blocksize)
-            while block:
-                f.write(block)
-                blocknum += 1
-                t.update(blocknum * blocksize - t.n)
+        with urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
+            total = resp.info().get("content-length", None)
+            with tqdm(
+                unit="B",
+                unit_scale=True,
+                miniters=1,
+                unit_divisor=1024,
+                total=total if total is None else int(total),
+            ) as t, path.open("wb") as f:
                 block = resp.read(blocksize)
-        # fmt: on
-    except Exception:
+                while block:
+                    f.write(block)
+                    blocknum += 1
+                    t.update(len(block))
+                    block = resp.read(blocksize)
+
+    except (KeyboardInterrupt, Exception):
         # Make sure file doesn’t exist half-downloaded
         if path.is_file():
             path.unlink()
@@ -952,8 +961,7 @@ def _download(url: str, path: Path):
 
 
 def _check_datafile_present_and_download(path, backup_url=None):
-    """Check whether the file is present, otherwise download.
-    """
+    """Check whether the file is present, otherwise download."""
     path = Path(path)
     if path.is_file():
         return True

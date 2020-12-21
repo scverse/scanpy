@@ -21,9 +21,7 @@ def test_umap_init_dtype():
 needs_fa2 = pytest.mark.skipif(not find_spec("fa2"), reason="needs module `fa2`")
 
 
-@pytest.mark.parametrize(
-    "layout", [pytest.param("fa", marks=needs_fa2), "fr"],
-)
+@pytest.mark.parametrize("layout", [pytest.param("fa", marks=needs_fa2), "fr"])
 def test_umap_init_paga(layout):
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc = pbmc[:100, :].copy()

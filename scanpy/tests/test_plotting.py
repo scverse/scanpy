@@ -6,10 +6,11 @@ import pytest
 from matplotlib.testing import setup
 from packaging import version
 
-from scanpy._utils import pkg_version
+from scanpy._compat import pkg_version
 
 setup()
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
@@ -37,7 +38,12 @@ def test_heatmap(image_comparer):
 
     adata = sc.datasets.krumsiek11()
     sc.pl.heatmap(
-        adata, adata.var_names, 'cell_type', use_raw=False, show=False, dendrogram=True,
+        adata,
+        adata.var_names,
+        'cell_type',
+        use_raw=False,
+        show=False,
+        dendrogram=True,
     )
     save_and_compare_images('master_heatmap')
 
@@ -94,6 +100,30 @@ def test_heatmap(image_comparer):
         standard_scale='obs',
     )
     save_and_compare_images('master_heatmap_std_scale_obs')
+
+    # test var_names as dict
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.tl.leiden(pbmc, key_added="clusters", resolution=0.5)
+    # call umap to trigger colors for the clusters
+    sc.pl.umap(pbmc, color="clusters")
+    marker_genes_dict = {
+        "3": ["GNLY", "NKG7"],
+        "1": ["FCER1A"],
+        "2": ["CD3D"],
+        "0": ["FCGR3A"],
+        "4": ["CD79A", "MS4A1"],
+    }
+    sc.pl.heatmap(
+        adata=pbmc,
+        var_names=marker_genes_dict,
+        groupby="clusters",
+        vmin=-2,
+        vmax=2,
+        cmap="RdBu_r",
+        dendrogram=True,
+        swap_axes=True,
+    )
+    save_and_compare_images('master_heatmap_var_as_dict')
 
 
 @pytest.mark.skipif(
@@ -606,11 +636,11 @@ def test_rank_genes_groups(image_comparer, name, fn):
 @pytest.mark.parametrize(
     "id,fn",
     [
-        ("heatmap", sc.pl.heatmap,),
-        ("dotplot", sc.pl.dotplot,),
-        ("matrixplot", sc.pl.matrixplot,),
-        ("stacked_violin", sc.pl.stacked_violin,),
-        ("tracksplot", sc.pl.tracksplot,),
+        ("heatmap", sc.pl.heatmap),
+        ("dotplot", sc.pl.dotplot),
+        ("matrixplot", sc.pl.matrixplot),
+        ("stacked_violin", sc.pl.stacked_violin),
+        ("tracksplot", sc.pl.tracksplot),
     ],
 )
 def test_genes_symbols(image_comparer, id, fn):
@@ -639,11 +669,11 @@ def pbmc_scatterplots():
 
 
 @pytest.mark.parametrize(
-    "id,fn",
+    'id,fn',
     [
-        ("pca", partial(sc.pl.pca, color='bulk_labels')),
+        ('pca', partial(sc.pl.pca, color='bulk_labels')),
         (
-            "pca_with_fonts",
+            'pca_with_fonts',
             partial(
                 sc.pl.pca,
                 color=['bulk_labels', 'louvain'],
@@ -654,10 +684,11 @@ def pbmc_scatterplots():
             ),
         ),
         pytest.param(
-            "3dprojection", partial(sc.pl.pca, color='bulk_labels', projection='3d'),
+            '3dprojection',
+            partial(sc.pl.pca, color='bulk_labels', projection='3d'),
         ),
         (
-            "multipanel",
+            'multipanel',
             partial(
                 sc.pl.pca,
                 color=['CD3D', 'CD79A'],
@@ -669,21 +700,19 @@ def pbmc_scatterplots():
             ),
         ),
         (
-            "pca_sparse_layer",
-            partial(
-                sc.pl.pca, color=['CD3D', 'CD79A'], layer="sparse", cmap='viridis',
-            ),
+            'pca_sparse_layer',
+            partial(sc.pl.pca, color=['CD3D', 'CD79A'], layer='sparse', cmap='viridis'),
         ),
         pytest.param(
-            "tsne",
+            'tsne',
             partial(sc.pl.tsne, color=['CD3D', 'louvain']),
             marks=pytest.mark.xfail(
-                reason="slight differences even after setting random_state."
+                reason='slight differences even after setting random_state.'
             ),
         ),
-        ("umap_nocolor", sc.pl.umap),
+        ('umap_nocolor', sc.pl.umap),
         (
-            "umap",
+            'umap',
             partial(
                 sc.pl.umap,
                 color=['louvain'],
@@ -692,7 +721,7 @@ def pbmc_scatterplots():
             ),
         ),
         (
-            "umap_gene_expr",
+            'umap_gene_expr',
             partial(
                 sc.pl.umap,
                 color=np.array(['LYZ', 'CD79A']),
@@ -703,7 +732,7 @@ def pbmc_scatterplots():
             ),
         ),
         (
-            "umap_layer",
+            'umap_layer',
             partial(
                 sc.pl.umap,
                 color=np.array(['LYZ', 'CD79A']),
@@ -716,21 +745,21 @@ def pbmc_scatterplots():
             ),
         ),
         (
-            "umap_with_edges",
+            'umap_with_edges',
             partial(sc.pl.umap, color='louvain', edges=True, edges_width=0.1, s=50),
         ),
-        # ("diffmap", partial(sc.pl.diffmap, components='all', color=['CD3D'])),
+        # ('diffmap', partial(sc.pl.diffmap, components='all', color=['CD3D'])),
         (
-            "umap_symbols",
-            partial(sc.pl.umap, color=['1', '2', '3'], gene_symbols="numbers"),
+            'umap_symbols',
+            partial(sc.pl.umap, color=['1', '2', '3'], gene_symbols='numbers'),
         ),
     ],
 )
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    if id == "3dprojection":
-        # check if this still happens so we can remove our checks once mpl is fixed
+    # https://github.com/theislab/scanpy/issues/849
+    if id == "3dprojection" and version.parse(mpl.__version__) < version.parse("3.3.3"):
         with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
             fn(pbmc_scatterplots, show=False)
     else:
@@ -967,7 +996,7 @@ def test_visium_default(image_comparer):
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
 
-    sc.pl.spatial(adata,)
+    sc.pl.spatial(adata)
 
     save_and_compare_images('master_spatial_visium_default')
 

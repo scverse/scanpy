@@ -3,8 +3,10 @@ import collections.abc as cabc
 from abc import ABC
 from functools import lru_cache
 from typing import Union, List, Sequence, Tuple, Collection, Optional
+import anndata
 
 import numpy as np
+import matplotlib as mpl
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker, gridspec, axes
 from matplotlib.axes import Axes
@@ -155,7 +157,7 @@ def timeseries_subplot(
 
 
 def timeseries_as_heatmap(
-    X: np.ndarray, var_names: Collection[str] = (), highlights_x=(), color_map=None,
+    X: np.ndarray, var_names: Collection[str] = (), highlights_x=(), color_map=None
 ):
     """\
     Plot timeseries as heatmap.
@@ -357,7 +359,7 @@ def _validate_palette(adata, key):
 
 
 def _set_colors_for_categorical_obs(
-    adata, value_to_plot, palette: Union[str, Sequence[str], Cycler],
+    adata, value_to_plot, palette: Union[str, Sequence[str], Cycler]
 ):
     """
     Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
@@ -385,7 +387,8 @@ def _set_colors_for_categorical_obs(
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
         cmap = pl.get_cmap(palette)
         colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
-
+    elif isinstance(palette, cabc.Mapping):
+        colors_list = [to_hex(palette[k], keep_alpha=True) for k in categories]
     else:
         # check if palette is a list and convert it to a cycler, thus
         # it doesnt matter if the list is shorter than the categories length:
@@ -495,12 +498,19 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
         raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
     neighbors = NeighborsView(adata, neighbors_key)
     g = nx.Graph(neighbors['connectivities'])
+    basis_key = _get_basis(adata, basis)
+    if basis_key == "spatial":
+        adata.obsm["spatial"][:, 1] = np.abs(
+            np.subtract(
+                adata.obsm["spatial"][:, 1], np.max(adata.obsm["spatial"][:, 1])
+            )
+        )
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for ax in axs:
             edge_collection = nx.draw_networkx_edges(
                 g,
-                adata.obsm['X_' + basis],
+                adata.obsm[basis_key],
                 ax=ax,
                 width=edges_width,
                 edge_color=edges_color,
@@ -526,7 +536,9 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
             'The module `scvelo` has improved plotting facilities. '
             'Prefer using `scv.pl.velocity_embedding` to `arrows=True`.'
         )
-    X = adata.obsm[f'X_{basis}']
+
+    basis_key = _get_basis(adata, basis)
+    X = adata.obsm[basis_key]
     V = adata.obsm[f'{v_prefix}_{basis}']
     for ax in axs:
         quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
@@ -541,8 +553,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
 
 
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
-    """Scatter of group using representation of data Y.
-    """
+    """Scatter of group using representation of data Y."""
     mask = adata.obs[key].cat.categories[imask] == adata.obs[key].values
     color = adata.uns[key + '_colors'][imask]
     if not isinstance(color[0], str):
@@ -576,9 +587,8 @@ def setup_axes(
     projection: Literal['2d', '3d'] = '2d',
     show_ticks=False,
 ):
-    """Grid of axes for plotting, legends and colorbars.
-    """
-    make_projection_available(projection)
+    """Grid of axes for plotting, legends and colorbars."""
+    check_projection(projection)
     if left_margin is not None:
         raise NotImplementedError('We currently don’t support `left_margin`.')
     if np.any(colorbars) and right_margin is None:
@@ -738,7 +748,7 @@ def scatter_base(
             fig = pl.gcf()
             ax_cb = fig.add_axes(rectangle)
             cb = pl.colorbar(
-                sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb,
+                sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
             )
         # set the title
         if title is not None:
@@ -814,9 +824,7 @@ def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
     ax.set_yticks([])
 
 
-def arrows_transitions(
-    ax: Axes, X: np.ndarray, indices: Sequence[int], weight=None,
-):
+def arrows_transitions(ax: Axes, X: np.ndarray, indices: Sequence[int], weight=None):
     """
     Plot arrows of transitions in data matrix.
 
@@ -876,14 +884,12 @@ def ticks_formatter(x, pos):
 
 
 def pimp_axis(x_or_y_ax):
-    """Remove trailing zeros.
-    """
+    """Remove trailing zeros."""
     x_or_y_ax.set_major_formatter(ticker.FuncFormatter(ticks_formatter))
 
 
 def scale_to_zero_one(x):
-    """Take some 1d data and scale it so that min matches 0 and max 1.
-    """
+    """Take some 1d data and scale it so that min matches 0 and max 1."""
     xscaled = x - np.min(x)
     xscaled /= np.max(xscaled)
     return xscaled
@@ -892,28 +898,27 @@ def scale_to_zero_one(x):
 def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     """Tree layout for networkx graph.
 
-       See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
-       answer by burubum.
+    See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
+    answer by burubum.
 
-       If there is a cycle that is reachable from root, then this will see
-       infinite recursion.
+    If there is a cycle that is reachable from root, then this will see
+    infinite recursion.
 
-       Parameters
-       ----------
-       G: the graph
-       root: the root node
-       levels: a dictionary
-               key: level number (starting from 0)
-               value: number of nodes in this level
-       width: horizontal space allocated for drawing
-       height: vertical space allocated for drawing
+    Parameters
+    ----------
+    G: the graph
+    root: the root node
+    levels: a dictionary
+            key: level number (starting from 0)
+            value: number of nodes in this level
+    width: horizontal space allocated for drawing
+    height: vertical space allocated for drawing
     """
     TOTAL = "total"
     CURRENT = "current"
 
     def make_levels(levels, node=root, currentLevel=0, parent=None):
-        """Compute the number of nodes for each level
-        """
+        """Compute the number of nodes for each level"""
         if currentLevel not in levels:
             levels[currentLevel] = {TOTAL: 0, CURRENT: 0}
         levels[currentLevel][TOTAL] += 1
@@ -1048,36 +1053,18 @@ def data_to_axis_points(ax: Axes, points_data: np.ndarray):
     return data_to_axis(points_data)
 
 
-@lru_cache(None)
-def make_projection_available(projection):
-    avail_projections = {'2d', '3d'}
-    if projection not in avail_projections:
-        raise ValueError(f'choose projection from {avail_projections}')
-    if projection == '2d':
-        return
+def check_projection(projection):
+    """Validation for projection argument."""
+    if projection not in {"2d", "3d"}:
+        raise ValueError(f"Projection must be '2d' or '3d', was '{projection}'.")
+    if projection == "3d":
+        from packaging.version import parse
 
-    from io import BytesIO
-    from matplotlib import __version__ as mpl_version
-    from mpl_toolkits.mplot3d import Axes3D
-
-    fig = Figure()
-    ax = Axes3D(fig)
-
-    circles = PatchCollection([Circle((5, 1)), Circle((2, 2))])
-    ax.add_collection3d(circles, zs=[1, 2])
-
-    buf = BytesIO()
-    try:
-        fig.savefig(buf)
-    except ValueError as e:
-        if not 'operands could not be broadcast together' in str(e):
-            raise e
-        raise ValueError(
-            'There is a known error with matplotlib 3d plotting, '
-            f'and your version ({mpl_version}) seems to be affected. '
-            'Please install matplotlib==3.0.2 or wait for '
-            'https://github.com/matplotlib/matplotlib/issues/14298'
-        )
+        mpl_version = parse(mpl.__version__)
+        if mpl_version < parse("3.3.3"):
+            raise ImportError(
+                f"3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}"
+            )
 
 
 def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
@@ -1127,7 +1114,7 @@ def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
     patches = [Circle((x_, y_), s_) for x_, y_, s_ in zipped]
     collection = PatchCollection(patches, **kwargs)
     if isinstance(c, np.ndarray) and np.issubdtype(c.dtype, np.number):
-        collection.set_array(c)
+        collection.set_array(np.ma.masked_invalid(c))
         collection.set_clim(vmin, vmax)
     else:
         collection.set_facecolor(c)
@@ -1194,3 +1181,14 @@ def fix_kwds(kwds_dict, **kwargs):
     kwargs.update(kwds_dict)
 
     return kwargs
+
+
+def _get_basis(adata: anndata.AnnData, basis: str):
+
+    if basis in adata.obsm.keys():
+        basis_key = basis
+
+    elif f"X_{basis}" in adata.obsm.keys():
+        basis_key = f"X_{basis}"
+
+    return basis_key

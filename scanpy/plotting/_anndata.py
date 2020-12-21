@@ -420,7 +420,12 @@ def _scatter_obs(
             if projection == '3d':
                 data.append(Y[mask_remaining, 2])
             axs[ikey].scatter(
-                *data, marker='.', c='lightgrey', s=size, edgecolors='none', zorder=-1,
+                *data,
+                marker='.',
+                c='lightgrey',
+                s=size,
+                edgecolors='none',
+                zorder=-1,
             )
         legend = None
         if legend_loc.startswith('on data'):
@@ -726,30 +731,37 @@ def violin(
         x = groupby
         ys = keys
 
-    # set by default the violin plot cut=0 to limit the extend
-    # of the violin plot (see stacked_violin code) for more info.
-    kwds.setdefault('cut', 0)
-    kwds.setdefault('inner')
-
     if multi_panel and groupby is None and len(ys) == 1:
         # This is a quick and dirty way for adapting scales across several
         # keys if groupby is None.
         y = ys[0]
-        g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
-        # don't really know why this gives a warning without passing `order`
-        g = g.map(
-            sns.violinplot, y, orient='vertical', scale=scale, order=keys, **kwds,
+
+        g = sns.catplot(
+            y=y,
+            data=obs_tidy,
+            kind="violin",
+            scale=scale,
+            col=x,
+            col_order=keys,
+            sharey=False,
+            order=keys,
+            cut=0,
+            inner=None,
+            **kwds,
         )
+
         if stripplot:
-            g = g.map(
-                sns.stripplot,
-                y,
-                orient='vertical',
-                jitter=jitter,
-                size=size,
-                order=keys,
-                color='black',
-            )
+            grouped_df = obs_tidy.groupby(x)
+            for ax_id, key in zip(range(g.axes.shape[1]), keys):
+                sns.stripplot(
+                    y=y,
+                    data=grouped_df.get_group(key),
+                    jitter=jitter,
+                    size=size,
+                    color="black",
+                    ax=g.axes[0, ax_id],
+                    **kwds,
+                )
         if log:
             g.set(yscale='log')
         g.set_titles(col_template='{col_name}').set_xlabels('')
@@ -757,6 +769,11 @@ def violin(
             for ax in g.axes[0]:
                 ax.tick_params(axis='x', labelrotation=rotation)
     else:
+        # set by default the violin plot cut=0 to limit the extend
+        # of the violin plot (see stacked_violin code) for more info.
+        kwds.setdefault('cut', 0)
+        kwds.setdefault('inner')
+
         if ax is None:
             axs, _, _, _ = setup_axes(
                 ax=ax,
@@ -768,7 +785,7 @@ def violin(
             axs = [ax]
         for ax, y, ylab in zip(axs, ys, ylabel):
             ax = sns.violinplot(
-                x,
+                x=x,
                 y=y,
                 data=obs_tidy,
                 order=order,
@@ -779,7 +796,7 @@ def violin(
             )
             if stripplot:
                 ax = sns.stripplot(
-                    x,
+                    x=x,
                     y=y,
                     data=obs_tidy,
                     order=order,
@@ -961,6 +978,13 @@ def heatmap(
         layer=layer,
     )
 
+    # check if var_group_labels are a subset of categories:
+    if var_group_labels is not None:
+        if set(var_group_labels).issubset(categories):
+            var_groups_subset_of_groupby = True
+        else:
+            var_groups_subset_of_groupby = False
+
     if standard_scale == 'obs':
         obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
         obs_tidy = obs_tidy.div(obs_tidy.max(1), axis=0).fillna(0)
@@ -1090,13 +1114,18 @@ def heatmap(
             heatmap_ax.set_xticklabels(var_names, rotation=90)
         else:
             heatmap_ax.tick_params(axis='x', labelbottom=False, bottom=False)
-
         # plot colorbar
         _plot_colorbar(im, fig, axs[1, 3])
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+            (
+                label2code,
+                ticks,
+                labels,
+                groupby_cmap,
+                norm,
+            ) = _plot_categories_as_colorblocks(
                 groupby_ax, obs_tidy, colors=groupby_colors, orientation='left'
             )
 
@@ -1116,7 +1145,7 @@ def heatmap(
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(
-                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram,
+                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram
             )
 
         # plot group legends on top of heatmap_ax (if given)
@@ -1190,8 +1219,14 @@ def heatmap(
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
-                groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom',
+            (
+                label2code,
+                ticks,
+                labels,
+                groupby_cmap,
+                norm,
+            ) = _plot_categories_as_colorblocks(
+                groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom'
             )
             # add lines to main heatmap
             line_positions = (
@@ -1221,11 +1256,16 @@ def heatmap(
         if var_group_positions is not None and len(var_group_positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
-            for idx, pos in enumerate(var_group_positions):
-                arr += [idx] * (pos[1] + 1 - pos[0])
-
+            for idx, (label, pos) in enumerate(
+                zip(var_group_labels, var_group_positions)
+            ):
+                if var_groups_subset_of_groupby:
+                    label_code = label2code[label]
+                else:
+                    label_code = idx
+                arr += [label_code] * (pos[1] + 1 - pos[0])
             gene_groups_ax.imshow(
-                np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm
+                np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
             )
             gene_groups_ax.axis('off')
 
@@ -1452,7 +1492,7 @@ def tracksplot(
 
     groupby_ax = fig.add_subplot(axs2[1])
 
-    ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+    label2code, ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
         groupby_ax, obs_tidy.T, colors=groupby_colors, orientation='bottom'
     )
     # add lines to plot
@@ -1480,7 +1520,7 @@ def tracksplot(
             arr += [idx] * (pos[1] + 1 - pos[0])
 
         gene_groups_ax.imshow(
-            np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm
+            np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
         )
         gene_groups_ax.axis('off')
 
@@ -2095,7 +2135,10 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
     # the `dendrogram_key` can be a bool an NoneType or the name of the
     # dendrogram key. By default the name of the dendrogram key is 'dendrogram'
     if not isinstance(dendrogram_key, str):
-        dendrogram_key = f'dendrogram_{groupby}'
+        if isinstance(groupby, str):
+            dendrogram_key = f'dendrogram_{groupby}'
+        elif isinstance(groupby, list):
+            dendrogram_key = f'dendrogram_{"_".join(groupby)}'
 
     if dendrogram_key not in adata.uns:
         from ..tools._dendrogram import dendrogram
@@ -2294,7 +2337,7 @@ def _plot_categories_as_colorblocks(
 
     if orientation == 'left':
         groupby_ax.imshow(
-            np.matrix([label2code[lab] for lab in obs_tidy.index]).T,
+            np.array([[label2code[lab] for lab in obs_tidy.index]]).T,
             aspect='auto',
             cmap=groupby_cmap,
             norm=norm,
@@ -2317,7 +2360,7 @@ def _plot_categories_as_colorblocks(
         groupby_ax.set_ylabel(groupby)
     else:
         groupby_ax.imshow(
-            np.matrix([label2code[lab] for lab in obs_tidy.index]),
+            np.array([[label2code[lab] for lab in obs_tidy.index]]),
             aspect='auto',
             cmap=groupby_cmap,
             norm=norm,
@@ -2344,7 +2387,7 @@ def _plot_categories_as_colorblocks(
 
         groupby_ax.set_xlabel(groupby)
 
-    return ticks, labels, groupby_cmap, norm
+    return label2code, ticks, labels, groupby_cmap, norm
 
 
 def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):

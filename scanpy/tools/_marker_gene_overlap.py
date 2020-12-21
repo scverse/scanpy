@@ -116,9 +116,9 @@ def marker_gene_overlap(
         reference annotation per group. `'data'` normalizes the data by the
         total number of marker genes used for each cluster.
     top_n_markers
-        The number of top data-derived marker genes to use. By default all
-        calculated marker genes are used. If `adj_pval_threshold` is set along
-        with `top_n_markers`, then `adj_pval_threshold` is ignored.
+        The number of top data-derived marker genes to use. By default the top
+        100 marker genes are used. If `adj_pval_threshold` is set along with
+        `top_n_markers`, then `adj_pval_threshold` is ignored.
     adj_pval_threshold
         A significance threshold on the adjusted p-values to select marker
         genes. This can only be used when adjusted p-values are calculated by
@@ -240,8 +240,9 @@ def marker_gene_overlap(
                     'No marker genes passed the significance threshold of '
                     f'{adj_pval_threshold} for cluster {group!r}.'
                 )
+        # Use top 100 markers as default if top_n_markers = None
         else:
-            data_markers[group] = set(adata.uns[key]['names'][group])
+            data_markers[group] = set(adata.uns[key]['names'][group][:100])
 
     # Find overlaps
     if method == 'overlap_count':

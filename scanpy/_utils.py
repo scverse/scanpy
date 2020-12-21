@@ -15,7 +15,7 @@ from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple
 import numpy as np
 from numpy import random
 from scipy import sparse
-from anndata import AnnData
+from anndata import AnnData, __version__ as anndata_version
 from textwrap import dedent
 from packaging import version
 
@@ -36,19 +36,12 @@ AnyRandom = Union[None, int, random.RandomState]  # maybe in the future random.G
 EPS = 1e-15
 
 
-def pkg_version(package):
-    try:
-        from importlib.metadata import version as v
-    except ImportError:  # < Python 3.8: Use backport module
-        from importlib_metadata import version as v
-    return version.parse(v(package))
-
-
 def check_versions():
-    anndata_version = pkg_version("anndata")
+    from ._compat import pkg_version
+
     umap_version = pkg_version("umap-learn")
 
-    if anndata_version < version.parse('0.6.10'):
+    if version.parse(anndata_version) < version.parse('0.6.10'):
         from . import __version__
 
         raise ImportError(
@@ -386,6 +379,7 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
 
 # backwards compat... remove this in the future
 def sanitize_anndata(adata):
+    """Transform string annotations to categoricals."""
     adata._sanitize()
 
 

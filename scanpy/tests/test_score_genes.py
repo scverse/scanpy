@@ -175,3 +175,18 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
     dense_scores = adata.obs['Test'].values
 
     np.testing.assert_allclose(sparse_scores, dense_scores)
+
+
+def test_missing_genes():
+    adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
+    # These genes have a different length of name
+    non_extant_genes = _create_random_gene_names(n_genes=3, name_length=7)
+
+    with pytest.raises(ValueError):
+        sc.tl.score_genes(adata, non_extant_genes)
+
+
+def test_one_gene():
+    # https://github.com/theislab/scanpy/issues/1395
+    adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
+    sc.tl.score_genes(adata, [adata.var_names[0]])
