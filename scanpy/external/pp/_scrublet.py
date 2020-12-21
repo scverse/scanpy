@@ -484,7 +484,5 @@ def scrublet_simulate_doublets(
     adata_sim = AnnData(scrub._E_sim)
     adata_sim.obs['n_counts'] = scrub._total_counts_sim
     adata_sim.obsm['doublet_parents'] = scrub.doublet_parents_
-    adata_sim.uns['scrublet'] = {}
-    adata_sim.uns['scrublet']['parameters'] = {}
-    adata_sim.uns['scrublet']['parameters']['sim_doublet_ratio'] = sim_doublet_ratio
+    adata_sim.uns['scrublet'] = {'parameters': {'sim_doublet_ratio': sim_doublet_ratio}}
     return adata_sim
