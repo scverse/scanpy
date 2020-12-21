@@ -420,12 +420,7 @@ def _scatter_obs(
             if projection == '3d':
                 data.append(Y[mask_remaining, 2])
             axs[ikey].scatter(
-                *data,
-                marker='.',
-                c='lightgrey',
-                s=size,
-                edgecolors='none',
-                zorder=-1,
+                *data, marker='.', c='lightgrey', s=size, edgecolors='none', zorder=-1
             )
         legend = None
         if legend_loc.startswith('on data'):
@@ -1028,8 +1023,7 @@ def heatmap(
             var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
 
         obs_tidy.index = obs_tidy.index.reorder_categories(
-            [categories[x] for x in dendro_data['categories_idx_ordered']],
-            ordered=True,
+            [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True
         )
 
         # reorder groupby colors
@@ -1080,12 +1074,7 @@ def heatmap(
         else:
             height_ratios = [0, height]
 
-        width_ratios = [
-            groupby_width,
-            heatmap_width,
-            dendro_width,
-            colorbar_width,
-        ]
+        width_ratios = [groupby_width, heatmap_width, dendro_width, colorbar_width]
         fig = pl.figure(figsize=(width, height))
 
         axs = gridspec.GridSpec(
@@ -1388,8 +1377,7 @@ def tracksplot(
             var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
 
         obs_tidy.index = obs_tidy.index.reorder_categories(
-            [categories[x] for x in dendro_data['categories_idx_ordered']],
-            ordered=True,
+            [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True
         )
         categories = [categories[x] for x in dendro_data['categories_idx_ordered']]
 
@@ -1809,23 +1797,26 @@ def _prepare_dataframe(
     if isinstance(var_names, str):
         var_names = [var_names]
 
+    orig_index_col = None
     if groupby is not None:
         if isinstance(groupby, str):
             # if not a list, turn into a list
             groupby = [groupby]
         for group in groupby:
+            if group == adata.obs.index.name:
+                # if grouping is using the index, reset the index
+                # to have the group as a column.
+                adata.obs.reset_index(inplace=True)
+                orig_index_col = group
             if group not in adata.obs_keys():
                 raise ValueError(
                     'groupby has to be a valid observation. '
-                    f'Given {group}, is not in observations: {adata.obs_keys()}'
+                    f'Given {group}, is not in observations: {adata.obs_keys()} or '
+                    f'index name "{adata.obs.index.name}"'
                 )
 
     obs_tidy = get.obs_df(
-        adata,
-        keys=var_names,
-        layer=layer,
-        use_raw=use_raw,
-        gene_symbols=gene_symbols,
+        adata, keys=var_names, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
     )
     assert np.all(np.array(var_names) == np.array(obs_tidy.columns))
 
@@ -1850,7 +1841,8 @@ def _prepare_dataframe(
             categorical.name = "_".join(groupby)
     obs_tidy.set_index(categorical, inplace=True)
     categories = obs_tidy.index.categories
-
+    if orig_index_col is not None:
+        adata.obs.set_index(orig_index_col, inplace=True)
     return categories, obs_tidy
 
 
