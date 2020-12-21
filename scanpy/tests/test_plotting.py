@@ -154,7 +154,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "dotplot2",
             partial(
                 sc.pl.dotplot,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=7,
                 title='non categorical obs',
@@ -239,7 +239,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "matrixplot2",
             partial(
                 sc.pl.matrixplot,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=4,
                 title='non-categorical obs, custom figsize',
@@ -284,7 +284,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "stacked_violin_no_cat_obs",
             partial(
                 sc.pl.stacked_violin,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=4,
                 title='non-categorical obs, custom figsize',
@@ -297,7 +297,7 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     adata = sc.datasets.krumsiek11()
-    adata.obs['Gata2'] = adata.X[:, 0]
+    adata.obs['numeric_column'] = adata.X[:, 0]
     adata.layers['test'] = -1 * adata.X.copy()
     genes_dict = {
         'group a': ['Gata2', 'Gata1'],
