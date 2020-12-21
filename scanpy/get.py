@@ -168,7 +168,10 @@ def obs_df(
     var_names = []
     var_symbol = []
     not_found = []
-    for key in keys:
+
+    # use only unique keys, otherwise duplicated keys will
+    # further duplicate when reordering the keys later in the code
+    for key in np.unique(keys):
         if key in adata.obs.columns:
             obs_names.append(key)
             if key in gene_names.index:
@@ -246,7 +249,7 @@ def obs_df(
     if len(obs_names) > 0:
         df = df.join(adata.obs[obs_names])
 
-    # reorder columns to given order
+    # reorder columns to given order (including duplicates keys if present)
     df = df[keys]
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
