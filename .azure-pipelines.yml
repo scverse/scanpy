@@ -4,7 +4,7 @@ trigger:
 jobs:
 - job: PyTest
   pool:
-    vmImage: 'ubuntu-16.04'
+    vmImage: 'ubuntu-18.04'
   strategy:
     matrix:
       Python37:
@@ -32,7 +32,7 @@ jobs:
     displayName: 'Install dependencies'
 
   - script: |
-      pip install git+https://github.com/theislab/anndata
+      pip install -v git+https://github.com/theislab/anndata
     displayName: 'Install development anndata'
     condition: eq(variables['ANNDATA_DEV'], 'yes')
 

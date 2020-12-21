@@ -31,7 +31,6 @@ exclude = '''
     |__init__
     |logging
     |_utils
-    |_settings
     |neighbors/__init__
     |api/(__init__|pp|pl|datasets)
     |external/(exporting|tl/_palantir)
