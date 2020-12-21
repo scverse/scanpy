@@ -7,7 +7,7 @@ This section of the docs provides some guidelines and tips to follow when contri
 .. toctree::
 
     code
-    git
+    getting-set-up
     testing
     documentation
     external-tools
