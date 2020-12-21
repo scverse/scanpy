@@ -6,6 +6,8 @@ import pandas as pd
 from scipy.sparse import spmatrix, issparse
 
 from anndata import AnnData
+from . import logging as logg
+
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -169,6 +171,11 @@ def obs_df(
     for key in keys:
         if key in adata.obs.columns:
             obs_names.append(key)
+            if key in gene_names.index:
+                logg.warning(
+                    f'The key `{key}` is found in both adata.obs and adata.var_names.'
+                    'Only the adata.obs key will be used.'
+                )
         elif key in gene_names.index:
             var_names.append(gene_names[key])
             var_symbol.append(key)
@@ -201,9 +208,10 @@ def obs_df(
         # will erroneously expand the length of the obs adata frame.
         # A unique index is temporarily created which is afterwards replaced
         # by the original index
-        from . import logging as logg
-        logg.warning('Warning: the adata.obs index is not unique. This can be '
-                     'problematic for operations with adata.obs ')
+        logg.warning(
+            'Warning: the adata.obs index is not unique. This can be problematic for '
+            'operations with adata.obs '
+        )
 
         orig_index = adata.obs.index
         adata.obs_names_make_unique()
