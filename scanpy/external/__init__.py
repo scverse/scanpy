@@ -37,7 +37,9 @@ Data integration
 Multiplet detection
 ~~~~~~~~~~~~~~~~~~~
 
-   pp.scrub_doublet
+   pp.scrublet
+   pp.scrublet_simulate_doublets
+   pl.scrublet_score_distribution
 
 Imputation
 ~~~~~~~~~~
