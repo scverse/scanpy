@@ -392,17 +392,21 @@ def _scrublet_call_doublets(
 
     # Store doublet Scrublet metadata
 
-    adata_obs.uns['scrublet'] = {}
-    adata_obs.uns['scrublet']['threshold'] = scrub.threshold_
-    adata_obs.uns['scrublet']['doublet_scores_sim'] = scrub.doublet_scores_sim_
-    adata_obs.uns['scrublet']['doublet_parents'] = adata_sim.obsm['doublet_parents']
-    adata_obs.uns['scrublet']['parameters'] = {
-        'expected_doublet_rate': expected_doublet_rate,
-        'sim_doublet_ratio': adata_sim.uns['scrublet']['parameters'][
-            'sim_doublet_ratio'
-        ],
-        'n_neighbors': n_neighbors,
-        'random_state': random_state,
+    adata_obs.uns['scrublet'] = {
+        'threshold': scrub.threshold_
+        'doublet_scores_sim': scrub.doublet_scores_sim_
+        'doublet_parents': adata_sim.obsm['doublet_parents']
+        'parameters': {
+            'expected_doublet_rate': expected_doublet_rate,
+            'sim_doublet_ratio': (
+                adata_sim.uns
+                .get('scrublet', {})
+                .get('parameters', {})
+                .get('sim_doublet_ratio', None)
+            ),
+            'n_neighbors': n_neighbors,
+            'random_state': random_state,
+        }
     }
 
     if get_doublet_neighbor_parents:
