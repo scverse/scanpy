@@ -10,7 +10,7 @@ Running the tests
 -----------------
 
 We use `pytest <https://docs.pytest.org/en/stable/>`__ to test scanpy.
-To run the tests first make sure you have the required dependencies (``pip install -e "scanpy[tests]"``), then run ``pytest`` from the root of the repository.
+To run the tests first make sure you have the required dependencies (``pip install -e ".[tests]"``), then run ``pytest`` from the root of the repository.
 
 It can take a while to run the whole test suite. There are a few ways to cut down on this while working on a PR:
 
@@ -21,7 +21,6 @@ Miscellaneous tips
 ~~~~~~~~~~~~~~~~~~
 
 - A lot of warnings can be thrown while running the test suite. It's often easier to read the test results with them hidden via the `--disable-pytest-warnings` argument.
-- Parameterize your tests using the `pytest.mark.parameterize` and `pytest.fixture` decorators. Documentation on these can be found `here <https://docs.pytest.org/en/stable/fixture.html>`__, but we'd also recommend searching the test suite for existing usage.
 
 Writing tests
 -------------
@@ -30,7 +29,13 @@ You can refer to the `existing test suite <https://github.com/theislab/scanpy/tr
 If you haven't written tests before, Software Carpentry has an `in-depth guide <http://katyhuff.github.io/python-testing/>`__ on the topic.
 
 We highly recommend using `Test Driven Development <https://en.wikipedia.org/wiki/Test-driven_development>`__ when contributing code.
-This process boils down to writing the tests before you start the implementation.
+This not only ensures you have tests written, it often makes implementation easier since you start out with a specification for your function.
+
+Consider parameterizing your tests using the `pytest.mark.parameterize` and `pytest.fixture` decorators.
+Documentation on these can be found `here <https://docs.pytest.org/en/stable/fixture.html>`__, but we'd also recommend searching our test suite for existing usage.
+
+What to test
+~~~~~~~~~~~~
 
 If you're not sure what to tests about your function, some ideas include:
 
