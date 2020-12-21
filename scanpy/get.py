@@ -194,6 +194,22 @@ def obs_df(
             f" {gene_error}."
         )
 
+    # check that adata.obs.index is unique
+    orig_index_map = None
+    if not adata.obs.index.is_unique:
+        # non unique index is problematic in the `join` operation which
+        # will erroneously expand the length of the obs adata frame.
+        # A unique index is temporarily created which is afterwards replaced
+        # by the original index
+        from . import logging as logg
+        logg.warning('Warning: the adata.obs index is not unique. This can be '
+                     'problematic for operations with adata.obs ')
+
+        orig_index = adata.obs.index
+        adata.obs_names_make_unique()
+        # make dictionary to translate new index to original index
+        orig_index_map = dict(zip(adata.obs.index, orig_index))
+
     # Make df
     df = pd.DataFrame(index=adata.obs.index)
 
@@ -233,6 +249,8 @@ def obs_df(
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
+    if orig_index_map is not None:
+        df.index = df.index.map(orig_index_map)
     return df
 
 
