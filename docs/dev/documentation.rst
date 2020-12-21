@@ -10,18 +10,32 @@ Dependencies for building the documentation for scanpy can be installed with ``p
 
 To build the docs, enter the ``docs`` directory and run `make html`. After this process completes you can take a look at the docs by opening ``scanpy/docs/_build/html/index.html``.
 
+Adding to the docs
+------------------
+
+For any user-visible changes, please make sure a note has been added to `docs/release-latest.rst` so we can credit you! We recommend waiting on this until your PR is close to done since this section often causes merge conflicts.
+
+Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it. For computational methods, this should be added to `docs/api/index.rst` under a relevant heading. For plotting functions, add these to the module docstring of the plotting module at `scanpy/pl/__init__.py`.
+
+For tutorials and more in depth examples, consider adding a notebook to `scanpy-tutorials <https://github.com/theislab/scanpy-tutorials/>`__.
+
 docstrings format
 -----------------
 
 We use the numpydoc style for writing docstrings.
-We'd primarily suggest looking at existing docstrings for examples, but there are `good guides <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy>`__ available on the internet as well.
+We'd primarily suggest looking at existing docstrings for examples, but the `napolean guide to numpy style docstrings <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy>`__ is also a great source.
 
-Look at ```sc.tl.louvain`` <https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90>`__ as an example for everything mentioned here:
+Look at `sc.tl.louvain <https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90>`__ as an example for everything mentioned here:
+
+``Params`` section
+~~~~~~~~~~~~~~~~~~
 
 The ``Params`` abbreviation is a legit replacement for ``Parameters``.
 
 To document parameter types use type annotations on function parameters.
-Use the ```typing`` <https://docs.python.org/3/library/typing.html>`__ module for containers, e.g. ``Sequence``\ s (like ``list``), ``Iterable``\ s (like ``set``), and ``Mapping``\ s (like ``dict``).
+These will automatically populate the docstrings on import, and when the documentation is built.
+
+Use the python standard library types (defined in `collections.abc <https://docs.python.org/3/library/collections.abc.html>`__ and `typing <https://docs.python.org/3/library/typing.html>`__ modules) for containers, e.g. ``Sequence``\ s (like ``list``), ``Iterable``\ s (like ``set``), and ``Mapping``\ s (like ``dict``).
 Always specify what these contain, e.g. ``{'a': (1, 2)}`` → ``Mapping[str, Tuple[int, int]]``.
 If you can’t use one of those, use a concrete class like ``AnnData``.
 If your parameter only accepts an enumeration of strings, specify them like so: ``Literal['elem-1', 'elem-2']``.
@@ -39,7 +53,7 @@ Examples
 ^^^^^^^^
 
 For simple cases, use prose as in
-```pp.normalize_total`` <https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html>`__.
+:func:`~scanpy.pp.normalize_total`
 
 .. code:: rst
 
@@ -50,7 +64,7 @@ For simple cases, use prose as in
    ``adata.X`` and ``adata.layers``, depending on ``inplace``.
 
 You can use the standard numpydoc way of populating it, e.g. as in
-```pp.calculate_qc_metrics`` <https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.calculate_qc_metrics.html>`__.
+:func:`~scanpy.pp.calculate_qc_metrics`.
 If you use a plain type name here, a link will be created.
 
 .. code:: rst
@@ -62,7 +76,7 @@ If you use a plain type name here, a link will be created.
    second_identifier : another.module.and_type
        Description 2.
 
-Many functions also just modify parts of the passed AnnData object, like e.g. ```tl.dpt`` <https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.dpt.html>`__.
+Many functions also just modify parts of the passed AnnData object, like e.g. :func:`~scanpy.tl.dpt`.
 You can then combine prose and lists to best describe what happens.
 
 .. code:: rst
