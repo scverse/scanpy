@@ -1,4 +1,4 @@
-Contributing to scanpy
+Contributing to Scanpy
 ======================
 
 Contributions to scanpy are welcome!
