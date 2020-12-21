@@ -34,12 +34,17 @@ Data integration
    pp.harmony_integrate
    pp.mnn_correct
 
-Multiplet detection
-~~~~~~~~~~~~~~~~~~~
+
+Sample demultiplexing, Doublet detection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
 
    pp.scrublet
    pp.scrublet_simulate_doublets
    pl.scrublet_score_distribution
+   pp.hashsolo
 
 Imputation
 ~~~~~~~~~~

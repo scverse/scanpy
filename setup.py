@@ -40,7 +40,7 @@ setup(
         scrublet=['scrublet'],
         dev=['setuptools_scm', 'pytoml', 'black>=20.8b1'],
         doc=[
-            'sphinx<3.1, >3',
+            'sphinx>=3.2',
             'sphinx_rtd_theme>=0.3.1',
             'sphinx_autodoc_typehints',
             'scanpydoc>=0.5',

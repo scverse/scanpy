@@ -200,7 +200,7 @@ def mitochondrial_genes(
 @singledispatch
 @_doc_params(doc_org=_doc_org)
 def enrich(
-    container: Iterable[str],
+    container: Union[Iterable[str], Mapping[str, Iterable[str]]],
     *,
     org: str = "hsapiens",
     gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
@@ -225,7 +225,8 @@ def enrich(
     Parameters
     ----------
     container
-        Contains genes you'd like to search.
+        Contains list of genes you'd like to search. If container is a `dict` all
+        enrichment queries are made at once.
     adata
         AnnData object whose group will be looked for.
     group
@@ -234,7 +235,10 @@ def enrich(
         Key in `uns` to find group under.
     {doc_org}
     gprofiler_kwargs
-        Keyword arguments to pass to `GProfiler.profile`, see gprofiler_.
+        Keyword arguments to pass to `GProfiler.profile`, see gprofiler_. Some
+        useful options are `no_evidences=False` which reports gene intersections,
+        `sources=['GO:BP']` which limits gene sets to only GO biological processes and
+        `all_results=True` which returns all results including the non-significant ones.
     **kwargs
         All other keyword arguments are passed to `sc.get.rank_genes_groups_df`. E.g.
         pval_cutoff, log2fc_min.
@@ -248,7 +252,8 @@ def enrich(
     Using `sc.queries.enrich` on a list of genes:
 
     >>> import scanpy as sc
-    >>> sc.queries.enrich(['Klf4', 'Pax5', 'Sox2', 'Nanog'], org="hsapiens")
+    >>> sc.queries.enrich(['KLF4', 'PAX5', 'SOX2', 'NANOG'], org="hsapiens")
+    >>> sc.queries.enrich({{'set1':['KLF4', 'PAX5'], 'set2':['SOX2', 'NANOG']}}, org="hsapiens")
 
     Using `sc.queries.enrich` on an :class:`anndata.AnnData` object:
 
@@ -270,7 +275,7 @@ def enrich(
                 f"Argument `{k}` should be passed directly through `enrich`, "
                 "not through `gprofiler_kwargs`"
             )
-    return gprofiler.profile(list(container), organism=org, **gprofiler_kwargs)
+    return gprofiler.profile(container, organism=org, **gprofiler_kwargs)
 
 
 @enrich.register(AnnData)

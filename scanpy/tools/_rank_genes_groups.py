@@ -98,6 +98,17 @@ class _RankGenes:
             adata, groups, groupby
         )
 
+        # Singlet groups cause division by zero errors
+        invalid_groups_selected = set(self.groups_order) & set(
+            adata.obs[groupby].value_counts().loc[lambda x: x < 2].index
+        )
+
+        if len(invalid_groups_selected) > 0:
+            raise ValueError(
+                "Could not calculate statistics for groups {} since they only "
+                "contain one sample.".format(', '.join(invalid_groups_selected))
+            )
+
         adata_comp = adata
         if layer is not None:
             if use_raw:

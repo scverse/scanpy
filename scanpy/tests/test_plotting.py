@@ -10,6 +10,7 @@ from scanpy._compat import pkg_version
 
 setup()
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
@@ -99,6 +100,30 @@ def test_heatmap(image_comparer):
         standard_scale='obs',
     )
     save_and_compare_images('master_heatmap_std_scale_obs')
+
+    # test var_names as dict
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.tl.leiden(pbmc, key_added="clusters", resolution=0.5)
+    # call umap to trigger colors for the clusters
+    sc.pl.umap(pbmc, color="clusters")
+    marker_genes_dict = {
+        "3": ["GNLY", "NKG7"],
+        "1": ["FCER1A"],
+        "2": ["CD3D"],
+        "0": ["FCGR3A"],
+        "4": ["CD79A", "MS4A1"],
+    }
+    sc.pl.heatmap(
+        adata=pbmc,
+        var_names=marker_genes_dict,
+        groupby="clusters",
+        vmin=-2,
+        vmax=2,
+        cmap="RdBu_r",
+        dendrogram=True,
+        swap_axes=True,
+    )
+    save_and_compare_images('master_heatmap_var_as_dict')
 
 
 @pytest.mark.skipif(
@@ -733,8 +758,8 @@ def pbmc_scatterplots():
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    if id == "3dprojection":
-        # check if this still happens so we can remove our checks once mpl is fixed
+    # https://github.com/theislab/scanpy/issues/849
+    if id == "3dprojection" and version.parse(mpl.__version__) < version.parse("3.3.3"):
         with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
             fn(pbmc_scatterplots, show=False)
     else:
