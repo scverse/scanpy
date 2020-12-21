@@ -64,11 +64,11 @@ def test_heatmap(image_comparer):
     # test heatmap numeric column():
 
     # set as numeric column the vales for the first gene on the matrix
-    adata.obs['Gata2'] = adata.X[:, 0]
+    adata.obs['numeric_value'] = adata.X[:, 0]
     sc.pl.heatmap(
         adata,
         adata.var_names,
-        'Gata2',
+        'numeric_value',
         use_raw=False,
         num_categories=4,
         figsize=(4.5, 5),

@@ -1796,11 +1796,16 @@ def _prepare_dataframe(
     -------
     Tuple of `pandas.DataFrame` and list of categories.
     """
-    from scipy.sparse import issparse
 
     sanitize_anndata(adata)
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
+    if use_raw is None:
+        if adata.raw is not None:
+            use_raw = True
+        else:
+            use_raw = False
+    if layer is not None:
+        use_raw = False
+
     if isinstance(var_names, str):
         var_names = [var_names]
 
@@ -1815,46 +1820,17 @@ def _prepare_dataframe(
                     f'Given {group}, is not in observations: {adata.obs_keys()}'
                 )
 
-    if gene_symbols is not None and gene_symbols in adata.var.columns:
-        # translate gene_symbols to var_names
-        # slow method but gives a meaningful error if no gene symbol is found:
-        translated_var_names = []
-        # if we're using raw to plot, we should also do gene symbol translations
-        # using raw
-        if use_raw:
-            adata_or_raw = adata.raw
-        else:
-            adata_or_raw = adata
-        for symbol in var_names:
-            if symbol not in adata_or_raw.var[gene_symbols].values:
-                logg.error(
-                    f"Gene symbol {symbol!r} not found in given "
-                    f"gene_symbols column: {gene_symbols!r}"
-                )
-                return
-            translated_var_names.append(
-                adata_or_raw.var[adata_or_raw.var[gene_symbols] == symbol].index[0]
-            )
-        symbols = var_names
-        var_names = translated_var_names
-    if layer is not None:
-        if layer not in adata.layers.keys():
-            raise KeyError(
-                f'Selected layer: {layer} is not in the layers list. '
-                f'The list of valid layers is: {adata.layers.keys()}'
-            )
-        matrix = adata[:, var_names].layers[layer]
-    elif use_raw:
-        matrix = adata.raw[:, var_names].X
-    else:
-        matrix = adata[:, var_names].X
+    obs_tidy = get.obs_df(
+        adata,
+        keys=var_names,
+        layer=layer,
+        use_raw=use_raw,
+        gene_symbols=gene_symbols,
+    )
+    assert np.all(np.array(var_names) == np.array(obs_tidy.columns))
 
-    if issparse(matrix):
-        matrix = matrix.toarray()
     if log:
-        matrix = np.log1p(matrix)
-
-    obs_tidy = pd.DataFrame(matrix, columns=var_names)
+        obs_tidy = np.log1p(obs_tidy)
     if groupby is None:
         groupby = ''
         categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
@@ -1873,12 +1849,6 @@ def _prepare_dataframe(
                     ).astype('category')
             categorical.name = "_".join(groupby)
     obs_tidy.set_index(categorical, inplace=True)
-    if gene_symbols is not None:
-        # translate the column names to the symbol names
-        obs_tidy.rename(
-            columns={var_names[x]: symbols[x] for x in range(len(var_names))},
-            inplace=True,
-        )
     categories = obs_tidy.index.categories
 
     return categories, obs_tidy
