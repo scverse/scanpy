@@ -1,5 +1,8 @@
+Getting set up
+==============
+
 Working with `git`
-==================
+------------------
 
 This section of the docs covers our practices for working with `git` on our codebase. For more in-depth guides, we can recommend a few sources:
 
@@ -11,7 +14,7 @@ For a more complete git tutorials we recommend checking out:
 .. _forking-and-cloning:
 
 Forking and cloning
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 To get the code, and be able to push changes back to the main project, you'll need to (1) fork the repository on github and (2) clone the repository to your local machine.
 
@@ -38,7 +41,7 @@ To do this manually, first make a fork of the repository by clicking the "fork" 
 .. _creating-a-branch:
 
 Creating a branch for your feature
-----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All development should occur in branches dedicated to the particular work being done.
 You can create a branch with:
@@ -50,7 +53,7 @@ You can create a branch with:
 .. _open-a-pr:
 
 Open a pull request
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 When you're ready to have your code reviewed, push your changes up to your fork:
 
@@ -65,3 +68,13 @@ And open a pull request by going to the main repo and clicking *New pull request
 GitHub is also pretty good about prompting you to open PRs for recently pushed branches.
 
 We'll try and get back to you soon!
+
+.. _dev-environments:
+
+Development environments
+------------------------
+
+It's recommended to do development work in an isolated environment. 
+There are number of ways to do this, including conda environments, virtual environments, and virtual machines.
+
+We think the easiest is probably conda environments. Simply create a new environment with a supported version of python and make a :ref:`development install <dev-install-instructions>` of `scanpy`.
