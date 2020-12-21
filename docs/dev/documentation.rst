@@ -1,6 +1,8 @@
 Documentation
 =============
 
+.. _building-the-docs:
+
 Building the docs
 -----------------
 
@@ -8,10 +10,12 @@ Dependencies for building the documentation for scanpy can be installed with ``p
 
 To build the docs, enter the ``docs`` directory and run `make html`. After this process completes you can take a look at the docs by opening ``scanpy/docs/_build/html/index.html``.
 
-docstrings
-----------
+docstrings format
+-----------------
 
 We use the numpydoc style for writing docstrings.
+We'd primarily suggest looking at existing docstrings for examples, but there are `good guides <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy>`__ available on the internet as well.
+
 Look at ```sc.tl.louvain`` <https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90>`__ as an example for everything mentioned here:
 
 The ``Params`` abbreviation is a legit replacement for ``Parameters``.
