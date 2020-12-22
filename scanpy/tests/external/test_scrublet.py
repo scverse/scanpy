@@ -3,8 +3,6 @@ import pytest
 import scanpy as sc
 import scanpy.external as sce
 
-pytest.importorskip("scrublet")
-
 
 def test_scrublet():
     """
@@ -12,6 +10,8 @@ def test_scrublet():
 
     Check that scrublet runs and detects some doublets.
     """
+    pytest.importorskip("scrublet")
+
     adata = sc.datasets.pbmc3k()
     sce.pp.scrublet(adata)
 
@@ -30,6 +30,7 @@ def test_scrublet_simulate_doublets():
 
     Check that doublet simulation runs and simulates some doublets..
     """
+    pytest.importorskip("scrublet")
 
     adata_obs = sc.datasets.pbmc3k()
     sc.pp.filter_genes(adata_obs, min_cells=3)

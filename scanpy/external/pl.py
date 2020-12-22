@@ -352,9 +352,9 @@ def scrublet_score_distribution(
 
     See also
     --------
-    :func:`~scanpy.external.scrublet`: Main way of running Scrublet, runs
+    :func:`~scanpy.external.pp.scrublet`: Main way of running Scrublet, runs
         preprocessing, doublet simulation (this function) and calling. 
-    :func:`~scanpy.external.scrublet_simulate_doublets`: Run Scrublet's doublet
+    :func:`~scanpy.external.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
         simulation separately for advanced usage. 
     """
 
