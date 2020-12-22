@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -5,7 +6,15 @@ import scipy as sp
 from typing import Optional, Sequence, Union
 from anndata import AnnData
 
-MIN_VERSION = "0.6.5"
+MIN_VERSION = "0.6.7"
+
+warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
+
+warnings.warn(
+    "scvi via scanpy external API is no longer supported. "
+    + "Please use the new scvi-tools package from `scvi-tools.org`",
+    DeprecationWarning,
+)
 
 
 def scvi(
