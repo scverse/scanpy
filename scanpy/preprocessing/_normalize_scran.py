@@ -2,34 +2,14 @@ import itertools
 from math import sqrt
 from typing import Collection, Optional, Union
 
-import sparseqr
+from scipy.sparse.linalg import lsqr
 import numpy as np
 from numpy import array
 from scipy.sparse import coo_matrix
 from anndata import AnnData
-from anndata.utils import Index
-
-# from numpy.linalg import solve
+#from anndata.utils import Index
 
 from .. import logging as logg
-
-
-def subset_to_index(subset, x, byrow=True):
-    # Converts arbitrary subsetting vectors to an integer index vector.
-    if byrow:
-        dummy = np.arange(x.shape[0])  # nrow(x))
-    else:
-        dummy = np.arange(x.shape[1])
-
-    if subset is not None:
-        dummy = dummy[subset]
-
-    out = dummy
-
-    if np.any(np.isnan(out)):
-        raise ValueError("'subset' indices out of range of 'x'")
-
-    return out
 
 
 # TODO: check if necessary
@@ -51,8 +31,6 @@ def generate_sphere(lib_sizes):
     out = np.r_[o[even], np.flip(o[odd])]
     return np.r_[out, out]
 
-
-# TODO check
 def pool_size_factors(exprs, pseudo_cell, order, pool_sizes):
     # A function to estimate the pooled size factors and construct the linear equations.
     ngenes, ncells = exprs.shape
@@ -118,11 +96,6 @@ def pool_size_factors(exprs, pseudo_cell, order, pool_sizes):
 
     return pool_factor
 
-
-# from itertools import chain
-
-# import itertools
-# TODO some code missing
 def create_linear_system(cur_exprs, ave_cell, sphere, pool_sizes):
     # Does the heavy lifting of computing pool-based size factors
     # and creating the linear system out of the equations for each pool.
@@ -132,34 +105,12 @@ def create_linear_system(cur_exprs, ave_cell, sphere, pool_sizes):
     output = []
 
     # Creating the linear system with the requested pool sizes.
-    out = pool_size_factors(cur_exprs, ave_cell, sphere, pool_sizes)  # sphere - 1L
-
-    # TODO input code for row_dex , col_dex , output
-    # output.append(out)
-    # row_dex.append( out[0]) #+ 1L
-    # col_dex.append( out[1] )#+ 1L
-    # output.append(out[2])
-    # -----------------------pool_size_factors doesnt work-> use output of r script
-
-    # a = readROutput_tonumpyArray('out_1.csv')
-    # b = readROutput_tonumpyArray('out_2.csv')
-    # c = readROutput_tonumpyArray('out_3.csv')
-
-    # row_dex.append(a)  # + 1L
-    # col_dex.append(b)  # + 1L
-    # output.append(c)
-
-    # new
-    # np.empty([nsizes, ncells],np.float64)
-    # Adding extra equations to guarantee solvability.
+    out = pool_size_factors(cur_exprs, ave_cell, sphere, pool_sizes) 
     cur_cells = cur_exprs.shape[1]
-    # old
-    # Adding extra equations to guarantee solvability.
     cur_cells = cur_exprs.shape[1]
-    # evtl +1 bei range
     row_dex.append(np.arange(cur_cells) + cur_cells * len(pool_sizes))
 
-    col_dex.append(np.arange(cur_cells))  # evtl +1 bei range
+    col_dex.append(np.arange(cur_cells)) 
 
     LOWWEIGHT = 0.000001
     output.append(np.repeat(sqrt(LOWWEIGHT) / np.sum(ave_cell), cur_cells))
@@ -216,13 +167,13 @@ def limit_cluster_size(clusters, max_size):
     # Done by arbitrarily splitting large clusters so that they fall below max_size.
     if max_size is None:
         return clusters
-    new_clusters = np.zeros(clusters.size)
+    new_clusters = np.zeros(len(clusters))
     counter = 1
-    for id in np.unique(clusters):
-        current = np.equal(id, clusters)
-        ncells = np.sum(current)
+    for i in np.unique(clusters):
+        current = np.equal(i, clusters)
+        num_cells = np.sum(current)
 
-        if ncells <= max_size:
+        if num_cells <= max_size:
             new_clusters[current] = counter
             counter = counter + 1
             continue
@@ -232,22 +183,41 @@ def limit_cluster_size(clusters, max_size):
 
         # ToDo #testdata=anndata.read_csv("scran_computeSumFactors_countMatrix.csv")
 
-        mult = np.ceil(ncells / max_size)
-        realloc = np.tile(np.arange(1, mult + 1) - 1 + counter, ncells)
+        mult = np.ceil(num_cells / max_size)
+        realloc = _np_rep(
+            np.arange(1, mult + 1) - 1 + counter,
+            length=num_cells
+        )
         new_clusters[current] = realloc
         counter = counter + mult
 
     return new_clusters
 
 
-def split(x, f):
+def _split(x, f):
     return (
         list(itertools.compress(x, f)),
         list(itertools.compress(x, (not i for i in f))),
     )
 
+def _np_rep(x, reps=1, each=False, length=0):
+    """ implementation of functionality of rep() and rep_len() from R
 
-# TODO check
+    Attributes:
+        x: numpy array, which will be flattened
+        reps: int, number of times x should be repeated
+        each: logical; should each element be repeated reps times before the next
+        length: int, length desired; if >0, overrides reps argument
+    """
+    if length > 0:
+        reps = np.int(np.ceil(length / x.size))
+    x = np.repeat(x, reps)
+    if(not each):
+        x = x.reshape(-1, reps).T.ravel() 
+    if length > 0:
+        x = x[0:length]
+    return(x)
+
 def per_cluster_normalize(
     x, curdex, sizes, subset_row, min_mean=1, positive=False, scaling=None
 ):
@@ -292,7 +262,7 @@ def per_cluster_normalize(
     A = design
     b = output
 
-    final_nf = sparseqr.solve(A, b, tolerance=0)
+    final_nf = lsqr(A, b)
 
     final_nf = final_nf * scaling
 
@@ -305,37 +275,57 @@ def per_cluster_normalize(
     final_nf = readROutput_tonumpyArray("final.csv")
     return [final_nf, use_ave_cell]  # or ave_cell wrong
 
-
-# TODO end
 def calculate_sum_factors(
-    x,  # count matrix
+    X,
     sizes=np.arange(20, 101, 5),
-    # sizes: A numeric vector of pool sizes, i.e., number of cells per pool.
     clusters=None,
-    # clusters: An optional factor specifying which cells belong to which cluster, for deconvolution within clusters.
     ref_clust=None,
-    # ref_clust:reference cluster for inter-cluster normalization.
     max_cluster_size=3000,
-    # max_cluster_size_ An integer scalar specifying the maximum number of cells in each cluster.
     positive=True,
-    # positive: A logical scalar indicating whether linear inverse models should be used to enforce positive estimates.
     scaling=None,
-    # scaling: A numeric scalar containing scaling factors to adjust the counts prior to computing size factors.
     min_mean=1,
-    # min_mean: A numeric scalar specifying the minimum (library size-adjusted) average count of genes to be used for normalization.
     subset_row=None,
 ):
-    ncells = x.shape[1]
+    """
+    Params
+    x
+        count matrix
+    sizes
+        A numeric vector of pool sizes, i.e., number of cells per pool.
+    clusters
+        An optional factor specifying which cells belong to which cluster,
+        for deconvolution within clusters.
+    ref_clust
+        reference cluster for inter-cluster normalization.
+    max_cluster_size
+        An integer scalar specifying the maximum number of cells in each cluster.
+    positive
+        A logical scalar indicating whether linear inverse models should be used
+        to enforce positive estimates.
+    scaling
+        A numeric scalar containing scaling factors to adjust the counts prior 
+        to computing size factors.
+    min_mean
+        A numeric scalar specifying the minimum (library size-adjusted) average 
+        count of genes to be used for normalization.
+    subset_row
+    """
+    num_cells = X.shape[1]
     if clusters is None:
-        clusters = np.zeros(ncells)
+        clusters = np.zeros(num_cells)
     clusters = limit_cluster_size(
-        clusters, max_cluster_size
+        clusters,
+        max_cluster_size
     )  # still have to check it with different input
 
-    if ncells != clusters.size:
-        raise ValueError("ncol(x) is not equal to clusters.size.")
+    if num_cells != len(clusters):
+        raise ValueError("Dimension 1 of X is not equal to len(clusters).")
 
-    indices = split(np.arange(0, clusters.size), [int(i) for i in clusters])
+    indices = _split(
+        np.arange(0, clusters.size),
+        [int(i) for i in clusters]
+    )
+
     # indices = list(itertools.compress(np.arange(1,clusters.size+1), clusters))
 
     if np.any(indices == 0) or np.any(np.equal(indices, 0), axis=0):
@@ -343,12 +333,12 @@ def calculate_sum_factors(
 
     # Checking sizes and subsetting.
     # sizes <- sort(as.integer(sizes))
-    sizes = np.sort([int(i) for i in sizes])
+    sizes = np.sort(int(sizes))
 
     if len(sizes) != len(set(sizes)):
         raise ValueError("'sizes' are not unique")
 
-    subset_row = subset_to_index(subset_row, x, byrow=True)
+    #subset_row = subset_to_index(subset_row, x, byrow=True)
 
     if min_mean is None:
         raise ValueError("set 'min.mean=0' to turn off abundance filtering")
@@ -356,11 +346,10 @@ def calculate_sum_factors(
     min_mean = np.maximum(min_mean, 1e-8)  # must be at least non-zero mean.
 
     # Setting some other values.
-    nclusters = len(indices)
+    num_clusters = len(indices)
 
-    clust_nf = clust_profile = clust_libsizes = np.array(nclusters)
-    # clust_meanlib= numeric(nclusters)
-    clust_meanlib = nclusters
+    clust_nf = clust_profile = clust_libsizes = np.array(num_clusters)
+    clust_meanlib = num_clusters
 
     # ' Within each cluster (if not specified, all cells are put into a single cluster), cells are sorted by increasing library size and a sliding window is applied to this ordering.
     # ' Each location of the window defines a pool of cells with similar library sizes.
@@ -378,7 +367,7 @@ def calculate_sum_factors(
     #
 
     # Computing normalization factors within each cluster.
-    all_norm = per_cluster_normalize(x, indices, sizes, subset_row, min_mean)
+    all_norm = per_cluster_normalize(X, indices, sizes, subset_row, min_mean)
 
     clust_nf = all_norm[0]
     clust_profile = all_norm[1]
@@ -419,7 +408,7 @@ def normalize_scran(
     # positive: bool = True,
     scaling: Union[str, Collection[float], None] = None,
     min_mean: Union[int, float] = 1,
-    subset_gene: Union[str, Index, None] = None,
+    subset_gene: Union[str, None] = None,
     key_added: Optional[str] = None,
     inplace: bool = True,
 ):
