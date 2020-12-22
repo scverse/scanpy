@@ -4,6 +4,10 @@
 On master
 ~~~~~~~~~
 
+.. rubric:: External tools
+
+- Scrublet [Wolock19]_ integration :func:`~scanpy.external.pp.scrublet` :pr:`1476` :smaller:`J Manning`
+
 .. rubric:: Features
 
 * Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
