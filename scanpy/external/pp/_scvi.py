@@ -8,14 +8,6 @@ from anndata import AnnData
 
 MIN_VERSION = "0.6.7"
 
-warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
-
-warnings.warn(
-    "scvi via scanpy external API is no longer supported. "
-    + "Please use the new scvi-tools package from `scvi-tools.org`",
-    DeprecationWarning,
-)
-
 
 def scvi(
     adata: AnnData,
@@ -114,6 +106,11 @@ def scvi(
     genes by n_latent matrix.
 
     """
+    warnings.warn(
+        "scvi via scanpy external API is no longer supported. "
+        + "Please use the new scvi-tools package from `scvi-tools.org`",
+        FutureWarning,
+    )
 
     try:
         from scvi.models import VAE, LDVAE
