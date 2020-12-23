@@ -63,13 +63,7 @@ def embedding(
     components: Union[str, Sequence[str]] = None,
     layer: Optional[str] = None,
     projection: Literal['2d', '3d'] = '2d',
-    # image parameters
-    img: Union[np.ndarray, None, Empty] = None,
-    cmap_img: Optional[str] = None,
-    alpha_img: Optional[float] = 1.0,
-    crop_coord: Tuple[int, int, int, int] = None,
-    scale_basis: Optional[float] = None,
-    #
+    scale_factor: Optional[float] = None,
     color_map: Union[Colormap, str, None] = None,
     cmap: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
@@ -170,7 +164,7 @@ def embedding(
     # get the points position and the components list
     # (only if components is not None)
     data_points, components_list = _get_data_points(
-        adata, basis, projection, components, scale_basis
+        adata, basis, projection, components, scale_factor
     )
 
     # Setup layout.
@@ -314,19 +308,10 @@ def embedding(
                 **kwargs,
             )
         else:
-            # plot img in background
-            if img is not None and img is not _empty:
-                ax.imshow(img, cmap=cmap_img, alpha=alpha_img)
-                if crop_coord is not None:
-                    ax.set_xlim(crop_coord[0], crop_coord[1])
-                    ax.set_ylim(crop_coord[3], crop_coord[2])
-            # there's no img but coord system is top left
-            if img is _empty:
-                ax.invert_yaxis()
 
             scatter = (
                 partial(ax.scatter, s=size, plotnonfinite=True)
-                if img is None or img is _empty
+                if scale_factor is None
                 else partial(circles, s=size, ax=ax)  # size in circles is radius
             )
 
@@ -787,6 +772,8 @@ def pca(
 def spatial(
     adata,
     *,
+    basis: str = "spatial",
+    img: Union[np.ndarray, None] = None,
     img_key: Union[str, None, Empty] = _empty,
     library_id: Union[str, Empty] = _empty,
     crop_coord: Tuple[int, int, int, int] = None,
@@ -794,8 +781,11 @@ def spatial(
     bw: Optional[bool] = False,
     size: float = None,
     cmap_img: Optional[str] = None,
-    scale_basis: Optional[float] = None,
-    na_color: ColorLike = (0.0, 0.0, 0.0, 0.0),
+    scale_factor: Optional[float] = None,
+    na_color: ColorLike = "lightgray",
+    show: Optional[bool] = None,
+    return_fig: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
     **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
@@ -821,6 +811,7 @@ def spatial(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
+    # get default image params if available
     if library_id is _empty:
         try:
             library_id = next((i for i in adata.uns['spatial'].keys()))
@@ -831,42 +822,45 @@ def spatial(
             if img_key is _empty:
                 img_key = next(
                     (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
-                    None,
                 )
-                if img_key is not None:
-                    (
-                        img_processed,
-                        img_coord,
-                        size,
-                        cmap_img,
-                        scale_basis,
-                    ) = _process_image(
-                        adata, "spatial", img_key, library_id, crop_coord, size, bw
-                    )
-        # data is not visium (no image in background)
-        if library_id is None or img_key is None:
-            img_processed = _empty
-            img_coord = None
-            na_color = "lightgray"
 
-    return embedding(
+    img, cropped_coords, size, cmap_img, scale_factor = _process_image(
+        adata, basis, img, scale_factor, img_key, library_id, crop_coord, size, bw
+    )
+
+    if (
+        img is not None and na_color == "lightgray"
+    ):  # make points transparents with image
+        na_color = (0.0, 0.0, 0.0, 0.0)
+
+    axs = embedding(
         adata,
         'spatial',
-        scale_basis=scale_basis,
-        crop_coord=img_coord,
-        img=img_processed,
-        cmap_img=cmap_img,
+        scale_factor=scale_factor,
         size=size,
         na_color=na_color,
+        show=False,
+        save=False,
         **kwargs,
     )
+    if not isinstance(axs, list):
+        axs = [axs]
+    for ax in axs:
+        if img is not None:
+            ax.imshow(img, cmap=cmap_img, alpha=alpha_img)
+        else:
+            ax.invert_yaxis()
+        if cropped_coords is not None:
+            ax.set_xlim(cropped_coords[0], cropped_coords[1])
+            ax.set_ylim(cropped_coords[3], cropped_coords[2])
+    _utils.savefig_or_show('show', show=show, save=save)
+    if show is False or return_fig is True:
+        return axs
 
 
 # Helpers
-
-
 def _get_data_points(
-    adata, basis, projection, components, scale_basis
+    adata, basis, projection, components, scale_factor
 ) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
     """
     Returns the data points corresponding to the selected basis, projection and/or components.
@@ -970,8 +964,8 @@ def _get_data_points(
         data_points = [np.array(adata.obsm[basis_key])[:, offset : offset + n_dims]]
         components_list = []
 
-    if scale_basis is not None:  # if basis need scale for img background
-        data_points[0] = np.multiply(data_points[0], scale_basis)
+    if scale_factor is not None:  # if basis need scale for img background
+        data_points[0] = np.multiply(data_points[0], scale_factor)
 
     return data_points, components_list
 
@@ -1139,19 +1133,16 @@ def _basis2name(basis):
 
 def _process_image(
     adata: AnnData,
-    basis: str,
-    img_key: str,
-    library_id: str,
-    crop_coord: tuple,
-    scale_spot: float = None,
+    basis: str = None,
+    img: np.ndarray = None,
+    scale_factor: float = None,
+    img_key: str = None,
+    library_id: str = None,
+    crop_coord: tuple = None,
+    size: float = None,
     bw: bool = False,
 ):
-    """Process Visium images."""
-    offset = 100
-    spatial_data = adata.uns['spatial'][library_id]
-    img = spatial_data['images'][img_key]
-
-    # get basis spatial
+    """Process image."""
     if basis in adata.obsm.keys():
         data_points = adata.obsm[basis]
     else:
@@ -1160,47 +1151,73 @@ def _process_image(
             f"while calling plotting._tools._process_image."
         )
 
-    # get scale factor
-    scalef_key = f"tissue_{img_key}_scalef"
-    if scalef_key in spatial_data['scalefactors'].keys():
-        scale_basis = spatial_data['scalefactors'][scalef_key]
+    if (
+        img_key is not None
+        and library_id is not None
+        and img is None
+        and scale_factor is None
+    ):
+        offset = 100
+        spatial_data = adata.uns['spatial'][library_id]
+        img = spatial_data['images'][img_key]
+        # get scale factor
+        scalef_key = f"tissue_{img_key}_scalef"
+        if scalef_key in spatial_data['scalefactors'].keys():
+            scale_factor = spatial_data['scalefactors'][scalef_key]
+        else:
+            raise KeyError(
+                f"Could not find entry in `adata.uns[spatial][{library_id}]` for '{img_key}'.\n"
+                f"Available keys are: {list(spatial_data['images'].keys())}."
+            )
+        size_spot = spatial_data['scalefactors']['spot_diameter_fullres']
     else:
-        raise KeyError(
-            f"Could not find entry in `adata.uns[spatial][{library_id}]` for '{img_key}'.\n"
-            f"Available keys are: {list(spatial_data['images'].keys())}."
-        )
+        offset = None
+        size_spot = 1.0
 
     # scale radius for circles
-    if scale_spot is None:
-        scale_spot = 1.0
-    spot_size = (
-        (scale_basis * spatial_data['scalefactors']['spot_diameter_fullres'])
-        * 0.5
-        * scale_spot
-    )
+    if scale_factor is not None:
+        if size is None:
+            size = 1.0
+        size = (scale_factor * size_spot) * 0.5 * size
 
-    # handle coord cropping
-    if crop_coord is not None:
-        crop_coord = np.asarray(crop_coord)
-        if len(crop_coord) != 4:
-            raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
-        img_coord = (
-            *crop_coord[:2],
-            *np.ceil(img.shape[0] - crop_coord[2:4]).astype(int),
-        )
-    else:
-        img_coord = [
-            data_points[:, 0].min() * scale_basis - offset,
-            data_points[:, 0].max() * scale_basis + offset,
-            data_points[:, 1].min() * scale_basis - offset,
-            data_points[:, 1].max() * scale_basis + offset,
-        ]
+    cropped_coords = _crop_coords(img, data_points, crop_coord, scale_factor, offset)
 
-    # handle cmap img
     if bw:
         img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
         cmap_img = "gray"
     else:
         cmap_img = None
 
-    return img, img_coord, spot_size, cmap_img, scale_basis
+    return img, cropped_coords, size, cmap_img, scale_factor
+
+
+def _crop_coords(
+    img: np.ndarray = None,
+    data_points: np.ndarray = None,
+    crop_coord: tuple = None,
+    scale_factor: float = None,
+    offset: int = None,
+) -> Tuple[int, int, int, int]:
+    """Handle cropping with image or basis."""
+    if crop_coord is not None:
+        crop_coord = np.asarray(crop_coord)
+        if len(crop_coord) != 4:
+            raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
+        if img is not None:
+            cropped_coord = (
+                *crop_coord[:2],
+                *np.ceil(img.shape[0] - crop_coord[2:4]).astype(int),
+            )
+        else:
+            cropped_coord = crop_coord
+    elif crop_coord is None and scale_factor is not None and offset is not None:
+        cropped_coord = [
+            data_points[:, 0].min() * scale_factor - offset,
+            data_points[:, 0].max() * scale_factor + offset,
+            data_points[:, 1].min() * scale_factor - offset,
+            data_points[:, 1].max() * scale_factor + offset,
+        ]
+    else:
+        cropped_coord = None
+
+    return cropped_coord
