@@ -1180,15 +1180,15 @@ def _process_image(
             size = 1.0
         size = (scale_factor * size_spot) * 0.5 * size
 
-    cropped_coords = _crop_coords(img, data_points, crop_coord, scale_factor, offset)
+    cropped_coord = _crop_coords(img, data_points, crop_coord, scale_factor, offset)
 
-    if bw:
+    if bw and img is not None:
         img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
         cmap_img = "gray"
     else:
         cmap_img = None
 
-    return img, cropped_coords, size, cmap_img, scale_factor
+    return img, cropped_coord, size, cmap_img, scale_factor
 
 
 def _crop_coords(
