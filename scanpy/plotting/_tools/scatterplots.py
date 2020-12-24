@@ -294,12 +294,11 @@ def embedding(
                 )
                 ax.set_title(value_to_plot)
 
-        # check vmin and vmax options
-        kwargs['vmin'] = kwargs['vmax'] = None
-        if 'vcenter' in kwargs:
-            del kwargs['vcenter']
-        if 'norm' in kwargs:
-            del kwargs['norm']
+        # clean up kwds
+        for key in ['vmin', 'vmax', 'vcenter', 'norm']:
+            if key in kwargs:
+                kwargs.pop(key)
+
         if not categorical:
             kwargs['norm'] = norm
             kwargs['vmin'], kwargs['vmax'], kwargs['vcenter'] = _get_vminmaxcenter(
