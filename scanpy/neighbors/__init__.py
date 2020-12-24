@@ -700,6 +700,8 @@ class Neighbors:
             raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
+        # do not use the cached rp_forest
+        self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
