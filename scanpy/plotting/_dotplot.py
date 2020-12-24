@@ -11,7 +11,7 @@ from matplotlib import pyplot as pl
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
-from ._utils import make_grid_spec, fix_kwds
+from ._utils import make_grid_spec, fix_kwds, _setup_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
@@ -659,6 +659,8 @@ class DotPlot(BasePlot):
         frac = dot_size.values.flatten()
         mean_flat = dot_color.values.flatten()
         cmap = pl.get_cmap(kwds.get('cmap', cmap))
+        if 'cmap' in kwds:
+            del kwds['cmap']
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
         else:
@@ -680,23 +682,7 @@ class DotPlot(BasePlot):
         size = frac ** size_exponent
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
-
-        import matplotlib.colors
-
-        if 'vcenter' in kwds and kwds['vcenter'] is not None:
-            normalize = matplotlib.colors.TwoSlopeNorm(
-                vmin=kwds.get('vmin'),
-                vmax=kwds.get('vmax'),
-                vcenter=kwds.get('vcenter'),
-            )
-        else:
-            normalize = matplotlib.colors.Normalize(
-                vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
-            )
-
-        for key in ['cmap', 'vmin', 'vmax', 'vcenter']:
-            if key in kwds:
-                del kwds[key]
+        normalize = _setup_colornorm(kwds)
 
         if color_on == 'square':
             if edge_color is None:
@@ -722,7 +708,6 @@ class DotPlot(BasePlot):
                 kwds,
                 s=size,
                 cmap=cmap,
-                norm=None,
                 linewidth=edge_lw,
                 facecolor='none',
                 edgecolor=edge_color,
@@ -738,7 +723,6 @@ class DotPlot(BasePlot):
                 s=size,
                 cmap=cmap,
                 color=color,
-                norm=None,
                 linewidth=edge_lw,
                 edgecolor=edge_color,
             )

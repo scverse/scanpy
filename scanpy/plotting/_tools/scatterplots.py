@@ -13,7 +13,7 @@ from matplotlib import pyplot as pl, colors
 from matplotlib.cm import get_cmap
 from matplotlib import rcParams
 from matplotlib import patheffects
-from matplotlib.colors import Colormap, Normalize, TwoSlopeNorm
+from matplotlib.colors import Colormap
 from functools import partial
 
 from .. import _utils
@@ -24,6 +24,7 @@ from .._utils import (
     circles,
     ColorLike,
     check_projection,
+    _setup_colornorm,
 )
 from .._docs import (
     doc_adata_color_etc,
@@ -205,6 +206,7 @@ def embedding(
         vmin = [vmin]
     if isinstance(vcenter, str) or not isinstance(vcenter, cabc.Sequence):
         vcenter = [vcenter]
+    norm = kwargs.get('norm')
 
     if 's' in kwargs:
         size = kwargs.pop('s')
@@ -293,19 +295,17 @@ def embedding(
                 ax.set_title(value_to_plot)
 
         # check vmin and vmax options
-        if categorical:
-            kwargs['norm'] = None
-        else:
-            vmin_next, vmax_next, vcenter_next = _get_vmin_vmax_vcenter(
+        kwargs['vmin'] = kwargs['vmax'] = None
+        if 'vcenter' in kwargs:
+            del kwargs['vcenter']
+        if 'norm' in kwargs:
+            del kwargs['norm']
+        if not categorical:
+            kwargs['norm'] = norm
+            kwargs['vmin'], kwargs['vmax'], kwargs['vcenter'] = _get_vminmaxcenter(
                 vmin, vmax, vcenter, count, color_vector
             )
-            if vcenter_next is not None:
-                norm = TwoSlopeNorm(
-                    vmin=vmin_next, vmax=vmax_next, vcenter=vcenter_next
-                )
-            else:
-                norm = Normalize(vmin=vmin_next, vmax=vmax_next)
-            kwargs['norm'] = norm
+            _setup_colornorm(kwargs)
 
         # make the scatter plot
         if projection == '3d':
@@ -474,7 +474,7 @@ def _panel_grid(hspace, wspace, ncols, num_panels):
     return fig, gs
 
 
-def _get_vmin_vmax_vcenter(
+def _get_vminmaxcenter(
     vmin: Sequence[VMinMaxCenter],
     vmax: Sequence[VMinMaxCenter],
     vcenter: Sequence[VMinMaxCenter],

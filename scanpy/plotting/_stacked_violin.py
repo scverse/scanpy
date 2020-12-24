@@ -10,7 +10,7 @@ from matplotlib.colors import is_color_like
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
-from ._utils import make_grid_spec
+from ._utils import make_grid_spec, _setup_colornorm
 from ._utils import _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
@@ -317,24 +317,12 @@ class StackedViolin(BasePlot):
         _color_df = _matrix.groupby(level=0).median()
         if self.are_axes_swapped:
             _color_df = _color_df.T
-        import matplotlib.colors
-
-        if 'vcenter' in self.kwds and self.kwds['vcenter'] is not None:
-            norm = matplotlib.colors.TwoSlopeNorm(
-                vmin=self.kwds.get('vmin'),
-                vmax=self.kwds.get('vmax'),
-                vcenter=self.kwds.get('vcenter'),
-            )
-        else:
-            norm = matplotlib.colors.Normalize(
-                vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
-            )
 
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
-        for key in ['vmin', 'vmax', 'vcenter', 'cmap']:
-            if key in self.kwds:
-                del self.kwds[key]
-        colormap_array = cmap(norm(_color_df.values))
+        if 'cmap' in self.kwds:
+            del self.kwds['cmap']
+        normalize = _setup_colornorm(self.kwds)
+        colormap_array = cmap(normalize(_color_df.values))
         x_spacer_size = self.plot_x_padding
         y_spacer_size = self.plot_y_padding
         self._make_rows_of_violinplots(
@@ -369,7 +357,7 @@ class StackedViolin(BasePlot):
         ax.tick_params(axis='both', labelsize='small')
         ax.grid(False)
 
-        return norm
+        return normalize
 
     def _make_rows_of_violinplots(
         self, ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size

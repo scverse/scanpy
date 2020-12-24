@@ -18,13 +18,7 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
-from matplotlib.colors import (
-    is_color_like,
-    Colormap,
-    ListedColormap,
-    Normalize,
-    TwoSlopeNorm,
-)
+from matplotlib.colors import is_color_like,Colormap, ListedColormap
 
 from .. import get
 from .. import logging as logg
@@ -32,7 +26,7 @@ from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params, _check_use_raw
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes
+from ._utils import scatter_base, scatter_group, setup_axes, _setup_colornorm
 from ._utils import ColorLike, _FontWeight, _FontSize
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
@@ -1063,22 +1057,7 @@ def heatmap(
         obs_tidy = obs_tidy.sort_index()
 
     colorbar_width = 0.2
-
-    if 'vcenter' in kwds and kwds['vcenter'] is not None:
-        norm = TwoSlopeNorm(
-            vmin=kwds.get('vmin'),
-            vmax=kwds.get('vmax'),
-            vcenter=kwds.get('vcenter'),
-        )
-    else:
-        norm = Normalize(
-            vmin=kwds.get('vmin'),
-            vmax=kwds.get('vmax'),
-        )
-    kwds['norm'] = norm
-    for key in ['vmax', 'vmin', 'vcenter']:
-        if key in kwds:
-            del kwds[key]
+    _setup_colornorm(kwds)
 
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
@@ -1660,7 +1639,8 @@ def correlation_matrix(
     **kwds
         Only if `show_correlation` is True:
         Are passed to :func:`matplotlib.pyplot.pcolormesh` when plotting the
-        correlation heatmap. Useful values to pass are `vmax`, `vmin` and `cmap`.
+        correlation heatmap. Useful values to pass are `vmax`, `vmin`,
+        `vcenter` and `cmap`.
 
     Returns
     -------
@@ -1740,9 +1720,10 @@ def correlation_matrix(
         else:
             kwds['edgecolors'] = 'black'
             kwds['linewidth'] = 0.01
-    if 'vmax' not in kwds and 'vmin' not in kwds:
+    if 'vmax' not in kwds and 'vmin' not in kwds and 'norm' not in kwds:
         kwds['vmax'] = 1
         kwds['vmin'] = -1
+    _setup_colornorm(kwds)
     if 'cmap' not in kwds:
         # by default use a divergent color map
         kwds['cmap'] = 'bwr'

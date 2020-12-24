@@ -11,7 +11,7 @@ from matplotlib import rcParams
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
-from ._utils import fix_kwds
+from ._utils import fix_kwds, _setup_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
@@ -200,18 +200,9 @@ class MatrixPlot(BasePlot):
         if self.are_axes_swapped:
             _color_df = _color_df.T
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
-        import matplotlib.colors
-
-        if 'vcenter' in self.kwds and self.kwds['vcenter'] is not None:
-            normalize = matplotlib.colors.TwoSlopeNorm(
-                vmin=self.kwds.get('vmin'),
-                vmax=self.kwds.get('vmax'),
-                vcenter=self.kwds.get('vcenter'),
-            )
-        else:
-            normalize = matplotlib.colors.Normalize(
-                vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
-            )
+        if 'cmap' in self.kwds:
+            del self.kwds['cmap']
+        normalize = _setup_colornorm(self.kwds)
 
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(1.5)
@@ -225,7 +216,6 @@ class MatrixPlot(BasePlot):
             cmap=cmap,
             edgecolor=self.edge_color,
             linewidth=self.edge_lw,
-            norm=normalize,
         )
         __ = ax.pcolor(_color_df, **kwds)
 

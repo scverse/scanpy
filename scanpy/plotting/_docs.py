@@ -115,8 +115,8 @@ vmin
 vmax
     Maximum value to plot. The format is the same as for `vmin`.
 vcenter
-    Center value of the color scale. Useful for diverging colormaps. The format is the same as
-    for `vmin`\.
+    The value representing the center of the color scale. Useful for diverging colormaps.
+    The format is the same as for `vmin`\.
 """
 
 doc_outline = """\

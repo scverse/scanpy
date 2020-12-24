@@ -14,7 +14,7 @@ from warnings import warn
 
 from .. import logging as logg
 from .._compat import Literal
-from ._utils import make_grid_spec
+from ._utils import make_grid_spec, _setup_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
 
@@ -529,8 +529,6 @@ class BasePlot(object):
         return_ax_dict['color_legend_ax'] = color_legend_ax
 
     def _mainplot(self, ax):
-        import matplotlib.colors
-
         y_labels = self.categories
         x_labels = self.var_names
 
@@ -563,18 +561,7 @@ class BasePlot(object):
         ax.set_ylim(len(y_labels), 0)
         ax.set_xlim(0, len(x_labels))
 
-        if 'vcenter' in self.kwds and self.kwds['vcenter'] is not None:
-            normalize = matplotlib.colors.TwoSlopeNorm(
-                vmin=self.kwds.get('vmin'),
-                vmax=self.kwds.get('vmax'),
-                vcenter=self.kwds.get('vcenter'),
-            )
-        else:
-            normalize = matplotlib.colors.Normalize(
-                vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
-            )
-
-        return normalize
+        return _setup_colornorm(self.kwds)
 
     def make_figure(self):
         """
