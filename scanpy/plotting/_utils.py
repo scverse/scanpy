@@ -1199,12 +1199,16 @@ def _setup_colornorm(kwds):
         from matplotlib.colors import DivergingNorm as DivNorm
 
     if kwds.get('norm') is not None:
-        if any([
-            kwds.get('vmin') is not None,
-            kwds.get('vmax') is not None,
-            kwds.get('vcenter') is not None,
-        ]):
-            raise ValueError('Passing both norm and one of vmin/vmax/vcenter is not allowed.')
+        if any(
+            [
+                kwds.get('vmin') is not None,
+                kwds.get('vmax') is not None,
+                kwds.get('vcenter') is not None,
+            ]
+        ):
+            raise ValueError(
+                    'Passing both norm and one of vmin/vmax/vcenter is not allowed.'
+            )
         else:
             norm = kwds['norm']
     else:
@@ -1215,9 +1219,7 @@ def _setup_colornorm(kwds):
                 vcenter=kwds.get('vcenter'),
             )
         else:
-            norm = Normalize(
-                vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
-            )
+            norm = Normalize(vmin=kwds.get('vmin'), vmax=kwds.get('vmax'))
         kwds['norm'] = norm
 
     for key in ['vmin', 'vmax', 'vcenter']:
