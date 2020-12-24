@@ -207,10 +207,6 @@ class MatrixPlot(BasePlot):
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(1.5)
 
-        for key in ['cmap', 'vmin', 'vmax', 'vcenter']:
-            if key in self.kwds:
-                del self.kwds[key]
-
         kwds = fix_kwds(
             self.kwds,
             cmap=cmap,

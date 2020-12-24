@@ -18,7 +18,7 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
-from matplotlib.colors import is_color_like,Colormap, ListedColormap
+from matplotlib.colors import is_color_like, Colormap, ListedColormap
 
 from .. import get
 from .. import logging as logg
