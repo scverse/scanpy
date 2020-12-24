@@ -1207,7 +1207,7 @@ def _setup_colornorm(kwds):
             ]
         ):
             raise ValueError(
-                    'Passing both norm and one of vmin/vmax/vcenter is not allowed.'
+                'Passing both norm and one of vmin/vmax/vcenter is not allowed.'
             )
         else:
             norm = kwds['norm']
