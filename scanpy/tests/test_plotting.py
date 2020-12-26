@@ -911,11 +911,12 @@ def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
         outline_width=(0.5, 0.5),
         cmap='viridis_r',
         alpha=0.9,
-        wspace=.5,
+        wspace=0.5,
     )
     save_and_compare_images('master_embedding_outline_vmin_vmax')
 
     import matplotlib as mpl, matplotlib.pyplot as plt
+
     norm = mpl.colors.LogNorm()
     try:
         sc.pl.embedding(
