@@ -116,7 +116,8 @@ vmax
     Maximum value to plot. The format is the same as for `vmin`.
 vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
-    The format is the same as for `vmin`\.
+    The format is the same as for `vmin`.
+    Example: sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')\
 """
 
 doc_outline = """\
