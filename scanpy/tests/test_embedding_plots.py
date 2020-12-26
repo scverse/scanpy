@@ -124,8 +124,8 @@ def groupsfunc(request):
 
 
 @pytest.fixture(
-    params=[(None, None), (0, 5), ("p15", "p90")],
-    ids=["vbounds.default", "vbound.numbers", "vbound.percentile"],
+    params=[(None, None, None), (0, 5, None), ("p15", "p90", None), (0, "p99", 0.1)],
+    ids=["vbounds.default", "vbound.numbers", "vbound.percentile", "vbound.vcenter"],
 )
 def vbounds(request):
     return request.param
@@ -169,7 +169,7 @@ def test_missing_values_continuous(
 
     # Passing through a dict so it's easier to use default values
     kwargs = {}
-    kwargs["vmin"], kwargs["vmax"] = vbounds
+    kwargs["vmin"], kwargs["vmax"], kwargs["vcenter"] = vbounds
     kwargs["legend_loc"] = legend_loc
     if na_color is not None:
         kwargs["na_color"] = na_color

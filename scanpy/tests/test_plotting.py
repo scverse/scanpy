@@ -595,6 +595,21 @@ def test_correlation(image_comparer):
             ),
         ),
         (
+            "ranked_genes_heatmap_swap_axes_vcenter",
+            partial(
+                sc.pl.rank_genes_groups_heatmap,
+                n_genes=20,
+                swap_axes=True,
+                use_raw=False,
+                show_gene_labels=False,
+                show=False,
+                vmin=-3,
+                vcenter=1,
+                vmax=3,
+                cmap='RdBu_r',
+            ),
+        ),
+        (
             "ranked_genes_stacked_violin",
             partial(
                 sc.pl.rank_genes_groups_stacked_violin,
@@ -623,6 +638,22 @@ def test_correlation(image_comparer):
             ),
         ),
         (
+            "ranked_genes_dotplot_logfoldchange_vcenter",
+            partial(
+                sc.pl.rank_genes_groups_dotplot,
+                n_genes=4,
+                values_to_plot="logfoldchanges",
+                vmin=-5,
+                vcenter=1,
+                vmax=5,
+                min_logfoldchange=3,
+                cmap='RdBu_r',
+                swap_axes=True,
+                title='log fold changes swap_axes',
+                show=False,
+            ),
+        ),
+        (
             "ranked_genes_matrixplot",
             partial(
                 sc.pl.rank_genes_groups_matrixplot,
@@ -640,6 +671,21 @@ def test_correlation(image_comparer):
                 swap_axes=True,
                 values_to_plot='logfoldchanges',
                 vmin=-6,
+                vmax=6,
+                cmap='bwr',
+                title='log fold changes swap_axes',
+            ),
+        ),
+        (
+            "ranked_genes_matrixplot_swap_axes_vcenter",
+            partial(
+                sc.pl.rank_genes_groups_matrixplot,
+                n_genes=5,
+                show=False,
+                swap_axes=True,
+                values_to_plot='logfoldchanges',
+                vmin=-6,
+                vcenter=1,
                 vmax=6,
                 cmap='bwr',
                 title='log fold changes swap_axes',
@@ -749,6 +795,19 @@ def pbmc_scatterplots():
             ),
         ),
         (
+            'multipanel_vcenter',
+            partial(
+                sc.pl.pca,
+                color=['CD3D', 'CD79A'],
+                components=['1,2', '1,3'],
+                vmax=5,
+                use_raw=False,
+                vmin=-5,
+                vcenter=1,
+                cmap='seismic',
+            ),
+        ),
+        (
             'pca_sparse_layer',
             partial(sc.pl.pca, color=['CD3D', 'CD79A'], layer='sparse', cmap='viridis'),
         ),
@@ -791,6 +850,7 @@ def pbmc_scatterplots():
                 title=['gene1', 'gene2'],
                 layer='test',
                 vmin=100,
+                vcenter=101,
             ),
         ),
         (
@@ -840,18 +900,36 @@ def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
     sc.pl.embedding(
         pbmc,
         'X_umap',
-        color=['percent_mito', 'n_counts', 'bulk_labels'],
+        color=['percent_mito', 'n_counts', 'bulk_labels', 'percent_mito'],
         s=200,
         frameon=False,
         add_outline=True,
-        vmax=['p99.0', partial(np.percentile, q=90)],
+        vmax=['p99.0', partial(np.percentile, q=90), None, 0.03],
         vmin=0.01,
+        vcenter=[0.015, None, None, 0.025],
         outline_color=('#555555', '0.9'),
         outline_width=(0.5, 0.5),
         cmap='viridis_r',
         alpha=0.9,
+        wspace=.5,
     )
     save_and_compare_images('master_embedding_outline_vmin_vmax')
+
+    import matplotlib as mpl, matplotlib.pyplot as plt
+    norm = mpl.colors.LogNorm()
+    try:
+        sc.pl.embedding(
+            pbmc,
+            'X_umap',
+            color=['percent_mito', 'n_counts'],
+            norm=norm,
+            vmin=0,
+            vmax=1,
+            vcenter=0.5,
+            cmap='RdBu_r',
+        )
+    except ValueError:
+        pass
 
 
 def test_timeseries():
