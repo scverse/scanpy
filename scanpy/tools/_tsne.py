@@ -1,48 +1,69 @@
 from typing import Optional, Union
 
+import numpy as np
+import scipy.sparse as sp
+import openTSNE
 from anndata import AnnData
 
-from .._utils import _doc_params, AnyRandom
-from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
-from .._settings import settings
 from .. import logging as logg
+from .._settings import settings
+from .._utils import AnyRandom, NeighborsView
+from ..tools._utils import get_init_pos_from_paga
 
 
-@_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+class ExistingKNNGAffinities(openTSNE.affinity.Affinities):
+    def __init__(self, knng, verbose=False):
+        super().__init__(verbose=verbose)
+        self.P = self.normalize(knng)
+
+    def to_new(self, data, return_distances=False):
+        raise NotImplementedError(
+            "`ExistingKNNGAffinities.to_new` is not implemented!"
+        )
+
+    def normalize(self, P, symmetrize=True, normalization="pair-wise"):
+        if symmetrize:
+            P = (P + P.T) / 2
+
+        if normalization == "pair-wise":
+            P /= np.sum(P)
+        elif normalization == "point-wise":
+            P = sp.diags(np.asarray(1 / P.sum(axis=1)).ravel()) @ P
+
+        return P
+
+
 def tsne(
     adata: AnnData,
-    n_pcs: Optional[int] = None,
-    use_rep: Optional[str] = None,
-    perplexity: Union[float, int] = 30,
+    learning_rate: Union[str, float] = "auto",
+    early_exaggeration_iter: int = 250,
     early_exaggeration: Union[float, int] = 12,
-    learning_rate: Union[float, int] = 1000,
+    n_iter: int = 500,
+    exaggeration: Optional[float] = None,
+    dof: float = 1,
+    init_pos: Union[str, np.ndarray] = "X_pca",
+    initial_momentum: float = 0.5,
+    final_momentum: float = 0.8,
+    max_step_norm: float = 5,
+    negative_gradient_method="auto",
     random_state: AnyRandom = 0,
-    use_fast_tsne: bool = True,
     n_jobs: Optional[int] = None,
+    binarize: Union[str, bool] = "auto",
+    neighbors_key: Optional[str] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
-    t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
+    t-SNE [Maaten08]_ [Amir13]_ [Policar19]_.
 
     t-distributed stochastic neighborhood embedding (tSNE) [Maaten08]_ has been
-    proposed for visualizating single-cell data by [Amir13]_. Here, by default,
-    we use the implementation of *scikit-learn* [Pedregosa11]_. You can achieve
-    a huge speedup and better convergence if you install `Multicore-tSNE
-    <https://github.com/DmitryUlyanov/Multicore-TSNE>`__ by [Ulyanov16]_, which
-    will be automatically detected by Scanpy.
+    proposed for visualizating single-cell data by [Amir13]_. We use the
+    implementation of `openTSNE <https://github.com/pavlin-policar/openTSNE>`__
+    [Policar19]_.
 
     Parameters
     ----------
     adata
         Annotated data matrix.
-    {doc_n_pcs}
-    {use_rep}
-    perplexity
-        The perplexity is related to the number of nearest neighbors that
-        is used in other manifold learning algorithms. Larger datasets
-        usually require a larger perplexity. Consider selecting a value
-        between 5 and 50. The choice is not extremely critical since t-SNE
-        is quite insensitive to this parameter.
     early_exaggeration
         Controls how tight natural clusters in the original space are in the
         embedded space and how much space will be between them. For larger
@@ -60,8 +81,6 @@ def tsne(
     random_state
         Change this to use different intial states for the optimization.
         If `None`, the initial state is not reproducible.
-    use_fast_tsne
-        Use the MulticoreTSNE package by D. Ulyanov if it is installed.
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
@@ -75,48 +94,77 @@ def tsne(
     **X_tsne** : `np.ndarray` (`adata.obs`, dtype `float`)
         tSNE coordinates of data.
     """
-    start = logg.info('computing tSNE')
     adata = adata.copy() if copy else adata
-    X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
-    # params for sklearn
-    params_sklearn = dict(
-        perplexity=perplexity,
-        random_state=random_state,
-        verbose=settings.verbosity > 3,
-        early_exaggeration=early_exaggeration,
+
+    if neighbors_key is None:
+        neighbors_key = "neighbors"
+
+    if neighbors_key not in adata.uns:
+        raise ValueError(
+            f"Did not find .uns['{neighbors_key}']. Run `sc.pp.neighbors` first."
+        )
+
+    start = logg.info("computing tSNE")
+
+    tsne_params = dict(
         learning_rate=learning_rate,
+        early_exaggeration_iter=early_exaggeration_iter,
+        early_exaggeration=early_exaggeration,
+        n_iter=n_iter,
+        exaggeration=exaggeration,
+        dof=dof,
+        initial_momentum=initial_momentum,
+        final_momentum=final_momentum,
+        max_step_norm=max_step_norm,
+        negative_gradient_method=negative_gradient_method,
     )
+    adata.uns["tsne"] = {"params": dict(tsne_params)}
+
+    verbose = settings.verbosity > 3
+
+    neighbors = NeighborsView(adata, neighbors_key)
+    connectivities = neighbors["connectivities"]
+
+    # If `binarize="auto"`, we binarize everything except t-SNE weights
+    if binarize == "auto":
+        binarize = neighbors["params"]["method"] != "tsne"
+
+    if binarize:
+        connectivities = connectivities > 0
+
+    affinities = ExistingKNNGAffinities(connectivities, verbose=verbose)
+
+    # Get initialization
+    if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
+        init_coords = adata.obsm[init_pos]
+    elif isinstance(init_pos, str) and init_pos == "paga":
+        init_coords = get_init_pos_from_paga(
+            adata, random_state=random_state, neighbors_key=neighbors_key
+        )
+    elif isinstance(init_pos, str) and init_pos == "spectral":
+        init_coords = openTSNE.initialization.spectral(
+            affinities.P, random_state=random_state, verbose=verbose,
+        )
+    else:
+        raise ValueError(f"`{init_pos}` is not a valid initialization scheme!")
+
+    # t-SNE requires the initialization to be appropriately rescaled
+    init_pos = openTSNE.initialization.rescale(init_coords[:, :2])
+
+    if random_state != 0:
+        adata.uns["tsne"]["params"]["random_state"] = random_state
+
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
-    # deal with different tSNE implementations
-    X_tsne = None
-    if n_jobs >= 1 and use_fast_tsne:
-        try:
-            from MulticoreTSNE import MulticoreTSNE as TSNE
 
-            tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
-            logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
-            # need to transform to float64 for MulticoreTSNE...
-            X_tsne = tsne.fit_transform(X.astype('float64'))
-        except ImportError:
-            logg.warning(
-                'Consider installing the package MulticoreTSNE '
-                '(https://github.com/DmitryUlyanov/Multicore-TSNE). '
-                'Even for n_jobs=1 this speeds up the computation considerably '
-                'and might yield better converged results.'
-            )
-    if X_tsne is None:
-        from sklearn.manifold import TSNE
-        from . import _tsne_fix  # fix by D. DeTomaso for sklearn < 0.19
+    tsne = openTSNE.TSNE(
+        random_state=random_state, n_jobs=n_jobs, verbose=verbose, **tsne_params
+    )
+    embedding = tsne.fit(affinities=affinities, initialization=init_pos)
 
-        # unfortunately, sklearn does not allow to set a minimum number
-        # of iterations for barnes-hut tSNE
-        tsne = TSNE(**params_sklearn)
-        logg.info('    using sklearn.manifold.TSNE with a fix by D. DeTomaso')
-        X_tsne = tsne.fit_transform(X)
     # update AnnData instance
-    adata.obsm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
+    adata.obsm["X_tsne"] = embedding.view(np.ndarray)
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
         deep="added\n    'X_tsne', tSNE coordinates (adata.obsm)",
     )

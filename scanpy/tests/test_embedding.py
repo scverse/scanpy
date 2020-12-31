@@ -2,7 +2,7 @@ from importlib.util import find_spec
 
 import numpy as np
 import pytest
-from sklearn.utils.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal
 
 import scanpy as sc
 
@@ -28,3 +28,8 @@ def test_umap_init_paga(layout):
     sc.tl.paga(pbmc)
     sc.pl.paga(pbmc, layout=layout, show=False)
     sc.tl.umap(pbmc, init_pos="paga")
+
+
+def test_tsne():
+    pbmc = sc.datasets.pbmc3k_processed()
+    sc.tl.tsne(pbmc, n_jobs=4)
