@@ -20,6 +20,10 @@ markers = [
     'internet: tests which rely on internet resources (enable with `--internet-tests`)',
 ]
 
+[tool.coverage.run]
+source = ['scanpy']
+omit = ['*/tests/*']
+
 [tool.black]
 line-length = 88
 target-version = ['py36']
