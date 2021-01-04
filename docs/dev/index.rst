@@ -1,3 +1,5 @@
+.. _contribution-guide:
+
 Contributing to Scanpy
 ======================
 
