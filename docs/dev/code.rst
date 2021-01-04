@@ -4,7 +4,7 @@ Contributing code
 Development workflow
 --------------------
 
-1. :ref:`Fork the scanpy repository <forking-and-cloning>` to your own GitHub account
+1. :ref:`Fork the Scanpy repository <forking-and-cloning>` to your own GitHub account
 2. Create a :ref:`development environment <dev-environments>`
 3. :ref:`Create a new branch <creating-a-branch>` for your PR
 4. Add your feature or bugfix to the codebase
