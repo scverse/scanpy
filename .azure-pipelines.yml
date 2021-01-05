@@ -1,6 +1,10 @@
 trigger:
 - master
 
+variables:
+  ANNDATA_DEV: no
+  RUN_COVERAGE: no
+
 jobs:
 - job: PyTest
   pool:
@@ -14,6 +18,7 @@ jobs:
       anndata_dev:
         python.version: '3.7'
         ANNDATA_DEV: yes
+        RUN_COVERAGE: yes
   steps:
   - task: UsePythonVersion@0
     inputs:
@@ -27,7 +32,7 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install pytest-azurepipelines wheel
+      pip install pytest-cov wheel
       pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony,scrublet,scanorama]
     displayName: 'Install dependencies'
 
@@ -47,8 +52,27 @@ jobs:
     displayName: 'Black'
 
   - script: |
-      pytest --ignore=scanpy/tests/_images
+      pytest --color=yes --ignore=scanpy/tests/_images --junitxml=junit/test-results.xml
     displayName: 'PyTest'
+    condition: eq(variables['RUN_COVERAGE'], 'no')
+
+  - script: |
+      pytest --color=yes --ignore=scanpy/tests/_images --junitxml=junit/test-results.xml --cov=scanpy --cov-report=xml
+    displayName: 'PyTest (coverage)'
+    condition: eq(variables['RUN_COVERAGE'], 'yes')
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+    condition: eq(variables['RUN_COVERAGE'], 'yes')
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'junit/test-*.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
 
   - script: |
       python setup.py check --restructuredtext --strict
