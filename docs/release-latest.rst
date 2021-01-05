@@ -12,6 +12,7 @@ On master
 
 - Add `Scanorama <https://github.com/brianhie/scanorama>`_ integration to scanpy external API :pr:`1332` :smaller:`B Hie`
 - Scrublet [Wolock19]_ integration :func:`~scanpy.external.pp.scrublet` :pr:`1476` :smaller:`J Manning`
+- Deprecate :func:`~scanpy.external.pp.scvi`. Instead, use `scvi-tools <https://scvi-tools.org>`_. :pr:`1554` :smaller:`G Xing`
 
 .. rubric:: Features
 

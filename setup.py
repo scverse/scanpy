@@ -32,7 +32,7 @@ setup(
         louvain=['python-igraph', 'louvain>=0.6,!=0.6.2'],
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
-        scvi=['scvi>=0.6.5'],
+        scvi=['scvi==0.6.7'],
         rapids=['cudf>=0.9', 'cuml>=0.9', 'cugraph>=0.9'],
         magic=['magic-impute>=2.0'],
         skmisc=['scikit-misc>=0.1.3'],
