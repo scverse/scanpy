@@ -4,7 +4,7 @@
 scVelo on the cover of Nature Biotechnology :small:`2020-12-01`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Scanpy's counterpart for RNA velocity, `scVelo <http://scvelo.org/>`__, made it on the cover of `Nature Biotechnology <https://www.nature.com/nbt/volumes/38/issues/12>`__.
+Scanpy's counterpart for RNA velocity, `scVelo <http://scvelo.org/>`__, made it on the cover of `Nature Biotechnology <https://www.nature.com/nbt/volumes/38/issues/12>`__ [`tweet <https://twitter.com/NatureBiotech/status/1334647540030070792>`__].
 
 
 Scanpy selected among 20 papers for 20 years of Genome Biology :small:`2020-08-01`
@@ -25,8 +25,8 @@ COVID-19 datasets distributed as `h5ad` :small:`2020-04-01`
 In a joint initiative, the Wellcome Sanger Institute, the Human Cell Atlas, and the CZI distribute datasets related to COVID-19 via anndata's `h5ad` files: `covid19cellatlas.org <https://www.covid19cellatlas.org/>`__. It wasn't anticipated that the `initial idea <https://falexwolf.de/blog/2017-12-23-anndata-indexing-views-HDF5-backing/>`__ of sharing and backing an on-disk representation of `AnnData` would become so widely adopted. Curious? Read up more on the `format <https://anndata.readthedocs.io/en/latest/fileformat-prose.html>`__.
 
 
-CZI grant :small:`2019-11-14`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Scanpy has been selected an "Essential open source software for science" by CZI :small:`2019-11-14`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Scanpy has been selected an `essential open source software for science`_ by
 CZI among `32 projects`_, along with giants such as Scipy, Numpy, Pandas,
