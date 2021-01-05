@@ -28,7 +28,7 @@ jobs:
   - script: |
       python -m pip install --upgrade pip
       pip install pytest-azurepipelines wheel
-      pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony,scanorama]
+      pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony,scrublet,scanorama]
     displayName: 'Install dependencies'
 
   - script: |
