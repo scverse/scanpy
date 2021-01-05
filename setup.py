@@ -38,6 +38,7 @@ setup(
         skmisc=['scikit-misc>=0.1.3'],
         harmony=['harmonypy'],
         scanorama=['scanorama'],
+        scrublet=['scrublet'],
         dev=['setuptools_scm', 'pytoml', 'black>=20.8b1'],
         doc=[
             'sphinx>=3.2',

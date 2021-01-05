@@ -253,6 +253,10 @@ References
    `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__,
    `bioRxiv <https://doi.org/10.1101/208819>`__.
 
+.. [Wolock19] Wolock *et al.* (2019),
+   *BBKNN: fast batch alignment of single cell transcriptomes*
+   `Cell Systems  <https://doi.org/10.1016/j.cels.2018.11.005>`__.
+
 .. [Zheng17] Zheng *et al.* (2017),
    *Massively parallel digital transcriptional profiling of single cells*,
    `Nature Communications <https://doi.org/10.1038/ncomms14049>`__.

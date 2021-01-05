@@ -4,21 +4,29 @@
 On master
 ~~~~~~~~~
 
+.. rubric:: Documentation
+
+- :ref:`New contribution guide <contribution-guide>` :pr:`1544` :smaller:`I Virshup`
+
+.. rubric:: External tools
+
+- Add `Scanorama <https://github.com/brianhie/scanorama>`_ integration to scanpy external API :pr:`1332` :smaller:`B Hie`
+- Scrublet [Wolock19]_ integration :func:`~scanpy.external.pp.scrublet` :pr:`1476` :smaller:`J Manning`
+
 .. rubric:: Features
 
-* Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
-* Add `Scanorama <https://github.com/brianhie/scanorama>`_ integration to scanpy external API :pr:`1332` :smaller:`B Hie`
+- Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
 
 .. rubric:: Bugfixes
 
-* Fixed the width of the progress bar when downloading data :pr:`1507` :smaller:`M Klein`
-* Fixed `log1p` inplace on integer dense arrays :pr:`1400` :smaller:`I Virshup`
-* Fixed `marker_gene_overlap` default value for `top_n_markers` :pr:`1464` :smaller:`MD Luecken`
-* Fixed download path of `pbmc3k_processed` :pr:`1472` :smaller:`D Strobl`
-* Fixed anndata version requirement for `sc.concat` :pr:`1491` :smaller:`I Virshup`
-* Fixed bug where `score_genes` would error if one gene was passed :pr:`1398` :smaller:`I Virshup`
-* Updated link for `moignard15` dataset :pr:`1542` :smaller:`I Virshup`
-* Fixed bug where calling `set_figure_params` could block if IPython was installed, but not used. :pr:`1547` :smaller:`I Virshup`
+- Fixed the width of the progress bar when downloading data :pr:`1507` :smaller:`M Klein`
+- Fixed `log1p` inplace on integer dense arrays :pr:`1400` :smaller:`I Virshup`
+- Fixed `marker_gene_overlap` default value for `top_n_markers` :pr:`1464` :smaller:`MD Luecken`
+- Fixed download path of `pbmc3k_processed` :pr:`1472` :smaller:`D Strobl`
+- Fixed anndata version requirement for `sc.concat` :pr:`1491` :smaller:`I Virshup`
+- Fixed bug where `score_genes` would error if one gene was passed :pr:`1398` :smaller:`I Virshup`
+- Updated link for `moignard15` dataset :pr:`1542` :smaller:`I Virshup`
+- Fixed bug where calling `set_figure_params` could block if IPython was installed, but not used. :pr:`1547` :smaller:`I Virshup`
 
 .. rubric:: Performance
 
