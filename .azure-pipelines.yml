@@ -37,6 +37,10 @@ jobs:
     condition: eq(variables['ANNDATA_DEV'], 'yes')
 
   - script: |
+      pip list
+    displayName: 'Display installed versions'
+
+  - script: |
       pip install black
       black . --check --diff
       python -m scanpy.tests.blackdiff 10

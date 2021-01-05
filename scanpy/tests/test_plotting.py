@@ -352,6 +352,9 @@ def test_dotplot_obj(image_comparer):
 
 
 def test_matrixplot_obj(image_comparer):
+    if version.parse(pd.__version__) < version.parse("1.2.0"):
+        pytest.xfail("Ordering changes in pandas 1.2.0")
+
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.datasets.krumsiek11()
     plot = sc.pl.matrixplot(
