@@ -4,7 +4,7 @@
 scVelo on the cover of Nature Biotechnology :small:`2020-12-01`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Scanpy's counterpart for RNA velocity, `scVelo <http://scvelo.org/>`__, made it on the cover of `Nature Biotechnoloogy <https://www.nature.com/nbt/volumes/38/issues/12>`__.
+Scanpy's counterpart for RNA velocity, `scVelo <http://scvelo.org/>`__, made it on the cover of `Nature Biotechnology <https://www.nature.com/nbt/volumes/38/issues/12>`__.
 
 
 Scanpy selected among 20 papers for 20 years of Genome Biology :small:`2020-08-01`
@@ -16,7 +16,7 @@ Scanpy selected among 20 papers for 20 years of Genome Biology :small:`2020-08-0
 Scanpy featured in Nature Biotechnoloogy :small:`2020-02-01`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-`Single-cell RNA-seq analysis software providers scramble to offer solutions <https://www.nature.com/articles/s41587-020-0449-8>`__ mentions Scanpy along with Seurat as the two major open source software packages for single-cell analysis [`pdf <https://rdcu.be/b2M5l>`__.
+`Single-cell RNA-seq analysis software providers scramble to offer solutions <https://www.nature.com/articles/s41587-020-0449-8>`__ mentions Scanpy along with Seurat as the two major open source software packages for single-cell analysis [`pdf <https://rdcu.be/b2M5l>`__].
 
 
 COVID-19 datasets distributed as `h5ad` :small:`2020-04-01`
