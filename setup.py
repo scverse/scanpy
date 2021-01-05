@@ -37,6 +37,7 @@ setup(
         magic=['magic-impute>=2.0'],
         skmisc=['scikit-misc>=0.1.3'],
         harmony=['harmonypy'],
+        scanorama=['scanorama'],
         scrublet=['scrublet'],
         dev=['setuptools_scm', 'pytoml', 'black>=20.8b1'],
         doc=[

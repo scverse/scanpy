@@ -10,6 +10,7 @@ On master
 
 .. rubric:: External tools
 
+- Add `Scanorama <https://github.com/brianhie/scanorama>`_ integration to scanpy external API :pr:`1332` :smaller:`B Hie`
 - Scrublet [Wolock19]_ integration :func:`~scanpy.external.pp.scrublet` :pr:`1476` :smaller:`J Manning`
 
 .. rubric:: Features
@@ -30,7 +31,6 @@ On master
 .. rubric:: Performance
 
 * Sped up `sc.get.obs_df` signifigantly :pr:`1499` :smaller:`F Ramirez`
-
 
 1.6.0 :small:`2020-08-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
