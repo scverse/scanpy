@@ -29,7 +29,7 @@ from .._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
     doc_scatter_embedding,
-    doc_scatter_spatial
+    doc_scatter_spatial,
     doc_show_save_ax,
 )
 from ... import logging as logg
