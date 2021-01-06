@@ -723,6 +723,7 @@ class DotPlot(BasePlot):
                 linewidth=edge_lw,
                 facecolor='none',
                 edgecolor=edge_color,
+                norm=normalize,
             )
             dot_ax.scatter(x, y, **kwds)
         else:
@@ -737,6 +738,7 @@ class DotPlot(BasePlot):
                 color=color,
                 linewidth=edge_lw,
                 edgecolor=edge_color,
+                norm=normalize,
             )
 
             dot_ax.scatter(x, y, **kwds)
