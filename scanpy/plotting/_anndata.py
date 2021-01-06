@@ -28,7 +28,12 @@ from .._compat import Literal
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes, _setup_colornorm
 from ._utils import ColorLike, _FontWeight, _FontSize
-from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args, doc_vminmax
+from ._docs import (
+    doc_scatter_basic,
+    doc_show_save_ax,
+    doc_common_plot_args,
+    doc_vminmax,
+)
 
 VALID_LEGENDLOCS = {
     'none',
