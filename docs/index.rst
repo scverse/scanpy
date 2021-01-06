@@ -44,5 +44,6 @@ Latest additions
    external/index
    ecosystem
    release-notes
+   dev/index
    contributors
    references

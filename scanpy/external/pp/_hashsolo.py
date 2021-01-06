@@ -26,12 +26,14 @@ hypotheses in a bayesian fashion, and select the most probable hypothesis.
 
 def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     """Calculate log likelihoods for each hypothesis, negative, singlet, doublet
+
     Parameters
     ----------
     data : np.ndarray
         cells by hashing counts matrix
     number_of_noise_barcodes : int,
         number of barcodes to used to calculated noise distribution
+
     Returns
     -------
     log_likelihoods_for_each_hypothesis : np.ndarray
@@ -43,6 +45,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     def gaussian_updates(data, mu_o, std_o):
         """Update parameters of your gaussian
         https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
+
         Parameters
         ----------
         data : np.array
@@ -51,6 +54,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
             global mean for hashing count distribution
         std_o : float,
             global std for hashing count distribution
+
         Returns
         -------
         float
@@ -73,11 +77,8 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
 
     all_indices = np.empty(data.shape[0])
     num_of_barcodes = data.shape[1]
-    number_of_non_noise_barcodes = (
-        num_of_barcodes - number_of_noise_barcodes
-        if number_of_noise_barcodes is not None
-        else 2
-    )
+    number_of_non_noise_barcodes = num_of_barcodes - number_of_noise_barcodes
+
     num_of_noise_barcodes = num_of_barcodes - number_of_non_noise_barcodes
 
     # assume log normal
@@ -201,6 +202,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
 def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
     """
     Calculate bayes rule from log likelihoods
+
     Parameters
     ----------
     data : np.array
@@ -215,6 +217,7 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
         in the transcriptome space, e.g. UMI counts, pct mito reads, etc.
     number_of_noise_barcodes : int
         number of barcodes to used to calculated noise distribution
+
     Returns
     -------
     bayes_dict_results : dict
@@ -246,21 +249,22 @@ def hashsolo(
     cell_hashing_columns: list,
     priors: list = [0.01, 0.8, 0.19],
     pre_existing_clusters: str = None,
-    number_of_noise_barcodes: int = None,
+    number_of_noise_barcodes: int = 2,
     inplace: bool = True,
 ):
     """Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
 
     .. note::
         More information and bug reports `here <https://github.com/calico/solo>`__.
+
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata
         Anndata object with cell hashes in .obs columns
-    cell_hashing_columns : list,
+    cell_hashing_columns
         list specifying which columns in adata.obs
         are cell hashing counts
-    priors : list,
+    priors
         a list of your prior for each hypothesis
         first element is your prior for the negative hypothesis
         second element is your prior for the singlet hypothesis
@@ -268,17 +272,18 @@ def hashsolo(
         We use [0.01, 0.8, 0.19] by default because we assume the barcodes
         in your cell hashing matrix are those cells which have passed QC
         in the transcriptome space, e.g. UMI counts, pct mito reads, etc.
-    pre_existing_clusters : str
+    pre_existing_clusters
         column in adata.obs for how to break up demultiplexing
         for example leiden or cell types, not batches though
-    number_of_noise_barcodes : int,
+    number_of_noise_barcodes
         Use this if you wish change the number of barcodes used to create the
         noise distribution. The default is number of cell hashes - 2.
-    inplace : bool
+    inplace
         To do operation in place
+
     Returns
     -------
-    adata : AnnData
+    adata
         if inplace is False returns AnnData with demultiplexing results
         in .obs attribute otherwise does is in place
 
@@ -287,16 +292,22 @@ def hashsolo(
     >>> import anndata
     >>> import scanpy.external as sce
     >>> data = anndata.read("data.h5ad")
-    >>> sce.pp.hashsolo(data)
+    >>> sce.pp.hashsolo(data, ['Hash1', 'Hash2', 'Hash3'])
     >>> data.obs.head()
     """
     print(
-        "Please cite HashSolo paper: \nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
+        "Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
     )
 
     data = adata.obs[cell_hashing_columns].values
     if not check_nonnegative_integers(data):
         raise ValueError("Cell hashing counts must be non-negative")
+    if number_of_noise_barcodes >= len(cell_hashing_columns):
+        raise ValueError(
+            "number_of_noise_barcodes must be at least one less \
+        than the number of samples you have as determined by the number of \
+        cell_hashing_columns you've given as input  "
+        )
     num_of_cells = adata.shape[0]
     results = pd.DataFrame(
         np.zeros((num_of_cells, 6)),
@@ -314,7 +325,7 @@ def hashsolo(
         cluster_features = pre_existing_clusters
         unique_cluster_features = np.unique(adata.obs[cluster_features])
         for cluster_feature in unique_cluster_features:
-            cluster_feature_bool_vector = adata.obs[cluster_features == cluster_feature]
+            cluster_feature_bool_vector = adata.obs[cluster_features] == cluster_feature
             posterior_dict = _calculate_bayes_rule(
                 data[cluster_feature_bool_vector], priors, number_of_noise_barcodes
             )

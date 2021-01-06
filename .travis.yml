@@ -18,7 +18,7 @@ matrix:
   - name: "anndata dev"
     python: "3.7"
     install:
-    - pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc]
+    - pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc,scrublet]
     - pip install git+https://github.com/theislab/anndata
 python:
 - '3.6'
@@ -29,7 +29,7 @@ cache:
 - directories:
   - data
 install:
-- pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc]
+- pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc,scrublet]
 env:
 - MPLBACKEND=Agg
 script:
