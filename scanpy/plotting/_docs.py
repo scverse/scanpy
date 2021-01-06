@@ -101,7 +101,7 @@ title
     e.g. `['title1', 'title2', ...]`.
 """
 
-doc_vminmax = """\
+doc_vminmax_percentile = """\
 vmin
     Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
     vmin can be a number, a string, a function or `None`. If vmin is a string and has the format `pN`,
@@ -118,6 +118,15 @@ vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
     The format is the same as for `vmin`.
     Example: sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')\
+"""
+
+doc_vminmax = """\
+vmin
+    Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
+vmax
+    Maximum value to plot. Values larger than vmax are plotted with the same color as vmax.
+vcenter
+    The value representing the center of the color scale. Useful for diverging colormaps.\
 """
 
 doc_outline = """\
@@ -148,7 +157,7 @@ return_fig
 # Docs for pl.pca, pl.tsne, … (everything in _tools.scatterplots)
 doc_scatter_embedding = f"""\
 {doc_scatter_basic}
-{doc_vminmax}
+{doc_vminmax_percentile}
 {doc_outline}
 {doc_panels}
 kwargs

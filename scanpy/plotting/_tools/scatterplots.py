@@ -1,6 +1,6 @@
 import collections.abc as cabc
 from copy import copy
-from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
+from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -25,6 +25,7 @@ from .._utils import (
     ColorLike,
     check_projection,
     _setup_colornorm,
+    VMinMaxCenter,
 )
 from .._docs import (
     doc_adata_color_etc,
@@ -37,8 +38,6 @@ from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
 from ..._compat import Literal
-
-VMinMaxCenter = Union[str, float, Callable[[Sequence[float]], float]]
 
 
 @_doc_params(
@@ -206,7 +205,6 @@ def embedding(
         vmin = [vmin]
     if isinstance(vcenter, str) or not isinstance(vcenter, cabc.Sequence):
         vcenter = [vcenter]
-    norm = kwargs.get('norm')
 
     if 's' in kwargs:
         size = kwargs.pop('s')
@@ -294,17 +292,18 @@ def embedding(
                 )
                 ax.set_title(value_to_plot)
 
-        # clean up kwds
-        for key in ['vmin', 'vmax', 'vcenter', 'norm']:
-            if key in kwargs:
-                kwargs.pop(key)
-
         if not categorical:
-            kwargs['norm'] = norm
-            kwargs['vmin'], kwargs['vmax'], kwargs['vcenter'] = _get_vminmaxcenter(
+            vmin_float, vmax_float, vcenter_float = _get_vminmaxcenter(
                 vmin, vmax, vcenter, count, color_vector
             )
-            _setup_colornorm(kwargs)
+            normalize = _setup_colornorm(
+                    vmin_float,
+                    vmax_float,
+                    vcenter_float,
+                    kwargs.get('norm'),
+            )
+        else:
+            normalize = None
 
         # make the scatter plot
         if projection == '3d':
@@ -315,6 +314,7 @@ def embedding(
                 marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
+                norm=normalize,
                 **kwargs,
             )
         else:
@@ -357,6 +357,7 @@ def embedding(
                     marker=".",
                     c=bg_color,
                     rasterized=settings._vector_friendly,
+                    norm=normalize,
                     **kwargs,
                 )
                 ax.scatter(
@@ -366,6 +367,7 @@ def embedding(
                     marker=".",
                     c=gap_color,
                     rasterized=settings._vector_friendly,
+                    norm=normalize,
                     **kwargs,
                 )
                 # if user did not set alpha, set alpha to 0.7
@@ -377,6 +379,7 @@ def embedding(
                 marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
+                norm=normalize,
                 **kwargs,
             )
 

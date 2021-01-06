@@ -18,7 +18,7 @@ from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from ..._settings import settings
-from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax, doc_panels
+from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax_percentile, doc_panels
 from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
 from matplotlib.colors import Colormap
@@ -1034,7 +1034,7 @@ def sim(
         savefig_or_show('sim_shuffled', save=save, show=show)
 
 
-@_doc_params(vminmax=doc_vminmax, panels=doc_panels, show_save_ax=doc_show_save_ax)
+@_doc_params(vminmax=doc_vminmax_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax)
 def embedding_density(
     adata: AnnData,
     # on purpose, there is no asterisk here (for backward compat)
@@ -1285,6 +1285,7 @@ def embedding_density(
             size=dot_sizes,
             vmax=vmax,
             vmin=vmin,
+            vcenter=vcenter,
             save=False,
             show=False,
             title=title,

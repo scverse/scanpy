@@ -15,7 +15,7 @@ from ._utils import _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
 
-from ._docs import doc_common_plot_args, doc_show_save_ax
+from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vminmax
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
 
@@ -142,6 +142,9 @@ class StackedViolin(BasePlot):
         layer: Optional[str] = None,
         standard_scale: Literal['var', 'group'] = None,
         ax: Optional[_AxesSubplot] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -161,6 +164,9 @@ class StackedViolin(BasePlot):
             var_group_rotation=var_group_rotation,
             layer=layer,
             ax=ax,
+            vmin=vmin,
+            vmax=vmax,
+            vcenter=vcenter,
             **kwds,
         )
 
@@ -321,7 +327,12 @@ class StackedViolin(BasePlot):
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
-        normalize = _setup_colornorm(self.kwds)
+        normalize = _setup_colornorm(
+                self.vmin,
+                self.vmax,
+                self.vcenter,
+                self.kwds.get('norm'),
+        )
         colormap_array = cmap(normalize(_color_df.values))
         x_spacer_size = self.plot_x_padding
         y_spacer_size = self.plot_y_padding
@@ -537,6 +548,7 @@ class StackedViolin(BasePlot):
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
     groupby_plots_args=doc_common_groupby_plot_args,
+    vminmax=doc_vminmax,
 )
 def stacked_violin(
     adata: AnnData,
@@ -568,6 +580,9 @@ def stacked_violin(
     row_palette: Optional[str] = StackedViolin.DEFAULT_ROW_PALETTE,
     cmap: Optional[str] = StackedViolin.DEFAULT_COLORMAP,
     ax: Optional[_AxesSubplot] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
     **kwds,
 ) -> Union[StackedViolin, dict, None]:
     """\
@@ -615,6 +630,7 @@ def stacked_violin(
         Alternatively, a single color name or hex value can be passed,
         e.g. `'red'` or `'#cc33ff'`.
     {show_save_ax}
+    {vminmax}
     kwds
         Are passed to :func:`~seaborn.violinplot`.
 

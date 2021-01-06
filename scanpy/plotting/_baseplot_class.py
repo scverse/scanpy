@@ -86,6 +86,9 @@ class BasePlot(object):
         var_group_rotation: Optional[float] = None,
         layer: Optional[str] = None,
         ax: Optional[_AxesSubplot] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
         **kwds,
     ):
         self.var_names = var_names
@@ -135,6 +138,9 @@ class BasePlot(object):
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.log = log
         self.kwds = kwds
+        self.vmin = vmin
+        self.vmax = vmax
+        self.vcenter = vcenter
 
         # set default values for legend
         self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
@@ -561,7 +567,12 @@ class BasePlot(object):
         ax.set_ylim(len(y_labels), 0)
         ax.set_xlim(0, len(x_labels))
 
-        return _setup_colornorm(self.kwds)
+        return _setup_colornorm(
+                self.vmin,
+                self.vmax,
+                self.vcenter,
+                self.kwds.get('norm'),
+        )
 
     def make_figure(self):
         """

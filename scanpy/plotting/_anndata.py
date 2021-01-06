@@ -28,7 +28,7 @@ from .._compat import Literal
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes, _setup_colornorm
 from ._utils import ColorLike, _FontWeight, _FontSize
-from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
+from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args, doc_vminmax
 
 VALID_LEGENDLOCS = {
     'none',
@@ -890,7 +890,7 @@ def clustermap(
         return g
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(vminmax=doc_vminmax, show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def heatmap(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -910,6 +910,9 @@ def heatmap(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     figsize: Optional[Tuple[float, float]] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
     **kwds,
 ):
     """\
@@ -933,6 +936,7 @@ def heatmap(
     show_gene_labels
          By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
     {show_save_ax}
+    {vminmax}
     **kwds
         Are passed to :func:`matplotlib.pyplot.imshow`.
 
@@ -1057,7 +1061,7 @@ def heatmap(
         obs_tidy = obs_tidy.sort_index()
 
     colorbar_width = 0.2
-    _setup_colornorm(kwds)
+    norm = _setup_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
 
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
@@ -1107,7 +1111,7 @@ def heatmap(
 
         heatmap_ax = fig.add_subplot(axs[1, 1])
         kwds.setdefault('interpolation', 'nearest')
-        im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', **kwds)
+        im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', norm=norm, **kwds)
 
         heatmap_ax.set_ylim(obs_tidy.shape[0] - 0.5, -0.5)
         heatmap_ax.set_xlim(-0.5, obs_tidy.shape[1] - 0.5)
@@ -1212,7 +1216,7 @@ def heatmap(
         heatmap_ax = fig.add_subplot(axs[1, 0])
 
         kwds.setdefault('interpolation', 'nearest')
-        im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
+        im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', norm=norm, **kwds)
         heatmap_ax.set_xlim(0 - 0.5, obs_tidy.shape[0] - 0.5)
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
@@ -1604,7 +1608,7 @@ def dendrogram(
     return ax
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vminmax)
 def correlation_matrix(
     adata: AnnData,
     groupby: str,
@@ -1614,6 +1618,9 @@ def correlation_matrix(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     ax: Optional[Axes] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
     **kwds,
 ) -> Union[Axes, List[Axes]]:
     """\
@@ -1636,11 +1643,11 @@ def correlation_matrix(
         By default a figure size that aims to produce a squared correlation
         matrix plot is used. Format is (width, height)
     {show_save_ax}
+    {vminmax}
     **kwds
         Only if `show_correlation` is True:
         Are passed to :func:`matplotlib.pyplot.pcolormesh` when plotting the
-        correlation heatmap. Useful values to pass are `vmax`, `vmin`,
-        `vcenter` and `cmap`.
+        correlation heatmap. `cmap` can be used to change the color palette.
 
     Returns
     -------
@@ -1720,15 +1727,15 @@ def correlation_matrix(
         else:
             kwds['edgecolors'] = 'black'
             kwds['linewidth'] = 0.01
-    if 'vmax' not in kwds and 'vmin' not in kwds and 'norm' not in kwds:
-        kwds['vmax'] = 1
-        kwds['vmin'] = -1
-    _setup_colornorm(kwds)
+    if vmax is None and vmin is None and 'norm' not in kwds:
+        vmax = 1
+        vmin = -1
+    norm = _setup_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
     if 'cmap' not in kwds:
         # by default use a divergent color map
         kwds['cmap'] = 'bwr'
 
-    img_mat = corr_matrix_ax.pcolormesh(corr_matrix, **kwds)
+    img_mat = corr_matrix_ax.pcolormesh(corr_matrix, norm=norm, **kwds)
     corr_matrix_ax.set_xlim(0, num_rows)
     corr_matrix_ax.set_ylim(0, num_rows)
 

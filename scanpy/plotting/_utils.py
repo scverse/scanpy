@@ -2,7 +2,7 @@ import warnings
 import collections.abc as cabc
 from abc import ABC
 from functools import lru_cache
-from typing import Union, List, Sequence, Tuple, Collection, Optional
+from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable
 import anndata
 
 import numpy as np
@@ -31,6 +31,7 @@ _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 
 _FontSize = Literal[
     'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
+VMinMaxCenter = Union[str, float, Callable[[Sequence[float]], float]]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase, ABC):
@@ -1189,7 +1190,7 @@ def _get_basis(adata: anndata.AnnData, basis: str):
     return basis_key
 
 
-def _setup_colornorm(kwds):
+def _setup_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
     from matplotlib.colors import Normalize
 
     try:
@@ -1198,32 +1199,15 @@ def _setup_colornorm(kwds):
         # matplotlib<3.2
         from matplotlib.colors import DivergingNorm as DivNorm
 
-    if kwds.get('norm') is not None:
-        if any(
-            [
-                kwds.get('vmin') is not None,
-                kwds.get('vmax') is not None,
-                kwds.get('vcenter') is not None,
-            ]
-        ):
+    if norm is not None:
+        if (vmin is not None) or (vmax is not None) or (vcenter is not None):
             raise ValueError(
-                'Passing both norm and one of vmin/vmax/vcenter is not allowed.'
+                'Passing both norm and vmin/vmax/vcenter is not allowed.'
             )
-        else:
-            norm = kwds['norm']
     else:
-        if kwds.get('vcenter') is not None:
-            norm = DivNorm(
-                vmin=kwds.get('vmin'),
-                vmax=kwds.get('vmax'),
-                vcenter=kwds.get('vcenter'),
-            )
+        if vcenter is not None:
+            norm = DivNorm(vmin=vmin, vmax=vmax, vcenter=vcenter)
         else:
-            norm = Normalize(vmin=kwds.get('vmin'), vmax=kwds.get('vmax'))
-        kwds['norm'] = norm
-
-    for key in ['vmin', 'vmax', 'vcenter']:
-        if key in kwds:
-            del kwds[key]
+            norm = Normalize(vmin=vmin, vmax=vmax)
 
     return norm

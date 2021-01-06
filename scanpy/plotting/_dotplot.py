@@ -16,7 +16,7 @@ from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
 
-from ._docs import doc_common_plot_args, doc_show_save_ax
+from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vminmax
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
 
@@ -122,6 +122,9 @@ class DotPlot(BasePlot):
         dot_color_df: Optional[pd.DataFrame] = None,
         dot_size_df: Optional[pd.DataFrame] = None,
         ax: Optional[_AxesSubplot] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -141,6 +144,9 @@ class DotPlot(BasePlot):
             var_group_rotation=var_group_rotation,
             layer=layer,
             ax=ax,
+            vmin=vmin,
+            vmax=vmax,
+            vcenter=vcenter,
             **kwds,
         )
 
@@ -536,6 +542,9 @@ class DotPlot(BasePlot):
             grid=self.grid,
             x_padding=self.plot_x_padding,
             y_padding=self.plot_y_padding,
+            vmin=self.vmin,
+            vmax=self.vmax,
+            vcenter=self.vcenter,
             **self.kwds,
         )
 
@@ -561,6 +570,9 @@ class DotPlot(BasePlot):
         grid: Optional[bool] = False,
         x_padding: Optional[float] = 0.8,
         y_padding: Optional[float] = 1.0,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
         **kwds,
     ):
         """\
@@ -682,7 +694,7 @@ class DotPlot(BasePlot):
         size = frac ** size_exponent
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
-        normalize = _setup_colornorm(kwds)
+        normalize = _setup_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
 
         if color_on == 'square':
             if edge_color is None:
@@ -775,6 +787,7 @@ class DotPlot(BasePlot):
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
     groupby_plots_args=doc_common_groupby_plot_args,
+    vminmax=doc_vminmax,
 )
 def dotplot(
     adata: AnnData,
@@ -806,6 +819,9 @@ def dotplot(
     save: Union[str, bool, None] = None,
     ax: Optional[_AxesSubplot] = None,
     return_fig: Optional[bool] = False,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
     **kwds,
 ) -> Union[DotPlot, dict, None]:
     """\
@@ -854,6 +870,7 @@ def dotplot(
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
     {show_save_ax}
+    {vminmax}
     kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
@@ -933,6 +950,9 @@ def dotplot(
         layer=layer,
         dot_color_df=dot_color_df,
         ax=ax,
+        vmin=vmin,
+        vmax=vmax,
+        vcenter=vcenter,
         **kwds,
     )
 
