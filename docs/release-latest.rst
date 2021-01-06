@@ -6,7 +6,7 @@ On master
 
 .. rubric:: Features
 
-- Add new 10x Visium datasets to :func:`~scanpy.datasets.visium_sge` :pr:`1473` :smaller:`giovp`
+- Add new 10x Visium datasets to :func:`~scanpy.datasets.visium_sge` :pr:`1473` :smaller:`G Palla`
 - Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
 - Dict input for :func:`scanpy.queries.enrich` :pr:`1488` :smaller:`G Eraslan`
 - :func:`~scanpy.get.rank_genes_groups_df` can now return fraction of cells in a group expressing a gene, and allows retrieving values for multiple groups at once :pr:`1388` :smaller:`G Eraslan`
@@ -60,3 +60,4 @@ On master
 - Updated link for `moignard15` dataset :pr:`1542` :smaller:`I Virshup`
 - Fixed bug where calling `set_figure_params` could block if IPython was installed, but not used. :pr:`1547` :smaller:`I Virshup`
 - :func:`~scanpy.pl.violin` no longer fails if `.raw` not present :pr:`1548` :smaller:`I Virshup`
+- :func:`~scanpy.pl.spatial` refactoring and better handling of spatial data :pr:`1512` :smaller:`G Palla`
