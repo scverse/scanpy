@@ -1061,9 +1061,7 @@ def test_spatial_external_img(image_comparer):  # external image
     adata.obs = adata.obs.astype({'array_row': 'str'})
 
     img = adata.uns["spatial"]["custom"]["images"]["hires"]
-    scalef = adata.uns["spatial"]["custom"]["scalefactors"][
-        "tissue_hires_scalef"
-    ]
+    scalef = adata.uns["spatial"]["custom"]["scalefactors"]["tissue_hires_scalef"]
     sc.pl.spatial(
         adata,
         color="array_row",
