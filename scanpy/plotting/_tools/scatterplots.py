@@ -29,6 +29,7 @@ from .._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
     doc_scatter_embedding,
+    doc_scatter_spatial
     doc_show_save_ax,
 )
 from ... import logging as logg
@@ -766,6 +767,7 @@ def pca(
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
+    scatter_spatial=doc_scatter_spatial,
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
@@ -780,7 +782,6 @@ def spatial(
     alpha_img: float = 1.0,
     bw: Optional[bool] = False,
     size: float = None,
-    cmap_img: Optional[str] = None,
     scale_factor: Optional[float] = None,
     na_color: ColorLike = "lightgray",
     show: Optional[bool] = None,
@@ -804,6 +805,7 @@ def spatial(
     Parameters
     ----------
     {adata_color_etc}
+    {scatter_spatial}
     {scatter_bulk}
     {show_save_ax}
 

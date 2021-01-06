@@ -56,6 +56,8 @@ components
     `components='all'`.
 projection
     Projection of plot (default: `'2d'`).
+scale_factor
+    Scale factor used to scale `adata.obsm[basis]`.
 legend_loc
     Location of legend, either `'on data'`, `'right margin'` or a valid keyword
     for the `loc` parameter of :class:`~matplotlib.legend.Legend`.
@@ -101,14 +103,6 @@ frameon
 title
     Provide title for panels either as string or list of strings,
     e.g. `['title1', 'title2', ...]`.
-img_key
-    Key for image data, stored in `adata.uns`.
-crop_coord
-    Coordinates to use for cropping the image (left, right, top, bottom).
-alpha_img
-    Alpha value for image.
-bw
-    Plot Image in gray scale.\
 """
 
 doc_vminmax = """\
@@ -228,4 +222,19 @@ layer
     Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
     If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
     then the layer is plotted. `layer` takes precedence over `use_raw`.\
+"""
+
+doc_scatter_spatial = """\
+img
+    image data to plot, if not present in `adata.uns`.
+img_key
+    Key for image data, stored in `adata.uns`.
+library_id
+    library_id for Visium data, in `adata.uns`.
+crop_coord
+    Coordinates to use for cropping the image (left, right, top, bottom).
+alpha_img
+    Alpha value for image.
+bw
+    Plot image data in gray scale.\
 """
