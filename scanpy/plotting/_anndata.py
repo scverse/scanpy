@@ -890,7 +890,11 @@ def clustermap(
         return g
 
 
-@_doc_params(vminmax=doc_vminmax, show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(
+    vminmax=doc_vminmax,
+    show_save_ax=doc_show_save_ax,
+    common_plot_args=doc_common_plot_args,
+)
 def heatmap(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],

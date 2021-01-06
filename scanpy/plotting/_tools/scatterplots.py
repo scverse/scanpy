@@ -297,10 +297,10 @@ def embedding(
                 vmin, vmax, vcenter, count, color_vector
             )
             normalize = _setup_colornorm(
-                    vmin_float,
-                    vmax_float,
-                    vcenter_float,
-                    kwargs.get('norm'),
+                vmin_float,
+                vmax_float,
+                vcenter_float,
+                kwargs.get('norm'),
             )
         else:
             normalize = None

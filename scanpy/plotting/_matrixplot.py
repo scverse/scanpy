@@ -15,7 +15,11 @@ from ._utils import fix_kwds, _setup_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
-from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vminmax
+from ._docs import (
+    doc_common_plot_args,
+    doc_show_save_ax,
+    doc_vminmax,
+)
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
 
@@ -209,10 +213,10 @@ class MatrixPlot(BasePlot):
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
         normalize = _setup_colornorm(
-                self.vmin,
-                self.vmax,
-                self.vcenter,
-                self.kwds.get('norm'),
+            self.vmin,
+            self.vmax,
+            self.vcenter,
+            self.kwds.get('norm'),
         )
 
         for axis in ['top', 'bottom', 'left', 'right']:

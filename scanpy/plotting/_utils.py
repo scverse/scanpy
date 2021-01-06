@@ -1201,9 +1201,7 @@ def _setup_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
 
     if norm is not None:
         if (vmin is not None) or (vmax is not None) or (vcenter is not None):
-            raise ValueError(
-                'Passing both norm and vmin/vmax/vcenter is not allowed.'
-            )
+            raise ValueError('Passing both norm and vmin/vmax/vcenter is not allowed.')
     else:
         if vcenter is not None:
             norm = DivNorm(vmin=vmin, vmax=vmax, vcenter=vcenter)

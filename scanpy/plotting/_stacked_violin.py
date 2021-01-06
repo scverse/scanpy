@@ -328,10 +328,10 @@ class StackedViolin(BasePlot):
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
         normalize = _setup_colornorm(
-                self.vmin,
-                self.vmax,
-                self.vcenter,
-                self.kwds.get('norm'),
+            self.vmin,
+            self.vmax,
+            self.vcenter,
+            self.kwds.get('norm'),
         )
         colormap_array = cmap(normalize(_color_df.values))
         x_spacer_size = self.plot_x_padding
