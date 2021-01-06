@@ -999,7 +999,7 @@ def test_no_copy():
         assert view.is_view
 
 
-def test_visium_circles(image_comparer):
+def test_visium_circles(image_comparer):  # standard visium data
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
@@ -1016,7 +1016,7 @@ def test_visium_circles(image_comparer):
     save_and_compare_images('master_spatial_visium')
 
 
-def test_visium_default(image_comparer):
+def test_visium_default(image_comparer):  # default values
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
@@ -1048,8 +1048,28 @@ def test_spatial_general(image_comparer):  # general coordinates
     sc.pl.spatial(adata)
     save_and_compare_images('master_spatial_general_nocol')
 
-    sc.pl.spatial(adata, color="array_row")
+    sc.pl.spatial(adata, color="array_row")  # category
     save_and_compare_images('master_spatial_general_cat')
 
-    sc.pl.spatial(adata, color="array_col")
+    sc.pl.spatial(adata, color="array_col")  # continuous
     save_and_compare_images('master_spatial_general_cont')
+
+
+def test_spatial_external_img(image_comparer):  # external image
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
+    adata.obs = adata.obs.astype({'array_row': 'str'})
+
+    img = adata.uns["spatial"]["custom"]["images"]["hires"]
+    scalef = adata.uns["spatial"]["custom"]["scalefactors"][
+        "tissue_hires_scalef"
+    ]
+    sc.pl.spatial(
+        adata,
+        color="array_row",
+        scale_factor=scalef,
+        img=img,
+        size=100,
+        basis="spatial",
+    )
+    save_and_compare_images('master_spatial_external_img')
