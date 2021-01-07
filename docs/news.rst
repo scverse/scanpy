@@ -15,16 +15,16 @@ Scanpy selected among 20 papers for 20 years of Genome Biology :small:`2020-08-0
 `Genome Biology: Celebrating 20 Years of Genome Biology <https://genomebiology.biomedcentral.com/20years>`__ selected the initial Scanpy paper for the year 2018 among 20 papers for 20 years [`tweet <https://twitter.com/falexwolf/status/1295748952504045572>`__].
 
 
-Scanpy featured in Nature Biotechnoloogy :small:`2020-02-01`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-`Single-cell RNA-seq analysis software providers scramble to offer solutions <https://www.nature.com/articles/s41587-020-0449-8>`__ mentions Scanpy along with Seurat as the two major open source software packages for single-cell analysis [`pdf <https://rdcu.be/b2M5l>`__].
-
-
 COVID-19 datasets distributed as `h5ad` :small:`2020-04-01`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In a joint initiative, the Wellcome Sanger Institute, the Human Cell Atlas, and the CZI distribute datasets related to COVID-19 via anndata's `h5ad` files: `covid19cellatlas.org <https://www.covid19cellatlas.org/>`__. It wasn't anticipated that the `initial idea <https://falexwolf.de/blog/2017-12-23-anndata-indexing-views-HDF5-backing/>`__ of sharing and backing an on-disk representation of `AnnData` would become so widely adopted. Curious? Read up more on the `format <https://anndata.readthedocs.io/en/latest/fileformat-prose.html>`__.
+
+
+Scanpy featured in Nature Biotechnoloogy :small:`2020-02-01`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`Single-cell RNA-seq analysis software providers scramble to offer solutions <https://www.nature.com/articles/s41587-020-0449-8>`__ mentions Scanpy along with Seurat as the two major open source software packages for single-cell analysis [`pdf <https://rdcu.be/b2M5l>`__].
 
 
 Scanpy has been selected an "Essential open source software for science" by CZI :small:`2019-11-14`
