@@ -1,7 +1,7 @@
 .. _contribution-guide:
 
-Contributing to Scanpy
-======================
+Contributing
+============
 
 Contributions to scanpy are welcome!
 This section of the docs provides some guidelines and tips to follow when contributing.
