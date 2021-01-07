@@ -24,6 +24,7 @@ News
 ----
 
 .. include:: news.rst
+   :end-line: 20
 
 
 Latest additions
