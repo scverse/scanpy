@@ -1045,7 +1045,6 @@ def test_spatial_external_img(image_comparer):  # external image
         color="array_row",
         scale_factor=scalef,
         img=img,
-        size=100,
         basis="spatial",
     )
     save_and_compare_images('master_spatial_external_img')
