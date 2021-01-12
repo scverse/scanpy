@@ -784,7 +784,7 @@ def spatial(
     size: float = 1.0,
     scale_factor: Optional[float] = None,
     spot_size: Optional[float] = None,
-    na_color: ColorLike = "lightgray",
+    na_color: Optional[ColorLike] = None,
     show: Optional[bool] = None,
     return_fig: Optional[bool] = None,
     save: Union[bool, str, None] = None,
@@ -815,27 +815,14 @@ def spatial(
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     # get default image params if available
-    spatial_data = None
-    if library_id is _empty:
-        try:
-            library_id = next((i for i in adata.uns['spatial'].keys()))
-        except KeyError:
-            library_id = None
-    if library_id is not None:
-        spatial_data = adata.uns['spatial'][library_id]
+    library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
     img, img_key = _check_img(spatial_data, img, img_key, bw=bw)
     spot_size = _check_spot_size(spatial_data, spot_size)
     scale_factor = _check_scale_factor(
         spatial_data, img_key=img_key, scale_factor=scale_factor
     )
-    # crop_coord = _check_crop_coord(crop_coord, scale_factor)
-    crop_coord = _check_crop_coord_bak(
-        img,
-        adata.obsm[basis],
-        crop_coord=crop_coord,
-        scale_factor=scale_factor,
-        offset=100,
-    )
+    crop_coord = _check_crop_coord(crop_coord, scale_factor)
+    na_color = _check_na_color(na_color, img=img)
 
     if bw:
         cmap_img = "gray"
@@ -843,14 +830,9 @@ def spatial(
         cmap_img = None
     circle_radius = size * scale_factor * spot_size * 0.5
 
-    if (
-        img is not None and na_color == "lightgray"
-    ):  # make points transparents with image
-        na_color = (0.0, 0.0, 0.0, 0.0)
-
     axs = embedding(
         adata,
-        'spatial',
+        basis=basis,
         scale_factor=scale_factor,
         size=circle_radius,
         na_color=na_color,
@@ -1160,7 +1142,10 @@ def _check_spot_size(
     This is a required argument for spatial plots.
     """
     if spatial_data is None and spot_size is None:
-        raise ValueError("Could not resolve required argument spot_size.")
+        raise ValueError(
+            "When .uns['spatial'][library_id] does not exist, spot_size must be "
+            "provided directly."
+        )
     elif spot_size is None:
         return spatial_data['scalefactors']['spot_diameter_fullres']
     else:
@@ -1179,6 +1164,32 @@ def _check_scale_factor(
         return spatial_data['scalefactors'][f"tissue_{img_key}_scalef"]
     else:
         return 1.0
+
+
+def _check_spatial_data(
+    uns: Mapping, library_id: Union[Empty, None, str]
+) -> Tuple[Optional[str], Optional[Mapping]]:
+    """
+    Given a mapping, try and extract a library id/ mapping with spatial data.
+
+    Assumes this is `.uns` from how we parse visium data.
+    """
+    spatial_mapping = uns.get("spatial", {})
+    if library_id is _empty:
+        if len(spatial_mapping) > 1:
+            raise ValueError(
+                "Found multiple possible libraries in `.uns['spatial']. Please specify."
+                f" Options are:\n\t{list(spatial_mapping.keys())}"
+            )
+        elif len(spatial_mapping) == 1:
+            library_id = list(spatial_mapping.keys())[0]
+        else:
+            library_id = None
+    if library_id is not None:
+        spatial_data = spatial_mapping[library_id]
+    else:
+        spatial_data = None
+    return library_id, spatial_data
 
 
 def _check_img(
@@ -1214,33 +1225,12 @@ def _check_crop_coord(
     return crop_coord
 
 
-def _check_crop_coord_bak(
-    img: np.ndarray = None,
-    data_points: np.ndarray = None,
-    crop_coord: tuple = None,
-    scale_factor: float = None,
-    offset: int = None,
-) -> Tuple[int, int, int, int]:
-    """Handle cropping with image or basis."""
-    if crop_coord is not None:
-        crop_coord = np.asarray(crop_coord)
-        if len(crop_coord) != 4:
-            raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
+def _check_na_color(
+    na_color: Optional[ColorLike], *, img: Optional[np.ndarray] = None
+) -> ColorLike:
+    if na_color is None:
         if img is not None:
-            cropped_coord = (
-                *crop_coord[:2],
-                *np.ceil(img.shape[0] - crop_coord[2:4]).astype(int),
-            )
+            na_color = (0.0, 0.0, 0.0, 0.0)
         else:
-            cropped_coord = crop_coord
-    elif crop_coord is None and scale_factor is not None and offset is not None:
-        cropped_coord = [
-            data_points[:, 0].min() * scale_factor - offset,
-            data_points[:, 0].max() * scale_factor + offset,
-            data_points[:, 1].min() * scale_factor - offset,
-            data_points[:, 1].max() * scale_factor + offset,
-        ]
-    else:
-        cropped_coord = None
-
-    return cropped_coord
+            na_color = "lightgray"
+    return na_color
