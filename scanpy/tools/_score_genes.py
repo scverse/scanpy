@@ -9,6 +9,7 @@ from scipy.sparse import issparse
 
 from .. import logging as logg
 from .._utils import AnyRandom
+from scanpy._utils import _check_use_raw
 
 
 def _sparse_nanmean(X, axis):
@@ -77,7 +78,7 @@ def score_genes(
     copy
         Copy `adata` or modify it inplace.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
 
         .. versionchanged:: 1.4.5
            Default value changed from `False` to `None`.
@@ -121,8 +122,7 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    if use_raw is None:
-        use_raw = True if adata.raw is not None else False
+    use_raw = _check_use_raw(adata, use_raw)
     _adata = adata.raw if use_raw else adata
 
     _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata

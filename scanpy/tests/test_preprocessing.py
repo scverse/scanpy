@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy import sparse as sp
 import scanpy as sc
-from sklearn.utils.testing import assert_allclose
+from numpy.testing import assert_allclose
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal, asarray

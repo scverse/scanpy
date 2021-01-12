@@ -6,75 +6,58 @@ On master
 
 .. rubric:: Features
 
-* Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
+- Add new 10x Visium datasets to :func:`~scanpy.datasets.visium_sge` :pr:`1473` :smaller:`G Palla`
+- Enable download of source image for 10x visium datasets in :func:`~scanpy.datasets.visium_sge` :pr:`1506` :smaller:`H Spitzer`
+- Dict input for :func:`scanpy.queries.enrich` :pr:`1488` :smaller:`G Eraslan`
+- :func:`~scanpy.get.rank_genes_groups_df` can now return fraction of cells in a group expressing a gene, and allows retrieving values for multiple groups at once :pr:`1388` :smaller:`G Eraslan`
+- Color annotations for gene sets in :func:`~scanpy.pl.heatmap` are now matched to color for cluster :pr:`1511` :smaller:`L Sikkema`
+- PCA plots can now annotate axes with variance explained :pr:`1470` :smaller:`bfurtwa`
+- Added `na_color` and `na_in_legend` keyword arguments to :func:`~scanpy.pl.embedding` plots. Allows specifying color for missing or filtered values in plots like :func:`~scanpy.pl.umap` or :func:`~scanpy.pl.spatial` :pr:`1356` :smaller:`I Virshup`
+- :func:`~scanpy.pl.embedding` plots now support passing `dict` of `{cluster_name: cluster_color, ...}` for palette argument  :pr:`1392` :smaller:`I Virshup`
 
-.. rubric:: Bugfixes
+.. rubric:: External tools (new)
 
-* Fixed the width of the progress bar when downloading data :pr:`1507` :smaller:`M Klein`
-* Fixed `log1p` inplace on integer dense arrays :pr:`1400` :smaller:`I Virshup`
-* Fixed `marker_gene_overlap` default value for `top_n_markers` :pr:`1464` :smaller:`MD Luecken`
-* Fixed download path of `pbmc3k_processed` :pr:`1472` :smaller:`D Strobl`
-* Fixed anndata version requirement for `sc.concat` :pr:`1491` :smaller:`I Virshup`
-* Fixed bug where `score_genes` would error if one gene was passed :pr:`1398` :smaller:`I Virshup`
-* Updated link for `moignard15` dataset :pr:`1542` :smaller:`I Virshup`
-* Fixed bug where calling `set_figure_params` could block if IPython was installed, but not used. :pr:`1547` :smaller:`I Virshup`
+- Add `Scanorama <https://github.com/brianhie/scanorama>`_ integration to scanpy external API (:func:`~scanpy.external.pp.scanorama_integrate`) [Hie19]_ :pr:`1332` :smaller:`B Hie`
+- Scrublet [Wolock19]_ integration: :func:`~scanpy.external.pp.scrublet`, :func:`~scanpy.external.pp.scrublet_simulate_doublets`, and plotting method :func:`~scanpy.external.pl.scrublet_score_distribution` :pr:`1476` :smaller:`J Manning`
+- :func:`~scanpy.external.pp.hashsolo` for HTO demultiplexing [Bernstein20]_ :pr:`1432` :smaller:`NJ Bernstein`
+- Added `scirpy <https://github.com/icbi-lab/scirpy>`__ (sc-AIRR analysis) to ecosystem page :pr:`1453` :smaller:`G Sturm`
+- Added `scvi-tools <https://scvi-tools.org>`_ to ecosystem page :pr:`1421` :smaller:`A Gayoso`
+
+.. rubric:: External tools (changes)
+
+- Updates for :func:`~scanpy.external.tl.palantir` and :func:`~scanpy.external.tl.palantir_results` :pr:`1245` :smaller:`A Mousa`
+- Fixes to :func:`~scanpy.external.tl.harmony_timeseries` docs :pr:`1248` :smaller:`A Mousa`
+- Support for `leiden` clustering by :func:`scanpy.external.tl.phenograph` :pr:`1080` :smaller:`A Mousa`
+- Deprecate :func:`~scanpy.external.pp.scvi` :pr:`1554` :smaller:`G Xing`
+
+.. rubric:: Documentation
+
+- :ref:`New contribution guide <contribution-guide>` :pr:`1544` :smaller:`I Virshup`
+- `zsh` installation instructions :pr:`1444` :smaller:`P Angerer`
 
 .. rubric:: Performance
 
-* Sped up `sc.get.obs_df` signifigantly :pr:`1499` :smaller:`F Ramirez`
+- Speed up :func:`~scanpy.read_10x_h5` :pr:`1402` :smaller:`P Weiler`
+- Speed ups for :func:`~scanpy.get.obs_df` :pr:`1499` :smaller:`F Ramirez`
 
+.. rubric:: Bugfixes
 
-1.6.0 :small:`2020-08-15`
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This release includes an overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.pl.matrixplot`, and :func:`~scanpy.pl.stacked_violin` (:pr:`1210` :smaller:`F Ramirez`), and of the internals of :func:`~scanpy.tl.rank_genes_groups` (:pr:`1156` :smaller:`S Rybakov`).
-
-.. rubric:: Overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.pl.matrixplot`, and :func:`~scanpy.pl.stacked_violin` :pr:`1210` :smaller:`F Ramirez`
-
-- An overhauled tutorial :tutorial:`plotting/core`.
-- New plotting classes can be accessed directly (e.g., :class:`~scanpy.pl.DotPlot`) or using the `return_fig` param.
-- It is possible to plot log fold change and p-values in the :func:`~scanpy.pl.rank_genes_groups_dotplot` family of functions.
-- Added `ax` parameter which allows embedding the plot in other images.
-- Added option to include a bar plot instead of the dendrogram containing the cell/observation totals per category.
-- Return a dictionary of axes for further manipulation. This includes the main plot, legend and dendrogram to totals
-- Legends can be removed.
-- The `groupby` param can take a list of categories, e.g., `groupby=[‘tissue’, ‘cell type’]`.
-- Added padding parameter to `dotplot` and `stacked_violin`. :pr:`1270`
-- Added title for colorbar and positioned as in dotplot for :func:`~scanpy.pl.matrixplot`.
-
-- :func:`~scanpy.pl.dotplot` changes:
-
-   * Improved the colorbar and size legend for dotplots. Now the colorbar and size have titles, which can be modified using the `colorbar_title` and `size_title` params. They also align at the bottom of the image and do not shrink if the dotplot image is smaller.
-   * Allow plotting genes in rows and categories in columns (`swap_axes`).
-   * Using :class:`~scanpy.pl.DotPlot`, the `dot_edge_color` and line width can be modified, a grid can be added, and other modifications are enabled.
-   * A new style was added in which the dots are replaced by an empty circle and the square behind the circle is colored (like in matrixplots).
-
-- :func:`~scanpy.pl.stacked_violin` changes:
-
-   * Violin colors can be colored based on average gene expression as in dotplots.
-   * The linewidth of the violin plots is thinner.
-   * Removed the tics for the y-axis as they tend to overlap with each other. Using the style method they can be displayed if needed.
-
-
-.. rubric:: Additions
-
-- :func:`~anndata.concat` is now exported from scanpy, see :doc:`anndata:concatenation` for more info. :pr:`1338` :smaller:`I Virshup`
-- Added highly variable gene selection strategy from Seurat v3 :pr:`1204` :smaller:`A Gayoso`
-- Added `CellRank <https://github.com/theislab/cellrank/>`__ to scanpy ecosystem :pr:`1304` :smaller:`giovp`
-- Added `backup_url` param to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`A Gayoso`
-- Allow prefix for :func:`~scanpy.read_10x_mtx` :pr:`1250`  :smaller:`G Sturm`
-- Optional tie correction for the `'wilcoxon'` method in :func:`~scanpy.tl.rank_genes_groups` :pr:`1330`  :smaller:`S Rybakov`
-- Use `sinfo` for :func:`~scanpy.logging.print_versions` and add :func:`~scanpy.logging.print_header` to do what it previously did. :pr:`1338` :smaller:`I Virshup` :pr:`1373`
-
-.. rubric:: Bug fixes
-
-- Avoid warning in :func:`~scanpy.tl.rank_genes_groups` if 't-test' is passed :pr:`1303` :smaller:`A Wolf`
-- Restrict sphinx version to <3.1, >3.0 :pr:`1297`  :smaller:`I Virshup`
-- Clean up `_ranks` and fix `dendrogram` for scipy 1.5 :pr:`1290` :smaller:`S Rybakov`
-- Use `.raw` to translate gene symbols if applicable :pr:`1278` :smaller:`E Rice`
-- Fix `diffmap` (:issue:`1262`) :smaller:`G Eraslan`
-- Fix `neighbors` in `spring_project` :issue:`1260`  :smaller:`S Rybakov`
-- Fix default size of dot in spatial plots :pr:`1255` :issue:`1253` :smaller:`giovp`
-- Bumped version requirement of `scipy` to `scipy>1.4` to support `rmatmat` argument of `LinearOperator` :issue:`1246` :smaller:`I Virshup`
-- Fix asymmetry of scores for the `'wilcoxon'` method in :func:`~scanpy.tl.rank_genes_groups` :issue:`754`  :smaller:`S Rybakov`
-- Avoid trimming of gene names in :func:`~scanpy.tl.rank_genes_groups` :issue:`753`  :smaller:`S Rybakov`
+- Consistent fold-change, fractions calculation for filter_rank_genes_groups :pr:`1391` :smaller:`S Rybakov`
+- Fixed bug where `score_genes` would error if one gene was passed :pr:`1398` :smaller:`I Virshup`
+- Fixed `log1p` inplace on integer dense arrays :pr:`1400` :smaller:`I Virshup`
+- Fix docstring formatting for :func:`~scanpy.tl.rank_genes_groups` :pr:`1417` :smaller:`P Weiler`
+- Removed `PendingDeprecationWarning`s from use of `np.matrix` :pr:`1424` :smaller:`P Weiler`
+- Fixed indexing byg in `~scanpy.pp.highly_variable_genes` :pr:`1456` :smaller:`V Bergen`
+- Fix default number of genes for marker_genes_overlap :pr:`1464` :smaller:`MD Luecken`
+- Fixed passing `groupby` and `dendrogram_key` to :func:`~scanpy.tl.dendrogram` :pr:`1465` :smaller:`M Varma`
+- Fixed download path of `pbmc3k_processed` :pr:`1472` :smaller:`D Strobl`
+- Better error message when computing DE with a group of size 1 :pr:`1490` :smaller:`J Manning`
+- Update cugraph API usage for v0.16 :pr:`1494` :smaller:`R Ilango`
+- Fixed `marker_gene_overlap` default value for `top_n_markers` :pr:`1464` :smaller:`MD Luecken`
+- Pass `random_state` to RAPIDs UMAP :pr:`1474` :smaller:`C Nolet`
+- Fixed `anndata` version requirement for :func:`~anndata.concat` (re-exported from scanpy as `sc.concat`) :pr:`1491` :smaller:`I Virshup`
+- Fixed the width of the progress bar when downloading data :pr:`1507` :smaller:`M Klein`
+- Updated link for `moignard15` dataset :pr:`1542` :smaller:`I Virshup`
+- Fixed bug where calling `set_figure_params` could block if IPython was installed, but not used. :pr:`1547` :smaller:`I Virshup`
+- :func:`~scanpy.pl.violin` no longer fails if `.raw` not present :pr:`1548` :smaller:`I Virshup`
+- :func:`~scanpy.pl.spatial` refactoring and better handling of spatial data :pr:`1512` :smaller:`G Palla`

@@ -352,6 +352,10 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     """
     Choose array aligned with obs annotation.
     """
+    # https://github.com/theislab/scanpy/issues/1546
+    if not isinstance(use_raw, bool):
+        raise TypeError(f"use_raw expected to be bool, was {type(use_raw)}.")
+
     is_layer = layer is not None
     is_raw = use_raw is not False
     is_obsm = obsm is not None

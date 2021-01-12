@@ -354,6 +354,9 @@ def test_dotplot_obj(image_comparer):
 
 
 def test_matrixplot_obj(image_comparer):
+    if version.parse(pd.__version__) < version.parse("1.2.0"):
+        pytest.xfail("Ordering changes in pandas 1.2.0")
+
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.datasets.krumsiek11()
     plot = sc.pl.matrixplot(
@@ -490,6 +493,28 @@ def test_violin(image_comparer):
         rotation=90,
     )
     save_and_compare_images('master_violin_multi_panel_with_layer')
+
+
+# TODO: Generalize test to more plotting types
+def test_violin_without_raw(tmpdir):
+    # https://github.com/theislab/scanpy/issues/1546
+    TESTDIR = Path(tmpdir)
+
+    has_raw_pth = TESTDIR / "has_raw.png"
+    no_raw_pth = TESTDIR / "no_raw.png"
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc_no_raw = pbmc.raw.to_adata().copy()
+
+    sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", show=False)
+    plt.savefig(has_raw_pth)
+    plt.close()
+
+    sc.pl.violin(pbmc_no_raw, 'CST3', groupby="bulk_labels", show=False)
+    plt.savefig(no_raw_pth)
+    plt.close()
+
+    assert compare_images(has_raw_pth, no_raw_pth, tol=5) is None
 
 
 def test_dendrogram(image_comparer):

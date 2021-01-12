@@ -323,3 +323,76 @@ def wishbone_marker_trajectory(
         return fig
     elif not show:
         return ax
+
+
+def scrublet_score_distribution(
+    adata,
+    scale_hist_obs: str = 'log',
+    scale_hist_sim: str = 'linear',
+    figsize: Optional[Tuple[float, float]] = (8, 3),
+):
+    """\
+    Plot histogram of doublet scores for observed transcriptomes and simulated doublets. 
+
+    The histogram for simulated doublets is useful for determining the correct doublet 
+    score threshold. 
+    
+    Parameters
+    ----------
+    adata
+        An annData object resulting from func:`~scanpy.external.scrublet`.  
+    scale_hist_obs
+        Set y axis scale transformation in matplotlib for the plot of observed
+        transcriptomes (e.g. "linear", "log", "symlog", "logit")
+    scale_hist_sim
+        Set y axis scale transformation in matplotlib for the plot of simulated
+        doublets (e.g. "linear", "log", "symlog", "logit")
+    figsize
+        width, height
+
+    See also
+    --------
+    :func:`~scanpy.external.pp.scrublet`: Main way of running Scrublet, runs
+        preprocessing, doublet simulation (this function) and calling. 
+    :func:`~scanpy.external.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
+        simulation separately for advanced usage. 
+    """
+
+    threshold = adata.uns['scrublet']['threshold']
+    fig, axs = plt.subplots(1, 2, figsize=figsize)
+
+    ax = axs[0]
+    ax.hist(
+        adata.obs['doublet_score'],
+        np.linspace(0, 1, 50),
+        color='gray',
+        linewidth=0,
+        density=True,
+    )
+    ax.set_yscale(scale_hist_obs)
+    yl = ax.get_ylim()
+    ax.set_ylim(yl)
+    ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+    ax.set_title('Observed transcriptomes')
+    ax.set_xlabel('Doublet score')
+    ax.set_ylabel('Prob. density')
+
+    ax = axs[1]
+    ax.hist(
+        adata.uns['scrublet']['doublet_scores_sim'],
+        np.linspace(0, 1, 50),
+        color='gray',
+        linewidth=0,
+        density=True,
+    )
+    ax.set_yscale(scale_hist_sim)
+    yl = ax.get_ylim()
+    ax.set_ylim(yl)
+    ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+    ax.set_title('Simulated doublets')
+    ax.set_xlabel('Doublet score')
+    ax.set_ylabel('Prob. density')
+
+    fig.tight_layout()
+
+    return fig, axs
