@@ -781,8 +781,9 @@ def spatial(
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
     bw: Optional[bool] = False,
-    size: float = None,
+    size: float = 1.0,
     scale_factor: Optional[float] = None,
+    spot_size: Optional[float] = None,
     na_color: ColorLike = "lightgray",
     show: Optional[bool] = None,
     return_fig: Optional[bool] = None,
@@ -814,21 +815,33 @@ def spatial(
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     # get default image params if available
+    spatial_data = None
     if library_id is _empty:
         try:
             library_id = next((i for i in adata.uns['spatial'].keys()))
         except KeyError:
             library_id = None
-        if library_id is not None:
-            spatial_data = adata.uns['spatial'][library_id]
-            if img_key is _empty:
-                img_key = next(
-                    (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
-                )
-
-    img, cropped_coords, size, cmap_img, scale_factor = _process_image(
-        adata, basis, img, scale_factor, img_key, library_id, crop_coord, size, bw
+    if library_id is not None:
+        spatial_data = adata.uns['spatial'][library_id]
+    img, img_key = _check_img(spatial_data, img, img_key, bw=bw)
+    spot_size = _check_spot_size(spatial_data, spot_size)
+    scale_factor = _check_scale_factor(
+        spatial_data, img_key=img_key, scale_factor=scale_factor
     )
+    # crop_coord = _check_crop_coord(crop_coord, scale_factor)
+    crop_coord = _check_crop_coord_bak(
+        img,
+        adata.obsm[basis],
+        crop_coord=crop_coord,
+        scale_factor=scale_factor,
+        offset=100,
+    )
+
+    if bw:
+        cmap_img = "gray"
+    else:
+        cmap_img = None
+    circle_radius = size * scale_factor * spot_size * 0.5
 
     if (
         img is not None and na_color == "lightgray"
@@ -839,7 +852,7 @@ def spatial(
         adata,
         'spatial',
         scale_factor=scale_factor,
-        size=size,
+        size=circle_radius,
         na_color=na_color,
         show=False,
         save=False,
@@ -848,13 +861,18 @@ def spatial(
     if not isinstance(axs, list):
         axs = [axs]
     for ax in axs:
+        cur_coords = np.concatenate([ax.get_xlim(), ax.get_ylim()])
         if img is not None:
             ax.imshow(img, cmap=cmap_img, alpha=alpha_img)
         else:
+            ax.set_aspect("equal")
             ax.invert_yaxis()
-        if cropped_coords is not None:
-            ax.set_xlim(cropped_coords[0], cropped_coords[1])
-            ax.set_ylim(cropped_coords[3], cropped_coords[2])
+        if crop_coord is not None:
+            ax.set_xlim(crop_coord[0], crop_coord[1])
+            ax.set_ylim(crop_coord[3], crop_coord[2])
+        else:
+            ax.set_xlim(cur_coords[0], cur_coords[1])
+            ax.set_ylim(cur_coords[3], cur_coords[2])
     _utils.savefig_or_show('show', show=show, save=save)
     if show is False or return_fig is True:
         return axs
@@ -1133,67 +1151,70 @@ def _basis2name(basis):
     return component_name
 
 
-def _process_image(
-    adata: AnnData,
-    basis: str = None,
-    img: np.ndarray = None,
-    scale_factor: float = None,
-    img_key: str = None,
-    library_id: str = None,
-    crop_coord: tuple = None,
-    size: float = None,
-    bw: bool = False,
-):
-    """Process image."""
-    if basis in adata.obsm.keys():
-        data_points = adata.obsm[basis]
-    else:
-        raise KeyError(
-            f"Could not find basis {basis} in `adata.obsm`\n"
-            f"while calling plotting._tools._process_image."
-        )
+def _check_spot_size(
+    spatial_data: Optional[Mapping], spot_size: Optional[float]
+) -> float:
+    """
+    Resolve spot_size value.
 
-    if (
-        img_key is not None
-        and library_id is not None
-        and img is None
-        and scale_factor is None
-    ):
-        offset = 100
-        spatial_data = adata.uns['spatial'][library_id]
-        img = spatial_data['images'][img_key]
-        # get scale factor
-        scalef_key = f"tissue_{img_key}_scalef"
-        if scalef_key in spatial_data['scalefactors'].keys():
-            scale_factor = spatial_data['scalefactors'][scalef_key]
-        else:
-            raise KeyError(
-                f"Could not find entry in `adata.uns[spatial][{library_id}]` for '{img_key}'.\n"
-                f"Available keys are: {list(spatial_data['images'].keys())}."
-            )
-        size_spot = spatial_data['scalefactors']['spot_diameter_fullres']
+    This is a required argument for spatial plots.
+    """
+    if spatial_data is None and spot_size is None:
+        raise ValueError("Could not resolve required argument spot_size.")
+    elif spot_size is None:
+        return spatial_data['scalefactors']['spot_diameter_fullres']
     else:
-        offset = None
-        size_spot = 1.0
+        return spot_size
 
-    # scale radius for circles
+
+def _check_scale_factor(
+    spatial_data: Optional[Mapping],
+    img_key: Optional[str],
+    scale_factor: Optional[float],
+) -> float:
+    """Resolve scale_factor, defaults to 1."""
     if scale_factor is not None:
-        if size is None:
-            size = 1.0
-        size = (scale_factor * size_spot) * 0.5 * size
-
-    cropped_coord = _crop_coords(img, data_points, crop_coord, scale_factor, offset)
-
-    if bw and img is not None:
-        img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
-        cmap_img = "gray"
+        return scale_factor
+    elif spatial_data is not None and img_key is not None:
+        return spatial_data['scalefactors'][f"tissue_{img_key}_scalef"]
     else:
-        cmap_img = None
-
-    return img, cropped_coord, size, cmap_img, scale_factor
+        return 1.0
 
 
-def _crop_coords(
+def _check_img(
+    spatial_data: Optional[Mapping],
+    img: Optional[np.ndarray],
+    img_key: Union[None, str, Empty],
+    bw: bool = False,
+) -> Tuple[Optional[np.ndarray], Optional[str]]:
+    """
+    Resolve image for spatial plots.
+    """
+    if img is None and spatial_data is not None and img_key is _empty:
+        img_key = next(
+            (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
+        )  # Throws StopIteration Error if keys not present
+    if img is None and spatial_data is not None and img_key is not None:
+        img = spatial_data["images"][img_key]
+    if bw:
+        img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
+    return img, img_key
+
+
+def _check_crop_coord(
+    crop_coord: Optional[tuple],
+    scale_factor: float,
+) -> Tuple[float, float, float, float]:
+    """Handle cropping with image or basis."""
+    if crop_coord is None:
+        return None
+    if len(crop_coord) != 4:
+        raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
+    crop_coord = tuple(c * scale_factor for c in crop_coord)
+    return crop_coord
+
+
+def _check_crop_coord_bak(
     img: np.ndarray = None,
     data_points: np.ndarray = None,
     crop_coord: tuple = None,
