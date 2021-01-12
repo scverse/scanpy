@@ -6,6 +6,14 @@ Ecosystem
 
 With *ecosystem*, we mean single-cell related tools that operate on :class:`~anndata.AnnData`. Here, we list some that do not have an interface in the :doc:`external API <external/index>`.
 
+Full Pipelines
+--------------
+
+* `MiCV <https://micv.works>`__ via direct reading of `.mtx`, `.h5ad`, or `.loom` :small:`MiOmics Inc., Michigan Med`
+    
+    | MiCV is a web-based, graphical interface to scanpy and palantir. It 
+      enables users to interactively take raw or analyzed single-cell data
+      through an scRNA-seq pipeline at the push of a button.
 
 Viewers
 -------
