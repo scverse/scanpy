@@ -793,15 +793,26 @@ def spatial(
     """\
     Scatter plot in spatial coordinates.
 
+    This function allows overlaying data on top of images.
     Use the parameter `img_key` to see the image in the background
     And the parameter `library_id` to select the image.
     By default, `'hires'` and `'lowres'` are attempted.
-    Also by default the first entry of `library_id` is attempted.
+
     Use `crop_coord`, `alpha_img`, and `bw` to control how it is displayed.
     Use `size` to scale the size of the Visium spots plotted on top.
-    This function call sets origin at top left for any coordinate system.
-    If your spatial coordinates are centered bottom left,
-    use `pl.embedding(adata, basis="<your_coords>")`
+
+    As this function is designed to for imaging data, there are two key assumptions
+    about how coordinates are handled:
+
+    1. The origin (e.g `(0, 0)`) is at the top left – as is common convention
+    with image data.
+
+    2. Coordinates are in the pixel space of the source image, so an equal
+    aspect ratio is assumed.
+
+    If your anndata object has a `"spatial"` entry in `.uns`, the `img_key`
+    and `library_id` parameters to find values for `img`, `scale_factor`,
+    and `spot_size` arguments. Alternatively, these values be passed directly.
 
     Parameters
     ----------
@@ -813,6 +824,22 @@ def spatial(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Usage
+    -----
+    This function behaves very similarly to other embedding plots like
+    :func:`~scanpy.pl.umap`
+
+    >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
+    >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
+    >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
+
+    See Also
+    --------
+    :func:`scanpy.datasets.visium_sge`
+        Example visium data.
+    :tutorial:`spatial/basic-analysis`
+        Tutorial on spatial analysis.
     """
     # get default image params if available
     library_id, spatial_data = _check_spatial_data(adata.uns, library_id)

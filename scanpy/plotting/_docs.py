@@ -56,8 +56,6 @@ components
     `components='all'`.
 projection
     Projection of plot (default: `'2d'`).
-scale_factor
-    Scale factor used to scale `adata.obsm[basis]`.
 legend_loc
     Location of legend, either `'on data'`, `'right margin'` or a valid keyword
     for the `loc` parameter of :class:`~matplotlib.legend.Legend`.
@@ -224,14 +222,28 @@ layer
 """
 
 doc_scatter_spatial = """\
-img
-    image data to plot, if not present in `adata.uns`.
-img_key
-    Key for image data, stored in `adata.uns`.
 library_id
-    library_id for Visium data, in `adata.uns`.
+    library_id for Visium data, e.g. key in `adata.uns["spatial"]`.
+img_key
+    Key for image data, used to get `img` and `scale_factor` from `"images"`
+    and `"scalefactors"` entires for this library. To use spatial coordinates,
+    but not plot an image, pass `img_key=None`.
+img
+    image data to plot, overrides `img_key`.
+scale_factor
+    Scaling factor used to map from coordinate space to pixel space.
+    Found by default if `library_id` and `img_key` can be resolved.
+    Otherwise defaults to `1.`.
+spot_size
+    Diameter of spot (in coordinate space) for each point. Diameter
+    in pixels of the spots will be `size * spot_size * scale_factor`.
+    This argument is required if it cannot be resolved from library info.
 crop_coord
     Coordinates to use for cropping the image (left, right, top, bottom).
+    These coordinates are expected to be in pixel space (same as `basis`)
+    and will be transformed by `scale_factor`.
+    If not provided, image is automatically cropped to bounds of `basis`,
+    plus a border.
 alpha_img
     Alpha value for image.
 bw
