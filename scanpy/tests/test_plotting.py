@@ -90,6 +90,8 @@ def test_heatmap(image_comparer):
     )
     save_and_compare_images('master_heatmap_std_scale_var')
 
+    # test standard_scale_obs and groupby = index
+    adata.obs.set_index('cell_type', inplace=True)
     sc.pl.heatmap(
         adata,
         adata.var_names,

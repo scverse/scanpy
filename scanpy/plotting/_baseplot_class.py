@@ -66,6 +66,8 @@ class BasePlot(object):
     DEFAULT_LEGENDS_WIDTH = 1.5
     DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
 
+    MAX_NUM_CATEGORIES = 500  # maximum number of categories allowed to be plotted
+
     def __init__(
         self,
         adata: AnnData,
@@ -109,6 +111,11 @@ class BasePlot(object):
             layer=layer,
             gene_symbols=gene_symbols,
         )
+        if len(self.categories) > self.MAX_NUM_CATEGORIES:
+            raise ValueError(
+                f"Over {self.MAX_NUM_CATEGORIES} categories found. "
+                f"Plot would be too large."
+            )
 
         if categories_order is not None:
             if set(self.obs_tidy.index.categories) != set(categories_order):
