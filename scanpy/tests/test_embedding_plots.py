@@ -242,15 +242,21 @@ def test_spatial_general(image_comparer):  # general coordinates
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
-    adata.uns.pop("spatial")  # spatial data don't have imgs, so remove entry from uns
+    spatial_metadata = adata.uns.pop(
+        "spatial"
+    )  # spatial data don't have imgs, so remove entry from uns
+    # Required argument for now
+    spot_size = list(spatial_metadata.values())[0]["scalefactors"][
+        "spot_diameter_fullres"
+    ]
 
-    sc.pl.spatial(adata)
+    sc.pl.spatial(adata, spot_size=spot_size)
     save_and_compare_images('master_spatial_general_nocol')
 
-    sc.pl.spatial(adata, color="array_row")  # category
+    sc.pl.spatial(adata, spot_size=spot_size, color="array_row")  # category
     save_and_compare_images('master_spatial_general_cat')
 
-    sc.pl.spatial(adata, color="array_col")  # continuous
+    sc.pl.spatial(adata, spot_size=spot_size, color="array_col")  # continuous
     save_and_compare_images('master_spatial_general_cont')
 
 
