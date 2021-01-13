@@ -825,8 +825,8 @@ def spatial(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
 
-    Usage
-    -----
+    Examples
+    --------
     This function behaves very similarly to other embedding plots like
     :func:`~scanpy.pl.umap`
 
