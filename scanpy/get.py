@@ -6,6 +6,8 @@ import pandas as pd
 from scipy.sparse import spmatrix, issparse
 
 from anndata import AnnData
+from . import logging as logg
+
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -166,9 +168,17 @@ def obs_df(
     var_names = []
     var_symbol = []
     not_found = []
-    for key in keys:
+
+    # use only unique keys, otherwise duplicated keys will
+    # further duplicate when reordering the keys later in the function
+    for key in np.unique(keys):
         if key in adata.obs.columns:
             obs_names.append(key)
+            if key in gene_names.index:
+                logg.warning(
+                    f'The key `{key}` is found in both adata.obs and adata.var_names.'
+                    'Only the adata.obs key will be used.'
+                )
         elif key in gene_names.index:
             var_names.append(gene_names[key])
             var_symbol.append(key)
@@ -193,6 +203,23 @@ def obs_df(
             f"Could not find keys '{not_found}' in columns of `adata.obs` or in"
             f" {gene_error}."
         )
+
+    # check that adata.obs.index is unique
+    orig_index_map = None
+    if not adata.obs.index.is_unique:
+        # non unique obs index is problematic in the `join` operation used in the next
+        # lines which will erroneously expand the length of the obs adata frame.
+        # To solve the problem, a unique index is temporarily created which is
+        # afterwards replaced by the original index
+        logg.warning(
+            'Warning: the adata.obs index is not unique. This can be problematic for '
+            'operations with adata.obs '
+        )
+
+        orig_index = adata.obs.index
+        adata.obs_names_make_unique()
+        # make dictionary to translate new index to original index
+        orig_index_map = dict(zip(adata.obs.index, orig_index))
 
     # Make df
     df = pd.DataFrame(index=adata.obs.index)
@@ -222,7 +249,7 @@ def obs_df(
     if len(obs_names) > 0:
         df = df.join(adata.obs[obs_names])
 
-    # reorder columns to given order
+    # reorder columns to given order (including duplicates keys if present)
     df = df[keys]
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
@@ -233,6 +260,9 @@ def obs_df(
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
+    if orig_index_map is not None:
+        # revert to index with duplicates
+        df.index = df.index.map(orig_index_map)
     return df
 
 

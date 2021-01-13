@@ -98,6 +98,14 @@ def test_obs_df(adata):
         sc.get.obs_df(adata, keys=["gene1", "gene2"]),
         pd.DataFrame({"gene1": [1, 1], "gene2": [1, 1]}, index=adata.obs_names),
     )
+    # test handling of duplicated keys (in this case repeated gene names)
+    pd.testing.assert_frame_equal(
+        sc.get.obs_df(adata, keys=["gene1", "gene2", "gene1", "gene1"]),
+        pd.DataFrame(
+            {"gene1": [1, 1], "gene2": [1, 1]},
+            index=adata.obs_names,
+        )[["gene1", "gene2", "gene1", "gene1"]],
+    )
 
     badkeys = ["badkey1", "badkey2"]
     with pytest.raises(KeyError) as badkey_err:
@@ -227,10 +235,10 @@ def test_rank_genes_groups_df():
     pd.testing.assert_frame_equal(dedf, dedf2)
     assert 'pct_nz_group' in dedf2.columns
     assert 'pct_nz_reference' in dedf2.columns
-    
+
     # get all groups
     dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
     assert 'a' in dedf3['group'].unique()
-    assert 'b' in dedf3['group'].unique()    
+    assert 'b' in dedf3['group'].unique()
     adata.var_names.name = 'pr1388'
     sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
