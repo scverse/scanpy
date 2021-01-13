@@ -352,15 +352,20 @@ def test_dotplot_obj(image_comparer):
 
 
 def test_matrixplot_obj(image_comparer):
-    if version.parse(pd.__version__) < version.parse("1.2.0"):
-        pytest.xfail("Ordering changes in pandas 1.2.0")
-
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.datasets.krumsiek11()
+    adata = sc.datasets.pbmc68k_reduced()
+    marker_genes_dict = {
+        "3": ["GNLY", "NKG7"],
+        "1": ["FCER1A"],
+        "2": ["CD3D"],
+        "0": ["FCGR3A"],
+        "4": ["CD79A", "MS4A1"],
+    }
+
     plot = sc.pl.matrixplot(
         adata,
-        adata.var_names,
-        'cell_type',
+        marker_genes_dict,
+        'bulk_labels',
         use_raw=False,
         title='added totals',
         return_fig=True,
