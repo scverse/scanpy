@@ -99,7 +99,10 @@ def na_in_legend(request):
     return request.param
 
 
-@pytest.fixture(params=[sc.pl.pca, sc.pl.spatial])
+@pytest.fixture(
+    params=[partial(sc.pl.pca, show=False), partial(sc.pl.spatial, show=False)],
+    ids=["pca", "spatial"],
+)
 def plotfunc(request):
     return request.param
 
@@ -189,8 +192,10 @@ def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
     # making a copy so colors aren't saved
     plotfunc(adata.copy(), color="label", palette=colors_rgb)
     plt.savefig(dict_pth, dpi=40)
+    plt.close()
     plotfunc(adata.copy(), color="label", palette=[colors_rgb[c] for c in categories])
     plt.savefig(list_pth, dpi=40)
+    plt.close()
 
     check_images(dict_pth, list_pth, tol=15)
 
@@ -210,6 +215,7 @@ def test_visium_circles(image_comparer):  # standard visium data
         crop_coord=(100, 400, 400, 100),
         alpha=0.5,
         size=1.3,
+        show=False,
     )
 
     save_and_compare_images('master_spatial_visium')
@@ -220,7 +226,7 @@ def test_visium_default(image_comparer):  # default values
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
 
-    sc.pl.spatial(adata)
+    sc.pl.spatial(adata, show=False)
 
     save_and_compare_images('master_spatial_visium_default')
 
@@ -230,11 +236,11 @@ def test_visium_empty_img_key(image_comparer):  # visium coordinates but image e
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
 
-    sc.pl.spatial(adata, img_key=None, color="array_row")
+    sc.pl.spatial(adata, img_key=None, color="array_row", show=False)
 
     save_and_compare_images('master_spatial_visium_empty_image')
 
-    sc.pl.embedding(adata, basis="spatial", color="array_row")
+    sc.pl.embedding(adata, basis="spatial", color="array_row", show=False)
     save_and_compare_images('master_spatial_visium_embedding')
 
 
@@ -250,13 +256,15 @@ def test_spatial_general(image_comparer):  # general coordinates
         "spot_diameter_fullres"
     ]
 
-    sc.pl.spatial(adata, spot_size=spot_size)
+    sc.pl.spatial(adata, show=False, spot_size=spot_size)
     save_and_compare_images('master_spatial_general_nocol')
 
-    sc.pl.spatial(adata, spot_size=spot_size, color="array_row")  # category
+    # category
+    sc.pl.spatial(adata, show=False, spot_size=spot_size, color="array_row")
     save_and_compare_images('master_spatial_general_cat')
 
-    sc.pl.spatial(adata, spot_size=spot_size, color="array_col")  # continuous
+    # continuous
+    sc.pl.spatial(adata, show=False, spot_size=spot_size, color="array_col")
     save_and_compare_images('master_spatial_general_cont')
 
 
@@ -273,6 +281,7 @@ def test_spatial_external_img(image_comparer):  # external image
         scale_factor=scalef,
         img=img,
         basis="spatial",
+        show=False,
     )
     save_and_compare_images('master_spatial_external_img')
 
@@ -342,8 +351,10 @@ def test_manual_equivalency(equivalent_spatial_plotters, tmpdir, spatial_kwargs)
 
     orig(**spatial_kwargs)
     plt.savefig(orig_pth, dpi=40)
+    plt.close()
     removed(**spatial_kwargs)
     plt.savefig(removed_pth, dpi=40)
+    plt.close()
 
     check_images(orig_pth, removed_pth, tol=1)
 
@@ -362,8 +373,10 @@ def test_manual_equivalency_no_img(
 
     orig(**spatial_kwargs)
     plt.savefig(orig_pth, dpi=40)
+    plt.close()
     removed(**spatial_kwargs)
     plt.savefig(removed_pth, dpi=40)
+    plt.close()
 
     check_images(orig_pth, removed_pth, tol=1)
 
@@ -411,6 +424,7 @@ def test_spatial_na_color(adata, tmpdir):
     def plot(pth, **kwargs):
         sc.pl.spatial(adata, color="1_missing", show=False, **kwargs)
         plt.savefig(pth, dpi=40)
+        plt.close()
 
     plot(lightgray_pth, na_color="lightgray", img_key=None)
     plot(transparent_pth, na_color=(0.0, 0.0, 0.0, 0.0), img_key=None)
