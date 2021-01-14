@@ -1,6 +1,15 @@
 .. role:: small
 .. role:: smaller
 
+1.6.1 :small:`2021-01-14`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is being released alongside `1.7.0rc1`. Check that version out with `pip install "scanpy==1.7.0rc1"`.
+
+.. rubric:: Bug fixes
+
+- Pin `umap-learn` to compatible version
+
 1.6.0 :small:`2020-08-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
