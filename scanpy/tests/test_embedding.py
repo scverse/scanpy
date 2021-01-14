@@ -2,7 +2,7 @@ from importlib.util import find_spec
 
 import numpy as np
 import pytest
-from sklearn.utils.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal
 
 import scanpy as sc
 
