@@ -997,3 +997,19 @@ def test_no_copy():
         view = actual[actual.obs["bulk_labels"] == "Dendritic"]
         plotfunc(view, ["Dendritic"], show=False)
         assert view.is_view
+
+
+def test_fail(check_same_image, tmpdir):
+    pth1 = tmpdir / "pth1.png"
+    pth2 = tmpdir/ "pth2.png"
+
+    adata = sc.datasets.pbmc68k_reduced()
+    sc.pl.umap(adata, color=["bulk_labels", "louvain"], show=False)  # Set colors
+    plt.savefig(pth1, dpi=40)
+    plt.close()
+
+    sc.pl.umap(adata, color=["louvain", "bulk_labels"], show=False)  # Set colors
+    plt.savefig(pth2, dpi=40)
+    plt.close()
+
+    check_same_image(pth1, pth2, tol=3)
