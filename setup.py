@@ -62,7 +62,8 @@ if __name__ == "__main__":
     if "develop" in sys.argv:
         msg = (
             "Please use `flit install -s` or `flit install --pth-file` "
-            "instead of `pip install -e`/`python setup.py develop`"
+            "instead of `pip install -e`/`python setup.py develop` "
+            "once https://github.com/pypa/pip/issues/9670 is fixed."
         )
     elif "install" in sys.argv:
         msg = 'Please use `pip install "$d"` instead of `python "$d/setup.py" install`'

@@ -35,16 +35,20 @@ To work with the latest version `on GitHub`_: clone the repository and `cd` into
 its root directory. To install using symbolic links (stay up to date with your
 cloned version after you update with `git pull`) call::
 
-    flit install -s  # from an activated venv or conda env
+    flit install -s --deps=develop  # from an activated venv or conda env
     # or
-    flit install -s --python path/to/venv/bin/python
-
-If you intend to do development work, there are some extra dependencies you'll want.
-These can be install with `scanpy` via::
-
-    pip install -e ".[dev,doc,test]"
+    flit install -s --deps=develop --python path/to/venv/bin/python
 
 .. _on GitHub: https://github.com/theislab/scanpy
+
+.. note::
+
+   Due to a `bug in pip`_, packages installed by `flit` can be uninstalled by normal pip operations.
+   For now, you can avoid this by using::
+
+       pip install -e ".[dev,doc,test]"
+
+.. _bug in pip: https://github.com/pypa/pip/issues/9670
 
 If you want to let conda_ handle the installations of dependencies, do::
 
@@ -52,21 +56,19 @@ If you want to let conda_ handle the installations of dependencies, do::
     beni pyproject.toml > environment.yml
     conda env create -f environment.yml
     conda activate scanpy
-    flit install -s
+    flit install -s --deps=develop  # or: pip install -e ".[dev,doc,test]"
 
 On Windows, you might have to use `flit install --pth-file`
 if you are not able to give yourself the `create symbolic links`_ privilege.
-Be aware that a `conda bug`_ might prevent `conda list` from working then.
 
 .. _create symbolic links: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
-.. _conda bug: https://github.com/conda/conda/issues/9074
 
 Docker
 ~~~~~~
-If you're using Docker_, you can use the minimal `fastgenomics/scanpy`_ image from the Docker Hub.
+If you're using Docker_, you can use e.g. the image `gcfntnu/scanpy`_ from Docker Hub.
 
 .. _Docker: https://en.wikipedia.org/wiki/Docker_(software)
-.. _fastgenomics/scanpy: https://hub.docker.com/r/fastgenomics/scanpy
+.. _gcfntnu/scanpy: https://hub.docker.com/r/gcfntnu/scanpy
 .. _bioconda: https://bioconda.github.io/
 
 Troubleshooting
