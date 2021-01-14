@@ -16,6 +16,7 @@ author-email = 'f.alex.wolf@gmx.de, philipp.angerer@helmholtz-muenchen.de'
 python_files = 'test_*.py'
 testpaths = 'scanpy/tests/'
 xfail_strict = true
+nunit_attach_on = 'fail'
 markers = [
     'internet: tests which rely on internet resources (enable with `--internet-tests`)',
 ]
