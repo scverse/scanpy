@@ -5,6 +5,8 @@ requires = [
     'setuptools_scm',
     'pytoml',
     'importlib_metadata>=0.7; python_version < "3.8"',
+    # setup.py stuff
+    'packaging',
 ]
 
 [tool.flit.metadata]
@@ -108,7 +110,10 @@ test = [
 scanpy = 'scanpy.cli:console_main'
 
 [tool.flit.sdist]
-exclude = ['scanpy/tests']
+exclude = [
+    'scanpy/tests',
+    'setup.py',
+]
 
 [tool.pytest.ini_options]
 python_files = 'test_*.py'
