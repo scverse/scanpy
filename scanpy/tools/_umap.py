@@ -156,7 +156,7 @@ def umap(
         # the data matrix X is really only used for determining the number of connected components
         # for the init condition in the UMAP embedding
         n_epochs = 0 if maxiter is None else maxiter
-        X_umap = simplicial_set_embedding(
+        X_umap, _ = simplicial_set_embedding(
             X,
             neighbors['connectivities'].tocoo(),
             n_components,
@@ -170,6 +170,9 @@ def umap(
             random_state,
             neigh_params.get('metric', 'euclidean'),
             neigh_params.get('metric_kwds', {}),
+            densmap=False,
+            densmap_kwds={},
+            output_dens=False,
             verbose=settings.verbosity > 3,
         )
     elif method == 'rapids':
