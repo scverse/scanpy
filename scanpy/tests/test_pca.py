@@ -114,3 +114,27 @@ def test_pca_reproducible(pbmc3k_normalized, array_type, float_dtype):
     assert_equal(a, b)
     # Test that changing random seed changes result
     assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
+
+
+def test_pca_chunked(pbmc3k_normalized):
+    # https://github.com/theislab/scanpy/issues/1590
+    # But also a more general test
+
+    # Subsetting for speed of test
+    pbmc = pbmc3k_normalized[::6].copy()
+    pbmc.X = pbmc.X.astype(np.float64)
+    chunked = sc.pp.pca(pbmc3k_normalized, chunked=True, copy=True)
+    default = sc.pp.pca(pbmc3k_normalized, copy=True)
+
+    # Taking absolute value since sometimes dimensions are flipped
+    np.testing.assert_allclose(
+        np.abs(chunked.obsm["X_pca"]), np.abs(default.obsm["X_pca"])
+    )
+    np.testing.assert_allclose(np.abs(chunked.varm["PCs"]), np.abs(default.varm["PCs"]))
+    np.testing.assert_allclose(
+        np.abs(chunked.uns["pca"]["variance"]), np.abs(default.uns["pca"]["variance"])
+    )
+    np.testing.assert_allclose(
+        np.abs(chunked.uns["pca"]["variance_ratio"]),
+        np.abs(default.uns["pca"]["variance_ratio"]),
+    )
