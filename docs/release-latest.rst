@@ -33,6 +33,7 @@ Version 1.7
 - Fixes to :func:`~scanpy.external.tl.harmony_timeseries` docs :pr:`1248` :smaller:`A Mousa`
 - Support for `leiden` clustering by :func:`scanpy.external.tl.phenograph` :pr:`1080` :smaller:`A Mousa`
 - Deprecate :func:`~scanpy.external.pp.scvi` :pr:`1554` :smaller:`G Xing`
+- Updated default params of :func:`~scanpy.external.tl.sam` to work with larger data :pr:`1540` :smaller:`A Tarashansky`
 
 .. rubric:: Documentation
 
