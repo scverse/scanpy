@@ -13,6 +13,7 @@ This section of the docs provides some guidelines and tips to follow when contri
     testing
     documentation
     external-tools
+    ci
     release
     versioning
 
