@@ -43,3 +43,6 @@ Thumbs.db
 # IDEs and editors
 /.idea/
 /.vscode/
+
+# Test artifacts
+**/test-results.xml
