@@ -1,5 +1,5 @@
 from typing import Optional, Union
-from warnings import simplefilter
+import warnings
 
 import numpy as np
 from packaging import version
@@ -133,7 +133,11 @@ def umap(
         logg.warning(f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap')
 
     # Compat for umap 0.4 -> 0.5
-    import umap
+    with warnings.catch_warnings():
+        # umap 0.5.0
+        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
+        import umap
+
     if version.parse(umap.__version__) >= version.parse("0.5.0"):
         def simplicial_set_embedding(*args, **kwargs):
             from umap.umap_ import simplicial_set_embedding
