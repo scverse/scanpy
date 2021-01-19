@@ -1,6 +1,8 @@
 from typing import Optional, Union
+import warnings
 
 import numpy as np
+from packaging import version
 from anndata import AnnData
 from sklearn.utils import check_random_state, check_array
 
@@ -129,7 +131,28 @@ def umap(
     if ('params' not in neighbors
         or neighbors['params']['method'] != 'umap'):
         logg.warning(f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap')
-    from umap.umap_ import find_ab_params, simplicial_set_embedding
+
+    # Compat for umap 0.4 -> 0.5
+    with warnings.catch_warnings():
+        # umap 0.5.0
+        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
+        import umap
+
+    if version.parse(umap.__version__) >= version.parse("0.5.0"):
+        def simplicial_set_embedding(*args, **kwargs):
+            from umap.umap_ import simplicial_set_embedding
+            X_umap, _ = simplicial_set_embedding(
+                *args,
+                densmap=False,
+                densmap_kwds={},
+                output_dens=False,
+                **kwargs,
+            )
+            return X_umap
+    else:
+        from umap.umap_ import simplicial_set_embedding
+    from umap.umap_ import find_ab_params
+
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
     else:
