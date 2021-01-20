@@ -1801,51 +1801,63 @@ def _prepare_dataframe(
         var_names = [var_names]
 
     orig_index_col = None
+    groupby_index = None
     if groupby is not None:
         if isinstance(groupby, str):
             # if not a list, turn into a list
             groupby = [groupby]
         for group in groupby:
-            if group == adata.obs.index.name:
-                # if grouping is using the index, reset the index
-                # to have the group as a column.
-                adata.obs.reset_index(inplace=True)
-                orig_index_col = group
-            if group not in adata.obs_keys():
+            if group not in list(adata.obs_keys()) + [adata.obs.index.name]:
                 raise ValueError(
                     'groupby has to be a valid observation. '
                     f'Given {group}, is not in observations: {adata.obs_keys()} or '
                     f'index name "{adata.obs.index.name}"'
                 )
-
+            if group in adata.obs.keys() and group == adata.obs.index.name:
+                raise ValueError(
+                    f'Given group {group} is both and index and a column level, '
+                    'which is ambiguous.'
+            )
+            if group == adata.obs.index.name:
+                groupby_index = group
+    if groupby_index is not None:
+        # obs_tidy contains adata.obs.index
+        # and does not need to be given
+        groupby.remove(groupby_index)
+    keys = list(groupby) + list(np.unique(var_names))
     obs_tidy = get.obs_df(
-        adata, keys=var_names, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
+        adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
     )
-    assert np.all(np.array(var_names) == np.array(obs_tidy.columns))
+    assert np.all(np.array(keys) == np.array(obs_tidy.columns))
 
-    if log:
-        obs_tidy = np.log1p(obs_tidy)
+    if groupby_index is not None:
+        # reset index to treat all columns the same way.
+        obs_tidy.reset_index(inplace=True)
+        groupby.append(groupby_index)
+
     if groupby is None:
         groupby = ''
         categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
     else:
-        if len(groupby) == 1 and not is_categorical_dtype(adata.obs[groupby[0]]):
+        if len(groupby) == 1 and not is_categorical_dtype(obs_tidy[groupby[0]]):
             # if the groupby column is not categorical, turn it into one
             # by subdividing into  `num_categories` categories
-            categorical = pd.cut(adata.obs[groupby[0]], num_categories)
+            categorical = pd.cut(obs_tidy[groupby[0]], num_categories)
         else:
-            categorical = adata.obs[groupby[0]]
+            categorical = obs_tidy[groupby[0]]
             if len(groupby) > 1:
                 for group in groupby[1:]:
                     # create new category by merging the given groupby categories
                     categorical = (
-                        categorical.astype(str) + "_" + adata.obs[group].astype(str)
+                        categorical.astype(str) + "_" + obs_tidy[group].astype(str)
                     ).astype('category')
             categorical.name = "_".join(groupby)
-    obs_tidy.set_index(categorical, inplace=True)
+    obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
-    if orig_index_col is not None:
-        adata.obs.set_index(orig_index_col, inplace=True)
+
+    if log:
+        obs_tidy = np.log1p(obs_tidy)
+
     return categories, obs_tidy
 
 
