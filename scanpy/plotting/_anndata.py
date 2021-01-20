@@ -12,7 +12,7 @@ import pandas as pd
 from anndata import AnnData
 from cycler import Cycler
 from matplotlib.axes import Axes
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import is_categorical_dtype, is_numeric_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
@@ -1839,12 +1839,12 @@ def _prepare_dataframe(
         groupby = ''
         categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
     else:
-        if len(groupby) == 1 and not is_categorical_dtype(obs_tidy[groupby[0]]):
+        if len(groupby) == 1 and is_numeric_dtype(obs_tidy[groupby[0]]):
             # if the groupby column is not categorical, turn it into one
             # by subdividing into  `num_categories` categories
             categorical = pd.cut(obs_tidy[groupby[0]], num_categories)
         else:
-            categorical = obs_tidy[groupby[0]]
+            categorical = obs_tidy[groupby[0]].astype('category')
             if len(groupby) > 1:
                 for group in groupby[1:]:
                     # create new category by merging the given groupby categories

@@ -90,8 +90,7 @@ def test_heatmap(image_comparer):
     )
     save_and_compare_images('master_heatmap_std_scale_var')
 
-    # test standard_scale_obs and groupby = index
-    adata.obs.set_index('cell_type', inplace=True)
+    # test standard_scale_obs
     sc.pl.heatmap(
         adata,
         adata.var_names,
@@ -999,3 +998,27 @@ def test_no_copy():
         view = actual[actual.obs["bulk_labels"] == "Dendritic"]
         plotfunc(view, ["Dendritic"], show=False)
         assert view.is_view
+
+
+def test_groupby_index(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    pbmc = sc.datasets.pbmc68k_reduced()
+
+    genes = [
+        'CD79A',
+        'MS4A1',
+        'CD8A',
+        'CD8B',
+        'LYZ',
+        'LGALS3',
+        'S100A8',
+        'GNLY',
+        'NKG7',
+        'KLRB1',
+        'FCGR3A',
+        'FCER1A',
+        'CST3',
+    ]
+    pbmc_subset = pbmc[:10].copy()
+    sc.pl.dotplot(pbmc_subset, genes, groupby='index')
+    save_and_compare_images('master_dotplot_groupby_index')
