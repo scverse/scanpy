@@ -11,6 +11,10 @@ jobs:
     vmImage: 'ubuntu-18.04'
   strategy:
     matrix:
+      Python39:
+        python.version: '3.9'
+      Python38:
+        python.version: '3.8'
       Python37:
         python.version: '3.7'
       Python36:
@@ -79,3 +83,9 @@ jobs:
       python setup.py check --restructuredtext --strict
       rst2html.py --halt=2 README.rst >/dev/null
     displayName: 'rst2html'
+
+  - script: |
+      pip install setuptools twine
+      python setup.py sdist bdist_wheel
+      twine check dist/*
+    displayName: 'Twine check'
