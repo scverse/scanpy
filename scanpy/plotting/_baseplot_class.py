@@ -10,6 +10,7 @@ from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib import pyplot as pl
 from matplotlib import gridspec
+from warnings import warn
 
 from .. import logging as logg
 from .._compat import Literal
@@ -112,8 +113,7 @@ class BasePlot(object):
             gene_symbols=gene_symbols,
         )
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
-            import warnings
-            warnings.warn(
+            warn(
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
                 "Plot would be very large."
             )

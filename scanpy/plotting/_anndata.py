@@ -1817,7 +1817,7 @@ def _prepare_dataframe(
                 raise ValueError(
                     f'Given group {group} is both and index and a column level, '
                     'which is ambiguous.'
-            )
+                )
             if group == adata.obs.index.name:
                 groupby_index = group
     if groupby_index is not None:
