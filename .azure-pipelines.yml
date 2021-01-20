@@ -15,8 +15,6 @@ jobs:
         python.version: '3.8'
       Python37:
         python.version: '3.7'
-      Python36:
-        python.version: '3.6'
       anndata_dev:
         python.version: '3.7'
         ANNDATA_DEV: yes
