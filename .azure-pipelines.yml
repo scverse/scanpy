@@ -14,9 +14,9 @@ jobs:
       Python38:
         python.version: '3.8'
       Python37:
-        python.version: '3.7'
+        python.version: '3.6'
       anndata_dev:
-        python.version: '3.7'
+        python.version: '3.8'
         ANNDATA_DEV: yes
         RUN_COVERAGE: yes
   steps:
