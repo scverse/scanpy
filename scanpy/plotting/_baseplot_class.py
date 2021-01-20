@@ -112,9 +112,10 @@ class BasePlot(object):
             gene_symbols=gene_symbols,
         )
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
-            raise ValueError(
+            import warnings
+            warnings.warn(
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
-                f"Plot would be too large."
+                "Plot would be very large."
             )
 
         if categories_order is not None:
