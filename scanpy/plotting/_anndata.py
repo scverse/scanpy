@@ -996,11 +996,13 @@ def heatmap(
         dendrogram = False
     else:
         categorical = True
-        # get categories colors:
-        if groupby + "_colors" in adata.uns:
-            groupby_colors = adata.uns[groupby + "_colors"]
-        else:
-            groupby_colors = None
+        # get categories colors
+        if groupby + "_colors" not in adata.uns:
+            # if colors are not found, assign a new palette
+            # and save it using the same code for embeddings
+            from ._tools.scatterplots import _get_palette
+            _get_palette(adata, groupby)
+        groupby_colors = adata.uns[groupby + "_colors"]
 
     if dendrogram:
         dendro_data = _reorder_categories_after_dendrogram(
@@ -1131,7 +1133,8 @@ def heatmap(
                 line_positions,
                 -0.73,
                 len(var_names) - 0.5,
-                lw=0.6,
+                lw=1,
+                color='black',
                 zorder=10,
                 clip_on=False,
             )
@@ -1199,7 +1202,7 @@ def heatmap(
 
         kwds.setdefault('interpolation', 'nearest')
         im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
-        heatmap_ax.set_xlim(0, obs_tidy.shape[0])
+        heatmap_ax.set_xlim(0 - 0.5, obs_tidy.shape[0] -0.5)
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
         heatmap_ax.set_xlabel('')
@@ -1230,7 +1233,8 @@ def heatmap(
                 line_positions,
                 -0.5,
                 len(var_names) + 0.35,
-                lw=0.6,
+                lw=1,
+                color='black',
                 zorder=10,
                 clip_on=False,
             )
@@ -2360,7 +2364,7 @@ def _plot_categories_as_colorblocks(
         )
         if len(labels) > 1:
             groupby_ax.set_xticks(ticks)
-            if max([len(x) for x in labels]) < 3:
+            if max([len(str(x)) for x in labels]) < 3:
                 # if the labels are small do not rotate them
                 rotation = 0
             else:
