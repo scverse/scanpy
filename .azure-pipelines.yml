@@ -79,7 +79,7 @@ jobs:
       rst2html.py --halt=2 README.rst >/dev/null
     displayName: 'rst2html'
 
-- job: Twine Check
+- job: Twine
   pool:
     vmImage: 'ubuntu-18.04'
   steps:
@@ -88,7 +88,7 @@ jobs:
         versionSpec: '3.8'
 
     - script: |
-      pip install setuptools twine wheel
-      python setup.py sdist bdist_wheel
-      twine check dist/*
-    displayName: 'Twine check'
+        pip install setuptools twine wheel
+        python setup.py sdist bdist_wheel
+        twine check dist/*
+      displayName: 'Twine check'
