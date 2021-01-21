@@ -533,7 +533,7 @@ def test_correlation(image_comparer):
             "ranked_genes_dotplot_gene_names",
             partial(
                 sc.pl.rank_genes_groups_dotplot,
-                gene_names={
+                var_names={
                     'T-cell': ['CD3D', 'CD3E', 'IL32'],
                     'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
                     'myeloid': ['CST3', 'LYZ'],
@@ -575,7 +575,7 @@ def test_correlation(image_comparer):
             "ranked_genes_matrixplot_gene_names_symbol",
             partial(
                 sc.pl.rank_genes_groups_matrixplot,
-                gene_names={
+                var_names={
                     'T-cell': ['CD3D__', 'CD3E__', 'IL32__'],
                     'B-cell': ['CD79A__', 'CD79B__', 'MS4A1__'],
                     'myeloid': ['CST3__', 'LYZ__'],

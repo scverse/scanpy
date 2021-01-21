@@ -351,8 +351,8 @@ def rank_genes_groups(
 
 def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
     """
-     Decides what to return
-     """
+    Decides what to return
+    """
     if return_fig:
         return plot_obj
     else:
@@ -370,12 +370,13 @@ def _rank_genes_groups_plot(
     n_genes: int = 10,
     groupby: Optional[str] = None,
     values_to_plot: Optional[str] = None,
-    gene_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
+    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
     return_fig: Optional[bool] = False,
+    gene_symbols: Optional[str] = None,
     **kwds,
 ):
     """\
@@ -388,21 +389,18 @@ def _rank_genes_groups_plot(
         groupby = str(adata.uns[key]['params']['groupby'])
     group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
 
-    gene_symbols = kwds.get('gene_symbols', None)
-
-    if gene_names is not None:
-        var_names = gene_names
+    if var_names is not None:
         if isinstance(var_names, Mapping):
             # get a single list of all gene names in the dictionary
-            gene_names = sum([list(x) for x in var_names.values()], [])
+            var_names_list = sum([list(x) for x in var_names.values()], [])
         elif isinstance(var_names, str):
-            gene_names = [var_names]
+            var_names_list = [var_names]
         else:
-            gene_names = var_names
+            var_names_list = var_names
     else:
         # dict in which each group is the key and the n_genes are the values
         var_names = {}
-        gene_names = []
+        var_names_list = []
         for group in group_names:
             df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
             if min_logfoldchange is not None:
@@ -410,7 +408,7 @@ def _rank_genes_groups_plot(
                 df = df[df.logfoldchanges > min_logfoldchange]
 
             if gene_symbols is not None:
-                df['names'] = df['symbol']
+                df['names'] = df[gene_symbols]
 
             genes_list = df.names.tolist()
 
@@ -422,7 +420,7 @@ def _rank_genes_groups_plot(
             else:
                 genes_list = genes_list[:n_genes]
             var_names[group] = genes_list
-            gene_names.extend(genes_list)
+            var_names_list.extend(genes_list)
 
     # by default add dendrogram to plots
     kwds.setdefault('dendrogram', True)
@@ -435,7 +433,11 @@ def _rank_genes_groups_plot(
         values_df = None
         if values_to_plot is not None:
             values_df = _get_values_to_plot(
-                adata, values_to_plot, gene_names, key=key, gene_symbols=gene_symbols
+                adata,
+                values_to_plot,
+                var_names_list,
+                key=key,
+                gene_symbols=gene_symbols,
             )
             title = values_to_plot
             if values_to_plot == 'logfoldchanges':
@@ -452,6 +454,7 @@ def _rank_genes_groups_plot(
                 groupby,
                 dot_color_df=values_df,
                 return_fig=True,
+                gene_symbols=gene_symbols,
                 **kwds,
             )
             if title is not None and 'colorbar_title' not in kwds:
@@ -460,7 +463,13 @@ def _rank_genes_groups_plot(
             from .._matrixplot import matrixplot
 
             _pl = matrixplot(
-                adata, var_names, groupby, values_df=values_df, return_fig=True, **kwds
+                adata,
+                var_names,
+                groupby,
+                values_df=values_df,
+                return_fig=True,
+                gene_symbols=gene_symbols,
+                **kwds,
             )
 
             if title is not None and 'colorbar_title' not in kwds:
@@ -471,18 +480,40 @@ def _rank_genes_groups_plot(
     elif plot_type == 'stacked_violin':
         from .._stacked_violin import stacked_violin
 
-        _pl = stacked_violin(adata, var_names, groupby, return_fig=True, **kwds)
+        _pl = stacked_violin(
+            adata,
+            var_names,
+            groupby,
+            return_fig=True,
+            gene_symbols=gene_symbols,
+            **kwds,
+        )
         return _fig_show_save_or_axes(_pl, return_fig, show, save)
-
     elif plot_type == 'heatmap':
         from .._anndata import heatmap
 
-        return heatmap(adata, var_names, groupby, show=show, save=save, **kwds)
+        return heatmap(
+            adata,
+            var_names,
+            groupby,
+            show=show,
+            save=save,
+            gene_symbols=gene_symbols,
+            **kwds,
+        )
 
     elif plot_type == 'tracksplot':
         from .._anndata import tracksplot
 
-        return tracksplot(adata, var_names, groupby, show=show, save=save, **kwds)
+        return tracksplot(
+            adata,
+            var_names,
+            groupby,
+            show=show,
+            save=save,
+            gene_symbols=gene_symbols,
+            **kwds,
+        )
 
 
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
@@ -491,7 +522,8 @@ def rank_genes_groups_heatmap(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
-    gene_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
+    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
+    gene_symbols: Optional[str] = None,
     min_logfoldchange: Optional[float] = None,
     key: str = None,
     show: Optional[bool] = None,
@@ -514,7 +546,8 @@ def rank_genes_groups_heatmap(
         plot_type='heatmap',
         groups=groups,
         n_genes=n_genes,
-        gene_names=gene_names,
+        var_names=var_names,
+        gene_symbols=gene_symbols,
         groupby=groupby,
         key=key,
         min_logfoldchange=min_logfoldchange,
@@ -530,6 +563,8 @@ def rank_genes_groups_tracksplot(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
+    gene_symbols: Optional[str] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
@@ -553,6 +588,8 @@ def rank_genes_groups_tracksplot(
         plot_type='tracksplot',
         groups=groups,
         n_genes=n_genes,
+        var_names=var_names,
+        gene_symbols=gene_symbols,
         groupby=groupby,
         key=key,
         min_logfoldchange=min_logfoldchange,
@@ -582,7 +619,8 @@ def rank_genes_groups_dotplot(
             'log10_pvals_adj',
         ]
     ] = None,
-    gene_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
+    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
+    gene_symbols: Optional[str] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
@@ -632,7 +670,8 @@ def rank_genes_groups_dotplot(
         n_genes=n_genes,
         groupby=groupby,
         values_to_plot=values_to_plot,
-        gene_names=gene_names,
+        var_names=var_names,
+        gene_symbols=gene_symbols,
         key=key,
         min_logfoldchange=min_logfoldchange,
         show=show,
@@ -648,6 +687,8 @@ def rank_genes_groups_stacked_violin(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
+    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
+    gene_symbols: Optional[str] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
@@ -690,6 +731,8 @@ def rank_genes_groups_stacked_violin(
         plot_type='stacked_violin',
         groups=groups,
         n_genes=n_genes,
+        var_names=var_names,
+        gene_symbols=gene_symbols,
         groupby=groupby,
         key=key,
         min_logfoldchange=min_logfoldchange,
@@ -720,7 +763,8 @@ def rank_genes_groups_matrixplot(
             'log10_pvals_adj',
         ]
     ] = None,
-    gene_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
+    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
+    gene_symbols: Optional[str] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
@@ -770,7 +814,8 @@ def rank_genes_groups_matrixplot(
         n_genes=n_genes,
         groupby=groupby,
         values_to_plot=values_to_plot,
-        gene_names=gene_names,
+        var_names=var_names,
+        gene_symbols=gene_symbols,
         key=key,
         min_logfoldchange=min_logfoldchange,
         show=show,
@@ -1260,7 +1305,7 @@ def _get_values_to_plot(
 
     The dataframe index are the given groups and the columns are the gene_names
 
-    used by _rank_genes_groups_dotplot
+    used by rank_genes_groups_dotplot
 
     Parameters
     ----------
@@ -1291,7 +1336,7 @@ def _get_values_to_plot(
         for group in groups:
             df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
             if gene_symbols is not None:
-                df['names'] = df['symbol']
+                df['names'] = df[gene_symbols]
             # check that all genes are present as by default rank_genes_groups
             # only report the top 100 genes per category
             if not check_done:

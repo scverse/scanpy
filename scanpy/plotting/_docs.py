@@ -237,7 +237,7 @@ groups
     The groups for which to show the gene ranking.
 n_genes
     Number of genes to show. This can be a negative number to show for
-    example the down regulated genes. eg: num_genes=-10. Is ignored if 
+    example the down regulated genes. eg: num_genes=-10. Is ignored if
     `gene_names` is passed.
 groupby
     The key of the observation grouping to consider. By default,
@@ -257,11 +257,14 @@ values_to_plot
     The mean gene values are plotted by default. Alternatively, any other
     values computed by `sc.rank_genes_groups` can be plotted. For example
     log fold change or p-value.
-gene_names
-    Genes to plot. Sometimes is useful to pass a specific list of genes to check their
-    fold changes or p-values instead of the top/bottom genes. If a list of
-    genes is given, this overwrites the `n_genes` option. The gene_names
-    could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or 
+var_names
+    Genes to plot. Sometimes is useful to pass a specific list of var names (eg genes)
+    to check their  fold changes or p-values instead of the top/bottom genes. If a list
+    of genes is given, this overwrites the `n_genes` option. The gene_names
+    could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
     :func:`~scanpy.pl.matrixplot`\
-
+gene_symbols
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
+    refer to the index column of the `.var` DataFrame. Setting this option allows
+    alternative names to be used.
 """
