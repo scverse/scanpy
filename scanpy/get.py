@@ -37,9 +37,9 @@ def rank_genes_groups_df(
     key
         Key differential expression groups were stored under.
     pval_cutoff
-        Minimum adjusted pval to return.
+        Return only adjusted p-values below the  cutoff.
     log2fc_min
-        Minumum logfc to return.
+        Minimum logfc to return.
     log2fc_max
         Maximum logfc to return.
     gene_symbols
@@ -50,7 +50,7 @@ def rank_genes_groups_df(
     -------
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True, n_genes=pbmc.shape[1])
+    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True)
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
     """
     d = pd.DataFrame()
