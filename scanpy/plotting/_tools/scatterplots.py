@@ -1129,8 +1129,13 @@ def _color_vector(
     if not is_categorical_dtype(values):
         return values, False
     else:  # is_categorical_dtype(values)
-        color_map = _get_palette(adata, values_key, palette=palette)
-        color_vector = values.map(color_map).map(to_hex)
+        color_map = {
+            k: to_hex(v)
+            for k, v in _get_palette(adata, values_key, palette=palette).items()
+        }
+        # If color_map does not have unique values, this can be slow as the
+        # result is not categorical
+        color_vector = values.map(color_map)
 
         # Set color to 'missing color' for all missing values
         if color_vector.isna().any():
