@@ -402,10 +402,13 @@ def _rank_genes_groups_plot(
         var_names = {}
         var_names_list = []
         for group in group_names:
-            df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
-            if min_logfoldchange is not None:
-                # select genes with given log_fold change
-                df = df[df.logfoldchanges > min_logfoldchange]
+            df = rank_genes_groups_df(
+                adata,
+                group,
+                key=key,
+                gene_symbols=gene_symbols,
+                log2fc_min=min_logfoldchange,
+            )
 
             if gene_symbols is not None:
                 df['names'] = df[gene_symbols]
@@ -522,7 +525,6 @@ def rank_genes_groups_heatmap(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
-    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     gene_symbols: Optional[str] = None,
     min_logfoldchange: Optional[float] = None,
     key: str = None,
@@ -540,13 +542,19 @@ def rank_genes_groups_heatmap(
     **kwds
         Are passed to :func:`~scanpy.pl.heatmap`.
     {show_save_ax}
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
+    >>> sc.pl.rank_genes_groups_heatmap(adata)
     """
     return _rank_genes_groups_plot(
         adata,
         plot_type='heatmap',
         groups=groups,
         n_genes=n_genes,
-        var_names=var_names,
         gene_symbols=gene_symbols,
         groupby=groupby,
         key=key,
@@ -581,6 +589,13 @@ def rank_genes_groups_tracksplot(
     **kwds
         Are passed to :func:`~scanpy.pl.tracksplot`.
     {show_save_ax}
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
+    >>> sc.pl.rank_genes_groups_tracksplot(adata)
     """
 
     return _rank_genes_groups_plot(
@@ -588,7 +603,6 @@ def rank_genes_groups_tracksplot(
         plot_type='tracksplot',
         groups=groups,
         n_genes=n_genes,
-        var_names=var_names,
         gene_symbols=gene_symbols,
         groupby=groupby,
         key=key,
@@ -628,13 +642,19 @@ def rank_genes_groups_dotplot(
     return_fig: Optional[bool] = False,
     **kwds,
 ):
-    """\
+    r"""\
     Plot ranking of genes using dotplot plot (see :func:`~scanpy.pl.dotplot`)
 
     Parameters
     ----------
     {params}
     {vals_to_plot}
+    var_names
+        Genes to plot. Sometimes is useful to pass a specific list of var names (eg genes)
+        to check their  fold changes or p-values instead of the top/bottom genes. If a list
+        of genes is given, this overwrites the `n_genes` option. The gene_names
+        could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
+        :func:`~scanpy.pl.matrixplot`
     {show_save_ax}
     return_fig
         Returns :class:`DotPlot` object. Useful for fine-tuning
@@ -651,7 +671,7 @@ def rank_genes_groups_dotplot(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
 
     Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
     like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
@@ -659,6 +679,21 @@ def rank_genes_groups_dotplot(
     Also, only genes with a log fold change of 3 or more are shown.
     >>> sc.pl.rank_genes_groups_dotplot(adata,
     ... n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
+    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+
+    Also, the last genes can be plotted. This can be useful to identify genes
+    that are not expressed in a group. For this `n_genes=-4` is used
+    >>> sc.pl.rank_genes_groups_dotplot(adata,
+    ... n_genes=-4, values_to_plot="logfoldchanges", cmap='bwr',
+    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+
+    A list specific genes can be given to check their log fold change. If a
+    dictionary, the dictionary keys will be added as labels in the plot.
+    >>> var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
+    ...               'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
+    ...               'myeloid': ['CST3', 'LYZ'] }}
+    >>> sc.pl.rank_genes_groups_dotplot(adata,
+    ... var_names=var_names, values_to_plot="logfoldchanges", cmap='bwr',
     ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
     """
@@ -687,7 +722,6 @@ def rank_genes_groups_stacked_violin(
     groups: Union[str, Sequence[str]] = None,
     n_genes: int = 10,
     groupby: Optional[str] = None,
-    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     gene_symbols: Optional[str] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
@@ -719,7 +753,7 @@ def rank_genes_groups_stacked_violin(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
 
     >>> sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=4,
     ... min_logfoldchange=4, figsize=(8,6))
@@ -731,7 +765,6 @@ def rank_genes_groups_stacked_violin(
         plot_type='stacked_violin',
         groups=groups,
         n_genes=n_genes,
-        var_names=var_names,
         gene_symbols=gene_symbols,
         groupby=groupby,
         key=key,
@@ -779,6 +812,12 @@ def rank_genes_groups_matrixplot(
     ----------
     {params}
     {vals_to_plot}
+    var_names
+        Genes to plot. Sometimes is useful to pass a specific list of var names (eg genes)
+        to check their  fold changes or p-values instead of the top/bottom genes. If a list
+        of genes is given, this overwrites the `n_genes` option. The gene_names
+        could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
+        :func:`~scanpy.pl.matrixplot`
     {show_save_ax}
     return_fig
         Returns :class:`MatrixPlot` object. Useful for fine-tuning
@@ -795,14 +834,29 @@ def rank_genes_groups_matrixplot(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
 
     Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
     like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
     and maximum values to plot are set to -4 and 4 respectively.
     Also, only genes with a log fold change of 3 or more are shown.
-    >>> sc.pl.rank_genes_groups_dotplot(adata,
+    >>> sc.pl.rank_genes_groups_matrixplot(adata,
     ... n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
+    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+
+    Also, the last genes can be plotted. This can be useful to identify genes
+    that are not expressed in a group. For this `n_genes=-4` is used
+    >>> sc.pl.rank_genes_groups_matrixplot(adata,
+    ... n_genes=-4, values_to_plot="logfoldchanges", cmap='bwr',
+    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+
+    A list specific genes can be given to check their log fold change. If a
+    dictionary, the dictionary keys will be added as labels in the plot.
+    >>> var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
+    ...               'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
+    ...               'myeloid': ['CST3', 'LYZ'] }}
+    >>> sc.pl.rank_genes_groups_matrixplot(adata,
+    ... var_names=var_names, values_to_plot="logfoldchanges", cmap='bwr',
     ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
     """
@@ -1337,8 +1391,8 @@ def _get_values_to_plot(
             df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
             if gene_symbols is not None:
                 df['names'] = df[gene_symbols]
-            # check that all genes are present as by default rank_genes_groups
-            # only report the top 100 genes per category
+            # check that all genes are present in the df as sc.tl.rank_genes_groups
+            # can be called with only top genes
             if not check_done:
                 if df.shape[0] < adata.shape[1]:
                     message = (
