@@ -642,7 +642,7 @@ def rank_genes_groups_dotplot(
     return_fig: Optional[bool] = False,
     **kwds,
 ):
-    r"""\
+    """\
     Plot ranking of genes using dotplot plot (see :func:`~scanpy.pl.dotplot`)
 
     Parameters

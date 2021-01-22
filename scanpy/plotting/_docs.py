@@ -232,7 +232,7 @@ n_genes
 gene_symbols
     Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
     refer to the index column of the `.var` DataFrame. Setting this option allows
-    alternative names to be used.\
+    alternative names to be used.
 groupby
     The key of the observation grouping to consider. By default,
     the groupby is chosen from the rank genes groups parameter but
