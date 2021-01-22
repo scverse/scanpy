@@ -66,4 +66,5 @@ Version 1.7
 - Fixed bug where calling `set_figure_params` could block if IPython was installed, but not used. :pr:`1547` :smaller:`I Virshup`
 - :func:`~scanpy.pl.violin` no longer fails if `.raw` not present :pr:`1548` :smaller:`I Virshup`
 - :func:`~scanpy.pl.spatial` refactoring and better handling of spatial data :pr:`1512` :smaller:`G Palla`
-- :func:`scanpy.pp.pca` works with `chunked=True` again :pr:`1592` :smaller:`I Virshup`
+- :func:`~scanpy.pp.pca` works with `chunked=True` again :pr:`1592` :smaller:`I Virshup`
+- :func:`~scanpy.tl.ingest` now works with umap-learn 0.5.0 :pr:`1601` :smaller:`S Rybakov`
