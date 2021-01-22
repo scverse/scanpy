@@ -1800,7 +1800,6 @@ def _prepare_dataframe(
     if isinstance(var_names, str):
         var_names = [var_names]
 
-    orig_index_col = None
     groupby_index = None
     if groupby is not None:
         if isinstance(groupby, str):
@@ -1808,10 +1807,13 @@ def _prepare_dataframe(
             groupby = [groupby]
         for group in groupby:
             if group not in list(adata.obs_keys()) + [adata.obs.index.name]:
+                if adata.obs.index.name is not None:
+                    msg = f' or index name "{adata.obs.index.name}"'
+                else:
+                    msg = ''
                 raise ValueError(
                     'groupby has to be a valid observation. '
-                    f'Given {group}, is not in observations: {adata.obs_keys()} or '
-                    f'index name "{adata.obs.index.name}"'
+                    f'Given {group}, is not in observations: {adata.obs_keys()}' + msg
                 )
             if group in adata.obs.keys() and group == adata.obs.index.name:
                 raise ValueError(
@@ -1823,6 +1825,7 @@ def _prepare_dataframe(
     if groupby_index is not None:
         # obs_tidy contains adata.obs.index
         # and does not need to be given
+        groupby = groupby[:]  # copy to not modify user passed parameter
         groupby.remove(groupby_index)
     keys = list(groupby) + list(np.unique(var_names))
     obs_tidy = get.obs_df(
@@ -1836,22 +1839,20 @@ def _prepare_dataframe(
         groupby.append(groupby_index)
 
     if groupby is None:
-        groupby = ''
         categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
+    elif len(groupby) == 1 and is_numeric_dtype(obs_tidy[groupby[0]]):
+        # if the groupby column is not categorical, turn it into one
+        # by subdividing into  `num_categories` categories
+        categorical = pd.cut(obs_tidy[groupby[0]], num_categories)
     else:
-        if len(groupby) == 1 and is_numeric_dtype(obs_tidy[groupby[0]]):
-            # if the groupby column is not categorical, turn it into one
-            # by subdividing into  `num_categories` categories
-            categorical = pd.cut(obs_tidy[groupby[0]], num_categories)
-        else:
-            categorical = obs_tidy[groupby[0]].astype('category')
-            if len(groupby) > 1:
-                for group in groupby[1:]:
-                    # create new category by merging the given groupby categories
-                    categorical = (
-                        categorical.astype(str) + "_" + obs_tidy[group].astype(str)
-                    ).astype('category')
-            categorical.name = "_".join(groupby)
+        categorical = obs_tidy[groupby[0]].astype('category')
+        if len(groupby) > 1:
+            for group in groupby[1:]:
+                # create new category by merging the given groupby categories
+                categorical = (
+                    categorical.astype(str) + "_" + obs_tidy[group].astype(str)
+                ).astype('category')
+        categorical.name = "_".join(groupby)
     obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
 
