@@ -24,6 +24,8 @@ News
 ----
 
 .. include:: news.rst
+   :start-line: 2
+   :end-line: 22
 
 
 Latest additions
@@ -44,5 +46,7 @@ Latest additions
    external/index
    ecosystem
    release-notes
+   news   
+   dev/index
    contributors
    references

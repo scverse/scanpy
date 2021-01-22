@@ -72,8 +72,7 @@ legend_fontoutline
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
-    the same as in adata.obs. If `img_key` not `None`, size is the scaling factor
-    for the spot size.
+    the same as in adata.obs.
 color_map
     Color map to use for continous variables. Can be a name or a
     :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
@@ -101,14 +100,6 @@ frameon
 title
     Provide title for panels either as string or list of strings,
     e.g. `['title1', 'title2', ...]`.
-img_key
-    Key for image data, stored in `adata.uns`.
-crop_coord
-    Coordinates to use for cropping the image (left, right, top, bottom).
-alpha_img
-    Alpha value for image.
-bw
-    Plot Image in gray scale.\
 """
 
 doc_vminmax = """\
@@ -172,7 +163,6 @@ save
 ax
     A matplotlib axes object. Only works if plotting a single component.\
 """
-
 
 doc_common_plot_args = """\
 adata
@@ -239,6 +229,10 @@ n_genes
     Number of genes to show. This can be a negative number to show for
     example the down regulated genes. eg: num_genes=-10. Is ignored if
     `gene_names` is passed.
+gene_symbols
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
+    refer to the index column of the `.var` DataFrame. Setting this option allows
+    alternative names to be used.\
 groupby
     The key of the observation grouping to consider. By default,
     the groupby is chosen from the rank genes groups parameter but
@@ -257,8 +251,39 @@ values_to_plot
     The mean gene values are plotted by default. Alternatively, any other
     values computed by `sc.rank_genes_groups` can be plotted. For example
     log fold change or p-value.
-gene_symbols
-    Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
-    refer to the index column of the `.var` DataFrame. Setting this option allows
-    alternative names to be used.
+var_names
+    Genes to plot. Sometimes is useful to pass a specific list of var names (eg genes)
+    to check their  fold changes or p-values instead of the top/bottom genes. If a list
+    of genes is given, this overwrites the `n_genes` option. The gene_names
+    could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
+    :func:`~scanpy.pl.matrixplot`\
+"""
+
+doc_scatter_spatial = """\
+library_id
+    library_id for Visium data, e.g. key in `adata.uns["spatial"]`.
+img_key
+    Key for image data, used to get `img` and `scale_factor` from `"images"`
+    and `"scalefactors"` entires for this library. To use spatial coordinates,
+    but not plot an image, pass `img_key=None`.
+img
+    image data to plot, overrides `img_key`.
+scale_factor
+    Scaling factor used to map from coordinate space to pixel space.
+    Found by default if `library_id` and `img_key` can be resolved.
+    Otherwise defaults to `1.`.
+spot_size
+    Diameter of spot (in coordinate space) for each point. Diameter
+    in pixels of the spots will be `size * spot_size * scale_factor`.
+    This argument is required if it cannot be resolved from library info.
+crop_coord
+    Coordinates to use for cropping the image (left, right, top, bottom).
+    These coordinates are expected to be in pixel space (same as `basis`)
+    and will be transformed by `scale_factor`.
+    If not provided, image is automatically cropped to bounds of `basis`,
+    plus a border.
+alpha_img
+    Alpha value for image.
+bw
+    Plot image data in gray scale.\
 """

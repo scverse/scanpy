@@ -23,7 +23,7 @@ from matplotlib.colors import is_color_like, Colormap, ListedColormap
 from .. import get
 from .. import logging as logg
 from .._settings import settings
-from .._utils import sanitize_anndata, _doc_params
+from .._utils import sanitize_anndata, _doc_params, _check_use_raw
 from .._compat import Literal
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes
@@ -101,7 +101,7 @@ def scatter(
         or a hex color specification, e.g.,
         `'ann1'`, `'#fe57a1'`, or `['ann1', 'ann2']`.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     layers
         Use the `layers` attribute of `adata` if present: specify the layer for
         `x`, `y` and `color`. If `layers` is a string, then it is expanded to
@@ -177,8 +177,7 @@ def _scatter_obs(
     sanitize_anndata(adata)
     from scipy.sparse import issparse
 
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
+    use_raw = _check_use_raw(adata, use_raw)
 
     # Process layers
     if layers in ['X', None] or (
@@ -647,7 +646,7 @@ def violin(
     log
         Plot on logarithmic axis.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     stripplot
         Add a stripplot on top of the violin plot.
         See :func:`~seaborn.stripplot`.
@@ -689,8 +688,7 @@ def violin(
     import seaborn as sns  # Slow import, only import if called
 
     sanitize_anndata(adata)
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
+    use_raw = _check_use_raw(adata, use_raw)
     if isinstance(keys, str):
         keys = [keys]
     keys = list(OrderedDict.fromkeys(keys))  # remove duplicates, preserving the order
@@ -848,7 +846,7 @@ def clustermap(
         Categorical annotation to plot with a different color map.
         Currently, only a single key is supported.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     {show_save_ax}
     **kwds
         Keyword arguments passed to :func:`~seaborn.clustermap`.
@@ -871,8 +869,7 @@ def clustermap(
     if not isinstance(obs_keys, (str, type(None))):
         raise ValueError('Currently, only a single key is supported.')
     sanitize_anndata(adata)
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
+    use_raw = _check_use_raw(adata, use_raw)
     X = adata.raw.X if use_raw else adata.X
     if issparse(X):
         X = X.toarray()
@@ -960,9 +957,6 @@ def heatmap(
     --------
     rank_genes_groups_heatmap: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
-
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
     )
@@ -977,6 +971,13 @@ def heatmap(
         gene_symbols=gene_symbols,
         layer=layer,
     )
+
+    # check if var_group_labels are a subset of categories:
+    if var_group_labels is not None:
+        if set(var_group_labels).issubset(categories):
+            var_groups_subset_of_groupby = True
+        else:
+            var_groups_subset_of_groupby = False
 
     if standard_scale == 'obs':
         obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
@@ -1107,13 +1108,18 @@ def heatmap(
             heatmap_ax.set_xticklabels(var_names, rotation=90)
         else:
             heatmap_ax.tick_params(axis='x', labelbottom=False, bottom=False)
-
         # plot colorbar
         _plot_colorbar(im, fig, axs[1, 3])
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+            (
+                label2code,
+                ticks,
+                labels,
+                groupby_cmap,
+                norm,
+            ) = _plot_categories_as_colorblocks(
                 groupby_ax, obs_tidy, colors=groupby_colors, orientation='left'
             )
 
@@ -1207,7 +1213,13 @@ def heatmap(
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+            (
+                label2code,
+                ticks,
+                labels,
+                groupby_cmap,
+                norm,
+            ) = _plot_categories_as_colorblocks(
                 groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom'
             )
             # add lines to main heatmap
@@ -1238,9 +1250,14 @@ def heatmap(
         if var_group_positions is not None and len(var_group_positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
-            for idx, pos in enumerate(var_group_positions):
-                arr += [idx] * (pos[1] + 1 - pos[0])
-
+            for idx, (label, pos) in enumerate(
+                zip(var_group_labels, var_group_positions)
+            ):
+                if var_groups_subset_of_groupby:
+                    label_code = label2code[label]
+                else:
+                    label_code = idx
+                arr += [label_code] * (pos[1] + 1 - pos[0])
             gene_groups_ax.imshow(
                 np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
             )
@@ -1469,7 +1486,7 @@ def tracksplot(
 
     groupby_ax = fig.add_subplot(axs2[1])
 
-    ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+    label2code, ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
         groupby_ax, obs_tidy.T, colors=groupby_colors, orientation='bottom'
     )
     # add lines to plot
@@ -1759,7 +1776,7 @@ def _prepare_dataframe(
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories`.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     log
         Use the log of the values
     num_categories
@@ -1776,8 +1793,7 @@ def _prepare_dataframe(
     from scipy.sparse import issparse
 
     sanitize_anndata(adata)
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
+    use_raw = _check_use_raw(adata, use_raw)
     if isinstance(var_names, str):
         var_names = [var_names]
 
@@ -2364,7 +2380,7 @@ def _plot_categories_as_colorblocks(
 
         groupby_ax.set_xlabel(groupby)
 
-    return ticks, labels, groupby_cmap, norm
+    return label2code, ticks, labels, groupby_cmap, norm
 
 
 def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):

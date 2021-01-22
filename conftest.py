@@ -1,5 +1,18 @@
 import pytest
 
+# In case pytest-nunit is not installed, defines a dummy fixture
+try:
+    import pytest_nunit
+except ModuleNotFoundError:
+
+    @pytest.fixture
+    def add_nunit_attachment(request):
+        def noop(file, description):
+            pass
+
+        return noop
+
+
 # Command line options for pytest must be added from conftest.py from where
 # `pytest` is called.
 def pytest_addoption(parser):

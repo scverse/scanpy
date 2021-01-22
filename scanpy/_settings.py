@@ -36,7 +36,6 @@ class Verbosity(IntEnum):
         # getLevelName(str) returns the int level…
         return getLevelName(_VERBOSITY_TO_LOGLEVEL[self])
 
-
     @contextmanager
     def override(self, verbosity: "Verbosity") -> ContextManager["Verbosity"]:
         """\
@@ -64,6 +63,7 @@ class ScanpyConfig:
     """\
     Config manager for scanpy.
     """
+
     def __init__(
         self,
         *,
@@ -142,8 +142,7 @@ class ScanpyConfig:
     @verbosity.setter
     def verbosity(self, verbosity: Union[Verbosity, int, str]):
         verbosity_str_options = [
-            v for v in _VERBOSITY_TO_LOGLEVEL
-            if isinstance(v, str)
+            v for v in _VERBOSITY_TO_LOGLEVEL if isinstance(v, str)
         ]
         if isinstance(verbosity, Verbosity):
             self._verbosity = verbosity
@@ -164,8 +163,7 @@ class ScanpyConfig:
 
     @property
     def plot_suffix(self) -> str:
-        """Global suffix that is appended to figure filenames.
-        """
+        """Global suffix that is appended to figure filenames."""
         return self._plot_suffix
 
     @plot_suffix.setter
@@ -384,11 +382,13 @@ class ScanpyConfig:
     # --------------------------------------------------------------------------------
 
     # Collected from the print_* functions in matplotlib.backends
+    # fmt: off
     _Format = Literal[
         'png', 'jpg', 'tif', 'tiff',
         'pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf',
         'raw', 'rgba',
     ]
+    # fmt: on
 
     def set_figure_params(
         self,
@@ -439,14 +439,15 @@ class ScanpyConfig:
             Only concerns the notebook/IPython environment; see
             :func:`~IPython.display.set_matplotlib_formats` for details.
         """
-        try:
+        if self._is_run_from_ipython():
             import IPython
+
             if isinstance(ipython_format, str):
                 ipython_format = [ipython_format]
             IPython.display.set_matplotlib_formats(*ipython_format)
-        except Exception:
-            pass
+
         from matplotlib import rcParams
+
         self._vector_friendly = vector_friendly
         self.file_format_figs = format
         if dpi is not None:
@@ -460,6 +461,7 @@ class ScanpyConfig:
             rcParams['axes.facecolor'] = facecolor
         if scanpy:
             from .plotting._rcmod import set_rcParams_scanpy
+
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
         if figsize is not None:
             rcParams['figure.figsize'] = figsize
@@ -467,15 +469,9 @@ class ScanpyConfig:
 
     @staticmethod
     def _is_run_from_ipython():
-        """Determines whether run from Ipython.
-
-        Only affects progress bars.
-        """
-        try:
-            __IPYTHON__
-            return True
-        except NameError:
-            return False
+        """Determines whether we're currently in IPython."""
+        # https://stackoverflow.com/questions/40638507/testing-for-presence-of-ipython
+        return hasattr(__builtins__, "__IPYTHON__")
 
     def __str__(self) -> str:
         return '\n'.join(

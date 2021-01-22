@@ -649,12 +649,6 @@ def rank_genes_groups_dotplot(
     ----------
     {params}
     {vals_to_plot}
-    var_names
-        Genes to plot. Sometimes is useful to pass a specific list of var names (eg genes)
-        to check their  fold changes or p-values instead of the top/bottom genes. If a list
-        of genes is given, this overwrites the `n_genes` option. The gene_names
-        could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
-        :func:`~scanpy.pl.matrixplot`
     {show_save_ax}
     return_fig
         Returns :class:`DotPlot` object. Useful for fine-tuning
@@ -812,12 +806,6 @@ def rank_genes_groups_matrixplot(
     ----------
     {params}
     {vals_to_plot}
-    var_names
-        Genes to plot. Sometimes is useful to pass a specific list of var names (eg genes)
-        to check their  fold changes or p-values instead of the top/bottom genes. If a list
-        of genes is given, this overwrites the `n_genes` option. The gene_names
-        could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
-        :func:`~scanpy.pl.matrixplot`
     {show_save_ax}
     return_fig
         Returns :class:`MatrixPlot` object. Useful for fine-tuning

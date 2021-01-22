@@ -9,6 +9,7 @@ from scipy.sparse import issparse
 
 from .. import logging as logg
 from .._utils import AnyRandom
+from scanpy._utils import _check_use_raw
 
 
 def _sparse_nanmean(X, axis):
@@ -77,7 +78,7 @@ def score_genes(
     copy
         Copy `adata` or modify it inplace.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
 
         .. versionchanged:: 1.4.5
            Default value changed from `False` to `None`.
@@ -110,9 +111,7 @@ def score_genes(
     gene_list = set(gene_list_in_var[:])
 
     if len(gene_list) == 0:
-        logg.warning('provided gene list has length 0, scores as 0')
-        adata.obs[score_name] = 0
-        return adata if copy else None
+        raise ValueError("No valid genes were passed for scoring.")
 
     if gene_pool is None:
         gene_pool = list(var_names)
@@ -123,8 +122,7 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    if use_raw is None:
-        use_raw = True if adata.raw is not None else False
+    use_raw = _check_use_raw(adata, use_raw)
     _adata = adata.raw if use_raw else adata
 
     _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
@@ -164,21 +162,7 @@ def score_genes(
     else:
         X_control = np.nanmean(X_control, axis=1)
 
-    if len(gene_list) == 0:
-        # We shouldn't even get here, but just in case
-        logg.hint(
-            f'could not add \n'
-            f'    {score_name!r}, score of gene set (adata.obs)'
-        )
-        return adata if copy else None
-    elif len(gene_list) == 1:
-        if _adata[:, gene_list].X.ndim == 2:
-            vector = _adata[:, gene_list].X.toarray()[:, 0] # new anndata
-        else:
-            vector = _adata[:, gene_list].X  # old anndata
-        score = vector - X_control
-    else:
-        score = X_list - X_control
+    score = X_list - X_control
 
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 

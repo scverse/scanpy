@@ -79,6 +79,10 @@ References
    *Batch effects in single-cell RNA-sequencing data are corrected by matching mutual nearest neighbors*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.4091>`__.
 
+.. [Hie19] Hie *et al.* (2019),
+   *Efficient integration of heterogeneous single-cell transcriptomes using Scanorama*,
+   `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0113-3>`__.
+
 .. [Huber15] Huber *et al.* (2015),
    *Orchestrating high-throughput genomic analysis with Bioconductor*,
    `Nature Methods <https://doi.org/10.1038/nmeth.3252>`__.
@@ -248,6 +252,10 @@ References
    *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
    `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__,
    `bioRxiv <https://doi.org/10.1101/208819>`__.
+
+.. [Wolock19] Wolock *et al.* (2019),
+   *BBKNN: fast batch alignment of single cell transcriptomes*
+   `Cell Systems  <https://doi.org/10.1016/j.cels.2018.11.005>`__.
 
 .. [Zheng17] Zheng *et al.* (2017),
    *Massively parallel digital transcriptional profiling of single cells*,
