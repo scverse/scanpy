@@ -997,12 +997,17 @@ def heatmap(
     else:
         categorical = True
         # get categories colors
-        if groupby + "_colors" not in adata.uns:
-            # if colors are not found, assign a new palette
-            # and save it using the same code for embeddings
-            from ._tools.scatterplots import _get_palette
-            _get_palette(adata, groupby)
-        groupby_colors = adata.uns[groupby + "_colors"]
+        if is_categorical_dtype(adata.obs[groupby]):
+            if groupby + "_colors" not in adata.uns:
+                # if colors are not found, assign a new palette
+                # and save it using the same code for embeddings
+                from ._tools.scatterplots import _get_palette
+                _get_palette(adata, groupby)
+            groupby_colors = adata.uns[groupby + "_colors"]
+        else:
+            # this case happen when adata.obs[groupby] is numeric
+            # the values are converted into a category on the fly
+            groupby_colors = None
 
     if dendrogram:
         dendro_data = _reorder_categories_after_dendrogram(
@@ -1050,8 +1055,9 @@ def heatmap(
 
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
-        # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
-        # second row is for main content. This second row is divided into three axes:
+        # first row is for 'brackets' (if no brackets needed, the height of this row
+        # is zero) second row is for main content. This second row is divided into
+        # three axes:
         #   first ax is for the categories defined by `groupby`
         #   second ax is for the heatmap
         #   third ax is for the dendrogram
@@ -1103,7 +1109,6 @@ def heatmap(
         heatmap_ax.set_ylabel('')
         heatmap_ax.grid(False)
 
-        # sns.heatmap(obs_tidy, yticklabels="auto", ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
         if show_gene_labels:
             heatmap_ax.tick_params(axis='x', labelsize='small')
             heatmap_ax.set_xticks(np.arange(len(var_names)))
@@ -1131,7 +1136,7 @@ def heatmap(
             )
             heatmap_ax.hlines(
                 line_positions,
-                -0.73,
+                -0.5,
                 len(var_names) - 0.5,
                 lw=1,
                 color='black',
@@ -1232,7 +1237,7 @@ def heatmap(
             heatmap_ax.vlines(
                 line_positions,
                 -0.5,
-                len(var_names) + 0.35,
+                len(var_names) -0.5,
                 lw=1,
                 color='black',
                 zorder=10,
