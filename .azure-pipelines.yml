@@ -87,8 +87,8 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install setuptools twine pytoml
-    displayName: 'Install dependencies'
+      pip install setuptools setuptools_scm pytoml wheel twine
+    displayName: 'Install build dependencies'
 
   - script: pip list
     displayName: 'Display installed versions'
