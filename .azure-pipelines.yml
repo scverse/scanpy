@@ -75,13 +75,25 @@ jobs:
       testResultsFormat: NUnit
       testRunTitle: 'Publish test results for Python $(python.version)'
 
-  - script: |
-      rst2html.py --halt=2 README.rst >/dev/null
-    displayName: 'rst2html'
+- job: CheckBuild
+  pool:
+    vmImage: 'ubuntu-18.04'
+  steps:
+
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.8'
+    displayName: 'Use Python 3.8'
 
   - script: |
+      python -m pip install --upgrade pip
       pip install setuptools twine
+    displayName: 'Install dependencies'
+
+  - script: pip list
+    displayName: 'Display installed versions'
+
+  - script: |
       python setup.py sdist bdist_wheel
       twine check dist/*
-    condition: in(variables['python.version'], '3.8')
-    displayName: 'Twine check'
+    displayName: 'Build & Twine check'
