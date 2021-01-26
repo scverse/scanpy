@@ -1845,7 +1845,7 @@ def _prepare_dataframe(
         # by subdividing into  `num_categories` categories
         categorical = pd.cut(obs_tidy[groupby[0]], num_categories)
     elif len(groupby) == 1:
-        categorical = obs_tidy[groupby[0]]
+        categorical = obs_tidy[groupby[0]].astype('category')
         categorical.name = groupby[0]
     else:
         # join the groupby values  using "_" to make a new 'category'
