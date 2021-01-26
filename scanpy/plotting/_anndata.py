@@ -1825,7 +1825,7 @@ def _prepare_dataframe(
     if groupby_index is not None:
         # obs_tidy contains adata.obs.index
         # and does not need to be given
-        groupby = groupby[:]  # copy to not modify user passed parameter
+        groupby = groupby.copy()  # copy to not modify user passed parameter
         groupby.remove(groupby_index)
     keys = list(groupby) + list(np.unique(var_names))
     obs_tidy = get.obs_df(
@@ -1844,15 +1844,14 @@ def _prepare_dataframe(
         # if the groupby column is not categorical, turn it into one
         # by subdividing into  `num_categories` categories
         categorical = pd.cut(obs_tidy[groupby[0]], num_categories)
+    elif len(groupby) == 1:
+        categorical = obs_tidy[groupby[0]]
+        categorical.name = groupby[0]
     else:
-        categorical = obs_tidy[groupby[0]].astype('category')
-        if len(groupby) > 1:
-            for group in groupby[1:]:
-                # create new category by merging the given groupby categories
-                categorical = (
-                    categorical.astype(str) + "_" + obs_tidy[group].astype(str)
-                ).astype('category')
+        # join the groupby values  using "_" to make a new 'category'
+        categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
         categorical.name = "_".join(groupby)
+
     obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
 

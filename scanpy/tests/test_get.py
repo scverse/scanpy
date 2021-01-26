@@ -114,6 +114,15 @@ def test_obs_df(adata):
         sc.get.obs_df(adata, keys=["gene1"], use_raw=True, layer="double")
     assert all(badkey_err.match(k) for k in badkeys)
 
+    # test non unique index
+    adata = sc.AnnData(
+        np.arange(16).reshape(4, 4),
+        obs=pd.DataFrame(index=["a", "a", "b", "c"]),
+        var=pd.DataFrame(index=[f"gene{i}" for i in range(4)]),
+    )
+    df = sc.get.obs_df(adata, ["gene1"])
+    pd.testing.assert_index_equal(df.index, adata.obs_names)
+
 
 def test_backed_vs_memory():
     "compares backed vs. memory"
