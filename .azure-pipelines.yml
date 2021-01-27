@@ -11,12 +11,12 @@ jobs:
     vmImage: 'ubuntu-18.04'
   strategy:
     matrix:
-      Python37:
-        python.version: '3.7'
+      Python38:
+        python.version: '3.8'
       Python36:
         python.version: '3.6'
       anndata_dev:
-        python.version: '3.7'
+        python.version: '3.8'
         ANNDATA_DEV: yes
         RUN_COVERAGE: yes
   steps:
@@ -75,7 +75,25 @@ jobs:
       testResultsFormat: NUnit
       testRunTitle: 'Publish test results for Python $(python.version)'
 
+- job: CheckBuild
+  pool:
+    vmImage: 'ubuntu-18.04'
+  steps:
+
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.8'
+    displayName: 'Use Python 3.8'
+
   - script: |
-      python setup.py check --restructuredtext --strict
-      rst2html.py --halt=2 README.rst >/dev/null
-    displayName: 'rst2html'
+      python -m pip install --upgrade pip
+      pip install setuptools setuptools_scm pytoml wheel twine
+    displayName: 'Install build dependencies'
+
+  - script: pip list
+    displayName: 'Display installed versions'
+
+  - script: |
+      python setup.py sdist bdist_wheel
+      twine check dist/*
+    displayName: 'Build & Twine check'
