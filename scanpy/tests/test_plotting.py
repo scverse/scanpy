@@ -125,6 +125,23 @@ def test_heatmap(image_comparer):
     )
     save_and_compare_images('master_heatmap_var_as_dict')
 
+    # test that plot elements are well aligned
+    # small
+    a = AnnData(
+        np.array([[0, 0.3, 0.5], [1, 1.3, 1.5], [2, 2.3, 2.5]]),
+        obs={"foo": 'a b c'.split()},
+        var=pd.DataFrame({"genes": 'g1 g2 g3'.split()}).set_index('genes'),
+    )
+    a.obs['foo'] = a.obs['foo'].astype('category')
+    sc.pl.heatmap(
+        a, var_names=a.var_names, groupby='foo', swap_axes=True, figsize=(4, 4)
+    )
+    save_and_compare_images('master_heatmap_small_swap_alignment')
+
+    sc.pl.heatmap(
+        a, var_names=a.var_names, groupby='foo', swap_axes=False, figsize=(4, 4)
+    )
+    save_and_compare_images('master_heatmap_small_alignment')
 
 @pytest.mark.skipif(
     pkg_version("matplotlib") < version.parse('3.1'),
