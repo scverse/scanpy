@@ -37,8 +37,7 @@ neighbors_key
     If specified, this looks
     .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
 arrows
-    Show arrows (requires to run :func:`scvelo.tl.velocity_embedding` before).
-    Deprecated in favor of :func:`scvelo.pl.velocity_embedding` and friends.
+    Show arrows (deprecated in favour of `scvelo.pl.velocity_embedding`).
 arrows_kwds
     Passed to :meth:`~matplotlib.axes.Axes.quiver`\
 """
