@@ -997,7 +997,12 @@ def heatmap(
     else:
         categorical = True
         # get categories colors
-        if is_categorical_dtype(adata.obs[groupby]):
+        if isinstance(groupby, str) and is_categorical_dtype(adata.obs[groupby]):
+            # saved category colors only work when groupby is valid adata.obs
+            # categorical column. When groupby is a numerical column
+            # or when groupby is a list of columns the colors are assigned on the fly,
+            # which may create inconsistencies in multiple runs that require sorting
+            # of the categories (eg. when dendrogram is plotted).
             if groupby + "_colors" not in adata.uns:
                 # if colors are not found, assign a new palette
                 # and save it using the same code for embeddings
