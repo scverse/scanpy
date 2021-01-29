@@ -211,6 +211,15 @@ def test_var_df(adata):
         ),
     )
 
+    # test handling of duplicated keys (in this case repeated cell names)
+    pd.testing.assert_frame_equal(
+        sc.get.var_df(adata, keys=["cell1", "cell2", "cell2", "cell1"]),
+        pd.DataFrame(
+            {"cell1": [1, 1], "cell2": [1, 1]},
+            index=adata.var_names,
+        )[["cell1", "cell2", "cell2", "cell1"]],
+    )
+
     badkeys = ["badkey1", "badkey2"]
     with pytest.raises(KeyError) as badkey_err:
         sc.get.var_df(adata, keys=badkeys)

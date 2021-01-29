@@ -279,7 +279,10 @@ def var_df(
     obs_names = []
     var_names = []
     not_found = []
-    for key in keys:
+
+    # use only unique keys, otherwise duplicated keys will
+    # further duplicate when reordering the keys later in the function
+    for key in np.unique(keys):
         if key in adata.obs_names:
             obs_names.append(key)
         elif key in adata.var.columns:
@@ -311,11 +314,14 @@ def var_df(
         if issparse(matrix):
             matrix = matrix.toarray()
 
-        df = df.join(pd.DataFrame(matrix.T, columns=obs_names, index=adata.var.index))
+        df = pd.concat(
+            [df, pd.DataFrame(matrix.T, columns=obs_names, index=adata.var.index)],
+            axis=1,
+        )
 
     # add obs values
     if len(var_names) > 0:
-        df = df.join(adata.var[var_names])
+        df = pd.concat([df, adata.var[var_names]], axis=1)
 
     # reorder columns to given order
     df = df[keys]
