@@ -124,6 +124,50 @@ def test_obs_df(adata):
     pd.testing.assert_index_equal(df.index, adata.obs_names)
 
 
+def test_non_unique_cols_value_error():
+    M, N = 5, 3
+    adata = sc.AnnData(
+        X=np.zeros((M, N)),
+        obs=pd.DataFrame(
+            np.arange(M * 2).reshape((M, 2)),
+            columns=["repeated_col", "repeated_col"],
+            index=[f"cell_{i}" for i in range(M)],
+        ),
+        var=pd.DataFrame(
+            index=[f"gene_{i}" for i in range(N)],
+        ),
+    )
+    with pytest.raises(ValueError):
+        sc.get.obs_df(adata, ["repeated_col"])
+
+
+def test_non_unique_var_index_value_error():
+    adata = sc.AnnData(
+        X=np.ones((2, 3)),
+        obs=pd.DataFrame(index=["cell-0", "cell-1"]),
+        var=pd.DataFrame(index=["gene-0", "gene-0", "gene-1"]),
+    )
+    with pytest.raises(ValueError):
+        sc.get.obs_df(adata, ["gene-0"])
+
+
+def test_keys_in_both_obs_and_var_index_value_error():
+    M, N = 5, 3
+    adata = sc.AnnData(
+        X=np.zeros((M, N)),
+        obs=pd.DataFrame(
+            np.arange(M),
+            columns=["var_id"],
+            index=[f"cell_{i}" for i in range(M)],
+        ),
+        var=pd.DataFrame(
+            index=["var_id"] + [f"gene_{i}" for i in range(N - 1)],
+        ),
+    )
+    with pytest.raises(ValueError):
+        sc.get.obs_df(adata, ["var_id"])
+
+
 def test_backed_vs_memory():
     "compares backed vs. memory"
     from pathlib import Path
