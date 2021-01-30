@@ -168,15 +168,34 @@ def obs_df(
     var_symbol = []
     not_found = []
 
+    # check that adata.obs does not contain duplicated columns
+    # if duplicated columns names are present, they will
+    # be further duplicated when selecting them.
+    if not adata.obs.columns.is_unique:
+        dup_obs = adata.obs.columns[adata.obs.columns.duplicated()].tolist()
+        raise ValueError(
+            "adata.obs contains duplicated columns. Please rename or remove "
+            "these columns first.\n`"
+            f"Duplicated columns {dup_obs}"
+        )
+
+    # check that adata.var does not contain duplicated indices
+    # If duplicated indices are present the selection of var by numeric
+    # index
+    if not adata.var.index.is_unique:
+        raise ValueError(
+            "adata.var contains duplicated var names\n"
+            "Please rename these var names first for example using "
+            "`adata.var_names_make_unique()`"
+        )
     # use only unique keys, otherwise duplicated keys will
     # further duplicate when reordering the keys later in the function
     for key in np.unique(keys):
         if key in adata.obs.columns:
             obs_names.append(key)
             if key in gene_names.index:
-                warnings.warn(
+                raise ValueError(
                     f'The key `{key}` is found in both adata.obs and adata.var_names.'
-                    'Only the adata.obs key will be used.'
                 )
         elif key in gene_names.index:
             var_names.append(gene_names[key])
