@@ -621,7 +621,7 @@ def rank_genes_groups_tracksplot(
 def rank_genes_groups_dotplot(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
-    n_genes: int = 10,
+    n_genes: Optional[int] = None,
     groupby: Optional[str] = None,
     values_to_plot: Optional[
         Literal[
@@ -691,6 +691,16 @@ def rank_genes_groups_dotplot(
     ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
     """
+
+    if var_names is not None and n_genes is not None:
+        raise ValueError(
+            "The arguments n_genes and var_names are mutually exclusive. Please "
+            "select only one."
+        )
+
+    if var_names is None and n_genes is None:
+        # set n_genes = 10 as default when none of the options is given
+        n_genes = 10
 
     return _rank_genes_groups_plot(
         adata,
@@ -778,7 +788,7 @@ def rank_genes_groups_stacked_violin(
 def rank_genes_groups_matrixplot(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
-    n_genes: int = 10,
+    n_genes: Optional[int] = None,
     groupby: Optional[str] = None,
     values_to_plot: Optional[
         Literal[
@@ -848,6 +858,16 @@ def rank_genes_groups_matrixplot(
     ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
     """
+
+    if var_names is not None and n_genes is not None:
+        raise ValueError(
+            "The arguments n_genes and var_names are mutually exclusive. Please "
+            "select only one."
+        )
+
+    if var_names is None and n_genes is None:
+        # set n_genes = 10 as default when none of the options is given
+        n_genes = 10
 
     return _rank_genes_groups_plot(
         adata,
@@ -1368,6 +1388,19 @@ def _get_values_to_plot(
     pandas DataFrame index=groups, columns=gene_names
 
     """
+    valid_options = [
+        'scores',
+        'logfoldchanges',
+        'pvals',
+        'pvals_adj',
+        'log10_pvals',
+        'log10_pvals_adj',
+    ]
+    if values_to_plot not in valid_options:
+        raise ValueError(
+            f"given value_to_plot: '{values_to_plot}' is not valid. Valid options are {valid_options}"
+        )
+
     values_df = None
     check_done = False
     if groups is None:

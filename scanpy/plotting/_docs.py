@@ -248,15 +248,15 @@ key
 
 doc_rank_genes_groups_values_to_plot = """\
 values_to_plot
-    The mean gene values are plotted by default. Alternatively, any other
-    values computed by `sc.rank_genes_groups` can be plotted. For example
-    log fold change or p-value.
+    Instead of the mean gene value, plot the values computed by `sc.rank_genes_groups`.
+    The options are: ['scores', 'logfoldchanges', 'pvals', 'pvals_adj',
+    'log10_pvals', 'log10_pvals_adj']. When plotting logfoldchanges a divergent
+    colormap is recommended. See examples below.
 var_names
-    Genes to plot. Sometimes is useful to pass a specific list of var names (eg genes)
-    to check their  fold changes or p-values instead of the top/bottom genes. If a list
-    of genes is given, this overwrites the `n_genes` option. The gene_names
-    could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
-    :func:`~scanpy.pl.matrixplot`\
+    Genes to plot. Sometimes is useful to pass a specific list of var names (e.g. genes)
+    to check their fold changes or p-values, instead of the top/bottom genes. The
+    var_names could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
+    :func:`~scanpy.pl.matrixplot`. See examples below.\
 """
 
 doc_scatter_spatial = """\
