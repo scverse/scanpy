@@ -143,6 +143,7 @@ def test_heatmap(image_comparer):
     )
     save_and_compare_images('master_heatmap_small_alignment')
 
+
 @pytest.mark.skipif(
     pkg_version("matplotlib") < version.parse('3.1'),
     reason="https://github.com/mwaskom/seaborn/issues/1953",
