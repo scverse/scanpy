@@ -1007,6 +1007,7 @@ def heatmap(
                 # if colors are not found, assign a new palette
                 # and save it using the same code for embeddings
                 from ._tools.scatterplots import _get_palette
+
                 _get_palette(adata, groupby)
             groupby_colors = adata.uns[groupby + "_colors"]
         else:
@@ -1212,7 +1213,7 @@ def heatmap(
 
         kwds.setdefault('interpolation', 'nearest')
         im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
-        heatmap_ax.set_xlim(0 - 0.5, obs_tidy.shape[0] -0.5)
+        heatmap_ax.set_xlim(0 - 0.5, obs_tidy.shape[0] - 0.5)
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
         heatmap_ax.set_xlabel('')
@@ -1242,7 +1243,7 @@ def heatmap(
             heatmap_ax.vlines(
                 line_positions,
                 -0.5,
-                len(var_names) -0.5,
+                len(var_names) - 0.5,
                 lw=1,
                 color='black',
                 zorder=10,
