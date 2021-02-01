@@ -164,8 +164,32 @@ def test_keys_in_both_obs_and_var_index_value_error():
             index=["var_id"] + [f"gene_{i}" for i in range(N - 1)],
         ),
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError, match="var_id"):
         sc.get.obs_df(adata, ["var_id"])
+
+
+def test_repeated_gene_symbols():
+    """
+    Gene symbols column allows repeats, but we can't unambiguously get data for these values.
+    """
+    gene_symbols = [f"symbol_{i}" for i in ["a", "b", "b", "c"]]
+    var_names = pd.Index([f"id_{i}" for i in ["a", "b.1", "b.2", "c"]])
+    adata = sc.AnnData(
+        np.arange(3 * 4).reshape((3, 4)),
+        var=pd.DataFrame({"gene_symbols": gene_symbols}, index=var_names),
+    )
+
+    with pytest.raises(KeyError, match="symbol_b"):
+        sc.get.obs_df(adata, ["symbol_b"], gene_symbols="gene_symbols")
+
+    expected = pd.DataFrame(
+        np.arange(3 * 4).reshape((3, 4))[:, [0, 3]].astype(np.float32),
+        index=adata.obs_names,
+        columns=["symbol_a", "symbol_c"],
+    )
+    result = sc.get.obs_df(adata, ["symbol_a", "symbol_c"], gene_symbols="gene_symbols")
+
+    pd.testing.assert_frame_equal(expected, result)
 
 
 def test_backed_vs_memory():

@@ -182,7 +182,7 @@ def obs_df(
     # check that adata.var does not contain duplicated indices
     # If duplicated indices are present the selection of var by numeric
     # index
-    if not adata.var.index.is_unique:
+    if not adata.var_names.is_unique:
         raise ValueError(
             "adata.var contains duplicated var names\n"
             "Please rename these var names first for example using "
@@ -194,11 +194,19 @@ def obs_df(
         if key in adata.obs.columns:
             obs_names.append(key)
             if key in gene_names.index:
-                raise ValueError(
+                raise KeyError(
                     f'The key `{key}` is found in both adata.obs and adata.var_names.'
                 )
         elif key in gene_names.index:
-            var_names.append(gene_names[key])
+            val = gene_names[key]
+            if isinstance(val, pd.Series):
+                # while var_names must be unique, adata.var[gene_symbols] does not
+                # It's still ambiguous to refer to a duplicated entry though.
+                assert gene_symbols is not None
+                raise KeyError(
+                    f"Found duplicate entries for '{key}' in adata.var['{gene_symbols}']."
+                )
+            var_names.append(val)
             var_symbol.append(key)
         else:
             not_found.append(key)
