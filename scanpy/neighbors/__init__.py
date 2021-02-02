@@ -139,6 +139,7 @@ def neighbors(
     neighbors_dict['distances_key'] = dists_key
 
     neighbors_dict['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
+    neighbors_dict['params']['random_state'] = random_state
     neighbors_dict['params']['metric'] = metric
     if metric_kwds:
         neighbors_dict['params']['metric_kwds'] = metric_kwds
