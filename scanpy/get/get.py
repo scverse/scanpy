@@ -1,5 +1,5 @@
 """This module contains helper functions for accessing data."""
-from typing import Optional, Iterable, Tuple, Union
+from typing import Optional, Iterable, Tuple, Union, List
 
 import numpy as np
 import pandas as pd
@@ -93,6 +93,115 @@ def rank_genes_groups_df(
     return d.reset_index(drop=True)
 
 
+def _check_indices(
+    dim_df: pd.DataFrame,
+    alt_index: pd.Index,
+    dim: "Literal['obs', 'var']",
+    keys: List[str],
+    alias_index: Optional[pd.Index] = None,
+    use_raw: bool = False,
+) -> Tuple[List[str], List[str], List[str]]:
+    """Common logic for checking indices for obs_df and var_df."""
+    if use_raw:
+        alt_repr = "adata.raw"
+    else:
+        alt_repr = "adata"
+
+    alt_dim = ("obs", "var")[dim == "obs"]
+
+    alias_name = None
+    if alias_index is not None:
+        alt_names = pd.Series(alt_index, index=alias_index)
+        alias_name = alias_index.name
+        alt_search_repr = f"{alt_dim}['{alias_name}']"
+    else:
+        alt_names = pd.Series(alt_index, index=alt_index)
+        alt_search_repr = f"{alt_dim}_names"
+
+    col_keys = []
+    index_keys = []
+    index_aliases = []
+    not_found = []
+
+    # check that adata.obs does not contain duplicated columns
+    # if duplicated columns names are present, they will
+    # be further duplicated when selecting them.
+    if not dim_df.columns.is_unique:
+        dup_cols = dim_df.columns[dim_df.columns.duplicated()].tolist()
+        raise ValueError(
+            f"adata.{dim} contains duplicated columns. Please rename or remove "
+            "these columns first.\n`"
+            f"Duplicated columns {dup_cols}"
+        )
+
+    if not alt_index.is_unique:
+        raise ValueError(
+            f"{alt_repr}.{alt_dim}_names contains duplicated items\n"
+            f"Please rename these {alt_dim} names first for example using "
+            f"`adata.{alt_dim}_names_make_unique()`"
+        )
+
+    # use only unique keys, otherwise duplicated keys will
+    # further duplicate when reordering the keys later in the function
+    for key in np.unique(keys):
+        if key in dim_df.columns:
+            col_keys.append(key)
+            if key in alt_names.index:
+                raise KeyError(
+                    f"The key '{key}' is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
+                )
+        elif key in alt_names.index:
+            val = alt_names[key]
+            if isinstance(val, pd.Series):
+                # while var_names must be unique, adata.var[gene_symbols] does not
+                # It's still ambiguous to refer to a duplicated entry though.
+                assert alias_index is not None
+                raise KeyError(
+                    f"Found duplicate entries for '{key}' in {alt_repr}.{alt_search_repr}."
+                )
+            index_keys.append(val)
+            index_aliases.append(key)
+        else:
+            not_found.append(key)
+    if len(not_found) > 0:
+        raise KeyError(
+            f"Could not find keys '{not_found}' in columns of `adata.{dim}` or in"
+            f" {alt_repr}.{alt_search_repr}."
+        )
+
+    return col_keys, index_keys, index_aliases
+
+
+def _get_array_values(
+    X,
+    dim_names: pd.Index,
+    keys: List[str],
+    axis: "Literal[0, 1]",
+    backed: bool,
+):
+    # TODO: This should be made easier on the anndata side
+    mutable_idxer = [slice(None), slice(None)]
+    idx = dim_names.get_indexer(keys)
+
+    # for backed AnnData is important that the indices are ordered
+    if backed:
+        idx_order = np.argsort(idx)
+        rev_idxer = mutable_idxer.copy()
+        mutable_idxer[axis] = idx[idx_order]
+        rev_idxer[axis] = np.argsort(idx_order)
+        matrix = X[tuple(mutable_idxer)][tuple(rev_idxer)]
+    else:
+        mutable_idxer[axis] = idx
+        matrix = X[tuple(mutable_idxer)]
+
+    from scipy.sparse import issparse
+
+    if issparse(matrix):
+        matrix = matrix.toarray()
+
+    return matrix
+
+
 def obs_df(
     adata: AnnData,
     keys: Iterable[str] = (),
@@ -152,114 +261,43 @@ def obs_df(
         assert (
             layer is None
         ), "Cannot specify use_raw=True and a layer at the same time."
-        if gene_symbols is not None:
-            gene_names = pd.Series(
-                adata.raw.var_names, index=adata.raw.var[gene_symbols]
-            )
-        else:
-            gene_names = pd.Series(adata.raw.var_names, index=adata.raw.var_names)
+        var = adata.raw.var
     else:
-        if gene_symbols is not None:
-            gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
-        else:
-            gene_names = pd.Series(adata.var_names, index=adata.var_names)
-    obs_names = []
-    var_names = []
-    var_symbol = []
-    not_found = []
+        var = adata.var
+    if gene_symbols is not None:
+        alias_index = pd.Index(var[gene_symbols])
+    else:
+        alias_index = None
 
-    # check that adata.obs does not contain duplicated columns
-    # if duplicated columns names are present, they will
-    # be further duplicated when selecting them.
-    if not adata.obs.columns.is_unique:
-        dup_obs = adata.obs.columns[adata.obs.columns.duplicated()].tolist()
-        raise ValueError(
-            "adata.obs contains duplicated columns. Please rename or remove "
-            "these columns first.\n`"
-            f"Duplicated columns {dup_obs}"
-        )
-
-    # check that adata.var does not contain duplicated indices
-    # If duplicated indices are present the selection of var by numeric
-    # index
-    if not adata.var_names.is_unique:
-        raise ValueError(
-            "adata.var contains duplicated var names\n"
-            "Please rename these var names first for example using "
-            "`adata.var_names_make_unique()`"
-        )
-    # use only unique keys, otherwise duplicated keys will
-    # further duplicate when reordering the keys later in the function
-    for key in np.unique(keys):
-        if key in adata.obs.columns:
-            obs_names.append(key)
-            if key in gene_names.index:
-                raise KeyError(
-                    f'The key `{key}` is found in both adata.obs and adata.var_names.'
-                )
-        elif key in gene_names.index:
-            val = gene_names[key]
-            if isinstance(val, pd.Series):
-                # while var_names must be unique, adata.var[gene_symbols] does not
-                # It's still ambiguous to refer to a duplicated entry though.
-                assert gene_symbols is not None
-                raise KeyError(
-                    f"Found duplicate entries for '{key}' in adata.var['{gene_symbols}']."
-                )
-            var_names.append(val)
-            var_symbol.append(key)
-        else:
-            not_found.append(key)
-    if len(not_found) > 0:
-        if use_raw:
-            if gene_symbols is None:
-                gene_error = "`adata.raw.var_names`"
-            else:
-                gene_error = "gene_symbols column `adata.raw.var[{}].values`".format(
-                    gene_symbols
-                )
-        else:
-            if gene_symbols is None:
-                gene_error = "`adata.var_names`"
-            else:
-                gene_error = "gene_symbols column `adata.var[{}].values`".format(
-                    gene_symbols
-                )
-        raise KeyError(
-            f"Could not find keys '{not_found}' in columns of `adata.obs` or in"
-            f" {gene_error}."
-        )
+    obs_cols, var_idx_keys, var_symbols = _check_indices(
+        adata.obs,
+        var.index,
+        "obs",
+        keys,
+        alias_index=alias_index,
+        use_raw=use_raw,
+    )
 
     # Make df
-    df = pd.DataFrame(index=adata.obs.index)
+    df = pd.DataFrame(index=adata.obs_names)
 
     # add var values
-    if len(var_names) > 0:
-        X = _get_obs_rep(adata, layer=layer, use_raw=use_raw)
-        if use_raw:
-            var_idx = adata.raw.var_names.get_indexer(var_names)
-        else:
-            var_idx = adata.var_names.get_indexer(var_names)
-
-        # for backed AnnData is important that the indices are ordered
-        if adata.isbacked:
-            var_order = np.argsort(var_idx)
-            matrix = X[:, var_idx[var_order]][:, np.argsort(var_order)]
-        else:
-            matrix = X[:, var_idx]
-
-        from scipy.sparse import issparse
-
-        if issparse(matrix):
-            matrix = matrix.toarray()
+    if len(var_idx_keys) > 0:
+        matrix = _get_array_values(
+            _get_obs_rep(adata, layer=layer, use_raw=use_raw),
+            var.index,
+            var_idx_keys,
+            axis=1,
+            backed=adata.isbacked,
+        )
         df = pd.concat(
-            [df, pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index)],
+            [df, pd.DataFrame(matrix, columns=var_symbols, index=adata.obs_names)],
             axis=1,
         )
 
     # add obs values
-    if len(obs_names) > 0:
-        df = pd.concat([df, adata.obs[obs_names]], axis=1)
+    if len(obs_cols) > 0:
+        df = pd.concat([df, adata.obs[obs_cols]], axis=1)
 
     # reorder columns to given order (including duplicates keys if present)
     df = df[keys]
@@ -303,52 +341,27 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
-    obs_names = []
-    var_names = []
-    not_found = []
-
-    # use only unique keys, otherwise duplicated keys will
-    # further duplicate when reordering the keys later in the function
-    for key in np.unique(keys):
-        if key in adata.obs_names:
-            obs_names.append(key)
-        elif key in adata.var.columns:
-            var_names.append(key)
-        else:
-            not_found.append(key)
-    if len(not_found) > 0:
-        raise KeyError(
-            f"Could not find keys '{not_found}' in columns of `adata.var` or"
-            " in `adata.obs_names`."
-        )
+    var_cols, obs_idx_keys, _ = _check_indices(adata.var, adata.obs_names, "var", keys)
 
     # initialize df
     df = pd.DataFrame(index=adata.var.index)
 
-    # add obs values
-    if len(obs_names) > 0:
-        X = _get_obs_rep(adata, layer=layer)
-        obs_idx = adata.obs_names.get_indexer(obs_names)
-
-        # for backed AnnData is important that the indices are ordered
-        if adata.isbacked:
-            obs_order = np.argsort(obs_idx)
-            matrix = X[obs_idx[obs_order], :][np.argsort(obs_order)]
-        else:
-            matrix = X[obs_idx, :]
-        from scipy.sparse import issparse
-
-        if issparse(matrix):
-            matrix = matrix.toarray()
-
+    if len(obs_idx_keys) > 0:
+        matrix = _get_array_values(
+            _get_obs_rep(adata, layer=layer),
+            adata.obs_names,
+            obs_idx_keys,
+            axis=0,
+            backed=adata.isbacked,
+        ).T
         df = pd.concat(
-            [df, pd.DataFrame(matrix.T, columns=obs_names, index=adata.var.index)],
+            [df, pd.DataFrame(matrix, columns=obs_idx_keys, index=adata.var_names)],
             axis=1,
         )
 
     # add obs values
-    if len(var_names) > 0:
-        df = pd.concat([df, adata.var[var_names]], axis=1)
+    if len(var_cols) > 0:
+        df = pd.concat([df, adata.var[var_cols]], axis=1)
 
     # reorder columns to given order
     df = df[keys]
