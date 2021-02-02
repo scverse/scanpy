@@ -12,7 +12,7 @@ import pandas as pd
 from anndata import AnnData
 from cycler import Cycler
 from matplotlib.axes import Axes
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import is_categorical_dtype, is_numeric_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
@@ -1792,7 +1792,9 @@ def _prepare_dataframe(
     use_raw
         Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     log
-        Use the log of the values
+        Use the log of the values.
+    layer
+        AnnData layer to use. Takes precedence over `use_raw`
     num_categories
         Only used if groupby observation is not categorical. This value
         determines the number of groups into which the groupby observation
@@ -1804,89 +1806,71 @@ def _prepare_dataframe(
     -------
     Tuple of `pandas.DataFrame` and list of categories.
     """
-    from scipy.sparse import issparse
 
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw)
+    if layer is not None:
+        use_raw = False
     if isinstance(var_names, str):
         var_names = [var_names]
 
+    groupby_index = None
     if groupby is not None:
         if isinstance(groupby, str):
             # if not a list, turn into a list
             groupby = [groupby]
         for group in groupby:
-            if group not in adata.obs_keys():
+            if group not in list(adata.obs_keys()) + [adata.obs.index.name]:
+                if adata.obs.index.name is not None:
+                    msg = f' or index name "{adata.obs.index.name}"'
+                else:
+                    msg = ''
                 raise ValueError(
                     'groupby has to be a valid observation. '
-                    f'Given {group}, is not in observations: {adata.obs_keys()}'
+                    f'Given {group}, is not in observations: {adata.obs_keys()}' + msg
                 )
-
-    if gene_symbols is not None and gene_symbols in adata.var.columns:
-        # translate gene_symbols to var_names
-        # slow method but gives a meaningful error if no gene symbol is found:
-        translated_var_names = []
-        # if we're using raw to plot, we should also do gene symbol translations
-        # using raw
-        if use_raw:
-            adata_or_raw = adata.raw
-        else:
-            adata_or_raw = adata
-        for symbol in var_names:
-            if symbol not in adata_or_raw.var[gene_symbols].values:
-                logg.error(
-                    f"Gene symbol {symbol!r} not found in given "
-                    f"gene_symbols column: {gene_symbols!r}"
+            if group in adata.obs.keys() and group == adata.obs.index.name:
+                raise ValueError(
+                    f'Given group {group} is both and index and a column level, '
+                    'which is ambiguous.'
                 )
-                return
-            translated_var_names.append(
-                adata_or_raw.var[adata_or_raw.var[gene_symbols] == symbol].index[0]
-            )
-        symbols = var_names
-        var_names = translated_var_names
-    if layer is not None:
-        if layer not in adata.layers.keys():
-            raise KeyError(
-                f'Selected layer: {layer} is not in the layers list. '
-                f'The list of valid layers is: {adata.layers.keys()}'
-            )
-        matrix = adata[:, var_names].layers[layer]
-    elif use_raw:
-        matrix = adata.raw[:, var_names].X
-    else:
-        matrix = adata[:, var_names].X
+            if group == adata.obs.index.name:
+                groupby_index = group
+    if groupby_index is not None:
+        # obs_tidy contains adata.obs.index
+        # and does not need to be given
+        groupby = groupby.copy()  # copy to not modify user passed parameter
+        groupby.remove(groupby_index)
+    keys = list(groupby) + list(np.unique(var_names))
+    obs_tidy = get.obs_df(
+        adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
+    )
+    assert np.all(np.array(keys) == np.array(obs_tidy.columns))
 
-    if issparse(matrix):
-        matrix = matrix.toarray()
-    if log:
-        matrix = np.log1p(matrix)
+    if groupby_index is not None:
+        # reset index to treat all columns the same way.
+        obs_tidy.reset_index(inplace=True)
+        groupby.append(groupby_index)
 
-    obs_tidy = pd.DataFrame(matrix, columns=var_names)
     if groupby is None:
-        groupby = ''
         categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
+    elif len(groupby) == 1 and is_numeric_dtype(obs_tidy[groupby[0]]):
+        # if the groupby column is not categorical, turn it into one
+        # by subdividing into  `num_categories` categories
+        categorical = pd.cut(obs_tidy[groupby[0]], num_categories)
+    elif len(groupby) == 1:
+        categorical = obs_tidy[groupby[0]].astype('category')
+        categorical.name = groupby[0]
     else:
-        if len(groupby) == 1 and not is_categorical_dtype(adata.obs[groupby[0]]):
-            # if the groupby column is not categorical, turn it into one
-            # by subdividing into  `num_categories` categories
-            categorical = pd.cut(adata.obs[groupby[0]], num_categories)
-        else:
-            categorical = adata.obs[groupby[0]]
-            if len(groupby) > 1:
-                for group in groupby[1:]:
-                    # create new category by merging the given groupby categories
-                    categorical = (
-                        categorical.astype(str) + "_" + adata.obs[group].astype(str)
-                    ).astype('category')
-            categorical.name = "_".join(groupby)
-    obs_tidy.set_index(categorical, inplace=True)
-    if gene_symbols is not None:
-        # translate the column names to the symbol names
-        obs_tidy.rename(
-            columns={var_names[x]: symbols[x] for x in range(len(var_names))},
-            inplace=True,
-        )
+        # join the groupby values  using "_" to make a new 'category'
+        categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
+        categorical.name = "_".join(groupby)
+
+    obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
+
+    if log:
+        obs_tidy = np.log1p(obs_tidy)
 
     return categories, obs_tidy
 

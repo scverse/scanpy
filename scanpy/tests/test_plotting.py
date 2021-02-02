@@ -64,11 +64,11 @@ def test_heatmap(image_comparer):
     # test heatmap numeric column():
 
     # set as numeric column the vales for the first gene on the matrix
-    adata.obs['Gata2'] = adata.X[:, 0]
+    adata.obs['numeric_value'] = adata.X[:, 0]
     sc.pl.heatmap(
         adata,
         adata.var_names,
-        'Gata2',
+        'numeric_value',
         use_raw=False,
         num_categories=4,
         figsize=(4.5, 5),
@@ -90,6 +90,7 @@ def test_heatmap(image_comparer):
     )
     save_and_compare_images('master_heatmap_std_scale_var')
 
+    # test standard_scale_obs
     sc.pl.heatmap(
         adata,
         adata.var_names,
@@ -171,7 +172,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "dotplot2",
             partial(
                 sc.pl.dotplot,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=7,
                 title='non categorical obs',
@@ -256,7 +257,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "matrixplot2",
             partial(
                 sc.pl.matrixplot,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=4,
                 title='non-categorical obs, custom figsize',
@@ -301,7 +302,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "stacked_violin_no_cat_obs",
             partial(
                 sc.pl.stacked_violin,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=4,
                 title='non-categorical obs, custom figsize',
@@ -314,7 +315,7 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     adata = sc.datasets.krumsiek11()
-    adata.obs['Gata2'] = adata.X[:, 0]
+    adata.obs['numeric_column'] = adata.X[:, 0]
     adata.layers['test'] = -1 * adata.X.copy()
     genes_dict = {
         'group a': ['Gata2', 'Gata1'],
@@ -1014,3 +1015,27 @@ def test_no_copy():
         view = actual[actual.obs["bulk_labels"] == "Dendritic"]
         plotfunc(view, ["Dendritic"], show=False)
         assert view.is_view
+
+
+def test_groupby_index(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    pbmc = sc.datasets.pbmc68k_reduced()
+
+    genes = [
+        'CD79A',
+        'MS4A1',
+        'CD8A',
+        'CD8B',
+        'LYZ',
+        'LGALS3',
+        'S100A8',
+        'GNLY',
+        'NKG7',
+        'KLRB1',
+        'FCGR3A',
+        'FCER1A',
+        'CST3',
+    ]
+    pbmc_subset = pbmc[:10].copy()
+    sc.pl.dotplot(pbmc_subset, genes, groupby='index')
+    save_and_compare_images('master_dotplot_groupby_index')

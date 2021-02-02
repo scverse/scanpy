@@ -3,9 +3,10 @@ from typing import Optional, Iterable, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix, issparse
+from scipy.sparse import spmatrix
 
 from anndata import AnnData
+import warnings
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -166,11 +167,46 @@ def obs_df(
     var_names = []
     var_symbol = []
     not_found = []
-    for key in keys:
+
+    # check that adata.obs does not contain duplicated columns
+    # if duplicated columns names are present, they will
+    # be further duplicated when selecting them.
+    if not adata.obs.columns.is_unique:
+        dup_obs = adata.obs.columns[adata.obs.columns.duplicated()].tolist()
+        raise ValueError(
+            "adata.obs contains duplicated columns. Please rename or remove "
+            "these columns first.\n`"
+            f"Duplicated columns {dup_obs}"
+        )
+
+    # check that adata.var does not contain duplicated indices
+    # If duplicated indices are present the selection of var by numeric
+    # index
+    if not adata.var_names.is_unique:
+        raise ValueError(
+            "adata.var contains duplicated var names\n"
+            "Please rename these var names first for example using "
+            "`adata.var_names_make_unique()`"
+        )
+    # use only unique keys, otherwise duplicated keys will
+    # further duplicate when reordering the keys later in the function
+    for key in np.unique(keys):
         if key in adata.obs.columns:
             obs_names.append(key)
+            if key in gene_names.index:
+                raise KeyError(
+                    f'The key `{key}` is found in both adata.obs and adata.var_names.'
+                )
         elif key in gene_names.index:
-            var_names.append(gene_names[key])
+            val = gene_names[key]
+            if isinstance(val, pd.Series):
+                # while var_names must be unique, adata.var[gene_symbols] does not
+                # It's still ambiguous to refer to a duplicated entry though.
+                assert gene_symbols is not None
+                raise KeyError(
+                    f"Found duplicate entries for '{key}' in adata.var['{gene_symbols}']."
+                )
+            var_names.append(val)
             var_symbol.append(key)
         else:
             not_found.append(key)
@@ -216,13 +252,16 @@ def obs_df(
 
         if issparse(matrix):
             matrix = matrix.toarray()
-        df = df.join(pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index))
+        df = pd.concat(
+            [df, pd.DataFrame(matrix, columns=var_symbol, index=adata.obs.index)],
+            axis=1,
+        )
 
     # add obs values
     if len(obs_names) > 0:
-        df = df.join(adata.obs[obs_names])
+        df = pd.concat([df, adata.obs[obs_names]], axis=1)
 
-    # reorder columns to given order
+    # reorder columns to given order (including duplicates keys if present)
     df = df[keys]
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
@@ -233,6 +272,7 @@ def obs_df(
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
+
     return df
 
 
@@ -266,7 +306,10 @@ def var_df(
     obs_names = []
     var_names = []
     not_found = []
-    for key in keys:
+
+    # use only unique keys, otherwise duplicated keys will
+    # further duplicate when reordering the keys later in the function
+    for key in np.unique(keys):
         if key in adata.obs_names:
             obs_names.append(key)
         elif key in adata.var.columns:
@@ -298,11 +341,14 @@ def var_df(
         if issparse(matrix):
             matrix = matrix.toarray()
 
-        df = df.join(pd.DataFrame(matrix.T, columns=obs_names, index=adata.var.index))
+        df = pd.concat(
+            [df, pd.DataFrame(matrix.T, columns=obs_names, index=adata.var.index)],
+            axis=1,
+        )
 
     # add obs values
     if len(var_names) > 0:
-        df = df.join(adata.var[var_names])
+        df = pd.concat([df, adata.var[var_names]], axis=1)
 
     # reorder columns to given order
     df = df[keys]
