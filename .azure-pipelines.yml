@@ -2,6 +2,7 @@ trigger:
 - master
 
 variables:
+  PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
   ANNDATA_DEV: no
   RUN_COVERAGE: no
 
@@ -24,6 +25,15 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
     displayName: 'Use Python $(python.version)'
+
+  - task: Cache@2
+    inputs:
+      key: '"python $(python.version)" | "$(Agent.OS)" | requirements.txt'
+      restoreKeys: | 
+        python | "$(Agent.OS)"
+        python
+      path: $(PIP_CACHE_DIR)
+    displayName: Cache pip packages
 
   - script: |
       export MPLBACKEND="agg"
