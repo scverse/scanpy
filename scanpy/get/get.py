@@ -107,16 +107,16 @@ def _check_indices(
     else:
         alt_repr = "adata"
 
-    alt_dim = ("obs", "var")[dim == "var"]
+    alt_dim = ("obs", "var")[dim == "obs"]
 
     alias_name = None
     if alias_index is not None:
         alt_names = pd.Series(alt_index, index=alias_index)
         alias_name = alias_index.name
-        alt_search_repr = f".{alt_dim}[{alias_name}]"
+        alt_search_repr = f"{alt_dim}['{alias_name}']"
     else:
         alt_names = pd.Series(alt_index, index=alt_index)
-        alt_search_repr = f".{alt_dim}_names"
+        alt_search_repr = f"{alt_dim}_names"
 
     col_keys = []
     index_keys = []
@@ -129,16 +129,16 @@ def _check_indices(
     if not dim_df.columns.is_unique:
         dup_cols = dim_df.columns[dim_df.columns.duplicated()].tolist()
         raise ValueError(
-            "adata.{dim} contains duplicated columns. Please rename or remove "
+            f"adata.{dim} contains duplicated columns. Please rename or remove "
             "these columns first.\n`"
             f"Duplicated columns {dup_cols}"
         )
 
     if not alt_index.is_unique:
         raise ValueError(
-            "{alt_repr}.{alt_dim}_names contains duplicated items\n"
-            "Please rename these {alt_dim} names first for example using "
-            "`adata.{alt_dim}_names_make_unique()`"
+            f"{alt_repr}.{alt_dim}_names contains duplicated items\n"
+            f"Please rename these {alt_dim} names first for example using "
+            f"`adata.{alt_dim}_names_make_unique()`"
         )
 
     # use only unique keys, otherwise duplicated keys will
@@ -148,7 +148,7 @@ def _check_indices(
             col_keys.append(key)
             if key in alt_names.index:
                 raise KeyError(
-                    f'The key `{key}` is found in both adata.{dim} and {alt_repr}.{alt_search_repr}.'
+                    f"The key '{key}' is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
                 )
         elif key in alt_names.index:
             val = alt_names[key]
