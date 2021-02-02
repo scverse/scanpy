@@ -98,6 +98,14 @@ def test_obs_df(adata):
         sc.get.obs_df(adata, keys=["gene1", "gene2"]),
         pd.DataFrame({"gene1": [1, 1], "gene2": [1, 1]}, index=adata.obs_names),
     )
+    # test handling of duplicated keys (in this case repeated gene names)
+    pd.testing.assert_frame_equal(
+        sc.get.obs_df(adata, keys=["gene1", "gene2", "gene1", "gene1"]),
+        pd.DataFrame(
+            {"gene1": [1, 1], "gene2": [1, 1]},
+            index=adata.obs_names,
+        )[["gene1", "gene2", "gene1", "gene1"]],
+    )
 
     badkeys = ["badkey1", "badkey2"]
     with pytest.raises(KeyError) as badkey_err:
@@ -105,6 +113,83 @@ def test_obs_df(adata):
     with pytest.raises(AssertionError):
         sc.get.obs_df(adata, keys=["gene1"], use_raw=True, layer="double")
     assert all(badkey_err.match(k) for k in badkeys)
+
+    # test non unique index
+    adata = sc.AnnData(
+        np.arange(16).reshape(4, 4),
+        obs=pd.DataFrame(index=["a", "a", "b", "c"]),
+        var=pd.DataFrame(index=[f"gene{i}" for i in range(4)]),
+    )
+    df = sc.get.obs_df(adata, ["gene1"])
+    pd.testing.assert_index_equal(df.index, adata.obs_names)
+
+
+def test_non_unique_cols_value_error():
+    M, N = 5, 3
+    adata = sc.AnnData(
+        X=np.zeros((M, N)),
+        obs=pd.DataFrame(
+            np.arange(M * 2).reshape((M, 2)),
+            columns=["repeated_col", "repeated_col"],
+            index=[f"cell_{i}" for i in range(M)],
+        ),
+        var=pd.DataFrame(
+            index=[f"gene_{i}" for i in range(N)],
+        ),
+    )
+    with pytest.raises(ValueError):
+        sc.get.obs_df(adata, ["repeated_col"])
+
+
+def test_non_unique_var_index_value_error():
+    adata = sc.AnnData(
+        X=np.ones((2, 3)),
+        obs=pd.DataFrame(index=["cell-0", "cell-1"]),
+        var=pd.DataFrame(index=["gene-0", "gene-0", "gene-1"]),
+    )
+    with pytest.raises(ValueError):
+        sc.get.obs_df(adata, ["gene-0"])
+
+
+def test_keys_in_both_obs_and_var_index_value_error():
+    M, N = 5, 3
+    adata = sc.AnnData(
+        X=np.zeros((M, N)),
+        obs=pd.DataFrame(
+            np.arange(M),
+            columns=["var_id"],
+            index=[f"cell_{i}" for i in range(M)],
+        ),
+        var=pd.DataFrame(
+            index=["var_id"] + [f"gene_{i}" for i in range(N - 1)],
+        ),
+    )
+    with pytest.raises(KeyError, match="var_id"):
+        sc.get.obs_df(adata, ["var_id"])
+
+
+def test_repeated_gene_symbols():
+    """
+    Gene symbols column allows repeats, but we can't unambiguously get data for these values.
+    """
+    gene_symbols = [f"symbol_{i}" for i in ["a", "b", "b", "c"]]
+    var_names = pd.Index([f"id_{i}" for i in ["a", "b.1", "b.2", "c"]])
+    adata = sc.AnnData(
+        np.arange(3 * 4).reshape((3, 4)),
+        var=pd.DataFrame({"gene_symbols": gene_symbols}, index=var_names),
+    )
+
+    with pytest.raises(KeyError, match="symbol_b"):
+        sc.get.obs_df(adata, ["symbol_b"], gene_symbols="gene_symbols")
+
+    expected = pd.DataFrame(
+        np.arange(3 * 4).reshape((3, 4))[:, [0, 3]].astype(np.float32),
+        index=adata.obs_names,
+        columns=["symbol_a", "symbol_c"],
+    )
+    result = sc.get.obs_df(adata, ["symbol_a", "symbol_c"], gene_symbols="gene_symbols")
+
+    pd.testing.assert_frame_equal(expected, result)
 
 
 def test_backed_vs_memory():
@@ -115,7 +200,7 @@ def test_backed_vs_memory():
     HERE = Path(sc.__file__).parent
     adata_file = HERE / "datasets/10x_pbmc68k_reduced.h5ad"
     adata_backed = sc.read(adata_file, backed='r')
-    adata = sc.read_h5ad(adata_file,)
+    adata = sc.read_h5ad(adata_file)
 
     # use non-sequential list of genes
     genes = list(adata.var_names[20::-2])
@@ -184,14 +269,27 @@ def test_var_df(adata):
     # test only cells
     pd.testing.assert_frame_equal(
         sc.get.var_df(adata, keys=["cell1", "cell2"]),
-        pd.DataFrame({"cell1": [1, 1], "cell2": [1, 1]}, index=adata.var_names,),
+        pd.DataFrame(
+            {"cell1": [1, 1], "cell2": [1, 1]},
+            index=adata.var_names,
+        ),
     )
     # test only var columns
     pd.testing.assert_frame_equal(
         sc.get.var_df(adata, keys=["gene_symbols"]),
         pd.DataFrame(
-            {"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=adata.var_names,
+            {"gene_symbols": ["genesymbol1", "genesymbol2"]},
+            index=adata.var_names,
         ),
+    )
+
+    # test handling of duplicated keys (in this case repeated cell names)
+    pd.testing.assert_frame_equal(
+        sc.get.var_df(adata, keys=["cell1", "cell2", "cell2", "cell1"]),
+        pd.DataFrame(
+            {"cell1": [1, 1], "cell2": [1, 1]},
+            index=adata.var_names,
+        )[["cell1", "cell2", "cell2", "cell1"]],
     )
 
     badkeys = ["badkey1", "badkey2"]
@@ -219,7 +317,11 @@ def test_rank_genes_groups_df():
     assert sc.get.rank_genes_groups_df(adata, "a", pval_cutoff=0.9).shape[0] == 1
     del adata.uns["rank_genes_groups"]
     sc.tl.rank_genes_groups(
-        adata, groupby="celltype", method="wilcoxon", key_added="different_key", pts=True,
+        adata,
+        groupby="celltype",
+        method="wilcoxon",
+        key_added="different_key",
+        pts=True,
     )
     with pytest.raises(KeyError):
         sc.get.rank_genes_groups_df(adata, "a")
@@ -227,10 +329,10 @@ def test_rank_genes_groups_df():
     pd.testing.assert_frame_equal(dedf, dedf2)
     assert 'pct_nz_group' in dedf2.columns
     assert 'pct_nz_reference' in dedf2.columns
-    
+
     # get all groups
     dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
     assert 'a' in dedf3['group'].unique()
-    assert 'b' in dedf3['group'].unique()    
+    assert 'b' in dedf3['group'].unique()
     adata.var_names.name = 'pr1388'
     sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
