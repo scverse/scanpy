@@ -13,8 +13,8 @@
    :target: https://bioconda.github.io/recipes/scanpy/README.html
 .. |Docs| image:: https://readthedocs.com/projects/icb-scanpy/badge/?version=latest
    :target: https://scanpy.readthedocs.io
-.. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
-   :target: https://travis-ci.org/theislab/scanpy
+.. |Build Status| image:: https://dev.azure.com/theislab/scanpy/_apis/build/status/theislab.scanpy?branchName=master
+   :target: https://dev.azure.com/theislab/scanpy/_build
 .. wait until we have better coverage ;-)
    .. |Coverage| image:: https://codecov.io/gh/theislab/scanpy/branch/master/graph/badge.svg
       :target: https://codecov.io/gh/theislab/scanpy
