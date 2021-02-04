@@ -1,0 +1,4 @@
+1.2.0 :small:`2018-06-08`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- :func:`~scanpy.tl.paga` improved, see PAGA_; the default model changed, restore the previous default model by passing `model='v1.0'`

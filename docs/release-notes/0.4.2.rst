@@ -1,0 +1,4 @@
+0.4.2 :small:`2018-01-07`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- amendments in PAGA_ and its plotting functions :smaller:`A Wolf`
