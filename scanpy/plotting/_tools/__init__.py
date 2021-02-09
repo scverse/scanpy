@@ -1090,21 +1090,39 @@ def embedding_density(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.umap(adata)
-    >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+
+    .. plot::
+        :context: close-figs
+
+        >>> import scanpy as sc
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> sc.tl.umap(adata)
+        >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
 
     Plot all categories be default
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase')
+
+    .. plot::
+        :context: close-figs
+
+        >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase')
 
     Plot selected categories
-    >>> sc.pl.embedding_density(
-    ...     adata,
-    ...     basis='umap',
-    ...     key='umap_density_phase',
-    ...     group=['G1', 'S'],
-    ... )
+
+    .. plot::
+        :context: close-figs
+
+        >>> sc.pl.embedding_density(
+        ...     adata,
+        ...     basis='umap',
+        ...     key='umap_density_phase',
+        ...     group=['G1', 'S'],
+        ... )
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.embedding_density
     """
     sanitize_anndata(adata)
 
