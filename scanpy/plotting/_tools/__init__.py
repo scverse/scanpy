@@ -1,4 +1,5 @@
 import collections.abc as cabc
+from copy import copy
 import numpy as np
 import pandas as pd
 from cycler import Cycler
@@ -1194,7 +1195,7 @@ def embedding_density(
 
     # Make the color map
     if isinstance(color_map, str):
-        color_map = cm.get_cmap(color_map)
+        color_map = copy(cm.get_cmap(color_map))
 
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
     color_map.set_over('black')
@@ -1249,8 +1250,6 @@ def embedding_density(
                 color_map=color_map,
                 norm=norm,
                 size=dot_sizes,
-                vmax=vmax,
-                vmin=vmin,
                 save=False,
                 title=_title,
                 ax=ax,

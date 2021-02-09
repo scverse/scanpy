@@ -274,9 +274,9 @@ def calculate_qc_metrics(
         pbmc.var["mito"] = pbmc.var_names.str.startswith("MT-")
         sc.pp.calculate_qc_metrics(pbmc, qc_vars=["mito"], inplace=True)
         sns.jointplot(
-            "log1p_total_counts",
-            "log1p_n_genes_by_counts",
             data=pbmc.obs,
+            x="log1p_total_counts",
+            y="log1p_n_genes_by_counts",
             kind="hex",
         )
 
