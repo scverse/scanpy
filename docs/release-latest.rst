@@ -4,8 +4,8 @@
 Version 1.7
 -----------
 
-1.7.0rc1 :small:`2021-01-14`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.7.0 :small:`2021-02-03`
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. rubric:: Features
 
@@ -16,6 +16,7 @@ Version 1.7
 - :func:`~scanpy.get.rank_genes_groups_df` can now return fraction of cells in a group expressing a gene, and allows retrieving values for multiple groups at once :pr:`1388` :smaller:`G Eraslan`
 - Color annotations for gene sets in :func:`~scanpy.pl.heatmap` are now matched to color for cluster :pr:`1511` :smaller:`L Sikkema`
 - PCA plots can now annotate axes with variance explained :pr:`1470` :smaller:`bfurtwa`
+- Plots with `groupby` arguments can now group by values in the index by passing the index's name (like `pd.DataFrame.groupby`). :pr:`1583` :smaller:`F Ramirez`
 - Added `na_color` and `na_in_legend` keyword arguments to :func:`~scanpy.pl.embedding` plots. Allows specifying color for missing or filtered values in plots like :func:`~scanpy.pl.umap` or :func:`~scanpy.pl.spatial` :pr:`1356` :smaller:`I Virshup`
 - :func:`~scanpy.pl.embedding` plots now support passing `dict` of `{cluster_name: cluster_color, ...}` for palette argument  :pr:`1392` :smaller:`I Virshup`
 
@@ -66,5 +67,6 @@ Version 1.7
 - Fixed bug where calling `set_figure_params` could block if IPython was installed, but not used. :pr:`1547` :smaller:`I Virshup`
 - :func:`~scanpy.pl.violin` no longer fails if `.raw` not present :pr:`1548` :smaller:`I Virshup`
 - :func:`~scanpy.pl.spatial` refactoring and better handling of spatial data :pr:`1512` :smaller:`G Palla`
-- :func:`scanpy.pp.pca` works with `chunked=True` again :pr:`1592` :smaller:`I Virshup`
-- :func:`scanpy.tl.dendrogram` use `1 - correlation` as distance matrix to compute the dendrogram :pr`1614` :smaller:`F Ramirez`
+- :func:`~scanpy.pp.pca` works with `chunked=True` again :pr:`1592` :smaller:`I Virshup`
+- :func:`~scanpy.tl.dendrogram` use `1 - correlation` as distance matrix to compute the dendrogram :pr`1614` :smaller:`F Ramirez`
+- :func:`~scanpy.tl.ingest` now works with umap-learn 0.5.0 :pr:`1601` :smaller:`S Rybakov`
