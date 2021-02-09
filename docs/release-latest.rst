@@ -67,3 +67,4 @@ Version 1.7
 - :func:`~scanpy.pl.violin` no longer fails if `.raw` not present :pr:`1548` :smaller:`I Virshup`
 - :func:`~scanpy.pl.spatial` refactoring and better handling of spatial data :pr:`1512` :smaller:`G Palla`
 - :func:`scanpy.pp.pca` works with `chunked=True` again :pr:`1592` :smaller:`I Virshup`
+- :func:`scanpy.tl.dendrogram` use `1 - correlation` as distance matrix to compute the dendrogram :pr`1614` :smaller:`F Ramirez`
