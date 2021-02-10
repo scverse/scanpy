@@ -4,6 +4,13 @@
 Version 1.7
 -----------
 
+1.7.1 :small:`the future`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Bugfixes
+
+- :func:`~scanpy.tl.dendrogram` use `1 - correlation` as distance matrix to compute the dendrogram :pr`1614` :smaller:`F Ramirez`
+
 1.7.0 :small:`2021-02-03`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
