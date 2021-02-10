@@ -1,5 +1,6 @@
 from types import MappingProxyType
 from typing import Union, Optional, Any, Mapping, Callable, NamedTuple, Generator, Tuple
+import warnings
 
 import numpy as np
 import scipy
@@ -140,6 +141,7 @@ def neighbors(
     neighbors_dict['distances_key'] = dists_key
 
     neighbors_dict['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
+    neighbors_dict['params']['random_state'] = random_state
     neighbors_dict['params']['metric'] = metric
     if metric_kwds:
         neighbors_dict['params']['metric_kwds'] = metric_kwds
@@ -269,7 +271,10 @@ def compute_neighbors_umap(
     -------
     **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
     """
-    from umap.umap_ import nearest_neighbors
+    with warnings.catch_warnings():
+        # umap 0.5.0
+        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
+        from umap.umap_ import nearest_neighbors
 
     random_state = check_random_state(random_state)
 
@@ -367,7 +372,10 @@ def _compute_connectivities_umap(
     simplicial set for each such point, and then combining all the local
     fuzzy simplicial sets into a global one via a fuzzy union.
     """
-    from umap.umap_ import fuzzy_simplicial_set
+    with warnings.catch_warnings():
+        # umap 0.5.0
+        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
+        from umap.umap_ import fuzzy_simplicial_set
 
     X = coo_matrix(([], ([], [])), shape=(n_obs, 1))
     connectivities = fuzzy_simplicial_set(
@@ -724,6 +732,8 @@ class Neighbors:
             raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
+        # do not use the cached rp_forest
+        self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)

@@ -124,8 +124,6 @@ def dendrogram(
         rep_df.set_index(categorical, inplace=True)
         categories = rep_df.index.categories
     else:
-        if use_raw is None and adata.raw is not None:
-            use_raw = True
         gene_names = adata.raw.var_names if use_raw else adata.var_names
         from ..plotting._anndata import _prepare_dataframe
 
@@ -135,10 +133,12 @@ def dendrogram(
     mean_df = rep_df.groupby(level=0).mean()
 
     import scipy.cluster.hierarchy as sch
+    from scipy.spatial import distance
 
     corr_matrix = mean_df.T.corr(method=cor_method)
+    corr_condensed = distance.squareform(1 - corr_matrix)
     z_var = sch.linkage(
-        corr_matrix, method=linkage_method, optimal_ordering=optimal_ordering
+        corr_condensed, method=linkage_method, optimal_ordering=optimal_ordering
     )
     dendro_info = sch.dendrogram(z_var, labels=list(categories), no_plot=True)
 

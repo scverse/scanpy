@@ -64,11 +64,11 @@ def test_heatmap(image_comparer):
     # test heatmap numeric column():
 
     # set as numeric column the vales for the first gene on the matrix
-    adata.obs['Gata2'] = adata.X[:, 0]
+    adata.obs['numeric_value'] = adata.X[:, 0]
     sc.pl.heatmap(
         adata,
         adata.var_names,
-        'Gata2',
+        'numeric_value',
         use_raw=False,
         num_categories=4,
         figsize=(4.5, 5),
@@ -90,6 +90,7 @@ def test_heatmap(image_comparer):
     )
     save_and_compare_images('master_heatmap_std_scale_var')
 
+    # test standard_scale_obs
     sc.pl.heatmap(
         adata,
         adata.var_names,
@@ -100,6 +101,48 @@ def test_heatmap(image_comparer):
         standard_scale='obs',
     )
     save_and_compare_images('master_heatmap_std_scale_obs')
+
+    # test var_names as dict
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.tl.leiden(pbmc, key_added="clusters", resolution=0.5)
+    # call umap to trigger colors for the clusters
+    sc.pl.umap(pbmc, color="clusters")
+    marker_genes_dict = {
+        "3": ["GNLY", "NKG7"],
+        "1": ["FCER1A"],
+        "2": ["CD3D"],
+        "0": ["FCGR3A"],
+        "4": ["CD79A", "MS4A1"],
+    }
+    sc.pl.heatmap(
+        adata=pbmc,
+        var_names=marker_genes_dict,
+        groupby="clusters",
+        vmin=-2,
+        vmax=2,
+        cmap="RdBu_r",
+        dendrogram=True,
+        swap_axes=True,
+    )
+    save_and_compare_images('master_heatmap_var_as_dict')
+
+    # test that plot elements are well aligned
+    # small
+    a = AnnData(
+        np.array([[0, 0.3, 0.5], [1, 1.3, 1.5], [2, 2.3, 2.5]]),
+        obs={"foo": 'a b c'.split()},
+        var=pd.DataFrame({"genes": 'g1 g2 g3'.split()}).set_index('genes'),
+    )
+    a.obs['foo'] = a.obs['foo'].astype('category')
+    sc.pl.heatmap(
+        a, var_names=a.var_names, groupby='foo', swap_axes=True, figsize=(4, 4)
+    )
+    save_and_compare_images('master_heatmap_small_swap_alignment')
+
+    sc.pl.heatmap(
+        a, var_names=a.var_names, groupby='foo', swap_axes=False, figsize=(4, 4)
+    )
+    save_and_compare_images('master_heatmap_small_alignment')
 
 
 @pytest.mark.skipif(
@@ -130,7 +173,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "dotplot2",
             partial(
                 sc.pl.dotplot,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=7,
                 title='non categorical obs',
@@ -215,7 +258,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "matrixplot2",
             partial(
                 sc.pl.matrixplot,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=4,
                 title='non-categorical obs, custom figsize',
@@ -260,7 +303,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "stacked_violin_no_cat_obs",
             partial(
                 sc.pl.stacked_violin,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=4,
                 title='non-categorical obs, custom figsize',
@@ -273,7 +316,7 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     adata = sc.datasets.krumsiek11()
-    adata.obs['Gata2'] = adata.X[:, 0]
+    adata.obs['numeric_column'] = adata.X[:, 0]
     adata.layers['test'] = -1 * adata.X.copy()
     genes_dict = {
         'group a': ['Gata2', 'Gata1'],
@@ -329,11 +372,19 @@ def test_dotplot_obj(image_comparer):
 
 def test_matrixplot_obj(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.datasets.krumsiek11()
+    adata = sc.datasets.pbmc68k_reduced()
+    marker_genes_dict = {
+        "3": ["GNLY", "NKG7"],
+        "1": ["FCER1A"],
+        "2": ["CD3D"],
+        "0": ["FCGR3A"],
+        "4": ["CD79A", "MS4A1"],
+    }
+
     plot = sc.pl.matrixplot(
         adata,
-        adata.var_names,
-        'cell_type',
+        marker_genes_dict,
+        'bulk_labels',
         use_raw=False,
         title='added totals',
         return_fig=True,
@@ -464,6 +515,28 @@ def test_violin(image_comparer):
         rotation=90,
     )
     save_and_compare_images('master_violin_multi_panel_with_layer')
+
+
+# TODO: Generalize test to more plotting types
+def test_violin_without_raw(tmpdir):
+    # https://github.com/theislab/scanpy/issues/1546
+    TESTDIR = Path(tmpdir)
+
+    has_raw_pth = TESTDIR / "has_raw.png"
+    no_raw_pth = TESTDIR / "no_raw.png"
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc_no_raw = pbmc.raw.to_adata().copy()
+
+    sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", show=False)
+    plt.savefig(has_raw_pth)
+    plt.close()
+
+    sc.pl.violin(pbmc_no_raw, 'CST3', groupby="bulk_labels", show=False)
+    plt.savefig(no_raw_pth)
+    plt.close()
+
+    assert compare_images(has_raw_pth, no_raw_pth, tol=5) is None
 
 
 def test_dendrogram(image_comparer):
@@ -950,41 +1023,25 @@ def test_no_copy():
         assert view.is_view
 
 
-def test_visium_circles(image_comparer):
+def test_groupby_index(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
-    adata.obs = adata.obs.astype({'array_row': 'str'})
+    pbmc = sc.datasets.pbmc68k_reduced()
 
-    sc.pl.spatial(
-        adata,
-        color="array_row",
-        groups=["24", "33"],
-        crop_coord=(100, 400, 400, 100),
-        alpha=0.5,
-        size=1.3,
-    )
-
-    save_and_compare_images('master_spatial_visium')
-
-
-def test_visium_default(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
-    adata.obs = adata.obs.astype({'array_row': 'str'})
-
-    sc.pl.spatial(adata)
-
-    save_and_compare_images('master_spatial_visium_default')
-
-
-def test_visium_empty_img_key(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
-    adata.obs = adata.obs.astype({'array_row': 'str'})
-
-    sc.pl.spatial(adata, img_key=None, color="array_row")
-
-    save_and_compare_images('master_spatial_visium_empty_image')
-
-    sc.pl.embedding(adata, basis="spatial", color="array_row")
-    save_and_compare_images('master_spatial_visium_embedding')
+    genes = [
+        'CD79A',
+        'MS4A1',
+        'CD8A',
+        'CD8B',
+        'LYZ',
+        'LGALS3',
+        'S100A8',
+        'GNLY',
+        'NKG7',
+        'KLRB1',
+        'FCGR3A',
+        'FCER1A',
+        'CST3',
+    ]
+    pbmc_subset = pbmc[:10].copy()
+    sc.pl.dotplot(pbmc_subset, genes, groupby='index')
+    save_and_compare_images('master_dotplot_groupby_index')

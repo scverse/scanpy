@@ -499,12 +499,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
     neighbors = NeighborsView(adata, neighbors_key)
     g = nx.Graph(neighbors['connectivities'])
     basis_key = _get_basis(adata, basis)
-    if basis_key == "spatial":
-        adata.obsm["spatial"][:, 1] = np.abs(
-            np.subtract(
-                adata.obsm["spatial"][:, 1], np.max(adata.obsm["spatial"][:, 1])
-            )
-        )
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for ax in axs:

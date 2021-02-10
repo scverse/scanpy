@@ -113,7 +113,7 @@ def pca(
              Explained variance, equivalent to the eigenvalues of the
              covariance matrix.
     """
-    start = logg.info(f'computing PCA')
+    logg_start = logg.info(f'computing PCA')
 
     # chunked calculation is not randomized, anyways
     if svd_solver in {'auto', 'randomized'} and not chunked:
@@ -239,7 +239,7 @@ def pca(
             adata.varm['PCs'] = pca_.components_.T
         adata.uns['pca']['variance'] = pca_.explained_variance_
         adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
-        logg.info('    finished', time=start)
+        logg.info('    finished', time=logg_start)
         logg.debug(
             'and added\n'
             '    \'X_pca\', the PCA coordinates (adata.obs)\n'
@@ -249,7 +249,7 @@ def pca(
         )
         return adata if copy else None
     else:
-        logg.info('    finished', time=start)
+        logg.info('    finished', time=logg_start)
         if return_info:
             return (
                 X_pca,
