@@ -281,6 +281,32 @@ def test_var_df(adata):
     assert all(badkey_err.match(k) for k in badkeys)
 
 
+@TRANSPOSE_PARAMS
+def test_just_mapping_keys(dim, transform, func):
+    # https://github.com/theislab/scanpy/issues/1634
+    # Test for error where just passing obsm_keys, but not keys, would cause error.
+    mapping_attr = f"{dim}m"
+    kwargs = {f"{mapping_attr}_keys": [("array", 0), ("array", 1)]}
+
+    adata = transform(
+        sc.AnnData(
+            X=np.zeros((5, 5)),
+            obsm={
+                "array": np.arange(10).reshape((5, 2)),
+            },
+        )
+    )
+
+    expected = pd.DataFrame(
+        np.arange(10).reshape((5, 2)),
+        index=getattr(adata, f"{dim}_names"),
+        columns=["array-0", "array-1"],
+    )
+    result = func(adata, **kwargs)
+
+    pd.testing.assert_frame_equal(expected, result)
+
+
 ##################################
 # Test errors for obs_df, var_df #
 ##################################

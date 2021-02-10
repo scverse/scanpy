@@ -300,7 +300,9 @@ def obs_df(
         df = pd.concat([df, adata.obs[obs_cols]], axis=1)
 
     # reorder columns to given order (including duplicates keys if present)
-    df = df[keys]
+    if keys:
+        df = df[keys]
+
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
         val = adata.obsm[k]
@@ -364,7 +366,8 @@ def var_df(
         df = pd.concat([df, adata.var[var_cols]], axis=1)
 
     # reorder columns to given order
-    df = df[keys]
+    if keys:
+        df = df[keys]
 
     for k, idx in varm_keys:
         added_k = f"{k}-{idx}"
