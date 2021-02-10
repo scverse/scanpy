@@ -134,17 +134,16 @@ def draw_graph(
             )
             layout = 'fr'
 
-            
     # actual drawing
     if layout == 'fa':
-        
+
         if 'maxiter' in kwds:
-                iterations = kwds['maxiter']
+            iterations = kwds['maxiter']
         elif 'iterations' in kwds:
             iterations = kwds['iterations']
         else:
             iterations = 500
-        
+
         if method == 'fa2':
             forceatlas2 = ForceAtlas2(
                 # Behavior alternatives
@@ -164,25 +163,31 @@ def draw_graph(
                 # Log
                 verbose=False,
             )
-            
+
             positions = forceatlas2.forceatlas2(
                 adjacency, pos=init_coords, iterations=iterations
             )
             positions = np.array(positions)
-        
+
         elif method == 'rapids':
             import cugraph
             import cudf
+
             offsets = cudf.Series(adjacency.indptr)
             indices = cudf.Series(adjacency.indices)
             G = cugraph.Graph()
             G.from_cudf_adjlist(offsets, indices, None)
-            
-            forceatlas2=cugraph.layout.force_atlas2(G,
+
+            forceatlas2 = cugraph.layout.force_atlas2(
+                G,
                 max_iter=iterations,
-                pos_list=cudf.DataFrame({"vertex": np.arange(init_coords.shape[0]),
-                                         "x": init_coords[:,0],
-                                         "y": init_coords[:,1]}),
+                pos_list=cudf.DataFrame(
+                    {
+                        "vertex": np.arange(init_coords.shape[0]),
+                        "x": init_coords[:, 0],
+                        "y": init_coords[:, 1],
+                    }
+                ),
                 outbound_attraction_distribution=False,
                 lin_log_mode=False,
                 edge_weight_influence=1.0,
@@ -192,9 +197,10 @@ def draw_graph(
                 scaling_ratio=2.0,
                 strong_gravity_mode=False,
                 gravity=1.0,
-                verbose=True)
-            positions=forceatlas2.to_pandas().loc[:,["x","y"]].values
-            
+                verbose=True,
+            )
+            positions = forceatlas2.to_pandas().loc[:, ["x", "y"]].values
+
     else:
         # igraph doesn't use numpy seed
         random.seed(random_state)

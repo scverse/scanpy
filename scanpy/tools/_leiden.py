@@ -30,7 +30,7 @@ def leiden(
     random_state: _utils.AnyRandom = 0,
     key_added: str = 'leiden',
     adjacency: Optional[sparse.spmatrix] = None,
-    flavor: Literal['leidenalg','rapids'] = 'leidenalg',
+    flavor: Literal['leidenalg', 'rapids'] = 'leidenalg',
     directed: bool = True,
     use_weights: bool = True,
     n_iterations: int = -1,
@@ -108,7 +108,7 @@ def leiden(
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
-    
+
     partition_kwargs = dict(partition_kwargs)
 
     start = logg.info('running Leiden clustering')
@@ -124,7 +124,7 @@ def leiden(
             restrict_categories,
             adjacency,
         )
-        
+
     if flavor == 'leidenalg':
         try:
             import leidenalg
@@ -151,10 +151,11 @@ def leiden(
         part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
         # store output into adata.obs
         groups = np.array(part.membership)
-        
+
     elif flavor == 'rapids':
         import cudf
         import cugraph
+
         offsets = cudf.Series(adjacency.indptr)
         indices = cudf.Series(adjacency.indices)
         if use_weights:
@@ -173,9 +174,14 @@ def leiden(
             g.from_cudf_adjlist(offsets, indices, weights)
 
         logg.info('    using cugraph')
-        leiden_parts, _ = cugraph.leiden(g,resolution=resolution)
-        groups = leiden_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
-        
+        leiden_parts, _ = cugraph.leiden(g, resolution=resolution)
+        groups = (
+            leiden_parts.to_pandas()
+            .sort_values('vertex')[['partition']]
+            .to_numpy()
+            .ravel()
+        )
+
     if restrict_to is not None:
         if key_added == 'leiden':
             key_added += '_R'
