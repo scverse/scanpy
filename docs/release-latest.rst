@@ -9,7 +9,8 @@ Version 1.7
 
 .. rubric:: Bugfixes
 
-- :func:`~scanpy.tl.dendrogram` use `1 - correlation` as distance matrix to compute the dendrogram :pr`1614` :smaller:`F Ramirez`
+- :func:`~scanpy.tl.dendrogram` use `1 - correlation` as distance matrix to compute the dendrogram :pr:`1614` :smaller:`F Ramirez`
+- Fixed :func:`~scanpy.get.obs_df`/ :func:`~scanpy.get.var_df` erroring when `keys` not passed :pr:`1637` :smaller:`I Virshup`
 
 1.7.0 :small:`2021-02-03`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
