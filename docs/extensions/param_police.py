@@ -13,7 +13,6 @@ def scanpy_log_param_types(self, fields, field_role='param', type_role='type'):
         if (
             not _type
             or not self._obj.__module__.startswith('scanpy')
-            or self._name.startswith('scanpy.api')
         ):
             continue
         w_list = param_warnings.setdefault((self._name, self._obj), [])
