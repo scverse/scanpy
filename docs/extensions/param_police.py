@@ -10,10 +10,7 @@ param_warnings = {}
 
 def scanpy_log_param_types(self, fields, field_role='param', type_role='type'):
     for _name, _type, _desc in fields:
-        if (
-            not _type
-            or not self._obj.__module__.startswith('scanpy')
-        ):
+        if not _type or not self._obj.__module__.startswith('scanpy'):
             continue
         w_list = param_warnings.setdefault((self._name, self._obj), [])
         if (_name, _type) not in w_list:
