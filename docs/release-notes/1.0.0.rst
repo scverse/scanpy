@@ -48,7 +48,7 @@
   in contrast to tSNE, UMAP directly embeds the single-cell graph and is faster;
   UMAP is also used for measuring connectivities and computing neighbors,
   see :func:`~scanpy.pp.neighbors` :smaller:`A Wolf`
-- graph abstraction: AGA is renamed to PAGA_: :func:`~scanpy.tl.paga`; now,
+- graph abstraction: AGA is renamed to `PAGA <https://github.com/theislab/paga>`_: :func:`~scanpy.tl.paga`; now,
   it only measures connectivities between partitions of the single-cell graph,
   pseudotime and clustering need to be computed separately via
   :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.dpt`, the

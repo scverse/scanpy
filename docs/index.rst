@@ -1,7 +1,6 @@
 .. include:: ../README.rst
    :end-line: 29
 
-.. include:: _links.rst
 .. include:: _key_contributors.rst
 
 .. role:: small

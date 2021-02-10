@@ -3,6 +3,6 @@
 
 - :class:`~anndata.AnnData` gains method :meth:`~anndata.AnnData.concatenate` :smaller:`A Wolf`
 - :class:`~anndata.AnnData` is available as the separate anndata_ package :smaller:`P Angerer, A Wolf`
-- results of PAGA_ simplified :smaller:`A Wolf`
+- results of `PAGA <https://github.com/theislab/paga>`_ simplified :smaller:`A Wolf`
 
 .. _anndata: https://pypi.org/project/anndata/
