@@ -100,7 +100,11 @@ def pca_loadings(
         logg.error("Component indices must be greater than zero.")
         return
     ranking(
-        adata, 'varm', 'PCs', indices=components, include_lowest=include_lowest,
+        adata,
+        'varm',
+        'PCs',
+        indices=components,
+        include_lowest=include_lowest,
     )
     savefig_or_show('pca_loadings', show=show, save=save)
 
@@ -347,8 +351,8 @@ def rank_genes_groups(
 
 def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
     """
-     Decides what to return
-     """
+    Decides what to return
+    """
     if return_fig:
         return plot_obj
     else:

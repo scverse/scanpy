@@ -16,7 +16,10 @@ from .._utils import _choose_graph
 try:
     from louvain.VertexPartition import MutableVertexPartition
 except ImportError:
-    class MutableVertexPartition: pass
+
+    class MutableVertexPartition:
+        pass
+
     MutableVertexPartition.__module__ = 'louvain.VertexPartition'
 
 
@@ -106,8 +109,7 @@ def louvain(
     start = logg.info('running Louvain clustering')
     if (flavor != 'vtraag') and (partition_type is not None):
         raise ValueError(
-            '`partition_type` is only a valid argument '
-            'when `flavour` is "vtraag"'
+            '`partition_type` is only a valid argument ' 'when `flavour` is "vtraag"'
         )
     adata = adata.copy() if copy else adata
     if adjacency is None:
@@ -122,12 +124,11 @@ def louvain(
         )
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
-            logg.warning(
-                '`resolution` parameter has no effect for flavor "igraph"'
-            )
+            logg.warning('`resolution` parameter has no effect for flavor "igraph"')
         if directed and flavor == 'igraph':
             directed = False
-        if not directed: logg.debug('    using the undirected graph')
+        if not directed:
+            logg.debug('    using the undirected graph')
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if use_weights:
             weights = np.array(g.es["weight"]).astype(np.float64)
@@ -135,6 +136,7 @@ def louvain(
             weights = None
         if flavor == 'vtraag':
             import louvain
+
             if partition_type is None:
                 partition_type = louvain.RBConfigurationVertexPartition
             if resolution is not None:
@@ -147,7 +149,8 @@ def louvain(
                 partition_kwargs["seed"] = random_state
             logg.info('    using the "louvain" package of Traag (2017)')
             part = louvain.find_partition(
-                g, partition_type,
+                g,
+                partition_type,
                 **partition_kwargs,
             )
             # adata.uns['louvain_quality'] = part.quality()
@@ -159,6 +162,7 @@ def louvain(
         # and `adjacency` must have a directed edge in both directions
         import cudf
         import cugraph
+
         offsets = cudf.Series(adjacency.indptr)
         indices = cudf.Series(adjacency.indices)
         if use_weights:
@@ -178,19 +182,24 @@ def louvain(
 
         logg.info('    using the "louvain" package of rapids')
         louvain_parts, _ = cugraph.louvain(g)
-        groups = louvain_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
+        groups = (
+            louvain_parts.to_pandas()
+            .sort_values('vertex')[['partition']]
+            .to_numpy()
+            .ravel()
+        )
     elif flavor == 'taynaud':
         # this is deprecated
         import networkx as nx
         import community
+
         g = nx.Graph(adjacency)
         partition = community.best_partition(g)
         groups = np.zeros(len(partition), dtype=int)
-        for k, v in partition.items(): groups[k] = v
+        for k, v in partition.items():
+            groups[k] = v
     else:
-        raise ValueError(
-            '`flavor` needs to be "vtraag" or "igraph" or "taynaud".'
-        )
+        raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
     if restrict_to is not None:
         if key_added == 'louvain':
             key_added += '_R'

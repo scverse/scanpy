@@ -207,7 +207,10 @@ def palantir(
 
     # Diffusion maps
     dm_res = run_diffusion_maps(
-        data_df=df, n_components=n_components, knn=knn, alpha=alpha,
+        data_df=df,
+        n_components=n_components,
+        knn=knn,
+        alpha=alpha,
     )
     # Determine the multi scale space of the data
     ms_data = determine_multiscale_space(dm_res=dm_res, n_eigs=n_eigs)
@@ -215,9 +218,7 @@ def palantir(
     # MAGIC imputation
     if impute_data:
         imp_df = run_magic_imputation(
-            data=adata.to_df(),
-            dm_res=dm_res,
-            n_steps=n_steps
+            data=adata.to_df(), dm_res=dm_res, n_steps=n_steps
         )
         adata.layers['palantir_imp'] = imp_df
 
@@ -310,4 +311,3 @@ def _check_import():
         import palantir
     except ImportError:
         raise ImportError('\nplease install palantir:\n\tpip install palantir')
-
