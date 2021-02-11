@@ -42,7 +42,21 @@ Some key points:
 * When docs exist in the same file as code, line length restrictions still apply. In files which are just docs, go with a sentence per line (for easier `git diff`\ s).
 * Check that the docs look like what you expect them too! It's easy to forget to add a reference to function, be sure it got added and looks right.
 
-Look at `sc.tl.louvain <https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90>`__ as an example for everything mentioned here:
+Look at `sc.tl.louvain <https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90>`__ as an example for everything mentioned here.
+
+Plots in docstrings
+~~~~~~~~~~~~~~~~~~~
+
+One of the most useful things you can include in a docstring is examples of how the function should be used.
+In the case of plotting functions, it's also possible to include show the resulting plots in the rendered docs.
+This is accomplished with `matplotlib's plot directive <https://matplotlib.org/devel/plot_directive.html>`__.
+
+For examples of what this looks like, see the examples sections of :func:`~scanpy.pl.dotplot` or :func:`~scanpy.pp.calculate_qc_metrics`.
+
+Note that anything in these sections will need to be run when the docs are built, so it's important to keep them light.
+
+* If you need computed features (e.g. an embedding, differential expression results) load data that has this precomputed.
+* Try to re-use datasets, this reduces the amount of data that needs to be downloaded to the CI server.
 
 `Params` section
 ~~~~~~~~~~~~~~~~
