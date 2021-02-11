@@ -6,6 +6,7 @@ sphinx:
 python:
   version: 3.8
   install:
+  - requirements: .pip-2033.txt
   - method: pip
     path: .
     extra_requirements:
