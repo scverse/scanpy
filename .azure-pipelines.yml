@@ -42,6 +42,7 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
+      pip install -r .pip-2033.txt
       pip install pytest-cov wheel
       pip install .[dev,doc,test,louvain,leiden,magic,scvi,harmony,scrublet,scanorama]
     displayName: 'Install dependencies'
@@ -102,6 +103,7 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
+      pip install flit
       flit build
       twine check dist/*
     displayName: 'Build & Twine check'

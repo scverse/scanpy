@@ -1,0 +1,4 @@
+# Flit mangles the +local part of the version spec in compliance with PEP 427,
+# but pip 20.3.4 started expecting wheel filenames to contain the local part unmangled.
+# https://github.com/pypa/pip/issues/9628
+pip==20.3.3
