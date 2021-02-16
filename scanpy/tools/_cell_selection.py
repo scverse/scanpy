@@ -93,9 +93,9 @@ def cell_selection(
         val_list = [item for sublist in val.tolist() for item in sublist]
         dat = pd.Categorical(val_list, categories=[True, False])
     else:
-        val = adata.raw[:,'{}'.format(var_names[0]))].X.todense() > 0
+        val = adata.raw[:,'{}'.format(var_names[0])].X.todense() > 0
         for i in range(len(var_names[1:])):
-            val = val & (adata.raw[:,'{}'.format(var_names[i+1]))].X.todense() > 0)
+            val = val & (adata.raw[:,'{}'.format(var_names[i+1])].X.todense() > 0)
 
         val_list = [item for sublist in val.tolist() for item in sublist]
         dat = pd.Categorical(val_list, categories=[True, False])
