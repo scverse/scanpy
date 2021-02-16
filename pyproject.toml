@@ -58,6 +58,7 @@ exclude = '''
         |_score_genes
         |_utils_clustering
         |_rank_genes_groups
+        |_cell_selection
     )
     |plotting/(
         __init__
