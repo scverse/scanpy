@@ -379,7 +379,9 @@ def _rank_genes_groups_plot(
         key = 'rank_genes_groups'
 
     if groupby is None:
-        groupby = str(adata.uns[key]['params']['groupby'])
+        groupby = adata.uns[key]['params']['groupby']
+        if not isinstance(groupby, (str, np.ndarray)):
+            groupby = str(groupby)
     group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
 
     var_names = {}  # dict in which each group is the key and the n_genes are the values
