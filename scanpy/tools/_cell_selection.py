@@ -18,7 +18,7 @@ def cell_selection(
     key_added: Optional[str] = None,
     inplace: bool = True,
     **kwargs,
-) -> Optional[Anndata]:
+):
     """\
     Returns a selection of cells simultaneously expressing given genes. 
 
