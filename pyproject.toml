@@ -48,6 +48,7 @@ exclude = '''
     )
     |tools/(
         _dpt
+        _cell_selection
         |_sim
         |_paga
         |_umap
@@ -58,7 +59,6 @@ exclude = '''
         |_score_genes
         |_utils_clustering
         |_rank_genes_groups
-        |_cell_selection
     )
     |plotting/(
         __init__
