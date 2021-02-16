@@ -20,3 +20,4 @@ from ._dendrogram import dendrogram
 from ._embedding_density import embedding_density
 from ._marker_gene_overlap import marker_gene_overlap
 from ._ingest import ingest, Ingest
+from ._cell_selection import cell_selection
