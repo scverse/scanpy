@@ -64,9 +64,9 @@ def cell_selection(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> gene_list = ['CD14', 'LYZ']
+    >>> gene_list = ['FCER1A', 'CST3']
     >>> sc.tl.cell_selection(adata, var_names=gene_list)
-    >>> sc.pl.umap(adata, color='select_CD14_LYZ', groups=[True])
+    >>> sc.pl.umap(adata, color='select_FCER1A_CST3', groups=[True])
     """
 
     for var in var_names:
