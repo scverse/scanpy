@@ -197,13 +197,13 @@ def timeseries_as_heatmap(
         x_new[:, _hold:] = X[:, hold:]
 
     _, ax = pl.subplots(figsize=(1.5 * 4, 2 * 4))
-    ax.imshow(
+    img = ax.imshow(
         np.array(X, dtype=np.float_),
         aspect='auto',
         interpolation='nearest',
         cmap=color_map,
     )
-    pl.colorbar(shrink=0.5)
+    pl.colorbar(img, shrink=0.5)
     pl.yticks(range(X.shape[0]), var_names)
     for h in highlights_x:
         pl.plot([h, h], [0, X.shape[0]], '--', color='black')
