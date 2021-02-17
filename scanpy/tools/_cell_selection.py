@@ -14,7 +14,7 @@ def cell_selection(
     var_names: Sequence[str] = None,
     denoise: bool = True,
     t: Union[Literal['auto'], int] = 'auto',
-    knn: int = 10,
+    knn: int = 5,
     key_added: Optional[str] = None,
     inplace: bool = True,
     **kwargs,
