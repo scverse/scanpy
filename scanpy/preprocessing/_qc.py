@@ -264,14 +264,26 @@ def calculate_qc_metrics(
     -------
     Calculate qc metrics for visualization.
 
-    >>> import scanpy as sc
-    >>> import seaborn as sns
-    >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
-    >>> sns.jointplot(
-            "log1p_total_counts", "log1p_n_genes_by_counts",
-            data=adata.obs, kind="hex"
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        import seaborn as sns
+
+        pbmc = sc.datasets.pbmc3k()
+        pbmc.var["mito"] = pbmc.var_names.str.startswith("MT-")
+        sc.pp.calculate_qc_metrics(pbmc, qc_vars=["mito"], inplace=True)
+        sns.jointplot(
+            data=pbmc.obs,
+            x="log1p_total_counts",
+            y="log1p_n_genes_by_counts",
+            kind="hex",
         )
+
+    .. plot::
+        :context: close-figs
+
+        sns.histplot(pbmc.obs["pct_counts_mito"])
     """
     if parallel is not None:
         warn(
