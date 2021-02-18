@@ -39,6 +39,7 @@ setup(
         harmony=['harmonypy'],
         scanorama=['scanorama'],
         scrublet=['scrublet'],
+        annoy=['annoy<1.17.0'],
         dev=['setuptools_scm', 'pytoml', 'black>=20.8b1'],
         doc=[
             'sphinx>=3.2',
