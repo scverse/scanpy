@@ -854,6 +854,14 @@ def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
     save_and_compare_images('master_embedding_outline_vmin_vmax')
 
 
+def test_timeseries():
+    adata = sc.datasets.pbmc68k_reduced()
+    sc.pp.neighbors(adata, n_neighbors=5, method='gauss', knn=False)
+    sc.tl.diffmap(adata)
+    sc.tl.dpt(adata, n_branchings=1, n_dcs=10)
+    sc.pl.dpt_timeseries(adata, as_heatmap=True)
+
+
 def test_scatter_raw(tmp_path):
     pbmc = sc.datasets.pbmc68k_reduced()[:100].copy()
     raw_pth = tmp_path / "raw.png"
