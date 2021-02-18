@@ -13,7 +13,7 @@ def test_scrublet():
     pytest.importorskip("scrublet")
 
     adata = sc.datasets.pbmc3k()
-    sce.pp.scrublet(adata, use_approx_neighbors = False)
+    sce.pp.scrublet(adata, use_approx_neighbors=False)
 
     errors = []
 
