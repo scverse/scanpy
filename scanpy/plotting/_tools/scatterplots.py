@@ -106,17 +106,6 @@ def embedding(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
-
-    Examples
-    --------
-
-    .. plot::
-        :context: close-figs
-
-        >>> import scanpy as sc
-        >>> pbmc = sc.datasets.pbmc3k_processed()
-        >>> sc.pl.embedding(pbmc, basis="X_umap")
-
     """
     check_projection(projection)
     sanitize_anndata(adata)
