@@ -212,7 +212,7 @@ def scrublet(
         n_prin_comps=n_prin_comps,
         use_approx_neighbors=use_approx_neighbors,
         knn_dist_metric=knn_dist_metric,
-        get_doublet_neighbor_parents=get_doublet_neighbor_parents, 
+        get_doublet_neighbor_parents=get_doublet_neighbor_parents,
         threshold=threshold,
         random_state=random_state,
         verbose=verbose,
@@ -395,10 +395,7 @@ def _scrublet_call_doublets(
 
     # Actually call doublets
 
-    scrub.call_doublets(
-        threshold=threshold,
-        verbose=verbose
-    )
+    scrub.call_doublets(threshold=threshold, verbose=verbose)
 
     # Store results in AnnData for return
 
