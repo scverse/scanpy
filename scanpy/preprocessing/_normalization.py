@@ -4,6 +4,10 @@ import numpy as np
 from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
+try:
+   import dask.array as da
+except ImportError:
+    da.Array = None
 
 from .. import logging as logg
 from .._compat import Literal
@@ -14,9 +18,9 @@ def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    try:  # dask array
+    if isinstance(counts, da.Array):
         counts_greater_than_zero = counts[counts>0].compute_chunk_sizes()
-    except AttributeError:
+    else:
         counts_greater_than_zero = counts[counts>0]
 
     after = np.median(counts_greater_than_zero, axis=0) if after is None else after
