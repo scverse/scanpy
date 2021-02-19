@@ -40,7 +40,7 @@ def test_scrublet_params():
 
     f = io.StringIO()
     with redirect_stdout(f):
-        sce.pp.scrublet(adata)
+        sce.pp.scrublet(adata, use_approx_neighbors=False)
 
     default = f.getvalue()
 
@@ -59,7 +59,7 @@ def test_scrublet_params():
     # Test each parameter and make sure something changes
 
     for param in test_params.keys():
-        test_args = {'adata': adata, param: test_params[param]}
+        test_args = {'adata': adata, use_approx_neighbors=False, param: test_params[param]}
         f = io.StringIO()
         with redirect_stdout(f):
             sc.external.pp.scrublet(**test_args)
