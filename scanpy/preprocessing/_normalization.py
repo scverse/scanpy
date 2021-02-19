@@ -24,8 +24,10 @@ def _normalize_data(X, counts, after=None, copy=False):
     counts = counts / after
     if issparse(X):
         sparsefuncs.inplace_row_scale(X, 1/counts)
+    elif isinstance(counts, np.ndarray):
+        np.divide(X, counts[:, None], out=X)
     else:
-        X = np.divide(X, counts[:, None])
+        X = np.divide(X, counts[:, None])  # dask does not support kwarg "out"
     return X
 
 
