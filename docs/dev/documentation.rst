@@ -19,8 +19,9 @@ Next, if problems persist, clear the sphinx cache and try building them again (`
 Adding to the docs
 ------------------
 
-For any user-visible changes, please make sure a note has been added to `docs/release-latest.rst` so we can credit you!
-We recommend waiting on this until your PR is close to done since this section often causes merge conflicts.
+For any user-visible changes, please make sure a note has been added to the release notes for the relevant version so we can credit you!
+These files are found in the `docs/release-notes/` directory.
+We recommend waiting on this until your PR is close to done since this can often causes merge conflicts.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 For computational methods, this should be added to `docs/api/index.rst` under a relevant heading.

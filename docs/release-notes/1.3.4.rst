@@ -1,0 +1,6 @@
+1.3.4 :small:`2018-11-24`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- :func:`~scanpy.tl.leiden` wraps the recent graph clustering package by [Traag18]_ :smaller:`K Polanski`
+- :func:`~scanpy.external.pp.bbknn` wraps the recent batch correction package [Polanski19]_ :smaller:`K Polanski`
+- :func:`~scanpy.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :smaller:`I Virshup`
