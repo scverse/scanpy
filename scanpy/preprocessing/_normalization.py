@@ -1,4 +1,5 @@
 from typing import Optional, Union, Iterable, Dict
+from warnings import warn
 
 import numpy as np
 from anndata import AnnData
@@ -8,6 +9,7 @@ from sklearn.utils import sparsefuncs
 from .. import logging as logg
 from .._compat import Literal
 from .._utils import view_to_actual
+from scanpy.get import _get_obs_rep, _set_obs_rep
 
 
 def _normalize_data(X, counts, after=None, copy=False):
@@ -31,6 +33,7 @@ def normalize_total(
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
     key_added: Optional[str] = None,
+    layer: Optional[str] = None,
     layers: Union[Literal['all'], Iterable[str]] = None,
     layer_norm: Optional[str] = None,
     inplace: bool = True,
@@ -72,20 +75,8 @@ def normalize_total(
     key_added
         Name of the field in `adata.obs` where the normalization factor is
         stored.
-    layers
-        List of layers to normalize. Set to `'all'` to normalize all layers.
-    layer_norm
-        Specifies how to normalize layers:
-
-        * If `None`, after normalization, for each layer in *layers* each cell
-          has a total count equal to the median of the *counts_per_cell* before
-          normalization of the layer.
-        * If `'after'`, for each layer in *layers* each cell has
-          a total count equal to `target_sum`.
-        * If `'X'`, for each layer in *layers* each cell has a total count
-          equal to the median of total counts for observations (cells) of
-          `adata.X` before normalization.
-
+    layer
+        Layer to normalize instead of `X`. If `None`, `X` is normalized.
     inplace
         Whether to update `adata` or return dictionary with normalized copies of
         `adata.X` and `adata.layers`.
@@ -130,6 +121,22 @@ def normalize_total(
     if max_fraction < 0 or max_fraction > 1:
         raise ValueError('Choose max_fraction between 0 and 1.')
 
+    # Deprecated features
+    if layers is not None:
+        warn(
+            FutureWarning(
+                "The `layers` argument is deprecated. Instead, specify individual "
+                "layers to normalize with `layer`."
+            )
+        )
+    if layer_norm is not None:
+        warn(
+            FutureWarning(
+                "The `layer_norm` argument is deprecated. Specify the target size "
+                "factor directly with `target_sum`."
+            )
+        )
+
     if layers == 'all':
         layers = adata.layers.keys()
     elif isinstance(layers, str):
@@ -139,32 +146,47 @@ def normalize_total(
 
     view_to_actual(adata)
 
+    X = _get_obs_rep(adata, layer=layer)
+
     gene_subset = None
     msg = 'normalizing counts per cell'
     if exclude_highly_expressed:
-        counts_per_cell = adata.X.sum(1)  # original counts per cell
+        counts_per_cell = X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
 
         # at least one cell as more than max_fraction of counts per cell
-        gene_subset = (adata.X > counts_per_cell[:, None] * max_fraction).sum(0)
+
+        gene_subset = (X > counts_per_cell[:, None] * max_fraction).sum(0)
         gene_subset = np.ravel(gene_subset) == 0
 
         msg += (
             ' The following highly-expressed genes are not considered during '
             f'normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}'
         )
+        counts_per_cell = X[:, gene_subset].sum(1)
+    else:
+        counts_per_cell = X.sum(1)
     start = logg.info(msg)
-
-    # counts per cell for subset, if max_fraction!=1
-    X = adata.X if gene_subset is None else adata[:, gene_subset].X
-    counts_per_cell = X.sum(1)
-    # get rid of adata view
-    counts_per_cell = np.ravel(counts_per_cell).copy()
+    counts_per_cell = np.ravel(counts_per_cell)
 
     cell_subset = counts_per_cell > 0
     if not np.all(cell_subset):
-        logg.warning('Some cells have total count of genes equal to zero')
+        warn(UserWarning('Some cells have zero counts'))
 
+    if inplace:
+        if key_added is not None:
+            adata.obs[key_added] = counts_per_cell
+        _set_obs_rep(
+            adata, _normalize_data(X, counts_per_cell, target_sum), layer=layer
+        )
+    else:
+        # not recarray because need to support sparse
+        dat = dict(
+            X=_normalize_data(X, counts_per_cell, target_sum, copy=True),
+            norm_factor=counts_per_cell,
+        )
+
+    # Deprecated features
     if layer_norm == 'after':
         after = target_sum
     elif layer_norm == 'X':
@@ -173,26 +195,13 @@ def normalize_total(
         after = None
     else:
         raise ValueError('layer_norm should be "after", "X" or None')
-    del cell_subset
 
-    if inplace:
-        if key_added is not None:
-            adata.obs[key_added] = counts_per_cell
-        adata.X = _normalize_data(adata.X, counts_per_cell, target_sum)
-    else:
-        # not recarray because need to support sparse
-        dat = dict(
-            X=_normalize_data(adata.X, counts_per_cell, target_sum, copy=True),
-            norm_factor=counts_per_cell,
+    for layer_to_norm in layers if layers is not None else ():
+        res = normalize_total(
+            adata, layer=layer_to_norm, target_sum=after, inplace=inplace
         )
-
-    for layer_name in layers or ():
-        layer = adata.layers[layer_name]
-        counts = np.ravel(layer.sum(1))
-        if inplace:
-            adata.layers[layer_name] = _normalize_data(layer, counts, after)
-        else:
-            dat[layer_name] = _normalize_data(layer, counts, after, copy=True)
+        if not inplace:
+            dat[layer_to_norm] = res["X"]
 
     logg.info(
         '    finished ({time_passed})',
