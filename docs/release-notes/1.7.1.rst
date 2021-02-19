@@ -1,0 +1,11 @@
+1.7.1 :small:`the future`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Performance enhancements
+
+.. rubric:: Bug fixes
+
+- :func:`~scanpy.tl.dendrogram` use `1 - correlation` as distance matrix to compute the dendrogram :pr:`1614` :smaller:`F Ramirez`
+- Fixed :func:`~scanpy.get.obs_df`/ :func:`~scanpy.get.var_df` erroring when `keys` not passed :pr:`1637` :smaller:`I Virshup`
+
+.. rubric:: Deprecations
