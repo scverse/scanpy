@@ -59,7 +59,11 @@ def test_scrublet_params():
     # Test each parameter and make sure something changes
 
     for param in test_params.keys():
-        test_args = {'adata': adata, use_approx_neighbors=False, param: test_params[param]}
+        test_args = {
+            'adata': adata,
+            use_approx_neighbors: False,
+            param: test_params[param],
+        }
         f = io.StringIO()
         with redirect_stdout(f):
             sc.external.pp.scrublet(**test_args)
