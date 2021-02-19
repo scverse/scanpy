@@ -14,14 +14,18 @@ def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    counts = np.asarray(counts)  # dask doesn't do medians
-    after = np.median(counts[counts>0], axis=0) if after is None else after
+    try:  # dask array
+        counts_greater_than_zero = counts[counts>0].compute_chunk_sizes()
+    except AttributeError:
+        counts_greater_than_zero = counts[counts>0]
+
+    after = np.median(counts_greater_than_zero, axis=0) if after is None else after
     counts += (counts == 0)
     counts = counts / after
     if issparse(X):
         sparsefuncs.inplace_row_scale(X, 1/counts)
     else:
-        np.divide(X, counts[:, None], out=X)
+        X = np.divide(X, counts[:, None])
     return X
 
 
