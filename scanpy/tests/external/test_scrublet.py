@@ -61,7 +61,7 @@ def test_scrublet_params():
     for param in test_params.keys():
         test_args = {
             'adata': adata,
-            use_approx_neighbors: False,
+            'use_approx_neighbors': False,
             param: test_params[param],
         }
         f = io.StringIO()
