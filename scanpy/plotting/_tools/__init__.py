@@ -4,7 +4,6 @@ import pandas as pd
 from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, cm, colors
 from anndata import AnnData
@@ -903,8 +902,7 @@ def rank_genes_groups_violin(
                 X_col = adata[:, g].X
                 if gene_symbols:
                     g = adata.var[gene_symbols][g]
-            if issparse(X_col):
-                X_col = X_col.toarray().flatten()
+            X_col = X_col.toarray().flatten()
             new_gene_names.append(g)
             df[g] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
