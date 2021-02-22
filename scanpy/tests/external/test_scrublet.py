@@ -40,11 +40,7 @@ def test_scrublet_params():
 
     # Get the default output
 
-    f = io.StringIO()
-    with redirect_stdout(f):
-        sce.pp.scrublet(adata, use_approx_neighbors=False)
-
-    default = f.getvalue()
+    default = sce.pp.scrublet(adata, use_approx_neighbors=False, copy=True)
 
     test_params = {
         'expected_doublet_rate': 0.1,
@@ -64,14 +60,12 @@ def test_scrublet_params():
         test_args = {
             'adata': adata,
             'use_approx_neighbors': False,
+            'copy': True,
             param: test_params[param],
         }
-        f = io.StringIO()
-        with redirect_stdout(f):
-            sc.external.pp.scrublet(**test_args)
-        diff_result = f.getvalue()
-
-        assert diff_result != default
+        curr = sc.external.pp.scrublet(**test_args)
+        with pytest.raises(AssertionError):
+            assert_equal(default, curr)
 
 
 def test_scrublet_simulate_doublets():
