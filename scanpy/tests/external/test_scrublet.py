@@ -4,6 +4,7 @@ import scanpy as sc
 import scanpy.external as sce
 from anndata.tests.helpers import assert_equal
 
+
 def test_scrublet():
     """
     Test that Scrublet run works.
