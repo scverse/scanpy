@@ -155,7 +155,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         UserWarning,
         match="`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
     ):
-        sc.pp.highly_variable_genes(pbmc_dense, n_top_genes=1000, flavor='seurat_v3')
+        sc.pp.highly_variable_genes(pbmc, n_top_genes=1000, flavor='seurat_v3')
 
 
 def test_filter_genes_dispersion_compare_to_seurat():
