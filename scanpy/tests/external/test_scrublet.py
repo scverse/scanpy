@@ -2,9 +2,7 @@ import pytest
 
 import scanpy as sc
 import scanpy.external as sce
-import io
-from contextlib import redirect_stdout
-
+from anndata.tests.helpers import assert_equal
 
 def test_scrublet():
     """
