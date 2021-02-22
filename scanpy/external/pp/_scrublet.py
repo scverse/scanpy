@@ -207,7 +207,15 @@ def scrublet(
         n_neighbors=n_neighbors,
         expected_doublet_rate=expected_doublet_rate,
         stdev_doublet_rate=stdev_doublet_rate,
+        mean_center=mean_center,
+        normalize_variance=normalize_variance,
+        n_prin_comps=n_prin_comps,
+        use_approx_neighbors=use_approx_neighbors,
+        knn_dist_metric=knn_dist_metric,
+        get_doublet_neighbor_parents=get_doublet_neighbor_parents,
+        threshold=threshold,
         random_state=random_state,
+        verbose=verbose,
     )
 
     logg.info('    Scrublet finished', time=start)
@@ -236,6 +244,7 @@ def _scrublet_call_doublets(
     use_approx_neighbors: bool = True,
     knn_dist_metric: str = 'euclidean',
     get_doublet_neighbor_parents: bool = False,
+    threshold: Optional[float] = None,
     random_state: int = 0,
     verbose: bool = True,
 ) -> AnnData:
@@ -246,7 +255,7 @@ def _scrublet_call_doublets(
     transcriptomes and simulated doublets. This is a wrapper around the core
     functions of `Scrublet <https://github.com/swolock/scrublet>`__ to allow
     for flexibility in applying Scanpy filtering operations upstream. Unless
-    you know what you're doing you should use scrub_doublets().    
+    you know what you're doing you should use the main scrublet() function.    
 
     .. note::
         More information and bug reports `here
@@ -296,6 +305,13 @@ def _scrublet_call_doublets(
         doublet neighbors of each observed transcriptome. This information can 
         be used to infer the cell states that generated a given 
         doublet state. 
+    threshold
+        Doublet score threshold for calling a transcriptome a doublet. If
+        `None`, this is set automatically by looking for the minimum between
+        the two modes of the `doublet_scores_sim_` histogram. It is best
+        practice to check the threshold visually using the
+        `doublet_scores_sim_` histogram and/or based on co-localization of
+        predicted doublets in a 2-D embedding.
     random_state
         Initial state for doublet simulation and nearest neighbors.
     verbose 
@@ -379,7 +395,7 @@ def _scrublet_call_doublets(
 
     # Actually call doublets
 
-    scrub.call_doublets(verbose=verbose)
+    scrub.call_doublets(threshold=threshold, verbose=verbose)
 
     # Store results in AnnData for return
 
