@@ -1,6 +1,5 @@
 import warnings
 from typing import Optional
-
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -59,10 +58,10 @@ def _highly_variable_genes_seurat_v3(
 
     X = adata.layers[layer] if layer is not None else adata.X
     if check_values:
-        if check_nonnegative_integers(X) is False:
-            logg.warning(
-                "`flavor='seurat_v3'` expects raw count data, but non-integers were found."
-            )
+        warnings.warn(
+            "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
+            UserWarning,
+        )
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
