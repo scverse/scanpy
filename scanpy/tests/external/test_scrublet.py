@@ -34,7 +34,9 @@ def test_scrublet_params():
     """
     pytest.importorskip("scrublet")
 
-    adata = sc.datasets.pbmc3k()
+    # Reduce size of input for faster test
+    adata = sc.datasets.pbmc3k()[:500].copy()
+    sc.pp.filter_genes(adata, min_counts=100)
 
     # Get the default output
 
