@@ -1,6 +1,5 @@
 import warnings
 from typing import Optional
-
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -21,6 +20,7 @@ def _highly_variable_genes_seurat_v3(
     layer: Optional[str] = None,
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
+    check_values: Optional[bool] = True,
     span: Optional[float] = 0.3,
     subset: bool = False,
     inplace: bool = True,
@@ -57,10 +57,10 @@ def _highly_variable_genes_seurat_v3(
         )
 
     X = adata.layers[layer] if layer is not None else adata.X
-    if check_nonnegative_integers(X) is False:
-        raise ValueError(
-            "`pp.highly_variable_genes` with `flavor='seurat_v3'` expects "
-            "raw count data."
+    if check_values:
+        warnings.warn(
+            "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
+            UserWarning,
         )
 
     if batch_key is None:
@@ -97,7 +97,9 @@ def _highly_variable_genes_seurat_v3(
         else:
             clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
             np.putmask(
-                batch_counts, batch_counts > clip_val_broad, clip_val_broad,
+                batch_counts,
+                batch_counts > clip_val_broad,
+                clip_val_broad,
             )
 
         if sp_sparse.issparse(batch_counts):
@@ -300,6 +302,7 @@ def highly_variable_genes(
     subset: bool = False,
     inplace: bool = True,
     batch_key: Optional[str] = None,
+    check_values: Optional[bool] = True,
 ) -> Optional[pd.DataFrame]:
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
@@ -366,6 +369,9 @@ def highly_variable_genes(
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
         by normalized dispersion. If `flavor = 'seurat_v3'`, ties are broken by the median
         (across batches) rank based on within-batch normalized variance.
+    check_values
+        Check if counts in selected layer are integers. A Warning is returned if set to True.
+        Only used if `flavor='seurat_v3'`.
 
     Returns
     -------
@@ -417,6 +423,7 @@ def highly_variable_genes(
             layer=layer,
             n_top_genes=n_top_genes,
             batch_key=batch_key,
+            check_values=check_values,
             span=span,
             subset=subset,
             inplace=inplace,
@@ -461,7 +468,8 @@ def highly_variable_genes(
 
             # Add 0 values for genes that were filtered out
             missing_hvg = pd.DataFrame(
-                np.zeros((np.sum(~filt), len(hvg.columns))), columns=hvg.columns,
+                np.zeros((np.sum(~filt), len(hvg.columns))),
+                columns=hvg.columns,
             )
             missing_hvg['highly_variable'] = missing_hvg['highly_variable'].astype(bool)
             missing_hvg['gene'] = gene_list[~filt]
