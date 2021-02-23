@@ -41,7 +41,6 @@ exclude = '''
     |preprocessing/(
         _qc
         |_simple
-        |_normalization
         |_highly_variable_genes
         |_deprecated/highly_variable_genes
     )
