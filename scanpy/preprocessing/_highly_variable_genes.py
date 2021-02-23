@@ -21,7 +21,7 @@ def _highly_variable_genes_seurat_v3(
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
     check_values: bool = True,
-    span: float = 0.3,git status
+    span: float = 0.3,
     subset: bool = False,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
