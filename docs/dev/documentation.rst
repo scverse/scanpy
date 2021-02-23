@@ -19,8 +19,9 @@ Next, if problems persist, clear the sphinx cache and try building them again (`
 Adding to the docs
 ------------------
 
-For any user-visible changes, please make sure a note has been added to `docs/release-latest.rst` so we can credit you!
-We recommend waiting on this until your PR is close to done since this section often causes merge conflicts.
+For any user-visible changes, please make sure a note has been added to the release notes for the relevant version so we can credit you!
+These files are found in the `docs/release-notes/` directory.
+We recommend waiting on this until your PR is close to done since this can often causes merge conflicts.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 For computational methods, this should be added to `docs/api/index.rst` under a relevant heading.
@@ -42,7 +43,20 @@ Some key points:
 * When docs exist in the same file as code, line length restrictions still apply. In files which are just docs, go with a sentence per line (for easier `git diff`\ s).
 * Check that the docs look like what you expect them too! It's easy to forget to add a reference to function, be sure it got added and looks right.
 
-Look at `sc.tl.louvain <https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90>`__ as an example for everything mentioned here:
+Look at `sc.tl.louvain <https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90>`__ as an example for everything mentioned here.
+
+Plots in docstrings
+~~~~~~~~~~~~~~~~~~~
+
+One of the most useful things you can include in a docstring is examples of how the function should be used.
+These are a great way to demonstrate intended usage and give users a template they can copy and modify.
+We're able to include the plots produced by these snippets in the rendered docs using `matplotlib's plot directive <https://matplotlib.org/devel/plot_directive.html>`__. 
+For examples of this, see the `Examples` sections of :func:`~scanpy.pl.dotplot` or :func:`~scanpy.pp.calculate_qc_metrics`.
+
+Note that anything in these sections will need to be run when the docs are built, so please keep them computationally light.
+
+* If you need computed features (e.g. an embedding, differential expression results) load data that has this precomputed.
+* Try to re-use datasets, this reduces the amount of data that needs to be downloaded to the CI server.
 
 `Params` section
 ~~~~~~~~~~~~~~~~

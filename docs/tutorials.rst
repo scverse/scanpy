@@ -1,8 +1,6 @@
 Tutorials
 =========
 
-.. include:: _links.rst
-
 Clustering
 ----------
 
@@ -41,7 +39,7 @@ Get started with the following example for hematopoiesis for data of [Paul15]_: 
    :width: 450px
 
 More examples for trajectory inference on complex datasets can be found in the
-PAGA_ repository [Wolf19]_, for instance, multi-resolution analyses of whole
+`PAGA <https://github.com/theislab/paga>`_ repository [Wolf19]_, for instance, multi-resolution analyses of whole
 animals, such as for planaria_ for data of [Plass18]_.
 
 .. image:: http://www.falexwolf.de/img/paga_planaria.png
