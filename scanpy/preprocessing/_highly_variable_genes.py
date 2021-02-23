@@ -20,8 +20,8 @@ def _highly_variable_genes_seurat_v3(
     layer: Optional[str] = None,
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
-    check_values: Optional[bool] = True,
-    span: Optional[float] = 0.3,
+    check_values: bool = True,
+    span: float = 0.3,
     subset: bool = False,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
@@ -58,10 +58,11 @@ def _highly_variable_genes_seurat_v3(
 
     X = adata.layers[layer] if layer is not None else adata.X
     if check_values:
-        warnings.warn(
-            "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
-            UserWarning,
-        )
+        if check_nonnegative_integers(X) is False:
+            warnings.warn(
+                "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
+                UserWarning,
+            )
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
