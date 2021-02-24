@@ -97,7 +97,9 @@ def _highly_variable_genes_seurat_v3(
         else:
             clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
             np.putmask(
-                batch_counts, batch_counts > clip_val_broad, clip_val_broad,
+                batch_counts,
+                batch_counts > clip_val_broad,
+                clip_val_broad,
             )
 
         if sp_sparse.issparse(batch_counts):
@@ -461,7 +463,8 @@ def highly_variable_genes(
 
             # Add 0 values for genes that were filtered out
             missing_hvg = pd.DataFrame(
-                np.zeros((np.sum(~filt), len(hvg.columns))), columns=hvg.columns,
+                np.zeros((np.sum(~filt), len(hvg.columns))),
+                columns=hvg.columns,
             )
             missing_hvg['highly_variable'] = missing_hvg['highly_variable'].astype(bool)
             missing_hvg['gene'] = gene_list[~filt]
