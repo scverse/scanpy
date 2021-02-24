@@ -37,6 +37,7 @@ def check_rep_mutation(func, X, *, fields=["layer", "obsm"], **kwargs):
         )
         np.testing.assert_array_equal(asarray(adata_X.X), result_array)
 
+<<<<<<< HEAD
     # Unmodified fields
     for field in fields:
         np.testing.assert_array_equal(X_array, asarray(adatas_proc[field].X))
@@ -48,6 +49,11 @@ def check_rep_mutation(func, X, *, fields=["layer", "obsm"], **kwargs):
             sc.get._get_obs_rep(adatas_proc[field_a], **{field_b: field_b})
         )
         np.testing.assert_array_equal(X_array, result_array)
+=======
+    assert np.array_equal(asarray(adata_layer.X), asarray(adata_layer.obsm["obsm"]))
+    assert np.array_equal(asarray(adata_obsm.X), asarray(adata_obsm.layers["layer"]))
+    assert np.array_equal(asarray(adata_X.layers["layer"]), asarray(adata_X.obsm["obsm"]))
+>>>>>>> 40dc2c3b (add flake8 pre-commit)
 
 
 def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):

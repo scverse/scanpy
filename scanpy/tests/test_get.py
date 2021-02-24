@@ -39,12 +39,8 @@ def adata():
     """
     return AnnData(
         X=np.ones((2, 2)),
-        obs=pd.DataFrame(
-            {"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]
-        ),
-        var=pd.DataFrame(
-            {"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]
-        ),
+        obs=pd.DataFrame({"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]),
+        var=pd.DataFrame({"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]),
         layers={"double": sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},
         dtype=int,
     )
@@ -69,9 +65,7 @@ def test_obs_df(adata):
         dtype='float64',
     )
     pd.testing.assert_frame_equal(
-        sc.get.obs_df(
-            adata, keys=["gene2", "obs1"], obsm_keys=[("eye", 0), ("sparse", 1)]
-        ),
+        sc.get.obs_df(adata, keys=["gene2", "obs1"], obsm_keys=[("eye", 0), ("sparse", 1)]),
         pd.DataFrame(
             {"gene2": [1, 1], "obs1": [0, 1], "eye-0": [1, 0], "sparse-1": [0.0, 1.0]},
             index=adata.obs_names,
@@ -361,9 +355,7 @@ def test_repeated_cols(dim, transform, func):
     adata = transform(
         sc.AnnData(
             np.ones((5, 10)),
-            obs=pd.DataFrame(
-                np.ones((5, 2)), columns=["a_column_name", "a_column_name"]
-            ),
+            obs=pd.DataFrame(np.ones((5, 2)), columns=["a_column_name", "a_column_name"]),
             var=pd.DataFrame(index=[f"gene-{i}" for i in range(10)]),
         )
     )
@@ -380,9 +372,7 @@ def test_repeated_index_vals(dim, transform, func):
     adata = transform(
         sc.AnnData(
             np.ones((5, 10)),
-            var=pd.DataFrame(
-                index=["repeated_id"] * 2 + [f"gene-{i}" for i in range(8)]
-            ),
+            var=pd.DataFrame(index=["repeated_id"] * 2 + [f"gene-{i}" for i in range(8)]),
         )
     )
 

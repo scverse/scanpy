@@ -1,4 +1,3 @@
-from collections import namedtuple
 from typing import List, Optional, NamedTuple
 
 import numpy as np
@@ -98,9 +97,7 @@ def paga(
     """
     check_neighbors = 'neighbors' if neighbors_key is None else neighbors_key
     if check_neighbors not in adata.uns:
-        raise ValueError(
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
-        )
+        raise ValueError('You need to run `pp.neighbors` first to compute a neighborhood graph.')
     if groups is None:
         for k in ("leiden", "louvain"):
             if k in adata.obs.columns:
@@ -161,9 +158,7 @@ class PAGA:
         elif self._model == 'v1.0':
             return self._compute_connectivities_v1_0()
         else:
-            raise ValueError(
-                f'`model` {self._model} needs to be one of {_AVAIL_MODELS}.'
-            )
+            raise ValueError(f'`model` {self._model} needs to be one of {_AVAIL_MODELS}.')
 
     def _compute_connectivities_v1_2(self):
         import igraph
@@ -172,9 +167,7 @@ class PAGA:
         ones.data = np.ones(len(ones.data))
         # should be directed if we deal with distances
         g = _utils.get_igraph_from_adjacency(ones, directed=True)
-        vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups_key].cat.codes.values
-        )
+        vc = igraph.VertexClustering(g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         ns = vc.sizes()
         n = sum(ns)
         es_inner_cluster = [vc.subgraph(i).ecount() for i in range(len(ns))]
@@ -208,9 +201,7 @@ class PAGA:
         ones = self._neighbors.connectivities.copy()
         ones.data = np.ones(len(ones.data))
         g = _utils.get_igraph_from_adjacency(ones)
-        vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups_key].cat.codes.values
-        )
+        vc = igraph.VertexClustering(g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         ns = vc.sizes()
         cg = vc.cluster_graph(combine_edges='sum')
         inter_es = _utils.get_sparse_from_igraph(cg, weight_attr='weight') / 2
@@ -235,13 +226,8 @@ class PAGA:
         inverse_connectivities = self.connectivities.copy()
         inverse_connectivities.data = 1.0 / inverse_connectivities.data
         connectivities_tree = minimum_spanning_tree(inverse_connectivities)
-        connectivities_tree_indices = [
-            connectivities_tree[i].nonzero()[1]
-            for i in range(connectivities_tree.shape[0])
-        ]
-        connectivities_tree = sp.sparse.lil_matrix(
-            self.connectivities.shape, dtype=float
-        )
+        connectivities_tree_indices = [connectivities_tree[i].nonzero()[1] for i in range(connectivities_tree.shape[0])]
+        connectivities_tree = sp.sparse.lil_matrix(self.connectivities.shape, dtype=float)
         for i, neighbors in enumerate(connectivities_tree_indices):
             if len(neighbors) > 0:
                 connectivities_tree[i, neighbors] = self.connectivities[i, neighbors]
@@ -251,10 +237,7 @@ class PAGA:
         inverse_inter_es = inter_es.copy()
         inverse_inter_es.data = 1.0 / inverse_inter_es.data
         connectivities_tree = minimum_spanning_tree(inverse_inter_es)
-        connectivities_tree_indices = [
-            connectivities_tree[i].nonzero()[1]
-            for i in range(connectivities_tree.shape[0])
-        ]
+        connectivities_tree_indices = [connectivities_tree[i].nonzero()[1] for i in range(connectivities_tree.shape[0])]
         connectivities_tree = sp.sparse.lil_matrix(inter_es.shape, dtype=float)
         for i, neighbors in enumerate(connectivities_tree_indices):
             if len(neighbors) > 0:
@@ -266,9 +249,7 @@ class PAGA:
         if vkey not in self._adata.uns:
             if 'velocyto_transitions' in self._adata.uns:
                 self._adata.uns[vkey] = self._adata.uns['velocyto_transitions']
-                logg.debug(
-                    "The key 'velocyto_transitions' has been changed to 'velocity_graph'."
-                )
+                logg.debug("The key 'velocyto_transitions' has been changed to 'velocity_graph'.")
             else:
                 raise ValueError(
                     'The passed AnnData needs to have an `uns` annotation '
@@ -289,9 +270,7 @@ class PAGA:
             self._adata.uns[vkey].astype('bool'),
             directed=True,
         )
-        vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups_key].cat.codes.values
-        )
+        vc = igraph.VertexClustering(g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         # set combine_edges to False if you want self loops
         cg_full = vc.cluster_graph(combine_edges='sum')
         transitions = _utils.get_sparse_from_igraph(cg_full, weight_attr='weight')
@@ -322,9 +301,7 @@ class PAGA:
             self._adata.uns['velocyto_transitions'],
             directed=True,
         )
-        vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups_key].cat.codes.values
-        )
+        vc = igraph.VertexClustering(g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         # this stores all single-cell edges in the cluster graph
         cg_full = vc.cluster_graph(combine_edges=False)
         # this is the boolean version that simply counts edges in the clustered graph
@@ -332,9 +309,7 @@ class PAGA:
             self._adata.uns['velocyto_transitions'].astype('bool'),
             directed=True,
         )
-        vc_bool = igraph.VertexClustering(
-            g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values
-        )
+        vc_bool = igraph.VertexClustering(g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values)
         cg_bool = vc_bool.cluster_graph(combine_edges='sum')  # collapsed version
         transitions = _utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
         total_n = self._neighbors.n_neighbors * np.array(vc_bool.sizes())
@@ -415,16 +390,12 @@ def paga_expression_entropies(adata) -> List[float]:
     """
     from scipy.stats import entropy
 
-    groups_order, groups_masks = _utils.select_groups(
-        adata, key=adata.uns['paga']['groups']
-    )
+    groups_order, groups_masks = _utils.select_groups(adata, key=adata.uns['paga']['groups'])
     entropies = []
     for mask in groups_masks:
         X_mask = adata.X[mask].todense()
         x_median = np.nanmedian(X_mask, axis=1, overwrite_input=True)
-        x_probs = (x_median - np.nanmin(x_median)) / (
-            np.nanmax(x_median) - np.nanmin(x_median)
-        )
+        x_probs = (x_median - np.nanmin(x_median)) / (np.nanmax(x_median) - np.nanmin(x_median))
         entropies.append(entropy(x_probs))
     return entropies
 
@@ -478,11 +449,7 @@ def paga_compare_paths(
     import networkx as nx
 
     g1 = nx.Graph(adata1.uns['paga'][adjacency_key])
-    g2 = nx.Graph(
-        adata2.uns['paga'][
-            adjacency_key2 if adjacency_key2 is not None else adjacency_key
-        ]
-    )
+    g2 = nx.Graph(adata2.uns['paga'][adjacency_key2 if adjacency_key2 is not None else adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.debug(f'leaf nodes in graph 1: {leaf_nodes1}')
     paga_groups = adata1.uns['paga']['groups']
@@ -560,10 +527,7 @@ def paga_compare_paths(
                 if (
                     ip < ip_progress
                     or l not in p
-                    or not (
-                        ip + 1 < len(path_mapped)
-                        and path_compare[il + 1] in path_mapped[ip + 1]
-                    )
+                    or not (ip + 1 < len(path_mapped) and path_compare[il + 1] in path_mapped[ip + 1])
                 ):
                     continue
                 # make sure that a step backward leads us to the same value of l
@@ -581,8 +545,7 @@ def paga_compare_paths(
                     # was ok in the previous step
                     poss = list(range(ip - 1, ip_progress - 2, -1))
                     logg.debug(
-                        f'    step(s) backward to position(s) {poss} '
-                        'in path_mapped are fine, too: valid step'
+                        f'    step(s) backward to position(s) {poss} ' 'in path_mapped are fine, too: valid step'
                     )
                     n_agreeing_steps_path += 1
                     ip_progress = ip + 1

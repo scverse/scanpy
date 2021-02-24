@@ -137,9 +137,7 @@ def test_ingest_map_embedding_umap():
     adata_ref = sc.AnnData(X)
     adata_new = sc.AnnData(T)
 
-    sc.pp.neighbors(
-        adata_ref, method='umap', use_rep='X', n_neighbors=4, random_state=0
-    )
+    sc.pp.neighbors(adata_ref, method='umap', use_rep='X', n_neighbors=4, random_state=0)
     sc.tl.umap(adata_ref, random_state=0)
 
     ing = sc.tl.Ingest(adata_ref)

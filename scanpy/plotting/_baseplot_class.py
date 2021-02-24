@@ -100,11 +100,7 @@ class BasePlot(object):
         self.var_group_rotation = var_group_rotation
         self.width, self.height = figsize if figsize is not None else (None, None)
 
-        self.has_var_groups = (
-            True
-            if var_group_positions is not None and len(var_group_positions) > 0
-            else False
-        )
+        self.has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
 
         self._update_var_groups()
 
@@ -119,15 +115,12 @@ class BasePlot(object):
             gene_symbols=gene_symbols,
         )
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
-            warn(
-                f"Over {self.MAX_NUM_CATEGORIES} categories found. "
-                "Plot would be very large."
-            )
+            warn(f"Over {self.MAX_NUM_CATEGORIES} categories found. " "Plot would be very large.")
 
         if categories_order is not None:
             if set(self.obs_tidy.index.categories) != set(categories_order):
                 logg.error(
-                    "Please check that the categories given by "
+                    "Please check that the categories given by "  # noqa: F821
                     "the `order` parameter match the categories that "
                     "want to be reordered.\n\n"
                     "Mismatch: "
@@ -256,10 +249,7 @@ class BasePlot(object):
 
         if self.groupby is None or len(self.categories) <= 2:
             # dendrogram can only be computed  between groupby categories
-            logg.warning(
-                "Dendrogram not added. Dendrogram is added only "
-                "when the number of categories to plot > 2"
-            )
+            logg.warning("Dendrogram not added. Dendrogram is added only " "when the number of categories to plot > 2")
             return self
 
         self.group_extra_size = size
@@ -410,9 +400,7 @@ class BasePlot(object):
             self.make_figure()
         return self.ax_dict
 
-    def _plot_totals(
-        self, total_barplot_ax: Axes, orientation: Literal['top', 'right']
-    ):
+    def _plot_totals(self, total_barplot_ax: Axes, orientation: Literal['top', 'right']):
         """
         Makes the bar plot for totals
         """
@@ -507,9 +495,7 @@ class BasePlot(object):
         cmap = pl.get_cmap(self.cmap)
         import matplotlib.colorbar
 
-        matplotlib.colorbar.ColorbarBase(
-            color_legend_ax, orientation='horizontal', cmap=cmap, norm=normalize
-        )
+        matplotlib.colorbar.ColorbarBase(color_legend_ax, orientation='horizontal', cmap=cmap, norm=normalize)
 
         color_legend_ax.set_title(self.color_legend_title, fontsize='small')
 
@@ -528,9 +514,7 @@ class BasePlot(object):
             self.height - legend_height,
             legend_height,
         ]
-        fig, legend_gs = make_grid_spec(
-            legend_ax, nrows=2, ncols=1, height_ratios=height_ratios
-        )
+        fig, legend_gs = make_grid_spec(legend_ax, nrows=2, ncols=1, height_ratios=height_ratios)
 
         color_legend_ax = fig.add_subplot(legend_gs[1])
 
@@ -604,9 +588,7 @@ class BasePlot(object):
 
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
-            mainplot_width = (
-                len(self.var_names) * category_width + self.group_extra_size
-            )
+            mainplot_width = len(self.var_names) * category_width + self.group_extra_size
             if self.are_axes_swapped:
                 mainplot_height, mainplot_width = mainplot_width, mainplot_height
 
@@ -871,9 +853,7 @@ class BasePlot(object):
                     position = self.var_group_positions[idx]
                     _var_names = self.var_names[position[0] : position[1] + 1]
                     var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-                    positions_ordered.append(
-                        (position_start, position_start + len(_var_names) - 1)
-                    )
+                    positions_ordered.append((position_start, position_start + len(_var_names) - 1))
                     position_start += len(_var_names)
                     labels_ordered.append(self.var_group_labels[idx])
                 self.var_group_labels = labels_ordered
@@ -1019,9 +999,7 @@ class BasePlot(object):
         # remove y ticks
         gene_groups_ax.tick_params(axis='y', left=False, labelleft=False)
         # remove x ticks and labels
-        gene_groups_ax.tick_params(
-            axis='x', bottom=False, labelbottom=False, labeltop=False
-        )
+        gene_groups_ax.tick_params(axis='x', bottom=False, labelbottom=False, labeltop=False)
 
     def _update_var_groups(self):
         """

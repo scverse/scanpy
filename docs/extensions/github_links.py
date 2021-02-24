@@ -32,9 +32,7 @@ class AutoLink(NamedTuple):
 
 
 def register_links(app: Sphinx, config: Config):
-    gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(
-        config.html_context
-    )
+    gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(config.html_context)
     app.add_role('pr', AutoLink('pr', f'{gh_url}/pull/{{}}', 'PR {}'))
     app.add_role('issue', AutoLink('issue', f'{gh_url}/issues/{{}}', 'issue {}'))
     app.add_role('noteversion', AutoLink('noteversion', f'{gh_url}/releases/tag/{{}}'))

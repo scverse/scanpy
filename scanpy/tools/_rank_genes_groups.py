@@ -104,9 +104,7 @@ class _RankGenes:
         else:
             self.expm1_func = np.expm1
 
-        self.groups_order, self.groups_masks = _utils.select_groups(
-            adata, groups, groupby
-        )
+        self.groups_order, self.groups_masks = _utils.select_groups(adata, groups, groupby)
 
         # Singlet groups cause division by zero errors
         invalid_groups_selected = set(self.groups_order) & set(
@@ -171,9 +169,7 @@ class _RankGenes:
         else:
             mask_rest = self.groups_masks[self.ireference]
             X_rest = self.X[mask_rest]
-            self.means[self.ireference], self.vars[self.ireference] = _get_mean_var(
-                X_rest
-            )
+            self.means[self.ireference], self.vars[self.ireference] = _get_mean_var(X_rest)
             # deleting the next line causes a memory leak for some reason
             del X_rest
 
@@ -284,10 +280,7 @@ class _RankGenes:
                 m_active = np.count_nonzero(mask_rest)
 
                 if n_active <= 25 or m_active <= 25:
-                    logg.hint(
-                        'Few observations in a group for '
-                        'normal approximation (<=25). Lower test accuracy.'
-                    )
+                    logg.hint('Few observations in a group for ' 'normal approximation (<=25). Lower test accuracy.')
 
                 # Calculate rank sums for each chunk for the current mask
                 for ranks, left, right in _ranks(self.X, mask, mask_rest):
@@ -295,13 +288,9 @@ class _RankGenes:
                     if tie_correct:
                         T[left:right] = _tiecorrect(ranks)
 
-                std_dev = np.sqrt(
-                    T * n_active * m_active * (n_active + m_active + 1) / 12.0
-                )
+                std_dev = np.sqrt(T * n_active * m_active * (n_active + m_active + 1) / 12.0)
 
-                scores = (
-                    scores - (n_active * ((n_active + m_active + 1) / 2.0))
-                ) / std_dev
+                scores = (scores - (n_active * ((n_active + m_active + 1) / 2.0))) / std_dev
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores))
 
@@ -331,13 +320,9 @@ class _RankGenes:
                 else:
                     T_i = 1
 
-                std_dev = np.sqrt(
-                    T_i * n_active * (n_cells - n_active) * (n_cells + 1) / 12.0
-                )
+                std_dev = np.sqrt(T_i * n_active * (n_cells - n_active) * (n_cells + 1) / 12.0)
 
-                scores[group_index, :] = (
-                    scores[group_index, :] - (n_active * (n_cells + 1) / 2.0)
-                ) / std_dev
+                scores[group_index, :] = (scores[group_index, :] - (n_active * (n_cells + 1) / 2.0)) / std_dev
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[group_index, :]))
 
@@ -415,9 +400,7 @@ class _RankGenes:
                     from statsmodels.stats.multitest import multipletests
 
                     pvals[np.isnan(pvals)] = 1
-                    _, pvals_adj, _, _ = multipletests(
-                        pvals, alpha=0.05, method='fdr_bh'
-                    )
+                    _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
                 elif corr_method == 'bonferroni':
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
                 self.stats[group_name, 'pvals_adj'] = pvals_adj[global_indices]
@@ -431,9 +414,7 @@ class _RankGenes:
                 foldchanges = (self.expm1_func(mean_group) + 1e-9) / (
                     self.expm1_func(mean_rest) + 1e-9
                 )  # add small value to remove 0's
-                self.stats[group_name, 'logfoldchanges'] = np.log2(
-                    foldchanges[global_indices]
-                )
+                self.stats[group_name, 'logfoldchanges'] = np.log2(foldchanges[global_indices])
 
         if n_genes_user is None:
             self.stats.index = self.var_names
@@ -548,9 +529,7 @@ def rank_genes_groups(
     >>> sc.pl.rank_genes_groups(adata)
     """
     if method is None:
-        logg.warning(
-            "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
-        )
+        logg.warning("Default of the method has been changed to 't-test' from 't-test_overestim_var'")
         method = 't-test'
 
     if 'only_positive' in kwds:
@@ -580,9 +559,7 @@ def rank_genes_groups(
             groups_order += [reference]
     if reference != 'rest' and reference not in adata.obs[groupby].cat.categories:
         cats = adata.obs[groupby].cat.categories.tolist()
-        raise ValueError(
-            f'reference = {reference} needs to be one of groupby = {cats}.'
-        )
+        raise ValueError(f'reference = {reference} needs to be one of groupby = {cats}.')
 
     if key_added is None:
         key_added = 'rank_genes_groups'
@@ -608,15 +585,11 @@ def rank_genes_groups(
     logg.debug(f'consider {groupby!r} groups:')
     logg.debug(f'with sizes: {np.count_nonzero(test_obj.groups_masks, axis=1)}')
 
-    test_obj.compute_statistics(
-        method, corr_method, n_genes_user, rankby_abs, tie_correct, **kwds
-    )
+    test_obj.compute_statistics(method, corr_method, n_genes_user, rankby_abs, tie_correct, **kwds)
 
     if test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
-        adata.uns[key_added]['pts'] = pd.DataFrame(
-            test_obj.pts.T, index=test_obj.var_names, columns=groups_names
-        )
+        adata.uns[key_added]['pts'] = pd.DataFrame(test_obj.pts.T, index=test_obj.var_names, columns=groups_names)
     if test_obj.pts_rest is not None:
         adata.uns[key_added]['pts_rest'] = pd.DataFrame(
             test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
@@ -633,9 +606,7 @@ def rank_genes_groups(
     }
 
     for col in test_obj.stats.columns.levels[0]:
-        adata.uns[key_added][col] = test_obj.stats[col].to_records(
-            index=False, column_dtypes=dtypes[col]
-        )
+        adata.uns[key_added][col] = test_obj.stats[col].to_records(index=False, column_dtypes=dtypes[col])
 
     logg.info(
         '    finished',
@@ -780,12 +751,8 @@ def filter_rank_genes_groups(
             X_out = sub_X[~in_group]
 
         if use_fraction:
-            fraction_in_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]['pts'][cluster].loc[var_names].values
-            )
-            fraction_out_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]['pts_rest'][cluster].loc[var_names].values
-            )
+            fraction_in_cluster_matrix.loc[:, cluster] = adata.uns[key]['pts'][cluster].loc[var_names].values
+            fraction_out_cluster_matrix.loc[:, cluster] = adata.uns[key]['pts_rest'][cluster].loc[var_names].values
         else:
             fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(X_in)
             fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac(X_out)
@@ -796,8 +763,7 @@ def filter_rank_genes_groups(
             mean_out_cluster = np.ravel(X_out.mean(0))
             # compute fold change
             fold_change_matrix.loc[:, cluster] = np.log2(
-                (expm1_func(mean_in_cluster) + 1e-9)
-                / (expm1_func(mean_out_cluster) + 1e-9)
+                (expm1_func(mean_in_cluster) + 1e-9) / (expm1_func(mean_out_cluster) + 1e-9)
             )
 
     # filter original_matrix

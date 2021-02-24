@@ -24,8 +24,7 @@ def _choose_mtx_rep(adata, use_raw=False, layer=None):
     is_layer = layer is not None
     if use_raw and is_layer:
         raise ValueError(
-            "Cannot use expression from both layer and raw. You provided:"
-            f"'use_raw={use_raw}' and 'layer={layer}'"
+            "Cannot use expression from both layer and raw. You provided:" f"'use_raw={use_raw}' and 'layer={layer}'"
         )
     if is_layer:
         return adata.layers[layer]
@@ -103,33 +102,21 @@ def describe_obs(
     else:
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
     if log1p:
-        obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
-            obs_metrics[f"n_{var_type}_by_{expr_type}"]
-        )
+        obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(obs_metrics[f"n_{var_type}_by_{expr_type}"])
     obs_metrics[f"total_{expr_type}"] = X.sum(axis=1)
     if log1p:
-        obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(
-            obs_metrics[f"total_{expr_type}"]
-        )
+        obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(obs_metrics[f"total_{expr_type}"])
     if percent_top:
         percent_top = sorted(percent_top)
         proportions = top_segment_proportions(X, percent_top)
         for i, n in enumerate(percent_top):
-            obs_metrics[f"pct_{expr_type}_in_top_{n}_{var_type}"] = (
-                proportions[:, i] * 100
-            )
+            obs_metrics[f"pct_{expr_type}_in_top_{n}_{var_type}"] = proportions[:, i] * 100
     for qc_var in qc_vars:
-        obs_metrics[f"total_{expr_type}_{qc_var}"] = X[:, adata.var[qc_var].values].sum(
-            axis=1
-        )
+        obs_metrics[f"total_{expr_type}_{qc_var}"] = X[:, adata.var[qc_var].values].sum(axis=1)
         if log1p:
-            obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
-                obs_metrics[f"total_{expr_type}_{qc_var}"]
-            )
+            obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(obs_metrics[f"total_{expr_type}_{qc_var}"])
         obs_metrics[f"pct_{expr_type}_{qc_var}"] = (
-            obs_metrics[f"total_{expr_type}_{qc_var}"]
-            / obs_metrics[f"total_{expr_type}"]
-            * 100
+            obs_metrics[f"total_{expr_type}_{qc_var}"] / obs_metrics[f"total_{expr_type}"] * 100
         )
     if inplace:
         adata.obs[obs_metrics.columns] = obs_metrics
@@ -193,17 +180,11 @@ def describe_var(
         var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
         var_metrics["mean_{expr_type}"] = X.mean(axis=0)
     if log1p:
-        var_metrics["log1p_mean_{expr_type}"] = np.log1p(
-            var_metrics["mean_{expr_type}"]
-        )
-    var_metrics["pct_dropout_by_{expr_type}"] = (
-        1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]
-    ) * 100
+        var_metrics["log1p_mean_{expr_type}"] = np.log1p(var_metrics["mean_{expr_type}"])
+    var_metrics["pct_dropout_by_{expr_type}"] = (1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]) * 100
     var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
     if log1p:
-        var_metrics["log1p_total_{expr_type}"] = np.log1p(
-            var_metrics["total_{expr_type}"]
-        )
+        var_metrics["log1p_total_{expr_type}"] = np.log1p(var_metrics["total_{expr_type}"])
     # Relabel
     new_colnames = []
     for col in var_metrics.columns:
@@ -377,9 +358,7 @@ def top_proportions_sparse_csr(data, indptr, n):
     return values
 
 
-def top_segment_proportions(
-    mtx: Union[np.array, spmatrix], ns: Collection[int]
-) -> np.ndarray:
+def top_segment_proportions(mtx: Union[np.array, spmatrix], ns: Collection[int]) -> np.ndarray:
     """
     Calculates total percentage of counts in top ns genes.
 
@@ -403,15 +382,11 @@ def top_segment_proportions(
         return top_segment_proportions_dense(mtx, ns)
 
 
-def top_segment_proportions_dense(
-    mtx: Union[np.array, spmatrix], ns: Collection[int]
-) -> np.ndarray:
+def top_segment_proportions_dense(mtx: Union[np.array, spmatrix], ns: Collection[int]) -> np.ndarray:
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)
     sums = mtx.sum(axis=1)
-    partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][
-        :, : ns[-1]
-    ]
+    partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][:, : ns[-1]]
     values = np.zeros((mtx.shape[0], len(ns)))
     acc = np.zeros(mtx.shape[0])
     prev = 0

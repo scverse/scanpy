@@ -60,13 +60,9 @@ def simple_query(
     try:
         from pybiomart import Server
     except ImportError:
-        raise ImportError(
-            "This method requires the `pybiomart` module to be installed."
-        )
+        raise ImportError("This method requires the `pybiomart` module to be installed.")
     server = Server(host, use_cache=use_cache)
-    dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets[
-        "{}_gene_ensembl".format(org)
-    ]
+    dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets["{}_gene_ensembl".format(org)]
     res = dataset.query(attributes=attrs, filters=filters, use_attr_names=True)
     return res
 
@@ -264,16 +260,13 @@ def enrich(
     try:
         from gprofiler import GProfiler
     except ImportError:
-        raise ImportError(
-            "This method requires the `gprofiler-official` module to be installed."
-        )
+        raise ImportError("This method requires the `gprofiler-official` module to be installed.")
     gprofiler = GProfiler(user_agent="scanpy", return_dataframe=True)
     gprofiler_kwargs = dict(gprofiler_kwargs)
     for k in ["organism"]:
         if gprofiler_kwargs.get(k) is not None:
             raise ValueError(
-                f"Argument `{k}` should be passed directly through `enrich`, "
-                "not through `gprofiler_kwargs`"
+                f"Argument `{k}` should be passed directly through `enrich`, " "not through `gprofiler_kwargs`"
             )
     return gprofiler.profile(container, organism=org, **gprofiler_kwargs)
 

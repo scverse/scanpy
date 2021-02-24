@@ -63,13 +63,9 @@ def test_higly_variable_genes_compare_to_seurat():
 
     sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
     sc.pp.log1p(pbmc)
-    sc.pp.highly_variable_genes(
-        pbmc, flavor='seurat', min_mean=0.0125, max_mean=3, min_disp=0.5, inplace=True
-    )
+    sc.pp.highly_variable_genes(pbmc, flavor='seurat', min_mean=0.0125, max_mean=3, min_disp=0.5, inplace=True)
 
-    np.testing.assert_array_equal(
-        seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
-    )
+    np.testing.assert_array_equal(seurat_hvg_info['highly_variable'], pbmc.var['highly_variable'])
 
     # (still) Not equal to tolerance rtol=2e-05, atol=2e-05
     # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
@@ -94,9 +90,7 @@ def test_higly_variable_genes_compare_to_seurat():
 
 
 def test_higly_variable_genes_compare_to_seurat_v3():
-    seurat_hvg_info = pd.read_csv(
-        FILE_V3, sep=' ', dtype={"variances_norm": np.float64}
-    )
+    seurat_hvg_info = pd.read_csv(FILE_V3, sep=' ', dtype={"variances_norm": np.float64})
 
     pbmc = sc.datasets.pbmc3k()
     pbmc.var_names_make_unique()
@@ -107,9 +101,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     sc.pp.highly_variable_genes(pbmc, n_top_genes=1000, flavor='seurat_v3')
     sc.pp.highly_variable_genes(pbmc_dense, n_top_genes=1000, flavor='seurat_v3')
 
-    np.testing.assert_array_equal(
-        seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
-    )
+    np.testing.assert_array_equal(seurat_hvg_info['highly_variable'], pbmc.var['highly_variable'])
     np.testing.assert_allclose(
         seurat_hvg_info['variances'],
         pbmc.var['variances'],
@@ -132,9 +124,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     batch = np.zeros((len(pbmc)), dtype=int)
     batch[1500:] = 1
     pbmc.obs["batch"] = batch
-    df = sc.pp.highly_variable_genes(
-        pbmc, n_top_genes=4000, flavor='seurat_v3', batch_key="batch", inplace=False
-    )
+    df = sc.pp.highly_variable_genes(pbmc, n_top_genes=4000, flavor='seurat_v3', batch_key="batch", inplace=False)
     df.sort_values(
         ["highly_variable_nbatches", "highly_variable_rank"],
         ascending=[False, True],
@@ -142,9 +132,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         inplace=True,
     )
     df = df.iloc[:4000]
-    seurat_hvg_info_batch = pd.read_csv(
-        FILE_V3_BATCH, sep=' ', dtype={"variances_norm": np.float64}
-    )
+    seurat_hvg_info_batch = pd.read_csv(FILE_V3_BATCH, sep=' ', dtype={"variances_norm": np.float64})
 
     # ranks might be slightly different due to many genes having same normalized var
     seu = pd.Index(seurat_hvg_info_batch['x'].values)
@@ -176,9 +164,7 @@ def test_filter_genes_dispersion_compare_to_seurat():
         min_disp=0.5,
     )
 
-    np.testing.assert_array_equal(
-        seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
-    )
+    np.testing.assert_array_equal(seurat_hvg_info['highly_variable'], pbmc.var['highly_variable'])
 
     # (still) Not equal to tolerance rtol=2e-05, atol=2e-05:
     # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
@@ -219,12 +205,8 @@ def test_highly_variable_genes_batches():
 
     sc.pp.filter_genes(adata_1, min_cells=1)
     sc.pp.filter_genes(adata_2, min_cells=1)
-    hvg1 = sc.pp.highly_variable_genes(
-        adata_1, flavor='cell_ranger', n_top_genes=200, inplace=False
-    )
-    hvg2 = sc.pp.highly_variable_genes(
-        adata_2, flavor='cell_ranger', n_top_genes=200, inplace=False
-    )
+    hvg1 = sc.pp.highly_variable_genes(adata_1, flavor='cell_ranger', n_top_genes=200, inplace=False)
+    hvg2 = sc.pp.highly_variable_genes(adata_2, flavor='cell_ranger', n_top_genes=200, inplace=False)
 
     assert np.isclose(
         adata.var['dispersions_norm'][100],
@@ -234,9 +216,7 @@ def test_highly_variable_genes_batches():
         adata.var['dispersions_norm'][101],
         0.5 * hvg1['dispersions_norm'][1] + 0.5 * hvg2['dispersions_norm'][101],
     )
-    assert np.isclose(
-        adata.var['dispersions_norm'][0], 0.5 * hvg2['dispersions_norm'][0]
-    )
+    assert np.isclose(adata.var['dispersions_norm'][0], 0.5 * hvg2['dispersions_norm'][0])
 
     colnames = [
         'means',

@@ -210,6 +210,4 @@ def _plot_color_cycle(clists: Mapping[str, Sequence[str]]):
 
 
 if __name__ == '__main__':
-    _plot_color_cycle(
-        {name: colors for name, colors in globals().items() if isinstance(colors, list)}
-    )
+    _plot_color_cycle({name: colors for name, colors in globals().items() if isinstance(colors, list)})

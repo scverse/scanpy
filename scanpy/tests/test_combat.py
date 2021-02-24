@@ -37,9 +37,7 @@ def test_covariates():
     adata.obs['cat2'] = np.random.binomial(2, 0.1, size=(adata.n_obs))
     adata.obs['num1'] = np.random.normal(size=(adata.n_obs))
 
-    X2 = sc.pp.combat(
-        adata, key=key, covariates=['cat1', 'cat2', 'num1'], inplace=False
-    )
+    X2 = sc.pp.combat(adata, key=key, covariates=['cat1', 'cat2', 'num1'], inplace=False)
     sc.pp.combat(adata, key=key, covariates=['cat1', 'cat2', 'num1'], inplace=True)
 
     assert X1.shape == X2.shape

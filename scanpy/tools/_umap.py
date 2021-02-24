@@ -122,17 +122,13 @@ def umap(
         neighbors_key = 'neighbors'
 
     if neighbors_key not in adata.uns:
-        raise ValueError(
-            f'Did not find .uns["{neighbors_key}"]. Run `sc.pp.neighbors` first.'
-        )
+        raise ValueError(f'Did not find .uns["{neighbors_key}"]. Run `sc.pp.neighbors` first.')
     start = logg.info('computing UMAP')
 
     neighbors = NeighborsView(adata, neighbors_key)
 
     if 'params' not in neighbors or neighbors['params']['method'] != 'umap':
-        logg.warning(
-            f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap'
-        )
+        logg.warning(f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap')
 
     # Compat for umap 0.4 -> 0.5
     with warnings.catch_warnings():
@@ -167,9 +163,7 @@ def umap(
     if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(
-            adata, random_state=random_state, neighbors_key=neighbors_key
-        )
+        init_coords = get_init_pos_from_paga(adata, random_state=random_state, neighbors_key=neighbors_key)
     else:
         init_coords = init_pos  # Let umap handle it
     if hasattr(init_coords, "dtype"):
@@ -216,9 +210,7 @@ def umap(
         from cuml import UMAP
 
         n_neighbors = neighbors['params']['n_neighbors']
-        n_epochs = (
-            500 if maxiter is None else maxiter
-        )  # 0 is not a valid value for rapids, unlike original umap
+        n_epochs = 500 if maxiter is None else maxiter  # 0 is not a valid value for rapids, unlike original umap
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
         umap = UMAP(
             n_neighbors=n_neighbors,

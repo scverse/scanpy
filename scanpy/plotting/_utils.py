@@ -70,9 +70,7 @@ def matrix(
         ax.set_xticks(range(len(xticks)), xticks, rotation='vertical')
     if yticks is not None:
         ax.set_yticks(range(len(yticks)), yticks)
-    pl.colorbar(
-        img, shrink=colorbar_shrink, ax=ax
-    )  # need a figure instance for colorbar
+    pl.colorbar(img, shrink=colorbar_shrink, ax=ax)  # need a figure instance for colorbar
     savefig_or_show('matrix', show=show, save=save)
 
 
@@ -157,9 +155,7 @@ def timeseries_subplot(
         ax.legend(frameon=False)
 
 
-def timeseries_as_heatmap(
-    X: np.ndarray, var_names: Collection[str] = (), highlights_x=(), color_map=None
-):
+def timeseries_as_heatmap(X: np.ndarray, var_names: Collection[str] = (), highlights_x=(), color_map=None):
     """\
     Plot timeseries as heatmap.
 
@@ -268,10 +264,7 @@ def savefig(writekey, dpi=None, ext=None):
     """
     if dpi is None:
         # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
-        if (
-            not isinstance(rcParams['savefig.dpi'], str)
-            and rcParams['savefig.dpi'] < 150
-        ):
+        if not isinstance(rcParams['savefig.dpi'], str) and rcParams['savefig.dpi'] < 150:
             if settings._low_resolution_warning:
                 logg.warning(
                     'You are using a low resolution (dpi<150) for saving figures.\n'
@@ -359,9 +352,7 @@ def _validate_palette(adata, key):
         adata.uns[color_key] = _palette
 
 
-def _set_colors_for_categorical_obs(
-    adata, value_to_plot, palette: Union[str, Sequence[str], Cycler]
-):
+def _set_colors_for_categorical_obs(adata, value_to_plot, palette: Union[str, Sequence[str], Cycler]):
     """
     Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
 
@@ -410,10 +401,7 @@ def _set_colors_for_categorical_obs(
                     if color in additional_colors:
                         color = additional_colors[color]
                     else:
-                        raise ValueError(
-                            "The following color value of the given palette "
-                            f"is not valid: {color}"
-                        )
+                        raise ValueError("The following color value of the given palette " f"is not valid: {color}")
                 _color_list.append(color)
 
             palette = cycler(color=_color_list)
@@ -473,9 +461,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     adata.uns[value_to_plot + '_colors'] = palette[:length]
 
 
-def add_colors_for_categorical_sample_annotation(
-    adata, key, palette=None, force_update_colors=False
-):
+def add_colors_for_categorical_sample_annotation(adata, key, palette=None, force_update_colors=False):
 
     color_key = f"{key}_colors"
     colors_needed = len(adata.obs[key].cat.categories)
@@ -518,14 +504,10 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
 def plot_arrows(axs, adata, basis, arrows_kwds=None):
     if not isinstance(axs, cabc.Sequence):
         axs = [axs]
-    v_prefix = next(
-        (p for p in ['velocity', 'Delta'] if f'{p}_{basis}' in adata.obsm), None
-    )
+    v_prefix = next((p for p in ['velocity', 'Delta'] if f'{p}_{basis}' in adata.obsm), None)
     if v_prefix is None:
         raise ValueError(
-            "`arrows=True` requires "
-            f"`'velocity_{basis}'` from scvelo or "
-            f"`'Delta_{basis}'` from velocyto."
+            "`arrows=True` requires " f"`'velocity_{basis}'` from scvelo or " f"`'Delta_{basis}'` from velocyto."
         )
     if v_prefix == 'velocity':
         logg.warning(
@@ -607,9 +589,7 @@ def setup_axes(
     if show_ticks:
         base_width *= 1.1
 
-    draw_region_width = (
-        base_width - left_offset - top_offset - 0.5
-    )  # this is kept constant throughout
+    draw_region_width = base_width - left_offset - top_offset - 0.5  # this is kept constant throughout
 
     right_margin_factor = sum([1 + right_margin for right_margin in right_margin_list])
     width_without_offsets = (
@@ -630,9 +610,7 @@ def setup_axes(
     left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
     for i in range(1, len(panels)):
         right_margin = right_margin_list[i - 1]
-        left_positions.append(
-            left_positions[-1] + right_margin * draw_region_width_frac
-        )
+        left_positions.append(left_positions[-1] + right_margin * draw_region_width_frac)
         left_positions.append(left_positions[-1] + draw_region_width_frac)
     panel_pos = [[bottom_offset], [1 - top_offset], left_positions]
 
@@ -736,10 +714,7 @@ def scatter_base(
             )
         if colorbars[icolor]:
             width = 0.006 * draw_region_width / len(colors)
-            left = (
-                panel_pos[2][2 * icolor + 1]
-                + (1.2 if projection == '3d' else 0.2) * width
-            )
+            left = panel_pos[2][2 * icolor + 1] + (1.2 if projection == '3d' else 0.2) * width
             rectangle = [left, bottom, width, height]
             fig = pl.gcf()
             ax_cb = fig.add_axes(rectangle)
@@ -762,11 +737,7 @@ def scatter_base(
                 s=10,
                 zorder=20,
             )
-            highlight_text = (
-                highlights_labels[iihighlight]
-                if len(highlights_labels) > 0
-                else str(ihighlight)
-            )
+            highlight_text = highlights_labels[iihighlight] if len(highlights_labels) > 0 else str(ihighlight)
             # the following is a Python 2 compatibility hack
             ax.text(
                 *([d[0] for d in data] + [highlight_text]),
@@ -781,10 +752,7 @@ def scatter_base(
                 ax.set_zticks([])
     # set default axis_labels
     if axis_labels is None:
-        axis_labels = [
-            [component_name + str(i) for i in component_indexnames]
-            for _ in range(len(axs))
-        ]
+        axis_labels = [[component_name + str(i) for i in component_indexnames] for _ in range(len(axs))]
     else:
         axis_labels = [axis_labels for _ in range(len(axs))]
     for iax, ax in enumerate(axs):
@@ -938,7 +906,11 @@ def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     if levels is None:
         levels = make_levels({})
     else:
+<<<<<<< HEAD
         levels = {l: {TOTAL: levels[l], CURRENT: 0} for l in levels}
+=======
+        levels = {level: {TOTAL: levels[level], CURRENT: 0} for level in levels}
+>>>>>>> 7a096bf9 (add flake8 pre-commit)
     vert_gap = height / (max([level for level in levels]) + 1)
     return make_pos({})
 
@@ -972,9 +944,7 @@ def zoom(ax, xy='x', factor=1):
     ----------
     """
     limits = ax.get_xlim() if xy == 'x' else ax.get_ylim()
-    new_limits = 0.5 * (limits[0] + limits[1]) + 1.0 / factor * np.array(
-        (-0.5, 0.5)
-    ) * (limits[1] - limits[0])
+    new_limits = 0.5 * (limits[0] + limits[1]) + 1.0 / factor * np.array((-0.5, 0.5)) * (limits[1] - limits[0])
     if xy == 'x':
         ax.set_xlim(new_limits)
     else:
@@ -1056,9 +1026,7 @@ def check_projection(projection):
 
         mpl_version = parse(mpl.__version__)
         if mpl_version < parse("3.3.3"):
-            raise ImportError(
-                f"3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}"
-            )
+            raise ImportError(f"3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}")
 
 
 def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):

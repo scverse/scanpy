@@ -206,26 +206,19 @@ def _compute_pos(
             iterations = layout_kwds['iterations']
         else:
             iterations = 500
-        pos_list = forceatlas2.forceatlas2(
-            adjacency_solid, pos=init_coords, iterations=iterations
-        )
+        pos_list = forceatlas2.forceatlas2(adjacency_solid, pos=init_coords, iterations=iterations)
         pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
     elif layout == 'eq_tree':
         nx_g_tree = nx.Graph(adj_tree)
         pos = _utils.hierarchy_pos(nx_g_tree, root)
         if len(pos) < adjacency_solid.shape[0]:
-            raise ValueError(
-                'This is a forest and not a single tree. '
-                'Try another `layout`, e.g., {\'fr\'}.'
-            )
+            raise ValueError('This is a forest and not a single tree. ' 'Try another `layout`, e.g., {\'fr\'}.')
     else:
         # igraph layouts
         g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
         if 'rt' in layout:
             g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
-            pos_list = g_tree.layout(
-                layout, root=root if isinstance(root, list) else [root]
-            ).coords
+            pos_list = g_tree.layout(layout, root=root if isinstance(root, list) else [root]).coords
         elif layout == 'circle':
             pos_list = g.layout(layout).coords
         else:
@@ -240,9 +233,7 @@ def _compute_pos(
                 init_pos[:, 1] *= -1
                 init_coords = init_pos.tolist()
             try:
-                pos_list = g.layout(
-                    layout, seed=init_coords, weights='weight', **layout_kwds
-                ).coords
+                pos_list = g.layout(layout, seed=init_coords, weights='weight', **layout_kwds).coords
             except AttributeError:  # hack for empty graphs...
                 pos_list = g.layout(layout, seed=init_coords, **layout_kwds).coords
         pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
@@ -441,18 +432,12 @@ def paga(
     groups_key = adata.uns['paga']['groups']
 
     def is_flat(x):
-        has_one_per_category = isinstance(x, cabc.Collection) and len(x) == len(
-            adata.obs[groups_key].cat.categories
-        )
+        has_one_per_category = isinstance(x, cabc.Collection) and len(x) == len(adata.obs[groups_key].cat.categories)
         return has_one_per_category or x is None or isinstance(x, str)
 
-    if isinstance(colors, cabc.Mapping) and isinstance(
-        colors[next(iter(colors))], cabc.Mapping
-    ):
+    if isinstance(colors, cabc.Mapping) and isinstance(colors[next(iter(colors))], cabc.Mapping):
         # handle paga pie, remap string keys to integers
-        names_to_ixs = {
-            n: i for i, n in enumerate(adata.obs[groups_key].cat.categories)
-        }
+        names_to_ixs = {n: i for i, n in enumerate(adata.obs[groups_key].cat.categories)}
         colors = {names_to_ixs.get(n, n): v for n, v in colors.items()}
     if is_flat(colors):
         colors = [colors]
@@ -473,21 +458,14 @@ def paga(
     if colorbar is None:
         var_names = adata.var_names if adata.raw is None else adata.raw.var_names
         colorbars = [
-            (
-                (c in adata.obs_keys() and adata.obs[c].dtype.name != 'category')
-                or (c in var_names)
-            )
-            for c in colors
+            ((c in adata.obs_keys() and adata.obs[c].dtype.name != 'category') or (c in var_names)) for c in colors
         ]
     else:
         colorbars = [False for _ in colors]
 
     if isinstance(root, str):
         if root not in labels:
-            raise ValueError(
-                'If `root` is a string, '
-                f'it needs to be one of {labels} not {root!r}.'
-            )
+            raise ValueError('If `root` is a string, ' f'it needs to be one of {labels} not {root!r}.')
         root = list(labels).index(root)
     if isinstance(root, cabc.Sequence) and root[0] in labels:
         root = [list(labels).index(r) for r in root]
@@ -631,11 +609,7 @@ def _paga_graph(
     import networkx as nx
 
     node_labels = labels  # rename for clarity
-    if (
-        node_labels is not None
-        and isinstance(node_labels, str)
-        and node_labels != adata.uns['paga']['groups']
-    ):
+    if node_labels is not None and isinstance(node_labels, str) and node_labels != adata.uns['paga']['groups']:
         raise ValueError(
             'Provide a list of group labels for the PAGA groups {}, not {}.'.format(
                 adata.uns['paga']['groups'], node_labels
@@ -646,9 +620,9 @@ def _paga_graph(
         node_labels = adata.obs[groups_key].cat.categories
 
     if (colors is None or colors == groups_key) and groups_key is not None:
-        if groups_key + '_colors' not in adata.uns or len(
-            adata.obs[groups_key].cat.categories
-        ) != len(adata.uns[groups_key + '_colors']):
+        if groups_key + '_colors' not in adata.uns or len(adata.obs[groups_key].cat.categories) != len(
+            adata.uns[groups_key + '_colors']
+        ):
             _utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
         colors = adata.uns[groups_key + '_colors']
         for iname, name in enumerate(adata.obs[groups_key].cat.categories):
@@ -714,11 +688,7 @@ def _paga_graph(
         colors = x_color
 
     # plot continuous annotation
-    if (
-        isinstance(colors, str)
-        and colors in adata.obs
-        and not is_categorical_dtype(adata.obs[colors])
-    ):
+    if isinstance(colors, str) and colors in adata.obs and not is_categorical_dtype(adata.obs[colors]):
         x_color = []
         cats = adata.obs[groups_key].cat.categories
         for icat, cat in enumerate(cats):
@@ -727,11 +697,7 @@ def _paga_graph(
         colors = x_color
 
     # plot categorical annotation
-    if (
-        isinstance(colors, str)
-        and colors in adata.obs
-        and is_categorical_dtype(adata.obs[colors])
-    ):
+    if isinstance(colors, str) and colors in adata.obs and is_categorical_dtype(adata.obs[colors]):
         asso_names, asso_matrix = _sc_utils.compute_association_matrix_of_groups(
             adata,
             prediction=groups_key,
@@ -739,16 +705,11 @@ def _paga_graph(
             normalization='reference' if normalize_to_color else 'prediction',
         )
         _utils.add_colors_for_categorical_sample_annotation(adata, colors)
-        asso_colors = _sc_utils.get_associated_colors_of_groups(
-            adata.uns[colors + '_colors'], asso_matrix
-        )
+        asso_colors = _sc_utils.get_associated_colors_of_groups(adata.uns[colors + '_colors'], asso_matrix)
         colors = asso_colors
 
     if len(colors) != len(node_labels):
-        raise ValueError(
-            f'Expected `colors` to be of length `{len(node_labels)}`, '
-            f'found `{len(colors)}`.'
-        )
+        raise ValueError(f'Expected `colors` to be of length `{len(node_labels)}`, ' f'found `{len(colors)}`.')
 
     # count number of connected components
     n_components, labels = scipy.sparse.csgraph.connected_components(adjacency_solid)
@@ -764,13 +725,8 @@ def _paga_graph(
         adjacency_solid = adjacency_solid.tocsc()[:, labels == largest_component]
         colors = np.array(colors)[labels == largest_component]
         node_labels = np.array(node_labels)[labels == largest_component]
-        cats_dropped = (
-            adata.obs[groups_key].cat.categories[labels != largest_component].tolist()
-        )
-        logg.info(
-            'Restricting graph to largest connected component by dropping categories\n'
-            f'{cats_dropped}'
-        )
+        cats_dropped = adata.obs[groups_key].cat.categories[labels != largest_component].tolist()
+        logg.info('Restricting graph to largest connected component by dropping categories\n' f'{cats_dropped}')
         nx_g_solid = nx.Graph(adjacency_solid)
         if dashed_edges is not None:
             raise ValueError('`single_component` only if `dashed_edges` is `None`.')
@@ -802,9 +758,7 @@ def _paga_graph(
             widths = np.clip(widths, min_edge_width, max_edge_width)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            nx.draw_networkx_edges(
-                nx_g_solid, pos, ax=ax, width=widths, edge_color='black'
-            )
+            nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
     # draw directed edges
     else:
         adjacency_transitions = adata.uns['paga'][transitions].copy()
@@ -817,9 +771,7 @@ def _paga_graph(
         widths = base_edge_width * np.array(widths)
         if min_edge_width is not None or max_edge_width is not None:
             widths = np.clip(widths, min_edge_width, max_edge_width)
-        nx.draw_networkx_edges(
-            g_dir, pos, ax=ax, width=widths, edge_color='black', arrowsize=arrowsize
-        )
+        nx.draw_networkx_edges(g_dir, pos, ax=ax, width=widths, edge_color='black', arrowsize=arrowsize)
 
     if export_to_gexf:
         if isinstance(colors[0], tuple):
@@ -851,21 +803,15 @@ def _paga_graph(
     else:
         groups_sizes = np.ones(len(node_labels))
     base_scale_scatter = 2000
-    base_pie_size = (
-        base_scale_scatter / (np.sqrt(adjacency_solid.shape[0]) + 10) * node_size_scale
-    )
+    base_pie_size = base_scale_scatter / (np.sqrt(adjacency_solid.shape[0]) + 10) * node_size_scale
     median_group_size = np.median(groups_sizes)
-    groups_sizes = base_pie_size * np.power(
-        groups_sizes / median_group_size, node_size_power
-    )
+    groups_sizes = base_pie_size * np.power(groups_sizes / median_group_size, node_size_power)
 
     if fontsize is None:
         fontsize = rcParams['legend.fontsize']
     if fontoutline is not None:
         text_kwds = dict(text_kwds)
-        text_kwds['path_effects'] = [
-            patheffects.withStroke(linewidth=fontoutline, foreground='w')
-        ]
+        text_kwds['path_effects'] = [patheffects.withStroke(linewidth=fontoutline, foreground='w')]
     # usual scatter plot
     if not isinstance(colors[0], cabc.Mapping):
         n_groups = len(pos_array)
@@ -893,8 +839,7 @@ def _paga_graph(
         for ix, (xx, yy) in enumerate(zip(pos_array[:, 0], pos_array[:, 1])):
             if not isinstance(colors[ix], cabc.Mapping):
                 raise ValueError(
-                    f'{colors[ix]} is neither a dict of valid '
-                    'matplotlib colors nor a valid matplotlib color.'
+                    f'{colors[ix]} is neither a dict of valid ' 'matplotlib colors nor a valid matplotlib color.'
                 )
             color_single = colors[ix].keys()
             fracs = [colors[ix][c] for c in color_single]
@@ -905,10 +850,7 @@ def _paga_graph(
                 color_single.append('grey')
                 fracs.append(1 - sum(fracs))
             elif not np.isclose(total, 1):
-                raise ValueError(
-                    f'Expected fractions for node `{ix}` to be '
-                    f'close to 1, found `{total}`.'
-                )
+                raise ValueError(f'Expected fractions for node `{ix}` to be ' f'close to 1, found `{total}`.')
 
             cumsum = np.cumsum(fracs)
             cumsum = cumsum / cumsum[-1]
@@ -922,9 +864,7 @@ def _paga_graph(
                 xy = np.column_stack([x, y])
                 s = np.abs(xy).max()
 
-                sct = ax.scatter(
-                    [xx], [yy], marker=xy, s=s ** 2 * groups_sizes[ix], color=color
-                )
+                sct = ax.scatter([xx], [yy], marker=xy, s=s ** 2 * groups_sizes[ix], color=color)
 
             if node_labels is not None:
                 ax.text(
@@ -948,9 +888,7 @@ def paga_path(
     use_raw: bool = True,
     annotations: Sequence[str] = ('dpt_pseudotime',),
     color_map: Union[str, Colormap, None] = None,
-    color_maps_annotations: Mapping[str, Union[str, Colormap]] = MappingProxyType(
-        dict(dpt_pseudotime='Greys')
-    ),
+    color_maps_annotations: Mapping[str, Union[str, Colormap]] = MappingProxyType(dict(dpt_pseudotime='Greys')),
     palette_groups: Optional[Sequence[str]] = None,
     n_avg: int = 1,
     groups_key: Optional[str] = None,
@@ -1033,17 +971,13 @@ def paga_path(
 
     if groups_key is None:
         if 'groups' not in adata.uns['paga']:
-            raise KeyError(
-                'Pass the key of the grouping with which you ran PAGA, '
-                'using the parameter `groups_key`.'
-            )
+            raise KeyError('Pass the key of the grouping with which you ran PAGA, ' 'using the parameter `groups_key`.')
         groups_key = adata.uns['paga']['groups']
     groups_names = adata.obs[groups_key].cat.categories
 
     if 'dpt_pseudotime' not in adata.obs.keys():
         raise ValueError(
-            '`pl.paga_path` requires computation of a pseudotime `tl.dpt` '
-            'for ordering at single-cell resolution'
+            '`pl.paga_path` requires computation of a pseudotime `tl.dpt` ' 'for ordering at single-cell resolution'
         )
 
     if palette_groups is None:
@@ -1082,9 +1016,7 @@ def paga_path(
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes_ints):
-            idcs = np.arange(adata.n_obs)[
-                adata.obs[groups_key].values == nodes_strs[igroup]
-            ]
+            idcs = np.arange(adata.n_obs)[adata.obs[groups_key].values == nodes_strs[igroup]]
             if len(idcs) == 0:
                 raise ValueError(
                     'Did not find data points that match '
@@ -1093,9 +1025,7 @@ def paga_path(
                     'actually contains what you expect.'
                 )
             idcs_group = np.argsort(
-                adata.obs['dpt_pseudotime'].values[
-                    adata.obs[groups_key].values == nodes_strs[igroup]
-                ]
+                adata.obs['dpt_pseudotime'].values[adata.obs[groups_key].values == nodes_strs[igroup]]
             )
             idcs = idcs[idcs_group]
             values = (
@@ -1221,9 +1151,7 @@ def paga_path(
             )
             arr = np.array(anno_dict[anno])[None, :]
             if anno not in color_maps_annotations:
-                color_map_anno = (
-                    'Vega10' if is_categorical_dtype(adata.obs[anno]) else 'Greys'
-                )
+                color_map_anno = 'Vega10' if is_categorical_dtype(adata.obs[anno]) else 'Greys'
             else:
                 color_map_anno = color_maps_annotations[anno]
             img = anno_axis.imshow(

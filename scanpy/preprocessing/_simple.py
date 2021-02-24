@@ -119,9 +119,7 @@ def filter_cells(
     """
     if copy:
         logg.warning('`copy` is deprecated, use `inplace` instead.')
-    n_given_options = sum(
-        option is not None for option in [min_genes, min_counts, max_genes, max_counts]
-    )
+    n_given_options = sum(option is not None for option in [min_genes, min_counts, max_genes, max_counts])
     if n_given_options != 1:
         raise ValueError(
             'Only provide one of the optional parameters `min_counts`, '
@@ -143,9 +141,7 @@ def filter_cells(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    number_per_cell = np.sum(
-        X if min_genes is None and max_genes is None else X > 0, axis=1
-    )
+    number_per_cell = np.sum(X if min_genes is None and max_genes is None else X > 0, axis=1)
     if issparse(X):
         number_per_cell = number_per_cell.A1
     if min_number is not None:
@@ -158,18 +154,10 @@ def filter_cells(
         msg = f'filtered out {s} cells that have '
         if min_genes is not None or min_counts is not None:
             msg += 'less than '
-            msg += (
-                f'{min_genes} genes expressed'
-                if min_counts is None
-                else f'{min_counts} counts'
-            )
+            msg += f'{min_genes} genes expressed' if min_counts is None else f'{min_counts} counts'
         if max_genes is not None or max_counts is not None:
             msg += 'more than '
-            msg += (
-                f'{max_genes} genes expressed'
-                if max_counts is None
-                else f'{max_counts} counts'
-            )
+            msg += f'{max_genes} genes expressed' if max_counts is None else f'{max_counts} counts'
         logg.info(msg)
     return cell_subset, number_per_cell
 
@@ -223,9 +211,7 @@ def filter_genes(
     """
     if copy:
         logg.warning('`copy` is deprecated, use `inplace` instead.')
-    n_given_options = sum(
-        option is not None for option in [min_cells, min_counts, max_cells, max_counts]
-    )
+    n_given_options = sum(option is not None for option in [min_cells, min_counts, max_cells, max_counts])
     if n_given_options != 1:
         raise ValueError(
             'Only provide one of the optional parameters `min_counts`, '
@@ -255,9 +241,7 @@ def filter_genes(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
-    number_per_gene = np.sum(
-        X if min_cells is None and max_cells is None else X > 0, axis=0
-    )
+    number_per_gene = np.sum(X if min_cells is None and max_cells is None else X > 0, axis=0)
     if issparse(X):
         number_per_gene = number_per_gene.A1
     if min_number is not None:
@@ -270,14 +254,10 @@ def filter_genes(
         msg = f'filtered out {s} genes that are detected '
         if min_cells is not None or min_counts is not None:
             msg += 'in less than '
-            msg += (
-                f'{min_cells} cells' if min_counts is None else f'{min_counts} counts'
-            )
+            msg += f'{min_cells} cells' if min_counts is None else f'{min_counts} counts'
         if max_cells is not None or max_counts is not None:
             msg += 'in more than '
-            msg += (
-                f'{max_cells} cells' if max_counts is None else f'{max_counts} counts'
-            )
+            msg += f'{max_cells} cells' if max_counts is None else f'{max_counts} counts'
         logg.info(msg)
     return gene_subset, number_per_gene
 
@@ -323,17 +303,13 @@ def log1p(
     -------
     Returns or updates `data`, depending on `copy`.
     """
-    _check_array_function_arguments(
-        chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
-    )
+    _check_array_function_arguments(chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm)
     return log1p_array(X, copy=copy, base=base)
 
 
 @log1p.register(spmatrix)
 def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
-    X = check_array(
-        X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
-    )
+    X = check_array(X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy)
     X.data = log1p(X.data, copy=False, base=base)
     return X
 
@@ -347,9 +323,7 @@ def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
             X = X.astype(np.floating)
         else:
             X = X.copy()
-    elif not (
-        np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, np.complex)
-    ):
+    elif not (np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, np.complex)):
         X = X.astype(np.floating)
     np.log1p(X, out=X)
     if base is not None:
@@ -376,9 +350,7 @@ def log1p_anndata(
 
     if chunked:
         if (layer is not None) or (obsm is not None):
-            raise NotImplementedError(
-                "Currently cannot perform chunked operations on arrays not stored in X."
-            )
+            raise NotImplementedError("Currently cannot perform chunked operations on arrays not stored in X.")
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
@@ -520,9 +492,7 @@ def normalize_per_cell(
         start = logg.info('normalizing by total count per cell')
         adata = data.copy() if copy else data
         if counts_per_cell is None:
-            cell_subset, counts_per_cell = materialize_as_ndarray(
-                filter_cells(adata.X, min_counts=min_counts)
-            )
+            cell_subset, counts_per_cell = materialize_as_ndarray(filter_cells(adata.X, min_counts=min_counts))
             adata.obs[key_n_counts] = counts_per_cell
             adata._inplace_subset_obs(cell_subset)
             counts_per_cell = counts_per_cell[cell_subset]
@@ -698,9 +668,7 @@ def _regress_out_chunk(data):
         else:
             regres = regressors
         try:
-            result = sm.GLM(
-                data_chunk[:, col_index], regres, family=sm.families.Gaussian()
-            ).fit()
+            result = sm.GLM(data_chunk[:, col_index], regres, family=sm.families.Gaussian()).fit()
             new_column = result.resid_response
         except PerfectSeparationError:  # this emulates R's behavior
             logg.warning('Encountered PerfectSeparationError, setting to 0 as in R.')
@@ -752,9 +720,13 @@ def scale(
     annotated with `'mean'` and `'std'` in `adata.var`.
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
+<<<<<<< HEAD
     return scale_array(
         data, zero_center=zero_center, max_value=max_value, copy=copy  # noqa: F821
     )
+=======
+    return scale_array(data, zero_center=zero_center, max_value=max_value, copy=copy)  # noqa: F821
+>>>>>>> 7a096bf9 (add flake8 pre-commit)
 
 
 @scale.register(np.ndarray)
@@ -774,10 +746,7 @@ def scale_array(
         )
 
     if np.issubdtype(X.dtype, np.integer):
-        logg.info(
-            '... as scaling leads to float results, integer '
-            'input is cast to float, returning copy.'
-        )
+        logg.info('... as scaling leads to float results, integer ' 'input is cast to float, returning copy.')
         X = X.astype(float)
 
     mean, var = _get_mean_var(X)
@@ -814,10 +783,7 @@ def scale_sparse(
 ):
     # need to add the following here to make inplace logic work
     if zero_center:
-        logg.info(
-            "... as `zero_center=True`, sparse input is "
-            "densified and may lead to large memory consumption"
-        )
+        logg.info("... as `zero_center=True`, sparse input is " "densified and may lead to large memory consumption")
         X = X.toarray()
         copy = False  # Since the data has been copied
     return scale_array(
@@ -951,9 +917,7 @@ def downsample_counts(
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
-        raise ValueError(
-            "Must specify exactly one of `total_counts` or `counts_per_cell`."
-        )
+        raise ValueError("Must specify exactly one of `total_counts` or `counts_per_cell`.")
     if copy:
         adata = adata.copy()
     if total_counts_call:

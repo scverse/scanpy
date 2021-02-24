@@ -15,9 +15,7 @@ mod_dir = Path(scanpy.__file__).parent
 proj_dir = mod_dir.parent
 
 scanpy_functions = [
-    c_or_f
-    for c_or_f in descend_classes_and_funcs(scanpy, "scanpy")
-    if isinstance(c_or_f, FunctionType)
+    c_or_f for c_or_f in descend_classes_and_funcs(scanpy, "scanpy") if isinstance(c_or_f, FunctionType)
 ]
 
 

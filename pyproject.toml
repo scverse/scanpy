@@ -128,8 +128,8 @@ source = ['scanpy']
 omit = ['*/tests/*']
 
 [tool.black]
-line-length = 88
-target-version = ['py36']
+line-length = 120
+target-version = ['py38']
 skip-string-normalization = true
 exclude = '''
 /build/.*

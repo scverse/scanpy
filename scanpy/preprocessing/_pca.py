@@ -138,9 +138,7 @@ def pca(
         use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
     if use_highly_variable:
         logg.info('    on highly variable genes')
-    adata_comp = (
-        adata[:, adata.var['highly_variable']] if use_highly_variable else adata
-    )
+    adata_comp = adata[:, adata.var['highly_variable']] if use_highly_variable else adata
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
@@ -182,9 +180,7 @@ def pca(
                 "This may take a very large amount of memory."
             )
             X = X.toarray()
-        pca_ = PCA(
-            n_components=n_comps, svd_solver=svd_solver, random_state=random_state
-        )
+        pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
         X_pca = pca_.fit_transform(X)
     elif issparse(X) and zero_center:
         from sklearn.decomposition import PCA
@@ -197,9 +193,7 @@ def pca(
                 'Use "arpack" (the default) or "lobpcg" instead.'
             )
 
-        output = _pca_with_sparse(
-            X, n_comps, solver=svd_solver, random_state=random_state
-        )
+        output = _pca_with_sparse(X, n_comps, solver=svd_solver, random_state=random_state)
         # this is just a wrapper for the results
         X_pca = output['X_pca']
         pca_ = PCA(n_components=n_comps, svd_solver=svd_solver)
@@ -215,9 +209,7 @@ def pca(
             '    the first component, e.g., might be heavily influenced by different means\n'
             '    the following components often resemble the exact PCA very closely'
         )
-        pca_ = TruncatedSVD(
-            n_components=n_comps, random_state=random_state, algorithm=svd_solver
-        )
+        pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state, algorithm=svd_solver)
         X_pca = pca_.fit_transform(X)
     else:
         raise Exception("This shouldn't happen. Please open a bug report.")

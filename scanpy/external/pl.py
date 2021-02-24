@@ -176,9 +176,7 @@ def sam(
         try:
             dt = adata.obsm[projection]
         except KeyError:
-            raise ValueError(
-                'Please create a projection first using run_umap or run_tsne'
-            )
+            raise ValueError('Please create a projection first using run_umap or run_tsne')
     else:
         dt = projection
 
@@ -187,9 +185,7 @@ def sam(
         axes = plt.gca()
 
     if c is None:
-        axes.scatter(
-            dt[:, 0], dt[:, 1], s=s, linewidth=linewidth, edgecolor=edgecolor, **kwargs
-        )
+        axes.scatter(dt[:, 0], dt[:, 1], s=s, linewidth=linewidth, edgecolor=edgecolor, **kwargs)
         return axes
 
     if isinstance(c, str):

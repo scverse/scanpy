@@ -180,9 +180,7 @@ def ROC_AUC_analysis(
             fpr[name_list[i]],
             tpr[name_list[i]],
             thresholds[name_list[i]],
-        ) = metrics.roc_curve(
-            y_true, y_score, pos_label=None, sample_weight=None, drop_intermediate=False
-        )
+        ) = metrics.roc_curve(y_true, y_score, pos_label=None, sample_weight=None, drop_intermediate=False)
         roc_auc[name_list[i]] = metrics.auc(fpr[name_list[i]], tpr[name_list[i]])
     adata.uns['ROCfpr' + groupby + str(group)] = fpr
     adata.uns['ROCtpr' + groupby + str(group)] = tpr
@@ -191,11 +189,11 @@ def ROC_AUC_analysis(
 
 
 def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99):
-    ## Simple method that can be called by rank_gene_group. It uses masks that have been passed to the function and
-    ## calculates how much has to be subsampled in order to reach a certain precision with a certain probability
-    ## Then it subsamples for mask, mask rest
-    ## Since convergence speed varies, we take the slower one, i.e. the variance. This might have future speed-up
-    ## potential
+    # Simple method that can be called by rank_gene_group. It uses masks that have been passed to the function and
+    # calculates how much has to be subsampled in order to reach a certain precision with a certain probability
+    # Then it subsamples for mask, mask rest
+    # Since convergence speed varies, we take the slower one, i.e. the variance. This might have future speed-up
+    # potential
     if mask_rest is None:
         mask_rest = ~mask
     # TODO: DO precision calculation for mean variance shared
@@ -204,16 +202,16 @@ def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99)
 
 
 def dominated_ROC_elimination(adata, grouby):
-    ## This tool has the purpose to take a set of genes (possibly already pre-selected) and analyze AUC.
-    ## Those and only those are eliminated who are dominated completely
-    ## TODO: Potentially (But not till tomorrow), this can be adapted to only consider the AUC in the given
-    ## TODO: optimization frame
+    # This tool has the purpose to take a set of genes (possibly already pre-selected) and analyze AUC.
+    # Those and only those are eliminated who are dominated completely
+    # TODO: Potentially (But not till tomorrow), this can be adapted to only consider the AUC in the given
+    # TODO: optimization frame
     pass
 
 
 def _gene_preselection(adata, mask, thresholds):
-    ## This tool serves to
-    ## It is not thought to be addressed directly but rather using rank_genes_group or ROC analysis or comparable
-    ## TODO: Pass back a truncated adata object with only those genes that fullfill thresholding criterias
-    ## This function should be accessible by both rank_genes_groups and ROC_curve analysis
+    # This tool serves to
+    # It is not thought to be addressed directly but rather using rank_genes_group or ROC analysis or comparable
+    # TODO: Pass back a truncated adata object with only those genes that fullfill thresholding criterias
+    # This function should be accessible by both rank_genes_groups and ROC_curve analysis
     pass

@@ -101,8 +101,7 @@ def trimap(
         X = adata.X
         if scp.issparse(X):
             raise ValueError(
-                'trimap currently does not support sparse matrices. Please'
-                'use a dense matrix or apply pca first.'
+                'trimap currently does not support sparse matrices. Please' 'use a dense matrix or apply pca first.'
             )
         logg.warning('`X_pca` not found. Run `sc.pp.pca` first for speedup.')
     X_trimap = TRIMAP(

@@ -10,6 +10,7 @@
 # ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 
+import scanpy as sc
 from pathlib import Path
 
 import numpy as np
@@ -18,8 +19,6 @@ import pytest
 from matplotlib.testing import setup
 
 setup()
-
-import scanpy as sc
 
 
 HERE: Path = Path(__file__).parent
@@ -30,9 +29,7 @@ FIGS = HERE / 'figures'
 def test_pbmc3k(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
 
-    adata = sc.read(
-        './data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad'
-    )
+    adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
 
     # Preprocessing
 
@@ -45,9 +42,7 @@ def test_pbmc3k(image_comparer):
     mito_genes = [name for name in adata.var_names if name.startswith('MT-')]
     # for each cell compute fraction of counts in mito genes vs. all genes
     # the `.A1` is only necessary as X is sparse to transform to a dense array after summing
-    adata.obs['percent_mito'] = (
-        np.sum(adata[:, mito_genes].X, axis=1).A1 / np.sum(adata.X, axis=1).A1
-    )
+    adata.obs['percent_mito'] = np.sum(adata[:, mito_genes].X, axis=1).A1 / np.sum(adata.X, axis=1).A1
     # add the total counts per cell as observations-annotation to adata
     adata.obs['n_counts'] = adata.X.sum(axis=1).A1
 
@@ -144,7 +139,5 @@ def test_pbmc3k(image_comparer):
     # sc.pl.umap(adata, color='louvain', legend_loc='on data', title='', frameon=False, show=False)
     # save_and_compare_images('umap_3')
 
-    sc.pl.violin(
-        adata, ['CST3', 'NKG7', 'PPBP'], groupby='louvain', rotation=90, show=False
-    )
+    sc.pl.violin(adata, ['CST3', 'NKG7', 'PPBP'], groupby='louvain', rotation=90, show=False)
     save_and_compare_images('violin_2')

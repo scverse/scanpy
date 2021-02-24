@@ -54,9 +54,7 @@ def check_versions():
 
         # make this a warning, not an error
         # it might be useful for people to still be able to run it
-        logg.warning(
-            f'Scanpy {__version__} needs umap ' f'version >=0.3.0, not {umap_version}.'
-        )
+        logg.warning(f'Scanpy {__version__} needs umap ' f'version >=0.3.0, not {umap_version}.')
 
 
 def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
@@ -77,8 +75,7 @@ def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
             return cls
 
     return '\n'.join(
-        f'{line} : {type_doc(line)}' if line.strip() in sig.parameters else line
-        for line in doc.split('\n')
+        f'{line} : {type_doc(line)}' if line.strip() in sig.parameters else line for line in doc.split('\n')
     )
 
 
@@ -122,9 +119,7 @@ def _one_of_ours(obj, root: str):
     return (
         hasattr(obj, "__name__")
         and not obj.__name__.split(".")[-1].startswith("_")
-        and getattr(
-            obj, '__module__', getattr(obj, '__qualname__', obj.__name__)
-        ).startswith(root)
+        and getattr(obj, '__module__', getattr(obj, '__qualname__', obj.__name__)).startswith(root)
     )
 
 
@@ -174,9 +169,7 @@ def _check_array_function_arguments(**kwargs):
     # TODO: Figure out a better solution for documenting dispatched functions
     invalid_args = [k for k, v in kwargs.items() if v is not None]
     if len(invalid_args) > 0:
-        raise TypeError(
-            f"Arguments {invalid_args} are only valid if an AnnData object is passed."
-        )
+        raise TypeError(f"Arguments {invalid_args} are only valid if an AnnData object is passed.")
 
 
 def _check_use_raw(adata: AnnData, use_raw: Union[None, bool]) -> bool:
@@ -216,8 +209,7 @@ def get_igraph_from_adjacency(adjacency, directed=None):
         pass
     if g.vcount() != adjacency.shape[0]:
         logg.warning(
-            f'The constructed graph has only {g.vcount()} nodes. '
-            'Your adjacency matrix contained redundant nodes.'
+            f'The constructed graph has only {g.vcount()} nodes. ' 'Your adjacency matrix contained redundant nodes.'
         )
     return g
 
@@ -284,17 +276,12 @@ def compute_association_matrix_of_groups(
         reference labels, entries are proportional to degree of association.
     """
     if normalization not in {'prediction', 'reference'}:
-        raise ValueError(
-            '`normalization` needs to be either "prediction" or "reference".'
-        )
+        raise ValueError('`normalization` needs to be either "prediction" or "reference".')
     sanitize_anndata(adata)
     cats = adata.obs[reference].cat.categories
     for cat in cats:
         if cat in settings.categories_to_ignore:
-            logg.info(
-                f'Ignoring category {cat!r} '
-                'as it’s in `settings.categories_to_ignore`.'
-            )
+            logg.info(f'Ignoring category {cat!r} ' 'as it’s in `settings.categories_to_ignore`.')
     asso_names = []
     asso_matrix = []
     for ipred_group, pred_group in enumerate(adata.obs[prediction].cat.categories):
@@ -313,15 +300,11 @@ def compute_association_matrix_of_groups(
             if normalization == 'prediction':
                 # compute which fraction of the predicted group is contained in
                 # the ref group
-                ratio_contained = (
-                    np.sum(mask_pred_int) - np.sum(mask_ref_or_pred - mask_ref)
-                ) / np.sum(mask_pred_int)
+                ratio_contained = (np.sum(mask_pred_int) - np.sum(mask_ref_or_pred - mask_ref)) / np.sum(mask_pred_int)
             else:
                 # compute which fraction of the reference group is contained in
                 # the predicted group
-                ratio_contained = (
-                    np.sum(mask_ref) - np.sum(mask_ref_or_pred - mask_pred_int)
-                ) / np.sum(mask_ref)
+                ratio_contained = (np.sum(mask_ref) - np.sum(mask_ref_or_pred - mask_pred_int)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
         name_list_pred = [
             cats[i] if cats[i] not in settings.categories_to_ignore else ''
@@ -329,18 +312,13 @@ def compute_association_matrix_of_groups(
             if asso_matrix[-1][i] > threshold
         ]
         asso_names += ['\n'.join(name_list_pred[:max_n_names])]
-    Result = namedtuple(
-        'compute_association_matrix_of_groups', ['asso_names', 'asso_matrix']
-    )
+    Result = namedtuple('compute_association_matrix_of_groups', ['asso_names', 'asso_matrix'])
     return Result(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
 
 
 def get_associated_colors_of_groups(reference_colors, asso_matrix):
     return [
-        {
-            reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
-            for i_ref in range(asso_matrix.shape[1])
-        }
+        {reference_colors[i_ref]: asso_matrix[i_pred, i_ref] for i_ref in range(asso_matrix.shape[1])}
         for i_pred in range(asso_matrix.shape[0])
     ]
 
@@ -369,16 +347,9 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
     associated_predictions = {}
     associated_overlaps = {}
     for ref_label in ref_unique:
-        sub_pred_unique, sub_pred_counts = np.unique(
-            pred_labels[ref_label == ref_labels], return_counts=True
-        )
-        relative_overlaps_pred = [
-            sub_pred_counts[i] / pred_dict[n] for i, n in enumerate(sub_pred_unique)
-        ]
-        relative_overlaps_ref = [
-            sub_pred_counts[i] / ref_dict[ref_label]
-            for i, n in enumerate(sub_pred_unique)
-        ]
+        sub_pred_unique, sub_pred_counts = np.unique(pred_labels[ref_label == ref_labels], return_counts=True)
+        relative_overlaps_pred = [sub_pred_counts[i] / pred_dict[n] for i, n in enumerate(sub_pred_unique)]
+        relative_overlaps_ref = [sub_pred_counts[i] / ref_dict[ref_label] for i, n in enumerate(sub_pred_unique)]
         relative_overlaps = np.c_[relative_overlaps_pred, relative_overlaps_ref]
         relative_overlaps_min = np.min(relative_overlaps, axis=1)
         pred_best_index = np.argsort(relative_overlaps_min)[::-1]
@@ -502,9 +473,7 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
     if key + '_masks' in adata.uns:
         groups_masks = adata.uns[key + '_masks']
     else:
-        groups_masks = np.zeros(
-            (len(adata.obs[key].cat.categories), adata.obs[key].values.size), dtype=bool
-        )
+        groups_masks = np.zeros((len(adata.obs[key].cat.categories), adata.obs[key].values.size), dtype=bool)
         for iname, name in enumerate(adata.obs[key].cat.categories):
             # if the name is not found, fallback to index retrieval
             if adata.obs[key].cat.categories[iname] in adata.obs[key].values:
@@ -516,9 +485,7 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
     if groups_order_subset != 'all':
         groups_ids = []
         for name in groups_order_subset:
-            groups_ids.append(
-                np.where(adata.obs[key].cat.categories.values == name)[0][0]
-            )
+            groups_ids.append(np.where(adata.obs[key].cat.categories.values == name)[0][0])
         if len(groups_ids) == 0:
             # fallback to index retrieval
             groups_ids = np.where(
@@ -600,9 +567,7 @@ def subsample(
     return Xsampled, rows
 
 
-def subsample_n(
-    X: np.ndarray, n: int = 0, seed: int = 0
-) -> Tuple[np.ndarray, np.ndarray]:
+def subsample_n(X: np.ndarray, n: int = 0, seed: int = 0) -> Tuple[np.ndarray, np.ndarray]:
     """Subsample n samples from rows of array.
 
     Parameters
@@ -751,17 +716,12 @@ class NeighborsView:
 def _choose_graph(adata, obsp, neighbors_key):
     """Choose connectivities from neighbbors or another obsp column"""
     if obsp is not None and neighbors_key is not None:
-        raise ValueError(
-            'You can\'t specify both obsp, neighbors_key. ' 'Please select only one.'
-        )
+        raise ValueError('You can\'t specify both obsp, neighbors_key. ' 'Please select only one.')
 
     if obsp is not None:
         return adata.obsp[obsp]
     else:
         neighbors = NeighborsView(adata, neighbors_key)
         if 'connectivities' not in neighbors:
-            raise ValueError(
-                'You need to run `pp.neighbors` first '
-                'to compute a neighborhood graph.'
-            )
+            raise ValueError('You need to run `pp.neighbors` first ' 'to compute a neighborhood graph.')
         return neighbors['connectivities']
