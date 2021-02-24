@@ -73,10 +73,16 @@ def test_higly_variable_genes_compare_to_seurat():
     # (still) Not equal to tolerance rtol=2e-05, atol=2e-05
     # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(
-        seurat_hvg_info['means'], pbmc.var['means'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['means'],
+        pbmc.var['means'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
-        seurat_hvg_info['dispersions'], pbmc.var['dispersions'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['dispersions'],
+        pbmc.var['dispersions'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
         seurat_hvg_info['dispersions_norm'],
@@ -104,7 +110,10 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
     )
     np.testing.assert_allclose(
-        seurat_hvg_info['variances'], pbmc.var['variances'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['variances'],
+        pbmc.var['variances'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
         seurat_hvg_info['variances_norm'],
@@ -166,10 +175,16 @@ def test_filter_genes_dispersion_compare_to_seurat():
     # (still) Not equal to tolerance rtol=2e-05, atol=2e-05:
     # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(
-        seurat_hvg_info['means'], pbmc.var['means'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['means'],
+        pbmc.var['means'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
-        seurat_hvg_info['dispersions'], pbmc.var['dispersions'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['dispersions'],
+        pbmc.var['dispersions'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
         seurat_hvg_info['dispersions_norm'],
@@ -188,7 +203,10 @@ def test_highly_variable_genes_batches():
     adata_2 = adata[adata.obs.batch.isin(['1']), :]
 
     sc.pp.highly_variable_genes(
-        adata, batch_key='batch', flavor='cell_ranger', n_top_genes=200,
+        adata,
+        batch_key='batch',
+        flavor='cell_ranger',
+        n_top_genes=200,
     )
 
     sc.pp.filter_genes(adata_1, min_cells=1)
