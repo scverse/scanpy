@@ -1,11 +1,3 @@
-import scanpy as sc
-from anndata import AnnData
-from matplotlib.testing.compare import compare_images
-import pandas as pd
-import numpy as np
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 from functools import partial
 from pathlib import Path
 from itertools import repeat, chain, combinations
@@ -17,6 +9,16 @@ from packaging import version
 from scanpy._compat import pkg_version
 
 setup()
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import numpy as np
+import pandas as pd
+from matplotlib.testing.compare import compare_images
+from anndata import AnnData
+
+import scanpy as sc
 
 
 HERE: Path = Path(__file__).parent
@@ -428,15 +430,10 @@ def test_multiple_plots(image_comparer):
         'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
         'myeloid': ['CST3', 'LYZ'],
     }
-<<<<<<< HEAD
     fig, (ax1, ax2, ax3) = plt.subplots(
         1, 3, figsize=(20, 5), gridspec_kw={'wspace': 0.7}
     )
     _ = sc.pl.stacked_violin(
-=======
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 5), gridspec_kw={'wspace': 0.7})
-    __ = sc.pl.stacked_violin(
->>>>>>> 7a096bf9 (add flake8 pre-commit)
         adata,
         markers,
         groupby='bulk_labels',

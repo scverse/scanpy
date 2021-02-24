@@ -7,7 +7,3 @@ repos:
     rev: 3.8.4
     hooks:
     -   id: flake8
-<<<<<<< HEAD
-=======
-        exclude: scanpy/tests/
->>>>>>> 7a096bf9 (add flake8 pre-commit)

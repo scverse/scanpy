@@ -720,13 +720,7 @@ def scale(
     annotated with `'mean'` and `'std'` in `adata.var`.
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
-<<<<<<< HEAD
-    return scale_array(
-        data, zero_center=zero_center, max_value=max_value, copy=copy  # noqa: F821
-    )
-=======
     return scale_array(data, zero_center=zero_center, max_value=max_value, copy=copy)  # noqa: F821
->>>>>>> 7a096bf9 (add flake8 pre-commit)
 
 
 @scale.register(np.ndarray)

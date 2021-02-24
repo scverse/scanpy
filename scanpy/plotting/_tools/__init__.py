@@ -62,11 +62,7 @@ def pca_overview(adata: AnnData, **params):
     show = params['show'] if 'show' in params else None
     if 'show' in params:
         del params['show']
-<<<<<<< HEAD
-    pca(adata, **params, show=False)
-=======
     scatterplots.pca(adata, **params, show=False)  # noqa: F821
->>>>>>> 7a096bf9 (add flake8 pre-commit)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
 
