@@ -302,7 +302,7 @@ def highly_variable_genes(
     subset: bool = False,
     inplace: bool = True,
     batch_key: Optional[str] = None,
-    check_values: Optional[bool] = True,
+    check_values: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
