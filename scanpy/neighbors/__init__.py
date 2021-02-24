@@ -120,7 +120,6 @@ def neighbors(
     **distances** : sparse matrix of dtype `float32`.
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
-
     Notes
     -----
     If `method='umap'`, it's highly recommended to install pynndescent ``pip install pynndescent``.

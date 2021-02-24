@@ -1,6 +1,5 @@
 import warnings
 from typing import Optional
-
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -21,7 +20,8 @@ def _highly_variable_genes_seurat_v3(
     layer: Optional[str] = None,
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
-    span: Optional[float] = 0.3,
+    check_values: bool = True,
+    span: float = 0.3,
     subset: bool = False,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
@@ -55,8 +55,11 @@ def _highly_variable_genes_seurat_v3(
         raise ImportError('Please install skmisc package via `pip install --user scikit-misc')
 
     X = adata.layers[layer] if layer is not None else adata.X
-    if check_nonnegative_integers(X) is False:
-        raise ValueError("`pp.highly_variable_genes` with `flavor='seurat_v3'` expects " "raw count data.")
+    if check_values and (check_nonnegative_integers(X) == False):
+        warnings.warn(
+            "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
+            UserWarning,
+        )
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -280,6 +283,7 @@ def highly_variable_genes(
     subset: bool = False,
     inplace: bool = True,
     batch_key: Optional[str] = None,
+    check_values: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
@@ -346,6 +350,9 @@ def highly_variable_genes(
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
         by normalized dispersion. If `flavor = 'seurat_v3'`, ties are broken by the median
         (across batches) rank based on within-batch normalized variance.
+    check_values
+        Check if counts in selected layer are integers. A Warning is returned if set to True.
+        Only used if `flavor='seurat_v3'`.
 
     Returns
     -------
@@ -395,6 +402,7 @@ def highly_variable_genes(
             layer=layer,
             n_top_genes=n_top_genes,
             batch_key=batch_key,
+            check_values=check_values,
             span=span,
             subset=subset,
             inplace=inplace,

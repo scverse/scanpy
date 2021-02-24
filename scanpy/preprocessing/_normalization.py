@@ -38,6 +38,8 @@ def normalize_total(
     """\
     Normalize counts per cell.
 
+    Normalize each cell by total counts over all genes, 
+    so that every cell has the same total count after normalization.
     If choosing `target_sum=1e6`, this is CPM normalization.
 
     If `exclude_highly_expressed=True`, very highly expressed genes are excluded

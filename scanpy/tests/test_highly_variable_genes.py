@@ -1,3 +1,4 @@
+import pytest
 import pandas as pd
 import numpy as np
 import scanpy as sc
@@ -136,6 +137,13 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     # ranks might be slightly different due to many genes having same normalized var
     seu = pd.Index(seurat_hvg_info_batch['x'].values)
     assert len(seu.intersection(df.index)) / 4000 > 0.95
+
+    sc.pp.log1p(pbmc)
+    with pytest.warns(
+        UserWarning,
+        match="`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
+    ):
+        sc.pp.highly_variable_genes(pbmc, n_top_genes=1000, flavor='seurat_v3')
 
 
 def test_filter_genes_dispersion_compare_to_seurat():
