@@ -747,7 +747,7 @@ class Neighbors:
         self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         # neighbor search
-        use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or not knn
+        use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or knn == False
         if use_dense_distances:
             _distances = pairwise_distances(X, metric=metric, **metric_kwds)
             knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(_distances, n_neighbors)
@@ -832,7 +832,7 @@ class Neighbors:
             # make the weight matrix sparse
             if not self.knn:
                 mask = W > 1e-14
-                W[not mask] = 0
+                W[mask == False] = 0
             else:
                 # restrict number of neighbors to ~k
                 # build a symmetric mask
@@ -844,7 +844,7 @@ class Neighbors:
                             W[j, i] = W[i, j]
                             mask[j, i] = True
                 # set all entries that are not nearest neighbors to zero
-                W[not mask] = 0
+                W[mask == False] = 0
         else:
             W = Dsq.copy()  # need to copy the distance matrix here; what follows is inplace
             for i in range(len(Dsq.indptr[:-1])):
@@ -987,11 +987,10 @@ class Neighbors:
             label = self._connected_components[1][i]
             mask = self._connected_components[1] == label
         row = sum(
-            (self.eigen_values[i] / (1 - self.eigen_values[i]) * (self.eigen_basis[i, i] - self.eigen_basis[:, i]))
-            ** 2  # noqa: E126
+            (self.eigen_values[l] / (1 - self.eigen_values[l]) * (self.eigen_basis[i, l] - self.eigen_basis[:, l])) ** 2
             # account for float32 precision
-            for i in range(0, self.eigen_values.size)
-            if self.eigen_values[i] < 0.9994
+            for l in range(0, self.eigen_values.size)
+            if self.eigen_values[l] < 0.9994
         )
         # thanks to Marius Lange for pointing Alex to this:
         # we will likely remove the contributions from the stationary state below when making
@@ -999,9 +998,9 @@ class Neighbors:
         # they never seem to have deteriorated results, but also other distance measures (see e.g.
         # PAGA paper) don't have it, which makes sense
         row += sum(
-            (self.eigen_basis[i, j] - self.eigen_basis[:, j]) ** 2
-            for j in range(0, self.eigen_values.size)
-            if self.eigen_values[j] >= 0.9994
+            (self.eigen_basis[i, l] - self.eigen_basis[:, l]) ** 2
+            for l in range(0, self.eigen_values.size)
+            if self.eigen_values[l] >= 0.9994
         )
         if mask is not None:
             row[~mask] = np.inf
