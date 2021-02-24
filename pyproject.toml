@@ -47,6 +47,7 @@ exclude = '''
     )
     |tools/(
         _dpt
+        _cell_selection
         |_sim
         |_paga
         |_umap
