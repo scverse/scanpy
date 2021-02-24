@@ -20,7 +20,6 @@ from anndata import AnnData
 
 import scanpy as sc
 
-
 HERE: Path = Path(__file__).parent
 ROOT = HERE / '_images'
 FIGS = HERE / 'figures'

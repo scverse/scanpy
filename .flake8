@@ -1,4 +1,4 @@
 [flake8]
 exclude = docs, scanpy/tests
 max-line-length = 120
-ignore = F401, W503, E501, E203, E231, W504, E402
+ignore = F401, W503, E501, E203, E231, W504, E402, E126, E712, E741
