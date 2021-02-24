@@ -1,7 +1,10 @@
 import pandas as pd
 import numpy as np
+import pytest
+
 import scanpy as sc
 from pathlib import Path
+
 
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
 FILE_V3 = Path(__file__).parent / Path('_scripts/seurat_hvg_v3.csv.gz')
@@ -87,6 +90,8 @@ def test_higly_variable_genes_compare_to_seurat():
 
 
 def test_higly_variable_genes_compare_to_seurat_v3():
+    pytest.importorskip('skmisc', reason='needs package `scikit-misc`')
+
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=' ', dtype={"variances_norm": np.float64}
     )

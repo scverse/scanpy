@@ -18,7 +18,7 @@ def test_umap_init_dtype():
     assert_array_almost_equal(embed1, embed2)
 
 
-needs_fa2 = pytest.mark.skipif(not find_spec("fa2"), reason="needs module `fa2`")
+needs_fa2 = pytest.mark.skipif(not find_spec("fa2"), reason="needs package `fa2`")
 
 
 @pytest.mark.parametrize("layout", [pytest.param("fa", marks=needs_fa2), "fr"])

@@ -12,9 +12,8 @@
 
 from pathlib import Path
 
-import numpy as np
 import pytest
-
+import numpy as np
 from matplotlib.testing import setup
 setup()
 
@@ -27,6 +26,8 @@ FIGS = HERE / 'figures'
 
 
 def test_pbmc3k(image_comparer):
+    pytest.importorskip('louvain')
+
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
 
     adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')

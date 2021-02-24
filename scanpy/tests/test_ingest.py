@@ -6,7 +6,6 @@ from umap import UMAP
 
 import scanpy as sc
 from scanpy import settings
-from scanpy._compat import pkg_version
 
 
 X = np.array(
@@ -100,11 +99,13 @@ def test_neighbors_defaults(adatas, n):
     assert ing._indices.shape[1] == n
 
 
-@pytest.mark.skipif(
-    pkg_version("anndata") < sc.tl._ingest.ANNDATA_MIN_VERSION,
-    reason="`AnnData.concatenate` does not concatenate `.obsm` in old anndata versions",
-)
 def test_ingest_function(adatas):
+    pytest.importorskip(
+        'anndata',
+        minversion=sc.tl._ingest.ANNDATA_MIN_VERSION,
+        reason='`AnnData.concatenate` does not concatenate `.obsm` in old anndatas',
+    )
+
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()
 

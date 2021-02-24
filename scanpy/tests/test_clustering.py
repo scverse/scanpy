@@ -1,5 +1,12 @@
+from importlib.util import find_spec
+
 import pytest
 import scanpy as sc
+
+
+needs_louvain = pytest.mark.skipif(
+    not find_spec('louvain'), reason='needs package `louvain`'
+)
 
 
 @pytest.fixture
@@ -10,10 +17,14 @@ def adata_neighbors():
 def test_leiden_basic(adata_neighbors):
     sc.tl.leiden(adata_neighbors)
 
-@pytest.mark.parametrize('clustering,key', [
-    (sc.tl.louvain, 'louvain'),
-    (sc.tl.leiden, 'leiden'),
-])
+
+@pytest.mark.parametrize(
+    'clustering,key',
+    [
+        pytest.param(sc.tl.louvain, 'louvain', marks=needs_louvain),
+        (sc.tl.leiden, 'leiden'),
+    ],
+)
 def test_clustering_subset(adata_neighbors, clustering, key):
     clustering(adata_neighbors, key_added=key)
 
@@ -42,6 +53,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
 
 
 def test_louvain_basic(adata_neighbors):
+    pytest.importorskip('louvain')
     sc.tl.louvain(adata_neighbors)
     sc.tl.louvain(adata_neighbors, use_weights=True)
     sc.tl.louvain(adata_neighbors, use_weights=True, flavor="igraph")
@@ -49,6 +61,6 @@ def test_louvain_basic(adata_neighbors):
 
 
 def test_partition_type(adata_neighbors):
-    import louvain
+    louvain = pytest.importorskip('louvain')
     sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
     sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
