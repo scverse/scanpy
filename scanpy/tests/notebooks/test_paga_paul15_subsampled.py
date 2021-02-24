@@ -3,13 +3,14 @@
 #
 # This is the subsampled notebook for testing.
 
-import scanpy as sc
 from pathlib import Path
 
 import numpy as np
 from matplotlib.testing import setup
 
 setup()
+
+import scanpy as sc
 
 
 HERE: Path = Path(__file__).parent

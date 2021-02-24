@@ -1,9 +1,23 @@
 """Single-Cell Analysis in Python."""
 
-from ._utils import annotate_doc_types
-import sys
-from .neighbors import Neighbors
-from .readwrite import read, read_10x_h5, read_10x_mtx, write, read_visium
+from ._metadata import __version__, __author__, __email__
+
+from ._utils import check_versions
+
+check_versions()
+del check_versions
+
+# the actual API
+from ._settings import (
+    settings,
+    Verbosity,
+)  # start with settings as several tools are using it
+from . import tools as tl
+from . import preprocessing as pp
+from . import plotting as pl
+from . import datasets, logging, queries, external, get
+
+from anndata import AnnData, concat
 from anndata import (
     read_h5ad,
     read_csv,
@@ -14,30 +28,16 @@ from anndata import (
     read_text,
     read_umi_tools,
 )
-from anndata import AnnData, concat
-from . import datasets, logging, queries, external, get
-from . import plotting as pl
-from . import preprocessing as pp
-from . import tools as tl
-from ._settings import (
-    settings,
-    Verbosity,
-)  # start with settings as several tools are using it
-from ._metadata import __version__, __author__, __email__
-
-from ._utils import check_versions
-
-check_versions()
-del check_versions
-
-# the actual API
-
+from .readwrite import read, read_10x_h5, read_10x_mtx, write, read_visium
+from .neighbors import Neighbors
 
 set_figure_params = settings.set_figure_params
 
 # has to be done at the end, after everything has been imported
+import sys
 
 sys.modules.update({f'{__name__}.{m}': globals()[m] for m in ['tl', 'pp', 'pl']})
+from ._utils import annotate_doc_types
 
 annotate_doc_types(sys.modules[__name__], 'scanpy')
 del sys, annotate_doc_types
