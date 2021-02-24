@@ -21,10 +21,7 @@ def _calc_overlap_count(markers1: dict, markers2: dict):
     overlaps = np.zeros((len(markers1), len(markers2)))
 
     for j, marker_group in enumerate(markers1):
-        tmp = [
-            len(markers2[i].intersection(markers1[marker_group]))
-            for i in markers2.keys()
-        ]
+        tmp = [len(markers2[i].intersection(markers1[marker_group])) for i in markers2.keys()]
         overlaps[j, :] = tmp
 
     return overlaps
@@ -59,8 +56,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
 
     for j, marker_group in enumerate(markers1):
         tmp = [
-            len(markers2[i].intersection(markers1[marker_group]))
-            / len(markers2[i].union(markers1[marker_group]))
+            len(markers2[i].intersection(markers1[marker_group])) / len(markers2[i].union(markers1[marker_group]))
             for i in markers2.keys()
         ]
         jacc_results[j, :] = tmp
@@ -158,15 +154,11 @@ def marker_gene_overlap(
     # Test user inputs
     if inplace:
         raise NotImplementedError(
-            'Writing Pandas dataframes to h5ad is currently under development.'
-            '\nPlease use `inplace=False`.'
+            'Writing Pandas dataframes to h5ad is currently under development.' '\nPlease use `inplace=False`.'
         )
 
     if key not in adata.uns:
-        raise ValueError(
-            'Could not find marker gene data. '
-            'Please run `sc.tl.rank_genes_groups()` first.'
-        )
+        raise ValueError('Could not find marker gene data. ' 'Please run `sc.tl.rank_genes_groups()` first.')
 
     avail_methods = {'overlap_count', 'overlap_coef', 'jaccard', 'enrich'}
     if method not in avail_methods:
@@ -184,14 +176,9 @@ def marker_gene_overlap(
 
     if not all(isinstance(val, cabc.Set) for val in reference_markers.values()):
         try:
-            reference_markers = {
-                key: set(val) for key, val in reference_markers.items()
-            }
+            reference_markers = {key: set(val) for key, val in reference_markers.items()}
         except Exception:
-            raise ValueError(
-                'Please ensure that `reference_markers` contains '
-                'sets or lists of markers as values.'
-            )
+            raise ValueError('Please ensure that `reference_markers` contains ' 'sets or lists of markers as values.')
 
     if adj_pval_threshold is not None:
         if 'pvals_adj' not in adata.uns[key]:
@@ -202,26 +189,19 @@ def marker_gene_overlap(
             )
 
         if adj_pval_threshold < 0:
-            logg.warning(
-                '`adj_pval_threshold` was set below 0. Threshold will be set to 0.'
-            )
+            logg.warning('`adj_pval_threshold` was set below 0. Threshold will be set to 0.')
             adj_pval_threshold = 0
         elif adj_pval_threshold > 1:
-            logg.warning(
-                '`adj_pval_threshold` was set above 1. Threshold will be set to 1.'
-            )
+            logg.warning('`adj_pval_threshold` was set above 1. Threshold will be set to 1.')
             adj_pval_threshold = 1
 
         if top_n_markers is not None:
             logg.warning(
-                'Both `adj_pval_threshold` and `top_n_markers` is set. '
-                '`adj_pval_threshold` will be ignored.'
+                'Both `adj_pval_threshold` and `top_n_markers` is set. ' '`adj_pval_threshold` will be ignored.'
             )
 
     if top_n_markers is not None and top_n_markers < 1:
-        logg.warning(
-            '`top_n_markers` was set below 1. `top_n_markers` will be set to 1.'
-        )
+        logg.warning('`top_n_markers` was set below 1. `top_n_markers` will be set to 1.')
         top_n_markers = 1
 
     # Get data-derived marker genes in a dictionary of sets
@@ -249,16 +229,12 @@ def marker_gene_overlap(
         marker_match = _calc_overlap_count(reference_markers, data_markers)
         if normalize == 'reference':
             # Ensure rows sum to 1
-            ref_lengths = np.array(
-                [len(reference_markers[m_group]) for m_group in reference_markers]
-            )
+            ref_lengths = np.array([len(reference_markers[m_group]) for m_group in reference_markers])
             marker_match = marker_match / ref_lengths[:, np.newaxis]
             marker_match = np.nan_to_num(marker_match)
         elif normalize == 'data':
             # Ensure columns sum to 1
-            data_lengths = np.array(
-                [len(data_markers[dat_group]) for dat_group in data_markers]
-            )
+            data_lengths = np.array([len(data_markers[dat_group]) for dat_group in data_markers])
             marker_match = marker_match / data_lengths
             marker_match = np.nan_to_num(marker_match)
     elif method == 'overlap_coef':
@@ -276,9 +252,7 @@ def marker_gene_overlap(
     # Create a pandas dataframe with the results
     marker_groups = list(reference_markers.keys())
     clusters = list(cluster_ids)
-    marker_matching_df = pd.DataFrame(
-        marker_match, index=marker_groups, columns=clusters
-    )
+    marker_matching_df = pd.DataFrame(marker_match, index=marker_groups, columns=clusters)
 
     # Store the results
     if inplace:

@@ -1,14 +1,14 @@
+import scanpy
+import pytest
+from matplotlib.testing.compare import compare_images, make_test_filename
+from matplotlib import pyplot
 import sys
 from pathlib import Path
 
 import matplotlib as mpl
 
 mpl.use('agg')
-from matplotlib import pyplot
-from matplotlib.testing.compare import compare_images, make_test_filename
-import pytest
 
-import scanpy
 
 scanpy.settings.verbosity = "hint"
 

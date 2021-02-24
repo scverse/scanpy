@@ -195,10 +195,7 @@ def phenograph(
 
         assert phenograph.__version__ >= "1.5.3"
     except (ImportError, AssertionError, AttributeError):
-        raise ImportError(
-            "please install the latest release of phenograph:\n\t"
-            "pip install -U PhenoGraph"
-        )
+        raise ImportError("please install the latest release of phenograph:\n\t" "pip install -U PhenoGraph")
 
     if isinstance(adata, AnnData):
         try:
@@ -209,11 +206,7 @@ def phenograph(
         data = adata
         copy = True
 
-    comm_key = (
-        "pheno_{}".format(clustering_algo)
-        if clustering_algo in ["louvain", "leiden"]
-        else ''
-    )
+    comm_key = "pheno_{}".format(clustering_algo) if clustering_algo in ["louvain", "leiden"] else ''
     ig_key = "pheno_{}_ig".format("jaccard" if jaccard else "gaussian")
     q_key = "pheno_{}_q".format("jaccard" if jaccard else "gaussian")
 

@@ -30,9 +30,7 @@ def check_rep_mutation(func, X, **kwargs):
 
     assert np.array_equal(asarray(adata_layer.X), asarray(adata_layer.obsm["obsm"]))
     assert np.array_equal(asarray(adata_obsm.X), asarray(adata_obsm.layers["layer"]))
-    assert np.array_equal(
-        asarray(adata_X.layers["layer"]), asarray(adata_X.obsm["obsm"])
-    )
+    assert np.array_equal(asarray(adata_X.layers["layer"]), asarray(adata_X.obsm["obsm"]))
 
 
 def check_rep_results(func, X, **kwargs):

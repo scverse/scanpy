@@ -34,9 +34,7 @@ def test_rank_genes_groups_with_renamed_categories_use_rep():
     adata.X = adata.X[::-1, :]
 
     sc.tl.louvain(adata)
-    sc.tl.rank_genes_groups(
-        adata, 'louvain', method='logreg', layer="to_test", use_raw=False
-    )
+    sc.tl.rank_genes_groups(adata, 'louvain', method='logreg', layer="to_test", use_raw=False)
     assert adata.uns['rank_genes_groups']['names'].dtype.names == ('0', '1', '2')
     assert adata.uns['rank_genes_groups']['names'][0].tolist() == ('3', '1', '0')
 

@@ -47,9 +47,7 @@ def recipe_weinreb17(
         adata = adata.copy()
     if log:
         pp.log1p(adata)
-    adata.X = normalize_per_cell_weinreb16_deprecated(
-        adata.X, max_fraction=0.05, mult_with_mean=True
-    )
+    adata.X = normalize_per_cell_weinreb16_deprecated(adata.X, max_fraction=0.05, mult_with_mean=True)
     gene_subset = filter_genes_cv_deprecated(adata.X, mean_threshold, cv_threshold)
     adata._inplace_subset_var(gene_subset)  # this modifies the object itself
     X_pca = pp.pca(
@@ -63,9 +61,7 @@ def recipe_weinreb17(
     return adata if copy else None
 
 
-def recipe_seurat(
-    adata: AnnData, log: bool = True, plot: bool = False, copy: bool = False
-) -> Optional[AnnData]:
+def recipe_seurat(adata: AnnData, log: bool = True, plot: bool = False, copy: bool = False) -> Optional[AnnData]:
     """\
     Normalization and filtering as of Seurat [Satija15]_.
 
@@ -79,9 +75,7 @@ def recipe_seurat(
     pp.filter_cells(adata, min_genes=200)
     pp.filter_genes(adata, min_cells=3)
     normalize_total(adata, target_sum=1e4)
-    filter_result = filter_genes_dispersion(
-        adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5, log=not log
-    )
+    filter_result = filter_genes_dispersion(adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5, log=not log)
     if plot:
         from ..plotting import (
             _preprocessing as ppp,
@@ -152,9 +146,7 @@ def recipe_zheng17(
     pp.filter_genes(adata, min_counts=1)
     # normalize with total UMI count per cell
     normalize_total(adata, key_added='n_counts_all')
-    filter_result = filter_genes_dispersion(
-        adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False
-    )
+    filter_result = filter_genes_dispersion(adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False)
     if plot:  # should not import at the top of the file
         from ..plotting import _preprocessing as ppp
 

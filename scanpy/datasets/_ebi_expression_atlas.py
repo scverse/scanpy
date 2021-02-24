@@ -86,9 +86,7 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     return adata
 
 
-def ebi_expression_atlas(
-    accession: str, *, filter_boring: bool = False
-) -> anndata.AnnData:
+def ebi_expression_atlas(accession: str, *, filter_boring: bool = False) -> anndata.AnnData:
     """\
     Load a dataset from the `EBI Single Cell Expression Atlas
     <https://www.ebi.ac.uk/gxa/sc/experiments>`__

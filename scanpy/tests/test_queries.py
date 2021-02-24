@@ -20,9 +20,7 @@ def test_enrich():
     sc.queries.enrich(pbmc, "1")
 
     gene_dict = {'set1': ['KLF4', 'PAX5'], 'set2': ['SOX2', 'NANOG']}
-    enrich_list = sc.queries.enrich(
-        gene_dict, org="hsapiens", gprofiler_kwargs=dict(sources=['GO:BP'])
-    )
+    enrich_list = sc.queries.enrich(gene_dict, org="hsapiens", gprofiler_kwargs=dict(sources=['GO:BP']))
     assert 'set1' in enrich_list['query'].unique()
     assert 'set2' in enrich_list['query'].unique()
 
@@ -31,6 +29,4 @@ def test_enrich():
 def test_mito_genes():
     pbmc = sc.datasets.pbmc68k_reduced()
     mt_genes = sc.queries.mitochondrial_genes("hsapiens")
-    assert (
-        pbmc.var_names.isin(mt_genes["external_gene_name"]).sum() == 1
-    )  # Should only be MT-ND3
+    assert pbmc.var_names.isin(mt_genes["external_gene_name"]).sum() == 1  # Should only be MT-ND3

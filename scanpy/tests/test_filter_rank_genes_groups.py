@@ -47,9 +47,7 @@ def test_filter_rank_genes_groups():
         'max_out_group_fraction': 0.5,
     }
 
-    rank_genes_groups(
-        adata, 'bulk_labels', reference='Dendritic', method='wilcoxon', n_genes=5
-    )
+    rank_genes_groups(adata, 'bulk_labels', reference='Dendritic', method='wilcoxon', n_genes=5)
     filter_rank_genes_groups(**args)
 
     assert np.array_equal(

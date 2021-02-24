@@ -33,12 +33,12 @@ def scvi(
 
     Fits scVI model onto raw count data given an anndata object
 
-    scVI uses stochastic optimization and deep neural networks to aggregate information 
+    scVI uses stochastic optimization and deep neural networks to aggregate information
     across similar cells and genes and to approximate the distributions that underlie
     observed expression values, while accounting for batch effects and limited sensitivity.
 
     To use a linear-decoded Variational AutoEncoder model (implementation of [Svensson20]_.),
-    set linear_decoded = True. Compared to standard VAE, this model is less powerful, but can 
+    set linear_decoded = True. Compared to standard VAE, this model is less powerful, but can
     be used to inspect which genes contribute to variation in the dataset. It may also be used
     for all scVI tasks, like differential expression, batch correction, imputation, etc.
     However, batch correction may be less powerful as it assumes a linear model.
@@ -69,13 +69,13 @@ def scvi(
     train_size
         The train size, either a float between 0 and 1 or an integer for the number of training samples to use
     batch_key
-        Column name in anndata.obs for batches. 
+        Column name in anndata.obs for batches.
         If None, no batch correction is performed
         If not None, batch correction is performed per batch category
     use_highly_variable_genes
         If true, uses only the genes in anndata.var["highly_variable"]
     subset_genes
-        Optional list of indices or gene names to subset anndata. 
+        Optional list of indices or gene names to subset anndata.
         If not None, use_highly_variable_genes is ignored
     linear_decoder
         If true, uses LDVAE model, which is an implementation of [Svensson20]_.
@@ -89,18 +89,18 @@ def scvi(
         Extra arguments for UnsupervisedTrainer
     model_kwargs
         Extra arguments for VAE or LDVAE model
-    
+
     Returns
     -------
     If `copy` is true, anndata is returned.
     If `return_posterior` is true, the posterior object is returned
-    If both `copy` and `return_posterior` are true, 
-    a tuple of anndata and the posterior are returned in that order. 
+    If both `copy` and `return_posterior` are true,
+    a tuple of anndata and the posterior are returned in that order.
 
     `adata.obsm['X_scvi']` stores the latent representations
     `adata.obsm['X_scvi_denoised']` stores the normalized mean of the negative binomial
     `adata.obsm['X_scvi_sample_rate']` stores the mean of the negative binomial
-    
+
     If linear_decoder is true:
     `adata.uns['ldvae_loadings']` stores the per-gene weights in the linear decoder as a
     genes by n_latent matrix.
@@ -117,9 +117,7 @@ def scvi(
         from scvi.inference import UnsupervisedTrainer
         from scvi.dataset import AnnDatasetFromAnnData
     except ImportError:
-        raise ImportError(
-            "Please install scvi package from https://github.com/YosefLab/scVI"
-        )
+        raise ImportError("Please install scvi package from https://github.com/YosefLab/scVI")
 
     # check if observations are unnormalized using first 10
     # code from: https://github.com/theislab/dca/blob/89eee4ed01dd969b3d46e0c815382806fbfc2526/dca/io.py#L63-L69
@@ -127,9 +125,7 @@ def scvi(
         X_subset = adata.X[:10]
     else:
         X_subset = adata.X
-    norm_error = (
-        'Make sure that the dataset (adata.X) contains unnormalized count data.'
-    )
+    norm_error = 'Make sure that the dataset (adata.X) contains unnormalized count data.'
     if sp.sparse.issparse(X_subset):
         assert (X_subset.astype(int) != X_subset).nnz == 0, norm_error
     else:
@@ -185,9 +181,7 @@ def scvi(
 
     trainer.train(n_epochs=n_epochs, lr=lr)
 
-    full = trainer.create_posterior(
-        trainer.model, dataset, indices=np.arange(len(dataset))
-    )
+    full = trainer.create_posterior(trainer.model, dataset, indices=np.arange(len(dataset)))
     latent, batch_indices, labels = full.sequential().get_latent()
 
     if copy:

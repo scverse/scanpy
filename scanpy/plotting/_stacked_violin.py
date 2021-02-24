@@ -308,9 +308,7 @@ class StackedViolin(BasePlot):
             _matrix = _matrix.iloc[:, self.var_names_idx_order]
 
         if self.categories_order is not None:
-            _matrix.index = _matrix.index.reorder_categories(
-                self.categories_order, ordered=True
-            )
+            _matrix.index = _matrix.index.reorder_categories(self.categories_order, ordered=True)
 
         # get mean values for color and transform to color values
         # using colormap
@@ -319,18 +317,14 @@ class StackedViolin(BasePlot):
             _color_df = _color_df.T
         import matplotlib.colors
 
-        norm = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
-        )
+        norm = matplotlib.colors.Normalize(vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax'))
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
         colormap_array = cmap(norm(_color_df.values))
         x_spacer_size = self.plot_x_padding
         y_spacer_size = self.plot_y_padding
-        self._make_rows_of_violinplots(
-            ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
-        )
+        self._make_rows_of_violinplots(ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size)
 
         # turn on axis for `ax` as this is turned off
         # by make_grid_spec when the axis is subdivided earlier.
@@ -345,9 +339,7 @@ class StackedViolin(BasePlot):
         # 0.5 to position the ticks on the center of the violins
         y_ticks = np.arange(_color_df.shape[0]) + 0.5
         ax.set_yticks(y_ticks)
-        ax.set_yticklabels(
-            [_color_df.index[idx] for idx, _ in enumerate(y_ticks)], minor=False
-        )
+        ax.set_yticklabels([_color_df.index[idx] for idx, _ in enumerate(y_ticks)], minor=False)
 
         # 0.5 to position the ticks on the center of the violins
         x_ticks = np.arange(_color_df.shape[1]) + 0.5
@@ -362,9 +354,7 @@ class StackedViolin(BasePlot):
 
         return norm
 
-    def _make_rows_of_violinplots(
-        self, ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
-    ):
+    def _make_rows_of_violinplots(self, ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size):
         import seaborn as sns  # Slow import, only import if called
 
         row_palette = self.kwds.get('color', self.row_palette)
@@ -403,14 +393,8 @@ class StackedViolin(BasePlot):
                 }
             )
         )
-        df['genes'] = (
-            df['genes'].astype('category').cat.reorder_categories(_matrix.columns)
-        )
-        df['categories'] = (
-            df['categories']
-            .astype('category')
-            .cat.reorder_categories(_matrix.index.categories)
-        )
+        df['genes'] = df['genes'].astype('category').cat.reorder_categories(_matrix.columns)
+        df['categories'] = df['categories'].astype('category').cat.reorder_categories(_matrix.index.categories)
 
         # the ax need to be subdivided
         # define a layout of nrows = len(categories) rows
@@ -512,9 +496,7 @@ class StackedViolin(BasePlot):
             import matplotlib.ticker as ticker
 
             # use MaxNLocator to set 2 ticks
-            row_ax.yaxis.set_major_locator(
-                ticker.MaxNLocator(nbins=2, steps=[1, 1.2, 10])
-            )
+            row_ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins=2, steps=[1, 1.2, 10]))
             yticks = row_ax.get_yticks()
             row_ax.set_yticks([yticks[0], yticks[-1]])
             ticklabels = row_ax.get_yticklabels()
@@ -531,9 +513,7 @@ class StackedViolin(BasePlot):
         row_ax.set_xlabel('')
 
         row_ax.set_xticklabels([])
-        row_ax.tick_params(
-            axis='x', bottom=False, top=False, labeltop=False, labelbottom=False
-        )
+        row_ax.tick_params(axis='x', bottom=False, top=False, labeltop=False, labelbottom=False)
 
 
 @_doc_params(

@@ -94,9 +94,7 @@ def test_pca_sparse(pbmc3k_normalized):
     explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, copy=True)
 
     assert np.allclose(implicit.uns["pca"]["variance"], explicit.uns["pca"]["variance"])
-    assert np.allclose(
-        implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"]
-    )
+    assert np.allclose(implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"])
     assert np.allclose(implicit.obsm['X_pca'], explicit.obsm['X_pca'])
     assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
 
@@ -127,13 +125,9 @@ def test_pca_chunked(pbmc3k_normalized):
     default = sc.pp.pca(pbmc3k_normalized, copy=True)
 
     # Taking absolute value since sometimes dimensions are flipped
-    np.testing.assert_allclose(
-        np.abs(chunked.obsm["X_pca"]), np.abs(default.obsm["X_pca"])
-    )
+    np.testing.assert_allclose(np.abs(chunked.obsm["X_pca"]), np.abs(default.obsm["X_pca"]))
     np.testing.assert_allclose(np.abs(chunked.varm["PCs"]), np.abs(default.varm["PCs"]))
-    np.testing.assert_allclose(
-        np.abs(chunked.uns["pca"]["variance"]), np.abs(default.uns["pca"]["variance"])
-    )
+    np.testing.assert_allclose(np.abs(chunked.uns["pca"]["variance"]), np.abs(default.uns["pca"]["variance"]))
     np.testing.assert_allclose(
         np.abs(chunked.uns["pca"]["variance_ratio"]),
         np.abs(default.uns["pca"]["variance_ratio"]),

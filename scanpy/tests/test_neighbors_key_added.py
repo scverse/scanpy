@@ -19,12 +19,8 @@ def test_neighbors_key_added(adata):
     dists_key = adata.uns[key]['distances_key']
 
     assert adata.uns['neighbors']['params'] == adata.uns[key]['params']
-    assert np.allclose(
-        adata.obsp['connectivities'].toarray(), adata.obsp[conns_key].toarray()
-    )
-    assert np.allclose(
-        adata.obsp['distances'].toarray(), adata.obsp[dists_key].toarray()
-    )
+    assert np.allclose(adata.obsp['connectivities'].toarray(), adata.obsp[conns_key].toarray())
+    assert np.allclose(adata.obsp['distances'].toarray(), adata.obsp[dists_key].toarray())
 
 
 # test functions with neighbors_key and obsp

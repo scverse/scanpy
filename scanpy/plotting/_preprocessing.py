@@ -120,6 +120,4 @@ def filter_genes_dispersion(
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     """
-    highly_variable_genes(
-        result, log=log, show=show, save=save, highly_variable_genes=False
-    )
+    highly_variable_genes(result, log=log, show=show, save=save, highly_variable_genes=False)

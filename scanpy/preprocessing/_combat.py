@@ -10,9 +10,7 @@ from .. import logging as logg
 from .._utils import sanitize_anndata
 
 
-def _design_matrix(
-    model: pd.DataFrame, batch_key: str, batch_levels: Collection[str]
-) -> pd.DataFrame:
+def _design_matrix(model: pd.DataFrame, batch_key: str, batch_levels: Collection[str]) -> pd.DataFrame:
     """\
     Computes a simple design matrix.
 
@@ -44,9 +42,7 @@ def _design_matrix(
 
     if other_cols:
         col_repr = " + ".join("Q('{}')".format(x) for x in other_cols)
-        factor_matrix = patsy.dmatrix(
-            "~ 0 + {}".format(col_repr), model[other_cols], return_type="dataframe"
-        )
+        factor_matrix = patsy.dmatrix("~ 0 + {}".format(col_repr), model[other_cols], return_type="dataframe")
 
         design = pd.concat((design, factor_matrix), axis=1)
         logg.info(f"Found {len(other_cols)} categorical variables:")
@@ -109,9 +105,7 @@ def _standardize_data(
     # Compute the means
     if np.sum(var_pooled == 0) > 0:
         print(f'Found {np.sum(var_pooled == 0)} genes with zero variance.')
-    stand_mean = np.dot(
-        grand_mean.T.reshape((len(grand_mean), 1)), np.ones((1, int(n_array)))
-    )
+    stand_mean = np.dot(grand_mean.T.reshape((len(grand_mean), 1)), np.ones((1, int(n_array))))
     tmp = np.array(design.copy())
     tmp[:, :n_batch] = 0
     stand_mean += np.dot(tmp, B_hat).T
@@ -175,9 +169,7 @@ def combat(
         cov_exist = np.isin(covariates, adata.obs_keys())
         if np.any(~cov_exist):
             missing_cov = np.array(covariates)[~cov_exist].tolist()
-            raise ValueError(
-                'Could not find the covariate(s) {!r} in adata.obs'.format(missing_cov)
-            )
+            raise ValueError('Could not find the covariate(s) {!r} in adata.obs'.format(missing_cov))
 
         if key in covariates:
             raise ValueError('Batch key and covariates cannot overlap')
@@ -209,9 +201,7 @@ def combat(
     logg.info("Fitting L/S model and finding priors\n")
     batch_design = design[design.columns[:n_batch]]
     # first estimate of the additive batch effect
-    gamma_hat = (
-        la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T
-    ).values
+    gamma_hat = (la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T).values
     delta_hat = []
 
     # first estimate for the multiplicative batch effect
@@ -260,10 +250,7 @@ def combat(
         dsq = np.sqrt(delta_star[j, :])
         dsq = dsq.reshape((len(dsq), 1))
         denom = np.dot(dsq, np.ones((1, n_batches[j])))
-        numer = np.array(
-            bayesdata.iloc[:, batch_idxs]
-            - np.dot(batch_design.iloc[batch_idxs], gamma_star).T
-        )
+        numer = np.array(bayesdata.iloc[:, batch_idxs] - np.dot(batch_design.iloc[batch_idxs], gamma_star).T)
         bayesdata.iloc[:, batch_idxs] = numer / denom
 
     vpsq = np.sqrt(var_pooled).reshape((len(var_pooled), 1))
@@ -329,16 +316,12 @@ def _it_sol(
     # in the loop, gamma and delta are updated together. they depend on each other. we iterate until convergence.
     while change > conv:
         g_new = (t2 * n * g_hat + d_old * g_bar) / (t2 * n + d_old)
-        sum2 = s_data - g_new.reshape((g_new.shape[0], 1)) @ np.ones(
-            (1, s_data.shape[1])
-        )
+        sum2 = s_data - g_new.reshape((g_new.shape[0], 1)) @ np.ones((1, s_data.shape[1]))
         sum2 = sum2 ** 2
         sum2 = sum2.sum(axis=1)
         d_new = (0.5 * sum2 + b) / (n / 2.0 + a - 1.0)
 
-        change = max(
-            (abs(g_new - g_old) / g_old).max(), (abs(d_new - d_old) / d_old).max()
-        )
+        change = max((abs(g_new - g_old) / g_old).max(), (abs(d_new - d_old) / d_old).max())
         g_old = g_new  # .copy()
         d_old = d_new  # .copy()
         count = count + 1

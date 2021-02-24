@@ -63,10 +63,7 @@ def test_ebi_expression_atlas(tmp_dataset_dir):
 def test_krumsiek11(tmp_dataset_dir):
     adata = sc.datasets.krumsiek11()
     assert adata.shape == (640, 11)
-    assert all(
-        np.unique(adata.obs["cell_type"])
-        == np.array(["Ery", "Mk", "Mo", "Neu", "progenitor"])
-    )
+    assert all(np.unique(adata.obs["cell_type"]) == np.array(["Ery", "Mk", "Mo", "Neu", "progenitor"]))
 
 
 def test_blobs():
@@ -102,18 +99,14 @@ def test_visium_datasets(tmp_dataset_dir, tmpdir):
     # Test that downloading tissue image works
     mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", include_hires_tiff=True)
     expected_image_path = sc.settings.datasetdir / "V1_Adult_Mouse_Brain" / "image.tif"
-    image_path = Path(
-        mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["metadata"]["source_image_path"]
-    )
+    image_path = Path(mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["metadata"]["source_image_path"])
     assert image_path == expected_image_path
 
     # Test that tissue image exists and is a valid image file
     assert image_path.exists()
 
     # Test that tissue image is a tif image file (using `file`)
-    process = subprocess.run(
-        ['file', '--mime-type', image_path], stdout=subprocess.PIPE
-    )
+    process = subprocess.run(['file', '--mime-type', image_path], stdout=subprocess.PIPE)
     output = process.stdout.strip().decode()  # make process output string
     assert output == str(image_path) + ': image/tiff'
 

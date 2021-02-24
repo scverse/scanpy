@@ -25,9 +25,7 @@ class _DelegatingSubparsersAction(_SubParsersAction):
     def __init__(self, *args, _command: str, _runargs: Dict[str, Any], **kwargs):
         super().__init__(*args, **kwargs)
         self.command = _command
-        self._name_parser_map = self.choices = _CommandDelegator(
-            _command, self, **_runargs
-        )
+        self._name_parser_map = self.choices = _CommandDelegator(_command, self, **_runargs)
 
 
 class _CommandDelegator(cabc.MutableMapping):
@@ -49,9 +47,7 @@ class _CommandDelegator(cabc.MutableMapping):
             if which(f'{self.command}-{k}'):
                 return _DelegatingParser(self, k)
             # Only here is the command list retrieved
-            raise ArgumentError(
-                self.action, f'No command “{k}”. Choose from {set(self)}'
-            )
+            raise ArgumentError(self.action, f'No command “{k}”. Choose from {set(self)}')
 
     def __setitem__(self, k: str, v: ArgumentParser) -> None:
         self.parser_map[k] = v
@@ -74,8 +70,7 @@ class _CommandDelegator(cabc.MutableMapping):
     def __eq__(self, other: Mapping[str, ArgumentParser]):
         if isinstance(other, _CommandDelegator):
             return all(
-                getattr(self, attr) == getattr(other, attr)
-                for attr in ['command', 'action', 'parser_map', 'runargs']
+                getattr(self, attr) == getattr(other, attr) for attr in ['command', 'action', 'parser_map', 'runargs']
             )
         return self.parser_map == other
 
@@ -103,9 +98,7 @@ class _DelegatingParser(ArgumentParser):
         args: Optional[Sequence[str]] = None,
         namespace: Optional[Namespace] = None,
     ) -> Tuple[Namespace, List[str]]:
-        assert (
-            args is not None and namespace is None
-        ), 'Only use DelegatingParser as subparser'
+        assert args is not None and namespace is None, 'Only use DelegatingParser as subparser'
         return Namespace(func=partial(run, [self.prog, *args], **self.cd.runargs)), []
 
 
@@ -115,9 +108,7 @@ def _cmd_settings() -> None:
     print(settings)
 
 
-def main(
-    argv: Optional[Sequence[str]] = None, *, check: bool = True, **runargs
-) -> Optional[CompletedProcess]:
+def main(argv: Optional[Sequence[str]] = None, *, check: bool = True, **runargs) -> Optional[CompletedProcess]:
     """\
     Run a builtin scanpy command or a scanpy-* subcommand.
 
@@ -125,10 +116,7 @@ def main(
     `~run(['scanpy', *argv], **runargs)`
     """
     parser = ArgumentParser(
-        description=(
-            "There are a few packages providing commands. "
-            "Try e.g. `pip install scanpy-scripts`!"
-        )
+        description=("There are a few packages providing commands. " "Try e.g. `pip install scanpy-scripts`!")
     )
     parser.set_defaults(func=parser.print_help)
 

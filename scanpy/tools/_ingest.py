@@ -113,12 +113,8 @@ def ingest(
 
     start = logg.info('running ingest')
     obs = [obs] if isinstance(obs, str) else obs
-    embedding_method = (
-        [embedding_method] if isinstance(embedding_method, str) else embedding_method
-    )
-    labeling_method = (
-        [labeling_method] if isinstance(labeling_method, str) else labeling_method
-    )
+    embedding_method = [embedding_method] if isinstance(embedding_method, str) else embedding_method
+    labeling_method = [labeling_method] if isinstance(labeling_method, str) else labeling_method
 
     if len(labeling_method) == 1 and len(obs or []) > 1:
         labeling_method = labeling_method * len(obs)
@@ -251,9 +247,7 @@ class Ingest:
                 make_initialized_nnd_search,
             )
 
-            self._random_init, self._tree_init = make_initialisations(
-                dist_func, dist_args
-            )
+            self._random_init, self._tree_init = make_initialisations(dist_func, dist_args)
             _initialise_search = partial(
                 initialise_search,
                 init_from_random=self._random_init,
@@ -385,8 +379,7 @@ class Ingest:
             self._init_neighbors(adata, neighbors_key)
         else:
             raise ValueError(
-                f'There is no neighbors data in `adata.uns["{neighbors_key}"]`.\n'
-                'Please run pp.neighbors.'
+                f'There is no neighbors data in `adata.uns["{neighbors_key}"]`.\n' 'Please run pp.neighbors.'
             )
 
         if 'X_umap' in adata.obsm:
@@ -436,10 +429,7 @@ class Ingest:
         new_var_names = adata_new.var_names.str.upper()
 
         if not ref_var_names.equals(new_var_names):
-            raise ValueError(
-                'Variables in the new adata are different '
-                'from variables in the reference adata'
-            )
+            raise ValueError('Variables in the new adata are different ' 'from variables in the reference adata')
 
         self._obs = pd.DataFrame(index=adata_new.obs.index)
         self._obsm = _DimDict(adata_new.n_obs, axis=0)
@@ -473,13 +463,9 @@ class Ingest:
         else:
             from umap.utils import deheap_sort
 
-            init = self._initialise_search(
-                self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state
-            )
+            init = self._initialise_search(self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state)
 
-            result = self._search(
-                train, self._search_graph.indptr, self._search_graph.indices, init, test
-            )
+            result = self._search(train, self._search_graph.indptr, self._search_graph.indices, init, test)
             indices, dists = deheap_sort(result)
             self._indices, self._distances = indices[:, :k], dists[:, :k]
 
@@ -499,14 +485,10 @@ class Ingest:
         elif method == 'pca':
             self._obsm['X_pca'] = self._pca()
         else:
-            raise NotImplementedError(
-                'Ingest supports only umap and pca embeddings for now.'
-            )
+            raise NotImplementedError('Ingest supports only umap and pca embeddings for now.')
 
     def _knn_classify(self, labels):
-        cat_array = self._adata_ref.obs[labels].astype(
-            'category'
-        )  # ensure it's categorical
+        cat_array = self._adata_ref.obs[labels].astype('category')  # ensure it's categorical
         values = [cat_array[inds].mode()[0] for inds in self._indices]
         return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
@@ -542,9 +524,7 @@ class Ingest:
         if not inplace:
             return adata
 
-    def to_adata_joint(
-        self, batch_key='batch', batch_categories=None, index_unique='-'
-    ):
+    def to_adata_joint(self, batch_key='batch', batch_categories=None, index_unique='-'):
         """\
         Returns concatenated object.
 
@@ -565,14 +545,10 @@ class Ingest:
 
         for key in self._obsm:
             if key in self._adata_ref.obsm:
-                adata.obsm[key] = np.vstack(
-                    (self._adata_ref.obsm[key], self._obsm[key])
-                )
+                adata.obsm[key] = np.vstack((self._adata_ref.obsm[key], self._obsm[key]))
 
         if self._use_rep not in ('X_pca', 'X'):
-            adata.obsm[self._use_rep] = np.vstack(
-                (self._adata_ref.obsm[self._use_rep], self._obsm['rep'])
-            )
+            adata.obsm[self._use_rep] = np.vstack((self._adata_ref.obsm[self._use_rep], self._obsm['rep']))
 
         if 'X_umap' in self._obsm:
             adata.uns['umap'] = self._adata_ref.uns['umap']

@@ -32,9 +32,7 @@ def _sparse_nanmean(X, axis):
 
     # the average
     s = Y.sum(axis)
-    m = s / n_elements.astype(
-        'float32'
-    )  # if we dont cast the int32 to float32, this will result in float64...
+    m = s / n_elements.astype('float32')  # if we dont cast the int32 to float32, this will result in float64...
 
     return m
 
@@ -127,22 +125,16 @@ def score_genes(
     use_raw = _check_use_raw(adata, use_raw)
     _adata = adata.raw if use_raw else adata
 
-    _adata_subset = (
-        _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
-    )
+    _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
     if issparse(_adata_subset.X):
         obs_avg = pd.Series(
             np.array(_sparse_nanmean(_adata_subset.X, axis=0)).flatten(),
             index=gene_pool,
         )  # average expression of genes
     else:
-        obs_avg = pd.Series(
-            np.nanmean(_adata_subset.X, axis=0), index=gene_pool
-        )  # average expression of genes
+        obs_avg = pd.Series(np.nanmean(_adata_subset.X, axis=0), index=gene_pool)  # average expression of genes
 
-    obs_avg = obs_avg[
-        np.isfinite(obs_avg)
-    ]  # Sometimes (and I don't know how) missing data may be there, with nansfor
+    obs_avg = obs_avg[np.isfinite(obs_avg)]  # Sometimes (and I don't know how) missing data may be there, with nansfor
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method='min') // n_items
@@ -239,9 +231,7 @@ def score_genes_cell_cycle(
     adata = adata.copy() if copy else adata
     ctrl_size = min(len(s_genes), len(g2m_genes))
     # add s-score
-    score_genes(
-        adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size, **kwargs
-    )
+    score_genes(adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size, **kwargs)
     # add g2m-score
     score_genes(
         adata,

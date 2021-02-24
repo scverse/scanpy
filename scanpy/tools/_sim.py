@@ -164,9 +164,7 @@ def sample_dynamic_data(**params):
             for restart in range(nrRealizations + maxRestarts):
                 # slightly break symmetry in initial conditions
                 if 'toggleswitch' in model_key:
-                    X0 = np.array(
-                        [0.8 for i in range(grnsim.dim)]
-                    ) + 0.01 * np.random.randn(grnsim.dim)
+                    X0 = np.array([0.8 for i in range(grnsim.dim)]) + 0.01 * np.random.randn(grnsim.dim)
                 X = grnsim.sim_model(tmax=tmax, X0=X0, noiseDyn=noiseDyn)
                 # check branching
                 check = True
@@ -207,7 +205,6 @@ def sample_dynamic_data(**params):
         step = 5
 
         grnsim = GRNsim(dim=dim, initType=initType, model=model_key, params=params)
-        curr_nrSamples = 0
         Xsamples = []
         for sample in range(maxNrSamples):
             # choose initial conditions such that branchings result
@@ -262,9 +259,7 @@ def sample_dynamic_data(**params):
     for filename in writedir.glob('sim*.txt'):
         pass
     logg.info(f'reading simulation results {filename}')
-    adata = readwrite._read(
-        filename, first_column_names=True, suppress_cache_warning=True
-    )
+    adata = readwrite._read(filename, first_column_names=True, suppress_cache_warning=True)
     adata.uns['tmax_write'] = tmax / step
     return adata
 
@@ -312,16 +307,12 @@ def write_data(
                         Adj[i, i] = 1
                 np.savetxt(dir + '/adj_' + id + '.txt', Adj, header=header, fmt='%d')
             if Coupl.size > 0:
-                np.savetxt(
-                    dir + '/coupl_' + id + '.txt', Coupl, header=header, fmt='%10.6f'
-                )
+                np.savetxt(dir + '/coupl_' + id + '.txt', Coupl, header=header, fmt='%10.6f')
         # write model file
         if varNames and Coupl.size > 0:
             with (dir / f'model_{id}.txt').open('w') as f:
                 f.write('# For each "variable = ", there must be a right hand side: \n')
-                f.write(
-                    '# either an empty string or a python-style logical expression \n'
-                )
+                f.write('# either an empty string or a python-style logical expression \n')
                 f.write('# involving variable names, "or", "and", "(", ")". \n')
                 f.write('# The order of equations matters! \n')
                 f.write('# \n')
@@ -337,11 +328,7 @@ def write_data(
                 for gp in range(dim):
                     for g in range(dim):
                         if np.abs(Coupl[gp, g]) > 1e-10:
-                            f.write(
-                                f'{names[gp]:10} '
-                                f'{names[g]:10} '
-                                f'{Coupl[gp, g]:10.3} \n'
-                            )
+                            f.write(f'{names[gp]:10} ' f'{names[g]:10} ' f'{Coupl[gp, g]:10.3} \n')
     # write simulated data
     # the binary mode option in the following line is a fix for python 3
     # variable names
@@ -397,9 +384,7 @@ class GRNsim:
             either string for predefined model,
             or directory with a model file and a couple matrix files
         """
-        self.dim = (
-            dim if Coupl is None else Coupl.shape[0]
-        )  # number of nodes / dimension of system
+        self.dim = dim if Coupl is None else Coupl.shape[0]  # number of nodes / dimension of system
         self.maxnpar = 1  # maximal number of parents
         self.p_indep = 0.4  # fraction of independent genes
         self.model = model
@@ -410,9 +395,8 @@ class GRNsim:
         # checks
         if initType not in ['branch', 'random']:
             raise RuntimeError('initType must be either: branch, random')
-        read = False
         if model not in self.availModels.keys():
-            message = 'model not among predefined models \n'
+            message = 'model not among predefined models \n'  # noqa: F841
         # read from file
         from .. import sim_models
 
@@ -477,24 +461,16 @@ class GRNsim:
                     iparent = self.varNames[self.pas[child][iv]]
                     x = Xt[iparent]
                     threshold = 0.1 / np.abs(self.Coupl[ichild, iparent])
-                    Xdiff_syn_tuple *= (
-                        self.hill_a(x, threshold) if v else self.hill_i(x, threshold)
-                    )
+                    Xdiff_syn_tuple *= self.hill_a(x, threshold) if v else self.hill_i(x, threshold)
                     if verbosity > 0:
-                        Xdiff_syn_tuple_str += (
-                            f'{"a" if v else "i"}'
-                            f'({self.pas[child][iv]}, {threshold:.2})'
-                        )
+                        Xdiff_syn_tuple_str += f'{"a" if v else "i"}' f'({self.pas[child][iv]}, {threshold:.2})'
                 Xdiff_syn += Xdiff_syn_tuple
                 if verbosity > 0:
                     Xdiff_syn_str += ('+' if ituple != 0 else '') + Xdiff_syn_tuple_str
             # multiply with degradation term
             Xdiff[ichild] = self.invTimeStep * (Xdiff_syn - Xt[ichild])
             if verbosity > 0:
-                Xdiff_str = (
-                    f'{child}_{child}-{child} = '
-                    f'{self.invTimeStep}*({Xdiff_syn_str}-{child})'
-                )
+                Xdiff_str = f'{child}_{child}-{child} = ' f'{self.invTimeStep}*({Xdiff_syn_str}-{child})'
                 settings.m(0, Xdiff_str)
         return Xdiff
 
@@ -564,9 +540,7 @@ class GRNsim:
         # read couplings via names
         self.Coupl = np.zeros((self.dim, self.dim))
         boolContinue = True
-        for (
-            line
-        ) in self.model.open():  # open(self.model.replace('/model','/couplList')):
+        for line in self.model.open():  # open(self.model.replace('/model','/couplList')):
             if line.startswith('# coupling list:'):
                 boolContinue = False
             if boolContinue:
@@ -598,9 +572,7 @@ class GRNsim:
                 for g in range(self.dim):
                     if np.abs(self.Coupl[gp, g] > 1e-10):
                         pas.append(names[g])
-                self.boolRules[names[gp]] = ''.join(
-                    pas[:1] + [' or ' + pa for pa in pas[1:]]
-                )
+                self.boolRules[names[gp]] = ''.join(pas[:1] + [' or ' + pa for pa in pas[1:]])
                 self.Adj_signed = np.sign(Coupl)
         elif self.model in ['6', '7', '8', '9', '10']:
             self.Adj_signed = np.zeros((self.dim, self.dim))
@@ -619,14 +591,10 @@ class GRNsim:
             #             settings.m(0,leafnodes,availnodes)
             while len(availnodes) != 0:
                 # parent
-                parent_idx = np.random.choice(
-                    np.arange(0, len(leafnodes)), size=1, replace=False
-                )
+                parent_idx = np.random.choice(np.arange(0, len(leafnodes)), size=1, replace=False)
                 parent = leafnodes[parent_idx]
                 # children
-                children_ids = np.random.choice(
-                    np.arange(0, len(availnodes)), size=2, replace=False
-                )
+                children_ids = np.random.choice(np.arange(0, len(availnodes)), size=2, replace=False)
                 children = availnodes[children_ids]
                 settings.m(0, parent, children)
                 self.Adj_signed[children, parent] = np.ones(2)
@@ -653,9 +621,7 @@ class GRNsim:
                     # and the variable itself, therefore its
                     # self.maxnpar+2 in the following line
                     nr = np.random.randint(1, self.maxnpar + 2)
-                    j_par = np.random.choice(
-                        np.arange(0, self.dim), size=nr, replace=False
-                    )
+                    j_par = np.random.choice(np.arange(0, self.dim), size=nr, replace=False)
                     self.Adj[i, j_par] = 1
                 else:
                     self.Adj[i, i] = 1
@@ -740,9 +706,7 @@ class GRNsim:
         X = np.zeros((tmax, self.dim))
         X[tmax - 1] = X0
         for t in range(tmax - 2, -1, -1):
-            sol = sp.optimize.root(
-                self.sim_model_back_help, X[t + 1], args=(X[t + 1]), method='hybr'
-            )
+            sol = sp.optimize.root(self.sim_model_back_help, X[t + 1], args=(X[t + 1]), method='hybr')
             X[t] = sol.x
         return X
 
@@ -752,17 +716,12 @@ class GRNsim:
         if Xfix[0] > 0.97 or Xfix[0] < 0.03:
             settings.m(
                 0,
-                '... either no fixed point in [0,1]^2! \n'
-                + '    or fixed point is too close to bounds',
+                '... either no fixed point in [0,1]^2! \n' + '    or fixed point is too close to bounds',
             )
             return None
         #
-        XbackUp = self.sim_model_backwards(
-            tmax=tmax / 3, X0=Xfix + np.array([0.02, -0.02])
-        )
-        XbackDo = self.sim_model_backwards(
-            tmax=tmax / 3, X0=Xfix + np.array([-0.02, -0.02])
-        )
+        XbackUp = self.sim_model_backwards(tmax=tmax / 3, X0=Xfix + np.array([0.02, -0.02]))
+        XbackDo = self.sim_model_backwards(tmax=tmax / 3, X0=Xfix + np.array([-0.02, -0.02]))
         #
         Xup = self.sim_model(tmax=tmax, X0=XbackUp[0])
         Xdo = self.sim_model(tmax=tmax, X0=XbackDo[0])
@@ -772,13 +731,12 @@ class GRNsim:
         if np.min(X0mean) < 0.025 or np.max(X0mean) > 0.975:
             settings.m(0, '... initial point is too close to bounds')
             return None
-        #
         if self.show and self.verbosity > 1:
-            pl.figure()
-            pl.plot(XbackUp[:, 0], '.b', XbackUp[:, 1], '.g')
-            pl.plot(XbackDo[:, 0], '.b', XbackDo[:, 1], '.g')
-            pl.plot(Xup[:, 0], 'b', Xup[:, 1], 'g')
-            pl.plot(Xdo[:, 0], 'b', Xdo[:, 1], 'g')
+            pl.figure()  # noqa: F821
+            pl.plot(XbackUp[:, 0], '.b', XbackUp[:, 1], '.g')  # noqa: F821
+            pl.plot(XbackDo[:, 0], '.b', XbackDo[:, 1], '.g')  # noqa: F821
+            pl.plot(Xup[:, 0], 'b', Xup[:, 1], 'g')  # noqa: F821
+            pl.plot(Xdo[:, 0], 'b', Xdo[:, 1], 'g')  # noqa: F821
         return X0mean
 
     def parents_from_boolRule(self, rule):
@@ -786,13 +744,7 @@ class GRNsim:
 
         Returns list of parents.
         """
-        rule_pa = (
-            rule.replace('(', '')
-            .replace(')', '')
-            .replace('or', '')
-            .replace('and', '')
-            .replace('not', '')
-        )
+        rule_pa = rule.replace('(', '').replace(')', '').replace('or', '').replace('and', '').replace('not', '')
         rule_pa = rule_pa.split()
         # if there are no parents, continue
         if not rule_pa:
@@ -839,17 +791,13 @@ class GRNsim:
                         raise ValueError(f'specify coupling value for {key} <- {g}')
                 else:
                     if np.abs(self.Coupl[self.varNames[key], g]) > 1e-10:
-                        raise ValueError(
-                            'there should be no coupling value for ' f'{key} <- {g}'
-                        )
+                        raise ValueError('there should be no coupling value for ' f'{key} <- {g}')
             if self.verbosity > 1:
                 settings.m(0, '...' + key)
                 settings.m(0, rule)
-                settings.m(0, rule_pa)
+                settings.m(0, rule_pa)  # noqa: F821
             # now evaluate coefficients
-            for tuple in list(
-                itertools.product([False, True], repeat=len(self.pas[key]))
-            ):
+            for tuple in list(itertools.product([False, True], repeat=len(self.pas[key]))):
                 if self.process_rule(rule, self.pas[key], tuple):
                     self.boolCoeff[key].append(tuple)
             #
@@ -977,9 +925,7 @@ def check_nocycles(Adj: np.ndarray, verbosity: int = 2) -> bool:
     return True
 
 
-def sample_coupling_matrix(
-    dim: int = 3, connectivity: float = 0.5
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+def sample_coupling_matrix(dim: int = 3, connectivity: float = 0.5) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int]:
     """\
     Sample coupling matrix.
 
@@ -1029,9 +975,7 @@ def sample_coupling_matrix(
             check = True
             break
     if not check:
-        raise ValueError(
-            'did not find graph without cycles after' f'{max_trial} trials'
-        )
+        raise ValueError('did not find graph without cycles after' f'{max_trial} trials')
     return Coupl, Adj, Adj_signed, n_edges
 
 
@@ -1077,16 +1021,6 @@ class StaticCauseEffect:
         -------
         Data array of shape (n_samples,dim).
         """
-        # nice examples
-        examples = [
-            dict(
-                func='sawtooth',
-                gdist='uniform',
-                sigma_glob=1.8,
-                sigma_noise=0.1,
-            )
-        ]
-
         # nr of samples
         n_samples = 100
 
@@ -1174,11 +1108,11 @@ class StaticCauseEffect:
         # AND type / horizontal
         X[:, 2] = func(X[:, 0]) * sp.stats.norm.cdf(X[:, 1], 1, 0.2)
 
-        pl.scatter(X[:, 0], X[:, 1], c=X[:, 2], edgecolor='face')
-        pl.show()
+        pl.scatter(X[:, 0], X[:, 1], c=X[:, 2], edgecolor='face')  # noqa: F821
+        pl.show()  # noqa: F821
 
-        pl.plot(X[:, 1], X[:, 2], '.')
-        pl.show()
+        pl.plot(X[:, 1], X[:, 2], '.')  # noqa: F821
+        pl.show()  # noqa: F821
 
         return X
 
@@ -1233,8 +1167,7 @@ if __name__ == '__main__':
     # command line options
     p = argparse.ArgumentParser(
         description=(
-            'Simulate stochastic discrete-time dynamical systems,\n'
-            'in particular gene regulatory networks.'
+            'Simulate stochastic discrete-time dynamical systems,\n' 'in particular gene regulatory networks.'
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
@@ -1273,10 +1206,7 @@ if __name__ == '__main__':
         model = dir.name.split('_')[0]
         settings.m(0, f'...model is: {model!r}')
     if dir.is_dir() and 'test' not in str(dir):
-        message = (
-            f'directory {dir} already exists, '
-            'remove it and continue? [y/n, press enter]'
-        )
+        message = f'directory {dir} already exists, ' 'remove it and continue? [y/n, press enter]'
         if str(input(message)) != 'y':
             settings.m(0, '    ...quit program execution')
             sys.exit()

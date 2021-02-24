@@ -84,9 +84,7 @@ def _set_log_level(settings, level: int):
 
 
 class _LogFormatter(logging.Formatter):
-    def __init__(
-        self, fmt='{levelname}: {message}', datefmt='%Y-%m-%d %H:%M', style='{'
-    ):
+    def __init__(self, fmt='{levelname}: {message}', datefmt='%Y-%m-%d %H:%M', style='{'):
         super().__init__(fmt, datefmt, style)
 
     def format(self, record: logging.LogRecord):
@@ -100,13 +98,9 @@ class _LogFormatter(logging.Formatter):
         if record.time_passed:
             # strip microseconds
             if record.time_passed.microseconds:
-                record.time_passed = timedelta(
-                    seconds=int(record.time_passed.total_seconds())
-                )
+                record.time_passed = timedelta(seconds=int(record.time_passed.total_seconds()))
             if '{time_passed}' in record.msg:
-                record.msg = record.msg.replace(
-                    '{time_passed}', str(record.time_passed)
-                )
+                record.msg = record.msg.replace('{time_passed}', str(record.time_passed))
             else:
                 self._style._fmt += ' ({time_passed})'
         if record.deep:
