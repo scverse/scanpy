@@ -27,7 +27,7 @@ omit = ['*/tests/*']
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py36']
 skip-string-normalization = true
 exclude = '''
 /build/.*
