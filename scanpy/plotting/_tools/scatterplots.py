@@ -220,7 +220,6 @@ def embedding(
     else:
         size = 120000 / adata.shape[0]
 
-    ###
     # make the plots
     axs = []
     import itertools
