@@ -79,6 +79,10 @@ jobs:
       testResultsFormat: NUnit
       testRunTitle: 'Publish test results for Python $(python.version)'
 
+  - script: bash <(curl -s https://codecov.io/bash)
+    displayName: 'Upload to codecov.io'
+    condition: eq(variables['RUN_COVERAGE'], 'yes')
+
 - job: CheckBuild
   pool:
     vmImage: 'ubuntu-18.04'
