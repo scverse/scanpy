@@ -167,7 +167,14 @@ def print_versions(*, file=None):
         buf = sys.stdout = io.StringIO()
         sinfo(
             dependencies=True,
-            excludes=['builtins', 'stdlib_list', 'importlib_metadata'],
+            excludes=[
+                'builtins',
+                'stdlib_list',
+                'importlib_metadata',
+                # Special module present if test coverage being calculated
+                # https://gitlab.com/joelostblom/sinfo/-/issues/10
+                "$coverage",
+            ],
         )
     finally:
         sys.stdout = stdout

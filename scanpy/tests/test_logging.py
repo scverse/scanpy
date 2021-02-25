@@ -1,7 +1,7 @@
 from contextlib import redirect_stdout
-import sys
 from datetime import datetime
 from io import StringIO
+import sys
 
 import pytest
 
