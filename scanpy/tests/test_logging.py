@@ -1,3 +1,4 @@
+from contextlib import redirect_stdout
 import sys
 from datetime import datetime
 from io import StringIO
@@ -5,6 +6,7 @@ from io import StringIO
 import pytest
 
 from scanpy import Verbosity, settings as s, logging as l
+import scanpy as sc
 
 
 @pytest.fixture
@@ -91,3 +93,24 @@ def test_timing(monkeypatch, capsys, logging_state):
     assert counter == 4 and capsys.readouterr().err == '4 (0:00:02)\n'
     l.info('5 {time_passed}', time=start)
     assert counter == 5 and capsys.readouterr().err == '5 0:00:03\n'
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        sc.logging.print_header,
+        sc.logging.print_versions,
+        sc.logging.print_version_and_date,
+    ],
+)
+def test_call_outputs(func):
+    """
+    Tests that these functions print to stdout and don't error.
+
+    Checks that https://github.com/theislab/scanpy/issues/1437 is fixed.
+    """
+    output_io = StringIO()
+    with redirect_stdout(output_io):
+        func()
+    output = output_io.getvalue()
+    assert output != ""

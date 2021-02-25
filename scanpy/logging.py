@@ -165,7 +165,10 @@ def print_versions(*, file=None):
     stdout = sys.stdout
     try:
         buf = sys.stdout = io.StringIO()
-        sinfo(dependencies=True)
+        sinfo(
+            dependencies=True,
+            excludes=['builtins', 'stdlib_list', 'importlib_metadata'],
+        )
     finally:
         sys.stdout = stdout
     output = buf.getvalue()
