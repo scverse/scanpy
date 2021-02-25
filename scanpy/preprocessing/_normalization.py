@@ -133,7 +133,9 @@ def normalize_total(
     if layers == 'all':
         layers = adata.layers.keys()
     elif isinstance(layers, str):
-        raise ValueError(f"`layers` needs to be a list of strings or 'all', not {layers!r}")
+        raise ValueError(
+            f"`layers` needs to be a list of strings or 'all', not {layers!r}"
+        )
 
     view_to_actual(adata)
 
@@ -197,6 +199,8 @@ def normalize_total(
         time=start,
     )
     if key_added is not None:
-        logg.debug(f'and added {key_added!r}, counts per cell before normalization (adata.obs)')
+        logg.debug(
+            f'and added {key_added!r}, counts per cell before normalization (adata.obs)'
+        )
 
     return dat if not inplace else None

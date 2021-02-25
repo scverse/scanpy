@@ -217,7 +217,9 @@ def palantir(
 
     # MAGIC imputation
     if impute_data:
-        imp_df = run_magic_imputation(data=adata.to_df(), dm_res=dm_res, n_steps=n_steps)
+        imp_df = run_magic_imputation(
+            data=adata.to_df(), dm_res=dm_res, n_steps=n_steps
+        )
         adata.layers['palantir_imp'] = imp_df
 
     (

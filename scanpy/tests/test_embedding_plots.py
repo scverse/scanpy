@@ -29,7 +29,9 @@ def adata():
     from sklearn.cluster import DBSCAN
 
     empty_pixel = np.array([1.0, 1.0, 1.0, 0]).reshape(1, 1, -1)
-    image = imread(Path(sc.__file__).parent.parent / "docs/_static/img/Scanpy_Logo_RGB.png")
+    image = imread(
+        Path(sc.__file__).parent.parent / "docs/_static/img/Scanpy_Logo_RGB.png"
+    )
     x, y = np.where(np.logical_and.reduce(~np.equal(image, empty_pixel), axis=2))
 
     # Just using to calculate the hex coords
@@ -68,7 +70,9 @@ def adata():
     adata.obs["label_missing"][::2] = np.nan
 
     adata.obs["1_missing"] = adata.obs_vector("1")
-    adata.obs.loc[adata.obsm["spatial"][:, 0] < adata.obsm["spatial"][:, 0].mean(), "1_missing"] = np.nan
+    adata.obs.loc[
+        adata.obsm["spatial"][:, 0] < adata.obsm["spatial"][:, 0].mean(), "1_missing"
+    ] = np.nan
 
     return adata
 
@@ -137,7 +141,9 @@ def test_missing_values_categorical(
     legend_loc,
     groupsfunc,
 ):
-    save_and_compare_images = image_comparer(MISSING_VALUES_ROOT, MISSING_VALUES_FIGS, tol=15)
+    save_and_compare_images = image_comparer(
+        MISSING_VALUES_ROOT, MISSING_VALUES_FIGS, tol=15
+    )
     base_name = fixture_request.node.name
 
     # Passing through a dict so it's easier to use default values
@@ -153,8 +159,12 @@ def test_missing_values_categorical(
     save_and_compare_images(base_name)
 
 
-def test_missing_values_continuous(fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds):
-    save_and_compare_images = image_comparer(MISSING_VALUES_ROOT, MISSING_VALUES_FIGS, tol=15)
+def test_missing_values_continuous(
+    fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds
+):
+    save_and_compare_images = image_comparer(
+        MISSING_VALUES_ROOT, MISSING_VALUES_FIGS, tol=15
+    )
     base_name = fixture_request.node.name
 
     # Passing through a dict so it's easier to use default values
@@ -238,9 +248,13 @@ def test_spatial_general(image_comparer):  # general coordinates
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
-    spatial_metadata = adata.uns.pop("spatial")  # spatial data don't have imgs, so remove entry from uns
+    spatial_metadata = adata.uns.pop(
+        "spatial"
+    )  # spatial data don't have imgs, so remove entry from uns
     # Required argument for now
-    spot_size = list(spatial_metadata.values())[0]["scalefactors"]["spot_diameter_fullres"]
+    spot_size = list(spatial_metadata.values())[0]["scalefactors"][
+        "spot_diameter_fullres"
+    ]
 
     sc.pl.spatial(adata, show=False, spot_size=spot_size)
     save_and_compare_images('master_spatial_general_nocol')
@@ -313,8 +327,12 @@ def equivalent_spatial_plotters_no_img(equivalent_spatial_plotters):
         pytest.param({"bw": True}, id="bw"),
         # Shape of the image for particular fixture, should not be hardcoded like this
         pytest.param({"img": np.ones((774, 1755, 4)), "scale_factor": 1.0}, id="img"),
-        pytest.param({"na_color": (0, 0, 0, 0), "color": "1_missing"}, id="na_color.transparent"),
-        pytest.param({"na_color": "lightgray", "color": "1_missing"}, id="na_color.lightgray"),
+        pytest.param(
+            {"na_color": (0, 0, 0, 0), "color": "1_missing"}, id="na_color.transparent"
+        ),
+        pytest.param(
+            {"na_color": "lightgray", "color": "1_missing"}, id="na_color.lightgray"
+        ),
     ]
 )
 def spatial_kwargs(request):
@@ -341,7 +359,9 @@ def test_manual_equivalency(equivalent_spatial_plotters, tmpdir, spatial_kwargs)
     check_images(orig_pth, removed_pth, tol=1)
 
 
-def test_manual_equivalency_no_img(equivalent_spatial_plotters_no_img, tmpdir, spatial_kwargs):
+def test_manual_equivalency_no_img(
+    equivalent_spatial_plotters_no_img, tmpdir, spatial_kwargs
+):
     if "bw" in spatial_kwargs:
         # Has no meaning when there is no image
         pytest.skip()
@@ -366,7 +386,9 @@ def test_white_background_vs_no_img(adata, tmpdir, spatial_kwargs):
         # These arguments don't make sense for this check
         pytest.skip()
 
-    white_background = np.ones_like(adata.uns["spatial"]["scanpy_img"]["images"]["hires"])
+    white_background = np.ones_like(
+        adata.uns["spatial"]["scanpy_img"]["images"]["hires"]
+    )
     TESTDIR = Path(tmpdir)
     white_pth = TESTDIR / "white_background.png"
     noimg_pth = TESTDIR / "no_img.png"
@@ -390,7 +412,9 @@ def test_spatial_na_color(adata, tmpdir):
     """
     Check that na_color defaults to transparent when an image is present, light gray when not.
     """
-    white_background = np.ones_like(adata.uns["spatial"]["scanpy_img"]["images"]["hires"])
+    white_background = np.ones_like(
+        adata.uns["spatial"]["scanpy_img"]["images"]["hires"]
+    )
     TESTDIR = Path(tmpdir)
     lightgray_pth = TESTDIR / "lightgray.png"
     transparent_pth = TESTDIR / "transparent.png"

@@ -104,7 +104,9 @@ def filter_genes_dispersion(
     If a data matrix `X` is passed, the annotation is returned as `np.recarray`
     with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
     """
-    if n_top_genes is not None and not all(x is None for x in [min_disp, max_disp, min_mean, max_mean]):
+    if n_top_genes is not None and not all(
+        x is None for x in [min_disp, max_disp, min_mean, max_mean]
+    ):
         logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
     if min_disp is None:
         min_disp = 0.5
@@ -168,7 +170,10 @@ def filter_genes_dispersion(
         disp_mean_bin[one_gene_per_bin] = 0
         # actually do the normalization
         df['dispersion_norm'] = (
-            df['dispersion'].values - disp_mean_bin[df['mean_bin'].values].values  # use values here as index differs
+            df['dispersion'].values
+            - disp_mean_bin[
+                df['mean_bin'].values
+            ].values  # use values here as index differs
         ) / disp_std_bin[df['mean_bin'].values].values
     elif flavor == 'cell_ranger':
         from statsmodels import robust
@@ -184,7 +189,9 @@ def filter_genes_dispersion(
             warnings.simplefilter('ignore')
             disp_mad_bin = disp_grouped.apply(robust.mad)
         df['dispersion_norm'] = (
-            np.abs(df['dispersion'].values - disp_median_bin[df['mean_bin'].values].values)
+            np.abs(
+                df['dispersion'].values - disp_median_bin[df['mean_bin'].values].values
+            )
             / disp_mad_bin[df['mean_bin'].values].values
         )
     else:
@@ -192,10 +199,15 @@ def filter_genes_dispersion(
     dispersion_norm = df['dispersion_norm'].values.astype('float32')
     if n_top_genes is not None:
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
-        dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
+        dispersion_norm[
+            ::-1
+        ].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes - 1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
-        logg.debug(f'the {n_top_genes} top genes correspond to a ' f'normalized dispersion cutoff of {disp_cut_off}')
+        logg.debug(
+            f'the {n_top_genes} top genes correspond to a '
+            f'normalized dispersion cutoff of {disp_cut_off}'
+        )
     else:
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat

@@ -115,7 +115,9 @@ def test_paga_paul15_subsampled(image_comparer, plt):
 
     adata.obs['distance'] = adata.obs['dpt_pseudotime']
 
-    _, axs = plt.subplots(ncols=3, figsize=(6, 2.5), gridspec_kw={'wspace': 0.05, 'left': 0.12})
+    _, axs = plt.subplots(
+        ncols=3, figsize=(6, 2.5), gridspec_kw={'wspace': 0.05, 'left': 0.12}
+    )
     plt.subplots_adjust(left=0.05, right=0.98, top=0.82, bottom=0.2)
     for ipath, (descr, path) in enumerate(paths):
         _, data = sc.pl.paga_path(

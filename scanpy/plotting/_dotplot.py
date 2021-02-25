@@ -156,12 +156,16 @@ class DotPlot(BasePlot):
         # of values >expression_cutoff, and divide the result by the total number of
         # values in the group (given by `count()`)
         if dot_size_df is None:
-            dot_size_df = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+            dot_size_df = (
+                obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+            )
 
         if dot_color_df is None:
             # 2. compute mean expression value value
             if mean_only_expressed:
-                dot_color_df = self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+                dot_color_df = (
+                    self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+                )
             else:
                 dot_color_df = self.obs_tidy.groupby(level=0).mean()
 
@@ -192,7 +196,9 @@ class DotPlot(BasePlot):
             # with df[['a', 'a', 'b']], results in a df with columns:
             # ['a', 'a', 'a', 'a', 'b']
 
-            unique_var_names, unique_idx = np.unique(dot_color_df.columns, return_index=True)
+            unique_var_names, unique_idx = np.unique(
+                dot_color_df.columns, return_index=True
+            )
             # remove duplicate columns
             if len(unique_var_names) != len(self.var_names):
                 dot_color_df = dot_color_df.iloc[:, unique_idx]
@@ -432,11 +438,15 @@ class DotPlot(BasePlot):
             zorder=100,
         )
         size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
-        labels = ["{}".format(np.round((x * 100), decimals=0).astype(int)) for x in size_range]
+        labels = [
+            "{}".format(np.round((x * 100), decimals=0).astype(int)) for x in size_range
+        ]
         size_legend_ax.set_xticklabels(labels, fontsize='small')
 
         # remove y ticks and labels
-        size_legend_ax.tick_params(axis='y', left=False, labelleft=False, labelright=False)
+        size_legend_ax.tick_params(
+            axis='y', left=False, labelleft=False, labelright=False
+        )
 
         # remove surrounding lines
         size_legend_ax.spines['right'].set_visible(False)
@@ -473,7 +483,9 @@ class DotPlot(BasePlot):
             spacer_height,
             cbar_legend_height,
         ]
-        fig, legend_gs = make_grid_spec(legend_ax, nrows=4, ncols=1, height_ratios=height_ratios)
+        fig, legend_gs = make_grid_spec(
+            legend_ax, nrows=4, ncols=1, height_ratios=height_ratios
+        )
 
         if self.show_size_legend:
             size_legend_ax = fig.add_subplot(legend_gs[1])
@@ -619,7 +631,8 @@ class DotPlot(BasePlot):
         )
 
         assert list(dot_size.columns) == list(dot_color.columns), (
-            'please check that the dot_size ' 'and dot_color dataframes have the same columns'
+            'please check that the dot_size '
+            'and dot_color dataframes have the same columns'
         )
 
         if standard_scale == 'group':
@@ -672,7 +685,9 @@ class DotPlot(BasePlot):
 
         import matplotlib.colors
 
-        normalize = matplotlib.colors.Normalize(vmin=kwds.get('vmin'), vmax=kwds.get('vmax'))
+        normalize = matplotlib.colors.Normalize(
+            vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
+        )
 
         if color_on == 'square':
             if edge_color is None:
@@ -723,7 +738,9 @@ class DotPlot(BasePlot):
 
         y_ticks = np.arange(dot_color.shape[0]) + 0.5
         dot_ax.set_yticks(y_ticks)
-        dot_ax.set_yticklabels([dot_color.index[idx] for idx, _ in enumerate(y_ticks)], minor=False)
+        dot_ax.set_yticklabels(
+            [dot_color.index[idx] for idx, _ in enumerate(y_ticks)], minor=False
+        )
 
         x_ticks = np.arange(dot_color.shape[1]) + 0.5
         dot_ax.set_xticks(x_ticks)

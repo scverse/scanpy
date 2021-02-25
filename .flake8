@@ -1,4 +1,5 @@
+# Can't yet be moved to the pyproject.toml due to https://gitlab.com/pycqa/flake8/-/issues/428#note_251982786
 [flake8]
-exclude = docs, scanpy/tests
-max-line-length = 120
+max-line-length = 88
+// switched off since they conflict with black's standards
 ignore = F401, W503, E501, E203, E231, W504, E402, E126, E712, E741

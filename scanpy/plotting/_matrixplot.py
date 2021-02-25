@@ -205,7 +205,9 @@ class MatrixPlot(BasePlot):
 
         import matplotlib.colors
 
-        normalize = matplotlib.colors.Normalize(vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax'))
+        normalize = matplotlib.colors.Normalize(
+            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+        )
 
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(1.5)

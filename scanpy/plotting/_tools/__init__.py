@@ -393,10 +393,14 @@ def _rank_genes_groups_plot(
         if min_logfoldchange is not None:
             df = rank_genes_groups_df(adata, group, key=key)
             # select genes with given log_fold change
-            genes_list = df[df.logfoldchanges > min_logfoldchange].names.tolist()[:n_genes]
+            genes_list = df[df.logfoldchanges > min_logfoldchange].names.tolist()[
+                :n_genes
+            ]
         else:
             # get all genes that are 'non-nan'
-            genes_list = [gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)][:n_genes]
+            genes_list = [
+                gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)
+            ][:n_genes]
 
         if len(genes_list) == 0:
             logg.warning(f'No genes found for group {group}')
@@ -437,7 +441,9 @@ def _rank_genes_groups_plot(
         elif plot_type == 'matrixplot':
             from .._matrixplot import matrixplot
 
-            _pl = matrixplot(adata, var_names, groupby, values_df=values_df, return_fig=True, **kwds)
+            _pl = matrixplot(
+                adata, var_names, groupby, values_df=values_df, return_fig=True, **kwds
+            )
 
             if title is not None and 'colorbar_title' not in kwds:
                 _pl.legend(title=title)
@@ -948,7 +954,11 @@ def rank_genes_groups_violin(
         _ax.legend_.remove()
         _ax.set_ylabel('expression')
         _ax.set_xticklabels(new_gene_names, rotation='vertical')
-        writekey = f"rank_genes_groups_" f"{adata.uns[key]['params']['groupby']}_" f"{group_name}"
+        writekey = (
+            f"rank_genes_groups_"
+            f"{adata.uns[key]['params']['groupby']}_"
+            f"{group_name}"
+        )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
     if not show:
@@ -1137,11 +1147,15 @@ def embedding_density(
 
     if f'X_{basis}' not in adata.obsm_keys():
         raise ValueError(
-            f'Cannot find the embedded representation `adata.obsm[X_{basis!r}]`. ' 'Compute the embedding first.'
+            f'Cannot find the embedded representation `adata.obsm[X_{basis!r}]`. '
+            'Compute the embedding first.'
         )
 
     if key not in adata.obs or f'{key}_params' not in adata.uns:
-        raise ValueError('Please run `sc.tl.embedding_density()` first ' 'and specify the correct key.')
+        raise ValueError(
+            'Please run `sc.tl.embedding_density()` first '
+            'and specify the correct key.'
+        )
 
     if 'components' in kwargs:
         logg.warning(
@@ -1164,11 +1178,15 @@ def embedding_density(
 
     if group is None and groupby is not None:
         raise ValueError(
-            'Densities were calculated over an `.obs` covariate. ' 'Please specify a group from this covariate to plot.'
+            'Densities were calculated over an `.obs` covariate. '
+            'Please specify a group from this covariate to plot.'
         )
 
     if group is not None and groupby is None:
-        logg.warning("value of 'group' is ignored because densities " "were not calculated for an `.obs` covariate.")
+        logg.warning(
+            "value of 'group' is ignored because densities "
+            "were not calculated for an `.obs` covariate."
+        )
         group = None
 
     if np.min(adata.obs[key]) < 0 or np.max(adata.obs[key]) > 1:
@@ -1196,7 +1214,11 @@ def embedding_density(
 
     # if group is set, then plot it using multiple panels
     # (even if only one group is set)
-    if group is not None and not isinstance(group, str) and isinstance(group, cabc.Sequence):
+    if (
+        group is not None
+        and not isinstance(group, str)
+        and isinstance(group, cabc.Sequence)
+    ):
         if ax is not None:
             raise ValueError("Can only specify `ax` if no `group` sequence is given.")
         fig, gs = _panel_grid(hspace, wspace, ncols, len(group))
@@ -1352,7 +1374,9 @@ def _get_values_to_plot(
             column = values_to_plot.replace('log10_', '')
         else:
             column = values_to_plot
-        values_df = pd.pivot(values_df, index='names', columns='group', values=column).fillna(1)
+        values_df = pd.pivot(
+            values_df, index='names', columns='group', values=column
+        ).fillna(1)
 
         if values_to_plot in ['log10_pvals', 'log10_pvals_adj']:
             values_df = -1 * np.log10(values_df)

@@ -9,7 +9,12 @@ def _create_random_gene_names(n_genes, name_length):
     """
     creates a bunch of random gene names (just CAPS letters)
     """
-    return np.array([''.join(map(chr, np.random.randint(65, 90, name_length))) for _ in range(n_genes)])
+    return np.array(
+        [
+            ''.join(map(chr, np.random.randint(65, 90, name_length)))
+            for _ in range(n_genes)
+        ]
+    )
 
 
 def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan):
@@ -52,7 +57,9 @@ def test_add_score():
     # the actual genes names are all 6letters
     # create some non-estinsting names with 7 letters:
     non_existing_genes = _create_random_gene_names(n_genes=3, name_length=7)
-    some_genes = np.r_[np.unique(np.random.choice(adata.var_names, 10)), np.unique(non_existing_genes)]
+    some_genes = np.r_[
+        np.unique(np.random.choice(adata.var_names, 10)), np.unique(non_existing_genes)
+    ]
     sc.tl.score_genes(adata, some_genes, score_name='Test')
     assert adata.obs['Test'].dtype == 'float32'
 
@@ -73,8 +80,12 @@ def test_sparse_nanmean():
 
     # sparse matrix with nan
     S = _create_sparse_nan_matrix(R, C, percent_zero=0.3, percent_nan=0.3)
-    np.testing.assert_allclose(np.nanmean(S.A, 1), np.array(_sparse_nanmean(S, 1)).flatten())
-    np.testing.assert_allclose(np.nanmean(S.A, 0), np.array(_sparse_nanmean(S, 0)).flatten())
+    np.testing.assert_allclose(
+        np.nanmean(S.A, 1), np.array(_sparse_nanmean(S, 1)).flatten()
+    )
+    np.testing.assert_allclose(
+        np.nanmean(S.A, 0), np.array(_sparse_nanmean(S, 0)).flatten()
+    )
 
     # edge case of only NaNs per row
     A = np.full((10, 1), np.nan)
@@ -107,7 +118,9 @@ def test_score_genes_sparse_vs_dense():
     sc.tl.score_genes(adata_sparse, gene_list=gene_set, score_name='Test')
     sc.tl.score_genes(adata_dense, gene_list=gene_set, score_name='Test')
 
-    np.testing.assert_allclose(adata_sparse.obs['Test'].values, adata_dense.obs['Test'].values)
+    np.testing.assert_allclose(
+        adata_sparse.obs['Test'].values, adata_dense.obs['Test'].values
+    )
 
 
 def test_score_genes_deplete():

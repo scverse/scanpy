@@ -5,9 +5,9 @@ import anndata as ad
 import numpy.testing as npt
 import pytest
 
-from scanpy.preprocessing import *
-from scanpy.preprocessing._simple import materialize_as_ndarray
-
+from scanpy.preprocessing import normalize_total, filter_genes
+from scanpy.preprocessing import log1p, normalize_per_cell, filter_cells
+from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 HERE = Path(__file__).parent / Path('_data/')
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
@@ -16,7 +16,9 @@ required = ['dask', 'zappy', 'zarr']
 installed = {mod: bool(find_spec(mod)) for mod in required}
 
 
-@pytest.mark.skipif(not all(installed.values()), reason=f'{required} all required: {installed}')
+@pytest.mark.skipif(
+    not all(installed.values()), reason=f'{required} all required: {installed}'
+)
 class TestPreprocessingDistributed:
     @pytest.fixture()
     def adata(self):

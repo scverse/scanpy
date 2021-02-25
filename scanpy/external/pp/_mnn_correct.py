@@ -28,7 +28,11 @@ def mnn_correct(
     save_raw: bool = False,
     n_jobs: Optional[int] = None,
     **kwargs,
-) -> Tuple[Union[np.ndarray, AnnData], List[pd.DataFrame], Optional[List[Tuple[Optional[float], int]]],]:
+) -> Tuple[
+    Union[np.ndarray, AnnData],
+    List[pd.DataFrame],
+    Optional[List[Tuple[Optional[float], int]]],
+]:
     """\
     Correct batch effects by matching mutual nearest neighbors [Haghverdi18]_ [Kang18]_.
 
@@ -122,7 +126,10 @@ def mnn_correct(
     try:
         from mnnpy import mnn_correct
     except ImportError:
-        raise ImportError('Please install the package mnnpy ' '(https://github.com/chriscainx/mnnpy). ')
+        raise ImportError(
+            'Please install the package mnnpy '
+            '(https://github.com/chriscainx/mnnpy). '
+        )
 
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     datas, mnn_list, angle_list = mnn_correct(

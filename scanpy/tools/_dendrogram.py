@@ -109,12 +109,16 @@ def dendrogram(
             )
 
     if var_names is None:
-        rep_df = pd.DataFrame(_choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs))
+        rep_df = pd.DataFrame(
+            _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+        )
         categorical = adata.obs[groupby[0]]
         if len(groupby) > 1:
             for group in groupby[1:]:
                 # create new category by merging the given groupby categories
-                categorical = (categorical.astype(str) + "_" + adata.obs[group].astype(str)).astype('category')
+                categorical = (
+                    categorical.astype(str) + "_" + adata.obs[group].astype(str)
+                ).astype('category')
         categorical.name = "_".join(groupby)
 
         rep_df.set_index(categorical, inplace=True)
@@ -133,7 +137,9 @@ def dendrogram(
 
     corr_matrix = mean_df.T.corr(method=cor_method)
     corr_condensed = distance.squareform(1 - corr_matrix)
-    z_var = sch.linkage(corr_condensed, method=linkage_method, optimal_ordering=optimal_ordering)
+    z_var = sch.linkage(
+        corr_condensed, method=linkage_method, optimal_ordering=optimal_ordering
+    )
     dendro_info = sch.dendrogram(z_var, labels=list(categories), no_plot=True)
 
     dat = dict(

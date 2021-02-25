@@ -134,10 +134,14 @@ def test_heatmap(image_comparer):
         var=pd.DataFrame({"genes": 'g1 g2 g3'.split()}).set_index('genes'),
     )
     a.obs['foo'] = a.obs['foo'].astype('category')
-    sc.pl.heatmap(a, var_names=a.var_names, groupby='foo', swap_axes=True, figsize=(4, 4))
+    sc.pl.heatmap(
+        a, var_names=a.var_names, groupby='foo', swap_axes=True, figsize=(4, 4)
+    )
     save_and_compare_images('master_heatmap_small_swap_alignment')
 
-    sc.pl.heatmap(a, var_names=a.var_names, groupby='foo', swap_axes=False, figsize=(4, 4))
+    sc.pl.heatmap(
+        a, var_names=a.var_names, groupby='foo', swap_axes=False, figsize=(4, 4)
+    )
     save_and_compare_images('master_heatmap_small_alignment')
 
 
@@ -161,7 +165,9 @@ def test_clustermap(image_comparer, obs_keys, name):
     [
         (
             "dotplot",
-            partial(sc.pl.dotplot, groupby='cell_type', title='dotplot', dendrogram=True),
+            partial(
+                sc.pl.dotplot, groupby='cell_type', title='dotplot', dendrogram=True
+            ),
         ),
         (
             "dotplot2",
@@ -415,7 +421,9 @@ def test_tracksplot(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     adata = sc.datasets.krumsiek11()
-    sc.pl.tracksplot(adata, adata.var_names, 'cell_type', dendrogram=True, use_raw=False)
+    sc.pl.tracksplot(
+        adata, adata.var_names, 'cell_type', dendrogram=True, use_raw=False
+    )
     save_and_compare_images('master_tracksplot')
 
 
@@ -429,8 +437,10 @@ def test_multiple_plots(image_comparer):
         'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
         'myeloid': ['CST3', 'LYZ'],
     }
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 5), gridspec_kw={'wspace': 0.7})
-    __ = sc.pl.stacked_violin(
+    fig, (ax1, ax2, ax3) = plt.subplots(
+        1, 3, figsize=(20, 5), gridspec_kw={'wspace': 0.7}
+    )
+    _ = sc.pl.stacked_violin(
         adata,
         markers,
         groupby='bulk_labels',
@@ -439,7 +449,7 @@ def test_multiple_plots(image_comparer):
         dendrogram=True,
         show=False,
     )
-    __ = sc.pl.dotplot(
+    _ = sc.pl.dotplot(
         adata,
         markers,
         groupby='bulk_labels',
@@ -448,7 +458,7 @@ def test_multiple_plots(image_comparer):
         dendrogram=True,
         show=False,
     )
-    __ = sc.pl.matrixplot(
+    _ = sc.pl.matrixplot(
         adata,
         markers,
         groupby='bulk_labels',
@@ -550,7 +560,9 @@ def test_correlation(image_comparer):
     [
         (
             "ranked_genes_sharey",
-            partial(sc.pl.rank_genes_groups, n_genes=12, n_panels_per_row=3, show=False),
+            partial(
+                sc.pl.rank_genes_groups, n_genes=12, n_panels_per_row=3, show=False
+            ),
         ),
         (
             "ranked_genes",
@@ -564,7 +576,9 @@ def test_correlation(image_comparer):
         ),
         (
             "ranked_genes_heatmap",
-            partial(sc.pl.rank_genes_groups_heatmap, n_genes=4, cmap='YlGnBu', show=False),
+            partial(
+                sc.pl.rank_genes_groups_heatmap, n_genes=4, cmap='YlGnBu', show=False
+            ),
         ),
         (
             "ranked_genes_heatmap_swap_axes",
@@ -741,7 +755,9 @@ def pbmc_scatterplots():
         pytest.param(
             'tsne',
             partial(sc.pl.tsne, color=['CD3D', 'louvain']),
-            marks=pytest.mark.xfail(reason='slight differences even after setting random_state.'),
+            marks=pytest.mark.xfail(
+                reason='slight differences even after setting random_state.'
+            ),
         ),
         ('umap_nocolor', sc.pl.umap),
         (
@@ -907,7 +923,10 @@ def test_scatter_rep(tmpdir):
         ),
         columns=["rep", "gene", "result"],
     )
-    states["outpth"] = [TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png" for state in states.itertuples()]
+    states["outpth"] = [
+        TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"
+        for state in states.itertuples()
+    ]
     pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))
     coords = np.c_[np.arange(15) % 5, pattern]
 
@@ -970,7 +989,10 @@ def test_paga(image_comparer):
     sc.pl.paga_compare(pbmc, basis='X_pca', legend_fontweight='normal', **common)
     save_and_compare_images('master_paga_compare_pca')
 
-    colors = {c: {cm.Set1(_): 0.33 for _ in range(3)} for c in pbmc.obs["bulk_labels"].cat.categories}
+    colors = {
+        c: {cm.Set1(_): 0.33 for _ in range(3)}
+        for c in pbmc.obs["bulk_labels"].cat.categories
+    }
     colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
 
     sc.pl.paga(pbmc, color=colors, colorbar=False)

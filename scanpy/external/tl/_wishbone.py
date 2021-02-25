@@ -93,16 +93,24 @@ def wishbone(
     try:
         from wishbone.core import wishbone as c_wishbone
     except ImportError:
-        raise ImportError("\nplease install wishbone:\n\n\thttps://github.com/dpeerlab/wishbone")
+        raise ImportError(
+            "\nplease install wishbone:\n\n\thttps://github.com/dpeerlab/wishbone"
+        )
 
     # Start cell index
     s = np.where(adata.obs_names == start_cell)[0]
     if len(s) == 0:
-        raise RuntimeError(f"Start cell {start_cell} not found in data. " "Please rerun with correct start cell.")
+        raise RuntimeError(
+            f"Start cell {start_cell} not found in data. "
+            "Please rerun with correct start cell."
+        )
     if isinstance(num_waypoints, cabc.Collection):
         diff = np.setdiff1d(num_waypoints, adata.obs.index)
         if diff.size > 0:
-            logging.warning("Some of the specified waypoints are not in the data. " "These will be removed")
+            logging.warning(
+                "Some of the specified waypoints are not in the data. "
+                "These will be removed"
+            )
             num_waypoints = diff.tolist()
     elif num_waypoints > adata.shape[0]:
         raise RuntimeError(
@@ -124,7 +132,9 @@ def wishbone(
 
     # Assign results
     trajectory = res["Trajectory"]
-    trajectory = (trajectory - np.min(trajectory)) / (np.max(trajectory) - np.min(trajectory))
+    trajectory = (trajectory - np.min(trajectory)) / (
+        np.max(trajectory) - np.min(trajectory)
+    )
     adata.obs['trajectory_wishbone'] = np.asarray(trajectory)
 
     # branch_ = None
@@ -137,7 +147,9 @@ def _anndata_to_wishbone(adata: AnnData):
     from wishbone.wb import SCData, Wishbone
 
     scdata = SCData(adata.to_df())
-    scdata.diffusion_eigenvectors = pd.DataFrame(adata.obsm['X_diffmap'], index=adata.obs_names)
+    scdata.diffusion_eigenvectors = pd.DataFrame(
+        adata.obsm['X_diffmap'], index=adata.obs_names
+    )
     wb = Wishbone(scdata)
     wb.trajectory = adata.obs["trajectory_wishbone"]
     wb.branch = adata.obs["branch_wishbone"]

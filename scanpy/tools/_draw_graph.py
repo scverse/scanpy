@@ -156,7 +156,9 @@ def draw_graph(
             iterations = kwds['iterations']
         else:
             iterations = 500
-        positions = forceatlas2.forceatlas2(adjacency, pos=init_coords, iterations=iterations)
+        positions = forceatlas2.forceatlas2(
+            adjacency, pos=init_coords, iterations=iterations
+        )
         positions = np.array(positions)
     else:
         # igraph doesn't use numpy seed

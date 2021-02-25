@@ -117,7 +117,9 @@ def scvi(
         from scvi.inference import UnsupervisedTrainer
         from scvi.dataset import AnnDatasetFromAnnData
     except ImportError:
-        raise ImportError("Please install scvi package from https://github.com/YosefLab/scVI")
+        raise ImportError(
+            "Please install scvi package from https://github.com/YosefLab/scVI"
+        )
 
     # check if observations are unnormalized using first 10
     # code from: https://github.com/theislab/dca/blob/89eee4ed01dd969b3d46e0c815382806fbfc2526/dca/io.py#L63-L69
@@ -125,7 +127,9 @@ def scvi(
         X_subset = adata.X[:10]
     else:
         X_subset = adata.X
-    norm_error = 'Make sure that the dataset (adata.X) contains unnormalized count data.'
+    norm_error = (
+        'Make sure that the dataset (adata.X) contains unnormalized count data.'
+    )
     if sp.sparse.issparse(X_subset):
         assert (X_subset.astype(int) != X_subset).nnz == 0, norm_error
     else:
@@ -181,7 +185,9 @@ def scvi(
 
     trainer.train(n_epochs=n_epochs, lr=lr)
 
-    full = trainer.create_posterior(trainer.model, dataset, indices=np.arange(len(dataset)))
+    full = trainer.create_posterior(
+        trainer.model, dataset, indices=np.arange(len(dataset))
+    )
     latent, batch_indices, labels = full.sequential().get_latent()
 
     if copy:

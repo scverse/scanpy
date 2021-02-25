@@ -148,7 +148,9 @@ def scrublet(
     try:
         import scrublet as sl
     except ImportError:
-        raise ImportError('Please install scrublet: `pip install scrublet` or `conda install scrublet`.')
+        raise ImportError(
+            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
+        )
 
     if copy:
         adata = adata.copy()
@@ -338,7 +340,9 @@ def _scrublet_call_doublets(
     try:
         import scrublet as sl
     except ImportError:
-        raise ImportError('Please install scrublet: `pip install scrublet` or `conda install scrublet`.')
+        raise ImportError(
+            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
+        )
 
     # Estimate n_neighbors if not provided, and create scrublet object.
 
@@ -372,10 +376,14 @@ def _scrublet_call_doublets(
 
     if mean_center:
         logg.info('Embedding transcriptomes using PCA...')
-        sl.pipeline_pca(scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state)
+        sl.pipeline_pca(
+            scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
+        )
     else:
         logg.info('Embedding transcriptomes using Truncated SVD...')
-        sl.pipeline_truncated_svd(scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state)
+        sl.pipeline_truncated_svd(
+            scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
+        )
 
     # Score the doublets
 
@@ -403,7 +411,9 @@ def _scrublet_call_doublets(
         'parameters': {
             'expected_doublet_rate': expected_doublet_rate,
             'sim_doublet_ratio': (
-                adata_sim.uns.get('scrublet', {}).get('parameters', {}).get('sim_doublet_ratio', None)
+                adata_sim.uns.get('scrublet', {})
+                .get('parameters', {})
+                .get('sim_doublet_ratio', None)
             ),
             'n_neighbors': n_neighbors,
             'random_state': random_state,
@@ -411,7 +421,9 @@ def _scrublet_call_doublets(
     }
 
     if get_doublet_neighbor_parents:
-        adata_obs.uns['scrublet']['doublet_neighbor_parents'] = scrub.doublet_neighbor_parents_
+        adata_obs.uns['scrublet'][
+            'doublet_neighbor_parents'
+        ] = scrub.doublet_neighbor_parents_
 
     return adata_obs
 
@@ -466,7 +478,9 @@ def scrublet_simulate_doublets(
     try:
         import scrublet as sl
     except ImportError:
-        raise ImportError('Please install scrublet: `pip install scrublet` or `conda install scrublet`.')
+        raise ImportError(
+            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
+        )
 
     X = _get_obs_rep(adata, layer=layer)
     scrub = sl.Scrublet(X)
