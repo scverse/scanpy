@@ -3,6 +3,7 @@ import numpy as np
 from anndata import AnnData
 
 import scanpy as sc
+from scanpy.tests.fixtures import array_type, float_dtype
 from anndata.tests.helpers import assert_equal
 
 A_list = [
@@ -37,7 +38,7 @@ A_svd = np.array(
 )
 
 
-def test_pca_transform(array_type):
+def test_pca_transform(array_type):  # noqa: F811
     A = array_type(A_list).astype('float32')
     A_pca_abs = np.abs(A_pca)
     A_svd_abs = np.abs(A_svd)
@@ -100,7 +101,7 @@ def test_pca_sparse(pbmc3k_normalized):
 
 # This will take a while to run, but irreproducibility may
 # not show up for float32 unless the matrix is large enough
-def test_pca_reproducible(pbmc3k_normalized, array_type, float_dtype):
+def test_pca_reproducible(pbmc3k_normalized, array_type, float_dtype):  # noqa: F811
     pbmc = pbmc3k_normalized
     pbmc.X = array_type(pbmc.X)
 
