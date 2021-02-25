@@ -127,7 +127,7 @@ class BasePlot(object):
         if categories_order is not None:
             if set(self.obs_tidy.index.categories) != set(categories_order):
                 logg.error(
-                    "Please check that the categories given by "  # noqa: F821
+                    "Please check that the categories given by "
                     "the `order` parameter match the categories that "
                     "want to be reordered.\n\n"
                     "Mismatch: "
