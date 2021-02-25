@@ -136,10 +136,13 @@ def moignard15() -> AnnData:
     }
     # annotate each observation/cell
     adata.obs['exp_groups'] = [
-        next(gname for gname in groups.keys() if sname.startswith(gname)) for sname in adata.obs_names
+        next(gname for gname in groups.keys() if sname.startswith(gname))
+        for sname in adata.obs_names
     ]
     # fix the order and colors of names in "groups"
-    adata.obs['exp_groups'] = pd.Categorical(adata.obs['exp_groups'], categories=list(groups.keys()))
+    adata.obs['exp_groups'] = pd.Categorical(
+        adata.obs['exp_groups'], categories=list(groups.keys())
+    )
     adata.uns['exp_groups_colors'] = list(groups.values())
     return adata
 
@@ -159,7 +162,10 @@ def paul15() -> AnnData:
     -------
     Annotated data matrix.
     """
-    logg.warning('In Scanpy 0.*, this returned logarithmized data. ' 'Now it returns non-logarithmized data.')
+    logg.warning(
+        'In Scanpy 0.*, this returned logarithmized data. '
+        'Now it returns non-logarithmized data.'
+    )
     import h5py
 
     filename = settings.datasetdir / 'paul15/paul15.h5'
@@ -329,7 +335,9 @@ def _download_visium_dataset(
     # Download spatial data
     tar_filename = f"{sample_id}_spatial.tar.gz"
     tar_pth = sample_dir / tar_filename
-    _utils.check_presence_download(filename=tar_pth, backup_url=url_prefix + tar_filename)
+    _utils.check_presence_download(
+        filename=tar_pth, backup_url=url_prefix + tar_filename
+    )
     with tarfile.open(tar_pth) as f:
         for el in f:
             if not (sample_dir / el.name).exists():
@@ -403,7 +411,9 @@ def visium_sge(
         spaceranger_version = "1.1.0"
     else:
         spaceranger_version = "1.2.0"
-    _download_visium_dataset(sample_id, spaceranger_version, download_image=include_hires_tiff)
+    _download_visium_dataset(
+        sample_id, spaceranger_version, download_image=include_hires_tiff
+    )
     if include_hires_tiff:
         adata = read_visium(
             settings.datasetdir / sample_id,

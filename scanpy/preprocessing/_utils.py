@@ -35,7 +35,9 @@ def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
     else:
         raise ValueError("This function only works on sparse csr and csc matrices")
     if axis == ax_minor:
-        return sparse_mean_var_major_axis(mtx.data, mtx.indices, mtx.indptr, *shape, np.float64)
+        return sparse_mean_var_major_axis(
+            mtx.data, mtx.indices, mtx.indptr, *shape, np.float64
+        )
     else:
         return sparse_mean_var_minor_axis(mtx.data, mtx.indices, *shape, np.float64)
 

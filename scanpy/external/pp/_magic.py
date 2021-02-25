@@ -150,7 +150,10 @@ def magic(
     start = logg.info('computing MAGIC')
     all_or_pca = isinstance(name_list, (str, type(None)))
     if all_or_pca and name_list not in {"all_genes", "pca_only", None}:
-        raise ValueError("Invalid string value for `name_list`: " "Only `'all_genes'` and `'pca_only'` are allowed.")
+        raise ValueError(
+            "Invalid string value for `name_list`: "
+            "Only `'all_genes'` and `'pca_only'` are allowed."
+        )
     if copy is None:
         copy = not all_or_pca
     elif not all_or_pca and not copy:
@@ -178,7 +181,11 @@ def magic(
     logg.info(
         '    finished',
         time=start,
-        deep=("added\n    'X_magic', PCA on MAGIC coordinates (adata.obsm)" if name_list == "pca_only" else ''),
+        deep=(
+            "added\n    'X_magic', PCA on MAGIC coordinates (adata.obsm)"
+            if name_list == "pca_only"
+            else ''
+        ),
     )
     # update AnnData instance
     if name_list == "pca_only":

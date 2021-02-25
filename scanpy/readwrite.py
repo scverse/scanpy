@@ -214,7 +214,8 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
                 genome = children[0]
             elif genome not in children:
                 raise ValueError(
-                    f"Could not find genome '{genome}' in '{filename}'. " f'Available genomes are: {children}'
+                    f"Could not find genome '{genome}' in '{filename}'. "
+                    f'Available genomes are: {children}'
                 )
             dsets = {}
             for node in f.walk_nodes('/' + genome, 'Array'):
@@ -372,19 +373,26 @@ def read_visium(
         for f in files.values():
             if not f.exists():
                 if any(x in str(f) for x in ["hires_image", "lowres_image"]):
-                    logg.warning(f"You seem to be missing an image file.\n" f"Could not find '{f}'.")
+                    logg.warning(
+                        f"You seem to be missing an image file.\n"
+                        f"Could not find '{f}'."
+                    )
                 else:
                     raise OSError(f"Could not find '{f}'")
 
         adata.uns["spatial"][library_id]['images'] = dict()
         for res in ['hires', 'lowres']:
             try:
-                adata.uns["spatial"][library_id]['images'][res] = imread(str(files[f'{res}_image']))
+                adata.uns["spatial"][library_id]['images'][res] = imread(
+                    str(files[f'{res}_image'])
+                )
             except Exception:
                 raise OSError(f"Could not find '{res}_image'")
 
         # read json scalefactors
-        adata.uns["spatial"][library_id]['scalefactors'] = json.loads(files['scalefactors_json_file'].read_bytes())
+        adata.uns["spatial"][library_id]['scalefactors'] = json.loads(
+            files['scalefactors_json_file'].read_bytes()
+        )
 
         adata.uns["spatial"][library_id]["metadata"] = {
             k: (str(attrs[k], "utf-8") if isinstance(attrs[k], bytes) else attrs[k])
@@ -406,7 +414,9 @@ def read_visium(
 
         adata.obs = adata.obs.join(positions, how="left")
 
-        adata.obsm['spatial'] = adata.obs[['pxl_row_in_fullres', 'pxl_col_in_fullres']].to_numpy()
+        adata.obsm['spatial'] = adata.obs[
+            ['pxl_row_in_fullres', 'pxl_col_in_fullres']
+        ].to_numpy()
         adata.obs.drop(
             columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres'],
             inplace=True,
@@ -416,7 +426,9 @@ def read_visium(
         if source_image_path is not None:
             # get an absolute path
             source_image_path = str(Path(source_image_path).resolve())
-            adata.uns["spatial"][library_id]["metadata"]["source_image_path"] = str(source_image_path)
+            adata.uns["spatial"][library_id]["metadata"]["source_image_path"] = str(
+                source_image_path
+            )
 
     return adata
 
@@ -477,7 +489,9 @@ def read_10x_mtx(
     if genefile_exists or not gex_only:
         return adata
     else:
-        gex_rows = list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))
+        gex_rows = list(
+            map(lambda x: x == 'Gene Expression', adata.var['feature_types'])
+        )
         return adata[:, gex_rows].copy()
 
 
@@ -546,7 +560,9 @@ def _read_v3_10x_mtx(
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
     adata.var['feature_types'] = genes[2].values
-    adata.obs_names = pd.read_csv(path / f'{prefix}barcodes.tsv.gz', header=None)[0].values
+    adata.obs_names = pd.read_csv(path / f'{prefix}barcodes.tsv.gz', header=None)[
+        0
+    ].values
     return adata
 
 
@@ -596,7 +612,9 @@ def write(
     if ext == 'csv':
         adata.write_csvs(filename)
     else:
-        adata.write(filename, compression=compression, compression_opts=compression_opts)
+        adata.write(
+            filename, compression=compression, compression_opts=compression_opts
+        )
 
 
 # -------------------------------------------------------------------------------
@@ -604,7 +622,9 @@ def write(
 # -------------------------------------------------------------------------------
 
 
-def read_params(filename: Union[Path, str], asheader: bool = False) -> Dict[str, Union[int, float, bool, str, None]]:
+def read_params(
+    filename: Union[Path, str], asheader: bool = False
+) -> Dict[str, Union[int, float, bool, str, None]]:
     """\
     Read parameter dictionary from text file.
 
@@ -679,7 +699,9 @@ def _read(
     **kwargs,
 ):
     if ext is not None and ext not in avail_exts:
-        raise ValueError('Please provide one of the available extensions.\n' f'{avail_exts}')
+        raise ValueError(
+            'Please provide one of the available extensions.\n' f'{avail_exts}'
+        )
     else:
         ext = is_valid_filename(filename, return_ext=True)
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
@@ -693,7 +715,9 @@ def _read(
             logg.debug(f'reading sheet {sheet} from file {filename}')
             return read_hdf(filename, sheet)
     # read other file types
-    path_cache = settings.cachedir / _slugify(filename).replace('.' + ext, '.h5ad')  # type: Path
+    path_cache = settings.cachedir / _slugify(filename).replace(
+        '.' + ext, '.h5ad'
+    )  # type: Path
     if path_cache.suffix in {'.gz', '.bz2'}:
         path_cache = path_cache.with_suffix('')
     if cache and path_cache.is_file():
@@ -732,7 +756,10 @@ def _read(
     else:
         raise ValueError(f'Unknown extension {ext}.')
     if cache:
-        logg.info(f'... writing an {settings.file_format_data} ' 'cache file to speedup reading next time')
+        logg.info(
+            f'... writing an {settings.file_format_data} '
+            'cache file to speedup reading next time'
+        )
         if cache_compression is _empty:
             cache_compression = settings.cache_compression
         if not path_cache.parent.is_dir():
@@ -876,7 +903,9 @@ def get_used_files():
     """Get files used by processes with name scanpy."""
     import psutil
 
-    loop_over_scanpy_processes = (proc for proc in psutil.process_iter() if proc.name() == 'scanpy')
+    loop_over_scanpy_processes = (
+        proc for proc in psutil.process_iter() if proc.name() == 'scanpy'
+    )
     filenames = []
     for proc in loop_over_scanpy_processes:
         try:
@@ -938,7 +967,10 @@ def _check_datafile_present_and_download(path, backup_url=None):
         return True
     if backup_url is None:
         return False
-    logg.info(f'try downloading from url\n{backup_url}\n' '... this may take a while but only happens once')
+    logg.info(
+        f'try downloading from url\n{backup_url}\n'
+        '... this may take a while but only happens once'
+    )
     if not path.parent.is_dir():
         logg.info(f'creating directory {path.parent}/ for saving data')
         path.parent.mkdir(parents=True)
@@ -953,7 +985,8 @@ def is_valid_filename(filename: Path, return_ext=False):
 
     if len(ext) > 2:
         logg.warning(
-            f'Your filename has more than two extensions: {ext}.\n' f'Only considering the two last: {ext[-2:]}.'
+            f'Your filename has more than two extensions: {ext}.\n'
+            f'Only considering the two last: {ext[-2:]}.'
         )
         ext = ext[-2:]
 

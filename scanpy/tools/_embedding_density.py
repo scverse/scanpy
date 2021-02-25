@@ -119,7 +119,8 @@ def embedding_density(
 
     if f'X_{basis}' not in adata.obsm_keys():
         raise ValueError(
-            "Cannot find the embedded representation " f"`adata.obsm['X_{basis}']`. Compute the embedding first."
+            "Cannot find the embedded representation "
+            f"`adata.obsm['X_{basis}']`. Compute the embedding first."
         )
 
     if components is None:
@@ -180,7 +181,9 @@ def embedding_density(
     if basis != 'diffmap':
         components += 1
 
-    adata.uns[f'{density_covariate}_params'] = dict(covariate=groupby, components=components.tolist())
+    adata.uns[f'{density_covariate}_params'] = dict(
+        covariate=groupby, components=components.tolist()
+    )
 
     logg.hint(
         f"added\n"

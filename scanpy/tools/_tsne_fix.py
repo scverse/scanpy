@@ -125,12 +125,16 @@ def _gradient_descent(
                 if verbose >= 2:
                     print(
                         "[t-SNE] Iteration %d: did not make any progress "
-                        "during the last %d episodes. Finished." % (i + 1, n_iter_without_progress)
+                        "during the last %d episodes. Finished."
+                        % (i + 1, n_iter_without_progress)
                     )
                 break
             if grad_norm <= min_grad_norm:
                 if verbose >= 2:
-                    print("[t-SNE] Iteration %d: gradient norm %f. Finished." % (i + 1, grad_norm))
+                    print(
+                        "[t-SNE] Iteration %d: gradient norm %f. Finished."
+                        % (i + 1, grad_norm)
+                    )
                 break
             if error_diff <= min_error_diff:
                 if verbose >= 2:

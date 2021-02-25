@@ -108,7 +108,9 @@ def louvain(
     partition_kwargs = dict(partition_kwargs)
     start = logg.info('running Louvain clustering')
     if (flavor != 'vtraag') and (partition_type is not None):
-        raise ValueError('`partition_type` is only a valid argument ' 'when `flavour` is "vtraag"')
+        raise ValueError(
+            '`partition_type` is only a valid argument ' 'when `flavour` is "vtraag"'
+        )
     adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)
@@ -180,7 +182,12 @@ def louvain(
 
         logg.info('    using the "louvain" package of rapids')
         louvain_parts, _ = cugraph.louvain(g)
-        groups = louvain_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
+        groups = (
+            louvain_parts.to_pandas()
+            .sort_values('vertex')[['partition']]
+            .to_numpy()
+            .ravel()
+        )
     elif flavor == 'taynaud':
         # this is deprecated
         import networkx as nx

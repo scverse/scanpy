@@ -67,7 +67,9 @@ def test_read_10x_h5_v1():
         ROOT / '1.2.0' / 'filtered_gene_bc_matrices_h5.h5',
         genome='hg19_chr21',
     )
-    nospec_genome_v1 = sc.read_10x_h5(ROOT / '1.2.0' / 'filtered_gene_bc_matrices_h5.h5')
+    nospec_genome_v1 = sc.read_10x_h5(
+        ROOT / '1.2.0' / 'filtered_gene_bc_matrices_h5.h5'
+    )
     assert_anndata_equal(spec_genome_v1, nospec_genome_v1)
 
 
@@ -111,4 +113,6 @@ def test_read_visium_counts():
 def test_10x_h5_gex():
     # Tests that gex option doesn't, say, make the function return None
     h5_pth = ROOT / '3.0.0' / 'filtered_feature_bc_matrix.h5'
-    assert_anndata_equal(sc.read_10x_h5(h5_pth, gex_only=True), sc.read_10x_h5(h5_pth, gex_only=False))
+    assert_anndata_equal(
+        sc.read_10x_h5(h5_pth, gex_only=True), sc.read_10x_h5(h5_pth, gex_only=False)
+    )

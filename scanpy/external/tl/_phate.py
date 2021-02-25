@@ -130,7 +130,8 @@ def phate(
         import phate
     except ImportError:
         raise ImportError(
-            'You need to install the package `phate`: please run `pip install ' '--user phate` in a terminal.'
+            'You need to install the package `phate`: please run `pip install '
+            '--user phate` in a terminal.'
         )
     X_phate = phate.PHATE(
         n_components=n_components,

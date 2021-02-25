@@ -147,21 +147,26 @@ def _check_indices(
         if key in dim_df.columns:
             col_keys.append(key)
             if key in alt_names.index:
-                raise KeyError(f"The key '{key}' is found in both adata.{dim} and {alt_repr}.{alt_search_repr}.")
+                raise KeyError(
+                    f"The key '{key}' is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
+                )
         elif key in alt_names.index:
             val = alt_names[key]
             if isinstance(val, pd.Series):
                 # while var_names must be unique, adata.var[gene_symbols] does not
                 # It's still ambiguous to refer to a duplicated entry though.
                 assert alias_index is not None
-                raise KeyError(f"Found duplicate entries for '{key}' in {alt_repr}.{alt_search_repr}.")
+                raise KeyError(
+                    f"Found duplicate entries for '{key}' in {alt_repr}.{alt_search_repr}."
+                )
             index_keys.append(val)
             index_aliases.append(key)
         else:
             not_found.append(key)
     if len(not_found) > 0:
         raise KeyError(
-            f"Could not find keys '{not_found}' in columns of `adata.{dim}` or in" f" {alt_repr}.{alt_search_repr}."
+            f"Could not find keys '{not_found}' in columns of `adata.{dim}` or in"
+            f" {alt_repr}.{alt_search_repr}."
         )
 
     return col_keys, index_keys, index_aliases
@@ -253,7 +258,9 @@ def obs_df(
     >>> mean, var = grouped.mean(), grouped.var()
     """
     if use_raw:
-        assert layer is None, "Cannot specify use_raw=True and a layer at the same time."
+        assert (
+            layer is None
+        ), "Cannot specify use_raw=True and a layer at the same time."
         var = adata.raw.var
     else:
         var = adata.var
@@ -400,7 +407,8 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
         return adata.obsp[obsp]
     else:
         assert False, (
-            "That was unexpected. Please report this bug at:\n\n\t" " https://github.com/theislab/scanpy/issues"
+            "That was unexpected. Please report this bug at:\n\n\t"
+            " https://github.com/theislab/scanpy/issues"
         )
 
 
@@ -426,5 +434,6 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
         adata.obsp[obsp] = val
     else:
         assert False, (
-            "That was unexpected. Please report this bug at:\n\n\t" " https://github.com/theislab/scanpy/issues"
+            "That was unexpected. Please report this bug at:\n\n\t"
+            " https://github.com/theislab/scanpy/issues"
         )

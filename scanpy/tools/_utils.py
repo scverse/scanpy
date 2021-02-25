@@ -30,7 +30,9 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
         if adata.n_vars > settings.N_PCS:
             if 'X_pca' in adata.obsm.keys():
                 if n_pcs is not None and n_pcs > adata.obsm['X_pca'].shape[1]:
-                    raise ValueError('`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`.')
+                    raise ValueError(
+                        '`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`.'
+                    )
                 X = adata.obsm['X_pca'][:, :n_pcs]
                 logg.info(f'    using \'X_pca\' with n_pcs = {X.shape[1]}')
             else:
@@ -52,7 +54,10 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
         elif use_rep == 'X':
             X = adata.X
         else:
-            raise ValueError('Did not find {} in `.obsm.keys()`. ' 'You need to compute it first.'.format(use_rep))
+            raise ValueError(
+                'Did not find {} in `.obsm.keys()`. '
+                'You need to compute it first.'.format(use_rep)
+            )
     settings.verbosity = verbosity  # resetting verbosity
     return X
 
@@ -88,7 +93,9 @@ def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
             return adata.X
 
 
-def get_init_pos_from_paga(adata, adjacency=None, random_state=0, neighbors_key=None, obsp=None):
+def get_init_pos_from_paga(
+    adata, adjacency=None, random_state=0, neighbors_key=None, obsp=None
+):
     np.random.seed(random_state)
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)
@@ -110,5 +117,7 @@ def get_init_pos_from_paga(adata, adjacency=None, random_state=0, neighbors_key=
             else:
                 init_pos[subset] = group_pos
     else:
-        raise ValueError('Plot PAGA first, so that adata.uns[\'paga\']' 'with key \'pos\'.')
+        raise ValueError(
+            'Plot PAGA first, so that adata.uns[\'paga\']' 'with key \'pos\'.'
+        )
     return init_pos

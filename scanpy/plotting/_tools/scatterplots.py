@@ -145,7 +145,8 @@ def embedding(
         use_raw = layer is None and adata.raw is not None
     if use_raw and layer is not None:
         raise ValueError(
-            "Cannot use both a layer and the raw representation. Was passed:" f"use_raw={use_raw}, layer={layer}."
+            "Cannot use both a layer and the raw representation. Was passed:"
+            f"use_raw={use_raw}, layer={layer}."
         )
 
     if wspace is None:
@@ -153,7 +154,10 @@ def embedding(
         #  current figure size
         wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
     if adata.raw is None and use_raw:
-        raise ValueError("`use_raw` is set to True but AnnData object does not have raw. " "Please check.")
+        raise ValueError(
+            "`use_raw` is set to True but AnnData object does not have raw. "
+            "Please check."
+        )
     # turn color into a python list
     color = [color] if isinstance(color, str) or color is None else list(color)
     if title is not None:
@@ -162,17 +166,24 @@ def embedding(
 
     # get the points position and the components list
     # (only if components is not None)
-    data_points, components_list = _get_data_points(adata, basis, projection, components, scale_factor)
+    data_points, components_list = _get_data_points(
+        adata, basis, projection, components, scale_factor
+    )
 
     # Setup layout.
     # Most of the code is for the case when multiple plots are required
     # 'color' is a list of names that want to be plotted.
     # Eg. ['Gene1', 'louvain', 'Gene2'].
     # component_list is a list of components [[0,1], [1,2]]
-    if (not isinstance(color, str) and isinstance(color, cabc.Sequence) and len(color) > 1) or len(components_list) > 1:
+    if (
+        not isinstance(color, str)
+        and isinstance(color, cabc.Sequence)
+        and len(color) > 1
+    ) or len(components_list) > 1:
         if ax is not None:
             raise ValueError(
-                "Cannot specify `ax` when plotting multiple panels " "(each for a given value of 'color')."
+                "Cannot specify `ax` when plotting multiple panels "
+                "(each for a given value of 'color')."
             )
         if len(components_list) == 0:
             components_list = [None]
@@ -227,7 +238,9 @@ def embedding(
     #     color=gene1, components=[1,2], color=gene1, components=[2,3],
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
-    for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
+    for count, (value_to_plot, component_idx) in enumerate(
+        itertools.product(color, idx_components)
+    ):
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
@@ -299,8 +312,14 @@ def embedding(
         if categorical:
             kwargs['vmin'] = kwargs['vmax'] = None
         else:
+<<<<<<< HEAD
             kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(vmin, vmax, count, color_vector)
 >>>>>>> 40dc2c3b (add flake8 pre-commit)
+=======
+            kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(
+                vmin, vmax, count, color_vector
+            )
+>>>>>>> 617168f7 (address review)
 
         # make the scatter plot
         if projection == '3d':
@@ -413,7 +432,9 @@ def embedding(
             continue
 
         if legend_fontoutline is not None:
-            path_effect = [patheffects.withStroke(linewidth=legend_fontoutline, foreground='w')]
+            path_effect = [
+                patheffects.withStroke(linewidth=legend_fontoutline, foreground='w')
+            ]
         else:
             path_effect = None
 
@@ -571,11 +592,17 @@ def _wraps_plot_scatter(wrapper):
     wrapper_params.pop("adata")
 
     params.update(wrapper_params)
-    annotations = {k: v.annotation for k, v in params.items() if v.annotation != inspect.Parameter.empty}
+    annotations = {
+        k: v.annotation
+        for k, v in params.items()
+        if v.annotation != inspect.Parameter.empty
+    }
     if wrapper_sig.return_annotation is not inspect.Signature.empty:
         annotations["return"] = wrapper_sig.return_annotation
 
-    wrapper.__signature__ = inspect.Signature(list(params.values()), return_annotation=wrapper_sig.return_annotation)
+    wrapper.__signature__ = inspect.Signature(
+        list(params.values()), return_annotation=wrapper_sig.return_annotation
+    )
     wrapper.__annotations__ = annotations
 
     return wrapper
@@ -664,7 +691,9 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def draw_graph(adata: AnnData, *, layout: Optional[_IGraphLayout] = None, **kwargs) -> Union[Axes, List[Axes], None]:
+def draw_graph(
+    adata: AnnData, *, layout: Optional[_IGraphLayout] = None, **kwargs
+) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
 
@@ -687,7 +716,9 @@ def draw_graph(adata: AnnData, *, layout: Optional[_IGraphLayout] = None, **kwar
     basis = 'draw_graph_' + layout
     if 'X_' + basis not in adata.obsm_keys():
         raise ValueError(
-            'Did not find {} in adata.obs. Did you compute layout {}?'.format('draw_graph_' + layout, layout)
+            'Did not find {} in adata.obs. Did you compute layout {}?'.format(
+                'draw_graph_' + layout, layout
+            )
         )
 
     return embedding(adata, basis, **kwargs)
@@ -725,12 +756,15 @@ def pca(
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     if not annotate_var_explained:
-        return embedding(adata, 'pca', show=show, return_fig=return_fig, save=save, **kwargs)
+        return embedding(
+            adata, 'pca', show=show, return_fig=return_fig, save=save, **kwargs
+        )
     else:
 
         if 'pca' not in adata.obsm.keys() and 'X_pca' not in adata.obsm.keys():
             raise KeyError(
-                f"Could not find entry in `obsm` for 'pca'.\n" f"Available keys are: {list(adata.obsm.keys())}."
+                f"Could not find entry in `obsm` for 'pca'.\n"
+                f"Available keys are: {list(adata.obsm.keys())}."
             )
 
         label_dict = {
@@ -842,7 +876,9 @@ def spatial(
     library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
     img, img_key = _check_img(spatial_data, img, img_key, bw=bw)
     spot_size = _check_spot_size(spatial_data, spot_size)
-    scale_factor = _check_scale_factor(spatial_data, img_key=img_key, scale_factor=scale_factor)
+    scale_factor = _check_scale_factor(
+        spatial_data, img_key=img_key, scale_factor=scale_factor
+    )
     crop_coord = _check_crop_coord(crop_coord, scale_factor)
     na_color = _check_na_color(na_color, img=img)
 
@@ -909,7 +945,8 @@ def _get_data_points(
         basis_key = f"X_{basis}"
     else:
         raise KeyError(
-            f"Could not find entry in `obsm` for '{basis}'.\n" f"Available keys are: {list(adata.obsm.keys())}."
+            f"Could not find entry in `obsm` for '{basis}'.\n"
+            f"Available keys are: {list(adata.obsm.keys())}."
         )
 
     n_dims = 2
@@ -929,7 +966,9 @@ def _get_data_points(
 
         r_value = 3 if projection == '3d' else 2
         _components_list = np.arange(adata.obsm[basis_key].shape[1]) + 1
-        components = [",".join(map(str, x)) for x in combinations(_components_list, r=r_value)]
+        components = [
+            ",".join(map(str, x)) for x in combinations(_components_list, r=r_value)
+        ]
 
     components_list = []
     offset = 0
@@ -941,7 +980,9 @@ def _get_data_points(
 
         if isinstance(components, str):
             # eg: components='1,2'
-            components_list.append(tuple(int(x.strip()) - 1 + offset for x in components.split(',')))
+            components_list.append(
+                tuple(int(x.strip()) - 1 + offset for x in components.split(','))
+            )
 
         elif isinstance(components, cabc.Sequence):
             if isinstance(components[0], int):
@@ -953,11 +994,14 @@ def _get_data_points(
                 # More than one component can be given and is stored
                 # as a new item of components_list
                 for comp in components:
-                    components_list.append(tuple(int(x.strip()) - 1 + offset for x in comp.split(',')))
+                    components_list.append(
+                        tuple(int(x.strip()) - 1 + offset for x in comp.split(','))
+                    )
 
         else:
             raise ValueError(
-                "Given components: '{}' are not valid. Please check. " "A valid example is `components='2,3'`"
+                "Given components: '{}' are not valid. Please check. "
+                "A valid example is `components='2,3'`"
             )
         # check if the components are present in the data
         try:
@@ -966,13 +1010,16 @@ def _get_data_points(
                 data_points.append(adata.obsm[basis_key][:, comp])
         except Exception:
             raise ValueError(
-                "Given components: '{}' are not valid. Please check. " "A valid example is `components='2,3'`"
+                "Given components: '{}' are not valid. Please check. "
+                "A valid example is `components='2,3'`"
             )
 
         if basis == 'diffmap':
             # remove the offset added in the case of diffmap, such that
             # plot_scatter can print the labels correctly.
-            components_list = [tuple(number - 1 for number in comp) for comp in components_list]
+            components_list = [
+                tuple(number - 1 for number in comp) for comp in components_list
+            ]
     else:
         data_points = [np.array(adata.obsm[basis_key])[:, offset : offset + n_dims]]
         components_list = []
@@ -999,7 +1046,9 @@ def _add_categorical_legend(
     """Add a legend to the passed Axes."""
     if na_in_legend and pd.isnull(color_source_vector).any():
         if "NA" in color_source_vector:
-            raise NotImplementedError("No fallback for null labels has been defined if NA already in categories.")
+            raise NotImplementedError(
+                "No fallback for null labels has been defined if NA already in categories."
+            )
         color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
         palette = palette.copy()
         palette["NA"] = na_color
@@ -1023,7 +1072,11 @@ def _add_categorical_legend(
         )
     elif legend_loc == 'on data':
         # identify centroids to put labels
-        all_pos = pd.DataFrame(scatter_array, columns=["x", "y"]).groupby(color_source_vector, observed=True).median()
+        all_pos = (
+            pd.DataFrame(scatter_array, columns=["x", "y"])
+            .groupby(color_source_vector, observed=True)
+            .median()
+        )
 
         for label, x_pos, y_pos in all_pos.itertuples():
             ax.text(
@@ -1041,7 +1094,9 @@ def _add_categorical_legend(
         _utils._tmp_cluster_pos = all_pos.values
 
 
-def _get_color_source_vector(adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None, groups=None):
+def _get_color_source_vector(
+    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None, groups=None
+):
     """
     Get array from adata that colors will be based on.
     """
@@ -1051,7 +1106,11 @@ def _get_color_source_vector(adata, value_to_plot, use_raw=False, gene_symbols=N
         # _color_vector handles this.
         # https://github.com/matplotlib/matplotlib/issues/18294
         return np.broadcast_to(np.nan, adata.n_obs)
-    if gene_symbols is not None and value_to_plot not in adata.obs.columns and value_to_plot not in adata.var_names:
+    if (
+        gene_symbols is not None
+        and value_to_plot not in adata.obs.columns
+        and value_to_plot not in adata.var_names
+    ):
         # We should probably just make an index for this, and share it over runs
         value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][
             0
@@ -1070,7 +1129,9 @@ def _get_palette(adata, values_key: str, palette=None):
     values = pd.Categorical(adata.obs[values_key])
     if palette:
         _utils._set_colors_for_categorical_obs(adata, values_key, palette)
-    elif color_key not in adata.uns or len(adata.uns[color_key]) < len(values.categories):
+    elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
+        values.categories
+    ):
         #  set a default palette in case that no colors or few colors are found
         _utils._set_default_colors_for_categorical_obs(adata, values_key)
     else:
@@ -1078,7 +1139,9 @@ def _get_palette(adata, values_key: str, palette=None):
     return dict(zip(values.categories, adata.uns[color_key]))
 
 
-def _color_vector(adata, values_key: str, values, palette, na_color="lightgray") -> Tuple[np.ndarray, bool]:
+def _color_vector(
+    adata, values_key: str, values, palette, na_color="lightgray"
+) -> Tuple[np.ndarray, bool]:
     """
     Map array of values to array of hex (plus alpha) codes.
 
@@ -1097,7 +1160,10 @@ def _color_vector(adata, values_key: str, values, palette, na_color="lightgray")
     if not is_categorical_dtype(values):
         return values, False
     else:  # is_categorical_dtype(values)
-        color_map = {k: to_hex(v) for k, v in _get_palette(adata, values_key, palette=palette).items()}
+        color_map = {
+            k: to_hex(v)
+            for k, v in _get_palette(adata, values_key, palette=palette).items()
+        }
         # If color_map does not have unique values, this can be slow as the
         # result is not categorical
         color_vector = values.map(color_map)
@@ -1130,14 +1196,19 @@ def _basis2name(basis):
     return component_name
 
 
-def _check_spot_size(spatial_data: Optional[Mapping], spot_size: Optional[float]) -> float:
+def _check_spot_size(
+    spatial_data: Optional[Mapping], spot_size: Optional[float]
+) -> float:
     """
     Resolve spot_size value.
 
     This is a required argument for spatial plots.
     """
     if spatial_data is None and spot_size is None:
-        raise ValueError("When .uns['spatial'][library_id] does not exist, spot_size must be " "provided directly.")
+        raise ValueError(
+            "When .uns['spatial'][library_id] does not exist, spot_size must be "
+            "provided directly."
+        )
     elif spot_size is None:
         return spatial_data['scalefactors']['spot_diameter_fullres']
     else:
@@ -1158,7 +1229,9 @@ def _check_scale_factor(
         return 1.0
 
 
-def _check_spatial_data(uns: Mapping, library_id: Union[Empty, None, str]) -> Tuple[Optional[str], Optional[Mapping]]:
+def _check_spatial_data(
+    uns: Mapping, library_id: Union[Empty, None, str]
+) -> Tuple[Optional[str], Optional[Mapping]]:
     """
     Given a mapping, try and extract a library id/ mapping with spatial data.
 
@@ -1215,7 +1288,9 @@ def _check_crop_coord(
     return crop_coord
 
 
-def _check_na_color(na_color: Optional[ColorLike], *, img: Optional[np.ndarray] = None) -> ColorLike:
+def _check_na_color(
+    na_color: Optional[ColorLike], *, img: Optional[np.ndarray] = None
+) -> ColorLike:
     if na_color is None:
         if img is not None:
             na_color = (0.0, 0.0, 0.0, 0.0)

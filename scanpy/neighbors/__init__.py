@@ -23,7 +23,9 @@ N_PCS = (
 _Method = Literal['umap', 'gauss', 'rapids']
 _MetricFn = Callable[[np.ndarray, np.ndarray], float]
 # from sklearn.metrics.pairwise_distances.__doc__:
-_MetricSparseCapable = Literal['cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan']
+_MetricSparseCapable = Literal[
+    'cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan'
+]
 _MetricScipySpatial = Literal[
     'braycurtis',
     'canberra',
@@ -336,7 +338,9 @@ def compute_neighbors_rapids(X: np.ndarray, n_neighbors: int):
     return knn_indices, np.sqrt(knn_distsq)  # cuml uses sqeuclidean metric so take sqrt
 
 
-def _get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors):
+def _get_sparse_matrix_from_indices_distances_umap(
+    knn_indices, knn_dists, n_obs, n_neighbors
+):
     rows = np.zeros((n_obs * n_neighbors), dtype=np.int64)
     cols = np.zeros((n_obs * n_neighbors), dtype=np.int64)
     vals = np.zeros((n_obs * n_neighbors), dtype=np.float64)
@@ -398,12 +402,16 @@ def _compute_connectivities_umap(
         # In umap-learn 0.4, this returns (result, sigmas, rhos)
         connectivities = connectivities[0]
 
-    distances = _get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
+    distances = _get_sparse_matrix_from_indices_distances_umap(
+        knn_indices, knn_dists, n_obs, n_neighbors
+    )
 
     return distances, connectivities.tocsr()
 
 
-def _get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_neighbors):
+def _get_sparse_matrix_from_indices_distances_numpy(
+    indices, distances, n_obs, n_neighbors
+):
     n_nonzero = n_obs * n_neighbors
     indptr = np.arange(0, n_nonzero + 1, n_neighbors)
     D = csr_matrix(
@@ -432,7 +440,9 @@ def _get_indices_distances_from_sparse_matrix(D, n_neighbors: int):
         if len(neighbors[1]) > n_neighbors_m1:
             sorted_indices = np.argsort(D[i][neighbors].A1)[:n_neighbors_m1]
             indices[i, 1:] = neighbors[1][sorted_indices]
-            distances[i, 1:] = D[i][neighbors[0][sorted_indices], neighbors[1][sorted_indices]]
+            distances[i, 1:] = D[i][
+                neighbors[0][sorted_indices], neighbors[1][sorted_indices]
+            ]
         else:
             indices[i, 1:] = neighbors[1]
             distances[i, 1:] = D[i][neighbors]
@@ -466,7 +476,9 @@ def _make_forest_dict(forest):
     props = ('hyperplanes', 'offsets', 'children', 'indices')
     for prop in props:
         d[prop] = {}
-        sizes = np.fromiter((getattr(tree, prop).shape[0] for tree in forest), dtype=int)
+        sizes = np.fromiter(
+            (getattr(tree, prop).shape[0] for tree in forest), dtype=int
+        )
         d[prop]['start'] = np.zeros_like(sizes)
         if prop == 'offsets':
             dims = sizes.sum()
@@ -594,9 +606,15 @@ class Neighbors:
 
                 # estimating n_neighbors
                 if self._connectivities is None:
-                    self.n_neighbors = int(count_nonzero(self._distances) / self._distances.shape[0])
+                    self.n_neighbors = int(
+                        count_nonzero(self._distances) / self._distances.shape[0]
+                    )
                 else:
-                    self.n_neighbors = int(count_nonzero(self._connectivities) / self._connectivities.shape[0] / 2)
+                    self.n_neighbors = int(
+                        count_nonzero(self._connectivities)
+                        / self._connectivities.shape[0]
+                        / 2
+                    )
             info_str += '`.distances` `.connectivities` '
             self._number_connected_components = 1
             if issparse(self._connectivities):
@@ -611,7 +629,9 @@ class Neighbors:
                 if n_dcs > len(self._eigen_values):
                     raise ValueError(
                         'Cannot instantiate using `n_dcs`={}. '
-                        'Compute diffmap/spectrum with more components first.'.format(n_dcs)
+                        'Compute diffmap/spectrum with more components first.'.format(
+                            n_dcs
+                        )
                     )
                 self._eigen_values = self._eigen_values[:n_dcs]
                 self._eigen_basis = self._eigen_basis[:, :n_dcs]
@@ -736,7 +756,9 @@ class Neighbors:
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
         if method == 'rapids' and metric != 'euclidean':
-            raise ValueError("`method` 'rapids' only supports the 'euclidean' `metric`.")
+            raise ValueError(
+                "`method` 'rapids' only supports the 'euclidean' `metric`."
+            )
         if method not in {'umap', 'gauss', 'rapids'}:
             raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
         if self._adata.shape[0] >= 10000 and not knn:
@@ -747,10 +769,14 @@ class Neighbors:
         self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         # neighbor search
-        use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or knn == False
+        use_dense_distances = (
+            metric == 'euclidean' and X.shape[0] < 8192
+        ) or knn == False
         if use_dense_distances:
             _distances = pairwise_distances(X, metric=metric, **metric_kwds)
-            knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(_distances, n_neighbors)
+            knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
+                _distances, n_neighbors
+            )
             if knn:
                 self._distances = _get_sparse_matrix_from_indices_distances_numpy(
                     knn_indices, knn_distances, X.shape[0], n_neighbors
@@ -803,10 +829,14 @@ class Neighbors:
         # init distances
         if self.knn:
             Dsq = self._distances.power(2)
-            indices, distances_sq = _get_indices_distances_from_sparse_matrix(Dsq, self.n_neighbors)
+            indices, distances_sq = _get_indices_distances_from_sparse_matrix(
+                Dsq, self.n_neighbors
+            )
         else:
             Dsq = np.power(self._distances, 2)
-            indices, distances_sq = _get_indices_distances_from_dense_matrix(Dsq, self.n_neighbors)
+            indices, distances_sq = _get_indices_distances_from_dense_matrix(
+                Dsq, self.n_neighbors
+            )
 
         # exclude the first point, the 0th neighbor
         indices = indices[:, 1:]
@@ -846,7 +876,9 @@ class Neighbors:
                 # set all entries that are not nearest neighbors to zero
                 W[mask == False] = 0
         else:
-            W = Dsq.copy()  # need to copy the distance matrix here; what follows is inplace
+            W = (
+                Dsq.copy()
+            )  # need to copy the distance matrix here; what follows is inplace
             for i in range(len(Dsq.indptr[:-1])):
                 row = Dsq.indices[Dsq.indptr[i] : Dsq.indptr[i + 1]]
                 num = 2 * sigmas[i] * sigmas[row]
@@ -948,12 +980,17 @@ class Neighbors:
             which = 'LM' if sort == 'decrease' else 'SM'
             # it pays off to increase the stability with a bit more precision
             matrix = matrix.astype(np.float64)
-            evals, evecs = scipy.sparse.linalg.eigsh(matrix, k=n_comps, which=which, ncv=ncv)
+            evals, evecs = scipy.sparse.linalg.eigsh(
+                matrix, k=n_comps, which=which, ncv=ncv
+            )
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == 'decrease':
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
-        logg.info('    eigenvalues of transition matrix\n' '    {}'.format(str(evals).replace('\n', '\n    ')))
+        logg.info(
+            '    eigenvalues of transition matrix\n'
+            '    {}'.format(str(evals).replace('\n', '\n    '))
+        )
         if self._number_connected_components > len(evals) / 2:
             logg.warning('Transition matrix has many disconnected components!')
         self._eigen_values = evals
@@ -987,7 +1024,12 @@ class Neighbors:
             label = self._connected_components[1][i]
             mask = self._connected_components[1] == label
         row = sum(
-            (self.eigen_values[l] / (1 - self.eigen_values[l]) * (self.eigen_basis[i, l] - self.eigen_basis[:, l])) ** 2
+            (
+                self.eigen_values[l]
+                / (1 - self.eigen_values[l])
+                * (self.eigen_basis[i, l] - self.eigen_basis[:, l])
+            )
+            ** 2
             # account for float32 precision
             for l in range(0, self.eigen_values.size)
             if self.eigen_values[l] < 0.9994
@@ -1024,7 +1066,9 @@ class Neighbors:
             condition, only relevant for computing pseudotime.
         """
         if self._adata.shape[1] != xroot.size:
-            raise ValueError('The root vector you provided does not have the ' 'correct dimension.')
+            raise ValueError(
+                'The root vector you provided does not have the ' 'correct dimension.'
+            )
         # this is the squared distance
         dsqroot = 1e10
         iroot = 0

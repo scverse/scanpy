@@ -66,7 +66,9 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         n = len(data)
         lam = 1 / np.var(data) if len(data) > 1 else lam_o
         lam_n = lam_o + n * lam
-        mu_n = (np.mean(data) * n * lam + mu_o * lam_o) / lam_n if len(data) > 0 else mu_o
+        mu_n = (
+            (np.mean(data) * n * lam + mu_o * lam_o) / lam_n if len(data) > 0 else mu_o
+        )
         return mu_n, (1 / (lam_n / (n + 1))) ** (1 / 2)
 
     eps = 1e-15
@@ -89,8 +91,12 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     # barcodes with rank < k are considered to be noise
     global_signal_counts = np.ravel(data_sort[:, -1])
     global_noise_counts = np.ravel(data_sort[:, :-number_of_non_noise_barcodes])
-    global_mu_signal_o, global_sigma_signal_o = np.mean(global_signal_counts), np.std(global_signal_counts)
-    global_mu_noise_o, global_sigma_noise_o = np.mean(global_noise_counts), np.std(global_noise_counts)
+    global_mu_signal_o, global_sigma_signal_o = np.mean(global_signal_counts), np.std(
+        global_signal_counts
+    )
+    global_mu_noise_o, global_sigma_noise_o = np.mean(global_noise_counts), np.std(
+        global_noise_counts
+    )
 
     noise_params_dict = {}
     signal_params_dict = {}
@@ -98,7 +104,9 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     # for each barcode get  empirical noise and signal distribution parameterization
     for x in np.arange(num_of_barcodes):
         sample_barcodes = data[:, x]
-        sample_barcodes_noise_idx = np.where(data_arg[:, :num_of_noise_barcodes] == x)[0]
+        sample_barcodes_noise_idx = np.where(data_arg[:, :num_of_noise_barcodes] == x)[
+            0
+        ]
         sample_barcodes_signal_idx = np.where(data_arg[:, -1] == x)
 
         # get noise and signal counts
@@ -106,8 +114,12 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         signal_counts = sample_barcodes[sample_barcodes_signal_idx]
 
         # get parameters of distribution, assuming lognormal do update from global values
-        noise_param = gaussian_updates(noise_counts, global_mu_noise_o, global_sigma_noise_o)
-        signal_param = gaussian_updates(signal_counts, global_mu_signal_o, global_sigma_signal_o)
+        noise_param = gaussian_updates(
+            noise_counts, global_mu_noise_o, global_sigma_noise_o
+        )
+        signal_param = gaussian_updates(
+            signal_counts, global_mu_signal_o, global_sigma_signal_o
+        )
         noise_params_dict[x] = noise_param
         signal_params_dict[x] = signal_param
 
@@ -115,7 +127,9 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     counter = 0
 
     # for each combination of noise and signal barcode calculate probiltiy of in silico and real cell hypotheses
-    for noise_sample_idx, signal_sample_idx in product(np.arange(num_of_barcodes), np.arange(num_of_barcodes)):
+    for noise_sample_idx, signal_sample_idx in product(
+        np.arange(num_of_barcodes), np.arange(num_of_barcodes)
+    ):
         signal_subset = data_arg[:, -1] == signal_sample_idx
         noise_subset = data_arg[:, -2] == noise_sample_idx
         subset = signal_subset & noise_subset
@@ -168,9 +182,15 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
             + eps
         )
 
-        probs_of_negative = np.sum([log_noise_noise_probs, log_signal_noise_probs], axis=0)
-        probs_of_singlet = np.sum([log_noise_noise_probs, log_signal_signal_probs], axis=0)
-        probs_of_doublet = np.sum([log_noise_signal_probs, log_signal_signal_probs], axis=0)
+        probs_of_negative = np.sum(
+            [log_noise_noise_probs, log_signal_noise_probs], axis=0
+        )
+        probs_of_singlet = np.sum(
+            [log_noise_noise_probs, log_signal_signal_probs], axis=0
+        )
+        probs_of_doublet = np.sum(
+            [log_noise_signal_probs, log_signal_signal_probs], axis=0
+        )
         log_probs_list = [probs_of_negative, probs_of_singlet, probs_of_doublet]
 
         # each cell and each hypothesis probability
@@ -206,11 +226,15 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
         "log_likelihoods_for_each_hypothesis" key is a 2d np.array log likelihood of each hypothesis
     """
     priors = np.array(priors)
-    log_likelihoods_for_each_hypothesis, _, _ = _calculate_log_likelihoods(data, number_of_noise_barcodes)
+    log_likelihoods_for_each_hypothesis, _, _ = _calculate_log_likelihoods(
+        data, number_of_noise_barcodes
+    )
     probs_hypotheses = (
         np.exp(log_likelihoods_for_each_hypothesis)
         * priors
-        / np.sum(np.multiply(np.exp(log_likelihoods_for_each_hypothesis), priors), axis=1)[:, None]
+        / np.sum(
+            np.multiply(np.exp(log_likelihoods_for_each_hypothesis), priors), axis=1
+        )[:, None]
     )
     most_likely_hypothesis = np.argmax(probs_hypotheses, axis=1)
     return {
@@ -271,7 +295,9 @@ def hashsolo(
     >>> sce.pp.hashsolo(data, ['Hash1', 'Hash2', 'Hash3'])
     >>> data.obs.head()
     """
-    print("Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2")
+    print(
+        "Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
+    )
 
     data = adata.obs[cell_hashing_columns].values
     if not check_nonnegative_integers(data):
@@ -300,39 +326,67 @@ def hashsolo(
         unique_cluster_features = np.unique(adata.obs[cluster_features])
         for cluster_feature in unique_cluster_features:
             cluster_feature_bool_vector = adata.obs[cluster_features] == cluster_feature
-            posterior_dict = _calculate_bayes_rule(data[cluster_feature_bool_vector], priors, number_of_noise_barcodes)
-            results.loc[cluster_feature_bool_vector, "most_likely_hypothesis"] = posterior_dict[
-                "most_likely_hypothesis"
-            ]
-            results.loc[cluster_feature_bool_vector, "cluster_feature"] = cluster_feature
-            results.loc[cluster_feature_bool_vector, "negative_hypothesis_probability"] = posterior_dict[
-                "probs_hypotheses"
-            ][:, 0]
-            results.loc[cluster_feature_bool_vector, "singlet_hypothesis_probability"] = posterior_dict[
-                "probs_hypotheses"
-            ][:, 1]
-            results.loc[cluster_feature_bool_vector, "doublet_hypothesis_probability"] = posterior_dict[
-                "probs_hypotheses"
-            ][:, 2]
+            posterior_dict = _calculate_bayes_rule(
+                data[cluster_feature_bool_vector], priors, number_of_noise_barcodes
+            )
+            results.loc[
+                cluster_feature_bool_vector, "most_likely_hypothesis"
+            ] = posterior_dict["most_likely_hypothesis"]
+            results.loc[
+                cluster_feature_bool_vector, "cluster_feature"
+            ] = cluster_feature
+            results.loc[
+                cluster_feature_bool_vector, "negative_hypothesis_probability"
+            ] = posterior_dict["probs_hypotheses"][:, 0]
+            results.loc[
+                cluster_feature_bool_vector, "singlet_hypothesis_probability"
+            ] = posterior_dict["probs_hypotheses"][:, 1]
+            results.loc[
+                cluster_feature_bool_vector, "doublet_hypothesis_probability"
+            ] = posterior_dict["probs_hypotheses"][:, 2]
     else:
         posterior_dict = _calculate_bayes_rule(data, priors, number_of_noise_barcodes)
-        results.loc[:, "most_likely_hypothesis"] = posterior_dict["most_likely_hypothesis"]
+        results.loc[:, "most_likely_hypothesis"] = posterior_dict[
+            "most_likely_hypothesis"
+        ]
         results.loc[:, "cluster_feature"] = 0
-        results.loc[:, "negative_hypothesis_probability"] = posterior_dict["probs_hypotheses"][:, 0]
-        results.loc[:, "singlet_hypothesis_probability"] = posterior_dict["probs_hypotheses"][:, 1]
-        results.loc[:, "doublet_hypothesis_probability"] = posterior_dict["probs_hypotheses"][:, 2]
+        results.loc[:, "negative_hypothesis_probability"] = posterior_dict[
+            "probs_hypotheses"
+        ][:, 0]
+        results.loc[:, "singlet_hypothesis_probability"] = posterior_dict[
+            "probs_hypotheses"
+        ][:, 1]
+        results.loc[:, "doublet_hypothesis_probability"] = posterior_dict[
+            "probs_hypotheses"
+        ][:, 2]
 
-    adata.obs["most_likely_hypothesis"] = results.loc[adata.obs_names, "most_likely_hypothesis"]
+    adata.obs["most_likely_hypothesis"] = results.loc[
+        adata.obs_names, "most_likely_hypothesis"
+    ]
     adata.obs["cluster_feature"] = results.loc[adata.obs_names, "cluster_feature"]
-    adata.obs["negative_hypothesis_probability"] = results.loc[adata.obs_names, "negative_hypothesis_probability"]
-    adata.obs["singlet_hypothesis_probability"] = results.loc[adata.obs_names, "singlet_hypothesis_probability"]
-    adata.obs["doublet_hypothesis_probability"] = results.loc[adata.obs_names, "doublet_hypothesis_probability"]
+    adata.obs["negative_hypothesis_probability"] = results.loc[
+        adata.obs_names, "negative_hypothesis_probability"
+    ]
+    adata.obs["singlet_hypothesis_probability"] = results.loc[
+        adata.obs_names, "singlet_hypothesis_probability"
+    ]
+    adata.obs["doublet_hypothesis_probability"] = results.loc[
+        adata.obs_names, "doublet_hypothesis_probability"
+    ]
 
     adata.obs["Classification"] = None
-    adata.obs.loc[adata.obs["most_likely_hypothesis"] == 2, "Classification"] = "Doublet"
-    adata.obs.loc[adata.obs["most_likely_hypothesis"] == 0, "Classification"] = "Negative"
+    adata.obs.loc[
+        adata.obs["most_likely_hypothesis"] == 2, "Classification"
+    ] = "Doublet"
+    adata.obs.loc[
+        adata.obs["most_likely_hypothesis"] == 0, "Classification"
+    ] = "Negative"
     all_sings = adata.obs["most_likely_hypothesis"] == 1
-    singlet_sample_index = np.argmax(adata.obs.loc[all_sings, cell_hashing_columns].values, axis=1)
-    adata.obs.loc[all_sings, "Classification"] = adata.obs[cell_hashing_columns].columns[singlet_sample_index]
+    singlet_sample_index = np.argmax(
+        adata.obs.loc[all_sings, cell_hashing_columns].values, axis=1
+    )
+    adata.obs.loc[all_sings, "Classification"] = adata.obs[
+        cell_hashing_columns
+    ].columns[singlet_sample_index]
 
     return adata if not inplace else None

@@ -36,9 +36,15 @@ def normalize_per_cell_weinreb16_deprecated(
     gene_subset = np.all(X <= counts_per_cell[:, None] * max_fraction, axis=0)
     if issparse(X):
         gene_subset = gene_subset.A1
-    tc_include = X[:, gene_subset].sum(1).A1 if issparse(X) else X[:, gene_subset].sum(1)
+    tc_include = (
+        X[:, gene_subset].sum(1).A1 if issparse(X) else X[:, gene_subset].sum(1)
+    )
 
-    X_norm = X.multiply(csr_matrix(1 / tc_include[:, None])) if issparse(X) else X / tc_include[:, None]
+    X_norm = (
+        X.multiply(csr_matrix(1 / tc_include[:, None]))
+        if issparse(X)
+        else X / tc_include[:, None]
+    )
     if mult_with_mean:
         X_norm *= np.mean(counts_per_cell)
 

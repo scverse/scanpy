@@ -50,7 +50,9 @@ def test_segments_binary():
     assert (segfull == propfull).all()
 
 
-@pytest.mark.parametrize("cls", [np.asarray, sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix])
+@pytest.mark.parametrize(
+    "cls", [np.asarray, sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]
+)
 def test_top_segments(cls):
     a = cls(np.ones((300, 100)))
     seg = top_segment_proportions(a, [50, 100])
@@ -65,16 +67,25 @@ def test_top_segments(cls):
 # they’re also just making sure the metrics are there
 def test_qc_metrics():
     adata = AnnData(X=sparse.csr_matrix(np.random.binomial(100, 0.005, (1000, 1000))))
-    adata.var["mito"] = np.concatenate((np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))
+    adata.var["mito"] = np.concatenate(
+        (np.ones(100, dtype=bool), np.zeros(900, dtype=bool))
+    )
     adata.var["negative"] = False
     sc.pp.calculate_qc_metrics(adata, qc_vars=["mito", "negative"], inplace=True)
     assert (adata.obs["n_genes_by_counts"] < adata.shape[1]).all()
-    assert (adata.obs["n_genes_by_counts"] >= adata.obs["log1p_n_genes_by_counts"]).all()
+    assert (
+        adata.obs["n_genes_by_counts"] >= adata.obs["log1p_n_genes_by_counts"]
+    ).all()
     assert (adata.obs["total_counts"] == np.ravel(adata.X.sum(axis=1))).all()
     assert (adata.obs["total_counts"] >= adata.obs["log1p_total_counts"]).all()
-    assert (adata.obs["total_counts_mito"] >= adata.obs["log1p_total_counts_mito"]).all()
+    assert (
+        adata.obs["total_counts_mito"] >= adata.obs["log1p_total_counts_mito"]
+    ).all()
     assert (adata.obs["total_counts_negative"] == 0).all()
-    assert (adata.obs["pct_counts_in_top_50_genes"] <= adata.obs["pct_counts_in_top_100_genes"]).all()
+    assert (
+        adata.obs["pct_counts_in_top_50_genes"]
+        <= adata.obs["pct_counts_in_top_100_genes"]
+    ).all()
     for col in filter(lambda x: "negative" not in x, adata.obs.columns):
         assert (adata.obs[col] >= 0).all()  # Values should be positive or zero
         assert (adata.obs[col] != 0).any().all()  # Nothing should be all zeros
@@ -97,21 +108,29 @@ def test_qc_metrics():
         assert np.allclose(adata.var[col], old_var[col])
     # with log1p=False
     adata = AnnData(X=sparse.csr_matrix(np.random.binomial(100, 0.005, (1000, 1000))))
-    adata.var["mito"] = np.concatenate((np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))
+    adata.var["mito"] = np.concatenate(
+        (np.ones(100, dtype=bool), np.zeros(900, dtype=bool))
+    )
     adata.var["negative"] = False
-    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito", "negative"], log1p=False, inplace=True)
+    sc.pp.calculate_qc_metrics(
+        adata, qc_vars=["mito", "negative"], log1p=False, inplace=True
+    )
     assert not np.any(adata.obs.columns.str.startswith("log1p_"))
     assert not np.any(adata.var.columns.str.startswith("log1p_"))
 
 
 def adata_mito():
     a = np.random.binomial(100, 0.005, (1000, 1000))
-    init_var = pd.DataFrame(dict(mito=np.concatenate((np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))))
+    init_var = pd.DataFrame(
+        dict(mito=np.concatenate((np.ones(100, dtype=bool), np.zeros(900, dtype=bool))))
+    )
     adata_dense = AnnData(X=a, var=init_var.copy())
     return adata_dense, init_var
 
 
-@pytest.mark.parametrize("cls", [np.asarray, sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix])
+@pytest.mark.parametrize(
+    "cls", [np.asarray, sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]
+)
 def test_qc_metrics_format(cls):
     adata_dense, init_var = adata_mito()
     sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"], inplace=True)

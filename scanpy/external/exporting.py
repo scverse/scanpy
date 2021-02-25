@@ -75,16 +75,25 @@ def spring_project(
             embedding_method = 'X_' + embedding_method
         else:
             if embedding_method in adata.uns:
-                embedding_method = 'X_' + embedding_method + '_' + adata.uns[embedding_method]['params']['layout']
+                embedding_method = (
+                    'X_'
+                    + embedding_method
+                    + '_'
+                    + adata.uns[embedding_method]['params']['layout']
+                )
             else:
-                raise ValueError('Run the specified embedding method `%s` first.' % embedding_method)
+                raise ValueError(
+                    'Run the specified embedding method `%s` first.' % embedding_method
+                )
 
     coords = adata.obsm[embedding_method]
 
     # Make project directory and subplot directory (subplot has same name as project)
     # For now, the subplot is just all cells in adata
     project_dir: Path = Path(project_dir)
-    subplot_dir: Path = project_dir.parent if subplot_name is None else project_dir / subplot_name
+    subplot_dir: Path = (
+        project_dir.parent if subplot_name is None else project_dir / subplot_name
+    )
     subplot_dir.mkdir(parents=True, exist_ok=True)
     print(f'Writing subplot to {subplot_dir}')
 
@@ -150,7 +159,9 @@ def spring_project(
             elif is_categorical(adata.obs[obs_name]):
                 categorical_extras[obs_name] = [str(x) for x in adata.obs[obs_name]]
             else:
-                logg.warning(f'Cell grouping {obs_name!r} is not a categorical variable')
+                logg.warning(
+                    f'Cell grouping {obs_name!r} is not a categorical variable'
+                )
     if custom_color_tracks is None:
         for obs_name in adata.obs:
             if not is_categorical(adata.obs[obs_name]):
@@ -164,7 +175,9 @@ def spring_project(
             elif not is_categorical(adata.obs[obs_name]):
                 continuous_extras[obs_name] = np.array(adata.obs[obs_name])
             else:
-                logg.warning(f'Custom color track {obs_name!r} is not a continuous variable')
+                logg.warning(
+                    f'Custom color track {obs_name!r} is not a continuous variable'
+                )
 
     # Write continuous colors
     continuous_extras['Uniform'] = np.zeros(E.shape[0])
@@ -178,8 +191,12 @@ def spring_project(
 
     # Write categorical data
     categorical_coloring_data = {}
-    categorical_coloring_data = _build_categ_colors(categorical_coloring_data, categorical_extras)
-    _write_cell_groupings(subplot_dir / 'categorical_coloring_data.json', categorical_coloring_data)
+    categorical_coloring_data = _build_categ_colors(
+        categorical_coloring_data, categorical_extras
+    )
+    _write_cell_groupings(
+        subplot_dir / 'categorical_coloring_data.json', categorical_coloring_data
+    )
 
     # Write graph in two formats for backwards compatibility
     edges = _get_edges(adata, neighbors_key)
@@ -193,7 +210,10 @@ def spring_project(
 
     # Write 2-D coordinates, after adjusting to roughly match SPRING's default d3js force layout parameters
     coords = coords - coords.min(0)[None, :]
-    coords = coords * (np.array([1000, 1000]) / coords.ptp(0))[None, :] + np.array([200, -200])[None, :]
+    coords = (
+        coords * (np.array([1000, 1000]) / coords.ptp(0))[None, :]
+        + np.array([200, -200])[None, :]
+    )
     np.savetxt(
         subplot_dir / 'coordinates.txt',
         np.hstack((np.arange(E.shape[0])[:, None], coords)),
@@ -323,10 +343,14 @@ def _get_color_stats_genes(color_stats, E, gene_list):
     for iG in range(E.shape[1]):
         n_nonzero = E.indptr[iG + 1] - E.indptr[iG]
         if n_nonzero > pctl_n:
-            pctls[iG] = np.percentile(E.data[E.indptr[iG] : E.indptr[iG + 1]], 100 - 100 * pctl_n / n_nonzero)
+            pctls[iG] = np.percentile(
+                E.data[E.indptr[iG] : E.indptr[iG + 1]], 100 - 100 * pctl_n / n_nonzero
+            )
         else:
             pctls[iG] = 0
-        color_stats[gene_list[iG]] = tuple(map(float, (means[iG], stdevs[iG], mins[iG], maxes[iG], pctls[iG])))
+        color_stats[gene_list[iG]] = tuple(
+            map(float, (means[iG], stdevs[iG], mins[iG], maxes[iG], pctls[iG]))
+        )
     return color_stats
 
 
@@ -348,7 +372,10 @@ def _write_color_stats(filename, color_stats):
 
 def _build_categ_colors(categorical_coloring_data, cell_groupings):
     for k, labels in cell_groupings.items():
-        label_colors = {l: _frac_to_hex(float(i) / len(set(labels))) for i, l in enumerate(list(set(labels)))}
+        label_colors = {
+            l: _frac_to_hex(float(i) / len(set(labels)))
+            for i, l in enumerate(list(set(labels)))
+        }
         categorical_coloring_data[k] = {
             'label_colors': label_colors,
             'label_list': labels,
@@ -358,7 +385,9 @@ def _build_categ_colors(categorical_coloring_data, cell_groupings):
 
 def _write_cell_groupings(filename, categorical_coloring_data):
     with open(filename, 'w') as f:
-        f.write(json.dumps(categorical_coloring_data, indent=4, sort_keys=True))  # .decode('utf-8'))
+        f.write(
+            json.dumps(categorical_coloring_data, indent=4, sort_keys=True)
+        )  # .decode('utf-8'))
 
 
 def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
@@ -369,14 +398,18 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
     sizes = list(adata.uns[group_key + '_sizes'])
     clus_labels = adata.obs[group_key].cat.codes.values
-    cell_groups = [[int(j) for j in np.nonzero(clus_labels == i)[0]] for i in range(len(names))]
+    cell_groups = [
+        [int(j) for j in np.nonzero(clus_labels == i)[0]] for i in range(len(names))
+    ]
 
     if group_key + '_colors' in adata.uns:
         colors = list(adata.uns[group_key + '_colors'])
     else:
         import scanpy.plotting.utils
 
-        scanpy.plotting.utils.add_colors_for_categorical_sample_annotation(adata, group_key)
+        scanpy.plotting.utils.add_colors_for_categorical_sample_annotation(
+            adata, group_key
+        )
         colors = list(adata.uns[group_key + '_colors'])
 
     # retrieve edge level data
@@ -398,7 +431,9 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
     # make node list
     nodes = []
-    for i, name, xy, color, size, cells in zip(range(len(names)), names, coords, colors, sizes, cell_groups):
+    for i, name, xy, color, size, cells in zip(
+        range(len(names)), names, coords, colors, sizes, cell_groups
+    ):
         nodes.append(
             {
                 'index': i,
@@ -414,7 +449,9 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     links = []
     for source, target, weight in zip(sources, targets, weights):
         if source < target and weight > min_edge_weight_save:
-            links.append({'source': int(source), 'target': int(target), 'weight': float(weight)})
+            links.append(
+                {'source': int(source), 'target': int(target), 'weight': float(weight)}
+            )
 
     # save data about edge weights
     edge_weight_meta = {
@@ -527,7 +564,10 @@ def cellbrowser(
     try:
         import cellbrowser.cellbrowser as cb
     except ImportError:
-        logg.error("The package cellbrowser is not installed. " "Install with 'pip install cellbrowser' and retry.")
+        logg.error(
+            "The package cellbrowser is not installed. "
+            "Install with 'pip install cellbrowser' and retry."
+        )
         raise
 
     data_dir = str(data_dir)

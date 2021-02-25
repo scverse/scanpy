@@ -180,7 +180,9 @@ def ROC_AUC_analysis(
             fpr[name_list[i]],
             tpr[name_list[i]],
             thresholds[name_list[i]],
-        ) = metrics.roc_curve(y_true, y_score, pos_label=None, sample_weight=None, drop_intermediate=False)
+        ) = metrics.roc_curve(
+            y_true, y_score, pos_label=None, sample_weight=None, drop_intermediate=False
+        )
         roc_auc[name_list[i]] = metrics.auc(fpr[name_list[i]], tpr[name_list[i]])
     adata.uns['ROCfpr' + groupby + str(group)] = fpr
     adata.uns['ROCtpr' + groupby + str(group)] = tpr

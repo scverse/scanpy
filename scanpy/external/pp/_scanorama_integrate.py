@@ -113,7 +113,9 @@ def scanorama_integrate(
         name2idx[batch_name].append(idx)
 
     # Separate batches.
-    datasets_dimred = [adata.obsm[basis][name2idx[batch_name]] for batch_name in batch_names]
+    datasets_dimred = [
+        adata.obsm[basis][name2idx[batch_name]] for batch_name in batch_names
+    ]
 
     # Integrate.
     integrated = scanorama.assemble(
