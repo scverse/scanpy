@@ -43,6 +43,7 @@ setup(
         doc=[
             'sphinx>=3.2',
             'sphinx_rtd_theme>=0.3.1',
+            'readthedocs-sphinx-search',
             'sphinx_autodoc_typehints',
             'scanpydoc>=0.5',
             'typing_extensions; python_version < "3.8"',  # for `Literal`
