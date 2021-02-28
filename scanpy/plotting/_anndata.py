@@ -758,7 +758,6 @@ def violin(
                     size=size,
                     color="black",
                     ax=g.axes[0, ax_id],
-                    **kwds,
                 )
         if log:
             g.set(yscale='log')

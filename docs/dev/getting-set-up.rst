@@ -38,6 +38,28 @@ To do this manually, first make a fork of the repository by clicking the "fork" 
     git remote add upstream https://github.com/theislab/scanpy.git
     # git branch --set-upstream-to "upstream/master"
 
+`pre-commit`
+~~~~~~~~~~~~
+
+We use `precommit <https://pre-commit.com>`__ to run some styling checks in an automated way.
+We also test against these checks, so make sure you follow them!
+
+You can install pre-commit with:
+
+.. code:: shell
+
+    pip install pre-commit
+
+You can then install it to run while developing here with:
+
+.. code:: shell
+
+    pre-commit install
+
+From the root of the repo.
+
+If you choose not to run the hooks on each commit, you can run them manually with `pre-commit run --files={your files}`.
+
 .. _creating-a-branch:
 
 Creating a branch for your feature

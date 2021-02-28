@@ -1,4 +1,5 @@
 import collections.abc as cabc
+from copy import copy
 import numpy as np
 import pandas as pd
 from cycler import Cycler
@@ -99,7 +100,11 @@ def pca_loadings(
         logg.error("Component indices must be greater than zero.")
         return
     ranking(
-        adata, 'varm', 'PCs', indices=components, include_lowest=include_lowest,
+        adata,
+        'varm',
+        'PCs',
+        indices=components,
+        include_lowest=include_lowest,
     )
     savefig_or_show('pca_loadings', show=show, save=save)
 
@@ -346,8 +351,8 @@ def rank_genes_groups(
 
 def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
     """
-     Decides what to return
-     """
+    Decides what to return
+    """
     if return_fig:
         return plot_obj
     else:
@@ -1090,21 +1095,39 @@ def embedding_density(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.umap(adata)
-    >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.umap(adata)
+        sc.tl.embedding_density(adata, basis='umap', groupby='phase')
 
     Plot all categories be default
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase')
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase')
 
     Plot selected categories
-    >>> sc.pl.embedding_density(
-    ...     adata,
-    ...     basis='umap',
-    ...     key='umap_density_phase',
-    ...     group=['G1', 'S'],
-    ... )
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.embedding_density(
+            adata,
+            basis='umap',
+            key='umap_density_phase',
+            group=['G1', 'S'],
+        )
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.embedding_density
     """
     sanitize_anndata(adata)
 
@@ -1176,7 +1199,7 @@ def embedding_density(
 
     # Make the color map
     if isinstance(color_map, str):
-        color_map = cm.get_cmap(color_map)
+        color_map = copy(cm.get_cmap(color_map))
 
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
     color_map.set_over('black')
@@ -1231,8 +1254,6 @@ def embedding_density(
                 color_map=color_map,
                 norm=norm,
                 size=dot_sizes,
-                vmax=vmax,
-                vmin=vmin,
                 save=False,
                 title=_title,
                 ax=ax,

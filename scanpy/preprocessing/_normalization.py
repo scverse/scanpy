@@ -15,11 +15,11 @@ def _normalize_data(X, counts, after=None, copy=False):
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
     counts = np.asarray(counts)  # dask doesn't do medians
-    after = np.median(counts[counts>0], axis=0) if after is None else after
-    counts += (counts == 0)
+    after = np.median(counts[counts > 0], axis=0) if after is None else after
+    counts += counts == 0
     counts = counts / after
     if issparse(X):
-        sparsefuncs.inplace_row_scale(X, 1/counts)
+        sparsefuncs.inplace_row_scale(X, 1 / counts)
     else:
         np.divide(X, counts[:, None], out=X)
     return X
@@ -38,6 +38,8 @@ def normalize_total(
     """\
     Normalize counts per cell.
 
+    Normalize each cell by total counts over all genes, 
+    so that every cell has the same total count after normalization.
     If choosing `target_sum=1e6`, this is CPM normalization.
 
     If `exclude_highly_expressed=True`, very highly expressed genes are excluded
@@ -144,8 +146,8 @@ def normalize_total(
         counts_per_cell = np.ravel(counts_per_cell)
 
         # at least one cell as more than max_fraction of counts per cell
-        gene_subset = (adata.X > counts_per_cell[:, None]*max_fraction).sum(0)
-        gene_subset = (np.ravel(gene_subset) == 0)
+        gene_subset = (adata.X > counts_per_cell[:, None] * max_fraction).sum(0)
+        gene_subset = np.ravel(gene_subset) == 0
 
         msg += (
             ' The following highly-expressed genes are not considered during '
@@ -184,7 +186,7 @@ def normalize_total(
             norm_factor=counts_per_cell,
         )
 
-    for layer_name in (layers or ()):
+    for layer_name in layers or ():
         layer = adata.layers[layer_name]
         counts = np.ravel(layer.sum(1))
         if inplace:
@@ -197,6 +199,8 @@ def normalize_total(
         time=start,
     )
     if key_added is not None:
-        logg.debug(f'and added {key_added!r}, counts per cell before normalization (adata.obs)')
+        logg.debug(
+            f'and added {key_added!r}, counts per cell before normalization (adata.obs)'
+        )
 
     return dat if not inplace else None

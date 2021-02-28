@@ -1,0 +1,7 @@
+0.4.3 :small:`2018-02-09`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- :func:`~scanpy.pl.clustermap`: heatmap from hierarchical clustering,
+  based on :func:`seaborn.clustermap` [Waskom16]_ :smaller:`A Wolf`
+- only return :class:`matplotlib.axes.Axes` in plotting functions of `sc.pl`
+  when `show=False`, otherwise `None` :smaller:`A Wolf`

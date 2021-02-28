@@ -22,6 +22,7 @@ def test_rank_genes_groups_with_renamed_categories():
         sc.tl.rank_genes_groups(adata, 'louvain', method=method)
         assert adata.uns['rank_genes_groups']['names'][0].tolist() == ('3', '1', '0')
 
+
 def test_rank_genes_groups_with_renamed_categories_use_rep():
     adata = sc.datasets.blobs(n_variables=4, n_centers=3, n_observations=200)
     assert np.allclose(adata.X[1], [9.214668, -2.6487126, 4.2020774, 0.51076424])
