@@ -663,6 +663,7 @@ def regress_out(
         tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
 
     from joblib import Parallel, delayed
+
     res = Parallel(n_jobs=n_jobs)(delayed(_regress_out_chunk)(task) for task in tasks)
 
     # res is a list of vectors (each corresponding to a regressed gene column).
