@@ -26,8 +26,7 @@ setup(
     license='BSD',
     python_requires='>=3.6',
     install_requires=[
-        line.strip()
-        for line in Path('requirements.txt').read_text('utf-8').splitlines()
+        l.strip() for l in Path('requirements.txt').read_text('utf-8').splitlines()
     ],
     extras_require=dict(
         louvain=['python-igraph', 'louvain>=0.6,!=0.6.2'],
