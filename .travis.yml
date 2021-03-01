@@ -17,7 +17,7 @@ matrix:
     python: "3.7"
     install:
     - pip install .[dev,test,louvain,leiden,magic,scvi,harmony,skmisc,scrublet,scanorama]
-    - pip install git+https://github.com/theislab/anndata
+    - pip install git+https://github.com/theislab/anndata@flit
 python:
 - '3.6'
 - '3.7'
