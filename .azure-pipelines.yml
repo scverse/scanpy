@@ -102,6 +102,7 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
+      pip install flit
       flit build
       twine check dist/*
     displayName: 'Build & Twine check'
