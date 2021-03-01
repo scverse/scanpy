@@ -9,7 +9,7 @@ from ... import logging as logg
 from ..._compat import Literal
 
 try:
-    from SAM import SAM
+    from samalg import SAM
 except ImportError:
     SAM = Any
 
@@ -20,17 +20,17 @@ def sam(
     num_norm_avg: int = 50,
     k: int = 20,
     distance: str = 'correlation',
-    standardization: Literal['Normalizer', 'StandardScaler', 'None'] = 'Normalizer',
-    weight_pcs: bool = True,
+    standardization: Literal['Normalizer', 'StandardScaler', 'None'] = 'StandardScaler',
+    weight_pcs: bool = False,
     sparse_pca: bool = False,
-    n_pcs: Optional[int] = None,
-    n_genes: Optional[int] = None,
+    n_pcs: Optional[int] = 150,
+    n_genes: Optional[int] = 3000,
     projection: Literal['umap', 'tsne', 'None'] = 'umap',
     inplace: bool = True,
     verbose: bool = True,
 ) -> Union[SAM, Tuple[SAM, AnnData]]:
     """\
-    Self-Assembling Manifolds single-cell RNA sequencing analysis tool.
+    Self-Assembling Manifolds single-cell RNA sequencing analysis tool [Tarashansky19]_.
 
     SAM iteratively rescales the input gene expression matrix to emphasize
     genes that are spatially variable along the intrinsic manifold of the data.
@@ -180,7 +180,7 @@ def sam(
 
     In a Jupyter notebook, execute the following to launch the interface:
 
-    >>> from SAMGUI import SAMGUI
+    >>> from samalg.gui import SAMGUI
     >>> sam_gui = SAMGUI(sam_obj) # sam_obj is your SAM object
     >>> sam_gui.SamPlot
 
@@ -190,7 +190,7 @@ def sam(
     """
 
     try:
-        from SAM import SAM
+        from samalg import SAM
     except ImportError:
         raise ImportError(
             '\nplease install sam-algorithm: \n\n'

@@ -49,8 +49,10 @@ Variable level metrics include:
 
 `total_{expr_type}`
     E.g. "total_counts". Sum of counts for a gene.
+`n_genes_by_{expr_type}`
+    E.g. "n_genes_by_counts". The number of genes with at least 1 count in a cell. Calculated for all cells.
 `mean_{expr_type}`
-    E.g. "mean counts". Mean expression over all cells.
+    E.g. "mean_counts". Mean expression over all cells.
 `n_cells_by_{expr_type}`
     E.g. "n_cells_by_counts". Number of cells this expression is
     measured in.

@@ -1,10 +1,9 @@
-from typing import Optional, Tuple, Sequence, Type, Union
+from typing import Optional, Tuple, Sequence, Type
 
 import numpy as np
 import pandas as pd
 from natsort import natsorted
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 from scipy import sparse
 
 from .. import _utils
@@ -15,7 +14,10 @@ from ._utils_clustering import rename_groups, restrict_adjacency
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
 except ImportError:
-    class MutableVertexPartition: pass
+
+    class MutableVertexPartition:
+        pass
+
     MutableVertexPartition.__module__ = 'leidenalg.VertexPartition'
 
 
@@ -24,13 +26,15 @@ def leiden(
     resolution: float = 1,
     *,
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: _utils.AnyRandom = 0,
     key_added: str = 'leiden',
     adjacency: Optional[sparse.spmatrix] = None,
     directed: bool = True,
     use_weights: bool = True,
     n_iterations: int = -1,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
+    neighbors_key: Optional[str] = None,
+    obsp: Optional[str] = None,
     copy: bool = False,
     **partition_kwargs,
 ) -> Optional[AnnData]:
@@ -61,8 +65,7 @@ def leiden(
     key_added
         `adata.obs` key under which to add the cluster labels.
     adjacency
-        Sparse adjacency matrix of the graph, defaults to
-        `adata.uns['neighbors']['connectivities']`.
+        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     directed
         Whether to treat the graph as directed or undirected.
     use_weights
@@ -77,6 +80,15 @@ def leiden(
         Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`.
         For the available options, consult the documentation for
         :func:`~leidenalg.find_partition`.
+    neighbors_key
+        Use neighbors connectivities as adjacency.
+        If not specified, leiden looks .obsp['connectivities'] for connectivities
+        (default storage place for pp.neighbors).
+        If specified, leiden looks
+        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+    obsp
+        Use .obsp[obsp] as adjacency. You can't specify both
+        `obsp` and `neighbors_key` at the same time.
     copy
         Whether to copy `adata` or modify it inplace.
     **partition_kwargs
@@ -104,12 +116,7 @@ def leiden(
     adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
     if adjacency is None:
-        if 'neighbors' not in adata.uns:
-            raise ValueError(
-                'You need to run `pp.neighbors` first '
-                'to compute a neighborhood graph.'
-            )
-        adjacency = adata.uns['neighbors']['connectivities']
+        adjacency = _utils._choose_graph(adata, obsp, neighbors_key)
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         adjacency, restrict_indices = restrict_adjacency(

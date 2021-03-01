@@ -1,6 +1,29 @@
 [build-system]
-requires = ['setuptools', 'setuptools_scm', 'wheel']
+requires = ['setuptools', 'setuptools_scm', 'wheel', 'pytoml']
 build-backend = 'setuptools.build_meta'
+
+# uses the format of tool.flit.metadata because we’ll move to it anyway
+[tool.scanpy]
+author = """
+Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup, \
+Sergei Rybakov, Gokcen Eraslan, Tom White, Malte Luecken, \
+Davide Cittaro, Tobias Callies, Marius Lange, Andrés R. Muñoz-Rojas\
+"""
+# We don’t need all emails, the main authors are sufficient.
+author-email = 'f.alex.wolf@gmx.de, philipp.angerer@helmholtz-muenchen.de'
+
+[tool.pytest.ini_options]
+python_files = 'test_*.py'
+testpaths = 'scanpy/tests/'
+xfail_strict = true
+nunit_attach_on = 'fail'
+markers = [
+    'internet: tests which rely on internet resources (enable with `--internet-tests`)',
+]
+
+[tool.coverage.run]
+source = ['scanpy']
+omit = ['*/tests/*']
 
 [tool.black]
 line-length = 88
@@ -8,59 +31,4 @@ target-version = ['py36']
 skip-string-normalization = true
 exclude = '''
 /build/.*
-|/scanpy/(
-    get
-    |__init__
-    |cli
-    |logging
-    |readwrite
-    |_utils
-    |_settings
-    |neighbors/__init__
-    |api/(__init__|pp|pl|datasets)
-    |external/(exporting|tl/_palantir)
-    |preprocessing/(
-        _qc
-        |_combat
-        |_simple
-        |_recipes
-        |_normalization
-        |_highly_variable_genes
-        |_deprecated/highly_variable_genes
-    )
-    |tools/(
-        _dpt
-        |_sim
-        |_paga
-        |_umap
-        |_utils
-        |_leiden
-        |_louvain
-        |_tsne_fix
-        |_top_genes
-        |_score_genes
-        |_utils_clustering
-        |_rank_genes_groups
-    )
-    |plotting/(
-        __init__
-        |palettes
-        |_utils
-        |_preprocessing
-        |_tools/(scatterplots|__init__|paga)
-    )
-    |tests/(
-        test_get
-        |test_pca
-        |test_combat
-        |test_neighbors
-        |test_readwrite
-        |test_clustering
-        |test_preprocessing
-        |test_rank_genes_groups
-        |test_marker_gene_overlap
-        |test_highly_variable_genes
-        |test_rank_genes_groups_logreg
-        |notebooks/(test_paga_paul15_subsampled|test_pbmc3k)
-    )
-).py'''
+'''

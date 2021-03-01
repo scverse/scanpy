@@ -1,8 +1,8 @@
-from typing import Union, List, Optional, Any
+from typing import Union, List, Optional, Any, Tuple, Collection
 
 import numpy as np
-from anndata import AnnData
 import matplotlib.pyplot as plt
+from anndata import AnnData
 from matplotlib.axes import Axes
 
 from .._utils import _doc_params
@@ -14,6 +14,8 @@ from ..plotting._docs import (
     doc_show_save_ax,
 )
 from ..plotting._tools.scatterplots import _wraps_plot_scatter
+from ..plotting import _utils
+from .tl._wishbone import _anndata_to_wishbone
 
 
 @_wraps_plot_scatter
@@ -151,7 +153,6 @@ def sam(
     s: float = 10.0,
     **kwargs: Any,
 ) -> Axes:
-
     """\
     Scatter plot using the SAM projection or another input projection.
 
@@ -161,25 +162,23 @@ def sam(
         A case-sensitive string indicating the projection to display (a key
         in adata.obsm) or a 2D numpy array with cell coordinates. If None,
         projection defaults to UMAP.
-
     c
         Cell color values overlaid on the projection. Can be a string from adata.obs
         to overlay cluster assignments / annotations or a 1D numpy array.
-
     axes
         Plot output to the specified, existing axes. If None, create new
         figure window.
-
-    **kwargs - all keyword arguments in matplotlib.pyplot.scatter are eligible.
+    kwargs
+        all keyword arguments in matplotlib.pyplot.scatter are eligible.
     """
-
-    import utilities as ut
 
     if isinstance(projection, str):
         try:
             dt = adata.obsm[projection]
         except KeyError:
-            print('Please create a projection first using run_umap or' 'run_tsne')
+            raise ValueError(
+                'Please create a projection first using run_umap or run_tsne'
+            )
     else:
         dt = projection
 
@@ -191,49 +190,209 @@ def sam(
         axes.scatter(
             dt[:, 0], dt[:, 1], s=s, linewidth=linewidth, edgecolor=edgecolor, **kwargs
         )
+        return axes
+
+    if isinstance(c, str):
+        try:
+            c = np.array(list(adata.obs[c]))
+        except KeyError:
+            pass
+
+    if isinstance(c[0], (str, np.str_)) and isinstance(c, (np.ndarray, list)):
+        import samalg.utilities as ut
+
+        i = ut.convert_annotations(c)
+        ui, ai = np.unique(i, return_index=True)
+        cax = axes.scatter(
+            dt[:, 0],
+            dt[:, 1],
+            c=i,
+            cmap=cmap,
+            s=s,
+            linewidth=linewidth,
+            edgecolor=edgecolor,
+            **kwargs,
+        )
+
+        if colorbar:
+            cbar = plt.colorbar(cax, ax=axes, ticks=ui)
+            cbar.ax.set_yticklabels(c[ai])
     else:
+        if not isinstance(c, (np.ndarray, list)):
+            colorbar = False
+        i = c
 
-        if isinstance(c, str):
-            try:
-                c = np.array(list(adata.obs[c]))
-            except KeyError:
-                0  # do nothing
+        cax = axes.scatter(
+            dt[:, 0],
+            dt[:, 1],
+            c=i,
+            cmap=cmap,
+            s=s,
+            linewidth=linewidth,
+            edgecolor=edgecolor,
+            **kwargs,
+        )
 
-        if (isinstance(c[0], str) or isinstance(c[0], np.str_)) and (
-            isinstance(c, np.ndarray) or isinstance(c, list)
-        ):
-            i = ut.convert_annotations(c)
-            ui, ai = np.unique(i, return_index=True)
-            cax = axes.scatter(
-                dt[:, 0],
-                dt[:, 1],
-                c=i,
-                cmap=cmap,
-                s=s,
-                linewidth=linewidth,
-                edgecolor=edgecolor,
-                **kwargs,
-            )
-
-            if colorbar:
-                cbar = plt.colorbar(cax, ax=axes, ticks=ui)
-                cbar.ax.set_yticklabels(c[ai])
-        else:
-            if not (isinstance(c, np.ndarray) or isinstance(c, list)):
-                colorbar = False
-            i = c
-
-            cax = axes.scatter(
-                dt[:, 0],
-                dt[:, 1],
-                c=i,
-                cmap=cmap,
-                s=s,
-                linewidth=linewidth,
-                edgecolor=edgecolor,
-                **kwargs,
-            )
-
-            if colorbar:
-                plt.colorbar(cax, ax=axes)
+        if colorbar:
+            plt.colorbar(cax, ax=axes)
     return axes
+
+
+@_doc_params(show_save_ax=doc_show_save_ax)
+def wishbone_marker_trajectory(
+    adata: AnnData,
+    markers: Collection[str],
+    no_bins: int = 150,
+    smoothing_factor: int = 1,
+    min_delta: float = 0.1,
+    show_variance: bool = False,
+    figsize: Optional[Tuple[float, float]] = None,
+    return_fig: bool = False,
+    show: bool = True,
+    save: Optional[Union[str, bool]] = None,
+    ax: Optional[Axes] = None,
+):
+    """\
+    Plot marker trends along trajectory, and return trajectory branches for further
+    analysis and visualization (heatmap, etc..)
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    markers
+        Iterable of markers/genes to be plotted.
+    show_variance
+        Logical indicating if the trends should be accompanied with variance.
+    no_bins
+        Number of bins for calculating marker density.
+    smoothing_factor
+        Parameter controlling the degree of smoothing.
+    min_delta
+        Minimum difference in marker expression after normalization to show
+        separate trends for the two branches.
+    figsize
+        width, height
+    return_fig
+        Return the matplotlib figure.
+    {show_save_ax}
+
+    Returns
+    -------
+    Updates `adata` with the following fields:
+
+    `trunk_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
+        Computed values before branching
+    `branch1_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
+        Computed values for the first branch
+    `branch2_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
+        Computed values for the second branch.
+    """
+
+    wb = _anndata_to_wishbone(adata)
+
+    if figsize is None:
+        width = 2 * len(markers)
+        height = 0.75 * len(markers)
+    else:
+        width, height = figsize
+
+    if ax:
+        fig = ax.figure
+    else:
+        fig = plt.figure(figsize=(width, height))
+        ax = plt.gca()
+
+    ret_values, fig, ax = wb.plot_marker_trajectory(
+        markers=markers,
+        show_variance=show_variance,
+        no_bins=no_bins,
+        smoothing_factor=smoothing_factor,
+        min_delta=min_delta,
+        fig=fig,
+        ax=ax,
+    )
+
+    adata.uns['trunk_wishbone'] = ret_values['Trunk']
+    adata.uns['branch1_wishbone'] = ret_values['Branch1']
+    adata.uns['branch2_wishbone'] = ret_values['Branch2']
+
+    _utils.savefig_or_show('wishbone_trajectory', show=show, save=save)
+
+    if return_fig:
+        return fig
+    elif not show:
+        return ax
+
+
+def scrublet_score_distribution(
+    adata,
+    scale_hist_obs: str = 'log',
+    scale_hist_sim: str = 'linear',
+    figsize: Optional[Tuple[float, float]] = (8, 3),
+):
+    """\
+    Plot histogram of doublet scores for observed transcriptomes and simulated doublets. 
+
+    The histogram for simulated doublets is useful for determining the correct doublet 
+    score threshold. 
+    
+    Parameters
+    ----------
+    adata
+        An annData object resulting from func:`~scanpy.external.scrublet`.  
+    scale_hist_obs
+        Set y axis scale transformation in matplotlib for the plot of observed
+        transcriptomes (e.g. "linear", "log", "symlog", "logit")
+    scale_hist_sim
+        Set y axis scale transformation in matplotlib for the plot of simulated
+        doublets (e.g. "linear", "log", "symlog", "logit")
+    figsize
+        width, height
+
+    See also
+    --------
+    :func:`~scanpy.external.pp.scrublet`: Main way of running Scrublet, runs
+        preprocessing, doublet simulation (this function) and calling. 
+    :func:`~scanpy.external.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
+        simulation separately for advanced usage. 
+    """
+
+    threshold = adata.uns['scrublet']['threshold']
+    fig, axs = plt.subplots(1, 2, figsize=figsize)
+
+    ax = axs[0]
+    ax.hist(
+        adata.obs['doublet_score'],
+        np.linspace(0, 1, 50),
+        color='gray',
+        linewidth=0,
+        density=True,
+    )
+    ax.set_yscale(scale_hist_obs)
+    yl = ax.get_ylim()
+    ax.set_ylim(yl)
+    ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+    ax.set_title('Observed transcriptomes')
+    ax.set_xlabel('Doublet score')
+    ax.set_ylabel('Prob. density')
+
+    ax = axs[1]
+    ax.hist(
+        adata.uns['scrublet']['doublet_scores_sim'],
+        np.linspace(0, 1, 50),
+        color='gray',
+        linewidth=0,
+        density=True,
+    )
+    ax.set_yscale(scale_hist_sim)
+    yl = ax.get_ylim()
+    ax.set_ylim(yl)
+    ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+    ax.set_title('Simulated doublets')
+    ax.set_xlabel('Doublet score')
+    ax.set_ylabel('Prob. density')
+
+    fig.tight_layout()
+
+    return fig, axs

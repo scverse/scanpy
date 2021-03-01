@@ -30,9 +30,14 @@ edges_width
     Width of edges.
 edges_color
     Color of edges. See :func:`~networkx.drawing.nx_pylab.draw_networkx_edges`.
+neighbors_key
+    Where to look for neighbors connectivities.
+    If not specified, this looks .obsp['connectivities'] for connectivities
+    (default storage place for pp.neighbors).
+    If specified, this looks
+    .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
 arrows
-    Show arrows (requires to run :func:`scvelo.tl.velocity_embedding` before).
-    Deprecated in favor of :func:`scvelo.pl.velocity_embedding` and friends.
+    Show arrows (deprecated in favour of `scvelo.pl.velocity_embedding`).
 arrows_kwds
     Passed to :meth:`~matplotlib.axes.Axes.quiver`\
 """
@@ -76,18 +81,24 @@ color_map
 palette
     Colors to use for plotting categorical annotation groups.
     The palette can be a valid :class:`~matplotlib.colors.ListedColormap` name
-    (`'Set2'`, `'tab20'`, …), a :class:`~cycler.Cycler` object, or a sequence of
-    matplotlib colors like `['red', '#ccdd11', (0.1, 0.2, 1)]`
-    (see :func:`~matplotlib.colors.is_color_like`).
+    (`'Set2'`, `'tab20'`, …), a :class:`~cycler.Cycler` object, a dict mapping
+    categories to colors, or a sequence of colors. Colors must be valid to
+    matplotlib. (see :func:`~matplotlib.colors.is_color_like`).
     If `None`, `mpl.rcParams["axes.prop_cycle"]` is used unless the categorical
     variable already has colors stored in `adata.uns["{var}_colors"]`.
     If provided, values of `adata.uns["{var}_colors"]` will be set.
+na_color
+    Color to use for null or masked values. Can be anything matplotlib accepts as a
+    color. Used for all points if `color=None`.
+na_in_legend
+    If there are missing values, whether they get an entry in the legend. Currently
+    only implemented for categorical legends.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.set_figure_params`, defaults to `True`.
 title
     Provide title for panels either as string or list of strings,
-    e.g. `['title1', 'title2', ...]`.\
+    e.g. `['title1', 'title2', ...]`.
 """
 
 doc_vminmax = """\
@@ -174,6 +185,9 @@ num_categories
     Only used if groupby observation is not categorical. This value
     determines the number of groups into which the groupby observation
     should be subdivided.
+categories_order
+    Order in which to show the categories. Note: add_dendrogram or add_totals
+    can change the categories order.
 figsize
     Figure size when `multi_panel=True`.
     Otherwise the `rcParam['figure.figsize]` value is used.
@@ -204,4 +218,33 @@ layer
     Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
     If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
     then the layer is plotted. `layer` takes precedence over `use_raw`.\
+"""
+
+doc_scatter_spatial = """\
+library_id
+    library_id for Visium data, e.g. key in `adata.uns["spatial"]`.
+img_key
+    Key for image data, used to get `img` and `scale_factor` from `"images"`
+    and `"scalefactors"` entires for this library. To use spatial coordinates,
+    but not plot an image, pass `img_key=None`.
+img
+    image data to plot, overrides `img_key`.
+scale_factor
+    Scaling factor used to map from coordinate space to pixel space.
+    Found by default if `library_id` and `img_key` can be resolved.
+    Otherwise defaults to `1.`.
+spot_size
+    Diameter of spot (in coordinate space) for each point. Diameter
+    in pixels of the spots will be `size * spot_size * scale_factor`.
+    This argument is required if it cannot be resolved from library info.
+crop_coord
+    Coordinates to use for cropping the image (left, right, top, bottom).
+    These coordinates are expected to be in pixel space (same as `basis`)
+    and will be transformed by `scale_factor`.
+    If not provided, image is automatically cropped to bounds of `basis`,
+    plus a border.
+alpha_img
+    Alpha value for image.
+bw
+    Plot image data in gray scale.\
 """

@@ -5,8 +5,8 @@ from sklearn.neighbors import KDTree
 from umap import UMAP
 
 import scanpy as sc
-from scanpy.preprocessing._simple import N_PCS
-from scanpy._utils import pkg_version
+from scanpy import settings
+from scanpy._compat import pkg_version
 
 
 X = np.array(
@@ -45,7 +45,7 @@ def test_representation(adatas):
     ing.fit(adata_new)
 
     assert ing._use_rep == 'X_pca'
-    assert ing._obsm['rep'].shape == (adata_new.n_obs, N_PCS)
+    assert ing._obsm['rep'].shape == (adata_new.n_obs, settings.N_PCS)
     assert ing._pca_centered
 
     sc.pp.pca(adata_ref, n_comps=30, zero_center=False)
@@ -85,6 +85,19 @@ def test_neighbors(adatas):
     percent_correct = num_correct / (adata_new.n_obs * 10)
 
     assert percent_correct > 0.99
+
+
+@pytest.mark.parametrize('n', [3, 4])
+def test_neighbors_defaults(adatas, n):
+    adata_ref = adatas[0].copy()
+    adata_new = adatas[1].copy()
+
+    sc.pp.neighbors(adata_ref, n_neighbors=n)
+
+    ing = sc.tl.Ingest(adata_ref)
+    ing.fit(adata_new)
+    ing.neighbors()
+    assert ing._indices.shape[1] == n
 
 
 @pytest.mark.skipif(

@@ -1,14 +1,42 @@
 """Calculate scores based on the expression of gene lists.
 """
-from typing import Sequence, Optional, Union
+from typing import Sequence, Optional
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 from scipy.sparse import issparse
 
 from .. import logging as logg
+from .._utils import AnyRandom
+from scanpy._utils import _check_use_raw
+
+
+def _sparse_nanmean(X, axis):
+    """
+    np.nanmean equivalent for sparse matrices
+    """
+    if not issparse(X):
+        raise TypeError("X must be a sparse matrix")
+
+    # count the number of nan elements per row/column (dep. on axis)
+    Z = X.copy()
+    Z.data = np.isnan(Z.data)
+    Z.eliminate_zeros()
+    n_elements = Z.shape[axis] - Z.sum(axis)
+
+    # set the nans to 0, so that a normal .sum() works
+    Y = X.copy()
+    Y.data[np.isnan(Y.data)] = 0
+    Y.eliminate_zeros()
+
+    # the average
+    s = Y.sum(axis)
+    m = s / n_elements.astype(
+        'float32'
+    )  # if we dont cast the int32 to float32, this will result in float64...
+
+    return m
 
 
 def score_genes(
@@ -18,7 +46,7 @@ def score_genes(
     gene_pool: Optional[Sequence[str]] = None,
     n_bins: int = 25,
     score_name: str = 'score',
-    random_state: Optional[Union[int, RandomState]] = 0,
+    random_state: AnyRandom = 0,
     copy: bool = False,
     use_raw: bool = None,
 ) -> Optional[AnnData]:
@@ -39,7 +67,7 @@ def score_genes(
     gene_list
         The list of gene names used for score calculation.
     ctrl_size
-        Number of reference genes to be sampled. If `len(gene_list)` is not too
+        Number of reference genes to be sampled from each bin. If `len(gene_list)` is not too
         low, you can set `ctrl_size=len(gene_list)`.
     gene_pool
         Genes for sampling the reference set. Default is all genes.
@@ -52,7 +80,7 @@ def score_genes(
     copy
         Copy `adata` or modify it inplace.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
 
         .. versionchanged:: 1.4.5
            Default value changed from `False` to `None`.
@@ -85,9 +113,7 @@ def score_genes(
     gene_list = set(gene_list_in_var[:])
 
     if len(gene_list) == 0:
-        logg.warning('provided gene list has length 0, scores as 0')
-        adata.obs[score_name] = 0
-        return adata if copy else None
+        raise ValueError("No valid genes were passed for scoring.")
 
     if gene_pool is None:
         gene_pool = list(var_names)
@@ -98,19 +124,25 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    if use_raw is None:
-        use_raw = True if adata.raw is not None else False
+    use_raw = _check_use_raw(adata, use_raw)
     _adata = adata.raw if use_raw else adata
 
-    _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
+    _adata_subset = (
+        _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
+    )
     if issparse(_adata_subset.X):
         obs_avg = pd.Series(
-            np.array(_adata_subset.X.mean(axis=0)).flatten(), index=gene_pool)  # average expression of genes
+            np.array(_sparse_nanmean(_adata_subset.X, axis=0)).flatten(),
+            index=gene_pool,
+        )  # average expression of genes
     else:
         obs_avg = pd.Series(
-            np.nanmean(_adata_subset.X, axis=0), index=gene_pool)  # average expression of genes
+            np.nanmean(_adata_subset.X, axis=0), index=gene_pool
+        )  # average expression of genes
 
-    obs_avg = obs_avg[np.isfinite(obs_avg)] # Sometimes (and I don't know how) missing data may be there, with nansfor
+    obs_avg = obs_avg[
+        np.isfinite(obs_avg)
+    ]  # Sometimes (and I don't know how) missing data may be there, with nansfor
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method='min') // n_items
@@ -128,26 +160,18 @@ def score_genes(
     gene_list = list(gene_list)
 
     X_list = _adata[:, gene_list].X
-    if issparse(X_list): X_list = X_list.toarray()
-    X_control = _adata[:, control_genes].X
-    if issparse(X_control): X_control = X_control.toarray()
-    X_control = np.nanmean(X_control, axis=1)
-
-    if len(gene_list) == 0:
-        # We shouldn't even get here, but just in case
-        logg.hint(
-            f'could not add \n'
-            f'    {score_name!r}, score of gene set (adata.obs)'
-        )
-        return adata if copy else None
-    elif len(gene_list) == 1:
-        if _adata[:, gene_list].X.ndim == 2:
-            vector = _adata[:, gene_list].X.toarray()[:, 0] # new anndata
-        else:
-            vector =  _adata[:, gene_list].X  # old anndata
-        score = vector - X_control
+    if issparse(X_list):
+        X_list = np.array(_sparse_nanmean(X_list, axis=1)).flatten()
     else:
-        score = np.nanmean(X_list, axis=1) - X_control
+        X_list = np.nanmean(X_list, axis=1)
+
+    X_control = _adata[:, control_genes].X
+    if issparse(X_control):
+        X_control = np.array(_sparse_nanmean(X_control, axis=1)).flatten()
+    else:
+        X_control = np.nanmean(X_control, axis=1)
+
+    score = X_list - X_control
 
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 
@@ -156,7 +180,8 @@ def score_genes(
         time=start,
         deep=(
             'added\n'
-            f'    {score_name!r}, score of gene set (adata.obs)'
+            f'    {score_name!r}, score of gene set (adata.obs).\n'
+            f'    {len(control_genes)} total control genes are used.'
         ),
     )
     return adata if copy else None
@@ -214,9 +239,17 @@ def score_genes_cell_cycle(
     adata = adata.copy() if copy else adata
     ctrl_size = min(len(s_genes), len(g2m_genes))
     # add s-score
-    score_genes(adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size, **kwargs)
+    score_genes(
+        adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size, **kwargs
+    )
     # add g2m-score
-    score_genes(adata, gene_list=g2m_genes, score_name='G2M_score', ctrl_size=ctrl_size, **kwargs)
+    score_genes(
+        adata,
+        gene_list=g2m_genes,
+        score_name='G2M_score',
+        ctrl_size=ctrl_size,
+        **kwargs,
+    )
     scores = adata.obs[['S_score', 'G2M_score']]
 
     # default phase is S

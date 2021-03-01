@@ -1,41 +1,49 @@
 """Reading and Writing
 """
-from enum import Enum
 from pathlib import Path, PurePath
 from typing import Union, Dict, Optional, Tuple, BinaryIO
 
+import json
 import numpy as np
 import pandas as pd
+from matplotlib.image import imread
 import tables
 import anndata
 from anndata import (
     AnnData,
-    read_csv, read_text, read_excel,
-    read_mtx, read_loom, read_hdf,
+    read_csv,
+    read_text,
+    read_excel,
+    read_mtx,
+    read_loom,
+    read_hdf,
 )
 from anndata import read as read_h5ad
 
 from ._settings import settings
 from ._compat import Literal
+from ._utils import Empty, _empty
 from . import logging as logg
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
     'csv',
-    'tsv', 'tab', 'data', 'txt',  # these four are all equivalent
+    'tsv',
+    'tab',
+    'data',
+    'txt',  # these four are all equivalent
 }
 avail_exts = {
-    'anndata', 'xlsx',
-    'h5', 'h5ad', 'mtx', 'mtx.gz',
-    'soft.gz', 'loom',
+    'anndata',
+    'xlsx',
+    'h5',
+    'h5ad',
+    'mtx',
+    'mtx.gz',
+    'soft.gz',
+    'loom',
 } | text_exts
 """Available file formats for reading data. """
-
-
-class Empty(Enum):
-    token = 0
-
-_empty = Empty.token
 
 
 # --------------------------------------------------------------------------------
@@ -131,6 +139,7 @@ def read_10x_h5(
     filename: Union[str, Path],
     genome: Optional[str] = None,
     gex_only: bool = True,
+    backup_url: Optional[str] = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted hdf5 file.
@@ -138,23 +147,36 @@ def read_10x_h5(
     Parameters
     ----------
     filename
-        Filename.
+        Path to a 10x hdf5 file.
     genome
-        Filter expression to this genes within this genome. For legacy 10x h5
+        Filter expression to genes within this genome. For legacy 10x h5
         files, this must be provided if the data contains more than one genome.
     gex_only
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
+    backup_url
+        Retrieve the file from an URL if not present on disk.
 
     Returns
     -------
-    Annotated data matrix, where obsevations/cells are named by their
-    barcode and variables/genes by gene name. The data matrix is stored in
-    `adata.X`, cell names in `adata.obs_names` and gene names in
-    `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
-    The feature types are stored in `adata.var['feature_types']`
+    Annotated data matrix, where observations/cells are named by their
+    barcode and variables/genes by gene name. Stores the following information:
+
+    :attr:`~anndata.AnnData.X`
+        The data matrix is stored
+    :attr:`~anndata.AnnData.obs_names`
+        Cell names
+    :attr:`~anndata.AnnData.var_names`
+        Gene names
+    :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
+        Gene IDs
+    :attr:`~anndata.AnnData.var`\\ `['feature_types']`
+        Feature types
     """
     start = logg.info(f'reading {filename}')
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
+    if not is_present:
+        logg.debug(f'... did not find original file {filename}')
     with tables.open_file(str(filename), 'r') as f:
         v3 = '/matrix' in f
     if v3:
@@ -165,13 +187,14 @@ def read_10x_h5(
                     f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
                     f'Available genomes are: {list(adata.var["genome"].unique())}.'
                 )
-            adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
+            adata = adata[:, adata.var['genome'] == genome]
         if gex_only:
-            adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
+            adata = adata[:, adata.var['feature_types'] == 'Gene Expression']
         if adata.is_view:
-            return adata.copy()
+            adata = adata.copy()
     else:
-        return _read_legacy_10x_h5(filename, genome=genome, start=start)
+        adata = _read_legacy_10x_h5(filename, genome=genome, start=start)
+    return adata
 
 
 def _read_legacy_10x_h5(filename, *, genome=None, start=None):
@@ -200,6 +223,7 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
             # AnnData works with csr matrices
             # 10x stores the transposed data, so we do the transposition right away
             from scipy.sparse import csr_matrix
+
             M, N = dsets['shape']
             data = dsets['data']
             if dsets['data'].dtype == np.dtype('int32'):
@@ -235,6 +259,7 @@ def _read_v3_10x_h5(filename, *, start=None):
             for node in f.walk_nodes('/matrix', 'Array'):
                 dsets[node.name] = node.read()
             from scipy.sparse import csr_matrix
+
             M, N = dsets['shape']
             data = dsets['data']
             if dsets['data'].dtype == np.dtype('int32'):
@@ -260,6 +285,154 @@ def _read_v3_10x_h5(filename, *, start=None):
             raise Exception('File is missing one or more required datasets.')
 
 
+def read_visium(
+    path: Union[str, Path],
+    genome: Optional[str] = None,
+    *,
+    count_file: str = "filtered_feature_bc_matrix.h5",
+    library_id: str = None,
+    load_images: Optional[bool] = True,
+    source_image_path: Optional[Union[str, Path]] = None,
+) -> AnnData:
+    """\
+    Read 10x-Genomics-formatted visum dataset.
+
+    In addition to reading regular 10x output,
+    this looks for the `spatial` folder and loads images,
+    coordinates and scale factors.
+    Based on the `Space Ranger output docs`_.
+
+    See :func:`~scanpy.pl.spatial` for a compatible plotting function.
+
+    .. _Space Ranger output docs: https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
+
+    Parameters
+    ----------
+    path
+        Path to directory for visium datafiles.
+    genome
+        Filter expression to genes within this genome.
+    count_file
+        Which file in the passed directory to use as the count file. Typically would be one of:
+        'filtered_feature_bc_matrix.h5' or 'raw_feature_bc_matrix.h5'.
+    library_id
+        Identifier for the visium library. Can be modified when concatenating multiple adata objects.
+    source_image_path
+        Path to the high-resolution tissue image. Path will be included in
+        `.uns["spatial"][library_id]["metadata"]["source_image_path"]`.
+
+    Returns
+    -------
+    Annotated data matrix, where observations/cells are named by their
+    barcode and variables/genes by gene name. Stores the following information:
+
+    :attr:`~anndata.AnnData.X`
+        The data matrix is stored
+    :attr:`~anndata.AnnData.obs_names`
+        Cell names
+    :attr:`~anndata.AnnData.var_names`
+        Gene names
+    :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
+        Gene IDs
+    :attr:`~anndata.AnnData.var`\\ `['feature_types']`
+        Feature types
+    :attr:`~anndata.AnnData.uns`\\ `['spatial']`
+        Dict of spaceranger output files with 'library_id' as key
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['images']`
+        Dict of images (`'hires'` and `'lowres'`)
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['scalefactors']`
+        Scale factors for the spots
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
+        Files metadata: 'chemistry_description', 'software_version', 'source_image_path'
+    :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
+        Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
+    """
+    path = Path(path)
+    adata = read_10x_h5(path / count_file, genome=genome)
+
+    adata.uns["spatial"] = dict()
+
+    from h5py import File
+
+    with File(path / count_file, mode="r") as f:
+        attrs = dict(f.attrs)
+    if library_id is None:
+        library_id = str(attrs.pop("library_ids")[0], "utf-8")
+
+    adata.uns["spatial"][library_id] = dict()
+
+    if load_images:
+        files = dict(
+            tissue_positions_file=path / 'spatial/tissue_positions_list.csv',
+            scalefactors_json_file=path / 'spatial/scalefactors_json.json',
+            hires_image=path / 'spatial/tissue_hires_image.png',
+            lowres_image=path / 'spatial/tissue_lowres_image.png',
+        )
+
+        # check if files exists, continue if images are missing
+        for f in files.values():
+            if not f.exists():
+                if any(x in str(f) for x in ["hires_image", "lowres_image"]):
+                    logg.warning(
+                        f"You seem to be missing an image file.\n"
+                        f"Could not find '{f}'."
+                    )
+                else:
+                    raise OSError(f"Could not find '{f}'")
+
+        adata.uns["spatial"][library_id]['images'] = dict()
+        for res in ['hires', 'lowres']:
+            try:
+                adata.uns["spatial"][library_id]['images'][res] = imread(
+                    str(files[f'{res}_image'])
+                )
+            except Exception:
+                raise OSError(f"Could not find '{res}_image'")
+
+        # read json scalefactors
+        adata.uns["spatial"][library_id]['scalefactors'] = json.loads(
+            files['scalefactors_json_file'].read_bytes()
+        )
+
+        adata.uns["spatial"][library_id]["metadata"] = {
+            k: (str(attrs[k], "utf-8") if isinstance(attrs[k], bytes) else attrs[k])
+            for k in ("chemistry_description", "software_version")
+            if k in attrs
+        }
+
+        # read coordinates
+        positions = pd.read_csv(files['tissue_positions_file'], header=None)
+        positions.columns = [
+            'barcode',
+            'in_tissue',
+            'array_row',
+            'array_col',
+            'pxl_col_in_fullres',
+            'pxl_row_in_fullres',
+        ]
+        positions.index = positions['barcode']
+
+        adata.obs = adata.obs.join(positions, how="left")
+
+        adata.obsm['spatial'] = adata.obs[
+            ['pxl_row_in_fullres', 'pxl_col_in_fullres']
+        ].to_numpy()
+        adata.obs.drop(
+            columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres'],
+            inplace=True,
+        )
+
+        # put image path in uns
+        if source_image_path is not None:
+            # get an absolute path
+            source_image_path = str(Path(source_image_path).resolve())
+            adata.uns["spatial"][library_id]["metadata"]["source_image_path"] = str(
+                source_image_path
+            )
+
+    return adata
+
+
 def read_10x_mtx(
     path: Union[Path, str],
     var_names: Literal['gene_symbols', 'gene_ids'] = 'gene_symbols',
@@ -267,6 +440,8 @@ def read_10x_mtx(
     cache: bool = False,
     cache_compression: Union[Literal['gzip', 'lzf'], None, Empty] = _empty,
     gex_only: bool = True,
+    *,
+    prefix: str = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted mtx directory.
@@ -289,13 +464,19 @@ def read_10x_mtx(
     gex_only
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
+    prefix
+        Any prefix before `matrix.mtx`, `genes.tsv` and `barcodes.tsv`. For instance,
+        if the files are named `patientA_matrix.mtx`, `patientA_genes.tsv` and
+        `patientA_barcodes.tsv` the prefix is `patientA_`.
+        (Default: no prefix)
 
     Returns
     -------
     An :class:`~anndata.AnnData` object
     """
     path = Path(path)
-    genefile_exists = (path / 'genes.tsv').is_file()
+    prefix = "" if prefix is None else prefix
+    genefile_exists = (path / f'{prefix}genes.tsv').is_file()
     read = _read_legacy_10x_mtx if genefile_exists else _read_v3_10x_mtx
     adata = read(
         str(path),
@@ -303,11 +484,14 @@ def read_10x_mtx(
         make_unique=make_unique,
         cache=cache,
         cache_compression=cache_compression,
+        prefix=prefix,
     )
     if genefile_exists or not gex_only:
         return adata
     else:
-        gex_rows = list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))
+        gex_rows = list(
+            map(lambda x: x == 'Gene Expression', adata.var['feature_types'])
+        )
         return adata[:, gex_rows].copy()
 
 
@@ -317,17 +501,19 @@ def _read_legacy_10x_mtx(
     make_unique=True,
     cache=False,
     cache_compression=_empty,
+    *,
+    prefix="",
 ):
     """
     Read mex from output from Cell Ranger v2 or earlier versions
     """
     path = Path(path)
     adata = read(
-        path / 'matrix.mtx',
+        path / f'{prefix}matrix.mtx',
         cache=cache,
         cache_compression=cache_compression,
     ).T  # transpose the data
-    genes = pd.read_csv(path / 'genes.tsv', header=None, sep='\t')
+    genes = pd.read_csv(path / f'{prefix}genes.tsv', header=None, sep='\t')
     if var_names == 'gene_symbols':
         var_names = genes[1].values
         if make_unique:
@@ -339,7 +525,7 @@ def _read_legacy_10x_mtx(
         adata.var['gene_symbols'] = genes[1].values
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
-    adata.obs_names = pd.read_csv(path / 'barcodes.tsv', header=None)[0].values
+    adata.obs_names = pd.read_csv(path / f'{prefix}barcodes.tsv', header=None)[0].values
     return adata
 
 
@@ -349,17 +535,19 @@ def _read_v3_10x_mtx(
     make_unique=True,
     cache=False,
     cache_compression=_empty,
+    *,
+    prefix="",
 ):
     """
-    Read mex from output from Cell Ranger v3 or later versions
+    Read mtx from output from Cell Ranger v3 or later versions
     """
     path = Path(path)
     adata = read(
-        path / 'matrix.mtx.gz',
+        path / f'{prefix}matrix.mtx.gz',
         cache=cache,
-        cache_compression=cache_compression
+        cache_compression=cache_compression,
     ).T  # transpose the data
-    genes = pd.read_csv(path / 'features.tsv.gz', header=None, sep='\t')
+    genes = pd.read_csv(path / f'{prefix}features.tsv.gz', header=None, sep='\t')
     if var_names == 'gene_symbols':
         var_names = genes[1].values
         if make_unique:
@@ -372,7 +560,9 @@ def _read_v3_10x_mtx(
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
     adata.var['feature_types'] = genes[2].values
-    adata.obs_names = pd.read_csv(path / 'barcodes.tsv.gz', header=None)[0].values
+    adata.obs_names = pd.read_csv(path / f'{prefix}barcodes.tsv.gz', header=None)[
+        0
+    ].values
     return adata
 
 
@@ -422,8 +612,9 @@ def write(
     if ext == 'csv':
         adata.write_csvs(filename)
     else:
-        adata.write(filename, compression=compression,
-                    compression_opts=compression_opts)
+        adata.write(
+            filename, compression=compression, compression_opts=compression_opts
+        )
 
 
 # -------------------------------------------------------------------------------
@@ -432,8 +623,7 @@ def write(
 
 
 def read_params(
-    filename: Union[Path, str],
-    asheader: bool = False,
+    filename: Union[Path, str], asheader: bool = False
 ) -> Dict[str, Union[int, float, bool, str, None]]:
     """\
     Read parameter dictionary from text file.
@@ -458,6 +648,7 @@ def read_params(
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     from collections import OrderedDict
+
     params = OrderedDict([])
     for line in open(filename):
         if '=' in line:
@@ -509,16 +700,13 @@ def _read(
 ):
     if ext is not None and ext not in avail_exts:
         raise ValueError(
-            'Please provide one of the available extensions.\n'
-            f'{avail_exts}'
+            'Please provide one of the available extensions.\n' f'{avail_exts}'
         )
     else:
         ext = is_valid_filename(filename, return_ext=True)
-    is_present = _check_datafile_present_and_download(
-        filename,
-        backup_url=backup_url,
-    )
-    if not is_present: logg.debug(f'... did not find original file {filename}')
+    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
+    if not is_present:
+        logg.debug(f'... did not find original file {filename}')
     # read hdf5 files
     if ext in {'h5', 'h5ad'}:
         if sheet is None:
@@ -527,7 +715,9 @@ def _read(
             logg.debug(f'reading sheet {sheet} from file {filename}')
             return read_hdf(filename, sheet)
     # read other file types
-    path_cache = settings.cachedir / _slugify(filename).replace('.' + ext, '.h5ad')  # type: Path
+    path_cache = settings.cachedir / _slugify(filename).replace(
+        '.' + ext, '.h5ad'
+    )  # type: Path
     if path_cache.suffix in {'.gz', '.bz2'}:
         path_cache = path_cache.with_suffix('')
     if cache and path_cache.is_file():
@@ -545,9 +735,7 @@ def _read(
     # do the actual reading
     if ext == 'xlsx' or ext == 'xls':
         if sheet is None:
-            raise ValueError(
-                "Provide `sheet` parameter when reading '.xlsx' files."
-            )
+            raise ValueError("Provide `sheet` parameter when reading '.xlsx' files.")
         else:
             adata = read_excel(filename, sheet)
     elif ext in {'mtx', 'mtx.gz'}:
@@ -557,8 +745,7 @@ def _read(
     elif ext in {'txt', 'tab', 'data', 'tsv'}:
         if ext == 'data':
             logg.hint(
-                "... assuming '.data' means tab or white-space "
-                'separated text file',
+                "... assuming '.data' means tab or white-space " 'separated text file',
             )
             logg.hint('change this by passing `ext` to sc.read')
         adata = read_text(filename, delimiter, first_column_names)
@@ -610,6 +797,7 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
     http://dept.stat.lsa.umich.edu/~kshedden/Python-Workshop/gene_expression_comparison.html
     """
     import gzip
+
     with gzip.open(filename, mode='rt') as file:
         # The header part of the file contains information about the
         # samples. Read that information first.
@@ -674,8 +862,7 @@ def is_float(string: str) -> float:
 
 
 def is_int(string: str) -> bool:
-    """Check whether string is integer.
-    """
+    """Check whether string is integer."""
     try:
         int(string)
         return True
@@ -684,8 +871,7 @@ def is_int(string: str) -> bool:
 
 
 def convert_bool(string: str) -> Tuple[bool, bool]:
-    """Check whether string is boolean.
-    """
+    """Check whether string is boolean."""
     if string == 'True':
         return True, True
     elif string == 'False':
@@ -695,8 +881,7 @@ def convert_bool(string: str) -> Tuple[bool, bool]:
 
 
 def convert_string(string: str) -> Union[int, float, bool, str, None]:
-    """Convert string to int, float or bool.
-    """
+    """Convert string to int, float or bool."""
     if is_int(string):
         return int(string)
     elif is_float(string):
@@ -717,9 +902,9 @@ def convert_string(string: str) -> Union[int, float, bool, str, None]:
 def get_used_files():
     """Get files used by processes with name scanpy."""
     import psutil
+
     loop_over_scanpy_processes = (
-        proc for proc in psutil.process_iter()
-        if proc.name() == 'scanpy'
+        proc for proc in psutil.process_iter() if proc.name() == 'scanpy'
     )
     filenames = []
     for proc in loop_over_scanpy_processes:
@@ -740,25 +925,48 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 
 def _download(url: str, path: Path):
-    from tqdm.auto import tqdm
-    from urllib.request import urlretrieve
+    try:
+        import ipywidgets
+        from tqdm.auto import tqdm
+    except ImportError:
+        from tqdm import tqdm
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t:
-        def update_to(b=1, bsize=1, tsize=None):
-            if tsize is not None:
-                t.total = tsize
-            t.update(b * bsize - t.n)
+    from urllib.request import urlopen, Request
 
-        urlretrieve(url, str(path), reporthook=update_to)
+    blocksize = 1024 * 8
+    blocknum = 0
+
+    try:
+        with urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
+            total = resp.info().get("content-length", None)
+            with tqdm(
+                unit="B",
+                unit_scale=True,
+                miniters=1,
+                unit_divisor=1024,
+                total=total if total is None else int(total),
+            ) as t, path.open("wb") as f:
+                block = resp.read(blocksize)
+                while block:
+                    f.write(block)
+                    blocknum += 1
+                    t.update(len(block))
+                    block = resp.read(blocksize)
+
+    except (KeyboardInterrupt, Exception):
+        # Make sure file doesn’t exist half-downloaded
+        if path.is_file():
+            path.unlink()
+        raise
 
 
 def _check_datafile_present_and_download(path, backup_url=None):
-    """Check whether the file is present, otherwise download.
-    """
+    """Check whether the file is present, otherwise download."""
     path = Path(path)
-    if path.is_file(): return True
-    if backup_url is None: return False
+    if path.is_file():
+        return True
+    if backup_url is None:
+        return False
     logg.info(
         f'try downloading from url\n{backup_url}\n'
         '... this may take a while but only happens once'
@@ -793,9 +1001,11 @@ def is_valid_filename(filename: Path, return_ext=False):
         return 'mtx.gz' if return_ext else True
     elif not return_ext:
         return False
-    raise ValueError(f'''\
+    raise ValueError(
+        f'''\
 {filename!r} does not end on a valid extension.
 Please, provide one of the available extensions.
 {avail_exts}
 Text files with .gz and .bz2 extensions are also supported.\
-''')
+'''
+    )

@@ -1,4 +1,4 @@
-from ..preprocessing._simple import pca
+from ..preprocessing import pca
 from ._tsne import tsne
 from ._umap import umap
 from ._diffmap import diffmap

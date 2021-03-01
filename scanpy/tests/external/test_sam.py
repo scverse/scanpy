@@ -3,7 +3,7 @@ import scanpy as sc
 import scanpy.external as sce
 import numpy as np
 
-pytest.importorskip("SAM")
+pytest.importorskip("samalg")
 
 
 def test_sam():

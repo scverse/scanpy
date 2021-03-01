@@ -1,0 +1,107 @@
+trigger:
+- master
+
+variables:
+  PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
+  ANNDATA_DEV: no
+  RUN_COVERAGE: no
+
+jobs:
+- job: PyTest
+  pool:
+    vmImage: 'ubuntu-18.04'
+  strategy:
+    matrix:
+      Python38:
+        python.version: '3.8'
+      Python36:
+        python.version: '3.6'
+      anndata_dev:
+        python.version: '3.8'
+        ANNDATA_DEV: yes
+        RUN_COVERAGE: yes
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+    displayName: 'Use Python $(python.version)'
+
+  - task: Cache@2
+    inputs:
+      key: '"python $(python.version)" | "$(Agent.OS)" | requirements.txt'
+      restoreKeys: | 
+        python | "$(Agent.OS)"
+        python
+      path: $(PIP_CACHE_DIR)
+    displayName: Cache pip packages
+
+  - script: |
+      export MPLBACKEND="agg"
+      echo $MPLBACKEND
+    displayName: 'Set env'
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install pytest-cov wheel
+      pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony,scrublet,scanorama]
+    displayName: 'Install dependencies'
+
+  - script: |
+      pip install -v git+https://github.com/theislab/anndata
+    displayName: 'Install development anndata'
+    condition: eq(variables['ANNDATA_DEV'], 'yes')
+
+  - script: |
+      pip list
+    displayName: 'Display installed versions'
+
+  - script: |
+      pytest --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml"
+    displayName: 'PyTest'
+    condition: eq(variables['RUN_COVERAGE'], 'no')
+
+  - script: |
+      pytest --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml" --cov=scanpy --cov-report=xml
+    displayName: 'PyTest (coverage)'
+    condition: eq(variables['RUN_COVERAGE'], 'yes')
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+    condition: eq(variables['RUN_COVERAGE'], 'yes')
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'nunit/test-results.xml'
+      testResultsFormat: NUnit
+      testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - script: bash <(curl -s https://codecov.io/bash)
+    displayName: 'Upload to codecov.io'
+    condition: eq(variables['RUN_COVERAGE'], 'yes')
+
+- job: CheckBuild
+  pool:
+    vmImage: 'ubuntu-18.04'
+  steps:
+
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.8'
+    displayName: 'Use Python 3.8'
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install setuptools setuptools_scm pytoml wheel twine
+    displayName: 'Install build dependencies'
+
+  - script: pip list
+    displayName: 'Display installed versions'
+
+  - script: |
+      python setup.py sdist bdist_wheel
+      twine check dist/*
+    displayName: 'Build & Twine check'

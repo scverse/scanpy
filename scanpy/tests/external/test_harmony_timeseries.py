@@ -19,6 +19,7 @@ def test_load_timepoints_from_anndata_list():
         batch_categories=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
     )
     adata.obs["time_points"] = adata.obs["sample"].str.split("_", expand=True)[0]
+    adata.obs["time_points"] = adata.obs["time_points"].astype("category")
     sc.pp.normalize_total(adata, target_sum=10000)
     sc.pp.log1p(adata)
     sc.pp.highly_variable_genes(adata, n_top_genes=1000, subset=True)

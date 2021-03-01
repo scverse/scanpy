@@ -4,13 +4,13 @@ Denoise high-dimensional data using MAGIC
 from typing import Union, Sequence, Optional
 
 from anndata import AnnData
-from numpy.random.mtrand import RandomState
 from legacy_api_wrap import legacy_api
 from packaging import version
 
 from ... import logging as logg
 from ..._settings import settings
 from ..._compat import Literal
+from ..._utils import AnyRandom
 
 
 MIN_VERSION = "2.0"
@@ -28,7 +28,7 @@ def magic(
     n_pca: Optional[int] = 100,
     solver: Literal['exact', 'approximate'] = 'exact',
     knn_dist: str = 'euclidean',
-    random_state: Optional[Union[int, RandomState]] = None,
+    random_state: AnyRandom = None,
     n_jobs: Optional[int] = None,
     verbose: bool = False,
     copy: Optional[bool] = None,
