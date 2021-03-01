@@ -6,7 +6,7 @@
 .. rubric:: Bug fixes
 
 - :func:`scanpy.logging.print_versions` now works when `python<3.8` :pr:`1691` :smaller:`I Virshup`
-- :func:`scanpy.preprocessing.regress_out` now uses `joblib` as the parallel backend, and should stop oversubscribing threads :pr:`1694` :smaller:`I Virshup`
+- :func:`scanpy.pp.regress_out` now uses `joblib` as the parallel backend, and should stop oversubscribing threads :pr:`1694` :smaller:`I Virshup`
 
 .. rubric:: Deprecations
 
