@@ -11,7 +11,6 @@ matrix:
     - pip install .[dev,doc]
     script:
     - black . --check --diff
-    - python setup.py check --restructuredtext --strict
     - rst2html.py --halt=2 README.rst >/dev/null
     after_success: skip
   - name: "anndata dev"

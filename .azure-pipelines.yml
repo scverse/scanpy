@@ -28,8 +28,8 @@ jobs:
 
   - task: Cache@2
     inputs:
-      key: '"python $(python.version)" | "$(Agent.OS)" | requirements.txt'
-      restoreKeys: | 
+      key: '"python $(python.version)" | "$(Agent.OS)" | pyproject.toml'
+      restoreKeys: |
         python | "$(Agent.OS)"
         python
       path: $(PIP_CACHE_DIR)
@@ -42,8 +42,9 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
+      pip install -r .pip-2033.txt
       pip install pytest-cov wheel
-      pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony,scrublet,scanorama]
+      pip install .[dev,doc,test,louvain,leiden,magic,scvi,harmony,scrublet,scanorama]
     displayName: 'Install dependencies'
 
   - script: |
@@ -102,6 +103,7 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
-      python setup.py sdist bdist_wheel
+      pip install flit
+      flit build
       twine check dist/*
     displayName: 'Build & Twine check'

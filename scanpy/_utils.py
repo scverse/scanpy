@@ -141,6 +141,9 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
                     if callable(m) and _one_of_ours(m, root):
                         yield m
         elif isinstance(obj, ModuleType) and obj not in encountered:
+            if obj.__name__.startswith('scanpy.tests'):
+                # Python’s import mechanism seems to add this to `scanpy`’s attributes
+                continue
             encountered.add(obj)
             yield from descend_classes_and_funcs(obj, root, encountered)
 
