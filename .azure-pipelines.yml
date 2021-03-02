@@ -95,8 +95,11 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install flit twine wheel
-    displayName: 'Install build tools'
+      pip install flit twine wheel pytoml
+      python -c \
+        'import pytoml; c=pytoml.load(open("pyproject.toml")); print("\0".join(c["build-system"]["requires"]), end="")' \
+        | xargs -0 pip install -y
+    displayName: 'Install build tools and requirements'
 
   - script: pip list
     displayName: 'Display installed versions'
