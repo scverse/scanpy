@@ -8,8 +8,10 @@ from sklearn.utils import sparsefuncs
 
 from .. import logging as logg
 from .._compat import Literal
-from .._utils import view_to_actual
+
+from .._utils import view_to_actual, check_nonnegative_integers
 from scanpy.get import _get_obs_rep, _set_obs_rep
+
 
 
 def _normalize_data(X, counts, after=None, copy=False):
@@ -26,6 +28,145 @@ def _normalize_data(X, counts, after=None, copy=False):
         np.divide(X, counts[:, None], out=X)
     return X
 
+
+def _pearson_residuals(X, theta, clip, copy=False):
+
+    X = X.copy() if copy else X
+    X = X.toarray() if issparse(X) else X
+
+    #check theta
+    if theta <= 0:
+        ## TODO: would "underdispersion" with negative theta make sense? then only theta=0 were undefined..
+        raise ValueError('Pearson residuals require theta > 0')        
+    #prepare clipping
+    if clip == 'auto':
+        n = X.shape[0]
+        clip = np.sqrt(n)
+    if clip < 0:
+        raise ValueError("Pearson residuals require `clip>=0` or `clip='auto'`.")
+     
+    if check_nonnegative_integers(X) is False:
+        raise ValueError(
+            "`pp.normalize_pearson_residuals` expects raw count data"
+        )      
+    
+    #get residuals
+    sums_genes = np.sum(X, axis=0, keepdims=True)
+    sums_cells = np.sum(X, axis=1, keepdims=True)
+    sum_total  = np.sum(sums_genes)
+    mu = sums_cells @ sums_genes / sum_total
+    residuals = (X - mu) / np.sqrt(mu + mu**2/theta)
+
+    #clip
+    residuals = np.clip(residuals, a_min = -clip, a_max = clip)
+    
+    return residuals
+    
+
+def normalize_pearson_residuals(
+    adata: AnnData,
+    theta: float = 100,
+    clip: Union[Literal['auto', 'none'], float] = 'auto',
+    layers: Union[Literal['all'], Iterable[str]] = None,
+    theta_per_layer: Optional[Dict[str, str]] = None,
+    clip_per_layer: Optional[Dict[str, Union[Literal['auto', 'none'], float]]] = None,  ## TODO: Check if this is correct/needed
+    inplace: bool = True,
+) -> Optional[Dict[str, np.ndarray]]:
+    """\
+    Computes analytic Pearson residuals, assuming a negative binomial offset model
+    with overdispersion theta shared across genes. By default, residuals are
+    clipped to sqrt(n) and overdispersion theta=100 is used.
+
+    Params
+    ------
+    adata
+        The annotated data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
+    theta
+        The NB overdispersion parameter theta. Higher values correspond to less
+        overdispersion (var = mean + mean^2/theta), and `theta=np.Inf` corresponds
+        to a Poisson model.
+    clip
+        Determines if and how residuals are clipped:
+        
+        * If `'auto'`, residuals are clipped to the interval [-sqrt(n), sqrt(n)],
+        where n is the number of cells in the dataset (default behavior).
+        * If any scalar c, residuals are clipped to the interval [-c, c]. Set
+        `clip=np.Inf` for no clipping.
+        
+    layers
+        List of layers to compute Pearson residuals of. Set to `'all'` to 
+        compute for all layers.
+    theta_per_layer
+        Dict that specifies which theta is used for each layer:
+
+        * If `None`, the provided `theta` is used for all layers.
+        * Otherwise, each layer with key `layer_key` is processed with the theta
+          value in `theta_per_layer[layer_key]`.
+    clip_per_layer
+        Dict that specifies clipping behavior for each layer :
+
+        * If `None`, the provided `clip` variable is used for all layers.
+        * Otherwise, each layer with key `layer_key` is clipped according to
+          `clip_per_layer[layer_key]`. See `clip` above for possible values.
+          
+    inplace
+        Whether to update `adata` or return dictionary with normalized copies of
+        `adata.X` and `adata.layers`.
+
+    Returns
+    -------
+    Returns dictionary with Pearson residuals of `adata.X` and `adata.layers`
+    or updates `adata` with normalized version of the original
+    `adata.X` and `adata.layers`, depending on `inplace`.
+
+    """
+    
+    if layers == 'all':
+        layers = adata.layers.keys()
+        
+    view_to_actual(adata) ### TODO: is this needed and if yes what for (normalize_total() has it so I used it..)
+    
+    # Handle X
+    msg = 'computing analytic Pearson residuals for adata.X'
+    start = logg.info(msg)
+    if inplace:
+        adata.X = _pearson_residuals(adata.X, theta, clip)
+        settings = dict(theta=theta, clip=clip)
+        settings['theta_per_layer']=theta_per_layer if theta_per_layer is not None
+        settings['clip_per_layer']=clip_per_layer if clip_per_layer is not None
+        adata.uns['normalization_pearson_residuals'] = settings
+        
+    else:
+        dat = dict(X=_pearson_residuals(adata.X, theta, clip, copy=True))
+        
+    # Handle layers
+    for layer_name in (layers or ()):
+        
+        msg = f'computing analytic Pearson residuals for layer {layer_name}'
+        _ = logg.info(msg)
+                
+        # Default to theta/clip if no layer-specific theta/clip given
+        layer_theta = theta if theta_per_layer is None else theta_per_layer[layer_name]
+        layer_clip = clip if clip_per_layer is None else clip_per_layer[layer_name]
+        
+        layer = adata.layers[layer_name]
+
+        if inplace:
+            adata.layers[layer_name] = _pearson_residuals(layer, layer_theta, layer_clip)
+        else:
+            dat[layer_name] = _pearson_residuals(layer, layer_theta, layer_clip, copy=True)
+            
+    if not layers is None:
+        adata.uns['normalization_pearson_residuals'] = dict(
+                theta=theta,
+                clip=clip)
+
+    logg.info('    finished ({time_passed})', time=start)
+
+    return dat if not inplace else None
+    
+    
 
 def normalize_total(
     adata: AnnData,

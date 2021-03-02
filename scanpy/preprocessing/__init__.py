@@ -7,6 +7,6 @@ from ._simple import normalize_per_cell, regress_out, downsample_counts
 from ._pca import pca
 from ._qc import calculate_qc_metrics
 from ._combat import combat
-from ._normalization import normalize_total
+from ._normalization import normalize_total, normalize_pearson_residuals
 
 from ..neighbors import neighbors
