@@ -42,7 +42,6 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install -r .pip-2033.txt
       pip install pytest-cov wheel
       pip install .[dev,doc,test,louvain,leiden,magic,scvi,harmony,scrublet,scanorama]
     displayName: 'Install dependencies'
@@ -96,14 +95,13 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install setuptools setuptools_scm pytoml wheel twine
-    displayName: 'Install build dependencies'
+      pip install build twine
+    displayName: 'Install build tools and requirements'
 
   - script: pip list
     displayName: 'Display installed versions'
 
   - script: |
-      pip install flit
-      flit build
+      python -m build --sdist --wheel .
       twine check dist/*
     displayName: 'Build & Twine check'

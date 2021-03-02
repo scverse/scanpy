@@ -41,27 +41,22 @@ cloned version after you update with `git pull`) call::
 
 .. _on GitHub: https://github.com/theislab/scanpy
 
-.. note::
-
-   Due to a `bug in pip`_, packages installed by `flit` can be uninstalled by normal pip operations.
-   For now, you can avoid this by using::
-
-       pip install -e ".[dev,doc,test]"
-
-.. _bug in pip: https://github.com/pypa/pip/issues/9670
-
 If you want to let conda_ handle the installations of dependencies, do::
 
     pip install beni
     beni pyproject.toml > environment.yml
     conda env create -f environment.yml
     conda activate scanpy
-    flit install -s --deps=develop  # or: pip install -e ".[dev,doc,test]"
+    flit install -s --deps=develop
 
 On Windows, you might have to use `flit install --pth-file`
 if you are not able to give yourself the `create symbolic links`_ privilege.
 
 .. _create symbolic links: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
+
+.. note::
+
+    `pip install -e` still works, but may not in future versions.
 
 Docker
 ~~~~~~
