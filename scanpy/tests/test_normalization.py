@@ -39,7 +39,8 @@ def test_normalize_total_rep(typ, dtype):
 def test_normalize_total_layers(typ, dtype):
     adata = AnnData(typ(X_total), dtype=dtype)
     adata.layers["layer"] = adata.X.copy()
-    sc.pp.normalize_total(adata, layers=["layer"])
+    with pytest.warns(FutureWarning, match=r".*layers.*deprecated"):
+        sc.pp.normalize_total(adata, layers=["layer"])
     assert np.allclose(adata.layers["layer"].sum(axis=1), [3.0, 3.0, 3.0])
 
 
