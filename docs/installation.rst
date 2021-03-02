@@ -54,6 +54,10 @@ if you are not able to give yourself the `create symbolic links`_ privilege.
 
 .. _create symbolic links: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
 
+.. note::
+
+    `pip install -e` still works, but may not in future versions.
+
 Docker
 ~~~~~~
 If you're using Docker_, you can use e.g. the image `gcfntnu/scanpy`_ from Docker Hub.
