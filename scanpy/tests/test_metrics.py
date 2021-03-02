@@ -10,7 +10,7 @@ from scipy import sparse
 def test_gearys_c_consistency():
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
-    g = pbmc.uns["neighbors"]["connectivities"]
+    g = pbmc.obsp["connectivities"]
 
     assert eq(
         sc.metrics.gearys_c(g, pbmc.obs["percent_mito"]),
@@ -22,7 +22,7 @@ def test_gearys_c_consistency():
         sc.metrics.gearys_c(g, pbmc.obs["percent_mito"].values),
     )
 
-    assert np.array_equal(
+    np.testing.assert_array_equal(
         sc.metrics.gearys_c(pbmc, obsm="X_pca"),
         sc.metrics.gearys_c(g, pbmc.obsm["X_pca"].T),
     )
@@ -32,9 +32,9 @@ def test_gearys_c_consistency():
         pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
     )
 
-    assert np.allclose(all_genes[0], first_gene)
+    np.testing.assert_allclose(all_genes[0], first_gene)
 
-    assert np.allclose(
+    np.testing.assert_allclose(
         sc.metrics.gearys_c(pbmc, layer="raw"),
         sc.metrics.gearys_c(pbmc, vals=pbmc.layers["raw"].T.toarray()),
     )

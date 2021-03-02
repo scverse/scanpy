@@ -35,7 +35,6 @@ def _choose_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
         )
 
 
-
 ###############################################################################
 # Calculation
 ###############################################################################
@@ -60,8 +59,8 @@ def _gearys_c_vec(data, indices, indptr, x):
 @numba.njit(cache=True, parallel=True)
 def _gearys_c_vec_W(data, indices, indptr, x, W):
     N = len(indptr) - 1
-    x_bar = x.mean()
     x = x.astype(np.float_)
+    x_bar = x.mean()
 
     total = 0.0
     for i in numba.prange(N):
@@ -108,6 +107,7 @@ def _gearys_c_mtx_csr(
                 + (x_k_bar ** 2) * N
             )
         )
+        # fmt: on
         C = numer / denom
         out[k] = C
     return out
