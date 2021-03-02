@@ -37,6 +37,7 @@ def normalize_total(
     layers: Union[Literal['all'], Iterable[str]] = None,
     layer_norm: Optional[str] = None,
     inplace: bool = True,
+    copy: bool = False,
 ) -> Optional[Dict[str, np.ndarray]]:
     """\
     Normalize counts per cell.
@@ -80,6 +81,8 @@ def normalize_total(
     inplace
         Whether to update `adata` or return dictionary with normalized copies of
         `adata.X` and `adata.layers`.
+    copy
+        Whether to modify copied input object. Not compatible with inplace=False.
 
     Returns
     -------
@@ -118,6 +121,11 @@ def normalize_total(
            [ 0.5,  0.5,  0.5,  1. ,  1. ],
            [ 0.5, 11. ,  0.5,  1. ,  1. ]], dtype=float32)
     """
+    if copy:
+        if not inplace:
+            raise ValueError()
+        adata = adata.copy()
+
     if max_fraction < 0 or max_fraction > 1:
         raise ValueError('Choose max_fraction between 0 and 1.')
 
@@ -212,4 +220,7 @@ def normalize_total(
             f'and added {key_added!r}, counts per cell before normalization (adata.obs)'
         )
 
-    return dat if not inplace else None
+    if copy:
+        return adata
+    elif not inplace:
+        return dat
