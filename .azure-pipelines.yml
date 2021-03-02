@@ -95,14 +95,13 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install setuptools setuptools_scm pytoml wheel twine
-    displayName: 'Install build dependencies'
+      pip install flit twine wheel
+    displayName: 'Install build tools'
 
   - script: pip list
     displayName: 'Display installed versions'
 
   - script: |
-      pip install flit
       flit build
       twine check dist/*
     displayName: 'Build & Twine check'
