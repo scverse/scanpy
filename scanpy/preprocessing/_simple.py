@@ -664,6 +664,7 @@ def regress_out(
 
     from joblib import Parallel, delayed
 
+    # TODO: figure out how to test that this doesn't oversubscribe resources
     res = Parallel(n_jobs=n_jobs)(delayed(_regress_out_chunk)(task) for task in tasks)
 
     # res is a list of vectors (each corresponding to a regressed gene column).
