@@ -123,7 +123,7 @@ def normalize_total(
     """
     if copy:
         if not inplace:
-            raise ValueError()
+            raise ValueError("`copy=True` cannot be used with `inplace=False`.")
         adata = adata.copy()
 
     if max_fraction < 0 or max_fraction > 1:
