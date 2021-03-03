@@ -22,8 +22,10 @@ def gearys_c(
     use_raw: bool = False,
 ) -> Union[np.ndarray, float]:
     r"""
-    Calculate `Geary's C <https://en.wikipedia.org/wiki/Geary's_C>`_, as used
-    by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
+    Calculate `Geary's C`_, as used by `VISION`_.
+
+    .. _Geary's C: https://en.wikipedia.org/wiki/Geary's_C
+    .. _VISION: https://doi.org/10.1038/s41467-019-12235-0
 
     Geary's C is a measure of autocorrelation for some measure on a graph. This
     can be to whether measures are correlated between neighboring cells. Lower
