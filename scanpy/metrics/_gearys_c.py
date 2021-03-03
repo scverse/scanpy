@@ -1,47 +1,27 @@
+from functools import singledispatch
 from typing import Optional, Union
-from textwrap import dedent
+
 
 from anndata import AnnData
-import multipledispatch
 from scanpy.get import _get_obs_rep
-from multipledispatch import dispatch
 import numba
 import numpy as np
 import pandas as pd
 from scipy import sparse
 
 
-class DocumentedDispatcher(multipledispatch.Dispatcher):
-    @property
-    def __doc__(dispatcher):
-        from multipledispatch.dispatcher import str_signature
-
-        docs = ["Multiply dispatched method: %s" % dispatcher.name]
-
-        if dispatcher.doc:
-            docs.append(dispatcher.doc)
-
-        other = []
-        for sig in dispatcher.ordering[::-1]:
-            func = dispatcher.funcs[sig]
-            if func.__doc__:
-                s = 'Inputs: <%s>\n' % str_signature(sig)
-                s += '-' * len(s) + '\n'
-                s += dedent(func.__doc__)
-                docs.append(s)
-            else:
-                other.append(str_signature(sig))
-
-        if other:
-            docs.append('Other signatures:\n    ' + '\n    '.join(other))
-
-        return '\n\n'.join(docs)
-
-
-gearys_c = DocumentedDispatcher(
-    "gearys_c",
-    doc=dedent(
-        r"""
+@singledispatch
+def gearys_c(
+    adata: AnnData,
+    *,
+    vals: Optional[Union[np.ndarray, sparse.spmatrix]] = None,
+    use_graph: Optional[str] = None,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+    obsp: Optional[str] = None,
+    use_raw: bool = False,
+) -> Union[np.ndarray, float]:
+    r"""
     Calculate `Geary's C <https://en.wikipedia.org/wiki/Geary's_C>`_, as used
     by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
 
@@ -57,25 +37,7 @@ gearys_c = DocumentedDispatcher(
         }{
             2W \sum_i (x_i - \bar{x})^2
         }
-    """
-    ),
-)
 
-
-# TODO: Document better
-# TODO: Have scanpydoc work with multipledispatch
-@gearys_c.register(AnnData)  # noqa
-def _gearys_c(
-    adata: AnnData,
-    *,
-    vals: Optional[Union[np.ndarray, sparse.spmatrix]] = None,
-    use_graph: Optional[str] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-    obsp: Optional[str] = None,
-    use_raw: bool = False,
-) -> Union[np.ndarray, float]:
-    """\
     Params
     ------
     adata
@@ -97,10 +59,45 @@ def _gearys_c(
     use_raw
         Whether to use `adata.raw.X` for `vals`.
 
+
+    This function can also be called on the graph and values directly. In this case
+    the signature looks like:
+
+    Params
+    ------
+    g
+        The graph
+    vals
+        The values
+
+
+    See the examples for more info.
+
     Returns
     -------
     If vals is two dimensional, returns a 1 dimensional ndarray array. Returns
     a scalar if `vals` is 1d.
+
+
+    Examples
+    --------
+
+    Calculate Gearys C for each components of a dimensionality reduction:
+
+    .. code:: python
+
+        import scanpy as sc, numpy as np
+
+        pbmc = sc.datasets.pbmc68k_processed()
+        pc_c = sc.metrics.gearys_c(pbmc, obsm="X_pca")
+
+
+    It's equivalent to call the function directly on the underlying arrays:
+
+    .. code:: python
+
+        alt = sc.metrics.gearys_c(pbmc.obsp["connectivities"], pbmc.obsm["X_pca"].T)
+        np.testing.assert_array_equal(pc_c, alt)
     """
     if use_graph is None:
         # Fix for anndata<0.7
@@ -253,59 +250,49 @@ def _gearys_c_mtx_csr(
 ###############################################################################
 # Interface
 ###############################################################################
+@singledispatch
+def _resolve_vals(val):
+    return np.asarray(val)
 
 
-@gearys_c.register(sparse.csr_matrix, sparse.csr_matrix)
+@_resolve_vals.register(np.ndarray)
+@_resolve_vals.register(sparse.csr_matrix)
+def _(val):
+    return val
+
+
+@_resolve_vals.register(sparse.spmatrix)
+def _(val):
+    return sparse.csr_matrix(val)
+
+
+@_resolve_vals.register(pd.DataFrame)
+@_resolve_vals.register(pd.Series)
+def _(val):
+    return val.to_numpy()
+
+
+@gearys_c.register(sparse.csr_matrix)
 def _gearys_c(g, vals) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
-    assert g.shape[0] == vals.shape[1]
-    return _gearys_c_mtx_csr(
-        g.data.astype(np.float_, copy=False),
-        g.indices,
-        g.indptr,
-        vals.data.astype(np.float_, copy=False),
-        vals.indices,
-        vals.indptr,
-        vals.shape,
-    )
-
-
-@gearys_c.register(sparse.spmatrix, np.ndarray)  # noqa
-def _gearys_c_spmatrix_ndarray(g, vals):
-    """\
-    Params
-    ------
-    g
-        Connectivity graph as a scipy sparse matrix. Should have shape:
-        `(n_obs, n_obs)`.
-    vals
-        Values to calculate Geary's C for. If one dimensional, should have
-        shape `(n_obs,)`. If two dimensional (i.e calculating Geary's C for
-        multiple variables) should have shape `(n_vars, n_obs)`.
-    """
-    assert g.shape[0] == g.shape[1], "`g` should be a square matrix."
-    if not isinstance(g, sparse.csr_matrix):
-        g = g.tocsr()
+    vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
-    if vals.ndim == 1:
+    if isinstance(vals, sparse.csr_matrix):
+        assert g.shape[0] == vals.shape[1]
+        return _gearys_c_mtx_csr(
+            g_data,
+            g.indices,
+            g.indptr,
+            vals.data.astype(np.float_, copy=False),
+            vals.indices,
+            vals.indptr,
+            vals.shape,
+        )
+    elif isinstance(vals, np.ndarray) and vals.ndim == 1:
         assert g.shape[0] == vals.shape[0]
         return _gearys_c_vec(g_data, g.indices, g.indptr, vals)
-    elif vals.ndim == 2:
+    elif isinstance(vals, np.ndarray) and vals.ndim == 2:
         assert g.shape[0] == vals.shape[1]
         return _gearys_c_mtx(g_data, g.indices, g.indptr, vals)
     else:
-        raise ValueError()
-
-
-@gearys_c.register(sparse.spmatrix, (pd.DataFrame, pd.Series))  # noqa
-def _gearys_c(g, vals):
-    return gearys_c(g, vals.values)
-
-
-@gearys_c.register(sparse.spmatrix, sparse.spmatrix)  # noqa
-def _gearys_c(g, vals) -> np.ndarray:
-    if not isinstance(g, sparse.csr_matrix):
-        g = g.tocsr()
-    if not isinstance(vals, sparse.csr_matrix):
-        vals = vals.tocsr()
-    return gearys_c(g, vals)
+        raise NotImplementedError()
