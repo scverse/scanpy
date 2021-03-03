@@ -46,12 +46,6 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
-      pip install black
-      black . --check --diff
-      python -m scanpy.tests.blackdiff 10
-    displayName: 'Black'
-
-  - script: |
       pytest --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml"
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')
