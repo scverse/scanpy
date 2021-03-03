@@ -9,13 +9,16 @@ import numpy as np
 
 from anndata.tests.helpers import asarray, assert_equal
 
+# TODO: Report more context on the fields being compared on error
+# TODO: Allow specifying paths to ignore on comparison
+
 ###########################
 # Representation choice
 ###########################
 # These functions can be used to check that functions are correctly using arugments like `layers`, `obsm`, etc.
 
 
-def check_rep_mutation(func, X, fields=["layer", "obsm"], **kwargs):
+def check_rep_mutation(func, X, *, fields=["layer", "obsm"], **kwargs):
     """Check that only the array meant to be modified is modified."""
     adata = sc.AnnData(X=X.copy(), dtype=X.dtype)
     for field in fields:
@@ -47,35 +50,36 @@ def check_rep_mutation(func, X, fields=["layer", "obsm"], **kwargs):
         np.testing.assert_array_equal(X_array, result_array)
 
 
-def check_rep_results(func, X, **kwargs):
+def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
     """Checks that the results of a computation add values/ mutate the anndata object in a consistent way."""
     # Gen data
-    adata_X = sc.AnnData(
-        X=X.copy(),
-        layers={"layer": np.zeros(shape=X.shape, dtype=X.dtype)},
-        obsm={"obsm": np.zeros(shape=X.shape, dtype=X.dtype)},
+    empty_X = np.zeros(shape=X.shape, dtype=X.dtype)
+    adata = sc.AnnData(
+        X=empty_X.copy(),
+        layers={"layer": empty_X.copy()},
+        obsm={"obsm": empty_X.copy()},
     )
-    adata_layer = sc.AnnData(
-        X=np.zeros(shape=X.shape, dtype=X.dtype),
-        layers={"layer": X.copy()},
-        obsm={"obsm": np.zeros(shape=X.shape, dtype=X.dtype)},
-    )
-    adata_obsm = sc.AnnData(
-        X=np.zeros(shape=X.shape, dtype=X.dtype),
-        layers={"layer": np.zeros(shape=X.shape, dtype=X.dtype)},
-        obsm={"obsm": X.copy()},
-    )
+
+    adata_X = adata.copy()
+    adata_X.X = X.copy()
+
+    adatas_proc = {}
+    for field in fields:
+        cur = adata.copy()
+        sc.get._set_obs_rep(cur, X.copy(), **{field: field})
+        adatas_proc[field] = cur
 
     # Apply function
     func(adata_X, **kwargs)
-    func(adata_layer, layer="layer", **kwargs)
-    func(adata_obsm, obsm="obsm", **kwargs)
+    for field in fields:
+        func(adatas_proc[field], **{field: field}, **kwargs)
 
     # Reset X
-    adata_X.X = np.zeros(shape=X.shape, dtype=X.dtype)
-    adata_layer.layers["layer"] = np.zeros(shape=X.shape, dtype=X.dtype)
-    adata_obsm.obsm["obsm"] = np.zeros(shape=X.shape, dtype=X.dtype)
+    adata_X.X = empty_X.copy()
+    for field in fields:
+        sc.get._set_obs_rep(adatas_proc[field], empty_X.copy(), **{field: field})
 
-    # Check equality
-    assert_equal(adata_X, adata_layer)
-    assert_equal(adata_X, adata_obsm)
+    for field_a, field_b in permutations(fields, 2):
+        assert_equal(adatas_proc[field_a], adatas_proc[field_b])
+    for field in fields:
+        assert_equal(adata_X, adatas_proc[field])

@@ -5,7 +5,7 @@ from scipy.sparse import csr_matrix
 from scipy import sparse
 
 import scanpy as sc
-from scanpy.tests.helpers import check_rep_mutation
+from scanpy.tests.helpers import check_rep_mutation, check_rep_results
 from anndata.tests.helpers import assert_equal, asarray
 
 X_total = [[1, 0], [3, 0], [5, 6]]
@@ -32,6 +32,7 @@ def test_normalize_total_rep(typ, dtype):
     # Test that layer kwarg works
     X = typ(sparse.random(100, 50, format="csr", density=0.2, dtype=dtype))
     check_rep_mutation(sc.pp.normalize_total, X, fields=["layer"])
+    check_rep_results(sc.pp.normalize_total, X, fields=["layer"])
 
 
 @pytest.mark.parametrize('typ', [np.array, csr_matrix], ids=lambda x: x.__name__)
