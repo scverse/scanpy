@@ -76,6 +76,76 @@ def _gearys_c_vec_W(data, indices, indptr, x, W):
     return C
 
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Inner functions (per element C)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# For calling gearys_c on collections.
+# TODO: These are faster if we can compile them in parallel mode. However,
+# `workqueue` does not allow nested functions to be parallelized.
+# Additionally, there are currently problems with numba's compiler around
+# parallelization of this code:
+# https://github.com/numba/numba/issues/6774#issuecomment-788789663
+
+
+@numba.njit
+def _gearys_c_inner_sparse_x_densevec(g_data, g_indices, g_indptr, x, W):
+    x_bar = x.mean()
+    total = 0.0
+    N = len(x)
+    for i in numba.prange(N):
+        s = slice(g_indptr[i], g_indptr[i + 1])
+        i_indices = g_indices[s]
+        i_data = g_data[s]
+        total += np.sum(i_data * ((x[i] - x[i_indices]) ** 2))
+    numer = (N - 1) * total
+    denom = 2 * W * ((x - x_bar) ** 2).sum()
+    C = numer / denom
+    return C
+
+
+@numba.njit
+def _gearys_c_inner_sparse_x_sparsevec(
+    g_data, g_indices, g_indptr, x_data, x_indices, N, W
+):
+    x = np.zeros(N, dtype=np.float_)
+    x[x_indices] = x_data
+    x_bar = np.sum(x_data) / N
+    total = 0.0
+    N = len(x)
+    for i in numba.prange(N):
+        s = slice(g_indptr[i], g_indptr[i + 1])
+        i_indices = g_indices[s]
+        i_data = g_data[s]
+        total += np.sum(i_data * ((x[i] - x[i_indices]) ** 2))
+    numer = (N - 1) * total
+    # Expanded from 2 * W * ((x_k - x_k_bar) ** 2).sum(), but uses sparsity
+    # to skip some calculations
+    # fmt: off
+    denom = (
+        2 * W
+        * (
+            np.sum(x_data ** 2)
+            - np.sum(x_data * x_bar * 2)
+            + (x_bar ** 2) * N
+        )
+    )
+    # fmt: on
+    C = numer / denom
+    return C
+
+
+@numba.njit(cache=True, parallel=True)
+def _gearys_c_mtx(g_data, g_indices, g_indptr, X):
+    M, N = X.shape
+    assert N == len(g_indptr) - 1
+    W = g_data.sum()
+    out = np.zeros(M, dtype=np.float_)
+    for k in numba.prange(M):
+        x = X[k, :].astype(np.float_)
+        out[k] = _gearys_c_inner_sparse_x_densevec(g_data, g_indices, g_indptr, x, W)
+    return out
+
+
 @numba.njit(cache=True, parallel=True)
 def _gearys_c_mtx_csr(
     g_data, g_indices, g_indptr, x_data, x_indices, x_indptr, x_shape
@@ -83,88 +153,19 @@ def _gearys_c_mtx_csr(
     M, N = x_shape
     W = g_data.sum()
     out = np.zeros(M, dtype=np.float_)
+    x_data_list = np.split(x_data, x_indptr[1:-1])
+    x_indices_list = np.split(x_indices, x_indptr[1:-1])
     for k in numba.prange(M):
-        x_k = np.zeros(N, dtype=np.float_)
-        sk = slice(x_indptr[k], x_indptr[k + 1])
-        x_k_data = x_data[sk]
-        x_k[x_indices[sk]] = x_k_data
-        x_k_bar = np.sum(x_k_data) / N
-        total = 0.0
-        for i in numba.prange(N):
-            s = slice(g_indptr[i], g_indptr[i + 1])
-            i_indices = g_indices[s]
-            i_data = g_data[s]
-            total += np.sum(i_data * ((x_k[i] - x_k[i_indices]) ** 2))
-        numer = (N - 1) * total
-        # Expanded from 2 * W * ((x_k - x_k_bar) ** 2).sum(), but uses sparsity
-        # to skip some calculations
-        # fmt: off
-        denom = (
-            2 * W
-            * (
-                np.sum(x_k_data ** 2)
-                - np.sum(x_k_data * x_k_bar * 2)
-                + (x_k_bar ** 2) * N
-            )
+        out[k] = _gearys_c_inner_sparse_x_sparsevec(
+            g_data,
+            g_indices,
+            g_indptr,
+            x_data_list[k],
+            x_indices_list[k],
+            N,
+            W,
         )
-        # fmt: on
-        C = numer / denom
-        out[k] = C
     return out
-
-
-# Simplified implementation, hits race condition after umap import due to numba
-# parallel backend
-# @numba.njit(cache=True, parallel=True)
-# def _gearys_c_mtx_csr(
-#     g_data, g_indices, g_indptr, x_data, x_indices, x_indptr, x_shape
-# ):
-#     M, N = x_shape
-#     W = g_data.sum()
-#     out = np.zeros(M, dtype=np.float64)
-#     for k in numba.prange(M):
-#         x_arr = np.zeros(N, dtype=x_data.dtype)
-#         sk = slice(x_indptr[k], x_indptr[k + 1])
-#         x_arr[x_indices[sk]] = x_data[sk]
-#         outval = _gearys_c_vec_W(g_data, g_indices, g_indptr, x_arr, W)
-#         out[k] = outval
-#     return out
-
-
-@numba.njit(cache=True, parallel=True)
-def _gearys_c_mtx(g_data, g_indices, g_indptr, X):
-    M, N = X.shape
-    W = g_data.sum()
-    out = np.zeros(M, dtype=np.float_)
-    for k in numba.prange(M):
-        x = X[k, :].astype(np.float_)
-        x_bar = x.mean()
-
-        total = 0.0
-        for i in numba.prange(N):
-            s = slice(g_indptr[i], g_indptr[i + 1])
-            i_indices = g_indices[s]
-            i_data = g_data[s]
-            total += np.sum(i_data * ((x[i] - x[i_indices]) ** 2))
-
-        numer = (N - 1) * total
-        denom = 2 * W * ((x - x_bar) ** 2).sum()
-        C = numer / denom
-
-        out[k] = C
-    return out
-
-
-# Similar to above, simplified version umaps choice of parallel backend breaks:
-# @numba.njit(cache=True, parallel=True)
-# def _gearys_c_mtx(g_data, g_indices, g_indptr, X):
-#     M, N = X.shape
-#     W = g_data.sum()
-#     out = np.zeros(M, dtype=np.float64)
-#     for k in numba.prange(M):
-#         outval = _gearys_c_vec_W(g_data, g_indices, g_indptr, X[k, :], W)
-#         out[k] = outval
-#     return out
 
 
 ###############################################################################
