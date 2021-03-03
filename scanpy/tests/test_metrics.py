@@ -97,3 +97,20 @@ def test_confusion_matrix_randomized():
         sc.metrics.confusion_matrix(df["a"].values, df["b"].values),
         sc.metrics.confusion_matrix(a, b),
     )
+
+
+def test_confusion_matrix_api():
+    data = pd.DataFrame(
+        {"a": np.random.randint(5, size=100), "b": np.random.randint(5, size=100)}
+    )
+    expected = sc.metrics.confusion_matrix(data["a"], data["b"])
+
+    pd.testing.assert_frame_equal(expected, sc.metrics.confusion_matrix("a", "b", data))
+
+    pd.testing.assert_frame_equal(
+        expected, sc.metrics.confusion_matrix("a", data["b"], data)
+    )
+
+    pd.testing.assert_frame_equal(
+        expected, sc.metrics.confusion_matrix(data["a"], "b", data)
+    )

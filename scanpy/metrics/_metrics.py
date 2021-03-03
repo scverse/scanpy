@@ -19,12 +19,17 @@ def confusion_matrix(
     """\
     Given an original and new set of labels, create a labelled confusion matrix.
 
+    Parameters `orig` and `new` can either be entries in data or categorical arrays
+    of the same size.
+
     Params
     ------
     orig
-        Original labels
+        Original labels.
     new
-        New labels
+        New labels.
+    data
+        Optional dataframe to fill entries from.
     normalize
         Should the confusion matrix be normalized?
 
@@ -43,8 +48,10 @@ def confusion_matrix(
     from sklearn.metrics import confusion_matrix as _confusion_matrix
 
     if data is not None:
-        orig = data[orig]
-        new = data[new]
+        if isinstance(orig, str):
+            orig = data[orig]
+        if isinstance(new, str):
+            new = data[new]
 
     # Coercing so I don't have to deal with it later
     orig, new = pd.Series(orig), pd.Series(new)
