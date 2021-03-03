@@ -1,6 +1,9 @@
 from typing import Optional, Union
+from textwrap import dedent
 
 from anndata import AnnData
+import multipledispatch
+from scanpy.get import _get_obs_rep
 from multipledispatch import dispatch
 import numba
 import numpy as np
@@ -8,31 +11,110 @@ import pandas as pd
 from scipy import sparse
 
 
-def _choose_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
+class DocumentedDispatcher(multipledispatch.Dispatcher):
+    @property
+    def __doc__(dispatcher):
+        from multipledispatch.dispatcher import str_signature
+
+        docs = ["Multiply dispatched method: %s" % dispatcher.name]
+
+        if dispatcher.doc:
+            docs.append(dispatcher.doc)
+
+        other = []
+        for sig in dispatcher.ordering[::-1]:
+            func = dispatcher.funcs[sig]
+            if func.__doc__:
+                s = 'Inputs: <%s>\n' % str_signature(sig)
+                s += '-' * len(s) + '\n'
+                s += dedent(func.__doc__)
+                docs.append(s)
+            else:
+                other.append(str_signature(sig))
+
+        if other:
+            docs.append('Other signatures:\n    ' + '\n    '.join(other))
+
+        return '\n\n'.join(docs)
+
+
+gearys_c = DocumentedDispatcher(
+    "gearys_c",
+    doc=dedent(
+        r"""
+    Calculate `Geary's C <https://en.wikipedia.org/wiki/Geary's_C>`_, as used
+    by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
+
+    Geary's C is a measure of autocorrelation for some measure on a graph. This
+    can be to whether measures are correlated between neighboring cells. Lower
+    values indicate greater correlation.
+
+    .. math::
+
+        C =
+        \frac{
+            (N - 1)\sum_{i,j} w_{i,j} (x_i - x_j)^2
+        }{
+            2W \sum_i (x_i - \bar{x})^2
+        }
     """
-    Choose array aligned with obs annotation.
+    ),
+)
+
+
+# TODO: Document better
+# TODO: Have scanpydoc work with multipledispatch
+@gearys_c.register(AnnData)  # noqa
+def _gearys_c(
+    adata: AnnData,
+    *,
+    vals: Optional[Union[np.ndarray, sparse.spmatrix]] = None,
+    use_graph: Optional[str] = None,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+    obsp: Optional[str] = None,
+    use_raw: bool = False,
+) -> Union[np.ndarray, float]:
+    """\
+    Params
+    ------
+    adata
+    vals
+        Values to calculate Geary's C for. If this is two dimensional, should
+        be of shape `(n_features, n_cells)`. Otherwise should be of shape
+        `(n_cells,)`. This matrix can be selected from elements of the anndata
+        object by using key word arguments: `layer`, `obsm`, `obsp`, or
+        `use_raw`.
+    use_graph
+        Key to use for graph in anndata object. If not provided, default
+        neighbors connectivities will be used instead.
+    layer
+        Key for `adata.layers` to choose `vals`.
+    obsm
+        Key for `adata.obsm` to choose `vals`.
+    obsp
+        Key for `adata.obsp` to choose `vals`.
+    use_raw
+        Whether to use `adata.raw.X` for `vals`.
+
+    Returns
+    -------
+    If vals is two dimensional, returns a 1 dimensional ndarray array. Returns
+    a scalar if `vals` is 1d.
     """
-    is_layer = layer is not None
-    is_raw = use_raw is not False
-    is_obsm = obsm is not None
-    is_obsp = obsp is not None
-    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
-    assert choices_made <= 1
-    if choices_made == 0:
-        return adata.X
-    elif is_layer:
-        return adata.layers[layer]
-    elif use_raw:
-        return adata.raw.X
-    elif is_obsm:
-        return adata.obsm[obsm]
-    elif is_obsp:
-        return adata.obsp[obsp]
+    if use_graph is None:
+        # Fix for anndata<0.7
+        if hasattr(adata, "obsp") and "connectivities" in adata.obsp:
+            g = adata.obsp["connectivities"]
+        elif "neighbors" in adata.uns:
+            g = adata.uns["neighbors"]["connectivities"]
+        else:
+            raise ValueError("Must run neighbors first.")
     else:
-        assert False, (
-            "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/theislab/scanpy/issues"
-        )
+        raise NotImplementedError()
+    if vals is None:
+        vals = _get_obs_rep(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
+    return gearys_c(g, vals)
 
 
 ###############################################################################
@@ -173,8 +255,8 @@ def _gearys_c_mtx_csr(
 ###############################################################################
 
 
-@dispatch(sparse.csr_matrix, sparse.csr_matrix)
-def gearys_c(g, vals) -> np.ndarray:
+@gearys_c.register(sparse.csr_matrix, sparse.csr_matrix)
+def _gearys_c(g, vals) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     assert g.shape[0] == vals.shape[1]
     return _gearys_c_mtx_csr(
@@ -188,8 +270,8 @@ def gearys_c(g, vals) -> np.ndarray:
     )
 
 
-@dispatch(sparse.spmatrix, np.ndarray)  # noqa
-def gearys_c(g, vals):
+@gearys_c.register(sparse.spmatrix, np.ndarray)  # noqa
+def _gearys_c_spmatrix_ndarray(g, vals):
     """\
     Params
     ------
@@ -215,88 +297,15 @@ def gearys_c(g, vals):
         raise ValueError()
 
 
-@dispatch(sparse.spmatrix, (pd.DataFrame, pd.Series))  # noqa
-def gearys_c(g, vals):
+@gearys_c.register(sparse.spmatrix, (pd.DataFrame, pd.Series))  # noqa
+def _gearys_c(g, vals):
     return gearys_c(g, vals.values)
 
 
-@dispatch(sparse.spmatrix, sparse.spmatrix)  # noqa
-def gearys_c(g, vals) -> np.ndarray:
+@gearys_c.register(sparse.spmatrix, sparse.spmatrix)  # noqa
+def _gearys_c(g, vals) -> np.ndarray:
     if not isinstance(g, sparse.csr_matrix):
         g = g.tocsr()
     if not isinstance(vals, sparse.csr_matrix):
         vals = vals.tocsr()
-    return gearys_c(g, vals)
-
-
-# TODO: Document better
-# TODO: Have scanpydoc work with multipledispatch
-@dispatch(AnnData)  # noqa
-def gearys_c(
-    adata: AnnData,
-    *,
-    vals: Optional[Union[np.ndarray, sparse.spmatrix]] = None,
-    use_graph: Optional[str] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-    obsp: Optional[str] = None,
-    use_raw: bool = False,
-) -> Union[np.ndarray, float]:
-    """\
-    Calculate `Geary's C` <https://en.wikipedia.org/wiki/Geary's_C>`_, as used
-    by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
-
-    Geary's C is a measure of autocorrelation for some measure on a graph. This
-    can be to whether measures are correlated between neighboring cells. Lower
-    values indicate greater correlation.
-
-    ..math
-
-        C =
-        \frac{
-            (N - 1)\sum_{i,j} w_{i,j} (x_i - x_j)^2
-        }{
-            2W \sum_i (x_i - \bar{x})^2
-        }
-
-    Params
-    ------
-    adata
-    vals
-        Values to calculate Geary's C for. If this is two dimensional, should
-        be of shape `(n_features, n_cells)`. Otherwise should be of shape
-        `(n_cells,)`. This matrix can be selected from elements of the anndata
-        object by using key word arguments: `layer`, `obsm`, `obsp`, or
-        `use_raw`.
-    use_graph
-        Key to use for graph in anndata object. If not provided, default
-        neighbors connectivities will be used instead.
-    layer
-        Key for `adata.layers` to choose `vals`.
-    obsm
-        Key for `adata.obsm` to choose `vals`.
-    obsp
-        Key for `adata.obsp` to choose `vals`.
-    use_raw
-        Whether to use `adata.raw.X` for `vals`.
-
-    Returns
-    -------
-    If vals is two dimensional, returns a 1 dimensional ndarray array. Returns
-    a scalar if `vals` is 1d.
-    """
-    if use_graph is None:
-        # Fix for anndata<0.7
-        if hasattr(adata, "obsp") and "connectivities" in adata.obsp:
-            g = adata.obsp["connectivities"]
-        elif "neighbors" in adata.uns:
-            g = adata.uns["neighbors"]["connectivities"]
-        else:
-            raise ValueError("Must run neighbors first.")
-    else:
-        raise NotImplementedError()
-    if vals is None:
-        vals = _choose_obs_rep(
-            adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp
-        ).T
     return gearys_c(g, vals)
