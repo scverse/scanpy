@@ -49,6 +49,7 @@ setup(
         ],
         test=[
             'pytest>=4.4',
+            'pytest-nunit',
             'dask[array]!=2.17.0',
             'fsspec',
             'zappy',
