@@ -191,8 +191,8 @@ def _highly_variable_pearson_residuals(
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`) or
-    updates `.var` with the following fields
+    Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`)
+    or updates `.var` with the following fields
 
     highly_variable
         boolean indicator of highly-variable genes
@@ -201,43 +201,49 @@ def _highly_variable_pearson_residuals(
     variances
         variances per gene 
     residual_variances
-        Pearson residual variance per gene. Averaged in the case of multiple batches.
+        Pearson residual variance per gene. Averaged in the case of multiple
+        batches.
     highly_variable_rank
-        Rank of the gene according to residual variance, median rank in the case of multiple batches
+        Rank of the gene according to residual variance, median rank in the
+        case of multiple batches
     highly_variable_nbatches : int
-        If batch_key is given, this denotes in how many batches genes are detected as HVG
+        If batch_key is given, this denotes in how many batches genes are
+        detected as HVG
     highly_variable_intersection : bool
-        If batch_key is given, this denotes the genes that are highly variable in all batches
+        If batch_key is given, this denotes the genes that are highly variable
+        in all batches
     """
-    
+
     X = adata.layers[layer] if layer is not None else adata.X
-    
+
     # Check for raw counts
     if check_nonnegative_integers(X) is False:
         raise ValueError(
-            "`pp.highly_variable_genes` with `flavor='pearson_residuals'` expects "
-            "raw count data."
+            "`pp.highly_variable_genes` with `flavor='pearson_residuals'`"
+            "expects raw count data."
         )
-    
+
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
     else:
         batch_info = adata.obs[batch_key].values
     n_batches = len(np.unique(batch_info))
-        
+
     # Get pearson residuals for each batch separately
     residual_gene_vars = []
     for batch in np.unique(batch_info):
 
         adata_subset = adata[batch_info == batch]
-       
+
         # Filter out zero genes
         with settings.verbosity.override(Verbosity.error):
             nonzero_genes = filter_genes(adata_subset, min_cells=1, inplace=False)[0]
         adata_subset = adata_subset[:, nonzero_genes]
 
-
-        X_batch = adata_subset.layers[layer] if layer is not None else adata_subset.X 
+        if layer is not None:
+            X_batch = adata_subset.layers[layer]
+        else:
+            X_batch = adata_subset.X
 
         # Prepare clipping
         if clip == 'auto':
@@ -249,77 +255,78 @@ def _highly_variable_pearson_residuals(
         if sp_sparse.issparse(X_batch):
             sums_genes = np.sum(X_batch, axis=0)
             sums_cells = np.sum(X_batch, axis=1)
-            sum_total  = np.sum(sums_genes).squeeze()
+            sum_total = np.sum(sums_genes).squeeze()
         else:
             sums_genes = np.sum(X_batch, axis=0, keepdims=True)
             sums_cells = np.sum(X_batch, axis=1, keepdims=True)
-            sum_total  = np.sum(sums_genes)
+            sum_total = np.sum(sums_genes)
 
         # Compute pearson residuals in chunks
-        residual_gene_var = np.ones((X_batch.shape[1]))*np.nan
-        for start in np.arange(0,X_batch.shape[1],chunksize):
+        residual_gene_var = np.ones((X_batch.shape[1])) * np.nan
+        for start in np.arange(0, X_batch.shape[1], chunksize):
             stop = start + chunksize
-            mu = np.array(sums_cells @ sums_genes[:,start:stop] / sum_total)
-            X_dense = X_batch[:,start:stop].toarray()
-            residuals = (X_dense - mu) / np.sqrt(mu + mu**2/theta)
-            residuals = np.clip(residuals, a_min = -clip, a_max = clip)
-            residual_gene_var[start:stop] = np.var(residuals,axis=0)
-            
-        # Add 0 values for genes that were filtered out 
+            mu = np.array(sums_cells @ sums_genes[:, start:stop] / sum_total)
+            X_dense = X_batch[:, start:stop].toarray()
+            residuals = (X_dense - mu) / np.sqrt(mu + mu ** 2 / theta)
+            residuals = np.clip(residuals, a_min=-clip, a_max=clip)
+            residual_gene_var[start:stop] = np.var(residuals, axis=0)
+
+        # Add 0 values for genes that were filtered out
         zero_gene_var = np.zeros(np.sum(~nonzero_genes))
-        residual_gene_var = np.concatenate((residual_gene_var,
-                                            zero_gene_var))
+        residual_gene_var = np.concatenate((residual_gene_var, zero_gene_var))
         # Order as before filtering
-        idxs = np.concatenate((np.where(nonzero_genes)[0],
-                               np.where(~nonzero_genes)[0]))
+        idxs = np.concatenate((np.where(nonzero_genes)[0], np.where(~nonzero_genes)[0]))
         residual_gene_var = residual_gene_var[np.argsort(idxs)]
         residual_gene_vars.append(residual_gene_var.reshape(1, -1))
 
     residual_gene_vars = np.concatenate(residual_gene_vars, axis=0)
-    
+
     # Get cutoffs and define hvgs per batch
-    residual_gene_vars_sorted = np.sort(residual_gene_vars,axis=1)[:,::-1]
-    cutoffs_per_batch = residual_gene_vars_sorted[:,n_top_genes]
-    highly_variable_per_batch = np.greater(residual_gene_vars.T,cutoffs_per_batch).T
-    
+    residual_gene_vars_sorted = np.sort(residual_gene_vars, axis=1)[:, ::-1]
+    cutoffs_per_batch = residual_gene_vars_sorted[:, n_top_genes]
+    highly_variable_per_batch = np.greater(residual_gene_vars.T, cutoffs_per_batch).T
+
     # Merge hvgs across batches
-    highly_variable_nbatches = np.sum(highly_variable_per_batch,axis=0)
+    highly_variable_nbatches = np.sum(highly_variable_per_batch, axis=0)
     highly_variable_intersection = highly_variable_nbatches == n_batches
-    
+
     # Get rank per gene within each batch
     # argsort twice gives ranks, small rank means most variable
     ranks_residual_var = np.argsort(np.argsort(-residual_gene_vars, axis=1), axis=1)
     ranks_residual_var = ranks_residual_var.astype(np.float32)
-    ranks_residual_var[ranks_residual_var >= n_top_genes] = np.nan 
+    ranks_residual_var[ranks_residual_var >= n_top_genes] = np.nan
     ranks_masked_array = np.ma.masked_invalid(ranks_residual_var)
-    # Median rank across batches, ignoring batches in which gene was not selected
-    medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan) 
-    
+    # Median rank across batches,
+    # ignoring batches in which gene was not selected
+    medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan)
+
     means, variances = materialize_as_ndarray(_get_mean_var(X))
     df = pd.DataFrame.from_dict(
-                dict(means=means,
-                     variances=variances,
-                     residual_variances=np.mean(residual_gene_vars,axis=0),
-                     highly_variable_rank=medianrank_residual_var,
-                     highly_variable_nbatches=highly_variable_nbatches,
-                     highly_variable_intersection=highly_variable_intersection,
-                )
-         )
+        dict(
+            means=means,
+            variances=variances,
+            residual_variances=np.mean(residual_gene_vars, axis=0),
+            highly_variable_rank=medianrank_residual_var,
+            highly_variable_nbatches=highly_variable_nbatches,
+            highly_variable_intersection=highly_variable_intersection,
+        )
+    )
     df = df.set_index(adata.var_names)
-    
+
     # Sort genes by how often they selected as hvg within each batch and
     # break ties with median rank of residual variance across batches
     df.sort_values(
-                    ['highly_variable_nbatches', 'highly_variable_rank'],
-                    ascending=[False,True],
-                    na_position='last',
-                    inplace=True,
-                  )
+        ['highly_variable_nbatches', 'highly_variable_rank'],
+        ascending=[False, True],
+        na_position='last',
+        inplace=True,
+    )
     df['highly_variable'] = False
     df.highly_variable.iloc[:n_top_genes] = True
-    ## TODO: following line raises a pandas warning (also for flavor = seurat and cellranger..)
+    # TODO: following line raises a pandas warning
+    # (also for flavor = seurat and cellranger..)
     df = df.loc[adata.var_names]
-    
+
     if inplace or subset:
         adata.uns['hvg'] = {'flavor': 'pearson_residuals'}
         logg.hint(
@@ -350,9 +357,9 @@ def _highly_variable_pearson_residuals(
             adata._inplace_subset_var(df['highly_variable'].values)
     else:
         if batch_key is None:
-            df = df.drop(['highly_variable_nbatches',
-                          'highly_variable_intersection'],
-                         axis=1)
+            df = df.drop(
+                ['highly_variable_nbatches', 'highly_variable_intersection'], axis=1
+            )
         return df
     
     
