@@ -1,5 +1,7 @@
 dist: xenial
 language: python
+git:
+  depth: false  # Version detection needs all info
 branches:
   only:
     - master  # All other branches should become (draft) PRs and be build that way
