@@ -1,6 +1,8 @@
 from anndata import AnnData
 from typing import Optional
 import numpy as np
+from scipy import sparse
+
 
 from ... import logging as logg
 from ... import preprocessing as pp
@@ -349,6 +351,9 @@ def _scrublet_call_doublets(
     if n_neighbors is None:
         n_neighbors = int(round(0.5 * np.sqrt(adata_obs.shape[0])))
 
+    # Note: Scrublet() will sparse adata_obs.X if it's not already, but this
+    # matrix won't get used if we pre-set the normalised slots.
+
     scrub = sl.Scrublet(
         adata_obs.X,
         n_neighbors=n_neighbors,
@@ -357,8 +362,12 @@ def _scrublet_call_doublets(
         random_state=random_state,
     )
 
-    scrub._E_obs_norm = adata_obs.X
-    scrub._E_sim_norm = adata_sim.X
+    # Ensure normalised matrix sparseness as Scrublet does
+    # https://github.com/swolock/scrublet/blob/67f8ecbad14e8e1aa9c89b43dac6638cebe38640/src/scrublet/scrublet.py#L100
+
+    scrub._E_obs_norm = sparse.csc_matrix(adata_obs.X)
+    scrub._E_sim_norm = sparse.csc_matrix(adata_sim.X)
+
     scrub.doublet_parents_ = adata_sim.obsm['doublet_parents']
 
     # Call scrublet-specific preprocessing where specified

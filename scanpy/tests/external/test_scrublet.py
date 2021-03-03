@@ -23,6 +23,26 @@ def test_scrublet():
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
 
+def test_scrublet_dense():
+    """
+    Test that Scrublet works for dense matrices.
+
+    Check that scrublet runs and detects some doublets when a dense matrix is supplied.
+    """
+    pytest.importorskip("scrublet")
+
+    adata = sc.datasets.paul15()[:500].copy()
+    sce.pp.scrublet(adata, use_approx_neighbors=False)
+
+    errors = []
+
+    # replace assertions by conditions
+    assert "predicted_doublet" in adata.obs.columns
+    assert "doublet_score" in adata.obs.columns
+
+    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+
+
 def test_scrublet_params():
     """
     Test that Scrublet args are passed.
