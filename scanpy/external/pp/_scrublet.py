@@ -1,7 +1,8 @@
 from anndata import AnnData
 from typing import Collection, Tuple, Optional, Union
 import numpy as np
-import scipy as sp
+from scipy import sparse
+
 
 from ... import logging as logg
 from ... import preprocessing as pp
@@ -364,8 +365,8 @@ def _scrublet_call_doublets(
     # Ensure normalised matrix sparseness as Scrublet does
     # https://github.com/swolock/scrublet/blob/67f8ecbad14e8e1aa9c89b43dac6638cebe38640/src/scrublet/scrublet.py#L100
 
-    scrub._E_obs_norm = sp.sparse.csc_matrix(adata_obs.X)
-    scrub._E_sim_norm = sp.sparse.csc_matrix(adata_sim.X)
+    scrub._E_obs_norm = sparse.csc_matrix(adata_obs.X)
+    scrub._E_sim_norm = sparse.csc_matrix(adata_sim.X)
 
     scrub.doublet_parents_ = adata_sim.obsm['doublet_parents']
 
