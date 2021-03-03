@@ -364,18 +364,8 @@ def _scrublet_call_doublets(
     # Ensure normalised matrix sparseness as Scrublet does
     # https://github.com/swolock/scrublet/blob/67f8ecbad14e8e1aa9c89b43dac6638cebe38640/src/scrublet/scrublet.py#L100
 
-    def sparsify(mat):
-        if not sp.sparse.issparse(mat):
-            return sp.sparse.csc_matrix(mat)
-
-        elif not sp.sparse.isspmatrix_csc(mat):
-            return mat.tocsc()
-
-        else:
-            return mat
-
-    scrub._E_obs_norm = sparsify(adata_obs.X)
-    scrub._E_sim_norm = sparsify(adata_sim.X)
+    scrub._E_obs_norm = sp.sparse.csc_matrix(adata_obs.X)
+    scrub._E_sim_norm = sp.sparse.csc_matrix(adata_sim.X)
 
     scrub.doublet_parents_ = adata_sim.obsm['doublet_parents']
 
