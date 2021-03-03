@@ -46,12 +46,12 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
-      pytest --color=yes --ignore=scanpy/tests/_images --junitxml=junit/test-results.xml
+      pytest --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml"
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')
 
   - script: |
-      pytest --color=yes --ignore=scanpy/tests/_images --junitxml=junit/test-results.xml --cov=scanpy --cov-report=xml
+      pytest --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml" --cov=scanpy --cov-report=xml
     displayName: 'PyTest (coverage)'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
@@ -65,7 +65,8 @@ jobs:
   - task: PublishTestResults@2
     condition: succeededOrFailed()
     inputs:
-      testResultsFiles: 'junit/test-*.xml'
+      testResultsFiles: 'nunit/test-results.xml'
+      testResultsFormat: NUnit
       testRunTitle: 'Publish test results for Python $(python.version)'
 
 - job: CheckBuild
