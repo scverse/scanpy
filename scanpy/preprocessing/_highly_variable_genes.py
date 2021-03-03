@@ -578,7 +578,8 @@ def highly_variable_genes(
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
         by normalized dispersion. If `flavor = 'seurat_v3'`, ties are broken by the median
         (across batches) rank based on within-batch normalized variance. If 
-        `flavor='pearson_residuals'`, ties are broken based on
+        `flavor='pearson_residuals'`, ties are broken by the median rank (across batches)
+        based on within-batch residual variance.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
         Only used if `flavor='seurat_v3'`.
@@ -645,6 +646,11 @@ def highly_variable_genes(
             inplace=inplace,
         )
     if flavor == 'pearson_residuals':
+        if n_top_genes is None:
+            raise ValueError(
+            "`pp.highly_variable_genes` requires the argument `n_top_genes`"
+            " for `flavor='pearson_residuals'`"
+            )
         return _highly_variable_pearson_residuals(
             adata,
             layer = layer,

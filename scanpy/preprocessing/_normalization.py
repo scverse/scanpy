@@ -2,6 +2,7 @@ from typing import Optional, Union, Iterable, Dict
 from warnings import warn
 
 import numpy as np
+import pandas as pd
 from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
@@ -11,6 +12,9 @@ from .._compat import Literal
 
 from .._utils import view_to_actual, check_nonnegative_integers
 from scanpy.get import _get_obs_rep, _set_obs_rep
+
+from ._pca import pca
+
 
 
 
@@ -67,9 +71,9 @@ def normalize_pearson_residuals(
     adata: AnnData,
     theta: float = 100,
     clip: Union[Literal['auto', 'none'], float] = 'auto',
-    layers: Union[Literal['all'], Iterable[str]] = None,
+    layers: Optional[Union[Literal['all'], Iterable[str]]] = None,
     theta_per_layer: Optional[Dict[str, str]] = None,
-    clip_per_layer: Optional[Dict[str, Union[Literal['auto', 'none'], float]]] = None,  ## TODO: Check if this is correct/needed
+    clip_per_layer: Optional[Dict[str, Union[Literal['auto', 'none'], float]]] = None,
     inplace: bool = True,
 ) -> Optional[Dict[str, np.ndarray]]:
     """\
@@ -125,17 +129,19 @@ def normalize_pearson_residuals(
     if layers == 'all':
         layers = adata.layers.keys()
         
-    view_to_actual(adata) ### TODO: is this needed and if yes what for (normalize_total() has it so I used it..)
+    view_to_actual(adata) ### TODO: is this needed and if yes what for? normalize_total() has it so I used it here
     
     # Handle X
     msg = 'computing analytic Pearson residuals for adata.X'
     start = logg.info(msg)
     if inplace:
         adata.X = _pearson_residuals(adata.X, theta, clip)
-        settings = dict(theta=theta, clip=clip)
-        settings['theta_per_layer']=theta_per_layer if theta_per_layer is not None
-        settings['clip_per_layer']=clip_per_layer if clip_per_layer is not None
-        adata.uns['normalization_pearson_residuals'] = settings
+        settings_dict = dict(theta=theta, clip=clip)
+        if theta_per_layer is not None:
+            settings_dict['theta_per_layer']=theta_per_layer 
+        if clip_per_layer is not None:
+            settings_dict['clip_per_layer']=clip_per_layer 
+        adata.uns['normalization_pearson_residuals'] = settings_dict
         
     else:
         dat = dict(X=_pearson_residuals(adata.X, theta, clip, copy=True))
@@ -166,6 +172,98 @@ def normalize_pearson_residuals(
 
     return dat if not inplace else None
     
+    
+    
+def normalize_pearson_residuals_pca(
+    adata: AnnData, 
+    theta: float = 100,
+    clip: Union[Literal['auto', 'none'], float] = 'auto',    
+    n_comps_pca: Optional[int] = 50,
+    random_state_pca: Optional[float] = 0,
+    use_highly_variable: bool = True,
+    inplace: bool = False
+) -> Optional[pd.DataFrame]:
+
+    """\
+    Applies PCA based on Pearson residual normalization. Operates on the subset of
+    highly variable genes in `adata.var['highly_variable']` by default.
+    
+    
+    Parameters
+    ----------
+    adata
+        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
+    use_highly_variable
+        Whether to use the gene selection in `adata.var['highly_variable']` to subset
+        the data before normalizing (default) or proceed on the full dataset.
+    theta
+        This is the NB overdispersion parameter theta for Pearson residual computations.
+        Higher values correspond to less overdispersion (var = mean + mean^2/theta), and 
+        `theta=np.Inf` corresponds to a Poisson model.
+    clip
+        This determines if and how Pearson residuals are clipped:
+        
+        * If `'auto'`, residuals are clipped to the interval [-sqrt(n), sqrt(n)],
+        where n is the number of cells in the dataset (default behavior).
+        * If any scalar c, residuals are clipped to the interval [-c, c]. Set
+        `clip=np.Inf` for no clipping.
+        
+    n_comps_pca
+        Number of principal components to compute.
+    random_state_pca
+        Change to use different initial states for the optimization.
+    inplace
+        Whether to place results in `adata` or return them.
+
+
+    Returns
+    -------
+    If `inplace=False`, returns the Pearson residual-based PCA results (`adata_pca`).
+    If `inplace=True`, updates `adata` with the following fields:
+    
+    `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
+         The hvg-subset, normalized by Pearson residuals
+    `.uns['pearson_residuals_normalization']['theta']`
+         The used value of the overdisperion parameter theta
+    `.uns['pearson_residuals_normalization']['clip']`
+         The used value of the clipping parameter
+    
+    `.obsm['pearson_residuals_X_pca']`
+        PCA representation of data after gene selection and Pearson residual normalization.
+    `.uns['pearson_residuals_pca']['PCs']`
+         The principal components containing the loadings.
+    `.uns['pearson_residuals_pca']['variance_ratio']`
+         Ratio of explained variance.
+    `.uns['pearson_residuals_pca']['variance']`
+         Explained variance, equivalent to the eigenvalues of the
+         covariance matrix.        
+    
+    """    
+    
+
+    
+    if use_highly_variable and 'highly_variable' in adata.var_keys():
+        adata_pca = adata[:,adata.var['highly_variable']].copy() ##TODO: are these copies needed?
+    else:
+        adata_pca = adata.copy()##TODO: are these copies needed?
+    
+    normalize_pearson_residuals(adata_pca,theta=theta,clip=clip)
+    pca(adata_pca,n_comps=n_comps_pca,random_state=random_state_pca)
+    
+    if inplace:
+        normalization_settings = adata_pca.uns['normalization_pearson_residuals']
+        normalization_dict = dict(**normalization_settings,
+                                pearson_residuals_df = adata_pca.to_df())
+        pca_settings = adata_pca.uns['pca']
+        pca_dict = dict(**pca_settings, 
+                         PCs = adata_pca.varm['PCs'])
+        adata.uns['pearson_residuals_pca'] = pca_dict
+        adata.uns['pearson_residuals_normalization'] = normalization_dict
+        adata.obsm['pearson_residuals_X_pca'] = adata_pca.obsm['X_pca']
+        return None
+    else:
+        return adata_pca
     
 
 def normalize_total(
