@@ -139,6 +139,7 @@ qualname_overrides = {
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
+    "pandas.core.series.Series": "pandas.Series",
 }
 
 nitpick_ignore = [

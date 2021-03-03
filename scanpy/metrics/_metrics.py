@@ -28,12 +28,17 @@ def confusion_matrix(
     normalize
         Should the confusion matrix be normalized?
 
-    Usage
-    -----
-    >>> import scanpy as sc; import seaborn as sns
-    >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> cmtx = sc.metrics.confusion_matrix("bulk_labels", "louvain", pbmc.obs)
-    >>> sns.heatmap(cmtx)
+
+    Examples
+    --------
+
+    .. plot::
+
+        import scanpy as sc; import seaborn as sns
+        pbmc = sc.datasets.pbmc68k_reduced()
+        cmtx = sc.metrics.confusion_matrix("bulk_labels", "louvain", pbmc.obs)
+        sns.heatmap(cmtx)
+
     """
     from sklearn.metrics import confusion_matrix as _confusion_matrix
 
