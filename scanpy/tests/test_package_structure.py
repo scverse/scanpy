@@ -36,7 +36,6 @@ def test_function_headers(f):
     name = f"{f.__module__}.{f.__qualname__}"
     assert f.__doc__ is not None, f"{name} has no docstring"
     lines = getattr(f, "__orig_doc__", f.__doc__).split("\n")
-    assert lines[0], f"{name} needs a single-line summary"
     broken = [i for i, l in enumerate(lines) if l.strip() and not l.startswith("    ")]
     if any(broken):
         msg = f'''\
