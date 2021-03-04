@@ -8,6 +8,13 @@
 
 .. _flit: https://flit.readthedocs.io/en/latest/
 
+.. rubric:: Metrics module
+
+- Added :mod:`scanpy.metrics` module!
+
+    - Added :func:`scanpy.metrics.confusion_matrix` for comparing labellings :pr:`915` :smaller:`I Virshup`
+    - Added :func:`scanpy.metrics.gearys_c` for spatial autocorrelation :pr:`915` :smaller:`I Virshup`
+
 .. rubric:: External tools
 
 .. rubric:: Performance enhancements
