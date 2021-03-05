@@ -19,6 +19,7 @@ def pca(
     n_comps: Optional[int] = None,
     zero_center: Optional[bool] = True,
     svd_solver: str = 'arpack',
+    device: str = 'cpu',
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
@@ -155,7 +156,21 @@ def pca(
 
     X = adata_comp.X
 
-    if chunked:
+    if device == 'gpu':
+        from cuml import PCA
+
+        if svd_solver not in {'auto', 'full', 'jacobi'}:
+            raise ValueError(
+                'svd_solver: {svd_solver} can not be used with cuml.PCA.\n'
+                'Use "auto" or "full" or "jacobi" instead.'
+            )
+
+        pca_ = PCA(
+            n_components=n_comps, svd_solver=svd_solver, random_state=random_state
+        )
+        X_pca = pca_.fit_transform(X)
+
+    elif chunked:
         if not zero_center or random_state or svd_solver != 'arpack':
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
