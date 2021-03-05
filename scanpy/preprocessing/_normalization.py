@@ -14,6 +14,8 @@ from .._utils import view_to_actual, check_nonnegative_integers
 from scanpy.get import _get_obs_rep, _set_obs_rep
 
 from ._pca import pca
+from scanpy.get import _get_obs_rep, _set_obs_rep
+
 
 
 
@@ -36,6 +38,7 @@ def _normalize_data(X, counts, after=None, copy=False):
 def _pearson_residuals(X, theta, clip, copy=False):
 
     X = X.copy() if copy else X
+    ##TODO can we avoid making this dense?
     X = X.toarray() if issparse(X) else X
 
     # check theta
@@ -70,9 +73,8 @@ def normalize_pearson_residuals(
     adata: AnnData,
     theta: float = 100,
     clip: Union[Literal['auto', 'none'], float] = 'auto',
-    layers: Optional[Union[Literal['all'], Iterable[str]]] = None,
-    theta_per_layer: Optional[Dict[str, str]] = None,
-    clip_per_layer: Optional[Dict[str, Union[Literal['auto', 'none'], float]]] = None,
+    layer: Optional[str] = None,
+    copy: bool=False,
     inplace: bool = True,
 ) -> Optional[Dict[str, np.ndarray]]:
     """\
@@ -98,91 +100,56 @@ def normalize_pearson_residuals(
         * If any scalar c, residuals are clipped to the interval [-c, c]. Set
         `clip=np.Inf` for no clipping.
         
-    layers
-        List of layers to compute Pearson residuals of. Set to `'all'` to
-        compute for all layers.
-    theta_per_layer
-        Dict that specifies which theta is used for each layer:
-
-        * If `None`, the provided `theta` is used for all layers.
-        * Otherwise, each layer with key `layer_key` is processed with the
-        theta value in `theta_per_layer[layer_key]`.
-    clip_per_layer
-        Dict that specifies clipping behavior for each layer :
-
-        * If `None`, the provided `clip` variable is used for all layers.
-        * Otherwise, each layer with key `layer_key` is clipped according to
-          `clip_per_layer[layer_key]`. See `clip` above for possible values.
-          
+    layer
+        Layer to normalize instead of `X`. If `None`, `X` is normalized.
     inplace
         Whether to update `adata` or return dictionary with normalized copies
         of `adata.X` and `adata.layers`.
+    copy
+        Whether to modify copied input object. Not compatible with
+        `inplace=False`.
 
     Returns
     -------
-    Returns dictionary with Pearson residuals of `adata.X` and `adata.layers`
+    Returns dictionary with Pearson residuals and settings
     or updates `adata` with normalized version of the original
     `adata.X` and `adata.layers`, depending on `inplace`.
 
     """
+    
+    if copy:
+        if not inplace:
+            raise ValueError(
+                "`copy=True` cannot be used with `inplace=False`."
+            )
+        adata = adata.copy()
 
-    if layers == 'all':
-        layers = adata.layers.keys()
     # TODO: is this needed and if yes what for?
     # normalize_total() has it so I used it here
+    # TODO: add to other files as well?!
     view_to_actual(adata)
+        
+    X = _get_obs_rep(adata, layer=layer)  ## TODO add to other files as well!
+    computed_on = layer if layer else 'adata.X'
 
-    # Handle X
-    msg = 'computing analytic Pearson residuals for adata.X'
+    msg = 'computing analytic Pearson residuals on %s' % computed_on
     start = logg.info(msg)
+    
+    residuals = _pearson_residuals(X, theta, clip, copy = ~inplace)
+    settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
+    
     if inplace:
-        adata.X = _pearson_residuals(adata.X, theta, clip)
-        settings_dict = dict(theta=theta, clip=clip)
-        if theta_per_layer is not None:
-            settings_dict['theta_per_layer'] = theta_per_layer
-        if clip_per_layer is not None:
-            settings_dict['clip_per_layer'] = clip_per_layer
+        _set_obs_rep(adata,residuals,layer=layer)      
         adata.uns['pearson_residuals_normalization'] = settings_dict
-
     else:
-        dat = dict(X=_pearson_residuals(adata.X, theta, clip, copy=True))
-
-    # Handle layers
-    for layer_name in layers or ():
-
-        msg = f'computing analytic Pearson residuals for layer {layer_name}'
-        _ = logg.info(msg)
-
-        # Default to theta/clip if no layer-specific theta/clip given
-        if theta_per_layer is None:
-            layer_theta = theta
-        else:
-            layer_theta = theta_per_layer[layer_name]
-        if clip_per_layer is None:
-            layer_clip = clip
-        else:
-            layer_clip = clip_per_layer[layer_name]
-
-        layer = adata.layers[layer_name]
-
-        if inplace:
-            adata.layers[layer_name] = _pearson_residuals(
-                layer, layer_theta, layer_clip
-            )
-        else:
-            dat[layer_name] = _pearson_residuals(
-                layer, layer_theta, layer_clip, copy=True
-            )
-
-    if not layers is None:
-        adata.uns['pearson_residuals_normalization'] = dict(
-            theta=theta,
-            clip=clip,
-        )
+        results_dict = dict(X=residuals,**settings_dict)
 
     logg.info('    finished ({time_passed})', time=start)
 
-    return dat if not inplace else None
+    if copy:
+        return adata
+    elif not inplace:
+        return results_dict
 
 
 def normalize_pearson_residuals_pca(
@@ -192,7 +159,7 @@ def normalize_pearson_residuals_pca(
     n_comps_pca: Optional[int] = 50,
     random_state_pca: Optional[float] = 0,
     use_highly_variable: bool = True,
-    inplace: bool = False,
+    inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
 
     """\

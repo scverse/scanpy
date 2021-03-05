@@ -181,7 +181,7 @@ def recipe_pearson_residuals(
     batch_key: Optional[str] = None,
     n_comps_pca: Optional[int] = 50,
     random_state_pca: Optional[float] = 0,
-    inplace: bool = False,
+    inplace: bool = True,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """\
     Applies gene selection based on Pearson residuals. On the resulting subset,
