@@ -16,6 +16,12 @@ scanpy.settings.verbosity = "hint"
 IMPORTED = frozenset(sys.modules.keys())
 
 
+@pytest.fixture(autouse=True)
+def close_figures_on_teardown():
+    yield
+    pyplot.close("all")
+
+
 @pytest.fixture
 def imported_modules():
     return IMPORTED

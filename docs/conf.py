@@ -1,6 +1,5 @@
 import os
 import sys
-import warnings
 from pathlib import Path
 from datetime import datetime
 
@@ -51,6 +50,7 @@ extensions = [
     # 'ipython_directive',
     # 'ipython_console_highlighting',
     'scanpydoc',
+    "sphinx_search.extension",
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
@@ -139,6 +139,7 @@ qualname_overrides = {
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
+    "pandas.core.series.Series": "pandas.Series",
 }
 
 nitpick_ignore = [

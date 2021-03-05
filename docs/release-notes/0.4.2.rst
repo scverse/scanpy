@@ -1,0 +1,4 @@
+0.4.2 :small:`2018-01-07`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- amendments in `PAGA <https://github.com/theislab/paga>`_ and its plotting functions :smaller:`A Wolf`

@@ -17,7 +17,13 @@ from anndata import AnnData
 
 from .. import logging as logg
 from .._settings import settings as sett
-from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual, AnyRandom, _check_array_function_arguments
+from .._utils import (
+    sanitize_anndata,
+    deprecated_arg_names,
+    view_to_actual,
+    AnyRandom,
+    _check_array_function_arguments,
+)
 from .._compat import Literal
 from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
@@ -36,9 +42,9 @@ from ._deprecated.highly_variable_genes import filter_genes_dispersion
 def filter_cells(
     data: AnnData,
     min_counts: Optional[int] = None,
-    min_genes:  Optional[int] = None,
+    min_genes: Optional[int] = None,
     max_counts: Optional[int] = None,
-    max_genes:  Optional[int] = None,
+    max_genes: Optional[int] = None,
     inplace: bool = True,
     copy: bool = False,
 ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
@@ -112,29 +118,36 @@ def filter_cells(
     3
     """
     if copy:
-       logg.warning('`copy` is deprecated, use `inplace` instead.')
+        logg.warning('`copy` is deprecated, use `inplace` instead.')
     n_given_options = sum(
-        option is not None for option in
-        [min_genes, min_counts, max_genes, max_counts])
+        option is not None for option in [min_genes, min_counts, max_genes, max_counts]
+    )
     if n_given_options != 1:
         raise ValueError(
             'Only provide one of the optional parameters `min_counts`, '
-            '`min_genes`, `max_counts`, `max_genes` per call.')
+            '`min_genes`, `max_counts`, `max_genes` per call.'
+        )
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        cell_subset, number = materialize_as_ndarray(filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes))
+        cell_subset, number = materialize_as_ndarray(
+            filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes)
+        )
         if not inplace:
             return cell_subset, number
-        if min_genes is None and max_genes is None: adata.obs['n_counts'] = number
-        else: adata.obs['n_genes'] = number
+        if min_genes is None and max_genes is None:
+            adata.obs['n_counts'] = number
+        else:
+            adata.obs['n_genes'] = number
         adata._inplace_subset_obs(cell_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    number_per_cell = np.sum(X if min_genes is None and max_genes is None
-                             else X > 0, axis=1)
-    if issparse(X): number_per_cell = number_per_cell.A1
+    number_per_cell = np.sum(
+        X if min_genes is None and max_genes is None else X > 0, axis=1
+    )
+    if issparse(X):
+        number_per_cell = number_per_cell.A1
     if min_number is not None:
         cell_subset = number_per_cell >= min_number
     if max_number is not None:
@@ -145,10 +158,18 @@ def filter_cells(
         msg = f'filtered out {s} cells that have '
         if min_genes is not None or min_counts is not None:
             msg += 'less than '
-            msg += f'{min_genes} genes expressed' if min_counts is None else f'{min_counts} counts'
+            msg += (
+                f'{min_genes} genes expressed'
+                if min_counts is None
+                else f'{min_counts} counts'
+            )
         if max_genes is not None or max_counts is not None:
             msg += 'more than '
-            msg += f'{max_genes} genes expressed' if max_counts is None else f'{max_counts} counts'
+            msg += (
+                f'{max_genes} genes expressed'
+                if max_counts is None
+                else f'{max_counts} counts'
+            )
         logg.info(msg)
     return cell_subset, number_per_cell
 
@@ -156,9 +177,9 @@ def filter_cells(
 def filter_genes(
     data: AnnData,
     min_counts: Optional[int] = None,
-    min_cells:  Optional[int] = None,
+    min_cells: Optional[int] = None,
     max_counts: Optional[int] = None,
-    max_cells:  Optional[int] = None,
+    max_cells: Optional[int] = None,
     inplace: bool = True,
     copy: bool = False,
 ) -> Union[AnnData, None, Tuple[np.ndarray, np.ndarray]]:
@@ -201,21 +222,27 @@ def filter_genes(
         `n_counts` or `n_cells` per gene.
     """
     if copy:
-       logg.warning('`copy` is deprecated, use `inplace` instead.')
+        logg.warning('`copy` is deprecated, use `inplace` instead.')
     n_given_options = sum(
-        option is not None for option in
-        [min_cells, min_counts, max_cells, max_counts])
+        option is not None for option in [min_cells, min_counts, max_cells, max_counts]
+    )
     if n_given_options != 1:
         raise ValueError(
             'Only provide one of the optional parameters `min_counts`, '
-            '`min_cells`, `max_counts`, `max_cells` per call.')
+            '`min_cells`, `max_counts`, `max_cells` per call.'
+        )
 
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         gene_subset, number = materialize_as_ndarray(
-            filter_genes(adata.X, min_cells=min_cells,
-                         min_counts=min_counts, max_cells=max_cells,
-                         max_counts=max_counts))
+            filter_genes(
+                adata.X,
+                min_cells=min_cells,
+                min_counts=min_counts,
+                max_cells=max_cells,
+                max_counts=max_counts,
+            )
+        )
         if not inplace:
             return gene_subset, number
         if min_cells is None and max_cells is None:
@@ -228,8 +255,9 @@ def filter_genes(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
-    number_per_gene = np.sum(X if min_cells is None and max_cells is None
-                             else X > 0, axis=0)
+    number_per_gene = np.sum(
+        X if min_cells is None and max_cells is None else X > 0, axis=0
+    )
     if issparse(X):
         number_per_gene = number_per_gene.A1
     if min_number is not None:
@@ -242,10 +270,14 @@ def filter_genes(
         msg = f'filtered out {s} genes that are detected '
         if min_cells is not None or min_counts is not None:
             msg += 'in less than '
-            msg += f'{min_cells} cells' if min_counts is None else f'{min_counts} counts'
+            msg += (
+                f'{min_cells} cells' if min_counts is None else f'{min_counts} counts'
+            )
         if max_cells is not None or max_counts is not None:
             msg += 'in more than '
-            msg += f'{max_cells} cells' if max_counts is None else f'{max_counts} counts'
+            msg += (
+                f'{max_cells} cells' if max_counts is None else f'{max_counts} counts'
+            )
         logg.info(msg)
     return gene_subset, number_per_gene
 
@@ -489,10 +521,11 @@ def normalize_per_cell(
         adata = data.copy() if copy else data
         if counts_per_cell is None:
             cell_subset, counts_per_cell = materialize_as_ndarray(
-                        filter_cells(adata.X, min_counts=min_counts))
+                filter_cells(adata.X, min_counts=min_counts)
+            )
             adata.obs[key_n_counts] = counts_per_cell
             adata._inplace_subset_obs(cell_subset)
-            counts_per_cell=counts_per_cell[cell_subset]
+            counts_per_cell = counts_per_cell[cell_subset]
         normalize_per_cell(adata.X, counts_per_cell_after, counts_per_cell)
 
         layers = adata.layers.keys() if layers == 'all' else layers
@@ -502,10 +535,10 @@ def normalize_per_cell(
             after = np.median(counts_per_cell[cell_subset])
         elif use_rep is None:
             after = None
-        else: raise ValueError('use_rep should be "after", "X" or None')
+        else:
+            raise ValueError('use_rep should be "after", "X" or None')
         for layer in layers:
-            subset, counts = filter_cells(adata.layers[layer],
-                    min_counts=min_counts)
+            subset, counts = filter_cells(adata.layers[layer], min_counts=min_counts)
             temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
             adata.layers[layer] = temp
 
@@ -529,8 +562,10 @@ def normalize_per_cell(
         warnings.simplefilter("ignore")
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
-        if not issparse(X): X /= materialize_as_ndarray(counts_per_cell[:, np.newaxis])
-        else: sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
+        if not issparse(X):
+            X /= materialize_as_ndarray(counts_per_cell[:, np.newaxis])
+        else:
+            sparsefuncs.inplace_row_scale(X, 1 / counts_per_cell)
     return X if copy else None
 
 
@@ -565,10 +600,7 @@ def regress_out(
     """
     start = logg.info(f'regressing out {keys}')
     if issparse(adata.X):
-        logg.info(
-            '    sparse input is densified and may '
-            'lead to high memory use'
-        )
+        logg.info('    sparse input is densified and may ' 'lead to high memory use')
     adata = adata.copy() if copy else adata
 
     sanitize_anndata(adata)
@@ -630,14 +662,10 @@ def regress_out(
             regres = regressors
         tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
 
-    if n_jobs > 1 and n_chunks > 1:
-        import multiprocessing
-        pool = multiprocessing.Pool(n_jobs)
-        res = pool.map_async(_regress_out_chunk, tasks).get(9999999)
-        pool.close()
+    from joblib import Parallel, delayed
 
-    else:
-        res = list(map(_regress_out_chunk, tasks))
+    # TODO: figure out how to test that this doesn't oversubscribe resources
+    res = Parallel(n_jobs=n_jobs)(delayed(_regress_out_chunk)(task) for task in tasks)
 
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
@@ -670,7 +698,9 @@ def _regress_out_chunk(data):
         else:
             regres = regressors
         try:
-            result = sm.GLM(data_chunk[:, col_index], regres, family=sm.families.Gaussian()).fit()
+            result = sm.GLM(
+                data_chunk[:, col_index], regres, family=sm.families.Gaussian()
+            ).fit()
             new_column = result.resid_response
         except PerfectSeparationError:  # this emulates R's behavior
             logg.warning('Encountered PerfectSeparationError, setting to 0 as in R.')
@@ -796,6 +826,7 @@ def scale_sparse(
         return_mean_std=return_mean_std,
     )
 
+
 @scale.register(AnnData)
 def scale_anndata(
     adata: AnnData,
@@ -858,9 +889,7 @@ def subsample(
         new_n_obs = n_obs
     elif fraction is not None:
         if fraction > 1 or fraction < 0:
-            raise ValueError(
-                f'`fraction` needs to be within [0, 1], not {fraction}'
-            )
+            raise ValueError(f'`fraction` needs to be within [0, 1], not {fraction}')
         new_n_obs = int(fraction * old_n_obs)
         logg.debug(f'... subsampled to {new_n_obs} data points')
     else:
@@ -926,13 +955,9 @@ def downsample_counts(
     if copy:
         adata = adata.copy()
     if total_counts_call:
-        adata.X = _downsample_total_counts(
-            adata.X, total_counts, random_state, replace
-        )
+        adata.X = _downsample_total_counts(adata.X, total_counts, random_state, replace)
     elif counts_per_cell_call:
-        adata.X = _downsample_per_cell(
-            adata.X, counts_per_cell, random_state, replace
-        )
+        adata.X = _downsample_per_cell(adata.X, counts_per_cell, random_state, replace)
     if copy:
         return adata
 
@@ -945,10 +970,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         counts_per_cell = np.asarray(counts_per_cell)
     # np.random.choice needs int arguments in numba code:
     counts_per_cell = counts_per_cell.astype(np.int_, copy=False)
-    if (
-        not isinstance(counts_per_cell, np.ndarray)
-        or len(counts_per_cell) != n_obs
-    ):
+    if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
         raise ValueError(
             "If provided, 'counts_per_cell' must be either an integer, or "
             "coercible to an `np.ndarray` of length as number of observations"
@@ -1009,9 +1031,7 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
             X = original_type(X)
     else:
         v = X.reshape(np.multiply(*X.shape))
-        _downsample_array(
-            v, total_counts, random_state, replace=replace, inplace=True
-        )
+        _downsample_array(v, total_counts, random_state, replace=replace, inplace=True)
     return X
 
 

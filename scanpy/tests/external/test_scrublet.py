@@ -2,6 +2,7 @@ import pytest
 
 import scanpy as sc
 import scanpy.external as sce
+from anndata.tests.helpers import assert_equal
 
 
 def test_scrublet():
@@ -13,7 +14,7 @@ def test_scrublet():
     pytest.importorskip("scrublet")
 
     adata = sc.datasets.pbmc3k()
-    sce.pp.scrublet(adata)
+    sce.pp.scrublet(adata, use_approx_neighbors=False)
 
     errors = []
 
@@ -22,6 +23,68 @@ def test_scrublet():
     assert "doublet_score" in adata.obs.columns
 
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+
+
+def test_scrublet_dense():
+    """
+    Test that Scrublet works for dense matrices.
+
+    Check that scrublet runs and detects some doublets when a dense matrix is supplied.
+    """
+    pytest.importorskip("scrublet")
+
+    adata = sc.datasets.paul15()[:500].copy()
+    sce.pp.scrublet(adata, use_approx_neighbors=False)
+
+    errors = []
+
+    # replace assertions by conditions
+    assert "predicted_doublet" in adata.obs.columns
+    assert "doublet_score" in adata.obs.columns
+
+    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+
+
+def test_scrublet_params():
+    """
+    Test that Scrublet args are passed.
+
+    Check that changes to parameters change scrublet results.
+    """
+    pytest.importorskip("scrublet")
+
+    # Reduce size of input for faster test
+    adata = sc.datasets.pbmc3k()[:500].copy()
+    sc.pp.filter_genes(adata, min_counts=100)
+
+    # Get the default output
+
+    default = sce.pp.scrublet(adata, use_approx_neighbors=False, copy=True)
+
+    test_params = {
+        'expected_doublet_rate': 0.1,
+        'synthetic_doublet_umi_subsampling': 0.8,
+        'knn_dist_metric': 'manhattan',
+        'normalize_variance': False,
+        'log_transform': True,
+        'mean_center': False,
+        'n_prin_comps': 10,
+        'n_neighbors': 2,
+        'threshold': 0.1,
+    }
+
+    # Test each parameter and make sure something changes
+
+    for param in test_params.keys():
+        test_args = {
+            'adata': adata,
+            'use_approx_neighbors': False,
+            'copy': True,
+            param: test_params[param],
+        }
+        curr = sc.external.pp.scrublet(**test_args)
+        with pytest.raises(AssertionError):
+            assert_equal(default, curr)
 
 
 def test_scrublet_simulate_doublets():
