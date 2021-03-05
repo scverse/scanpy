@@ -854,6 +854,14 @@ def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
     save_and_compare_images('master_embedding_outline_vmin_vmax')
 
 
+def test_timeseries():
+    adata = sc.datasets.pbmc68k_reduced()
+    sc.pp.neighbors(adata, n_neighbors=5, method='gauss', knn=False)
+    sc.tl.diffmap(adata)
+    sc.tl.dpt(adata, n_branchings=1, n_dcs=10)
+    sc.pl.dpt_timeseries(adata, as_heatmap=True)
+
+
 def test_scatter_raw(tmp_path):
     pbmc = sc.datasets.pbmc68k_reduced()[:100].copy()
     raw_pth = tmp_path / "raw.png"
@@ -989,6 +997,23 @@ def test_paga(image_comparer):
 
     sc.pl.paga(pbmc, color=colors, colorbar=False)
     save_and_compare_images('master_paga_pie')
+
+
+def test_paga_path(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.tl.paga(pbmc, groups='bulk_labels')
+
+    pbmc.uns['iroot'] = 0
+    sc.tl.dpt(pbmc)
+    sc.pl.paga_path(
+        pbmc,
+        nodes=['Dendritic'],
+        keys=['HES4', 'SRM', 'CSTB'],
+        show=False,
+    )
+    save_and_compare_images('master_paga_path')
 
 
 def test_no_copy():

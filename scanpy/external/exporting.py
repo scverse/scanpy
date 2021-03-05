@@ -16,6 +16,7 @@ from pandas.api.types import is_categorical
 from ..preprocessing._utils import _get_mean_var
 from .._utils import NeighborsView
 
+
 def spring_project(
     adata: AnnData,
     project_dir: Union[Path, str],
@@ -74,16 +75,25 @@ def spring_project(
             embedding_method = 'X_' + embedding_method
         else:
             if embedding_method in adata.uns:
-                embedding_method = 'X_' + embedding_method + '_' + adata.uns[embedding_method]['params']['layout']
+                embedding_method = (
+                    'X_'
+                    + embedding_method
+                    + '_'
+                    + adata.uns[embedding_method]['params']['layout']
+                )
             else:
-                raise ValueError('Run the specified embedding method `%s` first.' %embedding_method)
+                raise ValueError(
+                    'Run the specified embedding method `%s` first.' % embedding_method
+                )
 
     coords = adata.obsm[embedding_method]
 
     # Make project directory and subplot directory (subplot has same name as project)
     # For now, the subplot is just all cells in adata
     project_dir: Path = Path(project_dir)
-    subplot_dir: Path = project_dir.parent if subplot_name is None else project_dir / subplot_name
+    subplot_dir: Path = (
+        project_dir.parent if subplot_name is None else project_dir / subplot_name
+    )
     subplot_dir.mkdir(parents=True, exist_ok=True)
     print(f'Writing subplot to {subplot_dir}')
 
@@ -93,8 +103,11 @@ def spring_project(
     # one file.
     write_counts_matrices = True
     base_dir_filelist = [
-        'counts_norm_sparse_genes.hdf5', 'counts_norm_sparse_cells.hdf5',
-        'counts_norm.npz', 'total_counts.txt', 'genes.txt',
+        'counts_norm_sparse_genes.hdf5',
+        'counts_norm_sparse_cells.hdf5',
+        'counts_norm.npz',
+        'total_counts.txt',
+        'genes.txt',
     ]
     if all((project_dir / f).is_file() for f in base_dir_filelist):
         if not overwrite:
@@ -146,7 +159,9 @@ def spring_project(
             elif is_categorical(adata.obs[obs_name]):
                 categorical_extras[obs_name] = [str(x) for x in adata.obs[obs_name]]
             else:
-                logg.warning(f'Cell grouping {obs_name!r} is not a categorical variable')
+                logg.warning(
+                    f'Cell grouping {obs_name!r} is not a categorical variable'
+                )
     if custom_color_tracks is None:
         for obs_name in adata.obs:
             if not is_categorical(adata.obs[obs_name]):
@@ -160,7 +175,9 @@ def spring_project(
             elif not is_categorical(adata.obs[obs_name]):
                 continuous_extras[obs_name] = np.array(adata.obs[obs_name])
             else:
-                logg.warning(f'Custom color track {obs_name!r} is not a continuous variable')
+                logg.warning(
+                    f'Custom color track {obs_name!r} is not a continuous variable'
+                )
 
     # Write continuous colors
     continuous_extras['Uniform'] = np.zeros(E.shape[0])
@@ -174,8 +191,12 @@ def spring_project(
 
     # Write categorical data
     categorical_coloring_data = {}
-    categorical_coloring_data = _build_categ_colors(categorical_coloring_data, categorical_extras)
-    _write_cell_groupings(subplot_dir / 'categorical_coloring_data.json', categorical_coloring_data)
+    categorical_coloring_data = _build_categ_colors(
+        categorical_coloring_data, categorical_extras
+    )
+    _write_cell_groupings(
+        subplot_dir / 'categorical_coloring_data.json', categorical_coloring_data
+    )
 
     # Write graph in two formats for backwards compatibility
     edges = _get_edges(adata, neighbors_key)
@@ -189,7 +210,10 @@ def spring_project(
 
     # Write 2-D coordinates, after adjusting to roughly match SPRING's default d3js force layout parameters
     coords = coords - coords.min(0)[None, :]
-    coords = coords * (np.array([1000, 1000]) / coords.ptp(0))[None, :] + np.array([200, -200])[None, :]
+    coords = (
+        coords * (np.array([1000, 1000]) / coords.ptp(0))[None, :]
+        + np.array([200, -200])[None, :]
+    )
     np.savetxt(
         subplot_dir / 'coordinates.txt',
         np.hstack((np.arange(E.shape[0])[:, None], coords)),
@@ -198,9 +222,11 @@ def spring_project(
 
     # Write some useful intermediates, if they exist
     if 'X_pca' in adata.obsm_keys():
-        np.savez_compressed(subplot_dir / 'intermediates.npz',
-                            Epca=adata.obsm['X_pca'],
-                            total_counts = total_counts)
+        np.savez_compressed(
+            subplot_dir / 'intermediates.npz',
+            Epca=adata.obsm['X_pca'],
+            total_counts=total_counts,
+        )
 
     # Write PAGA data, if present
     if 'paga' in adata.uns:
@@ -222,7 +248,7 @@ def _get_edges(adata, neighbors_key=None):
     else:
         matrix = neighbors['connectivities']
     matrix = matrix.tocoo()
-    edges = [(i,j) for i, j in zip(matrix.row, matrix.col)]
+    edges = [(i, j) for i, j in zip(matrix.row, matrix.col)]
 
     return edges
 
@@ -240,11 +266,11 @@ def write_hdf5_genes(E, gene_list, filename):
     hf.attrs['ngenes'] = E.shape[1]
 
     for iG, g in enumerate(gene_list):
-        counts = E[:,iG].A.squeeze()
+        counts = E[:, iG].A.squeeze()
         cell_ix = np.nonzero(counts)[0]
         counts = counts[cell_ix]
-        counts_group.create_dataset(g, data = counts)
-        cix_group.create_dataset(g, data = cell_ix)
+        counts_group.create_dataset(g, data=counts)
+        cix_group.create_dataset(g, data=cell_ix)
 
     hf.close()
 
@@ -262,45 +288,45 @@ def write_hdf5_cells(E, filename):
     hf.attrs['ngenes'] = E.shape[1]
 
     for iC in range(E.shape[0]):
-        counts = E[iC,:].A.squeeze()
+        counts = E[iC, :].A.squeeze()
         gene_ix = np.nonzero(counts)[0]
         counts = counts[gene_ix]
-        counts_group.create_dataset(str(iC), data = counts)
-        gix_group.create_dataset(str(iC), data = gene_ix)
+        counts_group.create_dataset(str(iC), data=counts)
+        gix_group.create_dataset(str(iC), data=gene_ix)
 
     hf.close()
 
 
-def write_sparse_npz(E, filename, compressed = False):
+def write_sparse_npz(E, filename, compressed=False):
     ''' SPRING standard: filename = main_spring_dir + "/counts_norm.npz"'''
     E = E.tocsc()
-    scipy.sparse.save_npz(filename, E, compressed = compressed)
+    scipy.sparse.save_npz(filename, E, compressed=compressed)
 
 
 def _write_graph(filename, n_nodes, edges):
-    nodes = [{'name':int(i),'number':int(i)} for i in range(n_nodes)]
-    edges = [{'source':int(i), 'target':int(j), 'distance':0} for i,j in edges]
-    out = {'nodes':nodes,'links':edges}
-    open(filename,'w').write(json.dumps(out,indent=4, separators=(',', ': ')))
+    nodes = [{'name': int(i), 'number': int(i)} for i in range(n_nodes)]
+    edges = [{'source': int(i), 'target': int(j), 'distance': 0} for i, j in edges]
+    out = {'nodes': nodes, 'links': edges}
+    open(filename, 'w').write(json.dumps(out, indent=4, separators=(',', ': ')))
 
 
 def _write_edges(filename, edges):
     with open(filename, 'w') as f:
         for e in edges:
-            f.write('%i;%i\n' %(e[0], e[1]))
+            f.write('%i;%i\n' % (e[0], e[1]))
 
 
 def _write_color_tracks(ctracks, fname):
     out = []
-    for name,score in ctracks.items():
-        line = name + ',' + ','.join(['%.3f' %x for x in score])
+    for name, score in ctracks.items():
+        line = name + ',' + ','.join(['%.3f' % x for x in score])
         out += [line]
-    out = sorted(out,key=lambda x: x.split(',')[0])
-    open(fname,'w').write('\n'.join(out))
+    out = sorted(out, key=lambda x: x.split(',')[0])
+    open(fname, 'w').write('\n'.join(out))
 
 
 def _frac_to_hex(frac):
-    rgb = tuple(np.array(np.array(plt.cm.jet(frac)[:3])*255,dtype=int))
+    rgb = tuple(np.array(np.array(plt.cm.jet(frac)[:3]) * 255, dtype=int))
     return '#%02x%02x%02x' % rgb
 
 
@@ -312,39 +338,56 @@ def _get_color_stats_genes(color_stats, E, gene_list):
     maxes = E.max(0).todense().A1
 
     pctl = 99.6
-    pctl_n = (100-pctl) / 100. * E.shape[0]
+    pctl_n = (100 - pctl) / 100.0 * E.shape[0]
     pctls = np.zeros(E.shape[1], dtype=float)
     for iG in range(E.shape[1]):
-        n_nonzero = E.indptr[iG+1] - E.indptr[iG]
+        n_nonzero = E.indptr[iG + 1] - E.indptr[iG]
         if n_nonzero > pctl_n:
-            pctls[iG] = np.percentile(E.data[E.indptr[iG]:E.indptr[iG+1]], 100 - 100 * pctl_n / n_nonzero)
+            pctls[iG] = np.percentile(
+                E.data[E.indptr[iG] : E.indptr[iG + 1]], 100 - 100 * pctl_n / n_nonzero
+            )
         else:
             pctls[iG] = 0
-        color_stats[gene_list[iG]] = tuple(map(float, (means[iG], stdevs[iG], mins[iG], maxes[iG], pctls[iG])))
+        color_stats[gene_list[iG]] = tuple(
+            map(float, (means[iG], stdevs[iG], mins[iG], maxes[iG], pctls[iG]))
+        )
     return color_stats
 
 
 def _get_color_stats_custom(color_stats, custom_colors):
-    for k,v in custom_colors.items():
-        color_stats[k] = tuple(map(float, (np.mean(v),np.std(v),np.min(v),np.max(v),np.percentile(v,99))))
+    for k, v in custom_colors.items():
+        color_stats[k] = tuple(
+            map(
+                float,
+                (np.mean(v), np.std(v), np.min(v), np.max(v), np.percentile(v, 99)),
+            )
+        )
     return color_stats
 
 
 def _write_color_stats(filename, color_stats):
-    with open(filename,'w') as f:
-        f.write(json.dumps(color_stats,indent=4, sort_keys=True))#.decode('utf-8'))
+    with open(filename, 'w') as f:
+        f.write(json.dumps(color_stats, indent=4, sort_keys=True))  # .decode('utf-8'))
 
 
 def _build_categ_colors(categorical_coloring_data, cell_groupings):
-    for k,labels in cell_groupings.items():
-        label_colors = {l:_frac_to_hex(float(i) / len(set(labels))) for i, l in enumerate(list(set(labels)))}
-        categorical_coloring_data[k] = {'label_colors':label_colors, 'label_list':labels}
+    for k, labels in cell_groupings.items():
+        label_colors = {
+            l: _frac_to_hex(float(i) / len(set(labels)))
+            for i, l in enumerate(list(set(labels)))
+        }
+        categorical_coloring_data[k] = {
+            'label_colors': label_colors,
+            'label_list': labels,
+        }
     return categorical_coloring_data
 
 
 def _write_cell_groupings(filename, categorical_coloring_data):
-    with open(filename,'w') as f:
-        f.write(json.dumps(categorical_coloring_data,indent=4, sort_keys=True))#.decode('utf-8'))
+    with open(filename, 'w') as f:
+        f.write(
+            json.dumps(categorical_coloring_data, indent=4, sort_keys=True)
+        )  # .decode('utf-8'))
 
 
 def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
@@ -355,17 +398,22 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
     sizes = list(adata.uns[group_key + '_sizes'])
     clus_labels = adata.obs[group_key].cat.codes.values
-    cell_groups = [[int(j) for j in np.nonzero(clus_labels==i)[0]] for i in range(len(names))]
+    cell_groups = [
+        [int(j) for j in np.nonzero(clus_labels == i)[0]] for i in range(len(names))
+    ]
 
     if group_key + '_colors' in adata.uns:
         colors = list(adata.uns[group_key + '_colors'])
     else:
         import scanpy.plotting.utils
-        scanpy.plotting.utils.add_colors_for_categorical_sample_annotation(adata, group_key)
+
+        scanpy.plotting.utils.add_colors_for_categorical_sample_annotation(
+            adata, group_key
+        )
         colors = list(adata.uns[group_key + '_colors'])
 
     # retrieve edge level data
-    sources,targets = adata.uns['paga']['connectivities'].nonzero()
+    sources, targets = adata.uns['paga']['connectivities'].nonzero()
     weights = np.sqrt(adata.uns['paga']['connectivities'].data) / 3
 
     # save a threshold weight for showing edges so that by default,
@@ -373,33 +421,49 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     if len(names) * 8 > len(weights):
         min_edge_weight_view = 0
     else:
-        min_edge_weight_view = sorted(weights)[-len(names)*8]
+        min_edge_weight_view = sorted(weights)[-len(names) * 8]
 
     # save another threshold for even saving edges at all, with 100 edges per node
-    if len(weights) < 100*len(names):
+    if len(weights) < 100 * len(names):
         min_edge_weight_save = 0
     else:
-        min_edge_weight_save = sorted(weights)[-len(names)*100]
+        min_edge_weight_save = sorted(weights)[-len(names) * 100]
 
     # make node list
     nodes = []
-    for i,name,xy,color,size,cells in zip(range(len(names)),names,coords,colors,sizes,cell_groups):
-        nodes.append({'index':i,'size':int(size), 'color':color, 'coordinates':xy, 'cells':cells, 'name':name})
+    for i, name, xy, color, size, cells in zip(
+        range(len(names)), names, coords, colors, sizes, cell_groups
+    ):
+        nodes.append(
+            {
+                'index': i,
+                'size': int(size),
+                'color': color,
+                'coordinates': xy,
+                'cells': cells,
+                'name': name,
+            }
+        )
 
     # make link list, avoid redundant encoding (graph is undirected)
     links = []
-    for source,target,weight in zip(sources,targets,weights):
+    for source, target, weight in zip(sources, targets, weights):
         if source < target and weight > min_edge_weight_save:
-            links.append({'source':int(source), 'target':int(target), 'weight':float(weight)})
+            links.append(
+                {'source': int(source), 'target': int(target), 'weight': float(weight)}
+            )
 
     # save data about edge weights
-    edge_weight_meta = {'min_edge_weight': min_edge_weight_view,
-                        'max_edge_weight': np.max(weights)}
+    edge_weight_meta = {
+        'min_edge_weight': min_edge_weight_view,
+        'max_edge_weight': np.max(weights),
+    }
 
-    PAGA_data = {'nodes':nodes, 'links':links, 'edge_weight_meta':edge_weight_meta}
+    PAGA_data = {'nodes': nodes, 'links': links, 'edge_weight_meta': edge_weight_meta}
 
     import json
-    json.dump(PAGA_data,open(outpath,'w'), indent=4)
+
+    json.dump(PAGA_data, open(outpath, 'w'), indent=4)
 
     return None
 
@@ -410,7 +474,10 @@ def cellbrowser(
     data_name: str,
     embedding_keys: Union[Iterable[str], Mapping[str, str], str, None] = None,
     annot_keys: Union[Iterable[str], Mapping[str, str], None] = (
-        "louvain", "percent_mito", "n_genes", "n_counts"
+        "louvain",
+        "percent_mito",
+        "n_genes",
+        "n_counts",
     ),
     cluster_field: str = "louvain",
     nb_marker: int = 50,

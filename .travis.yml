@@ -1,5 +1,7 @@
 dist: xenial
 language: python
+git:
+  depth: false  # Version detection needs all info
 branches:
   only:
     - master  # All other branches should become (draft) PRs and be build that way
@@ -11,8 +13,6 @@ matrix:
     - pip install .[dev,doc]
     script:
     - black . --check --diff
-    - python -m scanpy.tests.blackdiff 10
-    - python setup.py check --restructuredtext --strict
     - rst2html.py --halt=2 README.rst >/dev/null
     after_success: skip
   - name: "anndata dev"

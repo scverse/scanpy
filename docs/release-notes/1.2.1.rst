@@ -1,0 +1,6 @@
+1.2.1 :small:`2018-06-08`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Plotting of :ref:`pl-generic` marker genes and quality control.
+
+- :func:`~scanpy.pl.highest_expr_genes` for quality control; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_ :pr:`169` :smaller:`F Ramirez`
