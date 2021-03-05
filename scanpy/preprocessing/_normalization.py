@@ -124,12 +124,8 @@ def normalize_pearson_residuals(
             )
         adata = adata.copy()
 
-    # TODO: is this needed and if yes what for?
-    # normalize_total() has it so I used it here
-    # TODO: add to other files as well?!
-    view_to_actual(adata)
-        
-    X = _get_obs_rep(adata, layer=layer)  ## TODO add to other files as well!
+    view_to_actual(adata)        
+    X = _get_obs_rep(adata, layer=layer)
     computed_on = layer if layer else 'adata.X'
 
     msg = 'computing analytic Pearson residuals on %s' % computed_on

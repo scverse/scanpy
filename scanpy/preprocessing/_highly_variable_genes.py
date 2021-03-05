@@ -184,7 +184,7 @@ def _highly_variable_pearson_residuals(
     clip: Union[Literal['auto', 'none'], float] = 'auto',
     chunksize: int = 100,
     subset: bool = False,
-    inplace: bool = True,
+    inplace: bool = True
 ) -> Optional[pd.DataFrame]:
     """\
     See `highly_variable_genes`.
@@ -214,7 +214,9 @@ def _highly_variable_pearson_residuals(
         in all batches
     """
 
-    X = adata.layers[layer] if layer is not None else adata.X
+    view_to_actual(adata)        
+    X = _get_obs_rep(adata, layer=layer)
+    computed_on = layer if layer else 'adata.X'
 
     # Check for raw counts
     if check_nonnegative_integers(X) is False:
@@ -328,7 +330,8 @@ def _highly_variable_pearson_residuals(
     df = df.loc[adata.var_names]
 
     if inplace or subset:
-        adata.uns['hvg'] = {'flavor': 'pearson_residuals'}
+        adata.uns['hvg'] = {'flavor': 'pearson_residuals',
+                            'computed_on':computed_on}
         logg.hint(
             'added\n'
             '    \'highly_variable\', boolean vector (adata.var)\n'
