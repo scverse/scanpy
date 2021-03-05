@@ -38,8 +38,6 @@ def _normalize_data(X, counts, after=None, copy=False):
 def _pearson_residuals(X, theta, clip, copy=False):
 
     X = X.copy() if copy else X
-    ##TODO can we avoid making this dense?
-    X = X.toarray() if issparse(X) else X
 
     # check theta
     if theta <= 0:
@@ -56,12 +54,18 @@ def _pearson_residuals(X, theta, clip, copy=False):
     if check_nonnegative_integers(X) is False:
         raise ValueError("`pp.normalize_pearson_residuals` expects raw count data")
 
-    # get residuals
-    sums_genes = np.sum(X, axis=0, keepdims=True)
-    sums_cells = np.sum(X, axis=1, keepdims=True)
-    sum_total = np.sum(sums_genes)
-    mu = sums_cells @ sums_genes / sum_total
-    residuals = (X - mu) / np.sqrt(mu + mu ** 2 / theta)
+    if sp_sparse.issparse(X):
+        sums_genes = np.sum(X, axis=0)
+        sums_cells = np.sum(X, axis=1)
+        sum_total = np.sum(sums_genes).squeeze()
+    else:
+        sums_genes = np.sum(X, axis=0, keepdims=True)
+        sums_cells = np.sum(X, axis=1, keepdims=True)
+        sum_total = np.sum(sums_genes)
+
+    mu = np.array(sums_cells @ sums_genes / sum_total)
+    diff = np.array(X - mu)
+    residuals = diff / np.sqrt(mu + mu ** 2 / theta)
 
     # clip
     residuals = np.clip(residuals, a_min=-clip, a_max=clip)
