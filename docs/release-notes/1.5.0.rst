@@ -17,7 +17,7 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 
 .. rubric:: External tools
 
-- :func:`~scanpy.external.pp.scvi` for preprocessing with scVI :pr:`1085` :smaller:`G Xing`
+- `~scanpy.external.pp.scvi` for preprocessing with scVI :pr:`1085` :smaller:`G Xing`
 - Guide for using :ref:`Scanpy in R <conversion_to_r>` :pr:`1186` :smaller:`L Zappia`
 
 .. rubric:: Performance
