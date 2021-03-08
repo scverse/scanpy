@@ -119,11 +119,11 @@ def moignard15() -> AnnData:
     Annotated data matrix.
     """
     filename = settings.datasetdir / 'moignard15/nbt.3154-S3.xlsx'
-    backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
+    backup_url = 'https://static-content.springer.com/esm/art%3A10.1038%2Fnbt.3154/MediaObjects/41587_2015_BFnbt3154_MOESM4_ESM.xlsx'
     adata = read(filename, sheet='dCt_values.txt', backup_url=backup_url)
     # filter out 4 genes as in Haghverdi et al. (2016)
     gene_subset = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
-    adata = adata[:, gene_subset]  # retain non-removed genes
+    adata = adata[:, gene_subset].copy()  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
     adata.uns["iroot"] = 532  # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups
@@ -307,7 +307,10 @@ def pbmc3k_processed() -> AnnData:
 
 
 def _download_visium_dataset(
-    sample_id: str, spaceranger_version: str, base_dir: Optional[Path] = None
+    sample_id: str,
+    spaceranger_version: str,
+    base_dir: Optional[Path] = None,
+    download_image: bool = False,
 ):
     """
     Params
@@ -316,6 +319,8 @@ def _download_visium_dataset(
         String name of example visium dataset.
     base_dir
         Where to download the dataset to.
+    download_image
+        Whether to download the high-resolution tissue section.
     """
     import tarfile
 
@@ -343,6 +348,13 @@ def _download_visium_dataset(
         filename=sample_dir / "filtered_feature_bc_matrix.h5",
         backup_url=url_prefix + f"{sample_id}_filtered_feature_bc_matrix.h5",
     )
+
+    # Download image
+    if download_image:
+        _utils.check_presence_download(
+            filename=sample_dir / "image.tif",
+            backup_url=url_prefix + f"{sample_id}_image.tif",
+        )
 
 
 @check_datasetdir_exists
@@ -377,6 +389,8 @@ def visium_sge(
         'Targeted_Visium_Human_ColorectalCancer_GeneSignature',
         'Parent_Visium_Human_ColorectalCancer',
     ] = 'V1_Breast_Cancer_Block_A_Section_1',
+    *,
+    include_hires_tiff: bool = False,
 ) -> AnnData:
     """\
     Processed Visium Spatial Gene Expression data from 10x Genomics.
@@ -386,6 +400,8 @@ def visium_sge(
     ----------
     sample_id
         The ID of the data sample in 10x’s spatial database.
+    include_hires_tiff
+        Download and include the high-resolution tissue image (tiff) in `adata.uns["spatial"][sample_id]["metadata"]["source_image_path"]`.
 
     Returns
     -------
@@ -395,5 +411,14 @@ def visium_sge(
         spaceranger_version = "1.1.0"
     else:
         spaceranger_version = "1.2.0"
-    _download_visium_dataset(sample_id, spaceranger_version)
-    return read_visium(settings.datasetdir / sample_id)
+    _download_visium_dataset(
+        sample_id, spaceranger_version, download_image=include_hires_tiff
+    )
+    if include_hires_tiff:
+        adata = read_visium(
+            settings.datasetdir / sample_id,
+            source_image_path=settings.datasetdir / sample_id / "image.tif",
+        )
+    else:
+        adata = read_visium(settings.datasetdir / sample_id)
+    return adata

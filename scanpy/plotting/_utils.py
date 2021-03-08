@@ -197,13 +197,13 @@ def timeseries_as_heatmap(
         x_new[:, _hold:] = X[:, hold:]
 
     _, ax = pl.subplots(figsize=(1.5 * 4, 2 * 4))
-    ax.imshow(
+    img = ax.imshow(
         np.array(X, dtype=np.float_),
         aspect='auto',
         interpolation='nearest',
         cmap=color_map,
     )
-    pl.colorbar(shrink=0.5)
+    pl.colorbar(img, shrink=0.5)
     pl.yticks(range(X.shape[0]), var_names)
     for h in highlights_x:
         pl.plot([h, h], [0, X.shape[0]], '--', color='black')
@@ -499,12 +499,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
     neighbors = NeighborsView(adata, neighbors_key)
     g = nx.Graph(neighbors['connectivities'])
     basis_key = _get_basis(adata, basis)
-    if basis_key == "spatial":
-        adata.obsm["spatial"][:, 1] = np.abs(
-            np.subtract(
-                adata.obsm["spatial"][:, 1], np.max(adata.obsm["spatial"][:, 1])
-            )
-        )
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for ax in axs:
@@ -1067,7 +1062,9 @@ def check_projection(projection):
             )
 
 
-def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
+def circles(
+    x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, scale_factor=1.0, **kwargs
+):
     """
     Taken from here: https://gist.github.com/syrte/592a062c562cd2a98a83
     Make a scatter plot of circles.
@@ -1109,7 +1106,9 @@ def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
 
     # You can set `facecolor` with an array for each patch,
     # while you can only set `facecolors` with a value for all.
-
+    if scale_factor != 1.0:
+        x = x * scale_factor
+        y = y * scale_factor
     zipped = np.broadcast(x, y, s)
     patches = [Circle((x_, y_), s_) for x_, y_, s_ in zipped]
     collection = PatchCollection(patches, **kwargs)

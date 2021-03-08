@@ -882,25 +882,36 @@ def dotplot(
     Create a dot plot using the given markers and the PBMC example dataset grouped by
     the category 'bulk_labels'.
 
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get DotPlot object for fine tuning
 
-    >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
-    >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
+    .. plot::
+        :context: close-figs
+
+        dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
+        dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
 
     The axes used can be obtained using the get_axes() method
 
-    >>> axes_dict = dp.get_axes()
-    >>> print(axes_dict)
+    .. code-block:: python
+
+        axes_dict = dp.get_axes()
+        print(axes_dict)
 
     """
 

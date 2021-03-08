@@ -12,7 +12,7 @@ import pandas as pd
 from anndata import AnnData
 from cycler import Cycler
 from matplotlib.axes import Axes
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import is_categorical_dtype, is_numeric_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
@@ -23,7 +23,7 @@ from matplotlib.colors import is_color_like, Colormap, ListedColormap
 from .. import get
 from .. import logging as logg
 from .._settings import settings
-from .._utils import sanitize_anndata, _doc_params
+from .._utils import sanitize_anndata, _doc_params, _check_use_raw
 from .._compat import Literal
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes
@@ -101,7 +101,7 @@ def scatter(
         or a hex color specification, e.g.,
         `'ann1'`, `'#fe57a1'`, or `['ann1', 'ann2']`.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     layers
         Use the `layers` attribute of `adata` if present: specify the layer for
         `x`, `y` and `color`. If `layers` is a string, then it is expanded to
@@ -177,8 +177,7 @@ def _scatter_obs(
     sanitize_anndata(adata)
     from scipy.sparse import issparse
 
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
+    use_raw = _check_use_raw(adata, use_raw)
 
     # Process layers
     if layers in ['X', None] or (
@@ -647,7 +646,7 @@ def violin(
     log
         Plot on logarithmic axis.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     stripplot
         Add a stripplot on top of the violin plot.
         See :func:`~seaborn.stripplot`.
@@ -689,8 +688,7 @@ def violin(
     import seaborn as sns  # Slow import, only import if called
 
     sanitize_anndata(adata)
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
+    use_raw = _check_use_raw(adata, use_raw)
     if isinstance(keys, str):
         keys = [keys]
     keys = list(OrderedDict.fromkeys(keys))  # remove duplicates, preserving the order
@@ -760,7 +758,6 @@ def violin(
                     size=size,
                     color="black",
                     ax=g.axes[0, ax_id],
-                    **kwds,
                 )
         if log:
             g.set(yscale='log')
@@ -848,7 +845,7 @@ def clustermap(
         Categorical annotation to plot with a different color map.
         Currently, only a single key is supported.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     {show_save_ax}
     **kwds
         Keyword arguments passed to :func:`~seaborn.clustermap`.
@@ -871,8 +868,7 @@ def clustermap(
     if not isinstance(obs_keys, (str, type(None))):
         raise ValueError('Currently, only a single key is supported.')
     sanitize_anndata(adata)
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
+    use_raw = _check_use_raw(adata, use_raw)
     X = adata.raw.X if use_raw else adata.X
     if issparse(X):
         X = X.toarray()
@@ -960,9 +956,6 @@ def heatmap(
     --------
     rank_genes_groups_heatmap: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
-
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
     )
@@ -977,6 +970,13 @@ def heatmap(
         gene_symbols=gene_symbols,
         layer=layer,
     )
+
+    # check if var_group_labels are a subset of categories:
+    if var_group_labels is not None:
+        if set(var_group_labels).issubset(categories):
+            var_groups_subset_of_groupby = True
+        else:
+            var_groups_subset_of_groupby = False
 
     if standard_scale == 'obs':
         obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
@@ -995,10 +995,23 @@ def heatmap(
         dendrogram = False
     else:
         categorical = True
-        # get categories colors:
-        if groupby + "_colors" in adata.uns:
+        # get categories colors
+        if isinstance(groupby, str) and is_categorical_dtype(adata.obs[groupby]):
+            # saved category colors only work when groupby is valid adata.obs
+            # categorical column. When groupby is a numerical column
+            # or when groupby is a list of columns the colors are assigned on the fly,
+            # which may create inconsistencies in multiple runs that require sorting
+            # of the categories (eg. when dendrogram is plotted).
+            if groupby + "_colors" not in adata.uns:
+                # if colors are not found, assign a new palette
+                # and save it using the same code for embeddings
+                from ._tools.scatterplots import _get_palette
+
+                _get_palette(adata, groupby)
             groupby_colors = adata.uns[groupby + "_colors"]
         else:
+            # this case happen when adata.obs[groupby] is numeric
+            # the values are converted into a category on the fly
             groupby_colors = None
 
     if dendrogram:
@@ -1047,8 +1060,9 @@ def heatmap(
 
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
-        # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
-        # second row is for main content. This second row is divided into three axes:
+        # first row is for 'brackets' (if no brackets needed, the height of this row
+        # is zero) second row is for main content. This second row is divided into
+        # three axes:
         #   first ax is for the categories defined by `groupby`
         #   second ax is for the heatmap
         #   third ax is for the dendrogram
@@ -1100,20 +1114,24 @@ def heatmap(
         heatmap_ax.set_ylabel('')
         heatmap_ax.grid(False)
 
-        # sns.heatmap(obs_tidy, yticklabels="auto", ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
         if show_gene_labels:
             heatmap_ax.tick_params(axis='x', labelsize='small')
             heatmap_ax.set_xticks(np.arange(len(var_names)))
             heatmap_ax.set_xticklabels(var_names, rotation=90)
         else:
             heatmap_ax.tick_params(axis='x', labelbottom=False, bottom=False)
-
         # plot colorbar
         _plot_colorbar(im, fig, axs[1, 3])
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+            (
+                label2code,
+                ticks,
+                labels,
+                groupby_cmap,
+                norm,
+            ) = _plot_categories_as_colorblocks(
                 groupby_ax, obs_tidy, colors=groupby_colors, orientation='left'
             )
 
@@ -1123,9 +1141,10 @@ def heatmap(
             )
             heatmap_ax.hlines(
                 line_positions,
-                -0.73,
+                -0.5,
                 len(var_names) - 0.5,
-                lw=0.6,
+                lw=1,
+                color='black',
                 zorder=10,
                 clip_on=False,
             )
@@ -1193,7 +1212,7 @@ def heatmap(
 
         kwds.setdefault('interpolation', 'nearest')
         im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
-        heatmap_ax.set_xlim(0, obs_tidy.shape[0])
+        heatmap_ax.set_xlim(0 - 0.5, obs_tidy.shape[0] - 0.5)
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
         heatmap_ax.set_xlabel('')
@@ -1207,7 +1226,13 @@ def heatmap(
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+            (
+                label2code,
+                ticks,
+                labels,
+                groupby_cmap,
+                norm,
+            ) = _plot_categories_as_colorblocks(
                 groupby_ax, obs_tidy, colors=groupby_colors, orientation='bottom'
             )
             # add lines to main heatmap
@@ -1217,8 +1242,9 @@ def heatmap(
             heatmap_ax.vlines(
                 line_positions,
                 -0.5,
-                len(var_names) + 0.35,
-                lw=0.6,
+                len(var_names) - 0.5,
+                lw=1,
+                color='black',
                 zorder=10,
                 clip_on=False,
             )
@@ -1238,9 +1264,14 @@ def heatmap(
         if var_group_positions is not None and len(var_group_positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
-            for idx, pos in enumerate(var_group_positions):
-                arr += [idx] * (pos[1] + 1 - pos[0])
-
+            for idx, (label, pos) in enumerate(
+                zip(var_group_labels, var_group_positions)
+            ):
+                if var_groups_subset_of_groupby:
+                    label_code = label2code[label]
+                else:
+                    label_code = idx
+                arr += [label_code] * (pos[1] + 1 - pos[0])
             gene_groups_ax.imshow(
                 np.array([arr]).T, aspect='auto', cmap=groupby_cmap, norm=norm
             )
@@ -1469,7 +1500,7 @@ def tracksplot(
 
     groupby_ax = fig.add_subplot(axs2[1])
 
-    ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+    label2code, ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
         groupby_ax, obs_tidy.T, colors=groupby_colors, orientation='bottom'
     )
     # add lines to plot
@@ -1759,9 +1790,11 @@ def _prepare_dataframe(
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories`.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     log
-        Use the log of the values
+        Use the log of the values.
+    layer
+        AnnData layer to use. Takes precedence over `use_raw`
     num_categories
         Only used if groupby observation is not categorical. This value
         determines the number of groups into which the groupby observation
@@ -1773,90 +1806,71 @@ def _prepare_dataframe(
     -------
     Tuple of `pandas.DataFrame` and list of categories.
     """
-    from scipy.sparse import issparse
 
     sanitize_anndata(adata)
-    if use_raw is None and adata.raw is not None:
-        use_raw = True
+    use_raw = _check_use_raw(adata, use_raw)
+    if layer is not None:
+        use_raw = False
     if isinstance(var_names, str):
         var_names = [var_names]
 
+    groupby_index = None
     if groupby is not None:
         if isinstance(groupby, str):
             # if not a list, turn into a list
             groupby = [groupby]
         for group in groupby:
-            if group not in adata.obs_keys():
+            if group not in list(adata.obs_keys()) + [adata.obs.index.name]:
+                if adata.obs.index.name is not None:
+                    msg = f' or index name "{adata.obs.index.name}"'
+                else:
+                    msg = ''
                 raise ValueError(
                     'groupby has to be a valid observation. '
-                    f'Given {group}, is not in observations: {adata.obs_keys()}'
+                    f'Given {group}, is not in observations: {adata.obs_keys()}' + msg
                 )
-
-    if gene_symbols is not None and gene_symbols in adata.var.columns:
-        # translate gene_symbols to var_names
-        # slow method but gives a meaningful error if no gene symbol is found:
-        translated_var_names = []
-        # if we're using raw to plot, we should also do gene symbol translations
-        # using raw
-        if use_raw:
-            adata_or_raw = adata.raw
-        else:
-            adata_or_raw = adata
-        for symbol in var_names:
-            if symbol not in adata_or_raw.var[gene_symbols].values:
-                logg.error(
-                    f"Gene symbol {symbol!r} not found in given "
-                    f"gene_symbols column: {gene_symbols!r}"
+            if group in adata.obs.keys() and group == adata.obs.index.name:
+                raise ValueError(
+                    f'Given group {group} is both and index and a column level, '
+                    'which is ambiguous.'
                 )
-                return
-            translated_var_names.append(
-                adata_or_raw.var[adata_or_raw.var[gene_symbols] == symbol].index[0]
-            )
-        symbols = var_names
-        var_names = translated_var_names
-    if layer is not None:
-        if layer not in adata.layers.keys():
-            raise KeyError(
-                f'Selected layer: {layer} is not in the layers list. '
-                f'The list of valid layers is: {adata.layers.keys()}'
-            )
-        matrix = adata[:, var_names].layers[layer]
-    elif use_raw:
-        matrix = adata.raw[:, var_names].X
-    else:
-        matrix = adata[:, var_names].X
+            if group == adata.obs.index.name:
+                groupby_index = group
+    if groupby_index is not None:
+        # obs_tidy contains adata.obs.index
+        # and does not need to be given
+        groupby = groupby.copy()  # copy to not modify user passed parameter
+        groupby.remove(groupby_index)
+    keys = list(groupby) + list(np.unique(var_names))
+    obs_tidy = get.obs_df(
+        adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
+    )
+    assert np.all(np.array(keys) == np.array(obs_tidy.columns))
 
-    if issparse(matrix):
-        matrix = matrix.toarray()
-    if log:
-        matrix = np.log1p(matrix)
+    if groupby_index is not None:
+        # reset index to treat all columns the same way.
+        obs_tidy.reset_index(inplace=True)
+        groupby.append(groupby_index)
 
-    obs_tidy = pd.DataFrame(matrix, columns=var_names)
     if groupby is None:
-        groupby = ''
         categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
+    elif len(groupby) == 1 and is_numeric_dtype(obs_tidy[groupby[0]]):
+        # if the groupby column is not categorical, turn it into one
+        # by subdividing into  `num_categories` categories
+        categorical = pd.cut(obs_tidy[groupby[0]], num_categories)
+    elif len(groupby) == 1:
+        categorical = obs_tidy[groupby[0]].astype('category')
+        categorical.name = groupby[0]
     else:
-        if len(groupby) == 1 and not is_categorical_dtype(adata.obs[groupby[0]]):
-            # if the groupby column is not categorical, turn it into one
-            # by subdividing into  `num_categories` categories
-            categorical = pd.cut(adata.obs[groupby[0]], num_categories)
-        else:
-            categorical = adata.obs[groupby[0]]
-            if len(groupby) > 1:
-                for group in groupby[1:]:
-                    # create new category by merging the given groupby categories
-                    categorical = (
-                        categorical.astype(str) + "_" + adata.obs[group].astype(str)
-                    ).astype('category')
-            categorical.name = "_".join(groupby)
-    obs_tidy.set_index(categorical, inplace=True)
-    if gene_symbols is not None:
-        # translate the column names to the symbol names
-        obs_tidy.rename(
-            columns={var_names[x]: symbols[x] for x in range(len(var_names))},
-            inplace=True,
-        )
+        # join the groupby values  using "_" to make a new 'category'
+        categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
+        categorical.name = "_".join(groupby)
+
+    obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
+
+    if log:
+        obs_tidy = np.log1p(obs_tidy)
 
     return categories, obs_tidy
 
@@ -2344,7 +2358,7 @@ def _plot_categories_as_colorblocks(
         )
         if len(labels) > 1:
             groupby_ax.set_xticks(ticks)
-            if max([len(x) for x in labels]) < 3:
+            if max([len(str(x)) for x in labels]) < 3:
                 # if the labels are small do not rotate them
                 rotation = 0
             else:
@@ -2364,7 +2378,7 @@ def _plot_categories_as_colorblocks(
 
         groupby_ax.set_xlabel(groupby)
 
-    return ticks, labels, groupby_cmap, norm
+    return label2code, ticks, labels, groupby_cmap, norm
 
 
 def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):

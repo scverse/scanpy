@@ -37,8 +37,7 @@ neighbors_key
     If specified, this looks
     .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
 arrows
-    Show arrows (requires to run :func:`scvelo.tl.velocity_embedding` before).
-    Deprecated in favor of :func:`scvelo.pl.velocity_embedding` and friends.
+    Show arrows (deprecated in favour of `scvelo.pl.velocity_embedding`).
 arrows_kwds
     Passed to :meth:`~matplotlib.axes.Axes.quiver`\
 """
@@ -72,8 +71,7 @@ legend_fontoutline
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
-    the same as in adata.obs. If `img_key` not `None`, size is the scaling factor
-    for the spot size.
+    the same as in adata.obs.
 color_map
     Color map to use for continous variables. Can be a name or a
     :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
@@ -101,14 +99,6 @@ frameon
 title
     Provide title for panels either as string or list of strings,
     e.g. `['title1', 'title2', ...]`.
-img_key
-    Key for image data, stored in `adata.uns`.
-crop_coord
-    Coordinates to use for cropping the image (left, right, top, bottom).
-alpha_img
-    Alpha value for image.
-bw
-    Plot Image in gray scale.\
 """
 
 doc_vminmax = """\
@@ -228,4 +218,33 @@ layer
     Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
     If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
     then the layer is plotted. `layer` takes precedence over `use_raw`.\
+"""
+
+doc_scatter_spatial = """\
+library_id
+    library_id for Visium data, e.g. key in `adata.uns["spatial"]`.
+img_key
+    Key for image data, used to get `img` and `scale_factor` from `"images"`
+    and `"scalefactors"` entires for this library. To use spatial coordinates,
+    but not plot an image, pass `img_key=None`.
+img
+    image data to plot, overrides `img_key`.
+scale_factor
+    Scaling factor used to map from coordinate space to pixel space.
+    Found by default if `library_id` and `img_key` can be resolved.
+    Otherwise defaults to `1.`.
+spot_size
+    Diameter of spot (in coordinate space) for each point. Diameter
+    in pixels of the spots will be `size * spot_size * scale_factor`.
+    This argument is required if it cannot be resolved from library info.
+crop_coord
+    Coordinates to use for cropping the image (left, right, top, bottom).
+    These coordinates are expected to be in pixel space (same as `basis`)
+    and will be transformed by `scale_factor`.
+    If not provided, image is automatically cropped to bounds of `basis`,
+    plus a border.
+alpha_img
+    Alpha value for image.
+bw
+    Plot image data in gray scale.\
 """

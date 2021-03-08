@@ -1,7 +1,6 @@
 .. include:: ../README.rst
    :end-line: 29
 
-.. include:: _links.rst
 .. include:: _key_contributors.rst
 
 .. role:: small
@@ -24,12 +23,14 @@ News
 ----
 
 .. include:: news.rst
+   :start-line: 2
+   :end-line: 22
 
 
 Latest additions
 ----------------
 
-.. include:: release-latest.rst
+.. include:: release-notes/release-latest.rst
 
 .. put references first so all references are resolved
 .. NO! there is a particular meaning to this sequence
@@ -43,6 +44,8 @@ Latest additions
    api/index
    external/index
    ecosystem
-   release-notes
+   release-notes/index
+   news
+   dev/index
    contributors
    references

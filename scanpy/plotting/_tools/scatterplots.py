@@ -42,6 +42,7 @@ from .._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
     doc_scatter_embedding,
+    doc_scatter_spatial,
     doc_show_save_ax,
 )
 from ... import logging as logg
@@ -77,13 +78,7 @@ def embedding(
     dimensions=None,
     layer: Optional[str] = None,
     projection: Literal['2d', '3d'] = '2d',
-    # image parameters
-    img_key: Optional[str] = None,
-    crop_coord: Tuple[int, int, int, int] = None,
-    alpha_img: float = 1.0,
-    bw: bool = False,
-    library_id: str = None,
-    #
+    scale_factor: Optional[float] = None,
     color_map: Union[Colormap, str, None] = None,
     cmap: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
@@ -322,24 +317,12 @@ def embedding(
                 **kwargs,
             )
         else:
-            if img_key is not None:
-                # had to return size_spot cause spot size is set according
-                # to the image to be plotted
-                img_processed, img_coord, size_spot, cmap_img = _process_image(
-                    adata, coords, img_key, crop_coord, size, library_id, bw
-                )
-                ax.imshow(img_processed, cmap=cmap_img, alpha=alpha_img)
-                ax.set_xlim(img_coord[0], img_coord[1])
-                ax.set_ylim(img_coord[3], img_coord[2])
-            elif img_key is None and library_id is not None:
-                # order of magnitude similar to public visium
-                size_spot = 70 * size
-                ax.invert_yaxis()
-
             scatter = (
                 partial(ax.scatter, s=size, plotnonfinite=True)
-                if library_id is None
-                else partial(circles, s=size_spot, ax=ax)
+                if scale_factor is None
+                else partial(
+                    circles, s=size, ax=ax, scale_factor=scale_factor
+                )  # size in circles is radius
             )
 
             if add_outline:
@@ -788,77 +771,127 @@ def pca(
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
+    scatter_spatial=doc_scatter_spatial,
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
 def spatial(
     adata,
     *,
+    basis: str = "spatial",
+    img: Union[np.ndarray, None] = None,
     img_key: Union[str, None, Empty] = _empty,
     library_id: Union[str, Empty] = _empty,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
-    bw: bool = False,
-    size: float = None,
-    na_color: ColorLike = (0.0, 0.0, 0.0, 0.0),
+    bw: Optional[bool] = False,
+    size: float = 1.0,
+    scale_factor: Optional[float] = None,
+    spot_size: Optional[float] = None,
+    na_color: Optional[ColorLike] = None,
+    show: Optional[bool] = None,
+    return_fig: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
     **kwargs,
 ) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in spatial coordinates.
 
+    This function allows overlaying data on top of images.
     Use the parameter `img_key` to see the image in the background
     And the parameter `library_id` to select the image.
     By default, `'hires'` and `'lowres'` are attempted.
-    Also by default the first entry of `library_id` is attempted.
+
     Use `crop_coord`, `alpha_img`, and `bw` to control how it is displayed.
     Use `size` to scale the size of the Visium spots plotted on top.
+
+    As this function is designed to for imaging data, there are two key assumptions
+    about how coordinates are handled:
+
+    1. The origin (e.g `(0, 0)`) is at the top left – as is common convention
+    with image data.
+
+    2. Coordinates are in the pixel space of the source image, so an equal
+    aspect ratio is assumed.
+
+    If your anndata object has a `"spatial"` entry in `.uns`, the `img_key`
+    and `library_id` parameters to find values for `img`, `scale_factor`,
+    and `spot_size` arguments. Alternatively, these values be passed directly.
 
     Parameters
     ----------
     {adata_color_etc}
+    {scatter_spatial}
     {scatter_bulk}
     {show_save_ax}
 
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    This function behaves very similarly to other embedding plots like
+    :func:`~scanpy.pl.umap`
+
+    >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
+    >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
+    >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
+
+    See Also
+    --------
+    :func:`scanpy.datasets.visium_sge`
+        Example visium data.
+    :tutorial:`spatial/basic-analysis`
+        Tutorial on spatial analysis.
     """
-    if library_id is _empty:
-        library_id = next((i for i in adata.uns['spatial'].keys()))
+    # get default image params if available
+    library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
+    img, img_key = _check_img(spatial_data, img, img_key, bw=bw)
+    spot_size = _check_spot_size(spatial_data, spot_size)
+    scale_factor = _check_scale_factor(
+        spatial_data, img_key=img_key, scale_factor=scale_factor
+    )
+    crop_coord = _check_crop_coord(crop_coord, scale_factor)
+    na_color = _check_na_color(na_color, img=img)
+
+    if bw:
+        cmap_img = "gray"
     else:
-        if library_id not in adata.uns['spatial'].keys():
-            raise KeyError(
-                f"Could not find '{library_id}' in adata.uns['spatial'].keys().\n"
-                f"Available keys are: {list(adata.uns['spatial'].keys())}."
-            )
+        cmap_img = None
+    circle_radius = size * scale_factor * spot_size * 0.5
 
-    spatial_data = adata.uns['spatial'][library_id]
-    if img_key is _empty:
-        img_key = next(
-            (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
-            None,
-        )
-
-    if size is None:
-        size = 1.0
-
-    return embedding(
+    axs = embedding(
         adata,
-        'spatial',
-        img_key=img_key,
-        crop_coord=crop_coord,
-        alpha_img=alpha_img,
-        bw=bw,
-        library_id=library_id,
-        size=size,
+        basis=basis,
+        scale_factor=scale_factor,
+        size=circle_radius,
         na_color=na_color,
+        show=False,
+        save=False,
         **kwargs,
     )
+    if not isinstance(axs, list):
+        axs = [axs]
+    for ax in axs:
+        cur_coords = np.concatenate([ax.get_xlim(), ax.get_ylim()])
+        if img is not None:
+            ax.imshow(img, cmap=cmap_img, alpha=alpha_img)
+        else:
+            ax.set_aspect("equal")
+            ax.invert_yaxis()
+        if crop_coord is not None:
+            ax.set_xlim(crop_coord[0], crop_coord[1])
+            ax.set_ylim(crop_coord[3], crop_coord[2])
+        else:
+            ax.set_xlim(cur_coords[0], cur_coords[1])
+            ax.set_ylim(cur_coords[3], cur_coords[2])
+    _utils.savefig_or_show('show', show=show, save=save)
+    if show is False or return_fig is True:
+        return axs
 
 
 # Helpers
-
-
 def _components_to_dimensions(
     components: Optional[Union[str, Collection[str]]],
     dimensions: Optional[Union[Collection[int], Collection[Collection[int]]]],
@@ -1033,8 +1066,13 @@ def _color_vector(
     if not is_categorical_dtype(values):
         return values, False
     else:  # is_categorical_dtype(values)
-        color_map = _get_palette(adata, values_key, palette=palette)
-        color_vector = values.map(color_map).map(to_hex)
+        color_map = {
+            k: to_hex(v)
+            for k, v in _get_palette(adata, values_key, palette=palette).items()
+        }
+        # If color_map does not have unique values, this can be slow as the
+        # result is not categorical
+        color_vector = values.map(color_map)
 
         # Set color to 'missing color' for all missing values
         if color_vector.isna().any():
@@ -1064,45 +1102,104 @@ def _basis2name(basis):
     return component_name
 
 
-def _process_image(
-    adata, coords, img_key, crop_coord, scale_spot, library_id, bw=False
-):
-    offset = 100
-    cmap_img = None
-    spatial_data = adata.uns['spatial'][library_id]
-    img = spatial_data['images'][img_key]
-    scalef_key = f"tissue_{img_key}_scalef"
+def _check_spot_size(
+    spatial_data: Optional[Mapping], spot_size: Optional[float]
+) -> float:
+    """
+    Resolve spot_size value.
 
-    coords = np.multiply(coords, spatial_data['scalefactors'][scalef_key])
-    # 0.5 needed for optimal matching with spot boundaries
-    # checked with detected_tissue_image.png
-    spot_size = (
-        (
-            spatial_data['scalefactors'][scalef_key]
-            * spatial_data['scalefactors']['spot_diameter_fullres']
+    This is a required argument for spatial plots.
+    """
+    if spatial_data is None and spot_size is None:
+        raise ValueError(
+            "When .uns['spatial'][library_id] does not exist, spot_size must be "
+            "provided directly."
         )
-        * 0.5
-        * scale_spot
-    )
-
-    if crop_coord is not None:
-        crop_coord = np.asarray(crop_coord)
-        if len(crop_coord) != 4:
-            raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
-        img_coord = (
-            *crop_coord[:2],
-            *np.ceil(img.shape[0] - crop_coord[2:4]).astype(int),
-        )
+    elif spot_size is None:
+        return spatial_data['scalefactors']['spot_diameter_fullres']
     else:
-        img_coord = [
-            coords[:, 0].min() - offset,
-            coords[:, 0].max() + offset,
-            coords[:, 1].min() - offset,
-            coords[:, 1].max() + offset,
-        ]
+        return spot_size
 
+
+def _check_scale_factor(
+    spatial_data: Optional[Mapping],
+    img_key: Optional[str],
+    scale_factor: Optional[float],
+) -> float:
+    """Resolve scale_factor, defaults to 1."""
+    if scale_factor is not None:
+        return scale_factor
+    elif spatial_data is not None and img_key is not None:
+        return spatial_data['scalefactors'][f"tissue_{img_key}_scalef"]
+    else:
+        return 1.0
+
+
+def _check_spatial_data(
+    uns: Mapping, library_id: Union[Empty, None, str]
+) -> Tuple[Optional[str], Optional[Mapping]]:
+    """
+    Given a mapping, try and extract a library id/ mapping with spatial data.
+
+    Assumes this is `.uns` from how we parse visium data.
+    """
+    spatial_mapping = uns.get("spatial", {})
+    if library_id is _empty:
+        if len(spatial_mapping) > 1:
+            raise ValueError(
+                "Found multiple possible libraries in `.uns['spatial']. Please specify."
+                f" Options are:\n\t{list(spatial_mapping.keys())}"
+            )
+        elif len(spatial_mapping) == 1:
+            library_id = list(spatial_mapping.keys())[0]
+        else:
+            library_id = None
+    if library_id is not None:
+        spatial_data = spatial_mapping[library_id]
+    else:
+        spatial_data = None
+    return library_id, spatial_data
+
+
+def _check_img(
+    spatial_data: Optional[Mapping],
+    img: Optional[np.ndarray],
+    img_key: Union[None, str, Empty],
+    bw: bool = False,
+) -> Tuple[Optional[np.ndarray], Optional[str]]:
+    """
+    Resolve image for spatial plots.
+    """
+    if img is None and spatial_data is not None and img_key is _empty:
+        img_key = next(
+            (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
+        )  # Throws StopIteration Error if keys not present
+    if img is None and spatial_data is not None and img_key is not None:
+        img = spatial_data["images"][img_key]
     if bw:
         img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
-        cmap_img = "gray"
+    return img, img_key
 
-    return img, img_coord, spot_size, cmap_img
+
+def _check_crop_coord(
+    crop_coord: Optional[tuple],
+    scale_factor: float,
+) -> Tuple[float, float, float, float]:
+    """Handle cropping with image or basis."""
+    if crop_coord is None:
+        return None
+    if len(crop_coord) != 4:
+        raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
+    crop_coord = tuple(c * scale_factor for c in crop_coord)
+    return crop_coord
+
+
+def _check_na_color(
+    na_color: Optional[ColorLike], *, img: Optional[np.ndarray] = None
+) -> ColorLike:
+    if na_color is None:
+        if img is not None:
+            na_color = (0.0, 0.0, 0.0, 0.0)
+        else:
+            na_color = "lightgray"
+    return na_color

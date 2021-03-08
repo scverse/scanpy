@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -5,7 +6,7 @@ import scipy as sp
 from typing import Optional, Sequence, Union
 from anndata import AnnData
 
-MIN_VERSION = "0.6.5"
+MIN_VERSION = "0.6.7"
 
 
 def scvi(
@@ -105,6 +106,11 @@ def scvi(
     genes by n_latent matrix.
 
     """
+    warnings.warn(
+        "scvi via scanpy external API is no longer supported. "
+        + "Please use the new scvi-tools package from `scvi-tools.org`",
+        FutureWarning,
+    )
 
     try:
         from scvi.models import VAE, LDVAE

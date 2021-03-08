@@ -1,6 +1,8 @@
 from typing import Optional, Union
+import warnings
 
 import numpy as np
+from packaging import version
 from anndata import AnnData
 from sklearn.utils import check_random_state, check_array
 
@@ -121,25 +123,53 @@ def umap(
 
     if neighbors_key not in adata.uns:
         raise ValueError(
-            f'Did not find .uns["{neighbors_key}"]. Run `sc.pp.neighbors` first.')
+            f'Did not find .uns["{neighbors_key}"]. Run `sc.pp.neighbors` first.'
+        )
     start = logg.info('computing UMAP')
 
     neighbors = NeighborsView(adata, neighbors_key)
 
-    if ('params' not in neighbors
-        or neighbors['params']['method'] != 'umap'):
-        logg.warning(f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap')
-    from umap.umap_ import find_ab_params, simplicial_set_embedding
+    if 'params' not in neighbors or neighbors['params']['method'] != 'umap':
+        logg.warning(
+            f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap'
+        )
+
+    # Compat for umap 0.4 -> 0.5
+    with warnings.catch_warnings():
+        # umap 0.5.0
+        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
+        import umap
+
+    if version.parse(umap.__version__) >= version.parse("0.5.0"):
+
+        def simplicial_set_embedding(*args, **kwargs):
+            from umap.umap_ import simplicial_set_embedding
+
+            X_umap, _ = simplicial_set_embedding(
+                *args,
+                densmap=False,
+                densmap_kwds={},
+                output_dens=False,
+                **kwargs,
+            )
+            return X_umap
+
+    else:
+        from umap.umap_ import simplicial_set_embedding
+    from umap.umap_ import find_ab_params
+
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
     else:
         a = a
         b = b
-    adata.uns['umap'] = {'params':{'a': a, 'b': b}}
+    adata.uns['umap'] = {'params': {'a': a, 'b': b}}
     if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(adata, random_state=random_state, neighbors_key=neighbors_key)
+        init_coords = get_init_pos_from_paga(
+            adata, random_state=random_state, neighbors_key=neighbors_key
+        )
     else:
         init_coords = init_pos  # Let umap handle it
     if hasattr(init_coords, "dtype"):
@@ -151,7 +181,11 @@ def umap(
 
     neigh_params = neighbors['params']
     X = _choose_representation(
-        adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None), silent=True)
+        adata,
+        neigh_params.get('use_rep', None),
+        neigh_params.get('n_pcs', None),
+        silent=True,
+    )
     if method == 'umap':
         # the data matrix X is really only used for determining the number of connected components
         # for the init condition in the UMAP embedding
@@ -180,8 +214,11 @@ def umap(
                 "but umap `method` 'rapids' only supports the 'euclidean' metric."
             )
         from cuml import UMAP
+
         n_neighbors = neighbors['params']['n_neighbors']
-        n_epochs = 500 if maxiter is None else maxiter # 0 is not a valid value for rapids, unlike original umap
+        n_epochs = (
+            500 if maxiter is None else maxiter
+        )  # 0 is not a valid value for rapids, unlike original umap
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
         umap = UMAP(
             n_neighbors=n_neighbors,
@@ -195,16 +232,13 @@ def umap(
             a=a,
             b=b,
             verbose=settings.verbosity > 3,
-            random_state=random_state
+            random_state=random_state,
         )
         X_umap = umap.fit_transform(X_contiguous)
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
     logg.info(
         '    finished',
         time=start,
-        deep=(
-            'added\n'
-            "    'X_umap', UMAP coordinates (adata.obsm)"
-        ),
+        deep=('added\n' "    'X_umap', UMAP coordinates (adata.obsm)"),
     )
     return adata if copy else None
