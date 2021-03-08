@@ -12,12 +12,12 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 
 .. rubric:: New functionality
 
-- Many functions, like :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap`, now store cell-by-cell graphs in :attr:`~anndata.AnnData.obsp` :pr:`1118` :smaller:`S Rybakov`
+- Many functions, like :func:`scanpy.pp.neighbors` and :func:`~scanpy.tl.umap`, now store cell-by-cell graphs in :attr:`~anndata.AnnData.obsp` :pr:`1118` :smaller:`S Rybakov`
 - :func:`~scanpy.pp.scale` and :func:`~scanpy.pp.log1p` can be used on any element in :attr:`~anndata.AnnData.layers` or :attr:`~anndata.AnnData.obsm` :pr:`1173` :smaller:`I Virshup`
 
 .. rubric:: External tools
 
-- `~scanpy.external.pp.scvi` for preprocessing with scVI :pr:`1085` :smaller:`G Xing`
+- `scanpy.external.pp.scvi` for preprocessing with scVI :pr:`1085` :smaller:`G Xing`
 - Guide for using :ref:`Scanpy in R <conversion_to_r>` :pr:`1186` :smaller:`L Zappia`
 
 .. rubric:: Performance
