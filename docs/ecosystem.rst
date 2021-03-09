@@ -76,3 +76,8 @@ Adaptive immune receptor repertoire (AIRR)
 * `scirpy <https://github.com/icbi-lab/scirpy>`__ :small:`Medical University of Innsbruck`
     
     | scirpy is a scanpy extension to expore single-cell T-cell receptor (TCR) and B-cell receptor (BCR) repertoires. 
+    
+    
+Feature selection
+-----------------
+* `triku 🦔 <https://gitlab.com/alexmascension/triku>`__ :small:`Biodonostia Health Research Institute`
