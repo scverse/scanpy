@@ -12,7 +12,7 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 
 .. rubric:: New functionality
 
-- Many functions, like :func:`scanpy.pp.neighbors` and :func:`~scanpy.tl.umap`, now store cell-by-cell graphs in :attr:`~anndata.AnnData.obsp` :pr:`1118` :smaller:`S Rybakov`
+- Many functions, like :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap`, now store cell-by-cell graphs in :attr:`~anndata.AnnData.obsp` :pr:`1118` :smaller:`S Rybakov`
 - :func:`~scanpy.pp.scale` and :func:`~scanpy.pp.log1p` can be used on any element in :attr:`~anndata.AnnData.layers` or :attr:`~anndata.AnnData.obsm` :pr:`1173` :smaller:`I Virshup`
 
 .. rubric:: External tools
@@ -48,4 +48,3 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 - :func:`~scanpy.tl.louvain` for Louvain `0.6` :pr:`1197` :smaller:`I Virshup`
 - :func:`~scanpy.pp.highly_variable_genes` which could lead to incorrect results when the `batch_key` argument was used :pr:`1180` :smaller:`G Eraslan`
 - :func:`~scanpy.tl.ingest` where an inconsistent number of neighbors was used :pr:`1111` :smaller:`S Rybakov`
-
