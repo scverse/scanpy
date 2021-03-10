@@ -66,11 +66,14 @@ Creating a branch for your feature
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All development should occur in branches dedicated to the particular work being done.
+Additionally, unless you are a maintainer, all changes should be directed at the `master` branch.
 You can create a branch with:
 
 .. code:: shell
 
-    git checkout -b {your-branch-name}
+    git checkout master                 # Starting from the master branch
+    git pull                            # Syncing with the repo
+    git checkout -b {your-branch-name}  # Making and changing to the new branch
 
 .. _open-a-pr:
 
