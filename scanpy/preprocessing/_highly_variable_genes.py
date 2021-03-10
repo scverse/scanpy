@@ -62,6 +62,7 @@ def _highly_variable_genes_seurat_v3(
             "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
             UserWarning,
         )
+    mean_fulldataset, var_fulldataset = _get_mean_var(X)
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -133,8 +134,8 @@ def _highly_variable_genes_seurat_v3(
     df['highly_variable_nbatches'] = num_batches_high_var
     df['highly_variable_rank'] = median_ranked
     df['variances_norm'] = np.mean(norm_gene_vars, axis=0)
-    df['means'] = mean
-    df['variances'] = var
+    df['means'] = mean_fulldataset
+    df['variances'] = var_fulldataset
 
     df.sort_values(
         ['highly_variable_rank', 'highly_variable_nbatches'],
