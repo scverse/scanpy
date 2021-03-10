@@ -175,6 +175,7 @@ def _highly_variable_genes_seurat_v3(
             df = df.drop(['highly_variable_nbatches'], axis=1)
         return df
 
+
 def _highly_variable_pearson_residuals(
     adata: AnnData,
     layer: Optional[str] = None,
@@ -184,7 +185,7 @@ def _highly_variable_pearson_residuals(
     clip: Union[Literal['auto', 'none'], float] = 'auto',
     chunksize: int = 100,
     subset: bool = False,
-    inplace: bool = True
+    inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
     See `highly_variable_genes`.
@@ -214,7 +215,7 @@ def _highly_variable_pearson_residuals(
         in all batches
     """
 
-    view_to_actual(adata)        
+    view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer)
     computed_on = layer if layer else 'adata.X'
 
@@ -330,8 +331,7 @@ def _highly_variable_pearson_residuals(
     df = df.loc[adata.var_names]
 
     if inplace or subset:
-        adata.uns['hvg'] = {'flavor': 'pearson_residuals',
-                            'computed_on':computed_on}
+        adata.uns['hvg'] = {'flavor': 'pearson_residuals', 'computed_on': computed_on}
         logg.hint(
             'added\n'
             '    \'highly_variable\', boolean vector (adata.var)\n'
@@ -364,9 +364,7 @@ def _highly_variable_pearson_residuals(
                 ['highly_variable_nbatches', 'highly_variable_intersection'], axis=1
             )
         return df
-    
-    
-    
+
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
@@ -481,7 +479,6 @@ def _highly_variable_genes_single_batch(
     return df
 
 
-
 def highly_variable_genes(
     adata: AnnData,
     layer: Optional[str] = None,
@@ -495,7 +492,9 @@ def highly_variable_genes(
     theta: float = 100,
     clip: Union[Literal['auto', 'none'], float] = 'auto',
     chunksize: int = 1000,
-    flavor: Literal['seurat', 'cell_ranger', 'seurat_v3', 'pearson_residuals'] = 'seurat',
+    flavor: Literal[
+        'seurat', 'cell_ranger', 'seurat_v3', 'pearson_residuals'
+    ] = 'seurat',
     subset: bool = False,
     inplace: bool = True,
     batch_key: Optional[str] = None,
@@ -658,21 +657,20 @@ def highly_variable_genes(
     if flavor == 'pearson_residuals':
         if n_top_genes is None:
             raise ValueError(
-            "`pp.highly_variable_genes` requires the argument `n_top_genes`"
-            " for `flavor='pearson_residuals'`"
+                "`pp.highly_variable_genes` requires the argument `n_top_genes`"
+                " for `flavor='pearson_residuals'`"
             )
         return _highly_variable_pearson_residuals(
             adata,
-            layer = layer,
-            n_top_genes = n_top_genes,
-            batch_key = batch_key,
-            theta = theta,
-            clip = clip,
-            chunksize= chunksize,
-            subset = subset,
-            inplace = inplace,
+            layer=layer,
+            n_top_genes=n_top_genes,
+            batch_key=batch_key,
+            theta=theta,
+            clip=clip,
+            chunksize=chunksize,
+            subset=subset,
+            inplace=inplace,
         )
-        
 
     if batch_key is None:
         df = _highly_variable_genes_single_batch(

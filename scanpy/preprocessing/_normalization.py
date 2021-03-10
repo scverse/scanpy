@@ -17,9 +17,6 @@ from ._pca import pca
 from scanpy.get import _get_obs_rep, _set_obs_rep
 
 
-
-
-
 def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
@@ -78,7 +75,7 @@ def normalize_pearson_residuals(
     theta: float = 100,
     clip: Union[Literal['auto', 'none'], float] = 'auto',
     layer: Optional[str] = None,
-    copy: bool=False,
+    copy: bool = False,
     inplace: bool = True,
 ) -> Optional[Dict[str, np.ndarray]]:
     """\
@@ -120,29 +117,27 @@ def normalize_pearson_residuals(
     `adata.X` and `adata.layers`, depending on `inplace`.
 
     """
-    
+
     if copy:
         if not inplace:
-            raise ValueError(
-                "`copy=True` cannot be used with `inplace=False`."
-            )
+            raise ValueError("`copy=True` cannot be used with `inplace=False`.")
         adata = adata.copy()
 
-    view_to_actual(adata)        
+    view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer)
     computed_on = layer if layer else 'adata.X'
 
     msg = 'computing analytic Pearson residuals on %s' % computed_on
     start = logg.info(msg)
-    
-    residuals = _pearson_residuals(X, theta, clip, copy = ~inplace)
+
+    residuals = _pearson_residuals(X, theta, clip, copy=~inplace)
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
-    
+
     if inplace:
-        _set_obs_rep(adata,residuals,layer=layer)      
+        _set_obs_rep(adata, residuals, layer=layer)
         adata.uns['pearson_residuals_normalization'] = settings_dict
     else:
-        results_dict = dict(X=residuals,**settings_dict)
+        results_dict = dict(X=residuals, **settings_dict)
 
     logg.info('    finished ({time_passed})', time=start)
 
@@ -246,7 +241,7 @@ def normalize_pearson_residuals_pca(
         return None
     else:
         return adata_pca
-    
+
 
 def normalize_total(
     adata: AnnData,
