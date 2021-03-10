@@ -1865,7 +1865,9 @@ def _prepare_dataframe(
         # join the groupby values  using "_" to make a new 'category'
         categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
         categorical.name = "_".join(groupby)
-
+        # preserve category order
+        categories = obs_tidy[groupby].drop_duplicates().sort_values(groupby).agg('_'.join, axis=1).values
+        categorical.cat.reorder_categories(categories, inplace=True)
     obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
 
