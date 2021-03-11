@@ -15,11 +15,11 @@ ip = np.int64
 fp = np.float64
 
 
-def moran(
+def morans_i(
     adata: AnnData,
-    connectivity_key: str = Key.obsp.spatial_conn(),
+    connectivity_key: str = "connectivities",
     genes: Optional[Union[str, Sequence[str]]] = None,
-    n_perms: int = 100,
+    n_perms: int = 1000,
     corr_method: Optional[str] = "fdr_bh",
     layer: Optional[str] = None,
     copy: bool = False,
@@ -79,7 +79,7 @@ def moran(
         mi = _moran_score_perms(counts, indptr, indices, data, n_perms)
         moran_list.append(mi)
 
-    df = pd.DataFrame(moran_list, columns=["I", "pval_sim", "VI_sim"], index=gen)
+    df = pd.DataFrame(moran_list, columns=["I", "pval_sim", "VI_sim"], index=genes)
 
     if corr_method is not None:
         _, pvals_adj, _, _ = multipletests(
@@ -144,7 +144,7 @@ def _moran_score_perms(
     res[0] = _compute_moran(counts, indptr, indices, data, z, data_sum, z2ss)
 
     for p in range(len(perms)):
-        np.random.shuffle(counts)
+        np.random.shuffle(z)
         perms[p] = _compute_moran(counts, indptr, indices, data, z, data_sum, z2ss)
     res[1] = (np.sum(perms > res[0]) + 1) / (n_perms + 1)
     res[2] = np.var(perms)
