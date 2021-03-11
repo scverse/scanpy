@@ -1870,8 +1870,10 @@ def _prepare_dataframe(
         from itertools import product
 
         order = {
-            "_".join(k): idx for idx, k in
-            enumerate(product(*(obs_tidy[g].cat.categories for g in groupby)))
+            "_".join(k): idx
+            for idx, k in enumerate(
+                product(*(obs_tidy[g].cat.categories for g in groupby))
+            )
         }
         categorical = categorical.cat.reorder_categories(
             sorted(categorical.cat.categories, key=lambda x: order[x])
