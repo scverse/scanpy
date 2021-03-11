@@ -1,8 +1,5 @@
 """Moran's I global spatial autocorrelation."""
-from typing import Any, Tuple, Union, Iterable, Optional, Sequence
-from itertools import chain
-
-from scanpy import logging as logg
+from typing import Any, Union, Optional, Sequence
 from anndata import AnnData
 
 import numpy as np
@@ -10,8 +7,6 @@ import pandas as pd
 import numba.types as nt
 
 from numba import njit
-from scipy.sparse import spmatrix
-from sklearn.metrics import pairwise_distances
 from statsmodels.stats.multitest import multipletests
 
 it = nt.int64
@@ -27,7 +22,6 @@ def moran(
     n_perms: int = 100,
     corr_method: Optional[str] = "fdr_bh",
     layer: Optional[str] = None,
-    seed: Optional[int] = None,
     copy: bool = False,
 ) -> Optional[pd.DataFrame]:
     """
