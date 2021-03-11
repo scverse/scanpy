@@ -14,7 +14,7 @@ from warnings import warn
 
 from .. import logging as logg
 from .._compat import Literal
-from ._utils import make_grid_spec, _setup_colornorm
+from ._utils import make_grid_spec, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
 
@@ -567,7 +567,7 @@ class BasePlot(object):
         ax.set_ylim(len(y_labels), 0)
         ax.set_xlim(0, len(x_labels))
 
-        return _setup_colornorm(
+        return check_colornorm(
             self.vmin,
             self.vmax,
             self.vcenter,

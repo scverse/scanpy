@@ -24,8 +24,8 @@ from .._utils import (
     circles,
     ColorLike,
     check_projection,
-    _setup_colornorm,
-    VMinMaxCenter,
+    check_colornorm,
+    VBound,
 )
 from .._docs import (
     doc_adata_color_etc,
@@ -76,9 +76,9 @@ def embedding(
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
-    vmax: Union[VMinMaxCenter, Sequence[VMinMaxCenter], None] = None,
-    vmin: Union[VMinMaxCenter, Sequence[VMinMaxCenter], None] = None,
-    vcenter: Union[VMinMaxCenter, Sequence[VMinMaxCenter], None] = None,
+    vmax: Union[VBound, Sequence[VBound], None] = None,
+    vmin: Union[VBound, Sequence[VBound], None] = None,
+    vcenter: Union[VBound, Sequence[VBound], None] = None,
     add_outline: Optional[bool] = False,
     outline_width: Tuple[float, float] = (0.3, 0.05),
     outline_color: Tuple[str, str] = ('black', 'white'),
@@ -296,7 +296,7 @@ def embedding(
             vmin_float, vmax_float, vcenter_float = _get_vminmaxcenter(
                 vmin, vmax, vcenter, count, color_vector
             )
-            normalize = _setup_colornorm(
+            normalize = check_colornorm(
                 vmin_float,
                 vmax_float,
                 vcenter_float,
@@ -477,9 +477,9 @@ def _panel_grid(hspace, wspace, ncols, num_panels):
 
 
 def _get_vminmaxcenter(
-    vmin: Sequence[VMinMaxCenter],
-    vmax: Sequence[VMinMaxCenter],
-    vcenter: Sequence[VMinMaxCenter],
+    vmin: Sequence[VBound],
+    vmax: Sequence[VBound],
+    vcenter: Sequence[VBound],
     index: int,
     color_vector: Sequence[float],
 ) -> Tuple[Union[float, None], Union[float, None]]:

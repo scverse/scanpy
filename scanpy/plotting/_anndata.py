@@ -26,7 +26,7 @@ from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params, _check_use_raw
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes, _setup_colornorm
+from ._utils import scatter_base, scatter_group, setup_axes, check_colornorm
 from ._utils import ColorLike, _FontWeight, _FontSize
 from ._docs import (
     doc_scatter_basic,
@@ -1070,7 +1070,7 @@ def heatmap(
         obs_tidy = obs_tidy.sort_index()
 
     colorbar_width = 0.2
-    norm = _setup_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
+    norm = check_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
 
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
@@ -1739,7 +1739,7 @@ def correlation_matrix(
     if vmax is None and vmin is None and 'norm' not in kwds:
         vmax = 1
         vmin = -1
-    norm = _setup_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
+    norm = check_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
     if 'cmap' not in kwds:
         # by default use a divergent color map
         kwds['cmap'] = 'bwr'

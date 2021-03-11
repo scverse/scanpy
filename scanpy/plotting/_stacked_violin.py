@@ -10,7 +10,7 @@ from matplotlib.colors import is_color_like
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
-from ._utils import make_grid_spec, _setup_colornorm
+from ._utils import make_grid_spec, check_colornorm
 from ._utils import _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
@@ -327,7 +327,7 @@ class StackedViolin(BasePlot):
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
-        normalize = _setup_colornorm(
+        normalize = check_colornorm(
             self.vmin,
             self.vmax,
             self.vcenter,

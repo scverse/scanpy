@@ -11,7 +11,7 @@ from matplotlib import pyplot as pl
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
-from ._utils import make_grid_spec, fix_kwds, _setup_colornorm
+from ._utils import make_grid_spec, fix_kwds, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
@@ -694,7 +694,7 @@ class DotPlot(BasePlot):
         size = frac ** size_exponent
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
-        normalize = _setup_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
+        normalize = check_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
 
         if color_on == 'square':
             if edge_color is None:

@@ -31,7 +31,7 @@ _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 
 _FontSize = Literal[
     'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
-VMinMaxCenter = Union[str, float, Callable[[Sequence[float]], float]]
+VBound = Union[str, float, Callable[[Sequence[float]], float]]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase, ABC):
@@ -1190,7 +1190,7 @@ def _get_basis(adata: anndata.AnnData, basis: str):
     return basis_key
 
 
-def _setup_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
+def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
     from matplotlib.colors import Normalize
 
     try:
