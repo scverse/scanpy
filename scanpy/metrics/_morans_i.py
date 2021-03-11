@@ -19,7 +19,7 @@ def morans_i(
     adata: AnnData,
     connectivity_key: str = "connectivities",
     genes: Optional[Union[str, Sequence[str]]] = None,
-    n_perms: int = 1000,
+    n_perms: int = 100,
     corr_method: Optional[str] = "fdr_bh",
     layer: Optional[str] = None,
     copy: bool = False,
