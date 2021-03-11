@@ -1072,11 +1072,11 @@ def test_groupby_index(image_comparer):
     save_and_compare_images('master_dotplot_groupby_index')
 
 
+# test category order when groupby is a list (#1735)
 def test_groupby_list(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
     adata = sc.datasets.krumsiek11()
 
-    # test cat order when groupby is a list (#1735)
     np.random.seed(1)
 
     cat_val = adata.obs.cell_type.tolist()
@@ -1085,5 +1085,7 @@ def test_groupby_list(image_comparer):
     np.random.shuffle(cats)
     adata.obs['rand_cat'] = pd.Categorical(cat_val, categories=cats)
 
-    sc.pl.dotplot(adata, ['Gata1', 'Gata2'], groupby=['rand_cat', 'cell_type'], swap_axes=True)
+    sc.pl.dotplot(
+        adata, ['Gata1', 'Gata2'], groupby=['rand_cat', 'cell_type'], swap_axes=True
+    )
     save_and_compare_images('master_dotplot_groupby_list_catorder')
