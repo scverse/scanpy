@@ -43,9 +43,8 @@ def morans_i(
         FDR correction method.
     layer
         Layer in :attr:`anndata.AnnData.layers` to use. If `None`, use :attr:`anndata.AnnData.X`.
-    %(seed)s
-    %(copy)s
-    %(parallelize)s
+    copy
+        Whether to modify copied input object.
 
     Returns
     -------
