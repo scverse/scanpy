@@ -1085,7 +1085,8 @@ def test_groupby_list(image_comparer):
     np.random.shuffle(cats)
     adata.obs['rand_cat'] = pd.Categorical(cat_val, categories=cats)
 
-    sc.pl.dotplot(
-        adata, ['Gata1', 'Gata2'], groupby=['rand_cat', 'cell_type'], swap_axes=True
-    )
-    save_and_compare_images('master_dotplot_groupby_list_catorder')
+    with mpl.rc_context({"figure.subplot.bottom": 0.5}):
+        sc.pl.dotplot(
+            adata, ['Gata1', 'Gata2'], groupby=['rand_cat', 'cell_type'], swap_axes=True
+        )
+        save_and_compare_images('master_dotplot_groupby_list_catorder')

@@ -57,7 +57,7 @@ def image_comparer(check_same_image):
         def save_and_compare(basename, tol=tol):
             path_actual.mkdir(parents=True, exist_ok=True)
             out_path = path_actual / f'{basename}.png'
-            pyplot.savefig(out_path, dpi=40, bbox_inches='tight')
+            pyplot.savefig(out_path, dpi=40)
             pyplot.close()
             check_same_image(path_expected / f'{basename}.png', out_path, tol=tol)
 

@@ -1865,15 +1865,17 @@ def _prepare_dataframe(
         # join the groupby values  using "_" to make a new 'category'
         categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
         categorical.name = "_".join(groupby)
+
         # preserve category order
-        categories = (
-            obs_tidy[groupby]
-            .drop_duplicates()
-            .sort_values(groupby)
-            .agg('_'.join, axis=1)
-            .values
+        from itertools import product
+
+        order = {
+            "_".join(k): idx for idx, k in
+            enumerate(product(*(obs_tidy[g].cat.categories for g in groupby)))
+        }
+        categorical = categorical.cat.reorder_categories(
+            sorted(categorical.cat.categories, key=lambda x: order[x])
         )
-        categorical.cat.reorder_categories(categories, inplace=True)
     obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
 
