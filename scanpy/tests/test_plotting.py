@@ -4,6 +4,7 @@ from itertools import repeat, chain, combinations
 
 import pytest
 from matplotlib.testing import setup
+from matplotlib.testing.exceptions import ImageComparisonFailure
 from packaging import version
 
 from scanpy._compat import pkg_version
@@ -893,7 +894,7 @@ def test_scatter_embedding_groups_and_size(image_comparer):
     save_and_compare_images('master_embedding_groups_size')
 
 
-def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
+def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same_image):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
 
@@ -918,7 +919,7 @@ def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
     import matplotlib as mpl, matplotlib.pyplot as plt
 
     norm = mpl.colors.LogNorm()
-    try:
+    with pytest.raises(ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."):
         sc.pl.embedding(
             pbmc,
             'X_umap',
@@ -929,8 +930,67 @@ def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
             vcenter=0.5,
             cmap='RdBu_r',
         )
-    except ValueError:
-        pass
+
+    try:
+        from matplotlib.colors import TwoSlopeNorm as DivNorm
+    except ImportError:
+        # matplotlib<3.2
+        from matplotlib.colors import DivergingNorm as DivNorm
+
+    from matplotlib.colors import Normalize
+
+    norm = Normalize(0, 10000)
+    divnorm = DivNorm(200, 150, 6000)
+
+    # allowed
+    sc.pl.umap(
+        pbmc,
+        color=['n_counts', 'bulk_labels', 'percent_mito'],
+        frameon=False,
+        vmax=['p99.0', None, None],
+        vcenter=[0.015, None, None],
+        norm=[None, norm, norm],
+        wspace=0.5,
+    )
+
+    sc.pl.umap(
+        pbmc,
+        color=['n_counts', 'bulk_labels', 'percent_mito'],
+        frameon=False,
+        norm=norm,
+        wspace=0.5,
+    )
+    plt.savefig(FIGS / 'umap_norm_fig0.png')
+    plt.close()
+
+    sc.pl.umap(
+        pbmc,
+        color=['n_counts', 'bulk_labels'],
+        frameon=False,
+        norm=divnorm,
+        outline_color=('#555555', '0.9'),
+        wspace=0.5,
+    )
+    plt.savefig(FIGS / 'umap_norm_fig1.png')
+    plt.close()
+
+    sc.pl.umap(
+        pbmc,
+        color=['n_counts', 'bulk_labels'],
+        frameon=False,
+        vcenter=200,
+        vmin=150,
+        vmax=6000,
+        outline_color=('#555555', '0.9'),
+        wspace=0.5,
+    )
+    plt.savefig(FIGS / 'umap_norm_fig2.png')
+    plt.close()
+
+    check_same_image(FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig2.png', tol=1)
+
+    with pytest.raises(ImageComparisonFailure):
+        check_same_image(FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig0.png', tol=1)
 
 
 def test_timeseries():
