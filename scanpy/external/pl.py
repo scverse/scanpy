@@ -325,11 +325,16 @@ def wishbone_marker_trajectory(
         return ax
 
 
+@_doc_params(show_save_ax=doc_show_save_ax)
 def scrublet_score_distribution(
     adata,
     scale_hist_obs: str = 'log',
     scale_hist_sim: str = 'linear',
     figsize: Optional[Tuple[float, float]] = (8, 3),
+    return_fig: bool = False,
+    show: bool = True,
+    save: Optional[Union[str, bool]] = None,
+    ax: Optional[Axes] = None,
 ):
     """\
     Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
@@ -349,11 +354,17 @@ def scrublet_score_distribution(
         doublets (e.g. "linear", "log", "symlog", "logit")
     figsize
         width, height
+    {show_save_ax}
+    
+    Returns
+    -------
+    If `return_fig` is True, a :class:`~matplotlib.figure.Figure`.
+    If `show==False` a list of :class:`~matplotlib.axes.Axes`.
 
     See also
     --------
     :func:`~scanpy.external.pp.scrublet`: Main way of running Scrublet, runs
-        preprocessing, doublet simulation (this function) and calling.
+        preprocessing, doublet simulation and calling. 
     :func:`~scanpy.external.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
         simulation separately for advanced usage.
     """
@@ -395,4 +406,8 @@ def scrublet_score_distribution(
 
     fig.tight_layout()
 
-    return fig, axs
+    _utils.savefig_or_show('scrublet_score_distribution', show=show, save=save)
+    if return_fig:
+        return fig
+    elif not show:
+        return axs
