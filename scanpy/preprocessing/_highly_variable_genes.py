@@ -267,7 +267,7 @@ def _highly_variable_pearson_residuals(
             sum_total = np.sum(sums_genes)
 
         # Compute pearson residuals in chunks
-        residual_gene_var = np.ones((X_batch.shape[1])) * np.nan
+        residual_gene_var = np.empty((X_batch.shape[1]))
         for start in np.arange(0, X_batch.shape[1], chunksize):
             stop = start + chunksize
             mu = np.array(sums_cells @ sums_genes[:, start:stop] / sum_total)
