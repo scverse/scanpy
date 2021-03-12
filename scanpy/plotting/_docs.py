@@ -131,7 +131,7 @@ vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
 norm
     Custom color normalization object from matplotlib. See
-    `https://matplotlib.org/stable/tutorials/colors/colormapnorms.html`_ for details.\
+    `https://matplotlib.org/stable/tutorials/colors/colormapnorms.html` for details.\
 """
 
 doc_outline = """\
