@@ -955,7 +955,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
 
     sc.pl.umap(
         pbmc,
-        color=['n_counts', 'bulk_labels', 'percent_mito'],
+        color=['n_counts', 'bulk_labels'],
         frameon=False,
         norm=norm,
         wspace=0.5,
@@ -968,7 +968,6 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
         color=['n_counts', 'bulk_labels'],
         frameon=False,
         norm=divnorm,
-        outline_color=('#555555', '0.9'),
         wspace=0.5,
     )
     plt.savefig(FIGS / 'umap_norm_fig1.png')
@@ -981,7 +980,6 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
         vcenter=200,
         vmin=150,
         vmax=6000,
-        outline_color=('#555555', '0.9'),
         wspace=0.5,
     )
     plt.savefig(FIGS / 'umap_norm_fig2.png')
