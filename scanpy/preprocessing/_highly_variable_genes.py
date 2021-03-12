@@ -593,7 +593,7 @@ def highly_variable_genes(
         based on within-batch residual variance.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
-        Only used if `flavor='seurat_v3'`.
+        Only used if `flavor='seurat_v3'` or `flavor='pearson_residuals'`.
 
 
     Returns
@@ -671,6 +671,7 @@ def highly_variable_genes(
             clip=clip,
             chunksize=chunksize,
             subset=subset,
+            check_values=check_values,
             inplace=inplace,
         )
 

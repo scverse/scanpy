@@ -181,6 +181,7 @@ def recipe_pearson_residuals(
     batch_key: Optional[str] = None,
     n_comps_pca: Optional[int] = 50,
     random_state_pca: Optional[float] = 0,
+    check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """\
@@ -225,6 +226,8 @@ def recipe_pearson_residuals(
         Number of principal components to compute.
     random_state_pca
         Change to use different initial states for the optimization.
+    check_values
+        Check if counts in selected layer are integers. A Warning is returned if set to True.
     inplace
         Whether to place results in `adata` or return them.
 
@@ -283,6 +286,7 @@ def recipe_pearson_residuals(
         theta=theta,
         clip=clip,
         chunksize=chunksize,
+        check_values=check_values,
     )
 
     if inplace:
@@ -294,7 +298,9 @@ def recipe_pearson_residuals(
         # TODO: are these copies needed?
         adata_pca = adata[:, hvg['highly_variable']].copy()
 
-    pp.normalize_pearson_residuals(adata_pca, theta=theta, clip=clip)
+    pp.normalize_pearson_residuals(
+        adata_pca, theta=theta, clip=clip, check_values=check_values
+    )
     pp.pca(adata_pca, n_comps=n_comps_pca, random_state=random_state_pca)
 
     if inplace:

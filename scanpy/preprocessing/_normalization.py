@@ -32,7 +32,7 @@ def _normalize_data(X, counts, after=None, copy=False):
     return X
 
 
-def _pearson_residuals(X, theta, clip, copy=False):
+def _pearson_residuals(X, theta, clip, check_values, copy=False):
 
     X = X.copy() if copy else X
 
@@ -48,8 +48,11 @@ def _pearson_residuals(X, theta, clip, copy=False):
     if clip < 0:
         raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
-    if check_nonnegative_integers(X) is False:
-        raise ValueError("`pp.normalize_pearson_residuals` expects raw count data")
+    if check_values and (check_nonnegative_integers(X) == False):
+        warnings.warn(
+            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
+            UserWarning,
+        )
 
     if issparse(X):
         sums_genes = np.sum(X, axis=0)
@@ -76,6 +79,7 @@ def normalize_pearson_residuals(
     clip: Optional[float] = None,
     layer: Optional[str] = None,
     copy: bool = False,
+    check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[Dict[str, np.ndarray]]:
     """\
@@ -103,12 +107,14 @@ def normalize_pearson_residuals(
         
     layer
         Layer to normalize instead of `X`. If `None`, `X` is normalized.
-    inplace
-        Whether to update `adata` or return dictionary with normalized copies
-        of `adata.X` and `adata.layers`.
     copy
         Whether to modify copied input object. Not compatible with
         `inplace=False`.
+    check_values
+        Check if counts in selected layer are integers. A Warning is returned if set to True.
+    inplace
+        Whether to update `adata` or return dictionary with normalized copies
+        of `adata.X` and `adata.layers`.
 
     Returns
     -------
@@ -130,7 +136,7 @@ def normalize_pearson_residuals(
     msg = 'computing analytic Pearson residuals on %s' % computed_on
     start = logg.info(msg)
 
-    residuals = _pearson_residuals(X, theta, clip, copy=~inplace)
+    residuals = _pearson_residuals(X, theta, clip, check_values, copy=~inplace)
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
 
     if inplace:
@@ -154,6 +160,7 @@ def normalize_pearson_residuals_pca(
     n_comps_pca: Optional[int] = 50,
     random_state_pca: Optional[float] = 0,
     use_highly_variable: bool = True,
+    check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
 
@@ -190,6 +197,8 @@ def normalize_pearson_residuals_pca(
         Number of principal components to compute.
     random_state_pca
         Change to use different initial states for the optimization.
+    check_values
+        Check if counts in selected layer are integers. A Warning is returned if set to True.
     inplace
         Whether to place results in `adata` or return them.
 
@@ -227,7 +236,9 @@ def normalize_pearson_residuals_pca(
         # TODO: are these copies needed?
         adata_pca = adata.copy()
 
-    normalize_pearson_residuals(adata_pca, theta=theta, clip=clip)
+    normalize_pearson_residuals(
+        adata_pca, theta=theta, clip=clip, check_values=check_values
+    )
     pca(adata_pca, n_comps=n_comps_pca, random_state=random_state_pca)
 
     if inplace:
