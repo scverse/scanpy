@@ -919,7 +919,9 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
     import matplotlib as mpl, matplotlib.pyplot as plt
 
     norm = mpl.colors.LogNorm()
-    with pytest.raises(ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."):
+    with pytest.raises(
+            ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."
+    ):
         sc.pl.embedding(
             pbmc,
             'X_umap',
@@ -988,7 +990,9 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
     check_same_image(FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig2.png', tol=1)
 
     with pytest.raises(ImageComparisonFailure):
-        check_same_image(FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig0.png', tol=1)
+        check_same_image(
+            FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig0.png', tol=1
+        )
 
 
 def test_timeseries():
