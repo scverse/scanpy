@@ -5,6 +5,7 @@ import pandas as pd
 from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.colors import Normalize
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, cm, colors
@@ -21,7 +22,7 @@ from ..._settings import settings
 from .._docs import (
     doc_scatter_embedding,
     doc_show_save_ax,
-    doc_vminmax_percentile,
+    doc_vbound_percentile,
     doc_panels,
 )
 from ...get import rank_genes_groups_df
@@ -1040,7 +1041,7 @@ def sim(
 
 
 @_doc_params(
-    vminmax=doc_vminmax_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
+    vminmax=doc_vbound_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
 )
 def embedding_density(
     adata: AnnData,
@@ -1055,6 +1056,7 @@ def embedding_density(
     vmax: Optional[int] = 1,
     vmin: Optional[int] = 0,
     vcenter: Optional[int] = None,
+    norm: Optional[Normalize] = None,
     ncols: Optional[int] = 4,
     hspace: Optional[float] = 0.25,
     wspace: Optional[None] = None,
@@ -1263,6 +1265,7 @@ def embedding_density(
                 vmax=vmax,
                 vmin=vmin,
                 vcenter=vcenter,
+                norm=norm,
                 save=False,
                 title=_title,
                 ax=ax,
@@ -1293,6 +1296,7 @@ def embedding_density(
             vmax=vmax,
             vmin=vmin,
             vcenter=vcenter,
+            norm=norm,
             save=False,
             show=False,
             title=title,

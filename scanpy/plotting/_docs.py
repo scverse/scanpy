@@ -101,32 +101,37 @@ title
     e.g. `['title1', 'title2', ...]`.
 """
 
-doc_vminmax_percentile = """\
+doc_vbound_percentile = """\
 vmin
-    Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
-    vmin can be a number, a string, a function or `None`. If vmin is a string and has the format `pN`,
-    this is interpreted as a vmin=percentile(N). For example vmin='p1.5' is interpreted as
-    the 1.5 percentile. If vmin is function, then vmin is interpreted as the return value
-    of the function over the list of values to plot. For example to set vmin tp the mean of
-    the values to plot, `def my_vmin(values): return np.mean(values)` and then
-    set `vmin=my_vmin`. If vmin is None (default) an automatic minimum value is used
-    as defined by matplotlib `scatter` function. When making multiple plots, vmin can
-    be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]`
+    The value representing the lower limit of the color scale. Values smaller than vmin are plotted
+    with the same color as vmin. vmin can be a number, a string, a function or `None`. If
+    vmin is a string and has the format `pN`, this is interpreted as a vmin=percentile(N).
+    For example vmin='p1.5' is interpreted as the 1.5 percentile. If vmin is function, then
+    vmin is interpreted as the return value of the function over the list of values to plot.
+    For example to set vmin tp the mean of the values to plot, `def my_vmin(values): return
+    np.mean(values)` and then set `vmin=my_vmin`. If vmin is None (default) an automatic
+    minimum value is used as defined by matplotlib `scatter` function. When making multiple
+    plots, vmin can be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]`
 vmax
-    Maximum value to plot. The format is the same as for `vmin`.
+    The value representing the upper limit of the color scale. The format is the same as for `vmin`.
 vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
     The format is the same as for `vmin`.
     Example: sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')\
 """
 
-doc_vminmax = """\
+doc_vboundnorm = """\
 vmin
-    Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
+    The value representing the lower limit of the color scale. Values smaller than vmin are plotted
+    with the same color as vmin.
 vmax
-    Maximum value to plot. Values larger than vmax are plotted with the same color as vmax.
+    The value representing the upper limit of the color scale. Values larger than vmax are plotted
+    with the same color as vmax.
 vcenter
-    The value representing the center of the color scale. Useful for diverging colormaps.\
+    The value representing the center of the color scale. Useful for diverging colormaps.
+norm
+    Custom color normalization object from matplotlib. See
+    `https://matplotlib.org/stable/tutorials/colors/colormapnorms.html`_ for details.\
 """
 
 doc_outline = """\
@@ -157,7 +162,7 @@ return_fig
 # Docs for pl.pca, pl.tsne, … (everything in _tools.scatterplots)
 doc_scatter_embedding = f"""\
 {doc_scatter_basic}
-{doc_vminmax_percentile}
+{doc_vbound_percentile}
 {doc_outline}
 {doc_panels}
 kwargs

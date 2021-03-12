@@ -1,6 +1,7 @@
 """BasePlot for dotplot, matrixplot and stacked_violin
 """
 import collections.abc as cabc
+from collections import namedtuple
 from typing import Optional, Union, Mapping  # Special
 from typing import Sequence, Iterable  # ABCs
 from typing import Tuple  # Classes
@@ -10,6 +11,7 @@ from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib import pyplot as pl
 from matplotlib import gridspec
+from matplotlib.colors import Normalize
 from warnings import warn
 
 from .. import logging as logg
@@ -89,6 +91,7 @@ class BasePlot(object):
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         self.var_names = var_names
@@ -138,9 +141,9 @@ class BasePlot(object):
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.log = log
         self.kwds = kwds
-        self.vmin = vmin
-        self.vmax = vmax
-        self.vcenter = vcenter
+
+        VBoundNorm = namedtuple('VBoundNorm', ['vmin', 'vmax', 'vcenter', 'norm'])
+        self.vboundnorm = VBoundNorm(vmin=vmin, vmax=vmax, vcenter=vcenter, norm=norm)
 
         # set default values for legend
         self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
@@ -568,10 +571,10 @@ class BasePlot(object):
         ax.set_xlim(0, len(x_labels))
 
         return check_colornorm(
-            self.vmin,
-            self.vmax,
-            self.vcenter,
-            self.kwds.get('norm'),
+            self.vboundnorm.vmin,
+            self.vboundnorm.vmax,
+            self.vboundnorm.vcenter,
+            self.vboundnorm.norm,
         )
 
     def make_figure(self):

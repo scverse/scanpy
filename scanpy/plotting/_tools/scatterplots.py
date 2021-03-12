@@ -13,7 +13,7 @@ from matplotlib import pyplot as pl, colors
 from matplotlib.cm import get_cmap
 from matplotlib import rcParams
 from matplotlib import patheffects
-from matplotlib.colors import Colormap
+from matplotlib.colors import Colormap, Normalize
 from functools import partial
 
 from .. import _utils
@@ -79,6 +79,7 @@ def embedding(
     vmax: Union[VBound, Sequence[VBound], None] = None,
     vmin: Union[VBound, Sequence[VBound], None] = None,
     vcenter: Union[VBound, Sequence[VBound], None] = None,
+    norm: Union[Normalize, Sequence[Normalize], None] = None,
     add_outline: Optional[bool] = False,
     outline_width: Tuple[float, float] = (0.3, 0.05),
     outline_color: Tuple[str, str] = ('black', 'white'),
@@ -205,6 +206,8 @@ def embedding(
         vmin = [vmin]
     if isinstance(vcenter, str) or not isinstance(vcenter, cabc.Sequence):
         vcenter = [vcenter]
+    if isinstance(norm, Normalize) or not isinstance(norm, cabc.Sequence):
+        norm = [norm]
 
     if 's' in kwargs:
         size = kwargs.pop('s')
@@ -293,14 +296,14 @@ def embedding(
                 ax.set_title(value_to_plot)
 
         if not categorical:
-            vmin_float, vmax_float, vcenter_float = _get_vminmaxcenter(
-                vmin, vmax, vcenter, count, color_vector
+            vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
+                vmin, vmax, vcenter, norm, count, color_vector
             )
             normalize = check_colornorm(
                 vmin_float,
                 vmax_float,
                 vcenter_float,
-                kwargs.get('norm'),
+                norm_obj,
             )
         else:
             normalize = None
@@ -476,10 +479,11 @@ def _panel_grid(hspace, wspace, ncols, num_panels):
     return fig, gs
 
 
-def _get_vminmaxcenter(
+def _get_vboundnorm(
     vmin: Sequence[VBound],
     vmax: Sequence[VBound],
     vcenter: Sequence[VBound],
+    norm: Sequence[Normalize],
     index: int,
     color_vector: Sequence[float],
 ) -> Tuple[Union[float, None], Union[float, None]]:
@@ -507,7 +511,8 @@ def _get_vminmaxcenter(
     Returns
     -------
 
-    (vmin, vmax, vcenter) containing None or float values
+    (vmin, vmax, vcenter, norm) containing None or float values for 
+    vmin, vmax, vcenter and matplotlib.colors.Normalize  or None for norm.
 
     """
     out = []
@@ -559,6 +564,7 @@ def _get_vminmaxcenter(
                     )
                     v_value = None
         out.append(v_value)
+    out.append(norm[0] if len(norm) == 1 else norm[index])
     return tuple(out)
 
 

@@ -2,6 +2,7 @@ from functools import partial
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
 from matplotlib.testing.compare import compare_images
 import numpy as np
 import pandas as pd
@@ -124,8 +125,28 @@ def groupsfunc(request):
 
 
 @pytest.fixture(
-    params=[(None, None, None), (0, 5, None), ("p15", "p90", None), (0, "p99", 0.1)],
-    ids=["vbounds.default", "vbound.numbers", "vbound.percentile", "vbound.vcenter"],
+    params=[
+        pytest.param(
+            {"vmin": None, "vmax": None, "vcenter": None, "norm": None},
+            id="vbounds.default"
+        ),
+        pytest.param(
+            {"vmin": 0, "vmax": 5, "vcenter": None, "norm": None},
+            id="vbounds.numbers"
+        ),
+        pytest.param(
+            {"vmin": "p15", "vmax": "p90", "vcenter": None, "norm": None},
+            id="vbounds.percentile"
+        ),
+        pytest.param(
+            {"vmin": 0, "vmax": "p99", "vcenter": 0.1, "norm": None},
+            id="vbounds.vcenter"
+        ),
+        pytest.param(
+            {"vmin": None, "vmax": None, "vcenter": None, "norm": Normalize(0, 5)},
+            id="vbounds.norm"
+        ),
+    ]
 )
 def vbounds(request):
     return request.param
@@ -169,7 +190,7 @@ def test_missing_values_continuous(
 
     # Passing through a dict so it's easier to use default values
     kwargs = {}
-    kwargs["vmin"], kwargs["vmax"], kwargs["vcenter"] = vbounds
+    kwargs.update(vbounds)
     kwargs["legend_loc"] = legend_loc
     if na_color is not None:
         kwargs["na_color"] = na_color

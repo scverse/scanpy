@@ -18,7 +18,7 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
-from matplotlib.colors import is_color_like, Colormap, ListedColormap
+from matplotlib.colors import is_color_like, Colormap, ListedColormap, Normalize
 
 from .. import get
 from .. import logging as logg
@@ -32,7 +32,7 @@ from ._docs import (
     doc_scatter_basic,
     doc_show_save_ax,
     doc_common_plot_args,
-    doc_vminmax,
+    doc_vboundnorm,
 )
 
 VALID_LEGENDLOCS = {
@@ -896,7 +896,7 @@ def clustermap(
 
 
 @_doc_params(
-    vminmax=doc_vminmax,
+    vminmax=doc_vboundnorm,
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
 )
@@ -922,6 +922,7 @@ def heatmap(
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
     vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ):
     """\
@@ -1070,7 +1071,7 @@ def heatmap(
         obs_tidy = obs_tidy.sort_index()
 
     colorbar_width = 0.2
-    norm = check_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
+    norm = check_colornorm(vmin, vmax, vcenter, norm)
 
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
@@ -1617,7 +1618,7 @@ def dendrogram(
     return ax
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vminmax)
+@_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vboundnorm)
 def correlation_matrix(
     adata: AnnData,
     groupby: str,
@@ -1630,6 +1631,7 @@ def correlation_matrix(
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
     vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ) -> Union[Axes, List[Axes]]:
     """\
@@ -1736,10 +1738,10 @@ def correlation_matrix(
         else:
             kwds['edgecolors'] = 'black'
             kwds['linewidth'] = 0.01
-    if vmax is None and vmin is None and 'norm' not in kwds:
+    if vmax is None and vmin is None and norm is None:
         vmax = 1
         vmin = -1
-    norm = check_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
+    norm = check_colornorm(vmin, vmax, vcenter, norm)
     if 'cmap' not in kwds:
         # by default use a divergent color map
         kwds['cmap'] = 'bwr'

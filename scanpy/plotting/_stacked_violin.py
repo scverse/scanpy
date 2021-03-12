@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from matplotlib import pyplot as pl
-from matplotlib.colors import is_color_like
+from matplotlib.colors import is_color_like, Normalize
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
@@ -15,7 +15,7 @@ from ._utils import _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
 
-from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vminmax
+from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
 
@@ -145,6 +145,7 @@ class StackedViolin(BasePlot):
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -167,6 +168,7 @@ class StackedViolin(BasePlot):
             vmin=vmin,
             vmax=vmax,
             vcenter=vcenter,
+            norm=norm,
             **kwds,
         )
 
@@ -328,10 +330,10 @@ class StackedViolin(BasePlot):
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
         normalize = check_colornorm(
-            self.vmin,
-            self.vmax,
-            self.vcenter,
-            self.kwds.get('norm'),
+            self.vboundnorm.vmin,
+            self.vboundnorm.vmax,
+            self.vboundnorm.vcenter,
+            self.vboundnorm.norm,
         )
         colormap_array = cmap(normalize(_color_df.values))
         x_spacer_size = self.plot_x_padding
@@ -548,7 +550,7 @@ class StackedViolin(BasePlot):
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
     groupby_plots_args=doc_common_groupby_plot_args,
-    vminmax=doc_vminmax,
+    vminmax=doc_vboundnorm,
 )
 def stacked_violin(
     adata: AnnData,
@@ -583,6 +585,7 @@ def stacked_violin(
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
     vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ) -> Union[StackedViolin, dict, None]:
     """\
@@ -689,6 +692,10 @@ def stacked_violin(
         var_group_rotation=var_group_rotation,
         layer=layer,
         ax=ax,
+        vmin=vmin,
+        vmax=vmax,
+        vcenter=vcenter,
+        norm=norm,
         **kwds,
     )
 

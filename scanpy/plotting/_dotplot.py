@@ -7,6 +7,7 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib import pyplot as pl
+from matplotlib.colors import Normalize
 
 from .. import logging as logg
 from .._utils import _doc_params
@@ -16,7 +17,7 @@ from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
 
-from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vminmax
+from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
 
@@ -125,6 +126,7 @@ class DotPlot(BasePlot):
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -147,6 +149,7 @@ class DotPlot(BasePlot):
             vmin=vmin,
             vmax=vmax,
             vcenter=vcenter,
+            norm=norm,
             **kwds,
         )
 
@@ -542,9 +545,10 @@ class DotPlot(BasePlot):
             grid=self.grid,
             x_padding=self.plot_x_padding,
             y_padding=self.plot_y_padding,
-            vmin=self.vmin,
-            vmax=self.vmax,
-            vcenter=self.vcenter,
+            vmin=self.vboundnorm.vmin,
+            vmax=self.vboundnorm.vmax,
+            vcenter=self.vboundnorm.vcenter,
+            norm=self.vboundnorm.norm,
             **self.kwds,
         )
 
@@ -573,6 +577,7 @@ class DotPlot(BasePlot):
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         """\
@@ -694,7 +699,7 @@ class DotPlot(BasePlot):
         size = frac ** size_exponent
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
-        normalize = check_colornorm(vmin, vmax, vcenter, kwds.get('norm'))
+        normalize = check_colornorm(vmin, vmax, vcenter, norm)
 
         if color_on == 'square':
             if edge_color is None:
@@ -789,7 +794,7 @@ class DotPlot(BasePlot):
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
     groupby_plots_args=doc_common_groupby_plot_args,
-    vminmax=doc_vminmax,
+    vminmax=doc_vboundnorm,
 )
 def dotplot(
     adata: AnnData,
@@ -824,6 +829,7 @@ def dotplot(
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
     vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ) -> Union[DotPlot, dict, None]:
     """\
@@ -955,6 +961,7 @@ def dotplot(
         vmin=vmin,
         vmax=vmax,
         vcenter=vcenter,
+        norm=norm,
         **kwds,
     )
 
