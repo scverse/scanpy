@@ -229,7 +229,7 @@ def _highly_variable_pearson_residuals(
         )
 
     if batch_key is None:
-        batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
+        batch_info = np.zeros(adata.shape[0], dtype=int)
     else:
         batch_info = adata.obs[batch_key].values
     n_batches = len(np.unique(batch_info))
