@@ -469,9 +469,7 @@ def scrublet_simulate_doublets(
     Returns
     -------
     adata : anndata.AnnData with simulated doublets in .X
-        if ``copy=True`` it returns or else adds fields to ``adata``:
-
-        ``adata.uns['scrublet']['doublet_parents']``
+        ``adata.obsm['doublet_parents']`` 
             Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
         ``uns['scrublet']['parameters']``
