@@ -4,7 +4,6 @@ from itertools import repeat, chain, combinations
 
 import pytest
 from matplotlib.testing import setup
-from matplotlib.testing.exceptions import ImageComparisonFailure
 from packaging import version
 
 from scanpy._compat import pkg_version
@@ -989,7 +988,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
 
     check_same_image(FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig2.png', tol=1)
 
-    with pytest.raises(ImageComparisonFailure):
+    with pytest.raises(AssertionError):
         check_same_image(
             FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig0.png', tol=1
         )
