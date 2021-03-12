@@ -21,11 +21,11 @@ from .._utils import (
     _IGraphLayout,
     _FontWeight,
     _FontSize,
-    circles,
     ColorLike,
+    VBound,
+    circles,
     check_projection,
     check_colornorm,
-    VBound,
 )
 from .._docs import (
     doc_adata_color_etc,
