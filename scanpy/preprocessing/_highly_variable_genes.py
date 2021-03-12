@@ -9,7 +9,8 @@ from anndata import AnnData
 
 from .. import logging as logg
 from .._settings import settings, Verbosity
-from .._utils import sanitize_anndata, check_nonnegative_integers
+from .._utils import sanitize_anndata, check_nonnegative_integers, view_to_actual
+from scanpy.get import _get_obs_rep, _set_obs_rep
 from .._compat import Literal
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray
@@ -34,20 +35,20 @@ def _highly_variable_genes_seurat_v3(
     Returns
     -------
     Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`) or
-    updates `.var` with the following fields
+    updates `.var` with the following fields:
 
     highly_variable : bool
-        boolean indicator of highly-variable genes
+        boolean indicator of highly-variable genes.
     **means**
-        means per gene
+        means per gene.
     **variances**
-        variance per gene
+        variance per gene.
     **variances_norm**
-        normalized variance per gene, averaged in the case of multiple batches
+        normalized variance per gene, averaged in the case of multiple batches.
     highly_variable_rank : float
-        Rank of the gene according to normalized variance, median rank in the case of multiple batches
+        Rank of the gene according to normalized variance, median rank in the case of multiple batches.
     highly_variable_nbatches : int
-        If batch_key is given, this denotes in how many batches genes are detected as HVG
+        If batch_key is given, this denotes in how many batches genes are detected as HVG.
     """
 
     try:
@@ -184,6 +185,7 @@ def _highly_variable_pearson_residuals(
     theta: float = 100,
     clip: Union[Literal['auto', 'none'], float] = 'auto',
     chunksize: int = 100,
+    check_values: bool = True,
     subset: bool = False,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
@@ -193,26 +195,26 @@ def _highly_variable_pearson_residuals(
     Returns
     -------
     Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`)
-    or updates `.var` with the following fields
+    or updates `.var` with the following fields:
 
     highly_variable
-        boolean indicator of highly-variable genes
+        boolean indicator of highly-variable genes.
     means
-        means per gene
+        means per gene.
     variances
-        variances per gene 
+        variances per gene.
     residual_variances
         Pearson residual variance per gene. Averaged in the case of multiple
         batches.
     highly_variable_rank
         Rank of the gene according to residual variance, median rank in the
-        case of multiple batches
+        case of multiple batches.
     highly_variable_nbatches : int
         If batch_key is given, this denotes in how many batches genes are
-        detected as HVG
+        detected as HVG.
     highly_variable_intersection : bool
         If batch_key is given, this denotes the genes that are highly variable
-        in all batches
+        in all batches.
     """
 
     view_to_actual(adata)
@@ -220,10 +222,10 @@ def _highly_variable_pearson_residuals(
     computed_on = layer if layer else 'adata.X'
 
     # Check for raw counts
-    if check_nonnegative_integers(X) is False:
-        raise ValueError(
-            "`pp.highly_variable_genes` with `flavor='pearson_residuals'`"
-            "expects raw count data."
+    if check_values and (check_nonnegative_integers(X) == False):
+        warnings.warn(
+            "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
+            UserWarning,
         )
 
     if batch_key is None:

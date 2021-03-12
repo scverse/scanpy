@@ -235,33 +235,33 @@ def recipe_pearson_residuals(
     updates `adata` with the following fields for gene selection results…:
 
     `.var['highly_variable']`
-        boolean indicator of highly-variable genes
+        boolean indicator of highly-variable genes.
     `.var['means']`
-        means per gene
+        means per gene.
     `.var['variances']`
-        variances per gene
+        variances per gene.
     `.var['residual_variances']`
         Pearson residual variance per gene. Averaged in the case of multiple
         batches.
     `.var['highly_variable_rank']`
         Rank of the gene according to residual variance, median rank in the
-        case of multiple batches
+        case of multiple batches.
     `.var['highly_variable_nbatches']`
         If batch_key is given, this denotes in how many batches genes are
-        detected as HVG
+        detected as HVG.
     `.var['highly_variable_intersection']`
         If batch_key is given, this denotes the genes that are highly variable
-        in all batches
+        in all batches.
 
     …and the following fields for Pearson residual-based PCA results and
     normalization settings:
 
     `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
-         The hvg-subset, normalized by Pearson residuals
+         The hvg-subset, normalized by Pearson residuals.
     `.uns['pearson_residuals_normalization']['theta']`
-         The used value of the overdisperion parameter theta
+         The used value of the overdisperion parameter theta.
     `.uns['pearson_residuals_normalization']['clip']`
-         The used value of the clipping parameter
+         The used value of the clipping parameter.
 
     `.obsm['pearson_residuals_X_pca']`
         PCA representation of data after gene selection and Pearson residual
