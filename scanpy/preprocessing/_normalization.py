@@ -42,16 +42,16 @@ def _pearson_residuals(X, theta, clip, copy=False):
         # then only theta=0 were undefined..
         raise ValueError('Pearson residuals require theta > 0')
     # prepare clipping
-    if clip == 'auto':
+    if clip is None:
         n = X.shape[0]
         clip = np.sqrt(n)
     if clip < 0:
-        raise ValueError("Pearson residuals require `clip>=0` or `clip='auto'`.")
+        raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
     if check_nonnegative_integers(X) is False:
         raise ValueError("`pp.normalize_pearson_residuals` expects raw count data")
 
-    if sp_sparse.issparse(X):
+    if issparse(X):
         sums_genes = np.sum(X, axis=0)
         sums_cells = np.sum(X, axis=1)
         sum_total = np.sum(sums_genes).squeeze()
@@ -73,7 +73,7 @@ def _pearson_residuals(X, theta, clip, copy=False):
 def normalize_pearson_residuals(
     adata: AnnData,
     theta: float = 100,
-    clip: Union[Literal['auto', 'none'], float] = 'auto',
+    clip: Optional[float] = None,
     layer: Optional[str] = None,
     copy: bool = False,
     inplace: bool = True,
@@ -95,7 +95,7 @@ def normalize_pearson_residuals(
     clip
         Determines if and how residuals are clipped:
         
-        * If `'auto'`, residuals are clipped to the interval
+        * If `None`, residuals are clipped to the interval
         [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset
         (default behavior).
         * If any scalar c, residuals are clipped to the interval [-c, c]. Set
@@ -150,7 +150,7 @@ def normalize_pearson_residuals(
 def normalize_pearson_residuals_pca(
     adata: AnnData,
     theta: float = 100,
-    clip: Union[Literal['auto', 'none'], float] = 'auto',
+    clip: Optional[float] = None,
     n_comps_pca: Optional[int] = 50,
     random_state_pca: Optional[float] = 0,
     use_highly_variable: bool = True,
@@ -180,7 +180,7 @@ def normalize_pearson_residuals_pca(
     clip
         This determines if and how Pearson residuals are clipped:
         
-        * If `'auto'`, residuals are clipped to the interval
+        * If `None`, residuals are clipped to the interval
         [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset
         (default behavior).
         * If any scalar c, residuals are clipped to the interval [-c, c]. Set

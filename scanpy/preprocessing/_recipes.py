@@ -176,7 +176,7 @@ def recipe_pearson_residuals(
     adata: AnnData,
     n_top_genes: int = 1000,
     theta: float = 100,
-    clip: Union[Literal['auto', 'none'], float] = 'auto',
+    clip: Optional[float] = None,
     chunksize: int = 1000,
     batch_key: Optional[str] = None,
     n_comps_pca: Optional[int] = 50,
@@ -208,7 +208,7 @@ def recipe_pearson_residuals(
     clip
         This determines if and how Pearson residuals are clipped:
 
-        * If `'auto'`, residuals are clipped to the interval
+        * If `None`, residuals are clipped to the interval
         [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset
         (default behavior).
         * If any scalar c, residuals are clipped to the interval [-c, c]. Set

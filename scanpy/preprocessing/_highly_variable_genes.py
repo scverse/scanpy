@@ -183,7 +183,7 @@ def _highly_variable_pearson_residuals(
     n_top_genes: int = 2000,
     batch_key: Optional[str] = None,
     theta: float = 100,
-    clip: Union[Literal['auto', 'none'], float] = 'auto',
+    clip: Optional[float] = None,
     chunksize: int = 100,
     check_values: bool = True,
     subset: bool = False,
@@ -251,11 +251,11 @@ def _highly_variable_pearson_residuals(
             X_batch = adata_subset.X
 
         # Prepare clipping
-        if clip == 'auto':
+        if clip is None:
             n = X_batch.shape[0]
             clip = np.sqrt(n)
         if clip < 0:
-            raise ValueError("Pearson residuals require `clip>=0` or `clip='auto'`.")
+            raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
         if sp_sparse.issparse(X_batch):
             sums_genes = np.sum(X_batch, axis=0)
@@ -492,7 +492,7 @@ def highly_variable_genes(
     span: Optional[float] = 0.3,
     n_bins: int = 20,
     theta: float = 100,
-    clip: Union[Literal['auto', 'none'], float] = 'auto',
+    clip: Optional[float] = None,
     chunksize: int = 1000,
     flavor: Literal[
         'seurat', 'cell_ranger', 'seurat_v3', 'pearson_residuals'
@@ -564,7 +564,7 @@ def highly_variable_genes(
     clip
         If `flavor='pearson_residuals'`, this determines if and how residuals are clipped:
         
-        * If `'auto'`, residuals are clipped to the interval [-sqrt(n), sqrt(n)],
+        * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)],
         where n is the number of cells in the dataset (default behavior).
         * If any scalar c, residuals are clipped to the interval [-c, c]. Set
         `clip=np.Inf` for no clipping.
