@@ -920,7 +920,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
 
     norm = mpl.colors.LogNorm()
     with pytest.raises(
-            ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."
+        ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."
     ):
         sc.pl.embedding(
             pbmc,
