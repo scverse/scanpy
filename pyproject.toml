@@ -43,8 +43,9 @@ requires = [
     'anndata>=0.7.4',
     # numpy needs a version due to #1320
     'numpy>=1.17.0',
-    # Matplotlib 3.2 is needed for TwoSlopeNorm, see #1551
-    'matplotlib>=3.2',
+    # Matplotlib 3.1 causes an error in 3d scatter plots (https://github.com/matplotlib/matplotlib/issues/14298)
+    # But matplotlib 3.0 causes one in heatmaps
+    'matplotlib>=3.1.2',
     'pandas>=0.21',
     'scipy>=1.4',
     'seaborn',
