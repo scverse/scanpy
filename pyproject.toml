@@ -43,7 +43,7 @@ requires = [
     'anndata>=0.7.4',
     # numpy needs a version due to #1320
     'numpy>=1.17.0',
-    # Matplotlib 3.2 is needed for TwoSlopeNotm
+    # Matplotlib 3.2 is needed for TwoSlopeNorm, see #1551
     'matplotlib>=3.2',
     'pandas>=0.21',
     'scipy>=1.4',
