@@ -128,23 +128,22 @@ def groupsfunc(request):
     params=[
         pytest.param(
             {"vmin": None, "vmax": None, "vcenter": None, "norm": None},
-            id="vbounds.default"
+            id="vbounds.default",
         ),
         pytest.param(
-            {"vmin": 0, "vmax": 5, "vcenter": None, "norm": None},
-            id="vbounds.numbers"
+            {"vmin": 0, "vmax": 5, "vcenter": None, "norm": None}, id="vbounds.numbers"
         ),
         pytest.param(
             {"vmin": "p15", "vmax": "p90", "vcenter": None, "norm": None},
-            id="vbounds.percentile"
+            id="vbounds.percentile",
         ),
         pytest.param(
             {"vmin": 0, "vmax": "p99", "vcenter": 0.1, "norm": None},
-            id="vbounds.vcenter"
+            id="vbounds.vcenter",
         ),
         pytest.param(
             {"vmin": None, "vmax": None, "vcenter": None, "norm": Normalize(0, 5)},
-            id="vbounds.norm"
+            id="vbounds.norm",
         ),
     ]
 )
