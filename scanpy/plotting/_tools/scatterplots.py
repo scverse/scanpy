@@ -511,7 +511,7 @@ def _get_vboundnorm(
     Returns
     -------
 
-    (vmin, vmax, vcenter, norm) containing None or float values for 
+    (vmin, vmax, vcenter, norm) containing None or float values for
     vmin, vmax, vcenter and matplotlib.colors.Normalize  or None for norm.
 
     """
