@@ -7,15 +7,20 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
+from matplotlib.colors import Normalize
 
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
-from ._utils import fix_kwds
+from ._utils import fix_kwds, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
-from ._docs import doc_common_plot_args, doc_show_save_ax
+from ._docs import (
+    doc_common_plot_args,
+    doc_show_save_ax,
+    doc_vboundnorm,
+)
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
 
@@ -97,6 +102,10 @@ class MatrixPlot(BasePlot):
         standard_scale: Literal['var', 'group'] = None,
         ax: Optional[_AxesSubplot] = None,
         values_df: Optional[pd.DataFrame] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -116,6 +125,10 @@ class MatrixPlot(BasePlot):
             var_group_rotation=var_group_rotation,
             layer=layer,
             ax=ax,
+            vmin=vmin,
+            vmax=vmax,
+            vcenter=vcenter,
+            norm=norm,
             **kwds,
         )
 
@@ -202,11 +215,11 @@ class MatrixPlot(BasePlot):
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
-
-        import matplotlib.colors
-
-        normalize = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+        normalize = check_colornorm(
+            self.vboundnorm.vmin,
+            self.vboundnorm.vmax,
+            self.vboundnorm.vcenter,
+            self.vboundnorm.norm,
         )
 
         for axis in ['top', 'bottom', 'left', 'right']:
@@ -248,6 +261,7 @@ class MatrixPlot(BasePlot):
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
     groupby_plots_args=doc_common_groupby_plot_args,
+    vminmax=doc_vboundnorm,
 )
 def matrixplot(
     adata: AnnData,
@@ -273,6 +287,10 @@ def matrixplot(
     save: Union[str, bool, None] = None,
     ax: Optional[_AxesSubplot] = None,
     return_fig: Optional[bool] = False,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ) -> Union[MatrixPlot, dict, None]:
     """\
@@ -287,6 +305,7 @@ def matrixplot(
     {common_plot_args}
     {groupby_plots_args}
     {show_save_ax}
+    {vminmax}
     kwds
         Are passed to :func:`matplotlib.pyplot.pcolor`.
 
@@ -342,6 +361,10 @@ def matrixplot(
         layer=layer,
         values_df=values_df,
         ax=ax,
+        vmin=vmin,
+        vmax=vmax,
+        vcenter=vcenter,
+        norm=norm,
         **kwds,
     )
 

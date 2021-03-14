@@ -2,7 +2,7 @@ import warnings
 import collections.abc as cabc
 from abc import ABC
 from functools import lru_cache
-from typing import Union, List, Sequence, Tuple, Collection, Optional
+from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable
 import anndata
 
 import numpy as np
@@ -31,6 +31,7 @@ _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 
 _FontSize = Literal[
     'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
+VBound = Union[str, float, Callable[[Sequence[float]], float]]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase, ABC):
@@ -1187,3 +1188,24 @@ def _get_basis(adata: anndata.AnnData, basis: str):
         basis_key = f"X_{basis}"
 
     return basis_key
+
+
+def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
+    from matplotlib.colors import Normalize
+
+    try:
+        from matplotlib.colors import TwoSlopeNorm as DivNorm
+    except ImportError:
+        # matplotlib<3.2
+        from matplotlib.colors import DivergingNorm as DivNorm
+
+    if norm is not None:
+        if (vmin is not None) or (vmax is not None) or (vcenter is not None):
+            raise ValueError('Passing both norm and vmin/vmax/vcenter is not allowed.')
+    else:
+        if vcenter is not None:
+            norm = DivNorm(vmin=vmin, vmax=vmax, vcenter=vcenter)
+        else:
+            norm = Normalize(vmin=vmin, vmax=vmax)
+
+    return norm
