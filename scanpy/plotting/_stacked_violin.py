@@ -6,16 +6,16 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from matplotlib import pyplot as pl
-from matplotlib.colors import is_color_like
+from matplotlib.colors import is_color_like, Normalize
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
-from ._utils import make_grid_spec
+from ._utils import make_grid_spec, check_colornorm
 from ._utils import _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
 
-from ._docs import doc_common_plot_args, doc_show_save_ax
+from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
 
@@ -142,6 +142,10 @@ class StackedViolin(BasePlot):
         layer: Optional[str] = None,
         standard_scale: Literal['var', 'group'] = None,
         ax: Optional[_AxesSubplot] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -161,6 +165,10 @@ class StackedViolin(BasePlot):
             var_group_rotation=var_group_rotation,
             layer=layer,
             ax=ax,
+            vmin=vmin,
+            vmax=vmax,
+            vcenter=vcenter,
+            norm=norm,
             **kwds,
         )
 
@@ -317,15 +325,17 @@ class StackedViolin(BasePlot):
         _color_df = _matrix.groupby(level=0).median()
         if self.are_axes_swapped:
             _color_df = _color_df.T
-        import matplotlib.colors
 
-        norm = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
-        )
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
-        colormap_array = cmap(norm(_color_df.values))
+        normalize = check_colornorm(
+            self.vboundnorm.vmin,
+            self.vboundnorm.vmax,
+            self.vboundnorm.vcenter,
+            self.vboundnorm.norm,
+        )
+        colormap_array = cmap(normalize(_color_df.values))
         x_spacer_size = self.plot_x_padding
         y_spacer_size = self.plot_y_padding
         self._make_rows_of_violinplots(
@@ -360,7 +370,7 @@ class StackedViolin(BasePlot):
         ax.tick_params(axis='both', labelsize='small')
         ax.grid(False)
 
-        return norm
+        return normalize
 
     def _make_rows_of_violinplots(
         self, ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
@@ -540,6 +550,7 @@ class StackedViolin(BasePlot):
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
     groupby_plots_args=doc_common_groupby_plot_args,
+    vminmax=doc_vboundnorm,
 )
 def stacked_violin(
     adata: AnnData,
@@ -571,6 +582,10 @@ def stacked_violin(
     row_palette: Optional[str] = StackedViolin.DEFAULT_ROW_PALETTE,
     cmap: Optional[str] = StackedViolin.DEFAULT_COLORMAP,
     ax: Optional[_AxesSubplot] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ) -> Union[StackedViolin, dict, None]:
     """\
@@ -618,6 +633,7 @@ def stacked_violin(
         Alternatively, a single color name or hex value can be passed,
         e.g. `'red'` or `'#cc33ff'`.
     {show_save_ax}
+    {vminmax}
     kwds
         Are passed to :func:`~seaborn.violinplot`.
 
@@ -676,6 +692,10 @@ def stacked_violin(
         var_group_rotation=var_group_rotation,
         layer=layer,
         ax=ax,
+        vmin=vmin,
+        vmax=vmax,
+        vcenter=vcenter,
+        norm=norm,
         **kwds,
     )
 
