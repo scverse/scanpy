@@ -1025,7 +1025,7 @@ class Neighbors:
             (
                 self.eigen_values[k]
                 / (1 - self.eigen_values[k])
-                * (self.eigen_basis[k, k] - self.eigen_basis[:, k])
+                * (self.eigen_basis[i, k] - self.eigen_basis[:, k])
             )
             ** 2
             # account for float32 precision
