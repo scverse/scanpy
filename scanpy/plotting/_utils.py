@@ -1,6 +1,7 @@
 import warnings
 import collections.abc as cabc
 from abc import ABC
+from functools import lru_cache
 from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable
 import anndata
 
@@ -126,7 +127,7 @@ def timeseries_subplot(
     else:
         levels, _ = np.unique(color, return_inverse=True)
         colors = np.array(palette[: len(levels)].by_key()['color'])
-        subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
+        subsets = [(x_range[color == l], X[color == l, :]) for l in levels]
 
     if ax is None:
         ax = pl.subplot()
@@ -619,7 +620,6 @@ def setup_axes(
     figure_width = width_without_offsets + left_offset + right_offset
     draw_region_width_frac = draw_region_width / figure_width
     left_offset_frac = left_offset / figure_width
-    right_offset_frac = 1 - (len(panels) - 1) * left_offset_frac  # noqa: F841
 
     if ax is None:
         pl.figure(
@@ -707,9 +707,7 @@ def scatter_base(
     )
     for icolor, color in enumerate(colors):
         ax = axs[icolor]
-        left = panel_pos[2][2 * icolor]
         bottom = panel_pos[0][0]
-        width = draw_region_width / figure_width
         height = panel_pos[1][0] - bottom
         Y_sort = Y
         if not is_color_like(color) and sort_order:
@@ -742,7 +740,9 @@ def scatter_base(
             rectangle = [left, bottom, width, height]
             fig = pl.gcf()
             ax_cb = fig.add_axes(rectangle)
-            pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb)
+            _ = pl.colorbar(
+                sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
+            )
         # set the title
         if title is not None:
             ax.set_title(title[icolor])
@@ -937,8 +937,8 @@ def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     if levels is None:
         levels = make_levels({})
     else:
-        levels = {level: {TOTAL: levels[level], CURRENT: 0} for level in levels}
-    vert_gap = height / (max([level for level in levels]) + 1)
+        levels = {l: {TOTAL: levels[l], CURRENT: 0} for l in levels}
+    vert_gap = height / (max([l for l in levels]) + 1)
     return make_pos({})
 
 

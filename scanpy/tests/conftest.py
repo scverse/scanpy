@@ -11,7 +11,6 @@ import pytest
 import scanpy
 
 
-
 scanpy.settings.verbosity = "hint"
 
 # define this after importing scanpy but before running tests
