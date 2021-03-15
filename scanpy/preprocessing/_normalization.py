@@ -163,6 +163,7 @@ def normalize_pearson_residuals_pca(
     n_comps_pca: Optional[int] = 50,
     random_state_pca: Optional[float] = 0,
     use_highly_variable: bool = True,
+    kwargs_pca: Optional[dict] = None,
     check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
@@ -203,6 +204,8 @@ def normalize_pearson_residuals_pca(
         Number of principal components to compute.
     random_state_pca
         Change to use different initial states for the optimization.
+    kwargs_pca
+        Dictionary of further keyword arguments passed on to `sc.pp.pca()`.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
     inplace
@@ -245,7 +248,7 @@ def normalize_pearson_residuals_pca(
     normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
-    pca(adata_pca, n_comps=n_comps_pca, random_state=random_state_pca)
+    pca(adata_pca, n_comps=n_comps_pca, random_state=random_state_pca, **kwargs_pca)
 
     if inplace:
         norm_settings = adata_pca.uns['pearson_residuals_normalization']
