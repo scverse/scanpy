@@ -34,8 +34,6 @@ def test_scrublet_dense():
     adata = sc.datasets.paul15()[:500].copy()
     sce.pp.scrublet(adata, use_approx_neighbors=False)
 
-    errors = []
-
     # replace assertions by conditions
     assert "predicted_doublet" in adata.obs.columns
     assert "doublet_score" in adata.obs.columns

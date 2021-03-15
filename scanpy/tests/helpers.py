@@ -37,7 +37,6 @@ def check_rep_mutation(func, X, *, fields=["layer", "obsm"], **kwargs):
         )
         np.testing.assert_array_equal(asarray(adata_X.X), result_array)
 
-
     # Unmodified fields
     for field in fields:
         np.testing.assert_array_equal(X_array, asarray(adatas_proc[field].X))

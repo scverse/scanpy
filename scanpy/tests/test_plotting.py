@@ -915,7 +915,8 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
     )
     save_and_compare_images('master_embedding_outline_vmin_vmax')
 
-    import matplotlib as mpl, matplotlib.pyplot as plt
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
 
     norm = mpl.colors.LogNorm()
     with pytest.raises(

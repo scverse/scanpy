@@ -699,16 +699,7 @@ class DotPlot(BasePlot):
         size = frac ** size_exponent
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
-<<<<<<< HEAD
         normalize = check_colornorm(vmin, vmax, vcenter, norm)
-=======
-
-        import matplotlib.colors
-
-        normalize = matplotlib.colors.Normalize(
-            vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
-        )
->>>>>>> 617168f7 (address review)
 
         if color_on == 'square':
             if edge_color is None:
