@@ -16,7 +16,13 @@ Code style
 ----------
 
 New code should follow
-`Black <https://black.readthedocs.io/en/stable/the_black_code_style.html>`__
-and Scanpy’s
+`Black <https://black.readthedocs.io/en/stable/the_black_code_style.html>`__,
+and
+`flake8 <https://flake8.pycqa.org>`__.
+We ignore a couple of flake8 checks which are documented in the .flake8 file in the root
+of this repository.
+To learn how to ignore checks per line please read
+`flake8 violations <https://flake8.pycqa.org/en/latest/user/violations.html>`__.
+Additionally, we use Scanpy’s
 `EditorConfig <https://github.com/theislab/scanpy/blob/master/.editorconfig>`__,
 so using an editor/IDE with support for both is helpful.
