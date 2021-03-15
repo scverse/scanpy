@@ -188,8 +188,8 @@ def _morans_i_mtx_csr(
     X_data: np.ndarray,
     X_indices: np.ndarray,
     X_indptr: np.ndarray,
-    indptr: np.ndarray,
     indices: np.ndarray,
+    indptr: np.ndarray,
     data: np.ndarray,
     X_shape: tuple,
 ):
@@ -200,7 +200,8 @@ def _morans_i_mtx_csr(
     x_indices_list = np.split(X_indices, X_indptr[1:-1])
     for k in range(M):
         x = np.zeros(N, dtype=ft)
-        x[x_indices_list[k]] = x_data_list[k]
+        x_index = x_indices_list[k]
+        x[x_index] = x_data_list[k]
         z = x - x.mean()
         z2ss = (z * z).sum()
         out[k] = _morans_i_vec_W(x, indptr, indices, data, z, W, z2ss)
@@ -241,10 +242,10 @@ def _morans_i(g, vals) -> np.ndarray:
         assert g.shape[0] == vals.shape[1]
         return _morans_i_mtx_csr(
             vals.data.astype(fp, copy=False),
-            vals.indices,
-            vals.indptr,
-            g.indices,
-            g.indptr,
+            vals.indices.astype(ip),
+            vals.indptr.astype(ip),
+            g.indices.astype(ip),
+            g.indptr.astype(ip),
             g_data,
             vals.shape,
         )
@@ -253,7 +254,9 @@ def _morans_i(g, vals) -> np.ndarray:
         return _morans_i_vec(vals, g.indptr, g.indices, g_data)
     elif isinstance(vals, np.ndarray) and vals.ndim == 2:
         assert g.shape[0] == vals.shape[1]
-        return _morans_i_mtx(vals, g.indptr, g.indices, g_data)
+        return _morans_i_mtx(
+            vals.astype(fp), g.indptr.astype(ip), g.indices.astype(ip), g_data
+        )
     else:
         raise NotImplementedError()
 
