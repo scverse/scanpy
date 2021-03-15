@@ -1,11 +1,3 @@
-import scanpy as sc
-from anndata import AnnData
-from matplotlib.testing.compare import compare_images
-import pandas as pd
-import numpy as np
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 from functools import partial
 from pathlib import Path
 from itertools import repeat, chain, combinations
@@ -18,6 +10,15 @@ from scanpy._compat import pkg_version
 
 setup()
 
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import numpy as np
+import pandas as pd
+from matplotlib.testing.compare import compare_images
+from anndata import AnnData
+
+import scanpy as sc
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / '_images'

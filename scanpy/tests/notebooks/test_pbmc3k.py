@@ -10,7 +10,6 @@
 # ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 
-import scanpy as sc
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +18,8 @@ import pytest
 from matplotlib.testing import setup
 
 setup()
+
+import scanpy as sc
 
 
 HERE: Path = Path(__file__).parent

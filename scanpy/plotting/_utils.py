@@ -620,6 +620,7 @@ def setup_axes(
     figure_width = width_without_offsets + left_offset + right_offset
     draw_region_width_frac = draw_region_width / figure_width
     left_offset_frac = left_offset / figure_width
+    right_offset_frac = 1 - (len(panels) - 1) * left_offset_frac  # noqa: F841
 
     if ax is None:
         pl.figure(
@@ -707,7 +708,9 @@ def scatter_base(
     )
     for icolor, color in enumerate(colors):
         ax = axs[icolor]
+        left = panel_pos[2][2 * icolor]  # noqa: F841
         bottom = panel_pos[0][0]
+        width = draw_region_width / figure_width  # noqa: F841
         height = panel_pos[1][0] - bottom
         Y_sort = Y
         if not is_color_like(color) and sort_order:
