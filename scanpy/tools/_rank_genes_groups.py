@@ -35,32 +35,24 @@ def _ranks(X, mask=None, mask_rest=None):
     n_genes = X.shape[1]
 
     if issparse(X):
-
-        def merge(tpl):
-            return vstack(tpl).toarray()
-
-        def adapt(X):
-            return X.toarray()
+        merge = lambda tpl: vstack(tpl).toarray()
+        adapt = lambda X: X.toarray()
 
     else:
         merge = np.vstack
-
-        def adapt(X):
-            return X
+        adapt = lambda X: X
 
     masked = mask is not None and mask_rest is not None
 
     if masked:
         n_cells = np.count_nonzero(mask) + np.count_nonzero(mask_rest)
-
-        def get_chunk(X, left, right):
-            return merge((X[mask, left:right], X[mask_rest, left:right]))
+        get_chunk = lambda X, left, right: merge(
+            (X[mask, left:right], X[mask_rest, left:right])
+        )
 
     else:
         n_cells = X.shape[0]
-
-        def get_chunk(X, left, right):
-            return adapt(X[:, left:right])
+        get_chunk = lambda X, left, right: adapt(X[:, left:right])
 
     # Calculate chunk frames
     max_chunk = floor(CONST_MAX_SIZE / n_cells)
@@ -178,14 +170,10 @@ class _RankGenes:
             del X_rest
 
         if issparse(self.X):
-
-            def get_nonzeros(X):
-                return X.getnnz(axis=0)
+            get_nonzeros = lambda X: X.getnnz(axis=0)
 
         else:
-
-            def get_nonzeros(X):
-                return np.count_nonzero(X, axis=0)
+            get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
 
         for imask, mask in enumerate(self.groups_masks):
             X_mask = self.X[mask]
@@ -755,9 +743,7 @@ def filter_rank_genes_groups(
         )
 
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
-
-            def expm1_func(x):
-                return np.expm1(x * np.log(adata.uns['log1p']['base']))
+            expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
 
         else:
             expm1_func = np.expm1
