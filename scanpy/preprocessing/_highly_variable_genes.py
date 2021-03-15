@@ -57,16 +57,11 @@ def _highly_variable_genes_seurat_v3(
         )
 
     X = adata.layers[layer] if layer is not None else adata.X
-<<<<<<< HEAD
     if check_values and (check_nonnegative_integers(X) == False):
         warnings.warn(
             "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
             UserWarning,
         )
-=======
-    if check_nonnegative_integers(X) is False:
-        raise ValueError("`pp.highly_variable_genes` with `flavor='seurat_v3'` expects " "raw count data.")
->>>>>>> 40dc2c3b (add flake8 pre-commit)
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))

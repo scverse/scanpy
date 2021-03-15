@@ -570,20 +570,12 @@ class BasePlot(object):
         ax.set_ylim(len(y_labels), 0)
         ax.set_xlim(0, len(x_labels))
 
-<<<<<<< HEAD
         return check_colornorm(
             self.vboundnorm.vmin,
             self.vboundnorm.vmax,
             self.vboundnorm.vcenter,
             self.vboundnorm.norm,
         )
-=======
-        normalize = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
-        )
-
-        return normalize
->>>>>>> 617168f7 (address review)
 
     def make_figure(self):
         """
