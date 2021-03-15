@@ -1,7 +1,6 @@
 import warnings
 import collections.abc as cabc
 from abc import ABC
-from functools import lru_cache
 from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable
 import anndata
 
@@ -31,10 +30,7 @@ _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 
 _FontSize = Literal[
     'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
-<<<<<<< HEAD
 VBound = Union[str, float, Callable[[Sequence[float]], float]]
-=======
->>>>>>> 617168f7 (address review)
 
 
 class _AxesSubplot(Axes, axes.SubplotBase, ABC):

@@ -215,19 +215,11 @@ class MatrixPlot(BasePlot):
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
-<<<<<<< HEAD
         normalize = check_colornorm(
             self.vboundnorm.vmin,
             self.vboundnorm.vmax,
             self.vboundnorm.vcenter,
             self.vboundnorm.norm,
-=======
-
-        import matplotlib.colors
-
-        normalize = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
->>>>>>> 617168f7 (address review)
         )
 
         for axis in ['top', 'bottom', 'left', 'right']:

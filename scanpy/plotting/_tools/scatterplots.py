@@ -294,7 +294,6 @@ def embedding(
                 )
                 ax.set_title(value_to_plot)
 
-<<<<<<< HEAD
         if not categorical:
             vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
                 vmin, vmax, vcenter, norm, count, color_vector
@@ -307,19 +306,6 @@ def embedding(
             )
         else:
             normalize = None
-=======
-        # check vmin and vmax options
-        if categorical:
-            kwargs['vmin'] = kwargs['vmax'] = None
-        else:
-<<<<<<< HEAD
-            kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(vmin, vmax, count, color_vector)
->>>>>>> 40dc2c3b (add flake8 pre-commit)
-=======
-            kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(
-                vmin, vmax, count, color_vector
-            )
->>>>>>> 617168f7 (address review)
 
         # make the scatter plot
         if projection == '3d':
