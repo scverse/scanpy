@@ -2,4 +2,12 @@
 [flake8]
 max-line-length = 88
 # switched off since they conflict with black's standards
-ignore = F401, W503, E501, E203, E231, W504, E402, E126, E712, E741, E266, E262
+ignore = F401,  # module imported but unused -> required for Scanpys API
+         W503,  # line break before a binary operator -> black does not adhere to PEP8
+         W504,  # line break occured after a binary operator -> black does not adhere to PEP8
+         E501,  # line too long -> we accept long comment lines; black gets rid of long code lines
+         E203,  # whitespace before : -> black does not adhere to PEP8
+         E231,  # missing whitespace after ,', ';', or ':' -> black does not adhere to PEP8
+         E402,  # module level import not at top of file -> required to circumvent circular imports for Scanpys API
+         E126,  # continuation line over-indented for hanging indent -> black does not adhere to PEP8
+         E266,  # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections

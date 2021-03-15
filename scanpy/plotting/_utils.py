@@ -127,7 +127,7 @@ def timeseries_subplot(
     else:
         levels, _ = np.unique(color, return_inverse=True)
         colors = np.array(palette[: len(levels)].by_key()['color'])
-        subsets = [(x_range[color == l], X[color == l, :]) for l in levels]
+        subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
 
     if ax is None:
         ax = pl.subplot()
@@ -937,8 +937,8 @@ def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     if levels is None:
         levels = make_levels({})
     else:
-        levels = {l: {TOTAL: levels[l], CURRENT: 0} for l in levels}
-    vert_gap = height / (max([l for l in levels]) + 1)
+        levels = {level: {TOTAL: levels[level], CURRENT: 0} for level in levels}
+    vert_gap = height / (max([level for level in levels]) + 1)
     return make_pos({})
 
 

@@ -170,8 +170,10 @@ def filter_genes_dispersion(
         disp_mean_bin[one_gene_per_bin] = 0
         # actually do the normalization
         df['dispersion_norm'] = (
-            df['dispersion'].values  # use values here as index differs
-            - disp_mean_bin[df['mean_bin'].values].values
+            df['dispersion'].values
+            - disp_mean_bin[  # use values here as index differs
+                df['mean_bin'].values
+            ].values
         ) / disp_std_bin[df['mean_bin'].values].values
     elif flavor == 'cell_ranger':
         from statsmodels import robust
