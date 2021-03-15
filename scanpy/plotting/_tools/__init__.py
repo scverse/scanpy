@@ -165,7 +165,6 @@ def dpt_timeseries(
 ):
     """\
     Heatmap of pseudotime series.
-
     Parameters
     ----------
     as_heatmap
