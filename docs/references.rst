@@ -119,6 +119,10 @@ References
    *Laplacian Dynamics and Multiscale Modular Structure in Networks*
    `arXiv <https://arxiv.org/abs/0812.1770>`__.
 
+.. [Lause20] Lause *et al.* (2020)
+   *Analytic Pearson residuals for normalization of single-cell RNA-seq UMI data*,
+   `BioRxiv <https://doi.org/10.1101/2020.12.01.405886>`__.
+
 .. [Leek12] Leek *et al.* (2012),
    *sva: Surrogate Variable Analysis. R package*
    `Bioconductor <https://doi.org/10.18129/B9.bioc.sva>`__.

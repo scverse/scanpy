@@ -188,6 +188,9 @@ def recipe_pearson_residuals(
     Applies gene selection based on Pearson residuals. On the resulting subset,
     Pearson residual normalization and PCA are performed.
 
+    This recipe is based on "Analytic Pearson residuals for normalization of
+    single-cell RNA-seq UMI data", bioRxiv, [Lause20]_.
+
 
     Parameters
     ----------

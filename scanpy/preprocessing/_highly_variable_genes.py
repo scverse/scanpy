@@ -505,11 +505,12 @@ def highly_variable_genes(
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
 
-    Expects logarithmized data, except when `flavor='seurat_v3'` in which
-    count data is expected.
+    Expects logarithmized data, except when `flavor='seurat_v3'` or
+    `flavor='pearson_residuals'`, in which count data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
+    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_, or uses
+    analytical Peason residuals [Lause20]_.
 
     For the dispersion-based methods ([Satija15]_ and [Zheng17]_), the normalized
     dispersion is obtained by scaling with the mean and standard deviation of
@@ -521,6 +522,11 @@ def highly_variable_genes(
     are standardized (i.e., z-score normalization per feature) with a regularized
     standard deviation. Next, the normalized variance is computed as the variance
     of each gene after the transformation. Genes are ranked by the normalized variance.
+
+    For [Lause20]_, Pearson residuals of a negative binomial offset model (with
+    overdispersion theta shared across genes) are computed. By default, overdispersion
+    theta=100 is used and residuals are clipped to sqrt(n). Finally, genes are ranked
+    by residual variance.
 
     Parameters
     ----------

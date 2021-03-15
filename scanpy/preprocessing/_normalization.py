@@ -87,6 +87,9 @@ def normalize_pearson_residuals(
     model with overdispersion theta shared across genes. By default, residuals
     are clipped to sqrt(n) and overdispersion theta=100 is used.
 
+    Based on "Analytic Pearson residuals for normalization of single-cell
+    RNA-seq UMI data", bioRxiv, [Lause20]_.
+
     Params
     ------
     adata
@@ -168,6 +171,9 @@ def normalize_pearson_residuals_pca(
     Applies PCA based on Pearson residual normalization. Operates on the
     subset of highly variable genes in `adata.var['highly_variable']` by
     default.
+
+    This workflow is based on "Analytic Pearson residuals for normalization of
+    single-cell RNA-seq UMI data", bioRxiv, [Lause20]_.
 
 
     Parameters
