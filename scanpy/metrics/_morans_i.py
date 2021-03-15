@@ -8,7 +8,7 @@ import pandas as pd
 from scipy import sparse
 
 import numba.types as nt
-from numba import njit
+from numba import njit, prange
 
 from scanpy.get import _get_obs_rep
 
@@ -120,7 +120,7 @@ def morans_i(
 @njit(
     ft(ft[:], it[:], it[:], ft[:], ft[:], ft, ft),
     cache=True,
-    parallel=True,
+    parallel=False,
     fastmath=True,
 )
 def _morans_i_vec_W(
@@ -136,7 +136,7 @@ def _morans_i_vec_W(
     zl = np.empty(len(z))
     N = len(indptr) - 1
 
-    for i in range(N):
+    for i in prange(N):
         s = slice(indptr[i], indptr[i + 1])
         i_indices = indices[s]
         i_data = data[s]
@@ -170,7 +170,7 @@ def _morans_i_mtx(
     assert N == len(indptr) - 1
     W = data.sum()
     out = np.zeros(M, dtype=ft)
-    for k in range(M):
+    for k in prange(M):
         x = X[k, :].astype(ft)
         z = x - x.mean()
         z2ss = (z * z).sum()
@@ -198,7 +198,7 @@ def _morans_i_mtx_csr(
     out = np.zeros(M, dtype=ft)
     x_data_list = np.split(X_data, X_indptr[1:-1])
     x_indices_list = np.split(X_indices, X_indptr[1:-1])
-    for k in range(M):
+    for k in prange(M):
         x = np.zeros(N, dtype=ft)
         x_index = x_indices_list[k]
         x[x_index] = x_data_list[k]
