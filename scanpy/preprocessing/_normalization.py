@@ -163,7 +163,7 @@ def normalize_pearson_residuals_pca(
     n_comps_pca: Optional[int] = 50,
     random_state_pca: Optional[float] = 0,
     use_highly_variable: bool = True,
-    kwargs_pca: Optional[dict] = None,
+    kwargs_pca: Optional[dict] = {},
     check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:

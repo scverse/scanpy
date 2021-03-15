@@ -181,7 +181,7 @@ def recipe_pearson_residuals(
     batch_key: Optional[str] = None,
     n_comps_pca: Optional[int] = 50,
     random_state_pca: Optional[float] = 0,
-    kwargs_pca: Optional[dict] = None,
+    kwargs_pca: dict = {},
     check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:

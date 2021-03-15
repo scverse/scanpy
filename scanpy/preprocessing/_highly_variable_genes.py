@@ -180,7 +180,7 @@ def _highly_variable_genes_seurat_v3(
 def _highly_variable_pearson_residuals(
     adata: AnnData,
     layer: Optional[str] = None,
-    n_top_genes: int = 2000,
+    n_top_genes: int = 1000,
     batch_key: Optional[str] = None,
     theta: float = 100,
     clip: Optional[float] = None,
@@ -287,9 +287,11 @@ def _highly_variable_pearson_residuals(
     residual_gene_vars = np.concatenate(residual_gene_vars, axis=0)
 
     # Get cutoffs and define hvgs per batch
-    residual_gene_vars_sorted = np.sort(residual_gene_vars, axis=1)[:, ::-1]
-    cutoffs_per_batch = residual_gene_vars_sorted[:, n_top_genes]
-    highly_variable_per_batch = np.greater(residual_gene_vars.T, cutoffs_per_batch).T
+    residual_gene_vars_sorted = np.sort(residual_gene_vars, axis=1)
+    cutoffs_per_batch = residual_gene_vars_sorted[:, -n_top_genes]
+    highly_variable_per_batch = np.greater_equal(
+        residual_gene_vars.T, cutoffs_per_batch
+    ).T
 
     # Merge hvgs across batches
     highly_variable_nbatches = np.sum(highly_variable_per_batch, axis=0)
