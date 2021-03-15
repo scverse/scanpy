@@ -1993,7 +1993,7 @@ def _plot_gene_groups_brackets(
                     va='bottom',
                     rotation=rotation,
                 )
-            except Exception:
+            except Exception:  # TODO catch the correct exception
                 pass
     else:
         top = left

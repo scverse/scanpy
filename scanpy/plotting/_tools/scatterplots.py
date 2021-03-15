@@ -994,7 +994,7 @@ def _get_data_points(
             data_points = []
             for comp in components_list:
                 data_points.append(adata.obsm[basis_key][:, comp])
-        except Exception:
+        except Exception:  # TODO catch the correct exception
             raise ValueError(
                 "Given components: '{}' are not valid. Please check. "
                 "A valid example is `components='2,3'`"

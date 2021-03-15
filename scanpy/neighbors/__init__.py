@@ -795,7 +795,7 @@ class Neighbors:
             try:
                 if forest:
                     self._rp_forest = _make_forest_dict(forest)
-            except Exception:
+            except Exception:  # TODO catch the correct exception
                 pass
         # write indices as attributes
         if write_knn_indices:
