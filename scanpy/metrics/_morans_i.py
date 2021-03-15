@@ -31,27 +31,21 @@ def morans_i(
     use_raw: bool = False,
 ) -> Union[np.ndarray, float]:
     r"""
-    Calculate `Geary's C <https://en.wikipedia.org/wiki/Geary's_C>`_, as used
-    by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
+    Calculate Moran’s I Global Autocorrelation Statistic.
 
-    Geary's C is a measure of autocorrelation for some measure on a graph. This
-    can be to whether measures are correlated between neighboring cells. Lower
-    values indicate greater correlation.
+    Moran’s I is a global autocorrelation statistic for some measure on a graph. It is commonly used in
+    spatial data analysis to assess autocorrelation on a 2D grid. It is closely related to Geary's C,
+    but not identical. More info can be found `here`<https://en.wikipedia.org/wiki/Moran%27s_I> .
 
     .. math::
 
-        C =
-        \frac{
-            (N - 1)\sum_{i,j} w_{i,j} (x_i - x_j)^2
-        }{
-            2W \sum_i (x_i - \bar{x})^2
-        }
+        I=\frac{n}{S_{0}} \frac{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{i, j} z_{i} z_{j}}{\sum_{i=1}^{n} z_{i}^{2}}
 
     Params
     ------
     adata
     vals
-        Values to calculate Geary's C for. If this is two dimensional, should
+        Values to calculate Moran's I for. If this is two dimensional, should
         be of shape `(n_features, n_cells)`. Otherwise should be of shape
         `(n_cells,)`. This matrix can be selected from elements of the anndata
         object by using key word arguments: `layer`, `obsm`, `obsp`, or
@@ -91,21 +85,21 @@ def morans_i(
     Examples
     --------
 
-    Calculate Gearys C for each components of a dimensionality reduction:
+    Calculate Morans I for each components of a dimensionality reduction:
 
     .. code:: python
 
         import scanpy as sc, numpy as np
 
         pbmc = sc.datasets.pbmc68k_processed()
-        pc_c = sc.metrics.gearys_c(pbmc, obsm="X_pca")
+        pc_c = sc.metrics.morans_i(pbmc, obsm="X_pca")
 
 
     It's equivalent to call the function directly on the underlying arrays:
 
     .. code:: python
 
-        alt = sc.metrics.gearys_c(pbmc.obsp["connectivities"], pbmc.obsm["X_pca"].T)
+        alt = sc.metrics.morans_i(pbmc.obsp["connectivities"], pbmc.obsm["X_pca"].T)
         np.testing.assert_array_equal(pc_c, alt)
     """
     if use_graph is None:
