@@ -62,7 +62,7 @@ def pca_overview(adata: AnnData, **params):
     show = params['show'] if 'show' in params else None
     if 'show' in params:
         del params['show']
-    scatterplots.pca(adata, **params, show=False)  # noqa: F821
+    pca(adata, **params, show=False)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
 
