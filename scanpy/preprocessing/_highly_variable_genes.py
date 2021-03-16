@@ -236,10 +236,8 @@ def _highly_variable_genes_single_batch(
         disp_mean_bin[one_gene_per_bin.values] = 0
         # actually do the normalization
         df['dispersions_norm'] = (
-            df['dispersions'].values
-            - disp_mean_bin[
-                df['mean_bin'].values
-            ].values  # use values here as index differs
+            df['dispersions'].values  # use values here as index differs
+            - disp_mean_bin[df['mean_bin'].values].values
         ) / disp_std_bin[df['mean_bin'].values].values
     elif flavor == 'cell_ranger':
         from statsmodels import robust

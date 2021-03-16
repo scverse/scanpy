@@ -554,7 +554,9 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     import traceback
 
     traceback.print_stack()
-    log = file if hasattr(file, 'write') else sys.stderr  # noqa: F841
+    log = (  # noqa: F841  # TODO Does this need fixing?
+        file if hasattr(file, 'write') else sys.stderr
+    )
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
 
 

@@ -410,7 +410,7 @@ class GRNsim:
         if initType not in ['branch', 'random']:
             raise RuntimeError('initType must be either: branch, random')
         if model not in self.availModels.keys():
-            message = 'model not among predefined models \n'  # noqa: F841
+            message = 'model not among predefined models \n'  # noqa: F841  # TODO FIX
         # read from file
         from .. import sim_models
 
@@ -771,11 +771,11 @@ class GRNsim:
             settings.m(0, '... initial point is too close to bounds')
             return None
         if self.show and self.verbosity > 1:
-            pl.figure()  # noqa: F821
-            pl.plot(XbackUp[:, 0], '.b', XbackUp[:, 1], '.g')  # noqa: F821
-            pl.plot(XbackDo[:, 0], '.b', XbackDo[:, 1], '.g')  # noqa: F821
-            pl.plot(Xup[:, 0], 'b', Xup[:, 1], 'g')  # noqa: F821
-            pl.plot(Xdo[:, 0], 'b', Xdo[:, 1], 'g')  # noqa: F821
+            pl.figure()  # noqa: F821  TODO Fix me
+            pl.plot(XbackUp[:, 0], '.b', XbackUp[:, 1], '.g')  # noqa: F821  TODO Fix me
+            pl.plot(XbackDo[:, 0], '.b', XbackDo[:, 1], '.g')  # noqa: F821  TODO Fix me
+            pl.plot(Xup[:, 0], 'b', Xup[:, 1], 'g')  # noqa: F821  TODO Fix me
+            pl.plot(Xdo[:, 0], 'b', Xdo[:, 1], 'g')  # noqa: F821  TODO Fix me
         return X0mean
 
     def parents_from_boolRule(self, rule):
@@ -1171,11 +1171,13 @@ class StaticCauseEffect:
         # AND type / horizontal
         X[:, 2] = func(X[:, 0]) * sp.stats.norm.cdf(X[:, 1], 1, 0.2)
 
-        pl.scatter(X[:, 0], X[:, 1], c=X[:, 2], edgecolor='face')  # noqa: F821
-        pl.show()  # noqa: F821
+        pl.scatter(  # noqa: F821  TODO Fix me
+            X[:, 0], X[:, 1], c=X[:, 2], edgecolor='face'
+        )
+        pl.show()  # noqa: F821  TODO Fix me
 
-        pl.plot(X[:, 1], X[:, 2], '.')  # noqa: F821
-        pl.show()  # noqa: F821
+        pl.plot(X[:, 1], X[:, 2], '.')  # noqa: F821  TODO Fix me
+        pl.show()  # noqa: F821  TODO Fix me
 
         return X
 

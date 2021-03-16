@@ -620,7 +620,9 @@ def setup_axes(
     figure_width = width_without_offsets + left_offset + right_offset
     draw_region_width_frac = draw_region_width / figure_width
     left_offset_frac = left_offset / figure_width
-    right_offset_frac = 1 - (len(panels) - 1) * left_offset_frac  # noqa: F841
+    right_offset_frac = (  # noqa: F841  # TODO Does this need fixing?
+        1 - (len(panels) - 1) * left_offset_frac
+    )
 
     if ax is None:
         pl.figure(

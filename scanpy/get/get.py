@@ -95,7 +95,7 @@ def rank_genes_groups_df(
 def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
-    dim: "Literal['obs', 'var']",  # noqa: F821
+    dim: "Literal['obs', 'var']",  # noqa: F821  # TODO Does this need fixing?
     keys: List[str],
     alias_index: Optional[pd.Index] = None,
     use_raw: bool = False,
@@ -175,7 +175,7 @@ def _get_array_values(
     X,
     dim_names: pd.Index,
     keys: List[str],
-    axis: "Literal[0, 1]",  # noqa: F821
+    axis: "Literal[0, 1]",  # noqa: F821  # TODO Does this need fixing?
     backed: bool,
 ):
     # TODO: This should be made easier on the anndata side
