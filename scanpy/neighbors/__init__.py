@@ -1023,14 +1023,14 @@ class Neighbors:
             mask = self._connected_components[1] == label
         row = sum(
             (
-                self.eigen_values[k]
-                / (1 - self.eigen_values[k])
-                * (self.eigen_basis[i, k] - self.eigen_basis[:, k])
+                self.eigen_values[j]
+                / (1 - self.eigen_values[j])
+                * (self.eigen_basis[i, j] - self.eigen_basis[:, j])
             )
             ** 2
             # account for float32 precision
-            for k in range(0, self.eigen_values.size)
-            if self.eigen_values[k] < 0.9994
+            for j in range(0, self.eigen_values.size)
+            if self.eigen_values[j] < 0.9994
         )
         # thanks to Marius Lange for pointing Alex to this:
         # we will likely remove the contributions from the stationary state below when making
