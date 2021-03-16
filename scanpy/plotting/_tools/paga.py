@@ -148,7 +148,7 @@ def paga_compare(
     if suptitle is not None:
         pl.suptitle(suptitle)
     _utils.savefig_or_show('paga_compare', show=show, save=save)
-    if not show:
+    if show == False:  # noqa: E712
         return axs
 
 

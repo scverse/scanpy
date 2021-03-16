@@ -708,9 +708,7 @@ def scatter_base(
     )
     for icolor, color in enumerate(colors):
         ax = axs[icolor]
-        left = panel_pos[2][2 * icolor]  # noqa: F841
         bottom = panel_pos[0][0]
-        width = draw_region_width / figure_width  # noqa: F841
         height = panel_pos[1][0] - bottom
         Y_sort = Y
         if not is_color_like(color) and sort_order:
