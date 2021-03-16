@@ -13,9 +13,9 @@ from numba import njit, prange
 from scanpy.get import _get_obs_rep
 
 it = nt.int64
-ft = nt.float64
+ft = nt.float32
 ip = np.int64
-fp = np.float64
+fp = np.float32
 tt = nt.UniTuple
 
 

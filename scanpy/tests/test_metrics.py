@@ -78,10 +78,9 @@ def test_morans_i_consistency():
         sc.metrics.morans_i(g, pbmc.obs["percent_mito"].values),
     )
 
-    np.testing.assert_allclose(
+    np.testing.assert_array_equal(
         sc.metrics.morans_i(pbmc, obsm="X_pca"),
         sc.metrics.morans_i(g, pbmc.obsm["X_pca"].T),
-        rtol=1.0,
     )
 
     all_genes = sc.metrics.morans_i(pbmc, layer="raw")
@@ -89,24 +88,24 @@ def test_morans_i_consistency():
         pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
     )
 
-    np.testing.assert_allclose(all_genes[0], first_gene)
+    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-6)
 
     np.testing.assert_allclose(
         sc.metrics.morans_i(pbmc, layer="raw"),
-        sc.metrics.morans_i(pbmc, vals=pbmc.layers["raw"].T.toarray()),
+        sc.metrics.morans_i(pbmc, vals=pbmc.layers["raw"].T),
     )
 
 
 def test_morans_i_correctness():
     # Test case with perfectly seperated groups
     connected = np.zeros(100)
-    connected[np.random.choice(100, size=30, replace=False)] = 1
+    connected[np.random.choice(100, size=50, replace=False)] = 1
     graph = np.zeros((100, 100))
     graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
     graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
     graph = sparse.csr_matrix(graph)
 
-    assert sc.metrics.morans_i(graph, connected) == 0.0
+    assert sc.metrics.morans_i(graph, connected) == 1.0
     assert eq(
         sc.metrics.morans_i(graph, connected),
         sc.metrics.morans_i(graph, sparse.csr_matrix(connected)),
@@ -117,7 +116,7 @@ def test_morans_i_correctness():
         adata = sc.AnnData(
             sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
         )
-        assert sc.metrics.morans_i(adata, vals=connected) == 0.0
+        assert sc.metrics.morans_i(adata, vals=connected) == 1.0
 
 
 def test_confusion_matrix():
