@@ -938,8 +938,8 @@ def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     if levels is None:
         levels = make_levels({})
     else:
-        levels = {level: {TOTAL: levels[level], CURRENT: 0} for level in levels}
-    vert_gap = height / (max([level for level in levels]) + 1)
+        levels = {k: {TOTAL: v, CURRENT: 0} for k, v in levels.items()}
+    vert_gap = height / (max(levels.keys()) + 1)
     return make_pos({})
 
 
