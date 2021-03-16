@@ -899,7 +899,7 @@ class DPT(Neighbors):
         # permutations of tip cells
         ps = [
             [0, 1, 2],  # start by computing distances from the first tip
-            [1, 2, 0],  # -"-                       second tip
+            [1, 2, 0],  #              -"-              second tip
             [2, 0, 1],
         ]  # -"-                       third tip
         for i, p in enumerate(ps):
