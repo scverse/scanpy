@@ -872,7 +872,7 @@ class Neighbors:
                             W[j, i] = W[i, j]
                             mask[j, i] = True
                 # set all entries that are not nearest neighbors to zero
-                W[mask == False] = 0  # noqa: E712
+                W[~mask] = 0
         else:
             W = (
                 Dsq.copy()
