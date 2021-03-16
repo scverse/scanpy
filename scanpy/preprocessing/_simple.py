@@ -752,9 +752,11 @@ def scale(
     annotated with `'mean'` and `'std'` in `adata.var`.
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
-    return scale_array(
-        data, zero_center=zero_center, max_value=max_value, copy=copy  # noqa: F821
-    )
+    if layer is not None:
+        raise ValueError(f"`layer` argument inappropriate for value of type {type(X)}")
+    if obsm is not None:
+        raise ValueError(f"`obsm` argument inappropriate for value of type {type(X)}")
+    return scale_array(X, zero_center=zero_center, max_value=max_value, copy=copy)
 
 
 @scale.register(np.ndarray)
