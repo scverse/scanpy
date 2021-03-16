@@ -17,5 +17,8 @@ exclude =
     .git,
     __pycache__,
     build,
-    docs/_build
-    dist
+    docs/_build,
+    dist,
+per-file-ignores = 
+    # F811 Redefinition of unused name from line, does not play nice with pytest fixtures
+    tests/test*.py: F811,
