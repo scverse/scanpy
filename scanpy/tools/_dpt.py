@@ -342,7 +342,9 @@ class DPT(Neighbors):
         for n_edges in range(1, np.max(n_edges_per_seg) + 1):
             for iseg in range(self.segs_adjacency.shape[0]):
                 if n_edges_per_seg[iseg] == n_edges:
-                    _ = self.segs_adjacency[iseg].todense().A1
+                    neighbor_segs = (  # noqa: F841  TODO Evaluate whether to assign the variable or not
+                        self.segs_adjacency[iseg].todense().A1
+                    )
                     closest_points_other_segs = [
                         seg[np.argmin(self.distances_dpt[self.segs_tips[iseg][0], seg])]
                         for seg in self.segs
@@ -593,7 +595,9 @@ class DPT(Neighbors):
                 for iseg, seg_connects in enumerate(ssegs_connects)
                 if iseg != trunk
             ]
-            _ = segs_connects[iseg]
+            prev_connecting_points = segs_connects[  # noqa: F841  TODO Evaluate whether to assign the variable or not
+                iseg
+            ]
             for jseg_cnt, jseg in enumerate(prev_connecting_segments):
                 iseg_cnt = 0
                 for iseg_new, seg_new in enumerate(ssegs):

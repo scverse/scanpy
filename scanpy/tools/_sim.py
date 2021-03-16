@@ -1074,6 +1074,16 @@ class StaticCauseEffect:
         -------
         Data array of shape (n_samples,dim).
         """
+        # nice examples
+        examples = [  # noqa: F841 TODO We are really unsure whether this is needed.
+            dict(
+                func='sawtooth',
+                gdist='uniform',
+                sigma_glob=1.8,
+                sigma_noise=0.1,
+            )
+        ]
+
         # nr of samples
         n_samples = 100
 
