@@ -6,7 +6,6 @@ import pandas as pd
 from scipy.sparse import spmatrix
 
 from anndata import AnnData
-from ._compat import Literal
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -96,7 +95,7 @@ def rank_genes_groups_df(
 def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
-    dim: "Literal['obs', 'var']",
+    dim: "Literal['obs', 'var']",  # noqa: F821
     keys: List[str],
     alias_index: Optional[pd.Index] = None,
     use_raw: bool = False,
