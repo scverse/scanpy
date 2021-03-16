@@ -11,7 +11,8 @@ ignore = F401,  # module imported but unused -> required for Scanpys API
          E402,  # module level import not at top of file -> required to circumvent circular imports for Scanpys API
          E126,  # continuation line over-indented for hanging indent -> black does not adhere to PEP8
          E266,  # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections
-         E731   # Do not assign a lambda expression, use a def -> Scanpy allows lambda expression assignments
+         E731,  # Do not assign a lambda expression, use a def -> Scanpy allows lambda expression assignments
+         E741,  # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
 exclude =
     .git,
     __pycache__,
