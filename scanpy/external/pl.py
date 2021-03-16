@@ -335,7 +335,7 @@ def scrublet_score_distribution(
     Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
 
     The histogram for simulated doublets is useful for determining the correct doublet
-    score threshold. 
+    score threshold.
 
     Parameters
     ----------
