@@ -63,6 +63,63 @@ def test_gearys_c_correctness():
         assert sc.metrics.gearys_c(adata, vals=connected) == 0.0
 
 
+def test_morans_i_consistency():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc.layers["raw"] = pbmc.raw.X.copy()
+    g = pbmc.obsp["connectivities"]
+
+    assert eq(
+        sc.metrics.morans_i(g, pbmc.obs["percent_mito"]),
+        sc.metrics.morans_i(pbmc, vals=pbmc.obs["percent_mito"]),
+    )
+
+    assert eq(  # Test that series and vectors return same value
+        sc.metrics.morans_i(g, pbmc.obs["percent_mito"]),
+        sc.metrics.morans_i(g, pbmc.obs["percent_mito"].values),
+    )
+
+    np.testing.assert_allclose(
+        sc.metrics.morans_i(pbmc, obsm="X_pca"),
+        sc.metrics.morans_i(g, pbmc.obsm["X_pca"].T),
+        rtol=1.0,
+    )
+
+    all_genes = sc.metrics.morans_i(pbmc, layer="raw")
+    first_gene = sc.metrics.morans_i(
+        pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
+    )
+
+    np.testing.assert_allclose(all_genes[0], first_gene)
+
+    np.testing.assert_allclose(
+        sc.metrics.morans_i(pbmc, layer="raw"),
+        sc.metrics.morans_i(pbmc, vals=pbmc.layers["raw"].T.toarray()),
+    )
+
+
+def test_morans_i_correctness():
+    # Test case with perfectly seperated groups
+    connected = np.zeros(100)
+    connected[np.random.choice(100, size=30, replace=False)] = 1
+    graph = np.zeros((100, 100))
+    graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
+    graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
+    graph = sparse.csr_matrix(graph)
+
+    assert sc.metrics.morans_i(graph, connected) == 0.0
+    assert eq(
+        sc.metrics.morans_i(graph, connected),
+        sc.metrics.morans_i(graph, sparse.csr_matrix(connected)),
+    )
+    # Check for anndata > 0.7
+    if hasattr(sc.AnnData, "obsp"):
+        # Checking that obsp works
+        adata = sc.AnnData(
+            sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
+        )
+        assert sc.metrics.morans_i(adata, vals=connected) == 0.0
+
+
 def test_confusion_matrix():
     mtx = sc.metrics.confusion_matrix(["a", "b"], ["c", "d"], normalize=False)
     assert mtx.loc["a", "c"] == 1

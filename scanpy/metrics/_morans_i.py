@@ -251,7 +251,9 @@ def _morans_i(g, vals) -> np.ndarray:
         )
     elif isinstance(vals, np.ndarray) and vals.ndim == 1:
         assert g.shape[0] == vals.shape[0]
-        return _morans_i_vec(vals, g.indptr, g.indices, g_data)
+        return _morans_i_vec(
+            vals.astype(fp), g.indptr.astype(ip), g.indices.astype(ip), g_data
+        )
     elif isinstance(vals, np.ndarray) and vals.ndim == 2:
         assert g.shape[0] == vals.shape[1]
         return _morans_i_mtx(
@@ -259,33 +261,3 @@ def _morans_i(g, vals) -> np.ndarray:
         )
     else:
         raise NotImplementedError()
-
-
-# @njit(
-#     ft[:](ft[:], it[:], it[:], ft[:], it),
-#     parallel=False,
-#     fastmath=True,
-# )
-# def _moran_score_perms(
-#     counts: np.ndarray,
-#     indptr: np.ndarray,
-#     indices: np.ndarray,
-#     data: np.ndarray,
-#     n_perms: ip,
-# ) -> np.ndarray:
-
-#     perms = np.empty(n_perms, dtype=ft)
-#     res = np.empty(3, dtype=ft)
-
-#     z = counts - counts.mean()
-#     data_sum = data.sum()
-#     z2ss = (z * z).sum()
-
-#     res[0] = _compute_moran(counts, indptr, indices, data, z, data_sum, z2ss)
-
-#     for p in range(len(perms)):
-#         np.random.shuffle(z)
-#         perms[p] = _compute_moran(counts, indptr, indices, data, z, data_sum, z2ss)
-#     res[1] = (np.sum(perms > res[0]) + 1) / (n_perms + 1)
-#     res[2] = np.var(perms)
-#     return res
