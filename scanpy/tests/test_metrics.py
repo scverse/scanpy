@@ -88,7 +88,7 @@ def test_morans_i_consistency():
         pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
     )
 
-    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-6)
+    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-5)
 
     np.testing.assert_allclose(
         sc.metrics.morans_i(pbmc, layer="raw"),
