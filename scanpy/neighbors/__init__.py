@@ -860,7 +860,7 @@ class Neighbors:
             # make the weight matrix sparse
             if not self.knn:
                 mask = W > 1e-14
-                W[mask == False] = 0  # noqa: E712
+                W[~mask] = 0
             else:
                 # restrict number of neighbors to ~k
                 # build a symmetric mask
