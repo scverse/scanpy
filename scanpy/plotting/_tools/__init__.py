@@ -365,7 +365,7 @@ def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
         plot_obj.make_figure()
         savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
         show = settings.autoshow if show is None else show
-        if show == False:  # noqa: E712  # TODO Does this need fixing? -> is False
+        if show is False:
             return plot_obj.get_axes()
 
 
@@ -967,7 +967,7 @@ def rank_genes_groups_violin(
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
-    if show == False:  # noqa: E712  TODO Does this need fixing?
+    if show is False:
         return axs
 
 
