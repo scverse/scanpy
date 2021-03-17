@@ -533,24 +533,24 @@ def paga_compare_paths(
             n_steps += 1
             continue
         if len(path1) >= len(path2):
-            path_mapped = [asso_groups1[link] for link in path1]
+            path_mapped = [asso_groups1[leaf] for leaf in path1]
             path_compare = path2
             path_compare_id = 2
             path_compare_orig_names = [
-                [orig_names2[int(s)] for s in link] for link in path_compare
+                [orig_names2[int(s)] for s in leaf] for leaf in path_compare
             ]
             path_mapped_orig_names = [
-                [orig_names2[int(s)] for s in link] for link in path_mapped
+                [orig_names2[int(s)] for s in leaf] for leaf in path_mapped
             ]
         else:
-            path_mapped = [asso_groups2[link] for link in path2]
+            path_mapped = [asso_groups2[leaf] for leaf in path2]
             path_compare = path1
             path_compare_id = 1
             path_compare_orig_names = [
-                [orig_names1[int(s)] for s in link] for link in path_compare
+                [orig_names1[int(s)] for s in leaf] for leaf in path_compare
             ]
             path_mapped_orig_names = [
-                [orig_names1[int(s)] for s in link] for link in path_mapped
+                [orig_names1[int(s)] for s in leaf] for leaf in path_mapped
             ]
         n_agreeing_steps_path = 0
         ip_progress = 0

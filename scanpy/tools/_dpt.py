@@ -747,7 +747,11 @@ class DPT(Neighbors):
         tips: np.ndarray,
         seg_reference=None,
     ) -> Tuple[
-        List[np.ndarray], List[np.ndarray], List[List[int]], List[List[int]], int
+        List[np.ndarray],
+        List[np.ndarray],
+        List[List[int]],
+        List[List[int]],
+        int,
     ]:
         """\
         Detect branching on given segment.
@@ -984,7 +988,7 @@ class DPT(Neighbors):
                 Dseg[tips[0]][idcs] + Dseg[tips[1]][idcs] + Dseg[tips[2]][idcs]
             )
         # init list to store new segments
-        ssegs = []  # noqa: F841
+        ssegs = []  # noqa: F841  # TODO Look into this
         # first new segment: all points until, but excluding the branching point
         # increasing the following slightly from imax is a more conservative choice
         # as the criterion based on normalized distances, which follows below,
