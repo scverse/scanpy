@@ -904,8 +904,8 @@ class DPT(Neighbors):
         ps = [
             [0, 1, 2],  # start by computing distances from the first tip
             [1, 2, 0],  #             -"-                       second tip
-            [2, 0, 1],
-        ]  #             -"-                       third tip
+            [2, 0, 1],  #             -"-                       third tip
+        ]
         for i, p in enumerate(ps):
             ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
         return ssegs
