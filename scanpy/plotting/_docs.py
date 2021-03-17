@@ -78,6 +78,9 @@ color_map
     or `mpl.cm.cividis`), see :func:`~matplotlib.cm.get_cmap`.
     If `None`, the value of `mpl.rcParams["image.cmap"]` is used.
     The default `color_map` can be set using :func:`~scanpy.set_figure_params`.
+    The color map can also be set individually for each value in adata.obs and
+    adata.var, by setting `adata.uns["{var}_cmap"]`. The individual values overwrite
+    `color_map`.
 palette
     Colors to use for plotting categorical annotation groups.
     The palette can be a valid :class:`~matplotlib.colors.ListedColormap` name
