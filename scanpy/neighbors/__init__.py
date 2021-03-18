@@ -15,12 +15,10 @@ from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
 
-
 N_DCS = 15  # default number of diffusion components
 N_PCS = (
     settings.N_PCS
 )  # Backwards compat, constants should be defined in only one place.
-
 
 _Method = Literal['umap', 'gauss', 'rapids']
 _MetricFn = Callable[[np.ndarray, np.ndarray], float]
@@ -126,6 +124,12 @@ def neighbors(
     **distances** : sparse matrix of dtype `float32`.
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
+
+    Notes
+    -----
+    If `method='umap'`, it's highly recommended to install pynndescent ``pip install pynndescent``.
+    Installing `pynndescent` can significantly increase performance,
+    and in later versions it will become a hard dependency.
     """
     start = logg.info('computing neighbors')
     adata = adata.copy() if copy else adata
@@ -765,9 +769,7 @@ class Neighbors:
         self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         # neighbor search
-        use_dense_distances = (
-            metric == 'euclidean' and X.shape[0] < 8192
-        ) or knn == False
+        use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or not knn
         if use_dense_distances:
             _distances = pairwise_distances(X, metric=metric, **metric_kwds)
             knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
@@ -793,7 +795,7 @@ class Neighbors:
             try:
                 if forest:
                     self._rp_forest = _make_forest_dict(forest)
-            except:
+            except Exception:  # TODO catch the correct exception
                 pass
         # write indices as attributes
         if write_knn_indices:
@@ -858,7 +860,7 @@ class Neighbors:
             # make the weight matrix sparse
             if not self.knn:
                 mask = W > 1e-14
-                W[mask == False] = 0
+                W[~mask] = 0
             else:
                 # restrict number of neighbors to ~k
                 # build a symmetric mask
@@ -870,7 +872,7 @@ class Neighbors:
                             W[j, i] = W[i, j]
                             mask[j, i] = True
                 # set all entries that are not nearest neighbors to zero
-                W[mask == False] = 0
+                W[~mask] = 0
         else:
             W = (
                 Dsq.copy()
@@ -1021,14 +1023,14 @@ class Neighbors:
             mask = self._connected_components[1] == label
         row = sum(
             (
-                self.eigen_values[l]
-                / (1 - self.eigen_values[l])
-                * (self.eigen_basis[i, l] - self.eigen_basis[:, l])
+                self.eigen_values[j]
+                / (1 - self.eigen_values[j])
+                * (self.eigen_basis[i, j] - self.eigen_basis[:, j])
             )
             ** 2
             # account for float32 precision
-            for l in range(0, self.eigen_values.size)
-            if self.eigen_values[l] < 0.9994
+            for j in range(0, self.eigen_values.size)
+            if self.eigen_values[j] < 0.9994
         )
         # thanks to Marius Lange for pointing Alex to this:
         # we will likely remove the contributions from the stationary state below when making
@@ -1036,9 +1038,9 @@ class Neighbors:
         # they never seem to have deteriorated results, but also other distance measures (see e.g.
         # PAGA paper) don't have it, which makes sense
         row += sum(
-            (self.eigen_basis[i, l] - self.eigen_basis[:, l]) ** 2
-            for l in range(0, self.eigen_values.size)
-            if self.eigen_values[l] >= 0.9994
+            (self.eigen_basis[i, k] - self.eigen_basis[:, k]) ** 2
+            for k in range(0, self.eigen_values.size)
+            if self.eigen_values[k] >= 0.9994
         )
         if mask is not None:
             row[~mask] = np.inf

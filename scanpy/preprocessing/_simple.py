@@ -551,7 +551,7 @@ def normalize_per_cell(
     # proceed with data matrix
     X = data.copy() if copy else data
     if counts_per_cell is None:
-        if copy == False:
+        if not copy:
             raise ValueError('Can only be run with copy=True')
         cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
         X = X[cell_subset]
@@ -752,7 +752,11 @@ def scale(
     annotated with `'mean'` and `'std'` in `adata.var`.
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
-    return scale_array(data, zero_center=zero_center, max_value=max_value, copy=copy)
+    if layer is not None:
+        raise ValueError(f"`layer` argument inappropriate for value of type {type(X)}")
+    if obsm is not None:
+        raise ValueError(f"`obsm` argument inappropriate for value of type {type(X)}")
+    return scale_array(X, zero_center=zero_center, max_value=max_value, copy=copy)
 
 
 @scale.register(np.ndarray)

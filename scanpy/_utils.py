@@ -209,7 +209,7 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     g.add_edges(list(zip(sources, targets)))
     try:
         g.es['weight'] = weights
-    except:
+    except KeyError:
         pass
     if g.vcount() != adjacency.shape[0]:
         logg.warning(
@@ -551,7 +551,9 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     import traceback
 
     traceback.print_stack()
-    log = file if hasattr(file, 'write') else sys.stderr
+    log = (  # noqa: F841  # TODO Does this need fixing?
+        file if hasattr(file, 'write') else sys.stderr
+    )
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
 
 

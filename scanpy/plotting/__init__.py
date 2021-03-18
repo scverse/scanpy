@@ -77,7 +77,7 @@ Generic
 Classes
 -------
 
-These classes allow fine tuning of visual parameters. 
+These classes allow fine tuning of visual parameters.
 
 .. autosummary::
    :toctree: .

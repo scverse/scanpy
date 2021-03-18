@@ -57,6 +57,7 @@ def _highly_variable_genes_seurat_v3(
         )
 
     X = adata.layers[layer] if layer is not None else adata.X
+
     if check_nonnegative_integers(X) is False:
         raise ValueError(
             "`pp.highly_variable_genes` with `flavor='seurat_v3'` expects "
@@ -194,7 +195,6 @@ def _highly_variable_genes_single_batch(
     A DataFrame that contains the columns
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
-
     X = adata.layers[layer] if layer is not None else adata.X
     if flavor == 'seurat':
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
@@ -265,7 +265,7 @@ def _highly_variable_genes_single_batch(
             ::-1
         ].sort()  # interestingly, np.argpartition is slightly slower
         if n_top_genes > adata.n_vars:
-            logg.info(f'`n_top_genes` > `adata.n_var`, returning all genes.')
+            logg.info('`n_top_genes` > `adata.n_var`, returning all genes.')
             n_top_genes = adata.n_vars
         disp_cut_off = dispersion_norm[n_top_genes - 1]
         gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off

@@ -16,8 +16,6 @@ def test_scrublet():
     adata = sc.datasets.pbmc3k()
     sce.pp.scrublet(adata, use_approx_neighbors=False)
 
-    errors = []
-
     # replace assertions by conditions
     assert "predicted_doublet" in adata.obs.columns
     assert "doublet_score" in adata.obs.columns
@@ -35,8 +33,6 @@ def test_scrublet_dense():
 
     adata = sc.datasets.paul15()[:500].copy()
     sce.pp.scrublet(adata, use_approx_neighbors=False)
-
-    errors = []
 
     # replace assertions by conditions
     assert "predicted_doublet" in adata.obs.columns
@@ -102,7 +98,7 @@ def test_scrublet_simulate_doublets():
     sc.pp.normalize_total(adata_obs)
     logged = sc.pp.log1p(adata_obs, copy=True)
 
-    hvg = sc.pp.highly_variable_genes(logged)
+    _ = sc.pp.highly_variable_genes(logged)
     adata_obs = adata_obs[:, logged.var['highly_variable']]
 
     adata_sim = sce.pp.scrublet_simulate_doublets(adata_obs, layer='raw')
