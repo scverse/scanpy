@@ -6,18 +6,14 @@ from anndata import AnnData
 import numpy as np
 import pandas as pd
 from scipy import sparse
-
-import numba.types as nt
 from numba import njit, prange
+import numba.types as nt
 
 from scanpy.get import _get_obs_rep
 from scanpy.metrics._gearys_c import _resolve_vals
 
-it = nt.int64
-ft = nt.float32
-ip = np.int64
 fp = np.float32
-tt = nt.UniTuple
+ft = nt.float32
 
 
 @singledispatch
@@ -119,10 +115,8 @@ def morans_i(
 
 
 @njit(
-    ft(ft[:], it[:], it[:], ft[:], ft[:], ft, ft),
     cache=True,
     parallel=False,
-    fastmath=True,
 )
 def _morans_i_vec_W(
     x: np.ndarray,
@@ -130,8 +124,8 @@ def _morans_i_vec_W(
     indices: np.ndarray,
     data: np.ndarray,
     z: np.ndarray,
-    W: fp,
-    z2ss: fp,
+    W: np.float_,
+    z2ss: np.float_,
 ) -> Any:
 
     zl = np.empty(len(z))
@@ -147,7 +141,7 @@ def _morans_i_vec_W(
     return len(x) / W * inum / z2ss
 
 
-@njit(ft(ft[:], it[:], it[:], ft[:]), cache=True, parallel=True, fastmath=True)
+@njit(cache=True, parallel=True)
 def _morans_i_vec(
     x: np.ndarray,
     indptr: np.ndarray,
@@ -160,7 +154,7 @@ def _morans_i_vec(
     return _morans_i_vec_W(x, indptr, indices, data, z, W, z2ss)
 
 
-@njit(ft[:](ft[:, :], it[:], it[:], ft[:]), cache=True, parallel=True, fastmath=True)
+@njit(cache=True, parallel=True)
 def _morans_i_mtx(
     X: np.ndarray,
     indptr: np.ndarray,
@@ -172,7 +166,7 @@ def _morans_i_mtx(
     W = data.sum()
     out = np.zeros(M, dtype=ft)
     for k in prange(M):
-        x = X[k, :].astype(ft)
+        x = X[k, :]
         z = x - x.mean()
         z2ss = (z * z).sum()
         out[k] = _morans_i_vec_W(x, indptr, indices, data, z, W, z2ss)
@@ -180,10 +174,8 @@ def _morans_i_mtx(
 
 
 @njit(
-    ft[:](ft[:], it[:], it[:], it[:], it[:], ft[:], tt(it, 2)),
     cache=True,
     parallel=True,
-    fastmath=True,
 )
 def _morans_i_mtx_csr(
     X_data: np.ndarray,
@@ -200,7 +192,7 @@ def _morans_i_mtx_csr(
     x_data_list = np.split(X_data, X_indptr[1:-1])
     x_indices_list = np.split(X_indices, X_indptr[1:-1])
     for k in prange(M):
-        x = np.zeros(N, dtype=ft)
+        x = np.zeros(N)
         x_index = x_indices_list[k]
         x[x_index] = x_data_list[k]
         z = x - x.mean()
@@ -218,27 +210,24 @@ def _morans_i_mtx_csr(
 def _morans_i(g, vals) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
-    g_data = g.data.astype(fp, copy=False)
+    g_data = g.data.astype(np.float_, copy=False)
     if isinstance(vals, sparse.csr_matrix):
         assert g.shape[0] == vals.shape[1]
         return _morans_i_mtx_csr(
             vals.data.astype(fp, copy=False),
-            vals.indices.astype(ip),
-            vals.indptr.astype(ip),
-            g.indices.astype(ip),
-            g.indptr.astype(ip),
+            vals.indices,
+            vals.indptr,
+            g.indices,
+            g.indptr,
             g_data,
             vals.shape,
         )
     elif isinstance(vals, np.ndarray) and vals.ndim == 1:
         assert g.shape[0] == vals.shape[0]
-        return _morans_i_vec(
-            vals.astype(fp), g.indptr.astype(ip), g.indices.astype(ip), g_data
-        )
-    elif isinstance(vals, np.ndarray) and vals.ndim == 2:
+        return _morans_i_vec(vals, g.indptr, g.indices, g_data)
+    elif isinstance(vals.astype(fp, copy=False), np.ndarray) and vals.ndim == 2:
+        print(f"here{vals.shape}")
         assert g.shape[0] == vals.shape[1]
-        return _morans_i_mtx(
-            vals.astype(fp), g.indptr.astype(ip), g.indices.astype(ip), g_data
-        )
+        return _morans_i_mtx(vals.astype(fp, copy=False), g.indptr, g.indices, g_data)
     else:
         raise NotImplementedError()
