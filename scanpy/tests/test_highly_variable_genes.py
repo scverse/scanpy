@@ -259,7 +259,9 @@ def test_seurat_v3_mean_var_output_with_batchkey():
     batch[1500:] = 1
     pbmc.obs["batch"] = batch
 
-    true_mean, true_var = _get_mean_var(pbmc.X)
+    # true_mean, true_var = _get_mean_var(pbmc.X)
+    true_mean = np.mean(pbmc.X.toarray(), axis=0)
+    true_var = np.var(pbmc.X.toarray(), axis=0, dtype=np.float64, ddof=1)
 
     result_df = sc.pp.highly_variable_genes(
         pbmc, batch_key='batch', flavor='seurat_v3', n_top_genes=4000, inplace=False
