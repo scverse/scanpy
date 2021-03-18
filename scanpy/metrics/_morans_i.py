@@ -11,6 +11,7 @@ import numba.types as nt
 from numba import njit, prange
 
 from scanpy.get import _get_obs_rep
+from scanpy.metrics._gearys_c import _resolve_vals
 
 it = nt.int64
 ft = nt.float32
@@ -211,26 +212,6 @@ def _morans_i_mtx_csr(
 ###############################################################################
 # Interface (taken from gearys C)
 ###############################################################################
-@singledispatch
-def _resolve_vals(val):
-    return np.asarray(val)
-
-
-@_resolve_vals.register(np.ndarray)
-@_resolve_vals.register(sparse.csr_matrix)
-def _(val):
-    return val
-
-
-@_resolve_vals.register(sparse.spmatrix)
-def _(val):
-    return sparse.csr_matrix(val)
-
-
-@_resolve_vals.register(pd.DataFrame)
-@_resolve_vals.register(pd.Series)
-def _(val):
-    return val.to_numpy()
 
 
 @morans_i.register(sparse.csr_matrix)
