@@ -440,7 +440,7 @@ def test_multiple_plots(image_comparer):
     fig, (ax1, ax2, ax3) = plt.subplots(
         1, 3, figsize=(20, 5), gridspec_kw={'wspace': 0.7}
     )
-    __ = sc.pl.stacked_violin(
+    _ = sc.pl.stacked_violin(
         adata,
         markers,
         groupby='bulk_labels',
@@ -449,7 +449,7 @@ def test_multiple_plots(image_comparer):
         dendrogram=True,
         show=False,
     )
-    __ = sc.pl.dotplot(
+    _ = sc.pl.dotplot(
         adata,
         markers,
         groupby='bulk_labels',
@@ -458,7 +458,7 @@ def test_multiple_plots(image_comparer):
         dendrogram=True,
         show=False,
     )
-    __ = sc.pl.matrixplot(
+    _ = sc.pl.matrixplot(
         adata,
         markers,
         groupby='bulk_labels',
@@ -915,7 +915,8 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
     )
     save_and_compare_images('master_embedding_outline_vmin_vmax')
 
-    import matplotlib as mpl, matplotlib.pyplot as plt
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
 
     norm = mpl.colors.LogNorm()
     with pytest.raises(

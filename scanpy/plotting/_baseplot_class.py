@@ -131,9 +131,9 @@ class BasePlot(object):
                     "the `order` parameter match the categories that "
                     "want to be reordered.\n\n"
                     "Mismatch: "
-                    f"{set(obs_tidy.index.categories).difference(categories_order)}\n\n"
+                    f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
                     f"Given order categories: {categories_order}\n\n"
-                    f"{groupby} categories: {list(obs_tidy.index.categories)}\n"
+                    f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
                 )
                 return
 

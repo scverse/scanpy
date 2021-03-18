@@ -1,5 +1,6 @@
 """Color palettes in addition to matplotlib's palettes."""
 
+from typing import Mapping, Sequence
 from matplotlib import cm, colors
 
 # Colorblindness adjusted vega_10
@@ -178,9 +179,6 @@ godsnot_102 = [
 ]
 
 default_102 = godsnot_102
-
-
-from typing import Mapping, Sequence
 
 
 def _plot_color_cycle(clists: Mapping[str, Sequence[str]]):

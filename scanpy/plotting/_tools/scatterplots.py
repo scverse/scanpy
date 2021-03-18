@@ -226,7 +226,6 @@ def embedding(
     else:
         size = 120000 / adata.shape[0]
 
-    ###
     # make the plots
     axs = []
     import itertools
@@ -258,7 +257,7 @@ def embedding(
             na_color=na_color,
         )
 
-        ### Order points
+        # Order points
         order = slice(None)
         if sort_order is True and value_to_plot is not None and categorical is False:
             # Higher values plotted on top, null values on bottom
@@ -487,7 +486,6 @@ def _get_vboundnorm(
     index: int,
     color_vector: Sequence[float],
 ) -> Tuple[Union[float, None], Union[float, None]]:
-
     """
     Evaluates the value of vmin, vmax and vcenter, which could be a
     str in which case is interpreted as a percentile and should
@@ -749,7 +747,7 @@ def pca(
         )
     else:
 
-        if 'pca' not in adata.obsm.keys() and f"X_pca" not in adata.obsm.keys():
+        if 'pca' not in adata.obsm.keys() and 'X_pca' not in adata.obsm.keys():
             raise KeyError(
                 f"Could not find entry in `obsm` for 'pca'.\n"
                 f"Available keys are: {list(adata.obsm.keys())}."
@@ -996,7 +994,7 @@ def _get_data_points(
             data_points = []
             for comp in components_list:
                 data_points.append(adata.obsm[basis_key][:, comp])
-        except:
+        except Exception:  # TODO catch the correct exception
             raise ValueError(
                 "Given components: '{}' are not valid. Please check. "
                 "A valid example is `components='2,3'`"

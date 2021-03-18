@@ -342,7 +342,9 @@ class DPT(Neighbors):
         for n_edges in range(1, np.max(n_edges_per_seg) + 1):
             for iseg in range(self.segs_adjacency.shape[0]):
                 if n_edges_per_seg[iseg] == n_edges:
-                    neighbor_segs = self.segs_adjacency[iseg].todense().A1
+                    neighbor_segs = (  # noqa: F841  TODO Evaluate whether to assign the variable or not
+                        self.segs_adjacency[iseg].todense().A1
+                    )
                     closest_points_other_segs = [
                         seg[np.argmin(self.distances_dpt[self.segs_tips[iseg][0], seg])]
                         for seg in self.segs
@@ -593,7 +595,9 @@ class DPT(Neighbors):
                 for iseg, seg_connects in enumerate(ssegs_connects)
                 if iseg != trunk
             ]
-            prev_connecting_points = segs_connects[iseg]
+            prev_connecting_points = segs_connects[  # noqa: F841  TODO Evaluate whether to assign the variable or not
+                iseg
+            ]
             for jseg_cnt, jseg in enumerate(prev_connecting_segments):
                 iseg_cnt = 0
                 for iseg_new, seg_new in enumerate(ssegs):
@@ -904,8 +908,8 @@ class DPT(Neighbors):
         ps = [
             [0, 1, 2],  # start by computing distances from the first tip
             [1, 2, 0],  #             -"-                       second tip
-            [2, 0, 1],
-        ]  #             -"-                       third tip
+            [2, 0, 1],  #             -"-                       third tip
+        ]
         for i, p in enumerate(ps):
             ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
         return ssegs
@@ -984,7 +988,7 @@ class DPT(Neighbors):
                 Dseg[tips[0]][idcs] + Dseg[tips[1]][idcs] + Dseg[tips[2]][idcs]
             )
         # init list to store new segments
-        ssegs = []
+        ssegs = []  # noqa: F841  # TODO Look into this
         # first new segment: all points until, but excluding the branching point
         # increasing the following slightly from imax is a more conservative choice
         # as the criterion based on normalized distances, which follows below,
