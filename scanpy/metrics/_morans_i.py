@@ -111,7 +111,7 @@ def morans_i(
     return morans_i(g, vals)
 
 
-@njit
+@njit(cache=True)
 def _morans_i_vec_W_sparse(
     x_data: np.ndarray,
     x_indices: np.ndarray,
@@ -126,7 +126,7 @@ def _morans_i_vec_W_sparse(
     return _morans_i_vec_W(x, data, indices, indptr, W)
 
 
-@njit
+@njit(cache=True)
 def _morans_i_vec_W(
     x: np.ndarray,
     data: np.ndarray,
