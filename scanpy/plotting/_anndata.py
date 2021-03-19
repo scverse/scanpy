@@ -552,7 +552,7 @@ def ranking(
         n_rows, n_cols = 1, n_panels
     else:
         n_rows, n_cols = 2, int(n_panels / 2 + 0.5)
-    fig = pl.figure(
+    _ = pl.figure(
         figsize=(
             n_cols * rcParams['figure.figsize'][0],
             n_rows * rcParams['figure.figsize'][1],
@@ -1474,7 +1474,7 @@ def tracksplot(
         ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
-        tt = ax.set_yticklabels([str(ymax)], ha='left', va='top')
+        ax.set_yticklabels([str(ymax)], ha='left', va='top')
         ax.spines['right'].set_position(('axes', 1.01))
         ax.tick_params(
             axis='y',
@@ -1972,7 +1972,7 @@ def _plot_gene_groups_brackets(
                     va='bottom',
                     rotation=rotation,
                 )
-            except:
+            except Exception:  # TODO catch the correct exception
                 pass
     else:
         top = left

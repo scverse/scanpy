@@ -68,8 +68,8 @@ def correlation_matrix(
 
     # TODO: At the moment, only works for int identifiers
 
-    ### If no genes are passed, selects ranked genes from sample annotation.
-    ### At the moment, only calculate one table (Think about what comes next)
+    # If no genes are passed, selects ranked genes from sample annotation.
+    # At the moment, only calculate one table (Think about what comes next)
     if name_list is None:
         name_list = list()
         for j, k in enumerate(adata.uns['rank_genes_groups_gene_names']):
@@ -128,7 +128,7 @@ def ROC_AUC_analysis(
     Calculate correlation matrix.
 
     Calculate a correlation matrix for genes strored in sample annotation
-    
+
     Parameters
     ----------
     adata
@@ -159,7 +159,6 @@ def ROC_AUC_analysis(
     groups_order, groups_masks = select_groups(adata, groups, groupby)
 
     # Use usual convention, better for looping later.
-    imask = group
     mask = groups_masks[group]
 
     # TODO: Allow for sample weighting requires better mask access... later
@@ -192,11 +191,11 @@ def ROC_AUC_analysis(
 
 
 def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99):
-    ## Simple method that can be called by rank_gene_group. It uses masks that have been passed to the function and
-    ## calculates how much has to be subsampled in order to reach a certain precision with a certain probability
-    ## Then it subsamples for mask, mask rest
-    ## Since convergence speed varies, we take the slower one, i.e. the variance. This might have future speed-up
-    ## potential
+    # Simple method that can be called by rank_gene_group. It uses masks that have been passed to the function and
+    # calculates how much has to be subsampled in order to reach a certain precision with a certain probability
+    # Then it subsamples for mask, mask rest
+    # Since convergence speed varies, we take the slower one, i.e. the variance. This might have future speed-up
+    # potential
     if mask_rest is None:
         mask_rest = ~mask
     # TODO: DO precision calculation for mean variance shared
@@ -205,16 +204,16 @@ def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99)
 
 
 def dominated_ROC_elimination(adata, grouby):
-    ## This tool has the purpose to take a set of genes (possibly already pre-selected) and analyze AUC.
-    ## Those and only those are eliminated who are dominated completely
-    ## TODO: Potentially (But not till tomorrow), this can be adapted to only consider the AUC in the given
-    ## TODO: optimization frame
+    # This tool has the purpose to take a set of genes (possibly already pre-selected) and analyze AUC.
+    # Those and only those are eliminated who are dominated completely
+    # TODO: Potentially (But not till tomorrow), this can be adapted to only consider the AUC in the given
+    # TODO: optimization frame
     pass
 
 
 def _gene_preselection(adata, mask, thresholds):
-    ## This tool serves to
-    ## It is not thought to be addressed directly but rather using rank_genes_group or ROC analysis or comparable
-    ## TODO: Pass back a truncated adata object with only those genes that fullfill thresholding criterias
-    ## This function should be accessible by both rank_genes_groups and ROC_curve analysis
+    # This tool serves to
+    # It is not thought to be addressed directly but rather using rank_genes_group or ROC analysis or comparable
+    # TODO: Pass back a truncated adata object with only those genes that fullfill thresholding criterias
+    # This function should be accessible by both rank_genes_groups and ROC_curve analysis
     pass

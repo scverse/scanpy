@@ -219,7 +219,7 @@ class MatrixPlot(BasePlot):
             linewidth=self.edge_lw,
             norm=normalize,
         )
-        __ = ax.pcolor(_color_df, **kwds)
+        _ = ax.pcolor(_color_df, **kwds)
 
         y_labels = _color_df.index
         x_labels = _color_df.columns

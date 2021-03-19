@@ -435,7 +435,7 @@ def test_multiple_plots(image_comparer):
     fig, (ax1, ax2, ax3) = plt.subplots(
         1, 3, figsize=(20, 5), gridspec_kw={'wspace': 0.7}
     )
-    __ = sc.pl.stacked_violin(
+    _ = sc.pl.stacked_violin(
         adata,
         markers,
         groupby='bulk_labels',
@@ -444,7 +444,7 @@ def test_multiple_plots(image_comparer):
         dendrogram=True,
         show=False,
     )
-    __ = sc.pl.dotplot(
+    _ = sc.pl.dotplot(
         adata,
         markers,
         groupby='bulk_labels',
@@ -453,7 +453,7 @@ def test_multiple_plots(image_comparer):
         dendrogram=True,
         show=False,
     )
-    __ = sc.pl.matrixplot(
+    _ = sc.pl.matrixplot(
         adata,
         markers,
         groupby='bulk_labels',

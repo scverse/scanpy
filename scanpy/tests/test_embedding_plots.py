@@ -200,7 +200,7 @@ def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
     check_images(dict_pth, list_pth, tol=15)
 
 
-## Spatial specific
+# Spatial specific
 
 
 def test_visium_circles(image_comparer):  # standard visium data

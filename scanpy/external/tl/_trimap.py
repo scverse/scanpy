@@ -76,7 +76,7 @@ def trimap(
 
     Example
     -------
-    
+
     >>> import scanpy as sc
     >>> import scanpy.external as sce
     >>> pbmc = sc.datasets.pbmc68k_reduced()

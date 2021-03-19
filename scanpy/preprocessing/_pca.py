@@ -113,7 +113,7 @@ def pca(
              Explained variance, equivalent to the eigenvalues of the
              covariance matrix.
     """
-    logg_start = logg.info(f'computing PCA')
+    logg_start = logg.info('computing PCA')
 
     # chunked calculation is not randomized, anyways
     if svd_solver in {'auto', 'randomized'} and not chunked:
