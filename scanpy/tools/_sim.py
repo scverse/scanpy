@@ -207,7 +207,6 @@ def sample_dynamic_data(**params):
         step = 5
 
         grnsim = GRNsim(dim=dim, initType=initType, model=model_key, params=params)
-        curr_nrSamples = 0
         Xsamples = []
         for sample in range(maxNrSamples):
             # choose initial conditions such that branchings result
@@ -410,9 +409,8 @@ class GRNsim:
         # checks
         if initType not in ['branch', 'random']:
             raise RuntimeError('initType must be either: branch, random')
-        read = False
         if model not in self.availModels.keys():
-            message = 'model not among predefined models \n'
+            message = 'model not among predefined models \n'  # noqa: F841  # TODO FIX
         # read from file
         from .. import sim_models
 
@@ -772,13 +770,12 @@ class GRNsim:
         if np.min(X0mean) < 0.025 or np.max(X0mean) > 0.975:
             settings.m(0, '... initial point is too close to bounds')
             return None
-        #
         if self.show and self.verbosity > 1:
-            pl.figure()
-            pl.plot(XbackUp[:, 0], '.b', XbackUp[:, 1], '.g')
-            pl.plot(XbackDo[:, 0], '.b', XbackDo[:, 1], '.g')
-            pl.plot(Xup[:, 0], 'b', Xup[:, 1], 'g')
-            pl.plot(Xdo[:, 0], 'b', Xdo[:, 1], 'g')
+            pl.figure()  # noqa: F821  TODO Fix me
+            pl.plot(XbackUp[:, 0], '.b', XbackUp[:, 1], '.g')  # noqa: F821  TODO Fix me
+            pl.plot(XbackDo[:, 0], '.b', XbackDo[:, 1], '.g')  # noqa: F821  TODO Fix me
+            pl.plot(Xup[:, 0], 'b', Xup[:, 1], 'g')  # noqa: F821  TODO Fix me
+            pl.plot(Xdo[:, 0], 'b', Xdo[:, 1], 'g')  # noqa: F821  TODO Fix me
         return X0mean
 
     def parents_from_boolRule(self, rule):
@@ -845,7 +842,7 @@ class GRNsim:
             if self.verbosity > 1:
                 settings.m(0, '...' + key)
                 settings.m(0, rule)
-                settings.m(0, rule_pa)
+                settings.m(0, rule_pa)  # noqa: F821
             # now evaluate coefficients
             for tuple in list(
                 itertools.product([False, True], repeat=len(self.pas[key]))
@@ -1078,7 +1075,7 @@ class StaticCauseEffect:
         Data array of shape (n_samples,dim).
         """
         # nice examples
-        examples = [
+        examples = [  # noqa: F841 TODO We are really unsure whether this is needed.
             dict(
                 func='sawtooth',
                 gdist='uniform',
@@ -1174,11 +1171,13 @@ class StaticCauseEffect:
         # AND type / horizontal
         X[:, 2] = func(X[:, 0]) * sp.stats.norm.cdf(X[:, 1], 1, 0.2)
 
-        pl.scatter(X[:, 0], X[:, 1], c=X[:, 2], edgecolor='face')
-        pl.show()
+        pl.scatter(  # noqa: F821  TODO Fix me
+            X[:, 0], X[:, 1], c=X[:, 2], edgecolor='face'
+        )
+        pl.show()  # noqa: F821  TODO Fix me
 
-        pl.plot(X[:, 1], X[:, 2], '.')
-        pl.show()
+        pl.plot(X[:, 1], X[:, 2], '.')  # noqa: F821  TODO Fix me
+        pl.show()  # noqa: F821  TODO Fix me
 
         return X
 

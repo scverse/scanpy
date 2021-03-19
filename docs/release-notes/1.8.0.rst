@@ -6,6 +6,7 @@
 - Switched to flit_ for building and deploying the package,
   a simple tool with an easy to understand command line interface and metadata.
 - Added `layer` and `copy` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
+- Added `vcenter` and `norm` arguments to the plotting functions :pr:`1551` :smaller:`G Eraslan`
 
 .. _flit: https://flit.readthedocs.io/en/latest/
 

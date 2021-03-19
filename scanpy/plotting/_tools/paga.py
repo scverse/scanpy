@@ -148,7 +148,7 @@ def paga_compare(
     if suptitle is not None:
         pl.suptitle(suptitle)
     _utils.savefig_or_show('paga_compare', show=show, save=save)
-    if show == False:
+    if show is False:
         return axs
 
 
@@ -169,7 +169,7 @@ def _compute_pos(
     if layout == 'fa':
         try:
             from fa2 import ForceAtlas2
-        except:
+        except ImportError:
             logg.warning(
                 "Package 'fa2' is not installed, falling back to layout 'fr'."
                 'To use the faster and better ForceAtlas2 layout, '
@@ -579,7 +579,7 @@ def paga(
                 else:
                     ax_cb = cax[icolor]
 
-                cb = pl.colorbar(
+                _ = pl.colorbar(
                     sct,
                     format=ticker.FuncFormatter(_utils.ticks_formatter),
                     cax=ax_cb,

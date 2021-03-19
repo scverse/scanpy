@@ -52,10 +52,10 @@ def diffmap(
     `diffmap_evals` : :class:`numpy.ndarray` (`adata.uns`)
         Array of size (number of eigen vectors).
         Eigenvalues of transition matrix.
-    
+
     Notes
     -----
-    The 0-th column in `adata.obsm["X_diffmap"]` is the steady-state solution, 
+    The 0-th column in `adata.obsm["X_diffmap"]` is the steady-state solution,
     which is non-informative in diffusion maps.
     Therefore, the first diffusion component is at index 1,
     e.g. `adata.obsm["X_diffmap"][:,1]`

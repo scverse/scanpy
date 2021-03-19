@@ -5,6 +5,7 @@ import pandas as pd
 from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.colors import Normalize
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, cm, colors
@@ -18,7 +19,12 @@ from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from ..._settings import settings
-from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax, doc_panels
+from .._docs import (
+    doc_scatter_embedding,
+    doc_show_save_ax,
+    doc_vbound_percentile,
+    doc_panels,
+)
 from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
 from matplotlib.colors import Colormap
@@ -56,7 +62,7 @@ def pca_overview(adata: AnnData, **params):
     show = params['show'] if 'show' in params else None
     if 'show' in params:
         del params['show']
-    scatterplots.pca(adata, **params, show=False)
+    pca(adata, **params, show=False)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
 
@@ -359,7 +365,7 @@ def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
         plot_obj.make_figure()
         savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
         show = settings.autoshow if show is None else show
-        if not show:
+        if show is False:
             return plot_obj.get_axes()
 
 
@@ -961,7 +967,7 @@ def rank_genes_groups_violin(
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
-    if show == False:
+    if show is False:
         return axs
 
 
@@ -1034,7 +1040,9 @@ def sim(
         savefig_or_show('sim_shuffled', save=save, show=show)
 
 
-@_doc_params(vminmax=doc_vminmax, panels=doc_panels, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    vminmax=doc_vbound_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
+)
 def embedding_density(
     adata: AnnData,
     # on purpose, there is no asterisk here (for backward compat)
@@ -1047,6 +1055,8 @@ def embedding_density(
     fg_dotsize: Optional[int] = 180,
     vmax: Optional[int] = 1,
     vmin: Optional[int] = 0,
+    vcenter: Optional[int] = None,
+    norm: Optional[Normalize] = None,
     ncols: Optional[int] = 4,
     hspace: Optional[float] = 0.25,
     wspace: Optional[None] = None,
@@ -1201,7 +1211,6 @@ def embedding_density(
     if isinstance(color_map, str):
         color_map = copy(cm.get_cmap(color_map))
 
-    norm = colors.Normalize(vmin=vmin, vmax=vmax)
     color_map.set_over('black')
     color_map.set_under('lightgray')
     # a name to store the density values is needed. To avoid
@@ -1252,8 +1261,11 @@ def embedding_density(
                 components=components,
                 color=density_col_name,
                 color_map=color_map,
-                norm=norm,
                 size=dot_sizes,
+                vmax=vmax,
+                vmin=vmin,
+                vcenter=vcenter,
+                norm=norm,
                 save=False,
                 title=_title,
                 ax=ax,
@@ -1280,10 +1292,11 @@ def embedding_density(
             components=components,
             color=density_col_name,
             color_map=color_map,
-            norm=norm,
             size=dot_sizes,
             vmax=vmax,
             vmin=vmin,
+            vcenter=vcenter,
+            norm=norm,
             save=False,
             show=False,
             title=title,
