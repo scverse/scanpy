@@ -12,9 +12,6 @@ import numba.types as nt
 from scanpy.get import _get_obs_rep
 from scanpy.metrics._gearys_c import _resolve_vals
 
-fp = np.float32
-ft = nt.float32
-
 
 @singledispatch
 def morans_i(
@@ -114,29 +111,39 @@ def morans_i(
     return morans_i(g, vals)
 
 
-@njit(
-    cache=True,
-    parallel=False,
-)
+@njit
+def _morans_i_vec_W_sparse(
+    x_data: np.ndarray,
+    x_indices: np.ndarray,
+    data: np.ndarray,
+    indices: np.ndarray,
+    indptr: np.ndarray,
+    N: int,
+    W: np.float_,
+) -> float:
+    x = np.zeros(N, dtype=x_data.dtype)
+    x[x_indices] = x_data
+    return _morans_i_vec_W(x, data, indices, indptr, W)
+
+
+@njit
 def _morans_i_vec_W(
     x: np.ndarray,
-    indptr: np.ndarray,
-    indices: np.ndarray,
     data: np.ndarray,
-    z: np.ndarray,
+    indices: np.ndarray,
+    indptr: np.ndarray,
     W: np.float_,
-    z2ss: np.float_,
-) -> Any:
-
-    zl = np.empty(len(z))
-    N = len(indptr) - 1
+) -> float:
+    z = x - x.mean()
+    z2ss = (z * z).sum()
+    N = len(x)
+    inum = 0.0
 
     for i in prange(N):
         s = slice(indptr[i], indptr[i + 1])
         i_indices = indices[s]
         i_data = data[s]
-        zl[i] = np.sum(i_data * z[i_indices])
-    inum = (z * zl).sum()
+        inum += (i_data * z[i_indices]).sum() * z[i]
 
     return len(x) / W * inum / z2ss
 
@@ -144,32 +151,28 @@ def _morans_i_vec_W(
 @njit(cache=True, parallel=True)
 def _morans_i_vec(
     x: np.ndarray,
-    indptr: np.ndarray,
-    indices: np.ndarray,
     data: np.ndarray,
-) -> Any:
+    indices: np.ndarray,
+    indptr: np.ndarray,
+) -> float:
     W = data.sum()
-    z = x - x.mean()
-    z2ss = (z * z).sum()
-    return _morans_i_vec_W(x, indptr, indices, data, z, W, z2ss)
+    return _morans_i_vec_W(x, data, indices, indptr, W)
 
 
 @njit(cache=True, parallel=True)
 def _morans_i_mtx(
     X: np.ndarray,
-    indptr: np.ndarray,
-    indices: np.ndarray,
     data: np.ndarray,
-) -> Any:
+    indices: np.ndarray,
+    indptr: np.ndarray,
+) -> np.ndarray:
     M, N = X.shape
     assert N == len(indptr) - 1
     W = data.sum()
-    out = np.zeros(M, dtype=ft)
+    out = np.zeros(M, dtype=np.float_)
     for k in prange(M):
         x = X[k, :]
-        z = x - x.mean()
-        z2ss = (z * z).sum()
-        out[k] = _morans_i_vec_W(x, indptr, indices, data, z, W, z2ss)
+        out[k] = _morans_i_vec_W(x, data, indices, indptr, W)
     return out
 
 
@@ -181,23 +184,26 @@ def _morans_i_mtx_csr(
     X_data: np.ndarray,
     X_indices: np.ndarray,
     X_indptr: np.ndarray,
+    data: np.ndarray,
     indices: np.ndarray,
     indptr: np.ndarray,
-    data: np.ndarray,
     X_shape: tuple,
-):
+) -> np.ndarray:
     M, N = X_shape
     W = data.sum()
-    out = np.zeros(M, dtype=ft)
+    out = np.zeros(M, dtype=np.float_)
     x_data_list = np.split(X_data, X_indptr[1:-1])
     x_indices_list = np.split(X_indices, X_indptr[1:-1])
     for k in prange(M):
-        x = np.zeros(N)
-        x_index = x_indices_list[k]
-        x[x_index] = x_data_list[k]
-        z = x - x.mean()
-        z2ss = (z * z).sum()
-        out[k] = _morans_i_vec_W(x, indptr, indices, data, z, W, z2ss)
+        out[k] = _morans_i_vec_W_sparse(
+            x_data_list[k],
+            x_indices_list[k],
+            data,
+            indices,
+            indptr,
+            N,
+            W,
+        )
     return out
 
 
@@ -214,20 +220,21 @@ def _morans_i(g, vals) -> np.ndarray:
     if isinstance(vals, sparse.csr_matrix):
         assert g.shape[0] == vals.shape[1]
         return _morans_i_mtx_csr(
-            vals.data.astype(fp, copy=False),
+            vals.data.astype(np.float_, copy=False),
             vals.indices,
             vals.indptr,
+            g_data,
             g.indices,
             g.indptr,
-            g_data,
             vals.shape,
         )
     elif isinstance(vals, np.ndarray) and vals.ndim == 1:
         assert g.shape[0] == vals.shape[0]
-        return _morans_i_vec(vals, g.indptr, g.indices, g_data)
-    elif isinstance(vals.astype(fp, copy=False), np.ndarray) and vals.ndim == 2:
-        print(f"here{vals.shape}")
+        return _morans_i_vec(vals, g_data, g.indices, g.indptr)
+    elif isinstance(vals, np.ndarray) and vals.ndim == 2:
         assert g.shape[0] == vals.shape[1]
-        return _morans_i_mtx(vals.astype(fp, copy=False), g.indptr, g.indices, g_data)
+        return _morans_i_mtx(
+            vals.astype(np.float_, copy=False), g_data, g.indices, g.indptr
+        )
     else:
         raise NotImplementedError()

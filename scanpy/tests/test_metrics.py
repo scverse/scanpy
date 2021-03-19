@@ -34,6 +34,7 @@ def test_gearys_c_consistency():
 
     np.testing.assert_allclose(all_genes[0], first_gene)
 
+    # Test that results are similar for sparse and dense reps of same data
     np.testing.assert_allclose(
         sc.metrics.gearys_c(pbmc, layer="raw"),
         sc.metrics.gearys_c(pbmc, vals=pbmc.layers["raw"].T.toarray()),
@@ -90,9 +91,10 @@ def test_morans_i_consistency():
 
     np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-5)
 
+    # Test that results are similar for sparse and dense reps of same data
     np.testing.assert_allclose(
         sc.metrics.morans_i(pbmc, layer="raw"),
-        sc.metrics.morans_i(pbmc, vals=pbmc.layers["raw"].T),
+        sc.metrics.morans_i(pbmc, vals=pbmc.layers["raw"].T.toarray()),
     )
 
 
