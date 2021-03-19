@@ -8,6 +8,7 @@
 - Fix :func:`scanpy.pl.paga_path` `TypeError` with recent versions of anndata :pr:`1047` :smaller:`P Angerer`
 - :func:`scanpy.logging.print_versions` now works when `python<3.8` :pr:`1691` :smaller:`I Virshup`
 - :func:`scanpy.pp.regress_out` now uses `joblib` as the parallel backend, and should stop oversubscribing threads :pr:`1694` :smaller:`I Virshup`
+- :func:`scanpy.pp.highly_variable_genes` with `flavor="seurat_v3"` now returns correct gene means and -variances when used with `batch_key` :pr:`1732` :smaller:`J Lause`
 
 .. rubric:: Deprecations
 
