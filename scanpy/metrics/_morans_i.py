@@ -1,13 +1,11 @@
 """Moran's I global spatial autocorrelation."""
-from typing import Any, Union, Optional
+from typing import Union, Optional
 from functools import singledispatch
 from anndata import AnnData
 
 import numpy as np
-import pandas as pd
 from scipy import sparse
 from numba import njit, prange
-import numba.types as nt
 
 from scanpy.get import _get_obs_rep
 from scanpy.metrics._gearys_c import _resolve_vals
