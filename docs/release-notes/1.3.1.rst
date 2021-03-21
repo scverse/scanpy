@@ -16,7 +16,7 @@
 
 .. __: https://gist.github.com/fidelram/2289b7a8d6da055fb058ac9a79ed485c
 
-.. rubric:: There now is a section on imputation in :doc:`external <../external/index>`:
+.. rubric:: There now is a section on imputation in :doc:`external <../external>`:
 
 - :func:`~scanpy.external.pp.magic` for imputation using data diffusion [vanDijk18]_ :pr:`187` :smaller:`S Gigante`
 - :func:`~scanpy.external.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_ :pr:`186` :smaller:`G Eraslan`

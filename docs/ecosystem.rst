@@ -4,7 +4,7 @@ Ecosystem
 .. role:: small
 .. role:: smaller
 
-With *ecosystem*, we mean single-cell related tools that operate on :class:`~anndata.AnnData`. Here, we list some that do not have an interface in the :doc:`external API <external/index>`.
+With *ecosystem*, we mean single-cell related tools that operate on :class:`~anndata.AnnData`. Here, we list some that do not have an interface in the :doc:`external API <external>`.
 
 
 Viewers

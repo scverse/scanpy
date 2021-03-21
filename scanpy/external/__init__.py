@@ -28,7 +28,7 @@ Data integration
 ~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    pp.bbknn
    pp.harmony_integrate
@@ -40,7 +40,7 @@ Sample demultiplexing, Doublet detection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    pp.scrublet
    pp.scrublet_simulate_doublets
@@ -54,7 +54,7 @@ Note that the fundamental limitations of imputation are still under `debate
 <https://github.com/theislab/scanpy/issues/189>`__.
 
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    pp.dca
    pp.magic
@@ -67,7 +67,7 @@ Embeddings
 ~~~~~~~~~~
 
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.phate
    tl.palantir
@@ -78,7 +78,7 @@ Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.phenograph
    tl.harmony_timeseries
@@ -90,7 +90,7 @@ Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.sandbag
    tl.cyclone
@@ -100,7 +100,7 @@ Plotting: PL
 ------------
 
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    pl.phate
    pl.trimap
@@ -111,7 +111,7 @@ Exporting
 ---------
 
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    exporting.spring_project
    exporting.cellbrowser
