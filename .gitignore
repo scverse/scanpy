@@ -5,6 +5,8 @@
 
 # Docs
 /docs/_build/
+/docs/api/generated
+/docs/external/generated
 /docs/api/scanpy.*.rst
 /docs/external/scanpy.*.rst
 !/docs/api/scanpy.api.rst

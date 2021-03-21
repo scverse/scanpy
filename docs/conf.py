@@ -51,7 +51,13 @@ extensions = [
     # 'ipython_console_highlighting',
     'scanpydoc',
     "sphinx_search.extension",
-    *[p.stem for p in (HERE / 'extensions').glob('*.py')],
+    # Locally defined
+    "debug_docstrings",
+    "github_links",
+    "param_police",
+    "typed_returns",
+    # "function_images",
+    # *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
 # Generate the API documentation when building
