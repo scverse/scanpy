@@ -1,5 +1,5 @@
 ﻿Plotting API
-============
+------------
 
 .. currentmodule:: scanpy
 
@@ -9,10 +9,10 @@
 .. _pl-generic:
 
 Generic
--------
+~~~~~~~
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pl.scatter
    pl.heatmap
@@ -27,12 +27,12 @@ Generic
 
 
 Classes
--------
+~~~~~~~
 
 These classes allow fine tuning of visual parameters.
 
 .. autosummary::
-   :toctree: generated/classes
+   :toctree: ../generated/classes
 
     pl.DotPlot
     pl.MatrixPlot
@@ -40,12 +40,12 @@ These classes allow fine tuning of visual parameters.
 
 
 Preprocessing
--------------
+~~~~~~~~~~~~~
 
 Methods for visualizing quality control and results of preprocessing functions.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pl.highest_expr_genes
    pl.filter_genes_dispersion
@@ -53,16 +53,16 @@ Methods for visualizing quality control and results of preprocessing functions.
 
 
 Tools
------
+~~~~~
 
 Methods that extract and visualize tool-specific annotation in an
 :class:`~anndata.AnnData` object.  For any method in module ``tl``, there is
 a method with the same name in ``pl``.
 
 PCA
-~~~
+^^^
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pl.pca
    pl.pca_loadings
@@ -70,9 +70,10 @@ PCA
    pl.pca_overview
 
 Embeddings
-~~~~~~~~~~
+^^^^^^^^^^
+
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pl.tsne
    pl.umap
@@ -84,16 +85,16 @@ Embeddings
 Compute densities on embeddings.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pl.embedding_density
 
 Branching trajectories and pseudotime, clustering
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Visualize clusters using one of the embedding methods passing ``color='louvain'``.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pl.dpt_groups_pseudotime
    pl.dpt_timeseries
@@ -102,9 +103,9 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
    pl.paga_compare
 
 Marker genes
-~~~~~~~~~~~~
+^^^^^^^^^^^^
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pl.rank_genes_groups
    pl.rank_genes_groups_violin
@@ -115,8 +116,8 @@ Marker genes
    pl.rank_genes_groups_tracksplot
 
 Simulations
-~~~~~~~~~~~
+^^^^^^^^^^^
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pl.sim

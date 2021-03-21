@@ -27,10 +27,10 @@ Basic Preprocessing
 ~~~~~~~~~~~~~~~~~~~
 
 For visual quality control, see :func:`~scanpy.pl.highest_expr_genes` and
-:func:`~scanpy.pl.filter_genes_dispersion` in :mod:`scanpy.plotting`.
+:func:`~scanpy.pl.filter_genes_dispersion` in :mod:`scanpy.pl`.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pp.calculate_qc_metrics
    pp.filter_cells
@@ -48,7 +48,7 @@ Recipes
 ~~~~~~~
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pp.recipe_zheng17
    pp.recipe_weinreb17
@@ -60,7 +60,7 @@ Batch effect correction
 Also see `Data integration`_. Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :mod:`scanpy.external` for more.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pp.combat
 
@@ -68,7 +68,7 @@ Neighbors
 ~~~~~~~~~
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pp.neighbors
 
@@ -85,7 +85,7 @@ Embeddings
 ~~~~~~~~~~
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.pca
    tl.tsne
@@ -96,7 +96,7 @@ Embeddings
 Compute densities on embeddings.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.embedding_density
 
@@ -104,7 +104,7 @@ Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.leiden
    tl.louvain
@@ -116,7 +116,7 @@ Data integration
 ~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.ingest
 
@@ -124,7 +124,7 @@ Marker genes
 ~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.rank_genes_groups
    tl.filter_rank_genes_groups
@@ -134,7 +134,7 @@ Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.score_genes
    tl.score_genes_cell_cycle
@@ -143,7 +143,7 @@ Simulations
 ~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.sim
 
@@ -154,12 +154,10 @@ Plotting: `pl`
 .. module:: scanpy.pl
 .. currentmodule:: scanpy
 
-The plotting module :mod:`scanpy.plotting` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions.
+The plotting module :mod:`scanpy.pl` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions.
 For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
 
-.. toctree::
-
-   scanpy.plotting
+.. include:: scanpy.plotting.rst
 
 
 Reading
@@ -173,14 +171,14 @@ Reading
 Read common file formats using
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    read
 
 Read 10x formatted hdf5 files and directories containing `.mtx` files using
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    read_10x_h5
    read_10x_mtx
@@ -189,7 +187,7 @@ Read 10x formatted hdf5 files and directories containing `.mtx` files using
 Read other formats using functions borrowed from :mod:`anndata`
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    read_h5ad
    read_csv
@@ -211,7 +209,7 @@ The module `sc.get` provides convenience functions for getting values back in
 useful formats.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    get.obs_df
    get.var_df
@@ -227,7 +225,7 @@ Queries
 This module provides useful queries for annotation and enrichment.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    queries.biomart_annotations
    queries.gene_coordinates
@@ -244,7 +242,7 @@ Metrics
 Collections of useful measurements for evaluating results.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    metrics.confusion_matrix
    metrics.gearys_c
@@ -258,7 +256,7 @@ Classes
 Represent data as a neighborhood structure, usually a knn graph.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Neighbors
 
@@ -272,14 +270,14 @@ A convenience function for setting some default :obj:`matplotlib.rcParams` and a
 high-resolution jupyter display backend useful for use in notebooks.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    set_figure_params
 
 An instance of the :class:`~scanpy._settings.ScanpyConfig` is available as `scanpy.settings` and allows configuring Scanpy.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    _settings.ScanpyConfig
 
@@ -313,7 +311,7 @@ details, etc.
 Print versions of packages that might influence numerical results.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    logging.print_header
    logging.print_versions
@@ -326,7 +324,7 @@ Datasets
 .. currentmodule:: scanpy
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    datasets.blobs
    datasets.ebi_expression_atlas
@@ -340,20 +338,11 @@ Datasets
    datasets.visium_sge
 
 
-Further modules
----------------
-
-.. autosummary::
-   :toctree: generated/
-
-   plotting
-
-
 Deprecated functions
 --------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pp.filter_genes_dispersion
    pp.normalize_per_cell
