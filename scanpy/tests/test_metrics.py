@@ -34,6 +34,7 @@ def test_gearys_c_consistency():
 
     np.testing.assert_allclose(all_genes[0], first_gene)
 
+    # Test that results are similar for sparse and dense reps of same data
     np.testing.assert_allclose(
         sc.metrics.gearys_c(pbmc, layer="raw"),
         sc.metrics.gearys_c(pbmc, vals=pbmc.layers["raw"].T.toarray()),
@@ -61,6 +62,63 @@ def test_gearys_c_correctness():
             sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
         )
         assert sc.metrics.gearys_c(adata, vals=connected) == 0.0
+
+
+def test_morans_i_consistency():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc.layers["raw"] = pbmc.raw.X.copy()
+    g = pbmc.obsp["connectivities"]
+
+    assert eq(
+        sc.metrics.morans_i(g, pbmc.obs["percent_mito"]),
+        sc.metrics.morans_i(pbmc, vals=pbmc.obs["percent_mito"]),
+    )
+
+    assert eq(  # Test that series and vectors return same value
+        sc.metrics.morans_i(g, pbmc.obs["percent_mito"]),
+        sc.metrics.morans_i(g, pbmc.obs["percent_mito"].values),
+    )
+
+    np.testing.assert_array_equal(
+        sc.metrics.morans_i(pbmc, obsm="X_pca"),
+        sc.metrics.morans_i(g, pbmc.obsm["X_pca"].T),
+    )
+
+    all_genes = sc.metrics.morans_i(pbmc, layer="raw")
+    first_gene = sc.metrics.morans_i(
+        pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
+    )
+
+    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-5)
+
+    # Test that results are similar for sparse and dense reps of same data
+    np.testing.assert_allclose(
+        sc.metrics.morans_i(pbmc, layer="raw"),
+        sc.metrics.morans_i(pbmc, vals=pbmc.layers["raw"].T.toarray()),
+    )
+
+
+def test_morans_i_correctness():
+    # Test case with perfectly seperated groups
+    connected = np.zeros(100)
+    connected[np.random.choice(100, size=50, replace=False)] = 1
+    graph = np.zeros((100, 100))
+    graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
+    graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
+    graph = sparse.csr_matrix(graph)
+
+    assert sc.metrics.morans_i(graph, connected) == 1.0
+    assert eq(
+        sc.metrics.morans_i(graph, connected),
+        sc.metrics.morans_i(graph, sparse.csr_matrix(connected)),
+    )
+    # Check for anndata > 0.7
+    if hasattr(sc.AnnData, "obsp"):
+        # Checking that obsp works
+        adata = sc.AnnData(
+            sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
+        )
+        assert sc.metrics.morans_i(adata, vals=connected) == 1.0
 
 
 def test_confusion_matrix():

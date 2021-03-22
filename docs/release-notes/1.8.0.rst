@@ -16,6 +16,7 @@
 
     - Added :func:`scanpy.metrics.confusion_matrix` for comparing labellings :pr:`915` :smaller:`I Virshup`
     - Added :func:`scanpy.metrics.gearys_c` for spatial autocorrelation :pr:`915` :smaller:`I Virshup`
+    - Added :func:`scanpy.metrics.morans_i` for global spatial autocorrelation :pr:`1740` :smaller:`I Virshup, G Palla`
 
 .. rubric:: External tools
 
@@ -26,3 +27,8 @@
 .. rubric:: Deprecations
 
 - Deprecated `layers` and `layers_norm` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
+
+.. rubric:: Docs
+
+- Clarified docs issues for :func:`~scanpy.pp.neighbors`, 
+  :func:`~scanpy.tl.diffmap`, :func:`~scanpy.pp.calculate_qc_metrics` :pr:`1680` :smaller:`G Palla`

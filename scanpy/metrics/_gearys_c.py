@@ -166,7 +166,7 @@ def _gearys_c_vec_W(data, indices, indptr, x, W):
 # https://github.com/numba/numba/issues/6774#issuecomment-788789663
 
 
-@numba.njit
+@numba.njit(cache=True)
 def _gearys_c_inner_sparse_x_densevec(g_data, g_indices, g_indptr, x, W):
     x_bar = x.mean()
     total = 0.0
@@ -182,7 +182,7 @@ def _gearys_c_inner_sparse_x_densevec(g_data, g_indices, g_indptr, x, W):
     return C
 
 
-@numba.njit
+@numba.njit(cache=True)
 def _gearys_c_inner_sparse_x_sparsevec(
     g_data, g_indices, g_indptr, x_data, x_indices, N, W
 ):
