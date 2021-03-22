@@ -8,5 +8,6 @@ from ._pca import pca
 from ._qc import calculate_qc_metrics
 from ._combat import combat
 from ._normalization import normalize_total
+from ._normalize_scran import normalize_scran, _pool_size_factors, _per_cluster_normalize
 
 from ..neighbors import neighbors
