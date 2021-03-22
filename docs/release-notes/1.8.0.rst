@@ -15,7 +15,7 @@
 
     - Added :func:`scanpy.metrics.confusion_matrix` for comparing labellings :pr:`915` :smaller:`I Virshup`
     - Added :func:`scanpy.metrics.gearys_c` for spatial autocorrelation :pr:`915` :smaller:`I Virshup`
-    - - Added :func:`scanpy.metrics.morans_i` for global spatial autocorrelation :pr:`1740` :smaller:`I Virshup, G Palla`
+    - Added :func:`scanpy.metrics.morans_i` for global spatial autocorrelation :pr:`1740` :smaller:`I Virshup, G Palla`
 
 .. rubric:: External tools
 
