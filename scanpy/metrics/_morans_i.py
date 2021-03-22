@@ -31,7 +31,12 @@ def morans_i(
 
     .. math::
 
-        I=\frac{n}{S_{0}} \frac{\sum_{i=1}^{n} \sum_{j=1}^{n} w_{i, j} z_{i} z_{j}}{\sum_{i=1}^{n} z_{i}^{2}}
+        I =
+            \frac{
+                N \sum_{i, j} w_{i, j} z_{i} z_{j}
+            }{
+                S_{0} \sum_{i} z_{i}^{2}
+            } 
 
     Params
     ------
