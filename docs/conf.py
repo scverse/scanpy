@@ -50,7 +50,6 @@ extensions = [
     # 'ipython_directive',
     # 'ipython_console_highlighting',
     'scanpydoc',
-    "sphinx_search.extension",
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
