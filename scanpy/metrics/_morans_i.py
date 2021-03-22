@@ -27,7 +27,7 @@ def morans_i(
 
     Moran’s I is a global autocorrelation statistic for some measure on a graph. It is commonly used in
     spatial data analysis to assess autocorrelation on a 2D grid. It is closely related to Geary's C,
-    but not identical. More info can be found `here`<https://en.wikipedia.org/wiki/Moran%27s_I> .
+    but not identical. More info can be found `here <https://en.wikipedia.org/wiki/Moran%27s_I>`_.
 
     .. math::
 
@@ -36,7 +36,7 @@ def morans_i(
                 N \sum_{i, j} w_{i, j} z_{i} z_{j}
             }{
                 S_{0} \sum_{i} z_{i}^{2}
-            } 
+            }
 
     Params
     ------
