@@ -355,7 +355,7 @@ def scrublet_score_distribution(
     figsize
         width, height
     {show_save_ax}
-    
+
     Returns
     -------
     If `return_fig` is True, a :class:`~matplotlib.figure.Figure`.
@@ -364,7 +364,7 @@ def scrublet_score_distribution(
     See also
     --------
     :func:`~scanpy.external.pp.scrublet`: Main way of running Scrublet, runs
-        preprocessing, doublet simulation and calling. 
+        preprocessing, doublet simulation and calling.
     :func:`~scanpy.external.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
         simulation separately for advanced usage.
     """

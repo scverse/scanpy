@@ -133,7 +133,7 @@ def scrublet(
         ``.uns['scrublet']['doublet_scores_sim']``
             Doublet scores for each simulated doublet transcriptome
 
-        ``.uns['scrublet']['doublet_parents']`` 
+        ``.uns['scrublet']['doublet_parents']``
             Pairs of ``.obs_names`` used to generate each simulated doublet
             transcriptome
 
@@ -333,7 +333,7 @@ def _scrublet_call_doublets(
         ``.uns['scrublet']['doublet_scores_sim']``
             Doublet scores for each simulated doublet transcriptome
 
-        ``.uns['scrublet']['doublet_parents']`` 
+        ``.uns['scrublet']['doublet_parents']``
             Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
         ``.uns['scrublet']['parameters']``
@@ -471,7 +471,7 @@ def scrublet_simulate_doublets(
     adata : anndata.AnnData with simulated doublets in .X
         Adds fields to ``adata``:
 
-        ``.obsm['scrublet']['doublet_parents']`` 
+        ``.obsm['scrublet']['doublet_parents']``
             Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
         ``.uns['scrublet']['parameters']``
