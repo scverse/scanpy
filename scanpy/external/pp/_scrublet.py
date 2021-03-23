@@ -133,11 +133,7 @@ def scrublet(
         ``.uns['scrublet']['doublet_scores_sim']``
             Doublet scores for each simulated doublet transcriptome
 
-<<<<<<< HEAD
-        ``adata.uns['scrublet']['doublet_parents']``
-=======
         ``.uns['scrublet']['doublet_parents']`` 
->>>>>>> b5438c3c... Make 'Returns' docs consistent
             Pairs of ``.obs_names`` used to generate each simulated doublet
             transcriptome
 
@@ -337,11 +333,7 @@ def _scrublet_call_doublets(
         ``.uns['scrublet']['doublet_scores_sim']``
             Doublet scores for each simulated doublet transcriptome
 
-<<<<<<< HEAD
-        ``adata.uns['scrublet']['doublet_parents']``
-=======
         ``.uns['scrublet']['doublet_parents']`` 
->>>>>>> b5438c3c... Make 'Returns' docs consistent
             Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
         ``.uns['scrublet']['parameters']``
