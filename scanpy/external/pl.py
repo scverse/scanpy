@@ -325,7 +325,6 @@ def wishbone_marker_trajectory(
         return ax
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
 def scrublet_score_distribution(
     adata,
     scale_hist_obs: str = 'log',
@@ -334,7 +333,6 @@ def scrublet_score_distribution(
     return_fig: bool = False,
     show: bool = True,
     save: Optional[Union[str, bool]] = None,
-    ax: Optional[Axes] = None,
 ):
     """\
     Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
@@ -354,7 +352,12 @@ def scrublet_score_distribution(
         doublets (e.g. "linear", "log", "symlog", "logit")
     figsize
         width, height
-    {show_save_ax}
+    show
+         Show the plot, do not return axis.
+    save
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
 
     Returns
     -------
