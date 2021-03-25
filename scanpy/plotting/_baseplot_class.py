@@ -997,7 +997,7 @@ class BasePlot(object):
 
                 diff = bottom[idx] - top[idx]
                 group_y_center = top[idx] + float(diff) / 2
-                #if diff * 2 < len(group_labels[idx]):
+                # if diff * 2 < len(group_labels[idx]):
                 #    # cut label to fit available space
                 #    group_labels[idx] = group_labels[idx][: int(diff * 2)] + "."
                 gene_groups_ax.text(
