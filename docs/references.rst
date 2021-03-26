@@ -224,6 +224,10 @@ References
    *From Louvain to Leiden: guaranteeing well-connected communities*
    `arXiv <https://arxiv.org/abs/1810.08473>`__.
 
+.. [Townes19] Townes *et al.* (2019),
+   *Feature selection and dimension reduction for single-cell RNA-Seq based on a multinomial model*
+   `Genome Biology <https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1861-6>`__.
+
 .. [Ulyanov16] Ulyanov (2016),
    *Multicore t-SNE*,
    `GitHub <https://github.com/DmitryUlyanov/Multicore-TSNE>`__.
