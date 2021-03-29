@@ -17,4 +17,4 @@
 .. rubric:: Ecosystem
 
 - Added `triku` a feature selection method to the ecosystem page :pr:`1722` :smaller:`AM Ascensión`
-- Added `dorothea` and `progeny` to the ecosystem page :pr:`1767` :smaller:`PB Mompel`
+- Added `dorothea` and `progeny` to the ecosystem page :pr:`1767` :smaller:`P Badia-i-Mompel`

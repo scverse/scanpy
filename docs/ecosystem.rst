@@ -83,7 +83,7 @@ Feature selection
 * `triku 🦔 <https://gitlab.com/alexmascension/triku>`__ :small:`Biodonostia Health Research Institute`
 
 
-Functional tools
+Footprint-based enrichment analysis
 ----------------
 Extract functional signatures based on curated prior knowledge
 
