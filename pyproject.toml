@@ -103,6 +103,8 @@ test = [
     'profimp',
     # Test the metadata while this exists: https://github.com/takluyver/flit/issues/387
     'flit_core',
+    # Correlation plot images differ: https://github.com/theislab/scanpy/pull/1768
+    'matplotlib>=3.4.0',
 ]
 
 [tool.flit.scripts]
