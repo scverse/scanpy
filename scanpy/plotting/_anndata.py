@@ -1710,14 +1710,14 @@ def correlation_matrix(
         )
         axs.append(dendro_ax)
     # define some default pcolormesh parameters
-    if 'edge_color' not in kwds:
+    if 'edgecolors' not in kwds:
         if corr_matrix.shape[0] > 30:
             # when there are too many rows it is better to remove
             # the black lines surrounding the boxes in the heatmap
             kwds['edgecolors'] = 'none'
         else:
             kwds['edgecolors'] = 'black'
-            kwds['linewidth'] = 0.01
+            kwds.setdefault('linewidth', 0.01)
     if 'vmax' not in kwds and 'vmin' not in kwds:
         kwds['vmax'] = 1
         kwds['vmin'] = -1
