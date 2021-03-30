@@ -1,13 +1,16 @@
 import inspect
 import sys
+from contextlib import contextmanager
 from enum import IntEnum
 from pathlib import Path
 from time import time
 from logging import getLevelName
-from typing import Tuple, Union, Any, List, Iterable, TextIO, Optional
+from typing import Any, Union, Optional, Iterable, TextIO
+from typing import Tuple, List, ContextManager
 
 from . import logging
-from .logging import _set_log_level, _set_log_file, RootLogger
+from .logging import _set_log_level, _set_log_file, _RootLogger
+from ._compat import Literal
 
 _VERBOSITY_TO_LOGLEVEL = {
     'error': 'ERROR',
@@ -33,6 +36,15 @@ class Verbosity(IntEnum):
         # getLevelName(str) returns the int level…
         return getLevelName(_VERBOSITY_TO_LOGLEVEL[self])
 
+    @contextmanager
+    def override(self, verbosity: "Verbosity") -> ContextManager["Verbosity"]:
+        """\
+        Temporarily override verbosity
+        """
+        settings.verbosity = verbosity
+        yield self
+        settings.verbosity = self
+
 
 def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
     if isinstance(var, types):
@@ -48,7 +60,8 @@ def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
 
 
 class ScanpyConfig:
-    """Config manager for scanpy.
+    """\
+    Config manager for scanpy.
     """
 
     def __init__(
@@ -64,16 +77,18 @@ class ScanpyConfig:
         cachedir: Union[str, Path] = "./cache/",
         datasetdir: Union[str, Path] = "./data/",
         figdir: Union[str, Path] = "./figures/",
+        cache_compression: Union[str, None] = 'lzf',
         max_memory=15,
         n_jobs=1,
         logfile: Union[str, Path, None] = None,
         categories_to_ignore: Iterable[str] = ("N/A", "dontknow", "no_gate", "?"),
         _frameon: bool = True,
         _vector_friendly: bool = False,
-        _low_resolution_warning: bool = True
+        _low_resolution_warning: bool = True,
+        n_pcs=50,
     ):
         # logging
-        self._root_logger = RootLogger(logging.INFO)  # level will be replaced
+        self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
         self.logfile = logfile
         self.verbosity = verbosity
         # rest
@@ -86,6 +101,7 @@ class ScanpyConfig:
         self.cachedir = cachedir
         self.datasetdir = datasetdir
         self.figdir = figdir
+        self.cache_compression = cache_compression
         self.max_memory = max_memory
         self.n_jobs = n_jobs
         self.categories_to_ignore = categories_to_ignore
@@ -93,8 +109,7 @@ class ScanpyConfig:
         """bool: See set_figure_params."""
 
         self._vector_friendly = _vector_friendly
-        """Set to true if you want to include pngs in svgs and pdfs.
-        """
+        """Set to true if you want to include pngs in svgs and pdfs."""
 
         self._low_resolution_warning = _low_resolution_warning
         """Print warning when saving a figure with low resolution."""
@@ -108,10 +123,13 @@ class ScanpyConfig:
         self._previous_memory_usage = -1
         """Stores the previous memory usage."""
 
+        self.N_PCS = n_pcs
+        """Default number of principal components to use."""
+
     @property
     def verbosity(self) -> Verbosity:
         """
-        Set global verbosity level.
+        Verbosity level (default `warning`)
 
         Level 0: only show 'error' messages.
         Level 1: also show 'warning' messages.
@@ -124,8 +142,7 @@ class ScanpyConfig:
     @verbosity.setter
     def verbosity(self, verbosity: Union[Verbosity, int, str]):
         verbosity_str_options = [
-            v for v in _VERBOSITY_TO_LOGLEVEL
-            if isinstance(v, str)
+            v for v in _VERBOSITY_TO_LOGLEVEL if isinstance(v, str)
         ]
         if isinstance(verbosity, Verbosity):
             self._verbosity = verbosity
@@ -146,8 +163,7 @@ class ScanpyConfig:
 
     @property
     def plot_suffix(self) -> str:
-        """Global suffix that is appended to figure filenames.
-        """
+        """Global suffix that is appended to figure filenames."""
         return self._plot_suffix
 
     @plot_suffix.setter
@@ -191,7 +207,8 @@ class ScanpyConfig:
 
     @property
     def autosave(self) -> bool:
-        """bool: Save plots/figures as files in directory 'figs'.
+        """\
+        Automatically save figures in :attr:`~scanpy._settings.ScanpyConfig.figdir` (default `False`).
 
         Do not show plots/figures interactively.
         """
@@ -204,7 +221,8 @@ class ScanpyConfig:
 
     @property
     def autoshow(self) -> bool:
-        """bool: Show all plots/figures automatically if autosave == False.
+        """\
+        Automatically show figures if `autosave == False` (default `True`).
 
         There is no need to call the matplotlib pl.show() in this case.
         """
@@ -217,7 +235,8 @@ class ScanpyConfig:
 
     @property
     def writedir(self) -> Path:
-        """Directory where the function scanpy.write writes to by default.
+        """\
+        Directory where the function scanpy.write writes to by default.
         """
         return self._writedir
 
@@ -228,7 +247,8 @@ class ScanpyConfig:
 
     @property
     def cachedir(self) -> Path:
-        """Default cache directory.
+        """\
+        Directory for cache files (default `'./cache/'`).
         """
         return self._cachedir
 
@@ -239,7 +259,8 @@ class ScanpyConfig:
 
     @property
     def datasetdir(self) -> Path:
-        """Default directory for ``sc.datasets`` to download data to.
+        """\
+        Directory for example :mod:`~scanpy.datasets` (default `'./data/'`).
         """
         return self._datasetdir
 
@@ -250,7 +271,8 @@ class ScanpyConfig:
 
     @property
     def figdir(self) -> Path:
-        """Directory where plots are saved.
+        """\
+        Directory for saving figures (default `'./figures/'`).
         """
         return self._figdir
 
@@ -260,8 +282,27 @@ class ScanpyConfig:
         self._figdir = Path(figdir)
 
     @property
+    def cache_compression(self) -> Optional[str]:
+        """\
+        Compression for `sc.read(..., cache=True)` (default `'lzf'`).
+
+        May be `'lzf'`, `'gzip'`, or `None`.
+        """
+        return self._cache_compression
+
+    @cache_compression.setter
+    def cache_compression(self, cache_compression: Optional[str]):
+        if cache_compression not in {'lzf', 'gzip', None}:
+            raise ValueError(
+                f"`cache_compression` ({cache_compression}) "
+                "must be in {'lzf', 'gzip', None}"
+            )
+        self._cache_compression = cache_compression
+
+    @property
     def max_memory(self) -> Union[int, float]:
-        """Maximal memory usage in Gigabyte.
+        """\
+        Maximal memory usage in Gigabyte.
 
         Is currently not well respected....
         """
@@ -274,7 +315,8 @@ class ScanpyConfig:
 
     @property
     def n_jobs(self) -> int:
-        """Default number of jobs/ CPUs to use for parallel computing.
+        """\
+        Default number of jobs/ CPUs to use for parallel computing.
         """
         return self._n_jobs
 
@@ -285,7 +327,9 @@ class ScanpyConfig:
 
     @property
     def logpath(self) -> Optional[Path]:
-        """The file path `logfile` was set to."""
+        """\
+        The file path `logfile` was set to.
+        """
         return self._logpath
 
     @logpath.setter
@@ -297,9 +341,10 @@ class ScanpyConfig:
 
     @property
     def logfile(self) -> TextIO:
-        """The open file to write logs to.
+        """\
+        The open file to write logs to.
 
-        Set it to a :class:`~pathlib.Path` or :class:`str: to open a new one.
+        Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
         The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
         and to :obj:`sys.stderr` otherwise.
 
@@ -320,7 +365,8 @@ class ScanpyConfig:
 
     @property
     def categories_to_ignore(self) -> List[str]:
-        """Categories that are omitted in plotting etc.
+        """\
+        Categories that are omitted in plotting etc.
         """
         return self._categories_to_ignore
 
@@ -335,53 +381,73 @@ class ScanpyConfig:
     # Functions
     # --------------------------------------------------------------------------------
 
+    # Collected from the print_* functions in matplotlib.backends
+    # fmt: off
+    _Format = Literal[
+        'png', 'jpg', 'tif', 'tiff',
+        'pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf',
+        'raw', 'rgba',
+    ]
+    # fmt: on
+
     def set_figure_params(
         self,
-        scanpy=True,
-        dpi=80,
-        dpi_save=150,
-        frameon=True,
-        vector_friendly=True,
-        fontsize=14,
-        color_map=None,
-        format="pdf",
-        transparent=False,
-        ipython_format="png2x",
+        scanpy: bool = True,
+        dpi: int = 80,
+        dpi_save: int = 150,
+        frameon: bool = True,
+        vector_friendly: bool = True,
+        fontsize: int = 14,
+        figsize: Optional[int] = None,
+        color_map: Optional[str] = None,
+        format: _Format = "pdf",
+        facecolor: Optional[str] = None,
+        transparent: bool = False,
+        ipython_format: str = "png2x",
     ):
-        """Set resolution/size, styling and format of figures.
+        """\
+        Set resolution/size, styling and format of figures.
 
         Parameters
         ----------
-        scanpy : `bool`, optional (default: `True`)
-            Init default values for ``matplotlib.rcParams`` suited for Scanpy.
-        dpi : `int`, optional (default: `80`)
-            Resolution of rendered figures - this influences the size of figures in notebooks.
-        dpi_save : `int`, optional (default: `150`)
+        scanpy
+            Init default values for :obj:`matplotlib.rcParams` suited for Scanpy.
+        dpi
+            Resolution of rendered figures – this influences the size of figures in notebooks.
+        dpi_save
             Resolution of saved figures. This should typically be higher to achieve
             publication quality.
-        frameon : `bool`, optional (default: `True`)
+        frameon
             Add frames and axes labels to scatter plots.
-        vector_friendly : `bool`, optional (default: `True`)
+        vector_friendly
             Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
-        fontsize : `int`, optional (default: 14)
+        fontsize
             Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
-        color_map : `str`, optional (default: `None`)
+        figsize
+            Set plt.rcParams['figure.figsize'].
+        color_map
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
-        format : {'png', 'pdf', 'svg', etc.}, optional (default: 'pdf')
+        format
             This sets the default format for saving figures: `file_format_figs`.
-        transparent : `bool`, optional (default: `True`)
+        facecolor
+            Sets backgrounds via `rcParams['figure.facecolor'] = facecolor` and
+            `rcParams['axes.facecolor'] = facecolor`.
+        transparent
             Save figures with transparent back ground. Sets
             `rcParams['savefig.transparent']`.
-        ipython_format : list of `str`, optional (default: 'png2x')
+        ipython_format
             Only concerns the notebook/IPython environment; see
-            `IPython.core.display.set_matplotlib_formats` for more details.
+            :func:`~IPython.display.set_matplotlib_formats` for details.
         """
-        try:
+        if self._is_run_from_ipython():
             import IPython
-            IPython.core.display.set_matplotlib_formats(ipython_format)
-        except Exception:
-            pass
+
+            if isinstance(ipython_format, str):
+                ipython_format = [ipython_format]
+            IPython.display.set_matplotlib_formats(*ipython_format)
+
         from matplotlib import rcParams
+
         self._vector_friendly = vector_friendly
         self.file_format_figs = format
         if dpi is not None:
@@ -390,22 +456,22 @@ class ScanpyConfig:
             rcParams["savefig.dpi"] = dpi_save
         if transparent is not None:
             rcParams["savefig.transparent"] = transparent
+        if facecolor is not None:
+            rcParams['figure.facecolor'] = facecolor
+            rcParams['axes.facecolor'] = facecolor
         if scanpy:
             from .plotting._rcmod import set_rcParams_scanpy
+
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
+        if figsize is not None:
+            rcParams['figure.figsize'] = figsize
         self._frameon = frameon
 
     @staticmethod
     def _is_run_from_ipython():
-        """Determines whether run from Ipython.
-
-        Only affects progress bars.
-        """
-        try:
-            __IPYTHON__
-            return True
-        except NameError:
-            return False
+        """Determines whether we're currently in IPython."""
+        # https://stackoverflow.com/questions/40638507/testing-for-presence-of-ipython
+        return hasattr(__builtins__, "__IPYTHON__")
 
     def __str__(self) -> str:
         return '\n'.join(

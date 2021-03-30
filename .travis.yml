@@ -1,18 +1,36 @@
 dist: xenial
 language: python
+git:
+  depth: false  # Version detection needs all info
+branches:
+  only:
+    - master  # All other branches should become (draft) PRs and be build that way
+matrix:
+  include:
+  - name: "static analysis"
+    python: "3.7"
+    install:
+    - pip install .[dev,doc]
+    script:
+    - black . --check --diff
+    - rst2html.py --halt=2 README.rst >/dev/null
+    after_success: skip
+  - name: "anndata dev"
+    python: "3.7"
+    install:
+    - pip install .[dev,test,louvain,leiden,magic,harmony,skmisc,scrublet,scanorama]
+    - pip install git+https://github.com/theislab/anndata
 python:
-  - '3.6'
-  - '3.7'
-  #- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
-cache: 
-  - pip
-  - directories: data
+- '3.6'
+- '3.7'
+#- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
+cache:
+- pip
+- directories:
+  - data
 install:
-  - pip install docutils sphinx
-  - pip install -e .[test,louvain,leiden]
+- pip install .[dev,test,louvain,leiden,magic,harmony,skmisc,scrublet,scanorama]
 env:
-  - MPLBACKEND=Agg
+- MPLBACKEND=Agg
 script:
-  - pytest --ignore=scanpy/tests/_images
-  - python setup.py check --restructuredtext --strict
-  - rst2html.py --halt=2 README.rst >/dev/null
+- pytest --ignore=scanpy/tests/_images

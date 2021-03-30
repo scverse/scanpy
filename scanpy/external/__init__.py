@@ -1,13 +1,13 @@
 from . import tl
 from . import pl
 from . import pp
-
-from .. import _exporting as exporting
+from . import exporting
 
 import sys
-from .. import utils
-utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
-del sys, utils
+from .. import _utils
+
+_utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
+del sys, _utils
 
 
 __doc__ = """\
@@ -24,14 +24,28 @@ If you'd like to see your tool included here, please open a `pull request <https
 Preprocessing: PP
 ------------------
 
-Batch effect correction
-~~~~~~~~~~~~~~~~~~~~~~~
+Data integration
+~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: .
 
    pp.bbknn
+   pp.harmony_integrate
    pp.mnn_correct
+   pp.scanorama_integrate
+
+
+Sample demultiplexing, Doublet detection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   pp.scrublet
+   pp.scrublet_simulate_doublets
+   pl.scrublet_score_distribution
+   pp.hashsolo
 
 Imputation
 ~~~~~~~~~~
@@ -57,6 +71,8 @@ Embeddings
 
    tl.phate
    tl.palantir
+   tl.trimap
+   tl.sam
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,6 +81,10 @@ Clustering and trajectory inference
    :toctree: .
 
    tl.phenograph
+   tl.harmony_timeseries
+   tl.wishbone
+   tl.palantir
+   tl.palantir_results
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,8 +103,9 @@ Plotting: PL
    :toctree: .
 
    pl.phate
-   tl.palantir
-
+   pl.trimap
+   pl.sam
+   pl.wishbone_marker_trajectory
 
 Exporting
 ---------

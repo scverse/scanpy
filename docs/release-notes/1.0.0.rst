@@ -1,0 +1,68 @@
+1.0.0 :small:`2018-03-30`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Major updates
+
+- Scanpy is much faster and more memory efficient: preprocess, cluster and
+  visualize 1.3M cells in 6h_, 130K cells in 14min_, and 68K cells in 3min_ :smaller:`A Wolf`
+- the API gained a preprocessing function :func:`~scanpy.pp.neighbors` and a
+  class :func:`~scanpy.Neighbors` to which all basic graph computations are
+  delegated :smaller:`A Wolf`
+
+.. _6h: https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/
+.. _14min: https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_130K.txt
+.. _3min: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170503_zheng17/zheng17.ipynb
+
+
+.. warning::
+
+   .. rubric:: Upgrading to 1.0 isn’t fully backwards compatible in the following changes
+
+   - the graph-based tools :func:`~scanpy.tl.louvain`
+     :func:`~scanpy.tl.dpt` :func:`~scanpy.tl.draw_graph`
+     :func:`~scanpy.tl.umap` :func:`~scanpy.tl.diffmap`
+     :func:`~scanpy.tl.paga` require prior computation of the graph:
+     ``sc.pp.neighbors(adata, n_neighbors=5); sc.tl.louvain(adata)`` instead of
+     previously ``sc.tl.louvain(adata, n_neighbors=5)``
+   - install `numba` via ``conda install numba``, which replaces cython
+   - the default connectivity measure (dpt will look different using default
+     settings) changed. setting `method='gauss'` in `sc.pp.neighbors` uses
+     gauss kernel connectivities and reproduces the previous behavior,
+     see, for instance in the example paul15_.
+   - namings of returned annotation have changed for less bloated AnnData
+     objects, which means that some of the unstructured annotation of old
+     AnnData files is not recognized anymore
+   - replace occurances of `group_by` with `groupby` (consistency with
+     `pandas`)
+   - it is worth checking out the notebook examples to see changes, e.g.
+     the seurat_ example.
+   - upgrading scikit-learn from 0.18 to 0.19 changed the implementation of PCA,
+     some results might therefore look slightly different
+
+.. _paul15: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
+.. _seurat: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170505_seurat/seurat.ipynb
+
+.. rubric:: Further updates
+
+- UMAP [McInnes18]_ can serve as a first visualization of the data just as tSNE,
+  in contrast to tSNE, UMAP directly embeds the single-cell graph and is faster;
+  UMAP is also used for measuring connectivities and computing neighbors,
+  see :func:`~scanpy.pp.neighbors` :smaller:`A Wolf`
+- graph abstraction: AGA is renamed to `PAGA <https://github.com/theislab/paga>`_: :func:`~scanpy.tl.paga`; now,
+  it only measures connectivities between partitions of the single-cell graph,
+  pseudotime and clustering need to be computed separately via
+  :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.dpt`, the
+  connectivity measure has been improved :smaller:`A Wolf`
+- logistic regression for finding marker genes
+  :func:`~scanpy.tl.rank_genes_groups` with parameter `method='logreg'` :smaller:`A Wolf`
+- :func:`~scanpy.tl.louvain` provides a better implementation for
+  reclustering via `restrict_to` :smaller:`A Wolf`
+- scanpy no longer modifies rcParams upon import, call
+  `settings.set_figure_params` to set the 'scanpy style' :smaller:`A Wolf`
+- default cache directory is ``./cache/``, set `settings.cachedir` to change
+  this; nested directories in this are avoided :smaller:`A Wolf`
+- show edges in scatter plots based on graph visualization
+  :func:`~scanpy.tl.draw_graph` and :func:`~scanpy.tl.umap` by passing `edges=True` :smaller:`A Wolf`
+- :func:`~scanpy.pp.downsample_counts` for downsampling counts :smaller:`MD Luecken`
+- default `'louvain_groups'` are called `'louvain'` :smaller:`A Wolf`
+- `'X_diffmap'` contains the zero component, plotting remains unchanged :smaller:`A Wolf`

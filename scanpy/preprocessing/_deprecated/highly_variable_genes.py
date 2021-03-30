@@ -1,27 +1,36 @@
-from anndata import AnnData
+import warnings
+from typing import Optional
+
 import numpy as np
 import pandas as pd
-import warnings
+from scipy.sparse import issparse
+from anndata import AnnData
+
 from ... import logging as logg
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
-from scipy.sparse import issparse
+from ..._compat import Literal
 
 
-def filter_genes_dispersion(data,
-                            flavor='seurat',
-                            min_disp=None, max_disp=None,
-                            min_mean=None, max_mean=None,
-                            n_bins=20,
-                            n_top_genes=None,
-                            log=True,
-                            subset=True,
-                            copy=False):
-    """Extract highly variable genes [Satija15]_ [Zheng17]_.
+def filter_genes_dispersion(
+    data: AnnData,
+    flavor: Literal['seurat', 'cell_ranger'] = 'seurat',
+    min_disp: Optional[float] = None,
+    max_disp: Optional[float] = None,
+    min_mean: Optional[float] = None,
+    max_mean: Optional[float] = None,
+    n_bins: int = 20,
+    n_top_genes: Optional[int] = None,
+    log: bool = True,
+    subset: bool = True,
+    copy: bool = False,
+):
+    """\
+    Extract highly variable genes [Satija15]_ [Zheng17]_.
 
     .. warning::
         .. deprecated:: 1.3.6
-            Use :func:`~scanpy.api.pp.highly_variable_genes`
+            Use :func:`~scanpy.pp.highly_variable_genes`
             instead. The new function is equivalent to the present
             function, except that
 
@@ -43,37 +52,40 @@ def filter_genes_dispersion(data,
     variable genes are selected.
 
     Use `flavor='cell_ranger'` with care and in the same way as in
-    :func:`~scanpy.api.pp.recipe_zheng17`.
+    :func:`~scanpy.pp.recipe_zheng17`.
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
+    data
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    flavor : {'seurat', 'cell_ranger'}, optional (default: 'seurat')
+    flavor
         Choose the flavor for computing normalized dispersion. If choosing
-        'seurat', this expects non-logarithmized data - the logarithm of mean
+        'seurat', this expects non-logarithmized data – the logarithm of mean
         and dispersion is taken internally when `log` is at its default value
         `True`. For 'cell_ranger', this is usually called for logarithmized data
-        - in this case you should set `log` to `False`. In their default
+        – in this case you should set `log` to `False`. In their default
         workflows, Seurat passes the cutoffs whereas Cell Ranger passes
         `n_top_genes`.
-    min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=`None` : `float`, optional
+    min_mean
+    max_mean
+    min_disp
+    max_disp
         If `n_top_genes` unequals `None`, these cutoffs for the means and the
         normalized dispersions are ignored.
-    n_bins : `int` (default: 20)
+    n_bins
         Number of bins for binning the mean gene expression. Normalization is
         done with respect to each bin. If just a single gene falls into a bin,
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
-    n_top_genes : `int` or `None` (default: `None`)
+    n_top_genes
         Number of highly-variable genes to keep.
-    log : `bool`, optional (default: `True`)
+    log
         Use the logarithm of the mean to variance ratio.
-    subset : `bool`, optional (default: `True`)
+    subset
         Keep highly-variable genes only (if True) else write a bool array for h
         ighly-variable genes while keeping all genes
-    copy : `bool`, optional (default: `False`)
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
@@ -92,19 +104,28 @@ def filter_genes_dispersion(data,
     If a data matrix `X` is passed, the annotation is returned as `np.recarray`
     with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
     """
-    if n_top_genes is not None and not all([
-            min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
+    if n_top_genes is not None and not all(
+        x is None for x in [min_disp, max_disp, min_mean, max_mean]
+    ):
         logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
-    if min_disp is None: min_disp = 0.5
-    if min_mean is None: min_mean = 0.0125
-    if max_mean is None: max_mean = 3
+    if min_disp is None:
+        min_disp = 0.5
+    if min_mean is None:
+        min_mean = 0.0125
+    if max_mean is None:
+        max_mean = 3
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        result = filter_genes_dispersion(adata.X, log=log,
-                                         min_disp=min_disp, max_disp=max_disp,
-                                         min_mean=min_mean, max_mean=max_mean,
-                                         n_top_genes=n_top_genes,
-                                         flavor=flavor)
+        result = filter_genes_dispersion(
+            adata.X,
+            log=log,
+            min_disp=min_disp,
+            max_disp=max_disp,
+            min_mean=min_mean,
+            max_mean=max_mean,
+            n_top_genes=n_top_genes,
+            flavor=flavor,
+        )
         adata.var['means'] = result['means']
         adata.var['dispersions'] = result['dispersions']
         adata.var['dispersions_norm'] = result['dispersions_norm']
@@ -124,7 +145,6 @@ def filter_genes_dispersion(data,
         dispersion = np.log(dispersion)
         mean = np.log1p(mean)
     # all of the following quantities are "per-gene" here
-    import pandas as pd
     df = pd.DataFrame()
     df['mean'] = mean
     df['dispersion'] = dispersion
@@ -149,29 +169,39 @@ def filter_genes_dispersion(data,
         disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin.values].values
         disp_mean_bin[one_gene_per_bin] = 0
         # actually do the normalization
-        df['dispersion_norm'] = (df['dispersion'].values  # use values here as index differs
-                                 - disp_mean_bin[df['mean_bin'].values].values) \
-                                 / disp_std_bin[df['mean_bin'].values].values
+        df['dispersion_norm'] = (
+            # use values here as index differs
+            df['dispersion'].values
+            - disp_mean_bin[df['mean_bin'].values].values
+        ) / disp_std_bin[df['mean_bin'].values].values
     elif flavor == 'cell_ranger':
         from statsmodels import robust
-        df['mean_bin'] = pd.cut(df['mean'], np.r_[-np.inf,
-            np.percentile(df['mean'], np.arange(10, 105, 5)), np.inf])
+
+        df['mean_bin'] = pd.cut(
+            df['mean'],
+            np.r_[-np.inf, np.percentile(df['mean'], np.arange(10, 105, 5)), np.inf],
+        )
         disp_grouped = df.groupby('mean_bin')['dispersion']
         disp_median_bin = disp_grouped.median()
         # the next line raises the warning: "Mean of empty slice"
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             disp_mad_bin = disp_grouped.apply(robust.mad)
-        df['dispersion_norm'] = np.abs((df['dispersion'].values
-                                 - disp_median_bin[df['mean_bin'].values].values)) \
-                                / disp_mad_bin[df['mean_bin'].values].values
+        df['dispersion_norm'] = (
+            np.abs(
+                df['dispersion'].values - disp_median_bin[df['mean_bin'].values].values
+            )
+            / disp_mad_bin[df['mean_bin'].values].values
+        )
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
     dispersion_norm = df['dispersion_norm'].values.astype('float32')
     if n_top_genes is not None:
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
-        dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
-        disp_cut_off = dispersion_norm[n_top_genes-1]
+        dispersion_norm[
+            ::-1
+        ].sort()  # interestingly, np.argpartition is slightly slower
+        disp_cut_off = dispersion_norm[n_top_genes - 1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
         logg.debug(
             f'the {n_top_genes} top genes correspond to a '
@@ -180,48 +210,49 @@ def filter_genes_dispersion(data,
     else:
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
-                                             dispersion_norm > min_disp,
-                                             dispersion_norm < max_disp))
+        gene_subset = np.logical_and.reduce(
+            (
+                mean > min_mean,
+                mean < max_mean,
+                dispersion_norm > min_disp,
+                dispersion_norm < max_disp,
+            )
+        )
     logg.info('    finished', time=start)
-    return np.rec.fromarrays((
-        gene_subset,
-        df['mean'].values,
-        df['dispersion'].values,
-        df['dispersion_norm'].values.astype('float32', copy=False),
-    ), dtype=[
-        ('gene_subset', bool),
-        ('means', 'float32'),
-        ('dispersions', 'float32'),
-        ('dispersions_norm', 'float32'),
-    ])
+    return np.rec.fromarrays(
+        (
+            gene_subset,
+            df['mean'].values,
+            df['dispersion'].values,
+            df['dispersion_norm'].values.astype('float32', copy=False),
+        ),
+        dtype=[
+            ('gene_subset', bool),
+            ('means', 'float32'),
+            ('dispersions', 'float32'),
+            ('dispersions_norm', 'float32'),
+        ],
+    )
 
 
 def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
-    """Filter genes by coefficient of variance and mean.
-
-    See `filter_genes_dispersion`.
-
-    Reference: Weinreb et al. (2017).
-    """
-    if issparse(X):
-        raise ValueError('Not defined for sparse input. See `filter_genes_dispersion`.')
-    mean_filter = np.mean(X, axis=0) > Ecutoff
-    var_filter = np.std(X, axis=0) / (np.mean(X, axis=0) + .0001) > cvFilter
-    gene_subset = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
-    return gene_subset
+    """ Filter genes by coefficient of variance and mean."""
+    return _filter_genes(X, Ecutoff, cvFilter, np.std)
 
 
 def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
-    """Filter genes by fano factor and mean.
+    """Filter genes by fano factor and mean."""
+    return _filter_genes(X, Ecutoff, Vcutoff, np.var)
 
+
+def _filter_genes(X, e_cutoff, v_cutoff, meth):
+    """\
     See `filter_genes_dispersion`.
 
-    Reference: Weinreb et al. (2017).
-    """
+    Reference: Weinreb et al. (2017)."""
     if issparse(X):
         raise ValueError('Not defined for sparse input. See `filter_genes_dispersion`.')
-    mean_filter = np.mean(X, axis=0) > Ecutoff
-    var_filter = np.var(X, axis=0) / (np.mean(X, axis=0) + .0001) > Vcutoff
+    mean_filter = np.mean(X, axis=0) > e_cutoff
+    var_filter = meth(X, axis=0) / (np.mean(X, axis=0) + 0.0001) > v_cutoff
     gene_subset = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
     return gene_subset

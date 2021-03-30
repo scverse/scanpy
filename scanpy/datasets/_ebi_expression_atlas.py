@@ -8,9 +8,10 @@ import pandas as pd
 import numpy as np
 from scipy import sparse
 
-from ..readwrite import download
+from ..readwrite import _download
 from .._settings import settings
 from .. import logging as logg
+from ._utils import check_datasetdir_exists
 
 
 def _filter_boring(dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -26,33 +27,36 @@ def sniff_url(accession: str):
         with urlopen(base_url):  # Check if server up/ dataset exists
             pass
     except HTTPError as e:
-        e.msg = e.msg + f" ({base_url})"  # Report failed url
+        e.msg = f"{e.msg} ({base_url})"  # Report failed url
         raise
 
 
+@check_datasetdir_exists
 def download_experiment(accession: str):
     sniff_url(accession)
 
-    base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}/"
-    quantification_path = "download/zip?fileType=quantification-filtered&accessKey="
-    sampledata_path = "download?fileType=experiment-design&accessKey="
+    base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}"
+    design_url = f"{base_url}/download?accessKey=&fileType="
+    mtx_url = f"{base_url}/download/zip?accessKey=&fileType="
 
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    download(
-        base_url + sampledata_path,
+    _download(
+        design_url + "experiment-design",
         experiment_dir / "experimental_design.tsv",
     )
-    download(
-        base_url + quantification_path,
+    _download(
+        mtx_url + "quantification-raw",
         experiment_dir / "expression_archive.zip",
     )
 
 
 def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
-    stream.readline()
-    n, m, _ = (int(x) for x in stream.readline()[:-1].split(b" "))
+    curline = stream.readline()
+    while curline.startswith(b"%"):
+        curline = stream.readline()
+    n, m, _ = (int(x) for x in curline[:-1].split(b" "))
     data = pd.read_csv(
         stream,
         sep=r"\s+",
@@ -72,7 +76,8 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     with archive.open(mtx_data_info, "r") as f:
         expr = read_mtx_from_stream(f)
     with archive.open(mtx_rows_info, "r") as f:
-        varname = pd.read_csv(f, sep="\t", header=None)[1]  # TODO: Check what other value could be
+        # TODO: Check what other value could be
+        varname = pd.read_csv(f, sep="\t", header=None)[1]
     with archive.open(mtx_cols_info, "r") as f:
         obsname = pd.read_csv(f, sep="\t", header=None).iloc[:, 0]
     adata = anndata.AnnData(expr)
@@ -81,22 +86,29 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     return adata
 
 
-def ebi_expression_atlas(accession: str, *, filter_boring: bool = False) -> anndata.AnnData:
-    """Load a dataset from the `EBI Single Cell Expression Atlas <https://www.ebi.ac.uk/gxa/sc/experiments>`__.
+def ebi_expression_atlas(
+    accession: str, *, filter_boring: bool = False
+) -> anndata.AnnData:
+    """\
+    Load a dataset from the `EBI Single Cell Expression Atlas
+    <https://www.ebi.ac.uk/gxa/sc/experiments>`__
 
-    Downloaded datasets are saved in directory specified by `sc.settings.datasetdir`.
+    Downloaded datasets are saved in the directory specified by
+    :attr:`~scanpy._settings.ScanpyConfig.datasetdir`.
 
     Params
     ------
     accession
-        Dataset accession. Like ``E-GEOD-98816`` or ``E-MTAB-4888``. This can
-        be found in the url on the datasets page. For example:
-        ``https://www.ebi.ac.uk/gxa/sc/experiments/E-GEOD-98816/results/tsne``
+        Dataset accession. Like ``E-GEOD-98816`` or ``E-MTAB-4888``.
+        This can be found in the url on the datasets page, for example
+        https://www.ebi.ac.uk/gxa/sc/experiments/E-GEOD-98816/results/tsne.
     filter_boring
-        Whether boring labels in `.obs` should be automatically removed.
+        Whether boring labels in `.obs` should be automatically removed, such as
+        labels with a single or :attr:`~anndata.AnnData.n_obs` distinct values.
 
     Example
     -------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
     """
     experiment_dir = settings.datasetdir / accession
@@ -116,9 +128,7 @@ def ebi_expression_atlas(accession: str, *, filter_boring: bool = False) -> annd
 
     with ZipFile(experiment_dir / "expression_archive.zip", "r") as f:
         adata = read_expression_from_archive(f)
-    obs = pd.read_csv(
-        experiment_dir / "experimental_design.tsv", sep="\t", index_col=0
-    )
+    obs = pd.read_csv(experiment_dir / "experimental_design.tsv", sep="\t", index_col=0)
 
     adata.obs[obs.columns] = obs
     adata.write(dataset_path, compression="gzip")  # To be kind to disk space

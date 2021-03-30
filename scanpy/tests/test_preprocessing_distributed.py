@@ -5,9 +5,9 @@ import anndata as ad
 import numpy.testing as npt
 import pytest
 
-from scanpy.preprocessing import *
-from scanpy.preprocessing._simple import materialize_as_ndarray
-
+from scanpy.preprocessing import normalize_total, filter_genes
+from scanpy.preprocessing import log1p, normalize_per_cell, filter_cells
+from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 HERE = Path(__file__).parent / Path('_data/')
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
@@ -16,7 +16,9 @@ required = ['dask', 'zappy', 'zarr']
 installed = {mod: bool(find_spec(mod)) for mod in required}
 
 
-@pytest.mark.skipif(not all(installed.values()), reason=f'{required} all required: {installed}')
+@pytest.mark.skipif(
+    not all(installed.values()), reason=f'{required} all required: {installed}'
+)
 class TestPreprocessingDistributed:
     @pytest.fixture()
     def adata(self):
@@ -87,10 +89,12 @@ class TestPreprocessingDistributed:
         log1p(adata_dist)
         temp_store = zarr.TempStore()
         chunks = adata_dist.X.chunks
+        if isinstance(chunks[0], tuple):
+            chunks = (chunks[0][0],) + chunks[1]
         # write metadata using regular anndata
         adata.write_zarr(temp_store, chunks)
         if isinstance(adata_dist.X, da.Array):
-            adata_dist.X.to_zarr(temp_store.dir_path("X"))
+            adata_dist.X.to_zarr(temp_store.dir_path("X"), overwrite=True)
         else:
             adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks)
         # read back as zarr directly and check it is the same as adata.X

@@ -1,13 +1,38 @@
-from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot, dendrogram, correlation_matrix
-
+from ._anndata import (
+    scatter,
+    violin,
+    ranking,
+    clustermap,
+    tracksplot,
+    dendrogram,
+    correlation_matrix,
+    heatmap,
+)
+from ._dotplot import DotPlot, dotplot
+from ._matrixplot import MatrixPlot, matrixplot
+from ._stacked_violin import StackedViolin, stacked_violin
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
 
-from ._tools.scatterplots import pca, diffmap, draw_graph, tsne, umap
+from ._tools.scatterplots import (
+    embedding,
+    pca,
+    diffmap,
+    draw_graph,
+    tsne,
+    umap,
+    spatial,
+)
 from ._tools import pca_loadings, pca_scatter, pca_overview, pca_variance_ratio
 from ._tools.paga import paga, paga_adjacency, paga_compare, paga_path
 from ._tools import dpt_timeseries, dpt_groups_pseudotime
 from ._tools import rank_genes_groups, rank_genes_groups_violin
-from ._tools import rank_genes_groups_dotplot, rank_genes_groups_heatmap, rank_genes_groups_stacked_violin, rank_genes_groups_matrixplot, rank_genes_groups_tracksplot
+from ._tools import (
+    rank_genes_groups_dotplot,
+    rank_genes_groups_heatmap,
+    rank_genes_groups_stacked_violin,
+    rank_genes_groups_matrixplot,
+    rank_genes_groups_tracksplot,
+)
 from ._tools import sim
 from ._tools import embedding_density
 
@@ -24,11 +49,12 @@ __doc__ = """\
 Plotting API
 ============
 
-.. automodule:: scanpy
+.. currentmodule:: scanpy
 
 .. note::
+   See the :ref:`settings` section for all important plotting configurations.
 
-    See the :ref:`settings` section for all important plotting configurations.
+.. _pl-generic:
 
 Generic
 -------
@@ -45,6 +71,20 @@ Generic
    pl.matrixplot
    pl.clustermap
    pl.ranking
+   pl.dendrogram
+
+
+Classes
+-------
+
+These classes allow fine tuning of visual parameters.
+
+.. autosummary::
+   :toctree: .
+
+    pl.DotPlot
+    pl.MatrixPlot
+    pl.StackedViolin
 
 
 Preprocessing
@@ -69,7 +109,6 @@ a method with the same name in ``pl``.
 
 PCA
 ~~~
-
 .. autosummary::
    :toctree: .
 
@@ -80,7 +119,6 @@ PCA
 
 Embeddings
 ~~~~~~~~~~
-
 .. autosummary::
    :toctree: .
 
@@ -88,11 +126,18 @@ Embeddings
    pl.umap
    pl.diffmap
    pl.draw_graph
+   pl.spatial
+   pl.embedding
+
+Compute densities on embeddings.
+
+.. autosummary::
+   :toctree: .
+
    pl.embedding_density
 
 Branching trajectories and pseudotime, clustering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Visualize clusters using one of the embedding methods passing ``color='louvain'``.
 
 .. autosummary::
@@ -106,7 +151,6 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
 
 Marker genes
 ~~~~~~~~~~~~
-
 .. autosummary::
    :toctree: .
 
@@ -116,10 +160,10 @@ Marker genes
    pl.rank_genes_groups_heatmap
    pl.rank_genes_groups_dotplot
    pl.rank_genes_groups_matrixplot
+   pl.rank_genes_groups_tracksplot
 
 Simulations
 ~~~~~~~~~~~
-
 .. autosummary::
    :toctree: .
 

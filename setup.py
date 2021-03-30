@@ -1,64 +1,72 @@
+"""Temporary setuptools bridge
+Don't use this except if you have a deadline or you encounter a bug.
+"""
+import re
 import sys
-if sys.version_info < (3,):
-    sys.exit('scanpy requires Python >= 3.6')
+from warnings import warn
+
+import setuptools
 from pathlib import Path
 
-from setuptools import setup, find_packages
-import versioneer
+from flit_core import common, config
+from setuptools_scm.integration import find_files
 
 
-try:
-    from scanpy import __author__, __email__
-except ImportError:  # Deps not yet installed
-    __author__ = __email__ = ''
-
-setup(
-    name='scanpy',
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
-    description='Single-Cell Analysis in Python.',
-    long_description=Path('README.rst').read_text('utf-8'),
-    url='http://github.com/theislab/scanpy',
-    author=__author__,
-    author_email=__email__,
-    license='BSD',
-    python_requires='>=3.6',
-    install_requires=[
-        l.strip() for l in
-        Path('requirements.txt').read_text('utf-8').splitlines()
-    ],
-    extras_require=dict(
-        louvain=['python-igraph', 'louvain>=0.6'],
-        leiden=['python-igraph', 'leidenalg'],
-        bbknn=['bbknn'],
-        doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints', 'scanpydoc'],
-        test=['pytest>=4.4', 'dask[array]', 'fsspec', 'zappy', 'zarr'],
-    ),
-    packages=find_packages(),
-    # `package_data` does NOT work for source distributions!!!
-    # you also need MANIFTEST.in
-    # https://stackoverflow.com/questions/7522250/how-to-include-package-data-with-setuptools-distribute
-    package_data={'': '*.txt'},
-    include_package_data=True,
-    entry_points=dict(
-        console_scripts=['scanpy=scanpy.cli:console_main'],
-    ),
-    zip_safe=False,
-    classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'Environment :: Console',
-        'Framework :: Jupyter',
-        'Intended Audience :: Developers',
-        'Intended Audience :: Science/Research',
-        'Natural Language :: English',
-        'Operating System :: MacOS :: MacOS X',
-        'Operating System :: Microsoft :: Windows',
-        'Operating System :: POSIX :: Linux',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Topic :: Scientific/Engineering :: Bio-Informatics',
-        'Topic :: Scientific/Engineering :: Visualization',
-    ],
+field_map = dict(
+    description="summary",
+    long_description="description",
+    long_description_content_type="description_content_type",
+    python_requires="requires_python",
+    url="home_page",
+    **{
+        n: n
+        for n in ["name", "version", "author", "author_email", "license", "classifiers"]
+    },
 )
+
+
+def setup_args(config_path=Path("pyproject.toml")):
+    cfg = config.read_flit_config(config_path)
+    module = common.Module(cfg.module, config_path.parent)
+    metadata = common.make_metadata(module, cfg)
+    kwargs = {}
+    for st_field, metadata_field in field_map.items():
+        val = getattr(metadata, metadata_field, None)
+        if val is not None:
+            kwargs[st_field] = val
+        else:
+            msg = f"{metadata_field} not found in {dir(metadata)}"
+            assert metadata_field in {"license"}, msg
+    kwargs["packages"] = setuptools.find_packages(include=[metadata.name + "*"])
+    if metadata.requires_dist:
+        kwargs["install_requires"] = [
+            req for req in metadata.requires_dist if "extra ==" not in req
+        ]
+    if cfg.reqs_by_extra:
+        kwargs["extras_require"] = cfg.reqs_by_extra
+    scripts = cfg.entrypoints.get("console_scripts")
+    if scripts is not None:
+        kwargs["entry_points"] = dict(
+            console_scipts=[" = ".join(ep) for ep in scripts.items()]
+        )
+    kwargs["include_package_data"] = True
+    kwargs["package_data"] = {
+        module.name: [
+            re.escape(f[len(module.name) + 1 :]) for f in find_files(module.path)
+        ]
+    }
+    return kwargs
+
+
+if __name__ == "__main__":
+    if "develop" in sys.argv:
+        msg = (
+            "Please use `flit install -s` or `flit install --pth-file` "
+            "instead of `pip install -e`/`python setup.py develop`"
+        )
+    elif "install" in sys.argv:
+        msg = 'Please use `pip install "$d"` instead of `python "$d/setup.py" install`'
+    else:
+        msg = "Please use `pip ...` or `flit ...` instead of `python setup.py ...`"
+    warn(msg, FutureWarning)
+    setuptools.setup(**setup_args())

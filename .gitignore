@@ -10,6 +10,7 @@
 !/docs/api/scanpy.api.rst
 !/docs/api/scanpy.api.AnnData.rst
 !/docs/api/scanpy.plotting.rst
+!/docs/api/scanpy.external.rst
 
 # tests
 /.cache/
@@ -30,6 +31,8 @@ __pycache__/
 /dist/
 /build/
 /scanpy.egg-info/
+/*-env/
+/env-*/
 
 # OS stuff
 .DS_Store
@@ -40,3 +43,6 @@ Thumbs.db
 # IDEs and editors
 /.idea/
 /.vscode/
+
+# Test artifacts
+**/test-results.xml
