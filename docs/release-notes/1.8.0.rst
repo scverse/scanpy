@@ -26,3 +26,9 @@
 .. rubric:: Deprecations
 
 - Deprecated `layers` and `layers_norm` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
+
+.. rubric:: Documentation
+
+- Integrated to DocSearch_, a find-as-you-type documentation index search. :pr:`1754` :smaller:`P Angerer`
+
+.. _docsearch: https://docsearch.algolia.com/
