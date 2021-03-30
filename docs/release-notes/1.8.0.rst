@@ -16,6 +16,7 @@
 
     - Added :func:`scanpy.metrics.confusion_matrix` for comparing labellings :pr:`915` :smaller:`I Virshup`
     - Added :func:`scanpy.metrics.gearys_c` for spatial autocorrelation :pr:`915` :smaller:`I Virshup`
+    - Added :func:`scanpy.metrics.morans_i` for global spatial autocorrelation :pr:`1740` :smaller:`I Virshup, G Palla`
 
 .. rubric:: External tools
 
@@ -29,6 +30,8 @@
 
 .. rubric:: Documentation
 
+- Clarified docs issues for :func:`~scanpy.pp.neighbors`, 
+  :func:`~scanpy.tl.diffmap`, :func:`~scanpy.pp.calculate_qc_metrics` :pr:`1680` :smaller:`G Palla`
 - Integrated to DocSearch_, a find-as-you-type documentation index search. :pr:`1754` :smaller:`P Angerer`
 
 .. _docsearch: https://docsearch.algolia.com/
