@@ -24,11 +24,10 @@ import scanpy as sc
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / 'pbmc3k_images'
-FIGS = HERE / 'figures'
 
 
 def test_pbmc3k(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=20)
 
     adata = sc.read(
         './data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad'
