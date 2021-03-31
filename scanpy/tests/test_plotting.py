@@ -723,14 +723,10 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, 'louvain', n_genes=pbmc.raw.shape[1])
-    from matplotlib import rcParams
 
-    # plt.rc_context({})
-    rcParams['axes.grid'] = True
-    rcParams['figure.figsize'] = 4, 4
-
-    fn(pbmc)
-    save_and_compare_images(name)
+    with plt.rc_context({"axes.grid": True, "figure.figsize": (4, 4)}):
+        fn(pbmc)
+        save_and_compare_images(name)
 
 
 @pytest.mark.parametrize(
@@ -898,7 +894,7 @@ def test_scatter_embedding_groups_and_size(image_comparer):
     save_and_compare_images('embedding_groups_size')
 
 
-def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same_image):
+def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(image_comparer):
     save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
 
@@ -919,6 +915,11 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
         wspace=0.5,
     )
     save_and_compare_images('embedding_outline_vmin_vmax')
+
+
+def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmpdir, check_same_image):
+    TESTDIR = Path(tmpdir)
+    pbmc = sc.datasets.pbmc68k_reduced()
 
     import matplotlib as mpl
     import matplotlib.pyplot as plt
@@ -967,7 +968,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
         norm=norm,
         wspace=0.5,
     )
-    plt.savefig(FIGS / 'umap_norm_fig0.png')
+    plt.savefig(TESTDIR / 'umap_norm_fig0.png')
     plt.close()
 
     sc.pl.umap(
@@ -977,7 +978,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
         norm=divnorm,
         wspace=0.5,
     )
-    plt.savefig(FIGS / 'umap_norm_fig1.png')
+    plt.savefig(TESTDIR / 'umap_norm_fig1.png')
     plt.close()
 
     sc.pl.umap(
@@ -989,14 +990,16 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
         vmax=6000,
         wspace=0.5,
     )
-    plt.savefig(FIGS / 'umap_norm_fig2.png')
+    plt.savefig(TESTDIR / 'umap_norm_fig2.png')
     plt.close()
 
-    check_same_image(FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig2.png', tol=1)
+    check_same_image(
+        TESTDIR / 'umap_norm_fig1.png', TESTDIR / 'umap_norm_fig2.png', tol=1
+    )
 
     with pytest.raises(AssertionError):
         check_same_image(
-            FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig0.png', tol=1
+            TESTDIR / 'umap_norm_fig1.png', TESTDIR / 'umap_norm_fig0.png', tol=1
         )
 
 
