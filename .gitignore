@@ -18,7 +18,6 @@
 /scanpy/tests/test*.h5ad
 /scanpy/tests/**/*actual.png
 /scanpy/tests/**/*failed-diff.png
-/scanpy/tests/notebooks/figures/
 
 # Environment management
 /Pipfile
