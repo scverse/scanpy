@@ -74,6 +74,15 @@ Embeddings
    tl.trimap
    tl.sam
 
+Cell identity classification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: .
+
+    tl.scnym
+
+
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

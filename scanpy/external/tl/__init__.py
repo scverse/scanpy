@@ -5,4 +5,5 @@ from ._palantir import palantir, palantir_results
 from ._trimap import trimap
 from ._harmony_timeseries import harmony_timeseries
 from ._sam import sam
+from ._scnym import scnym
 from ._wishbone import wishbone
