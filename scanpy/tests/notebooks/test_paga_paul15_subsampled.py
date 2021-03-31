@@ -15,7 +15,6 @@ import scanpy as sc
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / '_images_paga_paul15_subsampled'
-FIGS = HERE / 'figures'
 
 
 def test_paga_paul15_subsampled(image_comparer, plt):
