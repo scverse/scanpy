@@ -29,7 +29,7 @@ cache:
 - directories:
   - data
 install:
-- pip install .[dev,test,louvain,leiden,magic,harmony,skmisc,scrublet,scanorama]
+- pip install .[dev,test,louvain,leiden,magic,harmony,skmisc,scrublet,scanorama,scnym]
 env:
 - MPLBACKEND=Agg
 script:
