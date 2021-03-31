@@ -44,6 +44,7 @@ def test_heatmap(image_comparer):
         use_raw=False,
         show=False,
         dendrogram=True,
+        cmap='YlGnBu',
     )
     save_and_compare_images('heatmap')
 
@@ -296,7 +297,7 @@ def test_clustermap(image_comparer, obs_keys, name):
                 standard_scale='group',
                 title='scale_group\nswap_axes',
                 swap_axes=True,
-                cmap='Blues',
+                cmap='Reds',
             ),
         ),
         (
@@ -313,7 +314,7 @@ def test_clustermap(image_comparer, obs_keys, name):
     ],
 )
 def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
-    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=10)
 
     adata = sc.datasets.krumsiek11()
     adata.obs['numeric_column'] = adata.X[:, 0]
