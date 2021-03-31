@@ -81,3 +81,12 @@ Adaptive immune receptor repertoire (AIRR)
 Feature selection
 -----------------
 * `triku 🦔 <https://gitlab.com/alexmascension/triku>`__ :small:`Biodonostia Health Research Institute`
+
+
+Annotation/ Enrichment Analysis
+-------------------------------
+
+Analyses using curated prior knowledge
+
+* `dorothea <https://github.com/saezlab/dorothea-py>`__ for Transcription Factor activities :small:`Institute for Computational Biomedicine, Heidelberg University`
+* `progeny <https://github.com/saezlab/progeny-py>`__ for footprint-based pathway activities :small:`Institute for Computational Biomedicine, Heidelberg University`
