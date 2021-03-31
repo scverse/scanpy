@@ -54,8 +54,6 @@ def scnym(*args, **kwargs) -> None:
             when this assumption is valid.
     key_added
         Key added to `adata.obs` with scNym predictions if `task=="predict"`.
-    copy
-        copy the AnnData object before predicting cell types.
 
     Returns
     -------
