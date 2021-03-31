@@ -6,13 +6,15 @@ Classify cell identities using scNym
 def scnym(*args, **kwargs) -> None:
     """
     scNym: Semi-supervised adversarial neural networks for
-    single cell classification [Kimmel2020]_.
+    single cell classification [Kimmel2021]_.
 
-    scNym is a cell identity classifier that transfers annotations from one
-    single cell experiment to another. The model is implemented as a neural
-    network that employs MixMatch semi-supervision and a domain adversary to
-    take advantage of unlabeled data during training. scNym offers superior
-    performance to many baseline single cell identity classification methods.
+    scNym is a cell identity classifier that transfers annotations across
+    single cell experiments. The model is implemented as a neural network
+    that employs MixMatch semi-supervision and a domain adversary to take
+    advantage of unlabeled data during training. These training approaches
+    allow scNym to an integrated representation of cell identity across
+    distinct experimental domains, such as different sequencing technologies,
+    biological sample types, or perturbation conditions.
 
     Parameters
     ----------
