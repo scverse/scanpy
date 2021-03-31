@@ -19,7 +19,7 @@ FIGS = HERE / 'figures'
 
 
 def test_paga_paul15_subsampled(image_comparer, plt):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=25)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=25)
 
     adata = sc.datasets.paul15()
     sc.pp.subsample(adata, n_obs=200)
