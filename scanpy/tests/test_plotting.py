@@ -35,7 +35,7 @@ sc.set_figure_params(dpi=40, color_map='viridis')
 
 
 def test_heatmap(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     adata = sc.datasets.krumsiek11()
     sc.pl.heatmap(
@@ -46,7 +46,7 @@ def test_heatmap(image_comparer):
         show=False,
         dendrogram=True,
     )
-    save_and_compare_images('master_heatmap')
+    save_and_compare_images('heatmap')
 
     # test swap axes
     sc.pl.heatmap(
@@ -60,7 +60,7 @@ def test_heatmap(image_comparer):
         figsize=(10, 3),
         cmap='YlGnBu',
     )
-    save_and_compare_images('master_heatmap_swap_axes')
+    save_and_compare_images('heatmap_swap_axes')
 
     # test heatmap numeric column():
 
@@ -75,7 +75,7 @@ def test_heatmap(image_comparer):
         figsize=(4.5, 5),
         show=False,
     )
-    save_and_compare_images('master_heatmap2')
+    save_and_compare_images('heatmap2')
 
     # test var/obs standardization and layer
     adata.layers['test'] = -1 * adata.X.copy()
@@ -89,7 +89,7 @@ def test_heatmap(image_comparer):
         standard_scale='var',
         layer='test',
     )
-    save_and_compare_images('master_heatmap_std_scale_var')
+    save_and_compare_images('heatmap_std_scale_var')
 
     # test standard_scale_obs
     sc.pl.heatmap(
@@ -101,7 +101,7 @@ def test_heatmap(image_comparer):
         show=False,
         standard_scale='obs',
     )
-    save_and_compare_images('master_heatmap_std_scale_obs')
+    save_and_compare_images('heatmap_std_scale_obs')
 
     # test var_names as dict
     pbmc = sc.datasets.pbmc68k_reduced()
@@ -125,7 +125,7 @@ def test_heatmap(image_comparer):
         dendrogram=True,
         swap_axes=True,
     )
-    save_and_compare_images('master_heatmap_var_as_dict')
+    save_and_compare_images('heatmap_var_as_dict')
 
     # test that plot elements are well aligned
     # small
@@ -138,12 +138,12 @@ def test_heatmap(image_comparer):
     sc.pl.heatmap(
         a, var_names=a.var_names, groupby='foo', swap_axes=True, figsize=(4, 4)
     )
-    save_and_compare_images('master_heatmap_small_swap_alignment')
+    save_and_compare_images('heatmap_small_swap_alignment')
 
     sc.pl.heatmap(
         a, var_names=a.var_names, groupby='foo', swap_axes=False, figsize=(4, 4)
     )
-    save_and_compare_images('master_heatmap_small_alignment')
+    save_and_compare_images('heatmap_small_alignment')
 
 
 @pytest.mark.skipif(
@@ -152,10 +152,10 @@ def test_heatmap(image_comparer):
 )
 @pytest.mark.parametrize(
     "obs_keys,name",
-    [(None, "master_clustermap"), ("cell_type", "master_clustermap_withcolor")],
+    [(None, "clustermap"), ("cell_type", "clustermap_withcolor")],
 )
 def test_clustermap(image_comparer, obs_keys, name):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
     adata = sc.datasets.krumsiek11()
     sc.pl.clustermap(adata, obs_keys)
     save_and_compare_images(name)
@@ -314,7 +314,7 @@ def test_clustermap(image_comparer, obs_keys, name):
     ],
 )
 def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     adata = sc.datasets.krumsiek11()
     adata.obs['numeric_column'] = adata.X[:, 0]
@@ -329,11 +329,11 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
         fn(adata, genes_dict, show=False)
     else:
         fn(adata, adata.var_names, show=False)
-    save_and_compare_images(f"master_{id}")
+    save_and_compare_images(id)
 
 
 def test_dotplot_obj(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
     # test dotplot dot_min, dot_max, color_map, and var_groups
     pbmc = sc.datasets.pbmc68k_reduced()
     genes = [
@@ -368,11 +368,11 @@ def test_dotplot_obj(image_comparer):
     )
     plot.style(dot_edge_color='black', dot_edge_lw=0.1, cmap='Reds').show()
 
-    save_and_compare_images('master_dotplot_std_scale_var')
+    save_and_compare_images('dotplot_std_scale_var')
 
 
 def test_matrixplot_obj(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
     adata = sc.datasets.pbmc68k_reduced()
     marker_genes_dict = {
         "3": ["GNLY", "NKG7"],
@@ -391,14 +391,14 @@ def test_matrixplot_obj(image_comparer):
         return_fig=True,
     )
     plot.add_totals(sort='descending').style(edge_color='white', edge_lw=0.5).show()
-    save_and_compare_images('master_matrixplot_with_totals')
+    save_and_compare_images('matrixplot_with_totals')
 
     axes = plot.get_axes()
     assert 'mainplot_ax' in axes, 'mainplot_ax not found in returned axes dict'
 
 
 def test_stacked_violin_obj(image_comparer, plt):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=26)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     markers = {
@@ -415,22 +415,22 @@ def test_stacked_violin_obj(image_comparer, plt):
         return_fig=True,
     )
     plot.add_totals().style(row_palette='tab20').show()
-    save_and_compare_images('master_stacked_violin_return_fig')
+    save_and_compare_images('stacked_violin_return_fig')
 
 
 def test_tracksplot(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     adata = sc.datasets.krumsiek11()
     sc.pl.tracksplot(
         adata, adata.var_names, 'cell_type', dendrogram=True, use_raw=False
     )
-    save_and_compare_images('master_tracksplot')
+    save_and_compare_images('tracksplot')
 
 
 def test_multiple_plots(image_comparer):
     # only testing stacked_violin, matrixplot and dotplot
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     adata = sc.datasets.pbmc68k_reduced()
     markers = {
@@ -468,11 +468,11 @@ def test_multiple_plots(image_comparer):
         dendrogram=True,
         show=False,
     )
-    save_and_compare_images('master_multiple_plots')
+    save_and_compare_images('multiple_plots')
 
 
 def test_violin(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=40)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=40)
 
     sc.pl.set_rcParams_defaults()
     sc.set_figure_params(dpi=50, color_map='viridis')
@@ -486,7 +486,7 @@ def test_violin(image_comparer):
         jitter=True,
         show=False,
     )
-    save_and_compare_images('master_violin_multi_panel')
+    save_and_compare_images('violin_multi_panel')
 
     sc.pl.violin(
         pbmc,
@@ -499,7 +499,7 @@ def test_violin(image_comparer):
         show=False,
         rotation=90,
     )
-    save_and_compare_images('master_violin_multi_panel_with_groupby')
+    save_and_compare_images('violin_multi_panel_with_groupby')
 
     # test use of layer
     pbmc.layers['negative'] = pbmc.X * -1
@@ -515,7 +515,7 @@ def test_violin(image_comparer):
         use_raw=False,
         rotation=90,
     )
-    save_and_compare_images('master_violin_multi_panel_with_layer')
+    save_and_compare_images('violin_multi_panel_with_layer')
 
 
 # TODO: Generalize test to more plotting types
@@ -541,7 +541,7 @@ def test_violin_without_raw(tmpdir):
 
 
 def test_dendrogram(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=10)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=10)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.pl.dendrogram(pbmc, 'bulk_labels')
@@ -553,7 +553,7 @@ def test_dendrogram(image_comparer):
     sys.version_info < (3, 7), reason="matplotlib 3.4 dropped support for python 3.6"
 )
 def test_correlation(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.pl.correlation_matrix(pbmc, 'bulk_labels')
@@ -719,18 +719,18 @@ def test_correlation(image_comparer):
     ],
 )
 def test_rank_genes_groups(image_comparer, name, fn):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, 'louvain', n_genes=pbmc.raw.shape[1])
     from matplotlib import rcParams
 
+    # plt.rc_context({})
     rcParams['axes.grid'] = True
     rcParams['figure.figsize'] = 4, 4
 
     fn(pbmc)
-    save_and_compare_images(f"master_{name}")
-    plt.close()
+    save_and_compare_images(name)
 
 
 @pytest.mark.parametrize(
@@ -744,7 +744,7 @@ def test_rank_genes_groups(image_comparer, name, fn):
     ],
 )
 def test_genes_symbols(image_comparer, id, fn):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     adata = sc.datasets.krumsiek11()
 
@@ -753,7 +753,7 @@ def test_genes_symbols(image_comparer, id, fn):
     symbols = ["symbol_{}".format(x) for x in adata.var_names]
 
     fn(adata, symbols, 'cell_type', dendrogram=True, gene_symbols='symbols', show=False)
-    save_and_compare_images(f"master_{id}_gene_symbols")
+    save_and_compare_images(f"{id}_gene_symbols")
 
 
 @pytest.fixture(scope="module")
@@ -870,7 +870,7 @@ def pbmc_scatterplots():
     ],
 )
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     # https://github.com/theislab/scanpy/issues/849
     if id == "3dprojection" and version.parse(mpl.__version__) < version.parse("3.3.3"):
@@ -878,7 +878,7 @@ def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
             fn(pbmc_scatterplots, show=False)
     else:
         fn(pbmc_scatterplots, show=False)
-        save_and_compare_images(f"master_{id}")
+        save_and_compare_images(id)
 
 
 def test_scatter_embedding_groups_and_size(image_comparer):
@@ -886,7 +886,7 @@ def test_scatter_embedding_groups_and_size(image_comparer):
     # cells, such that the cells belonging to the groups are
     # plotted on top. This new ordering requires that the size
     # vector is also ordered (if given).
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.pl.embedding(
         pbmc,
@@ -895,11 +895,11 @@ def test_scatter_embedding_groups_and_size(image_comparer):
         groups=['CD14+ Monocyte', 'Dendritic'],
         size=(np.arange(pbmc.shape[0]) / 40) ** 1.7,
     )
-    save_and_compare_images('master_embedding_groups_size')
+    save_and_compare_images('embedding_groups_size')
 
 
 def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same_image):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
 
     sc.pl.embedding(
@@ -918,7 +918,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
         alpha=0.9,
         wspace=0.5,
     )
-    save_and_compare_images('master_embedding_outline_vmin_vmax')
+    save_and_compare_images('embedding_outline_vmin_vmax')
 
     import matplotlib as mpl
     import matplotlib.pyplot as plt
@@ -948,7 +948,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
 
     norm = Normalize(0, 10000)
     divnorm = DivNorm(200, 150, 6000)
-
+    # TODO: use a tempdir for these:
     # allowed
     sc.pl.umap(
         pbmc,
@@ -1033,21 +1033,21 @@ def test_scatter_specify_layer_and_raw():
 
 
 def test_rankings(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.pp.pca(pbmc)
     sc.pl.pca_loadings(pbmc)
-    save_and_compare_images('master_pca_loadings')
+    save_and_compare_images('pca_loadings')
 
     sc.pl.pca_loadings(pbmc, components='1,2,3')
-    save_and_compare_images('master_pca_loadings')
+    save_and_compare_images('pca_loadings')
 
     sc.pl.pca_loadings(pbmc, components=[1, 2, 3])
-    save_and_compare_images('master_pca_loadings')
+    save_and_compare_images('pca_loadings')
 
     sc.pl.pca_loadings(pbmc, include_lowest=False)
-    save_and_compare_images('master_pca_loadings_without_lowest')
+    save_and_compare_images('pca_loadings_without_lowest')
 
 
 # TODO: Make more generic
@@ -1104,7 +1104,7 @@ def test_scatter_rep(tmpdir):
 def test_paga(image_comparer):
     # Sometimes things shift a pixel or so, resulting in diffs up to ~27
     # The 1px-edges aren’t that good actually as they’re ignored at this tol …
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=30)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.tl.paga(pbmc, groups='bulk_labels')
@@ -1114,26 +1114,26 @@ def test_paga(image_comparer):
     # delete bulk_labels_colors to test the creation of color list by paga
     del pbmc.uns['bulk_labels_colors']
     sc.pl.paga(pbmc, **common)
-    save_and_compare_images('master_paga')
+    save_and_compare_images('paga')
 
     sc.pl.paga(pbmc, color='CST3', **common)
-    save_and_compare_images('master_paga_continuous')
+    save_and_compare_images('paga_continuous')
 
     pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze()
     sc.pl.paga(pbmc, color='cool_feature', **common)
-    save_and_compare_images('master_paga_continuous_obs')
+    save_and_compare_images('paga_continuous_obs')
 
     sc.pl.paga(pbmc, color=['CST3', 'GATA2'], **common)
-    save_and_compare_images('master_paga_continuous_multiple')
+    save_and_compare_images('paga_continuous_multiple')
 
     sc.pl.paga_compare(pbmc, legend_fontoutline=2, **common)
-    save_and_compare_images('master_paga_compare')
+    save_and_compare_images('paga_compare')
 
     sc.pl.paga_compare(pbmc, color='CST3', legend_fontsize=5, **common)
-    save_and_compare_images('master_paga_compare_continuous')
+    save_and_compare_images('paga_compare_continuous')
 
     sc.pl.paga_compare(pbmc, basis='X_pca', legend_fontweight='normal', **common)
-    save_and_compare_images('master_paga_compare_pca')
+    save_and_compare_images('paga_compare_pca')
 
     colors = {
         c: {cm.Set1(_): 0.33 for _ in range(3)}
@@ -1142,11 +1142,11 @@ def test_paga(image_comparer):
     colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
 
     sc.pl.paga(pbmc, color=colors, colorbar=False)
-    save_and_compare_images('master_paga_pie')
+    save_and_compare_images('paga_pie')
 
 
 def test_paga_path(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.tl.paga(pbmc, groups='bulk_labels')
@@ -1159,7 +1159,7 @@ def test_paga_path(image_comparer):
         keys=['HES4', 'SRM', 'CSTB'],
         show=False,
     )
-    save_and_compare_images('master_paga_path')
+    save_and_compare_images('paga_path')
 
 
 def test_no_copy():
@@ -1195,7 +1195,7 @@ def test_no_copy():
 
 
 def test_groupby_index(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
 
     genes = [
@@ -1215,12 +1215,12 @@ def test_groupby_index(image_comparer):
     ]
     pbmc_subset = pbmc[:10].copy()
     sc.pl.dotplot(pbmc_subset, genes, groupby='index')
-    save_and_compare_images('master_dotplot_groupby_index')
+    save_and_compare_images('dotplot_groupby_index')
 
 
 # test category order when groupby is a list (#1735)
 def test_groupby_list(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
+    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=30)
     adata = sc.datasets.krumsiek11()
 
     np.random.seed(1)
@@ -1235,4 +1235,4 @@ def test_groupby_list(image_comparer):
         sc.pl.dotplot(
             adata, ['Gata1', 'Gata2'], groupby=['rand_cat', 'cell_type'], swap_axes=True
         )
-        save_and_compare_images('master_dotplot_groupby_list_catorder')
+        save_and_compare_images('dotplot_groupby_list_catorder')
