@@ -23,7 +23,7 @@ import scanpy as sc
 
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / 'pbmc3k_images'
+ROOT = HERE / '_images_pbmc3k'
 
 
 def test_pbmc3k(image_comparer):
