@@ -54,17 +54,20 @@ def check_same_image(add_nunit_attachment):
 
 @pytest.fixture
 def image_comparer(check_same_image):
-    def make_comparer(path_expected: Path, path_actual: Path, *, tol: int):
-        def save_and_compare(basename, tol=tol):
-            path_actual.mkdir(parents=True, exist_ok=True)
-            out_path = path_actual / f'{basename}.png'
-            pyplot.savefig(out_path, dpi=40)
-            pyplot.close()
-            check_same_image(path_expected / f'{basename}.png', out_path, tol=tol)
+    def save_and_compare(base_pth: Path, *, tol: int):
+        base_pth = Path(base_pth)
 
-        return save_and_compare
+        if not base_pth.is_dir():
+            base_pth.mkdir()
+        expected_pth = base_pth / 'expected.png'
+        actual_pth = base_pth / 'actual.png'
+        pyplot.savefig(actual_pth, dpi=40)
+        pyplot.close()
+        if not expected_pth.is_file():
+            raise OSError(f"No expected output found at {expected_pth}.")
+        check_same_image(expected_pth, actual_pth, tol=tol)
 
-    return make_comparer
+    return save_and_compare
 
 
 @pytest.fixture
