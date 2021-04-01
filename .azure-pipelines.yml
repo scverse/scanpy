@@ -43,7 +43,7 @@ jobs:
   - script: |
       python -m pip install --upgrade pip
       pip install pytest-cov wheel
-      pip install .[dev,doc,test,louvain,leiden,magic,harmony,scrublet,scanorama,scnym,skmisc]
+      pip install .[dev,test,louvain,leiden,magic,harmony,scrublet,scanorama,scnym,skmisc]
     displayName: 'Install dependencies'
 
   - script: |
