@@ -33,7 +33,7 @@ def sca(
     Reduce the data using Shannon Component Analysis (SCA) [DeMeo21]_.
 
     SCA compares local and global gene expression measurements to compute Shannon
-    information scores for each measurement, and finds a linear dimensionality
+    information scores for each measurement, and outputs a linear dimensionality
     reduction with high Shannon information. This function should be run after
     normalization but before computing the neighbor graph; it can be used in place of
     PCA. Since information scores are computed using binarized counts, any
