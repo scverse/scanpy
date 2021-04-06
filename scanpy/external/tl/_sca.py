@@ -48,17 +48,15 @@ def sca(
     adata
         The annotated data matrix.
     n_comps
-        Target dimensionality, i.e. number of top Shannon components;
-        defaults to 50.
+        Target dimensionality, i.e. number of top Shannon components.
     iters
         Number of SCA iterations to run. More iterations often increases
         the discriminative power of the representation. Typically stable after
         5 or so iterations.
     nbhd_size
         Size of neighborhoods used to compute local gene expression probabilities.
-        Defaults to 15
     nbhds
-        (Optional) Array of size (adata.shape[0], nbhd_size) specifying the indices
+        (Optional) Array of size `(adata.shape[0], nbhd_size)` specifying the indices
         of the nearest neighbors of each cell. If not specified, computes
         neighborhoods at runtime.
     rep
@@ -66,53 +64,49 @@ def sca(
         Ignored if nbhds is supplied. If not specified, computes a PCA representation
     n_pcs
         (Optional) Number of principal components used when computing local
-        neighborhoods in the first iteration. Ignored if rep or nbhds is supplied.
-        Defaults to 50.
+        neighborhoods in the first iteration. Ignored if `rep` or `nbhds` is supplied.
     metric
-        Metric used to compute nearest neighbors. Defaults to "cosine",
-        which performs well on most data.
+        Metric used to compute nearest neighbors. cosine distance performs well on
+        most data.
     max_bins
         Maximum number of gene probability bins used in the computation. Bins
         are used to approximate global gene probabilities. Lower numbers reduce
         the memory footprint at the expense of accuracy. If infinite (default),
-        gene probabilities are not binned.
+        gene probabilities are not binned and scores are computed exactly.
     scaled_bins
         Whether or not to scale bins so that approximations to gene probabilities
-        are correct to within a constant factor. Defaults to False, yielding
-        evenly-spaced bins. Ignoreed if max_bins is infinite.
+        are correct to within a constant factor. Defaults to
+        evenly-spaced bins. Ignored if `max_bins` is infinite.
     fast_version
-        If True (default), Shannon information scores are computed via a vectorized
+        If `True` (default), Shannon information scores are computed via a vectorized
         matrix multiplication; however, this can be memory-intensive. Setting
-        fast_version=False instead iterates over cells and computes the scores
+        `fast_version=False` instead iterates over cells and computes the scores
         individually, which takes longer but is less memory-intensive.
     keep_scores
         If True, add the information scores for each gene in cells as a layer
-        to adata, keyed by key_added+'_score'. Scores are stored as a sparse matrix;
-        however, score matrices are typically less sparse than adata.X, so this may
-        increase the memory footprint of adata significantly. Defaults to False.
+        to adata, keyed by `key_added+'_score'`. Scores are stored as a sparse matrix;
+        however, score matrices are typically less sparse than `adata.X`, so this may
+        increase the memory footprint of adata significantly.
     keep_loadings:
-        If True (default), store the loadings of each gene in each shannon component
+        If `True` (default), store the loadings of each gene in each shannon component
         under adata.varm[key_added+'_loadings']. Allows interpretation of components.
     keep_all_iters:
-        If True, store intermediate representations after each iteration, under
-        adata.obsm[key_added+'_i'] for i=1,2,...,iters. Defaults to False.
+        If `True`, store intermediate representations after each iteration, under
+        adata.obsm[key_added+'_i'] for i=1,2,...,iters.
     verbose:
-        If True, print progress as SCA runs.
+        If `True`, print progress as SCA runs.
     multi_correct:
-        Whether or not to correct information scores for multiple testing. If True,
+        Whether or not to correct information scores for multiple testing. If `True`,
         the Shannon information computations in each cell are corrected via a
         family-wise error rate correction.
     n_tests:
-        Effective number of tests per cell used in FWER correction. If all
-        genes were independent, this should be equal to the number of genes;
-        however, most single-cell data has substantial dependencies among genes,
-        so this over-corrects. Defaults to 50, which gives a good tradeoff.
+        Effective number of tests per cell used in FWER correction.
     copy:
-        If True, returns a copy of adata. If False, updates adata in place.
+        If `True`, returns a copy of `adata`. If `False`, updates `adata` in place.
     key_added:
-        Key under which SCA results are stored in adata.
+        Key under which SCA results are stored in `adata`.
     layer:
-        Layer on which SCA runs. If None, will run on adata.X.
+        Layer on which SCA runs. If None, will run on `adata.X`.
     kwargs
         Any additional arguments will be passed to
         ``shannonca.dimred.reduce_scanpy``
