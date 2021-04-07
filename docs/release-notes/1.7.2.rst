@@ -1,4 +1,4 @@
-1.7.2 :small:`the future`
+1.7.2 :small:`2021-04-07`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. rubric:: Performance enhancements
