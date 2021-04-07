@@ -1,17 +1,12 @@
-1.7.2 :small:`the future`
+1.7.2 :small:`2021-04-07`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. rubric:: Performance enhancements
 
 .. rubric:: Bug fixes
 
 - :func:`scanpy.logging.print_versions` now works when `python<3.8` :pr:`1691` :smaller:`I Virshup`
 - :func:`scanpy.pp.regress_out` now uses `joblib` as the parallel backend, and should stop oversubscribing threads :pr:`1694` :smaller:`I Virshup`
 - :func:`scanpy.pp.highly_variable_genes` with `flavor="seurat_v3"` now returns correct gene means and -variances when used with `batch_key` :pr:`1732` :smaller:`J Lause`
-
-.. rubric:: Deprecations
-
-.. rubric:: Documentation
+- :func:`scanpy.pp.highly_variable_genes` now throws a warning instead of an error when non-integer values are passed for method `"seurat_v3"`. The check can be skipped by passing `check_values=False`. :pr:`1679` :smaller:`G Palla`
 
 .. rubric:: Ecosystem
 
