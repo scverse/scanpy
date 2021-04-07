@@ -1,0 +1,12 @@
+1.7.3 :small:`the future`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Performance enhancements
+
+.. rubric:: Bug fixes
+
+.. rubric:: Deprecations
+
+.. rubric:: Documentation
+
+.. rubric:: Ecosystem
