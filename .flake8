@@ -25,9 +25,9 @@ ignore = # module imported but unused -> required for Scanpys API
          E731,
          # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
          E741
- per-file-ignores =
+per-file-ignores =
     # F811 Redefinition of unused name from line, does not play nice with pytest fixtures
-    tests/test*.py: F811
+    scanpy/tests/test*.py: F811
 exclude =
     .git,
     __pycache__,
