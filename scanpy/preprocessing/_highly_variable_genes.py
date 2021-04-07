@@ -58,7 +58,7 @@ def _highly_variable_genes_seurat_v3(
     df = pd.DataFrame(index=adata.var_names)
     X = adata.layers[layer] if layer is not None else adata.X
 
-    if check_values and (check_nonnegative_integers(X) == False):
+    if check_values and not check_nonnegative_integers(X):
         warnings.warn(
             "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
             UserWarning,
