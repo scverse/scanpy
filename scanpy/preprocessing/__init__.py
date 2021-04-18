@@ -9,4 +9,4 @@ from ._qc import calculate_qc_metrics
 from ._combat import combat
 from ._normalization import normalize_total
 
-from ..neighbors import neighbors
+from ..neighbors import neighbors, neighbors_tsne
