@@ -1,5 +1,8 @@
+import email
 import inspect
+import os
 from types import FunctionType
+from pathlib import Path
 
 import pytest
 from scanpy._utils import descend_classes_and_funcs
@@ -8,6 +11,9 @@ from scanpy._utils import descend_classes_and_funcs
 import scanpy.cli
 
 
+mod_dir = Path(scanpy.__file__).parent
+proj_dir = mod_dir.parent
+
 scanpy_functions = [
     c_or_f
     for c_or_f in descend_classes_and_funcs(scanpy, "scanpy")
@@ -15,12 +21,21 @@ scanpy_functions = [
 ]
 
 
+@pytest.fixture
+def in_project_dir():
+    wd_orig = Path.cwd()
+    os.chdir(proj_dir)
+    try:
+        yield proj_dir
+    finally:
+        os.chdir(wd_orig)
+
+
 @pytest.mark.parametrize("f", scanpy_functions)
 def test_function_headers(f):
     name = f"{f.__module__}.{f.__qualname__}"
     assert f.__doc__ is not None, f"{name} has no docstring"
     lines = getattr(f, "__orig_doc__", f.__doc__).split("\n")
-    assert lines[0], f"{name} needs a single-line summary"
     broken = [i for i, l in enumerate(lines) if l.strip() and not l.startswith("    ")]
     if any(broken):
         msg = f'''\
@@ -41,5 +56,11 @@ The displayed line is under-indented.
         raise SyntaxError(msg, (filename, lineno, 2, text))
 
 
-def test_plot_doc_signatures():
-    pass
+def test_metadata(tmp_path, in_project_dir):
+    import flit_core.buildapi
+
+    flit_core.buildapi.prepare_metadata_for_build_wheel(tmp_path)
+
+    metadata_path = next(tmp_path.glob('*.dist-info')) / 'METADATA'
+    metadata = email.message_from_bytes(metadata_path.read_bytes())
+    assert not metadata.defects

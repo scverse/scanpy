@@ -13,6 +13,7 @@ from matplotlib import pyplot as pl, rcParams, ticker
 from matplotlib import patheffects
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like, Colormap
+from scipy.sparse import issparse
 
 from .. import _utils
 from .._utils import matrix, _IGraphLayout, _FontWeight, _FontSize
@@ -71,7 +72,10 @@ def paga_compare(
     -------
     A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
     """
-    axs, _, _, _ = _utils.setup_axes(panels=[0, 1], right_margin=right_margin,)
+    axs, _, _, _ = _utils.setup_axes(
+        panels=[0, 1],
+        right_margin=right_margin,
+    )
     if color is None:
         color = adata.uns['paga']['groups']
     suptitle = None  # common title for entire figure
@@ -144,7 +148,7 @@ def paga_compare(
     if suptitle is not None:
         pl.suptitle(suptitle)
     _utils.savefig_or_show('paga_compare', show=show, save=save)
-    if show == False:
+    if show is False:
         return axs
 
 
@@ -165,7 +169,7 @@ def _compute_pos(
     if layout == 'fa':
         try:
             from fa2 import ForceAtlas2
-        except:
+        except ImportError:
             logg.warning(
                 "Package 'fa2' is not installed, falling back to layout 'fr'."
                 'To use the faster and better ForceAtlas2 layout, '
@@ -519,7 +523,9 @@ def paga(
 
     if plot:
         axs, panel_pos, draw_region_width, figure_width = _utils.setup_axes(
-            ax=ax, panels=colors, colorbars=colorbars,
+            ax=ax,
+            panels=colors,
+            colorbars=colorbars,
         )
 
         if len(colors) == 1 and not isinstance(axs, list):
@@ -573,8 +579,10 @@ def paga(
                 else:
                     ax_cb = cax[icolor]
 
-                cb = pl.colorbar(
-                    sct, format=ticker.FuncFormatter(_utils.ticks_formatter), cax=ax_cb,
+                _ = pl.colorbar(
+                    sct,
+                    format=ticker.FuncFormatter(_utils.ticks_formatter),
+                    cax=ax_cb,
                 )
     if add_pos:
         adata.uns['paga']['pos'] = pos
@@ -822,7 +830,11 @@ def _paga_graph(
             nx_g_solid.node[count]['label'] = str(node_labels[count])
             nx_g_solid.node[count]['color'] = str(colors[count])
             nx_g_solid.node[count]['viz'] = dict(
-                position=dict(x=1000 * pos[count][0], y=1000 * pos[count][1], z=0,)
+                position=dict(
+                    x=1000 * pos[count][0],
+                    y=1000 * pos[count][1],
+                    z=0,
+                )
             )
         filename = settings.writedir / 'paga_graph.gexf'
         logg.warning(f'exporting to {filename}')
@@ -1086,12 +1098,12 @@ def paga_path(
                 ]
             )
             idcs = idcs[idcs_group]
-            if key in adata.obs_keys():
-                x += list(adata.obs[key].values[idcs])
-            else:
-                x += list(adata_X[:, key].X[idcs])
+            values = (
+                adata.obs[key].values if key in adata.obs_keys() else adata_X[:, key].X
+            )[idcs]
+            x += (values.A if issparse(values) else values).tolist()
             if ikey == 0:
-                groups += [group for i in range(len(idcs))]
+                groups += [group] * len(idcs)
                 x_tick_locs.append(len(x))
                 for anno in annotations:
                     series = adata.obs[anno]
@@ -1117,7 +1129,7 @@ def paga_path(
                 else:
                     label = group
                 x_tick_labels.append(label)
-    X = np.array(X)
+    X = np.asarray(X).squeeze()
     if as_heatmap:
         img = ax.imshow(X, aspect='auto', interpolation='nearest', cmap=color_map)
         if show_yticks:
@@ -1187,7 +1199,8 @@ def paga_path(
                     ypos,
                     x_tick_labels[ilabel],
                     fontdict=dict(
-                        horizontalalignment='center', verticalalignment='center',
+                        horizontalalignment='center',
+                        verticalalignment='center',
                     ),
                 )
         groups_axis.set_xticks([])
@@ -1214,7 +1227,10 @@ def paga_path(
             else:
                 color_map_anno = color_maps_annotations[anno]
             img = anno_axis.imshow(
-                arr, aspect='auto', interpolation='nearest', cmap=color_map_anno,
+                arr,
+                aspect='auto',
+                interpolation='nearest',
+                cmap=color_map_anno,
             )
             if show_yticks:
                 anno_axis.set_yticklabels(['', anno, ''], fontsize=ytick_fontsize)

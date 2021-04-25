@@ -80,16 +80,30 @@ def embedding_density(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.umap(adata)
-    >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
-    >>> sc.pl.embedding_density(
-    ...     adata, basis='umap', key='umap_density_phase', group='G1'
-    ... )
-    >>> sc.pl.embedding_density(
-    ...     adata, basis='umap', key='umap_density_phase', group='S'
-    ... )
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.umap(adata)
+        sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+        sc.pl.embedding_density(
+            adata, basis='umap', key='umap_density_phase', group='G1'
+        )
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.embedding_density(
+            adata, basis='umap', key='umap_density_phase', group='S'
+        )
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    pl.embedding_density
     """
     # to ensure that newly created covariates are categorical
     # to test for category numbers

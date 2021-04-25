@@ -13,6 +13,7 @@ from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
 from .._compat import Literal
 from ..get import _get_obs_rep
+from .._utils import check_nonnegative_integers
 
 
 _Method = Optional[Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']]
@@ -582,6 +583,12 @@ def rank_genes_groups(
     )
 
     test_obj = _RankGenes(adata, groups_order, groupby, reference, use_raw, layer, pts)
+
+    if check_nonnegative_integers(test_obj.X) and method != 'logreg':
+        logg.warning(
+            "It seems you use rank_genes_groups on the raw count data. "
+            "Please logarithmize your data before calling rank_genes_groups."
+        )
 
     # for clarity, rename variable
     n_genes_user = n_genes

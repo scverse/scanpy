@@ -1,6 +1,8 @@
 from anndata import AnnData
-from typing import Collection, Tuple, Optional, Union
+from typing import Optional
 import numpy as np
+from scipy import sparse
+
 
 from ... import logging as logg
 from ... import preprocessing as pp
@@ -38,7 +40,7 @@ def scrublet(
     and directly call functions of Scrublet(). You may also undertake your own
     preprocessing, simulate doublets with
     scanpy.external.pp.scrublet_simulate_doublets(), and run the core scrublet
-    function scanpy.external.pp.scrublet.scrublet(). 
+    function scanpy.external.pp.scrublet.scrublet().
 
     .. note::
         More information and bug reports `here
@@ -59,7 +61,7 @@ def scrublet(
         as adata. This should have been built from adata_obs after
         filtering genes and cells and selcting highly-variable genes.
     sim_doublet_ratio
-        Number of doublets to simulate relative to the number of observed 
+        Number of doublets to simulate relative to the number of observed
         transcriptomes.
     expected_doublet_rate
         Where adata_sim not suplied, the estimated doublet rate for the
@@ -71,8 +73,8 @@ def scrublet(
         synthetic doublets. If 1.0, each doublet is created by simply adding
         the UMI counts from two randomly sampled observed transcriptomes. For
         values less than 1, the UMI counts are added and then randomly sampled
-        at the specified rate. 
-    knn_dist_metric 
+        at the specified rate.
+    knn_dist_metric
         Distance metric used when finding nearest neighbors. For list of
         valid values, see the documentation for annoy (if `use_approx_neighbors`
         is True) or sklearn.neighbors.NearestNeighbors (if `use_approx_neighbors`
@@ -88,16 +90,16 @@ def scrublet(
         If True, center the data such that each gene has a mean of 0.
         `sklearn.decomposition.PCA` will be used for dimensionality
         reduction.
-    n_prin_comps 
+    n_prin_comps
         Number of principal components used to embed the transcriptomes prior
-        to k-nearest-neighbor graph construction. 
+        to k-nearest-neighbor graph construction.
     use_approx_neighbors
-        Use approximate nearest neighbor method (annoy) for the KNN 
+        Use approximate nearest neighbor method (annoy) for the KNN
         classifier.
     get_doublet_neighbor_parents
         If True, return (in .uns) the parent transcriptomes that generated the
         doublet neighbors of each observed transcriptome. This information can
-        be used to infer the cell states that generated a given doublet state. 
+        be used to infer the cell states that generated a given doublet state.
     n_neighbors
         Number of neighbors used to construct the KNN graph of observed
         transcriptomes and simulated doublets. If ``None``, this is
@@ -131,7 +133,7 @@ def scrublet(
         ``adata.uns['scrublet']['doublet_scores_sim']``
             Doublet scores for each simulated doublet transcriptome
 
-        ``adata.uns['scrublet']['doublet_parents']`` 
+        ``adata.uns['scrublet']['doublet_parents']``
             Pairs of ``.obs_names`` used to generate each simulated doublet
             transcriptome
 
@@ -141,9 +143,9 @@ def scrublet(
     See also
     --------
     :func:`~scanpy.external.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
-        simulation separately for advanced usage. 
+        simulation separately for advanced usage.
     :func:`~scanpy.external.pl.scrublet_score_distribution`: Plot histogram of doublet
-        scores for observed transcriptomes and simulated doublets. 
+        scores for observed transcriptomes and simulated doublets.
     """
     try:
         import scrublet as sl
@@ -183,7 +185,7 @@ def scrublet(
             pp.highly_variable_genes(adata_obs, subset=True)
         else:
             logged = pp.log1p(adata_obs, copy=True)
-            hvg = pp.highly_variable_genes(logged)
+            _ = pp.highly_variable_genes(logged)
             adata_obs = adata_obs[:, logged.var['highly_variable']]
 
         # Simulate the doublets based on the raw expressions from the normalised
@@ -207,7 +209,15 @@ def scrublet(
         n_neighbors=n_neighbors,
         expected_doublet_rate=expected_doublet_rate,
         stdev_doublet_rate=stdev_doublet_rate,
+        mean_center=mean_center,
+        normalize_variance=normalize_variance,
+        n_prin_comps=n_prin_comps,
+        use_approx_neighbors=use_approx_neighbors,
+        knn_dist_metric=knn_dist_metric,
+        get_doublet_neighbor_parents=get_doublet_neighbor_parents,
+        threshold=threshold,
         random_state=random_state,
+        verbose=verbose,
     )
 
     logg.info('    Scrublet finished', time=start)
@@ -236,6 +246,7 @@ def _scrublet_call_doublets(
     use_approx_neighbors: bool = True,
     knn_dist_metric: str = 'euclidean',
     get_doublet_neighbor_parents: bool = False,
+    threshold: Optional[float] = None,
     random_state: int = 0,
     verbose: bool = True,
 ) -> AnnData:
@@ -246,7 +257,7 @@ def _scrublet_call_doublets(
     transcriptomes and simulated doublets. This is a wrapper around the core
     functions of `Scrublet <https://github.com/swolock/scrublet>`__ to allow
     for flexibility in applying Scanpy filtering operations upstream. Unless
-    you know what you're doing you should use scrub_doublets().    
+    you know what you're doing you should use the main scrublet() function.
 
     .. note::
         More information and bug reports `here
@@ -282,9 +293,9 @@ def _scrublet_call_doublets(
         reduction, unless `mean_center` is True.
     n_prin_comps
         Number of principal components used to embed the transcriptomes prior
-        to k-nearest-neighbor graph construction. 
+        to k-nearest-neighbor graph construction.
     use_approx_neighbors
-        Use approximate nearest neighbor method (annoy) for the KNN 
+        Use approximate nearest neighbor method (annoy) for the KNN
         classifier.
     knn_dist_metric
         Distance metric used when finding nearest neighbors. For list of
@@ -292,13 +303,20 @@ def _scrublet_call_doublets(
         is True) or sklearn.neighbors.NearestNeighbors (if `use_approx_neighbors`
         is False).
     get_doublet_neighbor_parents
-        If True, return the parent transcriptomes that generated the 
-        doublet neighbors of each observed transcriptome. This information can 
-        be used to infer the cell states that generated a given 
-        doublet state. 
+        If True, return the parent transcriptomes that generated the
+        doublet neighbors of each observed transcriptome. This information can
+        be used to infer the cell states that generated a given
+        doublet state.
+    threshold
+        Doublet score threshold for calling a transcriptome a doublet. If
+        `None`, this is set automatically by looking for the minimum between
+        the two modes of the `doublet_scores_sim_` histogram. It is best
+        practice to check the threshold visually using the
+        `doublet_scores_sim_` histogram and/or based on co-localization of
+        predicted doublets in a 2-D embedding.
     random_state
         Initial state for doublet simulation and nearest neighbors.
-    verbose 
+    verbose
         If True, print progress updates.
 
     Returns
@@ -315,7 +333,7 @@ def _scrublet_call_doublets(
         ``adata.uns['scrublet']['doublet_scores_sim']``
             Doublet scores for each simulated doublet transcriptome
 
-        ``adata.uns['scrublet']['doublet_parents']`` 
+        ``adata.uns['scrublet']['doublet_parents']``
             Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
         ``uns['scrublet']['parameters']``
@@ -333,6 +351,9 @@ def _scrublet_call_doublets(
     if n_neighbors is None:
         n_neighbors = int(round(0.5 * np.sqrt(adata_obs.shape[0])))
 
+    # Note: Scrublet() will sparse adata_obs.X if it's not already, but this
+    # matrix won't get used if we pre-set the normalised slots.
+
     scrub = sl.Scrublet(
         adata_obs.X,
         n_neighbors=n_neighbors,
@@ -341,8 +362,12 @@ def _scrublet_call_doublets(
         random_state=random_state,
     )
 
-    scrub._E_obs_norm = adata_obs.X
-    scrub._E_sim_norm = adata_sim.X
+    # Ensure normalised matrix sparseness as Scrublet does
+    # https://github.com/swolock/scrublet/blob/67f8ecbad14e8e1aa9c89b43dac6638cebe38640/src/scrublet/scrublet.py#L100
+
+    scrub._E_obs_norm = sparse.csc_matrix(adata_obs.X)
+    scrub._E_sim_norm = sparse.csc_matrix(adata_sim.X)
+
     scrub.doublet_parents_ = adata_sim.obsm['doublet_parents']
 
     # Call scrublet-specific preprocessing where specified
@@ -379,7 +404,7 @@ def _scrublet_call_doublets(
 
     # Actually call doublets
 
-    scrub.call_doublets(verbose=verbose)
+    scrub.call_doublets(threshold=threshold, verbose=verbose)
 
     # Store results in AnnData for return
 
@@ -428,16 +453,16 @@ def scrublet_simulate_doublets(
         The annotated data matrix of shape ``n_obs`` × ``n_vars``. Rows
         correspond to cells and columns to genes. Genes should have been
         filtered for expression and variability, and the object should contain
-        raw expression of the same dimensions. 
+        raw expression of the same dimensions.
     layer
-        Layer of adata where raw values are stored, or 'X' if values are in .X. 
+        Layer of adata where raw values are stored, or 'X' if values are in .X.
     sim_doublet_ratio
-        Number of doublets to simulate relative to the number of observed 
+        Number of doublets to simulate relative to the number of observed
         transcriptomes. If `None`, self.sim_doublet_ratio is used.
     synthetic_doublet_umi_subsampling
-        Rate for sampling UMIs when creating synthetic doublets. If 1.0, 
-        each doublet is created by simply adding the UMIs from two randomly 
-        sampled observed transcriptomes. For values less than 1, the 
+        Rate for sampling UMIs when creating synthetic doublets. If 1.0,
+        each doublet is created by simply adding the UMIs from two randomly
+        sampled observed transcriptomes. For values less than 1, the
         UMI counts are added and then randomly sampled at the specified
         rate.
 
@@ -446,7 +471,7 @@ def scrublet_simulate_doublets(
     adata : anndata.AnnData with simulated doublets in .X
         if ``copy=True`` it returns or else adds fields to ``adata``:
 
-        ``adata.uns['scrublet']['doublet_parents']`` 
+        ``adata.uns['scrublet']['doublet_parents']``
             Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
         ``uns['scrublet']['parameters']``
@@ -455,9 +480,9 @@ def scrublet_simulate_doublets(
     See also
     --------
     :func:`~scanpy.external.pp.scrublet`: Main way of running Scrublet, runs
-        preprocessing, doublet simulation (this function) and calling. 
+        preprocessing, doublet simulation (this function) and calling.
     :func:`~scanpy.external.pl.scrublet_score_distribution`: Plot histogram of doublet
-        scores for observed transcriptomes and simulated doublets. 
+        scores for observed transcriptomes and simulated doublets.
     """
     try:
         import scrublet as sl

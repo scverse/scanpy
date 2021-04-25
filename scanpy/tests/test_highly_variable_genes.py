@@ -1,3 +1,4 @@
+import pytest
 import pandas as pd
 import numpy as np
 import scanpy as sc
@@ -73,10 +74,16 @@ def test_higly_variable_genes_compare_to_seurat():
     # (still) Not equal to tolerance rtol=2e-05, atol=2e-05
     # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(
-        seurat_hvg_info['means'], pbmc.var['means'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['means'],
+        pbmc.var['means'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
-        seurat_hvg_info['dispersions'], pbmc.var['dispersions'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['dispersions'],
+        pbmc.var['dispersions'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
         seurat_hvg_info['dispersions_norm'],
@@ -104,7 +111,10 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         seurat_hvg_info['highly_variable'], pbmc.var['highly_variable']
     )
     np.testing.assert_allclose(
-        seurat_hvg_info['variances'], pbmc.var['variances'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['variances'],
+        pbmc.var['variances'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
         seurat_hvg_info['variances_norm'],
@@ -140,6 +150,13 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     seu = pd.Index(seurat_hvg_info_batch['x'].values)
     assert len(seu.intersection(df.index)) / 4000 > 0.95
 
+    sc.pp.log1p(pbmc)
+    with pytest.warns(
+        UserWarning,
+        match="`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
+    ):
+        sc.pp.highly_variable_genes(pbmc, n_top_genes=1000, flavor='seurat_v3')
+
 
 def test_filter_genes_dispersion_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
@@ -166,10 +183,16 @@ def test_filter_genes_dispersion_compare_to_seurat():
     # (still) Not equal to tolerance rtol=2e-05, atol=2e-05:
     # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(
-        seurat_hvg_info['means'], pbmc.var['means'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['means'],
+        pbmc.var['means'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
-        seurat_hvg_info['dispersions'], pbmc.var['dispersions'], rtol=2e-05, atol=2e-05,
+        seurat_hvg_info['dispersions'],
+        pbmc.var['dispersions'],
+        rtol=2e-05,
+        atol=2e-05,
     )
     np.testing.assert_allclose(
         seurat_hvg_info['dispersions_norm'],
@@ -188,7 +211,10 @@ def test_highly_variable_genes_batches():
     adata_2 = adata[adata.obs.batch.isin(['1']), :]
 
     sc.pp.highly_variable_genes(
-        adata, batch_key='batch', flavor='cell_ranger', n_top_genes=200,
+        adata,
+        batch_key='batch',
+        flavor='cell_ranger',
+        n_top_genes=200,
     )
 
     sc.pp.filter_genes(adata_1, min_cells=1)
@@ -220,3 +246,25 @@ def test_highly_variable_genes_batches():
     ]
 
     assert np.all(np.isin(colnames, hvg1.columns))
+
+
+from scanpy.preprocessing._utils import _get_mean_var
+
+
+def test_seurat_v3_mean_var_output_with_batchkey():
+    pbmc = sc.datasets.pbmc3k()
+    pbmc.var_names_make_unique()
+    n_cells = pbmc.shape[0]
+    batch = np.zeros((n_cells), dtype=int)
+    batch[1500:] = 1
+    pbmc.obs["batch"] = batch
+
+    # true_mean, true_var = _get_mean_var(pbmc.X)
+    true_mean = np.mean(pbmc.X.toarray(), axis=0)
+    true_var = np.var(pbmc.X.toarray(), axis=0, dtype=np.float64, ddof=1)
+
+    result_df = sc.pp.highly_variable_genes(
+        pbmc, batch_key='batch', flavor='seurat_v3', n_top_genes=4000, inplace=False
+    )
+    np.testing.assert_allclose(true_mean, result_df['means'], rtol=2e-05, atol=2e-05)
+    np.testing.assert_allclose(true_var, result_df['variances'], rtol=2e-05, atol=2e-05)

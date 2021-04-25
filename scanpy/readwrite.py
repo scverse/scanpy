@@ -815,9 +815,9 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
         # Next line is the column headers (sample id's)
         sample_names = file.readline().strip().split("\t")
         # The column indices that contain gene expression data
-        I = [i for i, x in enumerate(sample_names) if x.startswith("GSM")]
+        indices = [i for i, x in enumerate(sample_names) if x.startswith("GSM")]
         # Restrict the column headers to those that we keep
-        sample_names = [sample_names[i] for i in I]
+        sample_names = [sample_names[i] for i in indices]
         # Get a list of sample labels
         groups = [samples_info[k] for k in sample_names]
         # Read the gene expression data as a list of lists, also get the gene
@@ -831,7 +831,7 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
             V = line.split("\t")
             # Extract the values that correspond to gene expression measures
             # and convert the strings to numbers
-            x = [float(V[i]) for i in I]
+            x = [float(V[i]) for i in indices]
             X.append(x)
             gene_names.append(V[1])
     # Convert the Python list of lists to a Numpy array and transpose to match
@@ -914,7 +914,7 @@ def get_used_files():
                 filenames.append(nt.path)
         # This catches a race condition where a process ends
         # before we can examine its files
-        except psutil.NoSuchProcess as err:
+        except psutil.NoSuchProcess:
             pass
     return set(filenames)
 
