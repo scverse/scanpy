@@ -6,9 +6,8 @@ from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.colors import Normalize
-from scipy.sparse import issparse
 from matplotlib import pyplot as pl
-from matplotlib import rcParams, cm, colors
+from matplotlib import rcParams, cm
 from anndata import AnnData
 from typing import Union, Optional, List, Sequence, Iterable
 
