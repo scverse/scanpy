@@ -808,6 +808,7 @@ def rank_genes_groups_matrixplot(
 
     Examples
     --------
+
     .. plot::
         :context: close-figs
 

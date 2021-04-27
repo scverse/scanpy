@@ -358,7 +358,7 @@ def matrixplot(
     .. plot::
         :context: close-figs
 
-        mp = sc.pl.matrix(adata, markers, 'bulk_labels', return_fig=True)
+        mp = sc.pl.matrixplot(adata, markers, 'bulk_labels', return_fig=True)
         mp.add_totals().style(edge_color='black').show()
 
     The axes used can be obtained using the get_axes() method
