@@ -819,6 +819,7 @@ def rank_genes_groups_matrixplot(
     like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
     and maximum values to plot are set to -4 and 4 respectively.
     Also, only genes with a log fold change of 3 or more are shown.
+
     .. plot::
         :context: close-figs
 

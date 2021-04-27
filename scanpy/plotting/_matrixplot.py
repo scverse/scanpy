@@ -69,15 +69,16 @@ class MatrixPlot(BasePlot):
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        sc.pl.matrixplot(adata, markers, groupby='bulk_labels')
+        sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
 
     Same visualization but passing var_names as dict, which adds a grouping of
     the genes on top of the image:
+
     .. plot::
         :context: close-figs
 
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        sc.pl.matrixplot(adata, markers, groupby='bulk_labels')
+        sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
     """
 
     DEFAULT_SAVE_PREFIX = 'matrixplot_'
