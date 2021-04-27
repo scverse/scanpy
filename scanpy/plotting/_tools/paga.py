@@ -417,6 +417,17 @@ def paga(
     If `show==False`, one or more :class:`~matplotlib.axes.Axes` objects.
     Adds `'pos'` to `adata.uns['paga']` if `add_pos` is `True`.
 
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.paga(adata)
+        sc.pl.paga(adata)
+
     Notes
     -----
     When initializing the positions, note that – for some reason – igraph
