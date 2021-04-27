@@ -108,9 +108,11 @@ def pca_loadings(
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.pca(adata, svd_solver='arpack')
 
+    Show first 3 components loadings
+
     .. plot::
-        Show first 3 components loadings
         :context: close-figs
+
         sc.pl.pca_loadings(adata, components = '1,2,3')
 
 
