@@ -696,6 +696,16 @@ def draw_graph(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.draw_graph(adata)
+        sc.pl.draw_graph(adata, color=['phase', 'bulk_labels'])
+
     """
     if layout is None:
         layout = str(adata.uns['draw_graph']['params']['layout'])
