@@ -740,6 +740,33 @@ def pca(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.tl.pca(adata)
+        sc.pl.pca(adata)
+
+    Colour points by discrete variable (Louvain clusters)
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="louvain")
+
+    Colour points by gene expression
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="CST3")
+
+    .. currentmodule:: scanpy
     """
     if not annotate_var_explained:
         return embedding(
