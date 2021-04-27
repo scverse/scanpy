@@ -810,6 +810,7 @@ def rank_genes_groups_matrixplot(
     --------
     .. plot::
         :context: close-figs
+
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
@@ -820,14 +821,15 @@ def rank_genes_groups_matrixplot(
     Also, only genes with a log fold change of 3 or more are shown.
     .. plot::
         :context: close-figs
+
         sc.pl.rank_genes_groups_matrixplot(adata,
-        n_genes=4,
-        values_to_plot="logfoldchanges",
-        cmap='bwr',
-        vmin=-4,
-        vmax=4,
-        min_logfoldchange=3,
-        colorbar_title='log fold change')
+            n_genes=4,
+            values_to_plot="logfoldchanges",
+            cmap='bwr',
+            vmin=-4,
+            vmax=4,
+            min_logfoldchange=3,
+            colorbar_title='log fold change')
     """
 
     return _rank_genes_groups_plot(

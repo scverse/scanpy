@@ -63,16 +63,21 @@ class MatrixPlot(BasePlot):
 
     Simple visualization of the average expression of a few genes grouped by
     the category 'bulk_labels'.
+    .. plot::
+        :context: close-figs
 
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.matrixplot(adata, markers, groupby='bulk_labels')
 
     Same visualization but passing var_names as dict, which adds a grouping of
     the genes on top of the image:
+    .. plot::
+        :context: close-figs
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.matrixplot(adata, markers, groupby='bulk_labels')
     """
 
     DEFAULT_SAVE_PREFIX = 'matrixplot_'
