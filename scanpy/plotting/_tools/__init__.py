@@ -58,6 +58,14 @@ def pca_overview(adata: AnnData, **params):
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pp.pca(adata)
+        sc.pl.pca_overview(adata, color="bulk_labels")
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params:
