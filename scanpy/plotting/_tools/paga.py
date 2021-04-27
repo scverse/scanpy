@@ -425,7 +425,8 @@ def paga(
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
-        sc.tl.paga(adata)
+        sc.tl.louvain(adata, key_added="louvain")
+        sc.tl.paga(adata, groups='louvain')
         sc.pl.paga(adata)
 
     Notes
