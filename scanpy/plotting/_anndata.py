@@ -1602,10 +1602,12 @@ def dendrogram(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, 'bulk_labels')
-    >>> sc.pl.dendrogram(adata, 'bulk_labels')
+    .. plot::
+        :context: close-figs
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.dendrogram(adata, 'bulk_labels')
+        sc.pl.dendrogram(adata, 'bulk_labels')
     """
     if ax is None:
         _, ax = pl.subplots()
