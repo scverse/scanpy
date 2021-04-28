@@ -1,4 +1,4 @@
-﻿scanpy.plotting
+scanpy.plotting
 ===============
 
 .. automodule:: scanpy.plotting

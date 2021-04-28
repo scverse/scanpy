@@ -107,6 +107,8 @@ def pca_loadings(
 
     Show first 3 components loadings
 
+    Show first 3 components loadings
+
     .. plot::
         :context: close-figs
 
