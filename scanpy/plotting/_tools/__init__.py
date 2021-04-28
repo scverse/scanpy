@@ -103,14 +103,13 @@ def pca_loadings(
         :context: close-figs
 
         import scanpy as sc
-        import numpy as np
-        import pandas as pd
-        adata = sc.datasets.pbmc68k_reduced()
-        sc.tl.pca(adata, svd_solver='arpack')
+        adata = sc.datasets.pbmc3k_processed()
+
+    Show first 3 components loadings
 
     .. plot::
-        Show first 3 components loadings
         :context: close-figs
+
         sc.pl.pca_loadings(adata, components = '1,2,3')
 
 
