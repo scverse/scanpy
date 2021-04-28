@@ -181,7 +181,8 @@ def louvain(
             g.from_cudf_adjlist(offsets, indices, weights)
 
         logg.info('    using the "louvain" package of rapids')
-        louvain_parts, _ = cugraph.louvain(g, resolution = resolution)
+        louvain_parts, _ = cugraph.louvain(g,
+                                           resolution = resolution)
         groups = (
             louvain_parts.to_pandas()
             .sort_values('vertex')[['partition']]
