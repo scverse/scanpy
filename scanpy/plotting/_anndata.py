@@ -713,7 +713,7 @@ def violin(
 
     # appending by hue key if provided in kwds
     if kwds.get('hue') is not None:
-        keys = keys.append(kwds.get('hue'))
+        keys.append(kwds.get('hue'))
 
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
