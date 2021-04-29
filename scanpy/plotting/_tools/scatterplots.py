@@ -439,8 +439,8 @@ def embedding(
                 na_in_legend=na_in_legend,
                 multi_panel=bool(grid),
             )
-        else:
-            # TODO: na_in_legend should have some effect here
+        elif not categorical and legend_loc is not None:
+            # colorbar for continugous legends and if legend_loc is not none
             pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
 
     if return_fig is True:
