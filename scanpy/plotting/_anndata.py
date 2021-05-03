@@ -964,16 +964,6 @@ def heatmap(
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         sc.pl.heatmap(adata, markers, groupby='bulk_labels', swap_axes=True)
 
-    Using var_names as dict. Notice that the keys do not correspond to `'bulk_labels'` clusters,
-    yet the plotting still works. This is useful to visualize hierarchical or contrastive
-    cell annotations.
-
-    .. plot::
-        :context: close-figs
-
-        markers = {'CD4+/CD25 T Reg': 'CD3D', 'CD19+ B': 'CD79A', 'CD14+ Monocyte': 'CST3'}
-        sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
-
     .. currentmodule:: scanpy
 
     See also
