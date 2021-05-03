@@ -749,17 +749,16 @@ def pca(
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
-        sc.tl.pca(adata)
         sc.pl.pca(adata)
 
-    Colour points by discrete variable (Louvain clusters)
+    Colour points by discrete variable (Louvain clusters).
 
     .. plot::
         :context: close-figs
 
         sc.pl.pca(adata, color="louvain")
 
-    Colour points by gene expression
+    Colour points by gene expression.
 
     .. plot::
         :context: close-figs
