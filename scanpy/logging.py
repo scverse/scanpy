@@ -131,6 +131,7 @@ _DEPENDENCIES_NUMERICS = [
     ('igraph', 'python-igraph'),
     'louvain',
     'leidenalg',
+    'pynndescent',
 ]
 
 
