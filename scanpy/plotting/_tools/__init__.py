@@ -63,9 +63,15 @@ def pca_overview(adata: AnnData, **params):
     .. plot::
         :context: close-figs
         import scanpy as sc
-        adata = sc.datasets.pbmc68k_reduced()
-        sc.pp.pca(adata)
-        sc.pl.pca_overview(adata, color="bulk_labels")
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca_overview(adata, color="louvain")
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.pca
+    pp.pca
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params:
