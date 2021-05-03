@@ -111,6 +111,23 @@ def pca_loadings(
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+
+    Show first 3 components loadings
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca_loadings(adata, components = '1,2,3')
+
+
     """
     if components is None:
         components = [1, 2, 3]
