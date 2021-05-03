@@ -62,6 +62,7 @@ def pca_overview(adata: AnnData, **params):
     --------
     .. plot::
         :context: close-figs
+
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
         sc.pl.pca_overview(adata, color="louvain")
