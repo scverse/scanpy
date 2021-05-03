@@ -766,6 +766,11 @@ def pca(
         sc.pl.pca(adata, color="CST3")
 
     .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.pca
+    pp.pca
     """
     if not annotate_var_explained:
         return embedding(
