@@ -656,18 +656,45 @@ def rank_genes_groups_dotplot(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    Plot top 2 genes per group.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,n_genes=2)
+
+    Plot with scaled expressions for easier identification of differences.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,n_genes=2,standard_scale='var')
 
     Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
     like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
     and maximum values to plot are set to -4 and 4 respectively.
     Also, only genes with a log fold change of 3 or more are shown.
-    >>> sc.pl.rank_genes_groups_dotplot(adata,
-    ... n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
-    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,
+        n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
+        vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.rank_genes_groups
     """
 
     return _rank_genes_groups_plot(
