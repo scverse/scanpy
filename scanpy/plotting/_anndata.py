@@ -735,7 +735,7 @@ def violin(
 
     See also
     --------
-    sc.pl.stacked_violin
+    pl.stacked_violin
     """
     import seaborn as sns  # Slow import, only import if called
 
