@@ -962,9 +962,11 @@ def heatmap(
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True, swap_axes=True)
+        sc.pl.heatmap(adata, markers, groupby='bulk_labels', swap_axes=True)
 
-    Using var_names as dict.
+    Using var_names as dict. Notice that the keys do not correspond to `'bulk_labels'` clusters,
+    yet the plotting still works. This is useful to visualize hierarchical or contrastive
+    cell annotations.
 
     .. plot::
         :context: close-figs
@@ -972,9 +974,12 @@ def heatmap(
         markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
 
+    .. currentmodule:: scanpy
+
     See also
     --------
-    pl.rank_genes_groups_heatmap to plot marker genes identified with tl.rank_genes_groups .
+    pl.rank_genes_groups_heatmap
+    tl.rank_genes_groups
     """
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
@@ -1612,6 +1617,9 @@ def dendrogram(
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.dendrogram(adata, 'bulk_labels')
         sc.pl.dendrogram(adata, 'bulk_labels')
+
+    .. currentmodule:: scanpy
+
     """
     if ax is None:
         _, ax = pl.subplots()
