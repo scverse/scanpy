@@ -5,7 +5,7 @@
 
 .. rubric:: Bug fixes
 
-- :func:`scanpy.plotting.rank_genes_groups_violin` now works for `raw=False` :pr:`1669` :smaller:`M van den Beek`
+- :func:`scanpy.pl.rank_genes_groups_violin` now works for `raw=False` :pr:`1669` :smaller:`M van den Beek`
 
 .. rubric:: Deprecations
 
