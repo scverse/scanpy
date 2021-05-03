@@ -339,8 +339,8 @@ def compute_neighbors_rapids(
     nn = NearestNeighbors(n_neighbors=n_neighbors, metric=metric)
     X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
     nn.fit(X_contiguous)
-    knn_distsq, knn_indices = nn.kneighbors(X_contiguous)
-    return knn_indices, np.sqrt(knn_distsq)  # cuml uses sqeuclidean metric so take sqrt
+    knn_dist, knn_indices = nn.kneighbors(X_contiguous)
+    return knn_indices, knn_dist
 
 
 def _get_sparse_matrix_from_indices_distances_umap(
