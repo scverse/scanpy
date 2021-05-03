@@ -671,8 +671,8 @@ def rank_genes_groups_dotplot(
     .. plot::
         :context: close-figs
 
-        sc.pl.rank_genes_groups_dotplot(adata, \
-        n_genes=4, values_to_plot="logfoldchanges", cmap='bwr', \
+        sc.pl.rank_genes_groups_dotplot(adata,
+        n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
         vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
     .. currentmodule:: scanpy
