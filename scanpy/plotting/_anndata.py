@@ -971,8 +971,8 @@ def heatmap(
     .. plot::
         :context: close-figs
 
-        markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-        sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+        markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'Dendritic': 'CST3'}
+        sc.pl.heatmap(adata, markers, groupby='bulk_labels')
 
     .. currentmodule:: scanpy
 
