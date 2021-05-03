@@ -958,20 +958,23 @@ def heatmap(
     -------
     .. plot::
         :context: close-figs
+
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True, swap_axes=True)
 
-    Using var_names as dict:
+    Using var_names as dict.
+
     .. plot::
         :context: close-figs
-        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+
+        markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     See also
     --------
-    rank_genes_groups_heatmap: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    pl.rank_genes_groups_heatmap to plot marker genes identified with tl.rank_genes_groups .
     """
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
@@ -1604,6 +1607,7 @@ def dendrogram(
     --------
     .. plot::
         :context: close-figs
+
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.dendrogram(adata, 'bulk_labels')

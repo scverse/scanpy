@@ -648,10 +648,17 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     --------
     .. plot::
         :context: close-figs
+
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.tsne(adata)
         sc.pl.tsne(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.tsne
     """
     return embedding(adata, 'tsne', **kwargs)
 
@@ -680,10 +687,17 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     --------
     .. plot::
         :context: close-figs
+
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.diffmap(adata)
         sc.pl.diffmap(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.diffmap
     """
     return embedding(adata, 'diffmap', **kwargs)
 
@@ -719,11 +733,17 @@ def draw_graph(
     --------
     .. plot::
         :context: close-figs
+
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.draw_graph(adata)
         sc.pl.draw_graph(adata, color=['phase', 'bulk_labels'])
 
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.draw_graph
     """
     if layout is None:
         layout = str(adata.uns['draw_graph']['params']['layout'])
