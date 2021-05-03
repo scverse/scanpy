@@ -6,9 +6,8 @@ from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.colors import Normalize
-from scipy.sparse import issparse
 from matplotlib import pyplot as pl
-from matplotlib import rcParams, cm, colors
+from matplotlib import rcParams, cm
 from anndata import AnnData
 from typing import Union, Optional, List, Sequence, Iterable
 
@@ -28,6 +27,7 @@ from .._docs import (
 from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
 from matplotlib.colors import Colormap
+from scanpy.get import obs_df
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -903,21 +903,10 @@ def rank_genes_groups_violin(
             _gene_names = adata.uns[key]['names'][group_name][:n_genes]
         else:
             _gene_names = gene_names
-        df = pd.DataFrame()
-        new_gene_names = []
-        for g in _gene_names:
-            if adata.raw is not None and use_raw:
-                X_col = adata.raw[:, g].X
-                if gene_symbols:
-                    g = adata.raw.var[gene_symbols][g]
-            else:
-                X_col = adata[:, g].X
-                if gene_symbols:
-                    g = adata.var[gene_symbols][g]
-            if issparse(X_col):
-                X_col = X_col.toarray().flatten()
-            new_gene_names.append(g)
-            df[g] = X_col
+        if isinstance(_gene_names, np.ndarray):
+            _gene_names = _gene_names.tolist()
+        df = obs_df(adata, _gene_names, use_raw=use_raw, gene_symbols=gene_symbols)
+        new_gene_names = df.columns
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
             df.loc[df['hue'] != group_name, 'hue'] = 'rest'
