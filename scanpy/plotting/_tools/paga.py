@@ -353,9 +353,8 @@ def paga(
         graph is connected). If this is `None` or an empty list, the root
         vertices are automatically calculated based on topological sorting.
     transitions
-        Key for `.uns['paga']` that specifies the matrix that – for instance
-        `'transistions_confidence'` – that specifies the matrix that stores the
-        arrows.
+        Key for `.uns['paga']` that specifies the matrix that stores the
+        arrows, for instance `'transitions_confidence'`.
     solid_edges
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn solid black.
@@ -416,6 +415,24 @@ def paga(
     -------
     If `show==False`, one or more :class:`~matplotlib.axes.Axes` objects.
     Adds `'pos'` to `adata.uns['paga']` if `add_pos` is `True`.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.tl.paga(adata, groups='louvain')
+        sc.pl.paga(adata)
+
+    You can increase node and edge sizes by specifying additional arguments.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.paga(adata, node_size_scale=10, edge_width_scale=2)
 
     Notes
     -----
