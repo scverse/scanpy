@@ -769,8 +769,8 @@ def pca(
 
     See also
     --------
-    tl.pca
-    pp.pca
+    - tl.pca
+    - pp.pca
     """
     if not annotate_var_explained:
         return embedding(
