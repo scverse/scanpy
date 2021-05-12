@@ -38,3 +38,15 @@ Then follow these steps:
 
     # Upload wheel and code distribution to pypi
     twine upload dist/scanpy-{version}
+
+After making a release
+----------------------
+
+After a major or minor release has been made:
+
+* Tweet about it!
+* Create a new release notes file for the next minor release. This should only be added to the dev branch.
+
+After any release has been made:
+
+* Create a new release notes file for the next bugfix release. This should be included in both dev and stable branches `release-latest.rst`

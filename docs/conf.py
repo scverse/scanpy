@@ -1,6 +1,5 @@
 import os
 import sys
-import warnings
 from pathlib import Path
 from datetime import datetime
 
@@ -46,7 +45,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     # 'plot_generator',
-    # 'plot_directive',
+    'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
     # 'ipython_directive',
     # 'ipython_console_highlighting',
@@ -84,7 +83,6 @@ intersphinx_mapping = dict(
     pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
     scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
-    scvelo=('https://scvelo.readthedocs.io/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
     scanpy_tutorials=(scanpy_tutorials_url, None),
@@ -95,7 +93,12 @@ intersphinx_mapping = dict(
 
 
 html_theme = 'scanpydoc'
-html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the logo
+html_theme_options = dict(
+    navigation_depth=4,
+    logo_only=True,
+    docsearch_index='scanpy',
+    docsearch_key='fa4304eb95d2134997e3729553a674b2',
+)
 html_context = dict(
     display_github=True,  # Integrate GitHub
     github_user='theislab',  # Username
@@ -134,12 +137,13 @@ texinfo_documents = [
 # -- Suppress link warnings ----------------------------------------------------
 
 qualname_overrides = {
-    "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
+    "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
     # If the docs are built with an old version of numpy, this will make it work:
     "numpy.random.RandomState": "numpy.random.mtrand.RandomState",
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
+    "pandas.core.series.Series": "pandas.Series",
 }
 
 nitpick_ignore = [
@@ -152,3 +156,11 @@ nitpick_ignore = [
     ('py:class', 'scanpy._utils.Empty'),
     ('py:class', 'numpy.random.mtrand.RandomState'),
 ]
+
+# Options for plot examples
+
+plot_include_source = True
+plot_formats = [("png", 90)]
+plot_html_show_formats = False
+plot_html_show_source_link = False
+plot_working_directory = HERE.parent  # Project root

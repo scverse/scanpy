@@ -12,13 +12,13 @@ import pandas as pd
 from anndata import AnnData
 from cycler import Cycler
 from matplotlib.axes import Axes
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import is_categorical_dtype, is_numeric_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
-from matplotlib.colors import is_color_like, Colormap, ListedColormap
+from matplotlib.colors import is_color_like, Colormap, ListedColormap, Normalize
 
 from .. import get
 from .. import logging as logg
@@ -26,9 +26,14 @@ from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params, _check_use_raw
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes
+from ._utils import scatter_base, scatter_group, setup_axes, check_colornorm
 from ._utils import ColorLike, _FontWeight, _FontSize
-from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
+from ._docs import (
+    doc_scatter_basic,
+    doc_show_save_ax,
+    doc_common_plot_args,
+    doc_vboundnorm,
+)
 
 VALID_LEGENDLOCS = {
     'none',
@@ -552,7 +557,7 @@ def ranking(
         n_rows, n_cols = 1, n_panels
     else:
         n_rows, n_cols = 2, int(n_panels / 2 + 0.5)
-    fig = pl.figure(
+    _ = pl.figure(
         figsize=(
             n_cols * rcParams['figure.figsize'][0],
             n_rows * rcParams['figure.figsize'][1],
@@ -684,6 +689,53 @@ def violin(
     Returns
     -------
     A :class:`~matplotlib.axes.Axes` object if `ax` is `None` else `None`.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.violin(adata, keys='S_score')
+
+    Plot by category. Rotate x-axis labels so that they do not overlap.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90)
+
+    Set order of categories to be plotted or select specific categories to be plotted.
+
+    .. plot::
+        :context: close-figs
+
+        groupby_order = ['CD34+', 'CD19+ B']
+        sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90,
+            order=groupby_order)
+
+    Plot multiple keys.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys=['S_score', 'G2M_score'], groupby='bulk_labels',
+            rotation=90)
+
+    For large datasets consider omitting the overlaid scatter plot.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys='S_score', stripplot=False)
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    pl.stacked_violin
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -758,7 +810,6 @@ def violin(
                     size=size,
                     color="black",
                     ax=g.axes[0, ax_id],
-                    **kwds,
                 )
         if log:
             g.set(yscale='log')
@@ -891,7 +942,11 @@ def clustermap(
         return g
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(
+    vminmax=doc_vboundnorm,
+    show_save_ax=doc_show_save_ax,
+    common_plot_args=doc_common_plot_args,
+)
 def heatmap(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -911,6 +966,10 @@ def heatmap(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     figsize: Optional[Tuple[float, float]] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ):
     """\
@@ -934,6 +993,7 @@ def heatmap(
     show_gene_labels
          By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
     {show_save_ax}
+    {vminmax}
     **kwds
         Are passed to :func:`matplotlib.pyplot.imshow`.
 
@@ -943,19 +1003,20 @@ def heatmap(
 
     Examples
     -------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True, swap_axes=True)
+    .. plot::
+        :context: close-figs
 
-    Using var_names as dict:
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.heatmap(adata, markers, groupby='bulk_labels', swap_axes=True)
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. currentmodule:: scanpy
 
     See also
     --------
-    rank_genes_groups_heatmap: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    pl.rank_genes_groups_heatmap
+    tl.rank_genes_groups
     """
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
@@ -996,10 +1057,23 @@ def heatmap(
         dendrogram = False
     else:
         categorical = True
-        # get categories colors:
-        if groupby + "_colors" in adata.uns:
+        # get categories colors
+        if isinstance(groupby, str) and is_categorical_dtype(adata.obs[groupby]):
+            # saved category colors only work when groupby is valid adata.obs
+            # categorical column. When groupby is a numerical column
+            # or when groupby is a list of columns the colors are assigned on the fly,
+            # which may create inconsistencies in multiple runs that require sorting
+            # of the categories (eg. when dendrogram is plotted).
+            if groupby + "_colors" not in adata.uns:
+                # if colors are not found, assign a new palette
+                # and save it using the same code for embeddings
+                from ._tools.scatterplots import _get_palette
+
+                _get_palette(adata, groupby)
             groupby_colors = adata.uns[groupby + "_colors"]
         else:
+            # this case happen when adata.obs[groupby] is numeric
+            # the values are converted into a category on the fly
             groupby_colors = None
 
     if dendrogram:
@@ -1045,11 +1119,13 @@ def heatmap(
         obs_tidy = obs_tidy.sort_index()
 
     colorbar_width = 0.2
+    norm = check_colornorm(vmin, vmax, vcenter, norm)
 
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
-        # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
-        # second row is for main content. This second row is divided into three axes:
+        # first row is for 'brackets' (if no brackets needed, the height of this row
+        # is zero) second row is for main content. This second row is divided into
+        # three axes:
         #   first ax is for the categories defined by `groupby`
         #   second ax is for the heatmap
         #   third ax is for the dendrogram
@@ -1093,7 +1169,7 @@ def heatmap(
 
         heatmap_ax = fig.add_subplot(axs[1, 1])
         kwds.setdefault('interpolation', 'nearest')
-        im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', **kwds)
+        im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', norm=norm, **kwds)
 
         heatmap_ax.set_ylim(obs_tidy.shape[0] - 0.5, -0.5)
         heatmap_ax.set_xlim(-0.5, obs_tidy.shape[1] - 0.5)
@@ -1101,7 +1177,6 @@ def heatmap(
         heatmap_ax.set_ylabel('')
         heatmap_ax.grid(False)
 
-        # sns.heatmap(obs_tidy, yticklabels="auto", ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
         if show_gene_labels:
             heatmap_ax.tick_params(axis='x', labelsize='small')
             heatmap_ax.set_xticks(np.arange(len(var_names)))
@@ -1129,9 +1204,10 @@ def heatmap(
             )
             heatmap_ax.hlines(
                 line_positions,
-                -0.73,
+                -0.5,
                 len(var_names) - 0.5,
-                lw=0.6,
+                lw=1,
+                color='black',
                 zorder=10,
                 clip_on=False,
             )
@@ -1198,8 +1274,8 @@ def heatmap(
         heatmap_ax = fig.add_subplot(axs[1, 0])
 
         kwds.setdefault('interpolation', 'nearest')
-        im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
-        heatmap_ax.set_xlim(0, obs_tidy.shape[0])
+        im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', norm=norm, **kwds)
+        heatmap_ax.set_xlim(0 - 0.5, obs_tidy.shape[0] - 0.5)
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
         heatmap_ax.set_xlabel('')
@@ -1229,8 +1305,9 @@ def heatmap(
             heatmap_ax.vlines(
                 line_positions,
                 -0.5,
-                len(var_names) + 0.35,
-                lw=0.6,
+                len(var_names) - 0.5,
+                lw=1,
+                color='black',
                 zorder=10,
                 clip_on=False,
             )
@@ -1460,7 +1537,7 @@ def tracksplot(
         ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
-        tt = ax.set_yticklabels([str(ymax)], ha='left', va='top')
+        ax.set_yticklabels([str(ymax)], ha='left', va='top')
         ax.spines['right'].set_position(('axes', 1.01))
         ax.tick_params(
             axis='y',
@@ -1570,10 +1647,16 @@ def dendrogram(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, 'bulk_labels')
-    >>> sc.pl.dendrogram(adata, 'bulk_labels')
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.dendrogram(adata, 'bulk_labels')
+        sc.pl.dendrogram(adata, 'bulk_labels')
+
+    .. currentmodule:: scanpy
+
     """
     if ax is None:
         _, ax = pl.subplots()
@@ -1589,7 +1672,7 @@ def dendrogram(
     return ax
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vboundnorm)
 def correlation_matrix(
     adata: AnnData,
     groupby: str,
@@ -1599,6 +1682,10 @@ def correlation_matrix(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     ax: Optional[Axes] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ) -> Union[Axes, List[Axes]]:
     """\
@@ -1621,10 +1708,11 @@ def correlation_matrix(
         By default a figure size that aims to produce a squared correlation
         matrix plot is used. Format is (width, height)
     {show_save_ax}
+    {vminmax}
     **kwds
         Only if `show_correlation` is True:
         Are passed to :func:`matplotlib.pyplot.pcolormesh` when plotting the
-        correlation heatmap. Useful values to pas are `vmax`, `vmin` and `cmap`.
+        correlation heatmap. `cmap` can be used to change the color palette.
 
     Returns
     -------
@@ -1696,22 +1784,23 @@ def correlation_matrix(
         )
         axs.append(dendro_ax)
     # define some default pcolormesh parameters
-    if 'edge_color' not in kwds:
+    if 'edgecolors' not in kwds:
         if corr_matrix.shape[0] > 30:
             # when there are too many rows it is better to remove
             # the black lines surrounding the boxes in the heatmap
             kwds['edgecolors'] = 'none'
         else:
             kwds['edgecolors'] = 'black'
-            kwds['linewidth'] = 0.01
-    if 'vmax' not in kwds and 'vmin' not in kwds:
-        kwds['vmax'] = 1
-        kwds['vmin'] = -1
+            kwds.setdefault('linewidth', 0.01)
+    if vmax is None and vmin is None and norm is None:
+        vmax = 1
+        vmin = -1
+    norm = check_colornorm(vmin, vmax, vcenter, norm)
     if 'cmap' not in kwds:
         # by default use a divergent color map
         kwds['cmap'] = 'bwr'
 
-    img_mat = corr_matrix_ax.pcolormesh(corr_matrix, **kwds)
+    img_mat = corr_matrix_ax.pcolormesh(corr_matrix, norm=norm, **kwds)
     corr_matrix_ax.set_xlim(0, num_rows)
     corr_matrix_ax.set_ylim(0, num_rows)
 
@@ -1778,7 +1867,9 @@ def _prepare_dataframe(
     use_raw
         Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
     log
-        Use the log of the values
+        Use the log of the values.
+    layer
+        AnnData layer to use. Takes precedence over `use_raw`
     num_categories
         Only used if groupby observation is not categorical. This value
         determines the number of groups into which the groupby observation
@@ -1790,89 +1881,83 @@ def _prepare_dataframe(
     -------
     Tuple of `pandas.DataFrame` and list of categories.
     """
-    from scipy.sparse import issparse
 
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw)
+    if layer is not None:
+        use_raw = False
     if isinstance(var_names, str):
         var_names = [var_names]
 
+    groupby_index = None
     if groupby is not None:
         if isinstance(groupby, str):
             # if not a list, turn into a list
             groupby = [groupby]
         for group in groupby:
-            if group not in adata.obs_keys():
+            if group not in list(adata.obs_keys()) + [adata.obs.index.name]:
+                if adata.obs.index.name is not None:
+                    msg = f' or index name "{adata.obs.index.name}"'
+                else:
+                    msg = ''
                 raise ValueError(
                     'groupby has to be a valid observation. '
-                    f'Given {group}, is not in observations: {adata.obs_keys()}'
+                    f'Given {group}, is not in observations: {adata.obs_keys()}' + msg
                 )
-
-    if gene_symbols is not None and gene_symbols in adata.var.columns:
-        # translate gene_symbols to var_names
-        # slow method but gives a meaningful error if no gene symbol is found:
-        translated_var_names = []
-        # if we're using raw to plot, we should also do gene symbol translations
-        # using raw
-        if use_raw:
-            adata_or_raw = adata.raw
-        else:
-            adata_or_raw = adata
-        for symbol in var_names:
-            if symbol not in adata_or_raw.var[gene_symbols].values:
-                logg.error(
-                    f"Gene symbol {symbol!r} not found in given "
-                    f"gene_symbols column: {gene_symbols!r}"
+            if group in adata.obs.keys() and group == adata.obs.index.name:
+                raise ValueError(
+                    f'Given group {group} is both and index and a column level, '
+                    'which is ambiguous.'
                 )
-                return
-            translated_var_names.append(
-                adata_or_raw.var[adata_or_raw.var[gene_symbols] == symbol].index[0]
-            )
-        symbols = var_names
-        var_names = translated_var_names
-    if layer is not None:
-        if layer not in adata.layers.keys():
-            raise KeyError(
-                f'Selected layer: {layer} is not in the layers list. '
-                f'The list of valid layers is: {adata.layers.keys()}'
-            )
-        matrix = adata[:, var_names].layers[layer]
-    elif use_raw:
-        matrix = adata.raw[:, var_names].X
-    else:
-        matrix = adata[:, var_names].X
+            if group == adata.obs.index.name:
+                groupby_index = group
+    if groupby_index is not None:
+        # obs_tidy contains adata.obs.index
+        # and does not need to be given
+        groupby = groupby.copy()  # copy to not modify user passed parameter
+        groupby.remove(groupby_index)
+    keys = list(groupby) + list(np.unique(var_names))
+    obs_tidy = get.obs_df(
+        adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
+    )
+    assert np.all(np.array(keys) == np.array(obs_tidy.columns))
 
-    if issparse(matrix):
-        matrix = matrix.toarray()
-    if log:
-        matrix = np.log1p(matrix)
+    if groupby_index is not None:
+        # reset index to treat all columns the same way.
+        obs_tidy.reset_index(inplace=True)
+        groupby.append(groupby_index)
 
-    obs_tidy = pd.DataFrame(matrix, columns=var_names)
     if groupby is None:
-        groupby = ''
         categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
+    elif len(groupby) == 1 and is_numeric_dtype(obs_tidy[groupby[0]]):
+        # if the groupby column is not categorical, turn it into one
+        # by subdividing into  `num_categories` categories
+        categorical = pd.cut(obs_tidy[groupby[0]], num_categories)
+    elif len(groupby) == 1:
+        categorical = obs_tidy[groupby[0]].astype('category')
+        categorical.name = groupby[0]
     else:
-        if len(groupby) == 1 and not is_categorical_dtype(adata.obs[groupby[0]]):
-            # if the groupby column is not categorical, turn it into one
-            # by subdividing into  `num_categories` categories
-            categorical = pd.cut(adata.obs[groupby[0]], num_categories)
-        else:
-            categorical = adata.obs[groupby[0]]
-            if len(groupby) > 1:
-                for group in groupby[1:]:
-                    # create new category by merging the given groupby categories
-                    categorical = (
-                        categorical.astype(str) + "_" + adata.obs[group].astype(str)
-                    ).astype('category')
-            categorical.name = "_".join(groupby)
-    obs_tidy.set_index(categorical, inplace=True)
-    if gene_symbols is not None:
-        # translate the column names to the symbol names
-        obs_tidy.rename(
-            columns={var_names[x]: symbols[x] for x in range(len(var_names))},
-            inplace=True,
+        # join the groupby values  using "_" to make a new 'category'
+        categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
+        categorical.name = "_".join(groupby)
+
+        # preserve category order
+        from itertools import product
+
+        order = {
+            "_".join(k): idx
+            for idx, k in enumerate(
+                product(*(obs_tidy[g].cat.categories for g in groupby))
+            )
+        }
+        categorical = categorical.cat.reorder_categories(
+            sorted(categorical.cat.categories, key=lambda x: order[x])
         )
+    obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
+
+    if log:
+        obs_tidy = np.log1p(obs_tidy)
 
     return categories, obs_tidy
 
@@ -1962,7 +2047,7 @@ def _plot_gene_groups_brackets(
                     va='bottom',
                     rotation=rotation,
                 )
-            except:
+            except Exception:  # TODO catch the correct exception
                 pass
     else:
         top = left
@@ -2360,7 +2445,7 @@ def _plot_categories_as_colorblocks(
         )
         if len(labels) > 1:
             groupby_ax.set_xticks(ticks)
-            if max([len(x) for x in labels]) < 3:
+            if max([len(str(x)) for x in labels]) < 3:
                 # if the labels are small do not rotate them
                 rotation = 0
             else:

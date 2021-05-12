@@ -332,15 +332,15 @@ def scrublet_score_distribution(
     figsize: Optional[Tuple[float, float]] = (8, 3),
 ):
     """\
-    Plot histogram of doublet scores for observed transcriptomes and simulated doublets. 
+    Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
 
-    The histogram for simulated doublets is useful for determining the correct doublet 
-    score threshold. 
-    
+    The histogram for simulated doublets is useful for determining the correct doublet
+    score threshold.
+
     Parameters
     ----------
     adata
-        An annData object resulting from func:`~scanpy.external.scrublet`.  
+        An annData object resulting from func:`~scanpy.external.scrublet`.
     scale_hist_obs
         Set y axis scale transformation in matplotlib for the plot of observed
         transcriptomes (e.g. "linear", "log", "symlog", "logit")
@@ -353,9 +353,9 @@ def scrublet_score_distribution(
     See also
     --------
     :func:`~scanpy.external.pp.scrublet`: Main way of running Scrublet, runs
-        preprocessing, doublet simulation (this function) and calling. 
+        preprocessing, doublet simulation (this function) and calling.
     :func:`~scanpy.external.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
-        simulation separately for advanced usage. 
+        simulation separately for advanced usage.
     """
 
     threshold = adata.uns['scrublet']['threshold']

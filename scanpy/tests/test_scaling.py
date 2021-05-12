@@ -26,7 +26,7 @@ X_centered = [
 @pytest.mark.parametrize('typ', [np.array, csr_matrix], ids=lambda x: x.__name__)
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 def test_scale(typ, dtype):
-    ## test AnnData arguments
+    # test AnnData arguments
     # test scaling with default zero_center == True
     adata0 = AnnData(typ(X), dtype=dtype)
     sc.pp.scale(adata0)
@@ -39,7 +39,7 @@ def test_scale(typ, dtype):
     adata2 = AnnData(typ(X), dtype=dtype)
     sc.pp.scale(adata2, zero_center=False)
     assert np.allclose(csr_matrix(adata2.X).toarray(), X_scaled)
-    ## test bare count arguments, for simplicity only with explicit copy=True
+    # test bare count arguments, for simplicity only with explicit copy=True
     # test scaling with default zero_center == True
     data0 = typ(X, dtype=dtype)
     cdata0 = sc.pp.scale(data0, copy=True)

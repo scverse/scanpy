@@ -123,14 +123,18 @@ def _gradient_descent(
                 best_iter = i
             elif i - best_iter > n_iter_without_progress:
                 if verbose >= 2:
-                    print("[t-SNE] Iteration %d: did not make any progress "
-                          "during the last %d episodes. Finished."
-                          % (i + 1, n_iter_without_progress))
+                    print(
+                        "[t-SNE] Iteration %d: did not make any progress "
+                        "during the last %d episodes. Finished."
+                        % (i + 1, n_iter_without_progress)
+                    )
                 break
             if grad_norm <= min_grad_norm:
                 if verbose >= 2:
-                    print("[t-SNE] Iteration %d: gradient norm %f. Finished."
-                          % (i + 1, grad_norm))
+                    print(
+                        "[t-SNE] Iteration %d: gradient norm %f. Finished."
+                        % (i + 1, grad_norm)
+                    )
                 break
             if error_diff <= min_error_diff:
                 if verbose >= 2:
@@ -155,4 +159,5 @@ sk_ver = tuple(sk_ver)
 
 if sk_ver < (0, 19, 0):
     from sklearn.manifold import t_sne
+
     t_sne._gradient_descent = _gradient_descent

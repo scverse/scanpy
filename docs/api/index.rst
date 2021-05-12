@@ -236,6 +236,22 @@ This module provides useful queries for annotation and enrichment.
    queries.enrich
 
 
+Metrics
+-------
+
+.. module:: scanpy.metrics
+.. currentmodule:: scanpy
+
+Collections of useful measurements for evaluating results.
+
+.. autosummary::
+   :toctree: .
+
+   metrics.confusion_matrix
+   metrics.gearys_c
+   metrics.morans_i
+
+
 Classes
 -------
 

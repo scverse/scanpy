@@ -1,6 +1,7 @@
 """BasePlot for dotplot, matrixplot and stacked_violin
 """
 import collections.abc as cabc
+from collections import namedtuple
 from typing import Optional, Union, Mapping  # Special
 from typing import Sequence, Iterable  # ABCs
 from typing import Tuple  # Classes
@@ -10,10 +11,12 @@ from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib import pyplot as pl
 from matplotlib import gridspec
+from matplotlib.colors import Normalize
+from warnings import warn
 
 from .. import logging as logg
 from .._compat import Literal
-from ._utils import make_grid_spec
+from ._utils import make_grid_spec, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
 
@@ -66,6 +69,8 @@ class BasePlot(object):
     DEFAULT_LEGENDS_WIDTH = 1.5
     DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
 
+    MAX_NUM_CATEGORIES = 500  # maximum number of categories allowed to be plotted
+
     def __init__(
         self,
         adata: AnnData,
@@ -83,6 +88,10 @@ class BasePlot(object):
         var_group_rotation: Optional[float] = None,
         layer: Optional[str] = None,
         ax: Optional[_AxesSubplot] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         self.var_names = var_names
@@ -109,6 +118,11 @@ class BasePlot(object):
             layer=layer,
             gene_symbols=gene_symbols,
         )
+        if len(self.categories) > self.MAX_NUM_CATEGORIES:
+            warn(
+                f"Over {self.MAX_NUM_CATEGORIES} categories found. "
+                "Plot would be very large."
+            )
 
         if categories_order is not None:
             if set(self.obs_tidy.index.categories) != set(categories_order):
@@ -117,9 +131,9 @@ class BasePlot(object):
                     "the `order` parameter match the categories that "
                     "want to be reordered.\n\n"
                     "Mismatch: "
-                    f"{set(obs_tidy.index.categories).difference(categories_order)}\n\n"
+                    f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
                     f"Given order categories: {categories_order}\n\n"
-                    f"{groupby} categories: {list(obs_tidy.index.categories)}\n"
+                    f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
                 )
                 return
 
@@ -127,6 +141,9 @@ class BasePlot(object):
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.log = log
         self.kwds = kwds
+
+        VBoundNorm = namedtuple('VBoundNorm', ['vmin', 'vmax', 'vcenter', 'norm'])
+        self.vboundnorm = VBoundNorm(vmin=vmin, vmax=vmax, vcenter=vcenter, norm=norm)
 
         # set default values for legend
         self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
@@ -521,8 +538,6 @@ class BasePlot(object):
         return_ax_dict['color_legend_ax'] = color_legend_ax
 
     def _mainplot(self, ax):
-        import matplotlib.colors
-
         y_labels = self.categories
         x_labels = self.var_names
 
@@ -555,11 +570,12 @@ class BasePlot(object):
         ax.set_ylim(len(y_labels), 0)
         ax.set_xlim(0, len(x_labels))
 
-        normalize = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+        return check_colornorm(
+            self.vboundnorm.vmin,
+            self.vboundnorm.vmax,
+            self.vboundnorm.vcenter,
+            self.vboundnorm.norm,
         )
-
-        return normalize
 
     def make_figure(self):
         """

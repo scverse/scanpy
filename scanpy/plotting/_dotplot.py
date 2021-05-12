@@ -7,16 +7,17 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib import pyplot as pl
+from matplotlib.colors import Normalize
 
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
-from ._utils import make_grid_spec, fix_kwds
+from ._utils import make_grid_spec, fix_kwds, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
 
-from ._docs import doc_common_plot_args, doc_show_save_ax
+from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
 
@@ -122,6 +123,10 @@ class DotPlot(BasePlot):
         dot_color_df: Optional[pd.DataFrame] = None,
         dot_size_df: Optional[pd.DataFrame] = None,
         ax: Optional[_AxesSubplot] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -141,6 +146,10 @@ class DotPlot(BasePlot):
             var_group_rotation=var_group_rotation,
             layer=layer,
             ax=ax,
+            vmin=vmin,
+            vmax=vmax,
+            vcenter=vcenter,
+            norm=norm,
             **kwds,
         )
 
@@ -536,6 +545,10 @@ class DotPlot(BasePlot):
             grid=self.grid,
             x_padding=self.plot_x_padding,
             y_padding=self.plot_y_padding,
+            vmin=self.vboundnorm.vmin,
+            vmax=self.vboundnorm.vmax,
+            vcenter=self.vboundnorm.vcenter,
+            norm=self.vboundnorm.norm,
             **self.kwds,
         )
 
@@ -561,6 +574,10 @@ class DotPlot(BasePlot):
         grid: Optional[bool] = False,
         x_padding: Optional[float] = 0.8,
         y_padding: Optional[float] = 1.0,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         """\
@@ -682,12 +699,7 @@ class DotPlot(BasePlot):
         size = frac ** size_exponent
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
-
-        import matplotlib.colors
-
-        normalize = matplotlib.colors.Normalize(
-            vmin=kwds.get('vmin'), vmax=kwds.get('vmax')
-        )
+        normalize = check_colornorm(vmin, vmax, vcenter, norm)
 
         if color_on == 'square':
             if edge_color is None:
@@ -713,10 +725,10 @@ class DotPlot(BasePlot):
                 kwds,
                 s=size,
                 cmap=cmap,
-                norm=None,
                 linewidth=edge_lw,
                 facecolor='none',
                 edgecolor=edge_color,
+                norm=normalize,
             )
             dot_ax.scatter(x, y, **kwds)
         else:
@@ -729,9 +741,9 @@ class DotPlot(BasePlot):
                 s=size,
                 cmap=cmap,
                 color=color,
-                norm=None,
                 linewidth=edge_lw,
                 edgecolor=edge_color,
+                norm=normalize,
             )
 
             dot_ax.scatter(x, y, **kwds)
@@ -782,6 +794,7 @@ class DotPlot(BasePlot):
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
     groupby_plots_args=doc_common_groupby_plot_args,
+    vminmax=doc_vboundnorm,
 )
 def dotplot(
     adata: AnnData,
@@ -813,6 +826,10 @@ def dotplot(
     save: Union[str, bool, None] = None,
     ax: Optional[_AxesSubplot] = None,
     return_fig: Optional[bool] = False,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ) -> Union[DotPlot, dict, None]:
     """\
@@ -861,6 +878,7 @@ def dotplot(
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
     {show_save_ax}
+    {vminmax}
     kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
@@ -882,25 +900,36 @@ def dotplot(
     Create a dot plot using the given markers and the PBMC example dataset grouped by
     the category 'bulk_labels'.
 
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get DotPlot object for fine tuning
 
-    >>> dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
-    >>> dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
+    .. plot::
+        :context: close-figs
+
+        dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
+        dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
 
     The axes used can be obtained using the get_axes() method
 
-    >>> axes_dict = dp.get_axes()
-    >>> print(axes_dict)
+    .. code-block:: python
+
+        axes_dict = dp.get_axes()
+        print(axes_dict)
 
     """
 
@@ -929,6 +958,10 @@ def dotplot(
         layer=layer,
         dot_color_df=dot_color_df,
         ax=ax,
+        vmin=vmin,
+        vmax=vmax,
+        vcenter=vcenter,
+        norm=norm,
         **kwds,
     )
 

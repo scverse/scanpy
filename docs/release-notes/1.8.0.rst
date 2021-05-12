@@ -1,0 +1,39 @@
+1.8.0 :small:`the future`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Features
+
+- Switched to flit_ for building and deploying the package,
+  a simple tool with an easy to understand command line interface and metadata.
+- Added `layer` and `copy` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
+- Added `vcenter` and `norm` arguments to the plotting functions :pr:`1551` :smaller:`G Eraslan`
+
+.. _flit: https://flit.readthedocs.io/en/latest/
+
+.. rubric:: Metrics module
+
+- Added :mod:`scanpy.metrics` module!
+
+    - Added :func:`scanpy.metrics.confusion_matrix` for comparing labellings :pr:`915` :smaller:`I Virshup`
+    - Added :func:`scanpy.metrics.gearys_c` for spatial autocorrelation :pr:`915` :smaller:`I Virshup`
+    - Added :func:`scanpy.metrics.morans_i` for global spatial autocorrelation :pr:`1740` :smaller:`I Virshup, G Palla`
+
+.. rubric:: External tools
+
+.. rubric:: Performance enhancements
+
+.. rubric:: Bug fixes
+
+- Fix :func:`scanpy.pl.paga_path` `TypeError` with recent versions of anndata :pr:`1047` :smaller:`P Angerer`
+
+.. rubric:: Deprecations
+
+- Deprecated `layers` and `layers_norm` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
+
+.. rubric:: Documentation
+
+- Clarified docs issues for :func:`~scanpy.pp.neighbors`, 
+  :func:`~scanpy.tl.diffmap`, :func:`~scanpy.pp.calculate_qc_metrics` :pr:`1680` :smaller:`G Palla`
+- Integrated DocSearch_, a find-as-you-type documentation index search. :pr:`1754` :smaller:`P Angerer`
+
+.. _docsearch: https://docsearch.algolia.com/

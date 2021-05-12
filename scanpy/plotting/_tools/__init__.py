@@ -1,12 +1,13 @@
 import collections.abc as cabc
+from copy import copy
 import numpy as np
 import pandas as pd
 from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from scipy.sparse import issparse
+from matplotlib.colors import Normalize
 from matplotlib import pyplot as pl
-from matplotlib import rcParams, cm, colors
+from matplotlib import rcParams, cm
 from anndata import AnnData
 from typing import Union, Optional, List, Sequence, Iterable, Mapping
 
@@ -21,13 +22,15 @@ from .._docs import (
     doc_scatter_embedding,
     doc_show_save_ax,
     doc_vminmax,
-    doc_panels,
     doc_rank_genes_groups_plot_args,
     doc_rank_genes_groups_values_to_plot,
+    doc_vbound_percentile,
+    doc_panels,
 )
 from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
 from matplotlib.colors import Colormap
+from scanpy.get import obs_df
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -58,11 +61,26 @@ def pca_overview(adata: AnnData, **params):
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca_overview(adata, color="louvain")
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.pca
+    pp.pca
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params:
         del params['show']
-    scatterplots.pca(adata, **params, show=False)
+    pca(adata, **params, show=False)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
 
@@ -96,6 +114,23 @@ def pca_loadings(
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+
+    Show first 3 components loadings
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca_loadings(adata, components = '1,2,3')
+
+
     """
     if components is None:
         components = [1, 2, 3]
@@ -105,7 +140,13 @@ def pca_loadings(
     if np.any(components < 0):
         logg.error("Component indices must be greater than zero.")
         return
-    ranking(adata, 'varm', 'PCs', indices=components, include_lowest=include_lowest)
+    ranking(
+        adata,
+        'varm',
+        'PCs',
+        indices=components,
+        include_lowest=include_lowest,
+    )
     savefig_or_show('pca_loadings', show=show, save=save)
 
 
@@ -359,7 +400,7 @@ def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
         plot_obj.make_figure()
         savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
         show = settings.autoshow if show is None else show
-        if not show:
+        if show is False:
             return plot_obj.get_axes()
 
 
@@ -663,33 +704,78 @@ def rank_genes_groups_dotplot(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    Plot top 2 genes per group.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,n_genes=2)
+
+    Plot with scaled expressions for easier identification of differences.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,n_genes=2,standard_scale='var')
 
     Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
     like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
     and maximum values to plot are set to -4 and 4 respectively.
     Also, only genes with a log fold change of 3 or more are shown.
-    >>> sc.pl.rank_genes_groups_dotplot(adata,
-    ... n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
-    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,
+        n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
+        vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
     Also, the last genes can be plotted. This can be useful to identify genes
-    that are not expressed in a group. For this `n_genes=-4` is used
-    >>> sc.pl.rank_genes_groups_dotplot(adata,
-    ... n_genes=-4, values_to_plot="logfoldchanges", cmap='bwr',
-    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+    that are lowly expressed in a group. For this `n_genes=-4` is used
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,
+            n_genes=-4,
+            values_to_plot="logfoldchanges",
+            cmap='bwr',
+            vmin=-4,
+            vmax=4,
+            min_logfoldchange=3,
+            colorbar_title='log fold change')
 
     A list specific genes can be given to check their log fold change. If a
     dictionary, the dictionary keys will be added as labels in the plot.
-    >>> var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
-    ...               'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
-    ...               'myeloid': ['CST3', 'LYZ'] }}
-    >>> sc.pl.rank_genes_groups_dotplot(adata,
-    ... var_names=var_names, values_to_plot="logfoldchanges", cmap='bwr',
-    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
+    .. plot::
+        :context: close-figs
+
+        var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
+                      'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
+                      'myeloid': ['CST3', 'LYZ'] }}
+        sc.pl.rank_genes_groups_dotplot(adata,
+            var_names=var_names,
+            values_to_plot="logfoldchanges",
+            cmap='bwr',
+            vmin=-4,
+            vmax=4,
+            min_logfoldchange=3,
+            colorbar_title='log fold change')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.rank_genes_groups
     """
 
     if var_names is not None and n_genes is not None:
@@ -830,32 +916,63 @@ def rank_genes_groups_matrixplot(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
 
     Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
     like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
     and maximum values to plot are set to -4 and 4 respectively.
     Also, only genes with a log fold change of 3 or more are shown.
-    >>> sc.pl.rank_genes_groups_matrixplot(adata,
-    ... n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
-    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_matrixplot(adata,
+            n_genes=4,
+            values_to_plot="logfoldchanges",
+            cmap='bwr',
+            vmin=-4,
+            vmax=4,
+            min_logfoldchange=3,
+            colorbar_title='log fold change')
 
     Also, the last genes can be plotted. This can be useful to identify genes
-    that are not expressed in a group. For this `n_genes=-4` is used
-    >>> sc.pl.rank_genes_groups_matrixplot(adata,
-    ... n_genes=-4, values_to_plot="logfoldchanges", cmap='bwr',
-    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+    that are lowly expressed in a group. For this `n_genes=-4` is used
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_matrixplot(adata,
+            n_genes=-4,
+            values_to_plot="logfoldchanges",
+            cmap='bwr',
+            vmin=-4,
+            vmax=4,
+            min_logfoldchange=3,
+            colorbar_title='log fold change')
 
     A list specific genes can be given to check their log fold change. If a
     dictionary, the dictionary keys will be added as labels in the plot.
-    >>> var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
-    ...               'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
-    ...               'myeloid': ['CST3', 'LYZ'] }}
-    >>> sc.pl.rank_genes_groups_matrixplot(adata,
-    ... var_names=var_names, values_to_plot="logfoldchanges", cmap='bwr',
-    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+
+    .. plot::
+        :context: close-figs
+        var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
+                      'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
+                      'myeloid': ['CST3', 'LYZ'] }}
+        sc.pl.rank_genes_groups_matrixplot(adata,
+            var_names=var_names,
+            values_to_plot="logfoldchanges",
+            cmap='bwr',
+            vmin=-4,
+            vmax=4,
+            min_logfoldchange=3,
+            colorbar_title='log fold change')
 
     """
 
@@ -952,21 +1069,10 @@ def rank_genes_groups_violin(
             _gene_names = adata.uns[key]['names'][group_name][:n_genes]
         else:
             _gene_names = gene_names
-        df = pd.DataFrame()
-        new_gene_names = []
-        for g in _gene_names:
-            if adata.raw is not None and use_raw:
-                X_col = adata.raw[:, g].X
-                if gene_symbols:
-                    g = adata.raw.var[gene_symbols][g]
-            else:
-                X_col = adata[:, g].X
-                if gene_symbols:
-                    g = adata.var[gene_symbols][g]
-            if issparse(X_col):
-                X_col = X_col.toarray().flatten()
-            new_gene_names.append(g)
-            df[g] = X_col
+        if isinstance(_gene_names, np.ndarray):
+            _gene_names = _gene_names.tolist()
+        df = obs_df(adata, _gene_names, use_raw=use_raw, gene_symbols=gene_symbols)
+        new_gene_names = df.columns
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
             df.loc[df['hue'] != group_name, 'hue'] = 'rest'
@@ -1016,7 +1122,7 @@ def rank_genes_groups_violin(
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
-    if show == False:
+    if show is False:
         return axs
 
 
@@ -1089,7 +1195,9 @@ def sim(
         savefig_or_show('sim_shuffled', save=save, show=show)
 
 
-@_doc_params(vminmax=doc_vminmax, panels=doc_panels, show_save_ax=doc_show_save_ax)
+@_doc_params(
+    vminmax=doc_vbound_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
+)
 def embedding_density(
     adata: AnnData,
     # on purpose, there is no asterisk here (for backward compat)
@@ -1102,6 +1210,8 @@ def embedding_density(
     fg_dotsize: Optional[int] = 180,
     vmax: Optional[int] = 1,
     vmin: Optional[int] = 0,
+    vcenter: Optional[int] = None,
+    norm: Optional[Normalize] = None,
     ncols: Optional[int] = 4,
     hspace: Optional[float] = 0.25,
     wspace: Optional[None] = None,
@@ -1150,21 +1260,39 @@ def embedding_density(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.umap(adata)
-    >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.umap(adata)
+        sc.tl.embedding_density(adata, basis='umap', groupby='phase')
 
     Plot all categories be default
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase')
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase')
 
     Plot selected categories
-    >>> sc.pl.embedding_density(
-    ...     adata,
-    ...     basis='umap',
-    ...     key='umap_density_phase',
-    ...     group=['G1', 'S'],
-    ... )
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.embedding_density(
+            adata,
+            basis='umap',
+            key='umap_density_phase',
+            group=['G1', 'S'],
+        )
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.embedding_density
     """
     sanitize_anndata(adata)
 
@@ -1236,9 +1364,8 @@ def embedding_density(
 
     # Make the color map
     if isinstance(color_map, str):
-        color_map = cm.get_cmap(color_map)
+        color_map = copy(cm.get_cmap(color_map))
 
-    norm = colors.Normalize(vmin=vmin, vmax=vmax)
     color_map.set_over('black')
     color_map.set_under('lightgray')
     # a name to store the density values is needed. To avoid
@@ -1289,10 +1416,11 @@ def embedding_density(
                 components=components,
                 color=density_col_name,
                 color_map=color_map,
-                norm=norm,
                 size=dot_sizes,
                 vmax=vmax,
                 vmin=vmin,
+                vcenter=vcenter,
+                norm=norm,
                 save=False,
                 title=_title,
                 ax=ax,
@@ -1319,10 +1447,11 @@ def embedding_density(
             components=components,
             color=density_col_name,
             color_map=color_map,
-            norm=norm,
             size=dot_sizes,
             vmax=vmax,
             vmin=vmin,
+            vcenter=vcenter,
+            norm=norm,
             save=False,
             show=False,
             title=title,

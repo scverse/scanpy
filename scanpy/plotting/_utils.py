@@ -2,7 +2,7 @@ import warnings
 import collections.abc as cabc
 from abc import ABC
 from functools import lru_cache
-from typing import Union, List, Sequence, Tuple, Collection, Optional
+from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable
 import anndata
 
 import numpy as np
@@ -31,6 +31,7 @@ _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 
 _FontSize = Literal[
     'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
+VBound = Union[str, float, Callable[[Sequence[float]], float]]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase, ABC):
@@ -126,7 +127,7 @@ def timeseries_subplot(
     else:
         levels, _ = np.unique(color, return_inverse=True)
         colors = np.array(palette[: len(levels)].by_key()['color'])
-        subsets = [(x_range[color == l], X[color == l, :]) for l in levels]
+        subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
 
     if ax is None:
         ax = pl.subplot()
@@ -197,13 +198,13 @@ def timeseries_as_heatmap(
         x_new[:, _hold:] = X[:, hold:]
 
     _, ax = pl.subplots(figsize=(1.5 * 4, 2 * 4))
-    ax.imshow(
+    img = ax.imshow(
         np.array(X, dtype=np.float_),
         aspect='auto',
         interpolation='nearest',
         cmap=color_map,
     )
-    pl.colorbar(shrink=0.5)
+    pl.colorbar(img, shrink=0.5)
     pl.yticks(range(X.shape[0]), var_names)
     for h in highlights_x:
         pl.plot([h, h], [0, X.shape[0]], '--', color='black')
@@ -619,7 +620,9 @@ def setup_axes(
     figure_width = width_without_offsets + left_offset + right_offset
     draw_region_width_frac = draw_region_width / figure_width
     left_offset_frac = left_offset / figure_width
-    right_offset_frac = 1 - (len(panels) - 1) * left_offset_frac
+    right_offset_frac = (  # noqa: F841  # TODO Does this need fixing?
+        1 - (len(panels) - 1) * left_offset_frac
+    )
 
     if ax is None:
         pl.figure(
@@ -707,9 +710,7 @@ def scatter_base(
     )
     for icolor, color in enumerate(colors):
         ax = axs[icolor]
-        left = panel_pos[2][2 * icolor]
         bottom = panel_pos[0][0]
-        width = draw_region_width / figure_width
         height = panel_pos[1][0] - bottom
         Y_sort = Y
         if not is_color_like(color) and sort_order:
@@ -742,7 +743,7 @@ def scatter_base(
             rectangle = [left, bottom, width, height]
             fig = pl.gcf()
             ax_cb = fig.add_axes(rectangle)
-            cb = pl.colorbar(
+            _ = pl.colorbar(
                 sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
             )
         # set the title
@@ -939,8 +940,8 @@ def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     if levels is None:
         levels = make_levels({})
     else:
-        levels = {l: {TOTAL: levels[l], CURRENT: 0} for l in levels}
-    vert_gap = height / (max([l for l in levels]) + 1)
+        levels = {k: {TOTAL: v, CURRENT: 0} for k, v in levels.items()}
+    vert_gap = height / (max(levels.keys()) + 1)
     return make_pos({})
 
 
@@ -1187,3 +1188,24 @@ def _get_basis(adata: anndata.AnnData, basis: str):
         basis_key = f"X_{basis}"
 
     return basis_key
+
+
+def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
+    from matplotlib.colors import Normalize
+
+    try:
+        from matplotlib.colors import TwoSlopeNorm as DivNorm
+    except ImportError:
+        # matplotlib<3.2
+        from matplotlib.colors import DivergingNorm as DivNorm
+
+    if norm is not None:
+        if (vmin is not None) or (vmax is not None) or (vcenter is not None):
+            raise ValueError('Passing both norm and vmin/vmax/vcenter is not allowed.')
+    else:
+        if vcenter is not None:
+            norm = DivNorm(vmin=vmin, vmax=vmax, vcenter=vcenter)
+        else:
+            norm = Normalize(vmin=vmin, vmax=vmax)
+
+    return norm

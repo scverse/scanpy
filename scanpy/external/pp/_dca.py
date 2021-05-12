@@ -13,7 +13,7 @@ _AEType = Literal['zinb-conddisp', 'zinb', 'nb-conddisp', 'nb']
 def dca(
     adata: AnnData,
     mode: Literal['denoise', 'latent'] = 'denoise',
-    ae_type: _AEType = 'zinb-conddisp',
+    ae_type: _AEType = 'nb-conddisp',
     normalize_per_cell: bool = True,
     scale: bool = True,
     log1p: bool = True,
@@ -29,7 +29,7 @@ def dca(
     reduce_lr: int = 10,
     early_stop: int = 15,
     batch_size: int = 32,
-    optimizer: str = 'rmsprop',
+    optimizer: str = 'RMSprop',
     random_state: AnyRandom = 0,
     threads: Optional[int] = None,
     learning_rate: Optional[float] = None,

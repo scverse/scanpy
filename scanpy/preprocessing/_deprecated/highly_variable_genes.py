@@ -104,21 +104,25 @@ def filter_genes_dispersion(
     If a data matrix `X` is passed, the annotation is returned as `np.recarray`
     with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
     """
-    if (
-        n_top_genes is not None
-        and not all(x is None for x in [min_disp, max_disp, min_mean, max_mean])
+    if n_top_genes is not None and not all(
+        x is None for x in [min_disp, max_disp, min_mean, max_mean]
     ):
         logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
-    if min_disp is None: min_disp = 0.5
-    if min_mean is None: min_mean = 0.0125
-    if max_mean is None: max_mean = 3
+    if min_disp is None:
+        min_disp = 0.5
+    if min_mean is None:
+        min_mean = 0.0125
+    if max_mean is None:
+        max_mean = 3
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         result = filter_genes_dispersion(
             adata.X,
             log=log,
-            min_disp=min_disp, max_disp=max_disp,
-            min_mean=min_mean, max_mean=max_mean,
+            min_disp=min_disp,
+            max_disp=max_disp,
+            min_mean=min_mean,
+            max_mean=max_mean,
             n_top_genes=n_top_genes,
             flavor=flavor,
         )
@@ -166,30 +170,38 @@ def filter_genes_dispersion(
         disp_mean_bin[one_gene_per_bin] = 0
         # actually do the normalization
         df['dispersion_norm'] = (
-            df['dispersion'].values  # use values here as index differs
+            # use values here as index differs
+            df['dispersion'].values
             - disp_mean_bin[df['mean_bin'].values].values
         ) / disp_std_bin[df['mean_bin'].values].values
     elif flavor == 'cell_ranger':
         from statsmodels import robust
-        df['mean_bin'] = pd.cut(df['mean'], np.r_[-np.inf,
-            np.percentile(df['mean'], np.arange(10, 105, 5)), np.inf])
+
+        df['mean_bin'] = pd.cut(
+            df['mean'],
+            np.r_[-np.inf, np.percentile(df['mean'], np.arange(10, 105, 5)), np.inf],
+        )
         disp_grouped = df.groupby('mean_bin')['dispersion']
         disp_median_bin = disp_grouped.median()
         # the next line raises the warning: "Mean of empty slice"
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             disp_mad_bin = disp_grouped.apply(robust.mad)
-        df['dispersion_norm'] = np.abs(
-            df['dispersion'].values
-            - disp_median_bin[df['mean_bin'].values].values
-        ) / disp_mad_bin[df['mean_bin'].values].values
+        df['dispersion_norm'] = (
+            np.abs(
+                df['dispersion'].values - disp_median_bin[df['mean_bin'].values].values
+            )
+            / disp_mad_bin[df['mean_bin'].values].values
+        )
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
     dispersion_norm = df['dispersion_norm'].values.astype('float32')
     if n_top_genes is not None:
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
-        dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
-        disp_cut_off = dispersion_norm[n_top_genes-1]
+        dispersion_norm[
+            ::-1
+        ].sort()  # interestingly, np.argpartition is slightly slower
+        disp_cut_off = dispersion_norm[n_top_genes - 1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
         logg.debug(
             f'the {n_top_genes} top genes correspond to a '
@@ -198,24 +210,29 @@ def filter_genes_dispersion(
     else:
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        gene_subset = np.logical_and.reduce((
-            mean > min_mean,
-            mean < max_mean,
-            dispersion_norm > min_disp,
-            dispersion_norm < max_disp,
-        ))
+        gene_subset = np.logical_and.reduce(
+            (
+                mean > min_mean,
+                mean < max_mean,
+                dispersion_norm > min_disp,
+                dispersion_norm < max_disp,
+            )
+        )
     logg.info('    finished', time=start)
-    return np.rec.fromarrays((
-        gene_subset,
-        df['mean'].values,
-        df['dispersion'].values,
-        df['dispersion_norm'].values.astype('float32', copy=False),
-    ), dtype=[
-        ('gene_subset', bool),
-        ('means', 'float32'),
-        ('dispersions', 'float32'),
-        ('dispersions_norm', 'float32'),
-    ])
+    return np.rec.fromarrays(
+        (
+            gene_subset,
+            df['mean'].values,
+            df['dispersion'].values,
+            df['dispersion_norm'].values.astype('float32', copy=False),
+        ),
+        dtype=[
+            ('gene_subset', bool),
+            ('means', 'float32'),
+            ('dispersions', 'float32'),
+            ('dispersions_norm', 'float32'),
+        ],
+    )
 
 
 def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
@@ -236,6 +253,6 @@ def _filter_genes(X, e_cutoff, v_cutoff, meth):
     if issparse(X):
         raise ValueError('Not defined for sparse input. See `filter_genes_dispersion`.')
     mean_filter = np.mean(X, axis=0) > e_cutoff
-    var_filter = meth(X, axis=0) / (np.mean(X, axis=0) + .0001) > v_cutoff
+    var_filter = meth(X, axis=0) / (np.mean(X, axis=0) + 0.0001) > v_cutoff
     gene_subset = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
     return gene_subset

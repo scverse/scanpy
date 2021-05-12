@@ -1,5 +1,6 @@
 from functools import partial
 from pathlib import Path
+import sys
 from itertools import repeat, chain, combinations
 
 import pytest
@@ -59,11 +60,11 @@ def test_heatmap(image_comparer):
     # test heatmap numeric column():
 
     # set as numeric column the vales for the first gene on the matrix
-    adata.obs['Gata2'] = adata.X[:, 0]
+    adata.obs['numeric_value'] = adata.X[:, 0]
     sc.pl.heatmap(
         adata,
         adata.var_names,
-        'Gata2',
+        'numeric_value',
         use_raw=False,
         num_categories=4,
         figsize=(4.5, 5),
@@ -85,6 +86,7 @@ def test_heatmap(image_comparer):
     )
     save_and_compare_images('master_heatmap_std_scale_var')
 
+    # test standard_scale_obs
     sc.pl.heatmap(
         adata,
         adata.var_names,
@@ -120,6 +122,24 @@ def test_heatmap(image_comparer):
     )
     save_and_compare_images('master_heatmap_var_as_dict')
 
+    # test that plot elements are well aligned
+    # small
+    a = AnnData(
+        np.array([[0, 0.3, 0.5], [1, 1.3, 1.5], [2, 2.3, 2.5]]),
+        obs={"foo": 'a b c'.split()},
+        var=pd.DataFrame({"genes": 'g1 g2 g3'.split()}).set_index('genes'),
+    )
+    a.obs['foo'] = a.obs['foo'].astype('category')
+    sc.pl.heatmap(
+        a, var_names=a.var_names, groupby='foo', swap_axes=True, figsize=(4, 4)
+    )
+    save_and_compare_images('master_heatmap_small_swap_alignment')
+
+    sc.pl.heatmap(
+        a, var_names=a.var_names, groupby='foo', swap_axes=False, figsize=(4, 4)
+    )
+    save_and_compare_images('master_heatmap_small_alignment')
+
 
 @pytest.mark.skipif(
     pkg_version("matplotlib") < version.parse('3.1'),
@@ -149,7 +169,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "dotplot2",
             partial(
                 sc.pl.dotplot,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=7,
                 title='non categorical obs',
@@ -234,7 +254,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "matrixplot2",
             partial(
                 sc.pl.matrixplot,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=4,
                 title='non-categorical obs, custom figsize',
@@ -279,7 +299,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             "stacked_violin_no_cat_obs",
             partial(
                 sc.pl.stacked_violin,
-                groupby='Gata2',
+                groupby='numeric_column',
                 use_raw=False,
                 num_categories=4,
                 title='non-categorical obs, custom figsize',
@@ -292,7 +312,7 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     adata = sc.datasets.krumsiek11()
-    adata.obs['Gata2'] = adata.X[:, 0]
+    adata.obs['numeric_column'] = adata.X[:, 0]
     adata.layers['test'] = -1 * adata.X.copy()
     genes_dict = {
         'group a': ['Gata2', 'Gata1'],
@@ -416,7 +436,7 @@ def test_multiple_plots(image_comparer):
     fig, (ax1, ax2, ax3) = plt.subplots(
         1, 3, figsize=(20, 5), gridspec_kw={'wspace': 0.7}
     )
-    __ = sc.pl.stacked_violin(
+    _ = sc.pl.stacked_violin(
         adata,
         markers,
         groupby='bulk_labels',
@@ -425,7 +445,7 @@ def test_multiple_plots(image_comparer):
         dendrogram=True,
         show=False,
     )
-    __ = sc.pl.dotplot(
+    _ = sc.pl.dotplot(
         adata,
         markers,
         groupby='bulk_labels',
@@ -434,7 +454,7 @@ def test_multiple_plots(image_comparer):
         dendrogram=True,
         show=False,
     )
-    __ = sc.pl.matrixplot(
+    _ = sc.pl.matrixplot(
         adata,
         markers,
         groupby='bulk_labels',
@@ -523,6 +543,10 @@ def test_dendrogram(image_comparer):
     save_and_compare_images('dendrogram')
 
 
+# See https://github.com/theislab/scanpy/pull/1768
+@pytest.mark.skipif(
+    sys.version_info < (3, 7), reason="matplotlib 3.4 dropped support for python 3.6"
+)
 def test_correlation(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
@@ -571,6 +595,21 @@ def test_correlation(image_comparer):
             ),
         ),
         (
+            "ranked_genes_heatmap_swap_axes_vcenter",
+            partial(
+                sc.pl.rank_genes_groups_heatmap,
+                n_genes=20,
+                swap_axes=True,
+                use_raw=False,
+                show_gene_labels=False,
+                show=False,
+                vmin=-3,
+                vcenter=1,
+                vmax=3,
+                cmap='RdBu_r',
+            ),
+        ),
+        (
             "ranked_genes_stacked_violin",
             partial(
                 sc.pl.rank_genes_groups_stacked_violin,
@@ -606,6 +645,22 @@ def test_correlation(image_comparer):
                 n_genes=4,
                 values_to_plot="logfoldchanges",
                 vmin=-5,
+                vmax=5,
+                min_logfoldchange=3,
+                cmap='RdBu_r',
+                swap_axes=True,
+                title='log fold changes swap_axes',
+                show=False,
+            ),
+        ),
+        (
+            "ranked_genes_dotplot_logfoldchange_vcenter",
+            partial(
+                sc.pl.rank_genes_groups_dotplot,
+                n_genes=4,
+                values_to_plot="logfoldchanges",
+                vmin=-5,
+                vcenter=1,
                 vmax=5,
                 min_logfoldchange=3,
                 cmap='RdBu_r',
@@ -667,6 +722,21 @@ def test_correlation(image_comparer):
             ),
         ),
         (
+            "ranked_genes_matrixplot_swap_axes_vcenter",
+            partial(
+                sc.pl.rank_genes_groups_matrixplot,
+                n_genes=5,
+                show=False,
+                swap_axes=True,
+                values_to_plot='logfoldchanges',
+                vmin=-6,
+                vcenter=1,
+                vmax=6,
+                cmap='bwr',
+                title='log fold changes swap_axes',
+            ),
+        ),
+        (
             "ranked_genes_tracksplot",
             partial(
                 sc.pl.rank_genes_groups_tracksplot,
@@ -681,6 +751,19 @@ def test_correlation(image_comparer):
                 sc.pl.rank_genes_groups_violin,
                 groups='0',
                 n_genes=5,
+                use_raw=True,
+                jitter=False,
+                strip=False,
+                show=False,
+            ),
+        ),
+        (
+            "ranked_genes_violin_not_raw",
+            partial(
+                sc.pl.rank_genes_groups_violin,
+                groups='0',
+                n_genes=5,
+                use_raw=False,
                 jitter=False,
                 strip=False,
                 show=False,
@@ -771,6 +854,19 @@ def pbmc_scatterplots():
             ),
         ),
         (
+            'multipanel_vcenter',
+            partial(
+                sc.pl.pca,
+                color=['CD3D', 'CD79A'],
+                components=['1,2', '1,3'],
+                vmax=5,
+                use_raw=False,
+                vmin=-5,
+                vcenter=1,
+                cmap='seismic',
+            ),
+        ),
+        (
             'pca_sparse_layer',
             partial(sc.pl.pca, color=['CD3D', 'CD79A'], layer='sparse', cmap='viridis'),
         ),
@@ -813,6 +909,7 @@ def pbmc_scatterplots():
                 title=['gene1', 'gene2'],
                 layer='test',
                 vmin=100,
+                vcenter=101,
             ),
         ),
         (
@@ -855,25 +952,114 @@ def test_scatter_embedding_groups_and_size(image_comparer):
     save_and_compare_images('master_embedding_groups_size')
 
 
-def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
+def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same_image):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
 
     sc.pl.embedding(
         pbmc,
         'X_umap',
-        color=['percent_mito', 'n_counts', 'bulk_labels'],
+        color=['percent_mito', 'n_counts', 'bulk_labels', 'percent_mito'],
         s=200,
         frameon=False,
         add_outline=True,
-        vmax=['p99.0', partial(np.percentile, q=90)],
+        vmax=['p99.0', partial(np.percentile, q=90), None, 0.03],
         vmin=0.01,
+        vcenter=[0.015, None, None, 0.025],
         outline_color=('#555555', '0.9'),
         outline_width=(0.5, 0.5),
         cmap='viridis_r',
         alpha=0.9,
+        wspace=0.5,
     )
     save_and_compare_images('master_embedding_outline_vmin_vmax')
+
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
+    norm = mpl.colors.LogNorm()
+    with pytest.raises(
+        ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."
+    ):
+        sc.pl.embedding(
+            pbmc,
+            'X_umap',
+            color=['percent_mito', 'n_counts'],
+            norm=norm,
+            vmin=0,
+            vmax=1,
+            vcenter=0.5,
+            cmap='RdBu_r',
+        )
+
+    try:
+        from matplotlib.colors import TwoSlopeNorm as DivNorm
+    except ImportError:
+        # matplotlib<3.2
+        from matplotlib.colors import DivergingNorm as DivNorm
+
+    from matplotlib.colors import Normalize
+
+    norm = Normalize(0, 10000)
+    divnorm = DivNorm(200, 150, 6000)
+
+    # allowed
+    sc.pl.umap(
+        pbmc,
+        color=['n_counts', 'bulk_labels', 'percent_mito'],
+        frameon=False,
+        vmax=['p99.0', None, None],
+        vcenter=[0.015, None, None],
+        norm=[None, norm, norm],
+        wspace=0.5,
+    )
+
+    sc.pl.umap(
+        pbmc,
+        color=['n_counts', 'bulk_labels'],
+        frameon=False,
+        norm=norm,
+        wspace=0.5,
+    )
+    plt.savefig(FIGS / 'umap_norm_fig0.png')
+    plt.close()
+
+    sc.pl.umap(
+        pbmc,
+        color=['n_counts', 'bulk_labels'],
+        frameon=False,
+        norm=divnorm,
+        wspace=0.5,
+    )
+    plt.savefig(FIGS / 'umap_norm_fig1.png')
+    plt.close()
+
+    sc.pl.umap(
+        pbmc,
+        color=['n_counts', 'bulk_labels'],
+        frameon=False,
+        vcenter=200,
+        vmin=150,
+        vmax=6000,
+        wspace=0.5,
+    )
+    plt.savefig(FIGS / 'umap_norm_fig2.png')
+    plt.close()
+
+    check_same_image(FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig2.png', tol=1)
+
+    with pytest.raises(AssertionError):
+        check_same_image(
+            FIGS / 'umap_norm_fig1.png', FIGS / 'umap_norm_fig0.png', tol=1
+        )
+
+
+def test_timeseries():
+    adata = sc.datasets.pbmc68k_reduced()
+    sc.pp.neighbors(adata, n_neighbors=5, method='gauss', knn=False)
+    sc.tl.diffmap(adata)
+    sc.tl.dpt(adata, n_branchings=1, n_dcs=10)
+    sc.pl.dpt_timeseries(adata, as_heatmap=True)
 
 
 def test_scatter_raw(tmp_path):
@@ -1013,6 +1199,23 @@ def test_paga(image_comparer):
     save_and_compare_images('master_paga_pie')
 
 
+def test_paga_path(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.tl.paga(pbmc, groups='bulk_labels')
+
+    pbmc.uns['iroot'] = 0
+    sc.tl.dpt(pbmc)
+    sc.pl.paga_path(
+        pbmc,
+        nodes=['Dendritic'],
+        keys=['HES4', 'SRM', 'CSTB'],
+        show=False,
+    )
+    save_and_compare_images('master_paga_path')
+
+
 def test_no_copy():
     # https://github.com/theislab/scanpy/issues/1000
     # Tests that plotting functions don't make a copy from a view unless they
@@ -1051,3 +1254,47 @@ def test_no_copy():
         view = actual[actual.obs["bulk_labels"] == "Dendritic"]
         plotfunc(view, ["Dendritic"], show=False)
         assert view.is_view
+
+
+def test_groupby_index(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    pbmc = sc.datasets.pbmc68k_reduced()
+
+    genes = [
+        'CD79A',
+        'MS4A1',
+        'CD8A',
+        'CD8B',
+        'LYZ',
+        'LGALS3',
+        'S100A8',
+        'GNLY',
+        'NKG7',
+        'KLRB1',
+        'FCGR3A',
+        'FCER1A',
+        'CST3',
+    ]
+    pbmc_subset = pbmc[:10].copy()
+    sc.pl.dotplot(pbmc_subset, genes, groupby='index')
+    save_and_compare_images('master_dotplot_groupby_index')
+
+
+# test category order when groupby is a list (#1735)
+def test_groupby_list(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
+    adata = sc.datasets.krumsiek11()
+
+    np.random.seed(1)
+
+    cat_val = adata.obs.cell_type.tolist()
+    np.random.shuffle(cat_val)
+    cats = adata.obs.cell_type.cat.categories.tolist()
+    np.random.shuffle(cats)
+    adata.obs['rand_cat'] = pd.Categorical(cat_val, categories=cats)
+
+    with mpl.rc_context({"figure.subplot.bottom": 0.5}):
+        sc.pl.dotplot(
+            adata, ['Gata1', 'Gata2'], groupby=['rand_cat', 'cell_type'], swap_axes=True
+        )
+        save_and_compare_images('master_dotplot_groupby_list_catorder')
