@@ -21,7 +21,6 @@ from ..._settings import settings
 from .._docs import (
     doc_scatter_embedding,
     doc_show_save_ax,
-    doc_vminmax,
     doc_rank_genes_groups_plot_args,
     doc_rank_genes_groups_values_to_plot,
     doc_vbound_percentile,
