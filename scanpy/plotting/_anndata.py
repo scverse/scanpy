@@ -689,6 +689,53 @@ def violin(
     Returns
     -------
     A :class:`~matplotlib.axes.Axes` object if `ax` is `None` else `None`.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.violin(adata, keys='S_score')
+
+    Plot by category. Rotate x-axis labels so that they do not overlap.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90)
+
+    Set order of categories to be plotted or select specific categories to be plotted.
+
+    .. plot::
+        :context: close-figs
+
+        groupby_order = ['CD34+', 'CD19+ B']
+        sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90,
+            order=groupby_order)
+
+    Plot multiple keys.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys=['S_score', 'G2M_score'], groupby='bulk_labels',
+            rotation=90)
+
+    For large datasets consider omitting the overlaid scatter plot.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys='S_score', stripplot=False)
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    pl.stacked_violin
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -956,19 +1003,20 @@ def heatmap(
 
     Examples
     -------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True, swap_axes=True)
+    .. plot::
+        :context: close-figs
 
-    Using var_names as dict:
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.heatmap(adata, markers, groupby='bulk_labels', swap_axes=True)
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. currentmodule:: scanpy
 
     See also
     --------
-    rank_genes_groups_heatmap: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    pl.rank_genes_groups_heatmap
+    tl.rank_genes_groups
     """
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
@@ -1599,10 +1647,16 @@ def dendrogram(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, 'bulk_labels')
-    >>> sc.pl.dendrogram(adata, 'bulk_labels')
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.dendrogram(adata, 'bulk_labels')
+        sc.pl.dendrogram(adata, 'bulk_labels')
+
+    .. currentmodule:: scanpy
+
     """
     if ax is None:
         _, ax = pl.subplots()

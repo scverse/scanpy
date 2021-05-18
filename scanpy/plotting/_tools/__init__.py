@@ -6,9 +6,8 @@ from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.colors import Normalize
-from scipy.sparse import issparse
 from matplotlib import pyplot as pl
-from matplotlib import rcParams, cm, colors
+from matplotlib import rcParams, cm
 from anndata import AnnData
 from typing import Union, Optional, List, Sequence, Iterable
 
@@ -28,6 +27,7 @@ from .._docs import (
 from ...get import rank_genes_groups_df
 from .scatterplots import pca, embedding, _panel_grid
 from matplotlib.colors import Colormap
+from scanpy.get import obs_df
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -58,6 +58,21 @@ def pca_overview(adata: AnnData, **params):
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca_overview(adata, color="louvain")
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.pca
+    pp.pca
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params:
@@ -96,6 +111,23 @@ def pca_loadings(
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+
+    Show first 3 components loadings
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca_loadings(adata, components = '1,2,3')
+
+
     """
     if components is None:
         components = [1, 2, 3]
@@ -641,18 +673,45 @@ def rank_genes_groups_dotplot(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    Plot top 2 genes per group.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,n_genes=2)
+
+    Plot with scaled expressions for easier identification of differences.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,n_genes=2,standard_scale='var')
 
     Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
     like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
     and maximum values to plot are set to -4 and 4 respectively.
     Also, only genes with a log fold change of 3 or more are shown.
-    >>> sc.pl.rank_genes_groups_dotplot(adata,
-    ... n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
-    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_dotplot(adata,
+        n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
+        vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.rank_genes_groups
     """
 
     return _rank_genes_groups_plot(
@@ -808,18 +867,30 @@ def rank_genes_groups_matrixplot(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, 'bulk_labels', n_genes=adata.raw.shape[1])
 
     Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
     like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
     and maximum values to plot are set to -4 and 4 respectively.
     Also, only genes with a log fold change of 3 or more are shown.
-    >>> sc.pl.rank_genes_groups_dotplot(adata,
-    ... n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
-    ... vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
 
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_matrixplot(adata,
+            n_genes=4,
+            values_to_plot="logfoldchanges",
+            cmap='bwr',
+            vmin=-4,
+            vmax=4,
+            min_logfoldchange=3,
+            colorbar_title='log fold change')
     """
 
     return _rank_genes_groups_plot(
@@ -903,21 +974,10 @@ def rank_genes_groups_violin(
             _gene_names = adata.uns[key]['names'][group_name][:n_genes]
         else:
             _gene_names = gene_names
-        df = pd.DataFrame()
-        new_gene_names = []
-        for g in _gene_names:
-            if adata.raw is not None and use_raw:
-                X_col = adata.raw[:, g].X
-                if gene_symbols:
-                    g = adata.raw.var[gene_symbols][g]
-            else:
-                X_col = adata[:, g].X
-                if gene_symbols:
-                    g = adata.var[gene_symbols][g]
-            if issparse(X_col):
-                X_col = X_col.toarray().flatten()
-            new_gene_names.append(g)
-            df[g] = X_col
+        if isinstance(_gene_names, np.ndarray):
+            _gene_names = _gene_names.tolist()
+        df = obs_df(adata, _gene_names, use_raw=use_raw, gene_symbols=gene_symbols)
+        new_gene_names = df.columns
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
             df.loc[df['hue'] != group_name, 'hue'] = 'rest'
