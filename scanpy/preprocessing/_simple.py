@@ -347,9 +347,7 @@ def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
             X = X.astype(np.floating)
         else:
             X = X.copy()
-    elif not (
-        np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, np.complex)
-    ):
+    elif not (np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, complex)):
         X = X.astype(np.floating)
     np.log1p(X, out=X)
     if base is not None:
