@@ -18,7 +18,6 @@ repos:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-added-large-files
-        exclude: docs/data
     -   id: check-case-conflict
     -   id: check-toml
     -   id: check-yaml
