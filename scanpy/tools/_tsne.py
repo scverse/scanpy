@@ -93,6 +93,7 @@ def tsne(
         n_jobs=n_jobs,
         metric=metric,
     )
+
     # Backwards compat handling: Remove in scanpy 1.9.0
     if n_jobs != 1 and not use_fast_tsne:
         warnings.warn(
