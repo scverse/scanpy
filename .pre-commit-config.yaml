@@ -16,7 +16,9 @@ repos:
     rev: v4.0.1
     hooks:
     -   id: trailing-whitespace
+        exclude: scanpy/tests/_data
     -   id: end-of-file-fixer
+        exclude: scanpy/tests/_data
     -   id: check-added-large-files
     -   id: check-case-conflict
     -   id: check-toml
