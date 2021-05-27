@@ -937,6 +937,7 @@ class Neighbors:
         n_comps: int = 15,
         sym: Optional[bool] = None,
         sort: Literal['decrease', 'increase'] = 'decrease',
+        random_state: AnyRandom = 0,
     ):
         """\
         Compute eigen decomposition of transition matrix.
@@ -950,6 +951,8 @@ class Neighbors:
             Instead of computing the eigendecomposition of the assymetric
             transition matrix, computed the eigendecomposition of the symmetric
             Ktilde matrix.
+        random_state
+            A numpy random seed
 
         Returns
         -------
@@ -978,8 +981,14 @@ class Neighbors:
             which = 'LM' if sort == 'decrease' else 'SM'
             # it pays off to increase the stability with a bit more precision
             matrix = matrix.astype(np.float64)
+
+            # Setting the random initial vector
+            random_state = check_random_state(random_state)
+            np.random.set_state(random_state.get_state())
+            v0 = np.random.randn((matrix.shape[0]))
+
             evals, evecs = scipy.sparse.linalg.eigsh(
-                matrix, k=n_comps, which=which, ncv=ncv
+                matrix, k=n_comps, which=which, ncv=ncv, v0=v0
             )
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == 'decrease':
