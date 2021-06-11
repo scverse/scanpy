@@ -318,7 +318,11 @@ def recipe_pearson_residuals(
         pca_dict = dict(**pca_param, PCs=adata_pca.varm['PCs'])
         adata.uns['pearson_residuals_pca'] = pca_dict
         adata.uns['pearson_residuals_normalization'] = normalization_dict
-        adata.obsm['pearson_residuals_X_pca'] = adata_pca.obsm['X_pca']
+        adata.obsm['X_pearson_residuals_pca'] = adata_pca.obsm['X_pca']
         return None
     else:
+        adata_pca.obsm['X_pearson_residuals_pca'] = adata_pca.obsm['X_pca'].copy()
+        adata_pca.uns['pearson_residuals_pca'] = adata_pca.uns['pca'].copy()
+        del adata_pca.obsm['X_pca']
+        del adata_pca.uns['pca']
         return adata_pca, hvg
