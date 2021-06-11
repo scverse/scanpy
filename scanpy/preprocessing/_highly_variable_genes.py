@@ -197,18 +197,18 @@ def _highly_variable_pearson_residuals(
     Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`)
     or updates `.var` with the following fields:
 
-    highly_variable
+    highly_variable : bool
         boolean indicator of highly-variable genes.
-    means
+    means : float
         means per gene.
-    variances
+    variances : float
         variances per gene.
-    residual_variances
+    residual_variances : float
         Pearson residual variance per gene. Averaged in the case of multiple
         batches.
-    highly_variable_rank
+    highly_variable_rank : float
         Rank of the gene according to residual variance, median rank in the
-        case of multiple batches.
+        case of multiple batches. NaN for non-HVGs.
     highly_variable_nbatches : int
         If batch_key is given, this denotes in how many batches genes are
         detected as HVG.
@@ -227,6 +227,12 @@ def _highly_variable_pearson_residuals(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,
         )
+    # check theta
+    if theta <= 0:
+        # TODO: would "underdispersion" with negative theta make sense?
+        # then only theta=0 were undefined..
+        raise ValueError('Pearson residuals require theta > 0')
+    # prepare clipping
 
     if batch_key is None:
         batch_info = np.zeros(adata.shape[0], dtype=int)
@@ -312,9 +318,11 @@ def _highly_variable_pearson_residuals(
         dict(
             means=means,
             variances=variances,
-            residual_variances=np.mean(residual_gene_vars, axis=0),
+            residual_variances=np.mean(residual_gene_vars, axis=0).astype(
+                np.float32, copy=False
+            ),
             highly_variable_rank=medianrank_residual_var,
-            highly_variable_nbatches=highly_variable_nbatches,
+            highly_variable_nbatches=highly_variable_nbatches.astype(np.int64),
             highly_variable_intersection=highly_variable_intersection,
         )
     )
@@ -334,7 +342,7 @@ def _highly_variable_pearson_residuals(
     # (also for flavor = seurat and cellranger..)
     df = df.loc[adata.var_names]
 
-    if inplace or subset:
+    if inplace:
         adata.uns['hvg'] = {'flavor': 'pearson_residuals', 'computed_on': computed_on}
         logg.hint(
             'added\n'
@@ -350,9 +358,8 @@ def _highly_variable_pearson_residuals(
         adata.var['highly_variable_rank'] = df['highly_variable_rank'].values
         adata.var['means'] = df['means'].values
         adata.var['variances'] = df['variances'].values
-        adata.var['residual_variances'] = df['residual_variances'].values.astype(
-            'float64', copy=False
-        )
+        adata.var['residual_variances'] = df['residual_variances']
+
         if batch_key is not None:
             adata.var['highly_variable_nbatches'] = df[
                 'highly_variable_nbatches'
@@ -367,6 +374,9 @@ def _highly_variable_pearson_residuals(
             df = df.drop(
                 ['highly_variable_nbatches', 'highly_variable_intersection'], axis=1
             )
+        if subset:
+            df = df.iloc[df.highly_variable.values, :]
+
         return df
 
 
