@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 from pathlib import Path
+from scipy.sparse import csr_matrix
+from scanpy.tests.helpers import _prepare_pbmc_testdata
+import warnings
 
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
 FILE_V3 = Path(__file__).parent / Path('_scripts/seurat_hvg_v3.csv.gz')
@@ -52,6 +55,273 @@ def test_highly_variable_genes_basic():
     ]
     hvg_df = sc.pp.highly_variable_genes(adata, batch_key="batch", inplace=False)
     assert np.all(np.isin(colnames, hvg_df.columns))
+
+
+def _residual_var_reference(adata, clip=None, theta=100):
+    sc.pp.normalize_pearson_residuals(adata, clip=clip, theta=theta)
+    residuals = adata.X
+    return np.var(residuals, axis=0)
+
+
+@pytest.mark.parametrize(
+    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
+)
+@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtype):
+
+    adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
+
+    # depending on check_values, warnings should be raised for non-integer data
+    if dtype == 'float32':
+
+        adata_noninteger = adata.copy()
+        x, y = np.nonzero(adata_noninteger.X)
+        adata_noninteger.X[x[0], y[0]] = 0.5
+        nonint_warn_msg = "`flavor='pearson_residuals'` expects raw count data, but non-integers were found."
+
+        # expecting 0 no-int warnings
+        with warnings.catch_warnings(record=True) as record:
+            sc.pp.highly_variable_genes(
+                adata_noninteger.copy(),
+                flavor='pearson_residuals',
+                n_top_genes=100,
+                check_values=False,
+            )
+        nonint_warnings = [
+            warning.message.args[0] == nonint_warn_msg for warning in record
+        ]
+        assert np.sum(nonint_warnings) == 0
+
+        # expecting 1 no-int warning
+        with warnings.catch_warnings(record=True) as record:
+            sc.pp.highly_variable_genes(
+                adata_noninteger.copy(),
+                flavor='pearson_residuals',
+                n_top_genes=100,
+                check_values=True,
+            )
+        nonint_warnings = np.array(
+            [warning.message.args[0] == nonint_warn_msg for warning in record]
+        )
+        assert np.sum(nonint_warnings) == 1
+
+    # errors should be raised for invalid theta values
+    with pytest.raises(ValueError) as record:
+        sc.pp.highly_variable_genes(
+            adata.copy(), flavor='pearson_residuals', n_top_genes=100, theta=0
+        )
+    with pytest.raises(ValueError) as record:
+        sc.pp.highly_variable_genes(
+            adata.copy(), flavor='pearson_residuals', n_top_genes=100, theta=-1
+        )
+
+    # error should be raised for invalid clipping values
+    with pytest.raises(ValueError) as record:
+        sc.pp.highly_variable_genes(
+            adata.copy(), flavor='pearson_residuals', n_top_genes=100, clip=-1
+        )
+
+
+@pytest.mark.parametrize(
+    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
+)
+@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize('subset', [True, False])
+@pytest.mark.parametrize('inplace', [True, False])
+@pytest.mark.parametrize('clip', [None, np.Inf, 30])
+@pytest.mark.parametrize('theta', [100, np.Inf])
+def test_highly_variable_genes_pearson_residuals_values(
+    subset, inplace, sparsity_func, dtype, clip, theta
+):
+
+    n_top_genes = 100
+    adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
+    # compute reference output
+    residual_variances_reference = _residual_var_reference(
+        adata.copy(), clip=clip, theta=theta
+    )
+    if subset:
+        # lazyly sort by residual variance and take top N
+        top_n_idx = np.argsort(-residual_variances_reference)[:n_top_genes]
+        # (results in sorted "gene order" in reference)
+        residual_variances_reference = residual_variances_reference[top_n_idx]
+    # compute output to be tested
+    output = sc.pp.highly_variable_genes(
+        adata,
+        flavor='pearson_residuals',
+        n_top_genes=n_top_genes,
+        subset=subset,
+        inplace=inplace,
+        clip=clip,
+        theta=theta,
+    )
+
+    # depending on inplace, check adata.var or output
+    if inplace:
+        assert output is None
+        output_df = adata.var
+    else:
+        output_df = output
+
+    # consistency with normalization method
+    if subset:
+        # sort values before comparing as reference is sorted as well for subset case
+        sort_output_idx = np.argsort(-output_df['residual_variances'].values)
+        assert np.allclose(
+            output_df['residual_variances'].values[sort_output_idx],
+            residual_variances_reference,
+        )
+    else:
+        assert np.allclose(
+            output_df['residual_variances'].values, residual_variances_reference
+        )
+
+
+@pytest.mark.parametrize(
+    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
+)
+@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize('subset', [True, False])
+@pytest.mark.parametrize('inplace', [True, False])
+def test_highly_variable_genes_pearson_residuals_general(
+    subset,
+    inplace,
+    sparsity_func,
+    dtype,
+):
+
+    n_top_genes = 1000
+
+    adata = _prepare_pbmc_testdata(sparsity_func, dtype)
+    # compute reference output
+    residual_variances_reference = _residual_var_reference(adata.copy())
+    if subset:
+        # lazyly sort by residual variance and take top N
+        top_n_idx = np.argsort(-residual_variances_reference)[:n_top_genes]
+        # (results in sorted "gene order" in reference)
+        residual_variances_reference = residual_variances_reference[top_n_idx]
+    # compute output to be tested
+    output = sc.pp.highly_variable_genes(
+        adata,
+        flavor='pearson_residuals',
+        n_top_genes=n_top_genes,
+        subset=subset,
+        inplace=inplace,
+    )
+
+    # depending on inplace, check adata.var or output
+    if inplace:
+        assert output is None
+        output_df = adata.var
+    else:
+        output_df = output
+
+    # check output is complete
+    for key in [
+        'highly_variable',
+        'means',
+        'variances',
+        'residual_variances',
+        'highly_variable_rank',
+    ]:
+        assert key in output_df.keys()
+
+    # check residual variances
+    assert output_df['residual_variances'].values.dtype is np.dtype('float32')
+    # consistency with normalization method
+    if subset:
+        # sort values before comparing as reference is sorted as well for subset case
+        sort_output_idx = np.argsort(-output_df['residual_variances'].values)
+        assert np.allclose(
+            output_df['residual_variances'].values[sort_output_idx],
+            residual_variances_reference,
+        )
+    else:
+        assert np.allclose(
+            output_df['residual_variances'].values, residual_variances_reference
+        )
+
+    # check hvg flag
+    assert output_df['highly_variable'].values.dtype is np.dtype('bool')
+    assert np.sum(output_df['highly_variable']) == n_top_genes
+    hvg_idx = np.where(output_df['highly_variable'])[0]
+    topn_idx = np.sort(
+        np.argsort(-output_df['residual_variances'].values)[:n_top_genes]
+    )
+    assert np.all(hvg_idx == topn_idx)
+
+    # check ranks
+    assert np.nanmin(output_df['highly_variable_rank'].values) == 0
+    assert np.nanmax(output_df['highly_variable_rank'].values) <= n_top_genes - 1
+
+
+@pytest.mark.parametrize(
+    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
+)
+@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize('subset', [True, False])
+@pytest.mark.parametrize('inplace', [True, False])
+def test_highly_variable_genes_pearson_residuals_batch(
+    subset, inplace, sparsity_func, dtype
+):
+
+    n_top_genes = 1000
+
+    adata = _prepare_pbmc_testdata(sparsity_func, dtype)
+    n_genes = adata.shape[1]
+
+    output = sc.pp.highly_variable_genes(
+        adata,
+        flavor='pearson_residuals',
+        n_top_genes=n_top_genes,
+        batch_key='batch',
+        subset=subset,
+        inplace=inplace,
+    )
+
+    # depending on inplace, check adata.var or output
+    if inplace:
+        assert output is None
+        output_df = adata.var
+    else:
+        output_df = output
+
+    # check output is complete
+    for key in [
+        'highly_variable',
+        'means',
+        'variances',
+        'residual_variances',
+        'highly_variable_rank',
+        'highly_variable_nbatches',
+        'highly_variable_intersection',
+    ]:
+        assert key in output_df.keys()
+
+    # check hvg flag
+    assert output_df['highly_variable'].values.dtype is np.dtype('bool')
+    assert np.sum(output_df['highly_variable']) == n_top_genes
+
+    # check intersection flag
+    nbatches = len(np.unique(adata.obs['batch']))
+    assert output_df['highly_variable_intersection'].values.dtype is np.dtype('bool')
+    assert np.sum(output_df['highly_variable_intersection']) <= n_top_genes * nbatches
+    assert np.all(output_df['highly_variable'][output_df.highly_variable_intersection])
+
+    # check ranks (with batch_key these are the median of within-batch ranks)
+    assert output_df['highly_variable_rank'].values.dtype is np.dtype('float32')
+    assert np.nanmax(output_df['highly_variable_rank'].values) <= n_top_genes - 1
+
+    # check nbatches
+    assert output_df['highly_variable_nbatches'].values.dtype is np.dtype('int')
+    assert np.min(output_df['highly_variable_nbatches'].values) >= 0
+    assert np.max(output_df['highly_variable_nbatches'].values) <= nbatches
+
+    # check subsetting
+    if subset:
+        assert len(output_df) == n_top_genes
+    else:
+        assert len(output_df) == n_genes
 
 
 def test_higly_variable_genes_compare_to_seurat():
