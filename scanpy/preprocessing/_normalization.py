@@ -49,7 +49,7 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
         raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
     if check_values and (check_nonnegative_integers(X) == False):
-        warnings.warn(
+        warn(
             "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
             UserWarning,
         )
@@ -225,7 +225,7 @@ def normalize_pearson_residuals_pca(
     `.uns['pearson_residuals_normalization']['clip']`
          The used value of the clipping parameter
     
-    `.obsm['pearson_residuals_X_pca']`
+    `.obsm['X_pearson_residuals_pca']`
         PCA representation of data after gene selection and Pearson residual
         normalization.
     `.uns['pearson_residuals_pca']['PCs']`
@@ -257,9 +257,13 @@ def normalize_pearson_residuals_pca(
         pca_dict = dict(**pca_settings, PCs=adata_pca.varm['PCs'])
         adata.uns['pearson_residuals_pca'] = pca_dict
         adata.uns['pearson_residuals_normalization'] = norm_dict
-        adata.obsm['pearson_residuals_X_pca'] = adata_pca.obsm['X_pca']
+        adata.obsm['X_pearson_residuals_pca'] = adata_pca.obsm['X_pca']
         return None
     else:
+        adata_pca.obsm['X_pearson_residuals_pca'] = adata_pca.obsm['X_pca'].copy()
+        adata_pca.uns['pearson_residuals_pca'] = adata_pca.uns['pca'].copy()
+        del adata_pca.obsm['X_pca']
+        del adata_pca.uns['pca']
         return adata_pca
 
 
