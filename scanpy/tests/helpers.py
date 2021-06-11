@@ -83,3 +83,26 @@ def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
         assert_equal(adatas_proc[field_a], adatas_proc[field_b])
     for field in fields:
         assert_equal(adata_X, adatas_proc[field])
+
+
+def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
+    """Prepares 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
+
+    Params
+    ------
+    sparsity_func
+        sparsity function applied to adata.X (e.g. csr_matrix.toarray for dense or csr_matrix for sparse)
+    dtype
+        numpy dtype applied to adata.X (e.g.  'float32' or 'int64')
+    small
+        False (default) returns full data, True returns small subset of the data."""
+
+    adata = sc.datasets.pbmc3k()
+    if small:
+        adata = adata[:1000, :500]
+        sc.pp.filter_cells(adata, min_genes=1)
+    np.random.seed(42)
+    adata.obs['batch'] = np.random.randint(0, 3, size=adata.shape[0])
+    sc.pp.filter_genes(adata, min_cells=1)
+    adata.X = sparsity_func(adata.X.astype(dtype))
+    return adata
