@@ -20,7 +20,7 @@ def bbknn(
     *,
     n_pcs: int = 50,
     trim: Optional[int] = None,
-    n_trees: int = 10,
+    annoy_n_trees: int = 10,
     use_faiss: bool = True,
     set_op_mix_ratio: float = 1.0,
     local_connectivity: int = 1,
@@ -77,7 +77,7 @@ def bbknn(
         at the cost of more conserved batch effect. If `None`,
         sets the parameter value automatically to 10 times the total number of
         neighbours for each cell. Set to 0 to skip.
-    n_trees
+    annoy_n_trees
         Only used when `approx=True`.
         The number of trees to construct in the annoy forest.
         More trees give higher precision when querying,
@@ -113,7 +113,7 @@ def bbknn(
         copy=copy,
         n_pcs=n_pcs,
         trim=trim,
-        n_trees=n_trees,
+        annoy_n_trees=annoy_n_trees,
         use_faiss=use_faiss,
         set_op_mix_ratio=set_op_mix_ratio,
         local_connectivity=local_connectivity,
