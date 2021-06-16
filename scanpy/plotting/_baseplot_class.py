@@ -245,7 +245,7 @@ class BasePlot(object):
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
 
         """
@@ -318,7 +318,7 @@ class BasePlot(object):
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_totals().show()
         """
         self.group_extra_size = size
@@ -391,7 +391,7 @@ class BasePlot(object):
         Set legend title:
 
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
         >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
         """
