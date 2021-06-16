@@ -1,5 +1,4 @@
-from typing import Union, Optional
-import types
+from typing import Union, Optional, Callable
 
 from anndata import AnnData
 import sklearn
@@ -18,9 +17,7 @@ def bbknn(
     use_rep: str = 'X_pca',
     approx: bool = True,
     use_annoy: bool = True,
-    metric: Union[
-        str, 'types.FunctionType', 'sklearn.neighbors.DistanceMetric'
-    ] = 'euclidean',
+    metric: Union[str, Callable, 'sklearn.neighbors.DistanceMetric'] = 'euclidean',
     copy: bool = False,
     *,
     neighbors_within_batch: int = 3,
