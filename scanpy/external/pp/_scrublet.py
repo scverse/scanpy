@@ -130,14 +130,14 @@ def scrublet(
         ``.obs['predicted_doublets']``
             Boolean indicating predicted doublet status
 
-        ``adata.uns['scrublet']['doublet_scores_sim']``
+        ``.uns['scrublet']['doublet_scores_sim']``
             Doublet scores for each simulated doublet transcriptome
 
-        ``adata.uns['scrublet']['doublet_parents']``
+        ``.uns['scrublet']['doublet_parents']``
             Pairs of ``.obs_names`` used to generate each simulated doublet
             transcriptome
 
-        ``uns['scrublet']['parameters']``
+        ``.uns['scrublet']['parameters']``
             Dictionary of Scrublet parameters
 
     See also
@@ -322,7 +322,7 @@ def _scrublet_call_doublets(
     Returns
     -------
     adata : anndata.AnnData
-        if ``copy=True`` it returns or else adds fields to ``adata``. Those fields:
+        if ``copy=True`` it returns or else adds fields to ``adata``:
 
         ``.obs['doublet_score']``
             Doublet scores for each observed transcriptome
@@ -330,13 +330,13 @@ def _scrublet_call_doublets(
         ``.obs['predicted_doublets']``
             Boolean indicating predicted doublet status
 
-        ``adata.uns['scrublet']['doublet_scores_sim']``
+        ``.uns['scrublet']['doublet_scores_sim']``
             Doublet scores for each simulated doublet transcriptome
 
-        ``adata.uns['scrublet']['doublet_parents']``
+        ``.uns['scrublet']['doublet_parents']``
             Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
-        ``uns['scrublet']['parameters']``
+        ``.uns['scrublet']['parameters']``
             Dictionary of Scrublet parameters
     """
     try:
@@ -469,12 +469,12 @@ def scrublet_simulate_doublets(
     Returns
     -------
     adata : anndata.AnnData with simulated doublets in .X
-        if ``copy=True`` it returns or else adds fields to ``adata``:
+        Adds fields to ``adata``:
 
-        ``adata.uns['scrublet']['doublet_parents']``
+        ``.obsm['scrublet']['doublet_parents']``
             Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
-        ``uns['scrublet']['parameters']``
+        ``.uns['scrublet']['parameters']``
             Dictionary of Scrublet parameters
 
     See also
