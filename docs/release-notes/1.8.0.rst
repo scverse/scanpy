@@ -20,6 +20,10 @@
 
 .. rubric:: External tools
 
+.. rubric:: Ecosystem
+
+- Added `Cubé <https://github.com/connerlambden/Cube>` to ecosystem page :pr:`1878` :smaller:`C Lambden`
+
 .. rubric:: Performance enhancements
 
 .. rubric:: Bug fixes
