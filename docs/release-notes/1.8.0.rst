@@ -41,5 +41,6 @@
 - Clarified docs issues for :func:`~scanpy.pp.neighbors`,
   :func:`~scanpy.tl.diffmap`, :func:`~scanpy.pp.calculate_qc_metrics` :pr:`1680` :smaller:`G Palla`
 - Integrated DocSearch_, a find-as-you-type documentation index search. :pr:`1754` :smaller:`P Angerer`
+- Fixed typos in grouped plot doc-strings :pr:`1877` :smaller:`C Rands`
 
 .. _docsearch: https://docsearch.algolia.com/
