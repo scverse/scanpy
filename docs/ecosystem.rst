@@ -90,3 +90,6 @@ Analyses using curated prior knowledge
 
 * `dorothea <https://github.com/saezlab/dorothea-py>`__ for Transcription Factor activities :small:`Institute for Computational Biomedicine, Heidelberg University`
 * `progeny <https://github.com/saezlab/progeny-py>`__ for footprint-based pathway activities :small:`Institute for Computational Biomedicine, Heidelberg University`
+* `Cubé <https://github.com/connerlambden/Cube>`__ :small:`Harvard University`
+
+    | Intuitive Nonparametric Gene Network Search Algorithm that learns from existing biological pathways & multiplicative gene interference patterns.
