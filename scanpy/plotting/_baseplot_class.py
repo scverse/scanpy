@@ -183,7 +183,7 @@ class BasePlot(object):
         Parameters
         ----------
         swap_axes
-            Boolean to turn on (True) or off (False) 'add_dendrogram'. Default True
+            Boolean to turn on (True) or off (False) 'swap_axes'. Default True
 
 
         Returns
@@ -296,7 +296,7 @@ class BasePlot(object):
         Parameters
         ----------
         show
-            Boolean to turn on (True) or off (False) 'add_dendrogram'
+            Boolean to turn on (True) or off (False) 'add_totals'
         sort
             Set to either 'ascending' or 'descending' to reorder the categories
             by cell number
