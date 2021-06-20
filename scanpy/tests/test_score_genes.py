@@ -61,7 +61,7 @@ def test_add_score():
         np.unique(np.random.choice(adata.var_names, 10)), np.unique(non_existing_genes)
     ]
     sc.tl.score_genes(adata, some_genes, score_name='Test')
-    assert adata.obs['Test'].dtype == 'float32'
+    assert adata.obs['Test'].dtype == 'float64'
 
 
 def test_sparse_nanmean():
@@ -168,7 +168,7 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
 
     # now patch _sparse_nanmean by np.nanmean inside sc.tools
     def mock_fn(x, axis):
-        return np.nanmean(x.A, axis)
+        return np.nanmean(x.A, axis, dtype = 'float64')
 
     monkeypatch.setattr(sc.tools._score_genes, '_sparse_nanmean', mock_fn)
     sc.tl.score_genes(adata, gene_list=gene_set, score_name='Test')
