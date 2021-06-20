@@ -2,7 +2,7 @@ from importlib.util import find_spec
 
 import numpy as np
 import pytest
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
 
 import scanpy as sc
 
@@ -28,3 +28,18 @@ def test_umap_init_paga(layout):
     sc.tl.paga(pbmc)
     sc.pl.paga(pbmc, layout=layout, show=False)
     sc.tl.umap(pbmc, init_pos="paga")
+
+
+def test_diffmap():
+    pbmc = sc.datasets.pbmc68k_reduced()
+
+    sc.tl.diffmap(pbmc)
+    d1 = pbmc.obsm['X_diffmap'].copy()
+    sc.tl.diffmap(pbmc)
+    d2 = pbmc.obsm['X_diffmap'].copy()
+    assert_array_equal(d1, d2)
+
+    # Checking if specifying random_state  works, arrays shouldn't be equal
+    sc.tl.diffmap(pbmc, random_state=1234)
+    d3 = pbmc.obsm['X_diffmap'].copy()
+    assert_raises(AssertionError, assert_array_equal, d1, d3)
