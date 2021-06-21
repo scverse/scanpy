@@ -1,5 +1,6 @@
 from functools import singledispatch
 from typing import Optional, Union
+import warnings
 
 
 from anndata import AnnData
@@ -272,6 +273,28 @@ def _(val):
     return val.to_numpy()
 
 
+def _check_vals(vals):
+    """\
+    Checks that values wont cause issues in computation.
+
+    Returns new set of vals, and indexer to put values back into result.
+    """
+    from scanpy._utils import is_constant
+
+    full_result = np.empty(vals.shape[0], dtype=np.float64)
+    full_result.fill(np.nan)
+    idxer = ~is_constant(vals, axis=1)
+    if idxer.all():
+        idxer = slice(None)
+    else:
+        warnings.warn(
+            UserWarning(
+                f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these.",
+            )
+        )
+    return vals[idxer], idxer, full_result
+
+
 @gearys_c.register(sparse.csr_matrix)
 def _gearys_c(g, vals) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
@@ -279,20 +302,26 @@ def _gearys_c(g, vals) -> np.ndarray:
     g_data = g.data.astype(np.float_, copy=False)
     if isinstance(vals, sparse.csr_matrix):
         assert g.shape[0] == vals.shape[1]
-        return _gearys_c_mtx_csr(
+        new_vals, idxer, full_result = _check_vals(vals)
+        result = _gearys_c_mtx_csr(
             g_data,
             g.indices,
             g.indptr,
-            vals.data.astype(np.float_, copy=False),
-            vals.indices,
-            vals.indptr,
-            vals.shape,
+            new_vals.data.astype(np.float_, copy=False),
+            new_vals.indices,
+            new_vals.indptr,
+            new_vals.shape,
         )
+        full_result[idxer] = result
+        return full_result
     elif isinstance(vals, np.ndarray) and vals.ndim == 1:
         assert g.shape[0] == vals.shape[0]
         return _gearys_c_vec(g_data, g.indices, g.indptr, vals)
     elif isinstance(vals, np.ndarray) and vals.ndim == 2:
         assert g.shape[0] == vals.shape[1]
-        return _gearys_c_mtx(g_data, g.indices, g.indptr, vals)
+        new_vals, idxer, full_result = _check_vals(vals)
+        result = _gearys_c_mtx(g_data, g.indices, g.indptr, new_vals)
+        full_result[idxer] = result
+        return full_result
     else:
         raise NotImplementedError()
