@@ -42,7 +42,7 @@ def diffmap(
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
         respectively.
     random_state
-            A numpy random seed
+        A numpy random seed
     copy
         Return a copy instead of writing to adata.
 
