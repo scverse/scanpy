@@ -984,7 +984,6 @@ class Neighbors:
 
             # Setting the random initial vector
             random_state = check_random_state(random_state)
-            np.random.set_state(random_state.get_state())
             v0 = random_state.standard_normal((matrix.shape[0]))
             evals, evecs = scipy.sparse.linalg.eigsh(
                 matrix, k=n_comps, which=which, ncv=ncv, v0=v0
