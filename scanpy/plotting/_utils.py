@@ -447,7 +447,6 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     -------
     None
     """
-
     categories = adata.obs[value_to_plot].cat.categories
     length = len(categories)
 
@@ -470,7 +469,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
                 "'grey' color will be used for all categories."
             )
 
-    adata.uns[value_to_plot + '_colors'] = palette[:length]
+    _set_colors_for_categorical_obs(adata, value_to_plot, palette[:length])
 
 
 def add_colors_for_categorical_sample_annotation(
