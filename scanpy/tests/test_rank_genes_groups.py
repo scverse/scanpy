@@ -1,10 +1,12 @@
 import pytest
 
+from packaging import version
 from pathlib import Path
 import pickle
 
 import numpy as np
 import pandas as pd
+import scipy
 from scipy import sparse as sp
 from scipy.stats import mannwhitneyu
 from numpy.random import negative_binomial, binomial, seed
@@ -271,15 +273,22 @@ def test_wilcoxon_tie_correction(reference):
     mask_rest = groups_masks[1] if reference else ~groups_masks[0]
     Y = pbmc.raw.X[mask_rest].toarray()
 
-    n_genes = X.shape[1]
+    # Handle scipy versions
+    if version.parse(scipy.__version__) >= version.parse("1.7.0"):
+        pvals = mannwhitneyu(X, Y, use_continuity=False, alternative='two-sided').pvalue
+        pvals[np.isnan(pvals)] = 1.0
+    else:
+        # Backwards compat, to drop once we drop scipy < 1.7
+        n_genes = X.shape[1]
+        pvals = np.zeros(n_genes)
 
-    pvals = np.zeros(n_genes)
-
-    for i in range(n_genes):
-        try:
-            _, pvals[i] = mannwhitneyu(X[:, i], Y[:, i], False, 'two-sided')
-        except ValueError:
-            pvals[i] = 1
+        for i in range(n_genes):
+            try:
+                _, pvals[i] = mannwhitneyu(
+                    X[:, i], Y[:, i], use_continuity=False, alternative='two-sided'
+                )
+            except ValueError:
+                pvals[i] = 1
 
     if reference:
         ref = groups[1]
@@ -290,4 +299,4 @@ def test_wilcoxon_tie_correction(reference):
     test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
     test_obj.compute_statistics('wilcoxon', tie_correct=True)
 
-    assert np.allclose(test_obj.stats[groups[0]]['pvals'], pvals)
+    np.testing.assert_allclose(test_obj.stats[groups[0]]['pvals'], pvals)
