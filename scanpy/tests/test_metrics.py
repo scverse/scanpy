@@ -6,6 +6,8 @@ import pandas as pd
 import scanpy as sc
 from scipy import sparse
 
+import pytest
+
 
 def test_gearys_c_consistency():
     pbmc = sc.datasets.pbmc68k_reduced()
@@ -119,6 +121,35 @@ def test_morans_i_correctness():
             sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
         )
         assert sc.metrics.morans_i(adata, vals=connected) == 1.0
+
+
+@pytest.mark.parametrize("metric", [sc.metrics.gearys_c, sc.metrics.morans_i])
+# @pytest.mark.parametrize("array_type", [np.ndarray, sparse.csc_matrix, sparse.csr_matrix])
+def test_graph_metrics_w_missing_values(metric):
+    # https://github.com/theislab/scanpy/issues/1806
+    pbmc = sc.datasets.pbmc68k_reduced()
+    XT = pbmc.X.T.copy()
+    g = pbmc.obsp["connectivities"].copy()
+
+    const_inds = np.random.choice(XT.shape[0], 10)
+    XT_zero_vals = XT.copy()
+    XT_zero_vals[const_inds, :] = 0
+    XT_const_values = XT.copy()
+    XT_const_values[const_inds, :] = 42
+
+    results_full = metric(g, XT_const_values)
+    # TODO: Check for warnings
+    results_const_zeros = metric(g, XT_zero_vals)
+    results_const_vals = metric(g, XT_const_values)
+
+    np.testing.assert_array_equal(results_const_zeros, results_const_vals)
+    np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
+    np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
+
+    non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
+    np.testing.assert_array_equal(
+        results_full[non_const_mask], results_const_zeros[non_const_mask]
+    )
 
 
 def test_confusion_matrix():
