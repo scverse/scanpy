@@ -14,6 +14,7 @@ setup()
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import seaborn as sns
 import numpy as np
 import pandas as pd
 from matplotlib.testing.compare import compare_images
@@ -1298,3 +1299,20 @@ def test_groupby_list(image_comparer):
             adata, ['Gata1', 'Gata2'], groupby=['rand_cat', 'cell_type'], swap_axes=True
         )
         save_and_compare_images('master_dotplot_groupby_list_catorder')
+
+
+def test_color_cycler(caplog):
+    # https://github.com/theislab/scanpy/issues/1885
+    import logging
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    colors = sns.color_palette("deep")
+    cyl = sns.rcmod.cycler('color', sns.color_palette("deep"))
+
+    with caplog.at_level(logging.WARNING):
+        with plt.rc_context({'axes.prop_cycle': cyl, "patch.facecolor": colors[0]}):
+            sc.pl.umap(pbmc, color="phase")
+            plt.show()
+            plt.close()
+
+    assert caplog.text == ""

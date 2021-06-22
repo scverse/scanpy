@@ -336,8 +336,8 @@ class DotPlot(BasePlot):
             self.dot_max = dot_max
         if dot_min != self.dot_min:
             self.dot_min = dot_min
-        if dot_min != self.dot_min:
-            self.smallest_dot = dot_min
+        if smallest_dot != self.smallest_dot:
+            self.smallest_dot = smallest_dot
         if largest_dot != self.largest_dot:
             self.largest_dot = largest_dot
         if color_on != self.color_on:

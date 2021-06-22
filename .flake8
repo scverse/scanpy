@@ -34,4 +34,3 @@ exclude =
     build,
     docs/_build,
     dist,
-
