@@ -2,8 +2,6 @@ from functools import partial
 from pathlib import Path
 import sys
 from itertools import repeat, chain, combinations
-from tabnanny import check
-from black import format_float_or_int_string
 
 import pytest
 from matplotlib.testing import setup
