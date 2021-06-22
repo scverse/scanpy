@@ -750,7 +750,7 @@ def rank_genes_groups_dotplot(
     .. plot::
         :context: close-figs
 
-        sc.pl.rank_genes_groups_dotplot(adata,n_genes=2,standard_scale='var')
+        sc.pl.rank_genes_groups_dotplot(adata, n_genes=2, standard_scale='var')
 
     Plot `logfoldchanges` instead of gene expression. In this case a diverging colormap
     like `bwr` or `seismic` works better. To center the colormap in zero, the minimum
@@ -760,9 +760,15 @@ def rank_genes_groups_dotplot(
     .. plot::
         :context: close-figs
 
-        sc.pl.rank_genes_groups_dotplot(adata,
-        n_genes=4, values_to_plot="logfoldchanges", cmap='bwr',
-        vmin=-4, vmax=4, min_logfoldchange=3, colorbar_title='log fold change')
+        sc.pl.rank_genes_groups_dotplot(
+            adata,
+            n_genes=4,
+            values_to_plot="logfoldchanges", cmap='bwr',
+            vmin=-4,
+            vmax=4,
+            min_logfoldchange=3,
+            colorbar_title='log fold change'
+        )
 
     Also, the last genes can be plotted. This can be useful to identify genes
     that are lowly expressed in a group. For this `n_genes=-4` is used
@@ -770,14 +776,16 @@ def rank_genes_groups_dotplot(
     .. plot::
         :context: close-figs
 
-        sc.pl.rank_genes_groups_dotplot(adata,
+        sc.pl.rank_genes_groups_dotplot(
+            adata,
             n_genes=-4,
             values_to_plot="logfoldchanges",
             cmap='bwr',
             vmin=-4,
             vmax=4,
             min_logfoldchange=3,
-            colorbar_title='log fold change')
+            colorbar_title='log fold change',
+        )
 
     A list specific genes can be given to check their log fold change. If a
     dictionary, the dictionary keys will be added as labels in the plot.
@@ -785,17 +793,19 @@ def rank_genes_groups_dotplot(
     .. plot::
         :context: close-figs
 
-        var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
+        var_names = {{'T-cell': ['CD3D', 'CD3E', 'IL32'],
                       'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
                       'myeloid': ['CST3', 'LYZ'] }}
-        sc.pl.rank_genes_groups_dotplot(adata,
+        sc.pl.rank_genes_groups_dotplot(
+            adata,
             var_names=var_names,
             values_to_plot="logfoldchanges",
             cmap='bwr',
             vmin=-4,
             vmax=4,
             min_logfoldchange=3,
-            colorbar_title='log fold change')
+            colorbar_title='log fold change',
+        )
 
     .. currentmodule:: scanpy
 
@@ -951,14 +961,16 @@ def rank_genes_groups_matrixplot(
     .. plot::
         :context: close-figs
 
-        sc.pl.rank_genes_groups_matrixplot(adata,
+        sc.pl.rank_genes_groups_matrixplot(
+            adata,
             n_genes=4,
             values_to_plot="logfoldchanges",
             cmap='bwr',
             vmin=-4,
             vmax=4,
             min_logfoldchange=3,
-            colorbar_title='log fold change')
+            colorbar_title='log fold change',
+        )
 
     Also, the last genes can be plotted. This can be useful to identify genes
     that are lowly expressed in a group. For this `n_genes=-4` is used
@@ -966,14 +978,16 @@ def rank_genes_groups_matrixplot(
     .. plot::
         :context: close-figs
 
-        sc.pl.rank_genes_groups_matrixplot(adata,
+        sc.pl.rank_genes_groups_matrixplot(
+            adata,
             n_genes=-4,
             values_to_plot="logfoldchanges",
             cmap='bwr',
             vmin=-4,
             vmax=4,
             min_logfoldchange=3,
-            colorbar_title='log fold change')
+            colorbar_title='log fold change',
+        )
 
     A list specific genes can be given to check their log fold change. If a
     dictionary, the dictionary keys will be added as labels in the plot.
