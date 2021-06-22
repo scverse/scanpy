@@ -35,6 +35,7 @@
 - Fixed reproducibility of :func:`scanpy.tl.diffmap` (added random_state) :pr:`1858` :smaller:`I Kucinski`
 - Fixed errors and warnings from embedding plots with small numbers of categories after `sns.set_palette` was called :pr:`1886` :smaller:`I Virshup`
 - Fixed handling of `gene_symbols` argument in a number of `sc.pl.rank_genes_groups*` functions :pr:`1529` :smaller:`F Ramirez` :smaller:`I Virshup`
+- Fixed handling of `use_raw` for `sc.tl.rank_genes_groups` when no `.raw` is present :pr:`1895` :smaller:`I Virshup`
 
 .. rubric:: Deprecations
 
