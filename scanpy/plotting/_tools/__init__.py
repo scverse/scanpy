@@ -315,6 +315,7 @@ def rank_genes_groups(
             "Specifying a negative number for n_genes has not been implemented for "
             f"this plot. Received n_genes={n_genes}."
         )
+
     reference = str(adata.uns[key]['params']['reference'])
     group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
     # one panel for each group
@@ -590,10 +591,14 @@ def rank_genes_groups_heatmap(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
-    >>> sc.pl.rank_genes_groups_heatmap(adata)
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, 'bulk_labels')
+        sc.pl.rank_genes_groups_heatmap(adata)
     """
     return _rank_genes_groups_plot(
         adata,
@@ -637,10 +642,14 @@ def rank_genes_groups_tracksplot(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
-    >>> sc.pl.rank_genes_groups_tracksplot(adata)
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, 'bulk_labels')
+        sc.pl.rank_genes_groups_tracksplot(adata)
     """
 
     return _rank_genes_groups_plot(
