@@ -961,6 +961,7 @@ def rank_genes_groups_matrixplot(
 
     .. plot::
         :context: close-figs
+
         var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
                       'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
                       'myeloid': ['CST3', 'LYZ'] }}
