@@ -2,6 +2,8 @@ from functools import partial
 from pathlib import Path
 import sys
 from itertools import repeat, chain, combinations
+from tabnanny import check
+from black import format_float_or_int_string
 
 import pytest
 from matplotlib.testing import setup
@@ -787,6 +789,82 @@ def test_rank_genes_groups(image_comparer, name, fn):
     fn(pbmc)
     save_and_compare_images(f"master_{name}")
     plt.close()
+
+
+@pytest.fixture(scope="session")
+def gene_symbols_adatas():
+    """Create two anndata objects which are equivalent except for var_names
+
+    Both have ensembl ids and hgnc symbols as columns in var. The first has ensembl
+    ids as var_names, the second has symbols.
+    """
+    pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
+    pbmc_counts = sc.datasets.pbmc3k()
+
+    pbmc.layers["counts"] = pbmc_counts[pbmc.obs_names, pbmc.var_names].X.copy()
+    pbmc.var["gene_symbol"] = pbmc.var_names
+    pbmc.var["ensembl_id"] = pbmc_counts.var["gene_ids"].loc[pbmc.var_names]
+
+    pbmc.var = pbmc.var.set_index("ensembl_id", drop=False)
+
+    # Cutting down on size for plotting, tracksplot and stacked_violin are slow
+    pbmc = pbmc[pbmc.obs["louvain"].isin(pbmc.obs["louvain"].cat.categories[:4])]
+    pbmc = pbmc[::3].copy()
+
+    # Creating variations
+    a = pbmc.copy()
+    b = pbmc.copy()
+    a.var = a.var.set_index("ensembl_id")
+    b.var = b.var.set_index("gene_symbol")
+
+    # Computing DE
+    sc.tl.rank_genes_groups(a, groupby="louvain")
+    sc.tl.rank_genes_groups(b, groupby="louvain")
+
+    return a, b
+
+
+@pytest.mark.parametrize(
+    "func",
+    (
+        sc.pl.rank_genes_groups_dotplot,
+        sc.pl.rank_genes_groups_heatmap,
+        sc.pl.rank_genes_groups_matrixplot,
+        sc.pl.rank_genes_groups_stacked_violin,
+        sc.pl.rank_genes_groups_tracksplot,
+        # TODO: add other rank_genes_groups plots here once they work
+    ),
+)
+def test_plot_rank_genes_groups_gene_symbols(
+    gene_symbols_adatas, func, check_same_image
+):
+    a, b = gene_symbols_adatas
+
+    pth_1_a = FIGS / f"{func.__name__}_equivalent_gene_symbols_1_a.png"
+    pth_1_b = FIGS / f"{func.__name__}_equivalent_gene_symbols_1_b.png"
+
+    func(a, gene_symbols="gene_symbol")
+    plt.savefig(pth_1_a)
+    plt.close()
+
+    func(b)
+    plt.savefig(pth_1_b)
+    pass
+
+    check_same_image(pth_1_a, pth_1_b, tol=1)
+
+    pth_2_a = FIGS / f"{func.__name__}_equivalent_gene_symbols_2_a.png"
+    pth_2_b = FIGS / f"{func.__name__}_equivalent_gene_symbols_2_b.png"
+
+    func(a)
+    plt.savefig(pth_2_a)
+    plt.close()
+
+    func(b, gene_symbols="ensembl_id")
+    plt.savefig(pth_2_b)
+    plt.close()
+
+    check_same_image(pth_2_a, pth_2_b, tol=1)
 
 
 @pytest.mark.parametrize(
