@@ -310,6 +310,11 @@ def rank_genes_groups(
         n_panels_per_row = kwds['n_panels_per_row']
     else:
         n_panels_per_row = ncols
+    if n_genes < 1:
+        raise NotImplementedError(
+            "Specifying a negative number for n_genes has not been implemented for "
+            f"this plot. Received n_genes={n_genes}."
+        )
     reference = str(adata.uns[key]['params']['reference'])
     group_names = adata.uns[key]['names'].dtype.names if groups is None else groups
     # one panel for each group
