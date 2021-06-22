@@ -30,6 +30,7 @@
 
 - Fix :func:`scanpy.pl.paga_path` `TypeError` with recent versions of anndata :pr:`1047` :smaller:`P Angerer`
 - Fix detection of whether IPython is running :pr:`1844` :smaller:`I Virshup`
+- Fixed reproducibility of :func:`scanpy.tl.diffmap` (added random_state) :pr:`1858` :smaller:`I Kucinski`
 - Fixed errors and warnings from embedding plots with small numbers of categories after `sns.set_palette` was called :pr:`1886` :smaller:`I Virshup`
 
 .. rubric:: Deprecations
