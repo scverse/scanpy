@@ -413,7 +413,7 @@ def _rank_genes_groups_plot(
     adata: AnnData,
     plot_type: str = 'heatmap',
     groups: Union[str, Sequence[str]] = None,
-    n_genes: int = 10,
+    n_genes: Optional[int] = None,
     groupby: Optional[str] = None,
     values_to_plot: Optional[str] = None,
     var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
@@ -428,6 +428,16 @@ def _rank_genes_groups_plot(
     """\
     Common function to call the different rank_genes_groups_* plots
     """
+    if var_names is not None and n_genes is not None:
+        raise ValueError(
+            "The arguments n_genes and var_names are mutually exclusive. Please "
+            "select only one."
+        )
+
+    if var_names is None and n_genes is None:
+        # set n_genes = 10 as default when none of the options is given
+        n_genes = 10
+
     if key is None:
         key = 'rank_genes_groups'
 
@@ -569,9 +579,10 @@ def _rank_genes_groups_plot(
 def rank_genes_groups_heatmap(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
-    n_genes: int = 10,
+    n_genes: Optional[int] = None,
     groupby: Optional[str] = None,
     gene_symbols: Optional[str] = None,
+    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     min_logfoldchange: Optional[float] = None,
     key: str = None,
     show: Optional[bool] = None,
@@ -607,6 +618,7 @@ def rank_genes_groups_heatmap(
         n_genes=n_genes,
         gene_symbols=gene_symbols,
         groupby=groupby,
+        var_names=var_names,
         key=key,
         min_logfoldchange=min_logfoldchange,
         show=show,
@@ -619,7 +631,7 @@ def rank_genes_groups_heatmap(
 def rank_genes_groups_tracksplot(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
-    n_genes: int = 10,
+    n_genes: Optional[int] = None,
     groupby: Optional[str] = None,
     var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     gene_symbols: Optional[str] = None,
@@ -657,6 +669,7 @@ def rank_genes_groups_tracksplot(
         plot_type='tracksplot',
         groups=groups,
         n_genes=n_genes,
+        var_names=var_names,
         gene_symbols=gene_symbols,
         groupby=groupby,
         key=key,
@@ -790,17 +803,6 @@ def rank_genes_groups_dotplot(
     --------
     tl.rank_genes_groups
     """
-
-    if var_names is not None and n_genes is not None:
-        raise ValueError(
-            "The arguments n_genes and var_names are mutually exclusive. Please "
-            "select only one."
-        )
-
-    if var_names is None and n_genes is None:
-        # set n_genes = 10 as default when none of the options is given
-        n_genes = 10
-
     return _rank_genes_groups_plot(
         adata,
         plot_type='dotplot',
@@ -823,9 +825,11 @@ def rank_genes_groups_dotplot(
 def rank_genes_groups_stacked_violin(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
-    n_genes: int = 10,
+    n_genes: Optional[int] = None,
     groupby: Optional[str] = None,
     gene_symbols: Optional[str] = None,
+    *,
+    var_names: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None,
     min_logfoldchange: Optional[float] = None,
     key: Optional[str] = None,
     show: Optional[bool] = None,
@@ -870,6 +874,7 @@ def rank_genes_groups_stacked_violin(
         n_genes=n_genes,
         gene_symbols=gene_symbols,
         groupby=groupby,
+        var_names=var_names,
         key=key,
         min_logfoldchange=min_logfoldchange,
         show=show,
@@ -979,26 +984,17 @@ def rank_genes_groups_matrixplot(
         var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
                       'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
                       'myeloid': ['CST3', 'LYZ'] }}
-        sc.pl.rank_genes_groups_matrixplot(adata,
+        sc.pl.rank_genes_groups_matrixplot(
+            adata,
             var_names=var_names,
             values_to_plot="logfoldchanges",
             cmap='bwr',
             vmin=-4,
             vmax=4,
             min_logfoldchange=3,
-            colorbar_title='log fold change')
-
-    """
-
-    if var_names is not None and n_genes is not None:
-        raise ValueError(
-            "The arguments n_genes and var_names are mutually exclusive. Please "
-            "select only one."
+            colorbar_title='log fold change',
         )
-
-    if var_names is None and n_genes is None:
-        # set n_genes = 10 as default when none of the options is given
-        n_genes = 10
+    """
 
     return _rank_genes_groups_plot(
         adata,

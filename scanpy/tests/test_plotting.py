@@ -866,6 +866,62 @@ def test_plot_rank_genes_groups_gene_symbols(
 
 
 @pytest.mark.parametrize(
+    "func",
+    (
+        sc.pl.rank_genes_groups_dotplot,
+        sc.pl.rank_genes_groups_heatmap,
+        sc.pl.rank_genes_groups_matrixplot,
+        sc.pl.rank_genes_groups_stacked_violin,
+        sc.pl.rank_genes_groups_tracksplot,
+        # TODO: add other rank_genes_groups plots here once they work
+    ),
+)
+def test_rank_genes_groups_plots_n_genes_vs_var_names(tmpdir, func, check_same_image):
+    """\
+    Checks that passing a negative value for n_genes works, and that passing
+    var_names as a dict works.
+    """
+    N = 3
+    pbmc = sc.datasets.pbmc68k_reduced().raw.to_adata()
+    groups = pbmc.obs["louvain"].cat.categories[:3]
+    pbmc = pbmc[pbmc.obs["louvain"].isin(groups)][::3].copy()
+
+    sc.tl.rank_genes_groups(pbmc, groupby="louvain")
+
+    top_genes = {}
+    bottom_genes = {}
+    for g, subdf in sc.get.rank_genes_groups_df(pbmc, group=groups).groupby("group"):
+        top_genes[g] = list(subdf["names"].head(N))
+        bottom_genes[g] = list(subdf["names"].tail(N))
+
+    positive_n_pth = tmpdir / f"{func.__name__}_positive_n.png"
+    top_genes_pth = tmpdir / f"{func.__name__}_top_genes.png"
+    negative_n_pth = tmpdir / f"{func.__name__}_negative_n.png"
+    bottom_genes_pth = tmpdir / f"{func.__name__}_bottom_genes.png"
+
+    def wrapped(pth, **kwargs):
+        func(pbmc, groupby="louvain", dendrogram=False, **kwargs)
+        plt.savefig(pth)
+        plt.close()
+
+    wrapped(positive_n_pth, n_genes=N)
+    wrapped(top_genes_pth, var_names=top_genes)
+
+    check_same_image(positive_n_pth, top_genes_pth, tol=1)
+
+    wrapped(negative_n_pth, n_genes=-N)
+    wrapped(bottom_genes_pth, var_names=bottom_genes)
+
+    check_same_image(negative_n_pth, bottom_genes_pth, tol=1)
+
+    # Shouldn't be able to pass these together
+    with pytest.raises(
+        ValueError, match="n_genes and var_names are mutually exclusive"
+    ):
+        wrapped(tmpdir / "not_written.png", n_genes=N, var_names=top_genes)
+
+
+@pytest.mark.parametrize(
     "id,fn",
     [
         ("heatmap", sc.pl.heatmap),
