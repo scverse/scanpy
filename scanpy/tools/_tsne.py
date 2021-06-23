@@ -1,4 +1,6 @@
+from packaging import version
 from typing import Optional, Union
+import warnings
 
 from anndata import AnnData
 
@@ -17,9 +19,11 @@ def tsne(
     early_exaggeration: Union[float, int] = 12,
     learning_rate: Union[float, int] = 1000,
     random_state: AnyRandom = 0,
-    use_fast_tsne: bool = True,
+    use_fast_tsne: bool = False,
     n_jobs: Optional[int] = None,
     copy: bool = False,
+    *,
+    metric: str = "euclidean",
 ) -> Optional[AnnData]:
     """\
     t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
@@ -43,6 +47,8 @@ def tsne(
         usually require a larger perplexity. Consider selecting a value
         between 5 and 50. The choice is not extremely critical since t-SNE
         is quite insensitive to this parameter.
+    metric
+        Distance metric calculate neighbors on.
     early_exaggeration
         Controls how tight natural clusters in the original space are in the
         embedded space and how much space will be between them. For larger
@@ -60,8 +66,6 @@ def tsne(
     random_state
         Change this to use different intial states for the optimization.
         If `None`, the initial state is not reproducible.
-    use_fast_tsne
-        Use the MulticoreTSNE package by D. Ulyanov if it is installed.
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
@@ -75,49 +79,99 @@ def tsne(
     **X_tsne** : `np.ndarray` (`adata.obs`, dtype `float`)
         tSNE coordinates of data.
     """
+    import sklearn
+
     start = logg.info('computing tSNE')
     adata = adata.copy() if copy else adata
     X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     # params for sklearn
+    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     params_sklearn = dict(
         perplexity=perplexity,
         random_state=random_state,
         verbose=settings.verbosity > 3,
         early_exaggeration=early_exaggeration,
         learning_rate=learning_rate,
+        n_jobs=n_jobs,
+        metric=metric,
     )
-    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
+    # square_distances will default to true in the future, we'll get ahead of the
+    # warning for now
+    if metric != "euclidean":
+        sklearn_version = version.parse(sklearn.__version__)
+        if sklearn_version >= version.parse("0.24.0"):
+            params_sklearn["square_distances"] = True
+        else:
+            warnings.warn(
+                "Results for non-euclidean metrics changed in sklearn 0.24.0, while "
+                f"you are using {sklearn.__version__}.",
+                UserWarning,
+            )
+
+    # Backwards compat handling: Remove in scanpy 1.9.0
+    if n_jobs != 1 and not use_fast_tsne:
+        warnings.warn(
+            UserWarning(
+                "In previous versions of scanpy, calling tsne with n_jobs > 1 would use "
+                "MulticoreTSNE. Now this uses the scikit-learn version of TSNE by default. "
+                "If you'd like the old behaviour (which is deprecated), pass "
+                "'use_fast_tsne=True'. Note, MulticoreTSNE is not actually faster anymore."
+            )
+        )
+    if use_fast_tsne:
+        warnings.warn(
+            FutureWarning(
+                "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "
+                "will be dropped in a future version of scanpy."
+            )
+        )
+
     # deal with different tSNE implementations
-    X_tsne = None
-    if n_jobs >= 1 and use_fast_tsne:
+    if use_fast_tsne:
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
 
-            tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
+            tsne = TSNE(**params_sklearn)
             logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
             # need to transform to float64 for MulticoreTSNE...
             X_tsne = tsne.fit_transform(X.astype('float64'))
         except ImportError:
-            logg.warning(
-                'Consider installing the package MulticoreTSNE '
-                '(https://github.com/DmitryUlyanov/Multicore-TSNE). '
-                'Even for n_jobs=1 this speeds up the computation considerably '
-                'and might yield better converged results.'
+            use_fast_tsne = False
+            warnings.warn(
+                UserWarning(
+                    "Could not import 'MulticoreTSNE'. Falling back to scikit-learn."
+                )
             )
-    if X_tsne is None:
+    if use_fast_tsne is False:  # In case MultiCore failed to import
         from sklearn.manifold import TSNE
-        from . import _tsne_fix  # fix by D. DeTomaso for sklearn < 0.19
 
         # unfortunately, sklearn does not allow to set a minimum number
         # of iterations for barnes-hut tSNE
         tsne = TSNE(**params_sklearn)
-        logg.info('    using sklearn.manifold.TSNE with a fix by D. DeTomaso')
+        logg.info('    using sklearn.manifold.TSNE')
         X_tsne = tsne.fit_transform(X)
+
     # update AnnData instance
     adata.obsm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
+    adata.uns["tsne"] = {
+        "params": {
+            k: v
+            for k, v in {
+                "perplexity": perplexity,
+                "early_exaggeration": early_exaggeration,
+                "learning_rate": learning_rate,
+                "n_jobs": n_jobs,
+                "metric": metric,
+                "use_rep": use_rep,
+            }.items()
+            if v is not None
+        }
+    }
+
     logg.info(
         '    finished',
         time=start,
         deep="added\n    'X_tsne', tSNE coordinates (adata.obsm)",
     )
+
     return adata if copy else None

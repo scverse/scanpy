@@ -9,6 +9,7 @@
 - Added `vcenter` and `norm` arguments to the plotting functions :pr:`1551` :smaller:`G Eraslan`
 - Standardized and expanded available arguments to the `sc.pl.rank_genes_groups*` family of functions. :pr:`1529` :smaller:`F Ramirez` :smaller:`I Virshup`
   - See examples sections of :func:`~scanpy.pl.rank_genes_groups_dotplot` and :func:`~scanpy.pl.rank_genes_groups_matrixplot` for demonstrations.
+- :func:`scanpy.tl.tsne` now supports the metric argument and records the passed parameters :pr:`1854` :smaller:`I Virshup`
 
 .. _flit: https://flit.readthedocs.io/en/latest/
 
@@ -40,6 +41,7 @@
 .. rubric:: Deprecations
 
 - Deprecated `layers` and `layers_norm` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
+- Deprecated `MulticoreTSNE` backend for :func:`scanpy.tl.tsne` :pr:`1854` :smaller:`I Virshup`
 
 .. rubric:: Documentation
 
