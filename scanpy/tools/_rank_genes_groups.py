@@ -429,7 +429,7 @@ class _RankGenes:
 def rank_genes_groups(
     adata: AnnData,
     groupby: str,
-    use_raw: bool = True,
+    use_raw: Optional[bool] = None,
     groups: Union[Literal['all'], Iterable[str]] = 'all',
     reference: str = 'rest',
     n_genes: Optional[int] = None,
@@ -533,6 +533,11 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
+    if use_raw is None:
+        use_raw = adata.raw is not None
+    elif use_raw is True and adata.raw is not None:
+        raise ValueError("Received `use_raw=True`, but `adata.raw` is empty.")
+
     if method is None:
         logg.warning(
             "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
