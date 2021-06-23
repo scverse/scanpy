@@ -24,7 +24,7 @@
 
 .. rubric:: Ecosystem
 
-- Added `Cubé <https://github.com/connerlambden/Cube>` to ecosystem page :pr:`1878` :smaller:`C Lambden`
+- Added `Cubé <https://github.com/connerlambden/Cube>`_ to ecosystem page :pr:`1878` :smaller:`C Lambden`
 
 .. rubric:: Performance enhancements
 
@@ -40,6 +40,7 @@
 .. rubric:: Deprecations
 
 - Deprecated `layers` and `layers_norm` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
+- Dropped support for Python 3.6. `More details here <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_. :pr:`1897` :smaller:`I Virshup`
 
 .. rubric:: Documentation
 
