@@ -1,3 +1,4 @@
+from packaging import version
 from typing import Optional, Union
 
 from anndata import AnnData
@@ -79,6 +80,8 @@ def tsne(
     **X_tsne** : `np.ndarray` (`adata.obs`, dtype `float`)
         tSNE coordinates of data.
     """
+    import sklearn
+
     start = logg.info('computing tSNE')
     adata = adata.copy() if copy else adata
     X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
@@ -93,6 +96,18 @@ def tsne(
         n_jobs=n_jobs,
         metric=metric,
     )
+    # square_distances will default to true in the future, we'll get ahead of the
+    # warning for now
+    if metric != "euclidean":
+        sklearn_version = version.parse(sklearn.__version__)
+        if sklearn_version >= version.parse("0.24.0"):
+            params_sklearn["square_distances"] = True
+        else:
+            warnings.warn(
+                "Results for non-euclidean metrics changed in sklearn 0.24.0, while "
+                f"you are using {sklearn.__version__}.",
+                UserWarning,
+            )
 
     # Backwards compat handling: Remove in scanpy 1.9.0
     if n_jobs != 1 and not use_fast_tsne:
@@ -139,9 +154,25 @@ def tsne(
 
     # update AnnData instance
     adata.obsm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
+    adata.uns["tsne"] = {
+        "params": {
+            k: v
+            for k, v in {
+                "perplexity": perplexity,
+                "early_exaggeration": early_exaggeration,
+                "learning_rate": learning_rate,
+                "n_jobs": n_jobs,
+                "metric": metric,
+                "use_rep": use_rep,
+            }.items()
+            if v is not None
+        }
+    }
+
     logg.info(
         '    finished',
         time=start,
         deep="added\n    'X_tsne', tSNE coordinates (adata.obsm)",
     )
+
     return adata if copy else None
