@@ -73,6 +73,7 @@ def test_results_dense():
     seed(1234)
 
     adata = get_example_data()
+    assert adata.raw is None  # Assumption for later checks
 
     (
         true_names_t_test,
@@ -92,6 +93,7 @@ def test_results_dense():
             true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name]
         )
     assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
 
@@ -107,6 +109,7 @@ def test_results_dense():
     assert np.array_equal(
         true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7]
     )
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
 
 def test_results_sparse():
@@ -132,6 +135,7 @@ def test_results_sparse():
             true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name]
         )
     assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
 
@@ -147,6 +151,7 @@ def test_results_sparse():
     assert np.array_equal(
         true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7]
     )
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
 
 def test_results_layers():
@@ -169,9 +174,9 @@ def test_results_layers():
         'true_groups',
         method='wilcoxon',
         layer="to_test",
-        use_raw=False,
         n_genes=20,
     )
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(
             true_scores_wilcoxon[name][:7],
@@ -236,6 +241,7 @@ def test_wilcoxon_symmetry():
         method='wilcoxon',
         rankby_abs=True,
     )
+    assert pbmc.uns["rank_genes_groups"]["params"]["use_raw"] is True
 
     stats_mono = (
         rank_genes_groups_df(pbmc, group="CD14+ Monocyte")
