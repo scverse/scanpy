@@ -1,10 +1,44 @@
 from importlib.util import find_spec
+from unittest.mock import patch
+import warnings
 
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
 
 import scanpy as sc
+
+
+def test_tsne():
+    pbmc = sc.datasets.pbmc68k_reduced()
+
+    euclidean1 = sc.tl.tsne(pbmc, metric="euclidean", copy=True)
+    with pytest.warns(UserWarning, match="In previous versions of scanpy"):
+        euclidean2 = sc.tl.tsne(pbmc, metric="euclidean", n_jobs=2, copy=True)
+    cosine = sc.tl.tsne(pbmc, metric="cosine", copy=True)
+
+    # Reproducibility
+    np.testing.assert_equal(euclidean1.obsm["X_tsne"], euclidean2.obsm["X_tsne"])
+    # Metric has some effect
+    assert not np.array_equal(euclidean1.obsm["X_tsne"], cosine.obsm["X_tsne"])
+
+    # Params are recorded
+    assert euclidean1.uns["tsne"]["params"]["n_jobs"] == 1
+    assert euclidean2.uns["tsne"]["params"]["n_jobs"] == 2
+    assert cosine.uns["tsne"]["params"]["n_jobs"] == 1
+    assert euclidean1.uns["tsne"]["params"]["metric"] == "euclidean"
+    assert euclidean2.uns["tsne"]["params"]["metric"] == "euclidean"
+    assert cosine.uns["tsne"]["params"]["metric"] == "cosine"
+
+
+def test_tsne_metric_warning():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    import sklearn
+
+    with patch.object(sklearn, "__version__", "0.23.0"), pytest.warns(
+        UserWarning, match="Results for non-euclidean metrics changed"
+    ):
+        sc.tl.tsne(pbmc, metric="cosine")
 
 
 def test_umap_init_dtype():
