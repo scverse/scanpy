@@ -1159,9 +1159,6 @@ def _add_categorical_legend(
                 fontsize=legend_fontsize,
                 path_effects=legend_fontoutline,
             )
-        # TODO: wtf
-        # this is temporary storage for access by other tools
-        _utils._tmp_cluster_pos = all_pos.values
 
 
 def _get_color_source_vector(
