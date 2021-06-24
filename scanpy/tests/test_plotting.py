@@ -544,10 +544,6 @@ def test_dendrogram(image_comparer):
     save_and_compare_images('dendrogram')
 
 
-# See https://github.com/theislab/scanpy/pull/1768
-@pytest.mark.skipif(
-    sys.version_info < (3, 7), reason="matplotlib 3.4 dropped support for python 3.6"
-)
 def test_correlation(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
