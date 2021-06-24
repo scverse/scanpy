@@ -1137,10 +1137,15 @@ def _add_categorical_legend(
         )
     elif legend_loc == 'on data':
         # identify centroids to put labels
+
         all_pos = (
             pd.DataFrame(scatter_array, columns=["x", "y"])
             .groupby(color_source_vector, observed=True)
             .median()
+            # Have to sort_index since if observed=True and categorical is unordered
+            # the order of values in .index is undefined. Related issue:
+            # https://github.com/pandas-dev/pandas/issues/25167
+            .sort_index()
         )
 
         for label, x_pos, y_pos in all_pos.itertuples():
