@@ -36,6 +36,7 @@ For visual quality control, see :func:`~scanpy.pl.highest_expr_genes` and
    pp.filter_cells
    pp.filter_genes
    pp.highly_variable_genes
+   pp.highly_deviant_genes
    pp.log1p
    pp.pca
    pp.normalize_total
