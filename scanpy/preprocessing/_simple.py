@@ -344,13 +344,11 @@ def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
         if not np.issubdtype(X.dtype, np.floating):
-            X = X.astype(np.floating)
+            X = X.astype(float)
         else:
             X = X.copy()
-    elif not (
-        np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, np.complex)
-    ):
-        X = X.astype(np.floating)
+    elif not (np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, complex)):
+        X = X.astype(float)
     np.log1p(X, out=X)
     if base is not None:
         np.divide(X, np.log(base), out=X)

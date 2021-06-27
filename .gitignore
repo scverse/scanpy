@@ -6,6 +6,7 @@
 # Docs
 /docs/_build/
 /docs/generated/
+/docs/data/
 
 # tests
 /.cache/

@@ -4,7 +4,7 @@ Metrics which don't quite deserve their own file.
 from typing import Optional, Sequence, Union
 
 import pandas as pd
-from pandas.api.types import is_categorical
+from pandas.api.types import is_categorical_dtype
 from natsort import natsorted
 import numpy as np
 
@@ -75,11 +75,11 @@ def confusion_matrix(
     )
 
     # Filter
-    if is_categorical(orig):
+    if is_categorical_dtype(orig):
         orig_idx = pd.Series(orig).cat.categories
     else:
         orig_idx = natsorted(pd.unique(orig))
-    if is_categorical(new):
+    if is_categorical_dtype(new):
         new_idx = pd.Series(new).cat.categories
     else:
         new_idx = natsorted(pd.unique(new))

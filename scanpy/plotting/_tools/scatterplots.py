@@ -643,6 +643,22 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.tsne(adata)
+        sc.pl.tsne(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.tsne
     """
     return embedding(adata, 'tsne', **kwargs)
 
@@ -666,6 +682,22 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.diffmap(adata)
+        sc.pl.diffmap(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.diffmap
     """
     return embedding(adata, 'diffmap', **kwargs)
 
@@ -696,6 +728,22 @@ def draw_graph(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.draw_graph(adata)
+        sc.pl.draw_graph(adata, color=['phase', 'bulk_labels'])
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.draw_graph
     """
     if layout is None:
         layout = str(adata.uns['draw_graph']['params']['layout'])
@@ -740,6 +788,37 @@ def pca(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca(adata)
+
+    Colour points by discrete variable (Louvain clusters).
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="louvain")
+
+    Colour points by gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="CST3")
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.pca
+    pp.pca
     """
     if not annotate_var_explained:
         return embedding(

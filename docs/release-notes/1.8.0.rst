@@ -7,6 +7,9 @@
   a simple tool with an easy to understand command line interface and metadata.
 - Added `layer` and `copy` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
 - Added `vcenter` and `norm` arguments to the plotting functions :pr:`1551` :smaller:`G Eraslan`
+- Standardized and expanded available arguments to the `sc.pl.rank_genes_groups*` family of functions. :pr:`1529` :smaller:`F Ramirez` :smaller:`I Virshup`
+  - See examples sections of :func:`~scanpy.pl.rank_genes_groups_dotplot` and :func:`~scanpy.pl.rank_genes_groups_matrixplot` for demonstrations.
+- :func:`scanpy.tl.tsne` now supports the metric argument and records the passed parameters :pr:`1854` :smaller:`I Virshup`
 
 .. _flit: https://flit.readthedocs.io/en/latest/
 
@@ -16,13 +19,38 @@
 
     - Added :func:`scanpy.metrics.confusion_matrix` for comparing labellings :pr:`915` :smaller:`I Virshup`
     - Added :func:`scanpy.metrics.gearys_c` for spatial autocorrelation :pr:`915` :smaller:`I Virshup`
+    - Added :func:`scanpy.metrics.morans_i` for global spatial autocorrelation :pr:`1740` :smaller:`I Virshup, G Palla`
 
 .. rubric:: External tools
+
+.. rubric:: Ecosystem
+
+- Added `Cubé <https://github.com/connerlambden/Cube>`_ to ecosystem page :pr:`1878` :smaller:`C Lambden`
 
 .. rubric:: Performance enhancements
 
 .. rubric:: Bug fixes
 
+- Fix :func:`scanpy.pl.paga_path` `TypeError` with recent versions of anndata :pr:`1047` :smaller:`P Angerer`
+- Fix detection of whether IPython is running :pr:`1844` :smaller:`I Virshup`
+- Fixed reproducibility of :func:`scanpy.tl.diffmap` (added random_state) :pr:`1858` :smaller:`I Kucinski`
+- Fixed errors and warnings from embedding plots with small numbers of categories after `sns.set_palette` was called :pr:`1886` :smaller:`I Virshup`
+- Fixed handling of `gene_symbols` argument in a number of `sc.pl.rank_genes_groups*` functions :pr:`1529` :smaller:`F Ramirez` :smaller:`I Virshup`
+- Fixed handling of `use_raw` for `sc.tl.rank_genes_groups` when no `.raw` is present :pr:`1895` :smaller:`I Virshup`
+
 .. rubric:: Deprecations
 
+- Dropped support for Python 3.6. `More details here <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_. :pr:`1897` :smaller:`I Virshup`
 - Deprecated `layers` and `layers_norm` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
+- Deprecated `MulticoreTSNE` backend for :func:`scanpy.tl.tsne` :pr:`1854` :smaller:`I Virshup`
+
+.. rubric:: Documentation
+
+- Clarified docs issues for :func:`~scanpy.pp.neighbors`,
+  :func:`~scanpy.tl.diffmap`, :func:`~scanpy.pp.calculate_qc_metrics` :pr:`1680` :smaller:`G Palla`
+- Integrated DocSearch_, a find-as-you-type documentation index search. :pr:`1754` :smaller:`P Angerer`
+- Fixed typos in grouped plot doc-strings :pr:`1877` :smaller:`C Rands`
+- Extended examples for differential expression plotting. :pr:`1529` :smaller:`F Ramirez`
+  - See :func:`~scanpy.pl.rank_genes_groups_dotplot` or :func:`~scanpy.pl.rank_genes_groups_matrixplot` for examples.
+
+.. _docsearch: https://docsearch.algolia.com/

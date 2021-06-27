@@ -50,7 +50,7 @@ Plots in docstrings
 
 One of the most useful things you can include in a docstring is examples of how the function should be used.
 These are a great way to demonstrate intended usage and give users a template they can copy and modify.
-We're able to include the plots produced by these snippets in the rendered docs using `matplotlib's plot directive <https://matplotlib.org/devel/plot_directive.html>`__. 
+We're able to include the plots produced by these snippets in the rendered docs using `matplotlib's plot directive <https://matplotlib.org/devel/plot_directive.html>`__.
 For examples of this, see the `Examples` sections of :func:`~scanpy.pl.dotplot` or :func:`~scanpy.pp.calculate_qc_metrics`.
 
 Note that anything in these sections will need to be run when the docs are built, so please keep them computationally light.

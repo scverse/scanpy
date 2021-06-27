@@ -64,15 +64,22 @@ class MatrixPlot(BasePlot):
     Simple visualization of the average expression of a few genes grouped by
     the category 'bulk_labels'.
 
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
 
     Same visualization but passing var_names as dict, which adds a grouping of
     the genes on top of the image:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
     """
 
     DEFAULT_SAVE_PREFIX = 'matrixplot_'
@@ -178,13 +185,19 @@ class MatrixPlot(BasePlot):
         Examples
         -------
 
-        >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        .. plot::
+            :context: close-figs
+
+            adata = sc.datasets.pbmc68k_reduced()
+            markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
         Change color map and turn off edges:
 
-        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(cmap='Blues', edge_color='none').show()
+
+        .. plot::
+            :context: close-figs
+
+            sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').style(cmap='Blues', edge_color='none').show()
 
         """
 
@@ -324,24 +337,36 @@ def matrixplot(
     Examples
     --------
 
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get Matrix object for fine tuning:
 
-    >>> mp = sc.pl.matrix(adata, markers, 'bulk_labels', return_fig=True)
-    >>> mp.add_totals().style(edge_color='black').show()
+    .. plot::
+        :context: close-figs
+
+        mp = sc.pl.matrixplot(adata, markers, 'bulk_labels', return_fig=True)
+        mp.add_totals().style(edge_color='black').show()
 
     The axes used can be obtained using the get_axes() method
 
-    >>> axes_dict = mp.get_axes()
+    .. plot::
+        :context: close-figs
+
+        axes_dict = mp.get_axes()
     """
 
     mp = MatrixPlot(

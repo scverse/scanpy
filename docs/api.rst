@@ -366,6 +366,7 @@ Collections of useful measurements for evaluating results.
 
    metrics.confusion_matrix
    metrics.gearys_c
+   metrics.morans_i
 
 
 Classes

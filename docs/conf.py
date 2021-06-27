@@ -50,14 +50,7 @@ extensions = [
     # 'ipython_directive',
     # 'ipython_console_highlighting',
     'scanpydoc',
-    "sphinx_search.extension",
-    # Locally defined
-    "debug_docstrings",
-    "github_links",
-    "param_police",
-    "typed_returns",
-    # "function_images",
-    # *[p.stem for p in (HERE / 'extensions').glob('*.py')],
+    *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
 # Generate the API documentation when building
@@ -100,7 +93,12 @@ intersphinx_mapping = dict(
 
 
 html_theme = 'scanpydoc'
-html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the logo
+html_theme_options = dict(
+    navigation_depth=4,
+    logo_only=True,
+    docsearch_index='scanpy',
+    docsearch_key='fa4304eb95d2134997e3729553a674b2',
+)
 html_context = dict(
     display_github=True,  # Integrate GitHub
     github_user='theislab',  # Username
