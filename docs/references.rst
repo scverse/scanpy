@@ -33,6 +33,10 @@ References
    *The igraph software package for complex network research*,
    `InterJournal Complex Systems <http://igraph.org>`__.
 
+.. [DeMeo21] DeMeo *et al.* (2021),
+   *Discovering Rare Cell Types through Information-based Dimensionality Reduction*,
+   `bioRxiv <https://doi.org/10.1101/2021.01.19.427303>`__.
+
 .. [Eraslan18] Eraslan and Simon *et al.* (2018),
    *Single cell RNA-seq denoising using a deep count autoencoder*,
    `bioRxiv <https://doi.org/10.1101/300681>`__.

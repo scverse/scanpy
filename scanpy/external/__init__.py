@@ -76,6 +76,7 @@ Embeddings
    tl.palantir
    tl.trimap
    tl.sam
+   tl.sca
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
