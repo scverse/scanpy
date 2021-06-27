@@ -46,6 +46,7 @@
 
 .. rubric:: Documentation
 
+- Added :doc:`/community` page to docs :pr:`1856` :smaller:`I Virshup`
 - Clarified docs issues for :func:`~scanpy.pp.neighbors`,
   :func:`~scanpy.tl.diffmap`, :func:`~scanpy.pp.calculate_qc_metrics` :pr:`1680` :smaller:`G Palla`
 - Integrated DocSearch_, a find-as-you-type documentation index search. :pr:`1754` :smaller:`P Angerer`
