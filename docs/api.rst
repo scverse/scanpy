@@ -11,7 +11,7 @@ Import Scanpy as::
    import scanpy as sc
 
 .. note::
-   Wrappers to external functionality are found in :mod:`scanpy.external`.
+   Additional functionality is available in the broader :doc:`ecosystem <../ecosystem>`, with some tools being wrapped in the :mod:`scanpy.external` module.
 
 Preprocessing: `pp`
 -------------------

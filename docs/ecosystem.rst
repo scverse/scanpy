@@ -4,8 +4,11 @@ Ecosystem
 .. role:: small
 .. role:: smaller
 
-With *ecosystem*, we mean single-cell related tools that operate on :class:`~anndata.AnnData`. Here, we list some that do not have an interface in the :doc:`external API <external>`.
+.. note::
+  If you'd like to see your tool included here, please open a `pull request <https://github.com/theislab/scanpy>`_!
 
+  With *ecosystem*, we mean the broader single-cell related tools that operate on :class:`~anndata.AnnData`.
+  If your tool doesn't do this, but is useful for analysing single cell data we also accept light wrappers for some tools in :mod:`scanpy.external`.
 
 Viewers
 -------
