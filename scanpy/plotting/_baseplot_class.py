@@ -183,7 +183,7 @@ class BasePlot(object):
         Parameters
         ----------
         swap_axes
-            Boolean to turn on (True) or off (False) 'add_dendrogram'. Default True
+            Boolean to turn on (True) or off (False) 'swap_axes'. Default True
 
 
         Returns
@@ -245,7 +245,7 @@ class BasePlot(object):
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
 
         """
@@ -296,7 +296,7 @@ class BasePlot(object):
         Parameters
         ----------
         show
-            Boolean to turn on (True) or off (False) 'add_dendrogram'
+            Boolean to turn on (True) or off (False) 'add_totals'
         sort
             Set to either 'ascending' or 'descending' to reorder the categories
             by cell number
@@ -318,7 +318,7 @@ class BasePlot(object):
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_totals().show()
         """
         self.group_extra_size = size
@@ -391,7 +391,7 @@ class BasePlot(object):
         Set legend title:
 
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
         >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
         """
