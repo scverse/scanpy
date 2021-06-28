@@ -99,7 +99,7 @@ We'll try and get back to you soon!
 Development environments
 ------------------------
 
-It's recommended to do development work in an isolated environment. 
+It's recommended to do development work in an isolated environment.
 There are number of ways to do this, including conda environments, virtual environments, and virtual machines.
 
 We think the easiest is probably conda environments. Simply create a new environment with a supported version of python and make a :ref:`development install <dev-install-instructions>` of `scanpy`.

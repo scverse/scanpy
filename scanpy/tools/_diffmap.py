@@ -2,12 +2,14 @@ from anndata import AnnData
 from typing import Optional
 
 from ._dpt import _diffmap
+from .._utils import AnyRandom
 
 
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
     neighbors_key: Optional[str] = None,
+    random_state: AnyRandom = 0,
     copy: bool = False,
 ):
     """\
@@ -39,6 +41,8 @@ def diffmap(
         .obsp[.uns[neighbors_key]['connectivities_key']],
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
         respectively.
+    random_state
+        A numpy random seed
     copy
         Return a copy instead of writing to adata.
 
@@ -70,5 +74,7 @@ def diffmap(
     if n_comps <= 2:
         raise ValueError('Provide any value greater than 2 for `n_comps`. ')
     adata = adata.copy() if copy else adata
-    _diffmap(adata, n_comps=n_comps, neighbors_key=neighbors_key)
+    _diffmap(
+        adata, n_comps=n_comps, neighbors_key=neighbors_key, random_state=random_state
+    )
     return adata if copy else None

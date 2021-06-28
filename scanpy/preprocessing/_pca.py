@@ -126,7 +126,7 @@ def pca(
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
-        adata = AnnData(data)
+        adata = AnnData(data, dtype=data.dtype)
 
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
         raise ValueError(
