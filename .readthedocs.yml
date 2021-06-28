@@ -11,4 +11,4 @@ python:
     extra_requirements:
     - doc
   - method: pip
-    path: "tmpreq.txt"
+    path: "./tmpreq.txt"
