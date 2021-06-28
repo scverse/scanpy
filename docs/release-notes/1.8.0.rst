@@ -53,5 +53,6 @@
 - Fixed typos in grouped plot doc-strings :pr:`1877` :smaller:`C Rands`
 - Extended examples for differential expression plotting. :pr:`1529` :smaller:`F Ramirez`
   - See :func:`~scanpy.pl.rank_genes_groups_dotplot` or :func:`~scanpy.pl.rank_genes_groups_matrixplot` for examples.
+- Reorganized reference docs :pr:`1753` :smaller:`I Virshup`
 
 .. _docsearch: https://docsearch.algolia.com/

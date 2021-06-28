@@ -8,7 +8,7 @@ Docs
 ----
 
 To make sure your tool gets an entry in the documentation, you'll have to add it.
-These docs are generated from the module docstring for `sc.external`, so make sure there is a reference to your new function in `scanpy/external/__init__.py`.
+Make sure there is a reference to your new function in `docs/external.rst`.
 
 Testing
 -------
