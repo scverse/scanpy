@@ -586,7 +586,6 @@ def highly_variable_genes(
         where n is the number of cells in the dataset (default behavior).
         * If any scalar c, residuals are clipped to the interval [-c, c]. Set
         `clip=np.Inf` for no clipping.
-        
     chunksize
         If `flavor='pearson_residuals'`, this dertermines how many genes are processed at
         once while computing the residual variance. Choosing a smaller value will reduce 
