@@ -303,6 +303,32 @@ def rank_genes_groups(
         Controls if the y-axis of each panels should be shared. But passing
         `sharey=False`, each panel has its own y-axis range.
     {show_save_ax}
+
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.rank_genes_groups(adata)
+
+
+    Plot top 10 genes (default 20 genes)
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups(adata, n_genes=10)
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.rank_genes_groups
+
     """
     if 'n_panels_per_row' in kwds:
         n_panels_per_row = kwds['n_panels_per_row']
