@@ -568,6 +568,38 @@ def rank_genes_groups_heatmap(
     **kwds
         Are passed to :func:`~scanpy.pl.heatmap`.
     {show_save_ax}
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.rank_genes_groups_heatmap(adata)
+
+    Show gene names per group on the heatmap
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_heatmap(adata, show_gene_labels=True)
+
+    Plot top 5 genes per group (default 10 genes)
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.rank_genes_groups_heatmap(adata, n_genes=5, show_gene_labels=True)
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.rank_genes_groups
+    tl.dendrogram
+
     """
     return _rank_genes_groups_plot(
         adata,
