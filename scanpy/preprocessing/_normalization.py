@@ -7,14 +7,13 @@ from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
-from .. import logging as logg
-from .._compat import Literal
+from scanpy import logging as logg
+from scanpy._compat import Literal
 
-from .._utils import view_to_actual, check_nonnegative_integers
+from scanpy.preprocessing._utils import view_to_actual, check_nonnegative_integers
 from scanpy.get import _get_obs_rep, _set_obs_rep
 
 from ._pca import pca
-from scanpy.get import _get_obs_rep, _set_obs_rep
 
 
 def _normalize_data(X, counts, after=None, copy=False):
@@ -48,7 +47,7 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
     if clip < 0:
         raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
-    if check_values and (check_nonnegative_integers(X) == False):
+    if check_values and (check_nonnegative_integers(X) is False):
         warn(
             "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
             UserWarning,
@@ -101,13 +100,13 @@ def normalize_pearson_residuals(
         corresponds to a Poisson model.
     clip
         Determines if and how residuals are clipped:
-        
+
         * If `None`, residuals are clipped to the interval
         [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset
         (default behavior).
         * If any scalar c, residuals are clipped to the interval [-c, c]. Set
         `clip=np.Inf` for no clipping.
-        
+
     layer
         Layer to normalize instead of `X`. If `None`, `X` is normalized.
     copy
@@ -167,7 +166,6 @@ def normalize_pearson_residuals_pca(
     check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
-
     """\
     Applies PCA based on Pearson residual normalization. Operates on the
     subset of highly variable genes in `adata.var['highly_variable']` by
@@ -193,13 +191,13 @@ def normalize_pearson_residuals_pca(
         Poisson model.
     clip
         This determines if and how Pearson residuals are clipped:
-        
+
         * If `None`, residuals are clipped to the interval
         [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset
         (default behavior).
         * If any scalar c, residuals are clipped to the interval [-c, c]. Set
         `clip=np.Inf` for no clipping.
-        
+
     n_comps_pca
         Number of principal components to compute.
     random_state_pca
@@ -217,14 +215,14 @@ def normalize_pearson_residuals_pca(
     If `inplace=False`, returns the Pearson residual-based PCA results
     (`adata_pca`).
     If `inplace=True`, updates `adata` with the following fields:
-    
+
     `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
          The hvg-subset, normalized by Pearson residuals
     `.uns['pearson_residuals_normalization']['theta']`
          The used value of the overdisperion parameter theta
     `.uns['pearson_residuals_normalization']['clip']`
          The used value of the clipping parameter
-    
+
     `.obsm['X_pearson_residuals_pca']`
         PCA representation of data after gene selection and Pearson residual
         normalization.
@@ -234,8 +232,8 @@ def normalize_pearson_residuals_pca(
          Ratio of explained variance.
     `.uns['pearson_residuals_pca']['variance']`
          Explained variance, equivalent to the eigenvalues of the
-         covariance matrix.        
-    
+         covariance matrix.
+
     """
 
     if use_highly_variable and 'highly_variable' in adata.var_keys():

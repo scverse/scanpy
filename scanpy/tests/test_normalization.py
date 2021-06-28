@@ -287,7 +287,6 @@ def test_normalize_pearson_residuals_recipe(sparsity_func, dtype):
     sc.pp.highly_variable_genes(
         adata_with_hvgs, flavor='pearson_residuals', n_top_genes=n_hvgs
     )
-    adata_not_using_hvgs = adata_with_hvgs.copy()
 
     ### inplace = False ###
     # outputs the (potentially hvg-restricted) adata_pca object
