@@ -10,10 +10,10 @@ from sklearn.utils import sparsefuncs
 from scanpy import logging as logg
 from scanpy._compat import Literal
 
-from scanpy.preprocessing._utils import view_to_actual, check_nonnegative_integers
+from scanpy._utils import view_to_actual, check_nonnegative_integers
 from scanpy.get import _get_obs_rep, _set_obs_rep
 
-from ._pca import pca
+from scanpy.preprocessing._pca import pca
 
 
 def _normalize_data(X, counts, after=None, copy=False):
