@@ -93,6 +93,7 @@ doc = [
     'scanpydoc>=0.6',
     'typing_extensions; python_version < "3.8"',  # for `Literal`
     'python-igraph',
+    'get_version<3',
 ]
 test = [
     'pytest>=4.4',
