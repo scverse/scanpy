@@ -546,23 +546,23 @@ def highly_variable_genes(
     layer
         If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
     n_top_genes
-        Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or 
+        Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or
         `flavor='pearson_residuals'`.
     min_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or 
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
         `flavor='pearson_residuals'`.
     max_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or 
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
         `flavor='pearson_residuals'`.
     min_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or 
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
         `flavor='pearson_residuals'`.
     max_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or 
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
         `flavor='pearson_residuals'`.
     span
         The fraction of the data (cells) used when estimating the variance in the loess
@@ -571,22 +571,22 @@ def highly_variable_genes(
         Number of bins for binning the mean gene expression. Normalization is
         done with respect to each bin. If just a single gene falls into a bin,
         the normalized dispersion is artificially set to 1. You'll be informed
-        about this if you set `settings.verbosity = 4`. Ignored if 
+        about this if you set `settings.verbosity = 4`. Ignored if
         `flavor='pearson_residuals'`.
     theta
         If `flavor='pearson_residuals'`, this is the NB overdispersion parameter theta.
-        Higher values correspond to less overdispersion (var = mean + mean^2/theta), and 
+        Higher values correspond to less overdispersion (var = mean + mean^2/theta), and
         `theta=np.Inf` corresponds to a Poisson model.
     clip
         If `flavor='pearson_residuals'`, this determines if and how residuals are clipped:
-        
+
         * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)],
         where n is the number of cells in the dataset (default behavior).
         * If any scalar c, residuals are clipped to the interval [-c, c]. Set
         `clip=np.Inf` for no clipping.
     chunksize
         If `flavor='pearson_residuals'`, this dertermines how many genes are processed at
-        once while computing the residual variance. Choosing a smaller value will reduce 
+        once while computing the residual variance. Choosing a smaller value will reduce
         the required memory.
     flavor
         Choose the flavor for identifying highly variable genes. For the dispersion
@@ -603,7 +603,7 @@ def highly_variable_genes(
         lightweight batch correction method. For all flavors, genes are first sorted
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
         by normalized dispersion. If `flavor = 'seurat_v3'`, ties are broken by the median
-        (across batches) rank based on within-batch normalized variance. If 
+        (across batches) rank based on within-batch normalized variance. If
         `flavor='pearson_residuals'`, ties are broken by the median rank (across batches)
         based on within-batch residual variance.
     check_values
