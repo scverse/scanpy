@@ -10,7 +10,7 @@ from anndata import AnnData
 from .. import logging as logg
 from .._settings import settings, Verbosity
 from .._utils import sanitize_anndata, check_nonnegative_integers, view_to_actual
-from scanpy.get import _get_obs_rep, _set_obs_rep
+from scanpy.get import _get_obs_rep
 from .._compat import Literal
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray
