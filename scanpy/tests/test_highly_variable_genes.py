@@ -516,3 +516,25 @@ def test_highly_variable_genes_batches():
     ]
 
     assert np.all(np.isin(colnames, hvg1.columns))
+
+
+from scanpy.preprocessing._utils import _get_mean_var
+
+
+def test_seurat_v3_mean_var_output_with_batchkey():
+    pbmc = sc.datasets.pbmc3k()
+    pbmc.var_names_make_unique()
+    n_cells = pbmc.shape[0]
+    batch = np.zeros((n_cells), dtype=int)
+    batch[1500:] = 1
+    pbmc.obs["batch"] = batch
+
+    # true_mean, true_var = _get_mean_var(pbmc.X)
+    true_mean = np.mean(pbmc.X.toarray(), axis=0)
+    true_var = np.var(pbmc.X.toarray(), axis=0, dtype=np.float64, ddof=1)
+
+    result_df = sc.pp.highly_variable_genes(
+        pbmc, batch_key='batch', flavor='seurat_v3', n_top_genes=4000, inplace=False
+    )
+    np.testing.assert_allclose(true_mean, result_df['means'], rtol=2e-05, atol=2e-05)
+    np.testing.assert_allclose(true_var, result_df['variances'], rtol=2e-05, atol=2e-05)

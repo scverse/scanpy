@@ -1,6 +1,7 @@
 """BasePlot for dotplot, matrixplot and stacked_violin
 """
 import collections.abc as cabc
+from collections import namedtuple
 from typing import Optional, Union, Mapping  # Special
 from typing import Sequence, Iterable  # ABCs
 from typing import Tuple  # Classes
@@ -10,11 +11,12 @@ from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib import pyplot as pl
 from matplotlib import gridspec
+from matplotlib.colors import Normalize
 from warnings import warn
 
 from .. import logging as logg
 from .._compat import Literal
-from ._utils import make_grid_spec
+from ._utils import make_grid_spec, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
 
@@ -86,6 +88,10 @@ class BasePlot(object):
         var_group_rotation: Optional[float] = None,
         layer: Optional[str] = None,
         ax: Optional[_AxesSubplot] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         self.var_names = var_names
@@ -125,9 +131,9 @@ class BasePlot(object):
                     "the `order` parameter match the categories that "
                     "want to be reordered.\n\n"
                     "Mismatch: "
-                    f"{set(obs_tidy.index.categories).difference(categories_order)}\n\n"
+                    f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
                     f"Given order categories: {categories_order}\n\n"
-                    f"{groupby} categories: {list(obs_tidy.index.categories)}\n"
+                    f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
                 )
                 return
 
@@ -135,6 +141,9 @@ class BasePlot(object):
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.log = log
         self.kwds = kwds
+
+        VBoundNorm = namedtuple('VBoundNorm', ['vmin', 'vmax', 'vcenter', 'norm'])
+        self.vboundnorm = VBoundNorm(vmin=vmin, vmax=vmax, vcenter=vcenter, norm=norm)
 
         # set default values for legend
         self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
@@ -174,7 +183,7 @@ class BasePlot(object):
         Parameters
         ----------
         swap_axes
-            Boolean to turn on (True) or off (False) 'add_dendrogram'. Default True
+            Boolean to turn on (True) or off (False) 'swap_axes'. Default True
 
 
         Returns
@@ -236,7 +245,7 @@ class BasePlot(object):
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
 
         """
@@ -287,7 +296,7 @@ class BasePlot(object):
         Parameters
         ----------
         show
-            Boolean to turn on (True) or off (False) 'add_dendrogram'
+            Boolean to turn on (True) or off (False) 'add_totals'
         sort
             Set to either 'ascending' or 'descending' to reorder the categories
             by cell number
@@ -309,7 +318,7 @@ class BasePlot(object):
         Examples
         --------
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_totals().show()
         """
         self.group_extra_size = size
@@ -382,7 +391,7 @@ class BasePlot(object):
         Set legend title:
 
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
         >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
         """
@@ -529,8 +538,6 @@ class BasePlot(object):
         return_ax_dict['color_legend_ax'] = color_legend_ax
 
     def _mainplot(self, ax):
-        import matplotlib.colors
-
         y_labels = self.categories
         x_labels = self.var_names
 
@@ -563,11 +570,12 @@ class BasePlot(object):
         ax.set_ylim(len(y_labels), 0)
         ax.set_xlim(0, len(x_labels))
 
-        normalize = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+        return check_colornorm(
+            self.vboundnorm.vmin,
+            self.vboundnorm.vmax,
+            self.vboundnorm.vcenter,
+            self.vboundnorm.norm,
         )
-
-        return normalize
 
     def make_figure(self):
         """

@@ -57,13 +57,16 @@ def _highly_variable_genes_seurat_v3(
         raise ImportError(
             'Please install skmisc package via `pip install --user scikit-misc'
         )
-
+    df = pd.DataFrame(index=adata.var_names)
     X = adata.layers[layer] if layer is not None else adata.X
-    if check_values and (check_nonnegative_integers(X) == False):
+
+    if check_values and not check_nonnegative_integers(X):
         warnings.warn(
             "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
             UserWarning,
         )
+
+    df['means'], df['variances'] = _get_mean_var(X)
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -72,13 +75,11 @@ def _highly_variable_genes_seurat_v3(
 
     norm_gene_vars = []
     for b in np.unique(batch_info):
+        X_batch = X[batch_info == b]
 
-        ad = adata[batch_info == b]
-        X = ad.layers[layer] if layer is not None else ad.X
-
-        mean, var = _get_mean_var(X)
+        mean, var = _get_mean_var(X_batch)
         not_const = var > 0
-        estimat_var = np.zeros(adata.shape[1], dtype=np.float64)
+        estimat_var = np.zeros(X.shape[1], dtype=np.float64)
 
         y = np.log10(var[not_const])
         x = np.log10(mean[not_const])
@@ -87,15 +88,18 @@ def _highly_variable_genes_seurat_v3(
         estimat_var[not_const] = model.outputs.fitted_values
         reg_std = np.sqrt(10 ** estimat_var)
 
-        batch_counts = X.astype(np.float64).copy()
+        batch_counts = X_batch.astype(np.float64).copy()
         # clip large values as in Seurat
-        N = np.sum(batch_info == b)
+        N = X_batch.shape[0]
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
         if sp_sparse.issparse(batch_counts):
             batch_counts = sp_sparse.csr_matrix(batch_counts)
             mask = batch_counts.data > clip_val[batch_counts.indices]
             batch_counts.data[mask] = clip_val[batch_counts.indices[mask]]
+
+            squared_batch_counts_sum = np.array(batch_counts.power(2).sum(axis=0))
+            batch_counts_sum = np.array(batch_counts.sum(axis=0))
         else:
             clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
             np.putmask(
@@ -104,10 +108,6 @@ def _highly_variable_genes_seurat_v3(
                 clip_val_broad,
             )
 
-        if sp_sparse.issparse(batch_counts):
-            squared_batch_counts_sum = np.array(batch_counts.power(2).sum(axis=0))
-            batch_counts_sum = np.array(batch_counts.sum(axis=0))
-        else:
             squared_batch_counts_sum = np.square(batch_counts).sum(axis=0)
             batch_counts_sum = batch_counts.sum(axis=0)
 
@@ -131,22 +131,21 @@ def _highly_variable_genes_seurat_v3(
     ma_ranked = np.ma.masked_invalid(ranked_norm_gene_vars)
     median_ranked = np.ma.median(ma_ranked, axis=0).filled(np.nan)
 
-    df = pd.DataFrame(index=np.array(adata.var_names))
     df['highly_variable_nbatches'] = num_batches_high_var
     df['highly_variable_rank'] = median_ranked
     df['variances_norm'] = np.mean(norm_gene_vars, axis=0)
-    df['means'] = mean
-    df['variances'] = var
 
-    df.sort_values(
-        ['highly_variable_rank', 'highly_variable_nbatches'],
-        ascending=[True, False],
-        na_position='last',
-        inplace=True,
+    sorted_index = (
+        df[['highly_variable_rank', 'highly_variable_nbatches']]
+        .sort_values(
+            ['highly_variable_rank', 'highly_variable_nbatches'],
+            ascending=[True, False],
+            na_position='last',
+        )
+        .index
     )
     df['highly_variable'] = False
-    df.loc[: int(n_top_genes), 'highly_variable'] = True
-    df = df.loc[adata.var_names]
+    df.loc[sorted_index[: int(n_top_genes)], 'highly_variable'] = True
 
     if inplace or subset:
         adata.uns['hvg'] = {'flavor': 'seurat_v3'}
@@ -399,7 +398,6 @@ def _highly_variable_genes_single_batch(
     A DataFrame that contains the columns
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
-
     X = adata.layers[layer] if layer is not None else adata.X
     if flavor == 'seurat':
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
@@ -470,7 +468,7 @@ def _highly_variable_genes_single_batch(
             ::-1
         ].sort()  # interestingly, np.argpartition is slightly slower
         if n_top_genes > adata.n_vars:
-            logg.info(f'`n_top_genes` > `adata.n_var`, returning all genes.')
+            logg.info('`n_top_genes` > `adata.n_var`, returning all genes.')
             n_top_genes = adata.n_vars
         disp_cut_off = dispersion_norm[n_top_genes - 1]
         gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off

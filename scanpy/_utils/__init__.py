@@ -1,4 +1,7 @@
 """Utility functions and classes
+
+This file largely consists of the old _utils.py file. Over time, these functions
+should be moved of this file.
 """
 import sys
 import inspect
@@ -19,9 +22,11 @@ from anndata import AnnData, __version__ as anndata_version
 from textwrap import dedent
 from packaging import version
 
-from ._settings import settings
-from ._compat import Literal
-from . import logging as logg
+from .._settings import settings
+from .._compat import Literal
+from .. import logging as logg
+
+from .compute.is_constant import is_constant
 
 
 class Empty(Enum):
@@ -37,12 +42,12 @@ EPS = 1e-15
 
 
 def check_versions():
-    from ._compat import pkg_version
+    from .._compat import pkg_version
 
     umap_version = pkg_version("umap-learn")
 
     if version.parse(anndata_version) < version.parse('0.6.10'):
-        from . import __version__
+        from .. import __version__
 
         raise ImportError(
             f'Scanpy {__version__} needs anndata version >=0.6.10, '
@@ -212,7 +217,7 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     g.add_edges(list(zip(sources, targets)))
     try:
         g.es['weight'] = weights
-    except:
+    except KeyError:
         pass
     if g.vcount() != adjacency.shape[0]:
         logg.warning(
@@ -554,7 +559,9 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     import traceback
 
     traceback.print_stack()
-    log = file if hasattr(file, 'write') else sys.stderr
+    log = (  # noqa: F841  # TODO Does this need fixing?
+        file if hasattr(file, 'write') else sys.stderr
+    )
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
 
 
@@ -633,7 +640,7 @@ def subsample_n(
 def check_presence_download(filename: Path, backup_url):
     """Check if file is present otherwise download."""
     if not filename.is_file():
-        from .readwrite import _download
+        from ..readwrite import _download
 
         _download(backup_url, filename)
 

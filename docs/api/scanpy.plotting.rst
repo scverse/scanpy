@@ -2,22 +2,3 @@
 ===============
 
 .. automodule:: scanpy.plotting
-
-   
-   
-   
-
-   
-   
-   
-
-   
-   
-   
-
-   
-   
-   
-
-
-

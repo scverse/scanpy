@@ -66,11 +66,14 @@ Creating a branch for your feature
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All development should occur in branches dedicated to the particular work being done.
+Additionally, unless you are a maintainer, all changes should be directed at the `master` branch.
 You can create a branch with:
 
 .. code:: shell
 
-    git checkout -b {your-branch-name}
+    git checkout master                 # Starting from the master branch
+    git pull                            # Syncing with the repo
+    git checkout -b {your-branch-name}  # Making and changing to the new branch
 
 .. _open-a-pr:
 
@@ -96,7 +99,7 @@ We'll try and get back to you soon!
 Development environments
 ------------------------
 
-It's recommended to do development work in an isolated environment. 
+It's recommended to do development work in an isolated environment.
 There are number of ways to do this, including conda environments, virtual environments, and virtual machines.
 
 We think the easiest is probably conda environments. Simply create a new environment with a supported version of python and make a :ref:`development install <dev-install-instructions>` of `scanpy`.

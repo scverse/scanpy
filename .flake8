@@ -1,0 +1,36 @@
+# Can't yet be moved to the pyproject.toml due to https://gitlab.com/pycqa/flake8/-/issues/428#note_251982786
+[flake8]
+max-line-length = 88
+ignore = # module imported but unused -> required for Scanpys API
+         F401,
+         # line break before a binary operator -> black does not adhere to PEP8
+         W503,
+         # line break occured after a binary operator -> black does not adhere to PEP8
+         W504,
+         # line too long -> we accept long comment lines; black gets rid of long code lines
+         E501,
+         # whitespace before : -> black does not adhere to PEP8
+         E203,
+         # missing whitespace after ,', ';', or ':' -> black does not adhere to PEP8
+         E231,
+         # module level import not at top of file -> required to circumvent circular imports for Scanpys API
+         E402,
+         # continuation line over-indented for hanging indent -> black does not adhere to PEP8
+         E126,
+         # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections
+         E262,
+         # inline comment should start with '# ' -> Scanpy allows them for specific explanations
+         E266,
+         # Do not assign a lambda expression, use a def -> Scanpy allows lambda expression assignments,
+         E731,
+         # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
+         E741
+per-file-ignores =
+    # F811 Redefinition of unused name from line, does not play nice with pytest fixtures
+    scanpy/tests/test*.py: F811
+exclude =
+    .git,
+    __pycache__,
+    build,
+    docs/_build,
+    dist,
