@@ -1,5 +1,5 @@
 """Preprocessing recipes from the literature"""
-from typing import Optional, Union, Literal, Tuple
+from typing import Optional, Tuple
 
 from anndata import AnnData
 
