@@ -3,6 +3,10 @@ import scanpy as sc
 from anndata import AnnData
 from scipy.sparse import csr_matrix
 import pytest
+import pickle
+from pathlib import Path
+
+HERE = Path(__file__).parent / Path('_data/')
 
 
 def _create_random_gene_names(n_genes, name_length):
@@ -41,6 +45,25 @@ def _create_adata(n_obs, n_var, p_zero, p_nan):
     gene_names = _create_random_gene_names(n_var, name_length=6)
     adata.var_names = gene_names
     return adata
+
+
+def test_score_with_reference():
+    """
+    Checks if score_genes output agrees with pre-computed reference values.
+    The reference values had been generated using the same code
+    and stored as a pickle object in ./data
+    """
+
+    np.random.seed(123)
+    adata = _create_adata(100, 1000, p_zero=0.3, p_nan=0)
+    sc.pp.normalize_per_cell(adata)
+    sc.pp.scale(adata)
+
+    sc.tl.score_genes(adata, gene_list = adata.var_names[:100], score_name='Test')
+    with Path(HERE, 'score_genes_reference.pkl').open('rb') as file:
+        reference = pickle.load(file)
+    # assert np.allclose(reference, adata.obs.Test.values)
+    assert np.array_equal(reference, adata.obs.Test.values)
 
 
 def test_add_score():
