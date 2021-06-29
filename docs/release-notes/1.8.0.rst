@@ -11,14 +11,11 @@
 
 .. rubric:: Features
 
-- Switched to flit_ for building and deploying the package, a simple tool with an easy to understand command line interface and metadata.
 - Added `layer` and `copy` kwargs to :func:`~scanpy.pp.normalize_total` :pr:`1667` :smaller:`I Virshup`
 - Added `vcenter` and `norm` arguments to the plotting functions :pr:`1551` :smaller:`G Eraslan`
 - Standardized and expanded available arguments to the `sc.pl.rank_genes_groups*` family of functions. :pr:`1529` :smaller:`F Ramirez` :smaller:`I Virshup`
   - See examples sections of :func:`~scanpy.pl.rank_genes_groups_dotplot` and :func:`~scanpy.pl.rank_genes_groups_matrixplot` for demonstrations.
 - :func:`scanpy.tl.tsne` now supports the metric argument and records the passed parameters :pr:`1854` :smaller:`I Virshup`
-
-.. _flit: https://flit.readthedocs.io/en/latest/
 
 .. rubric:: Ecosystem
 
@@ -49,6 +46,13 @@
 - Fixed handling of `gene_symbols` argument in a number of `sc.pl.rank_genes_groups*` functions :pr:`1529` :smaller:`F Ramirez` :smaller:`I Virshup`
 - Fixed handling of `use_raw` for `sc.tl.rank_genes_groups` when no `.raw` is present :pr:`1895` :smaller:`I Virshup`
 - :func:`scanpy.pl.rank_genes_groups_violin` now works for `raw=False` :pr:`1669` :smaller:`M van den Beek`
+
+.. rubric:: Development processes
+
+- Switched to flit_ for building and deploying the package, a simple tool with an easy to understand command line interface and metadata :pr:`1527` :smaller:`P Angerer`
+- Use `pre-commit <https://pre-commit.com>`_ for style checks :pr:`1684` :pr:`1848` :smaller:`L Heumos` :smaller:`I Virshup`
+
+.. _flit: https://flit.readthedocs.io/en/latest/
 
 .. rubric:: Deprecations
 
