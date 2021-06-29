@@ -82,12 +82,11 @@ def normalize_pearson_residuals(
     inplace: bool = True,
 ) -> Optional[Dict[str, np.ndarray]]:
     """\
-    Computes analytic Pearson residuals, assuming a negative binomial offset
-    model with overdispersion theta shared across genes. By default, residuals
-    are clipped to sqrt(n) and overdispersion theta=100 is used.
+    Computes analytic Pearson residuals, based on [Lause20]_.
 
-    Based on "Analytic Pearson residuals for normalization of single-cell
-    RNA-seq UMI data", bioRxiv, [Lause20]_.
+    Assuming a negative binomial offset model with overdispersion
+    theta shared across genes, computes Pearson residuals. By default, residuals
+    are clipped to sqrt(n) and overdispersion theta=100 is used.
 
     Params
     ------
@@ -167,12 +166,9 @@ def normalize_pearson_residuals_pca(
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    Applies PCA based on Pearson residual normalization. Operates on the
-    subset of highly variable genes in `adata.var['highly_variable']` by
-    default.
+    Applies Pearson residual normalization and PCA, based on [Lause20]_.
 
-    This workflow is based on "Analytic Pearson residuals for normalization of
-    single-cell RNA-seq UMI data", bioRxiv, [Lause20]_.
+    Operates on the subset of highly variable genes in `adata.var['highly_variable']` by default.
 
 
     Parameters
@@ -190,20 +186,19 @@ def normalize_pearson_residuals_pca(
         (var = mean + mean^2/theta), and `theta=np.Inf` corresponds to a
         Poisson model.
     clip
-        This determines if and how Pearson residuals are clipped:
+        This determines how Pearson residuals are clipped:
 
-        * If `None`, residuals are clipped to the interval
-        [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset
-        (default behavior).
-        * If any scalar c, residuals are clipped to the interval [-c, c]. Set
-        `clip=np.Inf` for no clipping.
+            * If `None`, residuals are clipped to the interval \
+            [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset (default behavior).
+            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
+            `clip=np.Inf` for no clipping.
 
     n_comps_pca
         Number of principal components to compute.
     random_state_pca
         Change to use different initial states for the optimization.
     kwargs_pca
-        Dictionary of further keyword arguments passed on to `sc.pp.pca()`.
+        Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
     inplace

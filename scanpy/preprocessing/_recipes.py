@@ -186,11 +186,10 @@ def recipe_pearson_residuals(
     inplace: bool = True,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """\
+    Gene selection and normalization based on [Lause20]_.
+
     Applies gene selection based on Pearson residuals. On the resulting subset,
     Pearson residual normalization and PCA are performed.
-
-    This recipe is based on "Analytic Pearson residuals for normalization of
-    single-cell RNA-seq UMI data", bioRxiv, [Lause20]_.
 
 
     Parameters
@@ -213,11 +212,11 @@ def recipe_pearson_residuals(
     clip
         This determines if and how Pearson residuals are clipped:
 
-        * If `None`, residuals are clipped to the interval
-        [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset
-        (default behavior).
-        * If any scalar c, residuals are clipped to the interval [-c, c]. Set
-        `clip=np.Inf` for no clipping.
+            * If `None`, residuals are clipped to the interval \
+            [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset (default behavior).
+            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
+            `clip=np.Inf` for no clipping.
+
     batch_key
         If specified, highly-variable genes are selected within each batch
         separately and merged. This simple process avoids the selection of

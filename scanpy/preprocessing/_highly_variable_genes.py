@@ -513,14 +513,14 @@ def highly_variable_genes(
     check_values: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
+    Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_ [Lause20]_.
 
     Expects logarithmized data, except when `flavor='seurat_v3'` or
     `flavor='pearson_residuals'`, in which count data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
     [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_, or uses
-    analytical Peason residuals [Lause20]_.
+    analytical Pearson residuals [Lause20]_.
 
     For the dispersion-based methods ([Satija15]_ and [Zheng17]_), the normalized
     dispersion is obtained by scaling with the mean and standard deviation of
@@ -578,11 +578,11 @@ def highly_variable_genes(
         Higher values correspond to less overdispersion (var = mean + mean^2/theta), and
         `theta=np.Inf` corresponds to a Poisson model.
     clip
-        If `flavor='pearson_residuals'`, this determines if and how residuals are clipped:
+        If `flavor='pearson_residuals'`, this determines how residuals are clipped:
 
-            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)],
+            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
             where n is the number of cells in the dataset (default behavior).
-            * If any scalar c, residuals are clipped to the interval [-c, c]. Set
+            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
             `clip=np.Inf` for no clipping.
 
     chunksize
