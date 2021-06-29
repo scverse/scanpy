@@ -26,7 +26,7 @@
 .. rubric:: Documentation
 
 - Added :doc:`/community` page to docs :pr:`1856` :smaller:`I Virshup`
-- Added rendered examples to many plotting functions :issue:`1664` :smaller:`A Schaar` :smaller:`L Zappia` :smaller:`bio-la` :smaller:`L Hetzel` :smaller:`L Dony` :smaller:`M Buttner` :smaller:`K Hrovatin` :smaller:`F Ramirez` :smaller:`I Virshup` :smaller:`LouisK92`
+- Added rendered examples to many plotting functions :issue:`1664` :smaller:`A Schaar` :smaller:`L Zappia` :smaller:`bio-la` :smaller:`L Hetzel` :smaller:`L Dony` :smaller:`M Buttner` :smaller:`K Hrovatin` :smaller:`F Ramirez` :smaller:`I Virshup` :smaller:`LouisK92` :smaller:`mayarali`
 - Integrated DocSearch_, a find-as-you-type documentation index search. :pr:`1754` :smaller:`P Angerer`
 - - Reorganized reference docs :pr:`1753` :smaller:`I Virshup`
 - Clarified docs issues for :func:`~scanpy.pp.neighbors`,
