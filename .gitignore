@@ -5,13 +5,8 @@
 
 # Docs
 /docs/_build/
-/docs/api/scanpy.*.rst
-/docs/external/scanpy.*.rst
+/docs/generated/
 /docs/data/
-!/docs/api/scanpy.api.rst
-!/docs/api/scanpy.api.AnnData.rst
-!/docs/api/scanpy.plotting.rst
-!/docs/api/scanpy.external.rst
 
 # tests
 /.cache/
