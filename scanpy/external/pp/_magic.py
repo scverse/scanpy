@@ -4,7 +4,6 @@ Denoise high-dimensional data using MAGIC
 from typing import Union, Sequence, Optional
 
 from anndata import AnnData
-from legacy_api_wrap import legacy_api
 from packaging import version
 
 from ... import logging as logg
@@ -16,7 +15,6 @@ from ..._utils import AnyRandom
 MIN_VERSION = "2.0"
 
 
-@legacy_api('k', 'a')
 def magic(
     adata: AnnData,
     name_list: Union[Literal['all_genes', 'pca_only'], Sequence[str], None] = None,

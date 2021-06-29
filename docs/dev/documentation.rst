@@ -15,6 +15,10 @@ Sometimes these caches are not invalidated when you've updated the docs.
 If docs are not updating the way you expect, first try "force reloading" your browser page – e.g. reload the page without using the cache.
 Next, if problems persist, clear the sphinx cache and try building them again (`make clean` from `docs` directory).
 
+.. note::
+    If you've cloned the repository pre 1.8.0, you may need to be more thorough in cleaning.
+    If you run into warnings try removing all untracked files in the docs directory.
+
 
 Adding to the docs
 ------------------
@@ -24,8 +28,7 @@ These files are found in the `docs/release-notes/` directory.
 We recommend waiting on this until your PR is close to done since this can often causes merge conflicts.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
-For computational methods, this should be added to `docs/api/index.rst` under a relevant heading.
-For plotting functions, add these to the module docstring of the plotting module at `scanpy/pl/__init__.py`.
+This should be added to `docs/api.rst` under a relevant heading.
 
 For tutorials and more in depth examples, consider adding a notebook to `scanpy-tutorials <https://github.com/theislab/scanpy-tutorials/>`__.
 
