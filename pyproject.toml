@@ -90,7 +90,7 @@ doc = [
     'sphinx>=3.2',
     'sphinx-rtd-theme>=0.3.1',
     'sphinx-autodoc-typehints',
-    'scanpydoc @ git+git://github.com/ivirshup/scanpydoc.git@excise-get_version',
+    'scanpydoc==0.7.2',
     'typing_extensions; python_version < "3.8"',  # for `Literal`
     'python-igraph',
 ]
