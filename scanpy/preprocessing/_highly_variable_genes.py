@@ -580,10 +580,10 @@ def highly_variable_genes(
     clip
         If `flavor='pearson_residuals'`, this determines if and how residuals are clipped:
 
-        * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)],
-        where n is the number of cells in the dataset (default behavior).
-        * If any scalar c, residuals are clipped to the interval [-c, c]. Set
-        `clip=np.Inf` for no clipping.
+            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)],
+            where n is the number of cells in the dataset (default behavior).
+            * If any scalar c, residuals are clipped to the interval [-c, c]. Set
+            `clip=np.Inf` for no clipping.
 
     chunksize
         If `flavor='pearson_residuals'`, this dertermines how many genes are processed at
