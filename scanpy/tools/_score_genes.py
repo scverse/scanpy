@@ -31,7 +31,7 @@ def _sparse_nanmean(X, axis):
     Y.eliminate_zeros()
 
     # the average
-    s = Y.sum(axis, dtype = 'float64') # float64 for score_genes function compatibility)
+    s = Y.sum(axis, dtype='float64')  # float64 for score_genes function compatibility)
     m = s / n_elements
 
     return m
@@ -171,7 +171,9 @@ def score_genes(
 
     score = X_list - X_control
 
-    adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names, dtype = 'float64')
+    adata.obs[score_name] = pd.Series(
+        np.array(score).ravel(), index=adata.obs_names, dtype='float64'
+    )
 
     logg.info(
         '    finished',

@@ -59,7 +59,7 @@ def test_score_with_reference():
     sc.pp.normalize_per_cell(adata)
     sc.pp.scale(adata)
 
-    sc.tl.score_genes(adata, gene_list = adata.var_names[:100], score_name='Test')
+    sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name='Test')
     with Path(HERE, 'score_genes_reference.pkl').open('rb') as file:
         reference = pickle.load(file)
     # assert np.allclose(reference, adata.obs.Test.values)
@@ -191,7 +191,7 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
 
     # now patch _sparse_nanmean by np.nanmean inside sc.tools
     def mock_fn(x, axis):
-        return np.nanmean(x.A, axis, dtype = 'float64')
+        return np.nanmean(x.A, axis, dtype='float64')
 
     monkeypatch.setattr(sc.tools._score_genes, '_sparse_nanmean', mock_fn)
     sc.tl.score_genes(adata, gene_list=gene_set, score_name='Test')
