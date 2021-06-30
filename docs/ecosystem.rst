@@ -4,8 +4,11 @@ Ecosystem
 .. role:: small
 .. role:: smaller
 
-With *ecosystem*, we mean single-cell related tools that operate on :class:`~anndata.AnnData`. Here, we list some that do not have an interface in the :doc:`external API <external/index>`.
+.. note::
+  If you'd like to see your tool included here, please open a `pull request <https://github.com/theislab/scanpy>`_!
 
+  With *ecosystem*, we mean the broader single-cell related tools that operate on :class:`~anndata.AnnData`.
+  If your tool doesn't do this, but is useful for analysing single cell data we also accept light wrappers for some tools in :mod:`scanpy.external`.
 
 Viewers
 -------
@@ -90,3 +93,6 @@ Analyses using curated prior knowledge
 
 * `dorothea <https://github.com/saezlab/dorothea-py>`__ for Transcription Factor activities :small:`Institute for Computational Biomedicine, Heidelberg University`
 * `progeny <https://github.com/saezlab/progeny-py>`__ for footprint-based pathway activities :small:`Institute for Computational Biomedicine, Heidelberg University`
+* `Cubé <https://github.com/connerlambden/Cube>`__ :small:`Harvard University`
+
+    | Intuitive Nonparametric Gene Network Search Algorithm that learns from existing biological pathways & multiplicative gene interference patterns.

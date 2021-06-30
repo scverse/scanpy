@@ -1,0 +1,8 @@
+1.8.1 :small:`the future`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Bug fixes
+
+- Fixed reproducibility of :func:`scanpy.tl.score_genes`. Calculation and output is now float64 type.  :pr:`1890` :smaller:`I Kucinski`
+
+.. rubric:: Performance Enhancements
