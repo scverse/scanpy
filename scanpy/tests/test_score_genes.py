@@ -55,12 +55,12 @@ def test_score_with_reference():
     """
 
     np.random.seed(123)
-    adata = _create_adata(100, 1000, p_zero=0.3, p_nan=0)
-    sc.pp.normalize_per_cell(adata)
+    adata = sc.datasets.paul15()
+    sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
     sc.pp.scale(adata)
 
     sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name='Test')
-    with Path(HERE, 'score_genes_reference.pkl').open('rb') as file:
+    with Path(HERE, 'score_genes_reference_paul2015.pkl').open('rb') as file:
         reference = pickle.load(file)
     # assert np.allclose(reference, adata.obs.Test.values)
     assert np.array_equal(reference, adata.obs.Test.values)
