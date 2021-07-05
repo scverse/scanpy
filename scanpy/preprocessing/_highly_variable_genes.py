@@ -335,11 +335,11 @@ def _highly_variable_pearson_residuals(
         na_position='last',
         inplace=True,
     )
-    df['highly_variable'] = False
-    df.highly_variable.iloc[:n_top_genes] = True
-    # TODO: following line raises a pandas warning
-    # (also for flavor = seurat and cellranger..)
-    df = df.loc[adata.var_names]
+
+    high_var = np.zeros(df.shape[0])
+    high_var[:n_top_genes] = True
+    df['highly_variable'] = high_var.astype(bool)
+    df = df.loc[adata.var_names, :]
 
     if inplace:
         adata.uns['hvg'] = {'flavor': 'pearson_residuals', 'computed_on': computed_on}
@@ -353,11 +353,11 @@ def _highly_variable_pearson_residuals(
             '    \'variances\', float vector (adata.var)\n'
             '    \'residual_variances\', float vector (adata.var)'
         )
-        adata.var['highly_variable'] = df['highly_variable'].values
-        adata.var['highly_variable_rank'] = df['highly_variable_rank'].values
         adata.var['means'] = df['means'].values
         adata.var['variances'] = df['variances'].values
         adata.var['residual_variances'] = df['residual_variances']
+        adata.var['highly_variable_rank'] = df['highly_variable_rank'].values
+        adata.var['highly_variable'] = df['highly_variable'].values
 
         if batch_key is not None:
             adata.var['highly_variable_nbatches'] = df[
@@ -770,11 +770,12 @@ def highly_variable_genes(
                 na_position='last',
                 inplace=True,
             )
-            df['highly_variable'] = False
-            df.highly_variable.iloc[:n_top_genes] = True
-            df = df.loc[adata.var_names]
+            high_var = np.zeros(df.shape[0])
+            high_var[:n_top_genes] = True
+            df['highly_variable'] = high_var.astype(bool)
+            df = df.loc[adata.var_names, :]
         else:
-            df = df.loc[adata.var_names]
+            df = df.loc[adata.var_names, :]
             dispersion_norm = df.dispersions_norm.values
             dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
             gene_subset = np.logical_and.reduce(
