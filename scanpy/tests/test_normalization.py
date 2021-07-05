@@ -109,8 +109,7 @@ def test_normalize_pearson_residuals_inputchecks(sparsity_func, dtype):
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 @pytest.mark.parametrize('theta', [0.01, 1, 100, np.Inf])
 @pytest.mark.parametrize('clip', [None, 1, np.Inf])
-@pytest.mark.parametrize('inplace', [True, False])
-def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip, inplace):
+def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
 
     # toy data
     X = np.array([[3, 6], [2, 4], [1, 0]])
@@ -129,26 +128,21 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip, i
     # compute output to test
     adata = AnnData(sparsity_func(X), dtype=dtype)
     output = sc.pp.normalize_pearson_residuals(
-        adata, theta=theta, clip=clip, inplace=inplace
+        adata, theta=theta, clip=clip, inplace=False
     )
+    output_X = output['X']
+    sc.pp.normalize_pearson_residuals(adata, theta=theta, clip=clip, inplace=True)
 
-    # handle and test inplace argument
-    if inplace:
-        output_X = adata.X
-        assert output is None
-        # check for correct new `adata.uns` keys
-        assert np.all(
-            np.isin(['pearson_residuals_normalization'], list(adata.uns.keys()))
+    # check for correct new `adata.uns` keys
+    assert np.all(np.isin(['pearson_residuals_normalization'], list(adata.uns.keys())))
+    assert np.all(
+        np.isin(
+            ['theta', 'clip', 'computed_on'],
+            list(adata.uns['pearson_residuals_normalization'].keys()),
         )
-        assert np.all(
-            np.isin(
-                ['theta', 'clip', 'computed_on'],
-                list(adata.uns['pearson_residuals_normalization'].keys()),
-            )
-        )
-
-    else:
-        output_X = output['X']
+    )
+    # test against inplace
+    np.testing.assert_array_equal(adata.X, output_X)
 
     if clip is None:
         # default clipping: compare to sqrt(n) threshold
