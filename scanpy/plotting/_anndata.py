@@ -1938,7 +1938,7 @@ def _prepare_dataframe(
         categorical.name = groupby[0]
     else:
         # join the groupby values  using "_" to make a new 'category'
-        categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
+        categorical = obs_tidy[groupby].apply('_'.join, axis=1).astype('category')
         categorical.name = "_".join(groupby)
 
         # preserve category order
