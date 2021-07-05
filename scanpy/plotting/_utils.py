@@ -23,8 +23,6 @@ from .._utils import NeighborsView
 from . import palettes
 
 
-_tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
-
 ColorLike = Union[str, Tuple[float, ...]]
 _IGraphLayout = Literal['fa', 'fr', 'rt', 'rt_circular', 'drl', 'eq_tree', ...]
 _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 'black']
