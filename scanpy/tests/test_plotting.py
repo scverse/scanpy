@@ -1345,6 +1345,18 @@ def test_paga_path(image_comparer):
     save_and_compare_images('master_paga_path')
 
 
+def test_paga_compare(image_comparer):
+    # Tests that https://github.com/theislab/scanpy/issues/1887 is fixed
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+
+    pbmc = sc.datasets.pbmc3k_processed()
+    sc.tl.paga(pbmc, groups="louvain")
+
+    sc.pl.paga_compare(pbmc, basis="umap", show=False)
+
+    save_and_compare_images('master_paga_compare_pbmc3k')
+
+
 def test_no_copy():
     # https://github.com/theislab/scanpy/issues/1000
     # Tests that plotting functions don't make a copy from a view unless they
