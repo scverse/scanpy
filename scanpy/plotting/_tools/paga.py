@@ -14,6 +14,7 @@ from matplotlib import patheffects
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like, Colormap
 from scipy.sparse import issparse
+from sklearn.utils import check_random_state
 
 from .. import _utils
 from .._utils import matrix, _IGraphLayout, _FontWeight, _FontSize
@@ -161,7 +162,10 @@ def _compute_pos(
     root=0,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
 ):
+    import random
     import networkx as nx
+
+    random_state = check_random_state(random_state)
 
     nx_g_solid = nx.Graph(adjacency_solid)
     if layout is None:
@@ -177,9 +181,9 @@ def _compute_pos(
             )
             layout = 'fr'
     if layout == 'fa':
-        np.random.seed(random_state)
+        # np.random.seed(random_state)
         if init_pos is None:
-            init_coords = np.random.random((adjacency_solid.shape[0], 2))
+            init_coords = random_state.random_sample((adjacency_solid.shape[0], 2))
         else:
             init_coords = init_pos.copy()
         forceatlas2 = ForceAtlas2(
@@ -220,6 +224,7 @@ def _compute_pos(
             )
     else:
         # igraph layouts
+        random.seed(random_state.bytes(8))
         g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
         if 'rt' in layout:
             g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
@@ -230,9 +235,11 @@ def _compute_pos(
             pos_list = g.layout(layout).coords
         else:
             # I don't know why this is necessary
-            np.random.seed(random_state)
+            # np.random.seed(random_state)
             if init_pos is None:
-                init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
+                init_coords = random_state.random_sample(
+                    (adjacency_solid.shape[0], 2)
+                ).tolist()
             else:
                 init_pos = init_pos.copy()
                 # this is a super-weird hack that is necessary as igraph’s
