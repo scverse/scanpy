@@ -162,13 +162,13 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
     'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
 )
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
-def test_normalize_pearson_residuals_pca(sparsity_func, dtype):
+@pytest.mark.parametrize('n_hvgs', [100, 200])
+@pytest.mark.parametrize('n_comps_pca', [30, 50])
+def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps_pca):
 
     adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
-    n_cells = adata.shape[0]
-    n_genes = adata.shape[1]
-    n_hvgs = 100
-    n_comps_pca = 50
+    n_cells, n_genes = adata.shape
+
     adata_with_hvgs = adata.copy()
     sc.pp.highly_variable_genes(
         adata_with_hvgs, flavor='pearson_residuals', n_top_genes=n_hvgs
@@ -258,17 +258,27 @@ def test_normalize_pearson_residuals_pca(sparsity_func, dtype):
         n_comps_pca,
     )
 
+    # test for inplace/outplace
+    for ad_inplace, ad_outplace in zip(
+        [adata_pca, adata_pca_with_hvgs, adata_pca_not_using_hvgs],
+        [adata, adata_with_hvgs, adata_not_using_hvgs],
+    ):
+        np.testing.assert_array_equal(
+            ad_inplace.obsm['X_pearson_residuals_pca'],
+            ad_outplace.obsm['X_pearson_residuals_pca'],
+        )
+
 
 @pytest.mark.parametrize(
     'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
 )
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
-def test_normalize_pearson_residuals_recipe(sparsity_func, dtype):
+@pytest.mark.parametrize('n_hvgs', [100, 200])
+@pytest.mark.parametrize('n_comps_pca', [30, 50])
+def test_normalize_pearson_residuals_recipe(sparsity_func, dtype, n_hvgs, n_comps_pca):
     adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
-    n_cells = adata.shape[0]
-    n_genes = adata.shape[1]
-    n_hvgs = 100
-    n_comps_pca = 50
+    n_cells, n_genes = adata.shape
+
     adata_with_hvgs = adata.copy()
     sc.pp.highly_variable_genes(
         adata_with_hvgs, flavor='pearson_residuals', n_top_genes=n_hvgs
