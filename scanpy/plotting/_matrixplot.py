@@ -188,6 +188,8 @@ class MatrixPlot(BasePlot):
         .. plot::
             :context: close-figs
 
+            import scanpy as sc
+
             adata = sc.datasets.pbmc68k_reduced()
             markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
@@ -197,7 +199,11 @@ class MatrixPlot(BasePlot):
         .. plot::
             :context: close-figs
 
-            sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').style(cmap='Blues', edge_color='none').show()
+            (
+                sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')
+                .style(cmap='Blues', edge_color='none')
+                .show()
+            )
 
         """
 

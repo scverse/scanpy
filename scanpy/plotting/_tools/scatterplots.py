@@ -618,6 +618,43 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.umap(adata)
+
+    Colour points by discrete variable (Louvain clusters).
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color="louvain")
+
+    Colour points by gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color="HES4")
+
+    Plot muliple umaps for different gene expressions.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color=["HES4", "TNFRSF4"])
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.umap
     """
     return embedding(adata, 'umap', **kwargs)
 
