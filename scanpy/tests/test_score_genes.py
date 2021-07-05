@@ -3,6 +3,10 @@ import scanpy as sc
 from anndata import AnnData
 from scipy.sparse import csr_matrix
 import pytest
+import pickle
+from pathlib import Path
+
+HERE = Path(__file__).parent / Path('_data/')
 
 
 def _create_random_gene_names(n_genes, name_length):
@@ -43,6 +47,24 @@ def _create_adata(n_obs, n_var, p_zero, p_nan):
     return adata
 
 
+def test_score_with_reference():
+    """
+    Checks if score_genes output agrees with pre-computed reference values.
+    The reference values had been generated using the same code
+    and stored as a pickle object in ./data
+    """
+
+    adata = sc.datasets.paul15()
+    sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
+    sc.pp.scale(adata)
+
+    sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name='Test')
+    with Path(HERE, 'score_genes_reference_paul2015.pkl').open('rb') as file:
+        reference = pickle.load(file)
+    # assert np.allclose(reference, adata.obs.Test.values)
+    assert np.array_equal(reference, adata.obs.Test.values)
+
+
 def test_add_score():
     """
     check the dtype of the scores
@@ -61,7 +83,7 @@ def test_add_score():
         np.unique(np.random.choice(adata.var_names, 10)), np.unique(non_existing_genes)
     ]
     sc.tl.score_genes(adata, some_genes, score_name='Test')
-    assert adata.obs['Test'].dtype == 'float32'
+    assert adata.obs['Test'].dtype == 'float64'
 
 
 def test_sparse_nanmean():
@@ -168,7 +190,7 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
 
     # now patch _sparse_nanmean by np.nanmean inside sc.tools
     def mock_fn(x, axis):
-        return np.nanmean(x.A, axis)
+        return np.nanmean(x.A, axis, dtype='float64')
 
     monkeypatch.setattr(sc.tools._score_genes, '_sparse_nanmean', mock_fn)
     sc.tl.score_genes(adata, gene_list=gene_set, score_name='Test')
