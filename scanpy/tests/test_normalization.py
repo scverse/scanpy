@@ -78,27 +78,19 @@ def test_normalize_pearson_residuals_inputchecks(sparsity_func, dtype):
         adata_noninteger = adata.copy()
         x, y = np.nonzero(adata_noninteger.X)
         adata_noninteger.X[x[0], y[0]] = 0.5
-        nonint_warn_msg = "`normalize_pearson_residuals()` expects raw count data, but non-integers were found."
 
-        # expecting 0 no-int warnings
-        with warnings.catch_warnings(record=True) as record:
-            sc.pp.normalize_pearson_residuals(
-                adata_noninteger.copy(), check_values=False
-            )
-        nonint_warnings = [
-            warning.message.args[0] == nonint_warn_msg for warning in record
-        ]
-        assert np.sum(nonint_warnings) == 0
-
-        # expecting 1 no-int warning
-        with warnings.catch_warnings(record=True) as record:
+        with pytest.warns(UserWarning) as record:
             sc.pp.normalize_pearson_residuals(
                 adata_noninteger.copy(), check_values=True
             )
-        nonint_warnings = np.array(
-            [warning.message.args[0] == nonint_warn_msg for warning in record]
-        )
-        assert np.sum(nonint_warnings) == 1
+        assert len(record) == 1
+        assert "expects raw count data" in record[0].message.args[0]
+
+        with pytest.warns(None) as record:
+            sc.pp.normalize_pearson_residuals(
+                adata_noninteger.copy(), check_values=False
+            )
+        assert len(record) == 0
 
     # errors should be raised for invalid theta values
     with pytest.raises(ValueError) as record:

@@ -47,7 +47,7 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
     if clip < 0:
         raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
-    if check_values and (check_nonnegative_integers(X) is False):
+    if check_values and not check_nonnegative_integers(X):
         warn(
             "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
             UserWarning,
@@ -133,7 +133,7 @@ def normalize_pearson_residuals(
     X = _get_obs_rep(adata, layer=layer)
     computed_on = layer if layer else 'adata.X'
 
-    msg = 'computing analytic Pearson residuals on %s' % computed_on
+    msg = f'computing analytic Pearson residuals on {computed_on}'
     start = logg.info(msg)
 
     residuals = _pearson_residuals(X, theta, clip, check_values, copy=~inplace)
