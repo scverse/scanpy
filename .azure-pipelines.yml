@@ -56,7 +56,7 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
-      pytest --color=yes -vv --ignore=scanpy/tests/_images
+      pytest --ignore=scanpy/tests/_images
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')
 
