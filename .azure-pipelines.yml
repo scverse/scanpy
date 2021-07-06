@@ -5,6 +5,8 @@ variables:
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
   ANNDATA_DEV: no
   RUN_COVERAGE: no
+  MPLBACKEND: agg  # make matplotlib work without $DISPLAY set
+  NUMBA_THREADING_LAYER: workqueue  # unified numba backend
 
 jobs:
 - job: PyTest
@@ -34,11 +36,6 @@ jobs:
         python
       path: $(PIP_CACHE_DIR)
     displayName: Cache pip packages
-
-  - script: |
-      export MPLBACKEND="agg"
-      echo $MPLBACKEND
-    displayName: 'Set env'
 
   - script: |
       python -m pip install --upgrade pip
