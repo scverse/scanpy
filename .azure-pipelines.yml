@@ -5,7 +5,6 @@ variables:
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
   ANNDATA_DEV: no
   RUN_COVERAGE: no
-  MPLBACKEND: agg  # make matplotlib work without $DISPLAY set
   NUMBA_THREADING_LAYER: workqueue  # unified numba backend
 
 jobs:
@@ -22,6 +21,8 @@ jobs:
         python.version: '3.9'
         ANNDATA_DEV: yes
         RUN_COVERAGE: yes
+  variables:
+    MPLBACKEND: agg  # make matplotlib work without $DISPLAY set
   steps:
   - task: UsePythonVersion@0
     inputs:
