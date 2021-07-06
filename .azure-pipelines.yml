@@ -56,6 +56,10 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
+      numba -s
+    displayName: 'Display numba info'
+
+  - script: |
       pytest --ignore=scanpy/tests/_images
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')
