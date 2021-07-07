@@ -521,10 +521,9 @@ def split(
         raise ValueError(f"No {key} in .obs.")
 
     adatas = {}
-    all_groups = np.unique(adata.obs[key])
 
     if groups is None:
-        groups = all_groups
+        groups = np.unique(adata.obs[key])
 
     groups_dict = {}
     all_values = []
@@ -544,19 +543,22 @@ def split(
         groups_dict[name] = values
         all_values += values
 
+    use_others_key = others_key is not None
     # need to create dict before checking that others_key
     # is not among the passed groups
-    if others_key is not None:
-        if others_key in groups_dict:
-            raise ValueError(
-                f"others_key={others_key} coincides with a key in the passed groups."
-            )
-        others_values = [value for value in all_groups if value not in all_values]
-        if len(others_values) > 0:
-            groups_dict[others_key] = others_values
+    if use_others_key and others_key in groups_dict:
+        raise ValueError(
+            f"others_key={others_key} coincides with a key in the passed groups."
+        )
 
     for group, values in groups_dict.items():
         view = adata[adata.obs[key].isin(values)]
         adatas[group] = view.copy() if copy else view
+
+    # should be last
+    if use_others_key:
+        mask = ~adata.obs[key].isin(all_values)
+        if sum(mask) > 0:
+            adatas[others_key] = adata[mask]
 
     return adatas

@@ -334,6 +334,7 @@ useful formats.
    get.obs_df
    get.var_df
    get.rank_genes_groups_df
+   get.split
 
 
 Queries
