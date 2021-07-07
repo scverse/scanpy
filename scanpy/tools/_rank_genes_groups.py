@@ -535,7 +535,7 @@ def rank_genes_groups(
     """
     if use_raw is None:
         use_raw = adata.raw is not None
-    elif use_raw is True and adata.raw is not None:
+    elif use_raw is True and adata.raw is None:
         raise ValueError("Received `use_raw=True`, but `adata.raw` is empty.")
 
     if method is None:
