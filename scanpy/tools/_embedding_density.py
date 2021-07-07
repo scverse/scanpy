@@ -140,10 +140,7 @@ def embedding_density(
             raise ValueError(f'Could not find {groupby!r} `.obs` column.')
 
         if adata.obs[groupby].dtype.name != 'category':
-            raise ValueError(f'{groupby!r} column does not contain Categorical data')
-
-        if len(adata.obs[groupby].cat.categories) > 10:
-            raise ValueError(f'More than 10 categories in {groupby!r} column.')
+            raise ValueError(f'{groupby!r} column does not contain categorical data')
 
     # Define new covariate name
     if key_added is not None:
