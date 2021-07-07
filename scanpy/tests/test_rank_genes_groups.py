@@ -11,6 +11,7 @@ from scipy import sparse as sp
 from scipy.stats import mannwhitneyu
 from numpy.random import negative_binomial, binomial, seed
 
+import scanpy as sc
 from anndata import AnnData
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
@@ -211,6 +212,23 @@ def test_results_layers():
             true_scores_t_test[name][:7],
             adata.uns['rank_genes_groups']['scores'][name][:7],
         )
+
+
+def test_rank_genes_groups_use_raw():
+    # https://github.com/theislab/scanpy/issues/1929
+    pbmc = sc.datasets.pbmc68k_reduced()
+    assert pbmc.raw is not None
+
+    sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    del pbmc.raw
+    assert pbmc.raw is None
+
+    with pytest.raises(
+        ValueError, match="Received `use_raw=True`, but `adata.raw` is empty"
+    ):
+        sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
 
 
 def test_singlets():
