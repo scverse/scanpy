@@ -61,7 +61,6 @@ requires = [
     'joblib',
     'numba>=0.41.0',
     'umap-learn>=0.3.10',
-    'legacy-api-wrap',
     'packaging',
     'sinfo',
     # for getting the stable version
