@@ -48,7 +48,7 @@ def embedding_density(
     Note that density values are scaled to be between 0 and 1. Thus, the
     density value at each cell is only comparable to densities in
     the same category.
-    
+
     Beware that the KDE estimate used (`scipy.stats.gaussian_kde`) becomes
     unreliable if you don't have enough cells in a category.
 
