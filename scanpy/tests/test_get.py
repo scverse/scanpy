@@ -509,3 +509,35 @@ def test_rank_genes_groups_df():
     assert 'b' in dedf3['group'].unique()
     adata.var_names.name = 'pr1388'
     sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
+
+
+################
+# split tests #
+###############
+
+
+def test_split():
+    adata = sc.datasets.pbmc68k_reduced()
+
+    adatas = sc.get.split(adata, 'bulk_labels')
+    for g, ad in adatas.items():
+        assert ad.obs['bulk_labels'].cat.categories.tolist() == [g]
+        assert ad.is_view
+
+    groups = ['CD14+ Monocyte', 'CD34+']
+    adatas = sc.get.split(adata, 'bulk_labels', groups, copy=True)
+    assert list(adatas.keys()) == groups
+    for g in groups:
+        assert adatas[g].obs['bulk_labels'].cat.categories.tolist() == [g]
+        assert not adatas[g].is_view
+
+    adatas = sc.get.split(
+        adata,
+        'bulk_labels',
+        dict(some=groups),
+        others_key='others',
+    )
+    assert list(adatas.keys()) == ['some', 'others']
+    assert all(adatas['some'].obs['bulk_labels'].isin(groups))
+    mask = ~adata.obs['bulk_labels'].isin(groups)
+    assert adatas['others'].obs_names.equals(adata[mask].obs_names)

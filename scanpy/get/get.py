@@ -1,5 +1,5 @@
 """This module contains helper functions for accessing data."""
-from typing import Optional, Iterable, Tuple, Union, List
+from typing import Optional, Iterable, Tuple, Union, List, Dict
 
 import numpy as np
 import pandas as pd
@@ -437,3 +437,126 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
             "That was unexpected. Please report this bug at:\n\n\t"
             " https://github.com/theislab/scanpy/issues"
         )
+
+
+GroupsList = List[str]
+GroupsLists = List[GroupsList]
+GroupsDict = Dict[str, GroupsList]
+
+
+def split(
+    adata: AnnData,
+    key: str,
+    groups: Optional[Union[GroupsList, GroupsLists, GroupsDict]] = None,
+    others_key: Optional[str] = None,
+    copy: bool = False,
+) -> Dict[str, AnnData]:
+    """\
+    Split adata by obs key.
+
+    Params
+    ------
+    adata
+        AnnData object to split.
+    key
+        A key from `.obs` to use for splitting `adata`.
+    groups
+        Specifies which groups to select from adata `.obs` `key`.
+        If `None`, `adata` will be split with all values from `.obs` `key`.
+        It can be a list of groups' names, a list of lists of groups to aggregate,
+        a dict of lists of groups to aggregate.
+    others_key
+        If not `None`, the returned dict will have an additional key with
+        this name and the adata subset object with all groups not specified
+        in `groups` as a value.
+    copy
+        If `True`, all split AnnData objects are copied; otherwise,
+        the returned dict will have views.
+
+    Returns
+    -------
+    A dictionay with AnnData objects.
+    If names of the split AnnData objects are not specified
+    (a list of lists in `groups`), they will be created by joining the groups' names.
+
+    Examples
+    --------
+    Split by all values in an `.obs` `key`:
+
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> adatas = sc.get.split(adata, 'bulk_labels')
+    >>> adatas
+    {'CD14+ Monocyte': View of AnnData object with n_obs × n_vars = 129 × 765
+     ...,
+     'CD19+ B': View of AnnData object with n_obs × n_vars = 95 × 765
+     ...,
+     ...
+    }
+
+    Select only specific groups:
+
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> adatas = sc.get.split(adata, 'bulk_labels', ['CD14+ Monocyte', 'CD34+'])
+    >>> adatas
+    {'CD14+ Monocyte': View of AnnData object with n_obs × n_vars = 129 × 765
+     ...,
+     'CD34+': View of AnnData object with n_obs × n_vars = 13 × 765
+     ...
+    }
+
+    Aggreagte some groups, put all others to `others_key`:
+
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> adatas = sc.get.split(adata, 'bulk_labels',
+                              dict(some=['CD14+ Monocyte', 'CD34+']),
+                              others_key='others')
+    >>> adatas
+    {'some': View of AnnData object with n_obs × n_vars = 142 × 765
+     ...,
+     'others': View of AnnData object with n_obs × n_vars = 558 × 765
+     ...
+    }
+    """
+    if key not in adata.obs:
+        raise ValueError(f"No {key} in .obs.")
+
+    adatas = {}
+    all_groups = np.unique(adata.obs[key])
+
+    if groups is None:
+        groups = all_groups
+
+    groups_dict = {}
+    all_values = []
+    for group in groups:
+        if isinstance(groups, dict):
+            values = groups[group]
+        else:
+            values = group
+
+        if isinstance(group, list):
+            name = "-".join(str(e) for e in group)
+        else:
+            name = group
+
+        values = values if isinstance(values, list) else [values]
+
+        groups_dict[name] = values
+        all_values += values
+
+    # need to create dict before checking that others_key
+    # is not among the passed groups
+    if others_key is not None:
+        if others_key in groups_dict:
+            raise ValueError(
+                f"others_key={others_key} coincides with a key in the passed groups."
+            )
+        others_values = [value for value in all_groups if value not in all_values]
+        if len(others_values) > 0:
+            groups_dict[others_key] = others_values
+
+    for group, values in groups_dict.items():
+        view = adata[adata.obs[key].isin(values)]
+        adatas[group] = view.copy() if copy else view
+
+    return adatas
