@@ -444,11 +444,12 @@ GroupsLists = List[GroupsList]
 GroupsDict = Dict[str, GroupsList]
 
 
-def split(
+def split_by(
     adata: AnnData,
     key: str,
     groups: Optional[Union[GroupsList, GroupsLists, GroupsDict]] = None,
     others_key: Optional[str] = None,
+    axis: int = 0,
     copy: bool = False,
 ) -> Dict[str, AnnData]:
     """\
@@ -459,16 +460,19 @@ def split(
     adata
         AnnData object to split.
     key
-        A key from `.obs` to use for splitting `adata`.
+        A key from `.obs` or to `.var` depending on `axis`
+        to use for splitting `adata`.
     groups
-        Specifies which groups to select from adata `.obs` `key`.
-        If `None`, `adata` will be split with all values from `.obs` `key`.
+        Specifies which groups to select from adata `key`.
+        If `None`, `adata` will be split with all values from `key`.
         It can be a list of groups' names, a list of lists of groups to aggregate,
         a dict of lists of groups to aggregate.
     others_key
         If not `None`, the returned dict will have an additional key with
         this name and the adata subset object with all groups not specified
         in `groups` as a value.
+    axis
+        Axis of `adata` to split by `.obs` or `.var` `key`.
     copy
         If `True`, all split AnnData objects are copied; otherwise,
         the returned dict will have views.
@@ -493,7 +497,7 @@ def split(
      ...
     }
 
-    Select only specific groups:
+    Select only specific groups from `.obs` `key`:
 
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> adatas = sc.get.split(adata, 'bulk_labels', ['CD14+ Monocyte', 'CD34+'])
@@ -504,7 +508,7 @@ def split(
      ...
     }
 
-    Aggreagte some groups, put all others to `others_key`:
+    Aggreagte some groups from `.obs` `key`, put all others to `others_key`:
 
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> adatas = sc.get.split(adata, 'bulk_labels',
@@ -520,10 +524,16 @@ def split(
     if key not in adata.obs:
         raise ValueError(f"No {key} in .obs.")
 
+    if axis not in (0, 1):
+        raise ValueError("axis should be 0 or 1 only.")
+
+    attr_by_key = adata.obs[key] if axis == 0 else adata.var[key]
+    select = [slice(None), slice(None)]
+
     adatas = {}
 
     if groups is None:
-        groups = np.unique(adata.obs[key])
+        groups = np.unique(attr_by_key)
 
     groups_dict = {}
     all_values = []
@@ -552,13 +562,16 @@ def split(
         )
 
     for group, values in groups_dict.items():
-        view = adata[adata.obs[key].isin(values)]
-        adatas[group] = view.copy() if copy else view
+        select[axis] = attr_by_key.isin(values)
+        idx = tuple(select)
+        adatas[group] = adata[idx].copy() if copy else adata[idx]
 
     # should be last
     if use_others_key:
-        mask = ~adata.obs[key].isin(all_values)
+        mask = ~attr_by_key.isin(all_values)
         if sum(mask) > 0:
-            adatas[others_key] = adata[mask]
+            select[axis] = mask
+            idx = tuple(select)
+            adatas[others_key] = adata[idx].copy() if copy else adata[idx]
 
     return adatas
