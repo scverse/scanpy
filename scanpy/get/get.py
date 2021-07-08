@@ -488,7 +488,7 @@ def split_by(
     Split by all values in an `.obs` `key`:
 
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> adatas = sc.get.split(adata, 'bulk_labels')
+    >>> adatas = sc.get.split_by(adata, 'bulk_labels')
     >>> adatas
     {'CD14+ Monocyte': View of AnnData object with n_obs × n_vars = 129 × 765
      ...,
@@ -500,7 +500,7 @@ def split_by(
     Select only specific groups from `.obs` `key`:
 
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> adatas = sc.get.split(adata, 'bulk_labels', ['CD14+ Monocyte', 'CD34+'])
+    >>> adatas = sc.get.split_by(adata, 'bulk_labels', ['CD14+ Monocyte', 'CD34+'])
     >>> adatas
     {'CD14+ Monocyte': View of AnnData object with n_obs × n_vars = 129 × 765
      ...,
@@ -511,9 +511,9 @@ def split_by(
     Aggreagte some groups from `.obs` `key`, put all others to `others_key`:
 
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> adatas = sc.get.split(adata, 'bulk_labels',
-                              dict(some=['CD14+ Monocyte', 'CD34+']),
-                              others_key='others')
+    >>> adatas = sc.get.split_by(adata, 'bulk_labels',
+                                 dict(some=['CD14+ Monocyte', 'CD34+']),
+                                 others_key='others')
     >>> adatas
     {'some': View of AnnData object with n_obs × n_vars = 142 × 765
      ...,
