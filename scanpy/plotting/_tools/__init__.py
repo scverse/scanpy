@@ -495,7 +495,7 @@ def _rank_genes_groups_plot(
             if gene_symbols is not None:
                 df['names'] = df[gene_symbols]
 
-            genes_list = df.names.tolist()
+            genes_list = df.names[df.names.notnull()].tolist()
 
             if len(genes_list) == 0:
                 logg.warning(f'No genes found for group {group}')
