@@ -446,7 +446,7 @@ GroupsDict = Dict[str, GroupsList]
 
 def split_by(
     adata: AnnData,
-    key: str,
+    by: Union[str, pd.Series, list],
     groups: Optional[Union[GroupsList, GroupsLists, GroupsDict]] = None,
     others_key: Optional[str] = None,
     axis: int = 0,
@@ -459,12 +459,12 @@ def split_by(
     ------
     adata
         AnnData object to split.
-    key
-        A key from `.obs` or to `.var` depending on `axis`
-        to use for splitting `adata`.
+    by
+        A key from `.obs` or `.var` depending on `axis`,
+        pandas Series or a list with groups to use for splitting `adata`.
     groups
-        Specifies which groups to select from adata `key`.
-        If `None`, `adata` will be split with all values from `key`.
+        Specifies which groups to select from adata `by`.
+        If `None`, `adata` will be split with all values from `by`.
         It can be a list of groups' names, a list of lists of groups to aggregate,
         a dict of lists of groups to aggregate.
     others_key
@@ -472,7 +472,7 @@ def split_by(
         this name and the adata subset object with all groups not specified
         in `groups` as a value.
     axis
-        Axis of `adata` to split by `.obs` or `.var` `key`.
+        Axis of `adata` to split by.
     copy
         If `True`, all split AnnData objects are copied; otherwise,
         the returned dict will have views.
@@ -485,7 +485,7 @@ def split_by(
 
     Examples
     --------
-    Split by all values in an `.obs` `key`:
+    Split by all values in an `.obs` key:
 
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> adatas = sc.get.split_by(adata, 'bulk_labels')
@@ -497,7 +497,7 @@ def split_by(
      ...
     }
 
-    Select only specific groups from `.obs` `key`:
+    Select only specific groups from `.obs` key:
 
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> adatas = sc.get.split_by(adata, 'bulk_labels', ['CD14+ Monocyte', 'CD34+'])
@@ -508,7 +508,7 @@ def split_by(
      ...
     }
 
-    Aggreagte some groups from `.obs` `key`, put all others to `others_key`:
+    Aggreagte some groups from `.obs` key, put all others to `others_key`:
 
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> adatas = sc.get.split_by(adata, 'bulk_labels',
@@ -520,20 +520,45 @@ def split_by(
      'others': View of AnnData object with n_obs × n_vars = 558 × 765
      ...
     }
-    """
-    if key not in adata.obs:
-        raise ValueError(f"No {key} in .obs.")
 
+    Split by axis 1 (var axis) passing the Series from the binned continuous variable
+
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> var_cats = pd.cut(adata.var.means, 4).cat.rename_categories(str)
+    >>> adatas = sc.get.split_by(adata, var_cats, axis=1)
+    >>> adatas
+    {'(0.0233, 1.135]': View of AnnData object with n_obs × n_vars = 700 × 535
+     ...,
+     '(1.135, 2.242]': View of AnnData object with n_obs × n_vars = 700 × 194
+     ...,
+     ...
+    }
+    """
     if axis not in (0, 1):
         raise ValueError("axis should be 0 or 1 only.")
 
-    attr_by_key = adata.obs[key] if axis == 0 else adata.var[key]
+    attr_axis, attr_str = (adata.obs, '.obs') if axis == 0 else (adata.var, '.var')
+
+    if isinstance(by, str):
+        if by not in attr_axis:
+            raise ValueError(f"No {by} in {attr_str}.")
+        attr_by = attr_axis[by]
+    elif isinstance(by, list):
+        attr_by = pd.Series(by)
+    elif isinstance(by, pd.Series):
+        attr_by = by
+    else:
+        raise ValueError("by should be a string, pandas Series or a list")
+
+    if len(attr_by) != len(attr_axis.index):
+        raise ValueError(f"by should have the same length as {attr_str}.")
+
     select = [slice(None), slice(None)]
 
     adatas = {}
 
     if groups is None:
-        groups = np.unique(attr_by_key)
+        groups = attr_by.unique()
 
     groups_dict = {}
     all_values = []
@@ -562,13 +587,13 @@ def split_by(
         )
 
     for group, values in groups_dict.items():
-        select[axis] = attr_by_key.isin(values)
+        select[axis] = attr_by.isin(values)
         idx = tuple(select)
         adatas[group] = adata[idx].copy() if copy else adata[idx]
 
     # should be last
     if use_others_key:
-        mask = ~attr_by_key.isin(all_values)
+        mask = ~attr_by.isin(all_values)
         if sum(mask) > 0:
             select[axis] = mask
             idx = tuple(select)

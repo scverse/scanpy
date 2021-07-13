@@ -541,3 +541,7 @@ def test_split_by():
     assert all(adatas['some'].obs['bulk_labels'].isin(groups))
     mask = ~adata.obs['bulk_labels'].isin(groups)
     assert adatas['others'].obs_names.equals(adata[mask].obs_names)
+
+    var_cats = pd.cut(adata.var.n_counts, 4).cat.rename_categories(str)
+    adatas = sc.get.split_by(adata, var_cats, axis=1)
+    assert set(adatas.keys()) == set(var_cats.cat.categories)
