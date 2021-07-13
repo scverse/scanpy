@@ -90,7 +90,7 @@ doc = [
     'sphinx-rtd-theme>=0.3.1',
     'sphinx-autodoc-typehints',
     'scanpydoc>=0.7.3',
-    'get_version>=3.4',  # TEMP: Better debugging of sphinx problem
+    'get_version>=3.5',  # TEMP: Better debugging of sphinx problem
     'typing_extensions; python_version < "3.8"',  # for `Literal`
     'python-igraph',
 ]
