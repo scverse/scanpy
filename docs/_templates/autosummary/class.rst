@@ -15,7 +15,9 @@
    .. autosummary::
       :toctree: .
    {% for item in attributes %}
+      {% if has_attr(fullname, item) %}
       ~{{ fullname }}.{{ item }}
+      {% endif %}
    {%- endfor %}
    {% endif %}
    {% endblock %}
