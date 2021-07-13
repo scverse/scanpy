@@ -1456,3 +1456,48 @@ def test_color_cycler(caplog):
             plt.close()
 
     assert caplog.text == ""
+
+
+@pytest.mark.parametrize(
+    "plot",
+    (
+        sc.pl.rank_genes_groups_dotplot,
+        sc.pl.rank_genes_groups_heatmap,
+        sc.pl.rank_genes_groups_matrixplot,
+        sc.pl.rank_genes_groups_stacked_violin,
+        sc.pl.rank_genes_groups_tracksplot,
+        # TODO: add other rank_genes_groups plots here once they work
+    ),
+)
+def test_filter_rank_genes_groups_plots(plot, check_same_image):
+    adata = sc.datasets.pbmc68k_reduced()
+
+    sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon', n_genes=5)
+
+    args = {
+        'adata': adata,
+        'key_added': 'rank_genes_groups_filtered',
+        'min_in_group_fraction': 0.25,
+        'min_fold_change': 1,
+        'max_out_group_fraction': 0.5,
+    }
+    sc.tl.filter_rank_genes_groups(**args)
+
+    var_names = {}
+    genes_names = adata.uns['rank_genes_groups_filtered']['names']
+    for group in genes_names.dtype.names:
+        genes = genes_names[group].astype(str).tolist()
+        var_names[group] = [g for g in genes if g != 'nan']
+
+    pth_a = FIGS / f"{plot.__name__}_filter_a.png"
+    pth_b = FIGS / f"{plot.__name__}_filter_b.png"
+
+    plot(adata, key='rank_genes_groups_filtered')
+    plt.savefig(pth_a)
+    plt.close()
+
+    plot(adata, key='rank_genes_groups', var_names=var_names)
+    plt.savefig(pth_b)
+    plt.close()
+
+    check_same_image(pth_a, pth_b, tol=1)
