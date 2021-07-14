@@ -80,27 +80,27 @@ def test_normalize_pearson_residuals_inputchecks(sparsity_func, dtype):
         adata_noninteger.X[x[0], y[0]] = 0.5
 
         with pytest.warns(UserWarning) as record:
-            sc.pp.normalize_pearson_residuals(
+            sc.experimental.pp.normalize_pearson_residuals(
                 adata_noninteger.copy(), check_values=True
             )
         assert len(record) == 1
         assert "expects raw count data" in record[0].message.args[0]
 
         with pytest.warns(None) as record:
-            sc.pp.normalize_pearson_residuals(
+            sc.experimental.pp.normalize_pearson_residuals(
                 adata_noninteger.copy(), check_values=False
             )
         assert len(record) == 0
 
     # errors should be raised for invalid theta values
     with pytest.raises(ValueError) as record:
-        sc.pp.normalize_pearson_residuals(adata.copy(), theta=0)
+        sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=0)
     with pytest.raises(ValueError) as record:
-        sc.pp.normalize_pearson_residuals(adata.copy(), theta=-1)
+        sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=-1)
 
     # error should be raised for invalid clipping values
     with pytest.raises(ValueError) as record:
-        sc.pp.normalize_pearson_residuals(adata.copy(), clip=-1)
+        sc.experimental.pp.normalize_pearson_residuals(adata.copy(), clip=-1)
 
 
 @pytest.mark.parametrize(
@@ -127,11 +127,13 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
 
     # compute output to test
     adata = AnnData(sparsity_func(X), dtype=dtype)
-    output = sc.pp.normalize_pearson_residuals(
+    output = sc.experimental.pp.normalize_pearson_residuals(
         adata, theta=theta, clip=clip, inplace=False
     )
     output_X = output['X']
-    sc.pp.normalize_pearson_residuals(adata, theta=theta, clip=clip, inplace=True)
+    sc.experimental.pp.normalize_pearson_residuals(
+        adata, theta=theta, clip=clip, inplace=True
+    )
 
     # check for correct new `adata.uns` keys
     assert np.all(np.isin(['pearson_residuals_normalization'], list(adata.uns.keys())))
@@ -170,7 +172,7 @@ def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps_p
     n_cells, n_genes = adata.shape
 
     adata_with_hvgs = adata.copy()
-    sc.pp.highly_variable_genes(
+    sc.experimental.pp.highly_variable_genes(
         adata_with_hvgs, flavor='pearson_residuals', n_top_genes=n_hvgs
     )
     adata_not_using_hvgs = adata_with_hvgs.copy()
@@ -178,15 +180,15 @@ def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps_p
     ### inplace = False ###
     # outputs the (potentially hvg-restricted) adata_pca object
     # PCA on all genes
-    adata_pca = sc.pp.normalize_pearson_residuals_pca(
+    adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
         adata.copy(), inplace=False, n_comps_pca=n_comps_pca
     )
     # PCA on hvgs only
-    adata_pca_with_hvgs = sc.pp.normalize_pearson_residuals_pca(
+    adata_pca_with_hvgs = sc.experimental.pp.normalize_pearson_residuals_pca(
         adata_with_hvgs.copy(), inplace=False, n_comps_pca=n_comps_pca
     )
     # PCA again on all genes (hvg use supressed)
-    adata_pca_not_using_hvgs = sc.pp.normalize_pearson_residuals_pca(
+    adata_pca_not_using_hvgs = sc.experimental.pp.normalize_pearson_residuals_pca(
         adata_not_using_hvgs.copy(),
         inplace=False,
         n_comps_pca=n_comps_pca,
@@ -221,13 +223,15 @@ def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps_p
     ### inplace = True ###
     # modifies the input adata object
     # PCA on all genes
-    sc.pp.normalize_pearson_residuals_pca(adata, inplace=True, n_comps_pca=n_comps_pca)
+    sc.experimental.pp.normalize_pearson_residuals_pca(
+        adata, inplace=True, n_comps_pca=n_comps_pca
+    )
     # PCA on hvgs only
-    sc.pp.normalize_pearson_residuals_pca(
+    sc.experimental.pp.normalize_pearson_residuals_pca(
         adata_with_hvgs, inplace=True, n_comps_pca=n_comps_pca
     )
     # PCA again on all genes (hvg use supressed)
-    sc.pp.normalize_pearson_residuals_pca(
+    sc.experimental.pp.normalize_pearson_residuals_pca(
         adata_not_using_hvgs,
         inplace=True,
         n_comps_pca=n_comps_pca,
@@ -280,14 +284,14 @@ def test_normalize_pearson_residuals_recipe(sparsity_func, dtype, n_hvgs, n_comp
     n_cells, n_genes = adata.shape
 
     adata_with_hvgs = adata.copy()
-    sc.pp.highly_variable_genes(
+    sc.experimental.pp.highly_variable_genes(
         adata_with_hvgs, flavor='pearson_residuals', n_top_genes=n_hvgs
     )
 
     ### inplace = False ###
     # outputs the (potentially hvg-restricted) adata_pca object
     # PCA on all genes
-    adata_pca, hvg = sc.pp.recipe_pearson_residuals(
+    adata_pca, hvg = sc.experimental.pp.recipe_pearson_residuals(
         adata.copy(), inplace=False, n_comps_pca=n_comps_pca, n_top_genes=n_hvgs
     )
 
@@ -326,7 +330,7 @@ def test_normalize_pearson_residuals_recipe(sparsity_func, dtype, n_hvgs, n_comp
     ### inplace = True ###
     # modifies the input adata object
     # PCA on all genes
-    sc.pp.recipe_pearson_residuals(
+    sc.experimental.pp.recipe_pearson_residuals(
         adata, inplace=True, n_comps_pca=n_comps_pca, n_top_genes=n_hvgs
     )
 

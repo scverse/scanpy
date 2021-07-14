@@ -58,7 +58,7 @@ def test_highly_variable_genes_basic():
 
 
 def _residual_var_reference(adata, clip=None, theta=100):
-    sc.pp.normalize_pearson_residuals(adata, clip=clip, theta=theta)
+    sc.experimental.pp.normalize_pearson_residuals(adata, clip=clip, theta=theta)
     residuals = adata.X
     return np.var(residuals, axis=0)
 
@@ -80,7 +80,7 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
 
         # expecting 0 no-int warnings
         with pytest.warns(None) as record:
-            sc.pp.highly_variable_genes(
+            sc.experimental.pp.highly_variable_genes(
                 adata_noninteger.copy(),
                 flavor='pearson_residuals',
                 n_top_genes=100,
@@ -90,7 +90,7 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
 
         # expecting 1 no-int warning
         with pytest.warns(None) as record:
-            sc.pp.highly_variable_genes(
+            sc.experimental.pp.highly_variable_genes(
                 adata_noninteger.copy(),
                 flavor='pearson_residuals',
                 n_top_genes=100,
@@ -101,17 +101,17 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
 
     # errors should be raised for invalid theta values
     with pytest.raises(ValueError) as record:
-        sc.pp.highly_variable_genes(
+        sc.experimental.pp.highly_variable_genes(
             adata.copy(), flavor='pearson_residuals', n_top_genes=100, theta=0
         )
     with pytest.raises(ValueError) as record:
-        sc.pp.highly_variable_genes(
+        sc.experimental.pp.highly_variable_genes(
             adata.copy(), flavor='pearson_residuals', n_top_genes=100, theta=-1
         )
 
     # error should be raised for invalid clipping values
     with pytest.raises(ValueError) as record:
-        sc.pp.highly_variable_genes(
+        sc.experimental.pp.highly_variable_genes(
             adata.copy(), flavor='pearson_residuals', n_top_genes=100, clip=-1
         )
 
@@ -141,7 +141,7 @@ def test_highly_variable_genes_pearson_residuals_values(
         residual_variances_reference = residual_variances_reference[top_n_idx]
 
     # compute output to be tested
-    output_df = sc.pp.highly_variable_genes(
+    output_df = sc.experimental.pp.highly_variable_genes(
         adata,
         flavor='pearson_residuals',
         n_top_genes=n_top_genes,
@@ -151,7 +151,7 @@ def test_highly_variable_genes_pearson_residuals_values(
         theta=theta,
     )
 
-    sc.pp.highly_variable_genes(
+    sc.experimental.pp.highly_variable_genes(
         adata,
         flavor='pearson_residuals',
         n_top_genes=n_top_genes,
@@ -198,7 +198,7 @@ def test_highly_variable_genes_pearson_residuals_general(
         # (results in sorted "gene order" in reference)
         residual_variances_reference = residual_variances_reference[top_n_idx]
     # compute output to be tested
-    output_df = sc.pp.highly_variable_genes(
+    output_df = sc.experimental.pp.highly_variable_genes(
         adata,
         flavor='pearson_residuals',
         n_top_genes=n_top_genes,
@@ -206,7 +206,7 @@ def test_highly_variable_genes_pearson_residuals_general(
         inplace=False,
     )
 
-    sc.pp.highly_variable_genes(
+    sc.experimental.pp.highly_variable_genes(
         adata,
         flavor='pearson_residuals',
         n_top_genes=n_top_genes,
@@ -269,7 +269,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
     adata.var.drop(columns=adata.var.columns, inplace=True)
     n_genes = adata.shape[1]
 
-    output_df = sc.pp.highly_variable_genes(
+    output_df = sc.experimental.pp.highly_variable_genes(
         adata,
         flavor='pearson_residuals',
         n_top_genes=n_top_genes,
@@ -278,7 +278,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
         inplace=False,
     )
 
-    sc.pp.highly_variable_genes(
+    sc.experimental.pp.highly_variable_genes(
         adata,
         flavor='pearson_residuals',
         n_top_genes=n_top_genes,
