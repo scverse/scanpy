@@ -225,43 +225,19 @@ def highly_variable_genes(
     adata: AnnData,
     layer: Optional[str] = None,
     n_top_genes: Optional[int] = None,
-    min_disp: Optional[float] = 0.5,
-    max_disp: Optional[float] = np.inf,
-    min_mean: Optional[float] = 0.0125,
-    max_mean: Optional[float] = 3,
-    span: Optional[float] = 0.3,
-    n_bins: int = 20,
     theta: float = 100,
     clip: Optional[float] = None,
     chunksize: int = 1000,
-    flavor: Literal[
-        'seurat', 'cell_ranger', 'seurat_v3', 'pearson_residuals'
-    ] = 'seurat',
+    flavor: Literal['pearson_residuals'] = 'pearson_residuals',
     subset: bool = False,
     inplace: bool = True,
     batch_key: Optional[str] = None,
     check_values: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_ [Lause20]_.
+    Annotate highly variable genes using Analytical Pearson residuals [Lause20]_.
 
-    Expects logarithmized data, except when `flavor='seurat_v3'` or
-    `flavor='pearson_residuals'`, in which count data is expected.
-
-    Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_, or uses
-    analytical Pearson residuals [Lause20]_.
-
-    For the dispersion-based methods ([Satija15]_ and [Zheng17]_), the normalized
-    dispersion is obtained by scaling with the mean and standard deviation of
-    the dispersions for genes falling into a given bin for mean expression of
-    genes. This means that for each bin of mean expression, highly variable
-    genes are selected.
-
-    For [Stuart19]_, a normalized variance for each gene is computed. First, the data
-    are standardized (i.e., z-score normalization per feature) with a regularized
-    standard deviation. Next, the normalized variance is computed as the variance
-    of each gene after the transformation. Genes are ranked by the normalized variance.
+    Expects count data input.
 
     For [Lause20]_, Pearson residuals of a negative binomial offset model (with
     overdispersion theta shared across genes) are computed. By default, overdispersion
@@ -277,31 +253,6 @@ def highly_variable_genes(
         If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
     n_top_genes
         Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
-    min_mean
-        If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
-    max_mean
-        If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
-    min_disp
-        If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
-    max_disp
-        If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
-    span
-        The fraction of the data (cells) used when estimating the variance in the loess
-        model fit if `flavor='seurat_v3'`.
-    n_bins
-        Number of bins for binning the mean gene expression. Normalization is
-        done with respect to each bin. If just a single gene falls into a bin,
-        the normalized dispersion is artificially set to 1. You'll be informed
-        about this if you set `settings.verbosity = 4`. Ignored if
         `flavor='pearson_residuals'`.
     theta
         If `flavor='pearson_residuals'`, this is the NB overdispersion parameter theta.
@@ -320,9 +271,8 @@ def highly_variable_genes(
         once while computing the residual variance. Choosing a smaller value will reduce
         the required memory.
     flavor
-        Choose the flavor for identifying highly variable genes. For the dispersion
-        based methods in their default workflows, Seurat passes the cutoffs whereas
-        Cell Ranger passes `n_top_genes`.
+        Choose the flavor for identifying highly variable genes. In this experimental
+        version, only 'pearson_residuals' is functional.
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
@@ -351,21 +301,12 @@ def highly_variable_genes(
         boolean indicator of highly-variable genes
     **means**
         means per gene
-    **dispersions**
-        For dispersion-based flavors, dispersions per gene
-    **dispersions_norm**
-        For dispersion-based flavors, normalized dispersions per gene
     **variances**
-        For `flavor='seurat_v3'` and `flavor='pearson_residuals'`, variance per gene
-    **variances_norm**
-        For `flavor='seurat_v3'`, normalized variance per gene, averaged in
-        the case of multiple batches
+        variance per gene
     **residual_variances**
         For `flavor='pearson_residuals'`, residual variance per gene. Averaged in the case of
         multiple batches.
     highly_variable_rank : float
-        For `flavor='seurat_v3'`, rank of the gene according to normalized
-        variance, median rank in the case of multiple batches
         For `flavor='pearson_residuals'`, rank of the gene according to residual
         variance, median rank in the case of multiple batches
     highly_variable_nbatches : int
@@ -375,7 +316,7 @@ def highly_variable_genes(
 
     Notes
     -----
-    This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
+    Experimental version of `sc.pp.highly_variable_genes()`
     """
 
     logg.info('extracting highly variable genes')
