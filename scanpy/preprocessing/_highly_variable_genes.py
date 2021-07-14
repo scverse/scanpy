@@ -357,8 +357,6 @@ def _highly_variable_pearson_residuals(
         adata.var['variances'] = df['variances'].values
         adata.var['residual_variances'] = df['residual_variances']
         adata.var['highly_variable_rank'] = df['highly_variable_rank'].values
-        adata.var['highly_variable'] = df['highly_variable'].values
-
         if batch_key is not None:
             adata.var['highly_variable_nbatches'] = df[
                 'highly_variable_nbatches'
@@ -366,8 +364,11 @@ def _highly_variable_pearson_residuals(
             adata.var['highly_variable_intersection'] = df[
                 'highly_variable_intersection'
             ].values
+        adata.var['highly_variable'] = df['highly_variable'].values
+
         if subset:
             adata._inplace_subset_var(df['highly_variable'].values)
+
     else:
         if batch_key is None:
             df = df.drop(

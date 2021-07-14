@@ -287,7 +287,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
         inplace=True,
     )
 
-    # pd.testing.assert_frame_equal(output_df, adata.var)
+    pd.testing.assert_frame_equal(output_df, adata.var)
 
     # check output is complete
     for key in [
