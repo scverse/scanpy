@@ -69,7 +69,7 @@ api_dir = HERE / 'api'  # function_images
 scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
 
 intersphinx_mapping = dict(
-    anndata=('https://anndata.readthedocs.io/en/stable/', None),
+    anndata=('https://anndata.readthedocs.io/en/latest/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     cycler=('https://matplotlib.org/cycler/', None),
     h5py=('http://docs.h5py.org/en/stable/', None),
@@ -82,7 +82,7 @@ intersphinx_mapping = dict(
     pandas=('https://pandas.pydata.org/pandas-docs/stable/', None),
     pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
-    scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
+    scipy=('https://scipy.github.io/devdocs/reference/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
     scanpy_tutorials=(scanpy_tutorials_url, None),
