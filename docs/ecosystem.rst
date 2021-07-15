@@ -96,3 +96,10 @@ Analyses using curated prior knowledge
 * `Cubé <https://github.com/connerlambden/Cube>`__ :small:`Harvard University`
 
     | Intuitive Nonparametric Gene Network Search Algorithm that learns from existing biological pathways & multiplicative gene interference patterns.
+    
+Spatial Transcriptomics Tools
+-------------------------------
+* `PASTE <https://github.com/raphael-group/paste>`__ :small:`Princeton`
+
+    | PASTE is a computational method that leverages both gene expression similarity and spatial distances between spots to align and integrate spatial transcriptomics data.
+
