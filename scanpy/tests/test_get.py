@@ -545,4 +545,4 @@ def test_split_by():
     var_cats = pd.cut(adata.var.n_counts, 4).cat.rename_categories(str)
     adatas = sc.get.split_by(adata, var_cats, axis=1)
     assert set(adatas.keys()) == set(var_cats.cat.categories)
-    assert sum([a.n_vars for a in adatas.values()]) == adata.n_vars
+    assert sum(a.n_vars for a in adatas.values()) == adata.n_vars
