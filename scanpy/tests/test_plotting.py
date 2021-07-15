@@ -1471,10 +1471,11 @@ def test_color_cycler(caplog):
 )
 def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
     TESTDIR = Path(tmpdir)
+    N_GENES = 4
 
     adata = sc.datasets.pbmc68k_reduced()
 
-    sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon', n_genes=5)
+    sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon', pts=True)
 
     sc.tl.filter_rank_genes_groups(
         adata,
@@ -1484,16 +1485,16 @@ def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
         max_out_group_fraction=0.5,
     )
 
-    var_names = {}
-    genes_names = adata.uns['rank_genes_groups_filtered']['names']
-    for group in genes_names.dtype.names:
-        genes = genes_names[group].astype(str).tolist()
-        var_names[group] = [g for g in genes if g != 'nan']
+    conditions = 'logfoldchanges >= 1 & pct_nz_group >= .25 & pct_nz_reference < .5'
+    df = sc.get.rank_genes_groups_df(adata, group=None, key="rank_genes_groups")
+    df = df.query(conditions)[["group", "names"]]
+
+    var_names = {k: v.head(N_GENES).tolist() for k, v in df.groupby("group")["names"]}
 
     pth_a = TESTDIR / f"{plot.__name__}_filter_a.png"
     pth_b = TESTDIR / f"{plot.__name__}_filter_b.png"
 
-    plot(adata, key='rank_genes_groups_filtered')
+    plot(adata, key='rank_genes_groups_filtered', n_genes=N_GENES)
     plt.savefig(pth_a)
     plt.close()
 
