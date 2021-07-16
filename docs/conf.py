@@ -69,7 +69,7 @@ api_dir = HERE / 'api'  # function_images
 scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
 
 intersphinx_mapping = dict(
-    anndata=('https://anndata.readthedocs.io/en/latest/', None),
+    anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     cycler=('https://matplotlib.org/cycler/', None),
     h5py=('http://docs.h5py.org/en/stable/', None),
@@ -144,8 +144,6 @@ qualname_overrides = {
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
     "pandas.core.series.Series": "pandas.Series",
-    "scipy.sparse.base.spmatrix": "scipy.sparse.spmatrix",
-    "scipy.sparse.csr.csr_matrix": "scipy.sparse.csr_matrix",
 }
 
 nitpick_ignore = [
@@ -157,6 +155,9 @@ nitpick_ignore = [
     ('py:class', 'scanpy.plotting._utils._AxesSubplot'),
     ('py:class', 'scanpy._utils.Empty'),
     ('py:class', 'numpy.random.mtrand.RandomState'),
+    # Will work once scipy 1.8 is released
+    ('py:class', 'scipy.sparse.base.spmatrix'),
+    ('py:class', 'scipy.sparse.csr.csr_matrix'),
 ]
 
 # Options for plot examples
