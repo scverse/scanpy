@@ -82,7 +82,7 @@ intersphinx_mapping = dict(
     pandas=('https://pandas.pydata.org/pandas-docs/stable/', None),
     pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
-    scipy=('https://scipy.github.io/devdocs/', None),
+    scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
     scanpy_tutorials=(scanpy_tutorials_url, None),
@@ -144,6 +144,8 @@ qualname_overrides = {
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
     "pandas.core.series.Series": "pandas.Series",
+    "scipy.sparse.base.spmatrix": "scipy.sparse.spmatrix",
+    "scipy.sparse.csr.csr_matrix": "scipy.sparse.csr_matrix",
 }
 
 nitpick_ignore = [
