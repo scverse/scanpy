@@ -86,11 +86,10 @@ dev = [
     'docutils',
 ]
 doc = [
-    'sphinx>=3.2',
+    'sphinx>=4.1',
     'sphinx-rtd-theme>=0.3.1',
     'sphinx-autodoc-typehints',
     'scanpydoc>=0.7.3',
-    'get_version>=3.5',  # TEMP: Better debugging of sphinx problem
     'typing_extensions; python_version < "3.8"',  # for `Literal`
     'python-igraph',
 ]
