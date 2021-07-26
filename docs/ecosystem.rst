@@ -102,4 +102,3 @@ Spatial Transcriptomics Tools
 * `PASTE <https://github.com/raphael-group/paste>`__ :small:`Princeton`
 
     | PASTE is a computational method to align and integrate spatial transcriptomics data across adjacent tissue slices by leveraging both gene expression similarity and spatial distances between spots.
-
