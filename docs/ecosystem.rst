@@ -83,7 +83,6 @@ Adaptive immune receptor repertoire (AIRR)
 * `dandelion <https://github.com/zktuong/dandelion>`__ :small:`University of Cambridge`
 
     | dandelion is a single-cell BCR-seq network analysis package that integrates with transcriptomic data analyzed via scanpy. 
-    
 
 Feature selection
 -----------------
