@@ -9,4 +9,4 @@
 
 .. rubric:: Other
 
-- Added PASTE to scanpy ecosystem.
+- Added PASTE (a tool to align and integrate spatial transcriptomics data) to scanpy ecosystem.
