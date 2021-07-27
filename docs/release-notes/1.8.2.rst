@@ -7,6 +7,6 @@
 
 .. rubric:: Performance enhancements
 
-.. rubric:: Other
+.. rubric:: Ecosystem
 
 - Added PASTE (a tool to align and integrate spatial transcriptomics data) to scanpy ecosystem.
