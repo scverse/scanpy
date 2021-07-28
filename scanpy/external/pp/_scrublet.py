@@ -243,7 +243,7 @@ def scrublet(
                 adata_obs[
                     adata_obs.obs[batch_key] == batch,
                 ],
-                adata_sim
+                adata_sim,
             )
             for batch in batches
         ]
