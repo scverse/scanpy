@@ -210,7 +210,7 @@ def scrublet(
             pp.normalize_total(adata_sim, target_sum=1e6)
 
         ad_obs = _scrublet_call_doublets(
-            ad_obs=ad_obs,
+            adata_obs=ad_obs,
             adata_sim=adata_sim,
             n_neighbors=n_neighbors,
             expected_doublet_rate=expected_doublet_rate,
