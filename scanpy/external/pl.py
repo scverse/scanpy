@@ -330,6 +330,7 @@ def scrublet_score_distribution(
     scale_hist_obs: str = 'log',
     scale_hist_sim: str = 'linear',
     figsize: Optional[Tuple[float, float]] = (8, 3),
+    batch_key: str = None,
     return_fig: bool = False,
     show: bool = True,
     save: Optional[Union[str, bool]] = None,
@@ -339,6 +340,9 @@ def scrublet_score_distribution(
 
     The histogram for simulated doublets is useful for determining the correct doublet
     score threshold.
+
+    Scrublet must have been run previously with the input object, and if
+    batches were specified there they should be specified here.
 
     Parameters
     ----------
@@ -350,6 +354,8 @@ def scrublet_score_distribution(
     scale_hist_sim
         Set y axis scale transformation in matplotlib for the plot of simulated
         doublets (e.g. "linear", "log", "symlog", "logit")
+    batch_key
+        Optional `adata.obs` column name discriminating between batches.
     figsize
         width, height
     show
@@ -372,40 +378,77 @@ def scrublet_score_distribution(
         simulation separately for advanced usage.
     """
 
-    threshold = adata.uns['scrublet']['threshold']
-    fig, axs = plt.subplots(1, 2, figsize=figsize)
+    if batch_key is not None:
+        if batch_key not in adata.obs.keys():
+            raise ValueError(
+                '`batch_key` must be a column of .obs in the input annData object.'
+            )
 
-    ax = axs[0]
-    ax.hist(
-        adata.obs['doublet_score'],
-        np.linspace(0, 1, 50),
-        color='gray',
-        linewidth=0,
-        density=True,
-    )
-    ax.set_yscale(scale_hist_obs)
-    yl = ax.get_ylim()
-    ax.set_ylim(yl)
-    ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
-    ax.set_title('Observed transcriptomes')
-    ax.set_xlabel('Doublet score')
-    ax.set_ylabel('Prob. density')
+        batches = np.unique(adata.obs[batch_key])
+        adatas = [
+            adata[
+                adata.obs[batch_key] == batch,
+            ]
+            for batch in batches
+        ]
+        figsize = (figsize[0], figsize[1] * len(batches))
 
-    ax = axs[1]
-    ax.hist(
-        adata.uns['scrublet']['doublet_scores_sim'],
-        np.linspace(0, 1, 50),
-        color='gray',
-        linewidth=0,
-        density=True,
-    )
-    ax.set_yscale(scale_hist_sim)
-    yl = ax.get_ylim()
-    ax.set_ylim(yl)
-    ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
-    ax.set_title('Simulated doublets')
-    ax.set_xlabel('Doublet score')
-    ax.set_ylabel('Prob. density')
+    else:
+        adatas = [adata]
+
+    fig, axs = plt.subplots(len(adatas), 2, figsize=figsize)
+
+    for idx, ad in enumerate(adatas):
+
+        if batch_key is None:
+            threshold = adata.uns['scrublet']['threshold']
+            doublet_scores_sim = adata.uns['scrublet']['doublet_scores_sim']
+            axis_lab_suffix = ''
+
+        else:
+            batch = batches[idx]
+            if batch not in adata.uns['scrublet'].keys():
+                raise ValueError(
+                    'Please re-run scrublet with the same batch variable you have set here (%s) before plotting.'
+                    % batch_key
+                )
+
+            threshold = adata.uns['scrublet'][batch]['threshold']
+            doublet_scores_sim = adata.uns['scrublet'][batch]['doublet_scores_sim']
+            axis_lab_suffix = " (%s)" % batch
+
+        ax = axs[idx][0]
+
+        ax.hist(
+            ad.obs['doublet_score'],
+            np.linspace(0, 1, 50),
+            color='gray',
+            linewidth=0,
+            density=True,
+        )
+        ax.set_yscale(scale_hist_obs)
+        yl = ax.get_ylim()
+        ax.set_ylim(yl)
+        ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+        ax.set_title('Observed transcriptomes%s' % axis_lab_suffix)
+        ax.set_xlabel('Doublet score')
+        ax.set_ylabel('Prob. density')
+
+        ax = axs[idx][1]
+        ax.hist(
+            doublet_scores_sim,
+            np.linspace(0, 1, 50),
+            color='gray',
+            linewidth=0,
+            density=True,
+        )
+        ax.set_yscale(scale_hist_sim)
+        yl = ax.get_ylim()
+        ax.set_ylim(yl)
+        ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+        ax.set_title('Simulated doublets%s' % axis_lab_suffix)
+        ax.set_xlabel('Doublet score')
+        ax.set_ylabel('Prob. density')
 
     fig.tight_layout()
 
