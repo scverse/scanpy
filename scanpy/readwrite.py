@@ -741,7 +741,11 @@ def _read(
     elif ext in {'mtx', 'mtx.gz'}:
         adata = read_mtx(filename)
     elif ext == 'csv':
-        adata = read_csv(filename, first_column_names=first_column_names)
+        if delimiter is None:
+            delimiter = ','
+        adata = read_csv(
+            filename, first_column_names=first_column_names, delimiter=delimiter
+        )
     elif ext in {'txt', 'tab', 'data', 'tsv'}:
         if ext == 'data':
             logg.hint(
