@@ -165,12 +165,12 @@ def scrublet(
 
     adata_obs = adata.copy()
 
-    def _run_scrublet(ad_obs, adata_sim):
+    def _run_scrublet(ad_obs, ad_sim=None):
 
         # With no adata_sim we assume the regular use case, starting with raw
         # counts and simulating doublets
 
-        if not adata_sim:
+        if ad_sim is None:
 
             pp.filter_genes(ad_obs, min_cells=3)
             pp.filter_cells(ad_obs, min_genes=3)
@@ -179,25 +179,19 @@ def scrublet(
             # selection of genes following normalisation and variability filtering. So
             # we need to save the raw and subset at the same time.
 
-            ad_obs.layers['raw'] = ad_obs.X
+            ad_obs.layers['raw'] = ad_obs.X.copy()
             pp.normalize_total(ad_obs)
 
-            # HVG process needs log'd data. If we're not using that downstream, then
-            # copy logged data to new object and subset original object based on the
-            # output.
+            # HVG process needs log'd data.
 
-            if log_transform:
-                pp.log1p(ad_obs)
-                pp.highly_variable_genes(ad_obs, subset=True)
-            else:
-                logged = pp.log1p(ad_obs, copy=True)
-                _ = pp.highly_variable_genes(logged)
-                ad_obs = ad_obs[:, logged.var['highly_variable']]
+            logged = pp.log1p(ad_obs, copy=True)
+            pp.highly_variable_genes(logged)
+            ad_obs = ad_obs[:, logged.var['highly_variable']]
 
             # Simulate the doublets based on the raw expressions from the normalised
             # and filtered object.
 
-            adata_sim = scrublet_simulate_doublets(
+            ad_sim = scrublet_simulate_doublets(
                 ad_obs,
                 layer='raw',
                 sim_doublet_ratio=sim_doublet_ratio,
@@ -207,11 +201,15 @@ def scrublet(
             # Now normalise simulated and observed in the same way
 
             pp.normalize_total(ad_obs, target_sum=1e6)
-            pp.normalize_total(adata_sim, target_sum=1e6)
+            pp.normalize_total(ad_sim, target_sum=1e6)
+
+            if log_transform:
+                pp.log1p(ad_obs)
+                pp.log1p(ad_sim)
 
         ad_obs = _scrublet_call_doublets(
             adata_obs=ad_obs,
-            adata_sim=adata_sim,
+            adata_sim=ad_sim,
             n_neighbors=n_neighbors,
             expected_doublet_rate=expected_doublet_rate,
             stdev_doublet_rate=stdev_doublet_rate,
@@ -255,7 +253,15 @@ def scrublet(
 
         # Save the .uns from each batch separately
 
-        adata.uns['scrublet'] = dict(zip(batches, [scrub['uns'] for scrub in scrubbed]))
+        adata.uns['scrublet'] = {}
+        adata.uns['scrublet']['batches'] = dict(
+            zip(batches, [scrub['uns'] for scrub in scrubbed])
+        )
+
+        # Record that we've done batched analysis, so e.g. the plotting
+        # function knows what to do.
+
+        adata.uns['scrublet']['batched_by'] = batch_key
 
     else:
         scrubbed = _run_scrublet(adata_obs, adata_sim)
