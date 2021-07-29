@@ -264,7 +264,7 @@ def scrublet(
 
         adata.obs['doublet_score'] = scrubbed['obs']['doublet_score']
         adata.obs['predicted_doublet'] = scrubbed['obs']['predicted_doublet']
-        adata.uns['scrublet'] = scrubbed['uns']['scrublet']
+        adata.uns['scrublet'] = scrubbed['uns']
 
     logg.info('    Scrublet finished', time=start)
 
