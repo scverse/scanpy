@@ -340,8 +340,7 @@ def scrublet_score_distribution(
     The histogram for simulated doublets is useful for determining the correct doublet
     score threshold.
 
-    Scrublet must have been run previously with the input object, and if
-    batches were specified there they should be specified here.
+    Scrublet must have been run previously with the input object.
 
     Parameters
     ----------
