@@ -39,8 +39,6 @@ For visual quality control, see :func:`~scanpy.pl.highest_expr_genes` and
    pp.log1p
    pp.pca
    pp.normalize_total
-   pp.normalize_pearson_residuals
-   pp.normalize_pearson_residuals_pca
    pp.regress_out
    pp.scale
    pp.subsample
@@ -55,7 +53,6 @@ Recipes
    pp.recipe_zheng17
    pp.recipe_weinreb17
    pp.recipe_seurat
-   pp.recipe_pearson_residuals
 
 Batch effect correction
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -370,6 +367,24 @@ Collections of useful measurements for evaluating results.
    metrics.confusion_matrix
    metrics.gearys_c
    metrics.morans_i
+
+
+Experimental
+------------
+
+.. module:: scanpy.experimental
+.. currentmodule:: scanpy
+
+New methods that are in early development which are not (yet)
+integrated in Scanpy core.
+
+.. autosummary::
+   :toctree: generated/
+
+   pp.normalize_pearson_residuals
+   pp.normalize_pearson_residuals_pca
+   pp.highly_variable_genes
+   pp.recipe_pearson_residuals
 
 
 Classes
