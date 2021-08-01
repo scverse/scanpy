@@ -381,10 +381,10 @@ integrated in Scanpy core.
 .. autosummary::
    :toctree: generated/
 
-   pp.normalize_pearson_residuals
-   pp.normalize_pearson_residuals_pca
-   pp.highly_variable_genes
-   pp.recipe_pearson_residuals
+   experimental.pp.normalize_pearson_residuals
+   experimental.pp.normalize_pearson_residuals_pca
+   experimental.pp.highly_variable_genes
+   experimental.pp.recipe_pearson_residuals
 
 
 Classes
