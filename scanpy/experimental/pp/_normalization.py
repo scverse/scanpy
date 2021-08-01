@@ -71,8 +71,8 @@ def normalize_pearson_residuals(
     theta shared across genes, computes Pearson residuals. By default, residuals
     are clipped to sqrt(n) and overdispersion theta=100 is used.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.

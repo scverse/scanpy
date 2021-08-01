@@ -44,9 +44,9 @@ def recipe_pearson_residuals(
     clip
         Determines if and how residuals are clipped:
 
-            * If `None`, residuals are clipped to the interval \
+            * If `None`, residuals are clipped to the interval
             [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset (default behavior).
-            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
+            * If any scalar c, residuals are clipped to the interval [-c, c]. Set
             `clip=np.Inf` for no clipping.
 
     batch_key
