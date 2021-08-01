@@ -176,209 +176,6 @@ def _highly_variable_genes_seurat_v3(
         return df
 
 
-def _highly_variable_pearson_residuals(
-    adata: AnnData,
-    layer: Optional[str] = None,
-    n_top_genes: int = 1000,
-    batch_key: Optional[str] = None,
-    theta: float = 100,
-    clip: Optional[float] = None,
-    chunksize: int = 100,
-    check_values: bool = True,
-    subset: bool = False,
-    inplace: bool = True,
-) -> Optional[pd.DataFrame]:
-    """\
-    See `highly_variable_genes`.
-
-    Returns
-    -------
-    Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`)
-    or updates `.var` with the following fields:
-
-    highly_variable : bool
-        boolean indicator of highly-variable genes.
-    means : float
-        means per gene.
-    variances : float
-        variances per gene.
-    residual_variances : float
-        Pearson residual variance per gene. Averaged in the case of multiple
-        batches.
-    highly_variable_rank : float
-        Rank of the gene according to residual variance, median rank in the
-        case of multiple batches. NaN for non-HVGs.
-    highly_variable_nbatches : int
-        If batch_key is given, this denotes in how many batches genes are
-        detected as HVG.
-    highly_variable_intersection : bool
-        If batch_key is given, this denotes the genes that are highly variable
-        in all batches.
-    """
-
-    view_to_actual(adata)
-    X = _get_obs_rep(adata, layer=layer)
-    computed_on = layer if layer else 'adata.X'
-
-    # Check for raw counts
-    if check_values and (check_nonnegative_integers(X) is False):
-        warnings.warn(
-            "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
-            UserWarning,
-        )
-    # check theta
-    if theta <= 0:
-        # TODO: would "underdispersion" with negative theta make sense?
-        # then only theta=0 were undefined..
-        raise ValueError('Pearson residuals require theta > 0')
-    # prepare clipping
-
-    if batch_key is None:
-        batch_info = np.zeros(adata.shape[0], dtype=int)
-    else:
-        batch_info = adata.obs[batch_key].values
-    n_batches = len(np.unique(batch_info))
-
-    # Get pearson residuals for each batch separately
-    residual_gene_vars = []
-    for batch in np.unique(batch_info):
-
-        adata_subset = adata[batch_info == batch]
-
-        # Filter out zero genes
-        with settings.verbosity.override(Verbosity.error):
-            nonzero_genes = filter_genes(adata_subset, min_cells=1, inplace=False)[0]
-        adata_subset = adata_subset[:, nonzero_genes]
-
-        if layer is not None:
-            X_batch = adata_subset.layers[layer]
-        else:
-            X_batch = adata_subset.X
-
-        # Prepare clipping
-        if clip is None:
-            n = X_batch.shape[0]
-            clip = np.sqrt(n)
-        if clip < 0:
-            raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
-
-        if sp_sparse.issparse(X_batch):
-            sums_genes = np.sum(X_batch, axis=0)
-            sums_cells = np.sum(X_batch, axis=1)
-            sum_total = np.sum(sums_genes).squeeze()
-        else:
-            sums_genes = np.sum(X_batch, axis=0, keepdims=True)
-            sums_cells = np.sum(X_batch, axis=1, keepdims=True)
-            sum_total = np.sum(sums_genes)
-
-        # Compute pearson residuals in chunks
-        residual_gene_var = np.empty((X_batch.shape[1]))
-        for start in np.arange(0, X_batch.shape[1], chunksize):
-            stop = start + chunksize
-            mu = np.array(sums_cells @ sums_genes[:, start:stop] / sum_total)
-            X_dense = X_batch[:, start:stop].toarray()
-            residuals = (X_dense - mu) / np.sqrt(mu + mu ** 2 / theta)
-            residuals = np.clip(residuals, a_min=-clip, a_max=clip)
-            residual_gene_var[start:stop] = np.var(residuals, axis=0)
-
-        # Add 0 values for genes that were filtered out
-        zero_gene_var = np.zeros(np.sum(~nonzero_genes))
-        residual_gene_var = np.concatenate((residual_gene_var, zero_gene_var))
-        # Order as before filtering
-        idxs = np.concatenate((np.where(nonzero_genes)[0], np.where(~nonzero_genes)[0]))
-        residual_gene_var = residual_gene_var[np.argsort(idxs)]
-        residual_gene_vars.append(residual_gene_var.reshape(1, -1))
-
-    residual_gene_vars = np.concatenate(residual_gene_vars, axis=0)
-
-    # Get cutoffs and define hvgs per batch
-    residual_gene_vars_sorted = np.sort(residual_gene_vars, axis=1)
-    cutoffs_per_batch = residual_gene_vars_sorted[:, -n_top_genes]
-    highly_variable_per_batch = np.greater_equal(
-        residual_gene_vars.T, cutoffs_per_batch
-    ).T
-
-    # Merge hvgs across batches
-    highly_variable_nbatches = np.sum(highly_variable_per_batch, axis=0)
-    highly_variable_intersection = highly_variable_nbatches == n_batches
-
-    # Get rank per gene within each batch
-    # argsort twice gives ranks, small rank means most variable
-    ranks_residual_var = np.argsort(np.argsort(-residual_gene_vars, axis=1), axis=1)
-    ranks_residual_var = ranks_residual_var.astype(np.float32)
-    ranks_residual_var[ranks_residual_var >= n_top_genes] = np.nan
-    ranks_masked_array = np.ma.masked_invalid(ranks_residual_var)
-    # Median rank across batches,
-    # ignoring batches in which gene was not selected
-    medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan)
-
-    means, variances = materialize_as_ndarray(_get_mean_var(X))
-    df = pd.DataFrame.from_dict(
-        dict(
-            means=means,
-            variances=variances,
-            residual_variances=np.mean(residual_gene_vars, axis=0).astype(
-                np.float32, copy=False
-            ),
-            highly_variable_rank=medianrank_residual_var,
-            highly_variable_nbatches=highly_variable_nbatches.astype(np.int64),
-            highly_variable_intersection=highly_variable_intersection,
-        )
-    )
-    df = df.set_index(adata.var_names)
-
-    # Sort genes by how often they selected as hvg within each batch and
-    # break ties with median rank of residual variance across batches
-    df.sort_values(
-        ['highly_variable_nbatches', 'highly_variable_rank'],
-        ascending=[False, True],
-        na_position='last',
-        inplace=True,
-    )
-
-    high_var = np.zeros(df.shape[0])
-    high_var[:n_top_genes] = True
-    df['highly_variable'] = high_var.astype(bool)
-    df = df.loc[adata.var_names, :]
-
-    if inplace:
-        adata.uns['hvg'] = {'flavor': 'pearson_residuals', 'computed_on': computed_on}
-        logg.hint(
-            'added\n'
-            '    \'highly_variable\', boolean vector (adata.var)\n'
-            '    \'highly_variable_rank\', float vector (adata.var)\n'
-            '    \'highly_variable_nbatches\', int vector (adata.var)\n'
-            '    \'highly_variable_intersection\', boolean vector (adata.var)\n'
-            '    \'means\', float vector (adata.var)\n'
-            '    \'variances\', float vector (adata.var)\n'
-            '    \'residual_variances\', float vector (adata.var)'
-        )
-        adata.var['means'] = df['means'].values
-        adata.var['variances'] = df['variances'].values
-        adata.var['residual_variances'] = df['residual_variances']
-        adata.var['highly_variable_rank'] = df['highly_variable_rank'].values
-        adata.var['highly_variable'] = df['highly_variable'].values
-
-        if batch_key is not None:
-            adata.var['highly_variable_nbatches'] = df[
-                'highly_variable_nbatches'
-            ].values
-            adata.var['highly_variable_intersection'] = df[
-                'highly_variable_intersection'
-            ].values
-        if subset:
-            adata._inplace_subset_var(df['highly_variable'].values)
-    else:
-        if batch_key is None:
-            df = df.drop(
-                ['highly_variable_nbatches', 'highly_variable_intersection'], axis=1
-            )
-        if subset:
-            df = df.iloc[df.highly_variable.values, :]
-
-        return df
-
-
 def _highly_variable_genes_single_batch(
     adata: AnnData,
     layer: Optional[str] = None,
@@ -501,26 +298,20 @@ def highly_variable_genes(
     max_mean: Optional[float] = 3,
     span: Optional[float] = 0.3,
     n_bins: int = 20,
-    theta: float = 100,
-    clip: Optional[float] = None,
-    chunksize: int = 1000,
-    flavor: Literal[
-        'seurat', 'cell_ranger', 'seurat_v3', 'pearson_residuals'
-    ] = 'seurat',
+    flavor: Literal['seurat', 'cell_ranger', 'seurat_v3'] = 'seurat',
     subset: bool = False,
     inplace: bool = True,
     batch_key: Optional[str] = None,
     check_values: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_ [Lause20]_.
+    Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
 
-    Expects logarithmized data, except when `flavor='seurat_v3'` or
-    `flavor='pearson_residuals'`, in which count data is expected.
+    Expects logarithmized data, except when `flavor='seurat_v3'`, in which count
+    data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_, or uses
-    analytical Pearson residuals [Lause20]_.
+    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
 
     For the dispersion-based methods ([Satija15]_ and [Zheng17]_), the normalized
     dispersion is obtained by scaling with the mean and standard deviation of
@@ -533,10 +324,8 @@ def highly_variable_genes(
     standard deviation. Next, the normalized variance is computed as the variance
     of each gene after the transformation. Genes are ranked by the normalized variance.
 
-    For [Lause20]_, Pearson residuals of a negative binomial offset model (with
-    overdispersion theta shared across genes) are computed. By default, overdispersion
-    theta=100 is used and residuals are clipped to sqrt(n). Finally, genes are ranked
-    by residual variance.
+    See also `scanpy.experimental.pp._highly_variable_genes` for additional flavours
+    (e.g. Pearson residuals).
 
     Parameters
     ----------
@@ -546,24 +335,19 @@ def highly_variable_genes(
     layer
         If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
     n_top_genes
-        Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
+        Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'`.
     min_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
     max_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
     min_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
     max_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
+        normalized dispersions are ignored. Ignored if `flavor='seurat_v3'`.
     span
         The fraction of the data (cells) used when estimating the variance in the loess
         model fit if `flavor='seurat_v3'`.
@@ -571,24 +355,7 @@ def highly_variable_genes(
         Number of bins for binning the mean gene expression. Normalization is
         done with respect to each bin. If just a single gene falls into a bin,
         the normalized dispersion is artificially set to 1. You'll be informed
-        about this if you set `settings.verbosity = 4`. Ignored if
-        `flavor='pearson_residuals'`.
-    theta
-        If `flavor='pearson_residuals'`, this is the NB overdispersion parameter theta.
-        Higher values correspond to less overdispersion (var = mean + mean^2/theta), and
-        `theta=np.Inf` corresponds to a Poisson model.
-    clip
-        If `flavor='pearson_residuals'`, this determines how residuals are clipped:
-
-            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
-            where n is the number of cells in the dataset (default behavior).
-            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
-            `clip=np.Inf` for no clipping.
-
-    chunksize
-        If `flavor='pearson_residuals'`, this dertermines how many genes are processed at
-        once while computing the residual variance. Choosing a smaller value will reduce
-        the required memory.
+        about this if you set `settings.verbosity = 4`.
     flavor
         Choose the flavor for identifying highly variable genes. For the dispersion
         based methods in their default workflows, Seurat passes the cutoffs whereas
@@ -604,12 +371,10 @@ def highly_variable_genes(
         lightweight batch correction method. For all flavors, genes are first sorted
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
         by normalized dispersion. If `flavor = 'seurat_v3'`, ties are broken by the median
-        (across batches) rank based on within-batch normalized variance. If
-        `flavor='pearson_residuals'`, ties are broken by the median rank (across batches)
-        based on within-batch residual variance.
+        (across batches) rank based on within-batch normalized variance.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
-        Only used if `flavor='seurat_v3'` or `flavor='pearson_residuals'`.
+        Only used if `flavor='seurat_v3'`.
 
 
     Returns
@@ -626,17 +391,12 @@ def highly_variable_genes(
     **dispersions_norm**
         For dispersion-based flavors, normalized dispersions per gene
     **variances**
-        For `flavor='seurat_v3'` and `flavor='pearson_residuals'`, variance per gene
+        For `flavor='seurat_v3'`, variance per gene
     **variances_norm**
         For `flavor='seurat_v3'`, normalized variance per gene, averaged in
         the case of multiple batches
-    **residual_variances**
-        For `flavor='pearson_residuals'`, residual variance per gene. Averaged in the case of
-        multiple batches.
     highly_variable_rank : float
         For `flavor='seurat_v3'`, rank of the gene according to normalized
-        variance, median rank in the case of multiple batches
-        For `flavor='pearson_residuals'`, rank of the gene according to residual
         variance, median rank in the case of multiple batches
     highly_variable_nbatches : int
         If batch_key is given, this denotes in how many batches genes are detected as HVG
@@ -670,24 +430,6 @@ def highly_variable_genes(
             check_values=check_values,
             span=span,
             subset=subset,
-            inplace=inplace,
-        )
-    if flavor == 'pearson_residuals':
-        if n_top_genes is None:
-            raise ValueError(
-                "`pp.highly_variable_genes` requires the argument `n_top_genes`"
-                " for `flavor='pearson_residuals'`"
-            )
-        return _highly_variable_pearson_residuals(
-            adata,
-            layer=layer,
-            n_top_genes=n_top_genes,
-            batch_key=batch_key,
-            theta=theta,
-            clip=clip,
-            chunksize=chunksize,
-            subset=subset,
-            check_values=check_values,
             inplace=inplace,
         )
 
