@@ -20,8 +20,10 @@ def recipe_pearson_residuals(
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """\
     Gene selection and normalization based on [Lause20]_.
+
     Applies gene selection based on Pearson residuals. On the resulting subset,
     Pearson residual normalization and PCA are performed.
+
     Parameters
     ----------
     adata
@@ -40,11 +42,13 @@ def recipe_pearson_residuals(
         (var = mean + mean^2/theta), and `theta=np.Inf` corresponds to a
         Poisson model.
     clip
-        This determines if and how Pearson residuals are clipped:
+        Determines if and how residuals are clipped:
+
             * If `None`, residuals are clipped to the interval \
             [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset (default behavior).
             * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
             `clip=np.Inf` for no clipping.
+
     batch_key
         If specified, highly-variable genes are selected within each batch
         separately and merged. This simple process avoids the selection of
@@ -62,6 +66,7 @@ def recipe_pearson_residuals(
         Check if counts in selected layer are integers. A Warning is returned if set to True.
     inplace
         Whether to place results in `adata` or return them.
+
     Returns
     ------
     If `inplace=False`, separately returns the gene selection results (`hvg`)
@@ -103,6 +108,7 @@ def recipe_pearson_residuals(
     `.uns['pearson_residuals_pca']['variance']`
          Explained variance, equivalent to the eigenvalues of the
          covariance matrix.
+
     """
 
     hvg_args = dict(
