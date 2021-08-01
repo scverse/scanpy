@@ -459,7 +459,6 @@ def _scatter_obs(
                     all_pos[iname] = centroids[name]
                 else:
                     all_pos[iname] = [np.nan, np.nan]
-            _utils._tmp_cluster_pos = all_pos
             if legend_loc == 'on data export':
                 filename = settings.writedir / 'pos.csv'
                 logg.warning(f'exporting label positions to {filename}')
@@ -1938,7 +1937,7 @@ def _prepare_dataframe(
         categorical.name = groupby[0]
     else:
         # join the groupby values  using "_" to make a new 'category'
-        categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
+        categorical = obs_tidy[groupby].apply('_'.join, axis=1).astype('category')
         categorical.name = "_".join(groupby)
 
         # preserve category order

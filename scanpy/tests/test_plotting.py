@@ -1284,67 +1284,6 @@ def test_scatter_rep(tmpdir):
             assert "Error" in comp, f"{s1.outpth}, {s2.outpth} aren't supposed to match"
 
 
-def test_paga(image_comparer):
-    # Sometimes things shift a pixel or so, resulting in diffs up to ~27
-    # The 1px-edges aren’t that good actually as they’re ignored at this tol …
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
-
-    pbmc = sc.datasets.pbmc68k_reduced()
-    sc.tl.paga(pbmc, groups='bulk_labels')
-
-    common = dict(threshold=0.5, max_edge_width=1.0, random_state=0, show=False)
-
-    # delete bulk_labels_colors to test the creation of color list by paga
-    del pbmc.uns['bulk_labels_colors']
-    sc.pl.paga(pbmc, **common)
-    save_and_compare_images('master_paga')
-
-    sc.pl.paga(pbmc, color='CST3', **common)
-    save_and_compare_images('master_paga_continuous')
-
-    pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze()
-    sc.pl.paga(pbmc, color='cool_feature', **common)
-    save_and_compare_images('master_paga_continuous_obs')
-
-    sc.pl.paga(pbmc, color=['CST3', 'GATA2'], **common)
-    save_and_compare_images('master_paga_continuous_multiple')
-
-    sc.pl.paga_compare(pbmc, legend_fontoutline=2, **common)
-    save_and_compare_images('master_paga_compare')
-
-    sc.pl.paga_compare(pbmc, color='CST3', legend_fontsize=5, **common)
-    save_and_compare_images('master_paga_compare_continuous')
-
-    sc.pl.paga_compare(pbmc, basis='X_pca', legend_fontweight='normal', **common)
-    save_and_compare_images('master_paga_compare_pca')
-
-    colors = {
-        c: {cm.Set1(_): 0.33 for _ in range(3)}
-        for c in pbmc.obs["bulk_labels"].cat.categories
-    }
-    colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
-
-    sc.pl.paga(pbmc, color=colors, colorbar=False)
-    save_and_compare_images('master_paga_pie')
-
-
-def test_paga_path(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-
-    pbmc = sc.datasets.pbmc68k_reduced()
-    sc.tl.paga(pbmc, groups='bulk_labels')
-
-    pbmc.uns['iroot'] = 0
-    sc.tl.dpt(pbmc)
-    sc.pl.paga_path(
-        pbmc,
-        nodes=['Dendritic'],
-        keys=['HES4', 'SRM', 'CSTB'],
-        show=False,
-    )
-    save_and_compare_images('master_paga_path')
-
-
 def test_no_copy():
     # https://github.com/theislab/scanpy/issues/1000
     # Tests that plotting functions don't make a copy from a view unless they
@@ -1444,3 +1383,50 @@ def test_color_cycler(caplog):
             plt.close()
 
     assert caplog.text == ""
+
+
+@pytest.mark.parametrize(
+    "plot",
+    (
+        sc.pl.rank_genes_groups_dotplot,
+        sc.pl.rank_genes_groups_heatmap,
+        sc.pl.rank_genes_groups_matrixplot,
+        sc.pl.rank_genes_groups_stacked_violin,
+        sc.pl.rank_genes_groups_tracksplot,
+        # TODO: add other rank_genes_groups plots here once they work
+    ),
+)
+def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
+    TESTDIR = Path(tmpdir)
+    N_GENES = 4
+
+    adata = sc.datasets.pbmc68k_reduced()
+
+    sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon', pts=True)
+
+    sc.tl.filter_rank_genes_groups(
+        adata,
+        key_added='rank_genes_groups_filtered',
+        min_in_group_fraction=0.25,
+        min_fold_change=1,
+        max_out_group_fraction=0.5,
+    )
+
+    conditions = 'logfoldchanges >= 1 & pct_nz_group >= .25 & pct_nz_reference < .5'
+    df = sc.get.rank_genes_groups_df(adata, group=None, key="rank_genes_groups")
+    df = df.query(conditions)[["group", "names"]]
+
+    var_names = {k: v.head(N_GENES).tolist() for k, v in df.groupby("group")["names"]}
+
+    pth_a = TESTDIR / f"{plot.__name__}_filter_a.png"
+    pth_b = TESTDIR / f"{plot.__name__}_filter_b.png"
+
+    plot(adata, key='rank_genes_groups_filtered', n_genes=N_GENES)
+    plt.savefig(pth_a)
+    plt.close()
+
+    plot(adata, key='rank_genes_groups', var_names=var_names)
+    plt.savefig(pth_b)
+    plt.close()
+
+    check_same_image(pth_a, pth_b, tol=1)
