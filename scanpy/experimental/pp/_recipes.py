@@ -42,11 +42,11 @@ def recipe_pearson_residuals(
         (var = mean + mean^2/theta), and `theta=np.Inf` corresponds to a
         Poisson model.
     clip
-        Determines if and how residuals are clipped:
+        This determines how Pearson residuals are clipped:
 
-            * If `None`, residuals are clipped to the interval
+            * If `None`, residuals are clipped to the interval \
             [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset (default behavior).
-            * If any scalar c, residuals are clipped to the interval [-c, c]. Set
+            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
             `clip=np.Inf` for no clipping.
 
     batch_key
@@ -68,7 +68,7 @@ def recipe_pearson_residuals(
         Whether to place results in `adata` or return them.
 
     Returns
-    ------
+    -------
     If `inplace=False`, separately returns the gene selection results (`hvg`)
     and Pearson residual-based PCA results (`adata_pca`). If `inplace=True`,
     updates `adata` with the following fields for gene selection results…:
