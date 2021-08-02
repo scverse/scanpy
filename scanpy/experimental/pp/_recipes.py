@@ -99,14 +99,14 @@ def recipe_pearson_residuals(
          The used value of the overdisperion parameter theta.
     `.uns['pearson_residuals_normalization']['clip']`
          The used value of the clipping parameter.
-    `.obsm['X_pearson_residuals_pca']`
+    `.obsm['X_pca']`
         PCA representation of data after gene selection and Pearson residual
         normalization.
-    `.uns['pearson_residuals_pca']['PCs']`
+    `.uns['pca']['PCs']`
          The principal components containing the loadings.
-    `.uns['pearson_residuals_pca']['variance_ratio']`
+    `.uns['pca']['variance_ratio']`
          Ratio of explained variance.
-    `.uns['pearson_residuals_pca']['variance']`
+    `.uns['pca']['variance']`
          Explained variance, equivalent to the eigenvalues of the
          covariance matrix.
 
@@ -143,13 +143,9 @@ def recipe_pearson_residuals(
         )
         pca_param = adata_pca.uns['pca']
         pca_dict = dict(**pca_param, PCs=adata_pca.varm['PCs'])
-        adata.uns['pearson_residuals_pca'] = pca_dict
+        adata.uns['pca'] = pca_dict
         adata.uns['pearson_residuals_normalization'] = normalization_dict
-        adata.obsm['X_pearson_residuals_pca'] = adata_pca.obsm['X_pca']
+        adata.obsm['X_pca'] = adata_pca.obsm['X_pca']
         return None
     else:
-        adata_pca.obsm['X_pearson_residuals_pca'] = adata_pca.obsm['X_pca'].copy()
-        adata_pca.uns['pearson_residuals_pca'] = adata_pca.uns['pca'].copy()
-        del adata_pca.obsm['X_pca']
-        del adata_pca.uns['pca']
         return adata_pca, hvg
