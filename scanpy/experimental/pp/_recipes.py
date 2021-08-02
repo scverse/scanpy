@@ -99,7 +99,7 @@ def recipe_pearson_residuals(
          The used value of the overdisperion parameter theta.
     `.uns['pearson_residuals_normalization']['clip']`
          The used value of the clipping parameter.
-    `.obsm['pearson_residuals_X_pca']`
+    `.obsm['X_pearson_residuals_pca']`
         PCA representation of data after gene selection and Pearson residual
         normalization.
     `.uns['pearson_residuals_pca']['PCs']`
