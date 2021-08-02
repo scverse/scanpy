@@ -298,13 +298,13 @@ def test_normalize_pearson_residuals_recipe(sparsity_func, dtype, n_hvgs, n_comp
     # for both cases, check adata_pca keys are complete
     assert np.all(
         np.isin(
-            ['pearson_residuals_normalization', 'pearson_residuals_pca'],
+            ['pearson_residuals_normalization', 'pca'],
             list(adata_pca.uns.keys()),
         )
     )
-    assert np.all(np.isin(['X_pearson_residuals_pca'], list(adata_pca.obsm.keys())))
+    assert np.all(np.isin(['X_pca'], list(adata_pca.obsm.keys())))
     assert np.all(np.isin(['PCs'], list(adata_pca.varm.keys())))
-    assert adata_pca.obsm['X_pearson_residuals_pca'].shape == (n_cells, n_comps_pca)
+    assert adata_pca.obsm['X_pca'].shape == (n_cells, n_comps_pca)
 
     # check adata shape
     assert adata_pca.shape == (n_cells, n_hvgs)
@@ -336,13 +336,13 @@ def test_normalize_pearson_residuals_recipe(sparsity_func, dtype, n_hvgs, n_comp
 
     assert np.all(
         np.isin(
-            ['pearson_residuals_normalization', 'pearson_residuals_pca'],
+            ['pearson_residuals_normalization', 'pca'],
             list(adata.uns.keys()),
         )
     )
-    assert np.all(np.isin(['X_pearson_residuals_pca'], list(adata.obsm.keys())))
+    assert np.all(np.isin(['X_pca'], list(adata.obsm.keys())))
     assert adata.shape == (n_cells, n_genes)
-    assert adata.obsm['X_pearson_residuals_pca'].shape == (n_cells, n_comps_pca)
+    assert adata.obsm['X_pca'].shape == (n_cells, n_comps_pca)
 
     # check PC shapes to see whether or not HVGs were used for PCA
-    assert adata.uns['pearson_residuals_pca']['PCs'].shape == (n_hvgs, n_comps_pca)
+    assert adata.uns['pca']['PCs'].shape == (n_hvgs, n_comps_pca)
