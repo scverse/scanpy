@@ -80,6 +80,9 @@ Adaptive immune receptor repertoire (AIRR)
 
     | scirpy is a scanpy extension to expore single-cell T-cell receptor (TCR) and B-cell receptor (BCR) repertoires.
 
+* `dandelion <https://github.com/zktuong/dandelion>`__ :small:`University of Cambridge`
+
+    | dandelion is a single-cell BCR-seq network analysis package that integrates with transcriptomic data analyzed via scanpy.
 
 Feature selection
 -----------------
