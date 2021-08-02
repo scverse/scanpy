@@ -24,6 +24,7 @@ def recipe_pearson_residuals(
     Applies gene selection based on Pearson residuals. On the resulting subset,
     Pearson residual normalization and PCA are performed.
 
+
     Parameters
     ----------
     adata
@@ -44,10 +45,10 @@ def recipe_pearson_residuals(
     clip
         This determines how Pearson residuals are clipped:
 
-        * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)]
-        where n is the number of cells in the dataset (default behavior).
-        * If any scalar c, residuals are clipped to the interval [-c, c].
-        Set`clip=np.Inf` for no clipping.
+            * If `None`, residuals are clipped to the interval \
+            [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset (default behavior).
+            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
+            `clip=np.Inf` for no clipping.
 
     batch_key
         If specified, highly-variable genes are selected within each batch
