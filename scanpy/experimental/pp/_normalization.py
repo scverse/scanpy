@@ -1,4 +1,4 @@
-from typing import Optional, Union, Dict
+from typing import Optional, Dict
 from warnings import warn
 
 import numpy as np
@@ -71,8 +71,8 @@ def normalize_pearson_residuals(
     theta shared across genes, computes Pearson residuals. By default, residuals
     are clipped to sqrt(n) and overdispersion theta=100 is used.
 
-    Parameters
-    ----------
+    Params
+    ------
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
@@ -152,9 +152,8 @@ def normalize_pearson_residuals_pca(
 
     Operates on the subset of highly variable genes in `adata.var['highly_variable']` by default.
 
-
-    Parameters
-    ----------
+    Params
+    ------
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
@@ -200,14 +199,14 @@ def normalize_pearson_residuals_pca(
     `.uns['pearson_residuals_normalization']['clip']`
          The used value of the clipping parameter
 
-    `.obsm['X_pearson_residuals_pca']`
+    `.obsm['X_pca']`
         PCA representation of data after gene selection and Pearson residual
         normalization.
-    `.uns['pearson_residuals_pca']['PCs']`
+    `.uns['pca']['PCs']`
          The principal components containing the loadings.
-    `.uns['pearson_residuals_pca']['variance_ratio']`
+    `.uns['pca']['variance_ratio']`
          Ratio of explained variance.
-    `.uns['pearson_residuals_pca']['variance']`
+    `.uns['pca']['variance']`
          Explained variance, equivalent to the eigenvalues of the
          covariance matrix.
 
@@ -230,13 +229,9 @@ def normalize_pearson_residuals_pca(
         norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
         pca_settings = adata_pca.uns['pca']
         pca_dict = dict(**pca_settings, PCs=adata_pca.varm['PCs'])
-        adata.uns['pearson_residuals_pca'] = pca_dict
+        adata.uns['pca'] = pca_dict
         adata.uns['pearson_residuals_normalization'] = norm_dict
-        adata.obsm['X_pearson_residuals_pca'] = adata_pca.obsm['X_pca']
+        adata.obsm['X_pca'] = adata_pca.obsm['X_pca']
         return None
     else:
-        adata_pca.obsm['X_pearson_residuals_pca'] = adata_pca.obsm['X_pca'].copy()
-        adata_pca.uns['pearson_residuals_pca'] = adata_pca.uns['pca'].copy()
-        del adata_pca.obsm['X_pca']
-        del adata_pca.uns['pca']
         return adata_pca

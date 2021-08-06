@@ -21,15 +21,14 @@ def recipe_pearson_residuals(
     """\
     Gene selection and normalization based on [Lause20]_.
 
-    Applies gene selection based on Pearson residuals.
-    On the resulting subset, Pearson residual normalization and PCA are performed.
+    Applies gene selection based on Pearson residuals. On the resulting subset,
+    Pearson residual normalization and PCA are performed.
 
-
-    Parameters
-    ----------
+    Params
+    ------
     adata
-        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
+        The annotated data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
     n_top_genes
         Number of highly-variable genes to keep. Mandatory if
         `flavor='seurat_v3'` or `flavor='pearson_residuals'`.
@@ -43,7 +42,7 @@ def recipe_pearson_residuals(
         (var = mean + mean^2/theta), and `theta=np.Inf` corresponds to a
         Poisson model.
     clip
-        This determines how Pearson residuals are clipped:
+        Determines if and how residuals are clipped:
 
             * If `None`, residuals are clipped to the interval \
             [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset (default behavior).
@@ -62,17 +61,19 @@ def recipe_pearson_residuals(
     random_state_pca
         Change to use different initial states for the optimization.
     kwargs_pca
-        Dictionary of further keyword arguments passed on to `sc.pp.pca()`.
+        Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
     check_values
-        Check if counts in selected layer are integers. A Warning is returned if set to True.
+        Check if counts in selected layer are integers. A `Warning` is returned if set to True.
     inplace
         Whether to place results in `adata` or return them.
+
 
     Returns
     -------
     If `inplace=False`, separately returns the gene selection results (`hvg`)
     and Pearson residual-based PCA results (`adata_pca`). If `inplace=True`,
-    updates `adata` with the following fields for gene selection results…:
+    updates `adata` with the following fields for gene selection results:
+
     `.var['highly_variable']`
         boolean indicator of highly-variable genes.
     `.var['means']`
@@ -91,8 +92,10 @@ def recipe_pearson_residuals(
     `.var['highly_variable_intersection']`
         If batch_key is given, this denotes the genes that are highly variable
         in all batches.
+
     …and the following fields for Pearson residual-based PCA results and
     normalization settings:
+
     `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
          The hvg-subset, normalized by Pearson residuals.
     `.uns['pearson_residuals_normalization']['theta']`
