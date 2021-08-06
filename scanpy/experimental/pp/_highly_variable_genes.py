@@ -30,7 +30,7 @@ def _highly_variable_pearson_residuals(
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    See `highly_variable_genes`.
+    See `scanpy.pp.highly_variable_genes`.
 
     Returns
     -------

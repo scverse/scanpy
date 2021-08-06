@@ -21,8 +21,8 @@ def recipe_pearson_residuals(
     """\
     Gene selection and normalization based on [Lause20]_.
 
-    Applies gene selection based on Pearson residuals. On the resulting subset,
-    Pearson residual normalization and PCA are performed.
+    Applies gene selection based on Pearson residuals.
+    On the resulting subset, Pearson residual normalization and PCA are performed.
 
 
     Parameters
