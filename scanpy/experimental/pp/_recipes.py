@@ -19,7 +19,7 @@ def recipe_pearson_residuals(
     inplace: bool = True,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """\
-    Gene selection and normalization based on [Lause20]_.
+    Gene selection and normalization based on [Lause21]_.
 
     Applies gene selection based on Pearson residuals. On the resulting subset,
     Pearson residual normalization and PCA are performed.

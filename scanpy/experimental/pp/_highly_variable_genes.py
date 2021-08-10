@@ -231,9 +231,9 @@ def highly_variable_genes(
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    Annotate highly variable genes using analytic Pearson residuals [Lause20]_.
+    Annotate highly variable genes using analytic Pearson residuals [Lause21]_.
 
-    For [Lause20]_, Pearson residuals of a negative binomial offset model (with
+    For [Lause21]_, Pearson residuals of a negative binomial offset model (with
     overdispersion theta shared across genes) are computed. By default, overdispersion
     theta=100 is used and residuals are clipped to sqrt(n). Finally, genes are ranked
     by residual variance.

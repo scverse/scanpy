@@ -65,7 +65,7 @@ def normalize_pearson_residuals(
     inplace: bool = True,
 ) -> Optional[Dict[str, np.ndarray]]:
     """\
-    Applies analytic Pearson residual normalization, based on [Lause20]_.
+    Applies analytic Pearson residual normalization, based on [Lause21]_.
 
     The residuals are based on a negative binomial offset model with overdispersion
     `theta` shared across genes. By default, residuals are clipped to sqrt(n) and
@@ -150,7 +150,7 @@ def normalize_pearson_residuals_pca(
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    Applies analytic Pearson residual normalization and PCA, based on [Lause20]_.
+    Applies analytic Pearson residual normalization and PCA, based on [Lause21]_.
 
     The residuals are based on a negative binomial offset model with overdispersion
     `theta` shared across genes. By default, residuals are clipped to sqrt(n),
