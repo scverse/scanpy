@@ -59,17 +59,19 @@ def normalize_pearson_residuals(
     adata: AnnData,
     theta: float = 100,
     clip: Optional[float] = None,
+    check_values: bool = True,
     layer: Optional[str] = None,
     copy: bool = False,
-    check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[Dict[str, np.ndarray]]:
     """\
-    Computes analytic Pearson residuals, based on [Lause20]_.
+    Applies analytic Pearson residual normalization, based on [Lause20]_.
 
-    Assuming a negative binomial offset model with overdispersion
-    theta shared across genes, computes Pearson residuals. By default, residuals
-    are clipped to sqrt(n) and overdispersion theta=100 is used.
+    The residuals are based on a negative binomial offset model with overdispersion
+    `theta` shared across genes. By default, residuals are clipped to sqrt(n) and
+    overdispersion `theta=100` is used.
+
+    Expects raw count input.
 
     Params
     ------
@@ -77,24 +79,24 @@ def normalize_pearson_residuals(
         The annotated data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     theta
-        The NB overdispersion parameter theta. Higher values correspond to
-        less overdispersion (var = mean + mean^2/theta), and `theta=np.Inf`
-        corresponds to a Poisson model.
+        The negative binomial overdispersion parameter theta for Pearson residuals.
+        Higher values correspond to less overdispersion (var = mean + mean^2/theta),
+        and `theta=np.Inf` corresponds to a Poisson model.
     clip
         Determines if and how residuals are clipped:
 
-            * If `None`, residuals are clipped to the interval \
-            [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset (default behavior).
+            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
+            where n is the number of cells in the dataset (default behavior).
             * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
             `clip=np.Inf` for no clipping.
 
+    check_values
+        Check if counts in selected layer are integers. A Warning is returned if set to
+        True.
     layer
         Layer to normalize instead of `X`. If `None`, `X` is normalized.
     copy
-        Whether to modify copied input object. Not compatible with
-        `inplace=False`.
-    check_values
-        Check if counts in selected layer are integers. A Warning is returned if set to True.
+        Whether to modify copied input object. Not compatible with `inplace=False`.
     inplace
         Whether to update `adata` or return dictionary with normalized copies
         of `adata.X` and `adata.layers`.
@@ -142,35 +144,36 @@ def normalize_pearson_residuals_pca(
     clip: Optional[float] = None,
     n_comps_pca: Optional[int] = 50,
     random_state_pca: Optional[float] = 0,
-    use_highly_variable: bool = True,
     kwargs_pca: Optional[dict] = {},
+    use_highly_variable: bool = True,
     check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    Applies Pearson residual normalization and PCA, based on [Lause20]_.
+    Applies analytic Pearson residual normalization and PCA, based on [Lause20]_.
 
-    Operates on the subset of highly variable genes in `adata.var['highly_variable']` by default.
+    The residuals are based on a negative binomial offset model with overdispersion
+    `theta` shared across genes. By default, residuals are clipped to sqrt(n),
+    overdispersion `theta=100` is used, and PCA is run with 50 components.
+
+    Operates on the subset of highly variable genes in `adata.var['highly_variable']`
+    by default. Expects raw count input.
+
 
     Params
     ------
     adata
-        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    use_highly_variable
-        Whether to use the gene selection in `adata.var['highly_variable']` to
-        subset the data before normalizing (default) or proceed on the full
-        dataset.
+        The annotated data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
     theta
-        This is the NB overdispersion parameter theta for Pearson residual
-        computations. Higher values correspond to less overdispersion
-        (var = mean + mean^2/theta), and `theta=np.Inf` corresponds to a
-        Poisson model.
+        The negative binomial overdispersion parameter theta for Pearson residuals.
+        Higher values correspond to less overdispersion (var = mean + mean^2/theta),
+        and `theta=np.Inf` corresponds to a Poisson model.
     clip
-        This determines how Pearson residuals are clipped:
+        Determines if and how residuals are clipped:
 
-            * If `None`, residuals are clipped to the interval \
-            [-sqrt(n), sqrt(n)], where n is the number of cells in the dataset (default behavior).
+            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
+            where n is the number of cells in the dataset (default behavior).
             * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
             `clip=np.Inf` for no clipping.
 
@@ -180,8 +183,12 @@ def normalize_pearson_residuals_pca(
         Change to use different initial states for the optimization.
     kwargs_pca
         Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
+    use_highly_variable
+        Whether to use the gene selection in `adata.var['highly_variable']` to subset
+        the data before normalizing (default) or proceed on the full dataset.
     check_values
-        Check if counts in selected layer are integers. A Warning is returned if set to True.
+        Check if counts in selected layer are integers. A Warning is returned if set to
+        True.
     inplace
         Whether to place results in `adata` or return them.
 
@@ -200,15 +207,14 @@ def normalize_pearson_residuals_pca(
          The used value of the clipping parameter
 
     `.obsm['X_pca']`
-        PCA representation of data after gene selection and Pearson residual
-        normalization.
+        PCA representation of data after gene selection (if applicable) and Pearson
+        residual normalization.
     `.uns['pca']['PCs']`
          The principal components containing the loadings.
     `.uns['pca']['variance_ratio']`
          Ratio of explained variance.
     `.uns['pca']['variance']`
-         Explained variance, equivalent to the eigenvalues of the
-         covariance matrix.
+         Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """
 

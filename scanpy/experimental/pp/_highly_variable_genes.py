@@ -19,18 +19,18 @@ from scanpy.preprocessing._simple import filter_genes
 
 def _highly_variable_pearson_residuals(
     adata: AnnData,
-    layer: Optional[str] = None,
-    n_top_genes: int = 1000,
-    batch_key: Optional[str] = None,
     theta: float = 100,
     clip: Optional[float] = None,
-    chunksize: int = 100,
+    n_top_genes: int = 1000,
+    batch_key: Optional[str] = None,
+    chunksize: int = 1000,
     check_values: bool = True,
+    layer: Optional[str] = None,
     subset: bool = False,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    See `scanpy.pp.highly_variable_genes`.
+    See `scanpy.experimental.pp.highly_variable_genes`.
 
     Returns
     -------
@@ -38,23 +38,19 @@ def _highly_variable_pearson_residuals(
     or updates `.var` with the following fields:
 
     highly_variable : bool
-        boolean indicator of highly-variable genes.
+        boolean indicator of highly-variable genes
     means : float
-        means per gene.
+        means per gene
     variances : float
-        variances per gene.
+        variance per gene
     residual_variances : float
-        Pearson residual variance per gene. Averaged in the case of multiple
-        batches.
+        Residual variance per gene. Averaged in the case of multiple batches.
     highly_variable_rank : float
-        Rank of the gene according to residual variance, median rank in the
-        case of multiple batches. NaN for non-HVGs.
+        Rank of the gene according to residual variance, median rank in the case of multiple batches
     highly_variable_nbatches : int
-        If batch_key is given, this denotes in how many batches genes are
-        detected as HVG.
+        If `batch_key` given, denotes in how many batches genes are detected as HVG
     highly_variable_intersection : bool
-        If batch_key is given, this denotes the genes that are highly variable
-        in all batches.
+        If `batch_key` given, denotes the genes that are highly variable in all batches
     """
 
     view_to_actual(adata)
@@ -223,49 +219,55 @@ def _highly_variable_pearson_residuals(
 
 def highly_variable_genes(
     adata: AnnData,
-    layer: Optional[str] = None,
-    n_top_genes: Optional[int] = None,
     theta: float = 100,
     clip: Optional[float] = None,
+    n_top_genes: Optional[int] = None,
+    batch_key: Optional[str] = None,
     chunksize: int = 1000,
     flavor: Literal['pearson_residuals'] = 'pearson_residuals',
+    check_values: bool = True,
+    layer: Optional[str] = None,
     subset: bool = False,
     inplace: bool = True,
-    batch_key: Optional[str] = None,
-    check_values: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    Annotate highly variable genes using Analytical Pearson residuals [Lause20]_.
-
-    Expects count data input.
+    Annotate highly variable genes using analytic Pearson residuals [Lause20]_.
 
     For [Lause20]_, Pearson residuals of a negative binomial offset model (with
     overdispersion theta shared across genes) are computed. By default, overdispersion
     theta=100 is used and residuals are clipped to sqrt(n). Finally, genes are ranked
     by residual variance.
 
+    Expects raw count input.
+
+
     Parameters
     ----------
     adata
-        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    layer
-        If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
-    n_top_genes
-        Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
+        The annotated data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
     theta
-        If `flavor='pearson_residuals'`, this is the NB overdispersion parameter theta.
-        Higher values correspond to less overdispersion (var = mean + mean^2/theta), and
-        `theta=np.Inf` corresponds to a Poisson model.
+        The negative binomial overdispersion parameter theta for Pearson residuals.
+        Higher values correspond to less overdispersion (var = mean + mean^2/theta),
+        and `theta=np.Inf` corresponds to a Poisson model.
     clip
-        If `flavor='pearson_residuals'`, this determines how residuals are clipped:
+        If `flavor='pearson_residuals'`, determines if and how residuals are clipped:
 
             * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
             where n is the number of cells in the dataset (default behavior).
             * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
             `clip=np.Inf` for no clipping.
 
+    n_top_genes
+        Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or
+        `flavor='pearson_residuals'`.
+    batch_key
+        If specified, highly-variable genes are selected within each batch separately
+        and merged. This simple process avoids the selection of batch-specific genes
+        and acts as a lightweight batch correction method. Genes are first sorted by
+        how many batches they are a HVG. If `flavor='pearson_residuals'`, ties are
+        broken by the median rank (across batches) based on within-batch residual
+        variance.
     chunksize
         If `flavor='pearson_residuals'`, this dertermines how many genes are processed at
         once while computing the residual variance. Choosing a smaller value will reduce
@@ -273,24 +275,16 @@ def highly_variable_genes(
     flavor
         Choose the flavor for identifying highly variable genes. In this experimental
         version, only 'pearson_residuals' is functional.
+    check_values
+        Check if counts in selected layer are integers. A Warning is returned if set to
+        True. Only used if `flavor='pearson_residuals'`.
+    layer
+        If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
     inplace
         Whether to place calculated metrics in `.var` or return them.
-    batch_key
-        If specified, highly-variable genes are selected within each batch separately and merged.
-        This simple process avoids the selection of batch-specific genes and acts as a
-        lightweight batch correction method. For all flavors, genes are first sorted
-        by how many batches they are a HVG. For dispersion-based flavors ties are broken
-        by normalized dispersion. If `flavor = 'seurat_v3'`, ties are broken by the median
-        (across batches) rank based on within-batch normalized variance. If
-        `flavor='pearson_residuals'`, ties are broken by the median rank (across batches)
-        based on within-batch residual variance.
-    check_values
-        Check if counts in selected layer are integers. A Warning is returned if set to True.
-        Only used if `flavor='seurat_v3'` or `flavor='pearson_residuals'`.
-
 
     Returns
     -------
@@ -299,20 +293,20 @@ def highly_variable_genes(
 
     highly_variable : bool
         boolean indicator of highly-variable genes
-    **means**
+    means : float
         means per gene
-    **variances**
+    variances : float
         variance per gene
-    **residual_variances**
-        For `flavor='pearson_residuals'`, residual variance per gene. Averaged in the case of
-        multiple batches.
+    residual_variances : float
+        For `flavor='pearson_residuals'`, residual variance per gene. Averaged in the
+        case of multiple batches.
     highly_variable_rank : float
         For `flavor='pearson_residuals'`, rank of the gene according to residual
         variance, median rank in the case of multiple batches
     highly_variable_nbatches : int
-        If batch_key is given, this denotes in how many batches genes are detected as HVG
+        If `batch_key` given, denotes in how many batches genes are detected as HVG
     highly_variable_intersection : bool
-        If batch_key is given, this denotes the genes that are highly variable in all batches
+        If `batch_key` given, denotes the genes that are highly variable in all batches
 
     Notes
     -----
