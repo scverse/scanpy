@@ -68,6 +68,8 @@ legend_fontweight
 legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
+show_colorbar
+    Whether to show the colorbar of the chosen cmap for continuous variables. .
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
