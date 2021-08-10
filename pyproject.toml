@@ -33,12 +33,13 @@ classifiers = [
     'Operating System :: Microsoft :: Windows',
     'Operating System :: POSIX :: Linux',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
     'Topic :: Scientific/Engineering :: Bio-Informatics',
     'Topic :: Scientific/Engineering :: Visualization',
 ]
-requires-python = '>=3.6'
+requires-python = '>=3.7'
 requires = [
     'anndata>=0.7.4',
     # numpy needs a version due to #1320
@@ -52,7 +53,7 @@ requires = [
     'h5py>=2.10.0',
     'tables',
     'tqdm',
-    'scikit-learn>=0.21.2',
+    'scikit-learn>=0.22',
     'statsmodels>=0.10.0rc2',
     'patsy',
     'networkx>=2.3',
@@ -60,7 +61,6 @@ requires = [
     'joblib',
     'numba>=0.41.0',
     'umap-learn>=0.3.10',
-    'legacy-api-wrap',
     'packaging',
     'sinfo',
     # for getting the stable version
@@ -86,11 +86,12 @@ dev = [
     'docutils',
 ]
 doc = [
-    'sphinx>=3.2',
+    'sphinx>=4.1',
     'sphinx-rtd-theme>=0.3.1',
     'sphinx-autodoc-typehints',
-    'scanpydoc>=0.6',
+    'scanpydoc>=0.7.3',
     'typing_extensions; python_version < "3.8"',  # for `Literal`
+    'python-igraph',
 ]
 test = [
     'pytest>=4.4',
@@ -128,7 +129,7 @@ omit = ['*/tests/*']
 
 [tool.black]
 line-length = 88
-target-version = ['py36']
+target-version = ['py37']
 skip-string-normalization = true
 exclude = '''
 /build/.*

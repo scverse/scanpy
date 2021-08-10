@@ -237,8 +237,8 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
             # as scanpy expects it, so, no need for a further transpostion
             adata = AnnData(
                 matrix,
-                dict(obs_names=dsets['barcodes'].astype(str)),
-                dict(
+                obs=dict(obs_names=dsets['barcodes'].astype(str)),
+                var=dict(
                     var_names=dsets['gene_names'].astype(str),
                     gene_ids=dsets['genes'].astype(str),
                 ),
@@ -271,8 +271,8 @@ def _read_v3_10x_h5(filename, *, start=None):
             )
             adata = AnnData(
                 matrix,
-                dict(obs_names=dsets['barcodes'].astype(str)),
-                dict(
+                obs=dict(obs_names=dsets['barcodes'].astype(str)),
+                var=dict(
                     var_names=dsets['name'].astype(str),
                     gene_ids=dsets['id'].astype(str),
                     feature_types=dsets['feature_type'].astype(str),
@@ -839,7 +839,7 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
     X = np.array(X).T
     obs = pd.DataFrame({"groups": groups}, index=sample_names)
     var = pd.DataFrame(index=gene_names)
-    return AnnData(X=X, obs=obs, var=var)
+    return AnnData(X=X, obs=obs, var=var, dtype=X.dtype)
 
 
 # -------------------------------------------------------------------------------

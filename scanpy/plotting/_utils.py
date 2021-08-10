@@ -23,8 +23,6 @@ from .._utils import NeighborsView
 from . import palettes
 
 
-_tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
-
 ColorLike = Union[str, Tuple[float, ...]]
 _IGraphLayout = Literal['fa', 'fr', 'rt', 'rt_circular', 'drl', 'eq_tree', ...]
 _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 'black']
@@ -447,7 +445,6 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     -------
     None
     """
-
     categories = adata.obs[value_to_plot].cat.categories
     length = len(categories)
 
@@ -470,7 +467,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
                 "'grey' color will be used for all categories."
             )
 
-    adata.uns[value_to_plot + '_colors'] = palette[:length]
+    _set_colors_for_categorical_obs(adata, value_to_plot, palette[:length])
 
 
 def add_colors_for_categorical_sample_annotation(

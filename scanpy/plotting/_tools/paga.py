@@ -46,6 +46,8 @@ def paga_compare(
     save=None,
     title_graph=None,
     groups_graph=None,
+    *,
+    pos=None,
     **paga_graph_params,
 ):
     """\
@@ -83,17 +85,18 @@ def paga_compare(
         suptitle = color if title is None else title
         title, title_graph = '', ''
     if basis is None:
-        if 'X_draw_graph_fa' in adata.obsm.keys():
+        if 'X_draw_graph_fa' in adata.obsm:
             basis = 'draw_graph_fa'
-        elif 'X_umap' in adata.obsm.keys():
+        elif 'X_umap' in adata.obsm:
             basis = 'umap'
-        elif 'X_tsne' in adata.obsm.keys():
+        elif 'X_tsne' in adata.obsm:
             basis = 'tsne'
-        elif 'X_draw_graph_fr' in adata.obsm.keys():
+        elif 'X_draw_graph_fr' in adata.obsm:
             basis = 'draw_graph_fr'
         else:
             basis = 'umap'
-    from .scatterplots import embedding
+
+    from .scatterplots import embedding, _get_data_points
 
     embedding(
         adata,
@@ -116,11 +119,20 @@ def paga_compare(
         show=False,
         save=False,
     )
-    if 'pos' not in paga_graph_params:
+
+    if pos is None:
         if color == adata.uns['paga']['groups']:
-            paga_graph_params['pos'] = _utils._tmp_cluster_pos
+            coords = _get_data_points(
+                adata, basis, projection="2d", components=components, scale_factor=None
+            )[0][0]
+            pos = (
+                pd.DataFrame(coords, columns=["x", "y"], index=adata.obs_names)
+                .groupby(adata.obs[color], observed=True)
+                .median()
+                .sort_index()
+            ).to_numpy()
         else:
-            paga_graph_params['pos'] = adata.uns['paga']['pos']
+            pos = adata.uns['paga']['pos']
     xlim, ylim = axs[0].get_xlim(), axs[0].get_ylim()
     axs[1].set_xlim(xlim)
     axs[1].set_ylim(ylim)
@@ -143,6 +155,7 @@ def paga_compare(
         labels=labels,
         colors=color,
         frameon=frameon,
+        pos=pos,
         **paga_graph_params,
     )
     if suptitle is not None:
@@ -353,9 +366,8 @@ def paga(
         graph is connected). If this is `None` or an empty list, the root
         vertices are automatically calculated based on topological sorting.
     transitions
-        Key for `.uns['paga']` that specifies the matrix that – for instance
-        `'transistions_confidence'` – that specifies the matrix that stores the
-        arrows.
+        Key for `.uns['paga']` that specifies the matrix that stores the
+        arrows, for instance `'transitions_confidence'`.
     solid_edges
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn solid black.
@@ -416,6 +428,24 @@ def paga(
     -------
     If `show==False`, one or more :class:`~matplotlib.axes.Axes` objects.
     Adds `'pos'` to `adata.uns['paga']` if `add_pos` is `True`.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.tl.paga(adata, groups='louvain')
+        sc.pl.paga(adata)
+
+    You can increase node and edge sizes by specifying additional arguments.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.paga(adata, node_size_scale=10, edge_width_scale=2)
 
     Notes
     -----

@@ -618,6 +618,43 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.umap(adata)
+
+    Colour points by discrete variable (Louvain clusters).
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color="louvain")
+
+    Colour points by gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color="HES4")
+
+    Plot muliple umaps for different gene expressions.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color=["HES4", "TNFRSF4"])
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.umap
     """
     return embedding(adata, 'umap', **kwargs)
 
@@ -643,6 +680,22 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.tsne(adata)
+        sc.pl.tsne(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.tsne
     """
     return embedding(adata, 'tsne', **kwargs)
 
@@ -666,6 +719,22 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.diffmap(adata)
+        sc.pl.diffmap(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.diffmap
     """
     return embedding(adata, 'diffmap', **kwargs)
 
@@ -696,6 +765,22 @@ def draw_graph(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.draw_graph(adata)
+        sc.pl.draw_graph(adata, color=['phase', 'bulk_labels'])
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.draw_graph
     """
     if layout is None:
         layout = str(adata.uns['draw_graph']['params']['layout'])
@@ -740,6 +825,37 @@ def pca(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca(adata)
+
+    Colour points by discrete variable (Louvain clusters).
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="louvain")
+
+    Colour points by gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="CST3")
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.pca
+    pp.pca
     """
     if not annotate_var_explained:
         return embedding(
@@ -1058,10 +1174,15 @@ def _add_categorical_legend(
         )
     elif legend_loc == 'on data':
         # identify centroids to put labels
+
         all_pos = (
             pd.DataFrame(scatter_array, columns=["x", "y"])
             .groupby(color_source_vector, observed=True)
             .median()
+            # Have to sort_index since if observed=True and categorical is unordered
+            # the order of values in .index is undefined. Related issue:
+            # https://github.com/pandas-dev/pandas/issues/25167
+            .sort_index()
         )
 
         for label, x_pos, y_pos in all_pos.itertuples():
@@ -1075,9 +1196,6 @@ def _add_categorical_legend(
                 fontsize=legend_fontsize,
                 path_effects=legend_fontoutline,
             )
-        # TODO: wtf
-        # this is temporary storage for access by other tools
-        _utils._tmp_cluster_pos = all_pos.values
 
 
 def _get_color_source_vector(

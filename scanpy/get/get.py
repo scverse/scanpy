@@ -39,9 +39,9 @@ def rank_genes_groups_df(
     key
         Key differential expression groups were stored under.
     pval_cutoff
-        Minimum adjusted pval to return.
+        Return only adjusted p-values below the  cutoff.
     log2fc_min
-        Minumum logfc to return.
+        Minimum logfc to return.
     log2fc_max
         Maximum logfc to return.
     gene_symbols

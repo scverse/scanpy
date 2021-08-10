@@ -4,8 +4,11 @@ Ecosystem
 .. role:: small
 .. role:: smaller
 
-With *ecosystem*, we mean single-cell related tools that operate on :class:`~anndata.AnnData`. Here, we list some that do not have an interface in the :doc:`external API <external/index>`.
+.. note::
+  If you'd like to see your tool included here, please open a `pull request <https://github.com/theislab/scanpy>`_!
 
+  With *ecosystem*, we mean the broader single-cell related tools that operate on :class:`~anndata.AnnData`.
+  If your tool doesn't do this, but is useful for analysing single cell data we also accept light wrappers for some tools in :mod:`scanpy.external`.
 
 Viewers
 -------
@@ -68,16 +71,19 @@ scvi-tools
 
     | scvi-tools hosts deep generative models (DGM) for end-to-end analysis of single-cell
       omics data (e.g., scVI, scANVI, totalVI). It also contains several primitives to build novel DGMs.
-      
+
 
 Adaptive immune receptor repertoire (AIRR)
 ------------------------------------------
 
 * `scirpy <https://github.com/icbi-lab/scirpy>`__ :small:`Medical University of Innsbruck`
-    
-    | scirpy is a scanpy extension to expore single-cell T-cell receptor (TCR) and B-cell receptor (BCR) repertoires. 
-    
-    
+
+    | scirpy is a scanpy extension to expore single-cell T-cell receptor (TCR) and B-cell receptor (BCR) repertoires.
+
+* `dandelion <https://github.com/zktuong/dandelion>`__ :small:`University of Cambridge`
+
+    | dandelion is a single-cell BCR-seq network analysis package that integrates with transcriptomic data analyzed via scanpy.
+
 Feature selection
 -----------------
 * `triku 🦔 <https://gitlab.com/alexmascension/triku>`__ :small:`Biodonostia Health Research Institute`
@@ -90,3 +96,12 @@ Analyses using curated prior knowledge
 
 * `dorothea <https://github.com/saezlab/dorothea-py>`__ for Transcription Factor activities :small:`Institute for Computational Biomedicine, Heidelberg University`
 * `progeny <https://github.com/saezlab/progeny-py>`__ for footprint-based pathway activities :small:`Institute for Computational Biomedicine, Heidelberg University`
+* `Cubé <https://github.com/connerlambden/Cube>`__ :small:`Harvard University`
+
+    | Intuitive Nonparametric Gene Network Search Algorithm that learns from existing biological pathways & multiplicative gene interference patterns.
+
+Spatial Transcriptomics Tools
+-------------------------------
+* `PASTE <https://github.com/raphael-group/paste>`__ :small:`Princeton`
+
+    | PASTE is a computational method to align and integrate spatial transcriptomics data across adjacent tissue slices by leveraging both gene expression similarity and spatial distances between spots.

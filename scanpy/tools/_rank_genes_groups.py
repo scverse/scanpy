@@ -429,7 +429,7 @@ class _RankGenes:
 def rank_genes_groups(
     adata: AnnData,
     groupby: str,
-    use_raw: bool = True,
+    use_raw: Optional[bool] = None,
     groups: Union[Literal['all'], Iterable[str]] = 'all',
     reference: str = 'rest',
     n_genes: Optional[int] = None,
@@ -533,6 +533,11 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
+    if use_raw is None:
+        use_raw = adata.raw is not None
+    elif use_raw is True and adata.raw is None:
+        raise ValueError("Received `use_raw=True`, but `adata.raw` is empty.")
+
     if method is None:
         logg.warning(
             "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
@@ -665,9 +670,10 @@ def filter_rank_genes_groups(
     min_in_group_fraction=0.25,
     min_fold_change=1,
     max_out_group_fraction=0.5,
+    compare_abs=False,
 ) -> None:
     """\
-    Filters out genes based on fold change and fraction of genes expressing the
+    Filters out genes based on log fold change and fraction of genes expressing the
     gene within and outside the `groupby` categories.
 
     See :func:`~scanpy.tl.rank_genes_groups`.
@@ -688,6 +694,8 @@ def filter_rank_genes_groups(
     min_in_group_fraction
     min_fold_change
     max_out_group_fraction
+    compare_abs
+        If `True`, compare absolute values of log fold change with `min_fold_change`.
 
     Returns
     -------
@@ -789,6 +797,8 @@ def filter_rank_genes_groups(
                 / (expm1_func(mean_out_cluster) + 1e-9)
             )
 
+    if compare_abs:
+        fold_change_matrix = fold_change_matrix.abs()
     # filter original_matrix
     gene_names = gene_names[
         (fraction_in_cluster_matrix > min_in_group_fraction)
