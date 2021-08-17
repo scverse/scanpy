@@ -79,27 +79,40 @@ def test_normalize_pearson_residuals_inputchecks(sparsity_func, dtype):
         x, y = np.nonzero(adata_noninteger.X)
         adata_noninteger.X[x[0], y[0]] = 0.5
 
-        with pytest.warns(UserWarning) as record:
+        with warnings.catch_warnings(record=True) as record:
             sc.experimental.pp.normalize_pearson_residuals(
                 adata_noninteger.copy(), check_values=True
             )
-        assert len(record) == 1
-        assert "expects raw count data" in record[0].message.args[0]
+        warning_msgs = [w.message.args[0] for w in record]
+        assert (
+            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found."
+            in warning_msgs
+        )
 
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             sc.experimental.pp.normalize_pearson_residuals(
                 adata_noninteger.copy(), check_values=False
             )
-        assert len(record) == 0
+        warning_msgs = [w.message.args[0] for w in record]
+        assert (
+            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found."
+            not in warning_msgs
+        )
 
     # errors should be raised for invalid theta values
-    with pytest.raises(ValueError) as record:
+    with pytest.raises(
+        ValueError, match='Pearson residuals require theta > 0'
+    ) as record:
         sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=0)
-    with pytest.raises(ValueError) as record:
+    with pytest.raises(
+        ValueError, match='Pearson residuals require theta > 0'
+    ) as record:
         sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=-1)
 
     # error should be raised for invalid clipping values
-    with pytest.raises(ValueError) as record:
+    with pytest.raises(
+        ValueError, match='Pearson residuals require `clip>=0` or `clip=None`.'
+    ) as record:
         sc.experimental.pp.normalize_pearson_residuals(adata.copy(), clip=-1)
 
 

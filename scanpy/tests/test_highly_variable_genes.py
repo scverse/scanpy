@@ -79,38 +79,51 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
         adata_noninteger.X[x[0], y[0]] = 0.5
 
         # expecting 0 no-int warnings
-        with pytest.warns(None) as record:
-            sc.experimental.pp.highly_variable_genes(
-                adata_noninteger.copy(),
-                flavor='pearson_residuals',
-                n_top_genes=100,
-                check_values=False,
-            )
-        assert len(record) == 0
-
-        # expecting 1 no-int warning
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             sc.experimental.pp.highly_variable_genes(
                 adata_noninteger.copy(),
                 flavor='pearson_residuals',
                 n_top_genes=100,
                 check_values=True,
             )
-        assert len(record) == 1
-        assert "expects raw count data" in record[0].message.args[0]
+
+        warning_msgs = [w.message.args[0] for w in record]
+        assert (
+            "`flavor='pearson_residuals'` expects raw count data, but non-integers were found."
+            not in warning_msgs
+        )
+
+        # expecting 1 no-int warning
+        with pytest.warns(
+            UserWarning,
+            match="`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
+        ) as record:
+            sc.experimental.pp.highly_variable_genes(
+                adata_noninteger.copy(),
+                flavor='pearson_residuals',
+                n_top_genes=100,
+                check_values=True,
+            )
 
     # errors should be raised for invalid theta values
-    with pytest.raises(ValueError) as record:
+    with pytest.raises(
+        ValueError, match='Pearson residuals require theta > 0'
+    ) as record:
         sc.experimental.pp.highly_variable_genes(
             adata.copy(), flavor='pearson_residuals', n_top_genes=100, theta=0
         )
-    with pytest.raises(ValueError) as record:
+
+    with pytest.raises(
+        ValueError, match='Pearson residuals require theta > 0'
+    ) as record:
         sc.experimental.pp.highly_variable_genes(
             adata.copy(), flavor='pearson_residuals', n_top_genes=100, theta=-1
         )
 
     # error should be raised for invalid clipping values
-    with pytest.raises(ValueError) as record:
+    with pytest.raises(
+        ValueError, match='Pearson residuals require `clip>=0` or `clip=None`.'
+    ) as record:
         sc.experimental.pp.highly_variable_genes(
             adata.copy(), flavor='pearson_residuals', n_top_genes=100, clip=-1
         )
