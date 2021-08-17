@@ -84,7 +84,7 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
                 adata_noninteger.copy(),
                 flavor='pearson_residuals',
                 n_top_genes=100,
-                check_values=True,
+                check_values=False,
             )
 
         warning_msgs = [w.message.args[0] for w in record]
