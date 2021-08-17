@@ -1,9 +1,8 @@
 """Preprocessing recipes from the literature"""
-from typing import Optional, Tuple
+from typing import Optional
 
 from anndata import AnnData
 
-import pandas as pd
 
 from .. import preprocessing as pp
 from ._deprecated.highly_variable_genes import (

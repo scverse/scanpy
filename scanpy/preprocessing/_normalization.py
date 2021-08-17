@@ -2,7 +2,6 @@ from typing import Optional, Union, Iterable, Dict
 from warnings import warn
 
 import numpy as np
-import pandas as pd
 from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
@@ -10,10 +9,8 @@ from sklearn.utils import sparsefuncs
 from scanpy import logging as logg
 from scanpy._compat import Literal
 
-from scanpy._utils import view_to_actual, check_nonnegative_integers
+from scanpy._utils import view_to_actual
 from scanpy.get import _get_obs_rep, _set_obs_rep
-
-from scanpy.preprocessing._pca import pca
 
 
 def _normalize_data(X, counts, after=None, copy=False):

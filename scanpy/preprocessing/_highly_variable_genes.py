@@ -1,6 +1,5 @@
 import warnings
 from typing import Optional
-
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -9,8 +8,7 @@ from anndata import AnnData
 
 from .. import logging as logg
 from .._settings import settings, Verbosity
-from .._utils import sanitize_anndata, check_nonnegative_integers, view_to_actual
-from scanpy.get import _get_obs_rep
+from .._utils import sanitize_anndata, check_nonnegative_integers
 from .._compat import Literal
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray
@@ -375,7 +373,6 @@ def highly_variable_genes(
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
         Only used if `flavor='seurat_v3'`.
-
 
     Returns
     -------
