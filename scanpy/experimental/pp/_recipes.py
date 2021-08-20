@@ -12,8 +12,8 @@ def recipe_pearson_residuals(
     n_top_genes: int = 1000,
     batch_key: Optional[str] = None,
     chunksize: int = 1000,
-    n_comps_pca: Optional[int] = 50,
-    random_state_pca: Optional[float] = 0,
+    n_comps: Optional[int] = 50,
+    random_state: Optional[float] = 0,
     kwargs_pca: dict = {},
     check_values: bool = True,
     inplace: bool = True,
@@ -57,10 +57,10 @@ def recipe_pearson_residuals(
         the Pearson residual variance. Choosing a smaller value will reduce
         the required memory.
 
-    n_comps_pca
-        Number of principal components to compute.
-    random_state_pca
-        Change to use different initial states for the optimization.
+    n_comps
+        Number of principal components to compute in the PCA step.
+    random_state
+        Change to use different initial states for the optimization in the PCA step.
     kwargs_pca
         Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
     check_values
@@ -139,7 +139,7 @@ def recipe_pearson_residuals(
     experimental.pp.normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
-    pca(adata_pca, n_comps=n_comps_pca, random_state=random_state_pca, **kwargs_pca)
+    pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
 
     if inplace:
         normalization_param = adata_pca.uns['pearson_residuals_normalization']
