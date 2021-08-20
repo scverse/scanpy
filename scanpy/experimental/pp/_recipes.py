@@ -1,6 +1,7 @@
 from typing import Optional, Tuple
 from anndata import AnnData
 import pandas as pd
+import numpy as np
 from scanpy import experimental
 from scanpy.preprocessing import pca
 
@@ -108,8 +109,9 @@ def recipe_pearson_residuals(
     `.obsm['X_pca']`
         PCA representation of data after gene selection and Pearson residual
         normalization.
-    `.uns['pca']['PCs']`
-         The principal components containing the loadings.
+    `.varm['PCs']`
+         The principal components containing the loadings. When `inplace=True` this
+         will contain empty rows for the genes not selected during HVG selection.
     `.uns['pca']['variance_ratio']`
          Ratio of explained variance.
     `.uns['pca']['variance']`
@@ -146,9 +148,10 @@ def recipe_pearson_residuals(
         normalization_dict = dict(
             **normalization_param, pearson_residuals_df=adata_pca.to_df()
         )
-        pca_param = adata_pca.uns['pca']
-        pca_dict = dict(**pca_param, PCs=adata_pca.varm['PCs'])
-        adata.uns['pca'] = pca_dict
+
+        adata.uns['pca'] = adata_pca.uns['pca']
+        adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
+        adata.varm['PCs'][adata.var['highly_variable']] = adata_pca.varm['PCs']
         adata.uns['pearson_residuals_normalization'] = normalization_dict
         adata.obsm['X_pca'] = adata_pca.obsm['X_pca']
         return None

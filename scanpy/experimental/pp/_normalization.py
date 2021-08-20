@@ -145,7 +145,7 @@ def normalize_pearson_residuals_pca(
     n_comps: Optional[int] = 50,
     random_state: Optional[float] = 0,
     kwargs_pca: Optional[dict] = {},
-    use_highly_variable: bool = True,
+    use_highly_variable: Optional[bool] = None,
     check_values: bool = True,
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
@@ -209,8 +209,10 @@ def normalize_pearson_residuals_pca(
     `.obsm['X_pca']`
         PCA representation of data after gene selection (if applicable) and Pearson
         residual normalization.
-    `.uns['pca']['PCs']`
-         The principal components containing the loadings.
+    `.varm['PCs']`
+         The principal components containing the loadings. When `inplace=True` and
+         `use_highly_variable=True`, this will contain empty rows for the genes not
+         selected.
     `.uns['pca']['variance_ratio']`
          Ratio of explained variance.
     `.uns['pca']['variance']`
@@ -218,12 +220,23 @@ def normalize_pearson_residuals_pca(
 
     """
 
-    if use_highly_variable and 'highly_variable' in adata.var_keys():
-        # TODO: are these copies needed?
-        adata_pca = adata[:, adata.var['highly_variable']].copy()
+    # check if HVG selection is there if user wants to use it
+    if use_highly_variable and 'highly_variable' not in adata.var_keys():
+        raise ValueError(
+            'You passed `use_highly_variable=True`, but no HVG selection was found (`highly_variable` missing in `adata.var_keys()`.'
+        )
+
+    # default behavior: if there is a HVG selection, we will use it
+    if use_highly_variable is None and 'highly_variable' in adata.var_keys():
+        use_highly_variable = True
+
+    if use_highly_variable:
+        adata_sub = adata[:, adata.var['highly_variable']].copy()
+        adata_pca = AnnData(
+            adata_sub.X.copy(), obs=adata_sub.obs[[]], var=adata_sub.var[[]]
+        )
     else:
-        # TODO: are these copies needed?
-        adata_pca = adata.copy()
+        adata_pca = AnnData(adata.X.copy(), obs=adata.obs[[]], var=adata.var[[]])
 
     normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
@@ -233,9 +246,12 @@ def normalize_pearson_residuals_pca(
     if inplace:
         norm_settings = adata_pca.uns['pearson_residuals_normalization']
         norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
-        pca_settings = adata_pca.uns['pca']
-        pca_dict = dict(**pca_settings, PCs=adata_pca.varm['PCs'])
-        adata.uns['pca'] = pca_dict
+        if use_highly_variable:
+            adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
+            adata.varm['PCs'][adata.var['highly_variable']] = adata_pca.varm['PCs']
+        else:
+            adata.varm['PCs'] = adata_pca.varm['PCs']
+        adata.uns['pca'] = adata_pca.uns['pca']
         adata.uns['pearson_residuals_normalization'] = norm_dict
         adata.obsm['X_pca'] = adata_pca.obsm['X_pca']
         return None
