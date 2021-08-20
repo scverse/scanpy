@@ -119,34 +119,24 @@ def _highly_variable_pearson_residuals(
             residual_gene_var[start:stop] = np.var(residuals, axis=0)
 
         # Add 0 values for genes that were filtered out
-        zero_gene_var = np.zeros(np.sum(~nonzero_genes))
-        residual_gene_var = np.concatenate((residual_gene_var, zero_gene_var))
-        # Order as before filtering
-        idxs = np.concatenate((np.where(nonzero_genes)[0], np.where(~nonzero_genes)[0]))
-        residual_gene_var = residual_gene_var[np.argsort(idxs)]
-        residual_gene_vars.append(residual_gene_var.reshape(1, -1))
+        unmasked_residual_gene_var = np.zeros(len(nonzero_genes))
+        unmasked_residual_gene_var[nonzero_genes] = residual_gene_var
+        residual_gene_vars.append(unmasked_residual_gene_var.reshape(1, -1))
 
     residual_gene_vars = np.concatenate(residual_gene_vars, axis=0)
-
-    # Get cutoffs and define hvgs per batch
-    residual_gene_vars_sorted = np.sort(residual_gene_vars, axis=1)
-    cutoffs_per_batch = residual_gene_vars_sorted[:, -n_top_genes]
-    highly_variable_per_batch = np.greater_equal(
-        residual_gene_vars.T, cutoffs_per_batch
-    ).T
-
-    # Merge hvgs across batches
-    highly_variable_nbatches = np.sum(highly_variable_per_batch, axis=0)
-    highly_variable_intersection = highly_variable_nbatches == n_batches
 
     # Get rank per gene within each batch
     # argsort twice gives ranks, small rank means most variable
     ranks_residual_var = np.argsort(np.argsort(-residual_gene_vars, axis=1), axis=1)
     ranks_residual_var = ranks_residual_var.astype(np.float32)
+    # count in how many batches a genes was among the n_top_genes
+    highly_variable_nbatches = np.sum(
+        (ranks_residual_var < n_top_genes).astype(int), axis=0
+    )
+    # set non-top genes within each batch to nan
     ranks_residual_var[ranks_residual_var >= n_top_genes] = np.nan
     ranks_masked_array = np.ma.masked_invalid(ranks_residual_var)
-    # Median rank across batches,
-    # ignoring batches in which gene was not selected
+    # Median rank across batches, ignoring batches in which gene was not selected
     medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan)
 
     means, variances = materialize_as_ndarray(_get_mean_var(X))
@@ -154,12 +144,10 @@ def _highly_variable_pearson_residuals(
         dict(
             means=means,
             variances=variances,
-            residual_variances=np.mean(residual_gene_vars, axis=0).astype(
-                np.float32, copy=False
-            ),
+            residual_variances=np.mean(residual_gene_vars, axis=0),
             highly_variable_rank=medianrank_residual_var,
             highly_variable_nbatches=highly_variable_nbatches.astype(np.int64),
-            highly_variable_intersection=highly_variable_intersection,
+            highly_variable_intersection=highly_variable_nbatches == n_batches,
         )
     )
     df = df.set_index(adata.var_names)

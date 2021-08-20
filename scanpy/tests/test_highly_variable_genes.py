@@ -240,7 +240,7 @@ def test_highly_variable_genes_pearson_residuals_general(
         assert key in output_df.keys()
 
     # check residual variances
-    assert output_df['residual_variances'].values.dtype is np.dtype('float32')
+    assert pd.api.types.is_float_dtype(output_df['residual_variances'].dtype)
     # consistency with normalization method
     if subset:
         # sort values before comparing as reference is sorted as well for subset case
@@ -325,7 +325,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
     assert np.all(output_df['highly_variable'][output_df.highly_variable_intersection])
 
     # check ranks (with batch_key these are the median of within-batch ranks)
-    assert output_df['highly_variable_rank'].values.dtype is np.dtype('float32')
+    assert pd.api.types.is_float_dtype(output_df['highly_variable_rank'].dtype)
     assert np.nanmax(output_df['highly_variable_rank'].values) <= n_top_genes - 1
 
     # check nbatches
