@@ -142,8 +142,8 @@ def normalize_pearson_residuals_pca(
     adata: AnnData,
     theta: float = 100,
     clip: Optional[float] = None,
-    n_comps_pca: Optional[int] = 50,
-    random_state_pca: Optional[float] = 0,
+    n_comps: Optional[int] = 50,
+    random_state: Optional[float] = 0,
     kwargs_pca: Optional[dict] = {},
     use_highly_variable: bool = True,
     check_values: bool = True,
@@ -177,10 +177,10 @@ def normalize_pearson_residuals_pca(
             * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
             `clip=np.Inf` for no clipping.
 
-    n_comps_pca
-        Number of principal components to compute.
-    random_state_pca
-        Change to use different initial states for the optimization.
+    n_comps
+        Number of principal components to compute for the PCA step.
+    random_state
+        Change to use different initial states for the optimization of the PCA step.
     kwargs_pca
         Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
     use_highly_variable
@@ -228,7 +228,7 @@ def normalize_pearson_residuals_pca(
     normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
-    pca(adata_pca, n_comps=n_comps_pca, random_state=random_state_pca, **kwargs_pca)
+    pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
 
     if inplace:
         norm_settings = adata_pca.uns['pearson_residuals_normalization']
