@@ -10,6 +10,9 @@ from scanpy.tests.helpers import (
     check_rep_mutation,
     check_rep_results,
     _prepare_pbmc_testdata,
+    _make_noninteger_data,
+    _test_check_values_warnings,
+    _test_value_error,
 )
 from anndata.tests.helpers import assert_equal, asarray
 
@@ -75,45 +78,29 @@ def test_normalize_pearson_residuals_inputchecks(sparsity_func, dtype):
     # depending on check_values, warnings should be raised for non-integer data
     if dtype == 'float32':
 
-        adata_noninteger = adata.copy()
-        x, y = np.nonzero(adata_noninteger.X)
-        adata_noninteger.X[x[0], y[0]] = 0.5
+        adata_noninteger = _make_noninteger_data(adata)
 
-        with warnings.catch_warnings(record=True) as record:
-            sc.experimental.pp.normalize_pearson_residuals(
-                adata_noninteger.copy(), check_values=True
-            )
-        warning_msgs = [w.message.args[0] for w in record]
-        assert (
-            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found."
-            in warning_msgs
-        )
-
-        with warnings.catch_warnings(record=True) as record:
-            sc.experimental.pp.normalize_pearson_residuals(
-                adata_noninteger.copy(), check_values=False
-            )
-        warning_msgs = [w.message.args[0] for w in record]
-        assert (
-            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found."
-            not in warning_msgs
+        _test_check_values_warnings(
+            function=sc.experimental.pp.normalize_pearson_residuals,
+            adata=adata_noninteger,
+            expected_warning="`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
         )
 
     # errors should be raised for invalid theta values
-    with pytest.raises(
-        ValueError, match='Pearson residuals require theta > 0'
-    ) as record:
-        sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=0)
-    with pytest.raises(
-        ValueError, match='Pearson residuals require theta > 0'
-    ) as record:
-        sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=-1)
+    for theta in [0, -1]:
+        _test_value_error(
+            function=sc.experimental.pp.normalize_pearson_residuals,
+            adata=adata,
+            expected_error='Pearson residuals require theta > 0',
+            kwargs=dict(theta=theta),
+        )
 
-    # error should be raised for invalid clipping values
-    with pytest.raises(
-        ValueError, match='Pearson residuals require `clip>=0` or `clip=None`.'
-    ) as record:
-        sc.experimental.pp.normalize_pearson_residuals(adata.copy(), clip=-1)
+    _test_value_error(
+        function=sc.experimental.pp.normalize_pearson_residuals,
+        adata=adata,
+        expected_error='Pearson residuals require `clip>=0` or `clip=None`.',
+        kwargs=dict(clip=-1),
+    )
 
 
 @pytest.mark.parametrize(

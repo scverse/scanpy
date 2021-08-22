@@ -4,7 +4,12 @@ import numpy as np
 import scanpy as sc
 from pathlib import Path
 from scipy.sparse import csr_matrix
-from scanpy.tests.helpers import _prepare_pbmc_testdata
+from scanpy.tests.helpers import (
+    _prepare_pbmc_testdata,
+    _make_noninteger_data,
+    _test_check_values_warnings,
+    _test_value_error,
+)
 import warnings
 
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
@@ -74,59 +79,33 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
     # depending on check_values, warnings should be raised for non-integer data
     if dtype == 'float32':
 
-        adata_noninteger = adata.copy()
-        x, y = np.nonzero(adata_noninteger.X)
-        adata_noninteger.X[x[0], y[0]] = 0.5
+        adata_noninteger = _make_noninteger_data(adata)
 
-        # expecting 0 no-int warnings
-        with warnings.catch_warnings(record=True) as record:
-            sc.experimental.pp.highly_variable_genes(
-                adata_noninteger.copy(),
+        _test_check_values_warnings(
+            function=sc.experimental.pp.highly_variable_genes,
+            adata=adata_noninteger,
+            expected_warning="`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
+            kwargs=dict(
                 flavor='pearson_residuals',
                 n_top_genes=100,
-                check_values=False,
-            )
-
-        warning_msgs = [w.message.args[0] for w in record]
-        assert (
-            "`flavor='pearson_residuals'` expects raw count data, but non-integers were found."
-            not in warning_msgs
+            ),
         )
-
-        # expecting 1 no-int warning
-        with pytest.warns(
-            UserWarning,
-            match="`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
-        ) as record:
-            sc.experimental.pp.highly_variable_genes(
-                adata_noninteger.copy(),
-                flavor='pearson_residuals',
-                n_top_genes=100,
-                check_values=True,
-            )
 
     # errors should be raised for invalid theta values
-    with pytest.raises(
-        ValueError, match='Pearson residuals require theta > 0'
-    ) as record:
-        sc.experimental.pp.highly_variable_genes(
-            adata.copy(), flavor='pearson_residuals', n_top_genes=100, theta=0
+    for theta in [0, -1]:
+        _test_value_error(
+            function=sc.experimental.pp.highly_variable_genes,
+            adata=adata,
+            expected_error='Pearson residuals require theta > 0',
+            kwargs=dict(theta=theta, flavor='pearson_residuals', n_top_genes=100),
         )
 
-    with pytest.raises(
-        ValueError, match='Pearson residuals require theta > 0'
-    ) as record:
-        sc.experimental.pp.highly_variable_genes(
-            adata.copy(), flavor='pearson_residuals', n_top_genes=100, theta=-1
-        )
-
-    # error should be raised for invalid clipping values
-    with pytest.raises(
-        ValueError, match='Pearson residuals require `clip>=0` or `clip=None`.'
-    ) as record:
-        sc.experimental.pp.highly_variable_genes(
-            adata.copy(), flavor='pearson_residuals', n_top_genes=100, clip=-1
-        )
+    _test_value_error(
+        function=sc.experimental.pp.highly_variable_genes,
+        adata=adata,
+        expected_error='Pearson residuals require `clip>=0` or `clip=None`.',
+        kwargs=dict(clip=-1, flavor='pearson_residuals', n_top_genes=100),
+    )
 
 
 @pytest.mark.parametrize(

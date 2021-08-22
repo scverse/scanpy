@@ -6,6 +6,8 @@ from itertools import permutations
 
 import scanpy as sc
 import numpy as np
+import warnings
+import pytest
 
 from anndata.tests.helpers import asarray, assert_equal
 
@@ -106,3 +108,36 @@ def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
     sc.pp.filter_genes(adata, min_cells=1)
     adata.X = sparsity_func(adata.X.astype(dtype))
     return adata
+
+
+def _make_noninteger_data(adata):
+    '''Adds a single non-integer to the data matrix, e.g. for testing `check_value` arguments.'''
+
+    adata_noninteger = adata.copy()
+    x, y = np.nonzero(adata_noninteger.X)
+    adata_noninteger.X[x[0], y[0]] = 0.5
+
+    return adata_noninteger
+
+
+def _test_check_values_warnings(function, adata, expected_warning, kwargs={}):
+    '''Runs `function` on `adata` with provided arguments `kwargs` twice: once with `check_values=True` and once with `check_values=False`. Checks that the `expected_warning` is only raised whtn `check_values=True`.'''
+
+    # expecting 0 no-int warnings
+    with warnings.catch_warnings(record=True) as record:
+        function(adata.copy(), **kwargs, check_values=False)
+    warning_msgs = [w.message.args[0] for w in record]
+    assert expected_warning not in warning_msgs
+
+    # expecting 1 no-int warning
+    with warnings.catch_warnings(record=True) as record:
+        function(adata.copy(), **kwargs, check_values=True)
+    warning_msgs = [w.message.args[0] for w in record]
+    assert expected_warning in warning_msgs
+
+
+def _test_value_error(function, adata, expected_error, kwargs={}):
+    '''Runs `function` on `adata` with provided arguments `kwargs` and checks if `error_msg` is raised as an `ValueError`.'''
+
+    with pytest.raises(ValueError, match=expected_error):
+        function(adata.copy(), **kwargs)
