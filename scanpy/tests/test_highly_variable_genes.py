@@ -68,6 +68,16 @@ def _residual_var_reference(adata, clip=None, theta=100):
     return np.var(residuals, axis=0)
 
 
+def _check_pearson_hvg_columns(output_df, n_top_genes):
+
+    assert pd.api.types.is_float_dtype(output_df['residual_variances'].dtype)
+
+    assert output_df['highly_variable'].values.dtype is np.dtype('bool')
+    assert np.sum(output_df['highly_variable']) == n_top_genes
+
+    assert np.nanmax(output_df['highly_variable_rank'].values) <= n_top_genes - 1
+
+
 @pytest.mark.parametrize(
     'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
 )
@@ -166,9 +176,7 @@ def test_highly_variable_genes_pearson_residuals_general(
     ]:
         assert key in output_df.keys()
 
-    # check residual variances
-    assert pd.api.types.is_float_dtype(output_df['residual_variances'].dtype)
-    # consistency with normalization method
+    # check consistency with normalization method
     if subset:
         # sort values before comparing as reference is sorted as well for subset case
         sort_output_idx = np.argsort(-output_df['residual_variances'].values)
@@ -182,8 +190,6 @@ def test_highly_variable_genes_pearson_residuals_general(
         )
 
     # check hvg flag
-    assert output_df['highly_variable'].values.dtype is np.dtype('bool')
-    assert np.sum(output_df['highly_variable']) == n_top_genes
     hvg_idx = np.where(output_df['highly_variable'])[0]
     topn_idx = np.sort(
         np.argsort(-output_df['residual_variances'].values)[:n_top_genes]
@@ -192,7 +198,9 @@ def test_highly_variable_genes_pearson_residuals_general(
 
     # check ranks
     assert np.nanmin(output_df['highly_variable_rank'].values) == 0
-    assert np.nanmax(output_df['highly_variable_rank'].values) <= n_top_genes - 1
+
+    # more general checks on ranks, hvg flag and residual variance
+    _check_pearson_hvg_columns(output_df, n_top_genes)
 
 
 @pytest.mark.parametrize(
@@ -200,11 +208,11 @@ def test_highly_variable_genes_pearson_residuals_general(
 )
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 @pytest.mark.parametrize('subset', [True, False])
-@pytest.mark.parametrize('n_top_genes', [1000, 500])
+@pytest.mark.parametrize('n_top_genes', [100, 200])
 def test_highly_variable_genes_pearson_residuals_batch(
     subset, n_top_genes, sparsity_func, dtype
 ):
-    adata = _prepare_pbmc_testdata(sparsity_func, dtype)
+    adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
     # cleanup var
     del adata.var
     n_genes = adata.shape[1]
@@ -227,6 +235,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
         inplace=True,
     )
 
+    # compare inplace=True and inplace=False output
     pd.testing.assert_frame_equal(output_df, adata.var)
 
     # check output is complete
@@ -241,9 +250,8 @@ def test_highly_variable_genes_pearson_residuals_batch(
     ]:
         assert key in output_df.keys()
 
-    # check hvg flag
-    assert output_df['highly_variable'].values.dtype is np.dtype('bool')
-    assert np.sum(output_df['highly_variable']) == n_top_genes
+    # general checks on ranks, hvg flag and residual variance
+    _check_pearson_hvg_columns(output_df, n_top_genes)
 
     # check intersection flag
     nbatches = len(np.unique(adata.obs['batch']))
@@ -253,7 +261,6 @@ def test_highly_variable_genes_pearson_residuals_batch(
 
     # check ranks (with batch_key these are the median of within-batch ranks)
     assert pd.api.types.is_float_dtype(output_df['highly_variable_rank'].dtype)
-    assert np.nanmax(output_df['highly_variable_rank'].values) <= n_top_genes - 1
 
     # check nbatches
     assert output_df['highly_variable_nbatches'].values.dtype is np.dtype('int')
