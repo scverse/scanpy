@@ -160,6 +160,28 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
         assert np.min(output_X) >= -clip
 
 
+def _check_pearson_pca_fields(ad, n_cells, n_comps):
+    assert np.all(
+        np.isin(
+            ['pearson_residuals_normalization', 'pca'],
+            list(ad.uns.keys()),
+        )
+    ), (
+        """Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, but only %s were found"""
+        % (list(ad.uns.keys()))
+    )
+    assert 'X_pca' in list(
+        ad.obsm.keys()
+    ), """Missing `obsm` key `'X_pca'`, only %s were found""" % (list(ad.obsm.keys()))
+    assert 'PCs' in list(
+        ad.varm.keys()
+    ), """Missing `varm` key `'PCs'`, only %s were found""" % (list(ad.varm.keys()))
+    assert ad.obsm['X_pca'].shape == (
+        n_cells,
+        n_comps,
+    ), 'Wrong shape of PCA output in `X_pca`'
+
+
 @pytest.mark.parametrize(
     'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
 )
@@ -179,15 +201,15 @@ def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps):
 
     ### inplace = False ###
     # outputs the (potentially hvg-restricted) adata_pca object
-    # PCA on all genes
+    # PCA on all genes (no HVGs present)
     adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
         adata.copy(), inplace=False, n_comps=n_comps
     )
-    # PCA on hvgs only
+    # PCA on hvgs only (HVGs present, and by default, `use_highly_variable=True`)
     adata_pca_with_hvgs = sc.experimental.pp.normalize_pearson_residuals_pca(
         adata_with_hvgs.copy(), inplace=False, n_comps=n_comps
     )
-    # PCA again on all genes (hvg use supressed)
+    # PCA again on all genes (HVGs present, but hvg use supressed by `use_highly_variable=False`)
     adata_pca_not_using_hvgs = sc.experimental.pp.normalize_pearson_residuals_pca(
         adata_not_using_hvgs.copy(),
         inplace=False,
@@ -195,17 +217,9 @@ def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps):
         use_highly_variable=False,
     )
 
-    # for both cases, check adata_pca keys are complete
+    # for all cases, check adata_pca keys are complete
     for ad in [adata_pca, adata_pca_with_hvgs, adata_pca_not_using_hvgs]:
-        assert np.all(
-            np.isin(
-                ['pearson_residuals_normalization', 'pca'],
-                list(ad.uns.keys()),
-            )
-        )
-        assert np.all(np.isin(['X_pca'], list(ad.obsm.keys())))
-        assert np.all(np.isin(['PCs'], list(ad.varm.keys())))
-        assert ad.obsm['X_pca'].shape == (n_cells, n_comps)
+        _check_pearson_pca_fields(ad, n_cells, n_comps)
 
     # check adata shape to see if all genes or only HVGs are in the returned adata
     assert adata_pca.shape == (n_cells, n_genes)
@@ -217,20 +231,20 @@ def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps):
     assert adata_pca_with_hvgs.varm['PCs'].shape == (
         n_hvgs,
         n_comps,
-    )  # only HVGs used
+    )
     assert adata_pca_not_using_hvgs.varm['PCs'].shape == (n_genes, n_comps)
 
     ### inplace = True ###
     # modifies the input adata object
-    # PCA on all genes (no HVG supplied)
+    # PCA on all genes (no HVGs present)
     sc.experimental.pp.normalize_pearson_residuals_pca(
         adata, inplace=True, n_comps=n_comps
     )
-    # PCA on hvgs only (HVGs supplied and automatically used)
+    # PCA on hvgs only (HVGs present, and by default, `use_highly_variable=True`)
     sc.experimental.pp.normalize_pearson_residuals_pca(
         adata_with_hvgs, inplace=True, n_comps=n_comps
     )
-    # PCA again on all genes (HVGs supplied and NOT used)
+    # PCA again on all genes (HVGs present, but hvg use supressed by `use_highly_variable=False`)
     sc.experimental.pp.normalize_pearson_residuals_pca(
         adata_not_using_hvgs,
         inplace=True,
@@ -238,39 +252,27 @@ def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps):
         use_highly_variable=False,
     )
 
+    # for all cases, check adata_pca keys are complete
     for ad in [adata, adata_with_hvgs, adata_not_using_hvgs]:
-        # check adata_pca keys are complete
-        assert np.all(
-            np.isin(
-                [
-                    'pearson_residuals_normalization',
-                ],
-                list(ad.uns.keys()),
-            )
-        )
-        assert np.all(np.isin(['X_pca'], list(ad.obsm.keys())))
-        # check shapes: adata should always retains original shape
+        _check_pearson_pca_fields(ad, n_cells, n_comps)
+
+        # check shapes: inplace adata's should always retains original shape
         assert ad.shape == (n_cells, n_genes)
-        assert ad.obsm['X_pca'].shape == (n_cells, n_comps)
+        assert ad.varm['PCs'].shape == (n_genes, n_comps)
 
     # check if there are columns of all-zeros in the PCs shapes
     # to see whether or not HVGs were used for PCA
-    assert adata.varm['PCs'].shape == (n_genes, n_comps)
     # no all-zero-colums should exist
     assert sum(np.sum(np.abs(adata.varm['PCs']), axis=1) == 0) == 0
-
-    assert adata_with_hvgs.varm['PCs'].shape == (n_genes, n_comps)
     # number of all-zero-colums should be number of non-hvgs
     assert (
         sum(np.sum(np.abs(adata_with_hvgs.varm['PCs']), axis=1) == 0)
         == n_genes - n_hvgs
     )
-
-    assert adata_not_using_hvgs.varm['PCs'].shape == (n_genes, n_comps)
     # no all-zero-colums should exist
     assert sum(np.sum(np.abs(adata_not_using_hvgs.varm['PCs']), axis=1) == 0) == 0
 
-    # test for inplace/outplace
+    # compare PCA results beteen inplace/outplace
     for ad_inplace, ad_outplace in zip(
         [adata_pca, adata_pca_with_hvgs, adata_pca_not_using_hvgs],
         [adata, adata_with_hvgs, adata_not_using_hvgs],
@@ -298,20 +300,11 @@ def test_normalize_pearson_residuals_recipe(sparsity_func, dtype, n_hvgs, n_comp
         adata.copy(), inplace=False, n_comps=n_comps, n_top_genes=n_hvgs
     )
 
-    # for both cases, check adata_pca keys are complete
-    assert np.all(
-        np.isin(
-            ['pearson_residuals_normalization', 'pca'],
-            list(adata_pca.uns.keys()),
-        )
-    )
-    assert np.all(np.isin(['X_pca'], list(adata_pca.obsm.keys())))
-    assert np.all(np.isin(['PCs'], list(adata_pca.varm.keys())))
-    assert adata_pca.obsm['X_pca'].shape == (n_cells, n_comps)
-
-    # check adata shape
+    # check PCA fields
+    _check_pearson_pca_fields(adata_pca, n_cells, n_comps)
+    # check adata output shape (only HVGs in output)
     assert adata_pca.shape == (n_cells, n_hvgs)
-    # check PC shapes to check that HVGs were used for PCA
+    # check PC shape (non-hvgs are removed, so only `n_hvgs` genes)
     assert adata_pca.varm['PCs'].shape == (n_hvgs, n_comps)
 
     # check hvg df
@@ -337,17 +330,11 @@ def test_normalize_pearson_residuals_recipe(sparsity_func, dtype, n_hvgs, n_comp
         adata, inplace=True, n_comps=n_comps, n_top_genes=n_hvgs
     )
 
-    assert np.all(
-        np.isin(
-            ['pearson_residuals_normalization', 'pca'],
-            list(adata.uns.keys()),
-        )
-    )
-    assert np.all(np.isin(['X_pca'], list(adata.obsm.keys())))
+    # check PCA fields and output shape
+    _check_pearson_pca_fields(adata, n_cells, n_comps)
+    # check adata shape (no change to input)
     assert adata.shape == (n_cells, n_genes)
-    assert adata.obsm['X_pca'].shape == (n_cells, n_comps)
-
-    # check PC shape
+    # check PC shape (non-hvgs are masked with 0s, so original number of genes)
     assert adata.varm['PCs'].shape == (n_genes, n_comps)
     # number of all-zero-colums should be number of non-hvgs
     assert sum(np.sum(np.abs(adata.varm['PCs']), axis=1) == 0) == n_genes - n_hvgs
