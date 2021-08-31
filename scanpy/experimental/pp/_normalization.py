@@ -57,6 +57,7 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
 
 def normalize_pearson_residuals(
     adata: AnnData,
+    *,
     theta: float = 100,
     clip: Optional[float] = None,
     check_values: bool = True,
