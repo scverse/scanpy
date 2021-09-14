@@ -46,7 +46,7 @@ def score_genes(
     score_name: str = 'score',
     random_state: AnyRandom = 0,
     copy: bool = False,
-    use_raw: bool = None,
+    use_raw: Optional[bool] = None,
 ) -> Optional[AnnData]:
     """\
     Score a set of genes [Satija15]_.
