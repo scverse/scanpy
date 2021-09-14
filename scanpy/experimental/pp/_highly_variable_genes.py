@@ -207,6 +207,7 @@ def _highly_variable_pearson_residuals(
 
 def highly_variable_genes(
     adata: AnnData,
+    *,
     theta: float = 100,
     clip: Optional[float] = None,
     n_top_genes: Optional[int] = None,
