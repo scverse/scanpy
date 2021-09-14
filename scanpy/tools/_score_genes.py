@@ -94,6 +94,7 @@ def score_genes(
     """
     start = logg.info(f'computing score {score_name!r}')
     adata = adata.copy() if copy else adata
+    use_raw = _check_use_raw(adata, use_raw)
 
     if random_state is not None:
         np.random.seed(random_state)
@@ -117,14 +118,14 @@ def score_genes(
         gene_pool = list(var_names)
     else:
         gene_pool = [x for x in gene_pool if x in var_names]
+    if not gene_pool:
+        raise ValueError("No valid genes were passed for reference set.")
 
     # Trying here to match the Seurat approach in scoring cells.
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    use_raw = _check_use_raw(adata, use_raw)
     _adata = adata.raw if use_raw else adata
-
     _adata_subset = (
         _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
     )
