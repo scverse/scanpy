@@ -121,7 +121,7 @@ References
 
 .. [Lause21] Lause *et al.* (2021)
    *Analytic Pearson residuals for normalization of single-cell RNA-seq UMI data*,
-   `BioRxiv <https://doi.org/10.1101/2020.12.01.405886>`__.
+   `Genome Biology <https://doi.org/10.1186/s13059-021-02451-7>`__.
 
 .. [Leek12] Leek *et al.* (2012),
    *sva: Surrogate Variable Analysis. R package*
