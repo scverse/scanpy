@@ -236,7 +236,7 @@ def filter_genes_dispersion(
 
 
 def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
-    """ Filter genes by coefficient of variance and mean."""
+    """Filter genes by coefficient of variance and mean."""
     return _filter_genes(X, Ecutoff, cvFilter, np.std)
 
 
