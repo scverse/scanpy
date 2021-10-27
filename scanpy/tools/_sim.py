@@ -505,7 +505,7 @@ class GRNsim:
         return Xdiff
 
     def hill_a(self, x, threshold=0.1, power=2):
-        """ Activating hill function. """
+        """Activating hill function."""
         x_pow = np.power(x, power)
         threshold_pow = np.power(threshold, power)
         return x_pow / (x_pow + threshold_pow)
@@ -520,7 +520,7 @@ class GRNsim:
         return threshold_pow / (x_pow + threshold_pow)
 
     def nhill_a(self, x, threshold=0.1, power=2, ichild=2):
-        """ Normalized activating hill function. """
+        """Normalized activating hill function."""
         x_pow = np.power(x, power)
         threshold_pow = np.power(threshold, power)
         return x_pow / (x_pow + threshold_pow) * (1 + threshold_pow)
