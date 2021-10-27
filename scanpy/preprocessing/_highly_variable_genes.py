@@ -263,7 +263,9 @@ def _highly_variable_genes_single_batch(
             ::-1
         ].sort()  # interestingly, np.argpartition is slightly slower
         if n_top_genes > dispersion_norm.size:
-            logg.info('`n_top_genes` > `dispersion_norm.size`, returning all overdispersed genes.')
+            logg.info(
+                '`n_top_genes` > `dispersion_norm.size`, returning all overdispersed genes.'
+            )
             n_top_genes = dispersion_norm.size
         disp_cut_off = dispersion_norm[n_top_genes - 1]
         gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off
