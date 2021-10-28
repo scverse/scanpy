@@ -173,7 +173,7 @@ def scrublet(
         # selection of genes following normalisation and variability filtering. So
         # we need to save the raw and subset at the same time.
 
-        adata_obs.layers['raw'] = adata_obs.X
+        adata_obs.layers['raw'] = adata_obs.X.copy()
         pp.normalize_total(adata_obs)
 
         # HVG process needs log'd data. If we're not using that downstream, then
