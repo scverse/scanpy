@@ -179,14 +179,20 @@ def scrublet(
             # selection of genes following normalisation and variability filtering. So
             # we need to save the raw and subset at the same time.
 
-            ad_obs.layers['raw'] = ad_obs.X.copy()
+            ad_obs.layers['raw'] = ad_obs.X
             pp.normalize_total(ad_obs)
 
-            # HVG process needs log'd data.
+            # HVG process needs log'd data. If we're not using that downstream, then
+            # copy logged data to new object and subset original object based on the
+            # output.
 
-            logged = pp.log1p(ad_obs, copy=True)
-            pp.highly_variable_genes(logged)
-            ad_obs = ad_obs[:, logged.var['highly_variable']]
+            if log_transform:
+                pp.log1p(ad_obs)
+                pp.highly_variable_genes(ad_obs, subset=True)
+            else:
+                logged = pp.log1p(ad_obs, copy=True)
+                _ = pp.highly_variable_genes(logged)
+                ad_obs = ad_obs[:, logged.var['highly_variable']]
 
             # Simulate the doublets based on the raw expressions from the normalised
             # and filtered object.
@@ -202,10 +208,6 @@ def scrublet(
 
             pp.normalize_total(ad_obs, target_sum=1e6)
             pp.normalize_total(ad_sim, target_sum=1e6)
-
-            if log_transform:
-                pp.log1p(ad_obs)
-                pp.log1p(ad_sim)
 
         ad_obs = _scrublet_call_doublets(
             adata_obs=ad_obs,
