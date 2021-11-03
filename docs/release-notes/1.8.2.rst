@@ -1,5 +1,9 @@
-1.8.2 :small:`the future`
-~~~~~~~~~~~~~~~~~~~~~~~~~
+1.8.2 :small:`2021-11-3`
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: Docs
+
+- Update conda installation instructions :pr:`1974` :smaller:`L Heumos`
 
 .. rubric:: Bug fixes
 
@@ -8,8 +12,6 @@
   is present in :func:`scanpy.tl.score_genes` :pr:`1999` :smaller:`M Klein`
 - Fix compatibility with UMAP 0.5.2 :pr:`2028` :smaller:`L Mcinnes`
 - Fixed non-determinism in :func:`scanpy.pl.paga` node positions :pr:`1922` :smaller:`I Virshup`
-
-.. rubric:: Performance enhancements
 
 .. rubric:: Ecosystem
 
