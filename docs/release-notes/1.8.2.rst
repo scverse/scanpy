@@ -7,6 +7,7 @@
 - Fix ``use_raw=None`` using :attr:`anndata.AnnData.var_names` if :attr:`anndata.AnnData.raw`
   is present in :func:`scanpy.tl.score_genes` :pr:`1999` :smaller:`M Klein`
 - Fix compatibility with UMAP 0.5.2 :pr:`2028` :smaller:`L Mcinnes`
+- Fixed non-determinism in :func:`scanpy.pl.paga` node positions :pr:`1922` :smaller:`I Virshup`
 
 .. rubric:: Performance enhancements
 
