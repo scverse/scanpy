@@ -1,4 +1,4 @@
-1.8.2 :small:`the future`
+1.8.3 :small:`the future`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. rubric:: Docs
