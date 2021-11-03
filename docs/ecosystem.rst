@@ -80,6 +80,9 @@ Adaptive immune receptor repertoire (AIRR)
 
     | scirpy is a scanpy extension to expore single-cell T-cell receptor (TCR) and B-cell receptor (BCR) repertoires.
 
+* `dandelion <https://github.com/zktuong/dandelion>`__ :small:`University of Cambridge`
+
+    | dandelion is a single-cell BCR-seq network analysis package that integrates with transcriptomic data analyzed via scanpy.
 
 Feature selection
 -----------------
@@ -96,3 +99,9 @@ Analyses using curated prior knowledge
 * `Cubé <https://github.com/connerlambden/Cube>`__ :small:`Harvard University`
 
     | Intuitive Nonparametric Gene Network Search Algorithm that learns from existing biological pathways & multiplicative gene interference patterns.
+
+Spatial Transcriptomics Tools
+-------------------------------
+* `PASTE <https://github.com/raphael-group/paste>`__ :small:`Princeton`
+
+    | PASTE is a computational method to align and integrate spatial transcriptomics data across adjacent tissue slices by leveraging both gene expression similarity and spatial distances between spots.
