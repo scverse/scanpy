@@ -372,10 +372,7 @@ def scrublet_score_distribution(
         simulation separately for advanced usage.
     """
 
-    threshold = None
-
-    if 'threshold' in adata.uns['scrublet']:
-        threshold = adata.uns['scrublet']['threshold']
+    threshold = adata.uns["scrublet"].get("threshold", None)
 
     fig, axs = plt.subplots(1, 2, figsize=figsize)
 
