@@ -1242,7 +1242,7 @@ def pbmc_filtered():
         ('percent_mito', 'AAAGCCTGGCTAAC-1', None, None, True),
         # test that plotting one variable from obs.index vs. another from
         # var.keys() works, regardless of use_raw
-        #('n_cells', 'AAAGCCTGGCTAAC-1', None, True, False),
+        # ('n_cells', 'AAAGCCTGGCTAAC-1', None, True, False),
         ('n_cells', 'AAAGCCTGGCTAAC-1', None, False, False),
     ],
 )
