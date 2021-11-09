@@ -122,23 +122,23 @@ def scatter(
     """
     args = locals()
     if _check_use_raw(adata, use_raw):
-        var = adata.raw.var
+        var_index = adata.raw.var.index
     else:
-        var = adata.var
+        var_index = adata.var.index
     if basis is not None:
         return _scatter_obs(**args)
     if x is None or y is None:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
     if (
-        (x in adata.obs.keys() or x in var.index)
-        and (y in adata.obs.keys() or y in var.index)
-        and (color is None or color in adata.obs.keys() or color in var.index)
+        (x in adata.obs.keys() or x in var_index)
+        and (y in adata.obs.keys() or y in var_index)
+        and (color is None or color in adata.obs.keys() or color in var_index)
     ):
         return _scatter_obs(**args)
     if (
-        (x in var.keys() or x in adata.obs.index)
-        and (y in var.keys() or y in adata.obs.index)
-        and (color is None or color in var.keys() or color in adata.obs.index)
+        (x in adata.var.keys() or x in adata.obs.index)
+        and (y in adata.var.keys() or y in adata.obs.index)
+        and (color is None or color in adata.var.keys() or color in adata.obs.index)
     ):
         adata_T = adata.T
         axs = _scatter_obs(
