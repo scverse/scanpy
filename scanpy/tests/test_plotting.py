@@ -1215,6 +1215,57 @@ def test_scatter_specify_layer_and_raw():
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
 
 
+@pytest.fixture
+def pbmc_filtered():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pp.filter_genes(pbmc, min_cells=10)
+    return pbmc
+
+
+@pytest.mark.parametrize(
+    "x,y,color,use_raw,value_error",
+    [
+        # test that plots work with var_names only found in raw if use_raw
+        # is None or True
+        ('EGFL7', 'F12', 'FAM185A', None, False),
+        ('EGFL7', 'F12', 'FAM185A', True, False),
+        # test that plotting fails with a ValueError if trying to plot
+        # var_names only found in raw and use_raw is False
+        ('EGFL7', 'F12', 'FAM185A', False, True),
+        # test that plotting one variable from var.index vs. another from
+        # obs.keys() works, regardless of use_raw
+        ('HES4', 'percent_mito', None, False, False),
+        ('HES4', 'percent_mito', None, True, False),
+        # test that plotting fails if one axis is a per-var value and the
+        # other is a per-obs value
+        ('HES4', 'n_cells', None, None, True),
+        ('percent_mito', 'AAAGCCTGGCTAAC-1', None, None, True),
+        # test that plotting one variable from obs.index vs. another from
+        # var.keys() works, regardless of use_raw
+        #('n_cells', 'AAAGCCTGGCTAAC-1', None, True, False),
+        ('n_cells', 'AAAGCCTGGCTAAC-1', None, False, False),
+    ],
+)
+def test_scatter_no_basis(
+    image_comparer, pbmc_filtered, x, y, color, use_raw, value_error
+):
+    """Test that scatter plots vars in raw if `use_raw in [None, True]`
+
+    If `sc.pl.scatter()` receives labels of vars that are only in raw, and
+    `use_raw in [None, True]`, it should be able to successfully make a
+    scatterplot of them. If `use_raw=False`, it should not be able to make
+    a scatterplot.
+    """
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+
+    if value_error:
+        with pytest.raises(ValueError):
+            sc.pl.scatter(pbmc_filtered, x=x, y=y, color=color, use_raw=use_raw)
+    else:
+        sc.pl.scatter(pbmc_filtered, x=x, y=y, color=color, use_raw=use_raw)
+        save_and_compare_images(f'scatter_{x}.vs.{y}_color.{color}_raw{use_raw}')
+
+
 def test_rankings(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
