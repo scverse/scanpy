@@ -30,7 +30,7 @@ authors = [
 ]
 maintainers = [
     {name = "Isaac Virshup", email = "ivirshup@gmail.com"},
-    {name = "Philipp Angerer", email = "philipp.angerer@helmholtz-muenchen.de"},
+    {name = "Philipp Angerer", email = "phil.angerer@gmail.com"},
     {name = "Alex Wolf", email = "f.alex.wolf@gmx.de"},
 ]
 readme = {file = "README.rst", content-type="text/x-rst"}
