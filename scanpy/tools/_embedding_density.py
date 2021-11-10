@@ -12,7 +12,7 @@ from .._utils import sanitize_anndata
 
 def _calc_density(x: np.ndarray, y: np.ndarray):
     """\
-    Function to calculate the density of cells in an embedding.
+    Calculates the density of points in 2 dimensions.
     """
     from scipy.stats import gaussian_kde
 
@@ -43,11 +43,14 @@ def embedding_density(
     Gaussian kernel density estimation is used to calculate the density of
     cells in an embedded space. This can be performed per category over a
     categorical cell annotation. The cell density can be plotted using the
-    `sc.pl.embedding_density()` function.
+    `pl.embedding_density` function.
 
     Note that density values are scaled to be between 0 and 1. Thus, the
-    density value at each cell is only comparable to other densities in
-    the same condition category.
+    density value at each cell is only comparable to densities in
+    the same category.
+
+    Beware that the KDE estimate used (`scipy.stats.gaussian_kde`) becomes
+    unreliable if you don't have enough cells in a category.
 
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
@@ -60,9 +63,8 @@ def embedding_density(
         The embedding over which the density will be calculated. This embedded
         representation should be found in `adata.obsm['X_[basis]']``.
     groupby
-        Keys for categorical observation/cell annotation for which densities
-        are calculated per category. Columns with up to ten categories are
-        accepted.
+        Key for categorical observation/cell annotation for which densities
+        are calculated per category.
     key_added
         Name of the `.obs` covariate that will be added with the density
         estimates.
@@ -74,7 +76,7 @@ def embedding_density(
     -------
     Updates `adata.obs` with an additional field specified by the `key_added`
     parameter. This parameter defaults to `[basis]_density_[groupby]`, where
-    where `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa`
+    `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa`
     and `[groupby]` denotes the parameter input.
     Updates `adata.uns` with an additional field `[key_added]_params`.
 
@@ -140,10 +142,7 @@ def embedding_density(
             raise ValueError(f'Could not find {groupby!r} `.obs` column.')
 
         if adata.obs[groupby].dtype.name != 'category':
-            raise ValueError(f'{groupby!r} column does not contain Categorical data')
-
-        if len(adata.obs[groupby].cat.categories) > 10:
-            raise ValueError(f'More than 10 categories in {groupby!r} column.')
+            raise ValueError(f'{groupby!r} column does not contain categorical data')
 
     # Define new covariate name
     if key_added is not None:
