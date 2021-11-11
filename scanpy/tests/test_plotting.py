@@ -1225,10 +1225,6 @@ def pbmc_filtered():
 @pytest.mark.parametrize(
     "x,y,color,use_raw",
     [
-        # test that plots work with var_names only found in raw if use_raw
-        # is None or True
-        ('EGFL7', 'F12', 'FAM185A', None),
-        ('EGFL7', 'F12', 'FAM185A', True),
         # test that plotting one variable from var.index vs. another from
         # obs.keys() works, regardless of use_raw
         ('HES4', 'percent_mito', None, False),
@@ -1239,10 +1235,8 @@ def pbmc_filtered():
         ('n_cells', 'AAAGCCTGGCTAAC-1', None, False),
     ],
 )
-def test_scatter_no_basis(
-    image_comparer, pbmc_filtered, x, y, color, use_raw
-):
-    """Test scatter plots with no basis
+def test_scatter_no_basis(image_comparer, pbmc_filtered, x, y, color, use_raw):
+    """Test scatterplots with no basis
 
     Sometimes the axes of a scatterplot should correspond to `obs` or
     `var` variables instead of a basis. This tests that this works in
@@ -1253,6 +1247,29 @@ def test_scatter_no_basis(
 
     sc.pl.scatter(pbmc_filtered, x=x, y=y, color=color, use_raw=use_raw)
     save_and_compare_images(f'scatter_{x}.vs.{y}_color.{color}_raw{use_raw}')
+
+
+def test_scatter_no_basis_raw(check_same_image, pbmc_filtered):
+    """Test scatterplots of raw layer with no basis."""
+    path1 = FIGS / "scatter_EGFL7_F12_FAM185A_rawNone.png"
+    path2 = FIGS / "scatter_EGFL7_F12_FAM185A_rawTrue.png"
+    path3 = FIGS / "scatter_EGFL7_F12_FAM185A_rawToAdata.png"
+
+    sc.pl.scatter(pbmc_filtered, x='EGFL7', y='F12', color='FAM185A', use_raw=None)
+    plt.savefig(path1)
+    plt.close()
+
+    # is equivalent to:
+    sc.pl.scatter(pbmc_filtered, x='EGFL7', y='F12', color='FAM185A', use_raw=True)
+    plt.savefig(path2)
+    plt.close()
+
+    check_same_image(path1, path2, tol=15)
+
+    # and also to:
+    sc.pl.scatter(pbmc_filtered.raw.to_adata(), x='EGFL7', y='F12', color='FAM185A')
+    plt.savefig(path3)
+    check_same_image(path1, path2, tol=15)
 
 
 @pytest.mark.parametrize(
