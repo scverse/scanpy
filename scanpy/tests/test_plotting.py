@@ -1223,47 +1223,60 @@ def pbmc_filtered():
 
 
 @pytest.mark.parametrize(
-    "x,y,color,use_raw,value_error",
+    "x,y,color,use_raw",
     [
         # test that plots work with var_names only found in raw if use_raw
         # is None or True
-        ('EGFL7', 'F12', 'FAM185A', None, False),
-        ('EGFL7', 'F12', 'FAM185A', True, False),
-        # test that plotting fails with a ValueError if trying to plot
-        # var_names only found in raw and use_raw is False
-        ('EGFL7', 'F12', 'FAM185A', False, True),
+        ('EGFL7', 'F12', 'FAM185A', None),
+        ('EGFL7', 'F12', 'FAM185A', True),
         # test that plotting one variable from var.index vs. another from
         # obs.keys() works, regardless of use_raw
-        ('HES4', 'percent_mito', None, False, False),
-        ('HES4', 'percent_mito', None, True, False),
-        # test that plotting fails if one axis is a per-var value and the
-        # other is a per-obs value
-        ('HES4', 'n_cells', None, None, True),
-        ('percent_mito', 'AAAGCCTGGCTAAC-1', None, None, True),
+        ('HES4', 'percent_mito', None, False),
+        ('HES4', 'percent_mito', None, True),
         # test that plotting one variable from obs.index vs. another from
         # var.keys() works, regardless of use_raw
-        # ('n_cells', 'AAAGCCTGGCTAAC-1', None, True, False),
-        ('n_cells', 'AAAGCCTGGCTAAC-1', None, False, False),
+        # ('n_cells', 'AAAGCCTGGCTAAC-1', None, True),
+        ('n_cells', 'AAAGCCTGGCTAAC-1', None, False),
     ],
 )
 def test_scatter_no_basis(
-    image_comparer, pbmc_filtered, x, y, color, use_raw, value_error
+    image_comparer, pbmc_filtered, x, y, color, use_raw
 ):
-    """Test that scatter plots vars in raw if `use_raw in [None, True]`
+    """Test scatter plots with no basis
 
-    If `sc.pl.scatter()` receives labels of vars that are only in raw, and
-    `use_raw in [None, True]`, it should be able to successfully make a
-    scatterplot of them. If `use_raw=False`, it should not be able to make
-    a scatterplot.
+    Sometimes the axes of a scatterplot should correspond to `obs` or
+    `var` variables instead of a basis. This tests that this works in
+    various use cases, including with the different possible values of
+    `use_raw`.
     """
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    if value_error:
-        with pytest.raises(ValueError):
-            sc.pl.scatter(pbmc_filtered, x=x, y=y, color=color, use_raw=use_raw)
-    else:
+    sc.pl.scatter(pbmc_filtered, x=x, y=y, color=color, use_raw=use_raw)
+    save_and_compare_images(f'scatter_{x}.vs.{y}_color.{color}_raw{use_raw}')
+
+
+@pytest.mark.parametrize(
+    "x,y,color,use_raw",
+    [
+        # test that plotting fails with a ValueError if trying to plot
+        # var_names only found in raw and use_raw is False
+        ('EGFL7', 'F12', 'FAM185A', False),
+        # test that plotting fails if one axis is a per-var value and the
+        # other is a per-obs value
+        ('HES4', 'n_cells', None, None),
+        ('percent_mito', 'AAAGCCTGGCTAAC-1', None, None),
+    ],
+)
+def test_scatter_no_basis_value_error(pbmc_filtered, x, y, color, use_raw):
+    """Test that `scatter()` raises `ValueError` where appropriate
+
+    If `sc.pl.scatter()` receives variable labels that either cannot be
+    found or are incompatible with one another, the function should
+    raise a `ValueError`. This test checks that this happens as
+    expected.
+    """
+    with pytest.raises(ValueError):
         sc.pl.scatter(pbmc_filtered, x=x, y=y, color=color, use_raw=use_raw)
-        save_and_compare_images(f'scatter_{x}.vs.{y}_color.{color}_raw{use_raw}')
 
 
 def test_rankings(image_comparer):
