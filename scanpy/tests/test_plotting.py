@@ -1215,38 +1215,27 @@ def test_scatter_specify_layer_and_raw():
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
 
 
+def test_scatter_no_basis_per_obs(image_comparer):
+    """Test scatterplot of per-obs points with no basis"""
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pl.scatter(pbmc, x="HES4", y="percent_mito", color="n_genes", use_raw=False)
+    save_and_compare_images("scatter_HES_percent_mito_n_genes")
+
+
+def test_scatter_no_basis_per_var(image_comparer):
+    """Test scatterplot of per-var points with no basis"""
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pl.scatter(pbmc, x="AAAGCCTGGCTAAC-1", y="AAATTCGATGCACA-1", use_raw=False)
+    save_and_compare_images("scatter_AAAGCCTGGCTAAC-1_vs_AAATTCGATGCACA-1")
+
+
 @pytest.fixture
 def pbmc_filtered():
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.pp.filter_genes(pbmc, min_cells=10)
     return pbmc
-
-
-@pytest.mark.parametrize(
-    "x,y,color,use_raw",
-    [
-        # test that plotting one variable from var.index vs. another from
-        # obs.keys() works, regardless of use_raw
-        ('HES4', 'percent_mito', None, False),
-        ('HES4', 'percent_mito', None, True),
-        # test that plotting one variable from obs.index vs. another from
-        # var.keys() works, regardless of use_raw
-        # ('n_cells', 'AAAGCCTGGCTAAC-1', None, True),
-        ('n_cells', 'AAAGCCTGGCTAAC-1', None, False),
-    ],
-)
-def test_scatter_no_basis(image_comparer, pbmc_filtered, x, y, color, use_raw):
-    """Test scatterplots with no basis
-
-    Sometimes the axes of a scatterplot should correspond to `obs` or
-    `var` variables instead of a basis. This tests that this works in
-    various use cases, including with the different possible values of
-    `use_raw`.
-    """
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-
-    sc.pl.scatter(pbmc_filtered, x=x, y=y, color=color, use_raw=use_raw)
-    save_and_compare_images(f'scatter_{x}.vs.{y}_color.{color}_raw{use_raw}')
 
 
 def test_scatter_no_basis_raw(check_same_image, pbmc_filtered):
