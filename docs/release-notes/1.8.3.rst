@@ -5,7 +5,8 @@
 
 .. rubric:: Bug fixes
 
-- Fixed finding variables with ``use_raw=True`` in :func:`sc.pl.scatter(..., basis=None)` :pr:`2027`
+- Fixed finding variables with ``use_raw=True`` and ``basis=None`` in
+  :func:`scanpy.pl.scatter` :pr:`2027` :small:`I Virshup`
 
 .. rubric:: Performance
 
