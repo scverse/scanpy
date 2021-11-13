@@ -1238,11 +1238,11 @@ def pbmc_filtered():
     return pbmc
 
 
-def test_scatter_no_basis_raw(check_same_image, pbmc_filtered):
+def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmpdir):
     """Test scatterplots of raw layer with no basis."""
-    path1 = FIGS / "scatter_EGFL7_F12_FAM185A_rawNone.png"
-    path2 = FIGS / "scatter_EGFL7_F12_FAM185A_rawTrue.png"
-    path3 = FIGS / "scatter_EGFL7_F12_FAM185A_rawToAdata.png"
+    path1 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawNone.png"
+    path2 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawTrue.png"
+    path3 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawToAdata.png"
 
     sc.pl.scatter(pbmc_filtered, x='EGFL7', y='F12', color='FAM185A', use_raw=None)
     plt.savefig(path1)
