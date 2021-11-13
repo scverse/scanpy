@@ -1253,11 +1253,11 @@ def test_scatter_no_basis_raw(check_same_image, pbmc_filtered):
     plt.savefig(path2)
     plt.close()
 
-    check_same_image(path1, path2, tol=15)
-
     # and also to:
     sc.pl.scatter(pbmc_filtered.raw.to_adata(), x='EGFL7', y='F12', color='FAM185A')
     plt.savefig(path3)
+    
+    check_same_image(path1, path2, tol=15)
     check_same_image(path1, path3, tol=15)
 
 
