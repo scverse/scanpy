@@ -5,6 +5,8 @@
 
 .. rubric:: Bug fixes
 
+- Fixed finding variables with ``use_raw=True`` in :func:`sc.pl.scatter(..., basis=None)` :pr:`2027`
+
 .. rubric:: Performance
 
 .. rubric:: Ecosystem
