@@ -38,7 +38,6 @@ def test_scrublet_data():
     """
     pytest.importorskip("scrublet")
 
-    adata = sc.datasets.pbmc3k()
     random_state = 1234
 
     # Run Scrublet and let the main function run simulations
