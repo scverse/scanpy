@@ -151,7 +151,7 @@ class DotPlot(BasePlot):
             vmax=vmax,
             vcenter=vcenter,
             norm=norm,
-            groupby_expand = groupby_expand,
+            groupby_expand=groupby_expand,
             **kwds,
         )
 
@@ -170,8 +170,13 @@ class DotPlot(BasePlot):
         if dot_size_df is None:
             if self.groupby_expand:
                 dot_size_df = (
-                    obs_bool.groupby(level=[0, 1]).sum() / obs_bool.groupby(level=[0, 1]).count()
-                ).unstack(level=-1, fill_value=0).fillna(0)
+                    (
+                        obs_bool.groupby(level=[0, 1]).sum()
+                        / obs_bool.groupby(level=[0, 1]).count()
+                    )
+                    .unstack(level=-1, fill_value=0)
+                    .fillna(0)
+                )
                 dot_size_df.columns = dot_size_df.columns.droplevel()
             else:
                 dot_size_df = (
@@ -183,8 +188,15 @@ class DotPlot(BasePlot):
             if mean_only_expressed:
                 if self.groupby_expand:
                     dot_color_df = (
-                    self.obs_tidy.mask(~obs_bool).groupby(level=[0, 1]).mean().fillna(0)
-                ).unstack(level=-1, fill_value=0).fillna(0)
+                        (
+                            self.obs_tidy.mask(~obs_bool)
+                            .groupby(level=[0, 1])
+                            .mean()
+                            .fillna(0)
+                        )
+                        .unstack(level=-1, fill_value=0)
+                        .fillna(0)
+                    )
                     dot_color_df.columns = dot_color_df.columns.droplevel()
                 else:
                     dot_color_df = (
@@ -192,7 +204,12 @@ class DotPlot(BasePlot):
                     )
             else:
                 if self.groupby_expand:
-                    dot_color_df = self.obs_tidy.groupby(level=[0, 1]).mean().unstack(level=-1, fill_value=0).fillna(0)
+                    dot_color_df = (
+                        self.obs_tidy.groupby(level=[0, 1])
+                        .mean()
+                        .unstack(level=-1, fill_value=0)
+                        .fillna(0)
+                    )
                     dot_color_df.columns = dot_color_df.columns.droplevel()
                 else:
                     dot_color_df = self.obs_tidy.groupby(level=0).mean()
