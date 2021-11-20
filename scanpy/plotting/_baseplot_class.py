@@ -19,6 +19,8 @@ from .._compat import Literal
 from ._utils import make_grid_spec, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
+from .. get.get import obs_df
+from .. _utils import sanitize_anndata, _doc_params, _check_use_raw
 
 _VarNames = Union[str, Sequence[str]]
 
@@ -92,6 +94,7 @@ class BasePlot(object):
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
         norm: Optional[Normalize] = None,
+        groupby_expand: bool = False,
         **kwds,
     ):
         self.var_names = var_names
@@ -107,7 +110,7 @@ class BasePlot(object):
         )
 
         self._update_var_groups()
-
+        
         self.categories, self.obs_tidy = _prepare_dataframe(
             adata,
             self.var_names,
@@ -171,6 +174,22 @@ class BasePlot(object):
         self.fig = None
         self.ax_dict = None
         self.ax = ax
+        
+        self.groupby_expand = groupby_expand
+        if self.groupby_expand:
+            if len(self.var_names) != 1 or len(self.groupby) != 2:
+                logg.error("only one gene / category in var_names and two categories in groupby can be entered when groupby_expand = True")
+                return
+            sanitize_anndata(adata)
+            use_raw = _check_use_raw(adata, use_raw)
+            self.obs_tidy = obs_df(
+                adata = adata,
+                keys = self.var_names + self.groupby,
+                use_raw = use_raw,
+                layer = layer,
+                gene_symbols = gene_symbols
+            ).set_index(groupby)
+            self.categories = self.obs_tidy.index.get_level_values(level=0).categories
 
     def swap_axes(self, swap_axes: Optional[bool] = True):
         """
@@ -540,7 +559,9 @@ class BasePlot(object):
     def _mainplot(self, ax):
         y_labels = self.categories
         x_labels = self.var_names
-
+        if self.groupby_expand:
+            x_labels = self.obs_tidy.index.get_level_values(level=1).categories
+            
         if self.var_names_idx_order is not None:
             x_labels = [x_labels[x] for x in self.var_names_idx_order]
 
@@ -551,7 +572,10 @@ class BasePlot(object):
             x_labels, y_labels = y_labels, x_labels
             ax.set_xlabel(self.groupby)
         else:
-            ax.set_ylabel(self.groupby)
+            if self.groupby_expand:
+                ax.set_ylabel(self.groupby[0])
+            else:
+                ax.set_ylabel(self.groupby)
 
         y_ticks = np.arange(len(y_labels)) + 0.5
         ax.set_yticks(y_ticks)
@@ -604,9 +628,16 @@ class BasePlot(object):
 
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
-            mainplot_width = (
+            
+            if self.groupby_expand:
+                mainplot_width = (
+                len(self.obs_tidy.index.get_level_values(level=1).categories) * category_width + self.group_extra_size
+            )
+            else:
+                mainplot_width = (
                 len(self.var_names) * category_width + self.group_extra_size
             )
+            
             if self.are_axes_swapped:
                 mainplot_height, mainplot_width = mainplot_width, mainplot_height
 

@@ -127,6 +127,7 @@ class DotPlot(BasePlot):
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
         norm: Optional[Normalize] = None,
+        groupby_expand: Optional[bool] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -150,6 +151,7 @@ class DotPlot(BasePlot):
             vmax=vmax,
             vcenter=vcenter,
             norm=norm,
+            groupby_expand = groupby_expand,
             **kwds,
         )
 
@@ -159,24 +161,41 @@ class DotPlot(BasePlot):
 
         # 1. compute fraction of cells having value > expression_cutoff
         # transform obs_tidy into boolean matrix using the expression_cutoff
+
         obs_bool = self.obs_tidy > expression_cutoff
 
         # compute the sum per group which in the boolean matrix this is the number
         # of values >expression_cutoff, and divide the result by the total number of
         # values in the group (given by `count()`)
         if dot_size_df is None:
-            dot_size_df = (
-                obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
-            )
+            if self.groupby_expand:
+                dot_size_df = (
+                    obs_bool.groupby(level=[0, 1]).sum() / obs_bool.groupby(level=[0, 1]).count()
+                ).unstack(level=-1, fill_value=0).fillna(0)
+                dot_size_df.columns = dot_size_df.columns.droplevel()
+            else:
+                dot_size_df = (
+                    obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+                )
 
         if dot_color_df is None:
             # 2. compute mean expression value value
             if mean_only_expressed:
-                dot_color_df = (
-                    self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
-                )
+                if self.groupby_expand:
+                    dot_color_df = (
+                    self.obs_tidy.mask(~obs_bool).groupby(level=[0, 1]).mean().fillna(0)
+                ).unstack(level=-1, fill_value=0).fillna(0)
+                    dot_color_df.columns = dot_color_df.columns.droplevel()
+                else:
+                    dot_color_df = (
+                        self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+                    )
             else:
-                dot_color_df = self.obs_tidy.groupby(level=0).mean()
+                if self.groupby_expand:
+                    dot_color_df = self.obs_tidy.groupby(level=[0, 1]).mean().unstack(level=-1, fill_value=0).fillna(0)
+                    dot_color_df.columns = dot_color_df.columns.droplevel()
+                else:
+                    dot_color_df = self.obs_tidy.groupby(level=0).mean()
 
             if standard_scale == 'group':
                 dot_color_df = dot_color_df.sub(dot_color_df.min(1), axis=0)
@@ -830,6 +849,7 @@ def dotplot(
     vmax: Optional[float] = None,
     vcenter: Optional[float] = None,
     norm: Optional[Normalize] = None,
+    groupby_expand: Optional[bool] = None,
     **kwds,
 ) -> Union[DotPlot, dict, None]:
     """\
@@ -962,6 +982,7 @@ def dotplot(
         vmax=vmax,
         vcenter=vcenter,
         norm=norm,
+        groupby_expand=groupby_expand,
         **kwds,
     )
 
