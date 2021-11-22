@@ -127,19 +127,6 @@ class BasePlot(object):
                 "Plot would be very large."
             )
 
-        if categories_order is not None:
-            if set(self.obs_tidy.index.categories) != set(categories_order):
-                logg.error(
-                    "Please check that the categories given by "
-                    "the `order` parameter match the categories that "
-                    "want to be reordered.\n\n"
-                    "Mismatch: "
-                    f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
-                    f"Given order categories: {categories_order}\n\n"
-                    f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
-                )
-                return
-
         self.adata = adata
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.log = log
@@ -192,6 +179,36 @@ class BasePlot(object):
                 gene_symbols=gene_symbols,
             ).set_index(groupby)
             self.categories = self.obs_tidy.index.get_level_values(level=0).categories
+
+        if categories_order is not None:
+            if self.groupby_expand:
+                if set(self.obs_tidy.index.get_level_values(0).categories) != set(
+                    categories_order
+                ) and set(self.obs_tidy.index.get_level_values(1).categories) != set(
+                    categories_order
+                ):
+                    logg.error(
+                        "Please check that the categories given by "
+                        "the `order` parameter match the categories that "
+                        "want to be reordered.\n\n"
+                        "Mismatch: \n\n"
+                        f"{set(self.obs_tidy.index.get_level_values(0).categories).difference(categories_order)}\n\n"
+                        f"Given order categories: {categories_order}\n\n"
+                        f"{groupby[0]} categories: {list(self.obs_tidy.index.get_level_values(0).categories)}\n"
+                    )
+                    return
+            else:
+                if set(self.obs_tidy.index.categories) != set(categories_order):
+                    logg.error(
+                        "Please check that the categories given by "
+                        "the `order` parameter match the categories that "
+                        "want to be reordered.\n\n"
+                        "Mismatch: "
+                        f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
+                        f"Given order categories: {categories_order}\n\n"
+                        f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
+                    )
+                    return
 
     def swap_axes(self, swap_axes: Optional[bool] = True):
         """

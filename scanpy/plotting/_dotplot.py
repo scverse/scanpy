@@ -914,6 +914,8 @@ def dotplot(
     smallest_dot
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
+    groupby_expand
+        If True, dotplot will use variables in groupby as x and y axis.
     {show_save_ax}
     {vminmax}
     kwds
@@ -960,6 +962,12 @@ def dotplot(
 
         dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
         dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
+
+    .. plot::
+        :context: close-figs
+
+        adata.obs['sampleid'] = np.repeat(['s1', 's2'], adata.obs.shape[0]/2)
+        sc.pl.dotplot(adata, var_names='C1QA', groupby=['louvain', 'sampleid'], groupby_expand=True)
 
     The axes used can be obtained using the get_axes() method
 
