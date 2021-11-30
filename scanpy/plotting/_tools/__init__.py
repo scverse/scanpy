@@ -92,6 +92,7 @@ def pca_loadings(
     adata: AnnData,
     components: Union[str, Sequence[int], None] = None,
     include_lowest: bool = True,
+    n_points=30,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -143,6 +144,7 @@ def pca_loadings(
         adata,
         'varm',
         'PCs',
+        n_points=n_points,
         indices=components,
         include_lowest=include_lowest,
     )
