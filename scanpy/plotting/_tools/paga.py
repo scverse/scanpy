@@ -414,7 +414,7 @@ def paga(
     cax
         A matplotlib axes object for a potential colorbar.
     cb_kwds
-        Keyword arguments for :class:`~matplotlib.colorbar.ColorbarBase`,
+        Keyword arguments for :class:`~matplotlib.colorbar.Colorbar`,
         for instance, `ticks`.
     add_pos
         Add the positions to `adata.uns['paga']`.
