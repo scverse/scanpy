@@ -507,7 +507,7 @@ class BasePlot(object):
         cmap = pl.get_cmap(self.cmap)
         import matplotlib.colorbar
 
-        matplotlib.colorbar.ColorbarBase(
+        matplotlib.colorbar.Colorbar(
             color_legend_ax, orientation='horizontal', cmap=cmap, norm=normalize
         )
 

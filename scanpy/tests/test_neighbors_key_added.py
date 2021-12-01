@@ -52,12 +52,6 @@ def test_neighbors_key_obsp(adata, field):
     assert adata.uns['leiden']['params'] == adata1.uns['leiden']['params']
     assert np.all(adata.obs['leiden'] == adata1.obs['leiden'])
 
-    sc.tl.louvain(adata, random_state=0)
-    sc.tl.louvain(adata1, random_state=0, **arg)
-
-    assert adata.uns['louvain']['params'] == adata1.uns['louvain']['params']
-    assert np.all(adata.obs['louvain'] == adata1.obs['louvain'])
-
     # no obsp in umap, paga
     if field == 'neighbors_key':
         sc.tl.umap(adata, random_state=0)
@@ -77,3 +71,23 @@ def test_neighbors_key_obsp(adata, field):
             adata.uns['paga']['connectivities_tree'].toarray(),
             adata1.uns['paga']['connectivities_tree'].toarray(),
         )
+
+
+@pytest.mark.parametrize('field', ['neighbors_key', 'obsp'])
+def test_neighbors_key_obsp_louvain(adata, field):
+    pytest.importorskip("louvain")
+    adata1 = adata.copy()
+
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)
+    sc.pp.neighbors(adata1, n_neighbors=n_neighbors, random_state=0, key_added=key)
+
+    if field == 'neighbors_key':
+        arg = {field: key}
+    else:
+        arg = {field: adata1.uns[key]['connectivities_key']}
+
+    sc.tl.louvain(adata, random_state=0)
+    sc.tl.louvain(adata1, random_state=0, **arg)
+
+    assert adata.uns['louvain']['params'] == adata1.uns['louvain']['params']
+    assert np.all(adata.obs['louvain'] == adata1.obs['louvain'])
