@@ -51,7 +51,6 @@ requires = [
     'scipy>=1.4',
     'seaborn',
     'h5py>=2.10.0',
-    'tables',
     'tqdm',
     'scikit-learn>=0.22',
     'statsmodels>=0.10.0rc2',
