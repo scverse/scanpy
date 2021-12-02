@@ -37,7 +37,7 @@ To work with the latest version `on GitHub`_: clone the repository and `cd` into
     gh repo clone theislab/scanpy
     cd scanpy
 
-If you are using `pip>=21.3`, `scanpy` can be installed with::
+If you are using `pip>=21.3`, an editable install can be made::
 
     pip install -e ".[dev,doc,test]"
 
@@ -63,6 +63,8 @@ if you are not able to give yourself the `create symbolic links`_ privilege.
 
 .. _create symbolic links: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
 .. _flit: https://flit.readthedocs.io/en/latest/
+
+For instructions on how to work with the code, see the :ref:`contributing guide <contribution-guide>`.
 
 Docker
 ~~~~~~
