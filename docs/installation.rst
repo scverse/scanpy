@@ -30,9 +30,19 @@ parts of scanpy but aren't requirements: python-igraph_ [Csardi06]_ and leiden_ 
 
 Development Version
 ~~~~~~~~~~~~~~~~~~~
-To work with the latest version `on GitHub`_: clone the repository and `cd` into
-its root directory. To install using symbolic links (stay up to date with your
-cloned version after you update with `git pull`) call::
+To work with the latest version `on GitHub`_: clone the repository and `cd` into its root directory.
+
+.. code::
+
+    gh repo clone theislab/scanpy
+    cd scanpy
+
+If you are using `pip>=21.3`, `scanpy` can be installed with::
+
+    pip install -e ".[dev,doc,test]"
+
+For older versions of `pip`, `flit`_ can be used directly.
+To install using symbolic links (stay up to date with your cloned version after you update with `git pull`) call::
 
     flit install -s --deps=develop  # from an activated venv or conda env
     # or
@@ -52,10 +62,7 @@ On Windows, you might have to use `flit install --pth-file`
 if you are not able to give yourself the `create symbolic links`_ privilege.
 
 .. _create symbolic links: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
-
-.. note::
-
-    `pip install -e` still works, but may not in future versions.
+.. _flit: https://flit.readthedocs.io/en/latest/
 
 Docker
 ~~~~~~
