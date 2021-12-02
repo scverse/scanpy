@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 from matplotlib.testing import setup
+import pytest
 
 setup()
 
@@ -39,6 +40,9 @@ def test_paga_paul15_subsampled(image_comparer, plt):
     sc.tl.draw_graph(adata)
 
     sc.pl.draw_graph(adata, color='paul15_clusters', legend_loc='on data')
+
+    # TODO: skip if louvain isn't installed, needs major rework
+    pytest.importorskip("louvain")
 
     # Clustering and PAGA
     sc.tl.louvain(adata, resolution=1.0)
