@@ -4,11 +4,15 @@ Installation
 Anaconda
 ~~~~~~~~
 If you do not have a working installation of Python 3.6 (or later), consider
-installing Miniconda_ (see `Installing Miniconda`_). Then run::
+installing Miniconda_ (see `Installing Miniconda`_). Then run:
+
+.. code:: shell
 
     conda install -c conda-forge scanpy python-igraph leidenalg
 
-Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pip3`` to access Python 3)::
+Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pip3`` to access Python 3):
+
+.. code:: shell
 
     pip install scanpy
 
@@ -16,7 +20,9 @@ Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pi
 
 PyPI only
 ~~~~~~~~~
-If you prefer to exclusively use PyPI run::
+If you prefer to exclusively use PyPI run:
+
+.. code:: shell
 
     pip install 'scanpy[leiden]'
 
@@ -30,9 +36,23 @@ parts of scanpy but aren't requirements: python-igraph_ [Csardi06]_ and leiden_ 
 
 Development Version
 ~~~~~~~~~~~~~~~~~~~
-To work with the latest version `on GitHub`_: clone the repository and `cd` into
-its root directory. To install using symbolic links (stay up to date with your
-cloned version after you update with `git pull`) call::
+To work with the latest version `on GitHub`_: clone the repository and `cd` into its root directory.
+
+.. code:: shell
+
+   gh repo clone theislab/scanpy
+   cd scanpy
+
+If you are using `pip>=21.3`, an editable install can be made:
+
+.. code:: shell
+
+   pip install -e '.[dev,doc,test]'
+
+For older versions of `pip`, flit_ can be used directly.
+To install using symbolic links (stay up to date with your cloned version after you update with `git pull`) call:
+
+.. code:: shell
 
     flit install -s --deps=develop  # from an activated venv or conda env
     # or
@@ -40,7 +60,9 @@ cloned version after you update with `git pull`) call::
 
 .. _on GitHub: https://github.com/theislab/scanpy
 
-If you want to let conda_ handle the installations of dependencies, do::
+If you want to let conda_ handle the installations of dependencies, do:
+
+.. code:: shell
 
     pip install beni
     beni pyproject.toml > environment.yml
@@ -52,10 +74,9 @@ On Windows, you might have to use `flit install --pth-file`
 if you are not able to give yourself the `create symbolic links`_ privilege.
 
 .. _create symbolic links: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
+.. _flit: https://flit.readthedocs.io/en/latest/
 
-.. note::
-
-    `pip install -e` still works, but may not in future versions.
+For instructions on how to work with the code, see the :ref:`contributing guide <contribution-guide>`.
 
 Docker
 ~~~~~~
@@ -67,7 +88,9 @@ If you're using Docker_, you can use e.g. the image `gcfntnu/scanpy`_ from Docke
 
 Troubleshooting
 ~~~~~~~~~~~~~~~
-If you get a `Permission denied` error, never use `sudo pip`. Instead, use virtual environments or::
+If you get a `Permission denied` error, never use `sudo pip`. Instead, use virtual environments or:
+
+.. code:: shell
 
     pip install --user scanpy
 
@@ -76,7 +99,9 @@ If you get a `Permission denied` error, never use `sudo pip`. Instead, use virtu
 - `brew install igraph`
 - If python-igraph still fails to install, see the question on `compiling igraph`_.
   Alternatively consider installing gcc via `brew install gcc --without-multilib`
-  and exporting the required variables::
+  and exporting the required variables:
+
+  .. code:: shell
 
       export CC="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"
       export CXX="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"
