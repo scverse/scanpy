@@ -6,7 +6,6 @@ from anndata.tests.helpers import assert_equal
 import pandas as pd
 import anndata as ad
 from scanpy.get import _get_obs_rep
-import scrublet as sl
 import numpy as np
 import scanpy.preprocessing as pp
 import scipy.sparse as sparse
