@@ -7,6 +7,8 @@
 
 - Fixed finding variables with ``use_raw=True`` and ``basis=None`` in
   :func:`scanpy.pl.scatter` :pr:`2027` :small:`E Rice`
+- Fixed :func:`scanpy.external.pp.scrublet` to address :issue:`1957`
+  :smaller:`FlMai` and ensure raw counts are used for simulation
 
 .. rubric:: Performance
 
