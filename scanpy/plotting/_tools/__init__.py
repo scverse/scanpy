@@ -92,7 +92,6 @@ def pca_loadings(
     adata: AnnData,
     components: Union[str, Sequence[int], None] = None,
     include_lowest: bool = True,
-    n_points: Union[int, None] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -140,17 +139,10 @@ def pca_loadings(
     if np.any(components < 0):
         logg.error("Component indices must be greater than zero.")
         return
-    if n_points is None and adata.n_vars < 30:
-        n_points = adata.n_vars
-    elif n_points is None:
-        n_points = 30
-    else:
-        n_points = min(n_points, adata.n_vars)
     ranking(
         adata,
         'varm',
         'PCs',
-        n_points=n_points,
         indices=components,
         include_lowest=include_lowest,
     )
