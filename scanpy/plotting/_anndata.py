@@ -595,9 +595,13 @@ def ranking(
             pl.text(ig, score[g], labels[g], **txt_args)
         if include_lowest:
             score_mid = (score[g] + score[neg_indices[0]]) / 2
-            pl.text(len(indices), score_mid, '⋮', **txt_args)
-            for ig, g in enumerate(neg_indices):
-                pl.text(ig + len(indices) + 2, score[g], labels[g], **txt_args)
+            if (len(indices) + len(neg_indices)) < len(order_scores):
+                pl.text(len(indices), score_mid, '⋮', **txt_args)
+                for ig, g in enumerate(neg_indices):
+                    pl.text(ig + len(indices) + 2, score[g], labels[g], **txt_args)
+            else:
+                for ig, g in enumerate(neg_indices):
+                    pl.text(ig + len(indices), score[g], labels[g], **txt_args)
             pl.xticks([])
         pl.title(keys[iscore].replace('_', ' '))
         if n_panels <= 5 or iscore > n_cols:
