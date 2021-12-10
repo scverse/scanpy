@@ -110,6 +110,8 @@ def pca_loadings(
         Show the genes with both highest and lowest loadings.
     show
         Show the plot, do not return axis.
+    n_points
+        Number of points to plot.
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
