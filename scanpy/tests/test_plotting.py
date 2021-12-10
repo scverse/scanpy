@@ -1305,6 +1305,7 @@ def test_rankings(image_comparer):
     sc.pl.pca_loadings(pbmc, n_points=10)
     save_and_compare_images('master_pca_loadings_10_points')
 
+
 # TODO: Make more generic
 def test_scatter_rep(tmpdir):
     """
