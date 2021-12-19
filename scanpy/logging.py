@@ -160,31 +160,49 @@ def print_header(*, file=None):
     )
 
 
+def _run_session_info(rich: bool) -> Optional[IPython.display.HTML]:
+    return session_info.show(
+        dependencies=True,
+        html=rich,
+        excludes=[
+            'builtins',
+            'stdlib_list',
+            'importlib_metadata',
+            # Special module present if test coverage being calculated
+            # https://gitlab.com/joelostblom/session_info/-/issues/10
+            "$coverage",
+        ],
+    )
+
+
 def print_versions(*, file: Optional[IO[str]] = None, rich: Optional[bool] = None):
-    """Print print versions of imported packages"""
+    """\
+    Print print versions of imported packages.
+
+    Parameters
+    ----------
+    file
+        File to write output to. The default `None` means writing to `stdout`
+    rich
+        Rich HTML output. Defaults to `True` only if `file` is `None`
+        and this is called from a jupyter notebook.
+    """
     in_notebook = 'jupyter_core' in sys.modules
-    # don’t write HTML to file except if rich=True is set manually
+    # don’t write HTML to file unless rich=True is set manually
     if rich is None:
         rich = in_notebook and file is not None
 
-    stdout = sys.stdout
-    try:
-        buf = sys.stdout = io.StringIO()
-        session_info.show(
-            dependencies=True,
-            html=rich,
-            excludes=[
-                'builtins',
-                'stdlib_list',
-                'importlib_metadata',
-                # Special module present if test coverage being calculated
-                # https://gitlab.com/joelostblom/session_info/-/issues/10
-                "$coverage",
-            ],
-        )
-    finally:
-        sys.stdout = stdout
-    output = buf.getvalue()
+    output: str
+    if rich:
+        output = _run_session_info(True).data
+    else:
+        stdout = sys.stdout
+        try:
+            buf = sys.stdout = io.StringIO()
+            _run_session_info(False)
+        finally:
+            sys.stdout = stdout
+        output = buf.getvalue()
 
     if rich and file is None:
         IPython.display.display_html(output, raw=True)
