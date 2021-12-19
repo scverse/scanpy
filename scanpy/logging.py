@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import anndata.logging
-from sinfo import sinfo
+import session_info
 
 
 HINT = (INFO + DEBUG) // 2
@@ -166,14 +166,14 @@ def print_versions(*, file=None):
     stdout = sys.stdout
     try:
         buf = sys.stdout = io.StringIO()
-        sinfo(
+        session_info.show(
             dependencies=True,
             excludes=[
                 'builtins',
                 'stdlib_list',
                 'importlib_metadata',
                 # Special module present if test coverage being calculated
-                # https://gitlab.com/joelostblom/sinfo/-/issues/10
+                # https://gitlab.com/joelostblom/session_info/-/issues/10
                 "$coverage",
             ],
         )
