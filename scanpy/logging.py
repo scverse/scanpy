@@ -6,11 +6,16 @@ import sys
 from functools import update_wrapper, partial
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 from datetime import datetime, timedelta, timezone
-from typing import Optional, IO
+from typing import Optional, IO, TYPE_CHECKING
 
-import IPython.display
 import anndata.logging
 import session_info
+
+
+if TYPE_CHECKING:
+    from IPython.display import HTML
+else:
+    HTML = object
 
 
 HINT = (INFO + DEBUG) // 2
@@ -160,7 +165,7 @@ def print_header(*, file=None):
     )
 
 
-def _run_session_info(rich: bool) -> Optional[IPython.display.HTML]:
+def _run_session_info(rich: bool) -> Optional[HTML]:
     return session_info.show(
         dependencies=True,
         html=rich,
@@ -205,6 +210,8 @@ def print_versions(*, file: Optional[IO[str]] = None, rich: Optional[bool] = Non
         output = buf.getvalue()
 
     if rich and file is None:
+        import IPython.display
+
         IPython.display.display_html(output, raw=True)
     else:
         print(output, file=file)
