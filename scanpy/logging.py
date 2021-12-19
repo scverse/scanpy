@@ -190,7 +190,7 @@ def print_versions(*, file: Optional[IO[str]] = None, rich: Optional[bool] = Non
     in_notebook = 'jupyter_core' in sys.modules
     # don’t write HTML to file unless rich=True is set manually
     if rich is None:
-        rich = in_notebook and file is not None
+        rich = in_notebook and file is None
 
     output: str
     if rich:
