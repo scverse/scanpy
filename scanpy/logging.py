@@ -6,8 +6,9 @@ import sys
 from functools import update_wrapper, partial
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, IO
 
+import IPython.display
 import anndata.logging
 import session_info
 
@@ -159,15 +160,19 @@ def print_header(*, file=None):
     )
 
 
-def print_versions(*, file=None):
+def print_versions(*, file: Optional[IO[str]] = None, rich: Optional[bool] = None):
     """Print print versions of imported packages"""
-    if file is None:  # Inform people about the behavior change
-        warning('If you miss a compact list, please try `print_header`!')
+    in_notebook = 'jupyter_core' in sys.modules
+    # don’t write HTML to file except if rich=True is set manually
+    if rich is None:
+        rich = in_notebook and file is not None
+
     stdout = sys.stdout
     try:
         buf = sys.stdout = io.StringIO()
         session_info.show(
             dependencies=True,
+            html=rich,
             excludes=[
                 'builtins',
                 'stdlib_list',
@@ -180,7 +185,11 @@ def print_versions(*, file=None):
     finally:
         sys.stdout = stdout
     output = buf.getvalue()
-    print(output, file=file)
+
+    if rich and file is None:
+        IPython.display.display_html(output, raw=True)
+    else:
+        print(output, file=file)
 
 
 def print_version_and_date(*, file=None):
