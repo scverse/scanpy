@@ -182,7 +182,7 @@ def _run_session_info(rich: bool) -> Optional[HTML]:
 
 def print_versions(*, file: Optional[IO[str]] = None, rich: Optional[bool] = None):
     """\
-    Print print versions of imported packages.
+    Print versions of imported packages, OS, and jupyter environment.
 
     Parameters
     ----------
