@@ -163,7 +163,6 @@ class BasePlot(object):
         self.ax_dict = None
         self.ax = ax
 
-        
         if self.col_groups:
             sanitize_anndata(adata)
             use_raw = _check_use_raw(adata, use_raw)
@@ -175,7 +174,9 @@ class BasePlot(object):
                 gene_symbols=gene_symbols,
             ).set_index(self.groupby + self.col_groups)
             if len(self.groupby) == 1:
-                self.categories = self.obs_tidy.index.get_level_values(level=self.groupby[0]).categories
+                self.categories = self.obs_tidy.index.get_level_values(
+                    level=self.groupby[0]
+                ).categories
             else:
                 pass
 
@@ -646,7 +647,13 @@ class BasePlot(object):
 
             if self.col_groups:
                 mainplot_width = (
-                    len(self.obs_tidy.reset_index().loc[:, self.col_groups].apply('_'.join, axis=1).unique()) * len(self.var_names)
+                    len(
+                        self.obs_tidy.reset_index()
+                        .loc[:, self.col_groups]
+                        .apply('_'.join, axis=1)
+                        .unique()
+                    )
+                    * len(self.var_names)
                     * category_width
                     + self.group_extra_size
                 )

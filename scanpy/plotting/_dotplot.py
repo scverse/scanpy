@@ -195,7 +195,13 @@ class DotPlot(BasePlot):
             else:
                 dot_color_df = self.obs_tidy
             if self.col_groups:
-                dot_color_df = dot_color_df.groupby(self.groupby + self.col_groups).mean().fillna(0).unstack(level=self.col_groups, fill_value=0).fillna(0)
+                dot_color_df = (
+                    dot_color_df.groupby(self.groupby + self.col_groups)
+                    .mean()
+                    .fillna(0)
+                    .unstack(level=self.col_groups, fill_value=0)
+                    .fillna(0)
+                )
                 if len(self.var_names) == 1:
                     dot_color_df.columns = dot_color_df.columns.droplevel()
                 if type(dot_color_df.columns) is pd.core.indexes.multi.MultiIndex:
@@ -960,7 +966,6 @@ def dotplot(
         pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
         pbmc.obs["sampleid"] = np.repeat(["s1", "s2"], pbmc.n_obs / 2)
         pbmc.obs["condition"] = np.tile(["c1", "c2"], int(pbmc.n_obs / 2))
-        
         ## plot one gene, one column group variable
         sc.pl.dotplot(pbmc, var_names='C1QA', groupby='louvain', col_groups='sampleid')
         ## plot two genes, one column group variable

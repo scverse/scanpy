@@ -144,7 +144,11 @@ class MatrixPlot(BasePlot):
         if values_df is None:
             # compute mean value
             if self.col_groups:
-                values_df = self.obs_tidy.groupby(self.groupby + self.col_groups).mean().unstack(level=self.col_groups, fill_value=0)
+                values_df = (
+                    self.obs_tidy.groupby(self.groupby + self.col_groups)
+                    .mean()
+                    .unstack(level=self.col_groups, fill_value=0)
+                )
                 if len(self.var_names) == 1:
                     values_df.columns = values_df.columns.droplevel()
                 if type(values_df.columns) is pd.core.indexes.multi.MultiIndex:
