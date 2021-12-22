@@ -127,7 +127,7 @@ class DotPlot(BasePlot):
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
         norm: Optional[Normalize] = None,
-        groupby_expand: Optional[bool] = None,
+        col_groups: Optional[Union[str, Sequence[str]]] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -151,7 +151,7 @@ class DotPlot(BasePlot):
             vmax=vmax,
             vcenter=vcenter,
             norm=norm,
-            groupby_expand=groupby_expand,
+            col_groups=col_groups,
             **kwds,
         )
 
@@ -168,16 +168,21 @@ class DotPlot(BasePlot):
         # of values >expression_cutoff, and divide the result by the total number of
         # values in the group (given by `count()`)
         if dot_size_df is None:
-            if self.groupby_expand:
+            if self.col_groups:
                 dot_size_df = (
                     (
-                        obs_bool.groupby(level=[0, 1]).sum()
-                        / obs_bool.groupby(level=[0, 1]).count()
+                        obs_bool.groupby(level=self.groupby + self.col_groups).sum()
+                        / obs_bool.groupby(level=self.groupby + self.col_groups).count()
                     )
-                    .unstack(level=-1, fill_value=0)
+                    .unstack(level=self.col_groups, fill_value=0)
                     .fillna(0)
                 )
-                dot_size_df.columns = dot_size_df.columns.droplevel()
+                if len(self.var_names) == 1:
+                    dot_size_df.columns = dot_size_df.columns.droplevel()
+                if type(dot_size_df.columns) is pd.core.indexes.multi.MultiIndex:
+                    dot_size_df.columns = dot_size_df.columns.map('_'.join)
+                if type(dot_size_df.index) is pd.core.indexes.multi.MultiIndex:
+                    dot_size_df.index = dot_size_df.index.map('_'.join)
             else:
                 dot_size_df = (
                     obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
@@ -186,33 +191,19 @@ class DotPlot(BasePlot):
         if dot_color_df is None:
             # 2. compute mean expression value value
             if mean_only_expressed:
-                if self.groupby_expand:
-                    dot_color_df = (
-                        (
-                            self.obs_tidy.mask(~obs_bool)
-                            .groupby(level=[0, 1])
-                            .mean()
-                            .fillna(0)
-                        )
-                        .unstack(level=-1, fill_value=0)
-                        .fillna(0)
-                    )
-                    dot_color_df.columns = dot_color_df.columns.droplevel()
-                else:
-                    dot_color_df = (
-                        self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
-                    )
+                dot_color_df = self.obs_tidy.mask(~obs_bool)
             else:
-                if self.groupby_expand:
-                    dot_color_df = (
-                        self.obs_tidy.groupby(level=[0, 1])
-                        .mean()
-                        .unstack(level=-1, fill_value=0)
-                        .fillna(0)
-                    )
+                dot_color_df = self.obs_tidy
+            if self.col_groups:
+                dot_color_df = dot_color_df.groupby(self.groupby + self.col_groups).mean().fillna(0).unstack(level=self.col_groups, fill_value=0).fillna(0)
+                if len(self.var_names) == 1:
                     dot_color_df.columns = dot_color_df.columns.droplevel()
-                else:
-                    dot_color_df = self.obs_tidy.groupby(level=0).mean()
+                if type(dot_color_df.columns) is pd.core.indexes.multi.MultiIndex:
+                    dot_color_df.columns = dot_color_df.columns.map('_'.join)
+                if type(dot_color_df.index) is pd.core.indexes.multi.MultiIndex:
+                    dot_color_df.index = dot_color_df.index.map('_'.join)
+            else:
+                dot_color_df = dot_color_df.groupby(level=0).mean().fillna(0)
 
             if standard_scale == 'group':
                 dot_color_df = dot_color_df.sub(dot_color_df.min(1), axis=0)
@@ -866,7 +857,7 @@ def dotplot(
     vmax: Optional[float] = None,
     vcenter: Optional[float] = None,
     norm: Optional[Normalize] = None,
-    groupby_expand: Optional[bool] = None,
+    col_groups: Optional[Union[str, Sequence[str]]] = None,
     **kwds,
 ) -> Union[DotPlot, dict, None]:
     """\
@@ -914,8 +905,8 @@ def dotplot(
     smallest_dot
         If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
-    groupby_expand
-        If True, dotplot will use variables in groupby as x and y axis.
+    col_groups
+        If given, dotplot will use this variables or combo of variables as the x axis.
     {show_save_ax}
     {vminmax}
     kwds
@@ -966,8 +957,18 @@ def dotplot(
     .. plot::
         :context: close-figs
 
-        adata.obs['sampleid'] = np.repeat(['s1', 's2'], adata.obs.shape[0]/2)
-        sc.pl.dotplot(adata, var_names='C1QA', groupby=['louvain', 'sampleid'], groupby_expand=True)
+        pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
+        pbmc.obs["sampleid"] = np.repeat(["s1", "s2"], pbmc.n_obs / 2)
+        pbmc.obs["condition"] = np.tile(["c1", "c2"], int(pbmc.n_obs / 2))
+        
+        ## plot one gene, one column group variable
+        sc.pl.dotplot(pbmc, var_names='C1QA', groupby='louvain', col_groups='sampleid')
+        ## plot two genes, one column group variable
+        sc.pl.dotplot(pbmc, var_names=['C1QA', 'CD19'], groupby='louvain', col_groups='sampleid')
+        ## plot two genes, tow column group variable
+        sc.pl.dotplot(pbmc, var_names=['C1QA', 'CD19'], groupby='louvain', col_groups=['sampleid', 'condition'])
+        ## or we could use the varaibles on y axis
+        sc.pl.dotplot(pbmc, var_names=['C1QA', 'CD19'], groupby=['sampleid', 'condition'], col_groups='louvain')
 
     The axes used can be obtained using the get_axes() method
 
@@ -1007,7 +1008,7 @@ def dotplot(
         vmax=vmax,
         vcenter=vcenter,
         norm=norm,
-        groupby_expand=groupby_expand,
+        col_groups=col_groups,
         **kwds,
     )
 

@@ -94,7 +94,7 @@ class BasePlot(object):
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
         norm: Optional[Normalize] = None,
-        groupby_expand: bool = False,
+        col_groups: Optional[Union[str, Sequence[str]]] = None,
         **kwds,
     ):
         self.var_names = var_names
@@ -129,6 +129,7 @@ class BasePlot(object):
 
         self.adata = adata
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
+        self.col_groups = [col_groups] if isinstance(col_groups, str) else col_groups
         self.log = log
         self.kwds = kwds
 
@@ -162,26 +163,24 @@ class BasePlot(object):
         self.ax_dict = None
         self.ax = ax
 
-        self.groupby_expand = groupby_expand
-        if self.groupby_expand:
-            if len(self.var_names) != 1 or len(self.groupby) != 2:
-                logg.error(
-                    "only one gene / category in var_names and two categories in groupby can be entered when groupby_expand = True"
-                )
-                return
+        
+        if self.col_groups:
             sanitize_anndata(adata)
             use_raw = _check_use_raw(adata, use_raw)
             self.obs_tidy = obs_df(
                 adata=adata,
-                keys=self.var_names + self.groupby,
+                keys=self.var_names + self.groupby + self.col_groups,
                 use_raw=use_raw,
                 layer=layer,
                 gene_symbols=gene_symbols,
-            ).set_index(groupby)
-            self.categories = self.obs_tidy.index.get_level_values(level=0).categories
+            ).set_index(self.groupby + self.col_groups)
+            if len(self.groupby) == 1:
+                self.categories = self.obs_tidy.index.get_level_values(level=self.groupby[0]).categories
+            else:
+                pass
 
         if categories_order is not None:
-            if self.groupby_expand:
+            if self.col_groups:
                 if set(self.obs_tidy.index.get_level_values(0).categories) != set(
                     categories_order
                 ) and set(self.obs_tidy.index.get_level_values(1).categories) != set(
@@ -578,7 +577,7 @@ class BasePlot(object):
     def _mainplot(self, ax):
         y_labels = self.categories
         x_labels = self.var_names
-        if self.groupby_expand:
+        if self.col_groups:
             x_labels = self.obs_tidy.index.get_level_values(level=1).categories
 
         if self.var_names_idx_order is not None:
@@ -591,10 +590,7 @@ class BasePlot(object):
             x_labels, y_labels = y_labels, x_labels
             ax.set_xlabel(self.groupby)
         else:
-            if self.groupby_expand:
-                ax.set_ylabel(self.groupby[0])
-            else:
-                ax.set_ylabel(self.groupby)
+            ax.set_ylabel(self.groupby)
 
         y_ticks = np.arange(len(y_labels)) + 0.5
         ax.set_yticks(y_ticks)
@@ -648,9 +644,9 @@ class BasePlot(object):
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
 
-            if self.groupby_expand:
+            if self.col_groups:
                 mainplot_width = (
-                    len(self.obs_tidy.index.get_level_values(level=1).categories)
+                    len(self.obs_tidy.reset_index().loc[:, self.col_groups].apply('_'.join, axis=1).unique()) * len(self.var_names)
                     * category_width
                     + self.group_extra_size
                 )
