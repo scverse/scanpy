@@ -514,7 +514,7 @@ def highly_variable_genes(
             df['highly_variable'] = high_var.astype(bool)
             df = df.loc[adata.var_names, :]
         else:
-            df = df.loc[adata.var_names, :]
+            df = df.loc[adata.var_names]
             dispersion_norm = df.dispersions_norm.values
             dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
             gene_subset = np.logical_and.reduce(
