@@ -8,6 +8,7 @@ from scanpy.preprocessing import pca
 
 def recipe_pearson_residuals(
     adata: AnnData,
+    *,
     theta: float = 100,
     clip: Optional[float] = None,
     n_top_genes: int = 1000,
@@ -57,7 +58,6 @@ def recipe_pearson_residuals(
         This dertermines how many genes are processed at once while computing
         the Pearson residual variance. Choosing a smaller value will reduce
         the required memory.
-
     n_comps
         Number of principal components to compute in the PCA step.
     random_state

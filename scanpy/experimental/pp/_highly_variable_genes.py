@@ -80,17 +80,14 @@ def _highly_variable_pearson_residuals(
     residual_gene_vars = []
     for batch in np.unique(batch_info):
 
-        adata_subset = adata[batch_info == batch]
+        adata_subset_prefilter = adata[batch_info == batch]
+        X_batch_prefilter = _get_obs_rep(adata_subset_prefilter, layer=layer)
 
         # Filter out zero genes
         with settings.verbosity.override(Verbosity.error):
-            nonzero_genes = filter_genes(adata_subset, min_cells=1, inplace=False)[0]
-        adata_subset = adata_subset[:, nonzero_genes]
-
-        if layer is not None:
-            X_batch = adata_subset.layers[layer]
-        else:
-            X_batch = adata_subset.X
+            nonzero_genes = np.ravel(X_batch_prefilter.sum(axis=0)) != 0
+        adata_subset = adata_subset_prefilter[:, nonzero_genes]
+        X_batch = _get_obs_rep(adata_subset, layer=layer)
 
         # Prepare clipping
         if clip is None:
@@ -161,9 +158,9 @@ def _highly_variable_pearson_residuals(
         inplace=True,
     )
 
-    high_var = np.zeros(df.shape[0])
+    high_var = np.zeros(df.shape[0], dtype=bool)
     high_var[:n_top_genes] = True
-    df['highly_variable'] = high_var.astype(bool)
+    df['highly_variable'] = high_var
     df = df.loc[adata.var_names, :]
 
     if inplace:

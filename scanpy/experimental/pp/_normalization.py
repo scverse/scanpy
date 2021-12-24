@@ -141,6 +141,7 @@ def normalize_pearson_residuals(
 
 def normalize_pearson_residuals_pca(
     adata: AnnData,
+    *,
     theta: float = 100,
     clip: Optional[float] = None,
     n_comps: Optional[int] = 50,
@@ -224,7 +225,8 @@ def normalize_pearson_residuals_pca(
     # check if HVG selection is there if user wants to use it
     if use_highly_variable and 'highly_variable' not in adata.var_keys():
         raise ValueError(
-            'You passed `use_highly_variable=True`, but no HVG selection was found (`highly_variable` missing in `adata.var_keys()`.'
+            "You passed `use_highly_variable=True`, but no HVG selection was found "
+            "(e.g., there was no 'highly_variable' column in adata.var).'"
         )
 
     # default behavior: if there is a HVG selection, we will use it
