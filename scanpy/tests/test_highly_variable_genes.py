@@ -6,9 +6,7 @@ from pathlib import Path
 from scipy.sparse import csr_matrix
 from scanpy.tests.helpers import (
     _prepare_pbmc_testdata,
-    _make_noninteger_data,
-    _test_check_values_warnings,
-    _test_value_error,
+    _check_check_values_warnings,
 )
 import warnings
 
@@ -62,12 +60,6 @@ def test_highly_variable_genes_basic():
     assert np.all(np.isin(colnames, hvg_df.columns))
 
 
-def _residual_var_reference(adata, clip=None, theta=100):
-    sc.experimental.pp.normalize_pearson_residuals(adata, clip=clip, theta=theta)
-    residuals = adata.X
-    return np.var(residuals, axis=0)
-
-
 def _check_pearson_hvg_columns(output_df, n_top_genes):
 
     assert pd.api.types.is_float_dtype(output_df['residual_variances'].dtype)
@@ -89,9 +81,11 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
     # depending on check_values, warnings should be raised for non-integer data
     if dtype == 'float32':
 
-        adata_noninteger = _make_noninteger_data(adata)
+        adata_noninteger = adata.copy()
+        x, y = np.nonzero(adata_noninteger.X)
+        adata_noninteger.X[x[0], y[0]] = 0.5
 
-        _test_check_values_warnings(
+        _check_check_values_warnings(
             function=sc.experimental.pp.highly_variable_genes,
             adata=adata_noninteger,
             expected_warning="`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
@@ -103,19 +97,18 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
 
     # errors should be raised for invalid theta values
     for theta in [0, -1]:
-        _test_value_error(
-            function=sc.experimental.pp.highly_variable_genes,
-            adata=adata,
-            expected_error='Pearson residuals require theta > 0',
-            kwargs=dict(theta=theta, flavor='pearson_residuals', n_top_genes=100),
-        )
 
-    _test_value_error(
-        function=sc.experimental.pp.highly_variable_genes,
-        adata=adata,
-        expected_error='Pearson residuals require `clip>=0` or `clip=None`.',
-        kwargs=dict(clip=-1, flavor='pearson_residuals', n_top_genes=100),
-    )
+        with pytest.raises(ValueError, match='Pearson residuals require theta > 0'):
+            sc.experimental.pp.highly_variable_genes(
+                adata.copy(), theta=theta, flavor='pearson_residuals', n_top_genes=100
+            )
+
+    with pytest.raises(
+        ValueError, match='Pearson residuals require `clip>=0` or `clip=None`.'
+    ):
+        sc.experimental.pp.highly_variable_genes(
+            adata.copy(), clip=-1, flavor='pearson_residuals', n_top_genes=100
+        )
 
 
 @pytest.mark.parametrize(
@@ -132,10 +125,13 @@ def test_highly_variable_genes_pearson_residuals_general(
     adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
     # cleanup var
     del adata.var
+
     # compute reference output
-    residual_variances_reference = _residual_var_reference(
-        adata.copy(), clip=clip, theta=theta
-    )
+    residuals_reference = sc.experimental.pp.normalize_pearson_residuals(
+        adata, clip=clip, theta=theta, inplace=False
+    )['X']
+    residual_variances_reference = np.var(residuals_reference, axis=0)
+
     if subset:
         # lazyly sort by residual variance and take top N
         top_n_idx = np.argsort(-residual_variances_reference)[:n_top_genes]

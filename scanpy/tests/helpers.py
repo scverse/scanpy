@@ -99,7 +99,13 @@ def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
     small
         False (default) returns full data, True returns small subset of the data."""
 
-    adata = sc.datasets.pbmc3k()
+    # loading from disk takes long, so cache raw data after loading it once
+    if 'ADATA_PBMC_RAW' not in globals():
+        global ADATA_PBMC_RAW
+        ADATA_PBMC_RAW = sc.datasets.pbmc3k()
+
+    adata = ADATA_PBMC_RAW.copy()
+
     if small:
         adata = adata[:1000, :500]
         sc.pp.filter_cells(adata, min_genes=1)
@@ -110,17 +116,7 @@ def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
     return adata
 
 
-def _make_noninteger_data(adata):
-    '''Adds a single non-integer to the data matrix, e.g. for testing `check_value` arguments.'''
-
-    adata_noninteger = adata.copy()
-    x, y = np.nonzero(adata_noninteger.X)
-    adata_noninteger.X[x[0], y[0]] = 0.5
-
-    return adata_noninteger
-
-
-def _test_check_values_warnings(function, adata, expected_warning, kwargs={}):
+def _check_check_values_warnings(function, adata, expected_warning, kwargs={}):
     '''Runs `function` on `adata` with provided arguments `kwargs` twice: once with `check_values=True` and once with `check_values=False`. Checks that the `expected_warning` is only raised whtn `check_values=True`.'''
 
     # expecting 0 no-int warnings
@@ -134,10 +130,3 @@ def _test_check_values_warnings(function, adata, expected_warning, kwargs={}):
         function(adata.copy(), **kwargs, check_values=True)
     warning_msgs = [w.message.args[0] for w in record]
     assert expected_warning in warning_msgs
-
-
-def _test_value_error(function, adata, expected_error, kwargs={}):
-    '''Runs `function` on `adata` with provided arguments `kwargs` and checks if `error_msg` is raised as an `ValueError`.'''
-
-    with pytest.raises(ValueError, match=expected_error):
-        function(adata.copy(), **kwargs)
