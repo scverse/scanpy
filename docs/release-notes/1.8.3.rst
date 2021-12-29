@@ -5,10 +5,9 @@
 
 .. rubric:: Bug fixes
 
-- Fixed finding variables with ``use_raw=True`` and ``basis=None`` in
-  :func:`scanpy.pl.scatter` :pr:`2027` :small:`E Rice`
-- Fixed :func:`scanpy.external.pp.scrublet` to address :issue:`1957`
-  :smaller:`FlMai` and ensure raw counts are used for simulation
+- Fixed finding variables with ``use_raw=True`` and ``basis=None`` in :func:`scanpy.pl.scatter` :pr:`2027` :small:`E Rice`
+- Fixed :func:`scanpy.external.pp.scrublet` to address :issue:`1957` :smaller:`FlMai` and ensure raw counts are used for simulation
+- Functions in :mod:`scanpy.datasets` no longer throw `OldFormatWarnings` when using `anndata` `0.8` :pr:`2096` :small:`I Virshup`
 
 .. rubric:: Performance
 
