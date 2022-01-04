@@ -103,7 +103,7 @@ test = [
 doc = [
     "sphinx>=4.1,<4.2",
     "sphinx-rtd-theme>=0.3.1",
-    "sphinx-autodoc-typehints",
+    "sphinx-autodoc-typehints==1.12.0",
     "scanpydoc>=0.7.3",
     "typing_extensions; python_version < '3.8'",  # for `Literal`
     "python-igraph",
