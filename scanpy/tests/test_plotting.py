@@ -1503,7 +1503,7 @@ def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
 
 
 def test_scrublet_plots(image_comparer, plt):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=26)
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
 
     adata = sc.datasets.pbmc3k()
     sc.external.pp.scrublet(adata, use_approx_neighbors=False)
