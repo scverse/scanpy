@@ -522,10 +522,12 @@ def test_violin_without_raw(tmpdir):
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc_no_raw = pbmc.raw.to_adata().copy()
 
+    np.random.seed(42)  # Set seed for jitter
     sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", show=False)
     plt.savefig(has_raw_pth)
     plt.close()
 
+    np.random.seed(42)  # Set seed for jitter
     sc.pl.violin(pbmc_no_raw, 'CST3', groupby="bulk_labels", show=False)
     plt.savefig(no_raw_pth)
     plt.close()
