@@ -470,9 +470,6 @@ def test_multiple_plots(image_comparer):
 def test_violin(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=40)
 
-    sc.pl.set_rcParams_defaults()
-    sc.set_figure_params(dpi=50, color_map='viridis')
-
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.pl.violin(
         pbmc,
