@@ -1,16 +1,14 @@
 from functools import partial
 from itertools import repeat, chain
-import re
-from scanpy import datasets
 
 import numpy as np
-from numpy.core.fromnumeric import trace
 import pandas as pd
 import pytest
 from anndata import AnnData
 from scipy import sparse
 
 import scanpy as sc
+from scanpy.datasets._utils import filter_oldformatwarning
 
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
@@ -175,6 +173,7 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
+@filter_oldformatwarning
 def test_backed_vs_memory():
     "compares backed vs. memory"
     from pathlib import Path
