@@ -42,7 +42,7 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install pytest-cov wheel
+      pip install pytest-cov pytest-azurepipelines wheel
       pip install .[dev,test,leiden,magic,harmony,scrublet,scanorama,skmisc]
     displayName: 'Install dependencies'
 
