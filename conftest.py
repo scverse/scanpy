@@ -1,12 +1,12 @@
 import pytest
 
-# In case pytest-nunit is not installed, defines a dummy fixture
+# In case pytest-azurepipelines is not installed, defines a dummy fixture
 try:
-    import pytest_nunit
+    import pytest_azurepipelines
 except ModuleNotFoundError:
 
     @pytest.fixture
-    def add_nunit_attachment(request):
+    def add_pipelines_attachment(request):
         def noop(file, description):
             pass
 

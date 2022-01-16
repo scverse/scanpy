@@ -50,7 +50,7 @@ def imported_modules():
 
 
 @pytest.fixture
-def check_same_image(add_nunit_attachment):
+def check_same_image(add_pipelines_attachment):
     def _(pth1, pth2, *, tol: int, basename: str = ""):
         def fmt_descr(descr):
             if basename != "":
@@ -64,10 +64,10 @@ def check_same_image(add_nunit_attachment):
             assert result is None, result
         except Exception as e:
             diff_pth = make_test_filename(pth2, 'failed-diff')
-            add_nunit_attachment(str(pth1), fmt_descr("Expected"))
-            add_nunit_attachment(str(pth2), fmt_descr("Result"))
+            add_pipelines_attachment(str(pth1), fmt_descr("Expected"))
+            add_pipelines_attachment(str(pth2), fmt_descr("Result"))
             if Path(diff_pth).is_file():
-                add_nunit_attachment(str(diff_pth), fmt_descr("Difference"))
+                add_pipelines_attachment(str(diff_pth), fmt_descr("Difference"))
             raise e
 
     return _

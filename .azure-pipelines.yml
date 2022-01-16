@@ -56,28 +56,14 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
-      pytest --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml"
+      pytest --color=yes --ignore=scanpy/tests/_images --no-coverage-upload
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')
 
   - script: |
-      pytest --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml" --cov=scanpy --cov-report=xml
+      pytest --color=yes --ignore=scanpy/tests/_images --cov=scanpy --cov-report=xml
     displayName: 'PyTest (coverage)'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
-
-  - task: PublishCodeCoverageResults@1
-    inputs:
-      codeCoverageTool: Cobertura
-      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
-      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
-    condition: eq(variables['RUN_COVERAGE'], 'yes')
-
-  - task: PublishTestResults@2
-    condition: succeededOrFailed()
-    inputs:
-      testResultsFiles: 'nunit/test-results.xml'
-      testResultsFormat: NUnit
-      testRunTitle: 'Publish test results for Python $(python.version)'
 
   - script: bash <(curl -s https://codecov.io/bash)
     displayName: 'Upload to codecov.io'
