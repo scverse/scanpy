@@ -436,7 +436,7 @@ def scrublet_score_distribution(
 
         if threshold is not None:
             obs_ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
-        
+
         obs_ax.set_title('Observed transcriptomes%s' % axis_lab_suffix)
         obs_ax.set_xlabel('Doublet score')
         obs_ax.set_ylabel('Prob. density')
@@ -453,10 +453,10 @@ def scrublet_score_distribution(
         sim_ax.set_yscale(scale_hist_sim)
         yl = sim_ax.get_ylim()
         sim_ax.set_ylim(yl)
-        
+
         if threshold is not None:
             sim_ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
-        
+
         sim_ax.set_title('Simulated doublets%s' % axis_lab_suffix)
         sim_ax.set_xlabel('Doublet score')
         sim_ax.set_ylabel('Prob. density')

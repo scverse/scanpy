@@ -197,7 +197,7 @@ def scrublet(
                 sim_doublet_ratio=sim_doublet_ratio,
                 synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
             )
-        
+
             if log_transform:
                 pp.log1p(ad_obs)
                 pp.log1p(ad_sim)
