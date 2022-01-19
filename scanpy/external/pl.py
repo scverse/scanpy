@@ -406,7 +406,7 @@ def scrublet_score_distribution(
 
             batch = batches[idx]
 
-            threshold = adata.uns['scrublet']['batches'][batch]['threshold']
+            threshold = adata.uns["scrublet"]['batches'][batch].get("threshold", None)
             doublet_scores_sim = adata.uns['scrublet']['batches'][batch][
                 'doublet_scores_sim'
             ]
@@ -415,7 +415,7 @@ def scrublet_score_distribution(
             sim_ax = axs[idx][1]
 
         else:
-            threshold = adata.uns['scrublet']['threshold']
+            threshold = adata.uns["scrublet"].get("threshold", None)
             doublet_scores_sim = adata.uns['scrublet']['doublet_scores_sim']
             axis_lab_suffix = ''
             obs_ax = axs[0]
@@ -433,7 +433,10 @@ def scrublet_score_distribution(
         obs_ax.set_yscale(scale_hist_obs)
         yl = obs_ax.get_ylim()
         obs_ax.set_ylim(yl)
-        obs_ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+
+        if threshold is not None:
+            obs_ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+        
         obs_ax.set_title('Observed transcriptomes%s' % axis_lab_suffix)
         obs_ax.set_xlabel('Doublet score')
         obs_ax.set_ylabel('Prob. density')
@@ -450,7 +453,10 @@ def scrublet_score_distribution(
         sim_ax.set_yscale(scale_hist_sim)
         yl = sim_ax.get_ylim()
         sim_ax.set_ylim(yl)
-        sim_ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+        
+        if threshold is not None:
+            sim_ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+        
         sim_ax.set_title('Simulated doublets%s' % axis_lab_suffix)
         sim_ax.set_xlabel('Doublet score')
         sim_ax.set_ylabel('Prob. density')
