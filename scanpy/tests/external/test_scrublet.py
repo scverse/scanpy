@@ -29,6 +29,28 @@ def test_scrublet():
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
 
+def test_scrublet_batched():
+    """
+    Test that Scrublet run works with batched data.
+
+    Check that scrublet runs and detects some doublets.
+    """
+    pytest.importorskip("scrublet")
+
+    adata = sc.datasets.pbmc3k()
+    adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
+    sce.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
+
+    # replace assertions by conditions
+    assert "predicted_doublet" in adata.obs.columns
+    assert "doublet_score" in adata.obs.columns
+
+    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+    assert (
+        'batches' in adata.uns['scrublet'].keys()
+    ), "Expect .uns to contain batch info"
+
+
 def test_scrublet_data():
     """
     Test that Scrublet processing is arranged correctly.
