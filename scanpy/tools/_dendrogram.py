@@ -136,7 +136,7 @@ def dendrogram(
     from scipy.spatial import distance
 
     corr_matrix = mean_df.T.corr(method=cor_method)
-    corr_condensed = distance.squareform(1 - corr_matrix)
+    corr_condensed = distance.squareform(1 - corr_matrix, checks=False)
     z_var = sch.linkage(
         corr_condensed, method=linkage_method, optimal_ordering=optimal_ordering
     )
