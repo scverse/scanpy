@@ -5,6 +5,7 @@ Computes a dendrogram based on a given categorical observation.
 from typing import Optional, Sequence, Dict, Any
 
 import pandas as pd
+import numpy as np
 from anndata import AnnData
 from pandas.api.types import is_categorical_dtype
 
@@ -135,8 +136,9 @@ def dendrogram(
     import scipy.cluster.hierarchy as sch
     from scipy.spatial import distance
 
-    corr_matrix = mean_df.T.corr(method=cor_method)
-    corr_condensed = distance.squareform(1 - corr_matrix, checks=False)
+    corr_matrix = mean_df.T.corr(method=cor_method).values
+    np.fill_diagonal(corr_matrix, 1)  # Diagonal isn't quite 1, squareform errors
+    corr_condensed = distance.squareform(1 - corr_matrix)
     z_var = sch.linkage(
         corr_condensed, method=linkage_method, optimal_ordering=optimal_ordering
     )
@@ -151,7 +153,7 @@ def dendrogram(
         categories_ordered=dendro_info['ivl'],
         categories_idx_ordered=dendro_info['leaves'],
         dendrogram_info=dendro_info,
-        correlation_matrix=corr_matrix.values,
+        correlation_matrix=corr_matrix,
     )
 
     if inplace:
