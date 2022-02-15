@@ -525,11 +525,11 @@ def test_violin_without_raw(tmpdir):
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc_no_raw = pbmc.raw.to_adata().copy()
 
-    sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", show=False)
+    sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", jitter=False, show=False)
     plt.savefig(has_raw_pth)
     plt.close()
 
-    sc.pl.violin(pbmc_no_raw, 'CST3', groupby="bulk_labels", show=False)
+    sc.pl.violin(pbmc_no_raw, 'CST3', groupby="bulk_labels", jitter=False, show=False)
     plt.savefig(no_raw_pth)
     plt.close()
 

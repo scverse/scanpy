@@ -140,7 +140,7 @@ def dendrogram(
     # np.fill_diagonal(corr_matrix, 1)  # Diagonal isn't quite 1, squareform errors
     # corr_condensed = distance.squareform(1 - corr_matrix)
     corr_matrix = mean_df.T.corr(method=cor_method)
-    corr_condensed = distance.squareform(1 - corr_matrix, checks=False)
+    corr_condensed = distance.squareform(1 - corr_matrix)
     z_var = sch.linkage(
         corr_condensed, method=linkage_method, optimal_ordering=optimal_ordering
     )
