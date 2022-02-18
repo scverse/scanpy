@@ -489,7 +489,10 @@ def test_rank_genes_groups_df():
     assert sc.get.rank_genes_groups_df(adata, "a", pval_cutoff=0.9).shape[0] == 1
     assert sc.get.rank_genes_groups_df(adata, "a", n_top_genes=2).shape[0] == 2
     assert sc.get.rank_genes_groups_df(adata, "a", n_top_genes=100).shape[0] == 3
-    assert sc.get.rank_genes_groups_df(adata, "a", log2fc_max=0.1, n_top_genes=1).shape[0] == 1
+    assert (
+        sc.get.rank_genes_groups_df(adata, "a", log2fc_max=0.1, n_top_genes=1).shape[0]
+        == 1
+    )
     del adata.uns["rank_genes_groups"]
     sc.tl.rank_genes_groups(
         adata,
@@ -509,6 +512,11 @@ def test_rank_genes_groups_df():
     dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
     assert 'a' in dedf3['group'].unique()
     assert 'b' in dedf3['group'].unique()
-    assert sc.get.rank_genes_groups_df(adata, group=None, key="different_key", n_top_genes=2).shape[0] == 4
+    assert (
+        sc.get.rank_genes_groups_df(
+            adata, group=None, key="different_key", n_top_genes=2
+        ).shape[0]
+        == 4
+    )
     adata.var_names.name = 'pr1388'
     sc.get.rank_genes_groups_df(adata, group=None, key="different_key")

@@ -46,7 +46,7 @@ def rank_genes_groups_df(
     log2fc_max
         Maximum logfc to return.
     n_top_genes
-        Maximum number of genes per group to return. 
+        Maximum number of genes per group to return.
     gene_symbols
         Column name in `.var` DataFrame that stores gene symbols. Specifying
         this will add that column to the returned dataframe.
