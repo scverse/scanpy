@@ -14,6 +14,11 @@ def test_enrich():
     de_genes = de.loc[lambda x: x["pvals_adj"] < 0.05, "names"]
     enrich_list = sc.queries.enrich(list(de_genes))
     assert (enrich_anndata == enrich_list).all().all()
+    
+    de_genes_top10 = de_genes[:10]
+    enrich_list_top10 = sc.queries.enrich(list(de_genes_top10))
+    enrich_anndata_top10 = sc.queries.enrich(pbmc, "1", n_top_genes=10)
+    assert (enrich_anndata == enrich_list).all().all()
 
     # theislab/scanpy/#1043
     sc.tl.filter_rank_genes_groups(pbmc, min_fold_change=1)

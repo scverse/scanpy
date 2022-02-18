@@ -22,6 +22,7 @@ def rank_genes_groups_df(
     pval_cutoff: Optional[float] = None,
     log2fc_min: Optional[float] = None,
     log2fc_max: Optional[float] = None,
+    n_top_genes: Optional[int] = None,
     gene_symbols: Optional[str] = None,
 ) -> pd.DataFrame:
     """\
@@ -44,6 +45,8 @@ def rank_genes_groups_df(
         Minimum logfc to return.
     log2fc_max
         Maximum logfc to return.
+    n_top_genes
+        Maximum number of genes per group to return. 
     gene_symbols
         Column name in `.var` DataFrame that stores gene symbols. Specifying
         this will add that column to the returned dataframe.
@@ -73,6 +76,8 @@ def rank_genes_groups_df(
         d = d[d["logfoldchanges"] > log2fc_min]
     if log2fc_max is not None:
         d = d[d["logfoldchanges"] < log2fc_max]
+    if n_top_genes is not None:
+        d = d.groupby('group').head(n_top_genes)
     if gene_symbols is not None:
         d = d.join(adata.var[gene_symbols], on="names")
 
