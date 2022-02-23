@@ -4,8 +4,21 @@ import pandas as pd
 import numpy as np
 from scanpy import experimental
 from scanpy.preprocessing import pca
+from scanpy.experimental._docs import (
+    doc_adata,
+    doc_norm_params,
+    doc_layer,
+    doc_inplace,
+)
+from scanpy._utils import _doc_params
 
 
+@_doc_params(
+    adata=doc_adata,
+    norm_params=doc_norm_params,
+    layer=doc_layer,
+    inplace=doc_inplace,
+)
 def recipe_pearson_residuals(
     adata: AnnData,
     *,
@@ -31,21 +44,8 @@ def recipe_pearson_residuals(
 
     Params
     ------
-    adata
-        The annotated data matrix of shape `n_obs` × `n_vars`.
-        Rows correspond to cells and columns to genes.
-    theta
-        The negative binomial overdispersion parameter theta for Pearson residuals.
-        Higher values correspond to less overdispersion (var = mean + mean^2/theta),
-        and `theta=np.Inf` corresponds to a Poisson model.
-    clip
-        Determines if and how residuals are clipped:
-
-            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
-            where n is the number of cells in the dataset (default behavior).
-            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
-            `clip=np.Inf` for no clipping.
-
+    {adata}
+    {norm_params}
     n_top_genes
         Number of highly-variable genes to keep.
     batch_key
@@ -64,11 +64,8 @@ def recipe_pearson_residuals(
         Change to use different initial states for the optimization in the PCA step.
     kwargs_pca
         Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
-    check_values
-        Check if counts in selected layer are integers. A Warning is returned if set to
-        True.
-    inplace
-        Whether to place results in `adata` or return them.
+    {layer}
+    {inplace}
 
 
     Returns

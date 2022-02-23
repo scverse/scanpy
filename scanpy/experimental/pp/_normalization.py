@@ -10,8 +10,15 @@ from scanpy import logging as logg
 
 from scanpy._utils import view_to_actual, check_nonnegative_integers
 from scanpy.get import _get_obs_rep, _set_obs_rep
-
+from scanpy._utils import _doc_params
 from scanpy.preprocessing._pca import pca
+from scanpy.experimental._docs import (
+    doc_adata,
+    doc_norm_params,
+    doc_layer,
+    doc_copy,
+    doc_inplace,
+)
 
 
 def _pearson_residuals(X, theta, clip, check_values, copy=False):
@@ -55,6 +62,13 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
     return residuals
 
 
+@_doc_params(
+    adata=doc_adata,
+    norm_params=doc_norm_params,
+    layer=doc_layer,
+    inplace=doc_inplace,
+    copy=doc_copy,
+)
 def normalize_pearson_residuals(
     adata: AnnData,
     *,
@@ -62,8 +76,8 @@ def normalize_pearson_residuals(
     clip: Optional[float] = None,
     check_values: bool = True,
     layer: Optional[str] = None,
-    copy: bool = False,
     inplace: bool = True,
+    copy: bool = False,
 ) -> Optional[Dict[str, np.ndarray]]:
     """\
     Applies analytic Pearson residual normalization, based on [Lause21]_.
@@ -76,38 +90,17 @@ def normalize_pearson_residuals(
 
     Params
     ------
-    adata
-        The annotated data matrix of shape `n_obs` × `n_vars`.
-        Rows correspond to cells and columns to genes.
-    theta
-        The negative binomial overdispersion parameter theta for Pearson residuals.
-        Higher values correspond to less overdispersion (var = mean + mean^2/theta),
-        and `theta=np.Inf` corresponds to a Poisson model.
-    clip
-        Determines if and how residuals are clipped:
-
-            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
-            where n is the number of cells in the dataset (default behavior).
-            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
-            `clip=np.Inf` for no clipping.
-
-    check_values
-        Check if counts in selected layer are integers. A Warning is returned if set to
-        True.
-    layer
-        Layer to normalize instead of `X`. If `None`, `X` is normalized.
-    copy
-        Whether to modify copied input object. Not compatible with `inplace=False`.
-    inplace
-        Whether to update `adata` or return dictionary with normalized copies
-        of `adata.X` and `adata.layers`.
+    {adata}
+    {norm_params}
+    {layer}
+    {inplace}
+    {copy}
 
     Returns
     -------
     Returns dictionary with Pearson residuals and settings
     or updates `adata` with normalized version of the original
     `adata.X` and `adata.layers`, depending on `inplace`.
-
     """
 
     if copy:
