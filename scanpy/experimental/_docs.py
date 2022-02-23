@@ -22,7 +22,7 @@ clip
 
 """
 
-doc_layer_copy = """\
+doc_layer = """\
 check_values
     Check if counts in selected layer are integers. A Warning is returned if set to
     True.
