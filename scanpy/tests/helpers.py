@@ -8,7 +8,7 @@ import scanpy as sc
 import numpy as np
 import warnings
 import pytest
-
+from functools import cache
 from anndata.tests.helpers import asarray, assert_equal
 
 # TODO: Report more context on the fields being compared on error
@@ -87,6 +87,11 @@ def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
         assert_equal(adata_X, adatas_proc[field])
 
 
+@cache
+def _get_pbmc3k():
+    return sc.datasets.pbmc3k()
+
+
 def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
     """Prepares 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
 
@@ -95,16 +100,11 @@ def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
     sparsity_func
         sparsity function applied to adata.X (e.g. csr_matrix.toarray for dense or csr_matrix for sparse)
     dtype
-        numpy dtype applied to adata.X (e.g.  'float32' or 'int64')
+        numpy dtype applied to adata.X (e.g. 'float32' or 'int64')
     small
         False (default) returns full data, True returns small subset of the data."""
 
-    # loading from disk takes long, so cache raw data after loading it once
-    if 'ADATA_PBMC_RAW' not in globals():
-        global ADATA_PBMC_RAW
-        ADATA_PBMC_RAW = sc.datasets.pbmc3k()
-
-    adata = ADATA_PBMC_RAW.copy()
+    adata = _get_pbmc3k()
 
     if small:
         adata = adata[:1000, :500]
