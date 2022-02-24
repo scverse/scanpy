@@ -64,7 +64,7 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
 
 @_doc_params(
     adata=doc_adata,
-    norm_params=doc_dist_params,
+    dist_params=doc_dist_params,
     layer=doc_layer,
     inplace=doc_inplace,
     copy=doc_copy,
