@@ -1,6 +1,6 @@
 """Single-Cell Analysis in Python."""
 
-from ._metadata import __version__, __author__, __email__, within_flit
+from ._metadata import __version__, within_flit
 
 if not within_flit():  # see function docstring on why this is there
     from ._utils import check_versions

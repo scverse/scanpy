@@ -173,20 +173,14 @@ def scrublet(
         # selection of genes following normalisation and variability filtering. So
         # we need to save the raw and subset at the same time.
 
-        adata_obs.layers['raw'] = adata_obs.X
+        adata_obs.layers['raw'] = adata_obs.X.copy()
         pp.normalize_total(adata_obs)
 
-        # HVG process needs log'd data. If we're not using that downstream, then
-        # copy logged data to new object and subset original object based on the
-        # output.
+        # HVG process needs log'd data.
 
-        if log_transform:
-            pp.log1p(adata_obs)
-            pp.highly_variable_genes(adata_obs, subset=True)
-        else:
-            logged = pp.log1p(adata_obs, copy=True)
-            _ = pp.highly_variable_genes(logged)
-            adata_obs = adata_obs[:, logged.var['highly_variable']]
+        logged = pp.log1p(adata_obs, copy=True)
+        pp.highly_variable_genes(logged)
+        adata_obs = adata_obs[:, logged.var['highly_variable']]
 
         # Simulate the doublets based on the raw expressions from the normalised
         # and filtered object.
@@ -197,6 +191,10 @@ def scrublet(
             sim_doublet_ratio=sim_doublet_ratio,
             synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
         )
+
+        if log_transform:
+            pp.log1p(adata_obs)
+            pp.log1p(adata_sim)
 
         # Now normalise simulated and observed in the same way
 
@@ -409,12 +407,10 @@ def _scrublet_call_doublets(
     # Store results in AnnData for return
 
     adata_obs.obs['doublet_score'] = scrub.doublet_scores_obs_
-    adata_obs.obs['predicted_doublet'] = scrub.predicted_doublets_
 
     # Store doublet Scrublet metadata
 
     adata_obs.uns['scrublet'] = {
-        'threshold': scrub.threshold_,
         'doublet_scores_sim': scrub.doublet_scores_sim_,
         'doublet_parents': adata_sim.obsm['doublet_parents'],
         'parameters': {
@@ -428,6 +424,19 @@ def _scrublet_call_doublets(
             'random_state': random_state,
         },
     }
+
+    # If threshold hasn't been located successfully then we couldn't make any
+    # predictions. The user will get a warning from Scrublet, but we need to
+    # set the boolean so that any downstream filtering on
+    # predicted_doublet=False doesn't incorrectly filter cells. The user can
+    # still use this object to generate the plot and derive a threshold
+    # manually.
+
+    if hasattr(scrub, 'threshold_'):
+        adata_obs.uns['scrublet']['threshold'] = scrub.threshold_
+        adata_obs.obs['predicted_doublet'] = scrub.predicted_doublets_
+    else:
+        adata_obs.obs['predicted_doublet'] = False
 
     if get_doublet_neighbor_parents:
         adata_obs.uns['scrublet'][

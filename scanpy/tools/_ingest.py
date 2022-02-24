@@ -199,6 +199,7 @@ class Ingest:
 
         self._umap._initial_alpha = self._umap.learning_rate
         self._umap._raw_data = self._rep
+        self._umap.knn_dists = None
 
         self._umap._validate_parameters()
 
