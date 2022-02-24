@@ -14,7 +14,7 @@ from scanpy._utils import _doc_params
 from scanpy.preprocessing._pca import pca
 from scanpy.experimental._docs import (
     doc_adata,
-    doc_norm_params,
+    doc_dist_params,
     doc_layer,
     doc_copy,
     doc_inplace,
@@ -64,7 +64,7 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
 
 @_doc_params(
     adata=doc_adata,
-    norm_params=doc_norm_params,
+    norm_params=doc_dist_params,
     layer=doc_layer,
     inplace=doc_inplace,
     copy=doc_copy,
@@ -91,7 +91,7 @@ def normalize_pearson_residuals(
     Params
     ------
     {adata}
-    {norm_params}
+    {dist_params}
     {layer}
     {inplace}
     {copy}

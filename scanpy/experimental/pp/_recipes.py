@@ -6,7 +6,8 @@ from scanpy import experimental
 from scanpy.preprocessing import pca
 from scanpy.experimental._docs import (
     doc_adata,
-    doc_norm_params,
+    doc_dist_params,
+    doc_genes_batch_chunk,
     doc_layer,
     doc_inplace,
 )
@@ -15,7 +16,8 @@ from scanpy._utils import _doc_params
 
 @_doc_params(
     adata=doc_adata,
-    norm_params=doc_norm_params,
+    dist_params=doc_dist_params,
+    genes_batch_chunk=doc_genes_batch_chunk,
     layer=doc_layer,
     inplace=doc_inplace,
 )
@@ -45,19 +47,8 @@ def recipe_pearson_residuals(
     Params
     ------
     {adata}
-    {norm_params}
-    n_top_genes
-        Number of highly-variable genes to keep.
-    batch_key
-        If specified, highly-variable genes are selected within each batch separately
-        and merged. This simple process avoids the selection of batch-specific genes
-        and acts as a lightweight batch correction method. Genes are first sorted by
-        how many batches they are a HVG. Ties are broken by the median rank (across
-        batches) based on within-batch residual variance.
-    chunksize
-        This dertermines how many genes are processed at once while computing
-        the Pearson residual variance. Choosing a smaller value will reduce
-        the required memory.
+    {dist_params}
+    {genes_batch_chunk}
     n_comps
         Number of principal components to compute in the PCA step.
     random_state
@@ -66,7 +57,6 @@ def recipe_pearson_residuals(
         Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
     {layer}
     {inplace}
-
 
     Returns
     -------

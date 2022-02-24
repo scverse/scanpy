@@ -1,3 +1,4 @@
+from multiprocessing.sharedctypes import Value
 import warnings
 from typing import Optional
 
@@ -12,9 +13,18 @@ from scanpy._settings import settings, Verbosity
 from scanpy._utils import check_nonnegative_integers, view_to_actual
 from scanpy.get import _get_obs_rep
 from scanpy._compat import Literal
+from scanpy._utils import _doc_params
 from scanpy.preprocessing._utils import _get_mean_var
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._simple import filter_genes
+from scanpy.experimental._docs import (
+    doc_adata,
+    doc_dist_params,
+    doc_genes_batch_chunk,
+    doc_layer,
+    doc_copy,
+    doc_inplace,
+)
 
 
 def _highly_variable_pearson_residuals(
@@ -202,6 +212,13 @@ def _highly_variable_pearson_residuals(
         return df
 
 
+@_doc_params(
+    adata=doc_adata,
+    dist_params=doc_dist_params,
+    genes_batch_chunk=doc_genes_batch_chunk,
+    layer=doc_layer,
+    inplace=doc_inplace,
+)
 def highly_variable_genes(
     adata: AnnData,
     *,
@@ -226,51 +243,19 @@ def highly_variable_genes(
 
     Expects raw count input.
 
-
     Parameters
     ----------
-    adata
-        The annotated data matrix of shape `n_obs` × `n_vars`.
-        Rows correspond to cells and columns to genes.
-    theta
-        The negative binomial overdispersion parameter theta for Pearson residuals.
-        Higher values correspond to less overdispersion (var = mean + mean^2/theta),
-        and `theta=np.Inf` corresponds to a Poisson model.
-    clip
-        If `flavor='pearson_residuals'`, determines if and how residuals are clipped:
-
-            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
-            where n is the number of cells in the dataset (default behavior).
-            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
-            `clip=np.Inf` for no clipping.
-
-    n_top_genes
-        Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or
-        `flavor='pearson_residuals'`.
-    batch_key
-        If specified, highly-variable genes are selected within each batch separately
-        and merged. This simple process avoids the selection of batch-specific genes
-        and acts as a lightweight batch correction method. Genes are first sorted by
-        how many batches they are a HVG. If `flavor='pearson_residuals'`, ties are
-        broken by the median rank (across batches) based on within-batch residual
-        variance.
-    chunksize
-        If `flavor='pearson_residuals'`, this dertermines how many genes are processed at
-        once while computing the residual variance. Choosing a smaller value will reduce
-        the required memory.
+    {adata}
+    {dist_params}
+    {genes_batch_chunk}
     flavor
         Choose the flavor for identifying highly variable genes. In this experimental
         version, only 'pearson_residuals' is functional.
-    check_values
-        Check if counts in selected layer are integers. A Warning is returned if set to
-        True. Only used if `flavor='pearson_residuals'`.
-    layer
-        If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
+    {layer}
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
-    inplace
-        Whether to place calculated metrics in `.var` or return them.
+    {in_place}
 
     Returns
     -------
@@ -324,4 +309,8 @@ def highly_variable_genes(
             subset=subset,
             check_values=check_values,
             inplace=inplace,
+        )
+    else:
+        raise ValueError(
+            "This is an experimental API and only `flavor=pearson_residuals` is available."
         )
