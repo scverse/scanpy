@@ -255,7 +255,7 @@ def highly_variable_genes(
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
-    {in_place}
+    {inplace}
 
     Returns
     -------
