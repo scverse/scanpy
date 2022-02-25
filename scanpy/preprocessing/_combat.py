@@ -332,7 +332,7 @@ def _it_sol(
         sum2 = s_data - g_new.reshape((g_new.shape[0], 1)) @ np.ones(
             (1, s_data.shape[1])
         )
-        sum2 = sum2 ** 2
+        sum2 = sum2**2
         sum2 = sum2.sum(axis=1)
         d_new = (0.5 * sum2 + b) / (n / 2.0 + a - 1.0)
 
@@ -349,10 +349,10 @@ def _it_sol(
 def _aprior(delta_hat):
     m = delta_hat.mean()
     s2 = delta_hat.var()
-    return (2 * s2 + m ** 2) / s2
+    return (2 * s2 + m**2) / s2
 
 
 def _bprior(delta_hat):
     m = delta_hat.mean()
     s2 = delta_hat.var()
-    return (m * s2 + m ** 3) / s2
+    return (m * s2 + m**3) / s2

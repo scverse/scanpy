@@ -215,7 +215,7 @@ class PAGA:
         inter_es = _utils.get_sparse_from_igraph(cg, weight_attr='weight') / 2
         connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
-        n_neighbors_sq = self._neighbors.n_neighbors ** 2
+        n_neighbors_sq = self._neighbors.n_neighbors**2
         for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
             # have n_neighbors**2 inside sqrt for backwards compat
             geom_mean_approx_knn = np.sqrt(n_neighbors_sq * ns[i] * ns[j])
