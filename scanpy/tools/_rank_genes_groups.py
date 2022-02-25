@@ -75,7 +75,7 @@ def _tiecorrect(ranks):
     idx = np.sort(idx, axis=0)
     cnt = np.diff(idx, axis=0).astype(np.float64)
 
-    return 1.0 - (cnt ** 3 - cnt).sum(axis=0) / (size ** 3 - size)
+    return 1.0 - (cnt**3 - cnt).sum(axis=0) / (size**3 - size)
 
 
 class _RankGenes:

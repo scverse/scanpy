@@ -1053,7 +1053,7 @@ class StaticCauseEffect:
             line=lambda x: x,
             noise=lambda x: 0,
             absline=np.abs,
-            parabola=lambda x: x ** 2,
+            parabola=lambda x: x**2,
             sawtooth=lambda x: 0.5 * x - np.floor(0.5 * x),
             tanh=lambda x: np.tanh(2 * x),
         )
