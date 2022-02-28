@@ -8,8 +8,8 @@ import scanpy as sc
 import numpy as np
 import warnings
 import pytest
-from functools import cache
 from anndata.tests.helpers import asarray, assert_equal
+from scanpy.tests._data._cached_datasets import pbmc3k
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
@@ -87,11 +87,6 @@ def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
         assert_equal(adata_X, adatas_proc[field])
 
 
-@cache
-def _get_pbmc3k():
-    return sc.datasets.pbmc3k()
-
-
 def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
     """Prepares 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
 
@@ -104,7 +99,7 @@ def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
     small
         False (default) returns full data, True returns small subset of the data."""
 
-    adata = _get_pbmc3k()
+    adata = pbmc3k().copy()
 
     if small:
         adata = adata[:1000, :500]
