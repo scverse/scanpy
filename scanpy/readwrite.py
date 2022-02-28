@@ -3,11 +3,11 @@
 from pathlib import Path, PurePath
 from typing import Union, Dict, Optional, Tuple, BinaryIO
 
+import h5py
 import json
 import numpy as np
 import pandas as pd
 from matplotlib.image import imread
-import tables
 import anndata
 from anndata import (
     AnnData,
@@ -177,7 +177,7 @@ def read_10x_h5(
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f'... did not find original file {filename}')
-    with tables.open_file(str(filename), 'r') as f:
+    with h5py.File(str(filename), 'r') as f:
         v3 = '/matrix' in f
     if v3:
         adata = _read_v3_10x_h5(filename, start=start)
@@ -201,9 +201,9 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
     """
     Read hdf5 file from Cell Ranger v2 or earlier versions.
     """
-    with tables.open_file(str(filename), 'r') as f:
+    with h5py.File(str(filename), 'r') as f:
         try:
-            children = [x._v_name for x in f.list_nodes(f.root)]
+            children = list(f.keys())
             if not genome:
                 if len(children) > 1:
                     raise ValueError(
@@ -217,9 +217,10 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
                     f"Could not find genome '{genome}' in '{filename}'. "
                     f'Available genomes are: {children}'
                 )
+
             dsets = {}
-            for node in f.walk_nodes('/' + genome, 'Array'):
-                dsets[node.name] = node.read()
+            _collect_datasets(dsets, f)
+
             # AnnData works with csr matrices
             # 10x stores the transposed data, so we do the transposition right away
             from scipy.sparse import csr_matrix
@@ -249,15 +250,23 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
             raise Exception('File is missing one or more required datasets.')
 
 
+def _collect_datasets(dsets: dict, group: h5py.Group):
+    for k, v in group.items():
+        if isinstance(v, h5py.Dataset):
+            dsets[k] = v[:]
+        else:
+            _collect_datasets(dsets, v)
+
+
 def _read_v3_10x_h5(filename, *, start=None):
     """
     Read hdf5 file from Cell Ranger v3 or later versions.
     """
-    with tables.open_file(str(filename), 'r') as f:
+    with h5py.File(str(filename), 'r') as f:
         try:
             dsets = {}
-            for node in f.walk_nodes('/matrix', 'Array'):
-                dsets[node.name] = node.read()
+            _collect_datasets(dsets, f["matrix"])
+
             from scipy.sparse import csr_matrix
 
             M, N = dsets['shape']
