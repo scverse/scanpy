@@ -18,8 +18,7 @@ clip
     * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
     where n is the number of cells in the dataset (default behavior).
     * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
-    `clip=np.Inf` for no clipping.0
-
+    `clip=np.Inf` for no clipping.
 """
 
 doc_layer = """\
