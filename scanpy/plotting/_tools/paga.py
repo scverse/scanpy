@@ -960,7 +960,7 @@ def _paga_graph(
                 s = np.abs(xy).max()
 
                 sct = ax.scatter(
-                    [xx], [yy], marker=xy, s=s ** 2 * groups_sizes[ix], color=color
+                    [xx], [yy], marker=xy, s=s**2 * groups_sizes[ix], color=color
                 )
 
             if node_labels is not None:

@@ -9,15 +9,15 @@ of Seurat’s [Satija15]_ clustering tutorial for 3k PBMCs from 10x Genomics,
 containing preprocessing, clustering and the identification of cell types via
 known marker genes.
 
-.. image:: http://falexwolf.de/img/scanpy_usage/170505_seurat/filter_genes_dispersion.png
+.. image:: _static/img/tutorials/170505_seurat/filter_genes_dispersion.png
    :width: 100px
-.. image:: http://falexwolf.de/img/scanpy_usage/170505_seurat/louvain.png
+.. image:: _static/img/tutorials/170505_seurat/louvain.png
    :width: 100px
-.. image:: http://falexwolf.de/img/scanpy_usage/170505_seurat/NKG7.png
+.. image:: _static/img/tutorials/170505_seurat/NKG7.png
    :width: 100px
-.. image:: http://falexwolf.de/img/scanpy_usage/170505_seurat/violin.png
+.. image:: _static/img/tutorials/170505_seurat/violin.png
    :width: 100px
-.. image:: http://falexwolf.de/img/scanpy_usage/170505_seurat/cell_types.png
+.. image:: _static/img/tutorials/170505_seurat/cell_types.png
    :width: 200px
 
 
@@ -35,14 +35,14 @@ Trajectory inference
 
 Get started with the following example for hematopoiesis for data of [Paul15]_: :tutorial:`paga-paul15`
 
-.. image:: http://www.falexwolf.de/img/paga_paul15.png
+.. image:: _static/img/tutorials/paga_paul15.png
    :width: 450px
 
 More examples for trajectory inference on complex datasets can be found in the
 `PAGA <https://github.com/theislab/paga>`_ repository [Wolf19]_, for instance, multi-resolution analyses of whole
 animals, such as for planaria_ for data of [Plass18]_.
 
-.. image:: http://www.falexwolf.de/img/paga_planaria.png
+.. image:: _static/img/tutorials/paga_planaria.png
    :width: 350px
 
 As a reference for simple pseudotime analyses, we provide the diffusion pseudotime (DPT) analyses of [Haghverdi16]_
@@ -97,7 +97,7 @@ See the `cell cycle`_ notebook.
 
 .. _cell cycle: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb
 
-.. image:: http://falexwolf.de/img/scanpy_usage/170522_visualizing_one_million_cells/tsne_1.3M.png
+.. image:: _static/img/tutorials/170522_visualizing_one_million_cells/tsne_1.3M.png
    :width: 120px
    :align: right
 
@@ -114,7 +114,7 @@ Simulations
 
 Simulating single cells using literature-curated gene regulatory networks [Wittmann09]_.
 
-.. image:: http://falexwolf.de/img/scanpy_usage/170430_krumsiek11/timeseries.png
+.. image:: _static/img/tutorials/170430_krumsiek11/timeseries.png
    :width: 200px
    :align: right
 

@@ -62,7 +62,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         float
             std of gaussian
         """
-        lam_o = 1 / (std_o ** 2)
+        lam_o = 1 / (std_o**2)
         n = len(data)
         lam = 1 / np.var(data) if len(data) > 1 else lam_o
         lam_n = lam_o + n * lam
