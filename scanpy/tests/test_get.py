@@ -9,7 +9,7 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.datasets._utils import filter_oldformatwarning
-
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
     "dim,transform,func",
@@ -202,7 +202,7 @@ def test_backed_vs_memory():
 
 def test_column_content():
     "uses a larger dataset to test column order and content"
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
 
     # test that columns content is correct for obs_df
     query = ['CST3', 'NKG7', 'GNLY', 'louvain', 'n_counts', 'n_genes']

@@ -275,7 +275,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
 def test_higly_variable_genes_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
 
-    pbmc = pbmc68k_reduced().copy()
+    pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
     pbmc.var_names_make_unique()
 
@@ -316,7 +316,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         FILE_V3, sep=' ', dtype={"variances_norm": np.float64}
     )
 
-    pbmc = pbmc3k().copy()
+    pbmc = pbmc3k()
     pbmc.var_names_make_unique()
 
     pbmc_dense = pbmc.copy()
@@ -379,7 +379,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
 def test_filter_genes_dispersion_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
 
-    pbmc = pbmc68k_reduced().copy()
+    pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
     pbmc.var_names_make_unique()
 
@@ -421,7 +421,7 @@ def test_filter_genes_dispersion_compare_to_seurat():
 
 
 def test_highly_variable_genes_batches():
-    adata = pbmc68k_reduced().copy()
+    adata = pbmc68k_reduced()
     adata[:100, :100].X = np.zeros((100, 100))
 
     adata.obs['batch'] = ['0' if i < 100 else '1' for i in range(adata.n_obs)]
@@ -470,7 +470,7 @@ from scanpy.preprocessing._utils import _get_mean_var
 
 
 def test_seurat_v3_mean_var_output_with_batchkey():
-    pbmc = pbmc3k().copy()
+    pbmc = pbmc3k()
     pbmc.var_names_make_unique()
     n_cells = pbmc.shape[0]
     batch = np.zeros((n_cells), dtype=int)

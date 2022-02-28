@@ -6,7 +6,12 @@ from itertools import repeat, chain, combinations
 import pytest
 from matplotlib.testing import setup
 from packaging import version
-
+from scanpy.tests._data._cached_datasets import (
+    pbmc3k,
+    pbmc3k_processed,
+    pbmc68k_reduced,
+    krumsiek11,
+)
 from scanpy._compat import pkg_version
 
 setup()
@@ -38,7 +43,7 @@ sc.set_figure_params(dpi=40, color_map='viridis')
 def test_heatmap(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    adata = sc.datasets.krumsiek11()
+    adata = krumsiek11()
     sc.pl.heatmap(
         adata, adata.var_names, 'cell_type', use_raw=False, show=False, dendrogram=True
     )
@@ -100,7 +105,7 @@ def test_heatmap(image_comparer):
     save_and_compare_images('master_heatmap_std_scale_obs')
 
     # test var_names as dict
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.tl.leiden(pbmc, key_added="clusters", resolution=0.5)
     # call umap to trigger colors for the clusters
     sc.pl.umap(pbmc, color="clusters")
@@ -152,7 +157,7 @@ def test_heatmap(image_comparer):
 )
 def test_clustermap(image_comparer, obs_keys, name):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.datasets.krumsiek11()
+    adata = krumsiek11()
     sc.pl.clustermap(adata, obs_keys)
     save_and_compare_images(name)
 
@@ -312,7 +317,7 @@ def test_clustermap(image_comparer, obs_keys, name):
 def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    adata = sc.datasets.krumsiek11()
+    adata = krumsiek11()
     adata.obs['numeric_column'] = adata.X[:, 0]
     adata.layers['test'] = -1 * adata.X.copy()
     genes_dict = {
@@ -331,7 +336,7 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
 def test_dotplot_obj(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     # test dotplot dot_min, dot_max, color_map, and var_groups
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     genes = [
         'CD79A',
         'MS4A1',
@@ -369,7 +374,7 @@ def test_dotplot_obj(image_comparer):
 
 def test_matrixplot_obj(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     marker_genes_dict = {
         "3": ["GNLY", "NKG7"],
         "1": ["FCER1A"],
@@ -396,7 +401,7 @@ def test_matrixplot_obj(image_comparer):
 def test_stacked_violin_obj(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=26)
 
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     markers = {
         'T-cell': ['CD3D', 'CD3E', 'IL32'],
         'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
@@ -417,7 +422,7 @@ def test_stacked_violin_obj(image_comparer, plt):
 def test_tracksplot(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    adata = sc.datasets.krumsiek11()
+    adata = krumsiek11()
     sc.pl.tracksplot(
         adata, adata.var_names, 'cell_type', dendrogram=True, use_raw=False
     )
@@ -428,7 +433,7 @@ def test_multiple_plots(image_comparer):
     # only testing stacked_violin, matrixplot and dotplot
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     markers = {
         'T-cell': ['CD3D', 'CD3E', 'IL32'],
         'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
@@ -474,7 +479,7 @@ def test_violin(image_comparer):
         sc.pl.set_rcParams_defaults()
         sc.set_figure_params(dpi=50, color_map='viridis')
 
-        pbmc = sc.datasets.pbmc68k_reduced()
+        pbmc = pbmc68k_reduced()
         sc.pl.violin(
             pbmc,
             ['n_genes', 'percent_mito', 'n_counts'],
@@ -523,7 +528,7 @@ def test_violin_without_raw(tmpdir):
     has_raw_pth = TESTDIR / "has_raw.png"
     no_raw_pth = TESTDIR / "no_raw.png"
 
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     pbmc_no_raw = pbmc.raw.to_adata().copy()
 
     sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", show=False, jitter=False)
@@ -540,7 +545,7 @@ def test_violin_without_raw(tmpdir):
 def test_dendrogram(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=10)
 
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.pl.dendrogram(pbmc, 'bulk_labels')
     save_and_compare_images('dendrogram')
 
@@ -548,7 +553,7 @@ def test_dendrogram(image_comparer):
 def test_correlation(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.pl.correlation_matrix(pbmc, 'bulk_labels')
     save_and_compare_images('correlation')
 
@@ -772,7 +777,7 @@ def test_correlation(image_comparer):
 def test_rank_genes_groups(image_comparer, name, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, 'louvain', n_genes=pbmc.raw.shape[1])
 
     # add gene symbol
@@ -791,8 +796,8 @@ def gene_symbols_adatas():
     Both have ensembl ids and hgnc symbols as columns in var. The first has ensembl
     ids as var_names, the second has symbols.
     """
-    pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
-    pbmc_counts = sc.datasets.pbmc3k()
+    pbmc = pbmc3k_processed().raw.to_adata()
+    pbmc_counts = pbmc3k()
 
     pbmc.layers["counts"] = pbmc_counts[pbmc.obs_names, pbmc.var_names].X.copy()
     pbmc.var["gene_symbol"] = pbmc.var_names
@@ -877,7 +882,7 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmpdir, func, check_same_i
     var_names as a dict works.
     """
     N = 3
-    pbmc = sc.datasets.pbmc68k_reduced().raw.to_adata()
+    pbmc = pbmc68k_reduced().raw.to_adata()
     groups = pbmc.obs["louvain"].cat.categories[:3]
     pbmc = pbmc[pbmc.obs["louvain"].isin(groups)][::3].copy()
 
@@ -929,7 +934,7 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmpdir, func, check_same_i
 def test_genes_symbols(image_comparer, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    adata = sc.datasets.krumsiek11()
+    adata = krumsiek11()
 
     # add a 'symbols' column
     adata.var['symbols'] = adata.var.index.map(lambda x: "symbol_{}".format(x))
@@ -941,7 +946,7 @@ def test_genes_symbols(image_comparer, id, fn):
 
 @pytest.fixture(scope="module")
 def pbmc_scatterplots():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     pbmc.layers["sparse"] = pbmc.raw.X / 2
     pbmc.layers["test"] = pbmc.X.copy() + 100
     pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
@@ -1069,7 +1074,7 @@ def test_scatter_embedding_groups_and_size(image_comparer):
     # plotted on top. This new ordering requires that the size
     # vector is also ordered (if given).
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.pl.embedding(
         pbmc,
         'umap',
@@ -1082,7 +1087,7 @@ def test_scatter_embedding_groups_and_size(image_comparer):
 
 def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same_image):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
 
     sc.pl.embedding(
         pbmc,
@@ -1183,7 +1188,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
 
 
 def test_timeseries():
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     sc.pp.neighbors(adata, n_neighbors=5, method='gauss', knn=False)
     sc.tl.diffmap(adata)
     sc.tl.dpt(adata, n_branchings=1, n_dcs=10)
@@ -1191,7 +1196,7 @@ def test_timeseries():
 
 
 def test_scatter_raw(tmp_path):
-    pbmc = sc.datasets.pbmc68k_reduced()[:100].copy()
+    pbmc = pbmc68k_reduced()[:100].copy()
     raw_pth = tmp_path / "raw.png"
     x_pth = tmp_path / "X.png"
 
@@ -1208,7 +1213,7 @@ def test_scatter_raw(tmp_path):
 
 
 def test_scatter_specify_layer_and_raw():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     pbmc.layers["layer"] = pbmc.raw.X.copy()
     with pytest.raises(ValueError):
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
@@ -1217,7 +1222,7 @@ def test_scatter_specify_layer_and_raw():
 def test_scatter_no_basis_per_obs(image_comparer):
     """Test scatterplot of per-obs points with no basis"""
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.pl.scatter(pbmc, x="HES4", y="percent_mito", color="n_genes", use_raw=False)
     save_and_compare_images("scatter_HES_percent_mito_n_genes")
 
@@ -1225,14 +1230,14 @@ def test_scatter_no_basis_per_obs(image_comparer):
 def test_scatter_no_basis_per_var(image_comparer):
     """Test scatterplot of per-var points with no basis"""
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.pl.scatter(pbmc, x="AAAGCCTGGCTAAC-1", y="AAATTCGATGCACA-1", use_raw=False)
     save_and_compare_images("scatter_AAAGCCTGGCTAAC-1_vs_AAATTCGATGCACA-1")
 
 
 @pytest.fixture
 def pbmc_filtered():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.pp.filter_genes(pbmc, min_cells=10)
     return pbmc
 
@@ -1287,7 +1292,7 @@ def test_scatter_no_basis_value_error(pbmc_filtered, x, y, color, use_raw):
 def test_rankings(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.pp.pca(pbmc)
     sc.pl.pca_loadings(pbmc)
     save_and_compare_images('master_pca_loadings')
@@ -1357,7 +1362,7 @@ def test_no_copy():
     # https://github.com/theislab/scanpy/issues/1000
     # Tests that plotting functions don't make a copy from a view unless they
     # actually have to
-    actual = sc.datasets.pbmc68k_reduced()
+    actual = pbmc68k_reduced()
     sc.pl.umap(actual, color=["bulk_labels", "louvain"], show=False)  # Set colors
 
     view = actual[np.random.choice(actual.obs_names, size=actual.shape[0] // 5), :]
@@ -1395,7 +1400,7 @@ def test_no_copy():
 
 def test_groupby_index(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
 
     genes = [
         'CD79A',
@@ -1420,7 +1425,7 @@ def test_groupby_index(image_comparer):
 # test category order when groupby is a list (#1735)
 def test_groupby_list(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
-    adata = sc.datasets.krumsiek11()
+    adata = krumsiek11()
 
     np.random.seed(1)
 
@@ -1441,7 +1446,7 @@ def test_color_cycler(caplog):
     # https://github.com/theislab/scanpy/issues/1885
     import logging
 
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     colors = sns.color_palette("deep")
     cyl = sns.rcmod.cycler('color', sns.color_palette("deep"))
 
@@ -1469,7 +1474,7 @@ def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
     TESTDIR = Path(tmpdir)
     N_GENES = 4
 
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
 
     sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon', pts=True)
 
@@ -1504,7 +1509,7 @@ def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
 def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
 
-    adata = sc.datasets.pbmc3k()
+    adata = pbmc3k()
     sc.external.pp.scrublet(adata, use_approx_neighbors=False)
 
     sc.external.pl.scrublet_score_distribution(adata, return_fig=True)

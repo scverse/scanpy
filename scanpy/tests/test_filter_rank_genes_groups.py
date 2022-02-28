@@ -1,6 +1,6 @@
 import numpy as np
 from scanpy.tools import rank_genes_groups, filter_rank_genes_groups
-from scanpy.datasets import pbmc68k_reduced
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 
 names_no_reference = np.array(

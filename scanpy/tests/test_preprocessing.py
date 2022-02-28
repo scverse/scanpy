@@ -11,6 +11,7 @@ from anndata import AnnData
 from anndata.tests.helpers import assert_equal, asarray
 
 from scanpy.tests.helpers import check_rep_mutation, check_rep_results
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 
 def test_log1p(tmp_path):
@@ -115,7 +116,7 @@ def test_subsample_copy():
 
 
 def test_scale():
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     v = adata[:, 0 : adata.shape[1] // 2]
     # Should turn view to copy https://github.com/theislab/anndata/issues/171#issuecomment-508689965
@@ -336,7 +337,7 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
 
 def test_recipe_weinreb():
     # Just tests for failure for now
-    adata = sc.datasets.pbmc68k_reduced().raw.to_adata()
+    adata = pbmc68k_reduced().raw.to_adata()
     adata.X = adata.X.toarray()
 
     orig = adata.copy()

@@ -1,10 +1,11 @@
 import pytest
 import scanpy as sc
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 
 @pytest.fixture
 def adata_neighbors():
-    return sc.datasets.pbmc68k_reduced()
+    return pbmc68k_reduced()
 
 
 def test_leiden_basic(adata_neighbors):
