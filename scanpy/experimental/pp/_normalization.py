@@ -54,7 +54,7 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
 
     mu = np.array(sums_cells @ sums_genes / sum_total)
     diff = np.array(X - mu)
-    residuals = diff / np.sqrt(mu + mu ** 2 / theta)
+    residuals = diff / np.sqrt(mu + mu**2 / theta)
 
     # clip
     residuals = np.clip(residuals, a_min=-clip, a_max=clip)

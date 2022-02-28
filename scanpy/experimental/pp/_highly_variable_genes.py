@@ -121,7 +121,7 @@ def _highly_variable_pearson_residuals(
             stop = start + chunksize
             mu = np.array(sums_cells @ sums_genes[:, start:stop] / sum_total)
             X_dense = X_batch[:, start:stop].toarray()
-            residuals = (X_dense - mu) / np.sqrt(mu + mu ** 2 / theta)
+            residuals = (X_dense - mu) / np.sqrt(mu + mu**2 / theta)
             residuals = np.clip(residuals, a_min=-clip, a_max=clip)
             residual_gene_var[start:stop] = np.var(residuals, axis=0)
 

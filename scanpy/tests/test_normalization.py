@@ -118,7 +118,7 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
         residuals_reference = (X - mu) / np.sqrt(mu)
     else:
         # NB case
-        residuals_reference = (X - mu) / np.sqrt(mu + mu ** 2 / theta)
+        residuals_reference = (X - mu) / np.sqrt(mu + mu**2 / theta)
 
     # compute output to test
     adata = AnnData(sparsity_func(X), dtype=dtype)
