@@ -952,6 +952,10 @@ def _download(url: str, path: Path):
         try:
             open_url = urlopen(req)
         except URLError:
+            logg.warning(
+                'Failed to open the url with default certificates, trying with certifi.'
+            )
+
             from certifi import where
             from ssl import create_default_context
 
