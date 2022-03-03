@@ -932,12 +932,27 @@ def _download(url: str, path: Path):
         from tqdm import tqdm
 
     from urllib.request import urlopen, Request
+    from urllib.error import URLError
 
     blocksize = 1024 * 8
     blocknum = 0
 
     try:
-        with urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
+        req = Request(url, headers={"User-agent": "scanpy-user"})
+
+        try:
+            open_url = urlopen(req)
+        except URLError:
+            logg.warning(
+                'Failed to open the url with default certificates, trying with certifi.'
+            )
+
+            from certifi import where
+            from ssl import create_default_context
+
+            open_url = urlopen(req, context=create_default_context(cafile=where()))
+
+        with open_url as resp:
             total = resp.info().get("content-length", None)
             with tqdm(
                 unit="B",
