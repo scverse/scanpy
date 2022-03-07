@@ -103,10 +103,10 @@ def test_error_missing_genome():
 
 
 def test_read_visium_counts():
-    # TODO: What is the purpose of this test?
-    h5_pth = ROOT / '../visium_data/1.0.0/filtered_feature_bc_matrix.h5'
-    spec_genome_v3 = sc.read_10x_h5(h5_pth, genome='GRCh38')
-    nospec_genome_v3 = sc.read_10x_h5(h5_pth)
+    # Test that checks the read_visium function
+    h5_pth = ROOT / '../visium_data/1.0.0'
+    spec_genome_v3 = sc.read_visium(h5_pth, genome='GRCh38')
+    nospec_genome_v3 = sc.read_visium(h5_pth)
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
 
 
