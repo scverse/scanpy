@@ -104,9 +104,9 @@ def test_error_missing_genome():
 
 def test_read_visium_counts():
     # Test that checks the read_visium function
-    h5_pth = ROOT / '../visium_data/1.0.0'
-    spec_genome_v3 = sc.read_visium(h5_pth, genome='GRCh38')
-    nospec_genome_v3 = sc.read_visium(h5_pth)
+    visium_pth = ROOT / '../visium_data/1.0.0'
+    spec_genome_v3 = sc.read_visium(visium_pth, genome='GRCh38')
+    nospec_genome_v3 = sc.read_visium(visium_pth)
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
 
 
