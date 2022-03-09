@@ -5,3 +5,4 @@
 
 - :func:`~scanpy.tl.filter_rank_genes_groups` now allows to filter with absolute values of log fold change :pr:`1649` :smaller:`S Rybakov`
 - :func:`~scanpy.pl.embedding_density` now allows more than 10 groups :pr:`1936` :smaller:`A Wolf`
+- :mod:`~scanpy.experimental` new Scanpy experimental module with Pearson Residuals method for normalization and HVG selection :pr:`1715` :smaller:`J Lause, G Palla, I Virshup`
