@@ -268,3 +268,7 @@ References
 .. [Zunder15] Zunder *et al.* (2015),
    *A continuous molecular roadmap to iPSC reprogramming through progression analysis of single-cell mass cytometry*,
    `Cell Stem Cell <https://doi.org/10.1016/j.stem.2015.01.015>`__.
+
+.. [Lause21] Lause *et al.* (2021),
+   *Analytic Pearson residuals for normalization of single-cell RNA-seq UMI data*,
+   `Genome Biology <https://doi.org/10.1186/s13059-021-02451-7>`__.

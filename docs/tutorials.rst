@@ -101,6 +101,11 @@ See the `cell cycle`_ notebook.
    :width: 120px
    :align: right
 
+Normalization with Pearson Residuals
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Normalization of scRNA-seq data with Pearson Residuals, from [Lause21]_: :tutorial:`tutorial_pearson_residuals`
+
 
 Scaling Computations
 ~~~~~~~~~~~~~~~~~~~~
