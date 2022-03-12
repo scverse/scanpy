@@ -21,6 +21,7 @@ from scanpy.experimental._docs import (
     doc_adata,
     doc_dist_params,
     doc_genes_batch_chunk,
+    doc_check_values,
     doc_layer,
     doc_copy,
     doc_inplace,
@@ -44,8 +45,8 @@ def _highly_variable_pearson_residuals(
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`)
-    or updates `.var` with the following fields:
+    If `inplace=True`, `adata.var` is updated with the following fields. Otherwise,
+    returns the same fields as :class:`~pandas.DataFrame`.
 
     highly_variable : bool
         boolean indicator of highly-variable genes
@@ -216,6 +217,7 @@ def _highly_variable_pearson_residuals(
     adata=doc_adata,
     dist_params=doc_dist_params,
     genes_batch_chunk=doc_genes_batch_chunk,
+    check_values=doc_check_values,
     layer=doc_layer,
     inplace=doc_inplace,
 )
@@ -237,9 +239,9 @@ def highly_variable_genes(
     Annotate highly variable genes using analytic Pearson residuals [Lause21]_.
 
     For [Lause21]_, Pearson residuals of a negative binomial offset model (with
-    overdispersion theta shared across genes) are computed. By default, overdispersion
-    theta=100 is used and residuals are clipped to sqrt(n). Finally, genes are ranked
-    by residual variance.
+    overdispersion theta shared across genes) are computed. By default,
+    overdispersion `theta=100` is used and residuals are clipped to `sqrt(n_obs)`.
+    Finally, genes are ranked by residual variance.
 
     Expects raw count input.
 
@@ -251,6 +253,7 @@ def highly_variable_genes(
     flavor
         Choose the flavor for identifying highly variable genes. In this experimental
         version, only 'pearson_residuals' is functional.
+    {check_values}
     {layer}
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
@@ -259,8 +262,8 @@ def highly_variable_genes(
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics (:class:`~pandas.DataFrame`) or
-    updates `.var` with the following fields
+    If `inplace=True`, `adata.var` is updated with the following fields. Otherwise,
+    returns the same fields as :class:`~pandas.DataFrame`.
 
     highly_variable : bool
         boolean indicator of highly-variable genes

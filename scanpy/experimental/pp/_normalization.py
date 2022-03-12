@@ -16,8 +16,10 @@ from scanpy.experimental._docs import (
     doc_adata,
     doc_dist_params,
     doc_layer,
+    doc_check_values,
     doc_copy,
     doc_inplace,
+    doc_pca_chunk,
 )
 
 
@@ -65,6 +67,7 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
 @_doc_params(
     adata=doc_adata,
     dist_params=doc_dist_params,
+    check_values=doc_check_values,
     layer=doc_layer,
     inplace=doc_inplace,
     copy=doc_copy,
@@ -83,8 +86,8 @@ def normalize_pearson_residuals(
     Applies analytic Pearson residual normalization, based on [Lause21]_.
 
     The residuals are based on a negative binomial offset model with overdispersion
-    `theta` shared across genes. By default, residuals are clipped to sqrt(n) and
-    overdispersion `theta=100` is used.
+    `theta` shared across genes. By default, residuals are clipped to `sqrt(n_obs)`
+    and overdispersion `theta=100` is used.
 
     Expects raw count input.
 
@@ -92,15 +95,24 @@ def normalize_pearson_residuals(
     ------
     {adata}
     {dist_params}
+    {check_values}
     {layer}
     {inplace}
     {copy}
 
     Returns
     -------
-    Returns dictionary with Pearson residuals and settings
-    or updates `adata` with normalized version of the original
-    `adata.X` and `adata.layers`, depending on `inplace`.
+    If `inplace=True`, `adata.X` or the selected layer in `adata.layers` is updated
+    with the normalized values. `adata.uns` is updated with the following fields.
+    If `inplace=False`, the same fields are returned as dictionary with the
+    normalized values in `results_dict['X']`.
+
+    `.uns['pearson_residuals_normalization']['theta']`
+         The used value of the overdisperion parameter theta
+    `.uns['pearson_residuals_normalization']['clip']`
+         The used value of the clipping parameter
+    `.uns['pearson_residuals_normalization']['computed_on']`
+         The name of the layer on which the residuals were computed.
     """
 
     if copy:
@@ -132,6 +144,13 @@ def normalize_pearson_residuals(
         return results_dict
 
 
+@_doc_params(
+    adata=doc_adata,
+    dist_params=doc_dist_params,
+    pca_chunk=doc_pca_chunk,
+    check_values=doc_check_values,
+    inplace=doc_inplace,
+)
 def normalize_pearson_residuals_pca(
     adata: AnnData,
     *,
@@ -143,12 +162,12 @@ def normalize_pearson_residuals_pca(
     use_highly_variable: Optional[bool] = None,
     check_values: bool = True,
     inplace: bool = True,
-) -> Optional[pd.DataFrame]:
+) -> Optional[AnnData]:
     """\
     Applies analytic Pearson residual normalization and PCA, based on [Lause21]_.
 
     The residuals are based on a negative binomial offset model with overdispersion
-    `theta` shared across genes. By default, residuals are clipped to sqrt(n),
+    `theta` shared across genes. By default, residuals are clipped to `sqrt(n_obs)`,
     overdispersion `theta=100` is used, and PCA is run with 50 components.
 
     Operates on the subset of highly variable genes in `adata.var['highly_variable']`
@@ -157,42 +176,22 @@ def normalize_pearson_residuals_pca(
 
     Params
     ------
-    adata
-        The annotated data matrix of shape `n_obs` × `n_vars`.
-        Rows correspond to cells and columns to genes.
-    theta
-        The negative binomial overdispersion parameter theta for Pearson residuals.
-        Higher values correspond to less overdispersion (var = mean + mean^2/theta),
-        and `theta=np.Inf` corresponds to a Poisson model.
-    clip
-        Determines if and how residuals are clipped:
-
-            * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
-            where n is the number of cells in the dataset (default behavior).
-            * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
-            `clip=np.Inf` for no clipping.
-
-    n_comps
-        Number of principal components to compute for the PCA step.
-    random_state
-        Change to use different initial states for the optimization of the PCA step.
-    kwargs_pca
-        Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
+    {adata}
+    {dist_params}
+    {pca_chunk}
     use_highly_variable
-        Whether to use the gene selection in `adata.var['highly_variable']` to subset
-        the data before normalizing (default) or proceed on the full dataset.
-    check_values
-        Check if counts in selected layer are integers. A Warning is returned if set to
-        True.
-    inplace
-        Whether to place results in `adata` or return them.
+        If `True`, use gene selection present in `adata.var['highly_variable']` to
+        subset the data before normalizing (default). Otherwise, proceed on the full
+        dataset.
+    {check_values}
+    {inplace}
 
 
     Returns
     -------
-    If `inplace=False`, returns the Pearson residual-based PCA results
-    (`adata_pca`).
-    If `inplace=True`, updates `adata` with the following fields:
+    If `inplace=False`, returns the Pearson residual-based PCA results (`adata_pca`,
+    :class:`~anndata.AnnData`). If `inplace=True`, updates `adata` with the following
+    fields:
 
     `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
          The hvg-subset, normalized by Pearson residuals

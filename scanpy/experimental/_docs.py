@@ -10,21 +10,24 @@ adata
 doc_dist_params = """\
 theta
     The negative binomial overdispersion parameter theta for Pearson residuals.
-    Higher values correspond to less overdispersion (var = mean + mean^2/theta),
-    and `theta=np.Inf` corresponds to a Poisson model.
+    Higher values correspond to less overdispersion \
+    (`var = mean + mean^2/theta`), and `theta=np.Inf` corresponds to a Poisson model.
 clip
     Determines if and how residuals are clipped:
 
-    * If `None`, residuals are clipped to the interval [-sqrt(n), sqrt(n)], \
-    where n is the number of cells in the dataset (default behavior).
-    * If any scalar c, residuals are clipped to the interval [-c, c]. Set \
+    * If `None`, residuals are clipped to the interval \
+    `[-sqrt(n_obs), sqrt(n_obs)]`, where `n_obs` is the number of cells in the dataset (default behavior).
+    * If any scalar `c`, residuals are clipped to the interval `[-c, c]`. Set \
     `clip=np.Inf` for no clipping.
 """
 
-doc_layer = """\
+doc_check_values = """\
 check_values
-    Check if counts in selected layer are integers. A Warning is returned if set to
-    True.
+    Check if counts in selected layer are integers. A warning is returned if set to
+    `True`.
+"""
+
+doc_layer = """\
 layer
     Layer to normalize instead of `X`. If `None`, `X` is normalized.
 """
@@ -52,13 +55,24 @@ chunksize
     the required memory.
 """
 
+doc_pca_chunk = """\
+n_comps
+    Number of principal components to compute in the PCA step.
+random_state
+    Change to use different initial states for the optimization in the PCA step.
+kwargs_pca
+    Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
+"""
+
 doc_inplace = """\
 inplace
-    Whether to update `adata` or return dictionary with normalized copies
-    of `adata.X` and `adata.layers`.
+    If `True`, update `adata` with results. Otherwise, return results. See below for
+    details of what is returned.
 """
 
 doc_copy = """\
 copy
-    Whether to modify copied input object. Not compatible with `inplace=False`.
+    If `True`, the function runs on a copy of the input object and returns the
+    modified copy. Otherwise, the input object is modified direcly. Not compatible
+    with `inplace=False`.
 """

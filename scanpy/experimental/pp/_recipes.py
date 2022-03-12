@@ -8,7 +8,9 @@ from scanpy.experimental._docs import (
     doc_adata,
     doc_dist_params,
     doc_genes_batch_chunk,
+    doc_pca_chunk,
     doc_layer,
+    doc_check_values,
     doc_inplace,
 )
 from scanpy._utils import _doc_params
@@ -18,7 +20,8 @@ from scanpy._utils import _doc_params
     adata=doc_adata,
     dist_params=doc_dist_params,
     genes_batch_chunk=doc_genes_batch_chunk,
-    layer=doc_layer,
+    pca_chunk=doc_pca_chunk,
+    check_values=doc_check_values,
     inplace=doc_inplace,
 )
 def recipe_pearson_residuals(
@@ -34,7 +37,7 @@ def recipe_pearson_residuals(
     kwargs_pca: dict = {},
     check_values: bool = True,
     inplace: bool = True,
-) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
+) -> Optional[Tuple[AnnData, pd.DataFrame]]:
     """\
     Gene selection and normalization based on [Lause21]_.
 
@@ -49,20 +52,16 @@ def recipe_pearson_residuals(
     {adata}
     {dist_params}
     {genes_batch_chunk}
-    n_comps
-        Number of principal components to compute in the PCA step.
-    random_state
-        Change to use different initial states for the optimization in the PCA step.
-    kwargs_pca
-        Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
-    {layer}
+    {pca_chunk}
+    {check_values}
     {inplace}
 
     Returns
     -------
-    If `inplace=False`, separately returns the gene selection results (`hvg`)
-    and Pearson residual-based PCA results (`adata_pca`). If `inplace=True`,
-    updates `adata` with the following fields for gene selection results:
+    If `inplace=False`, separately returns the gene selection results (`hvg`,
+    :class:`~pandas.DataFrame`) and Pearson residual-based PCA results (`adata_pca`,
+    :class:`~anndata.AnnData`). If `inplace=True`, updates `adata` with the
+    following fields for gene selection results:
 
     `.var['highly_variable']` : bool
         boolean indicator of highly-variable genes.
@@ -83,7 +82,7 @@ def recipe_pearson_residuals(
         If batch_key is given, this denotes the genes that are highly variable
         in all batches.
 
-    …and the following fields for Pearson residual-based PCA results and
+    The following fields contain Pearson residual-based PCA results and
     normalization settings:
 
     `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
