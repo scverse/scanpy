@@ -108,9 +108,9 @@ def normalize_pearson_residuals(
     normalized values in `results_dict['X']`.
 
     `.uns['pearson_residuals_normalization']['theta']`
-         The used value of the overdisperion parameter theta
+         The used value of the overdisperion parameter theta.
     `.uns['pearson_residuals_normalization']['clip']`
-         The used value of the clipping parameter
+         The used value of the clipping parameter.
     `.uns['pearson_residuals_normalization']['computed_on']`
          The name of the layer on which the residuals were computed.
     """
@@ -180,7 +180,7 @@ def normalize_pearson_residuals_pca(
     {dist_params}
     {pca_chunk}
     use_highly_variable
-        If `True`, use gene selection present in `adata.var['highly_variable']` to
+        If `True`, uses gene selection present in `adata.var['highly_variable']` to
         subset the data before normalizing (default). Otherwise, proceed on the full
         dataset.
     {check_values}
@@ -189,16 +189,15 @@ def normalize_pearson_residuals_pca(
 
     Returns
     -------
-    If `inplace=False`, returns the Pearson residual-based PCA results (`adata_pca`,
-    :class:`~anndata.AnnData`). If `inplace=True`, updates `adata` with the following
-    fields:
+    If `inplace=False`, returns the Pearson residual-based PCA results (as :class:`~anndata.AnnData`
+    object). If `inplace=True`, updates `adata` with the following fields:
 
     `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
-         The hvg-subset, normalized by Pearson residuals
+         The subset of highly variable genes, normalized by Pearson residuals.
     `.uns['pearson_residuals_normalization']['theta']`
-         The used value of the overdisperion parameter theta
+         The used value of the overdisperion parameter theta.
     `.uns['pearson_residuals_normalization']['clip']`
-         The used value of the clipping parameter
+         The used value of the clipping parameter.
 
     `.obsm['X_pca']`
         PCA representation of data after gene selection (if applicable) and Pearson

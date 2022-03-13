@@ -236,12 +236,12 @@ def highly_variable_genes(
     inplace: bool = True,
 ) -> Optional[pd.DataFrame]:
     """\
-    Annotate highly variable genes using analytic Pearson residuals [Lause21]_.
+    Select highly variable genes using analytic Pearson residuals [Lause21]_.
 
-    For [Lause21]_, Pearson residuals of a negative binomial offset model (with
-    overdispersion theta shared across genes) are computed. By default,
-    overdispersion `theta=100` is used and residuals are clipped to `sqrt(n_obs)`.
-    Finally, genes are ranked by residual variance.
+    In [Lause21]_, Pearson residuals of a negative binomial offset model are computed
+    (with overdispersion `theta` shared across genes). By default, overdispersion
+    `theta=100` is used and residuals are clipped to `sqrt(n_obs)`. Finally, genes
+    are ranked by residual variance.
 
     Expects raw count input.
 
@@ -256,8 +256,8 @@ def highly_variable_genes(
     {check_values}
     {layer}
     subset
-        Inplace subset to highly-variable genes if `True` otherwise merely indicate
-        highly variable genes.
+        If `True`, subset the data to highly-variable genes after finding them.
+        Otherwise merely indicate highly variable genes in `adata.var` (see below).
     {inplace}
 
     Returns
@@ -266,21 +266,21 @@ def highly_variable_genes(
     returns the same fields as :class:`~pandas.DataFrame`.
 
     highly_variable : bool
-        boolean indicator of highly-variable genes
+        boolean indicator of highly-variable genes.
     means : float
-        means per gene
+        means per gene.
     variances : float
-        variance per gene
+        variance per gene.
     residual_variances : float
         For `flavor='pearson_residuals'`, residual variance per gene. Averaged in the
         case of multiple batches.
     highly_variable_rank : float
-        For `flavor='pearson_residuals'`, rank of the gene according to residual
-        variance, median rank in the case of multiple batches
+        For `flavor='pearson_residuals'`, rank of the gene according to residual.
+        variance, median rank in the case of multiple batches.
     highly_variable_nbatches : int
-        If `batch_key` given, denotes in how many batches genes are detected as HVG
+        If `batch_key` given, denotes in how many batches genes are detected as HVG.
     highly_variable_intersection : bool
-        If `batch_key` given, denotes the genes that are highly variable in all batches
+        If `batch_key` given, denotes the genes that are highly variable in all batches.
 
     Notes
     -----

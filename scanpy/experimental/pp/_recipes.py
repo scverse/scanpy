@@ -39,7 +39,7 @@ def recipe_pearson_residuals(
     inplace: bool = True,
 ) -> Optional[Tuple[AnnData, pd.DataFrame]]:
     """\
-    Gene selection and normalization based on [Lause21]_.
+    Full pipeline for HVG selection and normalization by analytic Pearson residuals ([Lause21]_).
 
     Applies gene selection based on Pearson residuals. On the resulting subset,
     Pearson residual normalization and PCA are performed.
@@ -58,8 +58,8 @@ def recipe_pearson_residuals(
 
     Returns
     -------
-    If `inplace=False`, separately returns the gene selection results (`hvg`,
-    :class:`~pandas.DataFrame`) and Pearson residual-based PCA results (`adata_pca`,
+    If `inplace=False`, separately returns the gene selection results (as
+    :class:`~pandas.DataFrame`) and Pearson residual-based PCA results (as
     :class:`~anndata.AnnData`). If `inplace=True`, updates `adata` with the
     following fields for gene selection results:
 
@@ -86,7 +86,7 @@ def recipe_pearson_residuals(
     normalization settings:
 
     `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
-         The hvg-subset, normalized by Pearson residuals.
+         The subset of highly variable genes, normalized by Pearson residuals.
     `.uns['pearson_residuals_normalization']['theta']`
          The used value of the overdisperion parameter theta.
     `.uns['pearson_residuals_normalization']['clip']`

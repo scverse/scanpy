@@ -9,7 +9,7 @@ adata
 
 doc_dist_params = """\
 theta
-    The negative binomial overdispersion parameter theta for Pearson residuals.
+    The negative binomial overdispersion parameter `theta` for Pearson residuals.
     Higher values correspond to less overdispersion \
     (`var = mean + mean^2/theta`), and `theta=np.Inf` corresponds to a Poisson model.
 clip
@@ -23,13 +23,14 @@ clip
 
 doc_check_values = """\
 check_values
-    Check if counts in selected layer are integers. A warning is returned if set to
-    `True`.
+    If `True`, checks if counts in selected layer are integers as expected by this
+    function, and return a warning if non-integers are found. Otherwise, proceed
+    without checking. Setting this to `False` can speed up code for large datasets.
 """
 
 doc_layer = """\
 layer
-    Layer to normalize instead of `X`. If `None`, `X` is normalized.
+    Layer to use as input instead of `X`. If `None`, `X` is used.
 """
 
 doc_subset = """\
@@ -59,7 +60,7 @@ doc_pca_chunk = """\
 n_comps
     Number of principal components to compute in the PCA step.
 random_state
-    Change to use different initial states for the optimization in the PCA step.
+    Random seed for setting the initial states for the optimization in the PCA step.
 kwargs_pca
     Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
 """
