@@ -88,6 +88,9 @@ Feature selection
 -----------------
 * `triku 🦔 <https://gitlab.com/alexmascension/triku>`__ :small:`Biodonostia Health Research Institute`
 
+Identification of rare cell types
+-----------------
+* `CIARA <https://github.com/ScialdoneLab/CIARA_python>`__ :small:`Helmholtz Munich`
 
 Annotation/ Enrichment Analysis
 -------------------------------
