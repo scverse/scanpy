@@ -505,10 +505,14 @@ class BasePlot(object):
 
         """
         cmap = pl.get_cmap(self.cmap)
+
         import matplotlib.colorbar
+        from matplotlib.cm import ScalarMappable
+
+        mappable = ScalarMappable(norm=normalize, cmap=cmap)
 
         matplotlib.colorbar.Colorbar(
-            color_legend_ax, orientation='horizontal', cmap=cmap, norm=normalize
+            color_legend_ax, mappable=mappable, orientation='horizontal'
         )
 
         color_legend_ax.set_title(self.color_legend_title, fontsize='small')

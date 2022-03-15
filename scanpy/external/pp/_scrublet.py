@@ -407,12 +407,10 @@ def _scrublet_call_doublets(
     # Store results in AnnData for return
 
     adata_obs.obs['doublet_score'] = scrub.doublet_scores_obs_
-    adata_obs.obs['predicted_doublet'] = scrub.predicted_doublets_
 
     # Store doublet Scrublet metadata
 
     adata_obs.uns['scrublet'] = {
-        'threshold': scrub.threshold_,
         'doublet_scores_sim': scrub.doublet_scores_sim_,
         'doublet_parents': adata_sim.obsm['doublet_parents'],
         'parameters': {
@@ -426,6 +424,19 @@ def _scrublet_call_doublets(
             'random_state': random_state,
         },
     }
+
+    # If threshold hasn't been located successfully then we couldn't make any
+    # predictions. The user will get a warning from Scrublet, but we need to
+    # set the boolean so that any downstream filtering on
+    # predicted_doublet=False doesn't incorrectly filter cells. The user can
+    # still use this object to generate the plot and derive a threshold
+    # manually.
+
+    if hasattr(scrub, 'threshold_'):
+        adata_obs.uns['scrublet']['threshold'] = scrub.threshold_
+        adata_obs.obs['predicted_doublet'] = scrub.predicted_doublets_
+    else:
+        adata_obs.obs['predicted_doublet'] = False
 
     if get_doublet_neighbor_parents:
         adata_obs.uns['scrublet'][

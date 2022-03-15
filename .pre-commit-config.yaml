@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/psf/black
-    rev: 21.12b0
+    rev: 22.1.0
     hooks:
     -   id: black
 -   repo: https://github.com/PyCQA/flake8
@@ -8,12 +8,12 @@ repos:
     hooks:
     -   id: flake8
 -   repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: v1.5.7
+    rev: v1.6.0
     hooks:
     -   id: autopep8
         args: ["-i"]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.1.0
     hooks:
     -   id: trailing-whitespace
         exclude: scanpy/tests/_data
