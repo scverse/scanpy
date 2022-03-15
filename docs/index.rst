@@ -9,7 +9,7 @@
 * Discuss usage on Discourse_ and development on GitHub_.
 * Get started by browsing :doc:`tutorials <tutorials>`,
   :doc:`usage principles <usage-principles>` or the main :doc:`API <api>`.
-* Follow changes in the :doc:`release notes <release-notes>`.
+* Follow changes in the :ref:`release notes <release-notes>`.
 * Find tools that harmonize well with anndata & Scanpy via the
   :doc:`external API <external>` and the :doc:`ecosystem page <ecosystem>`.
 * Consider citing `Genome Biology (2018)`_ along with original :doc:`references <references>`.
