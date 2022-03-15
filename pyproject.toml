@@ -73,7 +73,7 @@ dependencies = [
     "numba>=0.41.0",
     "umap-learn>=0.3.10",
     "packaging",
-    "sinfo",
+    "session-info",
     # for getting the stable version
     "importlib_metadata>=0.7; python_version < '3.8'",
 ]
