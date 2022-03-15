@@ -1,21 +1,14 @@
 """Logging and Profiling
 """
-import io
 import logging
 import sys
 from functools import update_wrapper, partial
-from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG
 from datetime import datetime, timedelta, timezone
-from typing import Optional, IO, TYPE_CHECKING
+from typing import Optional, IO
 import warnings
 
 import anndata.logging
-
-
-if TYPE_CHECKING:
-    from IPython.display import HTML
-else:
-    HTML = object
 
 
 HINT = (INFO + DEBUG) // 2
