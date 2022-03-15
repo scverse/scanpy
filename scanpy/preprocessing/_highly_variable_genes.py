@@ -28,7 +28,7 @@ def _highly_variable_genes_seurat_v3(
     """\
     See `highly_variable_genes`.
 
-    For further implemenation details see https://www.overleaf.com/read/ckptrbgzzzpg
+    For further implementation details see https://www.overleaf.com/read/ckptrbgzzzpg
 
     Returns
     -------
