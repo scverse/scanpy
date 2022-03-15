@@ -14,7 +14,7 @@
   :doc:`external API <external>` and the :doc:`ecosystem page <ecosystem>`.
 * Consider citing `Genome Biology (2018)`_ along with original :doc:`references <references>`.
 
-.. _Discourse: https://scanpy.discourse.group/
+.. _Discourse: https://discourse.scverse.org/
 .. _GitHub: https://github.com/theislab/scanpy
 .. _Genome Biology (2018): https://doi.org/10.1186/s13059-017-1382-0
 
