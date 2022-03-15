@@ -38,7 +38,7 @@ This release includes an overhaul of :func:`~scanpy.pl.dotplot`, :func:`~scanpy.
 - Added `backup_url` param to :func:`~scanpy.read_10x_h5` :pr:`1296` :smaller:`A Gayoso`
 - Allow prefix for :func:`~scanpy.read_10x_mtx` :pr:`1250`  :smaller:`G Sturm`
 - Optional tie correction for the `'wilcoxon'` method in :func:`~scanpy.tl.rank_genes_groups` :pr:`1330`  :smaller:`S Rybakov`
-- Use `session_info` (at release time `sinfo`) for :func:`~scanpy.logging.print_versions` and add :func:`~scanpy.logging.print_header` to do what it previously did. :pr:`1338` :smaller:`I Virshup` :pr:`1373`
+- Use `sinfo` for :func:`~scanpy.logging.print_versions` and add :func:`~scanpy.logging.print_header` to do what it previously did. :pr:`1338` :smaller:`I Virshup` :pr:`1373`
 
 .. rubric:: Bug fixes
 
