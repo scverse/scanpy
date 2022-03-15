@@ -6,9 +6,9 @@ Scanpy is a community driven project. There are multiple channels for users and 
 Discourse_
 ----------
 
-The Scanpy Discourse forum is place to go to ask usage questions and for longer form discussions around the project.
+The scverse Discourse forum is place to go to ask usage questions and for longer form discussions around the project.
 
-.. _Discourse: https://scanpy.discourse.group
+.. _Discourse: https://discourse.scverse.org
 
 `Github Issue Tracker <https://github.com/theislab/scanpy/issues>`_
 -------------------------------------------------------------------
