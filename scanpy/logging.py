@@ -7,9 +7,9 @@ from functools import update_wrapper, partial
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 from datetime import datetime, timedelta, timezone
 from typing import Optional, IO, TYPE_CHECKING
+import warnings
 
 import anndata.logging
-import session_info
 
 
 if TYPE_CHECKING:
@@ -165,56 +165,37 @@ def print_header(*, file=None):
     )
 
 
-def _run_session_info(rich: bool) -> Optional[HTML]:
-    return session_info.show(
-        dependencies=True,
-        html=rich,
-        excludes=[
-            'builtins',
-            'stdlib_list',
-            'importlib_metadata',
-            # Special module present if test coverage being calculated
-            # https://gitlab.com/joelostblom/session_info/-/issues/10
-            "$coverage",
-        ],
-    )
-
-
-def print_versions(*, file: Optional[IO[str]] = None, rich: Optional[bool] = None):
+def print_versions(*, file: Optional[IO[str]] = None):
     """\
     Print versions of imported packages, OS, and jupyter environment.
 
-    Parameters
-    ----------
-    file
-        File to write output to. The default `None` means writing to `stdout`
-    rich
-        Rich HTML output. Defaults to `True` only if `file` is `None`
-        and this is called from a jupyter notebook.
+    For more options (including rich output) use `session_info.show` directly.
     """
-    in_notebook = 'jupyter_core' in sys.modules
-    # don’t write HTML to file unless rich=True is set manually
-    if rich is None:
-        rich = in_notebook and file is None
+    import session_info
 
-    output: str
-    if rich:
-        output = _run_session_info(True).data
+    if file is not None:
+        from contextlib import redirect_stdout
+
+        warnings.warn(
+            "Passing argument 'file' to print_versions is deprecated, and will be "
+            "removed in a future version.",
+            FutureWarning,
+        )
+        with redirect_stdout(file):
+            print_versions()
     else:
-        stdout = sys.stdout
-        try:
-            buf = sys.stdout = io.StringIO()
-            _run_session_info(False)
-        finally:
-            sys.stdout = stdout
-        output = buf.getvalue()
-
-    if rich and file is None:
-        import IPython.display
-
-        IPython.display.display_html(output, raw=True)
-    else:
-        print(output, file=file)
+        session_info.show(
+            dependencies=True,
+            html=False,
+            excludes=[
+                'builtins',
+                'stdlib_list',
+                'importlib_metadata',
+                # Special module present if test coverage being calculated
+                # https://gitlab.com/joelostblom/session_info/-/issues/10
+                "$coverage",
+            ],
+        )
 
 
 def print_version_and_date(*, file=None):
