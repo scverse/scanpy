@@ -46,7 +46,6 @@ def recipe_pearson_residuals(
 
     Expects raw count input.
 
-
     Params
     ------
     {adata}
@@ -102,7 +101,6 @@ def recipe_pearson_residuals(
          Ratio of explained variance.
     `.uns['pca']['variance']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
-
     """
 
     hvg_args = dict(

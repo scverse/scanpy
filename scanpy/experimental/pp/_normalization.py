@@ -173,7 +173,6 @@ def normalize_pearson_residuals_pca(
     Operates on the subset of highly variable genes in `adata.var['highly_variable']`
     by default. Expects raw count input.
 
-
     Params
     ------
     {adata}
@@ -185,7 +184,6 @@ def normalize_pearson_residuals_pca(
         dataset.
     {check_values}
     {inplace}
-
 
     Returns
     -------
@@ -210,7 +208,6 @@ def normalize_pearson_residuals_pca(
          Ratio of explained variance.
     `.uns['pca']['variance']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
-
     """
 
     # check if HVG selection is there if user wants to use it
