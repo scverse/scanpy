@@ -25,46 +25,45 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
     if silent and settings.verbosity > 1:
         settings.verbosity = 1
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
-        use_rep = 'X'
+        use_rep = "X"
     if use_rep is None:
         if adata.n_vars > settings.N_PCS:
-            if 'X_pca' in adata.obsm.keys():
-                if n_pcs is not None and n_pcs > adata.obsm['X_pca'].shape[1]:
+            if "X_pca" in adata.obsm.keys():
+                if n_pcs is not None and n_pcs > adata.obsm["X_pca"].shape[1]:
                     raise ValueError(
-                        '`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`.'
+                        "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
                     )
-                X = adata.obsm['X_pca'][:, :n_pcs]
-                logg.info(f'    using \'X_pca\' with n_pcs = {X.shape[1]}')
+                X = adata.obsm["X_pca"][:, :n_pcs]
+                logg.info(f"    using 'X_pca' with n_pcs = {X.shape[1]}")
             else:
                 logg.warning(
-                    f'You’re trying to run this on {adata.n_vars} dimensions of `.X`, '
-                    'if you really want this, set `use_rep=\'X\'`.\n         '
-                    'Falling back to preprocessing with `sc.pp.pca` and default params.'
+                    f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
+                    "if you really want this, set `use_rep='X'`.\n         "
+                    "Falling back to preprocessing with `sc.pp.pca` and default params."
                 )
                 X = pca(adata.X)
-                adata.obsm['X_pca'] = X[:, :n_pcs]
+                adata.obsm["X_pca"] = X[:, :n_pcs]
         else:
-            logg.info('    using data matrix X directly')
+            logg.info("    using data matrix X directly")
             X = adata.X
     else:
         if use_rep in adata.obsm.keys() and n_pcs is not None:
             if n_pcs > adata.obsm[use_rep].shape[1]:
                 raise ValueError(
-                        '{rep_name} does not have enough Dimensions. Provide Representation with equal or more dimensions than `n_pcs`'.format(rep_name=use_rep)
-                    )
+                    "{rep_name} does not have enough Dimensions. Provide Representation with equal or more dimensions than `n_pcs`".format(rep_name=use_rep)
+                )
             X = adata.obsm[use_rep][:, :n_pcs]
         elif use_rep in adata.obsm.keys() and n_pcs is None:
             X = adata.obsm[use_rep]
-        elif use_rep == 'X':
+        elif use_rep == "X":
             X = adata.X
         else:
             raise ValueError(
-                'Did not find {} in `.obsm.keys()`. '
-                'You need to compute it first.'.format(use_rep)
+                "Did not find {} in `.obsm.keys()`. "
+                "You need to compute it first.".format(use_rep)
             )
     settings.verbosity = verbosity  # resetting verbosity
     return X
-
 
 def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
     """
