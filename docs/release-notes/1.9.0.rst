@@ -11,6 +11,7 @@
 - Added :mod:`scanpy.experimental` module!
 
     - Added :func:`scanpy.experimental.pp.normalize_pearson_residuals` for Pearson Residuals normalization :pr:`1715` :smaller:`J Lause, G Palla, I Virshup`
+    - Added :func:`scanpy.experimental.pp.normalize_pearson_residuals_pca` for Pearson Residuals normalization and PCA :pr:`1715` :smaller:`J Lause, G Palla, I Virshup`
     - Added :func:`scanpy.experimental.pp.highly_variable_genes` for HVG selection with Pearson Residuals :pr:`1715` :smaller:`J Lause, G Palla, I Virshup`
     - Added :func:`scanpy.experimental.pp.normalize_pearson_residuals_pca` for Pearson Residuals normalization and dimensionality reduction with PCA :pr:`1715` :smaller:`J Lause, G Palla, I Virshup`
     - Added :func:`scanpy.experimental.pp.recipe_pearson_residuals` for Pearson Residuals normalization, HVG selection and dimensionality reduction with PCA  :pr:`1715` :smaller:`J Lause, G Palla, I Virshup`

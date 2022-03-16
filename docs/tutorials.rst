@@ -97,15 +97,14 @@ See the `cell cycle`_ notebook.
 
 .. _cell cycle: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb
 
-.. image:: _static/img/tutorials/170522_visualizing_one_million_cells/tsne_1.3M.png
-   :width: 120px
-   :align: right
-
 Normalization with Pearson Residuals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Normalization of scRNA-seq data with Pearson Residuals, from [Lause21]_: :tutorial:`tutorial_pearson_residuals`
 
+.. image:: _static/img/tutorials/170522_visualizing_one_million_cells/tsne_1.3M.png
+   :width: 120px
+   :align: right
 
 Scaling Computations
 ~~~~~~~~~~~~~~~~~~~~
