@@ -5,6 +5,7 @@
 
 - :func:`~scanpy.tl.filter_rank_genes_groups` now allows to filter with absolute values of log fold change :pr:`1649` :smaller:`S Rybakov`
 - :func:`~scanpy.pl.embedding_density` now allows more than 10 groups :pr:`1936` :smaller:`A Wolf`
+- :func:`~scanpy.logging.print_versions` now uses `session_info` :pr:`2089` :smaller:`P Angerer` :smaller:`I Virshup`
 
 .. rubric:: Experimental module
 
@@ -15,3 +16,4 @@
     - Added :func:`scanpy.experimental.pp.highly_variable_genes` for HVG selection with Pearson Residuals :pr:`1715` :smaller:`J Lause, G Palla, I Virshup`
     - Added :func:`scanpy.experimental.pp.normalize_pearson_residuals_pca` for Pearson Residuals normalization and dimensionality reduction with PCA :pr:`1715` :smaller:`J Lause, G Palla, I Virshup`
     - Added :func:`scanpy.experimental.pp.recipe_pearson_residuals` for Pearson Residuals normalization, HVG selection and dimensionality reduction with PCA  :pr:`1715` :smaller:`J Lause, G Palla, I Virshup`
+    

@@ -28,12 +28,12 @@ preprocessing, visualization, clustering, trajectory inference and differential
 expression testing.  The Python-based implementation efficiently deals with
 datasets of more than one million cells.
 
-Discuss usage on Discourse_. Read the documentation_.
+Discuss usage on the scverse Discourse_. Read the documentation_.
 If you'd like to contribute by opening an issue or creating a pull request,
 please take a look at our `contributing guide`_.
 If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
-.. _Discourse: https://scanpy.discourse.group/
+.. _Discourse: https://discourse.scverse.org/
 .. _documentation: https://scanpy.readthedocs.io
 .. _contributing guide: CONTRIBUTING.md
 .. _Genome Biology (2018): https://doi.org/10.1186/s13059-017-1382-0
