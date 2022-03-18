@@ -105,6 +105,7 @@ doc = [
     "scanpydoc[typehints]>=0.7.7",
     "typing_extensions; python_version < '3.8'",  # for `Literal`
     "python-igraph",
+    "myst-parser",
 ]
 dev = [
     # getting the dev version
