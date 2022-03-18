@@ -112,7 +112,7 @@ html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 
 
 def setup(app):
-    app.warningiserror = on_rtd
+    app.warningiserror = False  # Temporary, just to debug this PR
 
 
 # -- Options for other output formats ------------------------------------------
