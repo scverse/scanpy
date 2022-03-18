@@ -6,11 +6,27 @@ Versioning
     We are currently experimenting with our development practices.
     These are currently documented on a best effort basis, but may not be completely accurate.
 
+Semantic versioning
+-------------------
+
 We try to follow `semantic versioning <https://semver.org>`__ with our versioning scheme.
 This scheme breaks down a version number into `{major.minor.point}` sections.
 At a `point` release, there should be no changes beyond bug fixes.
 `minor` releases can include new features.
 `major` releases can break old APIs.
+
+
+Version numbers
+~~~~~~~~~~~~~~~
+
+Valid version numbers are described in `PEP 440 <https://peps.python.org/pep-0440/>`_.
+
+`Release candidates <https://peps.python.org/pep-0440/#pre-releases>`_ should have versions like `1.7.0rc1`, `1.7.0rc2`.
+`Development versions <https://peps.python.org/pep-0440/#developmental-releases>`_ should look like `1.8.0.dev0`, with a commit hash optionally appended as a local version identifier (e.g. `1.8.0.dev2+g00ad77b`).
+
+
+Tooling
+-------
 
 To be sure we can follow this scheme and maintain some agility in development, we use some tooling and development practices.
 When a minor release is made, a release branch should be cut and pushed to the main repo (e.g. `1.7.x` for the `1.7` release series).
