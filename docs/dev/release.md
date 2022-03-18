@@ -58,5 +58,5 @@ After a major or minor release has been made:
 
 After any release has been made:
 
-- Create a new release notes file for the next bugfix release. This should be included in both dev and stable branches `release-latest.rst`
+- Create a new release notes file for the next bugfix release. This should be included in both dev and stable branches `release-latest.md`
 - Create a milestone for the next release(s). For bugfix releases, this should have `on-merge: backport to 0.8.x` so [meeseeksdev](https://meeseeksbox.github.io) bot will create a backport PR. See {doc}`versioning` for more info.

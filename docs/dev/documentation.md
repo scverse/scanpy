@@ -25,7 +25,7 @@ These files are found in the `docs/release-notes/` directory.
 We recommend waiting on this until your PR is close to done since this can often causes merge conflicts.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
-This should be added to `docs/api.rst` under a relevant heading.
+This should be added to `docs/api.md` under a relevant heading.
 
 For tutorials and more in depth examples, consider adding a notebook to [scanpy-tutorials](https://github.com/theislab/scanpy-tutorials/).
 

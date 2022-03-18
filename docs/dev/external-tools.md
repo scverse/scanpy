@@ -6,7 +6,7 @@ For internal, it’ll be a more in-depth review as we'd be more responsible for 
 ## Docs
 
 To make sure your tool gets an entry in the documentation, you'll have to add it.
-Make sure there is a reference to your new function in `docs/external.rst`.
+Make sure there is a reference to your new function in `docs/external.md`.
 
 ## Testing
 
