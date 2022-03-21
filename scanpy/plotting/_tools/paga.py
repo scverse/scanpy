@@ -97,7 +97,7 @@ def paga_compare(
         else:
             basis = 'umap'
 
-    from .scatterplots import embedding, _get_data_points
+    from .scatterplots import embedding, _get_basis, _components_to_dimensions
 
     embedding(
         adata,
@@ -123,9 +123,12 @@ def paga_compare(
 
     if pos is None:
         if color == adata.uns['paga']['groups']:
-            coords = _get_data_points(
-                adata, basis, projection="2d", components=components, scale_factor=None
-            )[0][0]
+            # TODO: Use dimensions here
+            _basis = _get_basis(adata, basis)
+            dims = _components_to_dimensions(
+                components=components, dimensions=None, total_dims=_basis.shape[1]
+            )[0]
+            coords = _basis[:, dims]
             pos = (
                 pd.DataFrame(coords, columns=["x", "y"], index=adata.obs_names)
                 .groupby(adata.obs[color], observed=True)
