@@ -7,9 +7,9 @@ from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
 try:
-    import dask.array as da
+    from dask.array import Array as DaskArray
 except ImportError:
-    da.Array = None
+    DaskArray = None
 
 from .. import logging as logg
 from .._compat import Literal
@@ -21,7 +21,7 @@ def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    if isinstance(counts, da.Array):
+    if isinstance(counts, DaskArray):
         counts_greater_than_zero = counts[counts > 0].compute_chunk_sizes()
     else:
         counts_greater_than_zero = counts[counts > 0]
