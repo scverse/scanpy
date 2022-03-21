@@ -220,6 +220,27 @@ def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
     check_images(dict_pth, list_pth, tol=15)
 
 
+def test_dimension_broadcasting(adata, tmpdir, check_same_image):
+    tmpdir = Path(tmpdir)
+
+    with pytest.raises(ValueError):
+        sc.pl.pca(
+            adata, color=["label", "1_missing"], dimensions=[(0, 1), (1, 2), (2, 3)]
+        )
+
+    dims_pth = tmpdir / "broadcast_dims.png"
+    color_pth = tmpdir / "broadcast_colors.png"
+
+    sc.pl.pca(adata, color=["label", "label", "label"], dimensions=(2, 3), show=False)
+    plt.savefig(dims_pth, dpi=40)
+    plt.close()
+    sc.pl.pca(adata, color="label", dimensions=[(2, 3), (2, 3), (2, 3)], show=False)
+    plt.savefig(color_pth, dpi=40)
+    plt.close()
+
+    check_same_image(dims_pth, color_pth, tol=5)
+
+
 # Spatial specific
 
 
