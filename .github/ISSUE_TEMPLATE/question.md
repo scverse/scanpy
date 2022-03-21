@@ -7,7 +7,7 @@ assignees: ''
 ---
 
 <!--
-⚠ If you need help using Scanpy, please ask in https://scanpy.discourse.group/ instead ⚠
+⚠ If you need help using Scanpy, please ask in https://discourse.scverse.org/ instead ⚠
 If you want to know about design decisions and the like, please ask below:
 -->
 ...

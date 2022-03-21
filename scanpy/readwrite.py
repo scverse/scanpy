@@ -3,11 +3,11 @@
 from pathlib import Path, PurePath
 from typing import Union, Dict, Optional, Tuple, BinaryIO
 
+import h5py
 import json
 import numpy as np
 import pandas as pd
 from matplotlib.image import imread
-import tables
 import anndata
 from anndata import (
     AnnData,
@@ -177,7 +177,7 @@ def read_10x_h5(
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f'... did not find original file {filename}')
-    with tables.open_file(str(filename), 'r') as f:
+    with h5py.File(str(filename), 'r') as f:
         v3 = '/matrix' in f
     if v3:
         adata = _read_v3_10x_h5(filename, start=start)
@@ -201,9 +201,9 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
     """
     Read hdf5 file from Cell Ranger v2 or earlier versions.
     """
-    with tables.open_file(str(filename), 'r') as f:
+    with h5py.File(str(filename), 'r') as f:
         try:
-            children = [x._v_name for x in f.list_nodes(f.root)]
+            children = list(f.keys())
             if not genome:
                 if len(children) > 1:
                     raise ValueError(
@@ -217,9 +217,10 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
                     f"Could not find genome '{genome}' in '{filename}'. "
                     f'Available genomes are: {children}'
                 )
+
             dsets = {}
-            for node in f.walk_nodes('/' + genome, 'Array'):
-                dsets[node.name] = node.read()
+            _collect_datasets(dsets, f)
+
             # AnnData works with csr matrices
             # 10x stores the transposed data, so we do the transposition right away
             from scipy.sparse import csr_matrix
@@ -237,8 +238,8 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
             # as scanpy expects it, so, no need for a further transpostion
             adata = AnnData(
                 matrix,
-                dict(obs_names=dsets['barcodes'].astype(str)),
-                dict(
+                obs=dict(obs_names=dsets['barcodes'].astype(str)),
+                var=dict(
                     var_names=dsets['gene_names'].astype(str),
                     gene_ids=dsets['genes'].astype(str),
                 ),
@@ -249,15 +250,23 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
             raise Exception('File is missing one or more required datasets.')
 
 
+def _collect_datasets(dsets: dict, group: h5py.Group):
+    for k, v in group.items():
+        if isinstance(v, h5py.Dataset):
+            dsets[k] = v[:]
+        else:
+            _collect_datasets(dsets, v)
+
+
 def _read_v3_10x_h5(filename, *, start=None):
     """
     Read hdf5 file from Cell Ranger v3 or later versions.
     """
-    with tables.open_file(str(filename), 'r') as f:
+    with h5py.File(str(filename), 'r') as f:
         try:
             dsets = {}
-            for node in f.walk_nodes('/matrix', 'Array'):
-                dsets[node.name] = node.read()
+            _collect_datasets(dsets, f["matrix"])
+
             from scipy.sparse import csr_matrix
 
             M, N = dsets['shape']
@@ -271,8 +280,8 @@ def _read_v3_10x_h5(filename, *, start=None):
             )
             adata = AnnData(
                 matrix,
-                dict(obs_names=dsets['barcodes'].astype(str)),
-                dict(
+                obs=dict(obs_names=dsets['barcodes'].astype(str)),
+                var=dict(
                     var_names=dsets['name'].astype(str),
                     gene_ids=dsets['id'].astype(str),
                     feature_types=dsets['feature_type'].astype(str),
@@ -815,9 +824,9 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
         # Next line is the column headers (sample id's)
         sample_names = file.readline().strip().split("\t")
         # The column indices that contain gene expression data
-        I = [i for i, x in enumerate(sample_names) if x.startswith("GSM")]
+        indices = [i for i, x in enumerate(sample_names) if x.startswith("GSM")]
         # Restrict the column headers to those that we keep
-        sample_names = [sample_names[i] for i in I]
+        sample_names = [sample_names[i] for i in indices]
         # Get a list of sample labels
         groups = [samples_info[k] for k in sample_names]
         # Read the gene expression data as a list of lists, also get the gene
@@ -831,7 +840,7 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
             V = line.split("\t")
             # Extract the values that correspond to gene expression measures
             # and convert the strings to numbers
-            x = [float(V[i]) for i in I]
+            x = [float(V[i]) for i in indices]
             X.append(x)
             gene_names.append(V[1])
     # Convert the Python list of lists to a Numpy array and transpose to match
@@ -839,7 +848,7 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
     X = np.array(X).T
     obs = pd.DataFrame({"groups": groups}, index=sample_names)
     var = pd.DataFrame(index=gene_names)
-    return AnnData(X=X, obs=obs, var=var)
+    return AnnData(X=X, obs=obs, var=var, dtype=X.dtype)
 
 
 # -------------------------------------------------------------------------------
@@ -914,7 +923,7 @@ def get_used_files():
                 filenames.append(nt.path)
         # This catches a race condition where a process ends
         # before we can examine its files
-        except psutil.NoSuchProcess as err:
+        except psutil.NoSuchProcess:
             pass
     return set(filenames)
 
@@ -932,12 +941,27 @@ def _download(url: str, path: Path):
         from tqdm import tqdm
 
     from urllib.request import urlopen, Request
+    from urllib.error import URLError
 
     blocksize = 1024 * 8
     blocknum = 0
 
     try:
-        with urlopen(Request(url, headers={"User-agent": "scanpy-user"})) as resp:
+        req = Request(url, headers={"User-agent": "scanpy-user"})
+
+        try:
+            open_url = urlopen(req)
+        except URLError:
+            logg.warning(
+                'Failed to open the url with default certificates, trying with certifi.'
+            )
+
+            from certifi import where
+            from ssl import create_default_context
+
+            open_url = urlopen(req, context=create_default_context(cafile=where()))
+
+        with open_url as resp:
             total = resp.info().get("content-length", None)
             with tqdm(
                 unit="B",

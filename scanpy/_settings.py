@@ -470,8 +470,9 @@ class ScanpyConfig:
     @staticmethod
     def _is_run_from_ipython():
         """Determines whether we're currently in IPython."""
-        # https://stackoverflow.com/questions/40638507/testing-for-presence-of-ipython
-        return hasattr(__builtins__, "__IPYTHON__")
+        import builtins
+
+        return getattr(builtins, "__IPYTHON__", False)
 
     def __str__(self) -> str:
         return '\n'.join(

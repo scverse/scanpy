@@ -17,7 +17,7 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 
 .. rubric:: External tools
 
-- :func:`~scanpy.external.pp.scvi` for preprocessing with scVI :pr:`1085` :smaller:`G Xing`
+- `scanpy.external.pp.scvi` for preprocessing with scVI :pr:`1085` :smaller:`G Xing`
 - Guide for using :ref:`Scanpy in R <conversion_to_r>` :pr:`1186` :smaller:`L Zappia`
 
 .. rubric:: Performance
@@ -48,4 +48,3 @@ The `1.5.0` release adds a lot of new functionality, much of which takes advanta
 - :func:`~scanpy.tl.louvain` for Louvain `0.6` :pr:`1197` :smaller:`I Virshup`
 - :func:`~scanpy.pp.highly_variable_genes` which could lead to incorrect results when the `batch_key` argument was used :pr:`1180` :smaller:`G Eraslan`
 - :func:`~scanpy.tl.ingest` where an inconsistent number of neighbors was used :pr:`1111` :smaller:`S Rybakov`
-

@@ -19,6 +19,9 @@ def test_leiden_basic(adata_neighbors):
     ],
 )
 def test_clustering_subset(adata_neighbors, clustering, key):
+    if clustering == sc.tl.louvain:
+        pytest.importorskip("louvain")
+
     clustering(adata_neighbors, key_added=key)
 
     for c in adata_neighbors.obs[key].unique():
@@ -41,11 +44,13 @@ def test_clustering_subset(adata_neighbors, clustering, key):
 
         # Original category's cells assigned only to new categories
         nonzero_cat = cat_counts[cat_counts > 0].index
-        common_cat = nonzero_cat & adata_neighbors.obs[key].cat.categories
+        common_cat = nonzero_cat.intersection(adata_neighbors.obs[key].cat.categories)
         assert len(common_cat) == 0
 
 
 def test_louvain_basic(adata_neighbors):
+    pytest.importorskip("louvain")
+
     sc.tl.louvain(adata_neighbors)
     sc.tl.louvain(adata_neighbors, use_weights=True)
     sc.tl.louvain(adata_neighbors, use_weights=True, flavor="igraph")
@@ -53,7 +58,7 @@ def test_louvain_basic(adata_neighbors):
 
 
 def test_partition_type(adata_neighbors):
-    import louvain
+    louvain = pytest.importorskip("louvain")
 
     sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
     sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)

@@ -6,4 +6,3 @@
 
 .. _SPRING: https://github.com/AllonKleinLab/SPRING/
 .. _spring tutorial: https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export
-
