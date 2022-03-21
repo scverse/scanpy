@@ -1,15 +1,14 @@
 """Logging and Profiling
 """
-import io
 import logging
 import sys
 from functools import update_wrapper, partial
-from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, IO
+import warnings
 
 import anndata.logging
-from sinfo import sinfo
 
 
 HINT = (INFO + DEBUG) // 2
@@ -159,28 +158,37 @@ def print_header(*, file=None):
     )
 
 
-def print_versions(*, file=None):
-    """Print print versions of imported packages"""
-    if file is None:  # Inform people about the behavior change
-        warning('If you miss a compact list, please try `print_header`!')
-    stdout = sys.stdout
-    try:
-        buf = sys.stdout = io.StringIO()
-        sinfo(
+def print_versions(*, file: Optional[IO[str]] = None):
+    """\
+    Print versions of imported packages, OS, and jupyter environment.
+
+    For more options (including rich output) use `session_info.show` directly.
+    """
+    import session_info
+
+    if file is not None:
+        from contextlib import redirect_stdout
+
+        warnings.warn(
+            "Passing argument 'file' to print_versions is deprecated, and will be "
+            "removed in a future version.",
+            FutureWarning,
+        )
+        with redirect_stdout(file):
+            print_versions()
+    else:
+        session_info.show(
             dependencies=True,
+            html=False,
             excludes=[
                 'builtins',
                 'stdlib_list',
                 'importlib_metadata',
                 # Special module present if test coverage being calculated
-                # https://gitlab.com/joelostblom/sinfo/-/issues/10
+                # https://gitlab.com/joelostblom/session_info/-/issues/10
                 "$coverage",
             ],
         )
-    finally:
-        sys.stdout = stdout
-    output = buf.getvalue()
-    print(output, file=file)
 
 
 def print_version_and_date(*, file=None):
