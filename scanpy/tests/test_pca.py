@@ -139,13 +139,15 @@ def test_pca_chunked(pbmc3k_normalized):
 
 def test_pca_n_pcs(pbmc3k_normalized):
     """
-    Tests that the n_pcs parameter also works for representations not called "X_pca"
+    Tests that the n_pcs parameter also works for
+    representations not called "X_pca"
     """
     pbmc = pbmc3k_normalized
     sc.pp.pca(pbmc, dtype=np.float64)
     pbmc.obsm["X_pca_test"] = pbmc.obsm["X_pca"]
-    original = sc.pp.neighbors(pbmc,n_pcs=5, use_rep="X_pca", copy=True)
-    renamed = sc.pp.neighbors(pbmc,n_pcs=5, use_rep="X_pca_test", copy=True)
-    
+    original = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca", copy=True)
+    renamed = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca_test", copy=True)
+
     assert np.allclose(original.obsm["X_pca"], renamed.obsm["X_pca_test"])
     assert np.allclose(original.obsp["distances"], renamed.obsp["distances"])
+    
