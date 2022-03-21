@@ -1454,6 +1454,22 @@ def test_color_cycler(caplog):
     assert caplog.text == ""
 
 
+def test_repeated_colors_w_missing_value():
+    # https://github.com/theislab/scanpy/issues/2133
+    v = pd.Series(np.arange(10).astype(str))
+    v[0] = np.nan
+    v = v.astype("category")
+
+    ad = sc.AnnData(obs=pd.DataFrame(v, columns=["value"]))
+    ad.obsm["X_umap"] = np.random.normal(size=(ad.n_obs, 2))
+
+    sc.pl.umap(ad, color="value")
+
+    ad.uns['value_colors'][1] = ad.uns['value_colors'][0]
+
+    sc.pl.umap(ad, color="value")
+
+
 @pytest.mark.parametrize(
     "plot",
     (
