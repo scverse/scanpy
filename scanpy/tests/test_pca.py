@@ -148,6 +148,6 @@ def test_pca_n_pcs(pbmc3k_normalized):
     original = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca", copy=True)
     renamed = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca_test", copy=True)
 
-    assert np.allclose(original.obsm["X_pca"], renamed.obsm["X_pca_test"])
-    assert np.allclose(original.obsp["distances"], renamed.obsp["distances"])
+    assert np.allclose(original.obsm["X_pca"].toarray(), renamed.obsm["X_pca_test"].toarray())
+    assert np.allclose(original.obsp["distances"].toarray(), renamed.obsp["distances"].toarray())
     
