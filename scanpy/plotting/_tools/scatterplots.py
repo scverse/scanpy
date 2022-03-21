@@ -1,6 +1,6 @@
 import collections.abc as cabc
 from copy import copy
-from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
+from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ from matplotlib import pyplot as pl, colors
 from matplotlib.cm import get_cmap
 from matplotlib import rcParams
 from matplotlib import patheffects
-from matplotlib.colors import Colormap
+from matplotlib.colors import Colormap, Normalize
 from functools import partial
 
 from .. import _utils
@@ -21,9 +21,11 @@ from .._utils import (
     _IGraphLayout,
     _FontWeight,
     _FontSize,
-    circles,
     ColorLike,
+    VBound,
+    circles,
     check_projection,
+    check_colornorm,
 )
 from .._docs import (
     doc_adata_color_etc,
@@ -36,8 +38,6 @@ from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
 from ..._compat import Literal
-
-VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
 
 @_doc_params(
@@ -76,8 +76,10 @@ def embedding(
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
-    vmax: Union[VMinMax, Sequence[VMinMax], None] = None,
-    vmin: Union[VMinMax, Sequence[VMinMax], None] = None,
+    vmax: Union[VBound, Sequence[VBound], None] = None,
+    vmin: Union[VBound, Sequence[VBound], None] = None,
+    vcenter: Union[VBound, Sequence[VBound], None] = None,
+    norm: Union[Normalize, Sequence[Normalize], None] = None,
     add_outline: Optional[bool] = False,
     outline_width: Tuple[float, float] = (0.3, 0.05),
     outline_color: Tuple[str, str] = ('black', 'white'),
@@ -202,6 +204,10 @@ def embedding(
         vmax = [vmax]
     if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
         vmin = [vmin]
+    if isinstance(vcenter, str) or not isinstance(vcenter, cabc.Sequence):
+        vcenter = [vcenter]
+    if isinstance(norm, Normalize) or not isinstance(norm, cabc.Sequence):
+        norm = [norm]
 
     if 's' in kwargs:
         size = kwargs.pop('s')
@@ -220,7 +226,6 @@ def embedding(
     else:
         size = 120000 / adata.shape[0]
 
-    ###
     # make the plots
     axs = []
     import itertools
@@ -252,7 +257,7 @@ def embedding(
             na_color=na_color,
         )
 
-        ### Order points
+        # Order points
         order = slice(None)
         if sort_order is True and value_to_plot is not None and categorical is False:
             # Higher values plotted on top, null values on bottom
@@ -289,13 +294,18 @@ def embedding(
                 )
                 ax.set_title(value_to_plot)
 
-        # check vmin and vmax options
-        if categorical:
-            kwargs['vmin'] = kwargs['vmax'] = None
-        else:
-            kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(
-                vmin, vmax, count, color_vector
+        if not categorical:
+            vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
+                vmin, vmax, vcenter, norm, count, color_vector
             )
+            normalize = check_colornorm(
+                vmin_float,
+                vmax_float,
+                vcenter_float,
+                norm_obj,
+            )
+        else:
+            normalize = None
 
         # make the scatter plot
         if projection == '3d':
@@ -306,6 +316,7 @@ def embedding(
                 marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
+                norm=normalize,
                 **kwargs,
             )
         else:
@@ -348,6 +359,7 @@ def embedding(
                     marker=".",
                     c=bg_color,
                     rasterized=settings._vector_friendly,
+                    norm=normalize,
                     **kwargs,
                 )
                 ax.scatter(
@@ -357,6 +369,7 @@ def embedding(
                     marker=".",
                     c=gap_color,
                     rasterized=settings._vector_friendly,
+                    norm=normalize,
                     **kwargs,
                 )
                 # if user did not set alpha, set alpha to 0.7
@@ -368,6 +381,7 @@ def embedding(
                 marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
+                norm=normalize,
                 **kwargs,
             )
 
@@ -464,15 +478,16 @@ def _panel_grid(hspace, wspace, ncols, num_panels):
     return fig, gs
 
 
-def _get_vmin_vmax(
-    vmin: Sequence[VMinMax],
-    vmax: Sequence[VMinMax],
+def _get_vboundnorm(
+    vmin: Sequence[VBound],
+    vmax: Sequence[VBound],
+    vcenter: Sequence[VBound],
+    norm: Sequence[Normalize],
     index: int,
     color_vector: Sequence[float],
 ) -> Tuple[Union[float, None], Union[float, None]]:
-
     """
-    Evaluates the value of vmin and vmax, which could be a
+    Evaluates the value of vmin, vmax and vcenter, which could be a
     str in which case is interpreted as a percentile and should
     be specified in the form 'pN' where N is the percentile.
     Eg. for a percentile of 85 the format would be 'p85'.
@@ -494,11 +509,12 @@ def _get_vmin_vmax(
     Returns
     -------
 
-    (vmin, vmax) containing None or float values
+    (vmin, vmax, vcenter, norm) containing None or float values for
+    vmin, vmax, vcenter and matplotlib.colors.Normalize  or None for norm.
 
     """
     out = []
-    for v_name, v in [('vmin', vmin), ('vmax', vmax)]:
+    for v_name, v in [('vmin', vmin), ('vmax', vmax), ('vcenter', vcenter)]:
         if len(v) == 1:
             # this case usually happens when the user sets eg vmax=0.9, which
             # is internally converted into list of len=1, but is expected that this
@@ -546,6 +562,7 @@ def _get_vmin_vmax(
                     )
                     v_value = None
         out.append(v_value)
+    out.append(norm[0] if len(norm) == 1 else norm[index])
     return tuple(out)
 
 
@@ -601,6 +618,43 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.umap(adata)
+
+    Colour points by discrete variable (Louvain clusters).
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color="louvain")
+
+    Colour points by gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color="HES4")
+
+    Plot muliple umaps for different gene expressions.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color=["HES4", "TNFRSF4"])
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.umap
     """
     return embedding(adata, 'umap', **kwargs)
 
@@ -626,6 +680,22 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.tsne(adata)
+        sc.pl.tsne(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.tsne
     """
     return embedding(adata, 'tsne', **kwargs)
 
@@ -649,6 +719,22 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.diffmap(adata)
+        sc.pl.diffmap(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.diffmap
     """
     return embedding(adata, 'diffmap', **kwargs)
 
@@ -679,6 +765,22 @@ def draw_graph(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.draw_graph(adata)
+        sc.pl.draw_graph(adata, color=['phase', 'bulk_labels'])
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.draw_graph
     """
     if layout is None:
         layout = str(adata.uns['draw_graph']['params']['layout'])
@@ -723,6 +825,37 @@ def pca(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca(adata)
+
+    Colour points by discrete variable (Louvain clusters).
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="louvain")
+
+    Colour points by gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="CST3")
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.pca
+    pp.pca
     """
     if not annotate_var_explained:
         return embedding(
@@ -730,7 +863,7 @@ def pca(
         )
     else:
 
-        if 'pca' not in adata.obsm.keys() and f"X_pca" not in adata.obsm.keys():
+        if 'pca' not in adata.obsm.keys() and 'X_pca' not in adata.obsm.keys():
             raise KeyError(
                 f"Could not find entry in `obsm` for 'pca'.\n"
                 f"Available keys are: {list(adata.obsm.keys())}."
@@ -977,7 +1110,7 @@ def _get_data_points(
             data_points = []
             for comp in components_list:
                 data_points.append(adata.obsm[basis_key][:, comp])
-        except:
+        except Exception:  # TODO catch the correct exception
             raise ValueError(
                 "Given components: '{}' are not valid. Please check. "
                 "A valid example is `components='2,3'`"
@@ -1041,10 +1174,15 @@ def _add_categorical_legend(
         )
     elif legend_loc == 'on data':
         # identify centroids to put labels
+
         all_pos = (
             pd.DataFrame(scatter_array, columns=["x", "y"])
             .groupby(color_source_vector, observed=True)
             .median()
+            # Have to sort_index since if observed=True and categorical is unordered
+            # the order of values in .index is undefined. Related issue:
+            # https://github.com/pandas-dev/pandas/issues/25167
+            .sort_index()
         )
 
         for label, x_pos, y_pos in all_pos.itertuples():
@@ -1058,9 +1196,6 @@ def _add_categorical_legend(
                 fontsize=legend_fontsize,
                 path_effects=legend_fontoutline,
             )
-        # TODO: wtf
-        # this is temporary storage for access by other tools
-        _utils._tmp_cluster_pos = all_pos.values
 
 
 def _get_color_source_vector(

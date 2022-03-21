@@ -1,5 +1,30 @@
 repos:
--   repo: https://github.com/python/black
-    rev: 20.8b1
+-   repo: https://github.com/psf/black
+    rev: 22.1.0
     hooks:
     -   id: black
+-   repo: https://github.com/PyCQA/flake8
+    rev: 4.0.1
+    hooks:
+    -   id: flake8
+-   repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: v1.6.0
+    hooks:
+    -   id: autopep8
+        args: ["-i"]
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+    -   id: trailing-whitespace
+        exclude: scanpy/tests/_data
+    -   id: end-of-file-fixer
+        exclude: scanpy/tests/_data
+    -   id: check-added-large-files
+    -   id: check-case-conflict
+    -   id: check-toml
+    -   id: check-yaml
+    -   id: check-merge-conflict
+    -   id: detect-private-key
+
+ci:
+    autofix_prs: false

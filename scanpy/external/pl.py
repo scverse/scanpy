@@ -330,17 +330,20 @@ def scrublet_score_distribution(
     scale_hist_obs: str = 'log',
     scale_hist_sim: str = 'linear',
     figsize: Optional[Tuple[float, float]] = (8, 3),
+    return_fig: bool = False,
+    show: bool = True,
+    save: Optional[Union[str, bool]] = None,
 ):
     """\
-    Plot histogram of doublet scores for observed transcriptomes and simulated doublets. 
+    Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
 
-    The histogram for simulated doublets is useful for determining the correct doublet 
-    score threshold. 
-    
+    The histogram for simulated doublets is useful for determining the correct doublet
+    score threshold.
+
     Parameters
     ----------
     adata
-        An annData object resulting from func:`~scanpy.external.scrublet`.  
+        An annData object resulting from func:`~scanpy.external.scrublet`.
     scale_hist_obs
         Set y axis scale transformation in matplotlib for the plot of observed
         transcriptomes (e.g. "linear", "log", "symlog", "logit")
@@ -349,16 +352,28 @@ def scrublet_score_distribution(
         doublets (e.g. "linear", "log", "symlog", "logit")
     figsize
         width, height
+    show
+         Show the plot, do not return axis.
+    save
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
+
+    Returns
+    -------
+    If `return_fig` is True, a :class:`~matplotlib.figure.Figure`.
+    If `show==False` a list of :class:`~matplotlib.axes.Axes`.
 
     See also
     --------
     :func:`~scanpy.external.pp.scrublet`: Main way of running Scrublet, runs
-        preprocessing, doublet simulation (this function) and calling. 
+        preprocessing, doublet simulation and calling.
     :func:`~scanpy.external.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
-        simulation separately for advanced usage. 
+        simulation separately for advanced usage.
     """
 
-    threshold = adata.uns['scrublet']['threshold']
+    threshold = adata.uns["scrublet"].get("threshold", None)
+
     fig, axs = plt.subplots(1, 2, figsize=figsize)
 
     ax = axs[0]
@@ -372,7 +387,10 @@ def scrublet_score_distribution(
     ax.set_yscale(scale_hist_obs)
     yl = ax.get_ylim()
     ax.set_ylim(yl)
-    ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+
+    if threshold is not None:
+        ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+
     ax.set_title('Observed transcriptomes')
     ax.set_xlabel('Doublet score')
     ax.set_ylabel('Prob. density')
@@ -388,11 +406,18 @@ def scrublet_score_distribution(
     ax.set_yscale(scale_hist_sim)
     yl = ax.get_ylim()
     ax.set_ylim(yl)
-    ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+
+    if threshold is not None:
+        ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+
     ax.set_title('Simulated doublets')
     ax.set_xlabel('Doublet score')
     ax.set_ylabel('Prob. density')
 
     fig.tight_layout()
 
-    return fig, axs
+    _utils.savefig_or_show('scrublet_score_distribution', show=show, save=save)
+    if return_fig:
+        return fig
+    elif not show:
+        return axs

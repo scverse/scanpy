@@ -276,7 +276,7 @@ def write_hdf5_genes(E, gene_list, filename):
 
 
 def write_hdf5_cells(E, filename):
-    '''SPRING standard: filename = main_spring_dir + "counts_norm_sparse_cells.hdf5" '''
+    '''SPRING standard: filename = main_spring_dir + "counts_norm_sparse_cells.hdf5"'''
 
     E = E.tocsr()
 
@@ -298,7 +298,7 @@ def write_hdf5_cells(E, filename):
 
 
 def write_sparse_npz(E, filename, compressed=False):
-    ''' SPRING standard: filename = main_spring_dir + "/counts_norm.npz"'''
+    '''SPRING standard: filename = main_spring_dir + "/counts_norm.npz"'''
     E = E.tocsc()
     scipy.sparse.save_npz(filename, E, compressed=compressed)
 

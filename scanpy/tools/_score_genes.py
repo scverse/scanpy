@@ -31,10 +31,8 @@ def _sparse_nanmean(X, axis):
     Y.eliminate_zeros()
 
     # the average
-    s = Y.sum(axis)
-    m = s / n_elements.astype(
-        'float32'
-    )  # if we dont cast the int32 to float32, this will result in float64...
+    s = Y.sum(axis, dtype='float64')  # float64 for score_genes function compatibility)
+    m = s / n_elements
 
     return m
 
@@ -48,7 +46,7 @@ def score_genes(
     score_name: str = 'score',
     random_state: AnyRandom = 0,
     copy: bool = False,
-    use_raw: bool = None,
+    use_raw: Optional[bool] = None,
 ) -> Optional[AnnData]:
     """\
     Score a set of genes [Satija15]_.
@@ -96,6 +94,7 @@ def score_genes(
     """
     start = logg.info(f'computing score {score_name!r}')
     adata = adata.copy() if copy else adata
+    use_raw = _check_use_raw(adata, use_raw)
 
     if random_state is not None:
         np.random.seed(random_state)
@@ -119,14 +118,14 @@ def score_genes(
         gene_pool = list(var_names)
     else:
         gene_pool = [x for x in gene_pool if x in var_names]
+    if not gene_pool:
+        raise ValueError("No valid genes were passed for reference set.")
 
     # Trying here to match the Seurat approach in scoring cells.
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    use_raw = _check_use_raw(adata, use_raw)
     _adata = adata.raw if use_raw else adata
-
     _adata_subset = (
         _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
     )
@@ -163,17 +162,19 @@ def score_genes(
     if issparse(X_list):
         X_list = np.array(_sparse_nanmean(X_list, axis=1)).flatten()
     else:
-        X_list = np.nanmean(X_list, axis=1)
+        X_list = np.nanmean(X_list, axis=1, dtype='float64')
 
     X_control = _adata[:, control_genes].X
     if issparse(X_control):
         X_control = np.array(_sparse_nanmean(X_control, axis=1)).flatten()
     else:
-        X_control = np.nanmean(X_control, axis=1)
+        X_control = np.nanmean(X_control, axis=1, dtype='float64')
 
     score = X_list - X_control
 
-    adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
+    adata.obs[score_name] = pd.Series(
+        np.array(score).ravel(), index=adata.obs_names, dtype='float64'
+    )
 
     logg.info(
         '    finished',

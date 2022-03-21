@@ -23,8 +23,8 @@ suppress_warnings = ['ref.citation']
 
 # General information
 project = 'Scanpy'
-author = scanpy.__author__
-copyright = f'{datetime.now():%Y}, {author}.'
+author = 'Scanpy development team'
+copyright = f'{datetime.now():%Y}, the Scanpy development team.'
 version = scanpy.__version__.replace('.dirty', '')
 release = version
 
@@ -50,7 +50,6 @@ extensions = [
     # 'ipython_directive',
     # 'ipython_console_highlighting',
     'scanpydoc',
-    "sphinx_search.extension",
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
@@ -73,17 +72,17 @@ intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     cycler=('https://matplotlib.org/cycler/', None),
-    h5py=('http://docs.h5py.org/en/stable/', None),
+    h5py=('https://docs.h5py.org/en/stable/', None),
     ipython=('https://ipython.readthedocs.io/en/stable/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
     louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
-    matplotlib=('https://matplotlib.org/', None),
-    networkx=('https://networkx.github.io/documentation/networkx-1.10/', None),
-    numpy=('https://docs.scipy.org/doc/numpy/', None),
+    matplotlib=('https://matplotlib.org/stable/', None),
+    networkx=('https://networkx.org/documentation/stable/', None),
+    numpy=('https://numpy.org/doc/stable/', None),
     pandas=('https://pandas.pydata.org/pandas-docs/stable/', None),
     pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
-    scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
+    scipy=('https://docs.scipy.org/doc/scipy/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
     scanpy_tutorials=(scanpy_tutorials_url, None),
@@ -94,7 +93,12 @@ intersphinx_mapping = dict(
 
 
 html_theme = 'scanpydoc'
-html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the logo
+html_theme_options = dict(
+    navigation_depth=4,
+    logo_only=True,
+    docsearch_index='scanpy',
+    docsearch_key='fa4304eb95d2134997e3729553a674b2',
+)
 html_context = dict(
     display_github=True,  # Integrate GitHub
     github_user='theislab',  # Username
@@ -151,6 +155,9 @@ nitpick_ignore = [
     ('py:class', 'scanpy.plotting._utils._AxesSubplot'),
     ('py:class', 'scanpy._utils.Empty'),
     ('py:class', 'numpy.random.mtrand.RandomState'),
+    # Will work once scipy 1.8 is released
+    ('py:class', 'scipy.sparse.base.spmatrix'),
+    ('py:class', 'scipy.sparse.csr.csr_matrix'),
 ]
 
 # Options for plot examples

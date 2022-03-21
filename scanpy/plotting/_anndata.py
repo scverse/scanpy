@@ -18,7 +18,7 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
-from matplotlib.colors import is_color_like, Colormap, ListedColormap
+from matplotlib.colors import is_color_like, Colormap, ListedColormap, Normalize
 
 from .. import get
 from .. import logging as logg
@@ -26,9 +26,14 @@ from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params, _check_use_raw
 from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes
+from ._utils import scatter_base, scatter_group, setup_axes, check_colornorm
 from ._utils import ColorLike, _FontWeight, _FontSize
-from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
+from ._docs import (
+    doc_scatter_basic,
+    doc_show_save_ax,
+    doc_common_plot_args,
+    doc_vboundnorm,
+)
 
 VALID_LEGENDLOCS = {
     'none',
@@ -116,14 +121,18 @@ def scatter(
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     args = locals()
+    if _check_use_raw(adata, use_raw):
+        var_index = adata.raw.var.index
+    else:
+        var_index = adata.var.index
     if basis is not None:
         return _scatter_obs(**args)
     if x is None or y is None:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
     if (
-        (x in adata.obs.keys() or x in adata.var.index)
-        and (y in adata.obs.keys() or y in adata.var.index)
-        and (color is None or color in adata.obs.keys() or color in adata.var.index)
+        (x in adata.obs.keys() or x in var_index)
+        and (y in adata.obs.keys() or y in var_index)
+        and (color is None or color in adata.obs.keys() or color in var_index)
     ):
         return _scatter_obs(**args)
     if (
@@ -454,7 +463,6 @@ def _scatter_obs(
                     all_pos[iname] = centroids[name]
                 else:
                     all_pos[iname] = [np.nan, np.nan]
-            _utils._tmp_cluster_pos = all_pos
             if legend_loc == 'on data export':
                 filename = settings.writedir / 'pos.csv'
                 logg.warning(f'exporting label positions to {filename}')
@@ -552,7 +560,7 @@ def ranking(
         n_rows, n_cols = 1, n_panels
     else:
         n_rows, n_cols = 2, int(n_panels / 2 + 0.5)
-    fig = pl.figure(
+    _ = pl.figure(
         figsize=(
             n_cols * rcParams['figure.figsize'][0],
             n_rows * rcParams['figure.figsize'][1],
@@ -684,6 +692,53 @@ def violin(
     Returns
     -------
     A :class:`~matplotlib.axes.Axes` object if `ax` is `None` else `None`.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.violin(adata, keys='S_score')
+
+    Plot by category. Rotate x-axis labels so that they do not overlap.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90)
+
+    Set order of categories to be plotted or select specific categories to be plotted.
+
+    .. plot::
+        :context: close-figs
+
+        groupby_order = ['CD34+', 'CD19+ B']
+        sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90,
+            order=groupby_order)
+
+    Plot multiple keys.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys=['S_score', 'G2M_score'], groupby='bulk_labels',
+            rotation=90)
+
+    For large datasets consider omitting the overlaid scatter plot.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys='S_score', stripplot=False)
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    pl.stacked_violin
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -890,7 +945,11 @@ def clustermap(
         return g
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(
+    vminmax=doc_vboundnorm,
+    show_save_ax=doc_show_save_ax,
+    common_plot_args=doc_common_plot_args,
+)
 def heatmap(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -910,6 +969,10 @@ def heatmap(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     figsize: Optional[Tuple[float, float]] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ):
     """\
@@ -933,6 +996,7 @@ def heatmap(
     show_gene_labels
          By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
     {show_save_ax}
+    {vminmax}
     **kwds
         Are passed to :func:`matplotlib.pyplot.imshow`.
 
@@ -942,19 +1006,20 @@ def heatmap(
 
     Examples
     -------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True, swap_axes=True)
+    .. plot::
+        :context: close-figs
 
-    Using var_names as dict:
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.heatmap(adata, markers, groupby='bulk_labels', swap_axes=True)
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. currentmodule:: scanpy
 
     See also
     --------
-    rank_genes_groups_heatmap: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    pl.rank_genes_groups_heatmap
+    tl.rank_genes_groups
     """
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
@@ -1057,6 +1122,7 @@ def heatmap(
         obs_tidy = obs_tidy.sort_index()
 
     colorbar_width = 0.2
+    norm = check_colornorm(vmin, vmax, vcenter, norm)
 
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
@@ -1106,7 +1172,7 @@ def heatmap(
 
         heatmap_ax = fig.add_subplot(axs[1, 1])
         kwds.setdefault('interpolation', 'nearest')
-        im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', **kwds)
+        im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', norm=norm, **kwds)
 
         heatmap_ax.set_ylim(obs_tidy.shape[0] - 0.5, -0.5)
         heatmap_ax.set_xlim(-0.5, obs_tidy.shape[1] - 0.5)
@@ -1211,7 +1277,7 @@ def heatmap(
         heatmap_ax = fig.add_subplot(axs[1, 0])
 
         kwds.setdefault('interpolation', 'nearest')
-        im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
+        im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', norm=norm, **kwds)
         heatmap_ax.set_xlim(0 - 0.5, obs_tidy.shape[0] - 0.5)
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
@@ -1474,7 +1540,7 @@ def tracksplot(
         ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
-        tt = ax.set_yticklabels([str(ymax)], ha='left', va='top')
+        ax.set_yticklabels([str(ymax)], ha='left', va='top')
         ax.spines['right'].set_position(('axes', 1.01))
         ax.tick_params(
             axis='y',
@@ -1584,10 +1650,16 @@ def dendrogram(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, 'bulk_labels')
-    >>> sc.pl.dendrogram(adata, 'bulk_labels')
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.dendrogram(adata, 'bulk_labels')
+        sc.pl.dendrogram(adata, 'bulk_labels')
+
+    .. currentmodule:: scanpy
+
     """
     if ax is None:
         _, ax = pl.subplots()
@@ -1603,7 +1675,7 @@ def dendrogram(
     return ax
 
 
-@_doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vboundnorm)
 def correlation_matrix(
     adata: AnnData,
     groupby: str,
@@ -1613,6 +1685,10 @@ def correlation_matrix(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     ax: Optional[Axes] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ) -> Union[Axes, List[Axes]]:
     """\
@@ -1635,10 +1711,11 @@ def correlation_matrix(
         By default a figure size that aims to produce a squared correlation
         matrix plot is used. Format is (width, height)
     {show_save_ax}
+    {vminmax}
     **kwds
         Only if `show_correlation` is True:
         Are passed to :func:`matplotlib.pyplot.pcolormesh` when plotting the
-        correlation heatmap. Useful values to pas are `vmax`, `vmin` and `cmap`.
+        correlation heatmap. `cmap` can be used to change the color palette.
 
     Returns
     -------
@@ -1710,22 +1787,23 @@ def correlation_matrix(
         )
         axs.append(dendro_ax)
     # define some default pcolormesh parameters
-    if 'edge_color' not in kwds:
+    if 'edgecolors' not in kwds:
         if corr_matrix.shape[0] > 30:
             # when there are too many rows it is better to remove
             # the black lines surrounding the boxes in the heatmap
             kwds['edgecolors'] = 'none'
         else:
             kwds['edgecolors'] = 'black'
-            kwds['linewidth'] = 0.01
-    if 'vmax' not in kwds and 'vmin' not in kwds:
-        kwds['vmax'] = 1
-        kwds['vmin'] = -1
+            kwds.setdefault('linewidth', 0.01)
+    if vmax is None and vmin is None and norm is None:
+        vmax = 1
+        vmin = -1
+    norm = check_colornorm(vmin, vmax, vcenter, norm)
     if 'cmap' not in kwds:
         # by default use a divergent color map
         kwds['cmap'] = 'bwr'
 
-    img_mat = corr_matrix_ax.pcolormesh(corr_matrix, **kwds)
+    img_mat = corr_matrix_ax.pcolormesh(corr_matrix, norm=norm, **kwds)
     corr_matrix_ax.set_xlim(0, num_rows)
     corr_matrix_ax.set_ylim(0, num_rows)
 
@@ -1863,9 +1941,21 @@ def _prepare_dataframe(
         categorical.name = groupby[0]
     else:
         # join the groupby values  using "_" to make a new 'category'
-        categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
+        categorical = obs_tidy[groupby].apply('_'.join, axis=1).astype('category')
         categorical.name = "_".join(groupby)
 
+        # preserve category order
+        from itertools import product
+
+        order = {
+            "_".join(k): idx
+            for idx, k in enumerate(
+                product(*(obs_tidy[g].cat.categories for g in groupby))
+            )
+        }
+        categorical = categorical.cat.reorder_categories(
+            sorted(categorical.cat.categories, key=lambda x: order[x])
+        )
     obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
 
@@ -1960,7 +2050,7 @@ def _plot_gene_groups_brackets(
                     va='bottom',
                     rotation=rotation,
                 )
-            except:
+            except Exception:  # TODO catch the correct exception
                 pass
     else:
         top = left
