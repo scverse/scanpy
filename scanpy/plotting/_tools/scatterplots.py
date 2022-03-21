@@ -1,7 +1,7 @@
 import collections.abc as cabc
 from copy import copy
 from numbers import Integral
-import itertools
+from itertools import combinations, product
 from typing import (
     Collection,
     Union,
@@ -12,6 +12,7 @@ from typing import (
     List,
     Tuple,
 )
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -213,6 +214,15 @@ def embedding(
         #  current figure size
         wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
 
+    if components is not None:
+        warn(
+            "Use of the components kwarg is deprecated. Use `dimensions` instead.",
+            FutureWarning,
+        )
+        color, dimensions = list(zip(*product(color, dimensions)))
+
+    color, dimensions = _broadcast_args(color, dimensions)
+
     # 'color' is a list of names that want to be plotted.
     # Eg. ['Gene1', 'louvain', 'Gene2'].
     # component_list is a list of components [[0,1], [1,2]]
@@ -228,8 +238,7 @@ def embedding(
             )
 
         # each plot needs to be its own panel
-        num_panels = len(color) * len(dimensions)  # Is this weird?
-        fig, grid = _panel_grid(hspace, wspace, ncols, num_panels)
+        fig, grid = _panel_grid(hspace, wspace, ncols, len(color))
     else:
         grid = None
         if ax is None:
@@ -247,7 +256,7 @@ def embedding(
     #     color=gene1, components=[1,2], color=gene1, components=[2,3],
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
-    for count, (value_to_plot, dims) in enumerate(itertools.product(color, dimensions)):
+    for count, (value_to_plot, dims) in enumerate(zip(color, dimensions)):
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
@@ -1041,7 +1050,7 @@ def _components_to_dimensions(
     # TODO: Consider deprecating this
     # If components is not None, parse them and set dimensions
     if components == "all":
-        dimensions = list(itertools.combinations(range(total_dims), ndims))
+        dimensions = list(combinations(range(total_dims), ndims))
     elif components is not None:
         if isinstance(components, str):
             components = [components]
@@ -1337,3 +1346,16 @@ def _check_na_color(
         else:
             na_color = "lightgray"
     return na_color
+
+
+def _broadcast_args(*args):
+    """Broadcasts arguments to a common length."""
+    from itertools import repeat
+
+    lens = [len(arg) for arg in args]
+    longest = max(lens)
+    if not (set(lens) == {1, longest} or set(lens) == {longest}):
+        raise ValueError(f"Could not broadast together arguments with shapes: {lens}.")
+    return list(
+        [[arg[0] for _ in range(longest)] if len(arg) == 1 else arg for arg in args]
+    )
