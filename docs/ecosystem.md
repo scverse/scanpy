@@ -80,10 +80,8 @@ Interactive manifold viewers.
 
 Analyses using curated prior knowledge
 
-- [dorothea](https://github.com/saezlab/dorothea-py) for Transcription Factor activities {small}`Institute for Computational Biomedicine, Heidelberg University`
 
-- [progeny](https://github.com/saezlab/progeny-py) for footprint-based pathway activities {small}`Institute for Computational Biomedicine, Heidelberg University`
-
+- [decoupler](https://github.com/saezlab/decoupler-py) is a collection of footprint enrichment methods that allows to infer transcription factor or pathway activities. {small}`Institute for Computational Biomedicine, Heidelberg University`
 - [Cubé](https://github.com/connerlambden/Cube) {small}`Harvard University`
 
   > Intuitive Nonparametric Gene Network Search Algorithm that learns from existing biological pathways & multiplicative gene interference patterns.
