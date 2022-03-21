@@ -50,7 +50,7 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
         if use_rep in adata.obsm.keys() and n_pcs is not None:
             if n_pcs > adata.obsm[use_rep].shape[1]:
                 raise ValueError(
-                    f'{use_rep} does not have enough Dimensions. Provide a ' 
+                    f'{use_rep} does not have enough Dimensions. Provide a '
                     'Representation with equal or more dimensions than'
                     '`n_pcs` or lower `n_pcs` '
                     )
