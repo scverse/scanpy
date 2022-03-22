@@ -59,6 +59,7 @@ def test_scrublet_batched():
 
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
 
+
 def test_scrublet_data():
     """
     Test that Scrublet processing is arranged correctly.
