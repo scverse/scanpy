@@ -28,7 +28,7 @@ def _highly_variable_genes_seurat_v3(
     """\
     See `highly_variable_genes`.
 
-    For further implemenation details see https://www.overleaf.com/read/ckptrbgzzzpg
+    For further implementation details see https://www.overleaf.com/read/ckptrbgzzzpg
 
     Returns
     -------
@@ -84,7 +84,7 @@ def _highly_variable_genes_seurat_v3(
         model = loess(x, y, span=span, degree=2)
         model.fit()
         estimat_var[not_const] = model.outputs.fitted_values
-        reg_std = np.sqrt(10 ** estimat_var)
+        reg_std = np.sqrt(10**estimat_var)
 
         batch_counts = X_batch.astype(np.float64).copy()
         # clip large values as in Seurat

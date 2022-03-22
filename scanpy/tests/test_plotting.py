@@ -470,48 +470,49 @@ def test_multiple_plots(image_comparer):
 def test_violin(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=40)
 
-    sc.pl.set_rcParams_defaults()
-    sc.set_figure_params(dpi=50, color_map='viridis')
+    with plt.rc_context():
+        sc.pl.set_rcParams_defaults()
+        sc.set_figure_params(dpi=50, color_map='viridis')
 
-    pbmc = sc.datasets.pbmc68k_reduced()
-    sc.pl.violin(
-        pbmc,
-        ['n_genes', 'percent_mito', 'n_counts'],
-        stripplot=True,
-        multi_panel=True,
-        jitter=True,
-        show=False,
-    )
-    save_and_compare_images('master_violin_multi_panel')
+        pbmc = sc.datasets.pbmc68k_reduced()
+        sc.pl.violin(
+            pbmc,
+            ['n_genes', 'percent_mito', 'n_counts'],
+            stripplot=True,
+            multi_panel=True,
+            jitter=True,
+            show=False,
+        )
+        save_and_compare_images('master_violin_multi_panel')
 
-    sc.pl.violin(
-        pbmc,
-        ['n_genes', 'percent_mito', 'n_counts'],
-        ylabel=["foo", "bar", "baz"],
-        groupby='bulk_labels',
-        stripplot=True,
-        multi_panel=True,
-        jitter=True,
-        show=False,
-        rotation=90,
-    )
-    save_and_compare_images('master_violin_multi_panel_with_groupby')
+        sc.pl.violin(
+            pbmc,
+            ['n_genes', 'percent_mito', 'n_counts'],
+            ylabel=["foo", "bar", "baz"],
+            groupby='bulk_labels',
+            stripplot=True,
+            multi_panel=True,
+            jitter=True,
+            show=False,
+            rotation=90,
+        )
+        save_and_compare_images('master_violin_multi_panel_with_groupby')
 
-    # test use of layer
-    pbmc.layers['negative'] = pbmc.X * -1
-    sc.pl.violin(
-        pbmc,
-        'CST3',
-        groupby='bulk_labels',
-        stripplot=True,
-        multi_panel=True,
-        jitter=True,
-        show=False,
-        layer='negative',
-        use_raw=False,
-        rotation=90,
-    )
-    save_and_compare_images('master_violin_multi_panel_with_layer')
+        # test use of layer
+        pbmc.layers['negative'] = pbmc.X * -1
+        sc.pl.violin(
+            pbmc,
+            'CST3',
+            groupby='bulk_labels',
+            stripplot=True,
+            multi_panel=True,
+            jitter=True,
+            show=False,
+            layer='negative',
+            use_raw=False,
+            rotation=90,
+        )
+        save_and_compare_images('master_violin_multi_panel_with_layer')
 
 
 # TODO: Generalize test to more plotting types
@@ -525,11 +526,11 @@ def test_violin_without_raw(tmpdir):
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc_no_raw = pbmc.raw.to_adata().copy()
 
-    sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", show=False)
+    sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", show=False, jitter=False)
     plt.savefig(has_raw_pth)
     plt.close()
 
-    sc.pl.violin(pbmc_no_raw, 'CST3', groupby="bulk_labels", show=False)
+    sc.pl.violin(pbmc_no_raw, 'CST3', groupby="bulk_labels", show=False, jitter=False)
     plt.savefig(no_raw_pth)
     plt.close()
 
@@ -773,16 +774,14 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, 'louvain', n_genes=pbmc.raw.shape[1])
-    from matplotlib import rcParams
-
-    rcParams['axes.grid'] = True
-    rcParams['figure.figsize'] = 4, 4
 
     # add gene symbol
     pbmc.var['symbol'] = pbmc.var.index + "__"
-    fn(pbmc)
-    save_and_compare_images(f"master_{name}")
-    plt.close()
+
+    with plt.rc_context({"axes.grid": True, "figure.figsize": (4, 4)}):
+        fn(pbmc)
+        save_and_compare_images(f"master_{name}")
+        plt.close()
 
 
 @pytest.fixture(scope="session")
@@ -1453,6 +1452,22 @@ def test_color_cycler(caplog):
             plt.close()
 
     assert caplog.text == ""
+
+
+def test_repeated_colors_w_missing_value():
+    # https://github.com/theislab/scanpy/issues/2133
+    v = pd.Series(np.arange(10).astype(str))
+    v[0] = np.nan
+    v = v.astype("category")
+
+    ad = sc.AnnData(obs=pd.DataFrame(v, columns=["value"]))
+    ad.obsm["X_umap"] = np.random.normal(size=(ad.n_obs, 2))
+
+    sc.pl.umap(ad, color="value")
+
+    ad.uns['value_colors'][1] = ad.uns['value_colors'][0]
+
+    sc.pl.umap(ad, color="value")
 
 
 @pytest.mark.parametrize(
