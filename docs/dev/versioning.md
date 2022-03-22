@@ -1,9 +1,9 @@
 # Versioning
 
-:::{note}
+```{note}
 We are currently experimenting with our development practices.
 These are currently documented on a best effort basis, but may not be completely accurate.
-:::
+```
 
 ## Semantic versioning
 

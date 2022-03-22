@@ -13,10 +13,10 @@ Sometimes these caches are not invalidated when you've updated the docs.
 If docs are not updating the way you expect, first try "force reloading" your browser page – e.g. reload the page without using the cache.
 Next, if problems persist, clear the sphinx cache and try building them again (`make clean` from `docs` directory).
 
-:::{note}
+```{note}
 If you've cloned the repository pre 1.8.0, you may need to be more thorough in cleaning.
 If you run into warnings try removing all untracked files in the docs directory.
-:::
+```
 
 ## Adding to the docs
 

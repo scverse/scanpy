@@ -15,9 +15,9 @@ Import Scanpy as:
 import scanpy as sc
 ```
 
-:::{note}
+```{note}
 Additional functionality is available in the broader {doc}`ecosystem <../ecosystem>`, with some tools being wrapped in the {mod}`scanpy.external` module.
-:::
+```
 
 ## Preprocessing: `pp`
 
@@ -189,9 +189,9 @@ For most tools and for some preprocessing functions, you'll find a plotting func
 
 See {tutorial}`plotting/core` for an overview of how to use these functions.
 
-:::{note}
+```{note}
 See the {ref}`settings` section for all important plotting configurations.
-:::
+```
 
 (pl-generic)=
 
@@ -325,11 +325,11 @@ Visualize clusters using one of the embedding methods passing `color='louvain'`.
 
 ## Reading
 
-:::{note}
+```{note}
 For reading annotation use {ref}`pandas.read_… <pandas:io>`
 and add it to your {class}`anndata.AnnData` object. The following read functions are
 intended for the numeric data in the data matrix `X`.
-:::
+```
 
 Read common file formats using
 

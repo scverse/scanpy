@@ -8,9 +8,9 @@
 .. currentmodule:: scanpy.external
 ```
 
-:::{note}
+```{note}
 More tools that integrate well with scanpy and anndata can be found on the {doc}`ecosystem page <../ecosystem>`.
-:::
+```
 
 Import Scanpy's wrappers to external tools as:
 

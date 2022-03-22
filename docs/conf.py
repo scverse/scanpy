@@ -56,10 +56,6 @@ extensions = [
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
-myst_enable_extensions = [
-    'colon_fence',
-]
-
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_member_order = 'bysource'
