@@ -137,6 +137,7 @@ def test_pca_chunked(pbmc3k_normalized):
         np.abs(default.uns["pca"]["variance_ratio"]),
     )
 
+
 def test_pca_n_pcs(pbmc3k_normalized):
     """
     Tests that the n_pcs parameter also works for
@@ -152,4 +153,3 @@ def test_pca_n_pcs(pbmc3k_normalized):
     assert np.allclose(
         original.obsp["distances"].toarray(), renamed.obsp["distances"].toarray()
     )
-    

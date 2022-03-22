@@ -67,6 +67,7 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
     settings.verbosity = verbosity  # resetting verbosity
     return X
 
+
 def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
     """
     Parameters
