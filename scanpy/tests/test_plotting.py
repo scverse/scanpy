@@ -1531,3 +1531,9 @@ def test_scrublet_plots(image_comparer, plt):
 
     sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
     save_and_compare_images('scrublet_no_threshold')
+
+    adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
+    sc.external.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
+
+    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
+    save_and_compare_images('scrublet_with_batches')
