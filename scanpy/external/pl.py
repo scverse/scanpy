@@ -1,6 +1,7 @@
 from typing import Union, List, Optional, Any, Tuple, Collection
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from anndata import AnnData
 from matplotlib.axes import Axes
