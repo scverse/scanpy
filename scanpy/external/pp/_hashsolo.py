@@ -62,12 +62,14 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         float
             std of gaussian
         """
-        lam_o = 1 / (std_o**2)
+        lam_o = 1 / (std_o ** 2)
         n = len(data)
         lam = 1 / np.var(data) if len(data) > 1 else lam_o
         lam_n = lam_o + n * lam
         mu_n = (
-            (np.mean(data) * n * lam + mu_o * lam_o) / lam_n if len(data) > 0 else mu_o
+            (np.mean(data) * n * lam + mu_o * lam_o) / lam_n
+            if len(data) > 0
+            else mu_o
         )
         return mu_n, (1 / (lam_n / (n + 1))) ** (1 / 2)
 
@@ -91,11 +93,13 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     # barcodes with rank < k are considered to be noise
     global_signal_counts = np.ravel(data_sort[:, -1])
     global_noise_counts = np.ravel(data_sort[:, :-number_of_non_noise_barcodes])
-    global_mu_signal_o, global_sigma_signal_o = np.mean(global_signal_counts), np.std(
-        global_signal_counts
+    global_mu_signal_o, global_sigma_signal_o = (
+        np.mean(global_signal_counts),
+        np.std(global_signal_counts),
     )
-    global_mu_noise_o, global_sigma_noise_o = np.mean(global_noise_counts), np.std(
-        global_noise_counts
+    global_mu_noise_o, global_sigma_noise_o = (
+        np.mean(global_noise_counts),
+        np.std(global_noise_counts),
     )
 
     noise_params_dict = {}
@@ -104,9 +108,9 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     # for each barcode get  empirical noise and signal distribution parameterization
     for x in np.arange(num_of_barcodes):
         sample_barcodes = data[:, x]
-        sample_barcodes_noise_idx = np.where(data_arg[:, :num_of_noise_barcodes] == x)[
-            0
-        ]
+        sample_barcodes_noise_idx = np.where(
+            data_arg[:, :num_of_noise_barcodes] == x
+        )[0]
         sample_barcodes_signal_idx = np.where(data_arg[:, -1] == x)
 
         # get noise and signal counts
@@ -137,7 +141,9 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
             continue
 
         indices = np.where(subset)[0]
-        barcode_combo = "_".join([str(noise_sample_idx), str(signal_sample_idx)])
+        barcode_combo = "_".join(
+            [str(noise_sample_idx), str(signal_sample_idx)]
+        )
         all_indices[np.where(subset)[0]] = counter
         counter_to_barcode_combo[counter] = barcode_combo
         counter += 1
@@ -196,7 +202,11 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         # each cell and each hypothesis probability
         for prob_idx, log_prob in enumerate(log_probs_list):
             log_likelihoods_for_each_hypothesis[indices, prob_idx] = log_prob
-    return log_likelihoods_for_each_hypothesis, all_indices, counter_to_barcode_combo
+    return (
+        log_likelihoods_for_each_hypothesis,
+        all_indices,
+        counter_to_barcode_combo,
+    )
 
 
 def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
@@ -233,7 +243,8 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
         np.exp(log_likelihoods_for_each_hypothesis)
         * priors
         / np.sum(
-            np.multiply(np.exp(log_likelihoods_for_each_hypothesis), priors), axis=1
+            np.multiply(np.exp(log_likelihoods_for_each_hypothesis), priors),
+            axis=1,
         )[:, None]
     )
     most_likely_hypothesis = np.argmax(probs_hypotheses, axis=1)
@@ -325,9 +336,13 @@ def hashsolo(
         cluster_features = pre_existing_clusters
         unique_cluster_features = np.unique(adata.obs[cluster_features])
         for cluster_feature in unique_cluster_features:
-            cluster_feature_bool_vector = adata.obs[cluster_features] == cluster_feature
+            cluster_feature_bool_vector = (
+                adata.obs[cluster_features] == cluster_feature
+            )
             posterior_dict = _calculate_bayes_rule(
-                data[cluster_feature_bool_vector], priors, number_of_noise_barcodes
+                data[cluster_feature_bool_vector],
+                priors,
+                number_of_noise_barcodes,
             )
             results.loc[
                 cluster_feature_bool_vector, "most_likely_hypothesis"
@@ -345,7 +360,9 @@ def hashsolo(
                 cluster_feature_bool_vector, "doublet_hypothesis_probability"
             ] = posterior_dict["probs_hypotheses"][:, 2]
     else:
-        posterior_dict = _calculate_bayes_rule(data, priors, number_of_noise_barcodes)
+        posterior_dict = _calculate_bayes_rule(
+            data, priors, number_of_noise_barcodes
+        )
         results.loc[:, "most_likely_hypothesis"] = posterior_dict[
             "most_likely_hypothesis"
         ]
@@ -363,7 +380,9 @@ def hashsolo(
     adata.obs["most_likely_hypothesis"] = results.loc[
         adata.obs_names, "most_likely_hypothesis"
     ]
-    adata.obs["cluster_feature"] = results.loc[adata.obs_names, "cluster_feature"]
+    adata.obs["cluster_feature"] = results.loc[
+        adata.obs_names, "cluster_feature"
+    ]
     adata.obs["negative_hypothesis_probability"] = results.loc[
         adata.obs_names, "negative_hypothesis_probability"
     ]
