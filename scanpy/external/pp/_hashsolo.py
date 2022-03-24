@@ -79,7 +79,11 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
 
     all_indices = np.empty(data.shape[0])
     num_of_barcodes = data.shape[1]
-    number_of_non_noise_barcodes = num_of_barcodes - number_of_noise_barcodes
+    number_of_non_noise_barcodes = (
+        num_of_barcodes - number_of_noise_barcodes
+        if number_of_noise_barcodes is not None
+        else 2
+    )
 
     num_of_noise_barcodes = num_of_barcodes - number_of_non_noise_barcodes
 
@@ -260,7 +264,7 @@ def hashsolo(
     cell_hashing_columns: list,
     priors: list = [0.01, 0.8, 0.19],
     pre_existing_clusters: str = None,
-    number_of_noise_barcodes: int = 2,
+    number_of_noise_barcodes: int = None,
     inplace: bool = True,
 ):
     """Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
@@ -313,7 +317,9 @@ def hashsolo(
     data = adata.obs[cell_hashing_columns].values
     if not check_nonnegative_integers(data):
         raise ValueError("Cell hashing counts must be non-negative")
-    if number_of_noise_barcodes >= len(cell_hashing_columns):
+    if (number_of_noise_barcodes is not None) and (
+        number_of_noise_barcodes >= len(cell_hashing_columns)
+    ):
         raise ValueError(
             "number_of_noise_barcodes must be at least one less \
         than the number of samples you have as determined by the number of \
