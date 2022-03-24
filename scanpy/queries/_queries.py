@@ -241,7 +241,7 @@ def enrich(
         `all_results=True` which returns all results including the non-significant ones.
     **kwargs
         All other keyword arguments are passed to `sc.get.rank_genes_groups_df`. E.g.
-        pval_cutoff, log2fc_min.
+        pval_cutoff, log2fc_min. pval_cutoff=0.5 by default.
 
     Returns
     -------
@@ -288,6 +288,7 @@ def _enrich_anndata(
     pval_cutoff: float = 0.05,
     log2fc_min: Optional[float] = None,
     log2fc_max: Optional[float] = None,
+    n_top_genes: Optional[int] = None,
     gene_symbols: Optional[str] = None,
     gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
 ) -> pd.DataFrame:
@@ -298,6 +299,7 @@ def _enrich_anndata(
         pval_cutoff=pval_cutoff,
         log2fc_min=log2fc_min,
         log2fc_max=log2fc_max,
+        n_top_genes=n_top_genes,
         gene_symbols=gene_symbols,
     )
     if gene_symbols is not None:
