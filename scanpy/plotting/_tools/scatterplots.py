@@ -1270,7 +1270,7 @@ def _color_vector(
         }
         # If color_map does not have unique values, this can be slow as the
         # result is not categorical
-        color_vector = values.map(color_map)
+        color_vector = pd.Categorical(values.map(color_map))
 
         # Set color to 'missing color' for all missing values
         if color_vector.isna().any():
