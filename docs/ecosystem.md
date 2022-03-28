@@ -75,6 +75,9 @@ Interactive manifold viewers.
 ## Feature selection
 
 - [triku 🦔](https://gitlab.com/alexmascension/triku) {small}`Biodonostia Health Research Institute`
+- [CIARA](https://github.com/ScialdoneLab/CIARA_python) {small}`Helmholtz Munich`
+
+  > CIARA is an algorithm for feature selection, that aims for the identification of rare cell types via scRNA-Seq data in scanpy.
 
 ## Annotation/ Enrichment Analysis
 
