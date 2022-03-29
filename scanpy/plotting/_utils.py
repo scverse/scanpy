@@ -1060,7 +1060,9 @@ def check_projection(projection):
             )
 
 
-def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
+def circles(
+    x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, scale_factor=1.0, **kwargs
+):
     """
     Taken from here: https://gist.github.com/syrte/592a062c562cd2a98a83
     Make a scatter plot of circles.
@@ -1102,7 +1104,9 @@ def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
 
     # You can set `facecolor` with an array for each patch,
     # while you can only set `facecolors` with a value for all.
-
+    if scale_factor != 1.0:
+        x = x * scale_factor
+        y = y * scale_factor
     zipped = np.broadcast(x, y, s)
     patches = [Circle((x_, y_), s_) for x_, y_, s_ in zipped]
     collection = PatchCollection(patches, **kwargs)

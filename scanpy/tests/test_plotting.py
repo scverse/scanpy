@@ -939,8 +939,9 @@ def test_genes_symbols(image_comparer, id, fn):
     save_and_compare_images(f"master_{id}_gene_symbols")
 
 
-@pytest.fixture(scope="module")
-def pbmc_scatterplots():
+@pytest.fixture(scope="session")
+def _pbmc_scatterplots():
+    # Wrapped in another fixture to avoid any mutation
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc.layers["sparse"] = pbmc.raw.X / 2
     pbmc.layers["test"] = pbmc.X.copy() + 100
@@ -949,6 +950,11 @@ def pbmc_scatterplots():
     sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
     sc.tl.diffmap(pbmc)
     return pbmc
+
+
+@pytest.fixture
+def pbmc_scatterplots(_pbmc_scatterplots):
+    return _pbmc_scatterplots.copy()
 
 
 @pytest.mark.parametrize(
@@ -1457,6 +1463,22 @@ def test_color_cycler(caplog):
     assert caplog.text == ""
 
 
+def test_repeated_colors_w_missing_value():
+    # https://github.com/theislab/scanpy/issues/2133
+    v = pd.Series(np.arange(10).astype(str))
+    v[0] = np.nan
+    v = v.astype("category")
+
+    ad = sc.AnnData(obs=pd.DataFrame(v, columns=["value"]))
+    ad.obsm["X_umap"] = np.random.normal(size=(ad.n_obs, 2))
+
+    sc.pl.umap(ad, color="value")
+
+    ad.uns['value_colors'][1] = ad.uns['value_colors'][0]
+
+    sc.pl.umap(ad, color="value")
+
+
 @pytest.mark.parametrize(
     "plot",
     (
@@ -1518,3 +1540,9 @@ def test_scrublet_plots(image_comparer, plt):
 
     sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
     save_and_compare_images('scrublet_no_threshold')
+
+    adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
+    sc.external.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
+
+    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
+    save_and_compare_images('scrublet_with_batches')
