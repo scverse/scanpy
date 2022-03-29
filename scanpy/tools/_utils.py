@@ -47,10 +47,16 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
             logg.info('    using data matrix X directly')
             X = adata.X
     else:
-        if use_rep in adata.obsm.keys():
+        if use_rep in adata.obsm.keys() and n_pcs is not None:
+            if n_pcs > adata.obsm[use_rep].shape[1]:
+                raise ValueError(
+                    f'{use_rep} does not have enough Dimensions. Provide a '
+                    'Representation with equal or more dimensions than'
+                    '`n_pcs` or lower `n_pcs` '
+                )
+            X = adata.obsm[use_rep][:, :n_pcs]
+        elif use_rep in adata.obsm.keys() and n_pcs is None:
             X = adata.obsm[use_rep]
-            if use_rep == 'X_pca' and n_pcs is not None:
-                X = adata.obsm[use_rep][:, :n_pcs]
         elif use_rep == 'X':
             X = adata.X
         else:

@@ -5,10 +5,12 @@ import pytest
 n_neighbors = 5
 key = 'test'
 
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+
 
 @pytest.fixture
 def adata():
-    return sc.AnnData(sc.datasets.pbmc68k_reduced().X)
+    return sc.AnnData(pbmc68k_reduced().X)
 
 
 def test_neighbors_key_added(adata):

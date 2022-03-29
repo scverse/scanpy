@@ -2,7 +2,7 @@
 
 Scanpy is a community driven project. There are multiple channels for users and developers to communicate and connect.
 
-## [Discourse]
+## [Discourse](https://discourse.scverse.org)
 
 The scverse Discourse forum is place to go to ask usage questions and for longer form discussions around the project.
 
@@ -14,9 +14,6 @@ The [Scanpy](https://github.com/theislab/scanpy/issues) and [anndata](https://gi
 - Documentation issues
 - Feature requests
 
-## Developer Slack
+## [Developer Chat](https://scverse.zulipchat.com/)
 
-We also have a private slack workspace for discussion of development of Scanpy and tools in the broader ecosystem.
-If you'd like to request an invite, [please fill out this form](https://forms.gle/tiLpC7koSVbxFCYr5).
-
-[discourse]: https://discourse.scverse.org
+Zulip chat instance for synchronous discussion of scanpy, anndata, and other scverse packages.

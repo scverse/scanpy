@@ -5,6 +5,7 @@ from scipy.sparse import csr_matrix
 import pytest
 import pickle
 from pathlib import Path
+from scanpy.tests._data._cached_datasets import paul15
 
 HERE = Path(__file__).parent / Path('_data/')
 
@@ -54,7 +55,7 @@ def test_score_with_reference():
     and stored as a pickle object in ./data
     """
 
-    adata = sc.datasets.paul15()
+    adata = paul15()
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
     sc.pp.scale(adata)
 
