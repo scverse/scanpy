@@ -74,7 +74,7 @@ def embedding(
     arrows_kwds: Optional[Mapping[str, Any]] = None,
     groups: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
-    dimensions: Optional[Union[tuple[int, int], Sequence[tuple[int, int]]]] = None,
+    dimensions: Optional[Union[Tuple[int, int], Sequence[Tuple[int, int]]]] = None,
     layer: Optional[str] = None,
     projection: Literal['2d', '3d'] = '2d',
     scale_factor: Optional[float] = None,
