@@ -939,8 +939,9 @@ def test_genes_symbols(image_comparer, id, fn):
     save_and_compare_images(f"master_{id}_gene_symbols")
 
 
-@pytest.fixture(scope="module")
-def pbmc_scatterplots():
+@pytest.fixture(scope="session")
+def _pbmc_scatterplots():
+    # Wrapped in another fixture to avoid any mutation
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc.layers["sparse"] = pbmc.raw.X / 2
     pbmc.layers["test"] = pbmc.X.copy() + 100
@@ -949,6 +950,11 @@ def pbmc_scatterplots():
     sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
     sc.tl.diffmap(pbmc)
     return pbmc
+
+
+@pytest.fixture
+def pbmc_scatterplots(_pbmc_scatterplots):
+    return _pbmc_scatterplots.copy()
 
 
 @pytest.mark.parametrize(
