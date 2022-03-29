@@ -249,13 +249,14 @@ def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
     comp_pth = tmpdir / "components_plot.png"
     dims_pth = tmpdir / "dimension_plot.png"
 
-    with pytest.warns(FutureWarning, match=r"components .* deprecated"):
-        sc.pl.pca(
-            adata,
-            color=["mean", "label"],
-            components=["1,2", "2,3"],
-            show=False,
-        )
+    # TODO: Deprecate components kwarg
+    # with pytest.warns(FutureWarning, match=r"components .* deprecated"):
+    sc.pl.pca(
+        adata,
+        color=["mean", "label"],
+        components=["1,2", "2,3"],
+        show=False,
+    )
     plt.savefig(comp_pth, dpi=40)
     plt.close()
 

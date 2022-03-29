@@ -215,10 +215,6 @@ def embedding(
         wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
 
     if components is not None:
-        warn(
-            "Use of the components kwarg is deprecated. Use `dimensions` instead.",
-            FutureWarning,
-        )
         color, dimensions = list(zip(*product(color, dimensions)))
 
     color, dimensions = _broadcast_args(color, dimensions)
@@ -1041,6 +1037,7 @@ def _components_to_dimensions(
     total_dims: int,
 ) -> List[Collection[int]]:
     """Normalize components/ dimensions args for embedding plots."""
+    # TODO: Deprecate components kwarg
     ndims = {"2d": 2, "3d": 3}[projection]
     if components is None and dimensions is None:
         dimensions = [tuple(i for i in range(ndims))]
