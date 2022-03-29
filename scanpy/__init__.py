@@ -14,7 +14,7 @@ if not within_flit():  # see function docstring on why this is there
     from . import tools as tl
     from . import preprocessing as pp
     from . import plotting as pl
-    from . import datasets, logging, queries, external, get, metrics
+    from . import datasets, logging, queries, external, get, metrics, experimental
 
     from anndata import AnnData, concat
     from anndata import (
