@@ -6,10 +6,15 @@ from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
+try:
+    from dask.array import Array as DaskArray
+except ImportError:
+    DaskArray = None
+
 from scanpy import logging as logg
 from scanpy._compat import Literal
-
 from scanpy._utils import view_to_actual
+
 from scanpy.get import _get_obs_rep, _set_obs_rep
 
 
@@ -17,14 +22,20 @@ def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    counts = np.asarray(counts)  # dask doesn't do medians
-    after = np.median(counts[counts > 0], axis=0) if after is None else after
+    if isinstance(counts, DaskArray):
+        counts_greater_than_zero = counts[counts > 0].compute_chunk_sizes()
+    else:
+        counts_greater_than_zero = counts[counts > 0]
+
+    after = np.median(counts_greater_than_zero, axis=0) if after is None else after
     counts += counts == 0
     counts = counts / after
     if issparse(X):
         sparsefuncs.inplace_row_scale(X, 1 / counts)
-    else:
+    elif isinstance(counts, np.ndarray):
         np.divide(X, counts[:, None], out=X)
+    else:
+        X = np.divide(X, counts[:, None])  # dask does not support kwarg "out"
     return X
 
 
