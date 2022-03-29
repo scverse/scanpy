@@ -107,11 +107,11 @@ def pca_loadings(
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
         principal component.
     include_lowest
-        Show the genes with both highest and lowest loadings.
+        Whether to show the variables with both highest and lowest loadings.
     show
         Show the plot, do not return axis.
     n_points
-        Number of points to plot.
+        Number of variables to plot for each component.
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
@@ -139,15 +139,17 @@ def pca_loadings(
     elif isinstance(components, str):
         components = [int(x) for x in components.split(',')]
     components = np.array(components) - 1
+
     if np.any(components < 0):
-        logg.error("Component indices must be greater than zero.")
-        return
-    if n_points is None and adata.n_vars < 30:
-        n_points = adata.n_vars
-    elif n_points is None:
-        n_points = 30
-    else:
-        n_points = min(n_points, adata.n_vars)
+        raise ValueError("Component indices must be greater than zero.")
+
+    if n_points is None:
+        n_points = min(30, adata.n_vars)
+    elif adata.n_vars < n_points:
+        raise ValueError(
+            f"Tried to plot {n_points} variables, but passed anndata only has {adata.n_vars}."
+        )
+
     ranking(
         adata,
         'varm',
