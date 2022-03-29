@@ -19,7 +19,10 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = '2.0'  # Nicer param docs
-suppress_warnings = ['ref.citation']
+suppress_warnings = [
+    'ref.citation',
+    'myst.header',  # https://github.com/executablebooks/MyST-Parser/issues/262
+]
 
 # General information
 project = 'Scanpy'
@@ -30,13 +33,13 @@ release = version
 
 # default settings
 templates_path = ['_templates']
-source_suffix = '.rst'
 master_doc = 'index'
 default_role = 'literal'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 
 extensions = [
+    'myst_parser',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
