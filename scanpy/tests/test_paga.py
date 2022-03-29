@@ -5,7 +5,7 @@ from matplotlib import cm
 import numpy as np
 
 import scanpy as sc
-
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced, pbmc3k_processed
 import pytest
 
 HERE: Path = Path(__file__).parent
@@ -15,7 +15,7 @@ FIGS = HERE / 'figures'
 
 @pytest.fixture(scope="module")
 def pbmc():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, groups='bulk_labels')
     pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze()
     return pbmc
@@ -81,7 +81,7 @@ def test_paga_compare(image_comparer):
     # Tests that https://github.com/theislab/scanpy/issues/1887 is fixed
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    pbmc = sc.datasets.pbmc3k_processed()
+    pbmc = pbmc3k_processed()
     sc.tl.paga(pbmc, groups="louvain")
 
     sc.pl.paga_compare(pbmc, basis="umap", show=False)
@@ -92,7 +92,7 @@ def test_paga_compare(image_comparer):
 def test_paga_positions_reproducible():
     """Check exact reproducibility and effect of random_state on paga positions"""
     # https://github.com/theislab/scanpy/issues/1859
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, "bulk_labels")
 
     a = pbmc.copy()

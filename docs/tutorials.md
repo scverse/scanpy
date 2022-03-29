@@ -94,6 +94,10 @@ See the [cell cycle] notebook.
 :width: 120px
 ```
 
+### Normalization with Pearson Residuals
+
+Normalization of scRNA-seq data with Pearson Residuals, from [^cite_lause21]: {tutorial}`tutorial_pearson_residuals`
+
 ### Scaling Computations
 
 - Visualize and cluster [1.3M neurons] from 10x Genomics.
