@@ -1,17 +1,15 @@
 from functools import partial
 from itertools import repeat, chain
-import re
-from scanpy import datasets
 
 import numpy as np
-from numpy.core.fromnumeric import trace
 import pandas as pd
 import pytest
 from anndata import AnnData
 from scipy import sparse
 
 import scanpy as sc
-
+from scanpy.datasets._utils import filter_oldformatwarning
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
     "dim,transform,func",
@@ -175,6 +173,7 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
+@filter_oldformatwarning
 def test_backed_vs_memory():
     "compares backed vs. memory"
     from pathlib import Path
@@ -203,7 +202,7 @@ def test_backed_vs_memory():
 
 def test_column_content():
     "uses a larger dataset to test column order and content"
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
 
     # test that columns content is correct for obs_df
     query = ['CST3', 'NKG7', 'GNLY', 'louvain', 'n_counts', 'n_genes']

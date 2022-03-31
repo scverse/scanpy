@@ -57,11 +57,18 @@ def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
     while curline.startswith(b"%"):
         curline = stream.readline()
     n, m, _ = (int(x) for x in curline[:-1].split(b" "))
+
+    max_int32 = np.iinfo(np.int32).max
+    if n > max_int32 or m > max_int32:
+        coord_dtype = np.int64
+    else:
+        coord_dtype = np.int32
+
     data = pd.read_csv(
         stream,
         sep=r"\s+",
         header=None,
-        dtype={0: np.integer, 1: np.integer, 2: np.float32},
+        dtype={0: coord_dtype, 1: coord_dtype, 2: np.float32},
     )
     mtx = sparse.csr_matrix((data[2], (data[1] - 1, data[0] - 1)), shape=(m, n))
     return mtx

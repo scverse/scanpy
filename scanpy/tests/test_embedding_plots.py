@@ -220,6 +220,58 @@ def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
     check_images(dict_pth, list_pth, tol=15)
 
 
+def test_dimension_broadcasting(adata, tmpdir, check_same_image):
+    tmpdir = Path(tmpdir)
+
+    with pytest.raises(ValueError):
+        sc.pl.pca(
+            adata, color=["label", "1_missing"], dimensions=[(0, 1), (1, 2), (2, 3)]
+        )
+
+    dims_pth = tmpdir / "broadcast_dims.png"
+    color_pth = tmpdir / "broadcast_colors.png"
+
+    sc.pl.pca(adata, color=["label", "label", "label"], dimensions=(2, 3), show=False)
+    plt.savefig(dims_pth, dpi=40)
+    plt.close()
+    sc.pl.pca(adata, color="label", dimensions=[(2, 3), (2, 3), (2, 3)], show=False)
+    plt.savefig(color_pth, dpi=40)
+    plt.close()
+
+    check_same_image(dims_pth, color_pth, tol=5)
+
+
+def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
+    tmpdir = Path(tmpdir)
+    adata = adata.copy()
+    adata.obs["mean"] = np.ravel(adata.X.mean(axis=1))
+
+    comp_pth = tmpdir / "components_plot.png"
+    dims_pth = tmpdir / "dimension_plot.png"
+
+    # TODO: Deprecate components kwarg
+    # with pytest.warns(FutureWarning, match=r"components .* deprecated"):
+    sc.pl.pca(
+        adata,
+        color=["mean", "label"],
+        components=["1,2", "2,3"],
+        show=False,
+    )
+    plt.savefig(comp_pth, dpi=40)
+    plt.close()
+
+    sc.pl.pca(
+        adata,
+        color=["mean", "mean", "label", "label"],
+        dimensions=[(0, 1), (1, 2), (0, 1), (1, 2)],
+        show=False,
+    )
+    plt.savefig(dims_pth, dpi=40)
+    plt.close()
+
+    check_same_image(dims_pth, comp_pth, tol=5)
+
+
 # Spatial specific
 
 

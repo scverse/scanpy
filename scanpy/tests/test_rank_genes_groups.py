@@ -16,7 +16,7 @@ from anndata import AnnData
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
-from scanpy.datasets import pbmc68k_reduced
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 from scanpy._utils import select_groups
 
 
@@ -216,12 +216,12 @@ def test_results_layers():
 
 def test_rank_genes_groups_use_raw():
     # https://github.com/theislab/scanpy/issues/1929
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     assert pbmc.raw is not None
 
     sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
 
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     del pbmc.raw
     assert pbmc.raw is None
 

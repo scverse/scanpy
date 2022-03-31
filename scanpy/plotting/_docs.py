@@ -50,6 +50,11 @@ sort_order
 groups
     Restrict to a few categories in categorical observation annotation.
     The default is not to restrict to any groups.
+dimensions
+    0-indexed dimensions of the embedding to plot as integers. E.g. [(0, 1), (1, 2)].
+    Unlike `components`, this argument is used in the same way as `colors`, e.g. is
+    used to specify a single plot at a time. Will eventually replace the components
+    argument.
 components
     For instance, `['1,2', '2,3']`. To plot all available components use
     `components='all'`.

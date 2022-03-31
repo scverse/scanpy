@@ -19,24 +19,27 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = '2.0'  # Nicer param docs
-suppress_warnings = ['ref.citation']
+suppress_warnings = [
+    'ref.citation',
+    'myst.header',  # https://github.com/executablebooks/MyST-Parser/issues/262
+]
 
 # General information
 project = 'Scanpy'
-author = scanpy.__author__
-copyright = f'{datetime.now():%Y}, {author}.'
+author = 'Scanpy development team'
+copyright = f'{datetime.now():%Y}, the Scanpy development team.'
 version = scanpy.__version__.replace('.dirty', '')
 release = version
 
 # default settings
 templates_path = ['_templates']
-source_suffix = '.rst'
 master_doc = 'index'
 default_role = 'literal'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 
 extensions = [
+    'myst_parser',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
@@ -72,17 +75,17 @@ intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     cycler=('https://matplotlib.org/cycler/', None),
-    h5py=('http://docs.h5py.org/en/stable/', None),
+    h5py=('https://docs.h5py.org/en/stable/', None),
     ipython=('https://ipython.readthedocs.io/en/stable/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
     louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
-    matplotlib=('https://matplotlib.org/', None),
-    networkx=('https://networkx.github.io/documentation/networkx-1.10/', None),
-    numpy=('https://docs.scipy.org/doc/numpy/', None),
+    matplotlib=('https://matplotlib.org/stable/', None),
+    networkx=('https://networkx.org/documentation/stable/', None),
+    numpy=('https://numpy.org/doc/stable/', None),
     pandas=('https://pandas.pydata.org/pandas-docs/stable/', None),
     pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
-    scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
+    scipy=('https://docs.scipy.org/doc/scipy/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
     scanpy_tutorials=(scanpy_tutorials_url, None),

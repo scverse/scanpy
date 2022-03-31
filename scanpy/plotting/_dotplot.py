@@ -433,7 +433,7 @@ class DotPlot(BasePlot):
         else:
             size_values = size_range
 
-        size = size_values ** self.size_exponent
+        size = size_values**self.size_exponent
         size = size * (self.largest_dot - self.smallest_dot) + self.smallest_dot
 
         # plot size bar
@@ -696,7 +696,7 @@ class DotPlot(BasePlot):
             # re-scale frac between 0 and 1
             frac = (frac - dot_min) / old_range
 
-        size = frac ** size_exponent
+        size = frac**size_exponent
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
         normalize = check_colornorm(vmin, vmax, vcenter, norm)
