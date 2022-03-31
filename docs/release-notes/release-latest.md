@@ -6,10 +6,6 @@
 
 ## Version 1.8
 
-
-```{include} /release-notes/1.8.3.md
-```
-
 ```{include} /release-notes/1.8.2.md
 ```
 

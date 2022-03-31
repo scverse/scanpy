@@ -447,6 +447,11 @@ New methods that are in early development which are not (yet)
 integrated in Scanpy core.
 
 ```{eval-rst}
+.. module:: scanpy.experimental.pp
+.. currentmodule:: scanpy
+```
+
+```{eval-rst}
 .. autosummary::
    :toctree: generated/
 
