@@ -89,7 +89,7 @@ def embedding(
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
-    show_colorbar: bool = True,
+    colorbar_loc: Optional[str] = "right",
     vmax: Union[VBound, Sequence[VBound], None] = None,
     vmin: Union[VBound, Sequence[VBound], None] = None,
     vcenter: Union[VBound, Sequence[VBound], None] = None,
@@ -448,8 +448,10 @@ def embedding(
                 na_in_legend=na_in_legend,
                 multi_panel=bool(grid),
             )
-        if show_colorbar:
-            pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
+        elif colorbar_loc is not None:
+            pl.colorbar(
+                cax, ax=ax, pad=0.01, fraction=0.08, aspect=30, location=colorbar_loc
+            )
 
     if return_fig is True:
         return fig
