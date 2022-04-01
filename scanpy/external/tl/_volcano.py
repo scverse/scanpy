@@ -13,7 +13,7 @@ def volcano_plot(
   pval_thres: Optional[float] = 0.05,
   figsize: Optional[Tuple[float, float]] = (6.5,6),
   title: Optional['str'] = None,
-  output_file: Optional['str'] = "volcanoplot.png"
+  out_dir: Optional['str'] = "volcanoplot.png"
   ):
   """
   Plot ranking of genes using volano plot
