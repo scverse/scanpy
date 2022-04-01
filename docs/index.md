@@ -25,7 +25,7 @@
 
 ```{include} news.md
 :start-line: 9
-:end-line: 30
+:end-line: 32
 ```
 
 {ref}`(past news) <News>`
