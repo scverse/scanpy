@@ -11,6 +11,13 @@
 
 Thanks to all our contributors for making this project possible!
 
+## New community channels {small}`2022-03-31`
+
+We've moved our forums and have a new publicly available chat!
+
+* Our discourse forum has migrated to a joint scverse forum ([discourse.scverse.org](https://discourse.scverse.org)).
+* Our private developer Slack has been replaced by a public Zulip chat ([scverse.zulipchat.com](https://scverse.zulipchat.com)).
+
 ## Toolkit for spatial (squidpy) and multimodal (muon) published {small}`2022-02-01`
 
 Two large toolkits extending our ecosystem to new modalities have had their manuscripts published!
