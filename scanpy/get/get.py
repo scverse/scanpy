@@ -385,7 +385,7 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     """
     Choose array aligned with obs annotation.
     """
-    # https://github.com/theislab/scanpy/issues/1546
+    # https://github.com/scverse/scanpy/issues/1546
     if not isinstance(use_raw, bool):
         raise TypeError(f"use_raw expected to be bool, was {type(use_raw)}.")
 
@@ -408,7 +408,7 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     else:
         assert False, (
             "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/theislab/scanpy/issues"
+            " https://github.com/scverse/scanpy/issues"
         )
 
 
@@ -435,5 +435,5 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
     else:
         assert False, (
             "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/theislab/scanpy/issues"
+            " https://github.com/scverse/scanpy/issues"
         )

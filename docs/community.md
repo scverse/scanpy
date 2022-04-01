@@ -6,9 +6,9 @@ Scanpy is a community driven project. There are multiple channels for users and 
 
 The scverse Discourse forum is place to go to ask usage questions and for longer form discussions around the project.
 
-## [Github Issue Tracker](https://github.com/theislab/scanpy/issues)
+## [Github Issue Tracker](https://github.com/scverse/scanpy/issues)
 
-The [Scanpy](https://github.com/theislab/scanpy/issues) and [anndata](https://github.com/theislab/anndata/issues) issue trackers are for reports and discussion of:
+The [Scanpy](https://github.com/scverse/scanpy/issues) and [anndata](https://github.com/scverse/anndata/issues) issue trackers are for reports and discussion of:
 
 - Bug reports
 - Documentation issues

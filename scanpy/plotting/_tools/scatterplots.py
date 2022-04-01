@@ -169,7 +169,7 @@ def embedding(
     if 'edgecolor' not in kwargs:
         # by default turn off edge color. Otherwise, for
         # very small sizes the edge will not reduce its size
-        # (https://github.com/theislab/scanpy/issues/293)
+        # (https://github.com/scverse/scanpy/issues/293)
         kwargs['edgecolor'] = 'none'
 
     # Vectorized arguments

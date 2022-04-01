@@ -215,7 +215,7 @@ def test_results_layers():
 
 
 def test_rank_genes_groups_use_raw():
-    # https://github.com/theislab/scanpy/issues/1929
+    # https://github.com/scverse/scanpy/issues/1929
     pbmc = pbmc68k_reduced()
     assert pbmc.raw is not None
 

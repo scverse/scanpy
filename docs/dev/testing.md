@@ -21,7 +21,7 @@ It can take a while to run the whole test suite. There are a few ways to cut dow
 
 ## Writing tests
 
-You can refer to the [existing test suite](https://github.com/theislab/scanpy/tree/master/scanpy/tests) for examples.
+You can refer to the [existing test suite](https://github.com/scverse/scanpy/tree/master/scanpy/tests) for examples.
 If you haven't written tests before, Software Carpentry has an [in-depth guide](http://katyhuff.github.io/python-testing/) on the topic.
 
 We highly recommend using [Test Driven Development](https://en.wikipedia.org/wiki/Test-driven_development) when contributing code.
