@@ -1,9 +1,34 @@
+(News)=
+
 # News
 
 ```{eval-rst}
 .. role:: small
 
 ```
+
+## Scanpy hits 100 contributors! {small}`2022-03-31`
+
+[100 people have contributed to Scanpy's source code!](https://github.com/theislab/scanpy/graphs/contributors)
+
+Of course, contributions to the project are not limited to direct modification of the source code.
+Many others have improved the project by building on top of it, participating in development discussions, helping others with usage, or by showing off what it's helped them accomplish.
+
+Thanks to all our contributors for making this project possible!
+
+## New community channels {small}`2022-03-31`
+
+We've moved our forums and have a new publicly available chat!
+
+* Our discourse forum has migrated to a joint scverse forum ([discourse.scverse.org](https://discourse.scverse.org)).
+* Our private developer Slack has been replaced by a public Zulip chat ([scverse.zulipchat.com](https://scverse.zulipchat.com)).
+
+## Toolkit for spatial (squidpy) and multimodal (muon) published {small}`2022-02-01`
+
+Two large toolkits extending our ecosystem to new modalities have had their manuscripts published!
+
+* [Muon](https://muon.readthedocs.io/), a framework for multimodal has been published in [Genome Biology](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-021-02577-8).
+* [Squidpy](https://squidpy.readthedocs.io/) a toolkit for working with spatial single cell data has been published in [Nature Methods](https://www.nature.com/articles/s41592-021-01358-2).
 
 ## scVelo on the cover of Nature Biotechnology {small}`2020-12-01`
 

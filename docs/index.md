@@ -1,5 +1,5 @@
 ```{include} ../README.md
-:end-line: 15
+:end-line: 17
 ```
 
 ```{eval-rst}
@@ -18,15 +18,17 @@
 * Get started by browsing {doc}`tutorials <tutorials>`, {doc}`usage principles <usage-principles>` or the main {doc}`API <api>`.
 * Follow changes in the {ref}`release notes <release-notes>`.
 * Find tools that harmonize well with anndata & Scanpy via the {doc}`external API <external>` and the {doc}`ecosystem page <ecosystem>`.
+* Check out our {ref}`contributing guide <contribution-guide>` for development practices.
 * Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
 
 # News
 
 ```{include} news.md
-:start-line: 2
-:end-line: 22
+:start-line: 9
+:end-line: 32
 ```
 
+{ref}`(past news) <News>`
 # Latest additions
 
 ```{include} release-notes/release-latest.md

@@ -23,6 +23,7 @@ Interactive manifold viewers.
 - [cirrocumulus](https://cirrocumulus.readthedocs.io/) via direct reading of `.h5ad` {small}`Broad Inst.`
 - [cell browser](https://cells.ucsc.edu/) via exporing through {func}`~scanpy.external.exporting.cellbrowser` {small}`UCSC`
 - [SPRING](https://github.com/AllonKleinLab/SPRING) via exporting through {func}`~scanpy.external.exporting.spring_project` {small}`Harvard Med`
+- [vitessce](http://vitessce.io) for purely browser based viewing of zarr formatted AnnData files {smaller}`Harvard Med`
 
 ## Portals
 
@@ -30,39 +31,30 @@ Interactive manifold viewers.
 - the [Galaxy Project](https://humancellatlas.usegalaxy.eu) for the Human Cell Atlas [\[tweet\]](https://twitter.com/ExpressionAtlas/status/1151797848469626881) {small}`U Freiburg`
 - the [Expression Atlas](https://www.ebi.ac.uk/gxa/sc/help.html) {small}`EMBL-EBI`
 
-## RNA velocity
+## Modalities
+
+### RNA velocity
 
 - [scVelo](https://scvelo.org) {small}`Helmholtz Munich`
 
-## Fate mapping
+### Spatial Transcriptomics Tools
 
-- [CellRank](http://cellrank.org) {small}`Helmholtz Munich`
+- [squidpy](https://squidpy.readthedocs.io/en/stable/) {small}`Helmholtz Munich`
 
-  > CellRank is a toolkit to uncover cellular dynamics based on scRNA-seq data with
-  > RNA velocity annotation by detecting initial and terminal populations, inferring
-  > fate potentials and uncovering gene expression trends towards specific
-  > terminal populations.
+  > Squidpy is a comprehensive toolkit for working with spatial single cell omics data.
 
-## Differential expression
+- [PASTE](https://github.com/raphael-group/paste) {small}`Princeton`
 
-- [diffxpy](https://github.com/theislab/diffxpy) {small}`Helmholtz Munich`
+  > PASTE is a computational method to align and integrate spatial transcriptomics data across adjacent tissue slices by leveraging both gene expression similarity and spatial distances between spots.
 
-## Data integration
+### Multimodal integration
 
-- [scanaroma](https://github.com/brianhie/scanorama) {small}`MIT`
+- [MUON](https://muon.readthedocs.io/en/latest/) and [MuData](https://mudata.readthedocs.io/en/latest/) {small}`EMBL/ DKFZ`
 
-## Modeling perturbations
+  > MUON, and it's associated data structure MuData are designed to organise, analyse, visualise, and exchange multimodal data.
+  > MUON enables a range of analyses for ATAC and CITE-seq, from data preprocessing to flexible multi-omics alignment.
 
-- [scGen](https://github.com/theislab/scgen) / [trVAE](https://github.com/theislab/trvae) {small}`Helmholtz Munich`
-
-## scvi-tools
-
-- [scvi-tools](https://github.com/YosefLab/scvi-tools) {small}`Berkeley`
-
-  > scvi-tools hosts deep generative models (DGM) for end-to-end analysis of single-cell
-  > omics data (e.g., scVI, scANVI, totalVI). It also contains several primitives to build novel DGMs.
-
-## Adaptive immune receptor repertoire (AIRR)
+### Adaptive immune receptor repertoire (AIRR)
 
 - [scirpy](https://github.com/icbi-lab/scirpy) {small}`Medical University of Innsbruck`
 
@@ -72,25 +64,55 @@ Interactive manifold viewers.
 
   > dandelion is a single-cell BCR-seq network analysis package that integrates with transcriptomic data analyzed via scanpy.
 
-## Feature selection
+### Long reads
+
+- [Swan](https://freese.gitbook.io/swan/tutorials/data_processing) {small}`UC Irvine`
+
+  > Swan is a Python library designed for the analysis and visualization of transcriptomes, especially with long-read transcriptomes in mind.
+  > Users can add transcriptomes from different datasets and explore distinct splicing and expression patterns across datasets.
+
+## Analysis methods
+
+### scvi-tools
+
+- [scvi-tools](https://github.com/YosefLab/scvi-tools) {small}`Berkeley`
+
+  > scvi-tools hosts deep generative models (DGM) for end-to-end analysis of single-cell
+  > omics data (e.g., scVI, scANVI, totalVI). It also contains several primitives to build novel DGMs.
+
+### Fate mapping
+
+- [CellRank](http://cellrank.org) {small}`Helmholtz Munich`
+
+  > CellRank is a toolkit to uncover cellular dynamics based on scRNA-seq data with
+  > RNA velocity annotation by detecting initial and terminal populations, inferring
+  > fate potentials and uncovering gene expression trends towards specific
+  > terminal populations.
+
+### Differential expression
+
+- [diffxpy](https://github.com/theislab/diffxpy) {small}`Helmholtz Munich`
+
+### Data integration
+
+- [scanaroma](https://github.com/brianhie/scanorama) {small}`MIT`
+
+### Modeling perturbations
+
+- [scGen](https://github.com/theislab/scgen) / [trVAE](https://github.com/theislab/trvae) {small}`Helmholtz Munich`
+
+### Feature selection
 
 - [triku 🦔](https://gitlab.com/alexmascension/triku) {small}`Biodonostia Health Research Institute`
 - [CIARA](https://github.com/ScialdoneLab/CIARA_python) {small}`Helmholtz Munich`
 
   > CIARA is an algorithm for feature selection, that aims for the identification of rare cell types via scRNA-Seq data in scanpy.
 
-## Annotation/ Enrichment Analysis
+### Annotation/ Enrichment Analysis
 
 Analyses using curated prior knowledge
-
 
 - [decoupler](https://github.com/saezlab/decoupler-py) is a collection of footprint enrichment methods that allows to infer transcription factor or pathway activities. {small}`Institute for Computational Biomedicine, Heidelberg University`
 - [Cubé](https://github.com/connerlambden/Cube) {small}`Harvard University`
 
   > Intuitive Nonparametric Gene Network Search Algorithm that learns from existing biological pathways & multiplicative gene interference patterns.
-
-## Spatial Transcriptomics Tools
-
-- [PASTE](https://github.com/raphael-group/paste) {small}`Princeton`
-
-  > PASTE is a computational method to align and integrate spatial transcriptomics data across adjacent tissue slices by leveraging both gene expression similarity and spatial distances between spots.
