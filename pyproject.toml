@@ -81,7 +81,7 @@ dynamic = ["version"]
 
 [project.urls]
 Documentation = "https://scanpy.readthedocs.io/"
-Source = "https://github.com/theislab/scanpy"
+Source = "https://github.com/scverse/scanpy"
 Home-page = "https://scanpy.org"
 
 [project.scripts]

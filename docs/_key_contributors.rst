@@ -12,8 +12,8 @@
    * `Alex Wolf`_: lead developer 2016-2019, initial anndata & scanpy conception
    * `Fabian Theis`_ & lab: enabling guidance, support and environment
 
-.. _anndata graph: https://github.com/theislab/anndata/graphs/contributors
-.. _scanpy graph: https://github.com/theislab/scanpy/graphs/contributors
+.. _anndata graph: https://github.com/scverse/anndata/graphs/contributors
+.. _scanpy graph: https://github.com/scverse/scanpy/graphs/contributors
 .. _Isaac Virshup: https://twitter.com/ivirshup
 .. _Alex Wolf: https://twitter.com/falexwolf
 .. _Fabian Theis: https://twitter.com/fabian_theis

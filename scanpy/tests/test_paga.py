@@ -78,7 +78,7 @@ def test_paga_path(image_comparer, pbmc):
 
 
 def test_paga_compare(image_comparer):
-    # Tests that https://github.com/theislab/scanpy/issues/1887 is fixed
+    # Tests that https://github.com/scverse/scanpy/issues/1887 is fixed
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     pbmc = pbmc3k_processed()
@@ -91,7 +91,7 @@ def test_paga_compare(image_comparer):
 
 def test_paga_positions_reproducible():
     """Check exact reproducibility and effect of random_state on paga positions"""
-    # https://github.com/theislab/scanpy/issues/1859
+    # https://github.com/scverse/scanpy/issues/1859
     pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, "bulk_labels")
 

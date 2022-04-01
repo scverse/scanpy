@@ -77,7 +77,7 @@ Map labels and embeddings of reference data to new data: {tutorial}`integrating-
 
 ### Conversion: AnnData, SingleCellExperiment, and Seurat objects
 
-```{image} https://github.com/theislab/scanpy-in-R/raw/master/logo.png
+```{image} https://github.com/scverse/scanpy-in-R/raw/master/logo.png
 :align: right
 :width: 200px
 ```
@@ -128,13 +128,13 @@ See pseudotime-time inference on deep-learning based features for [cell cycle re
 % .. _David P. Cook: https://twitter.com/DavidPCook
 % .. _Tabula Muris Consortium: https://www.biorxiv.org/content/early/2017/12/20/237446
 
-[1.3m neurons]: https://github.com/theislab/scanpy_usage/tree/master/170522_visualizing_one_million_cells
-[cell cycle]: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb
-[cell cycle reconstruction]: https://github.com/theislab/scanpy_usage/tree/master/170529_images
-[dpt example 1]: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
-[dpt example 2]: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
-[myeloid differentiation]: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170430_krumsiek11/krumsiek11.ipynb
+[1.3m neurons]: https://github.com/scverse/scanpy_usage/tree/master/170522_visualizing_one_million_cells
+[cell cycle]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb
+[cell cycle reconstruction]: https://github.com/scverse/scanpy_usage/tree/master/170529_images
+[dpt example 1]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170502_paul15/paul15.ipynb
+[dpt example 2]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
+[myeloid differentiation]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170430_krumsiek11/krumsiek11.ipynb
 [planaria]: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/planaria/planaria.ipynb
 [scanpy in r]: https://theislab.github.io/scanpy-in-R/
 [seurat to anndata]: https://github.com/LuckyMD/Code_snippets/blob/master/Seurat_to_anndata.ipynb
-[toggleswitch]: https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170430_krumsiek11/toggleswitch.ipynb
+[toggleswitch]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170430_krumsiek11/toggleswitch.ipynb

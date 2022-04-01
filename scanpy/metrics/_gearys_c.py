@@ -280,7 +280,7 @@ def _check_vals(vals):
     Returns new set of vals, and indexer to put values back into result.
 
     For details on why this is neccesary, see:
-    https://github.com/theislab/scanpy/issues/1806
+    https://github.com/scverse/scanpy/issues/1806
     """
     from scanpy._utils import is_constant
 
