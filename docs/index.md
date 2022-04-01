@@ -21,11 +21,11 @@
 * Check out our {ref}`contributing guide <contribution-guide>` for development practices.
 * Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
 
-# News
+# {ref}`News`
 
 ```{include} news.md
-:start-line: 2
-:end-line: 22
+:start-line: 9
+:end-line: 20
 ```
 
 # Latest additions

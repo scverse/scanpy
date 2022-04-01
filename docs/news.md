@@ -1,9 +1,22 @@
+(News)=
+
 # News
 
 ```{eval-rst}
 .. role:: small
 
 ```
+
+## Scanpy hits 100 contributors! {small}`2022-03-31`
+
+Thanks to all our contributors for making this project possible!
+
+## Toolkit for spatial (squidpy) and multimodal (muon) published {small}`2022-02-01`
+
+Two large toolkits extending our ecosystem to new modalities have had their manuscripts published!
+
+* [Muon](https://muon.readthedocs.io/), a framework for multimodal has been published in [Genome Biology](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-021-02577-8).
+* [Squidpy](https://squidpy.readthedocs.io/) a toolkit for working with spatial single cell data has been published in [Nature Methods](https://www.nature.com/articles/s41592-021-01358-2).
 
 ## scVelo on the cover of Nature Biotechnology {small}`2020-12-01`
 
