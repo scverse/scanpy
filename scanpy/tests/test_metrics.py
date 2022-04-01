@@ -133,7 +133,7 @@ def test_morans_i_correctness():
     ids=lambda x: x.__name__,
 )
 def test_graph_metrics_w_constant_values(metric, array_type):
-    # https://github.com/theislab/scanpy/issues/1806
+    # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())
     g = pbmc.obsp["connectivities"].copy()

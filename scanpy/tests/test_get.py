@@ -282,7 +282,7 @@ def test_var_df(adata):
 
 @TRANSPOSE_PARAMS
 def test_just_mapping_keys(dim, transform, func):
-    # https://github.com/theislab/scanpy/issues/1634
+    # https://github.com/scverse/scanpy/issues/1634
     # Test for error where just passing obsm_keys, but not keys, would cause error.
     mapping_attr = f"{dim}m"
     kwargs = {f"{mapping_attr}_keys": [("array", 0), ("array", 1)]}
@@ -374,7 +374,7 @@ def test_repeated_cols(dim, transform, func):
 @TRANSPOSE_PARAMS
 def test_repeated_index_vals(dim, transform, func):
     # THis one could be reverted, see:
-    # https://github.com/theislab/scanpy/pull/1583#issuecomment-770641710
+    # https://github.com/scverse/scanpy/pull/1583#issuecomment-770641710
     alt_dim = ["obs", "var"][dim == "obs"]
     adata = transform(
         sc.AnnData(

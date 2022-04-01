@@ -119,7 +119,7 @@ def test_scale():
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     v = adata[:, 0 : adata.shape[1] // 2]
-    # Should turn view to copy https://github.com/theislab/anndata/issues/171#issuecomment-508689965
+    # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965
     assert v.is_view
     with pytest.warns(Warning, match="view"):
         sc.pp.scale(v)
