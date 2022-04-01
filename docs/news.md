@@ -9,6 +9,9 @@
 
 ## Scanpy hits 100 contributors! {small}`2022-03-31`
 
+[100 people have contributed to Scanpy's source code!](https://github.com/theislab/scanpy/graphs/contributors)
+Of course, many more people have contributed to the project by participating in the community, whether through developing their own packages, helping others with usage, or by showing off what it's helped them accomplish!
+
 Thanks to all our contributors for making this project possible!
 
 ## New community channels {small}`2022-03-31`
