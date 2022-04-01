@@ -18,7 +18,7 @@ To get the code, and be able to push changes back to the main project, you'll ne
 This is very straight forward if you're using [GitHub's CLI](https://cli.github.com):
 
 ```shell
-$ gh repo fork theislab/scanpy --clone --remote
+$ gh repo fork scverse/scanpy --clone --remote
 ```
 
 This will fork the repo to your github account, create a clone of the repo on your current machine, add our repository as a remote, and set the `master` development branch to track our repository.
@@ -31,7 +31,7 @@ git clone https://github.com/{your-username}/scanpy.git
 # Enter the cloned repository
 cd scanpy
 # Add our repository as a remote
-git remote add upstream https://github.com/theislab/scanpy.git
+git remote add upstream https://github.com/scverse/scanpy.git
 # git branch --set-upstream-to "upstream/master"
 ```
 

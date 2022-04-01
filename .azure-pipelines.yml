@@ -47,7 +47,7 @@ jobs:
     displayName: 'Install dependencies'
 
   - script: |
-      pip install -v git+https://github.com/theislab/anndata
+      pip install -v git+https://github.com/scverse/anndata
     displayName: 'Install development anndata'
     condition: eq(variables['ANNDATA_DEV'], 'yes')
 

@@ -522,7 +522,7 @@ def test_violin(image_comparer):
 
 # TODO: Generalize test to more plotting types
 def test_violin_without_raw(tmpdir):
-    # https://github.com/theislab/scanpy/issues/1546
+    # https://github.com/scverse/scanpy/issues/1546
     TESTDIR = Path(tmpdir)
 
     has_raw_pth = TESTDIR / "has_raw.png"
@@ -1065,7 +1065,7 @@ def pbmc_scatterplots(_pbmc_scatterplots):
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    # https://github.com/theislab/scanpy/issues/849
+    # https://github.com/scverse/scanpy/issues/849
     if id == "3dprojection" and version.parse(mpl.__version__) < version.parse("3.3.3"):
         with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
             fn(pbmc_scatterplots, show=False)
@@ -1368,7 +1368,7 @@ def test_scatter_rep(tmpdir):
 
 
 def test_no_copy():
-    # https://github.com/theislab/scanpy/issues/1000
+    # https://github.com/scverse/scanpy/issues/1000
     # Tests that plotting functions don't make a copy from a view unless they
     # actually have to
     actual = pbmc68k_reduced()
@@ -1452,7 +1452,7 @@ def test_groupby_list(image_comparer):
 
 
 def test_color_cycler(caplog):
-    # https://github.com/theislab/scanpy/issues/1885
+    # https://github.com/scverse/scanpy/issues/1885
     import logging
 
     pbmc = pbmc68k_reduced()
@@ -1469,7 +1469,7 @@ def test_color_cycler(caplog):
 
 
 def test_repeated_colors_w_missing_value():
-    # https://github.com/theislab/scanpy/issues/2133
+    # https://github.com/scverse/scanpy/issues/2133
     v = pd.Series(np.arange(10).astype(str))
     v[0] = np.nan
     v = v.astype("category")

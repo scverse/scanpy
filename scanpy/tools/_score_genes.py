@@ -90,7 +90,7 @@ def score_genes(
 
     Examples
     --------
-    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`__.
+    See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
     start = logg.info(f'computing score {score_name!r}')
     adata = adata.copy() if copy else adata
@@ -233,7 +233,7 @@ def score_genes_cell_cycle(
 
     Examples
     --------
-    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`__.
+    See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
     logg.info('calculating cell cycle phase')
 

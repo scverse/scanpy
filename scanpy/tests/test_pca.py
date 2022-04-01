@@ -65,7 +65,7 @@ def test_pca_transform(array_type):
 
 def test_pca_shapes():
     """Tests that n_comps behaves correctly"""
-    # https://github.com/theislab/scanpy/issues/1051
+    # https://github.com/scverse/scanpy/issues/1051
     adata = AnnData(np.random.randn(30, 20))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (30, 19)
@@ -115,7 +115,7 @@ def test_pca_reproducible(pbmc3k_normalized, array_type, float_dtype):
 
 
 def test_pca_chunked(pbmc3k_normalized):
-    # https://github.com/theislab/scanpy/issues/1590
+    # https://github.com/scverse/scanpy/issues/1590
     # But also a more general test
 
     # Subsetting for speed of test
