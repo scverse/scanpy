@@ -33,7 +33,7 @@ parts of scanpy but aren't requirements: [python-igraph] [^cite_csardi06] and [l
 To work with the latest version [on GitHub]: clone the repository and `cd` into its root directory.
 
 ```shell
-gh repo clone theislab/scanpy
+gh repo clone scverse/scanpy
 cd scanpy
 ```
 
@@ -124,6 +124,6 @@ The whole process takes just a couple of minutes.
 [gcfntnu/scanpy]: https://hub.docker.com/r/gcfntnu/scanpy
 [leiden]: https://leidenalg.readthedocs.io
 [miniconda]: http://conda.pydata.org/miniconda.html
-[on github]: https://github.com/theislab/scanpy
+[on github]: https://github.com/scverse/scanpy
 [python-igraph]: http://igraph.org/python/
 [unofficial binaries]: https://www.lfd.uci.edu/~gohlke/pythonlibs/

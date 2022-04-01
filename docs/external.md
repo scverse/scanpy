@@ -50,7 +50,7 @@ If the tool already uses `scanpy` or `anndata`, it may fit better in the {doc}`e
 
 ### Imputation
 
-Note that the fundamental limitations of imputation are still under [debate](https://github.com/theislab/scanpy/issues/189).
+Note that the fundamental limitations of imputation are still under [debate](https://github.com/scverse/scanpy/issues/189).
 
 ```{eval-rst}
 .. autosummary::

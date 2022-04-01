@@ -210,7 +210,7 @@ def test_missing_genes():
 
 
 def test_one_gene():
-    # https://github.com/theislab/scanpy/issues/1395
+    # https://github.com/scverse/scanpy/issues/1395
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
     sc.tl.score_genes(adata, [adata.var_names[0]])
 

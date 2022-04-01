@@ -27,7 +27,7 @@ We recommend waiting on this until your PR is close to done since this can often
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 This should be added to `docs/api.md` under a relevant heading.
 
-For tutorials and more in depth examples, consider adding a notebook to [scanpy-tutorials](https://github.com/theislab/scanpy-tutorials/).
+For tutorials and more in depth examples, consider adding a notebook to [scanpy-tutorials](https://github.com/scverse/scanpy-tutorials/).
 
 ## docstrings format
 
@@ -42,7 +42,7 @@ Some key points:
 - When docs exist in the same file as code, line length restrictions still apply. In files which are just docs, go with a sentence per line (for easier `git diff`s).
 - Check that the docs look like what you expect them too! It's easy to forget to add a reference to function, be sure it got added and looks right.
 
-Look at [sc.tl.louvain](https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90) as an example for everything mentioned here.
+Look at [sc.tl.louvain](https://github.com/scverse/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90) as an example for everything mentioned here.
 
 ### Plots in docstrings
 
