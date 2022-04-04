@@ -59,11 +59,7 @@ extensions = [
     'sphinx_autodoc_typehints',  # needs to be after napoleon
     # 'ipython_directive',
     # 'ipython_console_highlighting',
-    # 'scanpydoc',  # scanpydoc.elegant_typehints causes full doc rebuilds
-    'scanpydoc.rtd_github_links',
-    'scanpydoc.theme',
-    'scanpydoc.definition_list_typed_field',
-    'scanpydoc.autosummary_generate_imported',
+    'scanpydoc',
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
