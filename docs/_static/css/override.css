@@ -1,8 +1,14 @@
-dt:target, span.highlighted {
+/* for the sphinx design cards */
+body {
+    --sd-color-shadow: dimgrey;
+}
+
+dt:target,
+span.highlighted {
     background-color: #f0f0f0;
 }
 
-dl.citation > dt {
+dl.citation>dt {
     float: left;
     margin-right: 15px;
     font-weight: bold;
@@ -25,6 +31,7 @@ p.rubric {
 li.toctree-l3 {
     font-size: 81.25% !important;
 }
+
 li.toctree-l4 {
     font-size: 75% !important;
 }

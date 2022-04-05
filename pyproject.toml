@@ -104,6 +104,8 @@ doc = [
     "python-igraph",
     "myst-parser",
     "furo",
+    "sphinx-design",
+    "sphinxext-opengraph",
 ]
 dev = [
     # getting the dev version

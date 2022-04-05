@@ -62,6 +62,8 @@ extensions = [
     # 'scanpydoc',  # scanpydoc.elegant_typehints causes full doc rebuilds
     'scanpydoc.definition_list_typed_field',
     'scanpydoc.autosummary_generate_imported',
+    "sphinx_design",
+    "sphinxext.opengraph",
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
@@ -82,6 +84,9 @@ myst_enable_extensions = [
     "dollarmath",
     "amsmath",
 ]
+
+ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
+ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
 
 typehints_defaults = 'braces'
 
