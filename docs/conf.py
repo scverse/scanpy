@@ -118,7 +118,7 @@ intersphinx_mapping = dict(
 
 # -- Options for HTML output ----------------------------------------------
 
-
+html_show_sourcelink = True
 html_theme = "furo"
 html_theme_options = {
     "sidebar_hide_name": True,
