@@ -3,10 +3,6 @@
 ```
 
 ```{eval-rst}
-.. include:: _key_contributors.rst
-```
-
-```{eval-rst}
 .. role:: small
 ```
 
