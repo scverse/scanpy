@@ -78,6 +78,11 @@ napoleon_use_param = True
 napoleon_custom_sections = [('Params', 'Parameters')]
 todo_include_todos = False
 api_dir = HERE / 'api'  # function_images
+myst_enable_extensions = [
+    "colon_fence",
+    "dollarmath",
+    "amsmath",
+]
 
 typehints_defaults = 'braces'
 
