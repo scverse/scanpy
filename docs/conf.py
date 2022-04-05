@@ -126,6 +126,7 @@ html_context = dict(
     conf_py_path='/docs/',  # Path in the checkout to the docs root
 )
 html_static_path = ['_static']
+html_css_files = ["css/override.css"]
 html_show_sphinx = False
 html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 html_title = "scanpy"
