@@ -1,0 +1,30 @@
+dt:target, span.highlighted {
+    background-color: #f0f0f0;
+}
+
+dl.citation > dt {
+    float: left;
+    margin-right: 15px;
+    font-weight: bold;
+}
+
+/* Parameters normalize size and captialized, */
+dl .field-list dt {
+    font-size: var(--font-size--normal) !important;
+    text-transform: none !important;
+}
+
+/* examples and headings in classes */
+p.rubric {
+    font-size: var(--font-size--normal);
+    text-transform: none;
+    font-weight: 500;
+}
+
+/* so that api methods are small in sidebar */
+li.toctree-l3 {
+    font-size: 81.25% !important;
+}
+li.toctree-l4 {
+    font-size: 75% !important;
+}
