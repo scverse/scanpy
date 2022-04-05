@@ -65,6 +65,7 @@ extensions = [
     'scanpydoc.autosummary_generate_imported',
     "sphinx_design",
     "sphinxext.opengraph",
+    "nbsphinx",
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
