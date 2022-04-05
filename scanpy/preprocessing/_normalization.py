@@ -22,7 +22,7 @@ def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    if isinstance(counts, DaskArray):
+    if DaskArray is not None and isinstance(counts, DaskArray):
         counts_greater_than_zero = counts[counts > 0].compute_chunk_sizes()
     else:
         counts_greater_than_zero = counts[counts > 0]
