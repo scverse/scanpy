@@ -83,6 +83,9 @@ typehints_defaults = 'braces'
 
 scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
 
+pygments_style = "default"
+pygments_dark_style = "native"
+
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
@@ -111,8 +114,6 @@ html_theme = "furo"
 html_theme_options = {
     "sidebar_hide_name": True,
     "light_css_variables": {
-        "color-brand-primary": "#003262",
-        "color-brand-content": "#003262",
         "admonition-font-size": "var(--font-size-normal)",
         "admonition-title-font-size": "var(--font-size-normal)",
         "code-font-size": "var(--font-size--small)",
