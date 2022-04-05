@@ -43,7 +43,6 @@ templates_path = ['_templates']
 master_doc = 'index'
 default_role = 'literal'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-pygments_style = 'sphinx'
 
 extensions = [
     'myst_parser',
