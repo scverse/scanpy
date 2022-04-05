@@ -1,3 +1,5 @@
+from importlib.util import find_spec
+
 import pytest
 import pandas as pd
 import numpy as np
@@ -15,6 +17,10 @@ from scanpy.tests._data._cached_datasets import pbmc3k, pbmc68k_reduced
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
 FILE_V3 = Path(__file__).parent / Path('_scripts/seurat_hvg_v3.csv.gz')
 FILE_V3_BATCH = Path(__file__).parent / Path('_scripts/seurat_hvg_v3_batch.csv')
+
+needs_skmisc = pytest.mark.skipif(
+    not find_spec('skmisc'), reason="needs module `skmisc`"
+)
 
 
 def test_highly_variable_genes_basic():
@@ -311,6 +317,7 @@ def test_higly_variable_genes_compare_to_seurat():
     )
 
 
+@needs_skmisc
 def test_higly_variable_genes_compare_to_seurat_v3():
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=' ', dtype={"variances_norm": np.float64}
@@ -466,9 +473,7 @@ def test_highly_variable_genes_batches():
     assert np.all(np.isin(colnames, hvg1.columns))
 
 
-from scanpy.preprocessing._utils import _get_mean_var
-
-
+@needs_skmisc
 def test_seurat_v3_mean_var_output_with_batchkey():
     pbmc = pbmc3k()
     pbmc.var_names_make_unique()
