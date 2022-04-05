@@ -9,7 +9,10 @@ from sklearn.utils import sparsefuncs
 try:
     from dask.array import Array as DaskArray
 except ImportError:
-    DaskArray = None
+
+    class DaskArray:
+        pass
+
 
 from scanpy import logging as logg
 from scanpy._compat import Literal
