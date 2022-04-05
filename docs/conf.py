@@ -54,6 +54,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
+    'sphinx.ext.viewcode',
     # 'plot_generator',
     'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
@@ -122,7 +123,6 @@ intersphinx_mapping = dict(
 
 # -- Options for HTML output ----------------------------------------------
 
-html_show_sourcelink = True
 html_theme = "furo"
 html_theme_options = {
     "sidebar_hide_name": True,
