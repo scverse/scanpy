@@ -35,3 +35,36 @@ li.toctree-l3 {
 li.toctree-l4 {
     font-size: 75% !important;
 }
+
+/* nbsphinx specific */
+
+.nbinput .prompt,
+.nboutput .prompt {
+    display: none;
+}
+
+.nboutput .stderr {
+    display: none;
+}
+
+div.nblast.container {
+    padding-bottom: 10px !important;
+    padding-right: 0px;
+    padding-left: 0px;
+}
+
+div.nbinput.container {
+    padding-top: 10px !important;
+    padding-right: 0px;
+    padding-left: 0px;
+}
+
+
+div.nbinput.container div.input_area div[class*="highlight"]>pre {
+    padding: 10px !important;
+    margin: 0;
+}
+
+p.topic-title {
+    margin-top: 0;
+}

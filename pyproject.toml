@@ -106,6 +106,7 @@ doc = [
     "furo",
     "sphinx-design",
     "sphinxext-opengraph",
+    "nbsphinx",
 ]
 dev = [
     # getting the dev version

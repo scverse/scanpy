@@ -85,6 +85,10 @@ myst_enable_extensions = [
     "amsmath",
 ]
 
+# nbsphinx specific settings
+exclude_patterns = ["_build", "**.ipynb_checkpoints"]
+nbsphinx_execute = "never"
+
 ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
 ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
 
@@ -136,6 +140,52 @@ html_title = "scanpy"
 
 # def setup(app):
     # app.warningiserror = on_rtd
+
+
+nbsphinx_prolog = r"""
+.. raw:: html
+
+{{% set docname = env.doc2path(env.docname, base=None).split("/")[-1] %}}
+
+.. raw:: html
+
+    <style>
+        p {{
+            margin-bottom: 0.5rem;
+        }}
+        /* Main index page overview cards */
+        /* https://github.com/spatialaudio/nbsphinx/pull/635/files */
+        .jp-RenderedHTMLCommon table,
+        div.rendered_html table {{
+        border: none;
+        border-collapse: collapse;
+        border-spacing: 0;
+        font-size: 12px;
+        table-layout: fixed;
+        color: inherit;
+        }}
+
+        body:not([data-theme=light]) .jp-RenderedHTMLCommon tbody tr:nth-child(odd),
+        body:not([data-theme=light]) div.rendered_html tbody tr:nth-child(odd) {{
+        background: rgba(255, 255, 255, .1);
+        }}
+    </style>
+
+.. raw:: html
+
+    <div class="admonition note">
+        <p class="admonition-title">Note</p>
+        <p>
+        This page was generated from
+        <a class="reference external" href="https://github.com/scverse/scanpy-tutorials/tree/master/">{docname}</a>.
+        Interactive online version:
+        <span style="white-space: nowrap;"><a href="https://colab.research.google.com/github/scverse/scvi-tutorials/blob/master/{docname}"><img alt="Colab badge" src="https://colab.research.google.com/assets/colab-badge.svg" style="vertical-align:text-bottom"></a>.</span>
+        Some tutorial content may look better in light mode.
+        </p>
+    </div>
+""".format(
+    version=version, docname="{{ docname|e }}"
+)
 
 
 # -- Options for other output formats ------------------------------------------
