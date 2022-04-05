@@ -134,7 +134,7 @@ html_show_sphinx = False
 html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 html_title = "scanpy"
 
-def setup(app):
+# def setup(app):
     # app.warningiserror = on_rtd
 
 
