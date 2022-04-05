@@ -60,7 +60,6 @@ extensions = [
     # 'ipython_directive',
     # 'ipython_console_highlighting',
     # 'scanpydoc',  # scanpydoc.elegant_typehints causes full doc rebuilds
-    'scanpydoc.rtd_github_links',
     'scanpydoc.definition_list_typed_field',
     'scanpydoc.autosummary_generate_imported',
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
@@ -124,13 +123,6 @@ html_theme_options = {
         "code-font-size": "var(--font-size--small)",
     },
 }
-html_context = dict(
-    display_github=True,  # Integrate GitHub
-    github_user='theislab',  # Username
-    github_repo='scanpy',  # Repo name
-    github_version='master',  # Version
-    conf_py_path='/docs/',  # Path in the checkout to the docs root
-)
 html_static_path = ['_static']
 html_css_files = ["css/override.css"]
 html_show_sphinx = False
