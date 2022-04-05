@@ -5,8 +5,6 @@ requires = [
     "setuptools_scm",
     "tomli",
     "importlib_metadata>=0.7; python_version < '3.8'",
-    # setup.py stuff
-    "packaging",
 ]
 
 [project]
@@ -95,13 +93,7 @@ test-full = [
     "scanpy[test]",
     "scanpy[speedups]",
     "scanpy[io]",
-    # tested algorithms
-    "scanpy[leiden]",
-    "scanpy[magic]",
-    "scanpy[harmony]",
-    "scanpy[scrublet]",
-    "scanpy[scanorama]",
-    "scanpy[skmisc]",
+    "scanpy[algorithms]",
 ]
 doc = [
     "sphinx>=4.4",
@@ -119,6 +111,19 @@ dev = [
     "docutils",
 ]
 # Algorithms
+algorithms = [  # tested algorithms
+    "scanpy[leiden]",
+    "scanpy[magic]",
+    "scanpy[skmisc]",
+    "scanpy[harmony]",
+    "scanpy[scanorama]",
+    "scanpy[scrublet]",
+]
+algorithms-full = [
+    "scanpy[algorithms]",
+    "scanpy[louvain]",
+    "scanpy[bbknn]",
+]
 louvain = ["python-igraph", "louvain>=0.6,!=0.6.2"]  # Louvain community detection
 leiden = ["python-igraph", "leidenalg"]  # Leiden community detection
 bbknn = ["bbknn"]  # Batch balanced KNN (batch correction)
@@ -128,8 +133,9 @@ harmony = ["harmonypy"]  # Harmony dataset integration
 scanorama = ["scanorama"]  # Scanorama dataset integration
 scrublet = ["scrublet"]  # Doublet detection
 # Acceleration
+speedups = ["scanpy[dask]", "scanpy[zappy]"]  # all CPU based speedups
+speedups-full = ["scanpy[speedups]", "scanpy[rapids]"]
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
-speedups = ["scanpy[dask]", "scanpy[zarr]"]  # all CPU based speedups
 dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
 zappy = ["zappy", "scanpy[zarr]"]  # Distributed array processing using Zarr
 # Optional I/O formats
