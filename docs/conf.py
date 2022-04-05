@@ -19,7 +19,7 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
-needs_sphinx = '2.0'  # Nicer param docs
+needs_sphinx = '4.0'  # Nicer param docs
 suppress_warnings = [
     'ref.citation',
     'myst.header',  # https://github.com/executablebooks/MyST-Parser/issues/262
@@ -61,7 +61,6 @@ extensions = [
     # 'ipython_console_highlighting',
     # 'scanpydoc',  # scanpydoc.elegant_typehints causes full doc rebuilds
     'scanpydoc.rtd_github_links',
-    'scanpydoc.theme',
     'scanpydoc.definition_list_typed_field',
     'scanpydoc.autosummary_generate_imported',
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
@@ -108,13 +107,17 @@ intersphinx_mapping = dict(
 # -- Options for HTML output ----------------------------------------------
 
 
-html_theme = 'scanpydoc'
-html_theme_options = dict(
-    navigation_depth=4,
-    logo_only=True,
-    docsearch_index='scanpy',
-    docsearch_key='fa4304eb95d2134997e3729553a674b2',
-)
+html_theme = "furo"
+html_theme_options = {
+    "sidebar_hide_name": True,
+    "light_css_variables": {
+        "color-brand-primary": "#003262",
+        "color-brand-content": "#003262",
+        "admonition-font-size": "var(--font-size-normal)",
+        "admonition-title-font-size": "var(--font-size-normal)",
+        "code-font-size": "var(--font-size--small)",
+    },
+}
 html_context = dict(
     display_github=True,  # Integrate GitHub
     github_user='theislab',  # Username
@@ -125,7 +128,7 @@ html_context = dict(
 html_static_path = ['_static']
 html_show_sphinx = False
 html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
-
+html_title = "scanpy"
 
 def setup(app):
     app.warningiserror = on_rtd
