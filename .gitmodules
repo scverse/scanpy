@@ -1,0 +1,4 @@
+[submodule "docs/tutorials/"]
+	path = docs/tutorials/
+	url = https://github.com/scverse/scanpy-tutorials.git
+    branch = master
