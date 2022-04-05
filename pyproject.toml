@@ -107,6 +107,7 @@ doc = [
     "sphinx-design",
     "sphinxext-opengraph",
     "nbsphinx",
+    "ipython>=7.20",
 ]
 dev = [
     # getting the dev version
