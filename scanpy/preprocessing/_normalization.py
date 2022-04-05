@@ -9,7 +9,10 @@ from sklearn.utils import sparsefuncs
 try:
     from dask.array import Array as DaskArray
 except ImportError:
-    DaskArray = None
+
+    class DaskArray:
+        pass
+
 
 from scanpy import logging as logg
 from scanpy._compat import Literal
@@ -22,7 +25,7 @@ def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    if DaskArray is not None and isinstance(counts, DaskArray):
+    if isinstance(counts, DaskArray):
         counts_greater_than_zero = counts[counts > 0].compute_chunk_sizes()
     else:
         counts_greater_than_zero = counts[counts > 0]
