@@ -17,7 +17,7 @@
 * Check out our {ref}`contributing guide <contribution-guide>` for development practices.
 * Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
 
-# News
+## News
 
 ```{include} news.md
 :start-line: 9
@@ -25,7 +25,7 @@
 ```
 
 {ref}`(past news) <News>`
-# Latest additions
+## Latest additions
 
 ```{include} release-notes/release-latest.md
 ```
