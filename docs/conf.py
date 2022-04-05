@@ -139,7 +139,7 @@ html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 html_title = "scanpy"
 
 # def setup(app):
-    # app.warningiserror = on_rtd
+# app.warningiserror = on_rtd
 
 
 nbsphinx_prolog = r"""
@@ -184,7 +184,7 @@ nbsphinx_prolog = r"""
         </p>
     </div>
 """.format(
-    version=version, docname="{{ docname|e }}"
+    docname="{{ docname|e }}"
 )
 
 
