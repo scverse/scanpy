@@ -179,7 +179,7 @@ nbsphinx_prolog = r"""
         This page was generated from
         <a class="reference external" href="https://github.com/scverse/scanpy-tutorials/tree/master/">{docname}</a>.
         Interactive online version:
-        <span style="white-space: nowrap;"><a href="https://colab.research.google.com/github/scverse/scvi-tutorials/blob/master/{docname}"><img alt="Colab badge" src="https://colab.research.google.com/assets/colab-badge.svg" style="vertical-align:text-bottom"></a>.</span>
+        <span style="white-space: nowrap;"><a href="https://colab.research.google.com/github/scverse/scanpy-tutorials/blob/master/{docname}"><img alt="Colab badge" src="https://colab.research.google.com/assets/colab-badge.svg" style="vertical-align:text-bottom"></a>.</span>
         Some tutorial content may look better in light mode.
         </p>
     </div>
