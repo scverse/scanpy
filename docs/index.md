@@ -38,7 +38,7 @@
 :hidden: true
 :maxdepth: 1
 
-tutorials
+tutorials/index
 usage-principles
 installation
 api
