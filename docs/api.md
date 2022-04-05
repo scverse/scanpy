@@ -40,6 +40,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pp.calculate_qc_metrics
@@ -59,6 +60,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pp.recipe_zheng17
@@ -72,6 +74,7 @@ Also see [Data integration]. Note that a simple batch correction method is avail
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pp.combat
@@ -81,6 +84,7 @@ Also see [Data integration]. Note that a simple batch correction method is avail
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pp.neighbors
@@ -103,6 +107,7 @@ Any transformation of the data matrix that is not *preprocessing*. In contrast t
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    tl.pca
@@ -116,6 +121,7 @@ Compute densities on embeddings.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    tl.embedding_density
@@ -125,6 +131,7 @@ Compute densities on embeddings.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    tl.leiden
@@ -138,6 +145,7 @@ Compute densities on embeddings.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    tl.ingest
@@ -147,6 +155,7 @@ Compute densities on embeddings.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    tl.rank_genes_groups
@@ -158,6 +167,7 @@ Compute densities on embeddings.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    tl.score_genes
@@ -168,6 +178,7 @@ Compute densities on embeddings.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    tl.sim
@@ -199,6 +210,7 @@ See the {ref}`settings` section for all important plotting configurations.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pl.scatter
@@ -220,6 +232,7 @@ These classes allow fine tuning of visual parameters.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/classes
 
     pl.DotPlot
@@ -234,6 +247,7 @@ Methods for visualizing quality control and results of preprocessing functions.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pl.highest_expr_genes
@@ -252,6 +266,7 @@ a method with the same name in `pl`.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pl.pca
@@ -264,6 +279,7 @@ a method with the same name in `pl`.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pl.tsne
@@ -278,6 +294,7 @@ Compute densities on embeddings.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pl.embedding_density
@@ -289,6 +306,7 @@ Visualize clusters using one of the embedding methods passing `color='louvain'`.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pl.dpt_groups_pseudotime
@@ -302,6 +320,7 @@ Visualize clusters using one of the embedding methods passing `color='louvain'`.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pl.rank_genes_groups
@@ -317,6 +336,7 @@ Visualize clusters using one of the embedding methods passing `color='louvain'`.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pl.sim
@@ -335,6 +355,7 @@ Read common file formats using
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    read
@@ -344,6 +365,7 @@ Read 10x formatted hdf5 files and directories containing `.mtx` files using
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    read_10x_h5
@@ -355,6 +377,7 @@ Read other formats using functions borrowed from {mod}`anndata`
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    read_h5ad
@@ -383,6 +406,7 @@ useful formats.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    get.obs_df
@@ -405,6 +429,7 @@ This module provides useful queries for annotation and enrichment.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    queries.biomart_annotations
@@ -428,6 +453,7 @@ Collections of useful measurements for evaluating results.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    metrics.confusion_matrix
@@ -453,6 +479,7 @@ integrated in Scanpy core.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    experimental.pp.normalize_pearson_residuals
@@ -469,6 +496,7 @@ Represent data as a neighborhood structure, usually a knn graph.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    Neighbors
@@ -484,6 +512,7 @@ high-resolution jupyter display backend useful for use in notebooks.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    set_figure_params
@@ -493,6 +522,7 @@ An instance of the {class}`~scanpy._settings.ScanpyConfig` is available as `scan
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    _settings.ScanpyConfig
@@ -507,6 +537,7 @@ you'd usually want to set `settings.autoshow` to `False`.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
 
    ~_settings.ScanpyConfig.autoshow
    ~_settings.ScanpyConfig.autosave
@@ -516,6 +547,7 @@ The default directories for saving figures, caching files and storing datasets.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
 
    ~_settings.ScanpyConfig.figdir
    ~_settings.ScanpyConfig.cachedir
@@ -528,6 +560,7 @@ details, etc.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
 
    ~_settings.ScanpyConfig.verbosity
 ```
@@ -536,6 +569,7 @@ Print versions of packages that might influence numerical results.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    logging.print_header
@@ -555,6 +589,7 @@ Print versions of packages that might influence numerical results.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    datasets.blobs
@@ -574,6 +609,7 @@ Print versions of packages that might influence numerical results.
 
 ```{eval-rst}
 .. autosummary::
+   :nosignatures:
    :toctree: generated/
 
    pp.filter_genes_dispersion
