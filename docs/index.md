@@ -59,10 +59,6 @@ Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest d
 ```
 
 {ref}`(past news) <News>`
-## Latest additions
-
-```{include} release-notes/release-latest.md
-```
 
 % put references first so all references are resolved
 
