@@ -53,9 +53,19 @@ def test_umap_init_dtype():
 
 
 needs_fa2 = pytest.mark.skipif(not find_spec("fa2"), reason="needs module `fa2`")
+needs_igraph = pytest.mark.skipif(
+    not find_spec("igraph"),
+    reason="needs module `igraph` (`pip install python-igraph`)",
+)
 
 
-@pytest.mark.parametrize("layout", [pytest.param("fa", marks=needs_fa2), "fr"])
+@pytest.mark.parametrize(
+    "layout",
+    [
+        pytest.param("fa", marks=needs_fa2),
+        pytest.param("fr", marks=needs_igraph),
+    ],
+)
 def test_umap_init_paga(layout):
     pbmc = pbmc68k_reduced()
     pbmc = pbmc[:100, :].copy()

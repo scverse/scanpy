@@ -83,8 +83,8 @@ class TestPreprocessingDistributed:
         npt.assert_allclose(result, adata.X)
 
     def test_write_zarr(self, adata, adata_dist):
-        import dask.array as da
-        import zarr
+        da = pytest.importorskip("dask.array")
+        zarr = pytest.importorskip("zarr")
 
         log1p(adata_dist)
         temp_store = zarr.TempStore()

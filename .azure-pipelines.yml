@@ -2,9 +2,11 @@ trigger:
 - master
 
 variables:
+  python.version: '3.9'
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
   ANNDATA_DEV: no
   RUN_COVERAGE: no
+  TEST_EXTRA: 'test-full'
 
 jobs:
 - job: PyTest
@@ -12,10 +14,11 @@ jobs:
     vmImage: 'ubuntu-18.04'
   strategy:
     matrix:
-      Python39:
-        python.version: '3.9'
       Python37:
         python.version: '3.7'
+      Python39: {}
+      minimal_tests:
+        TEST_EXTRA: 'test-min'
       anndata_dev:
         python.version: '3.9'
         ANNDATA_DEV: yes
@@ -43,7 +46,7 @@ jobs:
   - script: |
       python -m pip install --upgrade pip
       pip install pytest-cov wheel
-      pip install .[dev,test,leiden,magic,harmony,scrublet,scanorama,skmisc]
+      pip install .[dev,$(TEST_EXTRA)]
     displayName: 'Install dependencies'
 
   - script: |
