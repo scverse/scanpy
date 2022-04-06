@@ -75,7 +75,7 @@ Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest d
 tutorials/index
 usage-principles
 installation
-api
+api/index
 external
 ecosystem
 release-notes/index
