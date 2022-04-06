@@ -1,6 +1,6 @@
 from functools import partial
+from importlib.util import find_spec
 from pathlib import Path
-import sys
 from itertools import repeat, chain, combinations
 
 import pytest
@@ -18,7 +18,6 @@ setup()
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -40,6 +39,7 @@ sc.set_figure_params(dpi=40, color_map='viridis')
 # the ./figures folder to ./_images/
 
 
+@pytest.mark.skipif(not find_spec("leidenalg"), reason="needs module `leidenalg`")
 def test_heatmap(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
@@ -1531,6 +1531,7 @@ def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
+@pytest.mark.skipif(not find_spec("scrublet"), reason="needs module `scrublet`")
 def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
 

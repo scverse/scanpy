@@ -5,8 +5,6 @@ requires = [
     "setuptools_scm",
     "tomli",
     "importlib_metadata>=0.7; python_version < '3.8'",
-    # setup.py stuff
-    "packaging",
 ]
 
 [project]
@@ -86,28 +84,38 @@ Home-page = "https://scanpy.org"
 scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
-test = [
+test-min = [
     "pytest>=4.4",
     "pytest-nunit",
-    "dask[array]!=2.17.0",
-    "fsspec",
-    "zappy",
-    "zarr",
     "profimp",
-    # Test the metadata while this exists: https://github.com/takluyver/flit/issues/387
-    "flit_core",
+]
+test = [
+    "scanpy[test-min]",
+    # Optional but important dependencies
+    "scanpy[leiden]",
+    "zarr",
+    "scanpy[dask]",
+]
+test-full = [
+    "scanpy[test]",
+    # tested algorithms
+    "scanpy[leiden]",
+    "scanpy[magic]",
+    "scanpy[skmisc]",
+    "scanpy[harmony]",
+    "scanpy[scanorama]",
+    "scanpy[scrublet]",
 ]
 doc = [
     "sphinx>=4.4",
     "scanpydoc[typehints]>=0.7.7",
     "typing_extensions; python_version < '3.8'",  # for `Literal`
-    "python-igraph",
     "myst-parser",
     "furo",
     "sphinx-design",
     "sphinxext-opengraph",
     "nbsphinx",
-    "ipython>=7.20",
+    "ipython>=7.20",  # for nbsphinx code highlighting
 ]
 dev = [
     # getting the dev version
@@ -116,15 +124,19 @@ dev = [
     "black>=20.8b1",
     "docutils",
 ]
+# Algorithms
+paga = ["python-igraph"]
 louvain = ["python-igraph", "louvain>=0.6,!=0.6.2"]  # Louvain community detection
 leiden = ["python-igraph", "leidenalg"]  # Leiden community detection
 bbknn = ["bbknn"]  # Batch balanced KNN (batch correction)
-rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
 magic = ["magic-impute>=2.0"]  # MAGIC imputation method
 skmisc = ["scikit-misc>=0.1.3"]  # highly_variable_genes method 'seurat_v3'
 harmony = ["harmonypy"]  # Harmony dataset integration
 scanorama = ["scanorama"]  # Scanorama dataset integration
 scrublet = ["scrublet"]  # Doublet detection
+# Acceleration
+rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
+dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
 
 [tool.flit.sdist]
 exclude = [
