@@ -18,7 +18,7 @@ jobs:
         python.version: '3.7'
       Python39: {}
       minimal_tests:
-        TEST_EXTRA: 'test'
+        TEST_EXTRA: 'test-min'
       anndata_dev:
         python.version: '3.9'
         ANNDATA_DEV: yes
