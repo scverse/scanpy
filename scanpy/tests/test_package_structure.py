@@ -1,6 +1,7 @@
 import email
 import inspect
 import os
+from importlib.util import find_spec
 from types import FunctionType
 from pathlib import Path
 
@@ -54,13 +55,3 @@ The displayed line is under-indented.
         _, lineno = inspect.getsourcelines(f)
         text = f">{lines[broken[0]]}<"
         raise SyntaxError(msg, (filename, lineno, 2, text))
-
-
-def test_metadata(tmp_path, in_project_dir):
-    import flit_core.buildapi
-
-    flit_core.buildapi.prepare_metadata_for_build_wheel(tmp_path)
-
-    metadata_path = next(tmp_path.glob('*.dist-info')) / 'METADATA'
-    metadata = email.message_from_bytes(metadata_path.read_bytes())
-    assert not metadata.defects
