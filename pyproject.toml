@@ -113,7 +113,7 @@ doc = [
     "scanpydoc[typehints]>=0.7.7",
     "typing_extensions; python_version < '3.8'",  # for `Literal`
     "myst-parser",
-    "scanpy[leiden]",
+    "scanpy[paga]",
 ]
 dev = [
     # getting the dev version
