@@ -102,7 +102,7 @@ test-full = [
     # tested algorithms
     "scanpy[leiden]",
     "scanpy[magic]",
-    "scanpy[skmisc]",
+    "scanpy[seurat]",
     "scanpy[harmony]",
     "scanpy[scanorama]",
     "scanpy[scrublet]",
