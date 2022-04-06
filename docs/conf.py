@@ -127,7 +127,6 @@ html_theme = "furo"
 html_theme_options = {
     "sidebar_hide_name": True,
     "light_css_variables": {
-        "color-background-secondary": "#1a1c1e",
         "admonition-font-size": "var(--font-size-normal)",
         "admonition-title-font-size": "var(--font-size-normal)",
         "code-font-size": "var(--font-size--small)",
