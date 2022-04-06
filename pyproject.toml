@@ -94,10 +94,10 @@ test = [
     # Optional but important dependencies
     "scanpy[leiden]",
     "zarr",
+    "scanpy[dask]",
 ]
 test-full = [
     "scanpy[test]",
-    "scanpy[dask]",
     # tested algorithms
     "scanpy[leiden]",
     "scanpy[magic]",
