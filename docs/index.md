@@ -26,7 +26,7 @@ The tutorials walk you through real-world applications of scanpy.
 :::
 
 :::{card} API reference {octicon}`book;1em;`
-:link: api
+:link: api/index
 :link-type: doc
 
 The API reference contains a detailed description of
