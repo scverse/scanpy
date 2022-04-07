@@ -72,7 +72,7 @@ tutorials/index
 usage-principles
 installation
 api/index
-external
+external/index
 ecosystem
 release-notes/index
 community
