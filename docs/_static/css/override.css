@@ -65,6 +65,11 @@ div.nbinput.container div.input_area div[class*="highlight"]>pre {
     margin: 0;
 }
 
+div.nbinput.container div.input_area {
+    /* Code cell border that works in both dark and light mode */
+    border: 1px solid rgba(127,127,127,.25);
+}
+
 p.topic-title {
     margin-top: 0;
 }
