@@ -1,5 +1,9 @@
 ## Reading
 
+```{eval-rst}
+.. currentmodule:: scanpy
+```
+
 ```{note}
 For reading annotation use {ref}`pandas.read_… <pandas:io>`
 and add it to your {class}`anndata.AnnData` object. The following read functions are

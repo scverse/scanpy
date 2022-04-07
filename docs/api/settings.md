@@ -2,6 +2,11 @@
 
 ## Settings
 
+
+```{eval-rst}
+.. currentmodule:: scanpy
+```
+
 A convenience function for setting some default {obj}`matplotlib.rcParams` and a
 high-resolution jupyter display backend useful for use in notebooks.
 
