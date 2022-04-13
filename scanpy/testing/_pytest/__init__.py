@@ -1,3 +1,3 @@
 """A private pytest plugin"""
 
-from .fixtures import *
+from .fixtures import *  # noqa: F403

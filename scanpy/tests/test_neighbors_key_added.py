@@ -2,6 +2,8 @@ import scanpy as sc
 import numpy as np
 import pytest
 
+from scanpy.testing._pytest.marks import needs_igraph, needs_leidenalg
+
 n_neighbors = 5
 key = 'test'
 
