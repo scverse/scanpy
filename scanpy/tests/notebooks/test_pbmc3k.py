@@ -15,11 +15,10 @@ import numpy as np
 
 from matplotlib.testing import setup
 
-from scanpy.testing._pytest.marks import needs_leidenalg
-
 setup()
 
 import scanpy as sc
+from scanpy.testing._pytest.marks import needs_leidenalg
 
 
 HERE: Path = Path(__file__).parent

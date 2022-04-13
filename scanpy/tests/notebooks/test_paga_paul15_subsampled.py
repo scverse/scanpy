@@ -8,11 +8,10 @@ import numpy as np
 from matplotlib.testing import setup
 import pytest
 
-from scanpy.testing._pytest.marks import needs_igraph
-
 setup()
 
 import scanpy as sc
+from scanpy.testing._pytest.marks import needs_igraph
 
 
 HERE: Path = Path(__file__).parent

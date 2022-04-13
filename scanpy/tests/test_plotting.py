@@ -6,7 +6,6 @@ import pytest
 from matplotlib.testing import setup
 from packaging import version
 from scanpy._compat import pkg_version
-from scanpy.testing._pytest.marks import needs_leidenalg, needs_scrublet
 
 setup()
 
@@ -19,6 +18,7 @@ from matplotlib.testing.compare import compare_images
 from anndata import AnnData
 
 import scanpy as sc
+from scanpy.testing._pytest.marks import needs_leidenalg, needs_scrublet
 
 
 HERE: Path = Path(__file__).parent
