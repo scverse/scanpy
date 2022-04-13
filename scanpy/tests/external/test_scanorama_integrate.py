@@ -1,12 +1,9 @@
-from importlib.util import find_spec
-
-import pytest
-
 import scanpy as sc
 import scanpy.external as sce
+from scanpy.testing._pytest.marks import needs_scanorama
 
 
-@pytest.mark.skipif(not find_spec("scanorama"), reason="needs module `scanorama`")
+@needs_scanorama
 def test_scanorama_integrate():
     """
     Test that Scanorama integration works.

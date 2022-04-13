@@ -142,8 +142,11 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
-python_files = "test_*.py"
-testpaths = "scanpy/tests/"
+addopts = [
+    "--import-mode=importlib",
+    "-pscanpy.testing._pytest",
+]
+rootpath = "scanpy/tests"
 xfail_strict = true
 nunit_attach_on = "fail"
 markers = [

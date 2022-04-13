@@ -10,7 +10,7 @@ except ImportError:
     da = None
 
 import scanpy as sc
-from scanpy.tests.helpers import (
+from scanpy.testing._helpers import (
     check_rep_mutation,
     check_rep_results,
     _prepare_pbmc_testdata,

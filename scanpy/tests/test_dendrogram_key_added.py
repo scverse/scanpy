@@ -1,15 +1,14 @@
 import scanpy as sc
-import numpy as np
 import pytest
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+
 
 n_neighbors = 5
 key = 'test'
 
 
 @pytest.fixture
-def adata():
-    return pbmc68k_reduced()
+def adata(pbmc68k_reduced):
+    return pbmc68k_reduced
 
 
 @pytest.mark.parametrize('groupby', ['bulk_labels', ['bulk_labels', 'phase']])

@@ -1,6 +1,5 @@
 import numpy as np
 from scanpy.tools import rank_genes_groups, filter_rank_genes_groups
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 
 names_no_reference = np.array(
@@ -100,8 +99,8 @@ names_compare_abs = np.array(
 )
 
 
-def test_filter_rank_genes_groups():
-    adata = pbmc68k_reduced()
+def test_filter_rank_genes_groups(pbmc68k_reduced):
+    adata = pbmc68k_reduced
 
     # fix filter defaults
     args = {

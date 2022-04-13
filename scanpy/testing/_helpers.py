@@ -7,9 +7,8 @@ from itertools import permutations
 import scanpy as sc
 import numpy as np
 import warnings
-import pytest
 from anndata.tests.helpers import asarray, assert_equal
-from scanpy.tests._data._cached_datasets import pbmc3k
+
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
@@ -20,7 +19,7 @@ from scanpy.tests._data._cached_datasets import pbmc3k
 # These functions can be used to check that functions are correctly using arugments like `layers`, `obsm`, etc.
 
 
-def check_rep_mutation(func, X, *, fields=["layer", "obsm"], **kwargs):
+def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
     """Check that only the array meant to be modified is modified."""
     adata = sc.AnnData(X=X.copy(), dtype=X.dtype)
     for field in fields:
@@ -87,6 +86,9 @@ def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
         assert_equal(adata_X, adatas_proc[field])
 
 
+pbmc3k = None
+
+
 def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
     """Prepares 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
 
@@ -99,7 +101,11 @@ def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
     small
         False (default) returns full data, True returns small subset of the data."""
 
-    adata = pbmc3k().copy()
+    global pbmc3k
+
+    if pbmc3k is None:
+        pbmc3k = sc.datasets.pbmc3k()
+    adata = pbmc3k.copy()
 
     if small:
         adata = adata[:1000, :500]
@@ -112,7 +118,11 @@ def _prepare_pbmc_testdata(sparsity_func, dtype, small=False):
 
 
 def _check_check_values_warnings(function, adata, expected_warning, kwargs={}):
-    '''Runs `function` on `adata` with provided arguments `kwargs` twice: once with `check_values=True` and once with `check_values=False`. Checks that the `expected_warning` is only raised whtn `check_values=True`.'''
+    """
+    Runs `function` on `adata` with provided arguments `kwargs` twice:
+    once with `check_values=True` and once with `check_values=False`.
+    Checks that the `expected_warning` is only raised whtn `check_values=True`.
+    """
 
     # expecting 0 no-int warnings
     with warnings.catch_warnings(record=True) as record:

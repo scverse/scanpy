@@ -1,24 +1,14 @@
-from importlib.util import find_spec
-
 import pytest
 import scanpy as sc
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._pytest.marks import needs_leidenalg, needs_louvain
 
 
 @pytest.fixture
-def adata_neighbors():
-    return pbmc68k_reduced()
+def adata_neighbors(pbmc68k_reduced):
+    return pbmc68k_reduced
 
 
-needs_louvain = pytest.mark.skipif(
-    not find_spec("louvain"), reason="needs module `louvain`"
-)
-needs_leiden = pytest.mark.skipif(
-    not find_spec("leidenalg"), reason="needs module `leidenalg`"
-)
-
-
-@needs_leiden
+@needs_leidenalg
 def test_leiden_basic(adata_neighbors):
     sc.tl.leiden(adata_neighbors)
 
@@ -27,7 +17,7 @@ def test_leiden_basic(adata_neighbors):
     'clustering,key',
     [
         pytest.param(sc.tl.louvain, 'louvain', marks=needs_louvain),
-        pytest.param(sc.tl.leiden, 'leiden', marks=needs_leiden),
+        pytest.param(sc.tl.leiden, 'leiden', marks=needs_leidenalg),
     ],
 )
 def test_clustering_subset(adata_neighbors, clustering, key):

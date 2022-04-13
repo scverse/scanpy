@@ -11,8 +11,10 @@ import seaborn as sns
 
 import scanpy as sc
 
-from scanpy.tests.test_plotting import ROOT, FIGS, HERE
-import scanpy.tests._data._cached_datasets as datasets
+
+HERE: Path = Path(__file__).parent
+ROOT = HERE / '_images'
+FIGS = HERE / 'figures'
 
 MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
 MISSING_VALUES_FIGS = FIGS / "embedding-missing-values"
@@ -273,9 +275,9 @@ def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
     check_same_image(dims_pth, comp_pth, tol=5)
 
 
-def test_embedding_colorbar_location(image_comparer):
+def test_embedding_colorbar_location(pbmc3k_processed, image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = datasets.pbmc3k_processed().raw.to_adata()
+    adata = pbmc3k_processed.raw.to_adata()
 
     sc.pl.pca(adata, color="LDHB", colorbar_loc=None)
 

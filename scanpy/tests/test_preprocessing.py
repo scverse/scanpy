@@ -1,5 +1,4 @@
 from itertools import product
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,8 +9,7 @@ import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal, asarray
 
-from scanpy.tests.helpers import check_rep_mutation, check_rep_results
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._helpers import check_rep_mutation, check_rep_results
 
 
 def test_log1p(tmp_path):
@@ -115,8 +113,8 @@ def test_subsample_copy():
     assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
 
 
-def test_scale():
-    adata = pbmc68k_reduced()
+def test_scale(pbmc68k_reduced):
+    adata = pbmc68k_reduced
     adata.X = adata.raw.X
     v = adata[:, 0 : adata.shape[1] // 2]
     # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965
@@ -335,9 +333,9 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
     assert X.dtype == adata.X.dtype
 
 
-def test_recipe_weinreb():
+def test_recipe_weinreb(pbmc68k_reduced):
     # Just tests for failure for now
-    adata = pbmc68k_reduced().raw.to_adata()
+    adata = pbmc68k_reduced.raw.to_adata()
     adata.X = adata.X.toarray()
 
     orig = adata.copy()

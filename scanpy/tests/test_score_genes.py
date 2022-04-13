@@ -5,7 +5,7 @@ from scipy.sparse import csr_matrix
 import pytest
 import pickle
 from pathlib import Path
-from scanpy.tests._data._cached_datasets import paul15
+
 
 HERE = Path(__file__).parent / Path('_data/')
 
@@ -48,14 +48,14 @@ def _create_adata(n_obs, n_var, p_zero, p_nan):
     return adata
 
 
-def test_score_with_reference():
+def test_score_with_reference(paul15):
     """
     Checks if score_genes output agrees with pre-computed reference values.
     The reference values had been generated using the same code
     and stored as a pickle object in ./data
     """
 
-    adata = paul15()
+    adata = paul15
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
     sc.pp.scale(adata)
 

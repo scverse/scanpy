@@ -1,31 +1,30 @@
 from functools import partial
-from importlib.util import find_spec
 from pathlib import Path
 
-from matplotlib import cm
+import pytest
 import numpy as np
+from matplotlib import cm
 
 import scanpy as sc
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced, pbmc3k_processed
-import pytest
+from scanpy.testing._pytest.marks import needs_igraph
+
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / '_images'
 FIGS = HERE / 'figures'
 
 
-needs_igraph = pytest.mark.skipif(
-    not find_spec("igraph"),
-    reason="needs module `igraph` (`pip install python-igraph`)",
-)
-
-
 @pytest.fixture(scope="module")
-def pbmc():
-    pbmc = pbmc68k_reduced()
+def _pbmc(_pbmc68k_reduced):
+    pbmc = _pbmc68k_reduced.copy()
     sc.tl.paga(pbmc, groups='bulk_labels')
     pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze()
     return pbmc
+
+
+@pytest.fixture
+def pbmc(_pbmc):
+    return _pbmc.copy()
 
 
 @needs_igraph
@@ -88,11 +87,11 @@ def test_paga_path(image_comparer, pbmc):
 
 
 @needs_igraph
-def test_paga_compare(image_comparer):
+def test_paga_compare(pbmc3k_processed, image_comparer):
     # Tests that https://github.com/scverse/scanpy/issues/1887 is fixed
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    pbmc = pbmc3k_processed()
+    pbmc = pbmc3k_processed
     sc.tl.paga(pbmc, groups="louvain")
 
     sc.pl.paga_compare(pbmc, basis="umap", show=False)
@@ -101,10 +100,10 @@ def test_paga_compare(image_comparer):
 
 
 @needs_igraph
-def test_paga_positions_reproducible():
+def test_paga_positions_reproducible(pbmc68k_reduced):
     """Check exact reproducibility and effect of random_state on paga positions"""
     # https://github.com/scverse/scanpy/issues/1859
-    pbmc = pbmc68k_reduced()
+    pbmc = pbmc68k_reduced
     sc.tl.paga(pbmc, "bulk_labels")
 
     a = pbmc.copy()

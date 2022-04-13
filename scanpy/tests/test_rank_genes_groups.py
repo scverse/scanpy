@@ -16,7 +16,6 @@ from anndata import AnnData
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 from scanpy._utils import select_groups
 
 
@@ -214,14 +213,14 @@ def test_results_layers():
         )
 
 
-def test_rank_genes_groups_use_raw():
+def test_rank_genes_groups_use_raw(pbmc68k_reduced):
     # https://github.com/scverse/scanpy/issues/1929
-    pbmc = pbmc68k_reduced()
+    pbmc = pbmc68k_reduced.copy()
     assert pbmc.raw is not None
 
     sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
 
-    pbmc = pbmc68k_reduced()
+    pbmc = pbmc68k_reduced.copy()
     del pbmc.raw
     assert pbmc.raw is None
 
@@ -231,8 +230,8 @@ def test_rank_genes_groups_use_raw():
         sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
 
 
-def test_singlets():
-    pbmc = pbmc68k_reduced()
+def test_singlets(pbmc68k_reduced):
+    pbmc = pbmc68k_reduced
     pbmc.obs['louvain'] = pbmc.obs['louvain'].cat.add_categories(['11'])
     pbmc.obs['louvain'][0] = '11'
 
@@ -240,16 +239,16 @@ def test_singlets():
         rank_genes_groups(pbmc, groupby='louvain')
 
 
-def test_emptycat():
-    pbmc = pbmc68k_reduced()
+def test_emptycat(pbmc68k_reduced):
+    pbmc = pbmc68k_reduced
     pbmc.obs['louvain'] = pbmc.obs['louvain'].cat.add_categories(['11'])
 
     with pytest.raises(ValueError, match=rf"Could not calculate statistics.*{'11'}"):
         rank_genes_groups(pbmc, groupby='louvain')
 
 
-def test_wilcoxon_symmetry():
-    pbmc = pbmc68k_reduced()
+def test_wilcoxon_symmetry(pbmc68k_reduced):
+    pbmc = pbmc68k_reduced
 
     rank_genes_groups(
         pbmc,
@@ -284,8 +283,8 @@ def test_wilcoxon_symmetry():
 
 
 @pytest.mark.parametrize('reference', [True, False])
-def test_wilcoxon_tie_correction(reference):
-    pbmc = pbmc68k_reduced()
+def test_wilcoxon_tie_correction(pbmc68k_reduced, reference):
+    pbmc = pbmc68k_reduced
 
     groups = ['CD14+ Monocyte', 'Dendritic']
     groupby = 'bulk_labels'
