@@ -33,9 +33,7 @@ def adata():
     from sklearn.cluster import DBSCAN
 
     empty_pixel = np.array([1.0, 1.0, 1.0, 0]).reshape(1, 1, -1)
-    image = imread(
-        Path(sc.__file__).parent.parent / "docs/_static/img/Scanpy_Logo_RGB.png"
-    )
+    image = imread(HERE.parent.parent / "docs/_static/img/Scanpy_Logo_RGB.png")
     x, y = np.where(np.logical_and.reduce(~np.equal(image, empty_pixel), axis=2))
 
     # Just using to calculate the hex coords
