@@ -53,15 +53,23 @@ def volcano_plot(
   -------
   >> volcano_plot(logfoldchanges, p_vals)
   """
+  # default current dir, add user input option
+
   p_vals[p_vals == -np.inf] = np.min(p_vals[p_vals != -np.inf])
   
   fig = plt.figure(figsize = (8, 6))
   ax = fig.add_subplot(1, 1, 1)
-  id_sig = np.where((p_vals < -3.5) & (np.abs(logfoldchange) > 0.95))[0]
 
+  # find genes with significant expression
+  id_sig = np.where((p_vals < -3.5) & (np.abs(logfoldchange) > 0.95))[0]
+  # id_sig2 = np.where((log_p_vals < -3.5) & (np.abs(log_fold_change) > 0.95))[0]
+
+
+  # 
   ax.scatter(logfoldchange, -p_vals, s = 5, c = 'lightgray', label = 'Not Significant')
   ax.scatter(logfoldchange[id_sig], -p_vals[id_sig], s = 5, c = 'r', label = 'Significant')
 
+  # label significant points
   for i in id_sig:
     ax.text(logfoldchange[i], -p_vals[i], gene_ids[i])
 
@@ -69,7 +77,7 @@ def volcano_plot(
   ax.set_xlabel('Log fold change coefficient', fontsize = 16)
   ax.set_ylabel('Adjusted p-values', fontsize = 16)
 
-  ax.axhline(y = 50, color = 'g') 
-  ax.axvline(x = -0.6, color = 'b')
-  ax.axvline(x = 0.6, color = 'b')
-  plt.savefig('volcanoplot.png')
+  ax.axhline(y = pval_thres, color = 'g') 
+  ax.axvline(x = logfold_minthres, color = 'b')
+  ax.axvline(x = logfold_maxthres, color = 'b')
+  plt.savefig('volcanoplot.png', out_dir)
