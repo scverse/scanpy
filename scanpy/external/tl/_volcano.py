@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 
 def volcano_plot(
-  logfoldchange : DataFrame, 
-  p_vals : DataFrame, 
-  gene_ids: DataFrame,
+  logfoldchange : pd.DataFrame, 
+  p_vals : pd.DataFrame, 
+  gene_ids: pd.DataFrame,
   logfold_minthres: Optional[float] = -0.6,
   logfold_maxthres: Optional[float] = 0.6,
   pval_thres: Optional[float] = 0.05,
@@ -80,4 +80,4 @@ def volcano_plot(
   ax.axhline(y = pval_thres, color = 'g') 
   ax.axvline(x = logfold_minthres, color = 'b')
   ax.axvline(x = logfold_maxthres, color = 'b')
-  plt.savefig('volcanoplot.png', out_dir)
+  plt.savefig(out_dir)
