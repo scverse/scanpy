@@ -12,7 +12,8 @@ def volcano_plot(
   logfold_maxthres: Optional[float] = 0.6,
   pval_thres: Optional[float] = 0.05,
   figsize: Optional[Tuple[float, float]] = (6.5,6),
-  title: Optional['str'] = None,
+  x_label: Optional['str'] = 'Log fold change coefficient',
+  y_label: Optional['str'] = 'Adjusted p-values',
   out_dir: Optional['str'] = "volcanoplot.png"
   ):
   """
@@ -39,6 +40,10 @@ def volcano_plot(
       Output size of figure (width, height).
   title
       Title to display as caption of figure.
+  x_label
+    Label for x-axis of plot
+  y_label
+    Label for y-axis of plot
   output_file
       Name of output plot image (include ".png" extension)
 
@@ -53,8 +58,6 @@ def volcano_plot(
   -------
   >> volcano_plot(logfoldchanges, p_vals)
   """
-  # default current dir, add user input option
-
   p_vals[p_vals == -np.inf] = np.min(p_vals[p_vals != -np.inf])
   
   fig = plt.figure(figsize = (8, 6))
@@ -62,10 +65,7 @@ def volcano_plot(
 
   # find genes with significant expression
   id_sig = np.where((p_vals < -3.5) & (np.abs(logfoldchange) > 0.95))[0]
-  # id_sig2 = np.where((log_p_vals < -3.5) & (np.abs(log_fold_change) > 0.95))[0]
 
-
-  # 
   ax.scatter(logfoldchange, -p_vals, s = 5, c = 'lightgray', label = 'Not Significant')
   ax.scatter(logfoldchange[id_sig], -p_vals[id_sig], s = 5, c = 'r', label = 'Significant')
 
@@ -74,8 +74,8 @@ def volcano_plot(
     ax.text(logfoldchange[i], -p_vals[i], gene_ids[i])
 
   ax.legend(fontsize = 12, markerscale = 5)
-  ax.set_xlabel('Log fold change coefficient', fontsize = 16)
-  ax.set_ylabel('Adjusted p-values', fontsize = 16)
+  ax.set_xlabel(x_label, fontsize = 16)
+  ax.set_ylabel(y_label, fontsize = 16)
 
   ax.axhline(y = pval_thres, color = 'g') 
   ax.axvline(x = logfold_minthres, color = 'b')
