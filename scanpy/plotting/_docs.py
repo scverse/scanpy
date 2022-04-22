@@ -50,6 +50,11 @@ sort_order
 groups
     Restrict to a few categories in categorical observation annotation.
     The default is not to restrict to any groups.
+dimensions
+    0-indexed dimensions of the embedding to plot as integers. E.g. [(0, 1), (1, 2)].
+    Unlike `components`, this argument is used in the same way as `colors`, e.g. is
+    used to specify a single plot at a time. Will eventually replace the components
+    argument.
 components
     For instance, `['1,2', '2,3']`. To plot all available components use
     `components='all'`.
@@ -68,6 +73,9 @@ legend_fontweight
 legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
+colorbar_loc
+    Where to place the colorbar for continous variables. If `None`, no colorbar
+    is added.
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
@@ -101,19 +109,37 @@ title
     e.g. `['title1', 'title2', ...]`.
 """
 
-doc_vminmax = """\
+doc_vbound_percentile = """\
 vmin
-    Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
-    vmin can be a number, a string, a function or `None`. If vmin is a string and has the format `pN`,
-    this is interpreted as a vmin=percentile(N). For example vmin='p1.5' is interpreted as
-    the 1.5 percentile. If vmin is function, then vmin is interpreted as the return value
-    of the function over the list of values to plot. For example to set vmin tp the mean of
-    the values to plot, `def my_vmin(values): return np.mean(values)` and then
-    set `vmin=my_vmin`. If vmin is None (default) an automatic minimum value is used
-    as defined by matplotlib `scatter` function. When making multiple plots, vmin can
-    be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]`
+    The value representing the lower limit of the color scale. Values smaller than vmin are plotted
+    with the same color as vmin. vmin can be a number, a string, a function or `None`. If
+    vmin is a string and has the format `pN`, this is interpreted as a vmin=percentile(N).
+    For example vmin='p1.5' is interpreted as the 1.5 percentile. If vmin is function, then
+    vmin is interpreted as the return value of the function over the list of values to plot.
+    For example to set vmin tp the mean of the values to plot, `def my_vmin(values): return
+    np.mean(values)` and then set `vmin=my_vmin`. If vmin is None (default) an automatic
+    minimum value is used as defined by matplotlib `scatter` function. When making multiple
+    plots, vmin can be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]`
 vmax
-    Maximum value to plot. The format is the same as for `vmin`\
+    The value representing the upper limit of the color scale. The format is the same as for `vmin`.
+vcenter
+    The value representing the center of the color scale. Useful for diverging colormaps.
+    The format is the same as for `vmin`.
+    Example: sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')\
+"""
+
+doc_vboundnorm = """\
+vmin
+    The value representing the lower limit of the color scale. Values smaller than vmin are plotted
+    with the same color as vmin.
+vmax
+    The value representing the upper limit of the color scale. Values larger than vmax are plotted
+    with the same color as vmax.
+vcenter
+    The value representing the center of the color scale. Useful for diverging colormaps.
+norm
+    Custom color normalization object from matplotlib. See
+    `https://matplotlib.org/stable/tutorials/colors/colormapnorms.html` for details.\
 """
 
 doc_outline = """\
@@ -144,7 +170,7 @@ return_fig
 # Docs for pl.pca, pl.tsne, … (everything in _tools.scatterplots)
 doc_scatter_embedding = f"""\
 {doc_scatter_basic}
-{doc_vminmax}
+{doc_vbound_percentile}
 {doc_outline}
 {doc_panels}
 kwargs
@@ -162,7 +188,6 @@ save
 ax
     A matplotlib axes object. Only works if plotting a single component.\
 """
-
 
 doc_common_plot_args = """\
 adata
@@ -218,6 +243,45 @@ layer
     Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
     If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
     then the layer is plotted. `layer` takes precedence over `use_raw`.\
+"""
+
+doc_rank_genes_groups_plot_args = """\
+adata
+    Annotated data matrix.
+groups
+    The groups for which to show the gene ranking.
+n_genes
+    Number of genes to show. This can be a negative number to show for
+    example the down regulated genes. eg: num_genes=-10. Is ignored if
+    `gene_names` is passed.
+gene_symbols
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
+    refer to the index column of the `.var` DataFrame. Setting this option allows
+    alternative names to be used.
+groupby
+    The key of the observation grouping to consider. By default,
+    the groupby is chosen from the rank genes groups parameter but
+    other groupby options can be used.  It is expected that
+    groupby is a categorical. If groupby is not a categorical observation,
+    it would be subdivided into `num_categories` (see :func:`~scanpy.pl.dotplot`).
+min_logfoldchange
+    Value to filter genes in groups if their logfoldchange is less than the
+    min_logfoldchange
+key
+    Key used to store the ranking results in `adata.uns`.\
+"""
+
+doc_rank_genes_groups_values_to_plot = """\
+values_to_plot
+    Instead of the mean gene value, plot the values computed by `sc.rank_genes_groups`.
+    The options are: ['scores', 'logfoldchanges', 'pvals', 'pvals_adj',
+    'log10_pvals', 'log10_pvals_adj']. When plotting logfoldchanges a divergent
+    colormap is recommended. See examples below.
+var_names
+    Genes to plot. Sometimes is useful to pass a specific list of var names (e.g. genes)
+    to check their fold changes or p-values, instead of the top/bottom genes. The
+    var_names could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
+    :func:`~scanpy.pl.matrixplot`. See examples below.\
 """
 
 doc_scatter_spatial = """\

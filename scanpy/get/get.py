@@ -6,7 +6,7 @@ import pandas as pd
 from scipy.sparse import spmatrix
 
 from anndata import AnnData
-import warnings
+from .._compat import Literal
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -39,9 +39,9 @@ def rank_genes_groups_df(
     key
         Key differential expression groups were stored under.
     pval_cutoff
-        Minimum adjusted pval to return.
+        Return only adjusted p-values below the  cutoff.
     log2fc_min
-        Minumum logfc to return.
+        Minimum logfc to return.
     log2fc_max
         Maximum logfc to return.
     gene_symbols
@@ -96,7 +96,7 @@ def rank_genes_groups_df(
 def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
-    dim: "Literal['obs', 'var']",
+    dim: Literal['obs', 'var'],
     keys: List[str],
     alias_index: Optional[pd.Index] = None,
     use_raw: bool = False,
@@ -176,7 +176,7 @@ def _get_array_values(
     X,
     dim_names: pd.Index,
     keys: List[str],
-    axis: "Literal[0, 1]",
+    axis: Literal[0, 1],
     backed: bool,
 ):
     # TODO: This should be made easier on the anndata side
@@ -385,7 +385,7 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     """
     Choose array aligned with obs annotation.
     """
-    # https://github.com/theislab/scanpy/issues/1546
+    # https://github.com/scverse/scanpy/issues/1546
     if not isinstance(use_raw, bool):
         raise TypeError(f"use_raw expected to be bool, was {type(use_raw)}.")
 
@@ -408,7 +408,7 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     else:
         assert False, (
             "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/theislab/scanpy/issues"
+            " https://github.com/scverse/scanpy/issues"
         )
 
 
@@ -435,5 +435,5 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
     else:
         assert False, (
             "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/theislab/scanpy/issues"
+            " https://github.com/scverse/scanpy/issues"
         )

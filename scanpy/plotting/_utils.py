@@ -2,7 +2,7 @@ import warnings
 import collections.abc as cabc
 from abc import ABC
 from functools import lru_cache
-from typing import Union, List, Sequence, Tuple, Collection, Optional
+from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable
 import anndata
 
 import numpy as np
@@ -23,14 +23,13 @@ from .._utils import NeighborsView
 from . import palettes
 
 
-_tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
-
 ColorLike = Union[str, Tuple[float, ...]]
 _IGraphLayout = Literal['fa', 'fr', 'rt', 'rt_circular', 'drl', 'eq_tree', ...]
 _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 'black']
 _FontSize = Literal[
     'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
 ]
+VBound = Union[str, float, Callable[[Sequence[float]], float]]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase, ABC):
@@ -126,7 +125,7 @@ def timeseries_subplot(
     else:
         levels, _ = np.unique(color, return_inverse=True)
         colors = np.array(palette[: len(levels)].by_key()['color'])
-        subsets = [(x_range[color == l], X[color == l, :]) for l in levels]
+        subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
 
     if ax is None:
         ax = pl.subplot()
@@ -446,7 +445,6 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     -------
     None
     """
-
     categories = adata.obs[value_to_plot].cat.categories
     length = len(categories)
 
@@ -469,7 +467,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
                 "'grey' color will be used for all categories."
             )
 
-    adata.uns[value_to_plot + '_colors'] = palette[:length]
+    _set_colors_for_categorical_obs(adata, value_to_plot, palette[:length])
 
 
 def add_colors_for_categorical_sample_annotation(
@@ -619,7 +617,9 @@ def setup_axes(
     figure_width = width_without_offsets + left_offset + right_offset
     draw_region_width_frac = draw_region_width / figure_width
     left_offset_frac = left_offset / figure_width
-    right_offset_frac = 1 - (len(panels) - 1) * left_offset_frac
+    right_offset_frac = (  # noqa: F841  # TODO Does this need fixing?
+        1 - (len(panels) - 1) * left_offset_frac
+    )
 
     if ax is None:
         pl.figure(
@@ -707,9 +707,7 @@ def scatter_base(
     )
     for icolor, color in enumerate(colors):
         ax = axs[icolor]
-        left = panel_pos[2][2 * icolor]
         bottom = panel_pos[0][0]
-        width = draw_region_width / figure_width
         height = panel_pos[1][0] - bottom
         Y_sort = Y
         if not is_color_like(color) and sort_order:
@@ -742,7 +740,7 @@ def scatter_base(
             rectangle = [left, bottom, width, height]
             fig = pl.gcf()
             ax_cb = fig.add_axes(rectangle)
-            cb = pl.colorbar(
+            _ = pl.colorbar(
                 sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
             )
         # set the title
@@ -939,8 +937,8 @@ def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     if levels is None:
         levels = make_levels({})
     else:
-        levels = {l: {TOTAL: levels[l], CURRENT: 0} for l in levels}
-    vert_gap = height / (max([l for l in levels]) + 1)
+        levels = {k: {TOTAL: v, CURRENT: 0} for k, v in levels.items()}
+    vert_gap = height / (max(levels.keys()) + 1)
     return make_pos({})
 
 
@@ -1062,7 +1060,9 @@ def check_projection(projection):
             )
 
 
-def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
+def circles(
+    x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, scale_factor=1.0, **kwargs
+):
     """
     Taken from here: https://gist.github.com/syrte/592a062c562cd2a98a83
     Make a scatter plot of circles.
@@ -1104,7 +1104,9 @@ def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
 
     # You can set `facecolor` with an array for each patch,
     # while you can only set `facecolors` with a value for all.
-
+    if scale_factor != 1.0:
+        x = x * scale_factor
+        y = y * scale_factor
     zipped = np.broadcast(x, y, s)
     patches = [Circle((x_, y_), s_) for x_, y_, s_ in zipped]
     collection = PatchCollection(patches, **kwargs)
@@ -1187,3 +1189,24 @@ def _get_basis(adata: anndata.AnnData, basis: str):
         basis_key = f"X_{basis}"
 
     return basis_key
+
+
+def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
+    from matplotlib.colors import Normalize
+
+    try:
+        from matplotlib.colors import TwoSlopeNorm as DivNorm
+    except ImportError:
+        # matplotlib<3.2
+        from matplotlib.colors import DivergingNorm as DivNorm
+
+    if norm is not None:
+        if (vmin is not None) or (vmax is not None) or (vcenter is not None):
+            raise ValueError('Passing both norm and vmin/vmax/vcenter is not allowed.')
+    else:
+        if vcenter is not None:
+            norm = DivNorm(vmin=vmin, vmax=vmax, vcenter=vcenter)
+        else:
+            norm = Normalize(vmin=vmin, vmax=vmax)
+
+    return norm

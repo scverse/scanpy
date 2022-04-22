@@ -114,7 +114,7 @@ def pca(
              Explained variance, equivalent to the eigenvalues of the
              covariance matrix.
     """
-    logg_start = logg.info(f'computing PCA')
+    logg_start = logg.info('computing PCA')
 
     # chunked calculation is not randomized, anyways
     if svd_solver in {'auto', 'randomized'} and not chunked:
@@ -127,7 +127,7 @@ def pca(
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
-        adata = AnnData(data)
+        adata = AnnData(data, dtype=data.dtype)
 
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
         raise ValueError(

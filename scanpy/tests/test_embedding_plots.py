@@ -2,6 +2,7 @@ from functools import partial
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
 from matplotlib.testing.compare import compare_images
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ import seaborn as sns
 import scanpy as sc
 
 from scanpy.tests.test_plotting import ROOT, FIGS, HERE
+import scanpy.tests._data._cached_datasets as datasets
 
 MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
 MISSING_VALUES_FIGS = FIGS / "embedding-missing-values"
@@ -124,8 +126,27 @@ def groupsfunc(request):
 
 
 @pytest.fixture(
-    params=[(None, None), (0, 5), ("p15", "p90")],
-    ids=["vbounds.default", "vbound.numbers", "vbound.percentile"],
+    params=[
+        pytest.param(
+            {"vmin": None, "vmax": None, "vcenter": None, "norm": None},
+            id="vbounds.default",
+        ),
+        pytest.param(
+            {"vmin": 0, "vmax": 5, "vcenter": None, "norm": None}, id="vbounds.numbers"
+        ),
+        pytest.param(
+            {"vmin": "p15", "vmax": "p90", "vcenter": None, "norm": None},
+            id="vbounds.percentile",
+        ),
+        pytest.param(
+            {"vmin": 0, "vmax": "p99", "vcenter": 0.1, "norm": None},
+            id="vbounds.vcenter",
+        ),
+        pytest.param(
+            {"vmin": None, "vmax": None, "vcenter": None, "norm": Normalize(0, 5)},
+            id="vbounds.norm",
+        ),
+    ]
 )
 def vbounds(request):
     return request.param
@@ -169,7 +190,7 @@ def test_missing_values_continuous(
 
     # Passing through a dict so it's easier to use default values
     kwargs = {}
-    kwargs["vmin"], kwargs["vmax"] = vbounds
+    kwargs.update(vbounds)
     kwargs["legend_loc"] = legend_loc
     if na_color is not None:
         kwargs["na_color"] = na_color
@@ -200,7 +221,68 @@ def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
     check_images(dict_pth, list_pth, tol=15)
 
 
-## Spatial specific
+def test_dimension_broadcasting(adata, tmpdir, check_same_image):
+    tmpdir = Path(tmpdir)
+
+    with pytest.raises(ValueError):
+        sc.pl.pca(
+            adata, color=["label", "1_missing"], dimensions=[(0, 1), (1, 2), (2, 3)]
+        )
+
+    dims_pth = tmpdir / "broadcast_dims.png"
+    color_pth = tmpdir / "broadcast_colors.png"
+
+    sc.pl.pca(adata, color=["label", "label", "label"], dimensions=(2, 3), show=False)
+    plt.savefig(dims_pth, dpi=40)
+    plt.close()
+    sc.pl.pca(adata, color="label", dimensions=[(2, 3), (2, 3), (2, 3)], show=False)
+    plt.savefig(color_pth, dpi=40)
+    plt.close()
+
+    check_same_image(dims_pth, color_pth, tol=5)
+
+
+def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
+    tmpdir = Path(tmpdir)
+    adata = adata.copy()
+    adata.obs["mean"] = np.ravel(adata.X.mean(axis=1))
+
+    comp_pth = tmpdir / "components_plot.png"
+    dims_pth = tmpdir / "dimension_plot.png"
+
+    # TODO: Deprecate components kwarg
+    # with pytest.warns(FutureWarning, match=r"components .* deprecated"):
+    sc.pl.pca(
+        adata,
+        color=["mean", "label"],
+        components=["1,2", "2,3"],
+        show=False,
+    )
+    plt.savefig(comp_pth, dpi=40)
+    plt.close()
+
+    sc.pl.pca(
+        adata,
+        color=["mean", "mean", "label", "label"],
+        dimensions=[(0, 1), (1, 2), (0, 1), (1, 2)],
+        show=False,
+    )
+    plt.savefig(dims_pth, dpi=40)
+    plt.close()
+
+    check_same_image(dims_pth, comp_pth, tol=5)
+
+
+def test_embedding_colorbar_location(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    adata = datasets.pbmc3k_processed().raw.to_adata()
+
+    sc.pl.pca(adata, color="LDHB", colorbar_loc=None)
+
+    save_and_compare_images("master_no_colorbar")
+
+
+# Spatial specific
 
 
 def test_visium_circles(image_comparer):  # standard visium data

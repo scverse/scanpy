@@ -7,15 +7,20 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
+from matplotlib.colors import Normalize
 
 from .. import logging as logg
 from .._utils import _doc_params
 from .._compat import Literal
-from ._utils import fix_kwds
+from ._utils import fix_kwds, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
 from .._settings import settings
-from ._docs import doc_common_plot_args, doc_show_save_ax
+from ._docs import (
+    doc_common_plot_args,
+    doc_show_save_ax,
+    doc_vboundnorm,
+)
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
 
 
@@ -59,15 +64,22 @@ class MatrixPlot(BasePlot):
     Simple visualization of the average expression of a few genes grouped by
     the category 'bulk_labels'.
 
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
 
     Same visualization but passing var_names as dict, which adds a grouping of
     the genes on top of the image:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
     """
 
     DEFAULT_SAVE_PREFIX = 'matrixplot_'
@@ -97,6 +109,10 @@ class MatrixPlot(BasePlot):
         standard_scale: Literal['var', 'group'] = None,
         ax: Optional[_AxesSubplot] = None,
         values_df: Optional[pd.DataFrame] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        vcenter: Optional[float] = None,
+        norm: Optional[Normalize] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -116,6 +132,10 @@ class MatrixPlot(BasePlot):
             var_group_rotation=var_group_rotation,
             layer=layer,
             ax=ax,
+            vmin=vmin,
+            vmax=vmax,
+            vcenter=vcenter,
+            norm=norm,
             **kwds,
         )
 
@@ -165,13 +185,25 @@ class MatrixPlot(BasePlot):
         Examples
         -------
 
-        >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        .. plot::
+            :context: close-figs
+
+            import scanpy as sc
+
+            adata = sc.datasets.pbmc68k_reduced()
+            markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
         Change color map and turn off edges:
 
-        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(cmap='Blues', edge_color='none').show()
+
+        .. plot::
+            :context: close-figs
+
+            (
+                sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')
+                .style(cmap='Blues', edge_color='none')
+                .show()
+            )
 
         """
 
@@ -202,11 +234,11 @@ class MatrixPlot(BasePlot):
         cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
         if 'cmap' in self.kwds:
             del self.kwds['cmap']
-
-        import matplotlib.colors
-
-        normalize = matplotlib.colors.Normalize(
-            vmin=self.kwds.get('vmin'), vmax=self.kwds.get('vmax')
+        normalize = check_colornorm(
+            self.vboundnorm.vmin,
+            self.vboundnorm.vmax,
+            self.vboundnorm.vcenter,
+            self.vboundnorm.norm,
         )
 
         for axis in ['top', 'bottom', 'left', 'right']:
@@ -219,7 +251,7 @@ class MatrixPlot(BasePlot):
             linewidth=self.edge_lw,
             norm=normalize,
         )
-        __ = ax.pcolor(_color_df, **kwds)
+        _ = ax.pcolor(_color_df, **kwds)
 
         y_labels = _color_df.index
         x_labels = _color_df.columns
@@ -248,6 +280,7 @@ class MatrixPlot(BasePlot):
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
     groupby_plots_args=doc_common_groupby_plot_args,
+    vminmax=doc_vboundnorm,
 )
 def matrixplot(
     adata: AnnData,
@@ -273,6 +306,10 @@ def matrixplot(
     save: Union[str, bool, None] = None,
     ax: Optional[_AxesSubplot] = None,
     return_fig: Optional[bool] = False,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    vcenter: Optional[float] = None,
+    norm: Optional[Normalize] = None,
     **kwds,
 ) -> Union[MatrixPlot, dict, None]:
     """\
@@ -287,6 +324,7 @@ def matrixplot(
     {common_plot_args}
     {groupby_plots_args}
     {show_save_ax}
+    {vminmax}
     kwds
         Are passed to :func:`matplotlib.pyplot.pcolor`.
 
@@ -305,24 +343,36 @@ def matrixplot(
     Examples
     --------
 
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get Matrix object for fine tuning:
 
-    >>> mp = sc.pl.matrix(adata, markers, 'bulk_labels', return_fig=True)
-    >>> mp.add_totals().style(edge_color='black').show()
+    .. plot::
+        :context: close-figs
+
+        mp = sc.pl.matrixplot(adata, markers, 'bulk_labels', return_fig=True)
+        mp.add_totals().style(edge_color='black').show()
 
     The axes used can be obtained using the get_axes() method
 
-    >>> axes_dict = mp.get_axes()
+    .. plot::
+        :context: close-figs
+
+        axes_dict = mp.get_axes()
     """
 
     mp = MatrixPlot(
@@ -342,6 +392,10 @@ def matrixplot(
         layer=layer,
         values_df=values_df,
         ax=ax,
+        vmin=vmin,
+        vmax=vmax,
+        vcenter=vcenter,
+        norm=norm,
         **kwds,
     )
 

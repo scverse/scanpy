@@ -2,9 +2,11 @@ trigger:
 - master
 
 variables:
+  python.version: '3.9'
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
   ANNDATA_DEV: no
   RUN_COVERAGE: no
+  TEST_EXTRA: 'test-full'
 
 jobs:
 - job: PyTest
@@ -12,12 +14,13 @@ jobs:
     vmImage: 'ubuntu-18.04'
   strategy:
     matrix:
-      Python38:
-        python.version: '3.8'
-      Python36:
-        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+      Python39: {}
+      minimal_tests:
+        TEST_EXTRA: 'test-min'
       anndata_dev:
-        python.version: '3.8'
+        python.version: '3.9'
         ANNDATA_DEV: yes
         RUN_COVERAGE: yes
   steps:
@@ -28,8 +31,8 @@ jobs:
 
   - task: Cache@2
     inputs:
-      key: '"python $(python.version)" | "$(Agent.OS)" | requirements.txt'
-      restoreKeys: | 
+      key: '"python $(python.version)" | "$(Agent.OS)" | pyproject.toml'
+      restoreKeys: |
         python | "$(Agent.OS)"
         python
       path: $(PIP_CACHE_DIR)
@@ -43,11 +46,11 @@ jobs:
   - script: |
       python -m pip install --upgrade pip
       pip install pytest-cov wheel
-      pip install -e .[dev,doc,test,louvain,leiden,magic,scvi,harmony,scrublet,scanorama]
+      pip install .[dev,$(TEST_EXTRA)]
     displayName: 'Install dependencies'
 
   - script: |
-      pip install -v git+https://github.com/theislab/anndata
+      pip install -v git+https://github.com/scverse/anndata
     displayName: 'Install development anndata'
     condition: eq(variables['ANNDATA_DEV'], 'yes')
 
@@ -90,18 +93,18 @@ jobs:
 
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.8'
-    displayName: 'Use Python 3.8'
+      versionSpec: '3.9'
+    displayName: 'Use Python 3.9'
 
   - script: |
       python -m pip install --upgrade pip
-      pip install setuptools setuptools_scm pytoml wheel twine
-    displayName: 'Install build dependencies'
+      pip install build twine
+    displayName: 'Install build tools and requirements'
 
   - script: pip list
     displayName: 'Display installed versions'
 
   - script: |
-      python setup.py sdist bdist_wheel
+      python -m build --sdist --wheel .
       twine check dist/*
     displayName: 'Build & Twine check'

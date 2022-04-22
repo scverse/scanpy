@@ -1,8 +1,6 @@
 import pytest
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import csr_matrix
-from scipy import sparse
 
 import scanpy as sc
 from scanpy.tests.fixtures import array_type, float_dtype
@@ -67,7 +65,7 @@ def test_pca_transform(array_type):
 
 def test_pca_shapes():
     """Tests that n_comps behaves correctly"""
-    # https://github.com/theislab/scanpy/issues/1051
+    # https://github.com/scverse/scanpy/issues/1051
     adata = AnnData(np.random.randn(30, 20))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (30, 19)
@@ -117,7 +115,7 @@ def test_pca_reproducible(pbmc3k_normalized, array_type, float_dtype):
 
 
 def test_pca_chunked(pbmc3k_normalized):
-    # https://github.com/theislab/scanpy/issues/1590
+    # https://github.com/scverse/scanpy/issues/1590
     # But also a more general test
 
     # Subsetting for speed of test
@@ -137,4 +135,21 @@ def test_pca_chunked(pbmc3k_normalized):
     np.testing.assert_allclose(
         np.abs(chunked.uns["pca"]["variance_ratio"]),
         np.abs(default.uns["pca"]["variance_ratio"]),
+    )
+
+
+def test_pca_n_pcs(pbmc3k_normalized):
+    """
+    Tests that the n_pcs parameter also works for
+    representations not called "X_pca"
+    """
+    pbmc = pbmc3k_normalized
+    sc.pp.pca(pbmc, dtype=np.float64)
+    pbmc.obsm["X_pca_test"] = pbmc.obsm["X_pca"]
+    original = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca", copy=True)
+    renamed = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca_test", copy=True)
+
+    assert np.allclose(original.obsm["X_pca"], renamed.obsm["X_pca_test"])
+    assert np.allclose(
+        original.obsp["distances"].toarray(), renamed.obsp["distances"].toarray()
     )

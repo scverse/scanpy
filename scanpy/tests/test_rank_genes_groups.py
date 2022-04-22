@@ -1,19 +1,22 @@
 import pytest
 
+from packaging import version
 from pathlib import Path
 import pickle
 
 import numpy as np
 import pandas as pd
+import scipy
 from scipy import sparse as sp
 from scipy.stats import mannwhitneyu
 from numpy.random import negative_binomial, binomial, seed
 
+import scanpy as sc
 from anndata import AnnData
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
-from scanpy.datasets import pbmc68k_reduced
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 from scanpy._utils import select_groups
 
 
@@ -71,6 +74,7 @@ def test_results_dense():
     seed(1234)
 
     adata = get_example_data()
+    assert adata.raw is None  # Assumption for later checks
 
     (
         true_names_t_test,
@@ -90,6 +94,7 @@ def test_results_dense():
             true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name]
         )
     assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
 
@@ -105,6 +110,7 @@ def test_results_dense():
     assert np.array_equal(
         true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7]
     )
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
 
 def test_results_sparse():
@@ -130,6 +136,7 @@ def test_results_sparse():
             true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name]
         )
     assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
 
@@ -145,6 +152,7 @@ def test_results_sparse():
     assert np.array_equal(
         true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7]
     )
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
 
 def test_results_layers():
@@ -167,9 +175,9 @@ def test_results_layers():
         'true_groups',
         method='wilcoxon',
         layer="to_test",
-        use_raw=False,
         n_genes=20,
     )
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(
             true_scores_wilcoxon[name][:7],
@@ -206,6 +214,23 @@ def test_results_layers():
         )
 
 
+def test_rank_genes_groups_use_raw():
+    # https://github.com/scverse/scanpy/issues/1929
+    pbmc = pbmc68k_reduced()
+    assert pbmc.raw is not None
+
+    sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
+
+    pbmc = pbmc68k_reduced()
+    del pbmc.raw
+    assert pbmc.raw is None
+
+    with pytest.raises(
+        ValueError, match="Received `use_raw=True`, but `adata.raw` is empty"
+    ):
+        sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
+
+
 def test_singlets():
     pbmc = pbmc68k_reduced()
     pbmc.obs['louvain'] = pbmc.obs['louvain'].cat.add_categories(['11'])
@@ -234,6 +259,7 @@ def test_wilcoxon_symmetry():
         method='wilcoxon',
         rankby_abs=True,
     )
+    assert pbmc.uns["rank_genes_groups"]["params"]["use_raw"] is True
 
     stats_mono = (
         rank_genes_groups_df(pbmc, group="CD14+ Monocyte")
@@ -271,15 +297,22 @@ def test_wilcoxon_tie_correction(reference):
     mask_rest = groups_masks[1] if reference else ~groups_masks[0]
     Y = pbmc.raw.X[mask_rest].toarray()
 
-    n_genes = X.shape[1]
+    # Handle scipy versions
+    if version.parse(scipy.__version__) >= version.parse("1.7.0"):
+        pvals = mannwhitneyu(X, Y, use_continuity=False, alternative='two-sided').pvalue
+        pvals[np.isnan(pvals)] = 1.0
+    else:
+        # Backwards compat, to drop once we drop scipy < 1.7
+        n_genes = X.shape[1]
+        pvals = np.zeros(n_genes)
 
-    pvals = np.zeros(n_genes)
-
-    for i in range(n_genes):
-        try:
-            _, pvals[i] = mannwhitneyu(X[:, i], Y[:, i], False, 'two-sided')
-        except ValueError:
-            pvals[i] = 1
+        for i in range(n_genes):
+            try:
+                _, pvals[i] = mannwhitneyu(
+                    X[:, i], Y[:, i], use_continuity=False, alternative='two-sided'
+                )
+            except ValueError:
+                pvals[i] = 1
 
     if reference:
         ref = groups[1]
@@ -290,4 +323,4 @@ def test_wilcoxon_tie_correction(reference):
     test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
     test_obj.compute_statistics('wilcoxon', tie_correct=True)
 
-    assert np.allclose(test_obj.stats[groups[0]]['pvals'], pvals)
+    np.testing.assert_allclose(test_obj.stats[groups[0]]['pvals'], pvals)

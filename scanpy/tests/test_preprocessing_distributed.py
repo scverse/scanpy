@@ -5,9 +5,9 @@ import anndata as ad
 import numpy.testing as npt
 import pytest
 
-from scanpy.preprocessing import *
-from scanpy.preprocessing._simple import materialize_as_ndarray
-
+from scanpy.preprocessing import normalize_total, filter_genes
+from scanpy.preprocessing import log1p, normalize_per_cell, filter_cells
+from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 HERE = Path(__file__).parent / Path('_data/')
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
@@ -83,8 +83,8 @@ class TestPreprocessingDistributed:
         npt.assert_allclose(result, adata.X)
 
     def test_write_zarr(self, adata, adata_dist):
-        import dask.array as da
-        import zarr
+        da = pytest.importorskip("dask.array")
+        zarr = pytest.importorskip("zarr")
 
         log1p(adata_dist)
         temp_store = zarr.TempStore()

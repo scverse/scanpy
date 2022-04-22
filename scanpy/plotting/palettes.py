@@ -1,9 +1,10 @@
 """Color palettes in addition to matplotlib's palettes."""
 
+from typing import Mapping, Sequence
 from matplotlib import cm, colors
 
 # Colorblindness adjusted vega_10
-# See https://github.com/theislab/scanpy/issues/387
+# See https://github.com/scverse/scanpy/issues/387
 vega_10 = list(map(colors.to_hex, cm.tab10.colors))
 vega_10_scanpy = vega_10.copy()
 vega_10_scanpy[2] = '#279e68'  # green
@@ -178,9 +179,6 @@ godsnot_102 = [
 ]
 
 default_102 = godsnot_102
-
-
-from typing import Mapping, Sequence
 
 
 def _plot_color_cycle(clists: Mapping[str, Sequence[str]]):

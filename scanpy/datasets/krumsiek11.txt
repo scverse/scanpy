@@ -1,11 +1,11 @@
-# model = /Users/alexwolf/hholtz/01_projects/1512_scanpy/scanpy/scanpy/sim_models/krumsiek11.txt 
+# model = /Users/alexwolf/hholtz/01_projects/1512_scanpy/scanpy/scanpy/sim_models/krumsiek11.txt
 # tmax = 160
 # branching = True
 # nrRealizations = 4
 # noiseObs = 0
 # noiseDyn = 0.001
 # seed = 0
-# it   Gata2   Gata1    Fog1    EKLF    Fli1     SCL   Cebpa    Pu.1    cJun  EgrNab    Gfi1 
+# it   Gata2   Gata1    Fog1    EKLF    Fli1     SCL   Cebpa    Pu.1    cJun  EgrNab    Gfi1
    0  0.8032 -0.0005 -0.0001  0.0003  0.0013  0.0011  0.7997  0.8017  0.0006  0.0009  0.0002
    1  0.7239  0.0016 -0.0003 -0.0010  0.0011  0.0022  0.8195  0.7256  0.0784  0.0077  0.0941
    2  0.6578  0.0013 -0.0010 -0.0027  0.0025  0.0011  0.8358  0.6624  0.1105  0.0239  0.1497

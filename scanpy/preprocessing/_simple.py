@@ -344,13 +344,11 @@ def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
         if not np.issubdtype(X.dtype, np.floating):
-            X = X.astype(np.floating)
+            X = X.astype(float)
         else:
             X = X.copy()
-    elif not (
-        np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, np.complex)
-    ):
-        X = X.astype(np.floating)
+    elif not (np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, complex)):
+        X = X.astype(float)
     np.log1p(X, out=X)
     if base is not None:
         np.divide(X, np.log(base), out=X)
@@ -551,7 +549,7 @@ def normalize_per_cell(
     # proceed with data matrix
     X = data.copy() if copy else data
     if counts_per_cell is None:
-        if copy == False:
+        if not copy:
             raise ValueError('Can only be run with copy=True')
         cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
         X = X[cell_subset]
@@ -662,15 +660,10 @@ def regress_out(
             regres = regressors
         tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
 
-    if n_jobs > 1 and n_chunks > 1:
-        import multiprocessing
+    from joblib import Parallel, delayed
 
-        pool = multiprocessing.Pool(n_jobs)
-        res = pool.map_async(_regress_out_chunk, tasks).get(9999999)
-        pool.close()
-
-    else:
-        res = list(map(_regress_out_chunk, tasks))
+    # TODO: figure out how to test that this doesn't oversubscribe resources
+    res = Parallel(n_jobs=n_jobs)(delayed(_regress_out_chunk)(task) for task in tasks)
 
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
@@ -757,7 +750,11 @@ def scale(
     annotated with `'mean'` and `'std'` in `adata.var`.
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
-    return scale_array(data, zero_center=zero_center, max_value=max_value, copy=copy)
+    if layer is not None:
+        raise ValueError(f"`layer` argument inappropriate for value of type {type(X)}")
+    if obsm is not None:
+        raise ValueError(f"`obsm` argument inappropriate for value of type {type(X)}")
+    return scale_array(X, zero_center=zero_center, max_value=max_value, copy=copy)
 
 
 @scale.register(np.ndarray)
