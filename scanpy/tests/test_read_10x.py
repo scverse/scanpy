@@ -84,9 +84,10 @@ def test_read_10x_h5_v2_multiple_genomes():
     )
     # the test data are such that X is the same shape for both "genomes",
     # but the values are different
-    assert (genome1_v1.X != genome2_v1.X).sum() > 0, \
-        'loading data from two different genomes in 10x v2 format. ' \
+    assert (genome1_v1.X != genome2_v1.X).sum() > 0, (
+        'loading data from two different genomes in 10x v2 format. '
         'should be different, but is the same. '
+    )
 
 
 def test_read_10x_h5():
