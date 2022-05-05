@@ -267,7 +267,8 @@ def _highly_variable_genes_single_batch(
             n_top_genes = adata.n_vars
         if n_top_genes > dispersion_norm.size:
             warnings.warn(
-                '`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions'
+                '`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.',
+                UserWarning,
             )
             n_top_genes = dispersion_norm.size
         disp_cut_off = dispersion_norm[n_top_genes - 1]
