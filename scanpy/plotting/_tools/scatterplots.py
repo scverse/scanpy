@@ -72,6 +72,7 @@ def embedding(
     neighbors_key: Optional[str] = None,
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
+    preselect_basis_cols: Optional[Union[slice, List[int], List[bool]]] = None,
     groups: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
     dimensions: Optional[Union[Tuple[int, int], Sequence[Tuple[int, int]]]] = None,
@@ -116,6 +117,9 @@ def embedding(
         Name of the `obsm` basis to use.
     {adata_color_etc}
     {edges_arrows}
+    preselect_basis_cols
+        Select which columns of the basis will be used for plotting.
+        This option is applied before `dimensions`, `components` etc.
     {scatter_bulk}
     {show_save_ax}
 
@@ -130,7 +134,7 @@ def embedding(
     check_projection(projection)
     sanitize_anndata(adata)
 
-    basis_values = _get_basis(adata, basis)
+    basis_values = _get_basis(adata, basis, preselect_basis_cols)
     dimensions = _components_to_dimensions(
         components, dimensions, projection=projection, total_dims=basis_values.shape[1]
     )
@@ -746,7 +750,7 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     --------
     tl.diffmap
     """
-    return embedding(adata, 'diffmap', **kwargs)
+    return embedding(adata, 'diffmap', preselect_basis_cols=slice(1, None), **kwargs)
 
 
 @_wraps_plot_scatter
@@ -1132,14 +1136,19 @@ def _add_categorical_legend(
             )
 
 
-def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
-    """Get array for basis from anndata. Just tries to add 'X_'."""
+def _get_basis(adata: AnnData, basis: str, select_cols=None) -> np.ndarray:
+    """Get array for basis from anndata. Also tries to add 'X_'."""
     if basis in adata.obsm:
-        return adata.obsm[basis]
+        basis_values = adata.obsm[basis]
     elif f"X_{basis}" in adata.obsm:
-        return adata.obsm[f"X_{basis}"]
+        basis_values = adata.obsm[f"X_{basis}"]
     else:
         raise KeyError(f"Could not find '{basis}' or 'X_{basis}' in .obsm")
+
+    if select_cols is not None:
+        basis_values = basis_values[:, select_cols]
+
+    return basis_values
 
 
 def _get_color_source_vector(
