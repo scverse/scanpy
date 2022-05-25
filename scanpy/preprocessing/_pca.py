@@ -161,7 +161,7 @@ def pca(
 
         if svd_solver not in {'auto', 'full', 'jacobi'}:
             raise ValueError(
-                'svd_solver: {svd_solver} can not be used with cuml.PCA.\n'
+                f'svd_solver: {svd_solver} can not be used with cuml.PCA.\n'
                 'Use "auto" or "full" or "jacobi" instead.'
             )
 
