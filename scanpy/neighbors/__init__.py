@@ -413,6 +413,49 @@ def _compute_connectivities_umap(
 
     return distances, connectivities.tocsr()
 
+def _compute_connectivities_umap_rapids(
+    knn_indices,
+    knn_dists,
+    n_obs,
+    n_neighbors,
+    random_state,
+    set_op_mix_ratio=1.0,
+    local_connectivity=1.0,
+):
+    """\
+    Rapids implementation of umap.fuzzy_simplicial_set [McInnes18]_.
+
+    Given a set of data X, a neighborhood size, and a measure of distance
+    compute the fuzzy simplicial set (here represented as a fuzzy graph in
+    the form of a sparse matrix) associated to the data. This is done by
+    locally approximating geodesic distance at each point, creating a fuzzy
+    simplicial set for each such point, and then combining all the local
+    fuzzy simplicial sets into a global one via a fuzzy union.
+    """
+
+    from cuml.manifold.simpl_set import fuzzy_simplicial_set
+
+    X = np.empty((n_obs, 1))
+    connectivities = fuzzy_simplicial_set(
+        X,
+        n_neighbors,
+        random_state,
+        None,
+        knn_indices=knn_indices,
+        knn_dists=knn_dists,
+        set_op_mix_ratio=set_op_mix_ratio,
+        local_connectivity=local_connectivity,
+    )
+
+    if isinstance(connectivities, tuple):
+        # In umap-learn 0.4, this returns (result, sigmas, rhos)
+        connectivities = connectivities[0]
+
+    distances = _get_sparse_matrix_from_indices_distances_umap(
+        knn_indices, knn_dists, n_obs, n_neighbors
+    )
+
+    return distances, connectivities.tocsr().get()
 
 def _get_sparse_matrix_from_indices_distances_numpy(
     indices, distances, n_obs, n_neighbors
@@ -818,12 +861,24 @@ class Neighbors:
         if not use_dense_distances or method in {'umap', 'rapids'}:
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
-            self._distances, self._connectivities = _compute_connectivities_umap(
-                knn_indices,
-                knn_distances,
-                self._adata.shape[0],
-                self.n_neighbors,
-            )
+            if method == "umap":
+                self._distances, self._connectivities = _compute_connectivities_umap(
+                    knn_indices,
+                    knn_distances,
+                    self._adata.shape[0],
+                    self.n_neighbors,
+                )
+            else:
+                (
+                    self._distances,
+                    self._connectivities,
+                ) = _compute_connectivities_umap_rapids(
+                    knn_indices,
+                    knn_distances,
+                    self._adata.shape[0],
+                    self.n_neighbors,
+                    random_state,
+                )
         # overwrite the umap connectivities if method is 'gauss'
         # self._distances is unaffected by this
         if method == 'gauss':
