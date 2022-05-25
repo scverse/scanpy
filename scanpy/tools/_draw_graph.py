@@ -197,7 +197,7 @@ def draw_graph(
                 scaling_ratio=2.0,
                 strong_gravity_mode=False,
                 gravity=1.0,
-                verbose=True,
+                verbose=False,
             )
             positions = forceatlas2.to_pandas().loc[:, ["x", "y"]].values
 
