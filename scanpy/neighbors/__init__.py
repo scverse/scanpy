@@ -413,6 +413,7 @@ def _compute_connectivities_umap(
 
     return distances, connectivities.tocsr()
 
+
 def _compute_connectivities_umap_rapids(
     knn_indices,
     knn_dists,
@@ -456,6 +457,7 @@ def _compute_connectivities_umap_rapids(
     )
 
     return distances, connectivities.tocsr().get()
+
 
 def _get_sparse_matrix_from_indices_distances_numpy(
     indices, distances, n_obs, n_neighbors

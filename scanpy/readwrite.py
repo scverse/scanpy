@@ -575,42 +575,59 @@ def _read_v3_10x_mtx(
     return adata
 
 
-def read_mtx_gpu(
-    filename,
-    backend:Literal['cudf', 'dask_cudf'] = "cudf"
-):
+def read_mtx_gpu(filename, backend: Literal['cudf', 'dask_cudf'] = "cudf"):
     """
     Read mtx using using GPU, the matrix is transposed by default
     """
     import scipy.sparse as sp
     import cupyx.scipy.sparse as csp
-    mtxinfo=pd.read_csv(filename,nrows=1,sep=" ",comment="%",header=None).values[0]
-    shape=tuple((mtxinfo[[1,0]]).astype(int))
-    
-    if backend=="cudf":
+
+    mtxinfo = pd.read_csv(filename, nrows=1, sep=" ", comment="%", header=None).values[
+        0
+    ]
+    shape = tuple((mtxinfo[[1, 0]]).astype(int))
+
+    if backend == "cudf":
         import cudf
-        mtx_data=cudf.read_csv(filename,sep=" ",
-                               dtype=['float32' for i in range(3)],
-                               comment="%",header=None,skiprows=2)
+
+        mtx_data = cudf.read_csv(
+            filename,
+            sep=" ",
+            dtype=['float32' for i in range(3)],
+            comment="%",
+            header=None,
+            skiprows=2,
+        )
         # offseting row and column indices to fit python indexing
-        mtx_data["0"]=mtx_data["0"]-1
-        mtx_data["1"]=mtx_data["1"]-1
-        
-        mtx_data=mtx_data.to_cupy()
-        
-        mtx_data=csp.coo_matrix((mtx_data[:,2], (mtx_data[:,1], mtx_data[:,0])),
-                        shape=shape,dtype=np.float32)
-        toadata=mtx_data.get().tocsr()
-        
-    elif backend=="dask_cudf":
+        mtx_data["0"] = mtx_data["0"] - 1
+        mtx_data["1"] = mtx_data["1"] - 1
+
+        mtx_data = mtx_data.to_cupy()
+
+        mtx_data = csp.coo_matrix(
+            (mtx_data[:, 2], (mtx_data[:, 1], mtx_data[:, 0])),
+            shape=shape,
+            dtype=np.float32,
+        )
+        toadata = mtx_data.get().tocsr()
+
+    elif backend == "dask_cudf":
         import dask_cudf
-        mtx_data=dask_cudf.read_csv("matrix.mtx",sep=" ",
-                                    dtype=['float32' for i in range(3)],
-                                    comment="%",header=None)
-        mtx_data=mtx_data.to_dask_dataframe() # loading back to host
-        toadata=sp.coo_matrix((mtx_data["2"][1:], (mtx_data["1"][1:]-1, mtx_data["0"][1:]-1)), 
-                               shape=shape,dtype=np.float32)
-        toadata=toadata.tocsr()
+
+        mtx_data = dask_cudf.read_csv(
+            "matrix.mtx",
+            sep=" ",
+            dtype=['float32' for i in range(3)],
+            comment="%",
+            header=None,
+        )
+        mtx_data = mtx_data.to_dask_dataframe()  # loading back to host
+        toadata = sp.coo_matrix(
+            (mtx_data["2"][1:], (mtx_data["1"][1:] - 1, mtx_data["0"][1:] - 1)),
+            shape=shape,
+            dtype=np.float32,
+        )
+        toadata = toadata.tocsr()
 
     return AnnData(toadata)
 

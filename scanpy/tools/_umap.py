@@ -129,7 +129,10 @@ def umap(
 
     neighbors = NeighborsView(adata, neighbors_key)
 
-    if 'params' not in neighbors or neighbors['params']['method'] not in ["umap","rapids"]:
+    if 'params' not in neighbors or neighbors['params']['method'] not in [
+        "umap",
+        "rapids",
+    ]:
         logg.warning(
             f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap'
         )
