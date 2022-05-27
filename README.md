@@ -4,7 +4,7 @@
 [![Conda](https://img.shields.io/conda/dn/conda-forge/scanpy?logo=Anaconda)](https://anaconda.org/conda-forge/scanpy)
 [![Docs](https://readthedocs.com/projects/icb-scanpy/badge/?version=latest)](https://scanpy.readthedocs.io)
 [![Build Status](https://dev.azure.com/scverse/scanpy/_apis/build/status/theislab.scanpy?branchName=master)](https://dev.azure.com/scverse/scanpy/_build)
-![Discourse topics](https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org)
+[![Discourse topics](https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org)](https://discourse.scverse.org/)
 [![Chat](https://img.shields.io/badge/zulip-join_chat-%2367b08f.svg)](https://scverse.zulipchat.com)
 
 # Scanpy – Single-Cell Analysis in Python
