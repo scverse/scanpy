@@ -1,10 +1,14 @@
 import pytest
 import numpy as np
 from anndata import AnnData
+import numpy as np
+from scipy.sparse import csr_matrix
+import anndata as ad
 
 import scanpy as sc
 from scanpy.tests.fixtures import array_type, float_dtype
 from anndata.tests.helpers import assert_equal
+
 
 A_list = [
     [0, 0, 7, 0, 0],
@@ -153,3 +157,44 @@ def test_pca_n_pcs(pbmc3k_normalized):
     assert np.allclose(
         original.obsp["distances"].toarray(), renamed.obsp["distances"].toarray()
     )
+
+def test_pca_mask():
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    
+    #No mask 
+    adata= sc.pp.pca(pbmc)
+
+    if 'highly_variable' in pbmc.var.keys():
+        assert(adata.X.shape[1]==pbmc.var['highly_variable'].sum())
+    else:
+        assert(adata.X.shape[1]==pbmc.X.shape[1])
+
+
+    ##check warning on mask length
+    mask=np.random.choice(2,pbmc.shape[1]+1)
+    adata_mask= sc.pp.pca(pbmc, mask=mask)
+
+    #with mask
+    mask=pbmc.var['highly_variable']
+    adata_mask= sc.pp.pca(pbmc, mask=mask)
+
+    #check if columns of masked data equal no. highly variable genes
+    assert(adata_mask.X.shape[1]==pbmc.X.var['highly_variable'].sum())
+
+    #Test if pca result is equal when given mask vs. given use_highly_variable=True
+    adata_var= sc.pp.pca(pbmc, use_highly_variable=True)
+    assert(adata_var.X ==adata_mask.X)
+
+def test_non_existent_mask(array_type):
+    adata = array_type(A_list).astype('float32')
+    sc.pp.pca(adata, n_comps=4, zero_center=True, svd_solver='arpack', dtype='float64', use_existing_mask='mask')
+
+def test_use_existing_mask():
+    pcmb = sc.datasets.pbmc68k_reduced()
+    fromvar = sc.pp.pca(pcmb, use_existing_mask='highly_variable')
+    boolarray = sc.pp.pca(pcmb, mask=pcmb.var['highly_variable'])
+    assert('mask_used_for_PCA' in boolarray.var.keys())
+    assert('mask_used_for_PCA' not in fromvar.var.keys())
+    assert(fromvar.uns['pca']['params']['mask'] and boolarray.uns['pca']['params']['mask'])
+    assert(fromvar.varm['PCs']==boolarray.varm['PCs'])
