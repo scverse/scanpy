@@ -4,6 +4,7 @@ from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 import pytest
 
 
+
 def test_deprecate_multicore_tsne():
     pbmc = pbmc68k_reduced()
 
@@ -22,5 +23,5 @@ def test_deprecate_multicore_tsne():
 def test_deprecate_use_highly_variable_genes():    
     pbmc = pbmc68k_reduced()
 
-    with pytest.warns(UserWarning, match="Argument `use_highly_variable` is deprecated"):
+    with pytest.warns(FutureWarning, match="is deprecated"):
         sc.pp.pca(pbmc, use_highly_variable=True)

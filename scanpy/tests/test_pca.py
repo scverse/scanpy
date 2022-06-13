@@ -158,42 +158,42 @@ def test_pca_n_pcs(pbmc3k_normalized):
         original.obsp["distances"].toarray(), renamed.obsp["distances"].toarray()
     )
 
-def test_pca_mask():
+def test_pca_mask(pbmc3k_normalized, array_type):
 
     pbmc = sc.datasets.pbmc68k_reduced()
     
-    #No mask 
+    #Test that highly_variable_genes are always used when present
     adata= sc.pp.pca(pbmc)
-
-    if 'highly_variable' in pbmc.var.keys():
-        assert(adata.X.shape[1]==pbmc.var['highly_variable'].sum())
-    else:
-        assert(adata.X.shape[1]==pbmc.X.shape[1])
-
+    assert(adata.obsm['X_pca'].shape[1]==pbmc.var['highly_variable'].sum())
+    
+    #Test highly_variable ValueError 
+    adata = array_type(A_list).astype('float32')
+    with pytest.raises(ValueError):
+        sc.pp.pca(adata, use_highly_variable=True)
 
     ##check warning on mask length
-    mask=np.random.choice(2,pbmc.shape[1]+1)
-    adata_mask= sc.pp.pca(pbmc, mask=mask)
-
-    #with mask
-    mask=pbmc.var['highly_variable']
-    adata_mask= sc.pp.pca(pbmc, mask=mask)
+    mask=np.random.choice([True, False],pbmc.shape[1]+1)
+    with pytest.raises(ValueError):
+        sc.pp.pca(pbmc, mask=mask)
 
     #check if columns of masked data equal no. highly variable genes
-    assert(adata_mask.X.shape[1]==pbmc.X.var['highly_variable'].sum())
+    mask=pbmc.var['highly_variable']
+    adata_mask= sc.pp.pca(pbmc, mask=mask)
+    adata_var= sc.pp.pca(pbmc, use_highly_variable=True)
+    assert(adata_mask.shape[1]==pbmc.X.var['highly_variable'].sum())
+    assert(adata_mask.obsm['X_pca']==adata_var.obsm['X_pca'])
 
     #Test if pca result is equal when given mask vs. given use_highly_variable=True
-    adata_var= sc.pp.pca(pbmc, use_highly_variable=True)
     assert(adata_var.X ==adata_mask.X)
 
-def test_non_existent_mask(array_type):
+    #Test case of non existent mask
     adata = array_type(A_list).astype('float32')
-    sc.pp.pca(adata, n_comps=4, zero_center=True, svd_solver='arpack', dtype='float64', use_existing_mask='mask')
+    with pytest.raises(ValueError):
+        sc.pp.pca(adata, use_existing_mask='mask')
 
-def test_use_existing_mask():
-    pcmb = sc.datasets.pbmc68k_reduced()
-    fromvar = sc.pp.pca(pcmb, use_existing_mask='highly_variable')
-    boolarray = sc.pp.pca(pcmb, mask=pcmb.var['highly_variable'])
+    #test use_existing_mask
+    fromvar = sc.pp.pca(pbmc, use_existing_mask='highly_variable')
+    boolarray = sc.pp.pca(pbmc, mask=pbmc.var['highly_variable'])
     assert('mask_used_for_PCA' in boolarray.var.keys())
     assert('mask_used_for_PCA' not in fromvar.var.keys())
     assert(fromvar.uns['pca']['params']['mask'] and boolarray.uns['pca']['params']['mask'])

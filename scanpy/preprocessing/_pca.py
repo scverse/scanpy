@@ -153,6 +153,7 @@ def pca(
             'or consider running `pp.highly_variable_genes` first.'
         )
 
+
     if use_highly_variable is True:
         warn(
             "Argument `use_highly_variable` is deprecated, consider using a mask argument.",
