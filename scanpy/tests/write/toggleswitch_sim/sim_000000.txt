@@ -1,11 +1,11 @@
-# model = toggleswitch.txt 
+# model = toggleswitch.txt
 # tmax = 100
 # branching = True
 # nrRealizations = 2
 # noiseObs = 0.01
 # noiseDyn = 0.001
 # seed = 0
-# it       0       1 
+# it       0       1
    0  0.8052  0.7880
    1  0.7378  0.7237
    2  0.6568  0.6589

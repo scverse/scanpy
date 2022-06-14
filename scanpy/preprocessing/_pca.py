@@ -153,7 +153,6 @@ def pca(
             'or consider running `pp.highly_variable_genes` first.'
         )
 
-
     if use_highly_variable is True:
         warn(
             "Argument `use_highly_variable` is deprecated, consider using a mask argument.",
@@ -173,23 +172,22 @@ def pca(
 
     # Apply masking on highly variable genes
     if mask is not None:
-        if len(mask)!=len(adata.var):
+        if len(mask) != len(adata.var):
             raise ValueError(
                 'The mask you want to use does not fit the dimensions of your data '
             )
-        adata_comp=adata[:, mask]
+        adata_comp = adata[:, mask]
         logg.info('     on specified mask')
         if use_existing_mask is None:
             adata.var['mask_used_for_PCA'] = mask
-            use_existing_mask='mask_used_for_PCA'
+            use_existing_mask = 'mask_used_for_PCA'
 
     else:
         if 'highly_variable' in adata.var.keys():
             mask = adata.var['highly_variable']
-            use_existing_mask='highly_variable'
+            use_existing_mask = 'highly_variable'
             logg.info('    on highly variable genes')
         adata_comp = adata[:, mask] if mask is not None else adata
-        
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
@@ -279,7 +277,7 @@ def pca(
         adata.uns['pca'] = {}
         adata.uns['pca']['params'] = {
             'zero_center': zero_center,
-            'mask': use_existing_mask if use_existing_mask is not None else None
+            'mask': use_existing_mask if use_existing_mask is not None else None,
         }
         if mask is not None:
             adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
