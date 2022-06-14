@@ -159,40 +159,29 @@ def test_pca_n_pcs(pbmc3k_normalized):
     )
 
 
-def test_pca_mask(array_type, float_dtype):
-
-    pbmc = sc.datasets.pbmc68k_reduced()
-
+def test_mask_highly_var_error(array_type, float_dtype):
     # Test highly_variable ValueError
     adata = array_type(A_list).astype('float32')
     with pytest.raises(ValueError):
         sc.pp.pca(adata, use_highly_variable=True)
 
+
+def test_mask_length(array_type, float_dtype):
     # check warning on mask length
+    pbmc = sc.datasets.pbmc68k_reduced()
     mask = np.random.choice([True, False], pbmc.shape[1] + 1)
     with pytest.raises(ValueError):
         sc.pp.pca(pbmc, mask=mask, copy=True, dtype=float_dtype)
 
-    # Test if pca result is equal when given mask vs. given use_highly_variable=True
-    mask = pbmc.var['highly_variable']
-    adata_mask = sc.pp.pca(pbmc, mask=mask, copy=True, dtype=float_dtype)
-    adata_var = sc.pp.pca(pbmc, use_highly_variable=True, copy=True, dtype=float_dtype)
-    assert np.allclose(adata_mask.X, adata_var.X)
 
-    # Test case of non existent mask
-    adata = array_type(A_list).astype('float32')
-    with pytest.raises(ValueError):
-        sc.pp.pca(adata, use_existing_mask='mask')
+def test_mask_equal():
+    # Test if pca result is equal when given mask as boolarray vs string
 
-    # test use_existing_mask
-    fromvar = sc.pp.pca(
-        pbmc, use_existing_mask='highly_variable', copy=True, dtype=float_dtype
-    )
-    boolarray = sc.pp.pca(
-        pbmc, mask=pbmc.var['highly_variable'], copy=True, dtype=float_dtype
-    )
-    assert 'mask_used_for_PCA' in boolarray.var.keys()
-    assert (
-        fromvar.uns['pca']['params']['mask'] and boolarray.uns['pca']['params']['mask']
-    )
-    assert np.allclose(fromvar.varm['PCs'], boolarray.varm['PCs'])
+    pbmc = sc.datasets.pbmc3k_processed.raw.to_adata()
+    mask = np.random.choice([True, False], pbmc.shape[1] + 1)
+    pbmc_w_mask = pbmc.copy()
+    pbmc_w_mask.var["mask"] = mask
+
+    sc.pp.pca(pbmc, mask=mask)
+    sc.pp.pca(pbmc_w_mask, mask="mask")
+    assert np.allclose(pbmc.X, pbmc_w_mask.X)

@@ -278,10 +278,11 @@ def pca(
         adata.uns['pca']['params'] = {
             'zero_center': zero_center,
             'mask': use_existing_mask if use_existing_mask is not None else None,
+            'use_highly_variable': use_highly_variable,
         }
         if mask is not None:
             adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm['PCs'][mask] = pca_.components_.T
+            adata.varm['PCs'][adata.var[mask]] = pca_.components_.T
         else:
             adata.varm['PCs'] = pca_.components_.T
         adata.uns['pca']['variance'] = pca_.explained_variance_
