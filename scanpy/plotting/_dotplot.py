@@ -192,8 +192,8 @@ class DotPlot(BasePlot):
             # check that both matrices have the same shape
             if dot_color_df.shape != dot_size_df.shape:
                 logg.error(
-                    "the given dot_color_df data frame has a different shape than"
-                    "the data frame used for the dot size. Both data frames need"
+                    "the given dot_color_df data frame has a different shape than "
+                    "the data frame used for the dot size. Both data frames need "
                     "to have the same index and columns"
                 )
 
