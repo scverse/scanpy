@@ -59,7 +59,7 @@ def spring_project(
 
     Examples
     --------
-    See this `tutorial <https://github.com/scverse/scanpy_usage/tree/master/171111_SPRING_export>`__.
+    See this `tutorial <https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export>`__.
     """
 
     # need to get nearest neighbors first
@@ -558,7 +558,7 @@ def cellbrowser(
     Examples
     --------
     See this
-    `tutorial <https://github.com/scverse/scanpy_usage/tree/master/181126_Cellbrowser_exports>`__.
+    `tutorial <https://github.com/theislab/scanpy_usage/tree/master/181126_Cellbrowser_exports>`__.
     """
 
     try:
