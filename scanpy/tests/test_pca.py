@@ -99,18 +99,17 @@ def test_pca_sparse(pbmc3k_normalized):
     assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
 
 
-# This will take a while to run, but irreproducibility may
-# not show up for float32 unless the matrix is large enough
-def test_pca_reproducible(pbmc3k_normalized, array_type, float_dtype):
+def test_pca_reproducible(pbmc3k_normalized, array_type):
     pbmc = pbmc3k_normalized
     pbmc.X = array_type(pbmc.X)
 
-    a = sc.pp.pca(pbmc, copy=True, dtype=float_dtype, random_state=42)
-    b = sc.pp.pca(pbmc, copy=True, dtype=float_dtype, random_state=42)
-    c = sc.pp.pca(pbmc, copy=True, dtype=float_dtype, random_state=0)
+    a = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
+    b = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
+    c = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=0)
 
     assert_equal(a, b)
     # Test that changing random seed changes result
+    # Does not show up reliably with 32 bit computation
     assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
