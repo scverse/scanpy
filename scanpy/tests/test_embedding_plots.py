@@ -304,10 +304,11 @@ def test_visium_circles(image_comparer):  # standard visium data
 
 
 def test_visium_default(image_comparer):  # default values
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=5)
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
 
+    # Points default to transparent if an image is included
     sc.pl.spatial(adata, show=False)
 
     save_and_compare_images('master_spatial_visium_default')

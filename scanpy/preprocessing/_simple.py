@@ -315,7 +315,7 @@ def log1p(
     chunk_size
         `n_obs` of the chunks to process the data in.
     layer
-        Entry of layers to tranform.
+        Entry of layers to transform.
     obsm
         Entry of obsm to transform.
 
