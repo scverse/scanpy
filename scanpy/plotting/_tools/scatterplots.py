@@ -1090,7 +1090,7 @@ def _add_categorical_legend(
         palette["NA"] = na_color
     cats = color_source_vector.categories
 
-    if multi_panel is True and (legend_loc in ("right margin", "on data")):
+    if multi_panel is True:
         # Shrink current axis by 10% to fit legend and match
         # size of plots that are not categorical
         box = ax.get_position()
@@ -1130,7 +1130,7 @@ def _add_categorical_legend(
                 fontsize=legend_fontsize,
                 path_effects=legend_fontoutline,
             )
-    else:
+    elif legend_loc is not None:
         for label in cats:
             ax.scatter([], [], c=palette[label], label=label)
         ax.legend(
