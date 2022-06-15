@@ -106,7 +106,7 @@ def test_pbmc3k(image_comparer):
 
     # Clustering the graph
 
-    sc.tl.leiden(adata)
+    sc.tl.leiden(adata, resolution=0.9)
     # sc.pl.umap(adata, color=['leiden', 'CST3', 'NKG7'], show=False)
     # save_and_compare_images('umap_2')
     sc.pl.scatter(adata, 'CST3', 'NKG7', color='leiden', show=False)
