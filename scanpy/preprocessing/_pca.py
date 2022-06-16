@@ -6,10 +6,11 @@ from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
+
 from anndata import AnnData
 
 from .. import logging as logg
-from ._utils import _get_mean_var
+from ._utils import _get_mean_var, _check_mask
 from .._utils import AnyRandom
 from .. import settings
 
@@ -22,8 +23,7 @@ def pca(
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
-    use_existing_mask: Optional[str] = None,
-    mask: Optional[np.ndarray] = None,
+    mask: Union[np.ndarray, str, None] = None,
     dtype: str = 'float32',
     copy: bool = False,
     chunked: bool = False,
@@ -84,10 +84,9 @@ def pca(
         Whether to use highly variable genes only, stored in
         `.var['highly_variable']`.
         By default uses them if they have been determined beforehand.
-    use_existing_mask:
-        Use a mask that has been already stored in adata.var
     mask
         To run pca only on a certain set of genes given by a boolean array
+        or a string referring to an array in var
     dtype
         Numpy data type string to which to convert the result.
     copy
@@ -142,52 +141,26 @@ def pca(
         adata = AnnData(data, dtype=data.dtype)
 
     # Check for use_highly_varible
-    if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
+    if use_highly_variable is not None:
         warn(
             "Argument `use_highly_variable` is deprecated, consider using a mask argument.",
             FutureWarning,
         )
+    if use_highly_variable and mask is not None:
         raise ValueError(
-            'Did not find adata.var[\'highly_variable\']. '
-            'Either your data already only consists of highly-variable genes '
-            'or consider running `pp.highly_variable_genes` first.'
+            'These arguments are incompatible.'
+            'Use_highly_variable can be called through mask="highly_variable"'
         )
+    elif use_highly_variable or (use_highly_variable is not None):
+        mask = "highly_variable"
+        use_highly_variable = True
 
-    if use_highly_variable is True:
-        warn(
-            "Argument `use_highly_variable` is deprecated, consider using a mask argument.",
-            FutureWarning,
-        )
-
-    # Check and convert mask from var
-    if use_existing_mask is not None:
-        if use_existing_mask not in adata.var.keys():
-            raise ValueError(
-                f'Did not find adata.var[{use_existing_mask}]. '
-                'Either add the mask first to adata.var'
-                'or consider using the mask argument'
-            )
-        else:
-            mask = adata.var[use_existing_mask]
-
-    # Apply masking on highly variable genes
+    # Check mask and change to boolean array
     if mask is not None:
-        if len(mask) != len(adata.var):
-            raise ValueError(
-                'The mask you want to use does not fit the dimensions of your data '
-            )
-        adata_comp = adata[:, mask]
-        logg.info('     on specified mask')
-        if use_existing_mask is None:
-            adata.var['mask_used_for_PCA'] = mask
-            use_existing_mask = 'mask_used_for_PCA'
+        mask = _check_mask(adata, mask, 1)
 
-    else:
-        if 'highly_variable' in adata.var.keys():
-            mask = adata.var['highly_variable']
-            use_existing_mask = 'highly_variable'
-            logg.info('    on highly variable genes')
-        adata_comp = adata[:, mask] if mask is not None else adata
+    # Apply masking
+    adata_comp = adata[:, mask] if mask is not None else adata
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
@@ -277,12 +250,12 @@ def pca(
         adata.uns['pca'] = {}
         adata.uns['pca']['params'] = {
             'zero_center': zero_center,
-            'mask': use_existing_mask if use_existing_mask is not None else None,
+            'mask': mask is not None,
             'use_highly_variable': use_highly_variable,
         }
         if mask is not None:
             adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm['PCs'][adata.var[mask]] = pca_.components_.T
+            adata.varm['PCs'][mask] = pca_.components_.T
         else:
             adata.varm['PCs'] = pca_.components_.T
         adata.uns['pca']['variance'] = pca_.explained_variance_

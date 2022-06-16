@@ -174,14 +174,17 @@ def test_mask_length(array_type, float_dtype):
         sc.pp.pca(pbmc, mask=mask, copy=True, dtype=float_dtype)
 
 
-def test_mask_equal():
+def test_mask_equal(float_dtype):
     # Test if pca result is equal when given mask as boolarray vs string
 
-    pbmc = sc.datasets.pbmc3k_processed.raw.to_adata()
-    mask = np.random.choice([True, False], pbmc.shape[1] + 1)
-    pbmc_w_mask = pbmc.copy()
-    pbmc_w_mask.var["mask"] = mask
+    pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
+    # mask = np.random.choice([True, False], pbmc.shape[1] + 1)
+    mask2 = np.random.choice([True, False], pbmc.shape[1])
+    # pbmc_w_mask = pbmc.copy()
+    # pbmc_w_mask.var["mask"] = mask
+    pbmc_w_mask2 = pbmc.copy()
+    pbmc_w_mask2.var["mask"] = mask2
 
-    sc.pp.pca(pbmc, mask=mask)
-    sc.pp.pca(pbmc_w_mask, mask="mask")
-    assert np.allclose(pbmc.X, pbmc_w_mask.X)
+    pbmca = sc.pp.pca(pbmc, mask=mask2, copy=True, dtype=float_dtype)
+    pbmc_w_mask2a = sc.pp.pca(pbmc_w_mask2, mask="mask", copy=True, dtype=float_dtype)
+    assert np.allclose(pbmca.X.toarray(), pbmc_w_mask2a.X.toarray())
