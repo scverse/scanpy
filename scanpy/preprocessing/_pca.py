@@ -1,4 +1,5 @@
 from typing import Optional, Union
+from warnings import warn
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
@@ -7,11 +8,13 @@ from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
 from anndata import AnnData
+from sphinx.ext.autodoc import _Empty
 
 from .. import logging as logg
 from ._utils import _get_mean_var
 from .._utils import AnyRandom
 from .. import settings
+from ..get.get import _check_mask
 
 
 def pca(
@@ -22,6 +25,7 @@ def pca(
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
+    mask: Union[np.ndarray, str, None, _Empty] = _Empty,
     dtype: str = 'float32',
     copy: bool = False,
     chunked: bool = False,
@@ -31,7 +35,7 @@ def pca(
     Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition.
-    Uses the implementation of *scikit-learn* [Pedregosa11]_.
+    Uses the implementation of scikit-learn [Pedregosa11]_.
 
     .. versionchanged:: 1.5.0
 
@@ -77,11 +81,14 @@ def pca(
         Change to use different initial states for the optimization.
     return_info
         Only relevant when not passing an :class:`~anndata.AnnData`:
-        see “**Returns**”.
+        see “Returns”.
     use_highly_variable
         Whether to use highly variable genes only, stored in
         `.var['highly_variable']`.
         By default uses them if they have been determined beforehand.
+    mask
+        To run pca only on a certain set of genes given by a boolean array
+        or a string referring to an array in var
     dtype
         Numpy data type string to which to convert the result.
     copy
@@ -122,25 +129,45 @@ def pca(
             'reproducible across different computational platforms. For exact '
             'reproducibility, choose `svd_solver=\'arpack\'.`'
         )
+
     data_is_AnnData = isinstance(data, AnnData)
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
         adata = AnnData(data, dtype=data.dtype)
 
-    if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
-        raise ValueError(
-            'Did not find adata.var[\'highly_variable\']. '
-            'Either your data already only consists of highly-variable genes '
-            'or consider running `pp.highly_variable_genes` first.'
+    # Check for use_highly_varible
+    if use_highly_variable is not None:
+        warn(
+            "Argument `use_highly_variable` is deprecated, consider using the mask argument."
+            'Use_highly_variable=True can be called through mask="highly_variable"'
+            'Use_highly_variable=False can be called through mask=None',
+            FutureWarning,
         )
-    if use_highly_variable is None:
-        use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
+    if use_highly_variable is not None and mask is not _Empty:
+        raise ValueError(
+            'These arguments are incompatible.'
+            'Use_highly_variable=True can be called through mask="highly_variable"'
+            'Use_highly_variable=False can be called through mask=None'
+        )
     if use_highly_variable:
-        logg.info('    on highly variable genes')
-    adata_comp = (
-        adata[:, adata.var['highly_variable']] if use_highly_variable else adata
-    )
+        mask = "highly_variable"
+    if use_highly_variable is None and mask is _Empty:
+        if "highly_variable" in adata.var.keys():
+            mask = "highly_variable"
+            use_highly_variable = True
+
+    if mask is _Empty:
+        mask = None
+
+    # Check mask and change to boolean array
+    save_to_uns = mask
+
+    if mask is not None:
+        mask = _check_mask(adata, mask, 1)
+
+    # Apply masking
+    adata_comp = adata[:, mask] if mask is not None else adata
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
@@ -230,11 +257,12 @@ def pca(
         adata.uns['pca'] = {}
         adata.uns['pca']['params'] = {
             'zero_center': zero_center,
+            'mask': save_to_uns,
             'use_highly_variable': use_highly_variable,
         }
-        if use_highly_variable:
+        if mask is not None:
             adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm['PCs'][adata.var['highly_variable']] = pca_.components_.T
+            adata.varm['PCs'][mask] = pca_.components_.T
         else:
             adata.varm['PCs'] = pca_.components_.T
         adata.uns['pca']['variance'] = pca_.explained_variance_

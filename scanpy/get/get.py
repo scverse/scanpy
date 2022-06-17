@@ -437,3 +437,38 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
             "That was unexpected. Please report this bug at:\n\n\t"
             " https://github.com/scverse/scanpy/issues"
         )
+
+
+def _check_mask(
+    adata: AnnData,
+    mask: Union[str, np.ndarray],
+    axis: int = 0,
+) -> np.ndarray:  # Could also be a series, but should be one or the other
+    """
+    Validate mask argument
+
+    Params
+    ------
+    adata
+    mask
+        The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
+    axis
+        The axis being masked
+    """
+    if isinstance(mask, str):
+        if mask not in adata.var.keys():
+            raise ValueError(
+                f'Did not find adata.var[{mask}]. '
+                'Either add the mask first to adata.var'
+                'or consider using the mask argument with a boolean array'
+            )
+        mask_array = adata.var[mask].values if axis == 1 else adata.obs[mask].values
+    else:
+        if len(mask) != adata.shape[axis]:
+            raise ValueError('The shape of the mask do not match the data')
+        mask_array = mask
+
+    if not pd.api.types.is_bool_dtype(mask_array):
+        raise ValueError(...)  # mask array must be boolean, was {whatever dtype is was}
+
+    return mask_array
