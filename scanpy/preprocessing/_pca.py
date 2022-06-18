@@ -8,7 +8,8 @@ from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
 from anndata import AnnData
-from sphinx.ext.autodoc import _Empty
+
+# from sphinx.ext.autodoc import _Empty
 
 from .. import logging as logg
 from ._utils import _get_mean_var
@@ -28,7 +29,7 @@ def pca(
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
     # layer: str = None,
-    mask: Union[np.ndarray, str, None, _Empty] = _Empty,
+    mask: Union[np.ndarray, str, None] = None,
     dtype: str = 'float32',
     copy: bool = False,
     chunked: bool = False,
@@ -149,7 +150,7 @@ def pca(
             'Use_highly_variable=False can be called through mask=None',
             FutureWarning,
         )
-    if use_highly_variable is not None and mask is not _Empty:
+    if use_highly_variable is not None and mask is not None:
         raise ValueError(
             'These arguments are incompatible.'
             'Use_highly_variable=True can be called through mask="highly_variable"'
@@ -157,13 +158,13 @@ def pca(
         )
     if use_highly_variable:
         mask = "highly_variable"
-    if use_highly_variable is None and mask is _Empty:
+    if use_highly_variable is None and mask is None:
         if "highly_variable" in adata.var.keys():
             mask = "highly_variable"
             use_highly_variable = True
 
-    if mask is _Empty:
-        mask = None
+    # if mask is _Empty:
+    #    mask = None
 
     # Check mask, change to boolean array and apply masking
     '''
