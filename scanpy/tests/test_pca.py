@@ -177,13 +177,29 @@ def test_mask_equal(float_dtype):
     # Test if pca result is equal when given mask as boolarray vs string
 
     pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
-    # mask = np.random.choice([True, False], pbmc.shape[1] + 1)
-    mask2 = np.random.choice([True, False], pbmc.shape[1])
-    # pbmc_w_mask = pbmc.copy()
-    # pbmc_w_mask.var["mask"] = mask
-    pbmc_w_mask2 = pbmc.copy()
-    pbmc_w_mask2.var["mask"] = mask2
+    mask = np.random.choice([True, False], pbmc.shape[1])
+    pbmc_w_mask = pbmc.copy()
+    pbmc_w_mask.var["mask"] = mask
 
-    pbmca = sc.pp.pca(pbmc, mask=mask2, copy=True, dtype=float_dtype)
-    pbmc_w_mask2a = sc.pp.pca(pbmc_w_mask2, mask="mask", copy=True, dtype=float_dtype)
-    assert np.allclose(pbmca.X.toarray(), pbmc_w_mask2a.X.toarray())
+    pbmca = sc.pp.pca(pbmc, mask=mask, copy=True, dtype=float_dtype)
+    pbmc_w_mask = sc.pp.pca(pbmc_w_mask, mask="mask", copy=True, dtype=float_dtype)
+    assert np.allclose(pbmca.X.toarray(), pbmc_w_mask.X.toarray())
+
+
+def test_none(array_type, float_dtype):
+    # Test if pca result is equal without highly variable and with-but mask is None
+    # and if pca takes highly variable as mask as default
+    A = array_type(A_list).astype('float32')
+    adata = AnnData(A)
+
+    without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
+    mask = np.random.choice([True, False], adata.shape[1])
+    mask[0] = True
+    mask[1] = False
+    adata.var["highly_variable"] = mask
+    with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
+    assert without_var.uns['pca']['params']['mask'] is None
+    assert with_var.uns['pca']['params']['mask'] == "highly_variable"
+    assert not np.array_equal(without_var.obsm['X_pca'], with_var.obsm['X_pca'])
+    with_no_mask = sc.pp.pca(adata, mask=None, copy=True, dtype=float_dtype)
+    assert np.array_equal(without_var.obsm['X_pca'], with_no_mask.obsm['X_pca'])

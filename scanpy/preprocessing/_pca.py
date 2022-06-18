@@ -27,7 +27,6 @@ def pca(
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
-    # mask: Union[np.ndarray, str, None] = None,
     # layer: str = None,
     mask: Union[np.ndarray, str, None, _Empty] = _Empty,
     dtype: str = 'float32',
