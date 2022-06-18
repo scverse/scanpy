@@ -12,7 +12,7 @@ from sphinx.ext.autodoc import _Empty
 
 from .. import logging as logg
 from ._utils import _get_mean_var
-from scanpy.get import _check_mask, _get_obs_rep
+from scanpy.get.get import _check_mask, _get_obs_rep
 from .._utils import AnyRandom
 from .. import settings
 
