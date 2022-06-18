@@ -193,13 +193,14 @@ def test_none(array_type, float_dtype):
     adata = AnnData(A)
 
     without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
+    with_no_mask = sc.pp.pca(adata, mask=None, copy=True, dtype=float_dtype)
+    assert np.array_equal(without_var.obsm['X_pca'], with_no_mask.obsm['X_pca'])
+
     mask = np.random.choice([True, False], adata.shape[1])
     mask[0] = True
-    mask[1] = False
+    mask[1] = True
     adata.var["highly_variable"] = mask
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
     assert without_var.uns['pca']['params']['mask'] is None
     assert with_var.uns['pca']['params']['mask'] == "highly_variable"
     assert not np.array_equal(without_var.obsm['X_pca'], with_var.obsm['X_pca'])
-    with_no_mask = sc.pp.pca(adata, mask=None, copy=True, dtype=float_dtype)
-    assert np.array_equal(without_var.obsm['X_pca'], with_no_mask.obsm['X_pca'])
