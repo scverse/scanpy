@@ -90,7 +90,10 @@ class _RankGenes:
         comp_pts=False,
     ):
 
-        if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
+        if (
+            'log1p' in adata.uns_keys()
+            and adata.uns['log1p'].get('base', None) is not None
+        ):
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
         else:
             self.expm1_func = np.expm1
@@ -754,7 +757,10 @@ def filter_rank_genes_groups(
             index=gene_names.index,
         )
 
-        if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
+        if (
+            'log1p' in adata.uns_keys()
+            and adata.uns['log1p'].get('base', None) is not None
+        ):
             expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
         else:
             expm1_func = np.expm1

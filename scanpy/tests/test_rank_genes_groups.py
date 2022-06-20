@@ -324,3 +324,19 @@ def test_wilcoxon_tie_correction(reference):
     test_obj.compute_statistics('wilcoxon', tie_correct=True)
 
     np.testing.assert_allclose(test_obj.stats[groups[0]]['pvals'], pvals)
+
+
+def test_rank_genes_groups_null_base():
+    from anndata.tests.helpers import assert_equal
+
+    pbmc = pbmc68k_reduced().raw.to_adata()[::2].copy()
+    w_log = pbmc.copy()
+    w_log.uns["log1p"] = {}
+    w_null_base = w_log.copy()
+    w_null_base.uns["log1p"]["base"] = None
+
+    for adata in [pbmc, w_log, w_null_base]:
+        sc.tl.rank_genes_groups(adata, groupby="bulk_labels")
+
+    assert_equal(pbmc.uns["rank_genes_groups"], w_log.uns["rank_genes_groups"])
+    assert_equal(w_log.uns['rank_genes_groups'], w_null_base.uns['rank_genes_groups'])
