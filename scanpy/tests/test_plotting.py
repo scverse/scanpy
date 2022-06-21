@@ -1552,3 +1552,28 @@ def test_scrublet_plots(image_comparer, plt):
 
     sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
     save_and_compare_images('scrublet_with_batches')
+
+
+def test_umap_mask(check_same_image):
+
+    pbmc = sc.datasets.pbmc3k_processed()
+
+    # Check that all desired cells are coloured and masked cells gray
+    ax = sc.pl.umap(pbmc, show=False)
+    sc.pl.umap(
+        pbmc[pbmc.obs["louvain"].isin(['B cells', 'NK cells'])],
+        color="LDHB",
+        ax=ax,
+    )
+
+    plt.savefig(FIGS / 'umap_mask_fig1')
+
+    sc.pl.umap(
+        pbmc,
+        color="LDHB",
+        mask=pbmc.obs["louvain"].isin(['B cells', 'NK cells']),
+    )
+
+    plt.savefig(FIGS / 'umap_mask_fig2')
+
+    check_same_image(FIGS / 'umap_mask_fig1.png', FIGS / 'umap_mask_fig2.png', tol=1)
