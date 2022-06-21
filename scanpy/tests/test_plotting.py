@@ -1554,7 +1554,7 @@ def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images('scrublet_with_batches')
 
 
-def test_umap_mask(check_same_image):
+def test_umap_mask_equal(check_same_image):
 
     pbmc = sc.datasets.pbmc3k_processed()
 
@@ -1577,3 +1577,18 @@ def test_umap_mask(check_same_image):
     plt.savefig(FIGS / 'umap_mask_fig2')
 
     check_same_image(FIGS / 'umap_mask_fig1.png', FIGS / 'umap_mask_fig2.png', tol=1)
+
+
+def test_umap_mask_mult_plots():
+    # Check that multiple images are plotted when color is a list.
+    pbmc = sc.datasets.pbmc3k_processed()
+    color = ['LDHB', 'LYZ', 'CD79A']
+
+    assert len(
+        sc.pl.umap(
+            pbmc,
+            color=color,
+            mask=pbmc.obs["louvain"].isin(['B cells', 'NK cells']),
+            show=False,
+        )
+    ) == len(color)
