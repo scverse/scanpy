@@ -1556,8 +1556,21 @@ def test_scrublet_plots(image_comparer, plt):
 
 '''
 def test_umap_mask_equal(check_same_image):
-
+   #they look the same the problem I think is something with the size of the dots in the scatterplot
     pbmc = sc.datasets.pbmc3k_processed()
+    #mpl.use('TkAgg')
+    #ax = sc.pl.umap(pbmc, show=False)
+    #sc.pl.umap(
+    #    pbmc[pbmc.obs["louvain"].isin(['B cells', 'NK cells'])],
+    #    color="LDHB",
+    #    ax=ax
+    #)
+    #sc.pl.umap(
+    #    pbmc,
+    #    color="LDHB",
+    #    mask=pbmc.obs["louvain"].isin(['B cells', 'NK cells']),
+    #    show=True,
+    #)
 
     # Check that all desired cells are coloured and masked cells gray
     ax = sc.pl.umap(pbmc, show=False)
@@ -1587,7 +1600,6 @@ def test_umap_mask_mult_plots():
     # Check that multiple images are plotted when color is a list.
     pbmc = sc.datasets.pbmc3k_processed()
     color = ['LDHB', 'LYZ', 'CD79A']
-
     assert len(
         sc.pl.umap(
             pbmc,
@@ -1596,3 +1608,23 @@ def test_umap_mask_mult_plots():
             show=False,
         )
     ) == len(color)
+
+
+def test_string_mask(check_same_image):
+    # Check that multiple images are plotted when color is a list.
+    pbmc = sc.datasets.pbmc3k_processed()
+    pbmc.obs["mask"] = pbmc.obs["louvain"].isin(['B cells', 'NK cells'])
+    sc.pl.umap(
+        pbmc, mask=pbmc.obs["louvain"].isin(['B cells', 'NK cells']), color="LDHB"
+    )
+    plt.savefig(FIGS / 'umap_mask_fig1')
+    plt.close()
+    sc.pl.umap(
+        pbmc,
+        color="LDHB",
+        mask="mask",
+    )
+    plt.savefig(FIGS / 'umap_mask_fig2')
+    plt.close()
+
+    check_same_image(FIGS / 'umap_mask_fig1.png', FIGS / 'umap_mask_fig2.png', tol=1)
