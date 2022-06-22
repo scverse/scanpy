@@ -14,9 +14,8 @@ from ._utils import _get_mean_var
 from scanpy.get.get import _check_mask, _get_obs_rep
 from .._utils import AnyRandom
 from .. import settings
-from .._utils import Empty, _empty
 
-# from ..get.get import _check_mask
+from .._utils import Empty, _empty
 
 
 def pca(
@@ -165,6 +164,7 @@ def pca(
     if mask is _empty:
         mask = None
 
+    # Check mask, change to boolean array and apply masking
     '''
     use_raw = False
     if layer is not None:
