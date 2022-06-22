@@ -446,7 +446,6 @@ def _check_mask(
 ) -> np.ndarray:  # Could also be a series, but should be one or the other
     """
     Validate mask argument
-
     Params
     ------
     adata
@@ -456,9 +455,12 @@ def _check_mask(
         The axis being masked
     """
     if isinstance(mask, str):
-        if mask not in adata.var.keys():
+        annot = ("obs", "var")[axis]
+        if (axis == 1 and mask not in adata.var.keys()) or (
+            axis == 0 and mask not in adata.obs.keys()
+        ):
             raise ValueError(
-                f'Did not find adata.var[{mask}]. '
+                f'Did not find adata.{annot}[{mask}]. '
                 'Either add the mask first to adata.var'
                 'or consider using the mask argument with a boolean array'
             )
@@ -469,6 +471,6 @@ def _check_mask(
         mask_array = mask
 
     if not pd.api.types.is_bool_dtype(mask_array):
-        raise ValueError(...)  # mask array must be boolean, was {whatever dtype is was}
+        raise ValueError("Mask array must be boolean")
 
     return mask_array
