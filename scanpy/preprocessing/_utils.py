@@ -1,10 +1,6 @@
 import numpy as np
-import pandas as pd
 from scipy import sparse
 import numba
-
-from typing import Union
-from anndata import AnnData
 
 
 def _get_mean_var(X, *, axis=0):

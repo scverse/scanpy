@@ -4,10 +4,10 @@ This file contains helper functions for the scanpy test suite.
 
 from itertools import permutations
 
-
 import scanpy as sc
 import numpy as np
 import warnings
+import pytest
 from anndata.tests.helpers import asarray, assert_equal
 from scanpy.tests._data._cached_datasets import pbmc3k
 
