@@ -8,13 +8,15 @@ from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
 from anndata import AnnData
-from sphinx.ext.autodoc import _Empty
 
 from .. import logging as logg
 from ._utils import _get_mean_var
+from scanpy.get.get import _check_mask, _get_obs_rep
 from .._utils import AnyRandom
 from .. import settings
-from ..get.get import _check_mask
+from .._utils import Empty, _empty
+
+# from ..get.get import _check_mask
 
 
 def pca(
@@ -25,7 +27,8 @@ def pca(
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
-    mask: Union[np.ndarray, str, None, _Empty] = _Empty,
+    # layer: str = None,
+    mask: Union[np.ndarray, str, None, Empty] = _empty,
     dtype: str = 'float32',
     copy: bool = False,
     chunked: bool = False,
@@ -89,6 +92,8 @@ def pca(
     mask
         To run pca only on a certain set of genes given by a boolean array
         or a string referring to an array in var
+    layer
+        Layer of `adata` to use as expression values.
     dtype
         Numpy data type string to which to convert the result.
     copy
@@ -144,7 +149,7 @@ def pca(
             'Use_highly_variable=False can be called through mask=None',
             FutureWarning,
         )
-    if use_highly_variable is not None and mask is not _Empty:
+    if use_highly_variable is not None and mask is not _empty:
         raise ValueError(
             'These arguments are incompatible.'
             'Use_highly_variable=True can be called through mask="highly_variable"'
@@ -152,22 +157,33 @@ def pca(
         )
     if use_highly_variable:
         mask = "highly_variable"
-    if use_highly_variable is None and mask is _Empty:
+    if use_highly_variable is None and mask is _empty:
         if "highly_variable" in adata.var.keys():
             mask = "highly_variable"
             use_highly_variable = True
 
-    if mask is _Empty:
+    if mask is _empty:
         mask = None
+
+    '''
+    use_raw = False
+    if layer is not None:
+        if adata.raw is not None:
+            if layer not in adata.layers.keys() or adata.layers.keys() is None:
+                use_raw = True
+                layer = None
+    X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+    '''
 
     # Check mask and change to boolean array
     save_to_uns = mask
 
     if mask is not None:
         mask = _check_mask(adata, mask, 1)
+        X = adata[:, mask]
 
     # Apply masking
-    adata_comp = adata[:, mask] if mask is not None else adata
+    adata_comp = X if mask is not None else adata
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
