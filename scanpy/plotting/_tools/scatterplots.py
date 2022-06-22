@@ -63,6 +63,7 @@ def embedding(
     basis: str,
     *,
     color: Union[str, Sequence[str], None] = None,
+    mask: Union[np.ndarray, str, None] = None,
     gene_symbols: Optional[str] = None,
     use_raw: Optional[bool] = None,
     sort_order: bool = True,
@@ -317,6 +318,11 @@ def embedding(
                 vcenter_float,
                 norm_obj,
             )
+
+            # Map nan values to na_color
+            current_cmap = pl.cm.get_cmap(color_map)
+            current_cmap.set_bad(color=na_color)
+
         else:
             normalize = None
 
@@ -1143,7 +1149,13 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
 
 
 def _get_color_source_vector(
-    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None, groups=None
+    adata,
+    value_to_plot,
+    mask=None,
+    use_raw=False,
+    gene_symbols=None,
+    layer=None,
+    groups=None,
 ):
     """
     Get array from adata that colors will be based on.
@@ -1167,6 +1179,9 @@ def _get_color_source_vector(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
+    if mask is not None:
+        masked = np.where(mask is False)
+        values.iloc[masked] = np.nan
     if groups and is_categorical_dtype(values):
         values = values.replace(values.categories.difference(groups), np.nan)
     return values
