@@ -50,6 +50,7 @@ from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
 from ..._compat import Literal
+from scanpy.get.get import _check_mask
 
 
 @_doc_params(
@@ -63,6 +64,7 @@ def embedding(
     basis: str,
     *,
     color: Union[str, Sequence[str], None] = None,
+    mask: Union[np.ndarray, str, None] = None,
     gene_symbols: Optional[str] = None,
     use_raw: Optional[bool] = None,
     sort_order: bool = True,
@@ -135,6 +137,12 @@ def embedding(
         components, dimensions, projection=projection, total_dims=basis_values.shape[1]
     )
     args_3d = dict(projection='3d') if projection == '3d' else {}
+
+    # Checking the mask format and if used together with groups
+    if groups is not None and mask is not None:
+        raise ValueError('Groups and mask arguments are incompatible.')
+    if mask is not None:
+        mask = _check_mask(adata, mask, 0)
 
     # Figure out if we're using raw
     if use_raw is None:
@@ -258,6 +266,7 @@ def embedding(
             adata,
             value_to_plot,
             layer=layer,
+            mask=mask,
             use_raw=use_raw,
             gene_symbols=gene_symbols,
             groups=groups,
@@ -317,6 +326,11 @@ def embedding(
                 vcenter_float,
                 norm_obj,
             )
+
+            # Map nan values to na_color
+            current_cmap = pl.cm.get_cmap(color_map)
+            current_cmap.set_bad(color=na_color)
+
         else:
             normalize = None
 
@@ -1143,7 +1157,13 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
 
 
 def _get_color_source_vector(
-    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None, groups=None
+    adata,
+    value_to_plot,
+    mask=None,
+    use_raw=False,
+    gene_symbols=None,
+    layer=None,
+    groups=None,
 ):
     """
     Get array from adata that colors will be based on.
@@ -1167,6 +1187,8 @@ def _get_color_source_vector(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
+    if mask is not None:
+        values[~mask] = np.nan
     if groups and is_categorical_dtype(values):
         values = values.replace(values.categories.difference(groups), np.nan)
     return values
