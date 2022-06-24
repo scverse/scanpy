@@ -25,7 +25,7 @@ from .._utils import (
     _check_array_function_arguments,
 )
 from .._compat import Literal
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _get_obs_rep, _set_obs_rep, _check_mask
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 
@@ -717,6 +717,7 @@ def scale(
     copy: bool = False,
     layer: Optional[str] = None,
     obsm: Optional[str] = None,
+    mask: Union[np.ndarray, str, None] = None,
 ):
     """\
     Scale data to unit variance and zero mean.
@@ -754,7 +755,9 @@ def scale(
         raise ValueError(f"`layer` argument inappropriate for value of type {type(X)}")
     if obsm is not None:
         raise ValueError(f"`obsm` argument inappropriate for value of type {type(X)}")
-    return scale_array(X, zero_center=zero_center, max_value=max_value, copy=copy)
+    return scale_array(
+        X, zero_center=zero_center, max_value=max_value, copy=copy, mask=mask
+    )
 
 
 @scale.register(np.ndarray)
@@ -765,9 +768,33 @@ def scale_array(
     max_value: Optional[float] = None,
     copy: bool = False,
     return_mean_std: bool = False,
+    mask: Union[np.ndarray, None] = None,
 ):
     if copy:
         X = X.copy()
+    if mask is not None:
+        mask = _check_mask(X, mask, 0)
+        if return_mean_std:
+            X[mask, :], mean, std = scale_array(
+                X[mask, :],
+                zero_center=zero_center,
+                max_value=max_value,
+                copy=False,
+                return_mean_std=return_mean_std,
+                mask=None,
+            )
+            return X, mean, std
+        else:
+            X[mask, :] = scale_array(
+                X[mask, :],
+                zero_center=zero_center,
+                max_value=max_value,
+                copy=False,
+                return_mean_std=return_mean_std,
+                mask=None,
+            )
+            return X
+
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` " "without `zero_center`."
@@ -796,7 +823,6 @@ def scale_array(
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
         X[X > max_value] = max_value
-
     if return_mean_std:
         return X, mean, std
     else:
@@ -811,6 +837,7 @@ def scale_sparse(
     max_value: Optional[float] = None,
     copy: bool = False,
     return_mean_std: bool = False,
+    mask: Union[np.ndarray, None] = None,
 ):
     # need to add the following here to make inplace logic work
     if zero_center:
@@ -826,6 +853,7 @@ def scale_sparse(
         copy=copy,
         max_value=max_value,
         return_mean_std=return_mean_std,
+        mask=mask,
     )
 
 
@@ -838,16 +866,25 @@ def scale_anndata(
     copy: bool = False,
     layer: Optional[str] = None,
     obsm: Optional[str] = None,
+    mask: Union[np.ndarray, str, None] = None,
 ) -> Optional[AnnData]:
     adata = adata.copy() if copy else adata
+    str_mean_std = ("mean", "std")
+    if mask is not None:
+        if isinstance(mask, str):
+            str_mean_std = ("mean of " + mask, "std of " + mask)
+        else:
+            str_mean_std = ("mean with mask", "std with mask")
+        mask = _check_mask(adata, mask, 0)
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer, obsm=obsm)
-    X, adata.var["mean"], adata.var["std"] = scale(
+    X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
         X,
         zero_center=zero_center,
         max_value=max_value,
         copy=False,  # because a copy has already been made, if it were to be made
         return_mean_std=True,
+        mask=mask,
     )
     _set_obs_rep(adata, X, layer=layer, obsm=obsm)
     if copy:
