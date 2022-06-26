@@ -324,3 +324,69 @@ def test_wilcoxon_tie_correction(reference):
     test_obj.compute_statistics('wilcoxon', tie_correct=True)
 
     np.testing.assert_allclose(test_obj.stats[groups[0]]['pvals'], pvals)
+
+
+def test_mask_n_genes():
+    # check that no. genes in output=n_genes when n_genes<sum(mask)
+
+    pbmc = pbmc68k_reduced()
+    mask = np.zeros(pbmc.shape[1]).astype(bool)
+    mask[:6].fill(True)
+    no_genes = sum(mask) - 1
+
+    rank_genes_groups(
+        pbmc,
+        mask=mask,
+        groupby="bulk_labels",
+        groups=["CD14+ Monocyte", "Dendritic"],
+        reference="CD14+ Monocyte",
+        n_genes=no_genes,
+        method='wilcoxon',
+    )
+
+    assert len(pbmc.uns['rank_genes_groups']['scores']) == no_genes
+
+    # check that no. genes in output=sum(mask) when n_genes>sum(mask)
+
+    rank_genes_groups(
+        pbmc,
+        mask=mask,
+        groupby="bulk_labels",
+        groups=["CD14+ Monocyte", "Dendritic"],
+        reference="CD14+ Monocyte",
+        n_genes=no_genes + 2,
+        method='wilcoxon',
+    )
+    assert len(pbmc.uns['rank_genes_groups']['scores']) == no_genes + 1
+
+
+def test_mask_not_equal():
+    # Check that mask is applied successfully to data set where test statistics are already available (test stats ovwerwritten)
+
+    pbmc = pbmc68k_reduced()
+    mask = np.random.choice([True, False], pbmc.shape[1])
+    ngenes = sum(mask)
+
+    rank_genes_groups(
+        pbmc,
+        groupby="bulk_labels",
+        groups=["CD14+ Monocyte", "Dendritic"],
+        reference="CD14+ Monocyte",
+        n_genes=ngenes,
+        method='wilcoxon',
+    )
+
+    no_mask = pbmc.uns['rank_genes_groups']['names']
+
+    rank_genes_groups(
+        pbmc,
+        groupby="bulk_labels",
+        mask=mask,
+        groups=["CD14+ Monocyte", "Dendritic"],
+        reference="CD14+ Monocyte",
+        method='wilcoxon',
+    )
+
+    with_mask = pbmc.uns['rank_genes_groups']['names']
+
+    assert not np.array_equal(no_mask, with_mask)

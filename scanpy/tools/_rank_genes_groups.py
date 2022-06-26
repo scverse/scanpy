@@ -2,6 +2,7 @@
 """
 from math import floor
 from typing import Iterable, Union, Optional
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -12,8 +13,9 @@ from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
 from .._compat import Literal
-from ..get import _get_obs_rep
+from ..get import _get_obs_rep, _check_mask
 from .._utils import check_nonnegative_integers
+from .._utils import Empty, _empty
 
 
 _Method = Optional[Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']]
@@ -84,11 +86,14 @@ class _RankGenes:
         adata,
         groups,
         groupby,
+        gene_mask=None,
         reference='rest',
         use_raw=True,
         layer=None,
         comp_pts=False,
     ):
+
+        self.gene_mask = gene_mask
 
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
@@ -124,8 +129,16 @@ class _RankGenes:
         if issparse(X):
             X.eliminate_zeros()
 
-        self.X = X
-        self.var_names = adata_comp.var_names
+        # if self.gene_mask is _empty:
+        #    self.gene_mask = None
+
+        if self.gene_mask is not None:
+            self.X = X[:, self.gene_mask]
+            self.var_names = adata_comp.var_names[self.gene_mask]
+
+        else:
+            self.X = X
+            self.var_names = adata_comp.var_names
 
         self.ireference = None
         if reference != 'rest':
@@ -429,6 +442,7 @@ class _RankGenes:
 def rank_genes_groups(
     adata: AnnData,
     groupby: str,
+    mask: Union[np.ndarray, str, None, Empty] = _empty,
     use_raw: Optional[bool] = None,
     groups: Union[Literal['all'], Iterable[str]] = 'all',
     reference: str = 'rest',
@@ -454,6 +468,8 @@ def rank_genes_groups(
         Annotated data matrix.
     groupby
         The key of the observations grouping to consider.
+    mask
+        Select subset of genes to use in statistical tests.
     use_raw
         Use `raw` attribute of `adata` if present.
     layer
@@ -533,6 +549,13 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
+
+    if mask is _empty:
+        mask = None
+
+    if mask is not None:
+        _check_mask(adata, mask, 1)
+
     if use_raw is None:
         use_raw = adata.raw is not None
     elif use_raw is True and adata.raw is None:
@@ -587,7 +610,9 @@ def rank_genes_groups(
         corr_method=corr_method,
     )
 
-    test_obj = _RankGenes(adata, groups_order, groupby, reference, use_raw, layer, pts)
+    test_obj = _RankGenes(
+        adata, groups_order, groupby, mask, reference, use_raw, layer, pts
+    )
 
     if check_nonnegative_integers(test_obj.X) and method != 'logreg':
         logg.warning(
