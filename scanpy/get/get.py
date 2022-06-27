@@ -446,7 +446,6 @@ def _check_mask(
 ) -> np.ndarray:  # Could also be a series, but should be one or the other
     """
     Validate mask argument
-
     Params
     ------
     adata
