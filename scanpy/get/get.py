@@ -440,7 +440,7 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
 
 
 def _check_mask(
-    adata: AnnData,
+    adata: Union[AnnData, np.ndarray],
     mask: Union[str, np.ndarray],
     axis: int = 0,
 ) -> np.ndarray:  # Could also be a series, but should be one or the other
@@ -454,6 +454,10 @@ def _check_mask(
     axis
         The axis being masked
     """
+    if isinstance(mask, str) and not isinstance(adata, AnnData):
+        raise ValueError(
+            'Cannot refer to mask with string without providing anndata object as argument'
+        )
     if isinstance(mask, str):
         annot = ("obs", "var")[axis]
         if (axis == 1 and mask not in adata.var.keys()) or (
