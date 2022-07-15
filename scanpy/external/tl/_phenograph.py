@@ -6,6 +6,7 @@ from typing import Union, Tuple, Optional, Type, Any
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+import scipy as sp
 from scipy.sparse import spmatrix
 
 from ..._compat import Literal
@@ -243,7 +244,7 @@ def phenograph(
     if copy:
         return communities, graph, Q
     else:
-        adata.obsp[ig_key] = graph
+        adata.obsp[ig_key] = sp.sparse.csr_matrix(graph)
         if comm_key:
             adata.obs[comm_key] = pd.Categorical(communities)
         if Q:
