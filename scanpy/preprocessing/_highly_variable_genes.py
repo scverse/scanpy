@@ -195,7 +195,7 @@ def _highly_variable_genes_single_batch(
     """
     X = adata.layers[layer] if layer is not None else adata.X
     if flavor == 'seurat':
-        if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
+        if 'log1p' in adata.uns_keys() and 'base' in adata.uns['log1p']:
             X *= np.log(adata.uns['log1p']['base'])
         X = np.expm1(X)
 
