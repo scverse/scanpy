@@ -371,10 +371,13 @@ def read_visium(
     adata.uns["spatial"][library_id] = dict()
 
     if load_images:
+        tissue_positions_file = (
+            path / 'spatial/tissue_positions.csv'
+            if (path / 'spatial/tissue_positions.csv').exists()
+            else path / 'spatial/tissue_positions_list.csv'
+        )
         files = dict(
-            tissue_positions_file=[
-                file_path for file_path in path.glob("spatial/tissue_positions*.csv")
-            ][0],
+            tissue_positions_file=tissue_positions_file,
             scalefactors_json_file=path / 'spatial/scalefactors_json.json',
             hires_image=path / 'spatial/tissue_hires_image.png',
             lowres_image=path / 'spatial/tissue_lowres_image.png',
@@ -412,7 +415,13 @@ def read_visium(
         }
 
         # read coordinates
-        positions = pd.read_csv(files['tissue_positions_file'])
+        basename_tissue_positions_file = tissue_positions_file.name
+        positions = pd.read_csv(
+            files['tissue_positions_file'],
+            header=None
+            if basename_tissue_positions_file == "tissue_positions.csv"
+            else 1,
+        )
         positions.columns = [
             'barcode',
             'in_tissue',
