@@ -1,3 +1,4 @@
+from re import S
 from typing import Optional, Union
 
 import numpy as np
@@ -18,8 +19,9 @@ def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: Optional[int] = None,
     zero_center: Optional[bool] = True,
-    svd_solver: str = 'arpack',
+    svd_solver: str = None,
     device: str = 'cpu',
+    layer: Optional[str] = None,
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
@@ -116,6 +118,12 @@ def pca(
     """
     logg_start = logg.info('computing PCA')
 
+    #changed default svd_solver behavior to avoid error running on gpu
+    if svd_solver is None and device == "gpu":
+        svd_solver = "auto"
+    else:
+        svd_solver = "arpack"
+
     # chunked calculation is not randomized, anyways
     if svd_solver in {'auto', 'randomized'} and not chunked:
         logg.info(
@@ -154,7 +162,8 @@ def pca(
 
     random_state = check_random_state(random_state)
 
-    X = adata_comp.X
+    #added layer support for Pearson Residuals
+    X = adata_comp.layers[layer] if layer is not None else adata_comp.X
 
     if device == 'gpu':
         from cuml import PCA
