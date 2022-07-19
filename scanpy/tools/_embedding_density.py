@@ -185,7 +185,7 @@ def embedding_density(
             embed_x = adata.obsm[f'X_{basis}'][cat_mask, components[0]]
             embed_y = adata.obsm[f'X_{basis}'][cat_mask, components[1]]
             
-            if device == "gpu"
+            if device == "gpu":
                 dens_embed = _calc_density_gpu(embed_x, embed_y)
             else:
                 dens_embed = _calc_density(embed_x, embed_y)
@@ -196,7 +196,7 @@ def embedding_density(
         # Calculate the density over the whole embedding without subsetting
         embed_x = adata.obsm[f'X_{basis}'][:, components[0]]
         embed_y = adata.obsm[f'X_{basis}'][:, components[1]]
-        if device == "gpu"
+        if device == "gpu":
             adata.obs[density_covariate] = _calc_density_gpu(embed_x, embed_y)
         else:
             adata.obs[density_covariate] = _calc_density(embed_x, embed_y)
