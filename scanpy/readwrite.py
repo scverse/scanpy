@@ -415,12 +415,9 @@ def read_visium(
         }
 
         # read coordinates
-        basename_tissue_positions_file = tissue_positions_file.name
         positions = pd.read_csv(
             files['tissue_positions_file'],
-            header=None
-            if basename_tissue_positions_file == "tissue_positions.csv"
-            else 1,
+            header=1 if tissue_positions_file.name == "tissue_positions.csv" else None,
         )
         positions.columns = [
             'barcode',
