@@ -36,11 +36,26 @@ def test_highly_variable_genes_basic():
     assert 'highly_variable_intersection' in adata.var.columns
 
     adata = sc.datasets.blobs()
-    adata.obs['batch'] = np.random.binomial(4, 0.5, size=(adata.n_obs))
+    batch = np.random.binomial(4, 0.5, size=(adata.n_obs))
+    adata.obs['batch'] = batch
     adata.obs['batch'] = adata.obs['batch'].astype('category')
     sc.pp.highly_variable_genes(adata, batch_key='batch', n_top_genes=3)
     assert 'highly_variable_nbatches' in adata.var.columns
     assert adata.var['highly_variable'].sum() == 3
+    highly_var_first_layer = adata.var['highly_variable']
+
+    adata = sc.datasets.blobs()
+    new_layer = adata.X.copy()
+    np.random.shuffle(new_layer)
+    adata.layers['test_layer'] = new_layer
+    adata.obs['batch'] = batch
+    adata.obs['batch'] = adata.obs['batch'].astype('category')
+    sc.pp.highly_variable_genes(
+        adata, batch_key='batch', n_top_genes=3, layer='test_layer'
+    )
+    assert 'highly_variable_nbatches' in adata.var.columns
+    assert adata.var['highly_variable'].sum() == 3
+    assert (highly_var_first_layer != adata.var['highly_variable']).any()
 
     sc.pp.highly_variable_genes(adata)
     no_batch_hvg = adata.var.highly_variable.copy()
