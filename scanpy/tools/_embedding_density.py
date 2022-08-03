@@ -10,6 +10,27 @@ from .. import logging as logg
 from .._utils import sanitize_anndata
 
 
+def _calc_density_gpu(x: np.ndarray, y:np.ndarray):
+    """\
+    Calculates the density of points in 2 dimensions.
+    """
+    from cuml.neighbors import KernelDensity
+    import cupy as cp
+    
+    # Calculate the point density
+    xy = cp.vstack([cp.array(x), cp.array(y)]).T
+    bandwidth = cp.power(xy.shape[0],(-1./(xy.shape[1]+4)))
+    kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(xy)
+    z = kde.score_samples(xy)
+    min_z = cp.min(z)
+    max_z = cp.max(z)
+
+    # Scale between 0 and 1
+    scaled_z = (z - min_z) / (max_z - min_z)
+    
+    return scaled_z.get()
+
+
 def _calc_density(x: np.ndarray, y: np.ndarray):
     """\
     Calculates the density of points in 2 dimensions.
@@ -36,6 +57,7 @@ def embedding_density(
     groupby: Optional[str] = None,
     key_added: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
+    device:str = "cpu",
 ) -> None:
     """\
     Calculate the density of cells in an embedding (per condition).
@@ -162,8 +184,11 @@ def embedding_density(
             cat_mask = adata.obs[groupby] == cat
             embed_x = adata.obsm[f'X_{basis}'][cat_mask, components[0]]
             embed_y = adata.obsm[f'X_{basis}'][cat_mask, components[1]]
-
-            dens_embed = _calc_density(embed_x, embed_y)
+            
+            if device == "gpu":
+                dens_embed = _calc_density_gpu(embed_x, embed_y)
+            else:
+                dens_embed = _calc_density(embed_x, embed_y)
             density_values[cat_mask] = dens_embed
 
         adata.obs[density_covariate] = density_values
@@ -171,8 +196,10 @@ def embedding_density(
         # Calculate the density over the whole embedding without subsetting
         embed_x = adata.obsm[f'X_{basis}'][:, components[0]]
         embed_y = adata.obsm[f'X_{basis}'][:, components[1]]
-
-        adata.obs[density_covariate] = _calc_density(embed_x, embed_y)
+        if device == "gpu":
+            adata.obs[density_covariate] = _calc_density_gpu(embed_x, embed_y)
+        else:
+            adata.obs[density_covariate] = _calc_density(embed_x, embed_y)
 
     # Reduce diffmap components for labeling
     # Note: plot_scatter takes care of correcting diffmap components
