@@ -436,7 +436,7 @@ def _compute_connectivities_umap_rapids(
 
     from cuml.manifold.simpl_set import fuzzy_simplicial_set
 
-    X = np.empty((n_obs, 1))
+    X = np.empty((n_obs, 1), dtype=np.float32)
     connectivities = fuzzy_simplicial_set(
         X,
         n_neighbors,
