@@ -3,6 +3,7 @@
 """\
 This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
 """
+from re import A
 from typing import Optional, Collection
 
 import pandas as pd
@@ -24,6 +25,7 @@ def correlation_matrix(
     data: Literal['Complete', 'Group', 'Rest'] = 'Complete',
     method: Literal['pearson', 'kendall', 'spearman'] = 'pearson',
     annotation_key: Optional[str] = None,
+    device: str = "cpu",
 ) -> None:
     """\
     Calculate correlation matrix.
@@ -59,7 +61,7 @@ def correlation_matrix(
         pearson
             standard correlation coefficient
         kendall
-            Kendall Tau correlation coefficient
+            Kendall Tau correlation coefficient (only works for 'device = "cpu"')
         spearman
             Spearman rank correlation
     annotation_key
@@ -106,9 +108,18 @@ def correlation_matrix(
             logg.error('data argument should be either <Complete> or <Group> or <Rest>')
 
     # Distinguish between sparse and non-sparse data
+    if device == "gpu":
+        import cudf
 
-    DF_array = pd.DataFrame(Data_array, columns=name_list)
-    cor_table = DF_array.corr(method=method)
+        DF_array = cudf.DataFrame(Data_array, columns=name_list)
+        if method == "kendall":
+            raise ValueError(
+                "Kendall Tau correlation is not yet implemented into RAPIDS"
+            )
+        cor_table = DF_array.corr(method=method).to_pandas()
+    else:
+        DF_array = pd.DataFrame(Data_array, columns=name_list)
+        cor_table = DF_array.corr(method=method)
     if annotation_key is None:
         if groupby is None:
             adata.uns['Correlation_matrix'] = cor_table

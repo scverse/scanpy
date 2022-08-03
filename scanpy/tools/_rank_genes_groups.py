@@ -329,20 +329,33 @@ class _RankGenes:
 
                 yield group_index, scores[group_index], pvals
 
-    def logreg(self, **kwds):
+    def logreg(self, device, **kwds):
         # if reference is not set, then the groups listed will be compared to the rest
         # if reference is set, then the groups listed will be compared only to the other groups listed
-        from sklearn.linear_model import LogisticRegression
+        if device == "gpu":
+            from cuml.linear_model import LogisticRegression
+        else:
+            from sklearn.linear_model import LogisticRegression
 
         # Indexing with a series causes issues, possibly segfault
         X = self.X[self.grouping_mask.values, :]
-
+        grouping_logreg = self.grouping.cat.codes.to_numpy(dtype=np.float32).copy()
         if len(self.groups_order) == 1:
             raise ValueError('Cannot perform logistic regression on a single cluster.')
 
+        # Sorting Categories
+        self.groups_order = self.groups_order[np.argsort(self.groups_order)]
+        # Indexing grouping needed for device = 'gpu'
+        uniques = np.unique(grouping_logreg)
+        if device == "gpu":
+            for idx, cat in enumerate(uniques):
+                grouping_logreg[np.where(grouping_logreg == cat)] = idx
+
         clf = LogisticRegression(**kwds)
-        clf.fit(X, self.grouping.cat.codes)
+        clf.fit(X, grouping_logreg)
         scores_all = clf.coef_
+        if device == "gpu":
+            scores_all = scores_all.T
         for igroup, _ in enumerate(self.groups_order):
             if len(self.groups_order) <= 2:  # binary logistic regression
                 scores = scores_all[0]
@@ -361,6 +374,7 @@ class _RankGenes:
         n_genes_user=None,
         rankby_abs=False,
         tie_correct=False,
+        device="cpu",
         **kwds,
     ):
 
@@ -369,7 +383,7 @@ class _RankGenes:
         elif method == 'wilcoxon':
             generate_test_results = self.wilcoxon(tie_correct)
         elif method == 'logreg':
-            generate_test_results = self.logreg(**kwds)
+            generate_test_results = self.logreg(device, **kwds)
 
         self.stats = None
 
@@ -441,6 +455,7 @@ def rank_genes_groups(
     corr_method: _CorrMethod = 'benjamini-hochberg',
     tie_correct: bool = False,
     layer: Optional[str] = None,
+    device="cpu",
     **kwds,
 ) -> Optional[AnnData]:
     """\
@@ -606,7 +621,7 @@ def rank_genes_groups(
     logg.debug(f'with sizes: {np.count_nonzero(test_obj.groups_masks, axis=1)}')
 
     test_obj.compute_statistics(
-        method, corr_method, n_genes_user, rankby_abs, tie_correct, **kwds
+        method, corr_method, n_genes_user, rankby_abs, tie_correct, device, **kwds
     )
 
     if test_obj.pts is not None:
