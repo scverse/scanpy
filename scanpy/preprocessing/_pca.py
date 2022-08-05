@@ -118,7 +118,7 @@ def pca(
     """
     logg_start = logg.info('computing PCA')
 
-    #changed default svd_solver behavior to avoid error running on gpu
+    # changed default svd_solver behavior to avoid error running on gpu
     if svd_solver is None and device == "gpu":
         svd_solver = "auto"
     else:
@@ -162,7 +162,7 @@ def pca(
 
     random_state = check_random_state(random_state)
 
-    #added layer support for Pearson Residuals
+    # added layer support for Pearson Residuals
     X = adata_comp.layers[layer] if layer is not None else adata_comp.X
 
     if device == 'gpu':

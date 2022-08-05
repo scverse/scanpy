@@ -615,7 +615,7 @@ def read_mtx_gpu(filename, backend: Literal['cudf', 'dask_cudf'] = "cudf"):
         import dask_cudf
 
         mtx_data = dask_cudf.read_csv(
-            "matrix.mtx",
+            filename,
             sep=" ",
             dtype=['float32' for i in range(3)],
             comment="%",
