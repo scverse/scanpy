@@ -458,6 +458,7 @@ def highly_variable_genes(
 
             hvg = _highly_variable_genes_single_batch(
                 adata_subset,
+                layer=layer,
                 min_disp=min_disp,
                 max_disp=max_disp,
                 min_mean=min_mean,
