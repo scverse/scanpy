@@ -506,3 +506,16 @@ def test_seurat_v3_mean_var_output_with_batchkey():
     )
     np.testing.assert_allclose(true_mean, result_df['means'], rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(true_var, result_df['variances'], rtol=2e-05, atol=2e-05)
+
+
+def test_cellranger_n_top_genes_warning():
+    X = np.random.poisson(2, (100, 30))
+    adata = sc.AnnData(X, dtype=X.dtype)
+    sc.pp.normalize_total(adata)
+    sc.pp.log1p(adata)
+
+    with pytest.warns(
+        UserWarning,
+        match="`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
+    ):
+        sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
