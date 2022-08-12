@@ -494,7 +494,6 @@ def test_seurat_v3_mean_var_output_with_batchkey():
 
 
 def test_cellranger_n_top_genes_warning():
-
     X = np.random.poisson(2, (100, 30))
     adata = sc.AnnData(X, dtype=X.dtype)
     sc.pp.normalize_total(adata)
