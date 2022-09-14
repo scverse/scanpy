@@ -116,6 +116,7 @@ doc = [
     "sphinxext-opengraph",
     "nbsphinx",
     "ipython>=7.20",  # for nbsphinx code highlighting
+    "sphinx-hoverxref",
 ]
 dev = [
     # getting the dev version

@@ -1,7 +1,12 @@
 import os
 import sys
+import importlib.util
+import inspect
+import re
+import subprocess
 from pathlib import Path
 from datetime import datetime
+from typing import Any
 
 import matplotlib  # noqa
 from packaging.version import parse as parse_version
@@ -53,7 +58,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
-    'sphinx.ext.viewcode',
+    'sphinx.ext.linkcode',
     # 'plot_generator',
     'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
@@ -65,6 +70,7 @@ extensions = [
     "sphinx_design",
     "sphinxext.opengraph",
     "nbsphinx",
+    "hoverxref.extension",
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
@@ -240,3 +246,72 @@ plot_formats = [("png", 90)]
 plot_html_show_formats = False
 plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
+
+
+github_repo = "https://github.com/scverse/scanpy"
+
+
+def git(*args):
+    return subprocess.check_output(["git", *args]).strip().decode()
+
+
+# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
+# Current git reference. Uses branch/tag name if found, otherwise uses commit hash
+git_ref = None
+try:
+    git_ref = git("name-rev", "--name-only", "--no-undefined", "HEAD")
+    git_ref = re.sub(r"^(remotes/[^/]+|tags)/", "", git_ref)
+except Exception:
+    pass
+
+# (if no name found or relative ref, use commit hash instead)
+if not git_ref or re.search(r"[\^~]", git_ref):
+    try:
+        git_ref = git("rev-parse", "HEAD")
+    except Exception:
+        git_ref = "master"
+
+# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
+_module_path = os.path.dirname(importlib.util.find_spec("scanpy").origin)  # type: ignore
+
+
+def linkcode_resolve(domain, info):
+    if domain != "py":
+        return None
+
+    try:
+        obj: Any = sys.modules[info["module"]]
+        for part in info["fullname"].split("."):
+            obj = getattr(obj, part)
+        obj = inspect.unwrap(obj)
+
+        if isinstance(obj, property):
+            obj = inspect.unwrap(obj.fget)  # type: ignore
+
+        path = os.path.relpath(inspect.getsourcefile(obj), start=_module_path)  # type: ignore
+        src, lineno = inspect.getsourcelines(obj)
+    except Exception:
+        return None
+
+    path = f"{path}#L{lineno}-L{lineno + len(src) - 1}"
+    return f"{github_repo}/blob/{git_ref}/scvi/{path}"
+
+
+hoverx_default_type = "tooltip"
+hoverxref_domains = ["py"]
+hoverxref_role_types = dict.fromkeys(
+    ["ref", "class", "func", "meth", "attr", "exc", "data"],
+    "tooltip",
+)
+hoverxref_intersphinx = [
+    "python",
+    "numpy",
+    "scanpy",
+    "anndata",
+    "pytorch_lightning",
+    "scipy",
+    "pandas",
+]
+# use proxied API endpoint on rtd to avoid CORS issues
+if os.environ.get("READTHEDOCS"):
+    hoverxref_api_host = "/_"
