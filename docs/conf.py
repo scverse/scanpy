@@ -320,5 +320,6 @@ if os.environ.get("READTHEDOCS"):
 
 # extlinks config
 extlinks = {
+    "issue": ("https://github.com/scverse/scanpy/issues/%s", "GH"),
     "pr": ("https://github.com/scverse/scanpy/pull/%s", "PR"),
 }
