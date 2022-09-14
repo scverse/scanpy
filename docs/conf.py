@@ -309,9 +309,7 @@ hoverxref_role_types = dict.fromkeys(
 hoverxref_intersphinx = [
     "python",
     "numpy",
-    "scanpy",
     "anndata",
-    "pytorch_lightning",
     "scipy",
     "pandas",
 ]
