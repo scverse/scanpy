@@ -12,6 +12,7 @@
 
 ::::{grid} 2
 :gutter: 2
+
 :::{grid-item-card} Installation {octicon}`plug;1em;`
 :link: installation
 :link-type: doc
