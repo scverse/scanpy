@@ -59,6 +59,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'sphinx.ext.linkcode',
+    'sphinx.ext.extlinks',
     # 'plot_generator',
     'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
@@ -316,3 +317,8 @@ hoverxref_intersphinx = [
 # use proxied API endpoint on rtd to avoid CORS issues
 if os.environ.get("READTHEDOCS"):
     hoverxref_api_host = "/_"
+
+# extlinks config
+extlinks = {
+    "pr": ("https://github.com/scverse/scanpy/pull/%s", "PR"),
+}
