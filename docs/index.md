@@ -45,6 +45,7 @@ Need help? Reach out on our forum to get your questions answered!
 
 Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest developments.
 :::
+::::
 
 **Other resources**
 * Follow changes in the {ref}`release notes <release-notes>`.
