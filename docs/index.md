@@ -10,22 +10,23 @@
 .. role:: smaller
 ```
 
-
-:::{card} Installation {octicon}`plug;1em;`
+::::{grid} 2
+:gutter: 2
+:::{grid-item-card} Installation {octicon}`plug;1em;`
 :link: installation
 :link-type: doc
 
 New to *scanpy*? Check out the installation guide.
 :::
 
-:::{card} Tutorials {octicon}`play;1em;`
+:::{grid-item-card} Tutorials {octicon}`play;1em;`
 :link: tutorials/index
 :link-type: doc
 
 The tutorials walk you through real-world applications of scanpy.
 :::
 
-:::{card} API reference {octicon}`book;1em;`
+:::{grid-item-card} API reference {octicon}`book;1em;`
 :link: api/index
 :link-type: doc
 
@@ -33,13 +34,13 @@ The API reference contains a detailed description of
 the scanpy API.
 :::
 
-:::{card} Discussion {octicon}`megaphone;1em;`
+:::{grid-item-card} Discussion {octicon}`megaphone;1em;`
 :link: https://discourse.scverse.org
 
 Need help? Reach out on our forum to get your questions answered!
 :::
 
-:::{card} GitHub {octicon}`mark-github;1em;`
+:::{grid-item-card} GitHub {octicon}`mark-github;1em;`
 :link: https://github.com/scverse/scanpy
 
 Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest developments.
