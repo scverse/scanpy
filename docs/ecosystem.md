@@ -82,12 +82,10 @@ Interactive manifold viewers.
 
 ### Fate mapping
 
-- [CellRank](http://cellrank.org) {small}`Helmholtz Munich`
+- [CellRank](https://cellrank.org) {small}`Helmholtz Munich`
 
-  > CellRank is a toolkit to uncover cellular dynamics based on scRNA-seq data with
-  > RNA velocity annotation by detecting initial and terminal populations, inferring
-  > fate potentials and uncovering gene expression trends towards specific
-  > terminal populations.
+  > CellRank is a framework to uncover cellular dynamics based on single-cell data.
+  > It incorporates modalities such as RNA velocity, pseudotime, developmental potential, real-time information, etc.
 
 ### Differential expression
 
