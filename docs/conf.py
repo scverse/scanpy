@@ -247,6 +247,7 @@ plot_html_show_formats = False
 plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
 
+# Linkcode config
 
 github_repo = "https://github.com/scverse/scanpy"
 
@@ -296,6 +297,8 @@ def linkcode_resolve(domain, info):
     path = f"{path}#L{lineno}-L{lineno + len(src) - 1}"
     return f"{github_repo}/blob/{git_ref}/scvi/{path}"
 
+
+# Hoverxref config
 
 hoverx_default_type = "tooltip"
 hoverxref_domains = ["py"]
