@@ -60,12 +60,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.linkcode',
     'sphinx.ext.extlinks',
-    # 'plot_generator',
     'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
-    # 'ipython_directive',
-    # 'ipython_console_highlighting',
-    # 'scanpydoc',  # scanpydoc.elegant_typehints causes full doc rebuilds
     'scanpydoc.definition_list_typed_field',
     'scanpydoc.autosummary_generate_imported',
     "sphinx_design",
@@ -145,8 +141,9 @@ html_show_sphinx = False
 html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 html_title = "scanpy"
 
-# def setup(app):
-# app.warningiserror = on_rtd
+
+def setup(app):
+    app.warningiserror = on_rtd
 
 
 nbsphinx_prolog = r"""
