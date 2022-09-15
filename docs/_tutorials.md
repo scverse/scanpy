@@ -138,3 +138,16 @@ See pseudotime-time inference on deep-learning based features for [cell cycle re
 [scanpy in r]: https://theislab.github.io/scanpy-in-R/
 [seurat to anndata]: https://github.com/LuckyMD/Code_snippets/blob/master/Seurat_to_anndata.ipynb
 [toggleswitch]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170430_krumsiek11/toggleswitch.ipynb
+
+
+```{toctree}
+:hidden: true
+:maxdepth: 1
+
+pbmc3k
+paga-paul15
+plotting/core
+integrating-data-using-ingest
+spatial/basic-analysis
+spatial/integration-scanorama
+```
