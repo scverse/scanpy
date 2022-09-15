@@ -144,10 +144,10 @@ See pseudotime-time inference on deep-learning based features for [cell cycle re
 :hidden: true
 :maxdepth: 1
 
-pbmc3k
-paga-paul15
-plotting/core
-integrating-data-using-ingest
-spatial/basic-analysis
-spatial/integration-scanorama
+tutorials/pbmc3k
+tutorials/paga-paul15
+tutorials/plotting/core
+tutorials/integrating-data-using-ingest
+tutorials/spatial/basic-analysis
+tutorials/spatial/integration-scanorama
 ```
