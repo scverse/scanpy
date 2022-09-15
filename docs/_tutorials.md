@@ -77,7 +77,7 @@ Map labels and embeddings of reference data to new data: {doc}`/tutorials/integr
 
 ### Conversion: AnnData, SingleCellExperiment, and Seurat objects
 
-```{image} https://github.com/scverse/scanpy-in-R/raw/master/logo.png
+```{image} https://github.com/theislab/scanpy-in-R/raw/master/logo.png
 :align: right
 :width: 200px
 ```
