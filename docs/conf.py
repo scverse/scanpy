@@ -317,10 +317,10 @@ if os.environ.get("READTHEDOCS"):
 
 # extlinks config
 extlinks = {
-    "issue": ("https://github.com/scverse/scanpy/issues/%s", "{bdg-primary}`issue %s`"),
-    "pr": ("https://github.com/scverse/scanpy/pull/%s", "{bdg-primary}`pr %s`"),
+    "issue": ("https://github.com/scverse/scanpy/issues/%s", ":bdg-primary:`issue %s`"),
+    "pr": ("https://github.com/scverse/scanpy/pull/%s", ":bdg-primary:`pr %s`"),
     "tutorial": (
         "https://github.com/scverse/scanpy-tutorials/%s.ipynb",
-        "{bdg-primary}`tutorial %s`",
+        ":bdg-primary:`tutorial %s`",
     ),
 }
