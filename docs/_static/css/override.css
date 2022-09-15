@@ -36,6 +36,17 @@ li.toctree-l4 {
     font-size: 75% !important;
 }
 
+/* for custom small role */
+.small {
+    font-size: 40% !important
+}
+
+.smaller,
+.pr {
+    font-size: 70% !important
+}
+
+
 /* nbsphinx specific */
 
 .nbinput .prompt,
@@ -61,7 +72,7 @@ div.nbinput.container {
 
 div.nbinput.container div.input_area {
     /* Code cell border that works in both dark and light mode */
-    border-color: rgba(127,127,127,.25) !important;
+    border-color: rgba(127, 127, 127, .25) !important;
 }
 
 
