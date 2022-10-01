@@ -265,6 +265,12 @@ def _highly_variable_genes_single_batch(
         if n_top_genes > adata.n_vars:
             logg.info('`n_top_genes` > `adata.n_var`, returning all genes.')
             n_top_genes = adata.n_vars
+        if n_top_genes > dispersion_norm.size:
+            warnings.warn(
+                '`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.',
+                UserWarning,
+            )
+            n_top_genes = dispersion_norm.size
         disp_cut_off = dispersion_norm[n_top_genes - 1]
         gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off
         logg.debug(
@@ -458,6 +464,7 @@ def highly_variable_genes(
 
             hvg = _highly_variable_genes_single_batch(
                 adata_subset,
+                layer=layer,
                 min_disp=min_disp,
                 max_disp=max_disp,
                 min_mean=min_mean,
