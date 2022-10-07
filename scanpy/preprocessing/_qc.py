@@ -48,7 +48,7 @@ def describe_obs(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
+    percent_top: Optional[Collection[int]] = None,
     layer: Optional[str] = None,
     use_raw: bool = False,
     log1p: Optional[str] = True,
@@ -85,6 +85,8 @@ def describe_obs(
 
     {doc_obs_qc_returns}
     """
+    if percent_top is None:
+        percent_top = tuple(x for x in (50, 100, 200, 500) if x <= adata.shape[1])
     if parallel is not None:
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
@@ -229,7 +231,7 @@ def calculate_qc_metrics(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
+    percent_top: Optional[Collection[int]] = None,
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace: bool = False,
@@ -291,6 +293,8 @@ def calculate_qc_metrics(
 
         sns.histplot(pbmc.obs["pct_counts_mito"])
     """
+    if percent_top is None:
+        percent_top = tuple(x for x in (50, 100, 200, 500) if x <= adata.shape[1])
     if parallel is not None:
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
