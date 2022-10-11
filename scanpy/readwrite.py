@@ -253,7 +253,7 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
 def _collect_datasets(dsets: dict, group: h5py.Group):
     for k, v in group.items():
         if isinstance(v, h5py.Dataset):
-            dsets[k] = v[:]
+            dsets[k] = v[()]
         else:
             _collect_datasets(dsets, v)
 
