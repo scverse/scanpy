@@ -112,6 +112,7 @@ doc = [
     "scanpydoc[typehints]>=0.7.7",
     "typing_extensions; python_version < '3.8'",  # for `Literal`
     "myst-parser",
+    "matplotlib!=3.6.1",
     "scanpy[paga]",
 ]
 dev = [
