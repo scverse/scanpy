@@ -1,5 +1,8 @@
 References
 ----------
+.. [Xiong22] Xiong *et al.* (2022)
+   Online single-cell data integration through projecting heterogeneous datasets into a common cell-embedding space
+   `Nature Communications <https://www.nature.com/articles/s41467-022-33758-z>`__.
 
 .. [Amid19] Amid & Warmuth (2019),
    *TriMap: Large-scale Dimensionality Reduction Using Triplets*,

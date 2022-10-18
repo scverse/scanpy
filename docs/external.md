@@ -33,6 +33,7 @@ If the tool already uses `scanpy` or `anndata`, it may fit better in the {doc}`e
    pp.harmony_integrate
    pp.mnn_correct
    pp.scanorama_integrate
+   pp.scalex_integrate
 
 ```
 
