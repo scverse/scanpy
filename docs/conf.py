@@ -102,6 +102,7 @@ intersphinx_mapping = dict(
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
     scanpy_tutorials=(scanpy_tutorials_url, None),
+    scalex=('https://scalex.readthedocs.io/en/latest/', None),
 )
 
 

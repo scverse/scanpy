@@ -94,6 +94,7 @@ Interactive manifold viewers.
 ### Data integration
 
 - [scanaroma](https://github.com/brianhie/scanorama) {small}`MIT`
+- [scalex](https://github.com/jsxlei/SCALEX) {small}`Tsinghua`
 
 ### Modeling perturbations
 
