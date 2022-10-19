@@ -106,14 +106,14 @@ def scalex_integrate(
     from.
 
     >>> adata.obs['batch] = 1350*['a'] + 1350*['b']
-    >>> sce.pp.scalex_integrate(adata)
+    >>> adata = sce.pp.scalex_integrate(adata)
 
     'X_scalex_umap' as well as 'X_umap' will in adata.obsm
 
     SCALEX will do the preprocssing internally, like sc.pp.filter_cells, sc.pp.filter_genes, sc.pp.normalize_total, sc.pp.log1p, sc.pp.highly_variable_genes
     if adata has been preprocessed, please set the ``processed = True``
 
-    >>> sce.pp.scalex_integrate(adata, processed=True)
+    >>> adata = sce.pp.scalex_integrate(adata, processed=True)
 
     if use other meta information as ``batch``, e.g. sample_id
 

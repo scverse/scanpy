@@ -16,5 +16,9 @@ def test_scalex_integrate():
     adata = sc.datasets.pbmc3k()
 
     adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
-    sce.pp.scalex_integrate(adata)
+    adata = sce.pp.scalex_integrate(adata, show=False, max_iteration=1)
     assert adata.obsm['X_scalex_umap'].shape[0] == adata.shape[0]
+
+
+if __name__ == '__main__':
+    test_scalex_integrate()
