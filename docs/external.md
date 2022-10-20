@@ -59,6 +59,18 @@ Note that the fundamental limitations of imputation are still under [debate](htt
 
    pp.dca
    pp.magic
+   pp.scale
+
+```
+
+
+### scATAC-seq
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated/
+
+   pp.scale
 
 ```
 

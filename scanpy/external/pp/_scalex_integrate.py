@@ -97,7 +97,7 @@ def scalex_integrate(
     Example
     -------
     >>> import scanpy as sc
-    >>> import scapy.external as sce
+    >>> import scanpy.external as sce
     >>> adata = sc.datasets.pbmc3k()
 
     We now arbitrarily assign a batch metadata variable to each cell
@@ -117,7 +117,7 @@ def scalex_integrate(
 
     if use other meta information as ``batch``, e.g. sample_id
 
-    >>> sce.pp.scalex_integrate(adata, batch_name = 'sample_id')
+    >>> adata = sce.pp.scalex_integrate(adata, batch_name = 'sample_id')
     """
 
     try:

@@ -47,6 +47,14 @@ Interactive manifold viewers.
 
   > PASTE is a computational method to align and integrate spatial transcriptomics data across adjacent tissue slices by leveraging both gene expression similarity and spatial distances between spots.
 
+
+### Single-cell ATAC-seq
+
+- [SCALE](https://github.com/jsxlei/SCALE) {small}`Tsinghua`
+
+  > single-cell ATAC clustering
+  > single-cell imputation
+
 ### Multimodal integration
 
 - [MUON](https://muon.readthedocs.io/en/latest/) and [MuData](https://mudata.readthedocs.io/en/latest/) {small}`EMBL/ DKFZ`

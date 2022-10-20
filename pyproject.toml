@@ -106,6 +106,7 @@ test-full = [
     "scanpy[scanorama]",
     "scanpy[scrublet]",
     "scanpy[scalex]",
+    "scanpy[scale]",
 ]
 doc = [
     "sphinx>=4.4",
@@ -134,6 +135,8 @@ harmony = ["harmonypy"]  # Harmony dataset integration
 scanorama = ["scanorama"]  # Scanorama dataset integration
 scrublet = ["scrublet"]  # Doublet detection
 scalex = ["scalex"] # SCALEX online integration
+scale = ["scale"] # single-cell ATAC-seq clustering and imputation
+
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
 dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine

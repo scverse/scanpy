@@ -1,5 +1,10 @@
 References
 ----------
+.. [Xiong19] Xiong *et al.* (2019),
+   *SCALE method for single-cell ATAC-seq analysis via latent feature extraction*,
+   `Nature Communications <https://www.nature.com/articles/s41467-019-12630-7>`__.
+
+
 .. [Xiong22] Xiong *et al.* (2022),
    *Online single-cell data integration through projecting heterogeneous datasets into a common cell-embedding space*,
    `Nature Communications <https://www.nature.com/articles/s41467-022-33758-z>`__.
