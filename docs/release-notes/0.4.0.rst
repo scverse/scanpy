@@ -1,8 +1,0 @@
-0.4.0 :small:`2017-12-23`
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- export to SPRING_ [Weinreb17]_ for interactive visualization of data:
-  `spring tutorial`_ :smaller:`S Wollock`
-
-.. _SPRING: https://github.com/AllonKleinLab/SPRING/
-.. _spring tutorial: https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export

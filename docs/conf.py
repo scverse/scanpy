@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime
 
 import matplotlib  # noqa
+from packaging.version import parse as parse_version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
 matplotlib.use('agg')
@@ -19,24 +20,33 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = '2.0'  # Nicer param docs
-suppress_warnings = ['ref.citation']
+suppress_warnings = [
+    'ref.citation',
+    'myst.header',  # https://github.com/executablebooks/MyST-Parser/issues/262
+]
 
 # General information
 project = 'Scanpy'
 author = 'Scanpy development team'
 copyright = f'{datetime.now():%Y}, the Scanpy development team.'
 version = scanpy.__version__.replace('.dirty', '')
+
+# Bumping the version updates all docs, so don't do that
+if parse_version(version).is_devrelease:
+    parsed = parse_version(version)
+    version = f"{parsed.major}.{parsed.minor}.{parsed.micro}.dev"
+
 release = version
 
 # default settings
 templates_path = ['_templates']
-source_suffix = '.rst'
 master_doc = 'index'
 default_role = 'literal'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 
 extensions = [
+    'myst_parser',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
@@ -49,7 +59,11 @@ extensions = [
     'sphinx_autodoc_typehints',  # needs to be after napoleon
     # 'ipython_directive',
     # 'ipython_console_highlighting',
-    'scanpydoc',
+    # 'scanpydoc',  # scanpydoc.elegant_typehints causes full doc rebuilds
+    'scanpydoc.rtd_github_links',
+    'scanpydoc.theme',
+    'scanpydoc.definition_list_typed_field',
+    'scanpydoc.autosummary_generate_imported',
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
@@ -65,6 +79,8 @@ napoleon_use_param = True
 napoleon_custom_sections = [('Params', 'Parameters')]
 todo_include_todos = False
 api_dir = HERE / 'api'  # function_images
+
+typehints_defaults = 'braces'
 
 scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
 

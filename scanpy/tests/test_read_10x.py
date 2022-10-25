@@ -73,6 +73,23 @@ def test_read_10x_h5_v1():
     assert_anndata_equal(spec_genome_v1, nospec_genome_v1)
 
 
+def test_read_10x_h5_v2_multiple_genomes():
+    genome1_v1 = sc.read_10x_h5(
+        ROOT / '1.2.0' / 'multiple_genomes.h5',
+        genome='hg19_chr21',
+    )
+    genome2_v1 = sc.read_10x_h5(
+        ROOT / '1.2.0' / 'multiple_genomes.h5',
+        genome='another_genome',
+    )
+    # the test data are such that X is the same shape for both "genomes",
+    # but the values are different
+    assert (genome1_v1.X != genome2_v1.X).sum() > 0, (
+        'loading data from two different genomes in 10x v2 format. '
+        'should be different, but is the same. '
+    )
+
+
 def test_read_10x_h5():
     spec_genome_v3 = sc.read_10x_h5(
         ROOT / '3.0.0' / 'filtered_feature_bc_matrix.h5',

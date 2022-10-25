@@ -33,20 +33,20 @@ def _highly_variable_genes_seurat_v3(
     Returns
     -------
     Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`) or
-    updates `.var` with the following fields
+    updates `.var` with the following fields:
 
     highly_variable : bool
-        boolean indicator of highly-variable genes
+        boolean indicator of highly-variable genes.
     **means**
-        means per gene
+        means per gene.
     **variances**
-        variance per gene
+        variance per gene.
     **variances_norm**
-        normalized variance per gene, averaged in the case of multiple batches
+        normalized variance per gene, averaged in the case of multiple batches.
     highly_variable_rank : float
-        Rank of the gene according to normalized variance, median rank in the case of multiple batches
+        Rank of the gene according to normalized variance, median rank in the case of multiple batches.
     highly_variable_nbatches : int
-        If batch_key is given, this denotes in how many batches genes are detected as HVG
+        If batch_key is given, this denotes in how many batches genes are detected as HVG.
     """
 
     try:
@@ -265,6 +265,12 @@ def _highly_variable_genes_single_batch(
         if n_top_genes > adata.n_vars:
             logg.info('`n_top_genes` > `adata.n_var`, returning all genes.')
             n_top_genes = adata.n_vars
+        if n_top_genes > dispersion_norm.size:
+            warnings.warn(
+                '`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.',
+                UserWarning,
+            )
+            n_top_genes = dispersion_norm.size
         disp_cut_off = dispersion_norm[n_top_genes - 1]
         gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off
         logg.debug(
@@ -305,8 +311,8 @@ def highly_variable_genes(
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
 
-    Expects logarithmized data, except when `flavor='seurat_v3'` in which
-    count data is expected.
+    Expects logarithmized data, except when `flavor='seurat_v3'`, in which count
+    data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
     [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
@@ -321,6 +327,9 @@ def highly_variable_genes(
     are standardized (i.e., z-score normalization per feature) with a regularized
     standard deviation. Next, the normalized variance is computed as the variance
     of each gene after the transformation. Genes are ranked by the normalized variance.
+
+    See also `scanpy.experimental.pp._highly_variable_genes` for additional flavours
+    (e.g. Pearson residuals).
 
     Parameters
     ----------
@@ -455,6 +464,7 @@ def highly_variable_genes(
 
             hvg = _highly_variable_genes_single_batch(
                 adata_subset,
+                layer=layer,
                 min_disp=min_disp,
                 max_disp=max_disp,
                 min_mean=min_mean,
@@ -506,9 +516,10 @@ def highly_variable_genes(
                 na_position='last',
                 inplace=True,
             )
-            df['highly_variable'] = False
-            df.highly_variable.iloc[:n_top_genes] = True
-            df = df.loc[adata.var_names]
+            high_var = np.zeros(df.shape[0])
+            high_var[:n_top_genes] = True
+            df['highly_variable'] = high_var.astype(bool)
+            df = df.loc[adata.var_names, :]
         else:
             df = df.loc[adata.var_names]
             dispersion_norm = df.dispersions_norm.values

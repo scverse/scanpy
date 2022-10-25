@@ -5,8 +5,6 @@ requires = [
     "setuptools_scm",
     "tomli",
     "importlib_metadata>=0.7; python_version < '3.8'",
-    # setup.py stuff
-    "packaging",
 ]
 
 [project]
@@ -33,7 +31,7 @@ maintainers = [
     {name = "Philipp Angerer", email = "phil.angerer@gmail.com"},
     {name = "Alex Wolf", email = "f.alex.wolf@gmx.de"},
 ]
-readme = {file = "README.rst", content-type="text/x-rst"}
+readme = {file = "README.md", content-type="text/markdown"}
 classifiers = [
     "License :: OSI Approved :: BSD License",
     "Development Status :: 5 - Production/Stable",
@@ -56,10 +54,8 @@ dependencies = [
     "anndata>=0.7.4",
     # numpy needs a version due to #1320
     "numpy>=1.17.0",
-    # Matplotlib 3.1 causes an error in 3d scatter plots (https://github.com/matplotlib/matplotlib/issues/14298)
-    # But matplotlib 3.0 causes one in heatmaps
-    "matplotlib>=3.1.2",
-    "pandas>=0.21",
+    "matplotlib>=3.4",
+    "pandas>=1.0",
     "scipy>=1.4",
     "seaborn",
     "h5py>=3",
@@ -73,7 +69,7 @@ dependencies = [
     "numba>=0.41.0",
     "umap-learn>=0.3.10",
     "packaging",
-    "sinfo",
+    "session-info",
     # for getting the stable version
     "importlib_metadata>=0.7; python_version < '3.8'",
 ]
@@ -81,30 +77,43 @@ dynamic = ["version"]
 
 [project.urls]
 Documentation = "https://scanpy.readthedocs.io/"
-Source = "https://github.com/theislab/scanpy"
+Source = "https://github.com/scverse/scanpy"
 Home-page = "https://scanpy.org"
 
 [project.scripts]
 scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
-test = [
+test-min = [
     "pytest>=4.4",
     "pytest-nunit",
-    "dask[array]!=2.17.0",
-    "fsspec",
-    "zappy",
-    "zarr",
     "profimp",
-    # Test the metadata while this exists: https://github.com/takluyver/flit/issues/387
-    "flit_core",
+]
+test = [
+    "scanpy[test-min]",
+    # Optional but important dependencies
+    "scanpy[leiden]",
+    "zarr",
+    "scanpy[dask]",
+]
+test-full = [
+    "scanpy[test]",
+    # tested algorithms
+    "scanpy[leiden]",
+    "scanpy[magic]",
+    "scanpy[skmisc]",
+    "scanpy[harmony]",
+    "scanpy[scanorama]",
+    "scanpy[scrublet]",
 ]
 doc = [
-    "sphinx>=4.1,<4.2",
-    "sphinx-rtd-theme>=0.3.1",
-    "scanpydoc[typehints]>=0.7.4,<0.7.6",
+    "sphinx>=4.4",
+    "sphinx-rtd-theme>=1.0",
+    "scanpydoc[typehints]>=0.7.7",
     "typing_extensions; python_version < '3.8'",  # for `Literal`
-    "python-igraph",
+    "myst-parser",
+    "matplotlib!=3.6.1",
+    "scanpy[paga]",
 ]
 dev = [
     # getting the dev version
@@ -113,15 +122,19 @@ dev = [
     "black>=20.8b1",
     "docutils",
 ]
+# Algorithms
+paga = ["python-igraph"]
 louvain = ["python-igraph", "louvain>=0.6,!=0.6.2"]  # Louvain community detection
 leiden = ["python-igraph", "leidenalg"]  # Leiden community detection
 bbknn = ["bbknn"]  # Batch balanced KNN (batch correction)
-rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
 magic = ["magic-impute>=2.0"]  # MAGIC imputation method
 skmisc = ["scikit-misc>=0.1.3"]  # highly_variable_genes method 'seurat_v3'
 harmony = ["harmonypy"]  # Harmony dataset integration
 scanorama = ["scanorama"]  # Scanorama dataset integration
 scrublet = ["scrublet"]  # Doublet detection
+# Acceleration
+rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
+dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
 
 [tool.flit.sdist]
 exclude = [
@@ -132,7 +145,6 @@ exclude = [
 [tool.pytest.ini_options]
 python_files = "test_*.py"
 testpaths = "scanpy/tests/"
-xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",

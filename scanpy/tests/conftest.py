@@ -26,7 +26,7 @@ def close_figures_on_teardown():
 def clear_loggers():
     """Remove handlers from all loggers
 
-    Fixes: https://github.com/theislab/scanpy/issues/1736
+    Fixes: https://github.com/scverse/scanpy/issues/1736
 
     Code from: https://github.com/pytest-dev/pytest/issues/5502#issuecomment-647157873
     """

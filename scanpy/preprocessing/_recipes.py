@@ -3,6 +3,7 @@ from typing import Optional
 
 from anndata import AnnData
 
+
 from .. import preprocessing as pp
 from ._deprecated.highly_variable_genes import (
     filter_genes_dispersion,

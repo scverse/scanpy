@@ -1,24 +1,13 @@
 .. sidebar:: Key Contributors
-   :subtitle: `anndata graph`_ | `scanpy graph`_ | ☀ = maintainer
+   :subtitle: `anndata graph <https://github.com/scverse/anndata/graphs/contributors>`_ | `scanpy graph <https://github.com/scverse/scanpy/graphs/contributors>`_ | ☀ = maintainer
 
-   * `Isaac Virshup`_: lead developer since 2019 ☀
-   * `Gökcen Eraslan`_: developer, diverse contributions ☀
-   * Sergei Rybakov: developer, diverse contributions ☀
-   * `Fidel Ramirez`_: developer, plotting ☀
-   * `Giovanni Palla`_: developer, spatial data
-   * `Malte Luecken`_: developer, community & forum
-   * `Lukas Heumos`_: developer, diverse contributions
-   * Philipp Angerer: developer, software quality, initial anndata conception ☀
-   * `Alex Wolf`_: lead developer 2016-2019, initial anndata & scanpy conception
-   * `Fabian Theis`_ & lab: enabling guidance, support and environment
-
-.. _anndata graph: https://github.com/theislab/anndata/graphs/contributors
-.. _scanpy graph: https://github.com/theislab/scanpy/graphs/contributors
-.. _Isaac Virshup: https://twitter.com/ivirshup
-.. _Alex Wolf: https://twitter.com/falexwolf
-.. _Fabian Theis: https://twitter.com/fabian_theis
-.. _Fidel Ramirez: https://github.com/fidelram
-.. _Gökcen Eraslan: https://twitter.com/gokcen
-.. _Malte Luecken: https://twitter.com/MDLuecken
-.. _Giovanni Palla: https://twitter.com/g_palla1
-.. _Lukas Heumos: https://twitter.com/LukasHeumos
+   * `Isaac Virshup <https://github.com/ivirshup>`_: lead developer since 2019 ☀
+   * `Gökcen Eraslan <https://twitter.com/gokcen>`_: developer, diverse contributions ☀
+   * `Sergei Rybakov <https://github.com/Koncopd>`_: developer, diverse contributions ☀
+   * `Fidel Ramirez <https://github.com/fidelram>`_: developer, plotting ☀
+   * `Giovanni Palla <https://twitter.com/g_palla1>`_: developer, spatial data
+   * `Malte Luecken <https://twitter.com/MDLuecken>`_: developer, community & forum
+   * `Lukas Heumos <https://twitter.com/LukasHeumos>`_: developer, diverse contributions
+   * `Philipp Angerer <https://github.com/flying-sheep>`_: developer, software quality, initial anndata conception ☀
+   * `Alex Wolf <https://twitter.com/falexwolf>`_: lead developer 2016-2019, initial anndata & scanpy conception
+   * `Fabian Theis <https://twitter.com/fabian_theis>`_ & lab: enabling guidance, support and environment

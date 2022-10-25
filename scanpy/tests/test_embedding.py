@@ -1,7 +1,7 @@
 from importlib.util import find_spec
 from unittest.mock import patch
 import warnings
-
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
@@ -10,7 +10,7 @@ import scanpy as sc
 
 
 def test_tsne():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
 
     euclidean1 = sc.tl.tsne(pbmc, metric="euclidean", copy=True)
     with pytest.warns(UserWarning, match="In previous versions of scanpy"):
@@ -32,7 +32,7 @@ def test_tsne():
 
 
 def test_tsne_metric_warning():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     import sklearn
 
     with patch.object(sklearn, "__version__", "0.23.0"), pytest.warns(
@@ -42,7 +42,7 @@ def test_tsne_metric_warning():
 
 
 def test_umap_init_dtype():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     pbmc = pbmc[:100, :].copy()
     sc.tl.umap(pbmc, init_pos=pbmc.obsm["X_pca"][:, :2].astype(np.float32))
     embed1 = pbmc.obsm["X_umap"].copy()
@@ -53,11 +53,21 @@ def test_umap_init_dtype():
 
 
 needs_fa2 = pytest.mark.skipif(not find_spec("fa2"), reason="needs module `fa2`")
+needs_igraph = pytest.mark.skipif(
+    not find_spec("igraph"),
+    reason="needs module `igraph` (`pip install python-igraph`)",
+)
 
 
-@pytest.mark.parametrize("layout", [pytest.param("fa", marks=needs_fa2), "fr"])
+@pytest.mark.parametrize(
+    "layout",
+    [
+        pytest.param("fa", marks=needs_fa2),
+        pytest.param("fr", marks=needs_igraph),
+    ],
+)
 def test_umap_init_paga(layout):
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     pbmc = pbmc[:100, :].copy()
     sc.tl.paga(pbmc)
     sc.pl.paga(pbmc, layout=layout, show=False)
@@ -65,7 +75,7 @@ def test_umap_init_paga(layout):
 
 
 def test_diffmap():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
 
     sc.tl.diffmap(pbmc)
     d1 = pbmc.obsm['X_diffmap'].copy()
