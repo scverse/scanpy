@@ -9,10 +9,11 @@ from scipy import sparse
 
 from anndata.tests.helpers import asarray
 import pytest
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 
 def test_gearys_c_consistency():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
 
@@ -69,7 +70,7 @@ def test_gearys_c_correctness():
 
 
 def test_morans_i_consistency():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
 
@@ -132,8 +133,8 @@ def test_morans_i_correctness():
     ids=lambda x: x.__name__,
 )
 def test_graph_metrics_w_constant_values(metric, array_type):
-    # https://github.com/theislab/scanpy/issues/1806
-    pbmc = sc.datasets.pbmc68k_reduced()
+    # https://github.com/scverse/scanpy/issues/1806
+    pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())
     g = pbmc.obsp["connectivities"].copy()
 

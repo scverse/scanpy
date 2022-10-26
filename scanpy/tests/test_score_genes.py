@@ -5,6 +5,7 @@ from scipy.sparse import csr_matrix
 import pytest
 import pickle
 from pathlib import Path
+from scanpy.tests._data._cached_datasets import paul15
 
 HERE = Path(__file__).parent / Path('_data/')
 
@@ -54,7 +55,7 @@ def test_score_with_reference():
     and stored as a pickle object in ./data
     """
 
-    adata = sc.datasets.paul15()
+    adata = paul15()
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
     sc.pp.scale(adata)
 
@@ -209,6 +210,23 @@ def test_missing_genes():
 
 
 def test_one_gene():
-    # https://github.com/theislab/scanpy/issues/1395
+    # https://github.com/scverse/scanpy/issues/1395
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
     sc.tl.score_genes(adata, [adata.var_names[0]])
+
+
+def test_use_raw_None():
+    adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
+    adata_raw = adata.copy()
+    adata_raw.var_names = [str(i) for i in range(adata_raw.n_vars)]
+    adata.raw = adata_raw
+
+    sc.tl.score_genes(adata, adata_raw.var_names[:3], use_raw=None)
+
+
+@pytest.mark.parametrize("gene_pool", [[], ["foo", "bar"]])
+def test_invalid_gene_pool(gene_pool):
+    adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
+
+    with pytest.raises(ValueError, match="reference set"):
+        sc.tl.score_genes(adata, adata.var_names[:3], gene_pool=gene_pool)

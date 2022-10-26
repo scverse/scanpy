@@ -14,6 +14,7 @@ from matplotlib import patheffects
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like, Colormap
 from scipy.sparse import issparse
+from sklearn.utils import check_random_state
 
 from .. import _utils
 from .._utils import matrix, _IGraphLayout, _FontWeight, _FontSize
@@ -96,7 +97,7 @@ def paga_compare(
         else:
             basis = 'umap'
 
-    from .scatterplots import embedding, _get_data_points
+    from .scatterplots import embedding, _get_basis, _components_to_dimensions
 
     embedding(
         adata,
@@ -122,9 +123,12 @@ def paga_compare(
 
     if pos is None:
         if color == adata.uns['paga']['groups']:
-            coords = _get_data_points(
-                adata, basis, projection="2d", components=components, scale_factor=None
-            )[0][0]
+            # TODO: Use dimensions here
+            _basis = _get_basis(adata, basis)
+            dims = _components_to_dimensions(
+                components=components, dimensions=None, total_dims=_basis.shape[1]
+            )[0]
+            coords = _basis[:, dims]
             pos = (
                 pd.DataFrame(coords, columns=["x", "y"], index=adata.obs_names)
                 .groupby(adata.obs[color], observed=True)
@@ -174,7 +178,10 @@ def _compute_pos(
     root=0,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
 ):
+    import random
     import networkx as nx
+
+    random_state = check_random_state(random_state)
 
     nx_g_solid = nx.Graph(adjacency_solid)
     if layout is None:
@@ -190,9 +197,9 @@ def _compute_pos(
             )
             layout = 'fr'
     if layout == 'fa':
-        np.random.seed(random_state)
+        # np.random.seed(random_state)
         if init_pos is None:
-            init_coords = np.random.random((adjacency_solid.shape[0], 2))
+            init_coords = random_state.random_sample((adjacency_solid.shape[0], 2))
         else:
             init_coords = init_pos.copy()
         forceatlas2 = ForceAtlas2(
@@ -233,6 +240,7 @@ def _compute_pos(
             )
     else:
         # igraph layouts
+        random.seed(random_state.bytes(8))
         g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
         if 'rt' in layout:
             g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
@@ -243,9 +251,11 @@ def _compute_pos(
             pos_list = g.layout(layout).coords
         else:
             # I don't know why this is necessary
-            np.random.seed(random_state)
+            # np.random.seed(random_state)
             if init_pos is None:
-                init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
+                init_coords = random_state.random_sample(
+                    (adjacency_solid.shape[0], 2)
+                ).tolist()
             else:
                 init_pos = init_pos.copy()
                 # this is a super-weird hack that is necessary as igraph’s
@@ -407,7 +417,7 @@ def paga(
     cax
         A matplotlib axes object for a potential colorbar.
     cb_kwds
-        Keyword arguments for :class:`~matplotlib.colorbar.ColorbarBase`,
+        Keyword arguments for :class:`~matplotlib.colorbar.Colorbar`,
         for instance, `ticks`.
     add_pos
         Add the positions to `adata.uns['paga']`.
@@ -953,7 +963,7 @@ def _paga_graph(
                 s = np.abs(xy).max()
 
                 sct = ax.scatter(
-                    [xx], [yy], marker=xy, s=s ** 2 * groups_sizes[ix], color=color
+                    [xx], [yy], marker=xy, s=s**2 * groups_sizes[ix], color=color
                 )
 
             if node_labels is not None:
