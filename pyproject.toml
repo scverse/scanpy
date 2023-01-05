@@ -117,6 +117,8 @@ doc = [
     "nbsphinx",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "sphinx-hoverxref",
+    "matplotlib!=3.6.1",
+    "scanpy[paga]",
 ]
 dev = [
     # getting the dev version
