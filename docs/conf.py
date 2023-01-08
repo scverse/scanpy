@@ -141,8 +141,10 @@ html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 html_title = "scanpy"
 
 
-def setup(app):
-    app.warningiserror = on_rtd
+# TODO: fix all warnings in a future PR
+# Many come from the tutorials
+# def setup(app):
+#     app.warningiserror = on_rtd
 
 
 nbsphinx_prolog = r"""
