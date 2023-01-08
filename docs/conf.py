@@ -62,7 +62,6 @@ extensions = [
     'sphinx.ext.extlinks',
     'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
-    'scanpydoc.definition_list_typed_field',
     'scanpydoc.autosummary_generate_imported',
     "sphinx_design",
     "sphinxext.opengraph",
