@@ -21,7 +21,7 @@ New to *scanpy*? Check out the installation guide.
 :::
 
 :::{grid-item-card} Tutorials {octicon}`play;1em;`
-:link: tutorials/index
+:link: _tutorials
 :link-type: doc
 
 The tutorials walk you through real-world applications of scanpy.
