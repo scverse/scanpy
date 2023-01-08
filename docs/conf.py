@@ -67,7 +67,6 @@ extensions = [
     "sphinx_design",
     "sphinxext.opengraph",
     "nbsphinx",
-    "hoverxref.extension",
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
@@ -295,25 +294,6 @@ def linkcode_resolve(domain, info):
     path = f"{path}#L{lineno}-L{lineno + len(src) - 1}"
     return f"{github_repo}/blob/{git_ref}/scvi/{path}"
 
-
-# Hoverxref config
-
-hoverx_default_type = "tooltip"
-hoverxref_domains = ["py"]
-hoverxref_role_types = dict.fromkeys(
-    ["ref", "class", "func", "meth", "attr", "exc", "data"],
-    "tooltip",
-)
-hoverxref_intersphinx = [
-    "python",
-    "numpy",
-    "anndata",
-    "scipy",
-    "pandas",
-]
-# use proxied API endpoint on rtd to avoid CORS issues
-if os.environ.get("READTHEDOCS"):
-    hoverxref_api_host = "/_"
 
 # extlinks config
 extlinks = {

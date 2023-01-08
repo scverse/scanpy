@@ -150,4 +150,5 @@ tutorials/plotting/core
 tutorials/integrating-data-using-ingest
 tutorials/spatial/basic-analysis
 tutorials/spatial/integration-scanorama
+tutorials/tutorial_pearson_residuals
 ```
