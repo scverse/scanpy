@@ -431,6 +431,11 @@ def _scrublet_call_doublets(
 
     if mean_center:
         logg.info('Embedding transcriptomes using PCA...')
+        # Sklearn PCA doesn't like matrices, so convert to arrays
+        if isinstance(scrub._E_obs_norm, np.matrix):
+            scrub._E_obs_norm = np.asarray(scrub._E_obs_norm)
+        if isinstance(scrub._E_sim_norm, np.matrix):
+            scrub._E_sim_norm = np.asarray(scrub._E_sim_norm)
         sl.pipeline_pca(
             scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
         )
