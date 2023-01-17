@@ -8,8 +8,17 @@
 .. currentmodule:: scanpy.external
 ```
 
+```{warning}
+We are no longer accepting new tools into `scanpy.external`.
+
+Instead, please submit your tool to the [scverse ecosystem package listing](https://scverse.org/packages/#ecosystem).
+```
+
 ```{note}
-More tools that integrate well with scanpy and anndata can be found on the {doc}`ecosystem page <../ecosystem>`.
+For tools that integrate well with scanpy and anndata, see:
+
+* The [scverse ecosystem](https://scverse.org/packages/#ecosystem)
+* Scanpy's ecosystem {doc}`ecosystem page <../ecosystem>`
 ```
 
 Import Scanpy's wrappers to external tools as:
@@ -17,9 +26,6 @@ Import Scanpy's wrappers to external tools as:
 ```
 import scanpy.external as sce
 ```
-
-If you'd like to include a tool here, consider making a pull request ({doc}`instructions <../dev/external-tools>`).
-If the tool already uses `scanpy` or `anndata`, it may fit better in the {doc}`ecosystem page <../ecosystem>`.
 
 ## Preprocessing: PP
 
