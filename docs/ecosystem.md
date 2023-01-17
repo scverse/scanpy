@@ -47,6 +47,10 @@ Interactive manifold viewers.
 
   > PASTE is a computational method to align and integrate spatial transcriptomics data across adjacent tissue slices by leveraging both gene expression similarity and spatial distances between spots.
 
+- [bento](https://bento-tools.readthedocs.io/en/latest/) 🍱 {small}`UC San Diego`
+
+  > Bento is an accessible Python toolkit for performing subcellular analysis of spatial transcriptomics data.
+
 ### Multimodal integration
 
 - [MUON](https://muon.readthedocs.io/en/latest/) and [MuData](https://mudata.readthedocs.io/en/latest/) {small}`EMBL/ DKFZ`
