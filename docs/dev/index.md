@@ -10,7 +10,6 @@ code
 getting-set-up
 testing
 documentation
-external-tools
 ci
 release
 versioning
