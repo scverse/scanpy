@@ -83,7 +83,7 @@ def filter_cells(
         Boolean index mask that does filtering. `True` means that the
         cell is kept. `False` means the cell is removed.
     number_per_cell
-        Depending on what was tresholded (`counts` or `genes`),
+        Depending on what was thresholded (`counts` or `genes`),
         the array stores `n_counts` or `n_cells` per gene.
 
     Examples
@@ -218,7 +218,7 @@ def filter_genes(
         Boolean index mask that does filtering. `True` means that the
         gene is kept. `False` means the gene is removed.
     number_per_gene
-        Depending on what was tresholded (`counts` or `cells`), the array stores
+        Depending on what was thresholded (`counts` or `cells`), the array stores
         `n_counts` or `n_cells` per gene.
     """
     if copy:
