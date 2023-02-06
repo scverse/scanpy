@@ -132,6 +132,10 @@ def mnn_correct(
         )
 
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
+    
+    if n_jobs < 2:
+        mnnpy.settings.normalization = "single"
+        
     datas, mnn_list, angle_list = mnn_correct(
         *datas,
         var_index=var_index,
