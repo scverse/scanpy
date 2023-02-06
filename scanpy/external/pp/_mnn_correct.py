@@ -136,6 +136,8 @@ def mnn_correct(
     
     if n_jobs < 2:
         mnnpy.settings.normalization = "single"
+    else:
+        mnnpy.settings.normalization = 'parallel'
         
     datas, mnn_list, angle_list = mnn_correct(
         *datas,
