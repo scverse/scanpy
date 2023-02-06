@@ -125,6 +125,7 @@ def mnn_correct(
 
     try:
         from mnnpy import mnn_correct
+        import mnnpy
     except ImportError:
         raise ImportError(
             'Please install the package mnnpy '
