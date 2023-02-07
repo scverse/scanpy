@@ -520,7 +520,6 @@ class BasePlot(object):
         color_legend_ax.xaxis.set_tick_params(labelsize='small')
 
     def _plot_legend(self, legend_ax, return_ax_dict, normalize):
-
         # to maintain the fixed height size of the legends, a
         # spacer of variable height is added at top and bottom.
         # The structure for the legends is:

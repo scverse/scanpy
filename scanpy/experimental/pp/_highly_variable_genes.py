@@ -90,7 +90,6 @@ def _highly_variable_pearson_residuals(
     # Get pearson residuals for each batch separately
     residual_gene_vars = []
     for batch in np.unique(batch_info):
-
         adata_subset_prefilter = adata[batch_info == batch]
         X_batch_prefilter = _get_obs_rep(adata_subset_prefilter, layer=layer)
 
