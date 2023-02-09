@@ -30,7 +30,7 @@ def louvain(
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
     key_added: str = 'louvain',
     adjacency: Optional[spmatrix] = None,
-    flavor: Literal['vtraag', 'igraph', 'rapids'] = 'vtraag',
+    flavor: Literal['vtraag', 'igraph', 'rapids','katana'] = 'vtraag',
     directed: bool = True,
     use_weights: bool = False,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
@@ -201,8 +201,36 @@ def louvain(
         groups = np.zeros(len(partition), dtype=int)
         for k, v in partition.items():
             groups[k] = v
+    elif flavor == 'katana':
+        #from scanpy._utils import _choose_graph
+
+        adjacency = _choose_graph(adata, obsp=None, neighbors_key=None)
+        sources, targets = adjacency.nonzero()
+        weights = adjacency[sources, targets]
+        if isinstance(weights, np.matrix):
+              weights = weights.A1
+
+        import pandas as pd
+        from natsort import natsorted
+        from katana.local import Graph
+        from katana.local.analytics import louvain_clustering, LouvainClusteringStatistics, LouvainClusteringPlan
+        from katana.local.import_data import from_edge_list_arrays
+        import katana.local
+        katana.local.initialize()
+        property_dict = {"value": weights}
+        graph = from_edge_list_arrays(sources, targets, property_dict)
+        enable_vf = False
+        modularity_threshold_per_round = 0.0001
+        modularity_threshold_total = 0.0001
+        max_iterations = 100000
+        min_graph_size = 0
+        louvain_plan = LouvainClusteringPlan.do_all(enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size)
+        louvain_clustering(graph, "value", "output", plan=louvain_plan)
+        stats = LouvainClusteringStatistics(graph, "value", "output")
+        print(stats)
+        groups = graph.get_node_property("output").to_numpy().astype('int')
     else:
-        raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
+        raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud" or "katana".')
     if restrict_to is not None:
         if key_added == 'louvain':
             key_added += '_R'
