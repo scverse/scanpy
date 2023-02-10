@@ -36,7 +36,7 @@ def leiden(
     neighbors_key: Optional[str] = None,
     obsp: Optional[str] = None,
     copy: bool = False,
-    flavor: Literal['default','katana'] = 'default',
+    flavor: Literal['default', 'katana'] = 'default',
     **partition_kwargs,
 ) -> Optional[AnnData]:
     """\
@@ -169,26 +169,39 @@ def leiden(
             weights = weights.A1
         start = logg.info('running Leiden clustering')
 
-        from katana.local.analytics import leiden_clustering, LeidenClusteringStatistics, LeidenClusteringPlan
+        from katana.local.analytics import (
+            leiden_clustering,
+            LeidenClusteringStatistics,
+            LeidenClusteringPlan,
+        )
         from katana.local.import_data import from_edge_list_arrays
+
         property_dict = {"value": weights}
         graph = from_edge_list_arrays(sources, targets, property_dict)
 
         enable_vf = True
         modularity_threshold_per_round = 0.0001
-        modularity_threshold_total = 0.0001  
+        modularity_threshold_total = 0.0001
         max_iterations = 1000000
         min_graph_size = 0
         resolution = 1.0
         randomness = 0
-        
-        leiden_plan = LeidenClusteringPlan.deterministic(enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size, resolution, randomness)
+
+        leiden_plan = LeidenClusteringPlan.deterministic(
+            enable_vf,
+            modularity_threshold_per_round,
+            modularity_threshold_total,
+            max_iterations,
+            min_graph_size,
+            resolution,
+            randomness,
+        )
         # leiden_plan = LeidenClusteringPlan.do_all(enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size, resolution, randomness)
         leiden_clustering(graph, "value", "leiden_output", plan=leiden_plan)
         stats = LeidenClusteringStatistics(graph, "value", "leiden_output")
         print(stats)
         groups = graph.get_node_property("leiden_output").to_numpy().astype('int')
-        
+
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),
         categories=natsorted(map(str, np.unique(groups))),
