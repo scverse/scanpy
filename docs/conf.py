@@ -265,7 +265,7 @@ def linkcode_resolve(domain, info):
         return None
 
     path = f"{path}#L{lineno}-L{lineno + len(src) - 1}"
-    return f"{github_repo}/blob/{git_ref}/scvi/{path}"
+    return f"{github_repo}/blob/{git_ref}/scanpy/{path}"
 
 
 # extlinks config
