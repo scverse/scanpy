@@ -219,8 +219,6 @@ plot_working_directory = HERE.parent  # Project root
 
 # Linkcode config
 
-github_repo = "https://github.com/scverse/scanpy"
-
 
 def git(*args):
     return subprocess.check_output(["git", *args]).strip().decode()
@@ -265,7 +263,7 @@ def linkcode_resolve(domain, info):
         return None
 
     path = f"{path}#L{lineno}-L{lineno + len(src) - 1}"
-    return f"{github_repo}/blob/{git_ref}/scanpy/{path}"
+    return f"{repository_url}/blob/{git_ref}/scanpy/{path}"
 
 
 # extlinks config
