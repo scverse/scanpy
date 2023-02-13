@@ -134,6 +134,7 @@ html_theme_options = {
     "repository_url": repository_url,
     "use_repository_button": True,
     "logo_only": True,
+    "show_toc_level": 4,  # show all levels in the sidebar
 }
 html_static_path = ['_static']
 html_css_files = ["css/override.css"]
