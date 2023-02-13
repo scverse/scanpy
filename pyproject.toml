@@ -110,6 +110,7 @@ doc = [
     "sphinx>=4.4",
     "scanpydoc[typehints]>=0.7.7",
     "typing_extensions; python_version < '3.8'",  # for `Literal`
+    "myst-parser",
     "myst-nb",
     "sphinx-book-theme",
     "sphinx-design",
