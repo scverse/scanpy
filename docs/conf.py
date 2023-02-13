@@ -33,6 +33,7 @@ suppress_warnings = [
 # General information
 project = 'Scanpy'
 author = 'Scanpy development team'
+repository_url = "https://github.com/scverse/scanpy"
 copyright = f'{datetime.now():%Y}, the Scanpy development team.'
 version = scanpy.__version__.replace('.dirty', '')
 
@@ -50,7 +51,8 @@ default_role = 'literal'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 extensions = [
-    'myst_parser',
+    'myst_nb',
+    'sphinx_copybutton',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
@@ -65,7 +67,6 @@ extensions = [
     'scanpydoc.autosummary_generate_imported',
     "sphinx_design",
     "sphinxext.opengraph",
-    "nbsphinx",
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
@@ -82,10 +83,17 @@ napoleon_custom_sections = [('Params', 'Parameters')]
 todo_include_todos = False
 api_dir = HERE / 'api'  # function_images
 myst_enable_extensions = [
-    "colon_fence",
-    "dollarmath",
     "amsmath",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "html_image",
+    "html_admonition",
 ]
+myst_url_schemes = ("http", "https", "mailto")
+nb_output_stderr = "remove"
+nb_execution_mode = "off"
+nb_merge_streams = True
 
 # nbsphinx specific settings
 exclude_patterns = ["_build", "**.ipynb_checkpoints"]
@@ -124,72 +132,36 @@ intersphinx_mapping = dict(
 
 # -- Options for HTML output ----------------------------------------------
 
-html_theme = "furo"
+html_theme = "sphinx_book_theme"
 html_theme_options = {
-    "sidebar_hide_name": True,
-    "light_css_variables": {
-        "admonition-font-size": "var(--font-size-normal)",
-        "admonition-title-font-size": "var(--font-size-normal)",
-        "code-font-size": "var(--font-size--small)",
-    },
+    "repository_url": repository_url,
+    "use_repository_button": True,
 }
 html_static_path = ['_static']
 html_css_files = ["css/override.css"]
 html_show_sphinx = False
 html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 html_title = "scanpy"
+logo_only = True
 
 
-# TODO: fix all warnings in a future PR
-# Many come from the tutorials
-# def setup(app):
-#     app.warningiserror = on_rtd
-
-
-nbsphinx_prolog = r"""
-.. raw:: html
-
-{{% set docname = env.doc2path(env.docname, base=None).split("/")[-1] %}}
-
-.. raw:: html
-
-    <style>
-        p {{
-            margin-bottom: 0.5rem;
-        }}
-        /* Main index page overview cards */
-        /* https://github.com/spatialaudio/nbsphinx/pull/635/files */
-        .jp-RenderedHTMLCommon table,
-        div.rendered_html table {{
-        border: none;
-        border-collapse: collapse;
-        border-spacing: 0;
-        font-size: 12px;
-        table-layout: fixed;
-        color: inherit;
-        }}
-
-        body:not([data-theme=light]) .jp-RenderedHTMLCommon tbody tr:nth-child(odd),
-        body:not([data-theme=light]) div.rendered_html tbody tr:nth-child(odd) {{
-        background: rgba(255, 255, 255, .1);
-        }}
-    </style>
-
-.. raw:: html
-
-    <div class="admonition note">
-        <p class="admonition-title">Note</p>
-        <p>
-        This page was generated from
-        <a class="reference external" href="https://github.com/scverse/scanpy-tutorials/tree/master/">{docname}</a>.
-        Interactive online version:
-        <span style="white-space: nowrap;"><a href="https://colab.research.google.com/github/scverse/scanpy-tutorials/blob/master/{docname}"><img alt="Colab badge" src="https://colab.research.google.com/assets/colab-badge.svg" style="vertical-align:text-bottom"></a>.</span>
-        Some tutorial content may look better in light mode.
-        </p>
-    </div>
-""".format(
-    docname="{{ docname|e }}"
-)
+def setup(app):
+    """App setup hook."""
+    # TODO: fix all warnings in a future PR
+    # Many come from the tutorials, like the workshop directory
+    # which is not included in the docs
+    #     app.warningiserror = on_rtd
+    app.add_config_value(
+        "recommonmark_config",
+        {
+            "auto_toc_tree_section": "Contents",
+            "enable_auto_toc_tree": True,
+            "enable_math": True,
+            "enable_inline_math": False,
+            "enable_eval_rst": True,
+        },
+        True,
+    )
 
 
 # -- Options for other output formats ------------------------------------------

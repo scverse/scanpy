@@ -110,10 +110,11 @@ doc = [
     "sphinx>=4.4",
     "scanpydoc[typehints]>=0.7.7",
     "typing_extensions; python_version < '3.8'",  # for `Literal`
-    "myst-parser",
-    "furo",
+    "myst-nb",
+    "sphinx-book-theme",
     "sphinx-design",
-    "sphinxext-opengraph",
+    "sphinxext-opengraph", # for nice cards when sharing on social
+    "sphinx-copybutton",
     "nbsphinx",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",

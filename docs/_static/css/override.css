@@ -9,15 +9,6 @@ dl.citation>dt {
     font-weight: bold;
 }
 
-/* so that api methods are small in sidebar */
-li.toctree-l3 {
-    font-size: 81.25% !important;
-}
-
-li.toctree-l4 {
-    font-size: 75% !important;
-}
-
 /* for custom small role */
 .small {
     font-size: 40% !important
@@ -26,43 +17,4 @@ li.toctree-l4 {
 .smaller,
 .pr {
     font-size: 70% !important
-}
-
-
-/* nbsphinx specific */
-
-.nbinput .prompt,
-.nboutput .prompt {
-    display: none;
-}
-
-.nboutput .stderr {
-    display: none;
-}
-
-div.nblast.container {
-    padding-bottom: 10px !important;
-    padding-right: 0px;
-    padding-left: 0px;
-}
-
-div.nbinput.container {
-    padding-top: 10px !important;
-    padding-right: 0px;
-    padding-left: 0px;
-}
-
-div.nbinput.container div.input_area {
-    /* Code cell border that works in both dark and light mode */
-    border-color: rgba(127, 127, 127, .25) !important;
-}
-
-
-div.nbinput.container div.input_area div[class*="highlight"]>pre {
-    padding: 10px !important;
-    margin: 0;
-}
-
-p.topic-title {
-    margin-top: 0;
 }
