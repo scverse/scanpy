@@ -48,7 +48,7 @@ release = version
 templates_path = ['_templates']
 master_doc = 'index'
 default_role = 'literal'
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints']
 
 extensions = [
     'myst_nb',
@@ -95,9 +95,6 @@ nb_output_stderr = "remove"
 nb_execution_mode = "off"
 nb_merge_streams = True
 
-# nbsphinx specific settings
-exclude_patterns = ["_build", "**.ipynb_checkpoints"]
-nbsphinx_execute = "never"
 
 ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
 ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
