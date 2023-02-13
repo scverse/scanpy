@@ -107,7 +107,7 @@ test-full = [
     "scanpy[scrublet]",
 ]
 doc = [
-    "sphinx>=4.4",
+    "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
     "scanpydoc[typehints]>=0.7.7",
     "typing_extensions; python_version < '3.8'",  # for `Literal`
     "myst-parser",
