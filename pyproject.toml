@@ -54,7 +54,8 @@ dependencies = [
     "anndata>=0.7.4",
     # numpy needs a version due to #1320
     "numpy>=1.17.0",
-    "matplotlib>=3.4",
+    # currently incompatible with matplotlib 3.7 due to #2411
+    "matplotlib>=3.4,<3.7",
     "pandas>=1.0",
     "scipy>=1.4",
     "seaborn",
