@@ -27,13 +27,13 @@ def paga(
     By quantifying the connectivity of partitions (groups, clusters) of the
     single-cell graph, partition-based graph abstraction (PAGA) generates a much
     simpler abstracted graph (*PAGA graph*) of partitions, in which edge weights
-    represent confidence in the presence of connections. By tresholding this
+    represent confidence in the presence of connections. By thresholding this
     confidence in :func:`~scanpy.pl.paga`, a much simpler representation of the
     manifold data is obtained, which is nonetheless faithful to the topology of
     the manifold.
 
     The confidence should be interpreted as the ratio of the actual versus the
-    expected value of connetions under the null model of randomly connecting
+    expected value of connections under the null model of randomly connecting
     partitions. We do not provide a p-value as this null model does not
     precisely capture what one would consider "connected" in real data, hence it
     strongly overestimates the expected value. See an extensive discussion of
