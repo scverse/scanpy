@@ -158,6 +158,7 @@ def test_repeated_gene_symbols():
     adata = sc.AnnData(
         np.arange(3 * 4).reshape((3, 4)),
         var=pd.DataFrame({"gene_symbols": gene_symbols}, index=var_names),
+        dtype=np.float32,
     )
 
     with pytest.raises(KeyError, match="symbol_b"):

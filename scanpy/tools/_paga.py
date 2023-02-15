@@ -503,7 +503,7 @@ def paga_compare_paths(
     n_paths = 0
     n_agreeing_paths = 0
     # loop over all pairs of leaf nodes in the reference adata1
-    for (r, s) in itertools.combinations(leaf_nodes1, r=2):
+    for r, s in itertools.combinations(leaf_nodes1, r=2):
         r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
         on1_g1, on2_g1 = [orig_names1[int(i)] for i in [r, s]]
         on1_g2, on2_g2 = [orig_names2[int(i)] for i in [r2, s2]]
