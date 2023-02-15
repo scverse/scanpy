@@ -32,7 +32,7 @@ _FontSize = Literal[
 VBound = Union[str, float, Callable[[Sequence[float]], float]]
 
 
-class _AxesSubplot(Axes, axes.SubplotBase, ABC):
+class _AxesSubplot(Axes, axes.SubplotBase):
     """Intersection between Axes and SubplotBase: Has methods of both"""
 
 
