@@ -29,6 +29,8 @@ This should be added to `docs/api.md` under a relevant heading.
 
 For tutorials and more in depth examples, consider adding a notebook to [scanpy-tutorials](https://github.com/scverse/scanpy-tutorials/).
 
+The tutorials are tied to this repository via a submodule. To update the submodule, run `git submodule update --remote` from the root of the repository. Subsequently, commit and push the changes in a PR. This should be done before each release to ensure the tutorials are up to date.
+
 ## docstrings format
 
 We use the numpydoc style for writing docstrings.
