@@ -417,10 +417,8 @@ def scrublet_score_distribution(
     fig, axs = plt.subplots(n_batches, 2, figsize=figsize)
 
     for idx, (batch_key, sub_obs) in enumerate(adata.obs.groupby(batches)):
-
         # We'll need multiple rows if Scrublet was run in multiple batches
         if 'batched_by' in adata.uns['scrublet']:
-
             threshold = adata.uns["scrublet"]['batches'][batch_key].get(
                 "threshold", None
             )

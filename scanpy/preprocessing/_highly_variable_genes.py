@@ -315,18 +315,21 @@ def highly_variable_genes(
     data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
+    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_. Seurat v3 flavor
+    requires `scikit-misc` package. If you plan to use this flavor, consider
+    installing `scanpy` with this optional dependency: `scanpy[skmisc]`.
 
-    For the dispersion-based methods ([Satija15]_ and [Zheng17]_), the normalized
-    dispersion is obtained by scaling with the mean and standard deviation of
-    the dispersions for genes falling into a given bin for mean expression of
-    genes. This means that for each bin of mean expression, highly variable
-    genes are selected.
+    For the dispersion-based methods (`flavor='seurat'` [Satija15]_ and
+    `flavor='cell_ranger'` [Zheng17]_), the normalized dispersion is obtained
+    by scaling with the mean and standard deviation of the dispersions for genes
+    falling into a given bin for mean expression of genes. This means that for each
+    bin of mean expression, highly variable genes are selected.
 
-    For [Stuart19]_, a normalized variance for each gene is computed. First, the data
-    are standardized (i.e., z-score normalization per feature) with a regularized
-    standard deviation. Next, the normalized variance is computed as the variance
-    of each gene after the transformation. Genes are ranked by the normalized variance.
+    For `flavor='seurat_v3'` [Stuart19]_, a normalized variance for each gene
+    is computed. First, the data are standardized (i.e., z-score normalization
+    per feature) with a regularized standard deviation. Next, the normalized variance
+    is computed as the variance of each gene after the transformation. Genes are ranked
+    by the normalized variance.
 
     See also `scanpy.experimental.pp._highly_variable_genes` for additional flavours
     (e.g. Pearson residuals).

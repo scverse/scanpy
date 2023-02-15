@@ -89,7 +89,6 @@ class _RankGenes:
         layer=None,
         comp_pts=False,
     ):
-
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
         else:
@@ -363,7 +362,6 @@ class _RankGenes:
         tie_correct=False,
         **kwds,
     ):
-
         if method in {'t-test', 't-test_overestim_var'}:
             generate_test_results = self.t_test(method)
         elif method == 'wilcoxon':

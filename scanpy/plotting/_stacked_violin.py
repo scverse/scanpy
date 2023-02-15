@@ -440,7 +440,6 @@ class StackedViolin(BasePlot):
         )
         axs_list = []
         for idx, row_label in enumerate(_color_df.index):
-
             row_ax = fig.add_subplot(gs[idx + 1, 1:-1])
             axs_list.append(row_ax)
 

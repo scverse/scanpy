@@ -1618,7 +1618,6 @@ def _get_values_to_plot(
     if groups is None:
         groups = adata.uns[key]['names'].dtype.names
     if values_to_plot is not None:
-
         df_list = []
         for group in groups:
             df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
