@@ -296,9 +296,8 @@ def hashsolo(
 
     Returns
     -------
-    adata
-        if inplace is False returns AnnData with demultiplexing results
-        in .obs attribute otherwise does is in place
+    if inplace is False returns AnnData with demultiplexing results
+    in .obs attribute otherwise does is in place
 
     Examples
     -------
