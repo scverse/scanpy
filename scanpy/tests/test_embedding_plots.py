@@ -1,6 +1,7 @@
 from functools import partial
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.testing.compare import compare_images
@@ -304,6 +305,11 @@ def test_visium_circles(image_comparer):  # standard visium data
 
 
 def test_visium_default(image_comparer):  # default values
+    from packaging.version import parse as parse_version
+
+    if parse_version(mpl.__version__) < parse_version("3.7.0"):
+        pytest.xfail("Matplotlib 3.7.0+ required for this test")
+
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=5)
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})

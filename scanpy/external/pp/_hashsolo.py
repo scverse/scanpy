@@ -25,7 +25,8 @@ hypotheses in a bayesian fashion, and select the most probable hypothesis.
 
 
 def _calculate_log_likelihoods(data, number_of_noise_barcodes):
-    """Calculate log likelihoods for each hypothesis, negative, singlet, doublet
+    """\
+    Calculate log likelihoods for each hypothesis, negative, singlet, doublet
 
     Parameters
     ----------
@@ -43,8 +44,8 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     """
 
     def gaussian_updates(data, mu_o, std_o):
-        """Update parameters of your gaussian
-        https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
+        """\
+        Update parameters of your gaussian https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
 
         Parameters
         ----------
@@ -210,7 +211,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
 
 
 def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
-    """
+    """\
     Calculate bayes rule from log likelihoods
 
     Parameters
@@ -263,7 +264,8 @@ def hashsolo(
     number_of_noise_barcodes: int = None,
     inplace: bool = True,
 ):
-    """Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
+    """\
+    Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
 
     .. note::
         More information and bug reports `here <https://github.com/calico/solo>`__.
@@ -294,9 +296,8 @@ def hashsolo(
 
     Returns
     -------
-    adata
-        if inplace is False returns AnnData with demultiplexing results
-        in .obs attribute otherwise does is in place
+    if inplace is False returns AnnData with demultiplexing results
+    in .obs attribute otherwise does is in place
 
     Examples
     -------
