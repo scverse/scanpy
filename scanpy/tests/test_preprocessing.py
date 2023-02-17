@@ -15,11 +15,11 @@ from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 
 def test_log1p(tmp_path):
-    A = np.random.rand(200, 10)
+    A = np.random.rand(200, 10).astype(np.float32)
     A_l = np.log1p(A)
-    ad = AnnData(A)
-    ad2 = AnnData(A)
-    ad3 = AnnData(A)
+    ad = AnnData(A.copy())
+    ad2 = AnnData(A.copy())
+    ad3 = AnnData(A.copy())
     ad3.filename = tmp_path / 'test.h5ad'
     sc.pp.log1p(ad)
     assert np.allclose(ad.X, A_l)
