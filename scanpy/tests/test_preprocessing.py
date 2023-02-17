@@ -84,18 +84,19 @@ def test_mean_var_sparse():
 
 
 def test_normalize_per_cell():
-    adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
+    A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
+    adata = AnnData(A.copy())
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts='n_counts2')
     assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now with copy option
-    adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
+    adata = AnnData(A.copy())
     # note that sc.pp.normalize_per_cell is also used in
     # pl.highest_expr_genes with parameter counts_per_cell_after=100
     adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
     assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now sparse
-    adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
-    adata_sparse = AnnData(sp.csr_matrix([[1, 0], [3, 0], [5, 6]]))
+    adata = AnnData(A.copy())
+    adata_sparse = AnnData(sp.csr_matrix(A.copy()))
     sc.pp.normalize_per_cell(adata)
     sc.pp.normalize_per_cell(adata_sparse)
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
