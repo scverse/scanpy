@@ -14,6 +14,7 @@ from .._utils import _doc_params, AnyRandom, NeighborsView
 from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
+import numba
 
 N_DCS = 15  # default number of diffusion components
 N_PCS = (
@@ -343,26 +344,54 @@ def compute_neighbors_rapids(
     return knn_indices, knn_dist
 
 
+def compute_neighbors_sklearn(X: np.ndarray, n_neighbors: int):
+    """Compute nearest neighbors using sklearn
+    Parameters
+    ----------
+    X: array of shape (n_samples, n_features)
+        The data to compute nearest neighbors for.
+    n_neighbors
+        The number of neighbors to use.
+        Returns
+    -------
+    **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
+    """
+    from sklearn.neighbors import NearestNeighbors
+    import time
+
+    t0 = time.time()
+    nn = NearestNeighbors(n_neighbors=n_neighbors)
+    X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
+    nn.fit(X_contiguous)
+    knn_dist, knn_indices = nn.kneighbors(X_contiguous)
+    print("Here", time.time() - t0)
+    return knn_indices, knn_dist
+
+
 def _get_sparse_matrix_from_indices_distances_umap(
     knn_indices, knn_dists, n_obs, n_neighbors
 ):
-    rows = np.zeros((n_obs * n_neighbors), dtype=np.int64)
-    cols = np.zeros((n_obs * n_neighbors), dtype=np.int64)
-    vals = np.zeros((n_obs * n_neighbors), dtype=np.float64)
+    @numba.njit(cache=True, parallel=True)
+    def prep_arrays(knn_indices, knn_dists, n_obs, n_neighbors):
+        rows = np.zeros((n_obs * n_neighbors), dtype=np.int64)
+        cols = np.zeros((n_obs * n_neighbors), dtype=np.int64)
+        vals = np.zeros((n_obs * n_neighbors), dtype=np.float64)
 
-    for i in range(knn_indices.shape[0]):
-        for j in range(n_neighbors):
-            if knn_indices[i, j] == -1:
-                continue  # We didn't get the full knn for i
-            if knn_indices[i, j] == i:
-                val = 0.0
-            else:
-                val = knn_dists[i, j]
+        for i in numba.prange(knn_indices.shape[0]):
+            for j in range(n_neighbors):
+                if knn_indices[i, j] == -1:
+                    continue  # We didn't get the full knn for i
+                if knn_indices[i, j] == i:
+                    val = 0.0
+                else:
+                    val = knn_dists[i, j]
 
-            rows[i * n_neighbors + j] = i
-            cols[i * n_neighbors + j] = knn_indices[i, j]
-            vals[i * n_neighbors + j] = val
+                rows[i * n_neighbors + j] = i
+                cols[i * n_neighbors + j] = knn_indices[i, j]
+                vals[i * n_neighbors + j] = val
+        return rows, cols, vals
 
+    rows, cols, vals = prep_arrays(knn_indices, knn_dists, n_obs, n_neighbors)
     result = coo_matrix((vals, (rows, cols)), shape=(n_obs, n_obs))
     result.eliminate_zeros()
     return result.tocsr()
@@ -760,8 +789,14 @@ class Neighbors:
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
-        if method not in {'umap', 'gauss', 'rapids'}:
-            raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
+        if method == 'rapids' and metric != 'euclidean':
+            raise ValueError(
+                "`method` 'rapids' only supports the 'euclidean' `metric`."
+            )
+        if method not in {'umap', 'gauss', 'rapids', 'sklearn'}:
+            raise ValueError(
+                "`method` needs to be 'umap', 'gauss', 'sklearn' or 'rapids'."
+            )
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         # do not use the cached rp_forest
@@ -786,6 +821,8 @@ class Neighbors:
             knn_indices, knn_distances = compute_neighbors_rapids(
                 X, n_neighbors, metric=metric
             )
+        elif method == 'sklearn':
+            knn_indices, knn_distances = compute_neighbors_sklearn(X, n_neighbors)
         else:
             # non-euclidean case and approx nearest neighbors
             if X.shape[0] < 4096:
@@ -805,7 +842,7 @@ class Neighbors:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
-        if not use_dense_distances or method in {'umap', 'rapids'}:
+        if not use_dense_distances or method in {'umap', 'rapids', 'sklearn'}:
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
             self._distances, self._connectivities = _compute_connectivities_umap(
