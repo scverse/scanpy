@@ -372,9 +372,9 @@ def read_visium(
 
     if load_images:
         tissue_positions_file = (
-        path / "spatial/tissue_positions.csv"
-        if (path / "spatial/tissue_positions.csv").exists()
-        else path / "spatial/tissue_positions_list.csv"
+            path / "spatial/tissue_positions.csv"
+            if (path / "spatial/tissue_positions.csv").exists()
+            else path / "spatial/tissue_positions_list.csv"
         )
         files = dict(
             tissue_positions_file=tissue_positions_file,
@@ -415,9 +415,11 @@ def read_visium(
         }
 
         # read coordinates
-        positions = pd.read_csv(files['tissue_positions_file'], 
-        header=1 if tissue_positions_file.name == "tissue_positions.csv" else None,
-        index_col=0)
+        positions = pd.read_csv(
+            files['tissue_positions_file'],
+            header=1 if tissue_positions_file.name == "tissue_positions.csv" else None,
+            index_col=0,
+        )
         positions.columns = [
             'in_tissue',
             'array_row',
