@@ -301,7 +301,7 @@ def hashsolo(
         `.obs["most_likely_hypothesis"]`
             Index of the most likely hypothesis, where `0` corresponds to negative,
             `1` to singlet, and `2` to doublet.
-        `.obs["cluster_feature]`
+        `.obs["cluster_feature"]`
             The cluster assignments used for demultiplexing.
         `.obs["negative_hypothesis_probability"]`
             Probability of the negative hypothesis.
