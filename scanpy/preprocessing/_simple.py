@@ -10,6 +10,8 @@ from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
 import numba
 import numpy as np
 import scipy as sp
+import time
+import anndata
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs, check_array
 from pandas.api.types import is_categorical_dtype
@@ -83,7 +85,7 @@ def filter_cells(
         Boolean index mask that does filtering. `True` means that the
         cell is kept. `False` means the cell is removed.
     number_per_cell
-        Depending on what was tresholded (`counts` or `genes`),
+        Depending on what was thresholded (`counts` or `genes`),
         the array stores `n_counts` or `n_cells` per gene.
 
     Examples
@@ -218,7 +220,7 @@ def filter_genes(
         Boolean index mask that does filtering. `True` means that the
         gene is kept. `False` means the gene is removed.
     number_per_gene
-        Depending on what was tresholded (`counts` or `cells`), the array stores
+        Depending on what was thresholded (`counts` or `cells`), the array stores
         `n_counts` or `n_cells` per gene.
     """
     if copy:
@@ -280,6 +282,219 @@ def filter_genes(
             )
         logg.info(msg)
     return gene_subset, number_per_gene
+
+
+def finalize_drop_dense(adata, nrows, keeprows, keepcols0, ncols0, ncols, keepcols):
+    @numba.njit(cache=True, parallel=True)
+    def drop_to_dense(shp, indptr, indices, data, nrows, keeprows, ncols):
+        X = np.zeros((nrows, ncols), dtype=data.dtype)
+        rowmap = np.cumsum(keeprows)
+        for r in numba.prange(shp[0]):
+            # if not keeprows[r]: continue
+            newr = rowmap[r] - 1
+            # newr = r
+            sparserow = data[indptr[r] : indptr[r + 1]]
+            sparseind = indices[indptr[r] : indptr[r + 1]]
+            for j in range(len(sparserow)):
+                c = sparseind[j]
+                if c < ncols:
+                    X[newr, c] = sparserow[j]
+        return X
+
+    t0 = time.time()
+    newX = drop_to_dense(
+        adata.X.shape,
+        adata.X.indptr,
+        adata.X.indices,
+        adata.X.data,
+        nrows,
+        keeprows,
+        ncols,
+    )
+    print(len(keeprows))
+    print(len(adata.var))
+    adata = anndata.AnnData(
+        newX, adata.obs.iloc[keeprows, :], adata.var.iloc[keepcols, :]
+    )
+    print("finalize drops, densify: ", time.time() - t0)
+    return adata
+
+
+def csr_row_subset2(X, rows_to_keep):
+    @numba.njit(cache=True, parallel=True)
+    def _csr_row_subset2(rmask, indptr, data, indices, junkcol):
+        rows = 0
+        # print(len(indptr),len(rmask),len(data),junkcol)
+        for r in numba.prange(len(indptr) - 1):
+            if rmask[r]:
+                rows += 1
+            else:
+                indices[indptr[r] : indptr[r + 1]] = junkcol
+                # data[indptr[r]:indptr[r+1]] = 0
+        return rows
+
+    rows = _csr_row_subset2(rows_to_keep, X.indptr, X.data, X.indices, X.shape[1])
+    # rows = _csr_row_subset2(rows_to_keep, X.indptr, X.data, X.indices, 1000000000)
+    # cleared out indices for "removed" rows, but don't actually remove them
+    return rows
+
+
+def csr_col_subset(X, cols_to_keep):
+    @numba.njit(cache=True, parallel=True)
+    def _csr_col_subset(cmask, indices, data):
+        colmap = np.cumsum(cmask)
+        cols = colmap[-1]
+        junkcol = len(colmap)
+        # junkcol = 1000000000
+        # print (junkcol,len(colmap),cols,len(indices),len(data))
+        for i in numba.prange(len(indices)):
+            c = indices[i]
+            if c < len(colmap) and cmask[c]:
+                indices[i] = colmap[c] - 1
+            else:
+                indices[i] = junkcol
+                # data[i] = 0
+            # indices[i] = colmap[c]-1 if cmask[c] else junkcol
+        return cols
+
+    # assert (X.shape[0]==rows_to_keep.shape[0])
+    cols = _csr_col_subset(cols_to_keep, X.indices, X.data)
+    # renumbered all columns, marking ones for deletion out of range;  don't actually remove yet
+    return cols
+
+
+def filtering_cells(adata, ming, maxg):
+    t0 = time.time()
+    rows_to_keep = 0
+    rows = 0
+
+    @numba.njit(cache=True, parallel=True)
+    def get_rows_to_keep(indptr, ming, maxg):
+        lens = indptr[1:] - indptr[:-1]
+        keep_rows = np.logical_and(lens >= ming, lens <= maxg)
+        return lens, keep_rows
+
+    # nrows = adata.X.shape[0]
+    # nelems = adata.X.data.shape[0]
+    # nthr = numba.get_num_threads()
+    print("filter_cells:  prep ", time.time() - t0)
+    row_lengths, rows_to_keep = get_rows_to_keep(adata.X.indptr, ming, maxg)
+    print("filter_cells:  compute ", time.time() - t0)
+    adata.obs['n_genes'] = row_lengths
+    print("filter_cells:  set metadata ", time.time() - t0)
+    rows = csr_row_subset2(adata.X, rows_to_keep)
+    print("filter_cells:  filter total", time.time() - t0)
+    if rows == 0:
+        rows = adata.shape[0]
+    return adata, rows_to_keep, rows
+
+
+def filtering_genes(adata, minc):
+    t0 = time.time()
+    cols_to_keep = 0
+    cols = 0
+
+    @numba.njit(cache=True, parallel=True)
+    def get_cols_to_keep(indices, data, minc, colcount, nthr):
+        counts = np.zeros((nthr, colcount), dtype=np.int32)
+        for i in numba.prange(nthr):
+            start = i * indices.shape[0] // nthr
+            end = (i + 1) * indices.shape[0] // nthr
+            for j in range(start, end):
+                if data[j] != 0 and indices[j] < colcount:
+                    # if indices[j]<colcount:
+                    counts[i, indices[j]] += 1
+        counts = np.sum(counts, axis=0)
+        keep_cols = counts >= minc
+        return counts, keep_cols
+
+    ncols = adata.X.shape[1]
+    nthr = numba.get_num_threads()
+    print("filter_genes:  prep ", time.time() - t0)
+    counts, cols_to_keep = get_cols_to_keep(
+        adata.X.indices, adata.X.data, minc, ncols, nthr
+    )
+    print("filter_genes:  compute ", time.time() - t0)
+    adata.var['n_cells'] = counts
+    print("filter_genes:  set metadata ", time.time() - t0)
+    cols = csr_col_subset(adata.X, cols_to_keep)
+    print("filter_genes:  filter total", time.time() - t0)
+    if cols == 0:
+        cols = adata.shape[1]
+    return adata, cols_to_keep, cols
+
+
+def filter(
+    adata,
+    min_genes_per_cell,
+    max_genes_per_cell,
+    min_cells_per_gene,
+    target_sum,
+    markers,
+    n_top_genes,
+):
+    from ._highly_variable_genes import highly_variable_genes
+    from ._normalization import normtotal_log1p
+
+    filter_time = time.time()
+    adata, keeprows, nrows = filtering_cells(
+        adata, min_genes_per_cell, max_genes_per_cell
+    )
+    t0 = time.time()
+    print("filter cells time", t0 - filter_time)
+    adata, keepcols, ncols = filtering_genes(adata, min_cells_per_gene)
+    print("filter genes time", time.time() - t0)
+    normtotal_log1p(adata, target_sum, ncols)
+    print("after normalize, log1p")
+    print(adata.obs)
+    print(adata.var)
+    print(adata.X.data[0:1807], sum(adata.X.data[0:1807]))
+    print(adata.X.data[1807:3056], sum(adata.X.data[1807:3056]))
+
+    @numba.njit(cache=True, parallel=True)
+    def get_dense_col(col, indptr, indices, data):
+        rows = indptr.shape[0] - 1
+        X = np.zeros(rows, dtype=data.dtype)
+        for r in numba.prange(rows):
+            for i in range(indptr[r], indptr[r + 1]):
+                if indices[i] == col:
+                    X[r] = data[i]
+        return X
+
+    t0 = time.time()
+
+    highly_variable_genes(
+        adata,
+        nrows=nrows,
+        ncols=ncols,
+        keepcols=keepcols,
+        n_top_genes=n_top_genes,
+        flavor='use_fastpp',
+    )
+    print(adata.X.data[0:1807], sum(adata.X.data[0:1807]))
+    print(time.time() - t0)
+
+    for marker in markers:
+        col = np.argmax(adata.var.index[keepcols] == marker)
+        adata.obs[marker + "_raw"] = get_dense_col(
+            col, adata.X.indptr, adata.X.indices, adata.X.data
+        )
+    print(time.time() - t0)
+
+    csr_col_subset(adata.X, adata.var.highly_variable.values[keepcols])
+    adata = finalize_drop_dense(
+        adata,
+        nrows,
+        keeprows,
+        keepcols,
+        ncols,
+        n_top_genes,
+        adata.var.highly_variable.values,
+    )
+    print("downselect to top genes", time.time() - t0)
+    print(adata.shape)
+    print("Total Filtering time : %s\n" % (time.time() - filter_time))
+    return adata
 
 
 @singledispatch
@@ -684,7 +899,6 @@ def _regress_out_chunk(data):
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
     for col_index in range(data_chunk.shape[1]):
-
         # if all values are identical, the statsmodel.api.GLM throws an error;
         # but then no regression is necessary anyways...
         if not (data_chunk[:, col_index] != data_chunk[0, col_index]).any():
