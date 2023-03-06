@@ -32,7 +32,7 @@ _FontSize = Literal[
 VBound = Union[str, float, Callable[[Sequence[float]], float]]
 
 
-class _AxesSubplot(Axes, axes.SubplotBase, ABC):
+class _AxesSubplot(Axes, axes.SubplotBase):
     """Intersection between Axes and SubplotBase: Has methods of both"""
 
 
@@ -473,7 +473,6 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
 def add_colors_for_categorical_sample_annotation(
     adata, key, palette=None, force_update_colors=False
 ):
-
     color_key = f"{key}_colors"
     colors_needed = len(adata.obs[key].cat.categories)
     if palette and force_update_colors:
@@ -1181,7 +1180,6 @@ def fix_kwds(kwds_dict, **kwargs):
 
 
 def _get_basis(adata: anndata.AnnData, basis: str):
-
     if basis in adata.obsm.keys():
         basis_key = basis
 
