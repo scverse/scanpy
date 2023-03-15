@@ -1,4 +1,4 @@
-from typing import List, Optional, NamedTuple
+from typing import List, Optional, NamedTuple, Literal
 
 import numpy as np
 import scipy as sp
@@ -8,7 +8,6 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 from .. import _utils
 from .. import logging as logg
 from ..neighbors import Neighbors
-from .._compat import Literal
 
 _AVAIL_MODELS = {'v1.0', 'v1.2'}
 

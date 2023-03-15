@@ -11,11 +11,11 @@ variables:
 jobs:
 - job: PyTest
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-22.04'
   strategy:
     matrix:
-      Python37:
-        python.version: '3.7'
+      Python38:
+        python.version: '3.8'
       Python39: {}
       minimal_tests:
         TEST_EXTRA: 'test-min'

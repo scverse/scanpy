@@ -1,14 +1,12 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 import warnings
 
 import numpy as np
 import pandas as pd
 import anndata as ad
-from packaging import version
 
 from .. import logging as logg, _utils
-from .._compat import Literal
 from .._settings import settings
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning

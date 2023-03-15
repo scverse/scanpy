@@ -1,7 +1,7 @@
 """Reading and Writing
 """
 from pathlib import Path, PurePath
-from typing import Union, Dict, Optional, Tuple, BinaryIO
+from typing import Union, Dict, Optional, Tuple, BinaryIO, Literal
 
 import h5py
 import json
@@ -21,7 +21,6 @@ from anndata import (
 from anndata import read as read_h5ad
 
 from ._settings import settings
-from ._compat import Literal
 from ._utils import Empty, _empty
 from . import logging as logg
 
