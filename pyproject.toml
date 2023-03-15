@@ -10,7 +10,7 @@ requires = [
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = {file = "LICENSE"}
 authors = [
     {name = "Alex Wolf"},
@@ -44,9 +44,9 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
@@ -71,7 +71,6 @@ dependencies = [
     "packaging",
     "session-info",
     # for getting the stable version
-    "importlib_metadata>=0.7; python_version < '3.8'",
 ]
 dynamic = ["version"]
 
@@ -109,7 +108,6 @@ test-full = [
 doc = [
     "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
     "scanpydoc[typehints]>=0.7.7",
-    "typing_extensions; python_version < '3.8'",  # for `Literal`
     "myst-parser",
     "myst-nb",
     "sphinx-book-theme",
@@ -162,7 +160,7 @@ omit = ["*/tests/*"]
 
 [tool.black]
 line-length = 88
-target-version = ["py37"]
+target-version = ["py38"]
 skip-string-normalization = true
 exclude = """
 /build/.*
