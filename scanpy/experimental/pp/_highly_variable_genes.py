@@ -1,6 +1,6 @@
 from multiprocessing.sharedctypes import Value
 import warnings
-from typing import Optional
+from typing import Optional, Literal
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,6 @@ from scanpy import logging as logg
 from scanpy._settings import settings, Verbosity
 from scanpy._utils import check_nonnegative_integers, view_to_actual
 from scanpy.get import _get_obs_rep
-from scanpy._compat import Literal
 from scanpy._utils import _doc_params
 from scanpy.preprocessing._utils import _get_mean_var
 from scanpy.preprocessing._distributed import materialize_as_ndarray

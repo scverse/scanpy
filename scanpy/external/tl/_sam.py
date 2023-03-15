@@ -1,12 +1,11 @@
 """\
 Run the Self-Assembling Manifold algorithm
 """
-from typing import Optional, Union, Tuple, Any
+from typing import Optional, Union, Tuple, Any, Literal
 
 from anndata import AnnData
 
 from ... import logging as logg
-from ..._compat import Literal
 
 try:
     from samalg import SAM

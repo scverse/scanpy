@@ -2,7 +2,7 @@ import warnings
 import collections.abc as cabc
 from abc import ABC
 from functools import lru_cache
-from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable
+from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable, Literal
 import anndata
 
 import numpy as np
@@ -18,7 +18,6 @@ from cycler import Cycler, cycler
 
 from .. import logging as logg
 from .._settings import settings
-from .._compat import Literal
 from .._utils import NeighborsView
 from . import palettes
 

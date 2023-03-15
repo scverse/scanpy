@@ -2,7 +2,7 @@
 """
 import collections.abc as cabc
 from collections import namedtuple
-from typing import Optional, Union, Mapping  # Special
+from typing import Optional, Union, Mapping, Literal  # Special
 from typing import Sequence, Iterable  # ABCs
 from typing import Tuple  # Classes
 
@@ -15,7 +15,6 @@ from matplotlib.colors import Normalize
 from warnings import warn
 
 from .. import logging as logg
-from .._compat import Literal
 from ._utils import make_grid_spec, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
