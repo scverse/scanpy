@@ -5,12 +5,11 @@ from enum import IntEnum
 from pathlib import Path
 from time import time
 from logging import getLevelName
-from typing import Any, Union, Optional, Iterable, TextIO
+from typing import Any, Union, Optional, Iterable, TextIO, Literal
 from typing import Tuple, List, ContextManager
 
 from . import logging
 from .logging import _set_log_level, _set_log_file, _RootLogger
-from ._compat import Literal
 
 _VERBOSITY_TO_LOGLEVEL = {
     'error': 'ERROR',
