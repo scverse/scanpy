@@ -78,6 +78,8 @@ dynamic = ["version"]
 Documentation = "https://scanpy.readthedocs.io/"
 Source = "https://github.com/scverse/scanpy"
 Home-page = "https://scanpy.org"
+Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
+Twitter = "https://twitter.com/scverse_team"
 
 [project.scripts]
 scanpy = "scanpy.cli:console_main"
