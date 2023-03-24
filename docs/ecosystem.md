@@ -8,11 +8,9 @@
 .. role:: smaller
 ```
 
-```{note}
-If you'd like to see your tool included here, please open a [pull request](https://github.com/scverse/scanpy)!
-
-With *ecosystem*, we mean the broader single-cell related tools that operate on {class}`~anndata.AnnData`.
-If your tool doesn't do this, but is useful for analysing single cell data we also accept light wrappers for some tools in {mod}`scanpy.external`.
+```{warning}
+We are no longer accepting new tools on this page.
+Instead, please submit your tool to the [scverse ecosystem package listing](https://scverse.org/packages/#ecosystem).
 ```
 
 ## Viewers

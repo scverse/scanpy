@@ -1,5 +1,15 @@
 from types import MappingProxyType
-from typing import Union, Optional, Any, Mapping, Callable, NamedTuple, Generator, Tuple
+from typing import (
+    Union,
+    Optional,
+    Any,
+    Mapping,
+    Callable,
+    NamedTuple,
+    Generator,
+    Tuple,
+    Literal,
+)
 import warnings
 
 import numpy as np
@@ -11,7 +21,6 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .. import _utils
 from .._utils import _doc_params, AnyRandom, NeighborsView
-from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
 import numba

@@ -11,11 +11,11 @@ variables:
 jobs:
 - job: PyTest
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-22.04'
   strategy:
     matrix:
-      Python37:
-        python.version: '3.7'
+      Python38:
+        python.version: '3.8'
       Python39: {}
       minimal_tests:
         TEST_EXTRA: 'test-min'
@@ -50,7 +50,7 @@ jobs:
     displayName: 'Install dependencies'
 
   - script: |
-      pip install -v git+https://github.com/scverse/anndata
+      pip install -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
     displayName: 'Install development anndata'
     condition: eq(variables['ANNDATA_DEV'], 'yes')
 

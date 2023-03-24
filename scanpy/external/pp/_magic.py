@@ -1,14 +1,13 @@
 """\
 Denoise high-dimensional data using MAGIC
 """
-from typing import Union, Sequence, Optional
+from typing import Union, Sequence, Optional, Literal
 
 from anndata import AnnData
 from packaging import version
 
 from ... import logging as logg
 from ..._settings import settings
-from ..._compat import Literal
 from ..._utils import AnyRandom
 
 

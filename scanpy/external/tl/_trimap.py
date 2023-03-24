@@ -1,13 +1,12 @@
 """\
 Embed high-dimensional data using TriMap
 """
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 
 from anndata import AnnData
 import scipy.sparse as scp
 
 from ..._settings import settings
-from ..._compat import Literal
 from ... import logging as logg
 
 
