@@ -2,7 +2,7 @@ import warnings
 import collections.abc as cabc
 from pathlib import Path
 from types import MappingProxyType
-from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple
+from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple, Literal
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,6 @@ from .. import _utils
 from .._utils import matrix, _IGraphLayout, _FontWeight, _FontSize
 from ... import _utils as _sc_utils, logging as logg
 from ..._settings import settings
-from ..._compat import Literal
 
 
 def paga_compare(

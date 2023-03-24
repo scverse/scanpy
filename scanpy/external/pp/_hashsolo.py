@@ -271,45 +271,60 @@ def hashsolo(
     Parameters
     ----------
     adata
-        Anndata object with cell hashes in .obs columns
+        The (annotated) data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
     cell_hashing_columns
-        list specifying which columns in adata.obs
-        are cell hashing counts
+        A list specifying `.obs` columns that contain cell hashing counts.
     priors
-        a list of your prior for each hypothesis
-        first element is your prior for the negative hypothesis
-        second element is your prior for the singlet hypothesis
-        third element is your prior for the doublet hypothesis
-        We use [0.01, 0.8, 0.19] by default because we assume the barcodes
-        in your cell hashing matrix are those cells which have passed QC
-        in the transcriptome space, e.g. UMI counts, pct mito reads, etc.
+        A list specifying the prior probability of each hypothesis, in
+        the order `[negative, singlet, doublet]`. The default is set to
+        `[0.01, 0.8, 0.19]` assuming barcode counts are from cells that
+        have passed QC in the transcriptome space, e.g. UMI counts, pct
+        mito reads, etc.
     pre_existing_clusters
-        column in adata.obs for how to break up demultiplexing
-        for example leiden or cell types, not batches though
+        The column in `.obs` containing pre-existing cluster assignments
+        (e.g. Leiden clusters or cell types, but not batch assignments).
+        If provided, demultiplexing will be performed separately for each
+        cluster.
     number_of_noise_barcodes
-        Use this if you wish change the number of barcodes used to create the
-        noise distribution. The default is number of cell hashes - 2.
+        The number of barcodes used to create the noise distribution.
+        Defaults to `len(cell_hashing_columns) - 2`.
     inplace
-        To do operation in place
+        Whether to update `adata` in-place or return a copy.
 
     Returns
     -------
-    adata
-        if inplace is False returns AnnData with demultiplexing results
-        in .obs attribute otherwise does is in place
+    adata : anndata.AnnData
+        A copy of the input `adata` if `inplace=False`, otherwise the input
+        `adata`. The following fields are added:
+
+        `.obs["most_likely_hypothesis"]`
+            Index of the most likely hypothesis, where `0` corresponds to negative,
+            `1` to singlet, and `2` to doublet.
+        `.obs["cluster_feature"]`
+            The cluster assignments used for demultiplexing.
+        `.obs["negative_hypothesis_probability"]`
+            Probability of the negative hypothesis.
+        `.obs["singlet_hypothesis_probability"]`
+            Probability of the singlet hypothesis.
+        `.obs["doublet_hypothesis_probability"]`
+            Probability of the doublet hypothesis.
+        `.obs["Classification"]`:
+            Classification of the cell, one of the barcodes in `cell_hashing_columns`,
+            `"Negative"`, or `"Doublet"`.
 
     Examples
     -------
     >>> import anndata
     >>> import scanpy.external as sce
-    >>> data = anndata.read("data.h5ad")
-    >>> sce.pp.hashsolo(data, ['Hash1', 'Hash2', 'Hash3'])
-    >>> data.obs.head()
+    >>> adata = anndata.read("data.h5ad")
+    >>> sce.pp.hashsolo(adata, ['Hash1', 'Hash2', 'Hash3'])
+    >>> adata.obs.head()
     """
     print(
         "Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
     )
-
+    adata = adata.copy() if not inplace else adata
     data = adata.obs[cell_hashing_columns].values
     if not check_nonnegative_integers(data):
         raise ValueError("Cell hashing counts must be non-negative")
