@@ -1,5 +1,5 @@
 from types import MappingProxyType
-from typing import Optional, Tuple, Sequence, Type, Mapping, Any
+from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -10,7 +10,6 @@ from packaging import version
 
 from ._utils_clustering import rename_groups, restrict_adjacency
 from .. import _utils, logging as logg
-from .._compat import Literal
 from .._utils import _choose_graph
 
 try:

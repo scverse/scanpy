@@ -1,7 +1,7 @@
 """Rank genes according to differential expression.
 """
 from math import floor
-from typing import Iterable, Union, Optional
+from typing import Iterable, Union, Optional, Literal
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,6 @@ from scipy.sparse import issparse, vstack
 from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
-from .._compat import Literal
 from ..get import _get_obs_rep
 from .._utils import check_nonnegative_integers
 
