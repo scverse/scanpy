@@ -858,6 +858,35 @@ def scale_sparse(
     )
 
 
+@numba.njit(cache=True, parallel=True)
+def do_scale(X, maxv, nthr):
+    # nthr = numba.get_num_threads()
+    # t0= time.time()
+    s = np.zeros((nthr, X.shape[1]))
+    ss = np.zeros((nthr, X.shape[1]))
+    mean = np.zeros(X.shape[1])
+    std = np.zeros(X.shape[1])
+    n = X.shape[0]
+    for i in numba.prange(nthr):
+        for r in range(i, n, nthr):
+            for c in range(X.shape[1]):
+                v = X[r, c]
+                s[i, c] += v
+                ss[i, c] += v * v
+    for c in numba.prange(X.shape[1]):
+        s0 = s[:, c].sum()
+        mean[c] = s0 / n
+        std[c] = np.sqrt((ss[:, c].sum() - s0 * s0 / n) / (n - 1))
+
+    # with numba.objmode():
+    #    print ("finshed getting means, stddev", time.time()-t0)
+    for r, c in numba.pndindex(X.shape):
+        v = (X[r, c] - mean[c]) / std[c]
+        X[r, c] = maxv if v > maxv else v
+    # with numba.objmode():
+    #    print ("finshed scaling values", time.time()-t0)
+
+
 @scale.register(AnnData)
 def scale_anndata(
     adata: AnnData,
