@@ -3,7 +3,7 @@
 """\
 This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
 """
-from typing import Optional, Collection
+from typing import Optional, Collection, Literal
 
 import pandas as pd
 from anndata import AnnData
@@ -12,7 +12,6 @@ from scipy.sparse import issparse
 
 from .. import logging as logg
 from .._utils import select_groups
-from .._compat import Literal
 
 
 def correlation_matrix(
