@@ -369,7 +369,7 @@ def read_visium(
 
     adata.uns["spatial"][library_id] = dict()
 
-    # spaceranger count v1 uses "spatial_tissue_positions_list.csv" (no headers) 
+    # spaceranger count v1 uses "spatial_tissue_positions_list.csv" (no headers)
     # while v2 uses "tissue_positions.csv" (with headers)
     v1 = Path(path / 'spatial/tissue_positions_list.csv').is_file()
 
