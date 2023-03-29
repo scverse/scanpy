@@ -301,7 +301,6 @@ def read_visium(
     library_id: str = None,
     load_images: Optional[bool] = True,
     source_image_path: Optional[Union[str, Path]] = None,
-    spaceranger_version: Optional[str] = 'v1',
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted visum dataset.
@@ -370,24 +369,24 @@ def read_visium(
 
     adata.uns["spatial"][library_id] = dict()
 
+    # spaceranger count v1 uses "spatial_tissue_positions_list.csv" (no headers) 
+    # while v2 uses "tissue_positions.csv" (with headers)
+    v1 = Path(path / 'spatial/tissue_positions_list.csv').is_file()
+
     if load_images:
-        if spaceranger_version == 'v1':
+        if v1:
             files = dict(
                 tissue_positions_file=path / 'spatial/tissue_positions_list.csv',
                 scalefactors_json_file=path / 'spatial/scalefactors_json.json',
                 hires_image=path / 'spatial/tissue_hires_image.png',
                 lowres_image=path / 'spatial/tissue_lowres_image.png',
             )
-        elif spaceranger_version == 'v2':
+        else:
             files = dict(
                 tissue_positions_file=path / 'spatial/tissue_positions.csv',
                 scalefactors_json_file=path / 'spatial/scalefactors_json.json',
                 hires_image=path / 'spatial/tissue_hires_image.png',
                 lowres_image=path / 'spatial/tissue_lowres_image.png',
-            )
-        else:
-            raise ValueError(
-                f"Value passed for '{spaceranger_version}' is not valid. Only 'v1' and 'v2' are supported."
             )
 
         # check if files exists, continue if images are missing
@@ -422,7 +421,7 @@ def read_visium(
         }
 
         # read coordinates
-        if spaceranger_version == 'v1":
+        if v1:
             positions = pd.read_csv(files['tissue_positions_file'], header=None)
             positions.columns = [
                 'barcode',
@@ -432,12 +431,9 @@ def read_visium(
                 'pxl_col_in_fullres',
                 'pxl_row_in_fullres',
             ]
-        elif spaceranger_version == "v2":
-            positions = pd.read_csv(files['tissue_positions_file'])
         else:
-            raise ValueError(
-                f"Value passed for '{spaceranger_version}' is not valid. Only 'v1' and 'v2' are supported."
-            )
+            positions = pd.read_csv(files['tissue_positions_file'])
+
         positions.index = positions['barcode']
 
         adata.obs = adata.obs.join(positions, how="left")
