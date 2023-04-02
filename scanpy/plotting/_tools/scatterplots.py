@@ -274,7 +274,8 @@ def embedding(
         order = slice(None)
         if sort_order is True and value_to_plot is not None and categorical is False:
             # Higher values plotted on top, null values on bottom
-            order = np.argsort(~pd.isnull(color_vector.astype(str)), kind="stable")[::-1]
+            order = np.argsort(~pd.isnull(color_vector.astype(str)), kind="stable")[
+                    ::-1]
         elif sort_order and categorical:
             # Null points go on bottom
             order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
@@ -434,20 +435,35 @@ def embedding(
             path_effect = None
 
         # Adding legends
-        if categorical:
-            _add_categorical_legend(
-                ax,
-                color_source_vector,
-                palette=_get_palette(adata, value_to_plot),
-                scatter_array=coords,
-                legend_loc=legend_loc,
-                legend_fontweight=legend_fontweight,
-                legend_fontsize=legend_fontsize,
-                legend_fontoutline=path_effect,
-                na_color=na_color,
-                na_in_legend=na_in_legend,
-                multi_panel=bool(grid),
-            )
+        if categorical or color_vector.dtype == bool:  # for categorical and boolean
+            if color_vector.dtype == bool:
+                _add_categorical_legend(
+                    ax,
+                    color_vector,
+                    palette=_get_palette(adata, value_to_plot),
+                    scatter_array=coords,
+                    legend_loc=legend_loc,
+                    legend_fontweight=legend_fontweight,
+                    legend_fontsize=legend_fontsize,
+                    legend_fontoutline=path_effect,
+                    na_color=na_color,
+                    na_in_legend=na_in_legend,
+                    multi_panel=bool(grid),
+                )
+            else:
+                _add_categorical_legend(
+                    ax,
+                    color_source_vector,
+                    palette=_get_palette(adata, value_to_plot),
+                    scatter_array=coords,
+                    legend_loc=legend_loc,
+                    legend_fontweight=legend_fontweight,
+                    legend_fontsize=legend_fontsize,
+                    legend_fontoutline=path_effect,
+                    na_color=na_color,
+                    na_in_legend=na_in_legend,
+                    multi_panel=bool(grid),
+                )
         elif colorbar_loc is not None:
             pl.colorbar(
                 cax, ax=ax, pad=0.01, fraction=0.08, aspect=30, location=colorbar_loc
@@ -1087,7 +1103,12 @@ def _add_categorical_legend(
         color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
         palette = palette.copy()
         palette["NA"] = na_color
-    cats = color_source_vector.categories
+    if color_source_vector.dtype == bool:
+        cats = pd.Categorical(color_source_vector.astype(str)).categories
+    else:
+        print(type(color_source_vector))
+        cats = color_source_vector.categories
+
 
     if multi_panel is True:
         # Shrink current axis by 10% to fit legend and match
@@ -1173,7 +1194,10 @@ def _get_color_source_vector(
 
 def _get_palette(adata, values_key: str, palette=None):
     color_key = f"{values_key}_colors"
-    values = pd.Categorical(adata.obs[values_key])
+    if adata.obs[values_key].dtype == bool:
+        values = pd.Categorical(adata.obs[values_key].astype(str))
+    else:
+        values = pd.Categorical(adata.obs[values_key])
     if palette:
         _utils._set_colors_for_categorical_obs(adata, values_key, palette)
     elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
@@ -1206,7 +1230,9 @@ def _color_vector(
         return np.broadcast_to(to_hex(na_color), adata.n_obs), False
     if not is_categorical_dtype(values):
         return values, False
-    else:  # is_categorical_dtype(values)
+    elif is_categorical_dtype(values) or values.dtype == bool:
+        if values.dtype == bool:
+            values = values.astype(str)
         color_map = {
             k: to_hex(v)
             for k, v in _get_palette(adata, values_key, palette=palette).items()
