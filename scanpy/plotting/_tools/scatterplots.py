@@ -436,34 +436,19 @@ def embedding(
 
         # Adding legends
         if categorical or color_vector.dtype == bool:  # for categorical and boolean
-            if color_vector.dtype == bool:
-                _add_categorical_legend(
-                    ax,
-                    color_vector,
-                    palette=_get_palette(adata, value_to_plot),
-                    scatter_array=coords,
-                    legend_loc=legend_loc,
-                    legend_fontweight=legend_fontweight,
-                    legend_fontsize=legend_fontsize,
-                    legend_fontoutline=path_effect,
-                    na_color=na_color,
-                    na_in_legend=na_in_legend,
-                    multi_panel=bool(grid),
-                )
-            else:
-                _add_categorical_legend(
-                    ax,
-                    color_source_vector,
-                    palette=_get_palette(adata, value_to_plot),
-                    scatter_array=coords,
-                    legend_loc=legend_loc,
-                    legend_fontweight=legend_fontweight,
-                    legend_fontsize=legend_fontsize,
-                    legend_fontoutline=path_effect,
-                    na_color=na_color,
-                    na_in_legend=na_in_legend,
-                    multi_panel=bool(grid),
-                )
+            _add_categorical_legend(
+                ax,
+                color_source_vector,
+                palette=_get_palette(adata, value_to_plot),
+                scatter_array=coords,
+                legend_loc=legend_loc,
+                legend_fontweight=legend_fontweight,
+                legend_fontsize=legend_fontsize,
+                legend_fontoutline=path_effect,
+                na_color=na_color,
+                na_in_legend=na_in_legend,
+                multi_panel=bool(grid),
+            )
         elif colorbar_loc is not None:
             pl.colorbar(
                 cax, ax=ax, pad=0.01, fraction=0.08, aspect=30, location=colorbar_loc
@@ -1106,7 +1091,6 @@ def _add_categorical_legend(
     if color_source_vector.dtype == bool:
         cats = pd.Categorical(color_source_vector.astype(str)).categories
     else:
-        print(type(color_source_vector))
         cats = color_source_vector.categories
 
 
@@ -1228,11 +1212,9 @@ def _color_vector(
     to_hex = partial(colors.to_hex, keep_alpha=True)
     if values_key is None:
         return np.broadcast_to(to_hex(na_color), adata.n_obs), False
-    if not is_categorical_dtype(values):
-        return values, False
-    elif is_categorical_dtype(values) or values.dtype == bool:
+    if is_categorical_dtype(values) or values.dtype == bool:
         if values.dtype == bool:
-            values = values.astype(str)
+            values = pd.Categorical(values.astype(str))
         color_map = {
             k: to_hex(v)
             for k, v in _get_palette(adata, values_key, palette=palette).items()
@@ -1246,6 +1228,8 @@ def _color_vector(
             color_vector = color_vector.add_categories([to_hex(na_color)])
             color_vector = color_vector.fillna(to_hex(na_color))
         return color_vector, True
+    elif not is_categorical_dtype(values):
+        return values, False
 
 
 def _basis2name(basis):
