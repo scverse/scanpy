@@ -379,7 +379,9 @@ def _set_colors_for_categorical_obs(
     from matplotlib.colors import to_hex
 
     if adata.obs[value_to_plot].dtype == bool:
-        categories = adata.obs[value_to_plot].astype(str).astype('category').cat.categories
+        categories = (
+            adata.obs[value_to_plot].astype(str).astype('category').cat.categories
+        )
     else:
         categories = adata.obs[value_to_plot].cat.categories
     # check is palette is a valid matplotlib colormap
@@ -447,7 +449,9 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     None
     """
     if adata.obs[value_to_plot].dtype == bool:
-        categories = adata.obs[value_to_plot].astype(str).astype('category').cat.categories
+        categories = (
+            adata.obs[value_to_plot].astype(str).astype('category').cat.categories
+        )
     else:
         categories = adata.obs[value_to_plot].cat.categories
 

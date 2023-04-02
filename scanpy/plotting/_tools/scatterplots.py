@@ -275,7 +275,8 @@ def embedding(
         if sort_order is True and value_to_plot is not None and categorical is False:
             # Higher values plotted on top, null values on bottom
             order = np.argsort(~pd.isnull(color_vector.astype(str)), kind="stable")[
-                    ::-1]
+                ::-1
+            ]
         elif sort_order and categorical:
             # Null points go on bottom
             order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
@@ -1092,7 +1093,6 @@ def _add_categorical_legend(
         cats = pd.Categorical(color_source_vector.astype(str)).categories
     else:
         cats = color_source_vector.categories
-
 
     if multi_panel is True:
         # Shrink current axis by 10% to fit legend and match
