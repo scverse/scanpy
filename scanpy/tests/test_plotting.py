@@ -1218,6 +1218,15 @@ def test_scatter_raw(tmp_path):
     assert "Error" in comp, "Plots should change depending on use_raw."
 
 
+def test_binary_scatter(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    blobs = sc.datasets.blobs()
+    blobs.obs['binary'] = np.tile([True, False], 320)
+    sc.pp.pca(blobs)
+    sc.pl.pca(blobs, color='binary')
+    save_and_compare_images('master_binary_pca')
+
+
 def test_scatter_specify_layer_and_raw():
     pbmc = pbmc68k_reduced()
     pbmc.layers["layer"] = pbmc.raw.X.copy()
