@@ -1,17 +1,15 @@
 from functools import partial
 from itertools import repeat, chain
-import re
-from scanpy import datasets
 
 import numpy as np
-from numpy.core.fromnumeric import trace
 import pandas as pd
 import pytest
 from anndata import AnnData
 from scipy import sparse
 
 import scanpy as sc
-
+from scanpy.datasets._utils import filter_oldformatwarning
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
     "dim,transform,func",
@@ -160,6 +158,7 @@ def test_repeated_gene_symbols():
     adata = sc.AnnData(
         np.arange(3 * 4).reshape((3, 4)),
         var=pd.DataFrame({"gene_symbols": gene_symbols}, index=var_names),
+        dtype=np.float32,
     )
 
     with pytest.raises(KeyError, match="symbol_b"):
@@ -175,6 +174,7 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
+@filter_oldformatwarning
 def test_backed_vs_memory():
     "compares backed vs. memory"
     from pathlib import Path
@@ -203,7 +203,7 @@ def test_backed_vs_memory():
 
 def test_column_content():
     "uses a larger dataset to test column order and content"
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
 
     # test that columns content is correct for obs_df
     query = ['CST3', 'NKG7', 'GNLY', 'louvain', 'n_counts', 'n_genes']
@@ -283,7 +283,7 @@ def test_var_df(adata):
 
 @TRANSPOSE_PARAMS
 def test_just_mapping_keys(dim, transform, func):
-    # https://github.com/theislab/scanpy/issues/1634
+    # https://github.com/scverse/scanpy/issues/1634
     # Test for error where just passing obsm_keys, but not keys, would cause error.
     mapping_attr = f"{dim}m"
     kwargs = {f"{mapping_attr}_keys": [("array", 0), ("array", 1)]}
@@ -375,7 +375,7 @@ def test_repeated_cols(dim, transform, func):
 @TRANSPOSE_PARAMS
 def test_repeated_index_vals(dim, transform, func):
     # THis one could be reverted, see:
-    # https://github.com/theislab/scanpy/pull/1583#issuecomment-770641710
+    # https://github.com/scverse/scanpy/pull/1583#issuecomment-770641710
     alt_dim = ["obs", "var"][dim == "obs"]
     adata = transform(
         sc.AnnData(

@@ -1,6 +1,6 @@
 """Single-Cell Analysis in Python."""
 
-from ._metadata import __version__, __author__, __email__, within_flit
+from ._metadata import __version__, within_flit
 
 if not within_flit():  # see function docstring on why this is there
     from ._utils import check_versions
@@ -14,7 +14,7 @@ if not within_flit():  # see function docstring on why this is there
     from . import tools as tl
     from . import preprocessing as pp
     from . import plotting as pl
-    from . import datasets, logging, queries, external, get, metrics
+    from . import datasets, logging, queries, external, get, metrics, experimental
 
     from anndata import AnnData, concat
     from anndata import (

@@ -9,11 +9,10 @@ from matplotlib.colors import Normalize
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, cm
 from anndata import AnnData
-from typing import Union, Optional, List, Sequence, Iterable, Mapping
+from typing import Union, Optional, List, Sequence, Iterable, Mapping, Literal
 
 from .._utils import savefig_or_show
 from ..._utils import _doc_params, sanitize_anndata, subsample
-from ..._compat import Literal
 from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
@@ -92,6 +91,7 @@ def pca_loadings(
     adata: AnnData,
     components: Union[str, Sequence[int], None] = None,
     include_lowest: bool = True,
+    n_points: Union[int, None] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -106,9 +106,11 @@ def pca_loadings(
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
         principal component.
     include_lowest
-        Show the genes with both highest and lowest loadings.
+        Whether to show the variables with both highest and lowest loadings.
     show
         Show the plot, do not return axis.
+    n_points
+        Number of variables to plot for each component.
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
@@ -136,13 +138,22 @@ def pca_loadings(
     elif isinstance(components, str):
         components = [int(x) for x in components.split(',')]
     components = np.array(components) - 1
+
     if np.any(components < 0):
-        logg.error("Component indices must be greater than zero.")
-        return
+        raise ValueError("Component indices must be greater than zero.")
+
+    if n_points is None:
+        n_points = min(30, adata.n_vars)
+    elif adata.n_vars < n_points:
+        raise ValueError(
+            f"Tried to plot {n_points} variables, but passed anndata only has {adata.n_vars}."
+        )
+
     ranking(
         adata,
         'varm',
         'PCs',
+        n_points=n_points,
         indices=components,
         include_lowest=include_lowest,
     )
@@ -1484,7 +1495,7 @@ def embedding_density(
             ax = embedding(
                 adata,
                 basis,
-                components=components,
+                dimensions=np.array(components) - 1,  # Saved with 1 based indexing
                 color=density_col_name,
                 color_map=color_map,
                 size=dot_sizes,
@@ -1515,7 +1526,7 @@ def embedding_density(
         fig_or_ax = embedding(
             adata,
             basis,
-            components=components,
+            dimensions=np.array(components) - 1,  # Saved with 1 based indexing
             color=density_col_name,
             color_map=color_map,
             size=dot_sizes,
@@ -1606,7 +1617,6 @@ def _get_values_to_plot(
     if groups is None:
         groups = adata.uns[key]['names'].dtype.names
     if values_to_plot is not None:
-
         df_list = []
         for group in groups:
             df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)

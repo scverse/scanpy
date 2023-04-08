@@ -1,16 +1,15 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 import warnings
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
+import anndata as ad
 
 from .. import logging as logg, _utils
-from .._compat import Literal
 from .._settings import settings
 from ..readwrite import read, read_visium
-from ._utils import check_datasetdir_exists
+from ._utils import check_datasetdir_exists, filter_oldformatwarning
 
 HERE = Path(__file__).parent
 
@@ -20,7 +19,7 @@ def blobs(
     n_centers: int = 5,
     cluster_std: float = 1.0,
     n_observations: int = 640,
-) -> AnnData:
+) -> ad.AnnData:
     """\
     Gaussian Blobs.
 
@@ -50,11 +49,11 @@ def blobs(
         cluster_std=cluster_std,
         random_state=0,
     )
-    return AnnData(X, obs=dict(blobs=y.astype(str)), dtype=X.dtype)
+    return ad.AnnData(X, obs=dict(blobs=y.astype(str)), dtype=X.dtype)
 
 
 @check_datasetdir_exists
-def burczynski06() -> AnnData:
+def burczynski06() -> ad.AnnData:
     """\
     Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
 
@@ -75,7 +74,7 @@ def burczynski06() -> AnnData:
     return adata
 
 
-def krumsiek11() -> AnnData:
+def krumsiek11() -> ad.AnnData:
     """\
     Simulated myeloid progenitors [Krumsiek11]_.
 
@@ -110,7 +109,7 @@ def krumsiek11() -> AnnData:
 
 
 @check_datasetdir_exists
-def moignard15() -> AnnData:
+def moignard15() -> ad.AnnData:
     """\
     Hematopoiesis in early mouse embryos [Moignard15]_.
 
@@ -148,7 +147,7 @@ def moignard15() -> AnnData:
 
 
 @check_datasetdir_exists
-def paul15() -> AnnData:
+def paul15() -> ad.AnnData:
     """\
     Development of Myeloid Progenitors [Paul15]_.
 
@@ -173,13 +172,14 @@ def paul15() -> AnnData:
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, 'r') as f:
-        X = f['data.debatched'][()]
+        # Coercing to float32 for backwards compatibility
+        X = f['data.debatched'][()].astype(np.float32)
         gene_names = f['data.debatched_rownames'][()].astype(str)
         cell_names = f['data.debatched_colnames'][()].astype(str)
         clusters = f['cluster.id'][()].flatten().astype(int)
         infogenes_names = f['info.genes_strings'][()].astype(str)
     # each row has to correspond to a observation, therefore transpose
-    adata = AnnData(X.transpose(), dtype=X.dtype)
+    adata = ad.AnnData(X.transpose(), dtype=X.dtype)
     adata.var_names = gene_names
     adata.row_names = cell_names
     # names reflecting the cell type identifications from the paper
@@ -193,7 +193,7 @@ def paul15() -> AnnData:
     # remove 10 corrupted gene names
     infogenes_names = np.intersect1d(infogenes_names, adata.var_names)
     # restrict data array to the 3461 informative genes
-    adata = adata[:, infogenes_names]
+    adata = adata[:, infogenes_names].copy()
     # usually we'd set the root cell to an arbitrary cell in the MEP cluster
     # adata.uns['iroot'] = np.flatnonzero(adata.obs['paul15_clusters'] == '7MEP')[0]
     # here, set the root cell as in Haghverdi et al. (2016)
@@ -202,7 +202,7 @@ def paul15() -> AnnData:
     return adata
 
 
-def toggleswitch() -> AnnData:
+def toggleswitch() -> ad.AnnData:
     """\
     Simulated toggleswitch.
 
@@ -220,7 +220,8 @@ def toggleswitch() -> AnnData:
     return adata
 
 
-def pbmc68k_reduced() -> AnnData:
+@filter_oldformatwarning
+def pbmc68k_reduced() -> ad.AnnData:
     """\
     Subsampled and processed 68k PBMCs.
 
@@ -245,8 +246,9 @@ def pbmc68k_reduced() -> AnnData:
         return read(filename)
 
 
+@filter_oldformatwarning
 @check_datasetdir_exists
-def pbmc3k() -> AnnData:
+def pbmc3k() -> ad.AnnData:
     """\
     3k PBMCs from 10x Genomics.
 
@@ -288,8 +290,9 @@ def pbmc3k() -> AnnData:
     return adata
 
 
+@filter_oldformatwarning
 @check_datasetdir_exists
-def pbmc3k_processed() -> AnnData:
+def pbmc3k_processed() -> ad.AnnData:
     """Processed 3k PBMCs from 10x Genomics.
 
     Processed using the `basic tutorial <https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html>`__.
@@ -391,7 +394,7 @@ def visium_sge(
     ] = 'V1_Breast_Cancer_Block_A_Section_1',
     *,
     include_hires_tiff: bool = False,
-) -> AnnData:
+) -> ad.AnnData:
     """\
     Processed Visium Spatial Gene Expression data from 10x Genomics.
     Database: https://support.10xgenomics.com/spatial-gene-expression/datasets

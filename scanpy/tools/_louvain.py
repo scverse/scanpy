@@ -1,5 +1,5 @@
 from types import MappingProxyType
-from typing import Optional, Tuple, Sequence, Type, Mapping, Any
+from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -10,7 +10,6 @@ from packaging import version
 
 from ._utils_clustering import rename_groups, restrict_adjacency
 from .. import _utils, logging as logg
-from .._compat import Literal
 from .._utils import _choose_graph
 
 try:
@@ -55,8 +54,8 @@ def louvain(
     adata
         The annotated data matrix.
     resolution
-        For the default flavor (``'vtraag'``), you can provide a resolution
-        (higher resolution means finding more and smaller clusters),
+        For the default flavor (``'vtraag'``) or for ```RAPIDS```, you can provide a
+        resolution (higher resolution means finding more and smaller clusters),
         which defaults to 1.0.
         See “Time as a resolution parameter” in [Lambiotte09]_.
     random_state
@@ -181,7 +180,10 @@ def louvain(
             g.from_cudf_adjlist(offsets, indices, weights)
 
         logg.info('    using the "louvain" package of rapids')
-        louvain_parts, _ = cugraph.louvain(g)
+        if resolution is not None:
+            louvain_parts, _ = cugraph.louvain(g, resolution=resolution)
+        else:
+            louvain_parts, _ = cugraph.louvain(g)
         groups = (
             louvain_parts.to_pandas()
             .sort_values('vertex')[['partition']]

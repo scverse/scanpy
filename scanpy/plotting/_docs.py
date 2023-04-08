@@ -50,6 +50,11 @@ sort_order
 groups
     Restrict to a few categories in categorical observation annotation.
     The default is not to restrict to any groups.
+dimensions
+    0-indexed dimensions of the embedding to plot as integers. E.g. [(0, 1), (1, 2)].
+    Unlike `components`, this argument is used in the same way as `colors`, e.g. is
+    used to specify a single plot at a time. Will eventually replace the components
+    argument.
 components
     For instance, `['1,2', '2,3']`. To plot all available components use
     `components='all'`.
@@ -68,6 +73,9 @@ legend_fontweight
 legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
+colorbar_loc
+    Where to place the colorbar for continous variables. If `None`, no colorbar
+    is added.
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be

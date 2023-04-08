@@ -1,7 +1,7 @@
 """Rank genes according to differential expression.
 """
 from math import floor
-from typing import Iterable, Union, Optional
+from typing import Iterable, Union, Optional, Literal
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,6 @@ from scipy.sparse import issparse, vstack
 from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
-from .._compat import Literal
 from ..get import _get_obs_rep
 from .._utils import check_nonnegative_integers
 
@@ -75,7 +74,7 @@ def _tiecorrect(ranks):
     idx = np.sort(idx, axis=0)
     cnt = np.diff(idx, axis=0).astype(np.float64)
 
-    return 1.0 - (cnt ** 3 - cnt).sum(axis=0) / (size ** 3 - size)
+    return 1.0 - (cnt**3 - cnt).sum(axis=0) / (size**3 - size)
 
 
 class _RankGenes:
@@ -89,7 +88,6 @@ class _RankGenes:
         layer=None,
         comp_pts=False,
     ):
-
         if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
         else:
@@ -363,7 +361,6 @@ class _RankGenes:
         tie_correct=False,
         **kwds,
     ):
-
         if method in {'t-test', 't-test_overestim_var'}:
             generate_test_results = self.t_test(method)
         elif method == 'wilcoxon':
@@ -472,7 +469,7 @@ def rank_genes_groups(
         `'t-test_overestim_var'` overestimates variance of each group,
         `'wilcoxon'` uses Wilcoxon rank-sum,
         `'logreg'` uses logistic regression. See [Ntranos18]_,
-        `here <https://github.com/theislab/scanpy/issues/95>`__ and `here
+        `here <https://github.com/scverse/scanpy/issues/95>`__ and `here
         <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
         for why this is meaningful.
     corr_method
@@ -523,7 +520,7 @@ def rank_genes_groups(
     Notes
     -----
     There are slight inconsistencies depending on whether sparse
-    or dense data are passed. See `here <https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_rank_genes_groups.py>`__.
+    or dense data are passed. See `here <https://github.com/scverse/scanpy/blob/master/scanpy/tests/test_rank_genes_groups.py>`__.
 
     Examples
     --------

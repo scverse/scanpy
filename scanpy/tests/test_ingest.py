@@ -7,7 +7,7 @@ from umap import UMAP
 import scanpy as sc
 from scanpy import settings
 from scanpy._compat import pkg_version
-
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 X = np.array(
     [
@@ -17,15 +17,16 @@ X = np.array(
         [7.0, 9.4, 6.8, 9.1, 8.0],
         [8.9, 8.6, 9.6, 1.0, 2.0],
         [6.5, 8.9, 2.2, 4.5, 8.9],
-    ]
+    ],
+    dtype=np.float32,
 )
 
-T = np.array([[2.0, 3.5, 4.0, 1.0, 4.7], [3.2, 2.0, 5.0, 5.0, 8.0]])
+T = np.array([[2.0, 3.5, 4.0, 1.0, 4.7], [3.2, 2.0, 5.0, 5.0, 8.0]], dtype=np.float32)
 
 
 @pytest.fixture
 def adatas():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     n_split = 500
     adata_ref = sc.AnnData(pbmc.X[:n_split, :], obs=pbmc.obs.iloc[:n_split])
     adata_new = sc.AnnData(pbmc.X[n_split:, :])

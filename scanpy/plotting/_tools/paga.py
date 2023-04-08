@@ -2,7 +2,7 @@ import warnings
 import collections.abc as cabc
 from pathlib import Path
 from types import MappingProxyType
-from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple
+from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple, Literal
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,6 @@ from .. import _utils
 from .._utils import matrix, _IGraphLayout, _FontWeight, _FontSize
 from ... import _utils as _sc_utils, logging as logg
 from ..._settings import settings
-from ..._compat import Literal
 
 
 def paga_compare(
@@ -97,7 +96,7 @@ def paga_compare(
         else:
             basis = 'umap'
 
-    from .scatterplots import embedding, _get_data_points
+    from .scatterplots import embedding, _get_basis, _components_to_dimensions
 
     embedding(
         adata,
@@ -123,9 +122,12 @@ def paga_compare(
 
     if pos is None:
         if color == adata.uns['paga']['groups']:
-            coords = _get_data_points(
-                adata, basis, projection="2d", components=components, scale_factor=None
-            )[0][0]
+            # TODO: Use dimensions here
+            _basis = _get_basis(adata, basis)
+            dims = _components_to_dimensions(
+                components=components, dimensions=None, total_dims=_basis.shape[1]
+            )[0]
+            coords = _basis[:, dims]
             pos = (
                 pd.DataFrame(coords, columns=["x", "y"], index=adata.obs_names)
                 .groupby(adata.obs[color], observed=True)
@@ -414,7 +416,7 @@ def paga(
     cax
         A matplotlib axes object for a potential colorbar.
     cb_kwds
-        Keyword arguments for :class:`~matplotlib.colorbar.ColorbarBase`,
+        Keyword arguments for :class:`~matplotlib.colorbar.Colorbar`,
         for instance, `ticks`.
     add_pos
         Add the positions to `adata.uns['paga']`.
@@ -960,7 +962,7 @@ def _paga_graph(
                 s = np.abs(xy).max()
 
                 sct = ax.scatter(
-                    [xx], [yy], marker=xy, s=s ** 2 * groups_sizes[ix], color=color
+                    [xx], [yy], marker=xy, s=s**2 * groups_sizes[ix], color=color
                 )
 
             if node_labels is not None:

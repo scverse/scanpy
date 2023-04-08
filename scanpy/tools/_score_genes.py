@@ -90,7 +90,7 @@ def score_genes(
 
     Examples
     --------
-    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`__.
+    See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
     start = logg.info(f'computing score {score_name!r}')
     adata = adata.copy() if copy else adata
@@ -148,7 +148,7 @@ def score_genes(
     control_genes = set()
 
     # now pick `ctrl_size` genes from every cut
-    for cut in np.unique(obs_cut.loc[gene_list]):
+    for cut in np.unique(obs_cut.loc[list(gene_list)]):
         r_genes = np.array(obs_cut[obs_cut == cut].index)
         np.random.shuffle(r_genes)
         # uses full r_genes if ctrl_size > len(r_genes)
@@ -233,7 +233,7 @@ def score_genes_cell_cycle(
 
     Examples
     --------
-    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`__.
+    See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
     logg.info('calculating cell cycle phase')
 

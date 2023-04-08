@@ -3,6 +3,12 @@ import pytest
 import scanpy as sc
 import scanpy.external as sce
 from anndata.tests.helpers import assert_equal
+import pandas as pd
+import anndata as ad
+from scanpy.get import _get_obs_rep
+import numpy as np
+import scanpy.preprocessing as pp
+import scipy.sparse as sparse
 
 
 def test_scrublet():
@@ -21,6 +27,124 @@ def test_scrublet():
     assert "doublet_score" in adata.obs.columns
 
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+
+
+def test_scrublet_batched():
+    """
+    Test that Scrublet run works with batched data.
+
+    Check that scrublet runs and detects some doublets.
+    """
+    pytest.importorskip("scrublet")
+
+    adata = sc.datasets.pbmc3k()
+    adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
+    split = [adata[adata.obs["batch"] == x].copy() for x in ("a", "b")]
+
+    sce.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
+
+    # replace assertions by conditions
+    assert "predicted_doublet" in adata.obs.columns
+    assert "doublet_score" in adata.obs.columns
+
+    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+    assert (
+        'batches' in adata.uns['scrublet'].keys()
+    ), "Expect .uns to contain batch info"
+
+    # Check that results are independent
+    for s in split:
+        sce.pp.scrublet(s, use_approx_neighbors=False)
+    merged = sc.concat(split)
+
+    pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
+
+
+def test_scrublet_data():
+    """
+    Test that Scrublet processing is arranged correctly.
+
+    Check that simulations run on raw data.
+    """
+    pytest.importorskip("scrublet")
+
+    random_state = 1234
+
+    # Run Scrublet and let the main function run simulations
+    adata_scrublet_auto_sim = sce.pp.scrublet(
+        sc.datasets.pbmc3k(),
+        use_approx_neighbors=False,
+        copy=True,
+        random_state=random_state,
+    )
+
+    # Now make our own simulated data so we can check the result from function
+    # is the same, and by inference that the processing steps have not been
+    # broken
+
+    # Replicate the preprocessing steps used by the main function
+
+    def preprocess_for_scrublet(adata):
+        adata_pp = adata.copy()
+        pp.filter_genes(adata_pp, min_cells=3)
+        pp.filter_cells(adata_pp, min_genes=3)
+        adata_pp.layers['raw'] = adata_pp.X.copy()
+        pp.normalize_total(adata_pp)
+        logged = pp.log1p(adata_pp, copy=True)
+        pp.highly_variable_genes(logged)
+        adata_pp = adata_pp[:, logged.var['highly_variable']]
+
+        return adata_pp
+
+    # Simulate doublets using the same parents
+
+    def create_sim_from_parents(adata, parents):
+        # Now simulate doublets based on the randomly selected parents used
+        # previously
+
+        N_sim = parents.shape[0]
+        I = sparse.coo_matrix(
+            (
+                np.ones(2 * N_sim),
+                (np.repeat(np.arange(N_sim), 2), parents.flat),
+            ),
+            (N_sim, adata_obs.n_obs),
+        )
+        X = I @ adata_obs.layers['raw']
+        return ad.AnnData(
+            X,
+            var=pd.DataFrame(index=adata_obs.var_names),
+            obs=pd.DataFrame({"total_counts": np.ravel(X.sum(axis=1))}),
+            obsm={"doublet_parents": parents.copy()},
+        )
+
+    # Preprocess the data and make the simulated doublets
+
+    adata_obs = preprocess_for_scrublet(sc.datasets.pbmc3k())
+    adata_sim = create_sim_from_parents(
+        adata_obs, adata_scrublet_auto_sim.uns['scrublet']['doublet_parents']
+    )
+
+    # Apply the same post-normalisation the Scrublet function would
+
+    pp.normalize_total(adata_obs, target_sum=1e6)
+    pp.normalize_total(adata_sim, target_sum=1e6)
+
+    adata_scrublet_manual_sim = sce.pp.scrublet(
+        adata_obs,
+        adata_sim=adata_sim,
+        use_approx_neighbors=False,
+        copy=True,
+        random_state=random_state,
+    )
+
+    # Require that the doublet scores are the same whether simulation is via
+    # the main function or manually provided
+
+    assert (
+        adata_scrublet_manual_sim.obs['doublet_score']
+        == adata_scrublet_auto_sim.obs['doublet_score']
+    ).all()
 
 
 def test_scrublet_dense():

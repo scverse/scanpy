@@ -1,6 +1,7 @@
 from functools import partial
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.testing.compare import compare_images
@@ -12,6 +13,7 @@ import seaborn as sns
 import scanpy as sc
 
 from scanpy.tests.test_plotting import ROOT, FIGS, HERE
+import scanpy.tests._data._cached_datasets as datasets
 
 MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
 MISSING_VALUES_FIGS = FIGS / "embedding-missing-values"
@@ -220,6 +222,67 @@ def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
     check_images(dict_pth, list_pth, tol=15)
 
 
+def test_dimension_broadcasting(adata, tmpdir, check_same_image):
+    tmpdir = Path(tmpdir)
+
+    with pytest.raises(ValueError):
+        sc.pl.pca(
+            adata, color=["label", "1_missing"], dimensions=[(0, 1), (1, 2), (2, 3)]
+        )
+
+    dims_pth = tmpdir / "broadcast_dims.png"
+    color_pth = tmpdir / "broadcast_colors.png"
+
+    sc.pl.pca(adata, color=["label", "label", "label"], dimensions=(2, 3), show=False)
+    plt.savefig(dims_pth, dpi=40)
+    plt.close()
+    sc.pl.pca(adata, color="label", dimensions=[(2, 3), (2, 3), (2, 3)], show=False)
+    plt.savefig(color_pth, dpi=40)
+    plt.close()
+
+    check_same_image(dims_pth, color_pth, tol=5)
+
+
+def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
+    tmpdir = Path(tmpdir)
+    adata = adata.copy()
+    adata.obs["mean"] = np.ravel(adata.X.mean(axis=1))
+
+    comp_pth = tmpdir / "components_plot.png"
+    dims_pth = tmpdir / "dimension_plot.png"
+
+    # TODO: Deprecate components kwarg
+    # with pytest.warns(FutureWarning, match=r"components .* deprecated"):
+    sc.pl.pca(
+        adata,
+        color=["mean", "label"],
+        components=["1,2", "2,3"],
+        show=False,
+    )
+    plt.savefig(comp_pth, dpi=40)
+    plt.close()
+
+    sc.pl.pca(
+        adata,
+        color=["mean", "mean", "label", "label"],
+        dimensions=[(0, 1), (1, 2), (0, 1), (1, 2)],
+        show=False,
+    )
+    plt.savefig(dims_pth, dpi=40)
+    plt.close()
+
+    check_same_image(dims_pth, comp_pth, tol=5)
+
+
+def test_embedding_colorbar_location(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    adata = datasets.pbmc3k_processed().raw.to_adata()
+
+    sc.pl.pca(adata, color="LDHB", colorbar_loc=None)
+
+    save_and_compare_images("master_no_colorbar")
+
+
 # Spatial specific
 
 
@@ -242,10 +305,16 @@ def test_visium_circles(image_comparer):  # standard visium data
 
 
 def test_visium_default(image_comparer):  # default values
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    from packaging.version import parse as parse_version
+
+    if parse_version(mpl.__version__) < parse_version("3.7.0"):
+        pytest.xfail("Matplotlib 3.7.0+ required for this test")
+
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=5)
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
 
+    # Points default to transparent if an image is included
     sc.pl.spatial(adata, show=False)
 
     save_and_compare_images('master_spatial_visium_default')

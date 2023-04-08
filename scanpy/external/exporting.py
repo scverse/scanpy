@@ -11,7 +11,7 @@ import scipy.sparse
 import h5py
 import matplotlib.pyplot as plt
 from anndata import AnnData
-from pandas.api.types import is_categorical
+from pandas.api.types import is_categorical_dtype
 
 from ..preprocessing._utils import _get_mean_var
 from .._utils import NeighborsView
@@ -59,7 +59,7 @@ def spring_project(
 
     Examples
     --------
-    See this `tutorial <https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export>`__.
+    See this `tutorial <https://github.com/scverse/scanpy_usage/tree/master/171111_SPRING_export>`__.
     """
 
     # need to get nearest neighbors first
@@ -148,7 +148,7 @@ def spring_project(
     continuous_extras = {}
     if cell_groupings is None:
         for obs_name in adata.obs:
-            if is_categorical(adata.obs[obs_name]):
+            if is_categorical_dtype(adata.obs[obs_name]):
                 categorical_extras[obs_name] = [str(x) for x in adata.obs[obs_name]]
     else:
         if isinstance(cell_groupings, str):
@@ -156,7 +156,7 @@ def spring_project(
         for obs_name in cell_groupings:
             if obs_name not in adata.obs:
                 logg.warning(f'Cell grouping {obs_name!r} is not in adata.obs')
-            elif is_categorical(adata.obs[obs_name]):
+            elif is_categorical_dtype(adata.obs[obs_name]):
                 categorical_extras[obs_name] = [str(x) for x in adata.obs[obs_name]]
             else:
                 logg.warning(
@@ -164,7 +164,7 @@ def spring_project(
                 )
     if custom_color_tracks is None:
         for obs_name in adata.obs:
-            if not is_categorical(adata.obs[obs_name]):
+            if not is_categorical_dtype(adata.obs[obs_name]):
                 continuous_extras[obs_name] = np.array(adata.obs[obs_name])
     else:
         if isinstance(custom_color_tracks, str):
@@ -172,7 +172,7 @@ def spring_project(
         for obs_name in custom_color_tracks:
             if obs_name not in adata.obs:
                 logg.warning(f'Custom color track {obs_name!r} is not in adata.obs')
-            elif not is_categorical(adata.obs[obs_name]):
+            elif not is_categorical_dtype(adata.obs[obs_name]):
                 continuous_extras[obs_name] = np.array(adata.obs[obs_name])
             else:
                 logg.warning(
@@ -558,7 +558,7 @@ def cellbrowser(
     Examples
     --------
     See this
-    `tutorial <https://github.com/theislab/scanpy_usage/tree/master/181126_Cellbrowser_exports>`__.
+    `tutorial <https://github.com/scverse/scanpy_usage/tree/master/181126_Cellbrowser_exports>`__.
     """
 
     try:

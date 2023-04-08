@@ -3,7 +3,7 @@
 import collections.abc as cabc
 from itertools import product
 from collections import OrderedDict
-from typing import Optional, Union, Mapping  # Special
+from typing import Optional, Union, Mapping, Literal  # Special
 from typing import Sequence, Collection, Iterable  # ABCs
 from typing import Tuple, List  # Classes
 
@@ -24,7 +24,6 @@ from .. import get
 from .. import logging as logg
 from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params, _check_use_raw
-from .._compat import Literal
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes, check_colornorm
 from ._utils import ColorLike, _FontWeight, _FontSize
@@ -595,9 +594,13 @@ def ranking(
             pl.text(ig, score[g], labels[g], **txt_args)
         if include_lowest:
             score_mid = (score[g] + score[neg_indices[0]]) / 2
-            pl.text(len(indices), score_mid, '⋮', **txt_args)
-            for ig, g in enumerate(neg_indices):
-                pl.text(ig + len(indices) + 2, score[g], labels[g], **txt_args)
+            if (len(indices) + len(neg_indices)) < len(order_scores):
+                pl.text(len(indices), score_mid, '⋮', **txt_args)
+                for ig, g in enumerate(neg_indices):
+                    pl.text(ig + len(indices) + 2, score[g], labels[g], **txt_args)
+            else:
+                for ig, g in enumerate(neg_indices):
+                    pl.text(ig + len(indices), score[g], labels[g], **txt_args)
             pl.xticks([])
         pl.title(keys[iscore].replace('_', ' '))
         if n_panels <= 5 or iscore > n_cols:
@@ -2407,7 +2410,7 @@ def _plot_categories_as_colorblocks(
     labels = []
     label2code = {}  # dictionary of numerical values asigned to each label
     for code, (label, value) in enumerate(
-        obs_tidy.index.value_counts(sort=False).iteritems()
+        obs_tidy.index.value_counts(sort=False).items()
     ):
         ticks.append(value_sum + (value / 2))
         labels.append(label)
