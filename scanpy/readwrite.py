@@ -277,15 +277,44 @@ def _read_v3_10x_h5(filename, *, start=None):
                 (data, dsets['indices'], dsets['indptr']),
                 shape=(N, M),
             )
+            obs_dict = dict(obs_names=dsets['barcodes'].astype(str))
+            var_dict = dict(
+                var_names=dsets['name'].astype(str),
+                feature_types=dsets['feature_type'].astype(str),
+            )
+            if 'gene_id' not in dsets:
+                var_dict.update({'gene_ids': dsets['id'].astype(str)})
+            else:
+                var_dict.update(
+                    {
+                        'gene_ids': dsets['gene_id'].astype(str),
+                        'id': dsets['id'].astype(str),
+                    }
+                )
+            if 'filtered_barcodes' in f['matrix']:
+                obs_dict.update(
+                    {'filtered_barcodes': dsets['filtered_barcodes'].astype(bool)}
+                )
+            if 'features' in f['matrix']:
+                feature_datasets_dict = {
+                    x: y.dtype.kind
+                    for x, y in f["matrix"]['features'].items()
+                    if isinstance(y, h5py.Dataset)
+                    and x not in ['name', 'feature_type', 'id', 'gene_id']
+                    and not x.startswith('_')
+                }
+                var_dict.update(
+                    {
+                        x: dsets[x].astype(bool if y == 'b' else str)
+                        for (x, y) in feature_datasets_dict.items()
+                    },
+                )
+            else:
+                raise ValueError('10x h5 is misformed. Does not have features group')
             adata = AnnData(
                 matrix,
-                obs=dict(obs_names=dsets['barcodes'].astype(str)),
-                var=dict(
-                    var_names=dsets['name'].astype(str),
-                    gene_ids=dsets['id'].astype(str),
-                    feature_types=dsets['feature_type'].astype(str),
-                    genome=dsets['genome'].astype(str),
-                ),
+                obs=obs_dict,
+                var=var_dict,
             )
             logg.info('', time=start)
             return adata
