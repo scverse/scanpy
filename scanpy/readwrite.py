@@ -298,7 +298,7 @@ def _read_v3_10x_h5(filename, *, start=None):
             if 'features' in f['matrix']:
                 feature_datasets_dict = {
                     x: y.dtype.kind
-                    for x, y in f["matrix"]['features'].items()
+                    for x, y in f['matrix']['features'].items()
                     if isinstance(y, h5py.Dataset)
                     and x not in ['name', 'feature_type', 'id', 'gene_id']
                     and not x.startswith('_')
