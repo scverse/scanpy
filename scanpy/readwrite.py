@@ -277,18 +277,12 @@ def _read_v3_10x_h5(filename, *, start=None):
                 (data, dsets['indices'], dsets['indptr']),
                 shape=(N, M),
             )
-            obs_dict = dict(obs_names=dsets['barcodes'].astype(str))
-            var_dict = dict(
-                var_names=dsets['name'].astype(str),
-            )
+            obs_dict = {'obs_names': dsets['barcodes'].astype(str)}
+            var_dict = {'var_names': dsets['name'].astype(str)}
 
             if 'gene_id' not in dsets:
                 # Read metadata specific to a feature-barcode matrix
-                var_dict.update(
-                    {
-                        'gene_ids': dsets['id'].astype(str),
-                    }
-                )
+                var_dict['gene_ids'] = dsets['id'].astype(str)
             else:
                 # Read metadata specific to a probe-barcode matrix
                 var_dict.update(
@@ -297,29 +291,26 @@ def _read_v3_10x_h5(filename, *, start=None):
                         'probe_ids': dsets['id'].astype(str),
                     }
                 )
-            var_dict.update({'feature_types': dsets['feature_type'].astype(str)})
+            var_dict['feature_types'] = dsets['feature_type'].astype(str)
             if 'filtered_barcodes' in f['matrix']:
-                obs_dict.update(
-                    {'filtered_barcodes': dsets['filtered_barcodes'].astype(bool)}
-                )
+                obs_dict['filtered_barcodes'] = dsets['filtered_barcodes'].astype(bool)
+
             if 'features' in f['matrix']:
                 var_dict.update(
-                    {
-                        x: dsets[x].astype(bool if y.dtype.kind == 'b' else str)
-                        for x, y in f['matrix']['features'].items()
-                        if isinstance(y, h5py.Dataset)
-                        and x
-                        not in [
-                            'name',
-                            'feature_type',
-                            'id',
-                            'gene_id',
-                            '_all_tag_keys',
-                        ]
-                    },
+                    (x, dsets[x].astype(bool if y.dtype.kind == 'b' else str))
+                    for x, y in f['matrix']['features'].items()
+                    if isinstance(y, h5py.Dataset)
+                    and x
+                    not in [
+                        'name',
+                        'feature_type',
+                        'id',
+                        'gene_id',
+                        '_all_tag_keys',
+                    ]
                 )
             else:
-                raise ValueError('10x h5 is misformed. Does not have features group')
+                raise ValueError('10x h5 has no features group')
             adata = AnnData(
                 matrix,
                 obs=obs_dict,
