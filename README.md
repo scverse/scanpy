@@ -17,9 +17,25 @@ datasets of more than one million cells.
 
 Discuss usage on the scverse [Discourse]. Read the [documentation].
 If you'd like to contribute by opening an issue or creating a pull request, please take a look at our [contributing guide].
-If Scanpy is useful for your research, consider citing [Genome Biology (2018)].
+
+## Citation
+
+If you use `scanpy` in your work, please cite the `scanpy` publication as follows:
+
+> **SCANPY: large-scale single-cell gene expression data analysis**
+>
+> Alexander F. Wolf, Philipp Angerer, Fabian J. Theis
+>
+> _Genome Biology_ 2018 Feb 06. doi: [10.1186/s13059-017-1382-0](https://doi.org/10.1186/s13059-017-1382-0).
+
+You can cite the scverse publication as follows:
+
+> **The scverse project provides a computational ecosystem for single-cell omics data analysis**
+>
+> Isaac Virshup, Danila Bredikhin, Lukas Heumos, Giovanni Palla, Gregor Sturm, Adam Gayoso, Ilia Kats, Mikaela Koutrouli, Scverse Community, Bonnie Berger, Dana Pe’er, Aviv Regev, Sarah A. Teichmann, Francesca Finotello, F. Alexander Wolf, Nir Yosef, Oliver Stegle & Fabian J. Theis 
+>
+> _Nat Biotechnol._ 2022 Apr 10. doi: [10.1038/s41587-023-01733-8](https://doi.org/10.1038/s41587-023-01733-8).
 
 [contributing guide]: CONTRIBUTING.md
 [discourse]: https://discourse.scverse.org/
 [documentation]: https://scanpy.readthedocs.io
-[genome biology (2018)]: https://doi.org/10.1186/s13059-017-1382-0
