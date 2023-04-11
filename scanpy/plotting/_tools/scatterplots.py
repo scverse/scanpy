@@ -436,7 +436,7 @@ def embedding(
             path_effect = None
 
         # Adding legends
-        if categorical or color_vector.dtype == bool:  # for categorical and boolean
+        if categorical or color_vector.dtype == bool:
             _add_categorical_legend(
                 ax,
                 color_source_vector,
