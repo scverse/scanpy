@@ -281,37 +281,41 @@ def _read_v3_10x_h5(filename, *, start=None):
             var_dict = dict(
                 var_names=dsets['name'].astype(str),
             )
+
+            # Handles reading feature-barcode matrix
             if 'gene_id' not in dsets:
                 var_dict.update(
                     {
                         'gene_ids': dsets['id'].astype(str),
-                        'feature_types': dsets['feature_type'].astype(str),
                     }
                 )
+            # Handles reading probe-barcode matrix
             else:
                 var_dict.update(
                     {
                         'gene_ids': dsets['gene_id'].astype(str),
-                        'id': dsets['id'].astype(str),
-                        'feature_types': dsets['feature_type'].astype(str),
+                        'probe_ids': dsets['id'].astype(str),
                     }
                 )
+            var_dict.update({'feature_types': dsets['feature_type'].astype(str)})
             if 'filtered_barcodes' in f['matrix']:
                 obs_dict.update(
                     {'filtered_barcodes': dsets['filtered_barcodes'].astype(bool)}
                 )
             if 'features' in f['matrix']:
-                feature_datasets_dict = {
-                    x: y.dtype.kind
-                    for x, y in f['matrix']['features'].items()
-                    if isinstance(y, h5py.Dataset)
-                    and x not in ['name', 'feature_type', 'id', 'gene_id']
-                    and not x.startswith('_')
-                }
                 var_dict.update(
                     {
-                        x: dsets[x].astype(bool if y == 'b' else str)
-                        for (x, y) in feature_datasets_dict.items()
+                        x: dsets[x].astype(bool if y.dtype.kind == 'b' else str)
+                        for x, y in f['matrix']['features'].items()
+                        if isinstance(y, h5py.Dataset)
+                        and x
+                        not in [
+                            'name',
+                            'feature_type',
+                            'id',
+                            'gene_id',
+                            '_all_tag_keys',
+                        ]
                     },
                 )
             else:
