@@ -282,15 +282,15 @@ def _read_v3_10x_h5(filename, *, start=None):
                 var_names=dsets['name'].astype(str),
             )
 
-            # Handles reading feature-barcode matrix
             if 'gene_id' not in dsets:
+                # Read metadata specific to a feature-barcode matrix
                 var_dict.update(
                     {
                         'gene_ids': dsets['id'].astype(str),
                     }
                 )
-            # Handles reading probe-barcode matrix
             else:
+                # Read metadata specific to a probe-barcode matrix
                 var_dict.update(
                     {
                         'gene_ids': dsets['gene_id'].astype(str),
