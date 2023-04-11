@@ -24,7 +24,7 @@ If you use `scanpy` in your work, please cite the `scanpy` publication as follow
 
 > **SCANPY: large-scale single-cell gene expression data analysis**
 >
-> Alexander F. Wolf, Philipp Angerer, Fabian J. Theis
+> F. Alexander Wolf, Philipp Angerer, Fabian J. Theis
 >
 > _Genome Biology_ 2018 Feb 06. doi: [10.1186/s13059-017-1382-0](https://doi.org/10.1186/s13059-017-1382-0).
 
