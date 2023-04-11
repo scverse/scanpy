@@ -280,15 +280,20 @@ def _read_v3_10x_h5(filename, *, start=None):
             obs_dict = dict(obs_names=dsets['barcodes'].astype(str))
             var_dict = dict(
                 var_names=dsets['name'].astype(str),
-                feature_types=dsets['feature_type'].astype(str),
             )
             if 'gene_id' not in dsets:
-                var_dict.update({'gene_ids': dsets['id'].astype(str)})
+                var_dict.update(
+                    {
+                        'gene_ids': dsets['id'].astype(str),
+                        'feature_types': dsets['feature_type'].astype(str),
+                    }
+                )
             else:
                 var_dict.update(
                     {
                         'gene_ids': dsets['gene_id'].astype(str),
                         'id': dsets['id'].astype(str),
+                        'feature_types': dsets['feature_type'].astype(str),
                     }
                 )
             if 'filtered_barcodes' in f['matrix']:
