@@ -166,11 +166,15 @@ def read_10x_h5(
     :attr:`~anndata.AnnData.obs_names`
         Cell names
     :attr:`~anndata.AnnData.var_names`
-        Gene names
+        Gene names for a feature barcode matrix, probe names for a probe bc matrix
     :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
         Gene IDs
     :attr:`~anndata.AnnData.var`\\ `['feature_types']`
         Feature types
+    :attr:`~anndata.AnnData.obs`\\ `[filtered_barcodes]`
+        filtered barcodes if present in the matrix
+    :attr:`~anndata.AnnData.var`
+        Any additional metadata present in /matrix/features is read in.
     """
     start = logg.info(f'reading {filename}')
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
@@ -297,10 +301,17 @@ def _read_v3_10x_h5(filename, *, start=None):
 
             if 'features' in f['matrix']:
                 var_dict.update(
-                    (x, dsets[x].astype(bool if y.dtype.kind == 'b' else str))
-                    for x, y in f['matrix']['features'].items()
-                    if isinstance(y, h5py.Dataset)
-                    and x
+                    (
+                        feature_metadata_name,
+                        dsets[feature_metadata_name].astype(
+                            bool if feature_metadata_item.dtype.kind == 'b' else str
+                        ),
+                    )
+                    for feature_metadata_name, feature_metadata_item in f['matrix'][
+                        'features'
+                    ].items()
+                    if isinstance(feature_metadata_item, h5py.Dataset)
+                    and feature_metadata_name
                     not in [
                         'name',
                         'feature_type',
@@ -368,11 +379,15 @@ def read_visium(
     :attr:`~anndata.AnnData.obs_names`
         Cell names
     :attr:`~anndata.AnnData.var_names`
-        Gene names
+        Gene names for a feature barcode matrix, probe names for a probe bc matrix
     :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
         Gene IDs
     :attr:`~anndata.AnnData.var`\\ `['feature_types']`
         Feature types
+    :attr:`~anndata.AnnData.obs`\\ `[filtered_barcodes]`
+        filtered barcodes if present in the matrix
+    :attr:`~anndata.AnnData.var`
+        Any additional metadata present in /matrix/features is read in.
     :attr:`~anndata.AnnData.uns`\\ `['spatial']`
         Dict of spaceranger output files with 'library_id' as key
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['images']`
