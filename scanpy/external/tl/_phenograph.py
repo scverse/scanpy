@@ -244,7 +244,7 @@ def phenograph(
     if copy:
         return communities, graph, Q
     else:
-        adata.obsp[ig_key] = sp.sparse.csr_matrix(graph)
+        adata.obsp[ig_key] = graph.tocsr()
         if comm_key:
             adata.obs[comm_key] = pd.Categorical(communities)
         if Q:
