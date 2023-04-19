@@ -11,6 +11,7 @@ from typing import (
     Mapping,
     List,
     Tuple,
+    Literal,
 )
 from warnings import warn
 
@@ -49,7 +50,6 @@ from .._docs import (
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
-from ..._compat import Literal
 
 
 @_doc_params(
@@ -872,7 +872,6 @@ def pca(
             adata, 'pca', show=show, return_fig=return_fig, save=save, **kwargs
         )
     else:
-
         if 'pca' not in adata.obsm.keys() and 'X_pca' not in adata.obsm.keys():
             raise KeyError(
                 f"Could not find entry in `obsm` for 'pca'.\n"
@@ -1168,7 +1167,7 @@ def _get_color_source_vector(
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
     if groups and is_categorical_dtype(values):
-        values = values.replace(values.categories.difference(groups), np.nan)
+        values = values.remove_categories(values.categories.difference(groups))
     return values
 
 

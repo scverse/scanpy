@@ -1,7 +1,7 @@
 """\
 Perform clustering using PhenoGraph
 """
-from typing import Union, Tuple, Optional, Type, Any
+from typing import Union, Tuple, Optional, Type, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,6 @@ from anndata import AnnData
 import scipy as sp
 from scipy.sparse import spmatrix
 
-from ..._compat import Literal
 from ...tools._leiden import MutableVertexPartition
 from ... import logging as logg
 

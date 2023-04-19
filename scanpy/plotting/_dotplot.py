@@ -1,4 +1,4 @@
-from typing import Optional, Union, Mapping  # Special
+from typing import Optional, Union, Mapping, Literal  # Special
 from typing import Sequence  # ABCs
 from typing import Tuple  # Classes
 
@@ -11,7 +11,6 @@ from matplotlib.colors import Normalize
 
 from .. import logging as logg
 from .._utils import _doc_params
-from .._compat import Literal
 from ._utils import make_grid_spec, fix_kwds, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
@@ -472,7 +471,6 @@ class DotPlot(BasePlot):
         size_legend_ax.set_xlim(xmin - 0.15, xmax + 0.5)
 
     def _plot_legend(self, legend_ax, return_ax_dict, normalize):
-
         # to maintain the fixed height size of the legends, a
         # spacer of variable height is added at the bottom.
         # The structure for the legends is:

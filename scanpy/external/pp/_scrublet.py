@@ -166,12 +166,10 @@ def scrublet(
     adata_obs = adata.copy()
 
     def _run_scrublet(ad_obs, ad_sim=None):
-
         # With no adata_sim we assume the regular use case, starting with raw
         # counts and simulating doublets
 
         if ad_sim is None:
-
             pp.filter_genes(ad_obs, min_cells=3)
             pp.filter_cells(ad_obs, min_genes=3)
 
@@ -238,9 +236,7 @@ def scrublet(
         batches = np.unique(adata.obs[batch_key])
         scrubbed = [
             _run_scrublet(
-                adata_obs[
-                    adata_obs.obs[batch_key] == batch,
-                ],
+                adata_obs[adata_obs.obs[batch_key] == batch,],
                 adata_sim,
             )
             for batch in batches
@@ -431,6 +427,11 @@ def _scrublet_call_doublets(
 
     if mean_center:
         logg.info('Embedding transcriptomes using PCA...')
+        # Sklearn PCA doesn't like matrices, so convert to arrays
+        if isinstance(scrub._E_obs_norm, np.matrix):
+            scrub._E_obs_norm = np.asarray(scrub._E_obs_norm)
+        if isinstance(scrub._E_sim_norm, np.matrix):
+            scrub._E_sim_norm = np.asarray(scrub._E_sim_norm)
         sl.pipeline_pca(
             scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
         )

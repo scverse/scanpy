@@ -36,11 +36,26 @@ def test_highly_variable_genes_basic():
     assert 'highly_variable_intersection' in adata.var.columns
 
     adata = sc.datasets.blobs()
-    adata.obs['batch'] = np.random.binomial(4, 0.5, size=(adata.n_obs))
+    batch = np.random.binomial(4, 0.5, size=(adata.n_obs))
+    adata.obs['batch'] = batch
     adata.obs['batch'] = adata.obs['batch'].astype('category')
     sc.pp.highly_variable_genes(adata, batch_key='batch', n_top_genes=3)
     assert 'highly_variable_nbatches' in adata.var.columns
     assert adata.var['highly_variable'].sum() == 3
+    highly_var_first_layer = adata.var['highly_variable']
+
+    adata = sc.datasets.blobs()
+    new_layer = adata.X.copy()
+    np.random.shuffle(new_layer)
+    adata.layers['test_layer'] = new_layer
+    adata.obs['batch'] = batch
+    adata.obs['batch'] = adata.obs['batch'].astype('category')
+    sc.pp.highly_variable_genes(
+        adata, batch_key='batch', n_top_genes=3, layer='test_layer'
+    )
+    assert 'highly_variable_nbatches' in adata.var.columns
+    assert adata.var['highly_variable'].sum() == 3
+    assert (highly_var_first_layer != adata.var['highly_variable']).any()
 
     sc.pp.highly_variable_genes(adata)
     no_batch_hvg = adata.var.highly_variable.copy()
@@ -69,7 +84,6 @@ def test_highly_variable_genes_basic():
 
 
 def _check_pearson_hvg_columns(output_df, n_top_genes):
-
     assert pd.api.types.is_float_dtype(output_df['residual_variances'].dtype)
 
     assert output_df['highly_variable'].values.dtype is np.dtype('bool')
@@ -83,12 +97,10 @@ def _check_pearson_hvg_columns(output_df, n_top_genes):
 )
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtype):
-
     adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
 
     # depending on check_values, warnings should be raised for non-integer data
     if dtype == 'float32':
-
         adata_noninteger = adata.copy()
         x, y = np.nonzero(adata_noninteger.X)
         adata_noninteger.X[x[0], y[0]] = 0.5
@@ -105,7 +117,6 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
 
     # errors should be raised for invalid theta values
     for theta in [0, -1]:
-
         with pytest.raises(ValueError, match='Pearson residuals require theta > 0'):
             sc.experimental.pp.highly_variable_genes(
                 adata.copy(), theta=theta, flavor='pearson_residuals', n_top_genes=100
@@ -491,3 +502,16 @@ def test_seurat_v3_mean_var_output_with_batchkey():
     )
     np.testing.assert_allclose(true_mean, result_df['means'], rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(true_var, result_df['variances'], rtol=2e-05, atol=2e-05)
+
+
+def test_cellranger_n_top_genes_warning():
+    X = np.random.poisson(2, (100, 30))
+    adata = sc.AnnData(X, dtype=X.dtype)
+    sc.pp.normalize_total(adata)
+    sc.pp.log1p(adata)
+
+    with pytest.warns(
+        UserWarning,
+        match="`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
+    ):
+        sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
