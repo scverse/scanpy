@@ -25,7 +25,7 @@ jobs:
         ANNDATA_DEV: yes
         RUN_COVERAGE: yes
         PRERELEASE_DEPENDENCIES: yes
-        
+
   steps:
   - task: UsePythonVersion@0
     inputs:
@@ -52,7 +52,7 @@ jobs:
       pip install .[dev,$(TEST_EXTRA)]
     displayName: 'Install dependencies'
     condition: eq(variables['PRERELEASE_DEPENDENCIES'], 'no')
-    
+
   - script: |
       python -m pip install --pre --upgrade pip
       pip install --pre pytest-cov wheel
