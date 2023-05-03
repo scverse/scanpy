@@ -8,6 +8,7 @@ variables:
   ANNDATA_DEV: no
   RUN_COVERAGE: no
   TEST_EXTRA: 'test-full'
+  PRERELEASE_DEPENDENCIES: no
 
 jobs:
 - job: PyTest
@@ -24,6 +25,8 @@ jobs:
         python.version: '3.9'
         ANNDATA_DEV: yes
         RUN_COVERAGE: yes
+        PRERELEASE_DEPENDENCIES: yes
+
   steps:
   - task: UsePythonVersion@0
     inputs:
