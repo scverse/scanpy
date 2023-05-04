@@ -274,9 +274,7 @@ def embedding(
         order = slice(None)
         if sort_order is True and value_to_plot is not None and categorical is False:
             # Higher values plotted on top, null values on bottom
-            order = np.argsort(~pd.isnull(color_vector.astype(str)), kind="stable")[
-                ::-1
-            ]
+            order = np.argsort(-color_vector, kind="stable")[::-1]
         elif sort_order and categorical:
             # Null points go on bottom
             order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
