@@ -10,5 +10,5 @@ filepath = pooch.retrieve(url=input_url, known_hash=None)
 
 print("File path: ", filepath)
 tar = tarfile.open(filepath, "r:gz")
-tar.extractall(path=os.path.join( os.path.dirname( filepath ), '../..' ))
+tar.extractall(path=os.path.join(os.path.dirname(filepath), '../..'))
 tar.close()

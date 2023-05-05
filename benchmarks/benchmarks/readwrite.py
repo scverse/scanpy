@@ -40,7 +40,7 @@ class H5ADInMemorySizeSuite:
 
     def setup(self, input_url):
         self.filepath = pooch.retrieve(url=input_url, known_hash=None)
-        
+
     def track_in_memory_size(self, input_url):
         adata = sc.read_10x_mtx(self.filepath)
         adata_size = sys.getsizeof(adata)
