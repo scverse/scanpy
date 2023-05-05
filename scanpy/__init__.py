@@ -27,7 +27,14 @@ if not within_flit():  # see function docstring on why this is there
         read_text,
         read_umi_tools,
     )
-    from .readwrite import read, read_10x_h5, read_10x_mtx, write, read_visium
+    from .readwrite import (
+        read,
+        read_10x_h5,
+        read_10x_mtx,
+        write,
+        read_visium,
+        read_xenium,
+    )
     from .neighbors import Neighbors
 
     set_figure_params = settings.set_figure_params

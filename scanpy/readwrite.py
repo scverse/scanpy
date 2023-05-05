@@ -1,7 +1,7 @@
 """Reading and Writing
 """
 from pathlib import Path, PurePath
-from typing import Union, Dict, Optional, Tuple, BinaryIO, Literal
+from typing import Union, Dict, Optional, Tuple, BinaryIO, Literal, List
 
 import h5py
 import json
@@ -331,6 +331,141 @@ def _read_v3_10x_h5(filename, *, start=None):
             return adata
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
+
+
+def read_xenium(
+    path: Union[str, Path],
+    *,
+    count_file: str = "cell_feature_matrix.h5",
+    image_file: str = "morphology_mip.ome.tif",
+    library_id: Optional[str] = None,
+    load_image: bool = True,
+    image_resolutions: List[Tuple[int, int]] = [(3000, 3000)],
+):
+    """\
+    Read 10x-Genomics-formatted Xenium dataset.
+
+    In addition to reading regular 10x output,
+    this looks for the `cells.csv.gz` file and loads cell metadata.
+    Also loads images from the given `image_file`.
+    Based on the `Xenium output docs`_.
+
+    .. _Xenium output docs: https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
+
+    Parameters
+    ----------
+    path
+        Path to directory for xenium datafiles.
+    count_file
+        Which file in the passed directory to use as the count file. Typically would be called
+        'cell_feature_matrix.h5'.
+    image_file
+        Which file in the passed directory to use as the image file. Typically would be one of
+        `morphology_mip.ome.tif` or `morphology_focus.ome.tif`.
+    library_id
+        Identifier for the visium library. Can be modified when concatenating multiple adata objects.
+    load_image:
+        Whether to load the image.
+    image_resolutions:
+        List of image resolutions to load. The image file contains multiple resolutions of the same
+        image. For each given resolution, this function will search in the image file for the
+        most closely matching resolution and load it. A resolution will be loaded at most once, so
+        the resulting AnnData object may have less images than resolutions given.
+
+    Returns
+    -------
+    Annotated data matrix, where observations/cells are named by their
+    barcode and variables/genes by gene name. Stores the following information:
+
+    :attr:`~anndata.AnnData.X`
+        The data matrix is stored
+    :attr:`~anndata.AnnData.obs_names`
+        Cell names
+    :attr:`~anndata.AnnData.var_names`
+        Gene names
+    :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
+        Gene IDs
+    :attr:`~anndata.AnnData.var`\\ `['feature_types']`
+        Feature types
+    :attr:`~anndata.AnnData.var`
+        Any additional metadata present in /matrix/features is read in.
+    :attr:`~anndata.AnnData.uns`\\ `['spatial']`
+        Dict of spaceranger output files with 'library_id' as key
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['images']`
+        Dict of images
+    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
+        Experiment metadata from the `experiment.xenium` file
+    :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
+        Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
+    """
+    path = Path(path)
+    adata = read_visium(
+        path, count_file=count_file, library_id=library_id, load_images=False
+    )
+
+    cells = pd.read_csv(path / "cells.csv.gz")
+    adata.obsm["spatial"] = cells[["x_centroid", "y_centroid"]].to_numpy()
+    adata.obs = adata.obs.join(
+        cells.assign(cell_id=lambda x: x.cell_id.astype(str))
+        .set_index("cell_id")
+        .drop(columns=["x_centroid", "y_centroid"])
+    )
+
+    library_id = next(iter(adata.uns["spatial"].keys()))
+    adata.uns["spatial"][library_id]["metadata"] = json.loads(
+        (path / "experiment.xenium").read_bytes()
+    )
+
+    if load_image:
+        from PIL import Image, UnidentifiedImageError, TiffImagePlugin
+
+        maxpixels = Image.MAX_IMAGE_PIXELS
+        Image.MAX_IMAGE_PIXELS = None
+        imgpath = path / image_file
+        try:
+            img = Image.open(imgpath)
+            images = {}
+            sizes = {}
+            used_resolutions = set()
+
+            for i in range(img.n_frames):
+                img.seek(i)
+                sizes[img.width * img.height] = i
+
+            for res in image_resolutions:
+                resprod = res[0] * res[1]
+
+                bestmatch = 0
+                bestmatchidx = None
+                for size, frame in sizes.items():
+                    match = min(resprod, size) / max(resprod, size)
+                    if match > bestmatch:
+                        bestmatch = match
+                        bestmatchidx = frame
+                if bestmatchidx not in used_resolutions:
+                    img.seek(bestmatchidx)
+                    images[(img.width, img.height)] = np.asarray(img)
+
+            adata.uns["spatial"][library_id]["images"] = images
+        except UnidentifiedImageError as e:
+            with open(imgpath, "rb") as f:
+                magicbytes = f.read(16)
+                if magicbytes[:4] in TiffImagePlugin.PREFIXES:
+                    tags = TiffImagePlugin.ImageFileDirectory_v2(magicbytes)
+                    f.seek(tags.next)
+                    tags.load(f)
+                    if tags.get(TiffImagePlugin.COMPRESSION, 1) == 34712:
+                        e.args = (
+                            f"The TIFF file {imgpath} uses JPEG2000 compression, which is not supported.",
+                        )
+                    elif tags.compression not in TiffImagePlugin.COMPRESSION_INFO:
+                        e.args = (
+                            f"The TIFF file {imgpath} uses an unknown compression.",
+                        )
+            raise e
+        finally:
+            Image.MAX_IMAGE_PIXELS = maxpixels
+    return adata
 
 
 def read_visium(
