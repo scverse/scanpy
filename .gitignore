@@ -42,3 +42,6 @@ Thumbs.db
 
 # Test artifacts
 **/test-results.xml
+
+# asv benchmark files
+benchmarks/.asv

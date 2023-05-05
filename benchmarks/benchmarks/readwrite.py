@@ -31,7 +31,8 @@ import scanpy as sc
 from .utils import get_anndata_memsize, sedate, get_peak_mem, get_actualsize
 
 
-PBMC_3K_URL = "http://falexwolf.de/data/pbmc3k_raw.h5ad"
+PBMC_3K_URL = "http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz"
+
 
 class H5ADInMemorySizeSuite:
     params = [PBMC_3K_URL]
@@ -39,7 +40,7 @@ class H5ADInMemorySizeSuite:
 
     def setup(self, input_url):
         self.filepath = pooch.retrieve(url=input_url, known_hash=None)
-
+        
     def track_in_memory_size(self, input_url):
         adata = sc.read_10x_mtx(self.filepath)
         adata_size = sys.getsizeof(adata)
@@ -74,7 +75,7 @@ class H5ADReadSuite:
         mem_recording = memory_usage(
             (sedate(sc.read_10x_mtx, 0.005), (self.filepath,)), interval=0.001
         )
-        # adata = anndata.read_h5ad(self.filepath)
+
         base_size = mem_recording[-1] - mem_recording[0]
         print(np.max(mem_recording) - np.min(mem_recording))
         print(base_size)
