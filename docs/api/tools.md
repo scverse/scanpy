@@ -15,7 +15,7 @@ Any transformation of the data matrix that is not *preprocessing*. In contrast t
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.pca
    tl.tsne
@@ -29,7 +29,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.embedding_density
 ```
@@ -39,7 +39,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.leiden
    tl.louvain
@@ -53,7 +53,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.ingest
 ```
@@ -63,7 +63,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.rank_genes_groups
    tl.filter_rank_genes_groups
@@ -75,7 +75,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.score_genes
    tl.score_genes_cell_cycle
@@ -86,7 +86,7 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    tl.sim
 

@@ -18,7 +18,7 @@ integrated in Scanpy core.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    experimental.pp.normalize_pearson_residuals
    experimental.pp.normalize_pearson_residuals_pca

@@ -13,7 +13,7 @@ Collections of useful measurements for evaluating results.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    metrics.confusion_matrix
    metrics.gearys_c
