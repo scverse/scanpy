@@ -14,7 +14,7 @@ useful formats.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    get.obs_df
    get.var_df

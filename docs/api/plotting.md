@@ -24,7 +24,7 @@ See the {ref}`settings` section for all important plotting configurations.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    pl.scatter
    pl.heatmap

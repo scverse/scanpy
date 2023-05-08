@@ -6,7 +6,7 @@
 
 ```{eval-rst}
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    exporting.spring_project
    exporting.cellbrowser
