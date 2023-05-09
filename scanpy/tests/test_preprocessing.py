@@ -116,14 +116,15 @@ def test_subsample_copy():
     assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
 
 
-def test_scale():
+@pytest.mark.parametrize("flavor", ["default", "use_fastpp"])
+def test_scale(flavor):
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     v = adata[:, 0 : adata.shape[1] // 2]
     # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965
     assert v.is_view
     with pytest.warns(Warning, match="view"):
-        sc.pp.scale(v)
+        sc.pp.scale(v, flavor=flavor)
     assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
