@@ -73,12 +73,12 @@
 #     def mem_readfull_object(self, input_url):
 #         return sc.read_10x_mtx(self.filepath)
 
-    # def track_read_full_memratio(self, input_url):
-    #     mem_recording = memory_usage(
-    #         (sedate(sc.read_10x_mtx, 0.005), (self.filepath,)), interval=0.001
-    #     )
+# def track_read_full_memratio(self, input_url):
+#     mem_recording = memory_usage(
+#         (sedate(sc.read_10x_mtx, 0.005), (self.filepath,)), interval=0.001
+#     )
 
-    #     base_size = mem_recording[-1] - mem_recording[0]
-    #     print(np.max(mem_recording) - np.min(mem_recording))
-    #     print(base_size)
-    #     return (np.max(mem_recording) - np.min(mem_recording)) / base_size
+#     base_size = mem_recording[-1] - mem_recording[0]
+#     print(np.max(mem_recording) - np.min(mem_recording))
+#     print(base_size)
+#     return (np.max(mem_recording) - np.min(mem_recording)) / base_size

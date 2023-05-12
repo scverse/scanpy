@@ -5,7 +5,7 @@
 
     // The name of the project being benchmarked
     "project": "scanpy",
-    
+
     // The project's homepage
     "project_url": "https://scanpy.readthedocs.io/",
 
