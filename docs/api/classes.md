@@ -12,7 +12,7 @@ Represent data as a neighborhood structure, usually a knn graph.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    Neighbors
 
