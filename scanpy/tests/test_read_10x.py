@@ -9,6 +9,7 @@ import shutil
 
 ROOT = Path(__file__).parent
 ROOT = ROOT / '_data' / '10x_data'
+VISIUM_ROOT = Path(__file__).parent / '_data' / 'visium_data'
 
 
 def assert_anndata_equal(a1, a2):
@@ -121,7 +122,7 @@ def test_error_missing_genome():
 
 def test_read_visium_counts():
     # Test that checks the read_visium function
-    visium_pth = ROOT / '../visium_data/1.0.0'
+    visium_pth = VISIUM_ROOT / '1.0.0'
     spec_genome_v3 = sc.read_visium(visium_pth, genome='GRCh38')
     nospec_genome_v3 = sc.read_visium(visium_pth)
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
@@ -133,3 +134,21 @@ def test_10x_h5_gex():
     assert_anndata_equal(
         sc.read_10x_h5(h5_pth, gex_only=True), sc.read_10x_h5(h5_pth, gex_only=False)
     )
+
+
+def test_10x_probe_barcode_read():
+    # Tests the 10x probe barcode matrix is read correctly
+    h5_pth = VISIUM_ROOT / '2.1.0' / 'raw_probe_bc_matrix.h5'
+    probe_anndata = sc.read_10x_h5(h5_pth)
+    assert set(probe_anndata.var.columns) == {
+        'feature_types',
+        'filtered_probes',
+        'gene_ids',
+        'gene_name',
+        'genome',
+        'probe_ids',
+        'probe_region',
+    }
+    assert set(probe_anndata.obs.columns) == {'filtered_barcodes'}
+    assert probe_anndata.shape == (4987, 1000)
+    assert probe_anndata.X.nnz == 858

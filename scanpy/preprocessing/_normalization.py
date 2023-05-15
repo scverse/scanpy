@@ -179,7 +179,7 @@ def normalize_total(
         # at least one cell as more than max_fraction of counts per cell
 
         gene_subset = (X > counts_per_cell[:, None] * max_fraction).sum(0)
-        gene_subset = np.ravel(gene_subset) == 0
+        gene_subset = np.asarray(np.ravel(gene_subset) == 0)
 
         msg += (
             ' The following highly-expressed genes are not considered during '

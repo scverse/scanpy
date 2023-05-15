@@ -11,7 +11,7 @@
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    datasets.blobs
    datasets.ebi_expression_atlas

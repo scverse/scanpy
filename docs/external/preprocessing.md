@@ -8,7 +8,7 @@
 
 ```{eval-rst}
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pp.bbknn
    pp.harmony_integrate
@@ -21,7 +21,7 @@
 
 ```{eval-rst}
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pp.scrublet
    pp.scrublet_simulate_doublets
@@ -35,7 +35,7 @@ Note that the fundamental limitations of imputation are still under [debate](htt
 
 ```{eval-rst}
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    pp.dca
    pp.magic
