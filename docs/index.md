@@ -10,7 +10,7 @@
 .. role:: smaller
 ```
 
-::::{grid} 2
+::::{grid} 1 2 3 3
 :gutter: 2
 
 :::{grid-item-card} Installation {octicon}`plug;1em;`

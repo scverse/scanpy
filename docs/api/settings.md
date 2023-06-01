@@ -13,7 +13,7 @@ high-resolution jupyter display backend useful for use in notebooks.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    set_figure_params
 ```
@@ -23,7 +23,7 @@ An instance of the {class}`~scanpy._settings.ScanpyConfig` is available as `scan
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    _settings.ScanpyConfig
 ```
@@ -70,7 +70,7 @@ Print versions of packages that might influence numerical results.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    logging.print_header
    logging.print_versions
