@@ -9,6 +9,7 @@
 /docs/data/
 /docs/api/generated
 /docs/external/generated
+/docs/jupyter_execute
 
 # tests
 /.cache/
