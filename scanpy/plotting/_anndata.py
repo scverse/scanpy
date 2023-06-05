@@ -915,11 +915,19 @@ def clustermap(
 
     Examples
     --------
-    Soon to come with figures. In the meanwile, see :func:`~seaborn.clustermap`.
 
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.krumsiek11()
-    >>> sc.pl.clustermap(adata, obs_keys='cell_type')
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.krumsiek11()
+        sc.pl.clustermap(adata)
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.clustermap(adata, obs_keys='cell_type')
+        
     """
     import seaborn as sns  # Slow import, only import if called
 

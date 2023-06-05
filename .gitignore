@@ -7,6 +7,8 @@
 /docs/_build/
 /docs/generated/
 /docs/data/
+/docs/api/generated
+/docs/external/generated
 
 # tests
 /.cache/
@@ -29,6 +31,7 @@ __pycache__/
 /scanpy.egg-info/
 /*-env/
 /env-*/
+/environment.yml
 
 # OS stuff
 .DS_Store
