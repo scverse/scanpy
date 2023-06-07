@@ -83,8 +83,9 @@ def test_mean_var_sparse():
         assert v_resid_sc < v_resid_sk
 
 
-def test_normalize_per_cell():
-    A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
+@pytest.mark.parametrize('dtype', [np.float32, np.int64])
+def test_normalize_per_cell(dtype):
+    A = np.array([[1, 0], [3, 0], [5, 6]], dtype=dtype)
     adata = AnnData(A.copy())
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts='n_counts2')
     assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
