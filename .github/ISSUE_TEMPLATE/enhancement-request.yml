@@ -16,7 +16,7 @@ body:
     - 'Other?'
   validations:
     required: true
-- type: textbox
+- type: textarea
   id: description
   attributes:
     label: Please describe your wishes
