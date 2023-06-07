@@ -18,6 +18,7 @@ body:
     required: true
 - type: textbox
   id: description
-  label: Please describe your wishes
+  attributes:
+    label: Please describe your wishes
   validations:
     required: true
