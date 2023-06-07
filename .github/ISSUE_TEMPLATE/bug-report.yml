@@ -49,7 +49,7 @@ body:
     label: Versions
     description: Paste the output of scanpy.logging.print_versions() leaving a blank line after the details tag
     render: markdown
-    placeholder: |
+    value: |
       <details>
 
 
