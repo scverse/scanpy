@@ -1,8 +1,8 @@
 name: Enhancement request
 description: Anything you’d like to see in scanpy?
-title: ''
+#title: ...
 labels: [enhancement]
-assignees: []
+#assignees: []
 body:
 - type: dropdown
   id: kind

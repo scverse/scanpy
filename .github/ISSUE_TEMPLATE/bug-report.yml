@@ -1,13 +1,13 @@
 name: Bug report
 description: Scanpy doesn’t do what it should? Please help us fix it!
-title: ''
+#title: ...
 labels: [bug]
-assignees: []
+#assignees: []
 body:
 - type: checkboxes
   id: terms
   attributes:
-    # label: ...
+    label: Please make sure these conditions are met
     # description: ...
     options:
     - label: I have checked that this issue has not already been reported.
