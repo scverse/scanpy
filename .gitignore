@@ -18,6 +18,7 @@
 # Environment management
 /Pipfile
 /Pipfile.lock
+/requirements*.lock
 
 # always-ignore extensions
 *~
