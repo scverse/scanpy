@@ -2,7 +2,7 @@ name: Bug report
 description: Scanpy doesn’t do what it should? Please help us fix it!
 title: ''
 labels: [bug]
-assignees: ''
+assignees: []
 body:
 - type: checkboxes
   id: terms
@@ -21,6 +21,13 @@ body:
     value: |
       **Note**: Please read [this guide](https://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports) detailing how to provide the necessary information for us to reproduce your bug.
 - type: textarea
+  id: description
+  attributes:
+    label: What happened?
+    description: Describe what you tried to do, and what happened instead.
+  validations:
+    required: true
+- type: textarea
   id: code
   attributes:
     label: Minimal code sample
@@ -29,15 +36,15 @@ body:
   validations:
     required: true
 - type: textarea
-  id: tb
+  id: traceback
   attributes:
     label: Error output
-    description: (produced by the code above)
+    description: Produced by the code above. Leave empty if the issue is unexpected behavior instead of an error.
     render: pytb
   validations:
-    required: true
+    required: false
 - type: textarea
-  id: tb
+  id: versions
   attributes:
     label: Versions
     description: Paste the output of scanpy.logging.print_versions() leaving a blank line after the details tag
