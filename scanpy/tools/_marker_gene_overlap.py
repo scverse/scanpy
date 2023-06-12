@@ -2,14 +2,13 @@
 Calculate overlaps of rank_genes_groups marker genes with marker gene dictionaries
 """
 import collections.abc as cabc
-from typing import Union, Optional, Dict
+from typing import Union, Optional, Dict, Literal
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 
 from .. import logging as logg
-from .._compat import Literal
 
 
 def _calc_overlap_count(markers1: dict, markers2: dict):
@@ -116,9 +115,9 @@ def marker_gene_overlap(
         reference annotation per group. `'data'` normalizes the data by the
         total number of marker genes used for each cluster.
     top_n_markers
-        The number of top data-derived marker genes to use. By default all
-        calculated marker genes are used. If `adj_pval_threshold` is set along
-        with `top_n_markers`, then `adj_pval_threshold` is ignored.
+        The number of top data-derived marker genes to use. By default the top
+        100 marker genes are used. If `adj_pval_threshold` is set along with
+        `top_n_markers`, then `adj_pval_threshold` is ignored.
     adj_pval_threshold
         A significance threshold on the adjusted p-values to select marker
         genes. This can only be used when adjusted p-values are calculated by
@@ -203,14 +202,12 @@ def marker_gene_overlap(
 
         if adj_pval_threshold < 0:
             logg.warning(
-                '`adj_pval_threshold` was set below 0. '
-                'Threshold will be set to 0.'
+                '`adj_pval_threshold` was set below 0. Threshold will be set to 0.'
             )
             adj_pval_threshold = 0
         elif adj_pval_threshold > 1:
             logg.warning(
-                '`adj_pval_threshold` was set above 1. '
-                'Threshold will be set to 1.'
+                '`adj_pval_threshold` was set above 1. Threshold will be set to 1.'
             )
             adj_pval_threshold = 1
 
@@ -222,8 +219,7 @@ def marker_gene_overlap(
 
     if top_n_markers is not None and top_n_markers < 1:
         logg.warning(
-            '`top_n_markers` was set below 1. '
-            '`top_n_markers` will be set to 1.'
+            '`top_n_markers` was set below 1. `top_n_markers` will be set to 1.'
         )
         top_n_markers = 1
 
@@ -236,17 +232,16 @@ def marker_gene_overlap(
             n_genes = min(top_n_markers, adata.uns[key]['names'].shape[0])
             data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
         elif adj_pval_threshold is not None:
-            n_genes = (
-                adata.uns[key]['pvals_adj'][group] < adj_pval_threshold
-            ).sum()
+            n_genes = (adata.uns[key]['pvals_adj'][group] < adj_pval_threshold).sum()
             data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
             if n_genes == 0:
                 logg.warning(
                     'No marker genes passed the significance threshold of '
                     f'{adj_pval_threshold} for cluster {group!r}.'
                 )
+        # Use top 100 markers as default if top_n_markers = None
         else:
-            data_markers[group] = set(adata.uns[key]['names'][group])
+            data_markers[group] = set(adata.uns[key]['names'][group][:100])
 
     # Find overlaps
     if method == 'overlap_count':
@@ -254,10 +249,7 @@ def marker_gene_overlap(
         if normalize == 'reference':
             # Ensure rows sum to 1
             ref_lengths = np.array(
-                [
-                    len(reference_markers[m_group])
-                    for m_group in reference_markers
-                ]
+                [len(reference_markers[m_group]) for m_group in reference_markers]
             )
             marker_match = marker_match / ref_lengths[:, np.newaxis]
             marker_match = np.nan_to_num(marker_match)
@@ -290,8 +282,6 @@ def marker_gene_overlap(
     # Store the results
     if inplace:
         adata.uns[key_added] = marker_matching_df
-        logg.hint(
-            'added\n' f'    {key_added!r}, marker overlap scores (adata.uns)'
-        )
+        logg.hint(f'added\n    {key_added!r}, marker overlap scores (adata.uns)')
     else:
         return marker_matching_df

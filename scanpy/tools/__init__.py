@@ -1,4 +1,4 @@
-from ..preprocessing._simple import pca
+from ..preprocessing import pca
 from ._tsne import tsne
 from ._umap import umap
 from ._diffmap import diffmap
@@ -19,3 +19,4 @@ from ._score_genes import score_genes, score_genes_cell_cycle
 from ._dendrogram import dendrogram
 from ._embedding_density import embedding_density
 from ._marker_gene_overlap import marker_gene_overlap
+from ._ingest import ingest, Ingest

@@ -1,47 +1,58 @@
 import os
 import sys
-import warnings
+import importlib.util
+import inspect
+import re
+import subprocess
 from pathlib import Path
 from datetime import datetime
+from typing import Any
 
 import matplotlib  # noqa
+from packaging.version import parse as parse_version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
 matplotlib.use('agg')
 
 HERE = Path(__file__).parent
-sys.path.insert(0, str(HERE.parent))
+sys.path[:0] = [str(HERE.parent), str(HERE / 'extensions')]
 import scanpy  # noqa
-
-with warnings.catch_warnings():
-    warnings.filterwarnings('ignore', category=FutureWarning)
-    import scanpy.api
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 # -- General configuration ------------------------------------------------
 
 
-nitpicky = True  # Warn about broken links
-needs_sphinx = '2.0'  # Nicer param docs
-suppress_warnings = ['ref.citation']
+nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
+needs_sphinx = '4.0'  # Nicer param docs
+suppress_warnings = [
+    'ref.citation',
+    'myst.header',  # https://github.com/executablebooks/MyST-Parser/issues/262
+]
 
 # General information
 project = 'Scanpy'
-author = scanpy.__author__
-copyright = f'{datetime.now():%Y}, {author}.'
+author = 'Scanpy development team'
+repository_url = "https://github.com/scverse/scanpy"
+copyright = f'{datetime.now():%Y}, the Scanpy development team.'
 version = scanpy.__version__.replace('.dirty', '')
+
+# Bumping the version updates all docs, so don't do that
+if parse_version(version).is_devrelease:
+    parsed = parse_version(version)
+    version = f"{parsed.major}.{parsed.minor}.{parsed.micro}.dev"
+
 release = version
 
 # default settings
 templates_path = ['_templates']
-source_suffix = '.rst'
 master_doc = 'index'
 default_role = 'literal'
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-pygments_style = 'sphinx'
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints']
 
 extensions = [
+    'myst_nb',
+    'sphinx_copybutton',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
@@ -49,12 +60,14 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
-    # 'plot_generator',
-    # 'plot_directive',
+    'sphinx.ext.linkcode',
+    'sphinx.ext.extlinks',
+    'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
-    # 'ipython_directive',
-    # 'ipython_console_highlighting',
-    'scanpydoc',
+    'scanpydoc.autosummary_generate_imported',
+    "sphinx_design",
+    "sphinxext.opengraph",
+    *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
 # Generate the API documentation when building
@@ -68,64 +81,88 @@ napoleon_use_rtype = True  # having a separate entry generally helps readability
 napoleon_use_param = True
 napoleon_custom_sections = [('Params', 'Parameters')]
 todo_include_todos = False
+api_dir = HERE / 'api'  # function_images
+myst_enable_extensions = [
+    "amsmath",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "html_image",
+    "html_admonition",
+]
+myst_url_schemes = ("http", "https", "mailto")
+nb_output_stderr = "remove"
+nb_execution_mode = "off"
+nb_merge_streams = True
+
+
+ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
+ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
+
+typehints_defaults = 'braces'
+
+scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
+
+pygments_style = "default"
+pygments_dark_style = "native"
 
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     cycler=('https://matplotlib.org/cycler/', None),
-    h5py=('http://docs.h5py.org/en/stable/', None),
+    h5py=('https://docs.h5py.org/en/stable/', None),
     ipython=('https://ipython.readthedocs.io/en/stable/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
     louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
-    matplotlib=('https://matplotlib.org/', None),
-    networkx=('https://networkx.github.io/documentation/networkx-1.10/', None),
-    numpy=('https://docs.scipy.org/doc/numpy/', None),
+    matplotlib=('https://matplotlib.org/stable/', None),
+    networkx=('https://networkx.org/documentation/stable/', None),
+    numpy=('https://numpy.org/doc/stable/', None),
     pandas=('https://pandas.pydata.org/pandas-docs/stable/', None),
+    pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
-    scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
-    scvelo=('https://scvelo.readthedocs.io/', None),
+    scipy=('https://docs.scipy.org/doc/scipy/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
-    scanpy_tutorials=(
-        'https://scanpy-tutorials.readthedocs.io/en/latest',
-        None,
-    ),
+    scanpy_tutorials=(scanpy_tutorials_url, None),
 )
 
 
 # -- Options for HTML output ----------------------------------------------
 
-
-html_theme = 'sphinx_rtd_theme'
-html_theme_options = dict(
-    navigation_depth=4, logo_only=True  # Only show the logo
-)
-html_context = dict(
-    display_github=True,  # Integrate GitHub
-    github_user='theislab',  # Username
-    github_repo='scanpy',  # Repo name
-    github_version='master',  # Version
-    conf_py_path='/docs/',  # Path in the checkout to the docs root
-)
+html_theme = "sphinx_book_theme"
+html_theme_options = {
+    "repository_url": repository_url,
+    "use_repository_button": True,
+    "logo_only": True,
+    "show_toc_level": 4,  # show all levels in the sidebar
+}
 html_static_path = ['_static']
+html_css_files = ["css/override.css"]
 html_show_sphinx = False
 html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
-gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(
-    html_context
-)
+html_title = "scanpy"
 
 
 def setup(app):
-    app.warningiserror = on_rtd
-    app.add_stylesheet('css/custom.css')
-    app.connect('autodoc-process-docstring', insert_function_images)
-    app.connect('build-finished', show_param_warnings)
-    app.add_role('pr', autolink(f'{gh_url}/pull/{{}}', 'PR {}'))
-    app.add_role('issue', autolink(f'{gh_url}/issues/{{}}', 'issue {}'))
+    """App setup hook."""
+    # TODO: fix all warnings in a future PR
+    # Many come from the tutorials, like the workshop directory
+    # which is not included in the docs
+    #     app.warningiserror = on_rtd
+    app.add_config_value(
+        "recommonmark_config",
+        {
+            "auto_toc_tree_section": "Contents",
+            "enable_auto_toc_tree": True,
+            "enable_math": True,
+            "enable_inline_math": False,
+            "enable_eval_rst": True,
+        },
+        True,
+    )
 
 
 # -- Options for other output formats ------------------------------------------
-
 
 htmlhelp_basename = f'{project}doc'
 doc_title = f'{project} Documentation'
@@ -144,134 +181,16 @@ texinfo_documents = [
 ]
 
 
-# -- Images for plot functions -------------------------------------------------
-
-
-def insert_function_images(app, what, name, obj, options, lines):
-    path = Path(__file__).parent / 'api' / f'{name}.png'
-    if what != 'function' or not path.is_file():
-        return
-    lines[0:0] = [
-        f'.. image:: {path.name}',
-        '   :width: 200',
-        '   :align: right',
-        '',
-    ]
-
-
-# -- GitHub links --------------------------------------------------------------
-
-
-def autolink(url_template, title_template='{}'):
-    from docutils import nodes
-    from types import MappingProxyType
-
-    mp = MappingProxyType({})
-
-    def role(name, rawtext, text, lineno, inliner, options=mp, content=()):
-        url = url_template.format(text)
-        title = title_template.format(text)
-        node = nodes.reference(rawtext, title, refuri=url, **options)
-        return [node], []
-
-    return role
-
-
-# -- Test for new scanpydoc functionality --------------------------------------
-
-
-import re
-from sphinx.ext.napoleon import NumpyDocstring
-
-
-def process_return(lines):
-    for line in lines:
-        m = re.fullmatch(r'(?P<param>\w+)\s+:\s+(?P<type>[\w.]+)', line)
-        if m:
-            # Once this is in scanpydoc, we can use the fancy hover stuff
-            yield f'**{m["param"]}** : :class:`~{m["type"]}`'
-        else:
-            yield line
-
-
-def scanpy_parse_returns_section(self, section):
-    lines_raw = list(
-        process_return(self._dedent(self._consume_to_next_section()))
-    )
-    lines = self._format_block(':returns: ', lines_raw)
-    if lines and lines[-1]:
-        lines.append('')
-    return lines
-
-
-NumpyDocstring._parse_returns_section = scanpy_parse_returns_section
-
-
-# -- Warn for non-annotated params ---------------------------------------------
-
-
-_format_docutils_params_orig = NumpyDocstring._format_docutils_params
-param_warnings = {}
-
-
-def scanpy_log_param_types(self, fields, field_role='param', type_role='type'):
-    for _name, _type, _desc in fields:
-        if (
-            not _type
-            or not self._obj.__module__.startswith('scanpy')
-            or self._name.startswith('scanpy.api')
-        ):
-            continue
-        w_list = param_warnings.setdefault((self._name, self._obj), [])
-        if (_name, _type) not in w_list:
-            w_list.append((_name, _type))
-    return _format_docutils_params_orig(self, fields, field_role, type_role)
-
-
-def show_param_warnings(app, exception):
-    import inspect
-
-    for (fname, fun), params in param_warnings.items():
-        _, line = inspect.getsourcelines(fun)
-        file_name = inspect.getsourcefile(fun)
-        params_str = '\n'.join(f'\t{n}: {t}' for n, t in params)
-        warnings.warn_explicit(
-            f'\nParameters in `{fname}` have types in docstring.\n'
-            f'Replace them with type annotations.\n{params_str}',
-            UserWarning,
-            file_name,
-            line,
-        )
-    if param_warnings:
-        raise RuntimeError('Encountered text parameter type. Use annotations.')
-
-
-NumpyDocstring._format_docutils_params = scanpy_log_param_types
-
-
-# -- Debug code ----------------------------------------------------------------
-
-
-# Just do the following to see the rst of a function:
-# rm -f _build/doctrees/api/scanpy.<what_you_want>.doctree; DEBUG=1 make html
-import os
-
-if os.environ.get('DEBUG') is not None:
-    import sphinx.ext.napoleon
-
-    pd = sphinx.ext.napoleon._process_docstring
-
-    def pd_new(app, what, name, obj, options, lines):
-        pd(app, what, name, obj, options, lines)
-        print(*lines, sep='\n')
-
-    sphinx.ext.napoleon._process_docstring = pd_new
-
-
 # -- Suppress link warnings ----------------------------------------------------
 
 qualname_overrides = {
-    "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric"
+    "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
+    # If the docs are built with an old version of numpy, this will make it work:
+    "numpy.random.RandomState": "numpy.random.mtrand.RandomState",
+    "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
+    "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
+    "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
+    "pandas.core.series.Series": "pandas.Series",
 }
 
 nitpick_ignore = [
@@ -280,27 +199,77 @@ nitpick_ignore = [
     # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
     ('py:class', 'seaborn.ClusterGrid'),
     # Won’t be documented
-    ('py:class', 'scanpy.readwrite.Empty'),
+    ('py:class', 'scanpy.plotting._utils._AxesSubplot'),
+    ('py:class', 'scanpy._utils.Empty'),
+    ('py:class', 'numpy.random.mtrand.RandomState'),
+    # Will work once scipy 1.8 is released
+    ('py:class', 'scipy.sparse.base.spmatrix'),
+    ('py:class', 'scipy.sparse.csr.csr_matrix'),
 ]
 
-for mod_name in [
-    'pp',
-    'tl',
-    'pl',
-    'queries',
-    'logging',
-    'datasets',
-    'export_to',
-    None,
-]:
-    if mod_name is None:
-        mod = scanpy.api
-        mod_name = 'scanpy.api'
-    else:
-        mod = getattr(scanpy.api, mod_name)
-        mod_name = f'scanpy.api.{mod_name}'
-    for name, item in vars(mod).items():
-        if not callable(item):
-            continue
-        for kind in ['func', 'obj']:
-            nitpick_ignore.append((f'py:{kind}', f'{mod_name}.{name}'))
+# Options for plot examples
+
+plot_include_source = True
+plot_formats = [("png", 90)]
+plot_html_show_formats = False
+plot_html_show_source_link = False
+plot_working_directory = HERE.parent  # Project root
+
+# Linkcode config
+
+
+def git(*args):
+    return subprocess.check_output(["git", *args]).strip().decode()
+
+
+# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
+# Current git reference. Uses branch/tag name if found, otherwise uses commit hash
+git_ref = None
+try:
+    git_ref = git("name-rev", "--name-only", "--no-undefined", "HEAD")
+    git_ref = re.sub(r"^(remotes/[^/]+|tags)/", "", git_ref)
+except Exception:
+    pass
+
+# (if no name found or relative ref, use commit hash instead)
+if not git_ref or re.search(r"[\^~]", git_ref):
+    try:
+        git_ref = git("rev-parse", "HEAD")
+    except Exception:
+        git_ref = "master"
+
+# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
+_module_path = os.path.dirname(importlib.util.find_spec("scanpy").origin)  # type: ignore
+
+
+def linkcode_resolve(domain, info):
+    if domain != "py":
+        return None
+
+    try:
+        obj: Any = sys.modules[info["module"]]
+        for part in info["fullname"].split("."):
+            obj = getattr(obj, part)
+        obj = inspect.unwrap(obj)
+
+        if isinstance(obj, property):
+            obj = inspect.unwrap(obj.fget)  # type: ignore
+
+        path = os.path.relpath(inspect.getsourcefile(obj), start=_module_path)  # type: ignore
+        src, lineno = inspect.getsourcelines(obj)
+    except Exception:
+        return None
+
+    path = f"{path}#L{lineno}-L{lineno + len(src) - 1}"
+    return f"{repository_url}/blob/{git_ref}/scanpy/{path}"
+
+
+# extlinks config
+extlinks = {
+    "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
+    "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
+    "tutorial": (
+        "https://github.com/scverse/scanpy-tutorials/%s.ipynb",
+        "tutorial: %s",
+    ),
+}

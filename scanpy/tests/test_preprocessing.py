@@ -2,27 +2,49 @@ from itertools import product
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from scipy import sparse as sp
 import scanpy as sc
-from sklearn.utils.testing import assert_allclose
+from numpy.testing import assert_allclose
 import pytest
 from anndata import AnnData
+from anndata.tests.helpers import assert_equal, asarray
+
+from scanpy.tests.helpers import check_rep_mutation, check_rep_results
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 
-HERE = Path(__file__).parent
-
-
-def test_log1p_chunked():
-    A = np.random.rand(200, 10)
-    ad = AnnData(A)
-    ad2 = AnnData(A)
-    ad3 = AnnData(A)
-    ad3.filename = HERE / 'test.h5ad'
+def test_log1p(tmp_path):
+    A = np.random.rand(200, 10).astype(np.float32)
+    A_l = np.log1p(A)
+    ad = AnnData(A.copy())
+    ad2 = AnnData(A.copy())
+    ad3 = AnnData(A.copy())
+    ad3.filename = tmp_path / 'test.h5ad'
     sc.pp.log1p(ad)
+    assert np.allclose(ad.X, A_l)
     sc.pp.log1p(ad2, chunked=True)
     assert np.allclose(ad2.X, ad.X)
     sc.pp.log1p(ad3, chunked=True)
     assert np.allclose(ad3.X, ad.X)
+
+    # Test base
+    ad4 = AnnData(A)
+    sc.pp.log1p(ad4, base=2)
+    assert np.allclose(ad4.X, A_l / np.log(2))
+
+
+@pytest.fixture(params=[None, 2])
+def base(request):
+    return request.param
+
+
+def test_log1p_rep(count_matrix_format, base, dtype):
+    X = count_matrix_format(
+        np.abs(sp.random(100, 200, density=0.3, dtype=dtype)).toarray()
+    )
+    check_rep_mutation(sc.pp.log1p, X, base=base)
+    check_rep_results(sc.pp.log1p, X, base=base)
 
 
 def test_mean_var_sparse():
@@ -35,7 +57,7 @@ def test_mean_var_sparse():
     for mtx, ax in product((csr64, csc64), (0, 1)):
         scm, scv = sc.pp._utils._get_mean_var(mtx, axis=ax)
         skm, skv = mean_variance_axis(mtx, ax)
-        skv *= (mtx.shape[ax] / (mtx.shape[ax] - 1))
+        skv *= mtx.shape[ax] / (mtx.shape[ax] - 1)
 
         assert np.allclose(scm, skm)
         assert np.allclose(scv, skv)
@@ -49,8 +71,8 @@ def test_mean_var_sparse():
         scm64, scv64 = sc.pp._utils._get_mean_var(mtx64)
         skm32, skv32 = mean_variance_axis(mtx32, 0)
         skm64, skv64 = mean_variance_axis(mtx64, 0)
-        skv32 *= (mtx.shape[0] / (mtx.shape[0] - 1))
-        skv64 *= (mtx.shape[0] / (mtx.shape[0] - 1))
+        skv32 *= mtx.shape[0] / (mtx.shape[0] - 1)
+        skv64 *= mtx.shape[0] / (mtx.shape[0] - 1)
 
         m_resid_sc = np.mean(np.abs(scm64 - scm32))
         m_resid_sk = np.mean(np.abs(skm64 - skm32))
@@ -62,28 +84,22 @@ def test_mean_var_sparse():
 
 
 def test_normalize_per_cell():
-    adata = AnnData(
-        np.array([[1, 0], [3, 0], [5, 6]]))
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1,
-                             key_n_counts='n_counts2')
-    assert adata.X.sum(axis=1).tolist() == [1., 1., 1.]
+    A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
+    adata = AnnData(A.copy())
+    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts='n_counts2')
+    assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now with copy option
-    adata = AnnData(
-        np.array([[1, 0], [3, 0], [5, 6]]))
+    adata = AnnData(A.copy())
     # note that sc.pp.normalize_per_cell is also used in
     # pl.highest_expr_genes with parameter counts_per_cell_after=100
-    adata_copy = sc.pp.normalize_per_cell(
-        adata, counts_per_cell_after=1, copy=True)
-    assert adata_copy.X.sum(axis=1).tolist() == [1., 1., 1.]
+    adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
+    assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now sparse
-    adata = AnnData(
-        np.array([[1, 0], [3, 0], [5, 6]]))
-    adata_sparse = AnnData(
-        sp.csr_matrix([[1, 0], [3, 0], [5, 6]]))
+    adata = AnnData(A.copy())
+    adata_sparse = AnnData(sp.csr_matrix(A.copy()))
     sc.pp.normalize_per_cell(adata)
     sc.pp.normalize_per_cell(adata_sparse)
-    assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(
-        axis=1).A1.tolist()
+    assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
 
 
 def test_subsample():
@@ -94,17 +110,49 @@ def test_subsample():
     assert adata.n_obs == 4
 
 
+def test_subsample_copy():
+    adata = AnnData(np.ones((200, 10)))
+    assert sc.pp.subsample(adata, n_obs=40, copy=True).shape == (40, 10)
+    assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
+
+
 def test_scale():
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     adata.X = adata.raw.X
-    v = adata[:, 0:adata.shape[1] // 2]
-    # Should turn view to copy https://github.com/theislab/anndata/issues/171#issuecomment-508689965
-    assert v.isview
+    v = adata[:, 0 : adata.shape[1] // 2]
+    # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965
+    assert v.is_view
     with pytest.warns(Warning, match="view"):
         sc.pp.scale(v)
-    assert not v.isview
+    assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
+
+
+@pytest.fixture(params=[True, False])
+def zero_center(request):
+    return request.param
+
+
+def test_scale_rep(count_matrix_format, zero_center):
+    """
+    Test that it doesn't matter where the array being scaled is in the anndata object.
+    """
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
+    check_rep_results(sc.pp.scale, X, zero_center=zero_center)
+
+
+def test_scale_array(count_matrix_format, zero_center):
+    """
+    Test that running sc.pp.scale on an anndata object and an array returns the same results.
+    """
+    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    adata = sc.AnnData(X=X.copy(), dtype=np.float64)
+
+    sc.pp.scale(adata, zero_center=zero_center)
+    scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
+    assert np.array_equal(asarray(scaled_X), asarray(adata.X))
 
 
 def test_recipe_plotting():
@@ -117,32 +165,75 @@ def test_recipe_plotting():
 
 def test_regress_out_ordinal():
     from scipy.sparse import random
+
     adata = AnnData(random(1000, 100, density=0.6, format='csr'))
     adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
     adata.obs['n_counts'] = adata.X.sum(axis=1)
 
     # results using only one processor
     single = sc.pp.regress_out(
-        adata, keys=['n_counts', 'percent_mito'], n_jobs=1, copy=True)
+        adata, keys=['n_counts', 'percent_mito'], n_jobs=1, copy=True
+    )
     assert adata.X.shape == single.X.shape
 
     # results using 8 processors
     multi = sc.pp.regress_out(
-        adata, keys=['n_counts', 'percent_mito'], n_jobs=8, copy=True)
+        adata, keys=['n_counts', 'percent_mito'], n_jobs=8, copy=True
+    )
 
     np.testing.assert_array_equal(single.X, multi.X)
+
+
+def test_regress_out_view():
+    from scipy.sparse import random
+
+    adata = AnnData(random(500, 1100, density=0.2, format='csr'))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    subset_adata = adata[:, :1050]
+    subset_adata_copy = subset_adata.copy()
+
+    sc.pp.regress_out(subset_adata, keys=['n_counts', 'percent_mito'])
+    sc.pp.regress_out(subset_adata_copy, keys=['n_counts', 'percent_mito'])
+    assert_equal(subset_adata, subset_adata_copy)
+    assert not subset_adata.is_view
 
 
 def test_regress_out_categorical():
     from scipy.sparse import random
     import pandas as pd
+
     adata = AnnData(random(1000, 100, density=0.6, format='csr'))
     # create a categorical column
-    adata.obs['batch'] = pd.Categorical(
-        np.random.randint(1, 4, size=adata.X.shape[0]))
+    adata.obs['batch'] = pd.Categorical(np.random.randint(1, 4, size=adata.X.shape[0]))
 
     multi = sc.pp.regress_out(adata, keys='batch', n_jobs=8, copy=True)
     assert adata.X.shape == multi.X.shape
+
+
+def test_regress_out_constants():
+    adata = AnnData(np.hstack((np.full((10, 1), 0.0), np.full((10, 1), 1.0))))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    adata_copy = adata.copy()
+
+    sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'])
+    assert_equal(adata, adata_copy)
+
+
+def test_regress_out_constants_equivalent():
+    # Tests that constant values don't change results
+    # (since support for constant values is implemented by us)
+    from sklearn.datasets import make_blobs
+
+    X, cat = make_blobs(100, 20)
+    a = sc.AnnData(np.hstack([X, np.zeros((100, 5))]), obs={"cat": pd.Categorical(cat)})
+    b = sc.AnnData(X, obs={"cat": pd.Categorical(cat)})
+
+    sc.pp.regress_out(a, "cat")
+    sc.pp.regress_out(b, "cat")
+
+    np.testing.assert_equal(a[:, b.var_names].X, b.X)
 
 
 @pytest.fixture(params=[lambda x: x.copy(), sp.csr_matrix, sp.csc_matrix])
@@ -155,18 +246,26 @@ def replace(request):
     return request.param
 
 
-def test_downsample_counts_per_cell(count_matrix_format, replace):
+@pytest.fixture(params=[np.int64, np.float32, np.float64])
+def dtype(request):
+    return request.param
+
+
+def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     TARGET = 1000
-    X = np.random.randint(0, 100, (1000, 100)) * \
-        np.random.binomial(1, .3, (1000, 100))
-    adata = AnnData(X=count_matrix_format(X))
+    X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    X = X.astype(dtype)
+    adata = AnnData(X=count_matrix_format(X), dtype=dtype)
     with pytest.raises(ValueError):
-        sc.pp.downsample_counts(adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace)
+        sc.pp.downsample_counts(
+            adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace
+        )
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(adata, replace=replace)
     initial_totals = np.ravel(adata.X.sum(axis=1))
-    adata = sc.pp.downsample_counts(adata, counts_per_cell=TARGET,
-                                    replace=replace, copy=True)
+    adata = sc.pp.downsample_counts(
+        adata, counts_per_cell=TARGET, replace=replace, copy=True
+    )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if sp.issparse(adata.X):
         assert all(adata.X.toarray()[X == 0] == 0)
@@ -174,21 +273,27 @@ def test_downsample_counts_per_cell(count_matrix_format, replace):
         assert all(adata.X[X == 0] == 0)
     assert all(new_totals <= TARGET)
     assert all(initial_totals >= new_totals)
-    assert all(initial_totals[initial_totals <= TARGET]
-                == new_totals[initial_totals <= TARGET])
+    assert all(
+        initial_totals[initial_totals <= TARGET] == new_totals[initial_totals <= TARGET]
+    )
     if not replace:
         assert np.all(X >= adata.X)
+    assert X.dtype == adata.X.dtype
 
 
-def test_downsample_counts_per_cell_multiple_targets(count_matrix_format, replace):
+def test_downsample_counts_per_cell_multiple_targets(
+    count_matrix_format, replace, dtype
+):
     TARGETS = np.random.randint(500, 1500, 1000)
-    X = np.random.randint(0, 100, (1000, 100)) * \
-        np.random.binomial(1, .3, (1000, 100))
-    adata = AnnData(X=count_matrix_format(X))
+    X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    X = X.astype(dtype)
+    adata = AnnData(X=count_matrix_format(X), dtype=dtype)
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
-    adata = sc.pp.downsample_counts(adata, counts_per_cell=TARGETS, replace=replace, copy=True)
+    adata = sc.pp.downsample_counts(
+        adata, counts_per_cell=TARGETS, replace=replace, copy=True
+    )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if sp.issparse(adata.X):
         assert all(adata.X.toarray()[X == 0] == 0)
@@ -196,21 +301,25 @@ def test_downsample_counts_per_cell_multiple_targets(count_matrix_format, replac
         assert all(adata.X[X == 0] == 0)
     assert all(new_totals <= TARGETS)
     assert all(initial_totals >= new_totals)
-    assert all(initial_totals[initial_totals <= TARGETS]
-                == new_totals[initial_totals <= TARGETS])
+    assert all(
+        initial_totals[initial_totals <= TARGETS]
+        == new_totals[initial_totals <= TARGETS]
+    )
     if not replace:
         assert np.all(X >= adata.X)
+    assert X.dtype == adata.X.dtype
 
 
-def test_downsample_total_counts(count_matrix_format, replace):
-    X = np.random.randint(0, 100, (1000, 100)) * \
-        np.random.binomial(1, .3, (1000, 100))
-    adata_orig = AnnData(X=count_matrix_format(X))
+def test_downsample_total_counts(count_matrix_format, replace, dtype):
+    X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    X = X.astype(dtype)
+    adata_orig = AnnData(X=count_matrix_format(X), dtype=dtype)
     total = X.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))
-    adata = sc.pp.downsample_counts(adata_orig, total_counts=target,
-                                    replace=replace, copy=True)
+    adata = sc.pp.downsample_counts(
+        adata_orig, total_counts=target, replace=replace, copy=True
+    )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if sp.issparse(adata.X):
         assert all(adata.X.toarray()[X == 0] == 0)
@@ -220,6 +329,18 @@ def test_downsample_total_counts(count_matrix_format, replace):
     assert all(initial_totals >= new_totals)
     if not replace:
         assert np.all(X >= adata.X)
-        adata = sc.pp.downsample_counts(adata_orig, total_counts=total + 10,
-                                        replace=False, copy=True)
+        adata = sc.pp.downsample_counts(
+            adata_orig, total_counts=total + 10, replace=False, copy=True
+        )
         assert (adata.X == X).all()
+    assert X.dtype == adata.X.dtype
+
+
+def test_recipe_weinreb():
+    # Just tests for failure for now
+    adata = pbmc68k_reduced().raw.to_adata()
+    adata.X = adata.X.toarray()
+
+    orig = adata.copy()
+    sc.pp.recipe_weinreb17(adata, log=False, copy=True)
+    assert_equal(orig, adata)

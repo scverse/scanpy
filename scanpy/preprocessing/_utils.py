@@ -9,7 +9,7 @@ def _get_mean_var(X, *, axis=0):
     else:
         mean = np.mean(X, axis=axis, dtype=np.float64)
         mean_sq = np.multiply(X, X).mean(axis=axis, dtype=np.float64)
-        var = mean_sq - mean ** 2
+        var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
     var *= X.shape[axis] / (X.shape[axis] - 1)
     return mean, var
@@ -33,17 +33,13 @@ def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
         ax_minor = 0
         shape = mtx.shape[::-1]
     else:
-        raise ValueError(
-            "This function only works on sparse csr and csc matrices"
-        )
+        raise ValueError("This function only works on sparse csr and csc matrices")
     if axis == ax_minor:
         return sparse_mean_var_major_axis(
             mtx.data, mtx.indices, mtx.indptr, *shape, np.float64
         )
     else:
-        return sparse_mean_var_minor_axis(
-            mtx.data, mtx.indices, *shape, np.float64
-        )
+        return sparse_mean_var_minor_axis(mtx.data, mtx.indices, *shape, np.float64)
 
 
 @numba.njit(cache=True)
@@ -82,9 +78,7 @@ def sparse_mean_var_minor_axis(data, indices, major_len, minor_len, dtype):
 
 
 @numba.njit(cache=True)
-def sparse_mean_var_major_axis(
-    data, indices, indptr, major_len, minor_len, dtype
-):
+def sparse_mean_var_major_axis(data, indices, indptr, major_len, minor_len, dtype):
     """
     Computes mean and variance for a sparse array for the major axis.
 

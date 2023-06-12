@@ -1,5 +1,3 @@
-:github_url: {{ fullname | github_url }}
-
 {{ fullname | escape | underline}}
 
 .. currentmodule:: {{ module }}
@@ -15,7 +13,9 @@
    .. autosummary::
       :toctree: .
    {% for item in attributes %}
+      {% if has_attr(fullname, item) %}
       ~{{ fullname }}.{{ item }}
+      {% endif %}
    {%- endfor %}
    {% endif %}
    {% endblock %}
