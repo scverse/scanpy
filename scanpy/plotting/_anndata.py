@@ -519,7 +519,7 @@ def ranking(
     """\
     Plot rankings.
 
-    See, for example, how this is used in pl.pca_ranking.
+    See, for example, how this is used in pl.pca_loadings.
 
     Parameters
     ----------
@@ -915,11 +915,18 @@ def clustermap(
 
     Examples
     --------
-    Soon to come with figures. In the meanwile, see :func:`~seaborn.clustermap`.
 
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.krumsiek11()
-    >>> sc.pl.clustermap(adata, obs_keys='cell_type')
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.krumsiek11()
+        sc.pl.clustermap(adata)
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.clustermap(adata, obs_keys='cell_type')
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -1401,15 +1408,24 @@ def tracksplot(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.tracksplot(adata, markers, 'bulk_labels', dendrogram=True)
+
+    Using var_names as list:
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     .. currentmodule:: scanpy
 

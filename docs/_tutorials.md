@@ -29,7 +29,9 @@ known marker genes.
 
 ## Visualization
 
-This tutorial shows how to visually explore genes using scanpy. {doc}`/tutorials/plotting/core`
+Learn how to visually explore genes using scanpy: {doc}`/tutorials/plotting/core`
+
+For advanced customization of your plots, see {doc}`/tutorials/plotting/advanced`
 
 ```{image} _static/img/stacked_violin_dotplot_matrixplot.png
 :width: 550px
@@ -147,6 +149,7 @@ See pseudotime-time inference on deep-learning based features for [cell cycle re
 tutorials/pbmc3k
 tutorials/paga-paul15
 tutorials/plotting/core
+tutorials/plotting/advanced
 tutorials/integrating-data-using-ingest
 tutorials/spatial/basic-analysis
 tutorials/spatial/integration-scanorama

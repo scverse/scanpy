@@ -20,7 +20,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    pp.calculate_qc_metrics
    pp.filter_cells
