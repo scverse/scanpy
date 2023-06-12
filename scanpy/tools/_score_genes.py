@@ -109,7 +109,7 @@ def score_genes(
             genes_to_ignore.append(gene)
     if len(genes_to_ignore) > 0:
         logg.warning(f'genes are not in var_names and ignored: {genes_to_ignore}')
-    gene_list = set(gene_list_in_var[:])
+    gene_list = set(gene_list_in_var)
 
     if len(gene_list) == 0:
         raise ValueError("No valid genes were passed for scoring.")
