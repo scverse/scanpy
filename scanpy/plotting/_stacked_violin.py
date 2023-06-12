@@ -680,7 +680,7 @@ def stacked_violin(
     The axes used can be obtained using the get_axes() method:
 
     .. code-block:: python
-        
+
         axes_dict = vp.get_axes()
         print(axes_dict)
 

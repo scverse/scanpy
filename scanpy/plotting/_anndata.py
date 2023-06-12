@@ -927,7 +927,6 @@ def clustermap(
         :context: close-figs
 
         sc.pl.clustermap(adata, obs_keys='cell_type')
-        
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -1412,7 +1411,7 @@ def tracksplot(
 
     Using var_names as list:
 
-    .. plot:: 
+    .. plot::
         :context: close-figs
 
         import scanpy as sc
@@ -1422,9 +1421,9 @@ def tracksplot(
 
     Using var_names as dict:
 
-    .. plot:: 
+    .. plot::
         :context: close-figs
-        
+
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
