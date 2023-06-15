@@ -21,7 +21,6 @@ from .._settings import settings
 from .._utils import NeighborsView
 from . import palettes
 
-
 ColorLike = Union[str, Tuple[float, ...]]
 _IGraphLayout = Literal['fa', 'fr', 'rt', 'rt_circular', 'drl', 'eq_tree', ...]
 _FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 'black']
@@ -379,7 +378,12 @@ def _set_colors_for_categorical_obs(
     """
     from matplotlib.colors import to_hex
 
-    categories = adata.obs[value_to_plot].cat.categories
+    if adata.obs[value_to_plot].dtype == bool:
+        categories = (
+            adata.obs[value_to_plot].astype(str).astype('category').cat.categories
+        )
+    else:
+        categories = adata.obs[value_to_plot].cat.categories
     # check is palette is a valid matplotlib colormap
     if isinstance(palette, str) and palette in pl.colormaps():
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
@@ -444,7 +448,13 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     -------
     None
     """
-    categories = adata.obs[value_to_plot].cat.categories
+    if adata.obs[value_to_plot].dtype == bool:
+        categories = (
+            adata.obs[value_to_plot].astype(str).astype('category').cat.categories
+        )
+    else:
+        categories = adata.obs[value_to_plot].cat.categories
+
     length = len(categories)
 
     # check if default matplotlib palette has enough colors
