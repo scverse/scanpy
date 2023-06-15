@@ -319,6 +319,7 @@ def compute_neighbors_umap(
         metric_kwds=metric_kwds,
         angular=angular,
         verbose=verbose,
+        n_jobs=settings.n_jobs,
     )
 
     return knn_indices, knn_dists, forest
