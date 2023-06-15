@@ -18,6 +18,8 @@ from ..plotting._tools.scatterplots import _wraps_plot_scatter
 from ..plotting import _utils
 from .tl._wishbone import _anndata_to_wishbone
 
+from ._marsilea_heatmap import MarsileaHeatmap
+
 
 @_wraps_plot_scatter
 @_doc_params(
