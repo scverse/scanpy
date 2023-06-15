@@ -1220,10 +1220,12 @@ def test_scatter_raw(tmp_path):
 
 def test_binary_scatter(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    blobs = sc.datasets.blobs()
-    blobs.obs['binary'] = np.tile([True, False], 320)
-    sc.pp.pca(blobs)
-    sc.pl.pca(blobs, color='binary')
+    data = AnnData(
+        np.asarray([[-1, 2, 0], [3, 4, 0], [1, 2, 0]]).T,
+        obs=dict(binary=np.asarray([False, True, True])),
+    )
+    sc.pp.pca(data)
+    sc.pl.pca(data, color='binary')
     save_and_compare_images('master_binary_pca')
 
 
