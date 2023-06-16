@@ -31,16 +31,6 @@ def test_tsne():
     assert cosine.uns["tsne"]["params"]["metric"] == "cosine"
 
 
-def test_tsne_metric_warning():
-    pbmc = pbmc68k_reduced()
-    import sklearn
-
-    with patch.object(sklearn, "__version__", "0.23.0"), pytest.warns(
-        UserWarning, match="Results for non-euclidean metrics changed"
-    ):
-        sc.tl.tsne(pbmc, metric="cosine")
-
-
 def test_umap_init_dtype():
     pbmc = pbmc68k_reduced()
     pbmc = pbmc[:100, :].copy()
