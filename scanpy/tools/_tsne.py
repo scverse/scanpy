@@ -95,11 +95,11 @@ def tsne(
         n_jobs=n_jobs,
         metric=metric,
     )
-    # square_distances will default to true in the future, we'll get ahead of the
-    # warning for now
     if metric != "euclidean":
         sklearn_version = version.parse(sklearn.__version__)
-        if sklearn_version >= version.parse("0.24.0"):
+        if sklearn_version >= version.parse("1.3.0"):
+            pass  # square_distances are always True
+        elif sklearn_version >= version.parse("0.24.0"):
             params_sklearn["square_distances"] = True
         else:
             warnings.warn(
