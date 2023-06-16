@@ -1,50 +1,42 @@
-# some technical stuff
-import sys
-from ._utils import version, check_versions, annotate_doc_types
+"""Single-Cell Analysis in Python."""
 
-__author__ = ', '.join([
-    'Alex Wolf',
-    'Philipp Angerer',
-    'Fidel Ramirez',
-    'Isaac Virshup',
-    'Sergei Rybakov',
-    'Gokcen Eraslan',
-    'Tom White',
-    'Malte Luecken',
-    'Davide Cittaro',
-    'Tobias Callies',
-    'Marius Lange',
-    'Andrés R. Muñoz-Rojas',
-])
-__email__ = ', '.join([
-    'f.alex.wolf@gmx.de',
-    'philipp.angerer@helmholtz-muenchen.de',
-    # We don’t need all, the main authors are sufficient.
-])
-try:
-    from setuptools_scm import get_version
-    __version__ = get_version(root='..', relative_to=__file__)
-    del get_version
-except (LookupError, ImportError):
-    __version__ = version(__name__)
+from ._metadata import __version__, within_flit
 
-check_versions()
-del version, check_versions
+if not within_flit():  # see function docstring on why this is there
+    from ._utils import check_versions
 
-# the actual API
-from ._settings import settings, Verbosity  # start with settings as several tools are using it
-from . import tools as tl
-from . import preprocessing as pp
-from . import plotting as pl
-from . import datasets, logging, queries, external, get
+    check_versions()
+    del check_versions, within_flit
 
-from anndata import AnnData
-from anndata import read_h5ad, read_csv, read_excel, read_hdf, read_loom, read_mtx, read_text, read_umi_tools
-from .readwrite import read, read_10x_h5, read_10x_mtx, write
-from .neighbors import Neighbors
+    # the actual API
+    # (start with settings as several tools are using it)
+    from ._settings import settings, Verbosity
+    from . import tools as tl
+    from . import preprocessing as pp
+    from . import plotting as pl
+    from . import datasets, logging, queries, external, get, metrics, experimental
 
-set_figure_params = settings.set_figure_params
+    from anndata import AnnData, concat
+    from anndata import (
+        read_h5ad,
+        read_csv,
+        read_excel,
+        read_hdf,
+        read_loom,
+        read_mtx,
+        read_text,
+        read_umi_tools,
+    )
+    from .readwrite import read, read_10x_h5, read_10x_mtx, write, read_visium
+    from .neighbors import Neighbors
 
-# has to be done at the end, after everything has been imported
-annotate_doc_types(sys.modules[__name__], 'scanpy')
-del sys, annotate_doc_types
+    set_figure_params = settings.set_figure_params
+
+    # has to be done at the end, after everything has been imported
+    import sys
+
+    sys.modules.update({f'{__name__}.{m}': globals()[m] for m in ['tl', 'pp', 'pl']})
+    from ._utils import annotate_doc_types
+
+    annotate_doc_types(sys.modules[__name__], 'scanpy')
+    del sys, annotate_doc_types

@@ -3,7 +3,7 @@
 """\
 This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
 """
-from typing import Optional, Collection
+from typing import Optional, Collection, Literal
 
 import pandas as pd
 from anndata import AnnData
@@ -12,7 +12,6 @@ from scipy.sparse import issparse
 
 from .. import logging as logg
 from .._utils import select_groups
-from .._compat import Literal
 
 
 def correlation_matrix(
@@ -68,18 +67,17 @@ def correlation_matrix(
 
     # TODO: At the moment, only works for int identifiers
 
-    ### If no genes are passed, selects ranked genes from sample annotation.
-    ### At the moment, only calculate one table (Think about what comes next)
+    # If no genes are passed, selects ranked genes from sample annotation.
+    # At the moment, only calculate one table (Think about what comes next)
     if name_list is None:
         name_list = list()
         for j, k in enumerate(adata.uns['rank_genes_groups_gene_names']):
-            if j >=n_genes:
+            if j >= n_genes:
                 break
             name_list.append(adata.uns['rank_genes_groups_gene_names'][j][group])
     else:
-        if len(name_list)>n_genes:
-            name_list=name_list[0:n_genes]
-
+        if len(name_list) > n_genes:
+            name_list = name_list[0:n_genes]
 
     # If special method (later) , truncate
     adata_relevant = adata[:, name_list]
@@ -104,10 +102,9 @@ def correlation_matrix(
             else:
                 Data_array = adata_relevant.X[~groups_masks[group], :]
         else:
-            logg.error('data argument should be either <Complete> or <Group> or <Rest>' )
+            logg.error('data argument should be either <Complete> or <Group> or <Rest>')
 
     # Distinguish between sparse and non-sparse data
-
 
     DF_array = pd.DataFrame(Data_array, columns=name_list)
     cor_table = DF_array.corr(method=method)
@@ -115,7 +112,7 @@ def correlation_matrix(
         if groupby is None:
             adata.uns['Correlation_matrix'] = cor_table
         else:
-            adata.uns['Correlation_matrix'+groupby+str(group)]=cor_table
+            adata.uns['Correlation_matrix' + groupby + str(group)] = cor_table
     else:
         adata.uns[annotation_key] = cor_table
 
@@ -130,7 +127,7 @@ def ROC_AUC_analysis(
     Calculate correlation matrix.
 
     Calculate a correlation matrix for genes strored in sample annotation
-    
+
     Parameters
     ----------
     adata
@@ -156,63 +153,66 @@ def ROC_AUC_analysis(
             break
         name_list.append(adata.uns['rank_genes_groups_gene_names'][j][group])
 
-
     # TODO: For the moment, see that everything works for comparison against the rest. Resolve issues later.
     groups = 'all'
     groups_order, groups_masks = select_groups(adata, groups, groupby)
 
     # Use usual convention, better for looping later.
-    imask = group
     mask = groups_masks[group]
 
     # TODO: Allow for sample weighting requires better mask access... later
 
     # We store calculated data in dict, access it via dict to dict. Check if this is the best way.
-    fpr={}
-    tpr={}
-    thresholds={}
-    roc_auc={}
-    y_true=mask
+    fpr = {}
+    tpr = {}
+    thresholds = {}
+    roc_auc = {}
+    y_true = mask
     for i, j in enumerate(name_list):
-        vec=adata[:,[j]].X
+        vec = adata[:, [j]].X
         if issparse(vec):
             y_score = vec.todense()
         else:
             y_score = vec
 
-        fpr[name_list[i]], tpr[name_list[i]], thresholds[name_list[i]] = metrics.roc_curve(y_true, y_score, pos_label=None, sample_weight=None, drop_intermediate=False)
-        roc_auc[name_list[i]]=metrics.auc(fpr[name_list[i]],tpr[name_list[i]])
-    adata.uns['ROCfpr' +groupby+ str(group)] = fpr
-    adata.uns['ROCtpr' +groupby+ str(group)] = tpr
-    adata.uns['ROCthresholds' +groupby+ str(group)] = thresholds
+        (
+            fpr[name_list[i]],
+            tpr[name_list[i]],
+            thresholds[name_list[i]],
+        ) = metrics.roc_curve(
+            y_true, y_score, pos_label=None, sample_weight=None, drop_intermediate=False
+        )
+        roc_auc[name_list[i]] = metrics.auc(fpr[name_list[i]], tpr[name_list[i]])
+    adata.uns['ROCfpr' + groupby + str(group)] = fpr
+    adata.uns['ROCtpr' + groupby + str(group)] = tpr
+    adata.uns['ROCthresholds' + groupby + str(group)] = thresholds
     adata.uns['ROC_AUC' + groupby + str(group)] = roc_auc
 
 
 def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99):
-    ## Simple method that can be called by rank_gene_group. It uses masks that have been passed to the function and
-    ## calculates how much has to be subsampled in order to reach a certain precision with a certain probability
-    ## Then it subsamples for mask, mask rest
-    ## Since convergence speed varies, we take the slower one, i.e. the variance. This might have future speed-up
-    ## potential
+    # Simple method that can be called by rank_gene_group. It uses masks that have been passed to the function and
+    # calculates how much has to be subsampled in order to reach a certain precision with a certain probability
+    # Then it subsamples for mask, mask rest
+    # Since convergence speed varies, we take the slower one, i.e. the variance. This might have future speed-up
+    # potential
     if mask_rest is None:
-        mask_rest=~mask
+        mask_rest = ~mask
     # TODO: DO precision calculation for mean variance shared
-
 
     # TODO: Subsample
 
 
-def dominated_ROC_elimination(adata,grouby):
-    ## This tool has the purpose to take a set of genes (possibly already pre-selected) and analyze AUC.
-    ## Those and only those are eliminated who are dominated completely
-    ## TODO: Potentially (But not till tomorrow), this can be adapted to only consider the AUC in the given
-    ## TODO: optimization frame
+def dominated_ROC_elimination(adata, grouby):
+    # This tool has the purpose to take a set of genes (possibly already pre-selected) and analyze AUC.
+    # Those and only those are eliminated who are dominated completely
+    # TODO: Potentially (But not till tomorrow), this can be adapted to only consider the AUC in the given
+    # TODO: optimization frame
     pass
 
 
-def _gene_preselection(adata,mask,thresholds):
-    ## This tool serves to
-    ## It is not thought to be addressed directly but rather using rank_genes_group or ROC analysis or comparable
-    ## TODO: Pass back a truncated adata object with only those genes that fullfill thresholding criterias
-    ## This function should be accessible by both rank_genes_groups and ROC_curve analysis
+def _gene_preselection(adata, mask, thresholds):
+    # This tool serves to
+    # It is not thought to be addressed directly but rather using rank_genes_group or ROC analysis or comparable
+    # TODO: Pass back a truncated adata object with only those genes that fullfill thresholding criterias
+    # This function should be accessible by both rank_genes_groups and ROC_curve analysis
     pass

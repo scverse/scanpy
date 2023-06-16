@@ -1,6 +1,6 @@
 import numpy as np
 from anndata import AnnData
-
+from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 import scanpy as sc
 
 
@@ -8,9 +8,7 @@ def test_embedding_density():
     # Test that density values are scaled
     # Test that the highest value is in the middle for a grid layout
     test_data = AnnData(X=np.ones((9, 10)))
-    test_data.obsm['X_test'] = np.array(
-        [[x, y] for x in range(3) for y in range(3)]
-    )
+    test_data.obsm['X_test'] = np.array([[x, y] for x in range(3) for y in range(3)])
     sc.tl.embedding_density(test_data, 'test')
 
     max_dens = np.max(test_data.obs['test_density'])
@@ -24,6 +22,6 @@ def test_embedding_density():
 
 def test_embedding_density_plot():
     # Test that sc.pl.embedding_density() runs without error
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     sc.tl.embedding_density(adata, 'umap')
     sc.pl.embedding_density(adata, 'umap', 'umap_density', show=False)

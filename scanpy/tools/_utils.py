@@ -3,8 +3,8 @@ from typing import Optional
 import numpy as np
 from .. import logging as logg
 from ._pca import pca
-from ..preprocessing._simple import N_PCS
 from .. import settings
+from .._utils import _choose_graph
 
 doc_use_rep = """\
 use_rep
@@ -27,11 +27,12 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = 'X'
     if use_rep is None:
-        if adata.n_vars > N_PCS:
+        if adata.n_vars > settings.N_PCS:
             if 'X_pca' in adata.obsm.keys():
                 if n_pcs is not None and n_pcs > adata.obsm['X_pca'].shape[1]:
                     raise ValueError(
-                        '`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`.')
+                        '`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`.'
+                    )
                 X = adata.obsm['X_pca'][:, :n_pcs]
                 logg.info(f'    using \'X_pca\' with n_pcs = {X.shape[1]}')
             else:
@@ -46,14 +47,23 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
             logg.info('    using data matrix X directly')
             X = adata.X
     else:
-        if use_rep in adata.obsm.keys():
+        if use_rep in adata.obsm.keys() and n_pcs is not None:
+            if n_pcs > adata.obsm[use_rep].shape[1]:
+                raise ValueError(
+                    f'{use_rep} does not have enough Dimensions. Provide a '
+                    'Representation with equal or more dimensions than'
+                    '`n_pcs` or lower `n_pcs` '
+                )
+            X = adata.obsm[use_rep][:, :n_pcs]
+        elif use_rep in adata.obsm.keys() and n_pcs is None:
             X = adata.obsm[use_rep]
         elif use_rep == 'X':
             X = adata.X
         else:
             raise ValueError(
                 'Did not find {} in `.obsm.keys()`. '
-                'You need to compute it first.'.format(use_rep))
+                'You need to compute it first.'.format(use_rep)
+            )
     settings.verbosity = verbosity  # resetting verbosity
     return X
 
@@ -73,12 +83,11 @@ def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
     elif n_pcs is None and 'X_pca' in adata.obsm_keys():
         logg.info(f'    using \'X_pca\' with n_pcs = {adata.obsm["X_pca"].shape[1]}')
         return adata.obsm['X_pca']
-    elif ('X_pca' in adata.obsm_keys()
-          and adata.obsm['X_pca'].shape[1] >= n_pcs):
+    elif 'X_pca' in adata.obsm_keys() and adata.obsm['X_pca'].shape[1] >= n_pcs:
         logg.info(f'    using \'X_pca\' with n_pcs = {n_pcs}')
         return adata.obsm['X_pca'][:, :n_pcs]
     else:
-        n_pcs = N_PCS if n_pcs is None else n_pcs
+        n_pcs = settings.N_PCS if n_pcs is None else n_pcs
         if adata.X.shape[1] > n_pcs:
             logg.info(f'    computing \'X_pca\' with n_pcs = {n_pcs}')
             logg.hint('avoid this by setting n_pcs = 0')
@@ -90,10 +99,12 @@ def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
             return adata.X
 
 
-def get_init_pos_from_paga(adata, adjacency=None, random_state=0):
+def get_init_pos_from_paga(
+    adata, adjacency=None, random_state=0, neighbors_key=None, obsp=None
+):
     np.random.seed(random_state)
     if adjacency is None:
-        adjacency = adata.uns['neighbors']['connectivities']
+        adjacency = _choose_graph(adata, obsp, neighbors_key)
     if 'paga' in adata.uns and 'pos' in adata.uns['paga']:
         groups = adata.obs[adata.uns['paga']['groups']]
         pos = adata.uns['paga']['pos']
@@ -108,10 +119,11 @@ def get_init_pos_from_paga(adata, adjacency=None, random_state=0):
                 noise = np.random.random((len(subset[subset]), 2))
                 dist = pos[i] - pos[nearest_neighbor]
                 noise = noise * dist
-                init_pos[subset] = group_pos - 0.5*dist + noise
+                init_pos[subset] = group_pos - 0.5 * dist + noise
             else:
                 init_pos[subset] = group_pos
     else:
-        raise ValueError('Plot PAGA first, so that adata.uns[\'paga\']'
-                         'with key \'pos\'.')
+        raise ValueError(
+            'Plot PAGA first, so that adata.uns[\'paga\']' 'with key \'pos\'.'
+        )
     return init_pos

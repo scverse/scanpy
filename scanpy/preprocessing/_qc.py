@@ -48,9 +48,10 @@ def describe_obs(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Collection[int] = (50, 100, 200, 500),
+    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
     layer: Optional[str] = None,
     use_raw: bool = False,
+    log1p: Optional[str] = True,
     inplace: bool = False,
     X=None,
     parallel=None,
@@ -70,6 +71,8 @@ def describe_obs(
     {doc_qc_metric_naming}
     {doc_obs_qc_args}
     {doc_expr_reps}
+    log1p
+        Add `log1p` transformed metrics.
     inplace
         Whether to place calculated metrics in `adata.obs`.
     X
@@ -85,7 +88,7 @@ def describe_obs(
     if parallel is not None:
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
-            FutureWarning
+            FutureWarning,
         )
     # Handle whether X is passed
     if X is None:
@@ -99,11 +102,15 @@ def describe_obs(
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
     else:
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
-    obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
-        obs_metrics[f"n_{var_type}_by_{expr_type}"]
-    )
-    obs_metrics[f"total_{expr_type}"] = X.sum(axis=1)
-    obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(obs_metrics[f"total_{expr_type}"])
+    if log1p:
+        obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
+            obs_metrics[f"n_{var_type}_by_{expr_type}"]
+        )
+    obs_metrics[f"total_{expr_type}"] = np.ravel(X.sum(axis=1))
+    if log1p:
+        obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(
+            obs_metrics[f"total_{expr_type}"]
+        )
     if percent_top:
         percent_top = sorted(percent_top)
         proportions = top_segment_proportions(X, percent_top)
@@ -112,12 +119,13 @@ def describe_obs(
                 proportions[:, i] * 100
             )
     for qc_var in qc_vars:
-        obs_metrics[f"total_{expr_type}_{qc_var}"] = (
+        obs_metrics[f"total_{expr_type}_{qc_var}"] = np.ravel(
             X[:, adata.var[qc_var].values].sum(axis=1)
         )
-        obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
-            obs_metrics[f"total_{expr_type}_{qc_var}"]
-        )
+        if log1p:
+            obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
+                obs_metrics[f"total_{expr_type}_{qc_var}"]
+            )
         obs_metrics[f"pct_{expr_type}_{qc_var}"] = (
             obs_metrics[f"total_{expr_type}_{qc_var}"]
             / obs_metrics[f"total_{expr_type}"]
@@ -143,6 +151,7 @@ def describe_var(
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace=False,
+    log1p=True,
     X=None,
 ) -> Optional[pd.DataFrame]:
     """\
@@ -183,12 +192,18 @@ def describe_var(
     else:
         var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
         var_metrics["mean_{expr_type}"] = X.mean(axis=0)
-    var_metrics["log1p_mean_{expr_type}"] = np.log1p(var_metrics["mean_{expr_type}"])
+    if log1p:
+        var_metrics["log1p_mean_{expr_type}"] = np.log1p(
+            var_metrics["mean_{expr_type}"]
+        )
     var_metrics["pct_dropout_by_{expr_type}"] = (
         1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]
     ) * 100
     var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
-    var_metrics["log1p_total_{expr_type}"] = np.log1p(var_metrics["total_{expr_type}"])
+    if log1p:
+        var_metrics["log1p_total_{expr_type}"] = np.log1p(
+            var_metrics["total_{expr_type}"]
+        )
     # Relabel
     new_colnames = []
     for col in var_metrics.columns:
@@ -214,10 +229,11 @@ def calculate_qc_metrics(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Collection[int] = (50, 100, 200, 500),
+    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace: bool = False,
+    log1p: bool = True,
     parallel: Optional[bool] = None,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """\
@@ -238,6 +254,8 @@ def calculate_qc_metrics(
     {doc_expr_reps}
     inplace
         Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
+    log1p
+        Set to `False` to skip computing `log1p` transformed annotations.
 
     Returns
     -------
@@ -252,19 +270,31 @@ def calculate_qc_metrics(
     -------
     Calculate qc metrics for visualization.
 
-    >>> import scanpy as sc
-    >>> import seaborn as sns
-    >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
-    >>> sns.jointplot(
-            "log1p_total_counts", "log1p_n_genes_by_counts",
-            data=adata.obs, kind="hex"
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        import seaborn as sns
+
+        pbmc = sc.datasets.pbmc3k()
+        pbmc.var["mito"] = pbmc.var_names.str.startswith("MT-")
+        sc.pp.calculate_qc_metrics(pbmc, qc_vars=["mito"], inplace=True)
+        sns.jointplot(
+            data=pbmc.obs,
+            x="log1p_total_counts",
+            y="log1p_n_genes_by_counts",
+            kind="hex",
         )
+
+    .. plot::
+        :context: close-figs
+
+        sns.histplot(pbmc.obs["pct_counts_mito"])
     """
     if parallel is not None:
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
-            FutureWarning
+            FutureWarning,
         )
     # Pass X so I only have to do it once
     X = _choose_mtx_rep(adata, use_raw, layer)
@@ -281,9 +311,15 @@ def calculate_qc_metrics(
         percent_top=percent_top,
         inplace=inplace,
         X=X,
+        log1p=log1p,
     )
     var_metrics = describe_var(
-        adata, expr_type=expr_type, var_type=var_type, inplace=inplace, X=X
+        adata,
+        expr_type=expr_type,
+        var_type=var_type,
+        inplace=inplace,
+        X=X,
+        log1p=log1p,
     )
 
     if not inplace:
@@ -331,7 +367,7 @@ def top_proportions_sparse_csr(data, indptr, n):
         start, end = indptr[i], indptr[i + 1]
         vec = np.zeros(n, dtype=np.float64)
         if end - start <= n:
-            vec[:end - start] = data[start:end]
+            vec[: end - start] = data[start:end]
             total = vec.sum()
         else:
             vec[:] = -(np.partition(-data[start:end], n - 1)[:n])
@@ -362,9 +398,7 @@ def top_segment_proportions(
     if issparse(mtx):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
-        return top_segment_proportions_sparse_csr(
-            mtx.data, mtx.indptr, np.array(ns, dtype=np.int)
-        )
+        return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(ns))
     else:
         return top_segment_proportions_dense(mtx, ns)
 
@@ -375,9 +409,11 @@ def top_segment_proportions_dense(
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)
     sums = mtx.sum(axis=1)
-    partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][:, :ns[-1]]
+    partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][
+        :, : ns[-1]
+    ]
     values = np.zeros((mtx.shape[0], len(ns)))
-    acc = np.zeros((mtx.shape[0]))
+    acc = np.zeros(mtx.shape[0])
     prev = 0
     for j, n in enumerate(ns):
         acc += partitioned[:, prev:n].sum(axis=1)
@@ -388,6 +424,9 @@ def top_segment_proportions_dense(
 
 @numba.njit(cache=True, parallel=True)
 def top_segment_proportions_sparse_csr(data, indptr, ns):
+    # work around https://github.com/numba/numba/issues/5056
+    indptr = indptr.astype(np.int64)
+    ns = ns.astype(np.int64)
     ns = np.sort(ns)
     maxidx = ns[-1]
     sums = np.zeros((indptr.size - 1), dtype=data.dtype)
@@ -402,11 +441,12 @@ def top_segment_proportions_sparse_csr(data, indptr, ns):
         elif (end - start) > maxidx:
             partitioned[i, :] = -(np.partition(-data[start:end], maxidx))[:maxidx]
         partitioned[i, :] = np.partition(partitioned[i, :], maxidx - ns)
-    partitioned = partitioned[:, ::-1][:, :ns[-1]]
+    partitioned = partitioned[:, ::-1][:, : ns[-1]]
     acc = np.zeros((indptr.size - 1), dtype=data.dtype)
     prev = 0
-    for j, n in enumerate(ns):
-        acc += partitioned[:, prev:n].sum(axis=1)
+    # can’t use enumerate due to https://github.com/numba/numba/issues/2625
+    for j in range(ns.size):
+        acc += partitioned[:, prev : ns[j]].sum(axis=1)
         values[:, j] = acc
-        prev = n
+        prev = ns[j]
     return values / sums.reshape((indptr.size - 1, 1))

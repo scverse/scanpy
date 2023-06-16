@@ -5,12 +5,11 @@
 
 # Docs
 /docs/_build/
-/docs/api/scanpy.*.rst
-/docs/external/scanpy.*.rst
-!/docs/api/scanpy.api.rst
-!/docs/api/scanpy.api.AnnData.rst
-!/docs/api/scanpy.plotting.rst
-!/docs/api/scanpy.external.rst
+/docs/generated/
+/docs/data/
+/docs/api/generated
+/docs/external/generated
+/docs/jupyter_execute
 
 # tests
 /.cache/
@@ -22,6 +21,7 @@
 # Environment management
 /Pipfile
 /Pipfile.lock
+/requirements*.lock
 
 # always-ignore extensions
 *~
@@ -31,6 +31,9 @@ __pycache__/
 /dist/
 /build/
 /scanpy.egg-info/
+/*-env/
+/env-*/
+/environment.yml
 
 # OS stuff
 .DS_Store
@@ -41,3 +44,6 @@ Thumbs.db
 # IDEs and editors
 /.idea/
 /.vscode/
+
+# Test artifacts
+**/test-results.xml

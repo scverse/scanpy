@@ -5,12 +5,11 @@ from enum import IntEnum
 from pathlib import Path
 from time import time
 from logging import getLevelName
-from typing import Any, Union, Optional, Iterable, TextIO
+from typing import Any, Union, Optional, Iterable, TextIO, Literal
 from typing import Tuple, List, ContextManager
 
 from . import logging
 from .logging import _set_log_level, _set_log_file, _RootLogger
-from ._compat import Literal
 
 _VERBOSITY_TO_LOGLEVEL = {
     'error': 'ERROR',
@@ -35,7 +34,6 @@ class Verbosity(IntEnum):
     def level(self) -> int:
         # getLevelName(str) returns the int level…
         return getLevelName(_VERBOSITY_TO_LOGLEVEL[self])
-
 
     @contextmanager
     def override(self, verbosity: "Verbosity") -> ContextManager["Verbosity"]:
@@ -64,6 +62,7 @@ class ScanpyConfig:
     """\
     Config manager for scanpy.
     """
+
     def __init__(
         self,
         *,
@@ -85,6 +84,7 @@ class ScanpyConfig:
         _frameon: bool = True,
         _vector_friendly: bool = False,
         _low_resolution_warning: bool = True,
+        n_pcs=50,
     ):
         # logging
         self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
@@ -122,6 +122,9 @@ class ScanpyConfig:
         self._previous_memory_usage = -1
         """Stores the previous memory usage."""
 
+        self.N_PCS = n_pcs
+        """Default number of principal components to use."""
+
     @property
     def verbosity(self) -> Verbosity:
         """
@@ -138,8 +141,7 @@ class ScanpyConfig:
     @verbosity.setter
     def verbosity(self, verbosity: Union[Verbosity, int, str]):
         verbosity_str_options = [
-            v for v in _VERBOSITY_TO_LOGLEVEL
-            if isinstance(v, str)
+            v for v in _VERBOSITY_TO_LOGLEVEL if isinstance(v, str)
         ]
         if isinstance(verbosity, Verbosity):
             self._verbosity = verbosity
@@ -160,8 +162,7 @@ class ScanpyConfig:
 
     @property
     def plot_suffix(self) -> str:
-        """Global suffix that is appended to figure filenames.
-        """
+        """Global suffix that is appended to figure filenames."""
         return self._plot_suffix
 
     @plot_suffix.setter
@@ -380,11 +381,13 @@ class ScanpyConfig:
     # --------------------------------------------------------------------------------
 
     # Collected from the print_* functions in matplotlib.backends
+    # fmt: off
     _Format = Literal[
         'png', 'jpg', 'tif', 'tiff',
         'pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf',
         'raw', 'rgba',
     ]
+    # fmt: on
 
     def set_figure_params(
         self,
@@ -394,8 +397,10 @@ class ScanpyConfig:
         frameon: bool = True,
         vector_friendly: bool = True,
         fontsize: int = 14,
+        figsize: Optional[int] = None,
         color_map: Optional[str] = None,
         format: _Format = "pdf",
+        facecolor: Optional[str] = None,
         transparent: bool = False,
         ipython_format: str = "png2x",
     ):
@@ -417,10 +422,15 @@ class ScanpyConfig:
             Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
         fontsize
             Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
+        figsize
+            Set plt.rcParams['figure.figsize'].
         color_map
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
         format
             This sets the default format for saving figures: `file_format_figs`.
+        facecolor
+            Sets backgrounds via `rcParams['figure.facecolor'] = facecolor` and
+            `rcParams['axes.facecolor'] = facecolor`.
         transparent
             Save figures with transparent back ground. Sets
             `rcParams['savefig.transparent']`.
@@ -428,14 +438,15 @@ class ScanpyConfig:
             Only concerns the notebook/IPython environment; see
             :func:`~IPython.display.set_matplotlib_formats` for details.
         """
-        try:
+        if self._is_run_from_ipython():
             import IPython
+
             if isinstance(ipython_format, str):
                 ipython_format = [ipython_format]
             IPython.display.set_matplotlib_formats(*ipython_format)
-        except Exception:
-            pass
+
         from matplotlib import rcParams
+
         self._vector_friendly = vector_friendly
         self.file_format_figs = format
         if dpi is not None:
@@ -444,22 +455,23 @@ class ScanpyConfig:
             rcParams["savefig.dpi"] = dpi_save
         if transparent is not None:
             rcParams["savefig.transparent"] = transparent
+        if facecolor is not None:
+            rcParams['figure.facecolor'] = facecolor
+            rcParams['axes.facecolor'] = facecolor
         if scanpy:
             from .plotting._rcmod import set_rcParams_scanpy
+
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
+        if figsize is not None:
+            rcParams['figure.figsize'] = figsize
         self._frameon = frameon
 
     @staticmethod
     def _is_run_from_ipython():
-        """Determines whether run from Ipython.
+        """Determines whether we're currently in IPython."""
+        import builtins
 
-        Only affects progress bars.
-        """
-        try:
-            __IPYTHON__
-            return True
-        except NameError:
-            return False
+        return getattr(builtins, "__IPYTHON__", False)
 
     def __str__(self) -> str:
         return '\n'.join(
