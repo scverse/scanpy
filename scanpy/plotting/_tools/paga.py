@@ -300,11 +300,7 @@ def paga(
     init_pos: Optional[np.ndarray] = None,
     root: Union[int, str, Sequence[Union[int, str]], None] = 0,
     labels: Union[
-        str,
-        Sequence[str],
-        Mapping[str, str],
-        Sequence[Mapping[str, str]],
-        None
+        str, Sequence[str], Mapping[str, str], Sequence[Mapping[str, str]], None
     ] = None,
     single_component: bool = False,
     solid_edges: str = 'connectivities',
@@ -503,15 +499,10 @@ def paga(
     groups_key = adata.uns['paga']['groups']
 
     def is_flat(x):
-        has_one_per_category = (
-            isinstance(x, cabc.Collection)
-            and len(x) == len(adata.obs[groups_key].cat.categories)
+        has_one_per_category = isinstance(x, cabc.Collection) and len(x) == len(
+            adata.obs[groups_key].cat.categories
         )
-        return (
-            has_one_per_category
-            or x is None
-            or isinstance(x, (str, cabc.Mapping))
-        )
+        return has_one_per_category or x is None or isinstance(x, (str, cabc.Mapping))
         return has_one_per_category or x is None or isinstance(x, str)
 
     if isinstance(colors, cabc.Mapping) and isinstance(
@@ -545,7 +536,8 @@ def paga(
             (
                 (c in adata.obs_keys() and adata.obs[c].dtype.name != 'category')
                 or c in var_names
-            ) for c in colors
+            )
+            for c in colors
         ]
     else:
         colorbars = [False for _ in colors]
@@ -557,7 +549,9 @@ def paga(
             continue
         for ls in labels:
             if root in ls:
-                roots[r] = ls[root] if isinstance(ls, cabc.Mapping) else list(ls).index(root_)
+                roots[r] = (
+                    ls[root] if isinstance(ls, cabc.Mapping) else list(ls).index(root)
+                )
                 break
         else:
             raise ValueError(
