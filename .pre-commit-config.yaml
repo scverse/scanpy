@@ -7,11 +7,7 @@ repos:
     rev: v0.0.272
     hooks:
     -   id: ruff
--   repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: v2.0.2
-    hooks:
-    -   id: autopep8
-        args: ["-i"]
+        args: ["--fix"]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
