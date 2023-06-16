@@ -162,11 +162,7 @@ source = ["scanpy"]
 omit = ["*/tests/*"]
 
 [tool.black]
-target-version = ["py38"]
 skip-string-normalization = true
-exclude = """
-/build/.*
-"""
 
 [tool.ruff]
 select = [
