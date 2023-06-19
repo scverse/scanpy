@@ -3,15 +3,11 @@ repos:
     rev: 23.3.0
     hooks:
     -   id: black
--   repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.0.272
     hooks:
-    -   id: flake8
--   repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: v2.0.2
-    hooks:
-    -   id: autopep8
-        args: ["-i"]
+    -   id: ruff
+        args: ["--fix"]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
@@ -25,6 +21,8 @@ repos:
     -   id: check-yaml
     -   id: check-merge-conflict
     -   id: detect-private-key
+    -   id: no-commit-to-branch
+        args: ["--branch=master", "--branch=main"]
 
 ci:
     autofix_prs: false

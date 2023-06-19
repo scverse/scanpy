@@ -166,9 +166,26 @@ source = ["scanpy"]
 omit = ["*/tests/*"]
 
 [tool.black]
-line-length = 88
-target-version = ["py38"]
 skip-string-normalization = true
-exclude = """
-/build/.*
-"""
+
+[tool.ruff]
+select = [
+    "F",  # Pyflakes
+    "E",  # Pycodestyle errors
+    "W",  # Pycodestyle warnings
+]
+ignore = [
+    # module imported but unused -> required for Scanpys API
+    "F401",
+    # line too long -> we accept long comment lines; black gets rid of long code lines
+    "E501",
+    # module level import not at top of file -> required to circumvent circular imports for Scanpys API
+    "E402",
+    # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections
+    "E262",
+    # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
+    "E741",
+]
+[tool.ruff.per-file-ignores]
+# Do not assign a lambda expression, use a def
+"scanpy/tools/_rank_genes_groups.py" = ["E731"]
