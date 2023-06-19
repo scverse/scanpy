@@ -1,12 +1,11 @@
 """\
 Embed high-dimensional data using PHATE
 """
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 
 from anndata import AnnData
 
 from ..._settings import settings
-from ..._compat import Literal
 from ... import logging as logg
 from ..._utils import AnyRandom
 

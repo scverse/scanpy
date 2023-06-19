@@ -1,4 +1,4 @@
-from typing import Optional, Union, Iterable, Dict
+from typing import Optional, Union, Iterable, Dict, Literal
 from warnings import warn
 
 import numpy as np
@@ -15,7 +15,6 @@ except ImportError:
 
 
 from scanpy import logging as logg
-from scanpy._compat import Literal
 from scanpy._utils import view_to_actual
 
 from scanpy.get import _get_obs_rep, _set_obs_rep

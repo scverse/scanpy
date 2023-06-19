@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Optional, Literal
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -9,7 +9,6 @@ from anndata import AnnData
 from .. import logging as logg
 from .._settings import settings, Verbosity
 from .._utils import sanitize_anndata, check_nonnegative_integers
-from .._compat import Literal
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes

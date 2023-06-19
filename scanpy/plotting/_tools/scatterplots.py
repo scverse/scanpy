@@ -11,6 +11,7 @@ from typing import (
     Mapping,
     List,
     Tuple,
+    Literal,
 )
 from warnings import warn
 
@@ -49,7 +50,6 @@ from .._docs import (
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
-from ..._compat import Literal
 
 
 @_doc_params(
