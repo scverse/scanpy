@@ -12,7 +12,6 @@
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from matplotlib.testing import setup
 
@@ -26,10 +25,7 @@ HERE: Path = Path(__file__).parent
 ROOT = HERE / 'pbmc3k_images'
 FIGS = HERE / 'figures'
 
-# TODO: Fix for newly varying clustering results
 
-
-@pytest.mark.xfail
 @needs_leidenalg
 def test_pbmc3k(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
