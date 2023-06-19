@@ -12,6 +12,7 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from matplotlib.testing import setup
 
@@ -26,6 +27,7 @@ ROOT = HERE / 'pbmc3k_images'
 FIGS = HERE / 'figures'
 
 # TODO: Fix for newly varying clustering results
+
 
 @pytest.mark.xfail
 @needs_leidenalg
