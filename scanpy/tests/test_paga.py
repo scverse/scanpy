@@ -27,34 +27,33 @@ def pbmc(_pbmc):
     return _pbmc.copy()
 
 
+paga_plot_tests = [
+    ("", sc.pl.paga),
+    ("continuous", partial(sc.pl.paga, color="CST3")),
+    ("continuous_obs", partial(sc.pl.paga, color="cool_feature")),
+    ("continuous_multiple", partial(sc.pl.paga, color=['CST3', 'GATA2'])),
+    ("compare", partial(sc.pl.paga_compare, legend_fontoutline=2)),
+    (
+        "compare_continuous",
+        partial(sc.pl.paga_compare, color='CST3', legend_fontsize=5),
+    ),
+    (
+        "compare_pca",
+        partial(sc.pl.paga_compare, basis='X_pca', legend_fontweight='normal'),
+    ),
+]
+
+
 @needs_igraph
 @pytest.mark.parametrize(
-    "test_id,func",
-    [
-        ("master_paga", sc.pl.paga),
-        ("master_paga_continuous", partial(sc.pl.paga, color="CST3")),
-        ("master_paga_continuous_obs", partial(sc.pl.paga, color="cool_feature")),
-        (
-            "master_paga_continuous_multiple",
-            partial(sc.pl.paga, color=['CST3', 'GATA2']),
-        ),
-        ("master_paga_compare", partial(sc.pl.paga_compare, legend_fontoutline=2)),
-        (
-            "master_paga_compare_continuous",
-            partial(sc.pl.paga_compare, color='CST3', legend_fontsize=5),
-        ),
-        (
-            "master_paga_compare_pca",
-            partial(sc.pl.paga_compare, basis='X_pca', legend_fontweight='normal'),
-        ),
-    ],
+    "test_id,func", paga_plot_tests, ids=[id_ for id_, _ in paga_plot_tests]
 )
 def test_paga_plots(image_comparer, pbmc, test_id, func):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
     common = dict(threshold=0.5, max_edge_width=1.0, random_state=0, show=False)
 
     func(pbmc, **common)
-    save_and_compare_images(test_id)
+    save_and_compare_images(f"master_paga_{test_id}" if test_id else "master_paga")
 
 
 @needs_igraph
