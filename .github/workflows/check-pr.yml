@@ -9,9 +9,11 @@ on:
       - labeled
       - unlabeled
       - opened
-      - reopened
-      - synchronize
       - edited
+      - reopened
+      - milestoned
+      - demilestoned
+      - synchronize
 
 env:
   LABELS: ${{ join( github.event.pull_request.labels.*.name, '|' ) }}
