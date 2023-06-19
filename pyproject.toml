@@ -10,7 +10,7 @@ requires = [
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = {file = "LICENSE"}
 authors = [
     {name = "Alex Wolf"},
@@ -44,9 +44,10 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
@@ -60,7 +61,7 @@ dependencies = [
     "seaborn",
     "h5py>=3",
     "tqdm",
-    "scikit-learn>=0.22",
+    "scikit-learn>=0.24",
     "statsmodels>=0.10.0rc2",
     "patsy",
     "networkx>=2.3",
@@ -71,7 +72,6 @@ dependencies = [
     "packaging",
     "session-info",
     # for getting the stable version
-    "importlib_metadata>=0.7; python_version < '3.8'",
 ]
 dynamic = ["version"]
 
@@ -79,6 +79,8 @@ dynamic = ["version"]
 Documentation = "https://scanpy.readthedocs.io/"
 Source = "https://github.com/scverse/scanpy"
 Home-page = "https://scanpy.org"
+Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
+Twitter = "https://twitter.com/scverse_team"
 
 [project.scripts]
 scanpy = "scanpy.cli:console_main"
@@ -107,11 +109,17 @@ test-full = [
     "scanpy[scrublet]",
 ]
 doc = [
-    "sphinx>=4.4",
-    "sphinx-rtd-theme>=1.0",
+    "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
     "scanpydoc[typehints]>=0.7.7",
-    "typing_extensions; python_version < '3.8'",  # for `Literal`
     "myst-parser",
+    "myst-nb",
+    "sphinx-book-theme",
+    "sphinx-design",
+    "sphinxext-opengraph", # for nice cards when sharing on social
+    "sphinx-copybutton",
+    "nbsphinx",
+    "ipython>=7.20",  # for nbsphinx code highlighting
+    "matplotlib!=3.6.1",
     "scanpy[paga]",
 ]
 dev = [
@@ -159,7 +167,7 @@ omit = ["*/tests/*"]
 
 [tool.black]
 line-length = 88
-target-version = ["py37"]
+target-version = ["py38"]
 skip-string-normalization = true
 exclude = """
 /build/.*

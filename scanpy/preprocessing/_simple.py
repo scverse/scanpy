@@ -5,7 +5,7 @@ Compositions of these functions are found in sc.preprocess.recipes.
 from functools import singledispatch
 from numbers import Number
 import warnings
-from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
+from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Literal
 
 import numba
 import numpy as np
@@ -24,7 +24,6 @@ from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
 )
-from .._compat import Literal
 from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
@@ -83,7 +82,7 @@ def filter_cells(
         Boolean index mask that does filtering. `True` means that the
         cell is kept. `False` means the cell is removed.
     number_per_cell
-        Depending on what was tresholded (`counts` or `genes`),
+        Depending on what was thresholded (`counts` or `genes`),
         the array stores `n_counts` or `n_cells` per gene.
 
     Examples
@@ -218,7 +217,7 @@ def filter_genes(
         Boolean index mask that does filtering. `True` means that the
         gene is kept. `False` means the gene is removed.
     number_per_gene
-        Depending on what was tresholded (`counts` or `cells`), the array stores
+        Depending on what was thresholded (`counts` or `cells`), the array stores
         `n_counts` or `n_cells` per gene.
     """
     if copy:
@@ -315,7 +314,7 @@ def log1p(
     chunk_size
         `n_obs` of the chunks to process the data in.
     layer
-        Entry of layers to tranform.
+        Entry of layers to transform.
     obsm
         Entry of obsm to transform.
 
@@ -684,7 +683,6 @@ def _regress_out_chunk(data):
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
     for col_index in range(data_chunk.shape[1]):
-
         # if all values are identical, the statsmodel.api.GLM throws an error;
         # but then no regression is necessary anyways...
         if not (data_chunk[:, col_index] != data_chunk[0, col_index]).any():

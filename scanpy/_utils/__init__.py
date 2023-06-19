@@ -13,7 +13,7 @@ from weakref import WeakSet
 from collections import namedtuple
 from functools import partial, wraps
 from types import ModuleType, MethodType
-from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple
+from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
 
 import numpy as np
 from numpy import random
@@ -23,7 +23,6 @@ from textwrap import dedent
 from packaging import version
 
 from .._settings import settings
-from .._compat import Literal
 from .. import logging as logg
 
 from .compute.is_constant import is_constant

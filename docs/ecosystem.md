@@ -8,11 +8,9 @@
 .. role:: smaller
 ```
 
-```{note}
-If you'd like to see your tool included here, please open a [pull request](https://github.com/scverse/scanpy)!
-
-With *ecosystem*, we mean the broader single-cell related tools that operate on {class}`~anndata.AnnData`.
-If your tool doesn't do this, but is useful for analysing single cell data we also accept light wrappers for some tools in {mod}`scanpy.external`.
+```{warning}
+We are no longer accepting new tools on this page.
+Instead, please submit your tool to the [scverse ecosystem package listing](https://scverse.org/packages/#ecosystem).
 ```
 
 ## Viewers
@@ -46,6 +44,10 @@ Interactive manifold viewers.
 - [PASTE](https://github.com/raphael-group/paste) {small}`Princeton`
 
   > PASTE is a computational method to align and integrate spatial transcriptomics data across adjacent tissue slices by leveraging both gene expression similarity and spatial distances between spots.
+
+- [bento](https://bento-tools.readthedocs.io/en/latest/) 🍱 {small}`UC San Diego`
+
+  > Bento is an accessible Python toolkit for performing subcellular analysis of spatial transcriptomics data.
 
 ### Multimodal integration
 
@@ -82,12 +84,10 @@ Interactive manifold viewers.
 
 ### Fate mapping
 
-- [CellRank](http://cellrank.org) {small}`Helmholtz Munich`
+- [CellRank](https://cellrank.org) {small}`Helmholtz Munich`
 
-  > CellRank is a toolkit to uncover cellular dynamics based on scRNA-seq data with
-  > RNA velocity annotation by detecting initial and terminal populations, inferring
-  > fate potentials and uncovering gene expression trends towards specific
-  > terminal populations.
+  > CellRank is a framework to uncover cellular dynamics based on single-cell data.
+  > It incorporates modalities such as RNA velocity, pseudotime, developmental potential, real-time information, etc.
 
 ### Differential expression
 

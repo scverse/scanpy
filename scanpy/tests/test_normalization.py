@@ -81,12 +81,10 @@ def test_normalize_total_view(typ, dtype):
 )
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 def test_normalize_pearson_residuals_inputchecks(sparsity_func, dtype):
-
     adata = _prepare_pbmc_testdata(sparsity_func, dtype)
 
     # depending on check_values, warnings should be raised for non-integer data
     if dtype == 'float32':
-
         adata_noninteger = adata.copy()
         x, y = np.nonzero(adata_noninteger.X)
         adata_noninteger.X[x[0], y[0]] = 0.5
@@ -99,7 +97,6 @@ def test_normalize_pearson_residuals_inputchecks(sparsity_func, dtype):
 
     # errors should be raised for invalid theta values
     for theta in [0, -1]:
-
         with pytest.raises(ValueError, match='Pearson residuals require theta > 0'):
             sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=theta)
 
@@ -116,7 +113,6 @@ def test_normalize_pearson_residuals_inputchecks(sparsity_func, dtype):
 @pytest.mark.parametrize('theta', [0.01, 1, 100, np.Inf])
 @pytest.mark.parametrize('clip', [None, 1, np.Inf])
 def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
-
     # toy data
     X = np.array([[3, 6], [2, 4], [1, 0]])
     ns = np.sum(X, axis=1)
@@ -195,7 +191,6 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
 @pytest.mark.parametrize('n_hvgs', [100, 200])
 @pytest.mark.parametrize('n_comps', [30, 50])
 def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps):
-
     adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
     n_cells, n_genes = adata.shape
 
