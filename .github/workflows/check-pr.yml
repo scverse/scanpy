@@ -1,0 +1,24 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches:
+      - trunk
+    types:
+      - labeled
+      - unlabeled
+      - opened
+      - reopened
+      - synchronize
+      - edited
+
+env:
+  LABELS: ${{ join( github.event.pull_request.labels.*.name, '|' ) }}
+
+jobs:
+  check-milestone:
+    name: Check Milestone
+    runs-on: ubuntu-latest
+    steps:
+      - if: github.event.pull_request.milestone == null && contains( env.LABELS, 'no milestone' ) == false
+        run: exit 1
