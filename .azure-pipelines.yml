@@ -11,11 +11,11 @@ variables:
 jobs:
 - job: PyTest
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-22.04'
   strategy:
     matrix:
-      Python37:
-        python.version: '3.7'
+      Python38:
+        python.version: '3.8'
       Python39: {}
       minimal_tests:
         TEST_EXTRA: 'test-min'
@@ -59,12 +59,12 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
-      pytest --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml"
+      pytest -v --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml"
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')
 
   - script: |
-      pytest --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml" --cov=scanpy --cov-report=xml
+      pytest -v --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml" --cov=scanpy --cov-report=xml
     displayName: 'PyTest (coverage)'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
@@ -88,7 +88,7 @@ jobs:
 
 - job: CheckBuild
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-22.04'
   steps:
 
   - task: UsePythonVersion@0

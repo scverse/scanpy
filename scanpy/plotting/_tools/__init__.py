@@ -9,11 +9,10 @@ from matplotlib.colors import Normalize
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, cm
 from anndata import AnnData
-from typing import Union, Optional, List, Sequence, Iterable, Mapping
+from typing import Union, Optional, List, Sequence, Iterable, Mapping, Literal
 
 from .._utils import savefig_or_show
 from ..._utils import _doc_params, sanitize_anndata, subsample
-from ..._compat import Literal
 from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap

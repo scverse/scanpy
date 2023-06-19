@@ -14,7 +14,7 @@ import shutil
 import sys
 from pathlib import Path
 from types import MappingProxyType
-from typing import Optional, Union, List, Tuple, Mapping
+from typing import Optional, Union, List, Tuple, Mapping, Literal
 
 import numpy as np
 import scipy as sp
@@ -22,7 +22,6 @@ from anndata import AnnData
 
 from .. import _utils, readwrite, logging as logg
 from .._settings import settings
-from .._compat import Literal
 
 
 def sim(
