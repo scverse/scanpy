@@ -154,7 +154,7 @@ addopts = [
     "--import-mode=importlib",
     "-pscanpy.testing._pytest",
 ]
-norecursedirs = ["docs"]
+testpaths = ["scanpy"]
 xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
