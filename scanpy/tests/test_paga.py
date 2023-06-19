@@ -27,30 +27,25 @@ def pbmc(_pbmc):
     return _pbmc.copy()
 
 
-paga_plot_tests = [
-    pytest.param(sc.pl.paga, id=""),
-    pytest.param(partial(sc.pl.paga, color="CST3"), id="continuous"),
-    pytest.param(partial(sc.pl.paga, color="cool_feature"), id="continuous_obs"),
-    pytest.param(
-        partial(sc.pl.paga, color=['CST3', 'GATA2']), id="continuous_multiple"
-    ),
-    pytest.param(partial(sc.pl.paga_compare, legend_fontoutline=2), id="compare"),
-    pytest.param(
-        partial(sc.pl.paga_compare, color='CST3', legend_fontsize=5),
-        id="compare_continuous",
-        marks=pytest.mark.xfail(reason="expects .uns['paga']['pos']"),
-    ),
-    pytest.param(
-        partial(sc.pl.paga_compare, basis='X_pca', legend_fontweight='normal'),
-        id="compare_pca",
-    ),
-]
-
-
 @needs_igraph
 @pytest.mark.parametrize(
     "test_id,func",
-    [pytest.param(p.id, *p.values, id=p.id, marks=p.marks) for p in paga_plot_tests],
+    [
+        ("", sc.pl.paga),
+        ("continuous", partial(sc.pl.paga, color="CST3")),
+        ("continuous_obs", partial(sc.pl.paga, color="cool_feature")),
+        ("continuous_multiple", partial(sc.pl.paga, color=['CST3', 'GATA2'])),
+        ("compare", partial(sc.pl.paga_compare, legend_fontoutline=2)),
+        pytest.param(
+            "compare_continuous",
+            partial(sc.pl.paga_compare, color='CST3', legend_fontsize=5),
+            marks=pytest.mark.xfail(reason="expects .uns['paga']['pos']"),
+        ),
+        (
+            "compare_pca",
+            partial(sc.pl.paga_compare, basis='X_pca', legend_fontweight='normal'),
+        ),
+    ],
 )
 def test_paga_plots(image_comparer, pbmc, test_id, func):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
