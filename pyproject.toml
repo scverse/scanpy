@@ -162,9 +162,8 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["scanpy"]
+source_pkgs = ["scanpy"]
 omit = ["*/tests/*"]
-debug = ["sys", "trace"]
 
 [tool.black]
 skip-string-normalization = true
