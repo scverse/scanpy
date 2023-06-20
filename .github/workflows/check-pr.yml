@@ -6,13 +6,17 @@ on:
       - main
       - master
     types:
+      # milestone changes
+      - milestoned
+      - demilestoned
+      # label changes for “no milestone”
       - labeled
       - unlabeled
+      # initial check
       - opened
       - edited
       - reopened
-      - milestoned
-      - demilestoned
+      # code change (e.g. this workflow)
       - synchronize
 
 env:
