@@ -47,6 +47,11 @@ jobs:
     displayName: 'Set env'
 
   - script: |
+      curl -Os https://uploader.codecov.io/latest/linux/codecov
+      chmod +x codecov
+    displayName: 'Install codecov.io uploader'
+
+  - script: |
       python -m pip install --upgrade pip
       pip install pytest-cov wheel
       pip install .[dev,$(TEST_EXTRA)]
@@ -83,7 +88,7 @@ jobs:
     inputs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
-      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+      failIfCoverageEmpty: true
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
   - task: PublishTestResults@2
@@ -93,7 +98,7 @@ jobs:
       testResultsFormat: NUnit
       testRunTitle: 'Publish test results for Python $(python.version)'
 
-  - script: bash <(curl -s https://codecov.io/bash)
+  - script: ./codecov -t $(CODECOV_TOKEN)
     displayName: 'Upload to codecov.io'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
