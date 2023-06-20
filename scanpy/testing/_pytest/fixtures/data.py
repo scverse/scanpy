@@ -5,6 +5,8 @@ The private fixtures create the object while the public ones return deep copies.
 """
 from __future__ import annotations
 
+from __future__ import annotations
+
 from itertools import product
 from collections.abc import Callable
 import pytest
