@@ -24,7 +24,7 @@ needs_igraph = pytest.mark.skipif(
 def pbmc():
     pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, groups='bulk_labels')
-    pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze()
+    pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze().copy()
     return pbmc
 
 
