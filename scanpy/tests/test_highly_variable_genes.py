@@ -3,11 +3,7 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 from pathlib import Path
-from scipy.sparse import csr_matrix
-from scanpy.testing._helpers import (
-    _prepare_pbmc_testdata,
-    _check_check_values_warnings,
-)
+from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._pytest.marks import needs_skmisc
 
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
@@ -84,15 +80,11 @@ def _check_pearson_hvg_columns(output_df, n_top_genes):
     assert np.nanmax(output_df['highly_variable_rank'].values) <= n_top_genes - 1
 
 
-@pytest.mark.parametrize(
-    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
-)
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
-def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtype):
-    adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
+def test_highly_variable_genes_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
+    adata = pbmc3k_parametrized_small
 
     # depending on check_values, warnings should be raised for non-integer data
-    if dtype == 'float32':
+    if adata.X.dtype == 'float32':
         adata_noninteger = adata.copy()
         x, y = np.nonzero(adata_noninteger.X)
         adata_noninteger.X[x[0], y[0]] = 0.5
@@ -122,18 +114,14 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(sparsity_func, dtyp
         )
 
 
-@pytest.mark.parametrize(
-    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
-)
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
 @pytest.mark.parametrize('subset', [True, False])
 @pytest.mark.parametrize('clip', [None, np.Inf, 30])
 @pytest.mark.parametrize('theta', [100, np.Inf])
 @pytest.mark.parametrize('n_top_genes', [100, 200])
 def test_highly_variable_genes_pearson_residuals_general(
-    subset, sparsity_func, dtype, clip, theta, n_top_genes
+    pbmc3k_parametrized_small, subset, clip, theta, n_top_genes
 ):
-    adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
+    adata = pbmc3k_parametrized_small
     # cleanup var
     del adata.var
 
@@ -210,16 +198,12 @@ def test_highly_variable_genes_pearson_residuals_general(
     _check_pearson_hvg_columns(output_df, n_top_genes)
 
 
-@pytest.mark.parametrize(
-    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
-)
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
 @pytest.mark.parametrize('subset', [True, False])
 @pytest.mark.parametrize('n_top_genes', [100, 200])
 def test_highly_variable_genes_pearson_residuals_batch(
-    subset, n_top_genes, sparsity_func, dtype
+    pbmc3k_parametrized_small, subset, n_top_genes
 ):
-    adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
+    adata = pbmc3k_parametrized_small
     # cleanup var
     del adata.var
     n_genes = adata.shape[1]

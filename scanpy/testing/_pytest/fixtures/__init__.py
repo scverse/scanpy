@@ -20,6 +20,9 @@ from .data import (
     pbmc68k_reduced,
     krumsiek11,
     paul15,
+    _pbmc3ks_parametrized,
+    pbmc3k_parametrized,
+    pbmc3k_parametrized_small,
 )
 
 
@@ -38,6 +41,9 @@ __all__ = [
     'pbmc68k_reduced',
     'krumsiek11',
     'paul15',
+    '_pbmc3ks_parametrized',
+    'pbmc3k_parametrized',
+    'pbmc3k_parametrized_small',
 ]
 
 

@@ -13,7 +13,6 @@ import scanpy as sc
 from scanpy.testing._helpers import (
     check_rep_mutation,
     check_rep_results,
-    _prepare_pbmc_testdata,
     _check_check_values_warnings,
 )
 from anndata.tests.helpers import assert_equal, asarray
@@ -76,15 +75,11 @@ def test_normalize_total_view(typ, dtype):
     assert_equal(adata, v)
 
 
-@pytest.mark.parametrize(
-    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
-)
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
-def test_normalize_pearson_residuals_inputchecks(sparsity_func, dtype):
-    adata = _prepare_pbmc_testdata(sparsity_func, dtype)
+def test_normalize_pearson_residuals_inputchecks(pbmc3k_parametrized):
+    adata = pbmc3k_parametrized
 
     # depending on check_values, warnings should be raised for non-integer data
-    if dtype == 'float32':
+    if adata.X.dtype == 'float32':
         adata_noninteger = adata.copy()
         x, y = np.nonzero(adata_noninteger.X)
         adata_noninteger.X[x[0], y[0]] = 0.5
@@ -184,14 +179,10 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
     ), 'Wrong shape of PCA output in `X_pca`'
 
 
-@pytest.mark.parametrize(
-    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
-)
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
 @pytest.mark.parametrize('n_hvgs', [100, 200])
 @pytest.mark.parametrize('n_comps', [30, 50])
-def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps):
-    adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
+def test_normalize_pearson_residuals_pca(pbmc3k_parametrized_small, n_hvgs, n_comps):
+    adata = pbmc3k_parametrized_small
     n_cells, n_genes = adata.shape
 
     adata_with_hvgs = adata.copy()
@@ -284,14 +275,10 @@ def test_normalize_pearson_residuals_pca(sparsity_func, dtype, n_hvgs, n_comps):
         )
 
 
-@pytest.mark.parametrize(
-    'sparsity_func', [csr_matrix.toarray, csr_matrix], ids=lambda x: x.__name__
-)
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
 @pytest.mark.parametrize('n_hvgs', [100, 200])
 @pytest.mark.parametrize('n_comps', [30, 50])
-def test_normalize_pearson_residuals_recipe(sparsity_func, dtype, n_hvgs, n_comps):
-    adata = _prepare_pbmc_testdata(sparsity_func, dtype, small=True)
+def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n_comps):
+    adata = pbmc3k_parametrized_small
     n_cells, n_genes = adata.shape
 
     ### inplace = False ###
