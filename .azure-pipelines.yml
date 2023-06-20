@@ -47,13 +47,15 @@ jobs:
     displayName: 'Set env'
 
   - script: |
-      python -m pip install --upgrade pip wheel
+      python -m pip install --upgrade pip
+      pip install wheel coverage
       pip install .[dev,$(TEST_EXTRA)]
     displayName: 'Install dependencies'
     condition: eq(variables['PRERELEASE_DEPENDENCIES'], 'no')
 
   - script: |
       python -m pip install --pre --upgrade pip wheel
+      pip install --pre wheel coverage
       pip install --pre .[dev,$(TEST_EXTRA)]
     displayName: 'Install dependencies release candidates'
     condition: eq(variables['PRERELEASE_DEPENDENCIES'], 'yes')
