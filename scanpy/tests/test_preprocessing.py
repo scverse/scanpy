@@ -115,7 +115,7 @@ def test_subsample_copy():
 
 
 def test_scale(pbmc68k_reduced):
-    adata = pbmc68k_reduced
+    adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     v = adata[:, 0 : adata.shape[1] // 2]
     # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965

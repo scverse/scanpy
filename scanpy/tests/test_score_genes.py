@@ -55,7 +55,7 @@ def test_score_with_reference(paul15):
     and stored as a pickle object in ./data
     """
 
-    adata = paul15
+    adata = paul15()
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
     sc.pp.scale(adata)
 

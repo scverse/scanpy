@@ -8,7 +8,7 @@ from scanpy.testing._pytest.marks import needs_fa2, needs_igraph
 
 
 def test_tsne(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
 
     euclidean1 = sc.tl.tsne(pbmc, metric="euclidean", copy=True)
     with pytest.warns(UserWarning, match="In previous versions of scanpy"):
@@ -30,7 +30,7 @@ def test_tsne(pbmc68k_reduced):
 
 
 def test_umap_init_dtype(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced[:100, :].copy()
+    pbmc = pbmc68k_reduced()[:100, :].copy()
     sc.tl.umap(pbmc, init_pos=pbmc.obsm["X_pca"][:, :2].astype(np.float32))
     embed1 = pbmc.obsm["X_umap"].copy()
     sc.tl.umap(pbmc, init_pos=pbmc.obsm["X_pca"][:, :2].astype(np.float64))
@@ -47,14 +47,14 @@ def test_umap_init_dtype(pbmc68k_reduced):
     ],
 )
 def test_umap_init_paga(pbmc68k_reduced, layout):
-    pbmc = pbmc68k_reduced[:100, :].copy()
+    pbmc = pbmc68k_reduced()[:100, :].copy()
     sc.tl.paga(pbmc)
     sc.pl.paga(pbmc, layout=layout, show=False)
     sc.tl.umap(pbmc, init_pos="paga")
 
 
 def test_diffmap(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
 
     sc.tl.diffmap(pbmc)
     d1 = pbmc.obsm['X_diffmap'].copy()

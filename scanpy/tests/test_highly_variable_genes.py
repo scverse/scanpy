@@ -81,7 +81,7 @@ def _check_pearson_hvg_columns(output_df, n_top_genes):
 
 
 def test_highly_variable_genes_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
-    adata = pbmc3k_parametrized_small
+    adata = pbmc3k_parametrized_small()
 
     # depending on check_values, warnings should be raised for non-integer data
     if adata.X.dtype == 'float32':
@@ -121,7 +121,7 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(pbmc3k_parametrized
 def test_highly_variable_genes_pearson_residuals_general(
     pbmc3k_parametrized_small, subset, clip, theta, n_top_genes
 ):
-    adata = pbmc3k_parametrized_small
+    adata = pbmc3k_parametrized_small()
     # cleanup var
     del adata.var
 
@@ -203,7 +203,7 @@ def test_highly_variable_genes_pearson_residuals_general(
 def test_highly_variable_genes_pearson_residuals_batch(
     pbmc3k_parametrized_small, subset, n_top_genes
 ):
-    adata = pbmc3k_parametrized_small
+    adata = pbmc3k_parametrized_small()
     # cleanup var
     del adata.var
     n_genes = adata.shape[1]
@@ -268,7 +268,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
 def test_higly_variable_genes_compare_to_seurat(pbmc68k_reduced):
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
 
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
     pbmc.var_names_make_unique()
 
@@ -310,7 +310,7 @@ def test_higly_variable_genes_compare_to_seurat_v3(pbmc3k):
         FILE_V3, sep=' ', dtype={"variances_norm": np.float64}
     )
 
-    pbmc = pbmc3k
+    pbmc = pbmc3k()
     pbmc.var_names_make_unique()
 
     pbmc_dense = pbmc.copy()
@@ -373,7 +373,7 @@ def test_higly_variable_genes_compare_to_seurat_v3(pbmc3k):
 def test_filter_genes_dispersion_compare_to_seurat(pbmc68k_reduced):
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
 
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
     pbmc.var_names_make_unique()
 
@@ -415,7 +415,7 @@ def test_filter_genes_dispersion_compare_to_seurat(pbmc68k_reduced):
 
 
 def test_highly_variable_genes_batches(pbmc68k_reduced):
-    adata = pbmc68k_reduced
+    adata = pbmc68k_reduced()
     adata[:100, :100].X = np.zeros((100, 100))
 
     adata.obs['batch'] = ['0' if i < 100 else '1' for i in range(adata.n_obs)]
@@ -462,7 +462,7 @@ def test_highly_variable_genes_batches(pbmc68k_reduced):
 
 @needs_skmisc
 def test_seurat_v3_mean_var_output_with_batchkey(pbmc3k):
-    pbmc = pbmc3k
+    pbmc = pbmc3k()
     pbmc.var_names_make_unique()
     n_cells = pbmc.shape[0]
     batch = np.zeros((n_cells), dtype=int)

@@ -3,8 +3,10 @@ These fixtures provide a per test new copy of the dataset, without
 having to hit the disk or (in case of ``_pbmc3k_normalized``) recomputing normalization.
 The private fixtures create the object while the public ones return deep copies.
 """
+from __future__ import annotations
 
 from itertools import product
+from collections.abc import Callable
 import pytest
 import numpy as np
 from scipy import sparse
@@ -41,7 +43,7 @@ def _pbmc3k_processed() -> AnnData:
     ),
     ids=lambda x: f'{x[0].__name__}-{x[1]}',
 )
-def _pbmc3ks_parametrized(request, _pbmc3k):
+def _pbmc3ks_parametrized(request, _pbmc3k) -> dict[bool, AnnData]:
     sparsity_func, dtype = request.param
     return {
         small: _prepare_pbmc_testdata(_pbmc3k.copy(), sparsity_func, dtype, small=small)
@@ -65,46 +67,54 @@ def _paul15() -> AnnData:
 
 
 @pytest.fixture
-def pbmc3k(_pbmc3k) -> AnnData:
-    return _pbmc3k.copy()
+def pbmc3k(_pbmc3k) -> Callable[[], AnnData]:
+    return _pbmc3k.copy
 
 
 @pytest.fixture
-def pbmc3k_normalized(_pbmc3k_normalized) -> AnnData:
-    return _pbmc3k_normalized.copy()
+def pbmc3k_normalized(_pbmc3k_normalized) -> Callable[[], AnnData]:
+    return _pbmc3k_normalized.copy
 
 
 @pytest.fixture
-def pbmc3k_processed(_pbmc3k_processed) -> AnnData:
-    return _pbmc3k_processed.copy()
+def pbmc3k_processed(_pbmc3k_processed) -> Callable[[], AnnData]:
+    return _pbmc3k_processed.copy
 
 
 @pytest.fixture
-def pbmc3k_parametrized(_pbmc3ks_parametrized):
-    return _pbmc3ks_parametrized[False].copy()
+def pbmc3k_parametrized(_pbmc3ks_parametrized) -> Callable[[], AnnData]:
+    return _pbmc3ks_parametrized[False].copy
 
 
 @pytest.fixture
-def pbmc3k_parametrized_small(_pbmc3ks_parametrized):
-    return _pbmc3ks_parametrized[True].copy()
+def pbmc3k_parametrized_small(_pbmc3ks_parametrized) -> Callable[[], AnnData]:
+    return _pbmc3ks_parametrized[True].copy
 
 
 @pytest.fixture
-def pbmc68k_reduced(_pbmc68k_reduced) -> AnnData:
-    return _pbmc68k_reduced.copy()
+def pbmc68k_reduced(_pbmc68k_reduced) -> Callable[[], AnnData]:
+    return _pbmc68k_reduced.copy
 
 
 @pytest.fixture
-def krumsiek11(_krumsiek11) -> AnnData:
-    return _krumsiek11.copy()
+def krumsiek11(_krumsiek11) -> Callable[[], AnnData]:
+    return _krumsiek11.copy
 
 
 @pytest.fixture
-def paul15(_paul15) -> AnnData:
-    return _paul15.copy()
+def paul15(_paul15) -> Callable[[], AnnData]:
+    return _paul15.copy
 
 
-def _prepare_pbmc_testdata(adata, sparsity_func, dtype, *, small: bool):
+def _prepare_pbmc_testdata(
+    adata: AnnData,
+    sparsity_func: Callable[
+        [np.ndarray | sparse.spmatrix], np.ndarray | sparse.spmatrix
+    ],
+    dtype: str | np.dtype,
+    *,
+    small: bool,
+) -> AnnData:
     """Prepares 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
 
     Params

@@ -12,7 +12,7 @@ import pytest
 
 
 def test_gearys_c_consistency(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
 
@@ -69,7 +69,7 @@ def test_gearys_c_correctness():
 
 
 def test_morans_i_consistency(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
 
@@ -133,7 +133,7 @@ def test_morans_i_correctness():
 )
 def test_graph_metrics_w_constant_values(pbmc68k_reduced, metric, array_type):
     # https://github.com/scverse/scanpy/issues/1806
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())
     g = pbmc.obsp["connectivities"].copy()
 

@@ -6,14 +6,10 @@ n_neighbors = 5
 key = 'test'
 
 
-@pytest.fixture
-def adata(pbmc68k_reduced):
-    return pbmc68k_reduced
-
-
 @pytest.mark.parametrize('groupby', ['bulk_labels', ['bulk_labels', 'phase']])
 @pytest.mark.parametrize('key_added', [None, "custom_key"])
-def test_dendrogram_key_added(adata, groupby, key_added):
+def test_dendrogram_key_added(pbmc68k_reduced, groupby, key_added):
+    adata = pbmc68k_reduced()
     sc.tl.dendrogram(adata, groupby=groupby, key_added=key_added, use_rep="X_pca")
     if isinstance(groupby, list):
         dendrogram_key = f'dendrogram_{"_".join(groupby)}'

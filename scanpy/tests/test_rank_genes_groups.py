@@ -231,7 +231,7 @@ def test_rank_genes_groups_use_raw(pbmc68k_reduced):
 
 
 def test_singlets(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
     pbmc.obs['louvain'] = pbmc.obs['louvain'].cat.add_categories(['11'])
     pbmc.obs['louvain'][0] = '11'
 
@@ -240,7 +240,7 @@ def test_singlets(pbmc68k_reduced):
 
 
 def test_emptycat(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
     pbmc.obs['louvain'] = pbmc.obs['louvain'].cat.add_categories(['11'])
 
     with pytest.raises(ValueError, match=rf"Could not calculate statistics.*{'11'}"):
@@ -248,7 +248,7 @@ def test_emptycat(pbmc68k_reduced):
 
 
 def test_wilcoxon_symmetry(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
 
     rank_genes_groups(
         pbmc,
@@ -284,7 +284,7 @@ def test_wilcoxon_symmetry(pbmc68k_reduced):
 
 @pytest.mark.parametrize('reference', [True, False])
 def test_wilcoxon_tie_correction(pbmc68k_reduced, reference):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
 
     groups = ['CD14+ Monocyte', 'Dendritic']
     groupby = 'bulk_labels'
