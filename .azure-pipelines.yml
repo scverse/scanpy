@@ -70,12 +70,12 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
-      pytest -v --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml"
+      pytest -v --color=yes --nunit-xml="nunit/test-results.xml"
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')
 
   - script: |
-      pytest -v --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml" --cov --cov-report=term --cov-report=xml
+      pytest -v --color=yes --nunit-xml="nunit/test-results.xml" --cov --cov-report=term --cov-report=xml
     displayName: 'PyTest (coverage)'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
