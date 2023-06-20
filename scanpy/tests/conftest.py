@@ -9,7 +9,7 @@ from matplotlib.testing.compare import compare_images, make_test_filename
 import pytest
 
 import scanpy
-
+from scanpy.tests.fixtures import array_type, float_dtype  # noqa: F401
 
 scanpy.settings.verbosity = "hint"
 
