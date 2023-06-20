@@ -47,11 +47,6 @@ jobs:
     displayName: 'Set env'
 
   - script: |
-      curl -Os https://uploader.codecov.io/latest/linux/codecov
-      chmod +x codecov
-    displayName: 'Install codecov.io uploader'
-
-  - script: |
       python -m pip install --upgrade pip
       pip install pytest-cov wheel
       pip install .[dev,$(TEST_EXTRA)]
@@ -98,7 +93,7 @@ jobs:
       testResultsFormat: NUnit
       testRunTitle: 'Publish test results for Python $(python.version)'
 
-  - script: ./codecov -t $(CODECOV_TOKEN)
+  - script: bash <(curl -s https://codecov.io/bash)
     displayName: 'Upload to codecov.io'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
