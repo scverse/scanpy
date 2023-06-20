@@ -12,6 +12,7 @@
 /docs/jupyter_execute
 
 # tests
+/*coverage*
 /.cache/
 /.pytest_cache/
 /scanpy/tests/test*.h5ad
