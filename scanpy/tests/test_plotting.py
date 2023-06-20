@@ -1256,7 +1256,7 @@ def test_scatter_no_basis_per_var(pbmc68k_reduced, image_comparer):
 
 
 @pytest.fixture
-def pbmc_filtered(pbmc68k_reduced):
+def pbmc_filtered(pbmc68k_reduced) -> AnnData:
     pbmc = pbmc68k_reduced
     sc.pp.filter_genes(pbmc, min_cells=10)
     return pbmc
