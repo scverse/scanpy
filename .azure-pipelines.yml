@@ -75,7 +75,8 @@ jobs:
     condition: eq(variables['RUN_COVERAGE'], 'no')
 
   - script: |
-      pytest -v --color=yes --nunit-xml="nunit/test-results.xml" --cov --cov-report=term --cov-report=xml
+      coverage run -m pytest -v --color=yes --nunit-xml="nunit/test-results.xml"
+      coverage xml
     displayName: 'PyTest (coverage)'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
