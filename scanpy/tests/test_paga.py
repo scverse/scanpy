@@ -18,7 +18,8 @@ FIGS = HERE / 'figures'
 def _pbmc(_pbmc68k_reduced):
     pbmc = _pbmc68k_reduced.copy()
     sc.tl.paga(pbmc, groups='bulk_labels')
-    pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze()
+    pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze().copy()
+    assert not pbmc.obs['cool_feature'].isna().all()
     return pbmc
 
 
