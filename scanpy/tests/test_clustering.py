@@ -5,7 +5,7 @@ from scanpy.testing._pytest.marks import needs_leidenalg, needs_louvain
 
 @pytest.fixture
 def adata_neighbors(pbmc68k_reduced):
-    return pbmc68k_reduced
+    return pbmc68k_reduced()
 
 
 @needs_leidenalg

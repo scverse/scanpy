@@ -76,7 +76,7 @@ def test_normalize_total_view(typ, dtype):
 
 
 def test_normalize_pearson_residuals_inputchecks(pbmc3k_parametrized):
-    adata = pbmc3k_parametrized
+    adata = pbmc3k_parametrized()
 
     # depending on check_values, warnings should be raised for non-integer data
     if adata.X.dtype == 'float32':
@@ -182,7 +182,7 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
 @pytest.mark.parametrize('n_hvgs', [100, 200])
 @pytest.mark.parametrize('n_comps', [30, 50])
 def test_normalize_pearson_residuals_pca(pbmc3k_parametrized_small, n_hvgs, n_comps):
-    adata = pbmc3k_parametrized_small
+    adata = pbmc3k_parametrized_small()
     n_cells, n_genes = adata.shape
 
     adata_with_hvgs = adata.copy()
@@ -278,7 +278,7 @@ def test_normalize_pearson_residuals_pca(pbmc3k_parametrized_small, n_hvgs, n_co
 @pytest.mark.parametrize('n_hvgs', [100, 200])
 @pytest.mark.parametrize('n_comps', [30, 50])
 def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n_comps):
-    adata = pbmc3k_parametrized_small
+    adata = pbmc3k_parametrized_small()
     n_cells, n_genes = adata.shape
 
     ### inplace = False ###

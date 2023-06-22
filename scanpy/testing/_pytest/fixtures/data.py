@@ -3,6 +3,7 @@ These fixtures provide a per test new copy of the dataset, without
 having to hit the disk or (in case of ``_pbmc3k_normalized``) recomputing normalization.
 The private fixtures create the object while the public ones return deep copies.
 """
+from __future__ import annotations
 
 from __future__ import annotations
 
@@ -68,43 +69,43 @@ def _paul15() -> AnnData:
 
 
 @pytest.fixture
-def pbmc3k(_pbmc3k) -> AnnData:
-    return _pbmc3k.copy()
+def pbmc3k(_pbmc3k) -> Callable[[], AnnData]:
+    return _pbmc3k.copy
 
 
 @pytest.fixture
-def pbmc3k_normalized(_pbmc3k_normalized) -> AnnData:
-    return _pbmc3k_normalized.copy()
+def pbmc3k_normalized(_pbmc3k_normalized) -> Callable[[], AnnData]:
+    return _pbmc3k_normalized.copy
 
 
 @pytest.fixture
-def pbmc3k_processed(_pbmc3k_processed) -> AnnData:
-    return _pbmc3k_processed.copy()
+def pbmc3k_processed(_pbmc3k_processed) -> Callable[[], AnnData]:
+    return _pbmc3k_processed.copy
 
 
 @pytest.fixture
-def pbmc3k_parametrized(_pbmc3ks_parametrized) -> AnnData:
-    return _pbmc3ks_parametrized[False].copy()
+def pbmc3k_parametrized(_pbmc3ks_parametrized) -> Callable[[], AnnData]:
+    return _pbmc3ks_parametrized[False].copy
 
 
 @pytest.fixture
-def pbmc3k_parametrized_small(_pbmc3ks_parametrized) -> AnnData:
-    return _pbmc3ks_parametrized[True].copy()
+def pbmc3k_parametrized_small(_pbmc3ks_parametrized) -> Callable[[], AnnData]:
+    return _pbmc3ks_parametrized[True].copy
 
 
 @pytest.fixture
-def pbmc68k_reduced(_pbmc68k_reduced) -> AnnData:
-    return _pbmc68k_reduced.copy()
+def pbmc68k_reduced(_pbmc68k_reduced) -> Callable[[], AnnData]:
+    return _pbmc68k_reduced.copy
 
 
 @pytest.fixture
-def krumsiek11(_krumsiek11) -> AnnData:
-    return _krumsiek11.copy()
+def krumsiek11(_krumsiek11) -> Callable[[], AnnData]:
+    return _krumsiek11.copy
 
 
 @pytest.fixture
-def paul15(_paul15) -> AnnData:
-    return _paul15.copy()
+def paul15(_paul15) -> Callable[[], AnnData]:
+    return _paul15.copy
 
 
 def _prepare_pbmc_testdata(

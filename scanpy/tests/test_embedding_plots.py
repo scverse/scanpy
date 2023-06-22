@@ -276,7 +276,7 @@ def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
 
 def test_embedding_colorbar_location(pbmc3k_processed, image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = pbmc3k_processed.raw.to_adata()
+    adata = pbmc3k_processed().raw.to_adata()
 
     sc.pl.pca(adata, color="LDHB", colorbar_loc=None)
 

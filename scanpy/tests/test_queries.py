@@ -5,7 +5,7 @@ import scanpy as sc
 
 @pytest.mark.internet
 def test_enrich(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.shape[1])
     enrich_anndata = sc.queries.enrich(pbmc, "1")
     de = pd.DataFrame()
@@ -29,7 +29,7 @@ def test_enrich(pbmc68k_reduced):
 
 @pytest.mark.internet
 def test_mito_genes(pbmc68k_reduced):
-    pbmc = pbmc68k_reduced
+    pbmc = pbmc68k_reduced()
     mt_genes = sc.queries.mitochondrial_genes("hsapiens")
     assert (
         pbmc.var_names.isin(mt_genes["external_gene_name"]).sum() == 1

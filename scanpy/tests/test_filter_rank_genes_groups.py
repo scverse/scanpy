@@ -100,7 +100,7 @@ names_compare_abs = np.array(
 
 
 def test_filter_rank_genes_groups(pbmc68k_reduced):
-    adata = pbmc68k_reduced
+    adata = pbmc68k_reduced()
 
     # fix filter defaults
     args = {
