@@ -336,7 +336,7 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
 
 def test_recipe_weinreb(pbmc68k_reduced):
     # Just tests for failure for now
-    adata = pbmc68k_reduced.raw.to_adata()
+    adata = pbmc68k_reduced().raw.to_adata()
     adata.X = adata.X.toarray()
 
     orig = adata.copy()

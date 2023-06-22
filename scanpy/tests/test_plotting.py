@@ -886,7 +886,7 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(
     var_names as a dict works.
     """
     N = 3
-    pbmc = pbmc68k_reduced.raw.to_adata()
+    pbmc = pbmc68k_reduced().raw.to_adata()
     groups = pbmc.obs["louvain"].cat.categories[:3]
     pbmc = pbmc[pbmc.obs["louvain"].isin(groups)][::3].copy()
 
@@ -1208,7 +1208,7 @@ def test_timeseries(pbmc68k_reduced):
 
 
 def test_scatter_raw(tmp_path, pbmc68k_reduced):
-    pbmc = pbmc68k_reduced[:100].copy()
+    pbmc = pbmc68k_reduced()[:100].copy()
     raw_pth = tmp_path / "raw.png"
     x_pth = tmp_path / "X.png"
 

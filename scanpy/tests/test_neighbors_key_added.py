@@ -10,7 +10,7 @@ key = 'test'
 
 @pytest.fixture
 def adata(pbmc68k_reduced):
-    return sc.AnnData(pbmc68k_reduced.X)
+    return sc.AnnData(pbmc68k_reduced().X)
 
 
 def test_neighbors_key_added(adata):
