@@ -18,7 +18,7 @@ from matplotlib.testing import setup
 setup()
 
 import scanpy as sc
-from scanpy.testing._pytest.marks import needs_leidenalg
+from scanpy.testing._pytest.marks import needs
 
 
 HERE: Path = Path(__file__).parent
@@ -26,7 +26,7 @@ ROOT = HERE / 'pbmc3k_images'
 FIGS = HERE / 'figures'
 
 
-@needs_leidenalg
+@needs("leidenalg")
 def test_pbmc3k(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
 

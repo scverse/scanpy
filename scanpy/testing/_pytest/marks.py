@@ -4,23 +4,32 @@ from importlib.util import find_spec
 import pytest
 
 
-def make_skip_mark(mod: str, dist: str | None = None):
+# Mapping from module name to PyPI name
+KNOWN = dict(
+    leidenalg="leidenalg",
+    louvain="louvain",
+    skmisc="scikit-misc",
+    scanorama="scanorama",
+    scrublet="scrublet",
+    fa2="fa2",
+    igraph="python-igraph",
+)
+
+
+def needs(mod: str):
     """
     Returns a pytest skip marker evaluated at module import.
 
     This allows us to see the amount of skipped tests at the start of a test run.
     :func:`pytest.importorskip` skips tests after they started running.
     """
+    try:
+        dist = KNOWN[mod]
+    except KeyError:
+        raise ValueError(
+            f"Unknown import {mod}. Please add to KNOWN in this file."
+        ) from None
     reason = f"needs module `{mod}`"
-    if dist:
+    if mod != dist.lower().replace("-", "_"):
         reason = f"{reason} (`pip install {dist}`)"
     return pytest.mark.skipif(not find_spec(mod), reason=reason)
-
-
-needs_leidenalg = make_skip_mark("leidenalg")
-needs_louvain = make_skip_mark("louvain")
-needs_skmisc = make_skip_mark("skmisc", "scikit-misc")
-needs_scanorama = make_skip_mark("scanorama")
-needs_scrublet = make_skip_mark("scrublet")
-needs_fa2 = make_skip_mark("fa2")
-needs_igraph = make_skip_mark("igraph", "python-igraph")

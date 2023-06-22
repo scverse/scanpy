@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import cm
 
 import scanpy as sc
-from scanpy.testing._pytest.marks import needs_igraph
+from scanpy.testing._pytest.marks import needs
 
 
 HERE: Path = Path(__file__).parent
@@ -28,7 +28,7 @@ def pbmc(_pbmc):
     return _pbmc.copy()
 
 
-@needs_igraph
+@needs("igraph")
 @pytest.mark.parametrize(
     "test_id,func",
     [
@@ -56,7 +56,7 @@ def test_paga_plots(image_comparer, pbmc, test_id, func):
     save_and_compare_images(f"master_paga_{test_id}" if test_id else "master_paga")
 
 
-@needs_igraph
+@needs("igraph")
 def test_paga_pie(image_comparer, pbmc):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
 
@@ -70,7 +70,7 @@ def test_paga_pie(image_comparer, pbmc):
     save_and_compare_images('master_paga_pie')
 
 
-@needs_igraph
+@needs("igraph")
 def test_paga_path(image_comparer, pbmc):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
@@ -85,7 +85,7 @@ def test_paga_path(image_comparer, pbmc):
     save_and_compare_images('master_paga_path')
 
 
-@needs_igraph
+@needs("igraph")
 def test_paga_compare(pbmc3k_processed, image_comparer):
     # Tests that https://github.com/scverse/scanpy/issues/1887 is fixed
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
@@ -98,7 +98,7 @@ def test_paga_compare(pbmc3k_processed, image_comparer):
     save_and_compare_images('master_paga_compare_pbmc3k')
 
 
-@needs_igraph
+@needs("igraph")
 def test_paga_positions_reproducible(pbmc68k_reduced):
     """Check exact reproducibility and effect of random_state on paga positions"""
     # https://github.com/scverse/scanpy/issues/1859

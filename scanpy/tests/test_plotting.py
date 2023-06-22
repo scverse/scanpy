@@ -21,7 +21,7 @@ from matplotlib.testing.compare import compare_images
 from anndata import AnnData
 
 import scanpy as sc
-from scanpy.testing._pytest.marks import needs_leidenalg, needs_scrublet
+from scanpy.testing._pytest.marks import needs
 
 
 HERE: Path = Path(__file__).parent
@@ -37,7 +37,7 @@ sc.set_figure_params(dpi=40, color_map='viridis')
 # the ./figures folder to ./_images/
 
 
-@needs_leidenalg
+@needs("leidenalg")
 def test_heatmap(krumsiek11, pbmc68k_reduced, image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
@@ -1551,7 +1551,7 @@ def test_filter_rank_genes_groups_plots(
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs_scrublet
+@needs("scrublet")
 def test_scrublet_plots(pbmc3k, image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
 

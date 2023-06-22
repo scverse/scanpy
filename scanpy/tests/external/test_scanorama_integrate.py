@@ -1,9 +1,9 @@
 import scanpy as sc
 import scanpy.external as sce
-from scanpy.testing._pytest.marks import needs_scanorama
+from scanpy.testing._pytest.marks import needs
 
 
-@needs_scanorama
+@needs("scanorama")
 def test_scanorama_integrate():
     """
     Test that Scanorama integration works.

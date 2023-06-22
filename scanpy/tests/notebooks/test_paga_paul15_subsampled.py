@@ -11,7 +11,7 @@ import pytest
 setup()
 
 import scanpy as sc
-from scanpy.testing._pytest.marks import needs_igraph
+from scanpy.testing._pytest.marks import needs
 
 
 HERE: Path = Path(__file__).parent
@@ -19,7 +19,7 @@ ROOT = HERE / '_images_paga_paul15_subsampled'
 FIGS = HERE / 'figures'
 
 
-@needs_igraph
+@needs("igraph")
 def test_paga_paul15_subsampled(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=25)
 

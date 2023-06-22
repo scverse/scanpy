@@ -1,6 +1,6 @@
 import pytest
 import scanpy as sc
-from scanpy.testing._pytest.marks import needs_leidenalg, needs_louvain
+from scanpy.testing._pytest.marks import needs
 
 
 @pytest.fixture
@@ -8,7 +8,7 @@ def adata_neighbors(pbmc68k_reduced):
     return pbmc68k_reduced()
 
 
-@needs_leidenalg
+@needs("leidenalg")
 def test_leiden_basic(adata_neighbors):
     sc.tl.leiden(adata_neighbors)
 
@@ -16,8 +16,8 @@ def test_leiden_basic(adata_neighbors):
 @pytest.mark.parametrize(
     'clustering,key',
     [
-        pytest.param(sc.tl.louvain, 'louvain', marks=needs_louvain),
-        pytest.param(sc.tl.leiden, 'leiden', marks=needs_leidenalg),
+        pytest.param(sc.tl.louvain, 'louvain', marks=needs("louvain")),
+        pytest.param(sc.tl.leiden, 'leiden', marks=needs("leidenalg")),
     ],
 )
 def test_clustering_subset(adata_neighbors, clustering, key):
