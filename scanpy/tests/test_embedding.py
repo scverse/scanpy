@@ -4,7 +4,7 @@ import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
 
 import scanpy as sc
-from scanpy.testing._pytest.marks import needs_fa2, needs_igraph
+from scanpy.testing._pytest.marks import needs
 
 
 def test_tsne(pbmc68k_reduced):
@@ -42,8 +42,8 @@ def test_umap_init_dtype(pbmc68k_reduced):
 @pytest.mark.parametrize(
     "layout",
     [
-        pytest.param("fa", marks=needs_fa2),
-        pytest.param("fr", marks=needs_igraph),
+        pytest.param("fa", marks=needs("fa2")),
+        pytest.param("fr", marks=needs("igraph")),
     ],
 )
 def test_umap_init_paga(pbmc68k_reduced, layout):
