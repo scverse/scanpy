@@ -3,7 +3,6 @@ import numpy as np
 from anndata import AnnData
 
 import scanpy as sc
-from scanpy.tests.fixtures import array_type, float_dtype
 from anndata.tests.helpers import assert_equal
 
 from scanpy.testing._helpers.data import pbmc3k_normalized
