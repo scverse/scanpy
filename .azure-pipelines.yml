@@ -4,6 +4,7 @@ trigger:
 variables:
   python.version: '3.9'
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
+  PYTEST_ADDOPTS: '-v --color=yes --nunit-xml=nunit/test-results.xml'
   ANNDATA_DEV: no
   RUN_COVERAGE: no
   TEST_EXTRA: 'test-full'
@@ -69,13 +70,12 @@ jobs:
       pip list
     displayName: 'Display installed versions'
 
-  - script: |
-      pytest -v --color=yes --nunit-xml="nunit/test-results.xml"
+  - script: pytest
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')
 
   - script: |
-      coverage run -m pytest -v --color=yes --nunit-xml="nunit/test-results.xml"
+      coverage run -m pytest
       coverage xml
     displayName: 'PyTest (coverage)'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
