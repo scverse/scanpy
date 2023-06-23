@@ -9,7 +9,8 @@ from scipy import sparse
 
 from anndata.tests.helpers import asarray
 import pytest
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 def test_gearys_c_consistency():

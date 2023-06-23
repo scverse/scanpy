@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 import scanpy as sc
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 @pytest.mark.internet
