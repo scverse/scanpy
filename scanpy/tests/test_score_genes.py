@@ -5,7 +5,9 @@ from scipy.sparse import csr_matrix
 import pytest
 import pickle
 from pathlib import Path
-from scanpy.tests._data._cached_datasets import paul15
+
+from scanpy.testing._helpers.data import paul15
+
 
 HERE = Path(__file__).parent / Path('_data/')
 

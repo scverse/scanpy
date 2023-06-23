@@ -7,7 +7,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.colors import Normalize
 from matplotlib import pyplot as pl
-from matplotlib import rcParams, cm
+from matplotlib import rcParams, colormaps
 from anndata import AnnData
 from typing import Union, Optional, List, Sequence, Iterable, Mapping, Literal
 
@@ -1446,7 +1446,7 @@ def embedding_density(
 
     # Make the color map
     if isinstance(color_map, str):
-        color_map = copy(cm.get_cmap(color_map))
+        color_map = copy(colormaps.get_cmap(color_map))
 
     color_map.set_over('black')
     color_map.set_under('lightgray')
