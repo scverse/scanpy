@@ -12,6 +12,7 @@ setup()
 
 import scanpy as sc
 from scanpy.testing._pytest.marks import needs
+from scanpy.testing._helpers.data import paul15
 
 
 HERE: Path = Path(__file__).parent
@@ -23,7 +24,7 @@ FIGS = HERE / 'figures'
 def test_paga_paul15_subsampled(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=25)
 
-    adata = sc.datasets.paul15()
+    adata = paul15()
     sc.pp.subsample(adata, n_obs=200)
     del adata.uns['iroot']
     adata.X = adata.X.astype('float64')

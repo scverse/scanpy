@@ -10,6 +10,8 @@ import numpy as np
 import scanpy.preprocessing as pp
 import scipy.sparse as sparse
 
+from scanpy.testing._helpers.data import paul15, pbmc3k
+
 
 def test_scrublet():
     """
@@ -19,7 +21,7 @@ def test_scrublet():
     """
     pytest.importorskip("scrublet")
 
-    adata = sc.datasets.pbmc3k()
+    adata = pbmc3k()
     sce.pp.scrublet(adata, use_approx_neighbors=False)
 
     # replace assertions by conditions
@@ -37,7 +39,7 @@ def test_scrublet_batched():
     """
     pytest.importorskip("scrublet")
 
-    adata = sc.datasets.pbmc3k()
+    adata = pbmc3k()
     adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
     split = [adata[adata.obs["batch"] == x].copy() for x in ("a", "b")]
 
@@ -72,7 +74,7 @@ def test_scrublet_data():
 
     # Run Scrublet and let the main function run simulations
     adata_scrublet_auto_sim = sce.pp.scrublet(
-        sc.datasets.pbmc3k(),
+        pbmc3k(),
         use_approx_neighbors=False,
         copy=True,
         random_state=random_state,
@@ -120,7 +122,7 @@ def test_scrublet_data():
 
     # Preprocess the data and make the simulated doublets
 
-    adata_obs = preprocess_for_scrublet(sc.datasets.pbmc3k())
+    adata_obs = preprocess_for_scrublet(pbmc3k())
     adata_sim = create_sim_from_parents(
         adata_obs, adata_scrublet_auto_sim.uns['scrublet']['doublet_parents']
     )
@@ -155,7 +157,7 @@ def test_scrublet_dense():
     """
     pytest.importorskip("scrublet")
 
-    adata = sc.datasets.paul15()[:500].copy()
+    adata = paul15()[:500].copy()
     sce.pp.scrublet(adata, use_approx_neighbors=False)
 
     # replace assertions by conditions
@@ -174,7 +176,7 @@ def test_scrublet_params():
     pytest.importorskip("scrublet")
 
     # Reduce size of input for faster test
-    adata = sc.datasets.pbmc3k()[:500].copy()
+    adata = pbmc3k()[:500].copy()
     sc.pp.filter_genes(adata, min_counts=100)
 
     # Get the default output
@@ -215,7 +217,7 @@ def test_scrublet_simulate_doublets():
     """
     pytest.importorskip("scrublet")
 
-    adata_obs = sc.datasets.pbmc3k()
+    adata_obs = pbmc3k()
     sc.pp.filter_genes(adata_obs, min_cells=3)
     sc.pp.filter_cells(adata_obs, min_genes=3)
     adata_obs.layers['raw'] = adata_obs.X

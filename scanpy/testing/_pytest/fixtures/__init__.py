@@ -8,19 +8,7 @@ from scipy import sparse
 
 from anndata.tests.helpers import asarray
 from .data import (
-    _pbmc3k,
-    _pbmc3k_normalized,
-    _pbmc3k_processed,
-    _pbmc68k_reduced,
-    _krumsiek11,
-    _paul15,
-    pbmc3k,
-    pbmc3k_normalized,
-    pbmc3k_processed,
-    pbmc68k_reduced,
-    krumsiek11,
-    paul15,
-    _pbmc3ks_parametrized,
+    _pbmc3ks_parametrized_session,
     pbmc3k_parametrized,
     pbmc3k_parametrized_small,
 )
@@ -29,19 +17,7 @@ from .data import (
 __all__ = [
     'array_type',
     'float_dtype',
-    '_pbmc3k',
-    '_pbmc3k_normalized',
-    '_pbmc3k_processed',
-    '_pbmc68k_reduced',
-    '_krumsiek11',
-    '_paul15',
-    'pbmc3k',
-    'pbmc3k_normalized',
-    'pbmc3k_processed',
-    'pbmc68k_reduced',
-    'krumsiek11',
-    'paul15',
-    '_pbmc3ks_parametrized',
+    '_pbmc3ks_parametrized_session',
     'pbmc3k_parametrized',
     'pbmc3k_parametrized_small',
 ]

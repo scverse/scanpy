@@ -1,10 +1,11 @@
 import pandas as pd
 import pytest
 import scanpy as sc
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 @pytest.mark.internet
-def test_enrich(pbmc68k_reduced):
+def test_enrich():
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.shape[1])
     enrich_anndata = sc.queries.enrich(pbmc, "1")
@@ -28,7 +29,7 @@ def test_enrich(pbmc68k_reduced):
 
 
 @pytest.mark.internet
-def test_mito_genes(pbmc68k_reduced):
+def test_mito_genes():
     pbmc = pbmc68k_reduced()
     mt_genes = sc.queries.mitochondrial_genes("hsapiens")
     assert (

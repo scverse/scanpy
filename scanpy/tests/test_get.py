@@ -9,6 +9,7 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.datasets._utils import filter_oldformatwarning
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
@@ -201,7 +202,7 @@ def test_backed_vs_memory():
     )
 
 
-def test_column_content(pbmc68k_reduced):
+def test_column_content():
     """uses a larger dataset to test column order and content"""
     adata = pbmc68k_reduced()
 

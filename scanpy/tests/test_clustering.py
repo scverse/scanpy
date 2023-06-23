@@ -1,10 +1,11 @@
 import pytest
 import scanpy as sc
+from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
 
 
 @pytest.fixture
-def adata_neighbors(pbmc68k_reduced):
+def adata_neighbors():
     return pbmc68k_reduced()
 
 

@@ -4,10 +4,11 @@ import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
 
 import scanpy as sc
+from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
 
 
-def test_tsne(pbmc68k_reduced):
+def test_tsne():
     pbmc = pbmc68k_reduced()
 
     euclidean1 = sc.tl.tsne(pbmc, metric="euclidean", copy=True)
@@ -29,7 +30,7 @@ def test_tsne(pbmc68k_reduced):
     assert cosine.uns["tsne"]["params"]["metric"] == "cosine"
 
 
-def test_umap_init_dtype(pbmc68k_reduced):
+def test_umap_init_dtype():
     pbmc = pbmc68k_reduced()[:100, :].copy()
     sc.tl.umap(pbmc, init_pos=pbmc.obsm["X_pca"][:, :2].astype(np.float32))
     embed1 = pbmc.obsm["X_umap"].copy()
@@ -46,14 +47,14 @@ def test_umap_init_dtype(pbmc68k_reduced):
         pytest.param("fr", marks=needs("igraph")),
     ],
 )
-def test_umap_init_paga(pbmc68k_reduced, layout):
+def test_umap_init_paga(layout):
     pbmc = pbmc68k_reduced()[:100, :].copy()
     sc.tl.paga(pbmc)
     sc.pl.paga(pbmc, layout=layout, show=False)
     sc.tl.umap(pbmc, init_pos="paga")
 
 
-def test_diffmap(pbmc68k_reduced):
+def test_diffmap():
     pbmc = pbmc68k_reduced()
 
     sc.tl.diffmap(pbmc)

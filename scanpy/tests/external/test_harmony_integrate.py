@@ -2,6 +2,8 @@ import pytest
 
 import scanpy as sc
 import scanpy.external as sce
+from scanpy.testing._helpers.data import pbmc3k
+
 
 pytest.importorskip("harmonypy")
 
@@ -14,7 +16,7 @@ def test_harmony_integrate():
     integrate wrapper succesfully added a new field to ``adata.obsm``
     and makes sure it has the same dimensions as the original PCA table.
     """
-    adata = sc.datasets.pbmc3k()
+    adata = pbmc3k()
     sc.pp.recipe_zheng17(adata)
     sc.tl.pca(adata)
     adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']

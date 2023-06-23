@@ -6,6 +6,8 @@ import pytest
 import pickle
 from pathlib import Path
 
+from scanpy.testing._helpers.data import paul15
+
 
 HERE = Path(__file__).parent / Path('_data/')
 
@@ -48,7 +50,7 @@ def _create_adata(n_obs, n_var, p_zero, p_nan):
     return adata
 
 
-def test_score_with_reference(paul15):
+def test_score_with_reference():
     """
     Checks if score_genes output agrees with pre-computed reference values.
     The reference values had been generated using the same code

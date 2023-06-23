@@ -11,6 +11,7 @@ import pytest
 import seaborn as sns
 
 import scanpy as sc
+from scanpy.testing._helpers.data import pbmc3k_processed
 
 
 HERE: Path = Path(__file__).parent
@@ -274,7 +275,7 @@ def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
     check_same_image(dims_pth, comp_pth, tol=5)
 
 
-def test_embedding_colorbar_location(pbmc3k_processed, image_comparer):
+def test_embedding_colorbar_location(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = pbmc3k_processed().raw.to_adata()
 

@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import cm
 
 import scanpy as sc
+from scanpy.testing._helpers.data import pbmc3k_processed, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
 
 
@@ -15,8 +16,8 @@ FIGS = HERE / 'figures'
 
 
 @pytest.fixture(scope="module")
-def _pbmc(_pbmc68k_reduced):
-    pbmc = _pbmc68k_reduced.copy()
+def _pbmc_session():
+    pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, groups='bulk_labels')
     pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze().copy()
     assert not pbmc.obs['cool_feature'].isna().all()
@@ -24,8 +25,8 @@ def _pbmc(_pbmc68k_reduced):
 
 
 @pytest.fixture
-def pbmc(_pbmc):
-    return _pbmc.copy()
+def pbmc(_pbmc_session):
+    return _pbmc_session.copy()
 
 
 @needs("igraph")
@@ -86,7 +87,7 @@ def test_paga_path(image_comparer, pbmc):
 
 
 @needs("igraph")
-def test_paga_compare(pbmc3k_processed, image_comparer):
+def test_paga_compare(image_comparer):
     # Tests that https://github.com/scverse/scanpy/issues/1887 is fixed
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
@@ -99,7 +100,7 @@ def test_paga_compare(pbmc3k_processed, image_comparer):
 
 
 @needs("igraph")
-def test_paga_positions_reproducible(pbmc68k_reduced):
+def test_paga_positions_reproducible():
     """Check exact reproducibility and effect of random_state on paga positions"""
     # https://github.com/scverse/scanpy/issues/1859
     pbmc = pbmc68k_reduced()

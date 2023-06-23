@@ -3,13 +3,14 @@ import numpy as np
 import pytest
 
 from scanpy.testing._pytest.marks import needs
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 n_neighbors = 5
 key = 'test'
 
 
 @pytest.fixture
-def adata(pbmc68k_reduced):
+def adata():
     return sc.AnnData(pbmc68k_reduced().X)
 
 

@@ -5,6 +5,8 @@ from anndata import AnnData
 import scanpy as sc
 from anndata.tests.helpers import assert_equal
 
+from scanpy.testing._helpers.data import pbmc3k_normalized
+
 A_list = [
     [0, 0, 7, 0, 0],
     [8, 5, 0, 2, 0],
@@ -77,7 +79,7 @@ def test_pca_shapes():
         sc.pp.pca(adata, n_comps=100)
 
 
-def test_pca_sparse(pbmc3k_normalized):
+def test_pca_sparse():
     """
     Tests that implicitly centered pca on sparse arrays returns equivalent results to
     explicit centering on dense arrays.
@@ -98,7 +100,7 @@ def test_pca_sparse(pbmc3k_normalized):
     assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
 
 
-def test_pca_reproducible(pbmc3k_normalized, array_type):
+def test_pca_reproducible(array_type):
     pbmc = pbmc3k_normalized()
     pbmc.X = array_type(pbmc.X)
 
@@ -112,7 +114,7 @@ def test_pca_reproducible(pbmc3k_normalized, array_type):
     assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
-def test_pca_chunked(pbmc3k_normalized):
+def test_pca_chunked():
     # https://github.com/scverse/scanpy/issues/1590
     # But also a more general test
 
@@ -137,7 +139,7 @@ def test_pca_chunked(pbmc3k_normalized):
     )
 
 
-def test_pca_n_pcs(pbmc3k_normalized):
+def test_pca_n_pcs():
     """
     Tests that the n_pcs parameter also works for
     representations not called "X_pca"

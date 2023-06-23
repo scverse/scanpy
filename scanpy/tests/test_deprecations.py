@@ -2,8 +2,10 @@ import scanpy as sc
 
 import pytest
 
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
-def test_deprecate_multicore_tsne(pbmc68k_reduced):
+
+def test_deprecate_multicore_tsne():
     pbmc = pbmc68k_reduced()
 
     with pytest.warns(
