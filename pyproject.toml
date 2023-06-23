@@ -150,16 +150,23 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
-python_files = "test_*.py"
-testpaths = "scanpy/tests/"
+addopts = [
+    "--import-mode=importlib",
+    "-pscanpy.testing._pytest",
+]
+testpaths = ["scanpy"]
+ignore = ["scanpy/tests/_images"]
+xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
 ]
 
 [tool.coverage.run]
-source = ["scanpy"]
+source_pkgs = ["scanpy"]
 omit = ["*/tests/*"]
+[tool.coverage.paths]
+source = [".", "**/site-packages"]
 
 [tool.black]
 skip-string-normalization = true
@@ -169,6 +176,7 @@ select = [
     "F",  # Pyflakes
     "E",  # Pycodestyle errors
     "W",  # Pycodestyle warnings
+    "TID251",  # Banned imports
 ]
 ignore = [
     # module imported but unused -> required for Scanpys API
@@ -185,3 +193,5 @@ ignore = [
 [tool.ruff.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
+[tool.ruff.flake8-tidy-imports.banned-api]
+"pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
