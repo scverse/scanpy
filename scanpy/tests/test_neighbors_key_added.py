@@ -78,9 +78,9 @@ def test_neighbors_key_obsp(adata, field):
         )
 
 
+@needs("louvain")
 @pytest.mark.parametrize('field', ['neighbors_key', 'obsp'])
 def test_neighbors_key_obsp_louvain(adata, field):
-    pytest.importorskip("louvain")
     adata1 = adata.copy()
 
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)

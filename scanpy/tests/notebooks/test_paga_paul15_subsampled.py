@@ -21,6 +21,7 @@ FIGS = HERE / 'figures'
 
 
 @needs("igraph")
+@needs("louvain")
 def test_paga_paul15_subsampled(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=25)
 
@@ -43,8 +44,7 @@ def test_paga_paul15_subsampled(image_comparer, plt):
 
     sc.pl.draw_graph(adata, color='paul15_clusters', legend_loc='on data')
 
-    # TODO: skip if louvain isn't installed, needs major rework
-    pytest.importorskip("louvain")
+    # TODO: currently needs skip if louvain isn't installed, do major rework
 
     # Clustering and PAGA
     sc.tl.louvain(adata, resolution=1.0)

@@ -9,10 +9,20 @@ KNOWN = dict(
     leidenalg="leidenalg",
     louvain="louvain",
     skmisc="scikit-misc",
-    scanorama="scanorama",
-    scrublet="scrublet",
     fa2="fa2",
     igraph="python-igraph",
+    dask="dask",
+    zarr="zarr",
+    zappy="zappy",
+    # external
+    scanorama="scanorama",
+    scrublet="scrublet",
+    harmonypy="harmonypy",
+    magic="magic-impute",
+    palantir="palantir",
+    phenograph="PhenoGraph",
+    samalg="sam-algorithm",
+    wishbone="wishbone-dev",
 )
 
 

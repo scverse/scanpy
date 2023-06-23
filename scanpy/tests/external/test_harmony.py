@@ -1,16 +1,14 @@
 from itertools import product
 
-import pytest
 from anndata import AnnData
 
 import scanpy as sc
 import scanpy.external as sce
 from scanpy.testing._helpers.data import pbmc3k
+from scanpy.testing._pytest.marks import needs
 
 
-pytest.importorskip("harmony")
-
-
+@needs("harmonypy")
 def test_load_timepoints_from_anndata_list():
     adata_ref = pbmc3k()
     start = [596, 615, 1682, 1663, 1409, 1432]
@@ -30,3 +28,20 @@ def test_load_timepoints_from_anndata_list():
     assert all(
         [adata.obsp['harmony_aff'].shape[0], adata.obsp['harmony_aff_aug'].shape[0]]
     ), "harmony_timeseries augmented affinity matrix Error!"
+
+
+@needs("harmonypy")
+def test_harmony_integrate():
+    """
+    Test that Harmony integrate works.
+
+    This is a very simple test that just checks to see if the Harmony
+    integrate wrapper succesfully added a new field to ``adata.obsm``
+    and makes sure it has the same dimensions as the original PCA table.
+    """
+    adata = pbmc3k()
+    sc.pp.recipe_zheng17(adata)
+    sc.tl.pca(adata)
+    adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
+    sce.pp.harmony_integrate(adata, 'batch')
+    assert adata.obsm['X_pca_harmony'].shape == adata.obsm['X_pca'].shape

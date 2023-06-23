@@ -176,6 +176,7 @@ select = [
     "F",  # Pyflakes
     "E",  # Pycodestyle errors
     "W",  # Pycodestyle warnings
+    "TID251",  # Banned imports
 ]
 ignore = [
     # module imported but unused -> required for Scanpys API
@@ -192,3 +193,5 @@ ignore = [
 [tool.ruff.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
+[tool.ruff.flake8-tidy-imports.banned-api]
+"pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"

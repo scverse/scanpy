@@ -3,10 +3,10 @@ import pytest
 import scanpy as sc
 import scanpy.external as sce
 from scanpy.testing._helpers.data import pbmc3k_processed
+from scanpy.testing._pytest.marks import needs
 
-pytest.importorskip("palantir")
 
-
+@needs("palantir")
 def test_palantir_core():
     adata = pbmc3k_processed()
 

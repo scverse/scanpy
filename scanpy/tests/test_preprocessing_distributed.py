@@ -8,17 +8,14 @@ import pytest
 from scanpy.preprocessing import normalize_total, filter_genes
 from scanpy.preprocessing import log1p, normalize_per_cell, filter_cells
 from scanpy.preprocessing._distributed import materialize_as_ndarray
+from scanpy.testing._pytest.marks import needs
+
 
 HERE = Path(__file__).parent / Path('_data/')
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
 
-required = ['dask', 'zappy', 'zarr']
-installed = {mod: bool(find_spec(mod)) for mod in required}
 
-
-@pytest.mark.skipif(
-    not all(installed.values()), reason=f'{required} all required: {installed}'
-)
+@needs("zarr")
 class TestPreprocessingDistributed:
     @pytest.fixture()
     def adata(self):
@@ -26,7 +23,12 @@ class TestPreprocessingDistributed:
         a.X = a.X[:]  # convert to numpy array
         return a
 
-    @pytest.fixture(params=["direct", "dask"])
+    @pytest.fixture(
+        params=[
+            pytest.param("direct", marks=[needs("zappy")]),
+            pytest.param("dask", marks=[needs("dask")]),
+        ]
+    )
     def adata_dist(self, request):
         # regular anndata except for X, which we replace on the next line
         a = ad.read_zarr(input_file)
@@ -83,8 +85,12 @@ class TestPreprocessingDistributed:
         npt.assert_allclose(result, adata.X)
 
     def test_write_zarr(self, adata, adata_dist):
-        da = pytest.importorskip("dask.array")
-        zarr = pytest.importorskip("zarr")
+        try:
+            from dask import Array as DaskArray
+        except ImportError:
+            DaskArray = type("DaskArray", (), {})
+
+        import zarr
 
         log1p(adata_dist)
         temp_store = zarr.TempStore()
@@ -93,7 +99,7 @@ class TestPreprocessingDistributed:
             chunks = (chunks[0][0],) + chunks[1]
         # write metadata using regular anndata
         adata.write_zarr(temp_store, chunks)
-        if isinstance(adata_dist.X, da.Array):
+        if isinstance(adata_dist.X, DaskArray):
             adata_dist.X.to_zarr(temp_store.dir_path("X"), overwrite=True)
         else:
             adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks)

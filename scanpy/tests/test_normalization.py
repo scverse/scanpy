@@ -4,6 +4,8 @@ from anndata import AnnData
 from scipy.sparse import csr_matrix
 from scipy import sparse
 
+from scanpy.testing._pytest.marks import needs
+
 try:
     import dask.array as da
 except ImportError:
@@ -23,13 +25,15 @@ X_frac = [[1, 0, 1], [3, 0, 1], [5, 6, 1]]
 
 
 @pytest.fixture(
-    params=[np.array, csr_matrix, da.from_array if da else None],
+    params=[
+        lambda: np.array,
+        lambda: csr_matrix,
+        pytest.param(lambda: da.from_array, marks=[needs("dask")]),
+    ],
     ids=["numpy-array", "sparse-csr", "dask-array"],
 )
 def typ(request):
-    if request.param is None:
-        pytest.importorskip('dask.array', reason='dask.array required')
-    return request.param
+    return request.param()
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
