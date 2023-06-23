@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib as mpl
 
@@ -9,6 +10,10 @@ from matplotlib.testing.compare import compare_images, make_test_filename
 import pytest
 
 import scanpy
+
+if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
+    from scanpy.testing._pytest.fixtures import *  # noqa: F403
+
 
 scanpy.settings.verbosity = "hint"
 

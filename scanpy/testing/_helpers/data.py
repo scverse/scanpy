@@ -7,7 +7,7 @@ from __future__ import annotations
 
 try:
     from functools import cache
-except ImportError:
+except ImportError:  # Python < 3.9
     from functools import lru_cache
 
     def cache(func):

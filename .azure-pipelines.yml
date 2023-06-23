@@ -55,7 +55,7 @@ jobs:
     condition: eq(variables['PRERELEASE_DEPENDENCIES'], 'no')
 
   - script: |
-      python -m pip install --pre --upgrade pip wheel
+      python -m pip install --pre --upgrade pip
       pip install --pre wheel coverage
       pip install --pre .[dev,$(TEST_EXTRA)]
     displayName: 'Install dependencies release candidates'
