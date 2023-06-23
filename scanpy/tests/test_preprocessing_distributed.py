@@ -86,7 +86,7 @@ class TestPreprocessingDistributed:
 
     def test_write_zarr(self, adata, adata_dist):
         try:
-            from dask import Array as DaskArray
+            from dask.array import Array as DaskArray
         except ImportError:
             DaskArray = type("DaskArray", (), {})
 

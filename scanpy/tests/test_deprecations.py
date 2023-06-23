@@ -1,7 +1,6 @@
-import scanpy as sc
-
 import pytest
 
+import scanpy as sc
 from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
