@@ -17,6 +17,7 @@ KNOWN = dict(
     # external
     scanorama="scanorama",
     scrublet="scrublet",
+    harmony="harmonyTS",
     harmonypy="harmonypy",
     magic="magic-impute",
     palantir="palantir",
