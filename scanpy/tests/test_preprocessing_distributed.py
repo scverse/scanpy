@@ -97,9 +97,9 @@ class TestPreprocessingDistributed:
             chunks = (chunks[0][0],) + chunks[1]
         # write metadata using regular anndata
         adata.write_zarr(temp_store, chunks)
-        if adata_dist["dist-mode"] == "dask":
+        if adata_dist.uns["dist-mode"] == "dask":
             adata_dist.X.to_zarr(temp_store.dir_path("X"), overwrite=True)
-        elif adata_dist["dist-mode"] == "direct":
+        elif adata_dist.uns["dist-mode"] == "direct":
             adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks)
         else:
             assert False, "add branch for new dist-mode"
