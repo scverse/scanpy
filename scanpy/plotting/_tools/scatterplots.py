@@ -22,8 +22,7 @@ from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from pandas.api.types import is_categorical_dtype
-from matplotlib import pyplot as pl, colors
-from matplotlib.cm import get_cmap
+from matplotlib import pyplot as pl, colors, colormaps
 from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import Colormap, Normalize
@@ -160,7 +159,7 @@ def embedding(
             raise ValueError("Cannot specify both `color_map` and `cmap`.")
         else:
             cmap = color_map
-    cmap = copy(get_cmap(cmap))
+    cmap = copy(colormaps.get_cmap(cmap))
     cmap.set_bad(na_color)
     kwargs["cmap"] = cmap
     # Prevents warnings during legend creation

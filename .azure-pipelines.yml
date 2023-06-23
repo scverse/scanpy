@@ -4,9 +4,11 @@ trigger:
 variables:
   python.version: '3.9'
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
+  PYTEST_ADDOPTS: '-v --color=yes --nunit-xml=nunit/test-results.xml'
   ANNDATA_DEV: no
   RUN_COVERAGE: no
   TEST_EXTRA: 'test-full'
+  PRERELEASE_DEPENDENCIES: no
 
 jobs:
 - job: PyTest
@@ -23,6 +25,8 @@ jobs:
         python.version: '3.9'
         ANNDATA_DEV: yes
         RUN_COVERAGE: yes
+        PRERELEASE_DEPENDENCIES: yes
+
   steps:
   - task: UsePythonVersion@0
     inputs:
@@ -45,9 +49,17 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install pytest-cov wheel
+      pip install wheel coverage
       pip install .[dev,$(TEST_EXTRA)]
     displayName: 'Install dependencies'
+    condition: eq(variables['PRERELEASE_DEPENDENCIES'], 'no')
+
+  - script: |
+      python -m pip install --pre --upgrade pip
+      pip install --pre wheel coverage
+      pip install --pre .[dev,$(TEST_EXTRA)]
+    displayName: 'Install dependencies release candidates'
+    condition: eq(variables['PRERELEASE_DEPENDENCIES'], 'yes')
 
   - script: |
       pip install -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
@@ -58,13 +70,13 @@ jobs:
       pip list
     displayName: 'Display installed versions'
 
-  - script: |
-      pytest -v --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml"
+  - script: pytest
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')
 
   - script: |
-      pytest -v --color=yes --ignore=scanpy/tests/_images --nunit-xml="nunit/test-results.xml" --cov=scanpy --cov-report=xml
+      coverage run -m pytest
+      coverage xml
     displayName: 'PyTest (coverage)'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 

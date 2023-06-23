@@ -9,6 +9,8 @@
 /docs/data/
 
 # tests
+/*coverage*
+/nunit/
 /.cache/
 /.pytest_cache/
 /scanpy/tests/test*.h5ad
@@ -39,6 +41,3 @@ Thumbs.db
 # IDEs and editors
 /.idea/
 /.vscode/
-
-# Test artifacts
-**/test-results.xml
