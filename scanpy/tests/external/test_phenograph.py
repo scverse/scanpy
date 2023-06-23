@@ -6,10 +6,10 @@ from anndata import AnnData
 
 import scanpy as sc
 import scanpy.external as sce
+from scanpy.testing._pytest.marks import needs
 
-pytest.importorskip("phenograph")
 
-
+@needs("phenograph")
 def test_phenograph():
     df = np.random.rand(1000, 40)
     dframe = pd.DataFrame(df)

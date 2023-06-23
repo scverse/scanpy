@@ -1,18 +1,13 @@
+from __future__ import annotations
+
 from functools import partial
-from importlib.util import find_spec
 from pathlib import Path
 from itertools import repeat, chain, combinations
+from collections.abc import Callable
 
 import pytest
 from matplotlib.testing import setup
 from packaging import version
-from scanpy.tests._data._cached_datasets import (
-    pbmc3k,
-    pbmc3k_processed,
-    pbmc68k_reduced,
-    krumsiek11,
-)
-from scanpy._compat import pkg_version
 
 setup()
 
@@ -25,6 +20,15 @@ from matplotlib.testing.compare import compare_images
 from anndata import AnnData
 
 import scanpy as sc
+from scanpy._compat import pkg_version
+from scanpy.testing._pytest.marks import needs
+from scanpy.testing._helpers.data import (
+    pbmc3k,
+    pbmc3k_processed,
+    krumsiek11,
+    pbmc68k_reduced,
+)
+
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / '_images'
@@ -39,7 +43,7 @@ sc.set_figure_params(dpi=40, color_map='viridis')
 # the ./figures folder to ./_images/
 
 
-@pytest.mark.skipif(not find_spec("leidenalg"), reason="needs module `leidenalg`")
+@needs("leidenalg")
 def test_heatmap(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
@@ -521,12 +525,10 @@ def test_violin(image_comparer):
 
 
 # TODO: Generalize test to more plotting types
-def test_violin_without_raw(tmpdir):
+def test_violin_without_raw(tmp_path):
     # https://github.com/scverse/scanpy/issues/1546
-    TESTDIR = Path(tmpdir)
-
-    has_raw_pth = TESTDIR / "has_raw.png"
-    no_raw_pth = TESTDIR / "no_raw.png"
+    has_raw_pth = tmp_path / "has_raw.png"
+    no_raw_pth = tmp_path / "no_raw.png"
 
     pbmc = pbmc68k_reduced()
     pbmc_no_raw = pbmc.raw.to_adata().copy()
@@ -790,7 +792,7 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
 
 @pytest.fixture(scope="session")
-def gene_symbols_adatas():
+def _gene_symbols_adatas():
     """Create two anndata objects which are equivalent except for var_names
 
     Both have ensembl ids and hgnc symbols as columns in var. The first has ensembl
@@ -820,6 +822,12 @@ def gene_symbols_adatas():
     sc.tl.rank_genes_groups(b, groupby="louvain")
 
     return a, b
+
+
+@pytest.fixture
+def gene_symbols_adatas(_gene_symbols_adatas):
+    a, b = _gene_symbols_adatas
+    return a.copy(), b.copy()
 
 
 @pytest.mark.parametrize(
@@ -876,7 +884,7 @@ def test_plot_rank_genes_groups_gene_symbols(
         # TODO: add other rank_genes_groups plots here once they work
     ),
 )
-def test_rank_genes_groups_plots_n_genes_vs_var_names(tmpdir, func, check_same_image):
+def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same_image):
     """\
     Checks that passing a negative value for n_genes works, and that passing
     var_names as a dict works.
@@ -894,10 +902,10 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmpdir, func, check_same_i
         top_genes[g] = list(subdf["names"].head(N))
         bottom_genes[g] = list(subdf["names"].tail(N))
 
-    positive_n_pth = tmpdir / f"{func.__name__}_positive_n.png"
-    top_genes_pth = tmpdir / f"{func.__name__}_top_genes.png"
-    negative_n_pth = tmpdir / f"{func.__name__}_negative_n.png"
-    bottom_genes_pth = tmpdir / f"{func.__name__}_bottom_genes.png"
+    positive_n_pth = tmp_path / f"{func.__name__}_positive_n.png"
+    top_genes_pth = tmp_path / f"{func.__name__}_top_genes.png"
+    negative_n_pth = tmp_path / f"{func.__name__}_negative_n.png"
+    bottom_genes_pth = tmp_path / f"{func.__name__}_bottom_genes.png"
 
     def wrapped(pth, **kwargs):
         func(pbmc, groupby="louvain", dendrogram=False, **kwargs)
@@ -918,7 +926,7 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmpdir, func, check_same_i
     with pytest.raises(
         ValueError, match="n_genes and var_names are mutually exclusive"
     ):
-        wrapped(tmpdir / "not_written.png", n_genes=N, var_names=top_genes)
+        wrapped(tmp_path / "not_written.png", n_genes=N, var_names=top_genes)
 
 
 @pytest.mark.parametrize(
@@ -945,7 +953,7 @@ def test_genes_symbols(image_comparer, id, fn):
 
 
 @pytest.fixture(scope="module")
-def _pbmc_scatterplots():
+def _pbmc_scatterplots_session():
     # Wrapped in another fixture to avoid mutation
     pbmc = pbmc68k_reduced()
     pbmc.layers["sparse"] = pbmc.raw.X / 2
@@ -958,8 +966,8 @@ def _pbmc_scatterplots():
 
 
 @pytest.fixture
-def pbmc_scatterplots(_pbmc_scatterplots):
-    return _pbmc_scatterplots.copy()
+def pbmc_scatterplots(_pbmc_scatterplots_session):
+    return _pbmc_scatterplots_session.copy()
 
 
 @pytest.mark.parametrize(
@@ -1218,6 +1226,17 @@ def test_scatter_raw(tmp_path):
     assert "Error" in comp, "Plots should change depending on use_raw."
 
 
+def test_binary_scatter(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    data = AnnData(
+        np.asarray([[-1, 2, 0], [3, 4, 0], [1, 2, 0]]).T,
+        obs=dict(binary=np.asarray([False, True, True])),
+    )
+    sc.pp.pca(data)
+    sc.pl.pca(data, color='binary')
+    save_and_compare_images('master_binary_pca')
+
+
 def test_scatter_specify_layer_and_raw():
     pbmc = pbmc68k_reduced()
     pbmc.layers["layer"] = pbmc.raw.X.copy()
@@ -1242,29 +1261,31 @@ def test_scatter_no_basis_per_var(image_comparer):
 
 
 @pytest.fixture
-def pbmc_filtered():
+def pbmc_filtered() -> Callable[[], AnnData]:
     pbmc = pbmc68k_reduced()
     sc.pp.filter_genes(pbmc, min_cells=10)
-    return pbmc
+    return pbmc.copy
 
 
 def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmpdir):
+    adata = pbmc_filtered()
+
     """Test scatterplots of raw layer with no basis."""
     path1 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawNone.png"
     path2 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawTrue.png"
     path3 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawToAdata.png"
 
-    sc.pl.scatter(pbmc_filtered, x='EGFL7', y='F12', color='FAM185A', use_raw=None)
+    sc.pl.scatter(adata, x='EGFL7', y='F12', color='FAM185A', use_raw=None)
     plt.savefig(path1)
     plt.close()
 
     # is equivalent to:
-    sc.pl.scatter(pbmc_filtered, x='EGFL7', y='F12', color='FAM185A', use_raw=True)
+    sc.pl.scatter(adata, x='EGFL7', y='F12', color='FAM185A', use_raw=True)
     plt.savefig(path2)
     plt.close()
 
     # and also to:
-    sc.pl.scatter(pbmc_filtered.raw.to_adata(), x='EGFL7', y='F12', color='FAM185A')
+    sc.pl.scatter(adata.raw.to_adata(), x='EGFL7', y='F12', color='FAM185A')
     plt.savefig(path3)
 
     check_same_image(path1, path2, tol=15)
@@ -1292,7 +1313,7 @@ def test_scatter_no_basis_value_error(pbmc_filtered, x, y, color, use_raw):
     expected.
     """
     with pytest.raises(ValueError):
-        sc.pl.scatter(pbmc_filtered, x=x, y=y, color=color, use_raw=use_raw)
+        sc.pl.scatter(pbmc_filtered(), x=x, y=y, color=color, use_raw=use_raw)
 
 
 def test_rankings(image_comparer):
@@ -1495,8 +1516,7 @@ def test_repeated_colors_w_missing_value():
         # TODO: add other rank_genes_groups plots here once they work
     ),
 )
-def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
-    TESTDIR = Path(tmpdir)
+def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     N_GENES = 4
 
     adata = pbmc68k_reduced()
@@ -1517,8 +1537,8 @@ def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
 
     var_names = {k: v.head(N_GENES).tolist() for k, v in df.groupby("group")["names"]}
 
-    pth_a = TESTDIR / f"{plot.__name__}_filter_a.png"
-    pth_b = TESTDIR / f"{plot.__name__}_filter_b.png"
+    pth_a = tmp_path / f"{plot.__name__}_filter_a.png"
+    pth_b = tmp_path / f"{plot.__name__}_filter_b.png"
 
     plot(adata, key='rank_genes_groups_filtered', n_genes=N_GENES)
     plt.savefig(pth_a)
@@ -1531,7 +1551,7 @@ def test_filter_rank_genes_groups_plots(tmpdir, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@pytest.mark.skipif(not find_spec("scrublet"), reason="needs module `scrublet`")
+@needs("scrublet")
 def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
 

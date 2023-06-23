@@ -95,18 +95,10 @@ def tsne(
         n_jobs=n_jobs,
         metric=metric,
     )
-    # square_distances will default to true in the future, we'll get ahead of the
-    # warning for now
-    if metric != "euclidean":
-        sklearn_version = version.parse(sklearn.__version__)
-        if sklearn_version >= version.parse("0.24.0"):
-            params_sklearn["square_distances"] = True
-        else:
-            warnings.warn(
-                "Results for non-euclidean metrics changed in sklearn 0.24.0, while "
-                f"you are using {sklearn.__version__}.",
-                UserWarning,
-            )
+    if metric != "euclidean" and (
+        version.parse(sklearn.__version__) < version.parse("1.3.0rc1")
+    ):
+        params_sklearn["square_distances"] = True
 
     # Backwards compat handling: Remove in scanpy 1.9.0
     if n_jobs != 1 and not use_fast_tsne:

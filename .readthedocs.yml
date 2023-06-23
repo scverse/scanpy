@@ -11,3 +11,7 @@ python:
     path: .
     extra_requirements:
     - doc
+    - leiden
+submodules:
+  include:
+     - "docs/tutorials"

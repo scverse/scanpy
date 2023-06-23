@@ -10,7 +10,7 @@ requires = [
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = {file = "LICENSE"}
 authors = [
     {name = "Alex Wolf"},
@@ -44,9 +44,10 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
@@ -60,7 +61,7 @@ dependencies = [
     "seaborn",
     "h5py>=3",
     "tqdm",
-    "scikit-learn>=0.22",
+    "scikit-learn>=0.24",
     "statsmodels>=0.10.0rc2",
     "patsy",
     "networkx>=2.3",
@@ -71,7 +72,6 @@ dependencies = [
     "packaging",
     "session-info",
     # for getting the stable version
-    "importlib_metadata>=0.7; python_version < '3.8'",
 ]
 dynamic = ["version"]
 
@@ -79,6 +79,8 @@ dynamic = ["version"]
 Documentation = "https://scanpy.readthedocs.io/"
 Source = "https://github.com/scverse/scanpy"
 Home-page = "https://scanpy.org"
+Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
+Twitter = "https://twitter.com/scverse_team"
 
 [project.scripts]
 scanpy = "scanpy.cli:console_main"
@@ -107,11 +109,17 @@ test-full = [
     "scanpy[scrublet]",
 ]
 doc = [
-    "sphinx>=4.4",
-    "sphinx-rtd-theme>=1.0",
+    "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
     "scanpydoc[typehints]>=0.7.7",
-    "typing_extensions; python_version < '3.8'",  # for `Literal`
     "myst-parser",
+    "myst-nb",
+    "sphinx-book-theme",
+    "sphinx-design",
+    "sphinxext-opengraph", # for nice cards when sharing on social
+    "sphinx-copybutton",
+    "nbsphinx",
+    "ipython>=7.20",  # for nbsphinx code highlighting
+    "matplotlib!=3.6.1",
     "scanpy[paga]",
 ]
 dev = [
@@ -142,21 +150,48 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
-python_files = "test_*.py"
-testpaths = "scanpy/tests/"
+addopts = [
+    "--import-mode=importlib",
+    "-pscanpy.testing._pytest",
+]
+testpaths = ["scanpy"]
+ignore = ["scanpy/tests/_images"]
+xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
 ]
 
 [tool.coverage.run]
-source = ["scanpy"]
+source_pkgs = ["scanpy"]
 omit = ["*/tests/*"]
+[tool.coverage.paths]
+source = [".", "**/site-packages"]
 
 [tool.black]
-line-length = 88
-target-version = ["py37"]
 skip-string-normalization = true
-exclude = """
-/build/.*
-"""
+
+[tool.ruff]
+select = [
+    "F",  # Pyflakes
+    "E",  # Pycodestyle errors
+    "W",  # Pycodestyle warnings
+    "TID251",  # Banned imports
+]
+ignore = [
+    # module imported but unused -> required for Scanpys API
+    "F401",
+    # line too long -> we accept long comment lines; black gets rid of long code lines
+    "E501",
+    # module level import not at top of file -> required to circumvent circular imports for Scanpys API
+    "E402",
+    # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections
+    "E262",
+    # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
+    "E741",
+]
+[tool.ruff.per-file-ignores]
+# Do not assign a lambda expression, use a def
+"scanpy/tools/_rank_genes_groups.py" = ["E731"]
+[tool.ruff.flake8-tidy-imports.banned-api]
+"pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"

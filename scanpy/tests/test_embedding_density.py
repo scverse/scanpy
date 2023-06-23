@@ -1,7 +1,7 @@
 import numpy as np
 from anndata import AnnData
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 import scanpy as sc
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 def test_embedding_density():

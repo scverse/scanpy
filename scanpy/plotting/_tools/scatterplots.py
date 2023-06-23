@@ -11,6 +11,7 @@ from typing import (
     Mapping,
     List,
     Tuple,
+    Literal,
 )
 from warnings import warn
 
@@ -21,8 +22,7 @@ from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from pandas.api.types import is_categorical_dtype
-from matplotlib import pyplot as pl, colors
-from matplotlib.cm import get_cmap
+from matplotlib import pyplot as pl, colors, colormaps
 from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import Colormap, Normalize
@@ -49,7 +49,6 @@ from .._docs import (
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
-from ..._compat import Literal
 
 
 @_doc_params(
@@ -160,7 +159,7 @@ def embedding(
             raise ValueError("Cannot specify both `color_map` and `cmap`.")
         else:
             cmap = color_map
-    cmap = copy(get_cmap(cmap))
+    cmap = copy(colormaps.get_cmap(cmap))
     cmap.set_bad(na_color)
     kwargs["cmap"] = cmap
     # Prevents warnings during legend creation
@@ -434,7 +433,7 @@ def embedding(
             path_effect = None
 
         # Adding legends
-        if categorical:
+        if categorical or color_vector.dtype == bool:
             _add_categorical_legend(
                 ax,
                 color_source_vector,
@@ -883,7 +882,6 @@ def pca(
             adata, 'pca', show=show, return_fig=return_fig, save=save, **kwargs
         )
     else:
-
         if 'pca' not in adata.obsm.keys() and 'X_pca' not in adata.obsm.keys():
             raise KeyError(
                 f"Could not find entry in `obsm` for 'pca'.\n"
@@ -1099,7 +1097,10 @@ def _add_categorical_legend(
         color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
         palette = palette.copy()
         palette["NA"] = na_color
-    cats = color_source_vector.categories
+    if color_source_vector.dtype == bool:
+        cats = pd.Categorical(color_source_vector.astype(str)).categories
+    else:
+        cats = color_source_vector.categories
 
     if multi_panel is True:
         # Shrink current axis by 10% to fit legend and match
@@ -1179,13 +1180,16 @@ def _get_color_source_vector(
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
     if groups and is_categorical_dtype(values):
-        values = values.replace(values.categories.difference(groups), np.nan)
+        values = values.remove_categories(values.categories.difference(groups))
     return values
 
 
 def _get_palette(adata, values_key: str, palette=None):
     color_key = f"{values_key}_colors"
-    values = pd.Categorical(adata.obs[values_key])
+    if adata.obs[values_key].dtype == bool:
+        values = pd.Categorical(adata.obs[values_key].astype(str))
+    else:
+        values = pd.Categorical(adata.obs[values_key])
     if palette:
         _utils._set_colors_for_categorical_obs(adata, values_key, palette)
     elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
@@ -1216,9 +1220,9 @@ def _color_vector(
     to_hex = partial(colors.to_hex, keep_alpha=True)
     if values_key is None:
         return np.broadcast_to(to_hex(na_color), adata.n_obs), False
-    if not is_categorical_dtype(values):
-        return values, False
-    else:  # is_categorical_dtype(values)
+    if is_categorical_dtype(values) or values.dtype == bool:
+        if values.dtype == bool:
+            values = pd.Categorical(values.astype(str))
         color_map = {
             k: to_hex(v)
             for k, v in _get_palette(adata, values_key, palette=palette).items()
@@ -1232,6 +1236,8 @@ def _color_vector(
             color_vector = color_vector.add_categories([to_hex(na_color)])
             color_vector = color_vector.fillna(to_hex(na_color))
         return color_vector, True
+    elif not is_categorical_dtype(values):
+        return values, False
 
 
 def _basis2name(basis):

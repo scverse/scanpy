@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Optional, Literal
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -9,7 +9,6 @@ from anndata import AnnData
 from .. import logging as logg
 from .._settings import settings, Verbosity
 from .._utils import sanitize_anndata, check_nonnegative_integers
-from .._compat import Literal
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
@@ -265,6 +264,12 @@ def _highly_variable_genes_single_batch(
         if n_top_genes > adata.n_vars:
             logg.info('`n_top_genes` > `adata.n_var`, returning all genes.')
             n_top_genes = adata.n_vars
+        if n_top_genes > dispersion_norm.size:
+            warnings.warn(
+                '`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.',
+                UserWarning,
+            )
+            n_top_genes = dispersion_norm.size
         disp_cut_off = dispersion_norm[n_top_genes - 1]
         gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off
         logg.debug(
@@ -309,18 +314,21 @@ def highly_variable_genes(
     data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
+    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_. Seurat v3 flavor
+    requires `scikit-misc` package. If you plan to use this flavor, consider
+    installing `scanpy` with this optional dependency: `scanpy[skmisc]`.
 
-    For the dispersion-based methods ([Satija15]_ and [Zheng17]_), the normalized
-    dispersion is obtained by scaling with the mean and standard deviation of
-    the dispersions for genes falling into a given bin for mean expression of
-    genes. This means that for each bin of mean expression, highly variable
-    genes are selected.
+    For the dispersion-based methods (`flavor='seurat'` [Satija15]_ and
+    `flavor='cell_ranger'` [Zheng17]_), the normalized dispersion is obtained
+    by scaling with the mean and standard deviation of the dispersions for genes
+    falling into a given bin for mean expression of genes. This means that for each
+    bin of mean expression, highly variable genes are selected.
 
-    For [Stuart19]_, a normalized variance for each gene is computed. First, the data
-    are standardized (i.e., z-score normalization per feature) with a regularized
-    standard deviation. Next, the normalized variance is computed as the variance
-    of each gene after the transformation. Genes are ranked by the normalized variance.
+    For `flavor='seurat_v3'` [Stuart19]_, a normalized variance for each gene
+    is computed. First, the data are standardized (i.e., z-score normalization
+    per feature) with a regularized standard deviation. Next, the normalized variance
+    is computed as the variance of each gene after the transformation. Genes are ranked
+    by the normalized variance.
 
     See also `scanpy.experimental.pp._highly_variable_genes` for additional flavours
     (e.g. Pearson residuals).
@@ -458,6 +466,7 @@ def highly_variable_genes(
 
             hvg = _highly_variable_genes_single_batch(
                 adata_subset,
+                layer=layer,
                 min_disp=min_disp,
                 max_disp=max_disp,
                 min_mean=min_mean,
@@ -475,7 +484,7 @@ def highly_variable_genes(
             missing_hvg['highly_variable'] = missing_hvg['highly_variable'].astype(bool)
             missing_hvg['gene'] = gene_list[~filt]
             hvg['gene'] = adata_subset.var_names.values
-            hvg = hvg.append(missing_hvg, ignore_index=True)
+            hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
 
             # Order as before filtering
             idxs = np.concatenate((np.where(filt)[0], np.where(~filt)[0]))

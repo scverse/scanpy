@@ -26,7 +26,6 @@ def test_descend_classes_and_funcs():
 
 
 def test_check_nonnegative_integers():
-
     X = np.random.poisson(size=(100, 100)).astype(np.float64)
     assert check_nonnegative_integers(X) is True
     assert check_nonnegative_integers(-X) is False

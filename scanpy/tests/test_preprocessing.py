@@ -1,5 +1,4 @@
 from itertools import product
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,16 +9,16 @@ import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal, asarray
 
-from scanpy.tests.helpers import check_rep_mutation, check_rep_results
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._helpers import check_rep_mutation, check_rep_results
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 def test_log1p(tmp_path):
-    A = np.random.rand(200, 10)
+    A = np.random.rand(200, 10).astype(np.float32)
     A_l = np.log1p(A)
-    ad = AnnData(A)
-    ad2 = AnnData(A)
-    ad3 = AnnData(A)
+    ad = AnnData(A.copy())
+    ad2 = AnnData(A.copy())
+    ad3 = AnnData(A.copy())
     ad3.filename = tmp_path / 'test.h5ad'
     sc.pp.log1p(ad)
     assert np.allclose(ad.X, A_l)
@@ -84,18 +83,19 @@ def test_mean_var_sparse():
 
 
 def test_normalize_per_cell():
-    adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
+    A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
+    adata = AnnData(A.copy())
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts='n_counts2')
     assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now with copy option
-    adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
+    adata = AnnData(A.copy())
     # note that sc.pp.normalize_per_cell is also used in
     # pl.highest_expr_genes with parameter counts_per_cell_after=100
     adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
     assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now sparse
-    adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
-    adata_sparse = AnnData(sp.csr_matrix([[1, 0], [3, 0], [5, 6]]))
+    adata = AnnData(A.copy())
+    adata_sparse = AnnData(sp.csr_matrix(A.copy()))
     sc.pp.normalize_per_cell(adata)
     sc.pp.normalize_per_cell(adata_sparse)
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()

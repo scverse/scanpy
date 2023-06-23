@@ -125,6 +125,7 @@ def scanorama_integrate(
         approx=approx,
         alpha=alpha,
         ds_names=batch_names,
+        batch_size=batch_size,
         **kwargs,
     )
 

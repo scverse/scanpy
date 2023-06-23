@@ -13,10 +13,10 @@ from numpy.random import negative_binomial, binomial, seed
 
 import scanpy as sc
 from anndata import AnnData
+from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 from scanpy._utils import select_groups
 
 

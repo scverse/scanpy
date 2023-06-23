@@ -7,13 +7,12 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.colors import Normalize
 from matplotlib import pyplot as pl
-from matplotlib import rcParams, cm
+from matplotlib import rcParams, colormaps
 from anndata import AnnData
-from typing import Union, Optional, List, Sequence, Iterable, Mapping
+from typing import Union, Optional, List, Sequence, Iterable, Mapping, Literal
 
 from .._utils import savefig_or_show
 from ..._utils import _doc_params, sanitize_anndata, subsample
-from ..._compat import Literal
 from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
@@ -1447,7 +1446,7 @@ def embedding_density(
 
     # Make the color map
     if isinstance(color_map, str):
-        color_map = copy(cm.get_cmap(color_map))
+        color_map = copy(colormaps.get_cmap(color_map))
 
     color_map.set_over('black')
     color_map.set_under('lightgray')
@@ -1618,7 +1617,6 @@ def _get_values_to_plot(
     if groups is None:
         groups = adata.uns[key]['names'].dtype.names
     if values_to_plot is not None:
-
         df_list = []
         for group in groups:
             df = rank_genes_groups_df(adata, group, key=key, gene_symbols=gene_symbols)
