@@ -192,8 +192,8 @@ ignore = [
     "E741",
 ]
 [tool.ruff.flake8-quotes]
-inline-quotes = 'single'
-multiline-quotes = 'single'
+inline-quotes = "single"
+multiline-quotes = "single"
 [tool.ruff.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
