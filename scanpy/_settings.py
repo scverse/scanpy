@@ -36,7 +36,7 @@ class Verbosity(IntEnum):
         return getLevelName(_VERBOSITY_TO_LOGLEVEL[self])
 
     @contextmanager
-    def override(self, verbosity: "Verbosity") -> ContextManager["Verbosity"]:
+    def override(self, verbosity: 'Verbosity') -> ContextManager['Verbosity']:
         """\
         Temporarily override verbosity
         """
@@ -52,10 +52,10 @@ def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
         possible_types_str = types.__name__
     else:
         type_names = [t.__name__ for t in types]
-        possible_types_str = "{} or {}".format(
-            ", ".join(type_names[:-1]), type_names[-1]
+        possible_types_str = '{} or {}'.format(
+            ', '.join(type_names[:-1]), type_names[-1]
         )
-    raise TypeError(f"{varname} must be of type {possible_types_str}")
+    raise TypeError(f'{varname} must be of type {possible_types_str}')
 
 
 class ScanpyConfig:
@@ -66,21 +66,21 @@ class ScanpyConfig:
     def __init__(
         self,
         *,
-        verbosity: str = "warning",
-        plot_suffix: str = "",
-        file_format_data: str = "h5ad",
-        file_format_figs: str = "pdf",
+        verbosity: str = 'warning',
+        plot_suffix: str = '',
+        file_format_data: str = 'h5ad',
+        file_format_figs: str = 'pdf',
         autosave: bool = False,
         autoshow: bool = True,
-        writedir: Union[str, Path] = "./write/",
-        cachedir: Union[str, Path] = "./cache/",
-        datasetdir: Union[str, Path] = "./data/",
-        figdir: Union[str, Path] = "./figures/",
+        writedir: Union[str, Path] = './write/',
+        cachedir: Union[str, Path] = './cache/',
+        datasetdir: Union[str, Path] = './data/',
+        figdir: Union[str, Path] = './figures/',
         cache_compression: Union[str, None] = 'lzf',
         max_memory=15,
         n_jobs=1,
         logfile: Union[str, Path, None] = None,
-        categories_to_ignore: Iterable[str] = ("N/A", "dontknow", "no_gate", "?"),
+        categories_to_ignore: Iterable[str] = ('N/A', 'dontknow', 'no_gate', '?'),
         _frameon: bool = True,
         _vector_friendly: bool = False,
         _low_resolution_warning: bool = True,
@@ -105,25 +105,25 @@ class ScanpyConfig:
         self.n_jobs = n_jobs
         self.categories_to_ignore = categories_to_ignore
         self._frameon = _frameon
-        """bool: See set_figure_params."""
+        '''bool: See set_figure_params.'''
 
         self._vector_friendly = _vector_friendly
-        """Set to true if you want to include pngs in svgs and pdfs."""
+        '''Set to true if you want to include pngs in svgs and pdfs.'''
 
         self._low_resolution_warning = _low_resolution_warning
-        """Print warning when saving a figure with low resolution."""
+        '''Print warning when saving a figure with low resolution.'''
 
         self._start = time()
-        """Time when the settings module is first imported."""
+        '''Time when the settings module is first imported.'''
 
         self._previous_time = self._start
-        """Variable for timing program parts."""
+        '''Variable for timing program parts.'''
 
         self._previous_memory_usage = -1
-        """Stores the previous memory usage."""
+        '''Stores the previous memory usage.'''
 
         self.N_PCS = n_pcs
-        """Default number of principal components to use."""
+        '''Default number of principal components to use.'''
 
     @property
     def verbosity(self) -> Verbosity:
@@ -151,13 +151,13 @@ class ScanpyConfig:
             verbosity = verbosity.lower()
             if verbosity not in verbosity_str_options:
                 raise ValueError(
-                    f"Cannot set verbosity to {verbosity}. "
-                    f"Accepted string values are: {verbosity_str_options}"
+                    f'Cannot set verbosity to {verbosity}. '
+                    f'Accepted string values are: {verbosity_str_options}'
                 )
             else:
                 self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
-            _type_check(verbosity, "verbosity", (str, int))
+            _type_check(verbosity, 'verbosity', (str, int))
         _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity])
 
     @property
@@ -167,7 +167,7 @@ class ScanpyConfig:
 
     @plot_suffix.setter
     def plot_suffix(self, plot_suffix: str):
-        _type_check(plot_suffix, "plot_suffix", str)
+        _type_check(plot_suffix, 'plot_suffix', str)
         self._plot_suffix = plot_suffix
 
     @property
@@ -181,12 +181,12 @@ class ScanpyConfig:
 
     @file_format_data.setter
     def file_format_data(self, file_format: str):
-        _type_check(file_format, "file_format_data", str)
-        file_format_options = {"txt", "csv", "h5ad"}
+        _type_check(file_format, 'file_format_data', str)
+        file_format_options = {'txt', 'csv', 'h5ad'}
         if file_format not in file_format_options:
             raise ValueError(
-                f"Cannot set file_format_data to {file_format}. "
-                f"Must be one of {file_format_options}"
+                f'Cannot set file_format_data to {file_format}. '
+                f'Must be one of {file_format_options}'
             )
         self._file_format_data = file_format
 
@@ -201,7 +201,7 @@ class ScanpyConfig:
 
     @file_format_figs.setter
     def file_format_figs(self, figure_format: str):
-        _type_check(figure_format, "figure_format_data", str)
+        _type_check(figure_format, 'figure_format_data', str)
         self._file_format_figs = figure_format
 
     @property
@@ -215,7 +215,7 @@ class ScanpyConfig:
 
     @autosave.setter
     def autosave(self, autosave: bool):
-        _type_check(autosave, "autosave", bool)
+        _type_check(autosave, 'autosave', bool)
         self._autosave = autosave
 
     @property
@@ -229,7 +229,7 @@ class ScanpyConfig:
 
     @autoshow.setter
     def autoshow(self, autoshow: bool):
-        _type_check(autoshow, "autoshow", bool)
+        _type_check(autoshow, 'autoshow', bool)
         self._autoshow = autoshow
 
     @property
@@ -241,7 +241,7 @@ class ScanpyConfig:
 
     @writedir.setter
     def writedir(self, writedir: Union[str, Path]):
-        _type_check(writedir, "writedir", (str, Path))
+        _type_check(writedir, 'writedir', (str, Path))
         self._writedir = Path(writedir)
 
     @property
@@ -253,7 +253,7 @@ class ScanpyConfig:
 
     @cachedir.setter
     def cachedir(self, cachedir: Union[str, Path]):
-        _type_check(cachedir, "cachedir", (str, Path))
+        _type_check(cachedir, 'cachedir', (str, Path))
         self._cachedir = Path(cachedir)
 
     @property
@@ -265,7 +265,7 @@ class ScanpyConfig:
 
     @datasetdir.setter
     def datasetdir(self, datasetdir: Union[str, Path]):
-        _type_check(datasetdir, "datasetdir", (str, Path))
+        _type_check(datasetdir, 'datasetdir', (str, Path))
         self._datasetdir = Path(datasetdir).resolve()
 
     @property
@@ -277,7 +277,7 @@ class ScanpyConfig:
 
     @figdir.setter
     def figdir(self, figdir: Union[str, Path]):
-        _type_check(figdir, "figdir", (str, Path))
+        _type_check(figdir, 'figdir', (str, Path))
         self._figdir = Path(figdir)
 
     @property
@@ -309,7 +309,7 @@ class ScanpyConfig:
 
     @max_memory.setter
     def max_memory(self, max_memory: Union[int, float]):
-        _type_check(max_memory, "max_memory", (int, float))
+        _type_check(max_memory, 'max_memory', (int, float))
         self._max_memory = max_memory
 
     @property
@@ -321,7 +321,7 @@ class ScanpyConfig:
 
     @n_jobs.setter
     def n_jobs(self, n_jobs: int):
-        _type_check(n_jobs, "n_jobs", int)
+        _type_check(n_jobs, 'n_jobs', int)
         self._n_jobs = n_jobs
 
     @property
@@ -333,7 +333,7 @@ class ScanpyConfig:
 
     @logpath.setter
     def logpath(self, logpath: Union[str, Path, None]):
-        _type_check(logpath, "logfile", (str, Path))
+        _type_check(logpath, 'logfile', (str, Path))
         # set via “file object” branch of logfile.setter
         self.logfile = Path(logpath).open('a')
         self._logpath = Path(logpath)
@@ -373,7 +373,7 @@ class ScanpyConfig:
     def categories_to_ignore(self, categories_to_ignore: Iterable[str]):
         categories_to_ignore = list(categories_to_ignore)
         for i, cat in enumerate(categories_to_ignore):
-            _type_check(cat, f"categories_to_ignore[{i}]", str)
+            _type_check(cat, f'categories_to_ignore[{i}]', str)
         self._categories_to_ignore = categories_to_ignore
 
     # --------------------------------------------------------------------------------
@@ -399,10 +399,10 @@ class ScanpyConfig:
         fontsize: int = 14,
         figsize: Optional[int] = None,
         color_map: Optional[str] = None,
-        format: _Format = "pdf",
+        format: _Format = 'pdf',
         facecolor: Optional[str] = None,
         transparent: bool = False,
-        ipython_format: str = "png2x",
+        ipython_format: str = 'png2x',
     ):
         """\
         Set resolution/size, styling and format of figures.
@@ -450,11 +450,11 @@ class ScanpyConfig:
         self._vector_friendly = vector_friendly
         self.file_format_figs = format
         if dpi is not None:
-            rcParams["figure.dpi"] = dpi
+            rcParams['figure.dpi'] = dpi
         if dpi_save is not None:
-            rcParams["savefig.dpi"] = dpi_save
+            rcParams['savefig.dpi'] = dpi_save
         if transparent is not None:
-            rcParams["savefig.transparent"] = transparent
+            rcParams['savefig.transparent'] = transparent
         if facecolor is not None:
             rcParams['figure.facecolor'] = facecolor
             rcParams['axes.facecolor'] = facecolor
@@ -471,13 +471,13 @@ class ScanpyConfig:
         """Determines whether we're currently in IPython."""
         import builtins
 
-        return getattr(builtins, "__IPYTHON__", False)
+        return getattr(builtins, '__IPYTHON__', False)
 
     def __str__(self) -> str:
         return '\n'.join(
             f'{k} = {v!r}'
             for k, v in inspect.getmembers(self)
-            if not k.startswith("_") and not k == 'getdoc'
+            if not k.startswith('_') and not k == 'getdoc'
         )
 
 

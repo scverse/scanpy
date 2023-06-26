@@ -80,7 +80,7 @@ def embedding(
     color_map: Union[Colormap, str, None] = None,
     cmap: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
-    na_color: ColorLike = "lightgray",
+    na_color: ColorLike = 'lightgray',
     na_in_legend: bool = True,
     size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
@@ -88,7 +88,7 @@ def embedding(
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
-    colorbar_loc: Optional[str] = "right",
+    colorbar_loc: Optional[str] = 'right',
     vmax: Union[VBound, Sequence[VBound], None] = None,
     vmin: Union[VBound, Sequence[VBound], None] = None,
     vcenter: Union[VBound, Sequence[VBound], None] = None,
@@ -141,13 +141,13 @@ def embedding(
         use_raw = layer is None and adata.raw is not None
     if use_raw and layer is not None:
         raise ValueError(
-            "Cannot use both a layer and the raw representation. Was passed:"
-            f"use_raw={use_raw}, layer={layer}."
+            'Cannot use both a layer and the raw representation. Was passed:'
+            f'use_raw={use_raw}, layer={layer}.'
         )
     if use_raw and adata.raw is None:
         raise ValueError(
-            "`use_raw` is set to True but AnnData object does not have raw. "
-            "Please check."
+            '`use_raw` is set to True but AnnData object does not have raw. '
+            'Please check.'
         )
 
     if isinstance(groups, str):
@@ -156,12 +156,12 @@ def embedding(
     # Color map
     if color_map is not None:
         if cmap is not None:
-            raise ValueError("Cannot specify both `color_map` and `cmap`.")
+            raise ValueError('Cannot specify both `color_map` and `cmap`.')
         else:
             cmap = color_map
     cmap = copy(colormaps.get_cmap(cmap))
     cmap.set_bad(na_color)
-    kwargs["cmap"] = cmap
+    kwargs['cmap'] = cmap
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
@@ -273,10 +273,10 @@ def embedding(
         order = slice(None)
         if sort_order is True and value_to_plot is not None and categorical is False:
             # Higher values plotted on top, null values on bottom
-            order = np.argsort(-color_vector, kind="stable")[::-1]
+            order = np.argsort(-color_vector, kind='stable')[::-1]
         elif sort_order and categorical:
             # Null points go on bottom
-            order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
+            order = np.argsort(~pd.isnull(color_source_vector), kind='stable')
         # Set orders
         if isinstance(size, np.ndarray):
             size = np.array(size)[order]
@@ -325,7 +325,7 @@ def embedding(
                 coords[:, 0],
                 coords[:, 1],
                 coords[:, 2],
-                marker=".",
+                marker='.',
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 norm=normalize,
@@ -369,7 +369,7 @@ def embedding(
                     coords[:, 0],
                     coords[:, 1],
                     s=bg_size,
-                    marker=".",
+                    marker='.',
                     c=bg_color,
                     rasterized=settings._vector_friendly,
                     norm=normalize,
@@ -379,7 +379,7 @@ def embedding(
                     coords[:, 0],
                     coords[:, 1],
                     s=gap_size,
-                    marker=".",
+                    marker='.',
                     c=gap_color,
                     rasterized=settings._vector_friendly,
                     norm=normalize,
@@ -391,7 +391,7 @@ def embedding(
             cax = scatter(
                 coords[:, 0],
                 coords[:, 1],
-                marker=".",
+                marker='.',
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 norm=normalize,
@@ -534,9 +534,9 @@ def _get_vboundnorm(
                 v_value = v[index]
             except IndexError:
                 logg.error(
-                    f"The parameter {v_name} is not valid. If setting multiple {v_name} values,"
-                    f"check that the length of the {v_name} list is equal to the number "
-                    "of plots. "
+                    f'The parameter {v_name} is not valid. If setting multiple {v_name} values,'
+                    f'check that the length of the {v_name} list is equal to the number '
+                    'of plots. '
                 )
                 v_value = None
 
@@ -546,8 +546,8 @@ def _get_vboundnorm(
                     float(v_value[1:])
                 except ValueError:
                     logg.error(
-                        f"The parameter {v_name}={v_value} for plot number {index + 1} is not valid. "
-                        f"Please check the correct format for percentiles."
+                        f'The parameter {v_name}={v_value} for plot number {index + 1} is not valid. '
+                        f'Please check the correct format for percentiles.'
                     )
                 # interpret value of vmin/vmax as quantile with the following syntax 'p99.9'
                 v_value = np.nanpercentile(color_vector, q=float(v_value[1:]))
@@ -556,8 +556,8 @@ def _get_vboundnorm(
                 v_value = v_value(color_vector)
                 if not isinstance(v_value, float):
                     logg.error(
-                        f"The return of the function given for {v_name} is not valid. "
-                        "Please check that the function returns a number."
+                        f'The return of the function given for {v_name} is not valid. '
+                        'Please check that the function returns a number.'
                     )
                     v_value = None
             else:
@@ -582,9 +582,9 @@ def _wraps_plot_scatter(wrapper):
     wrapper_sig = inspect.signature(wrapper)
     wrapper_params = wrapper_sig.parameters.copy()
 
-    params.pop("basis")
-    params.pop("kwargs")
-    wrapper_params.pop("adata")
+    params.pop('basis')
+    params.pop('kwargs')
+    wrapper_params.pop('adata')
 
     params.update(wrapper_params)
     annotations = {
@@ -593,7 +593,7 @@ def _wraps_plot_scatter(wrapper):
         if v.annotation != inspect.Parameter.empty
     }
     if wrapper_sig.return_annotation is not inspect.Signature.empty:
-        annotations["return"] = wrapper_sig.return_annotation
+        annotations['return'] = wrapper_sig.return_annotation
 
     wrapper.__signature__ = inspect.Signature(
         list(params.values()), return_annotation=wrapper_sig.return_annotation
@@ -915,7 +915,7 @@ def pca(
 def spatial(
     adata,
     *,
-    basis: str = "spatial",
+    basis: str = 'spatial',
     img: Union[np.ndarray, None] = None,
     img_key: Union[str, None, Empty] = _empty,
     library_id: Union[str, Empty] = _empty,
@@ -993,7 +993,7 @@ def spatial(
     na_color = _check_na_color(na_color, img=img)
 
     if bw:
-        cmap_img = "gray"
+        cmap_img = 'gray'
     else:
         cmap_img = None
     circle_radius = size * scale_factor * spot_size * 0.5
@@ -1015,7 +1015,7 @@ def spatial(
         if img is not None:
             ax.imshow(img, cmap=cmap_img, alpha=alpha_img)
         else:
-            ax.set_aspect("equal")
+            ax.set_aspect('equal')
             ax.invert_yaxis()
         if crop_coord is not None:
             ax.set_xlim(crop_coord[0], crop_coord[1])
@@ -1033,26 +1033,26 @@ def _components_to_dimensions(
     components: Optional[Union[str, Collection[str]]],
     dimensions: Optional[Union[Collection[int], Collection[Collection[int]]]],
     *,
-    projection: Literal["2d", "3d"] = "2d",
+    projection: Literal['2d', '3d'] = '2d',
     total_dims: int,
 ) -> List[Collection[int]]:
     """Normalize components/ dimensions args for embedding plots."""
     # TODO: Deprecate components kwarg
-    ndims = {"2d": 2, "3d": 3}[projection]
+    ndims = {'2d': 2, '3d': 3}[projection]
     if components is None and dimensions is None:
         dimensions = [tuple(i for i in range(ndims))]
     elif components is not None and dimensions is not None:
-        raise ValueError("Cannot provide both dimensions and components")
+        raise ValueError('Cannot provide both dimensions and components')
 
     # TODO: Consider deprecating this
     # If components is not None, parse them and set dimensions
-    if components == "all":
+    if components == 'all':
         dimensions = list(combinations(range(total_dims), ndims))
     elif components is not None:
         if isinstance(components, str):
             components = [components]
         # Components use 1 based indexing
-        dimensions = [[int(dim) - 1 for dim in c.split(",")] for c in components]
+        dimensions = [[int(dim) - 1 for dim in c.split(',')] for c in components]
 
     if all(isinstance(el, Integral) for el in dimensions):
         dimensions = [dimensions]
@@ -1079,13 +1079,13 @@ def _add_categorical_legend(
 ):
     """Add a legend to the passed Axes."""
     if na_in_legend and pd.isnull(color_source_vector).any():
-        if "NA" in color_source_vector:
+        if 'NA' in color_source_vector:
             raise NotImplementedError(
-                "No fallback for null labels has been defined if NA already in categories."
+                'No fallback for null labels has been defined if NA already in categories.'
             )
-        color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
+        color_source_vector = color_source_vector.add_categories('NA').fillna('NA')
         palette = palette.copy()
-        palette["NA"] = na_color
+        palette['NA'] = na_color
     if color_source_vector.dtype == bool:
         cats = pd.Categorical(color_source_vector.astype(str)).categories
     else:
@@ -1111,7 +1111,7 @@ def _add_categorical_legend(
         # identify centroids to put labels
 
         all_pos = (
-            pd.DataFrame(scatter_array, columns=["x", "y"])
+            pd.DataFrame(scatter_array, columns=['x', 'y'])
             .groupby(color_source_vector, observed=True)
             .median()
             # Have to sort_index since if observed=True and categorical is unordered
@@ -1137,8 +1137,8 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
     """Get array for basis from anndata. Just tries to add 'X_'."""
     if basis in adata.obsm:
         return adata.obsm[basis]
-    elif f"X_{basis}" in adata.obsm:
-        return adata.obsm[f"X_{basis}"]
+    elif f'X_{basis}' in adata.obsm:
+        return adata.obsm[f'X_{basis}']
     else:
         raise KeyError(f"Could not find '{basis}' or 'X_{basis}' in .obsm")
 
@@ -1174,7 +1174,7 @@ def _get_color_source_vector(
 
 
 def _get_palette(adata, values_key: str, palette=None):
-    color_key = f"{values_key}_colors"
+    color_key = f'{values_key}_colors'
     if adata.obs[values_key].dtype == bool:
         values = pd.Categorical(adata.obs[values_key].astype(str))
     else:
@@ -1192,7 +1192,7 @@ def _get_palette(adata, values_key: str, palette=None):
 
 
 def _color_vector(
-    adata, values_key: str, values, palette, na_color="lightgray"
+    adata, values_key: str, values, palette, na_color='lightgray'
 ) -> Tuple[np.ndarray, bool]:
     """
     Map array of values to array of hex (plus alpha) codes.
@@ -1278,7 +1278,7 @@ def _check_scale_factor(
     if scale_factor is not None:
         return scale_factor
     elif spatial_data is not None and img_key is not None:
-        return spatial_data['scalefactors'][f"tissue_{img_key}_scalef"]
+        return spatial_data['scalefactors'][f'tissue_{img_key}_scalef']
     else:
         return 1.0
 
@@ -1291,7 +1291,7 @@ def _check_spatial_data(
 
     Assumes this is `.uns` from how we parse visium data.
     """
-    spatial_mapping = uns.get("spatial", {})
+    spatial_mapping = uns.get('spatial', {})
     if library_id is _empty:
         if len(spatial_mapping) > 1:
             raise ValueError(
@@ -1323,7 +1323,7 @@ def _check_img(
             (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
         )  # Throws StopIteration Error if keys not present
     if img is None and spatial_data is not None and img_key is not None:
-        img = spatial_data["images"][img_key]
+        img = spatial_data['images'][img_key]
     if bw:
         img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
     return img, img_key
@@ -1337,7 +1337,7 @@ def _check_crop_coord(
     if crop_coord is None:
         return None
     if len(crop_coord) != 4:
-        raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
+        raise ValueError('Invalid crop_coord of length {len(crop_coord)}(!=4)')
     crop_coord = tuple(c * scale_factor for c in crop_coord)
     return crop_coord
 
@@ -1349,7 +1349,7 @@ def _check_na_color(
         if img is not None:
             na_color = (0.0, 0.0, 0.0, 0.0)
         else:
-            na_color = "lightgray"
+            na_color = 'lightgray'
     return na_color
 
 
@@ -1360,7 +1360,7 @@ def _broadcast_args(*args):
     lens = [len(arg) for arg in args]
     longest = max(lens)
     if not (set(lens) == {1, longest} or set(lens) == {longest}):
-        raise ValueError(f"Could not broadast together arguments with shapes: {lens}.")
+        raise ValueError(f'Could not broadast together arguments with shapes: {lens}.')
     return list(
         [[arg[0] for _ in range(longest)] if len(arg) == 1 else arg for arg in args]
     )

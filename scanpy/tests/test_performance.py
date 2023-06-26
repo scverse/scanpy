@@ -4,18 +4,18 @@ from subprocess import run
 
 
 def descend(profimp_data, modules, path):
-    module = profimp_data["module"]
+    module = profimp_data['module']
     path = [*path, module]
     if module in modules:
-        yield " → ".join(e for e in path if e is not None)
+        yield ' → '.join(e for e in path if e is not None)
         modules.remove(module)
-    for child in profimp_data["children"]:
+    for child in profimp_data['children']:
         yield from descend(child, modules, path)
 
 
 def get_import_paths(modules):
     proc = run(
-        [sys.executable, "-m", "profimp.main", "import scanpy"],
+        [sys.executable, '-m', 'profimp.main', 'import scanpy'],
         capture_output=True,
         check=True,
     )
@@ -34,4 +34,4 @@ def test_deferred_imports(imported_modules):
     }
     falsely_imported = slow_to_import & imported_modules
 
-    assert not falsely_imported, "\n".join(get_import_paths(falsely_imported))
+    assert not falsely_imported, '\n'.join(get_import_paths(falsely_imported))

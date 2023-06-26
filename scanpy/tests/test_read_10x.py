@@ -32,30 +32,30 @@ def assert_anndata_equal(a1, a2):
         ),
     ],
 )
-@pytest.mark.parametrize('prefix', [None, "prefix_"])
+@pytest.mark.parametrize('prefix', [None, 'prefix_'])
 def test_read_10x(tmp_path, mtx_path, h5_path, prefix):
     if prefix is not None:
         # Build files named "prefix_XXX.xxx" in a temporary directory.
         mtx_path_orig = mtx_path
-        mtx_path = tmp_path / "filtered_gene_bc_matrices_prefix"
+        mtx_path = tmp_path / 'filtered_gene_bc_matrices_prefix'
         mtx_path.mkdir()
         for item in mtx_path_orig.iterdir():
             if item.is_file():
-                shutil.copyfile(item, mtx_path / f"{prefix}{item.name}")
+                shutil.copyfile(item, mtx_path / f'{prefix}{item.name}')
 
-    mtx = sc.read_10x_mtx(mtx_path, var_names="gene_symbols", prefix=prefix)
+    mtx = sc.read_10x_mtx(mtx_path, var_names='gene_symbols', prefix=prefix)
     h5 = sc.read_10x_h5(h5_path)
 
     # Drop genome column for comparing v3
-    if "3.0.0" in str(h5_path):
-        h5.var.drop(columns="genome", inplace=True)
+    if '3.0.0' in str(h5_path):
+        h5.var.drop(columns='genome', inplace=True)
 
     # Check equivalence
     assert_anndata_equal(mtx, h5)
 
     # Test that it can be written:
-    from_mtx_pth = tmp_path / "from_mtx.h5ad"
-    from_h5_pth = tmp_path / "from_h5.h5ad"
+    from_mtx_pth = tmp_path / 'from_mtx.h5ad'
+    from_h5_pth = tmp_path / 'from_h5.h5ad'
 
     mtx.write(from_mtx_pth)
     h5.write(from_h5_pth)
@@ -102,22 +102,22 @@ def test_read_10x_h5():
 
 def test_error_10x_h5_legacy(tmp_path):
     onepth = ROOT / '1.2.0' / 'filtered_gene_bc_matrices_h5.h5'
-    twopth = tmp_path / "two_genomes.h5"
-    with h5py.File(onepth, "r") as one, h5py.File(twopth, "w") as two:
-        one.copy("hg19_chr21", two)
-        one.copy("hg19_chr21", two, name="hg19_chr21_copy")
+    twopth = tmp_path / 'two_genomes.h5'
+    with h5py.File(onepth, 'r') as one, h5py.File(twopth, 'w') as two:
+        one.copy('hg19_chr21', two)
+        one.copy('hg19_chr21', two, name='hg19_chr21_copy')
     with pytest.raises(ValueError):
         sc.read_10x_h5(twopth)
-    sc.read_10x_h5(twopth, genome="hg19_chr21_copy")
+    sc.read_10x_h5(twopth, genome='hg19_chr21_copy')
 
 
 def test_error_missing_genome():
     legacy_pth = ROOT / '1.2.0' / 'filtered_gene_bc_matrices_h5.h5'
     v3_pth = ROOT / '3.0.0' / 'filtered_feature_bc_matrix.h5'
-    with pytest.raises(ValueError, match=r".*hg19_chr21.*"):
-        sc.read_10x_h5(legacy_pth, genome="not a genome")
-    with pytest.raises(ValueError, match=r".*GRCh38_chr21.*"):
-        sc.read_10x_h5(v3_pth, genome="not a genome")
+    with pytest.raises(ValueError, match=r'.*hg19_chr21.*'):
+        sc.read_10x_h5(legacy_pth, genome='not a genome')
+    with pytest.raises(ValueError, match=r'.*GRCh38_chr21.*'):
+        sc.read_10x_h5(v3_pth, genome='not a genome')
 
 
 @pytest.fixture(params=[1, 2])

@@ -21,7 +21,7 @@ from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
 
 _VarNames = Union[str, Sequence[str]]
 
-doc_common_groupby_plot_args = """\
+doc_common_groupby_plot_args = '''\
 title
     Title for the figure
 colorbar_title
@@ -38,7 +38,7 @@ swap_axes
 return_fig
     Returns :class:`DotPlot` object. Useful for fine-tuning
     the plot. Takes precedence over `show=False`.
-"""
+'''
 
 
 class BasePlot(object):
@@ -119,20 +119,20 @@ class BasePlot(object):
         )
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
             warn(
-                f"Over {self.MAX_NUM_CATEGORIES} categories found. "
-                "Plot would be very large."
+                f'Over {self.MAX_NUM_CATEGORIES} categories found. '
+                'Plot would be very large.'
             )
 
         if categories_order is not None:
             if set(self.obs_tidy.index.categories) != set(categories_order):
                 logg.error(
-                    "Please check that the categories given by "
-                    "the `order` parameter match the categories that "
-                    "want to be reordered.\n\n"
-                    "Mismatch: "
-                    f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
-                    f"Given order categories: {categories_order}\n\n"
-                    f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
+                    'Please check that the categories given by '
+                    'the `order` parameter match the categories that '
+                    'want to be reordered.\n\n'
+                    'Mismatch: '
+                    f'{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n'
+                    f'Given order categories: {categories_order}\n\n'
+                    f'{groupby} categories: {list(self.obs_tidy.index.categories)}\n'
                 )
                 return
 
@@ -256,8 +256,8 @@ class BasePlot(object):
         if self.groupby is None or len(self.categories) <= 2:
             # dendrogram can only be computed  between groupby categories
             logg.warning(
-                "Dendrogram not added. Dendrogram is added only "
-                "when the number of categories to plot > 2"
+                'Dendrogram not added. Dendrogram is added only '
+                'when the number of categories to plot > 2'
             )
             return self
 
@@ -429,11 +429,11 @@ class BasePlot(object):
 
         if orientation == 'top':
             counts_df.plot(
-                kind="bar",
+                kind='bar',
                 color=color,
                 position=0.5,
                 ax=total_barplot_ax,
-                edgecolor="black",
+                edgecolor='black',
                 width=0.65,
             )
             # add numbers to the top of the bars
@@ -448,11 +448,11 @@ class BasePlot(object):
                 total_barplot_ax.annotate(
                     display_number,
                     (p.get_x() + p.get_width() / 2.0, (p.get_height() + max_y * 0.05)),
-                    ha="center",
-                    va="top",
+                    ha='center',
+                    va='top',
                     xytext=(0, 10),
-                    fontsize="x-small",
-                    textcoords="offset points",
+                    fontsize='x-small',
+                    textcoords='offset points',
                 )
             # for k in total_barplot_ax.spines.keys():
             #     total_barplot_ax.spines[k].set_visible(False)
@@ -460,11 +460,11 @@ class BasePlot(object):
 
         elif orientation == 'right':
             counts_df.plot(
-                kind="barh",
+                kind='barh',
                 color=color,
                 position=-0.3,
                 ax=total_barplot_ax,
-                edgecolor="black",
+                edgecolor='black',
                 width=0.65,
             )
 
@@ -478,16 +478,16 @@ class BasePlot(object):
                 total_barplot_ax.annotate(
                     display_number,
                     ((p.get_width()), p.get_y() + p.get_height()),
-                    ha="center",
-                    va="top",
+                    ha='center',
+                    va='top',
                     xytext=(10, 10),
-                    fontsize="x-small",
-                    textcoords="offset points",
+                    fontsize='x-small',
+                    textcoords='offset points',
                 )
             total_barplot_ax.set_xlim(0, max_x * 1.4)
 
         total_barplot_ax.grid(False)
-        total_barplot_ax.axis("off")
+        total_barplot_ax.axis('off')
 
     def _plot_colorbar(self, color_legend_ax: Axes, normalize):
         """
@@ -882,11 +882,11 @@ class BasePlot(object):
                 self.var_group_positions = positions_ordered
             else:
                 logg.warning(
-                    "Groups are not reordered because the `groupby` categories "
-                    "and the `var_group_labels` are different.\n"
-                    f"categories: {_format_first_three_categories(self.categories)}\n"
-                    "var_group_labels: "
-                    f"{_format_first_three_categories(self.var_group_labels)}"
+                    'Groups are not reordered because the `groupby` categories '
+                    'and the `var_group_labels` are different.\n'
+                    f'categories: {_format_first_three_categories(self.categories)}\n'
+                    'var_group_labels: '
+                    f'{_format_first_three_categories(self.var_group_labels)}'
                 )
 
         if var_names_idx_ordered is not None:
@@ -1000,7 +1000,7 @@ class BasePlot(object):
                 group_y_center = top[idx] + float(diff) / 2
                 if diff * 2 < len(group_labels[idx]):
                     # cut label to fit available space
-                    group_labels[idx] = group_labels[idx][: int(diff * 2)] + "."
+                    group_labels[idx] = group_labels[idx][: int(diff * 2)] + '.'
                 gene_groups_ax.text(
                     1.1,
                     group_y_center,
@@ -1040,8 +1040,8 @@ class BasePlot(object):
         if isinstance(self.var_names, cabc.Mapping):
             if self.has_var_groups:
                 logg.warning(
-                    "`var_names` is a dictionary. This will reset the current "
-                    "values of `var_group_labels` and `var_group_positions`."
+                    '`var_names` is a dictionary. This will reset the current '
+                    'values of `var_group_labels` and `var_group_positions`.'
                 )
             var_group_labels = []
             _var_names = []

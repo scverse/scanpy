@@ -10,8 +10,8 @@ from anndata import AnnData
 def harmony_integrate(
     adata: AnnData,
     key: str,
-    basis: str = "X_pca",
-    adjusted_basis: str = "X_pca_harmony",
+    basis: str = 'X_pca',
+    adjusted_basis: str = 'X_pca_harmony',
     **kwargs,
 ):
     """\
@@ -77,7 +77,7 @@ def harmony_integrate(
     try:
         import harmonypy
     except ImportError:
-        raise ImportError("\nplease install harmonypy:\n\n\tpip install harmonypy")
+        raise ImportError('\nplease install harmonypy:\n\n\tpip install harmonypy')
 
     harmony_out = harmonypy.run_harmony(adata.obsm[basis], adata.obs, key, **kwargs)
 

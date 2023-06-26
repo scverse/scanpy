@@ -118,9 +118,9 @@ def pca(
     # chunked calculation is not randomized, anyways
     if svd_solver in {'auto', 'randomized'} and not chunked:
         logg.info(
-            'Note that scikit-learn\'s randomized PCA might not be exactly '
+            "Note that scikit-learn's randomized PCA might not be exactly "
             'reproducible across different computational platforms. For exact '
-            'reproducibility, choose `svd_solver=\'arpack\'.`'
+            "reproducibility, choose `svd_solver='arpack'.`"
         )
     data_is_AnnData = isinstance(data, AnnData)
     if data_is_AnnData:
@@ -130,7 +130,7 @@ def pca(
 
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
         raise ValueError(
-            'Did not find adata.var[\'highly_variable\']. '
+            "Did not find adata.var['highly_variable']. "
             'Either your data already only consists of highly-variable genes '
             'or consider running `pp.highly_variable_genes` first.'
         )
@@ -172,10 +172,10 @@ def pca(
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
-    elif (not issparse(X) or svd_solver == "randomized") and zero_center:
+    elif (not issparse(X) or svd_solver == 'randomized') and zero_center:
         from sklearn.decomposition import PCA
 
-        if issparse(X) and svd_solver == "randomized":
+        if issparse(X) and svd_solver == 'randomized':
             # This  is for backwards compat. Better behaviour would be to either error or use arpack.
             logg.warning(
                 "svd_solver 'randomized' does not work with sparse input. Densifying the array. "
@@ -189,8 +189,8 @@ def pca(
     elif issparse(X) and zero_center:
         from sklearn.decomposition import PCA
 
-        if svd_solver == "auto":
-            svd_solver = "arpack"
+        if svd_solver == 'auto':
+            svd_solver = 'arpack'
         if svd_solver not in {'lobpcg', 'arpack'}:
             raise ValueError(
                 'svd_solver: {svd_solver} can not be used with sparse input.\n'
@@ -244,10 +244,10 @@ def pca(
         logg.info('    finished', time=logg_start)
         logg.debug(
             'and added\n'
-            '    \'X_pca\', the PCA coordinates (adata.obs)\n'
-            '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
-            '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
-            '    \'pca_variance_ratio\', the variance ratio (adata.uns)'
+            "    'X_pca', the PCA coordinates (adata.obs)\n"
+            "    'PC1', 'PC2', ..., the loadings (adata.var)\n"
+            "    'pca_variance', the variance / eigenvalues (adata.uns)\n"
+            "    'pca_variance_ratio', the variance ratio (adata.uns)"
         )
         return adata if copy else None
     else:

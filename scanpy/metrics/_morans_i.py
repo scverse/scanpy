@@ -101,12 +101,12 @@ def morans_i(
     """
     if use_graph is None:
         # Fix for anndata<0.7
-        if hasattr(adata, "obsp") and "connectivities" in adata.obsp:
-            g = adata.obsp["connectivities"]
-        elif "neighbors" in adata.uns:
-            g = adata.uns["neighbors"]["connectivities"]
+        if hasattr(adata, 'obsp') and 'connectivities' in adata.obsp:
+            g = adata.obsp['connectivities']
+        elif 'neighbors' in adata.uns:
+            g = adata.uns['neighbors']['connectivities']
         else:
-            raise ValueError("Must run neighbors first.")
+            raise ValueError('Must run neighbors first.')
     else:
         raise NotImplementedError()
     if vals is None:
@@ -223,7 +223,7 @@ def _morans_i_mtx_csr(
 
 @morans_i.register(sparse.csr_matrix)
 def _morans_i(g, vals) -> np.ndarray:
-    assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
+    assert g.shape[0] == g.shape[1], '`g` should be a square adjacency matrix'
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
     if isinstance(vals, sparse.csr_matrix):

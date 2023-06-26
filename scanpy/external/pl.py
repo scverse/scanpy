@@ -120,7 +120,7 @@ def harmony_timeseries(
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
 
-    tp_name = adata.uns["harmony_timepoint_var"]
+    tp_name = adata.uns['harmony_timepoint_var']
     tps = adata.obs[tp_name].unique()
 
     fig, axes = plt.subplots(1, len(tps))
@@ -405,12 +405,12 @@ def scrublet_score_distribution(
 
     if 'batched_by' in adata.uns['scrublet']:
         batched_by = adata.uns['scrublet']['batched_by']
-        batches = adata.obs[batched_by].astype("category", copy=False)
+        batches = adata.obs[batched_by].astype('category', copy=False)
         n_batches = len(batches.cat.categories)
         figsize = (figsize[0], figsize[1] * n_batches)
     else:
         batches = pd.Series(
-            np.broadcast_to(0, adata.n_obs), dtype="category", index=adata.obs_names
+            np.broadcast_to(0, adata.n_obs), dtype='category', index=adata.obs_names
         )
         n_batches = 1
 
@@ -419,18 +419,18 @@ def scrublet_score_distribution(
     for idx, (batch_key, sub_obs) in enumerate(adata.obs.groupby(batches)):
         # We'll need multiple rows if Scrublet was run in multiple batches
         if 'batched_by' in adata.uns['scrublet']:
-            threshold = adata.uns["scrublet"]['batches'][batch_key].get(
-                "threshold", None
+            threshold = adata.uns['scrublet']['batches'][batch_key].get(
+                'threshold', None
             )
             doublet_scores_sim = adata.uns['scrublet']['batches'][batch_key][
                 'doublet_scores_sim'
             ]
-            axis_lab_suffix = " (%s)" % batch_key
+            axis_lab_suffix = ' (%s)' % batch_key
             obs_ax = axs[idx][0]
             sim_ax = axs[idx][1]
 
         else:
-            threshold = adata.uns["scrublet"].get("threshold", None)
+            threshold = adata.uns['scrublet'].get('threshold', None)
             doublet_scores_sim = adata.uns['scrublet']['doublet_scores_sim']
             axis_lab_suffix = ''
             obs_ax = axs[0]
@@ -439,16 +439,16 @@ def scrublet_score_distribution(
         # Make the plots
         _plot_scores(
             obs_ax,
-            sub_obs["doublet_score"],
+            sub_obs['doublet_score'],
             scale=scale_hist_obs,
-            title=f"Observed transcriptomes {axis_lab_suffix}",
+            title=f'Observed transcriptomes {axis_lab_suffix}',
             threshold=threshold,
         )
         _plot_scores(
             sim_ax,
             doublet_scores_sim,
             scale=scale_hist_sim,
-            title=f"Simulated doublets {axis_lab_suffix}",
+            title=f'Simulated doublets {axis_lab_suffix}',
             threshold=threshold,
         )
 

@@ -27,7 +27,7 @@ def filter_oldformatwarning(f):
         with warnings.catch_warnings():
             if version.parse(ad.__version__).release >= (0, 8):
                 warnings.filterwarnings(
-                    "ignore", category=ad.OldFormatWarning, module="anndata"
+                    'ignore', category=ad.OldFormatWarning, module='anndata'
                 )
             return f(*args, **kwargs)
 

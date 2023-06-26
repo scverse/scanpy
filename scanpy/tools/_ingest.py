@@ -14,7 +14,7 @@ from ..neighbors import _rp_forest_generate
 from .._utils import NeighborsView
 from .._compat import pkg_version
 
-ANNDATA_MIN_VERSION = version.parse("0.7rc1")
+ANNDATA_MIN_VERSION = version.parse('0.7rc1')
 
 
 def ingest(
@@ -103,7 +103,7 @@ def ingest(
     .. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
     """
     # anndata version check
-    anndata_version = pkg_version("anndata")
+    anndata_version = pkg_version('anndata')
     if anndata_version < ANNDATA_MIN_VERSION:
         raise ValueError(
             f'ingest only works correctly with anndata>={ANNDATA_MIN_VERSION} '
@@ -169,7 +169,7 @@ class _DimDict(MutableMapping):
         return len(self._data)
 
     def __repr__(self):
-        return f"{type(self).__name__}({self._data})"
+        return f'{type(self).__name__}({self._data})'
 
 
 class Ingest:
@@ -246,7 +246,7 @@ class Ingest:
 
         dist_func = named_distances[self._metric]
 
-        if pkg_version('umap-learn') < version.parse("0.4.0"):
+        if pkg_version('umap-learn') < version.parse('0.4.0'):
             from umap.nndescent import (
                 make_initialisations,
                 make_initialized_nnd_search,
@@ -336,7 +336,7 @@ class Ingest:
 
         self._metric = neighbors['params']['metric']
 
-        if pkg_version('umap-learn') < version.parse("0.5.0"):
+        if pkg_version('umap-learn') < version.parse('0.5.0'):
             self._init_dist_search(dist_args)
 
             search_graph = neighbors['distances'].copy()
@@ -356,7 +356,7 @@ class Ingest:
         self._pca_use_hvg = adata.uns['pca']['params']['use_highly_variable']
 
         if self._pca_use_hvg and 'highly_variable' not in adata.var.keys():
-            raise ValueError('Did not find adata.var[\'highly_variable\'].')
+            raise ValueError("Did not find adata.var['highly_variable'].")
 
         if self._pca_use_hvg:
             self._pca_basis = adata.varm['PCs'][adata.var['highly_variable']]

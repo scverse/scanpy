@@ -36,11 +36,11 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
         n = X.shape[0]
         clip = np.sqrt(n)
     if clip < 0:
-        raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
+        raise ValueError('Pearson residuals require `clip>=0` or `clip=None`.')
 
     if check_values and not check_nonnegative_integers(X):
         warn(
-            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
+            '`normalize_pearson_residuals()` expects raw count data, but non-integers were found.',
             UserWarning,
         )
 
@@ -116,7 +116,7 @@ def normalize_pearson_residuals(
 
     if copy:
         if not inplace:
-            raise ValueError("`copy=True` cannot be used with `inplace=False`.")
+            raise ValueError('`copy=True` cannot be used with `inplace=False`.')
         adata = adata.copy()
 
     view_to_actual(adata)

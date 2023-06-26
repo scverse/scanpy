@@ -26,7 +26,7 @@ def phenograph(
         'manhattan',
         'correlation',
         'cosine',
-    ] = "euclidean",
+    ] = 'euclidean',
     n_jobs: int = -1,
     q_tol: float = 1e-3,
     louvain_time_limit: int = 2000,
@@ -188,34 +188,34 @@ def phenograph(
     ...     palette=sc.pl.palettes.vega_20_scanpy, legend_fontsize=10
     ... )
     """
-    start = logg.info("PhenoGraph clustering")
+    start = logg.info('PhenoGraph clustering')
 
     try:
         import phenograph
 
-        assert phenograph.__version__ >= "1.5.3"
+        assert phenograph.__version__ >= '1.5.3'
     except (ImportError, AssertionError, AttributeError):
         raise ImportError(
-            "please install the latest release of phenograph:\n\t"
-            "pip install -U PhenoGraph"
+            'please install the latest release of phenograph:\n\t'
+            'pip install -U PhenoGraph'
         )
 
     if isinstance(adata, AnnData):
         try:
-            data = adata.obsm["X_pca"]
+            data = adata.obsm['X_pca']
         except KeyError:
-            raise KeyError("Please run `sc.tl.pca` on `adata` and try again!")
+            raise KeyError('Please run `sc.tl.pca` on `adata` and try again!')
     else:
         data = adata
         copy = True
 
     comm_key = (
-        "pheno_{}".format(clustering_algo)
-        if clustering_algo in ["louvain", "leiden"]
+        'pheno_{}'.format(clustering_algo)
+        if clustering_algo in ['louvain', 'leiden']
         else ''
     )
-    ig_key = "pheno_{}_ig".format("jaccard" if jaccard else "gaussian")
-    q_key = "pheno_{}_q".format("jaccard" if jaccard else "gaussian")
+    ig_key = 'pheno_{}_ig'.format('jaccard' if jaccard else 'gaussian')
+    q_key = 'pheno_{}_q'.format('jaccard' if jaccard else 'gaussian')
 
     communities, graph, Q = phenograph.cluster(
         data=data,
@@ -238,7 +238,7 @@ def phenograph(
         **kargs,
     )
 
-    logg.info("    finished", time=start)
+    logg.info('    finished', time=start)
 
     if copy:
         return communities, graph, Q

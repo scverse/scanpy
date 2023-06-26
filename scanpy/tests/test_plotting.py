@@ -43,7 +43,7 @@ sc.set_figure_params(dpi=40, color_map='viridis')
 # the ./figures folder to ./_images/
 
 
-@needs("leidenalg")
+@needs('leidenalg')
 def test_heatmap(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
@@ -110,23 +110,23 @@ def test_heatmap(image_comparer):
 
     # test var_names as dict
     pbmc = pbmc68k_reduced()
-    sc.tl.leiden(pbmc, key_added="clusters", resolution=0.5)
+    sc.tl.leiden(pbmc, key_added='clusters', resolution=0.5)
     # call umap to trigger colors for the clusters
-    sc.pl.umap(pbmc, color="clusters")
+    sc.pl.umap(pbmc, color='clusters')
     marker_genes_dict = {
-        "3": ["GNLY", "NKG7"],
-        "1": ["FCER1A"],
-        "2": ["CD3D"],
-        "0": ["FCGR3A"],
-        "4": ["CD79A", "MS4A1"],
+        '3': ['GNLY', 'NKG7'],
+        '1': ['FCER1A'],
+        '2': ['CD3D'],
+        '0': ['FCGR3A'],
+        '4': ['CD79A', 'MS4A1'],
     }
     sc.pl.heatmap(
         adata=pbmc,
         var_names=marker_genes_dict,
-        groupby="clusters",
+        groupby='clusters',
         vmin=-2,
         vmax=2,
-        cmap="RdBu_r",
+        cmap='RdBu_r',
         dendrogram=True,
         swap_axes=True,
     )
@@ -136,8 +136,8 @@ def test_heatmap(image_comparer):
     # small
     a = AnnData(
         np.array([[0, 0.3, 0.5], [1, 1.3, 1.5], [2, 2.3, 2.5]]),
-        obs={"foo": 'a b c'.split()},
-        var=pd.DataFrame({"genes": 'g1 g2 g3'.split()}).set_index('genes'),
+        obs={'foo': 'a b c'.split()},
+        var=pd.DataFrame({'genes': 'g1 g2 g3'.split()}).set_index('genes'),
     )
     a.obs['foo'] = a.obs['foo'].astype('category')
     sc.pl.heatmap(
@@ -152,12 +152,12 @@ def test_heatmap(image_comparer):
 
 
 @pytest.mark.skipif(
-    pkg_version("matplotlib") < version.parse('3.1'),
-    reason="https://github.com/mwaskom/seaborn/issues/1953",
+    pkg_version('matplotlib') < version.parse('3.1'),
+    reason='https://github.com/mwaskom/seaborn/issues/1953',
 )
 @pytest.mark.parametrize(
-    "obs_keys,name",
-    [(None, "master_clustermap"), ("cell_type", "master_clustermap_withcolor")],
+    'obs_keys,name',
+    [(None, 'master_clustermap'), ('cell_type', 'master_clustermap_withcolor')],
 )
 def test_clustermap(image_comparer, obs_keys, name):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
@@ -167,16 +167,16 @@ def test_clustermap(image_comparer, obs_keys, name):
 
 
 @pytest.mark.parametrize(
-    "id,fn",
+    'id,fn',
     [
         (
-            "dotplot",
+            'dotplot',
             partial(
                 sc.pl.dotplot, groupby='cell_type', title='dotplot', dendrogram=True
             ),
         ),
         (
-            "dotplot2",
+            'dotplot2',
             partial(
                 sc.pl.dotplot,
                 groupby='numeric_column',
@@ -187,7 +187,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "dotplot3",
+            'dotplot3',
             partial(
                 sc.pl.dotplot,
                 groupby='cell_type',
@@ -201,7 +201,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "dotplot_std_scale_group",
+            'dotplot_std_scale_group',
             partial(
                 sc.pl.dotplot,
                 groupby='cell_type',
@@ -215,7 +215,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "dotplot_dict",
+            'dotplot_dict',
             partial(
                 sc.pl.dotplot,
                 groupby='cell_type',
@@ -227,7 +227,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "matrixplot",
+            'matrixplot',
             partial(
                 sc.pl.matrixplot,
                 groupby='cell_type',
@@ -237,7 +237,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "matrixplot_std_scale_var_dict",
+            'matrixplot_std_scale_var_dict',
             partial(
                 sc.pl.matrixplot,
                 groupby='cell_type',
@@ -246,11 +246,11 @@ def test_clustermap(image_comparer, obs_keys, name):
                 layer='test',
                 cmap='Blues_r',
                 title='scale var, custom colorbar_title, layer="test"',
-                colorbar_title="Scaled expression",
+                colorbar_title='Scaled expression',
             ),
         ),
         (
-            "matrixplot_std_scale_group",
+            'matrixplot_std_scale_group',
             partial(
                 sc.pl.matrixplot,
                 groupby='cell_type',
@@ -261,7 +261,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "matrixplot2",
+            'matrixplot2',
             partial(
                 sc.pl.matrixplot,
                 groupby='numeric_column',
@@ -273,7 +273,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "stacked_violin",
+            'stacked_violin',
             partial(
                 sc.pl.stacked_violin,
                 groupby='cell_type',
@@ -283,7 +283,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "stacked_violin_std_scale_var_dict",
+            'stacked_violin_std_scale_var_dict',
             partial(
                 sc.pl.stacked_violin,
                 groupby='cell_type',
@@ -294,7 +294,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "stacked_violin_std_scale_group",
+            'stacked_violin_std_scale_group',
             partial(
                 sc.pl.stacked_violin,
                 groupby='cell_type',
@@ -306,7 +306,7 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "stacked_violin_no_cat_obs",
+            'stacked_violin_no_cat_obs',
             partial(
                 sc.pl.stacked_violin,
                 groupby='numeric_column',
@@ -330,11 +330,11 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
         'group c': ['Cebpa', 'Pu.1', 'cJun', 'EgrNab', 'Gfi1'],
     }
 
-    if id.endswith("dict"):
+    if id.endswith('dict'):
         fn(adata, genes_dict, show=False)
     else:
         fn(adata, adata.var_names, show=False)
-    save_and_compare_images(f"master_{id}")
+    save_and_compare_images(f'master_{id}')
 
 
 def test_dotplot_obj(image_comparer):
@@ -380,11 +380,11 @@ def test_matrixplot_obj(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     adata = pbmc68k_reduced()
     marker_genes_dict = {
-        "3": ["GNLY", "NKG7"],
-        "1": ["FCER1A"],
-        "2": ["CD3D"],
-        "0": ["FCGR3A"],
-        "4": ["CD79A", "MS4A1"],
+        '3': ['GNLY', 'NKG7'],
+        '1': ['FCER1A'],
+        '2': ['CD3D'],
+        '0': ['FCGR3A'],
+        '4': ['CD79A', 'MS4A1'],
     }
 
     plot = sc.pl.matrixplot(
@@ -416,7 +416,7 @@ def test_stacked_violin_obj(image_comparer, plt):
         markers,
         'bulk_labels',
         use_raw=False,
-        title="return_fig. add_totals",
+        title='return_fig. add_totals',
         return_fig=True,
     )
     plot.add_totals().style(row_palette='tab20').show()
@@ -497,7 +497,7 @@ def test_violin(image_comparer):
         sc.pl.violin(
             pbmc,
             ['n_genes', 'percent_mito', 'n_counts'],
-            ylabel=["foo", "bar", "baz"],
+            ylabel=['foo', 'bar', 'baz'],
             groupby='bulk_labels',
             stripplot=True,
             multi_panel=True,
@@ -527,17 +527,17 @@ def test_violin(image_comparer):
 # TODO: Generalize test to more plotting types
 def test_violin_without_raw(tmp_path):
     # https://github.com/scverse/scanpy/issues/1546
-    has_raw_pth = tmp_path / "has_raw.png"
-    no_raw_pth = tmp_path / "no_raw.png"
+    has_raw_pth = tmp_path / 'has_raw.png'
+    no_raw_pth = tmp_path / 'no_raw.png'
 
     pbmc = pbmc68k_reduced()
     pbmc_no_raw = pbmc.raw.to_adata().copy()
 
-    sc.pl.violin(pbmc, 'CST3', groupby="bulk_labels", show=False, jitter=False)
+    sc.pl.violin(pbmc, 'CST3', groupby='bulk_labels', show=False, jitter=False)
     plt.savefig(has_raw_pth)
     plt.close()
 
-    sc.pl.violin(pbmc_no_raw, 'CST3', groupby="bulk_labels", show=False, jitter=False)
+    sc.pl.violin(pbmc_no_raw, 'CST3', groupby='bulk_labels', show=False, jitter=False)
     plt.savefig(no_raw_pth)
     plt.close()
 
@@ -561,16 +561,16 @@ def test_correlation(image_comparer):
 
 
 @pytest.mark.parametrize(
-    "name,fn",
+    'name,fn',
     [
         (
-            "ranked_genes_sharey",
+            'ranked_genes_sharey',
             partial(
                 sc.pl.rank_genes_groups, n_genes=12, n_panels_per_row=3, show=False
             ),
         ),
         (
-            "ranked_genes",
+            'ranked_genes',
             partial(
                 sc.pl.rank_genes_groups,
                 n_genes=12,
@@ -580,13 +580,13 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_heatmap",
+            'ranked_genes_heatmap',
             partial(
                 sc.pl.rank_genes_groups_heatmap, n_genes=4, cmap='YlGnBu', show=False
             ),
         ),
         (
-            "ranked_genes_heatmap_swap_axes",
+            'ranked_genes_heatmap_swap_axes',
             partial(
                 sc.pl.rank_genes_groups_heatmap,
                 n_genes=20,
@@ -600,7 +600,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_heatmap_swap_axes_vcenter",
+            'ranked_genes_heatmap_swap_axes_vcenter',
             partial(
                 sc.pl.rank_genes_groups_heatmap,
                 n_genes=20,
@@ -615,7 +615,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_stacked_violin",
+            'ranked_genes_stacked_violin',
             partial(
                 sc.pl.rank_genes_groups_stacked_violin,
                 n_genes=3,
@@ -624,11 +624,11 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_dotplot",
+            'ranked_genes_dotplot',
             partial(sc.pl.rank_genes_groups_dotplot, n_genes=4, show=False),
         ),
         (
-            "ranked_genes_dotplot_gene_names",
+            'ranked_genes_dotplot_gene_names',
             partial(
                 sc.pl.rank_genes_groups_dotplot,
                 var_names={
@@ -644,11 +644,11 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_dotplot_logfoldchange",
+            'ranked_genes_dotplot_logfoldchange',
             partial(
                 sc.pl.rank_genes_groups_dotplot,
                 n_genes=4,
-                values_to_plot="logfoldchanges",
+                values_to_plot='logfoldchanges',
                 vmin=-5,
                 vmax=5,
                 min_logfoldchange=3,
@@ -659,11 +659,11 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_dotplot_logfoldchange_vcenter",
+            'ranked_genes_dotplot_logfoldchange_vcenter',
             partial(
                 sc.pl.rank_genes_groups_dotplot,
                 n_genes=4,
-                values_to_plot="logfoldchanges",
+                values_to_plot='logfoldchanges',
                 vmin=-5,
                 vcenter=1,
                 vmax=5,
@@ -675,7 +675,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_matrixplot",
+            'ranked_genes_matrixplot',
             partial(
                 sc.pl.rank_genes_groups_matrixplot,
                 n_genes=5,
@@ -686,7 +686,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_matrixplot_gene_names_symbol",
+            'ranked_genes_matrixplot_gene_names_symbol',
             partial(
                 sc.pl.rank_genes_groups_matrixplot,
                 var_names={
@@ -704,7 +704,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_matrixplot_n_genes_negative",
+            'ranked_genes_matrixplot_n_genes_negative',
             partial(
                 sc.pl.rank_genes_groups_matrixplot,
                 n_genes=-5,
@@ -713,7 +713,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_matrixplot_swap_axes",
+            'ranked_genes_matrixplot_swap_axes',
             partial(
                 sc.pl.rank_genes_groups_matrixplot,
                 n_genes=5,
@@ -727,7 +727,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_matrixplot_swap_axes_vcenter",
+            'ranked_genes_matrixplot_swap_axes_vcenter',
             partial(
                 sc.pl.rank_genes_groups_matrixplot,
                 n_genes=5,
@@ -742,7 +742,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_tracksplot",
+            'ranked_genes_tracksplot',
             partial(
                 sc.pl.rank_genes_groups_tracksplot,
                 n_genes=3,
@@ -751,7 +751,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_violin",
+            'ranked_genes_violin',
             partial(
                 sc.pl.rank_genes_groups_violin,
                 groups='0',
@@ -763,7 +763,7 @@ def test_correlation(image_comparer):
             ),
         ),
         (
-            "ranked_genes_violin_not_raw",
+            'ranked_genes_violin_not_raw',
             partial(
                 sc.pl.rank_genes_groups_violin,
                 groups='0',
@@ -783,15 +783,15 @@ def test_rank_genes_groups(image_comparer, name, fn):
     sc.tl.rank_genes_groups(pbmc, 'louvain', n_genes=pbmc.raw.shape[1])
 
     # add gene symbol
-    pbmc.var['symbol'] = pbmc.var.index + "__"
+    pbmc.var['symbol'] = pbmc.var.index + '__'
 
-    with plt.rc_context({"axes.grid": True, "figure.figsize": (4, 4)}):
+    with plt.rc_context({'axes.grid': True, 'figure.figsize': (4, 4)}):
         fn(pbmc)
-        save_and_compare_images(f"master_{name}")
+        save_and_compare_images(f'master_{name}')
         plt.close()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='session')
 def _gene_symbols_adatas():
     """Create two anndata objects which are equivalent except for var_names
 
@@ -801,25 +801,25 @@ def _gene_symbols_adatas():
     pbmc = pbmc3k_processed().raw.to_adata()
     pbmc_counts = pbmc3k()
 
-    pbmc.layers["counts"] = pbmc_counts[pbmc.obs_names, pbmc.var_names].X.copy()
-    pbmc.var["gene_symbol"] = pbmc.var_names
-    pbmc.var["ensembl_id"] = pbmc_counts.var["gene_ids"].loc[pbmc.var_names]
+    pbmc.layers['counts'] = pbmc_counts[pbmc.obs_names, pbmc.var_names].X.copy()
+    pbmc.var['gene_symbol'] = pbmc.var_names
+    pbmc.var['ensembl_id'] = pbmc_counts.var['gene_ids'].loc[pbmc.var_names]
 
-    pbmc.var = pbmc.var.set_index("ensembl_id", drop=False)
+    pbmc.var = pbmc.var.set_index('ensembl_id', drop=False)
 
     # Cutting down on size for plotting, tracksplot and stacked_violin are slow
-    pbmc = pbmc[pbmc.obs["louvain"].isin(pbmc.obs["louvain"].cat.categories[:4])]
+    pbmc = pbmc[pbmc.obs['louvain'].isin(pbmc.obs['louvain'].cat.categories[:4])]
     pbmc = pbmc[::3].copy()
 
     # Creating variations
     a = pbmc.copy()
     b = pbmc.copy()
-    a.var = a.var.set_index("ensembl_id")
-    b.var = b.var.set_index("gene_symbol")
+    a.var = a.var.set_index('ensembl_id')
+    b.var = b.var.set_index('gene_symbol')
 
     # Computing DE
-    sc.tl.rank_genes_groups(a, groupby="louvain")
-    sc.tl.rank_genes_groups(b, groupby="louvain")
+    sc.tl.rank_genes_groups(a, groupby='louvain')
+    sc.tl.rank_genes_groups(b, groupby='louvain')
 
     return a, b
 
@@ -831,7 +831,7 @@ def gene_symbols_adatas(_gene_symbols_adatas):
 
 
 @pytest.mark.parametrize(
-    "func",
+    'func',
     (
         sc.pl.rank_genes_groups_dotplot,
         sc.pl.rank_genes_groups_heatmap,
@@ -846,10 +846,10 @@ def test_plot_rank_genes_groups_gene_symbols(
 ):
     a, b = gene_symbols_adatas
 
-    pth_1_a = FIGS / f"{func.__name__}_equivalent_gene_symbols_1_a.png"
-    pth_1_b = FIGS / f"{func.__name__}_equivalent_gene_symbols_1_b.png"
+    pth_1_a = FIGS / f'{func.__name__}_equivalent_gene_symbols_1_a.png'
+    pth_1_b = FIGS / f'{func.__name__}_equivalent_gene_symbols_1_b.png'
 
-    func(a, gene_symbols="gene_symbol")
+    func(a, gene_symbols='gene_symbol')
     plt.savefig(pth_1_a)
     plt.close()
 
@@ -859,14 +859,14 @@ def test_plot_rank_genes_groups_gene_symbols(
 
     check_same_image(pth_1_a, pth_1_b, tol=1)
 
-    pth_2_a = FIGS / f"{func.__name__}_equivalent_gene_symbols_2_a.png"
-    pth_2_b = FIGS / f"{func.__name__}_equivalent_gene_symbols_2_b.png"
+    pth_2_a = FIGS / f'{func.__name__}_equivalent_gene_symbols_2_a.png'
+    pth_2_b = FIGS / f'{func.__name__}_equivalent_gene_symbols_2_b.png'
 
     func(a)
     plt.savefig(pth_2_a)
     plt.close()
 
-    func(b, gene_symbols="ensembl_id")
+    func(b, gene_symbols='ensembl_id')
     plt.savefig(pth_2_b)
     plt.close()
 
@@ -874,7 +874,7 @@ def test_plot_rank_genes_groups_gene_symbols(
 
 
 @pytest.mark.parametrize(
-    "func",
+    'func',
     (
         sc.pl.rank_genes_groups_dotplot,
         sc.pl.rank_genes_groups_heatmap,
@@ -891,24 +891,24 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     """
     N = 3
     pbmc = pbmc68k_reduced().raw.to_adata()
-    groups = pbmc.obs["louvain"].cat.categories[:3]
-    pbmc = pbmc[pbmc.obs["louvain"].isin(groups)][::3].copy()
+    groups = pbmc.obs['louvain'].cat.categories[:3]
+    pbmc = pbmc[pbmc.obs['louvain'].isin(groups)][::3].copy()
 
-    sc.tl.rank_genes_groups(pbmc, groupby="louvain")
+    sc.tl.rank_genes_groups(pbmc, groupby='louvain')
 
     top_genes = {}
     bottom_genes = {}
-    for g, subdf in sc.get.rank_genes_groups_df(pbmc, group=groups).groupby("group"):
-        top_genes[g] = list(subdf["names"].head(N))
-        bottom_genes[g] = list(subdf["names"].tail(N))
+    for g, subdf in sc.get.rank_genes_groups_df(pbmc, group=groups).groupby('group'):
+        top_genes[g] = list(subdf['names'].head(N))
+        bottom_genes[g] = list(subdf['names'].tail(N))
 
-    positive_n_pth = tmp_path / f"{func.__name__}_positive_n.png"
-    top_genes_pth = tmp_path / f"{func.__name__}_top_genes.png"
-    negative_n_pth = tmp_path / f"{func.__name__}_negative_n.png"
-    bottom_genes_pth = tmp_path / f"{func.__name__}_bottom_genes.png"
+    positive_n_pth = tmp_path / f'{func.__name__}_positive_n.png'
+    top_genes_pth = tmp_path / f'{func.__name__}_top_genes.png'
+    negative_n_pth = tmp_path / f'{func.__name__}_negative_n.png'
+    bottom_genes_pth = tmp_path / f'{func.__name__}_bottom_genes.png'
 
     def wrapped(pth, **kwargs):
-        func(pbmc, groupby="louvain", dendrogram=False, **kwargs)
+        func(pbmc, groupby='louvain', dendrogram=False, **kwargs)
         plt.savefig(pth)
         plt.close()
 
@@ -924,19 +924,19 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
 
     # Shouldn't be able to pass these together
     with pytest.raises(
-        ValueError, match="n_genes and var_names are mutually exclusive"
+        ValueError, match='n_genes and var_names are mutually exclusive'
     ):
-        wrapped(tmp_path / "not_written.png", n_genes=N, var_names=top_genes)
+        wrapped(tmp_path / 'not_written.png', n_genes=N, var_names=top_genes)
 
 
 @pytest.mark.parametrize(
-    "id,fn",
+    'id,fn',
     [
-        ("heatmap", sc.pl.heatmap),
-        ("dotplot", sc.pl.dotplot),
-        ("matrixplot", sc.pl.matrixplot),
-        ("stacked_violin", sc.pl.stacked_violin),
-        ("tracksplot", sc.pl.tracksplot),
+        ('heatmap', sc.pl.heatmap),
+        ('dotplot', sc.pl.dotplot),
+        ('matrixplot', sc.pl.matrixplot),
+        ('stacked_violin', sc.pl.stacked_violin),
+        ('tracksplot', sc.pl.tracksplot),
     ],
 )
 def test_genes_symbols(image_comparer, id, fn):
@@ -945,20 +945,20 @@ def test_genes_symbols(image_comparer, id, fn):
     adata = krumsiek11()
 
     # add a 'symbols' column
-    adata.var['symbols'] = adata.var.index.map(lambda x: "symbol_{}".format(x))
-    symbols = ["symbol_{}".format(x) for x in adata.var_names]
+    adata.var['symbols'] = adata.var.index.map(lambda x: 'symbol_{}'.format(x))
+    symbols = ['symbol_{}'.format(x) for x in adata.var_names]
 
     fn(adata, symbols, 'cell_type', dendrogram=True, gene_symbols='symbols', show=False)
-    save_and_compare_images(f"master_{id}_gene_symbols")
+    save_and_compare_images(f'master_{id}_gene_symbols')
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def _pbmc_scatterplots_session():
     # Wrapped in another fixture to avoid mutation
     pbmc = pbmc68k_reduced()
-    pbmc.layers["sparse"] = pbmc.raw.X / 2
-    pbmc.layers["test"] = pbmc.X.copy() + 100
-    pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
+    pbmc.layers['sparse'] = pbmc.raw.X / 2
+    pbmc.layers['test'] = pbmc.X.copy() + 100
+    pbmc.var['numbers'] = [str(x) for x in range(pbmc.shape[1])]
     sc.pp.neighbors(pbmc)
     sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
     sc.tl.diffmap(pbmc)
@@ -1074,12 +1074,12 @@ def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     # https://github.com/scverse/scanpy/issues/849
-    if id == "3dprojection" and version.parse(mpl.__version__) < version.parse("3.3.3"):
-        with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
+    if id == '3dprojection' and version.parse(mpl.__version__) < version.parse('3.3.3'):
+        with pytest.raises(ValueError, match=r'known error with matplotlib 3d'):
             fn(pbmc_scatterplots, show=False)
     else:
         fn(pbmc_scatterplots, show=False)
-        save_and_compare_images(f"master_{id}")
+        save_and_compare_images(f'master_{id}')
 
 
 def test_scatter_embedding_groups_and_size(image_comparer):
@@ -1126,7 +1126,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
 
     norm = mpl.colors.LogNorm()
     with pytest.raises(
-        ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."
+        ValueError, match='Passing both norm and vmin/vmax/vcenter is not allowed.'
     ):
         sc.pl.embedding(
             pbmc,
@@ -1211,19 +1211,19 @@ def test_timeseries():
 
 def test_scatter_raw(tmp_path):
     pbmc = pbmc68k_reduced()[:100].copy()
-    raw_pth = tmp_path / "raw.png"
-    x_pth = tmp_path / "X.png"
+    raw_pth = tmp_path / 'raw.png'
+    x_pth = tmp_path / 'X.png'
 
-    sc.pl.scatter(pbmc, color="HES4", basis="umap", use_raw=True)
+    sc.pl.scatter(pbmc, color='HES4', basis='umap', use_raw=True)
     plt.savefig(raw_pth, dpi=60)
     plt.close()
 
-    sc.pl.scatter(pbmc, color="HES4", basis="umap", use_raw=False)
+    sc.pl.scatter(pbmc, color='HES4', basis='umap', use_raw=False)
     plt.savefig(x_pth, dpi=60)
     plt.close()
 
     comp = compare_images(str(raw_pth), str(x_pth), tol=5)
-    assert "Error" in comp, "Plots should change depending on use_raw."
+    assert 'Error' in comp, 'Plots should change depending on use_raw.'
 
 
 def test_binary_scatter(image_comparer):
@@ -1239,25 +1239,25 @@ def test_binary_scatter(image_comparer):
 
 def test_scatter_specify_layer_and_raw():
     pbmc = pbmc68k_reduced()
-    pbmc.layers["layer"] = pbmc.raw.X.copy()
+    pbmc.layers['layer'] = pbmc.raw.X.copy()
     with pytest.raises(ValueError):
-        sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
+        sc.pl.umap(pbmc, color='HES4', use_raw=True, layer='layer')
 
 
 def test_scatter_no_basis_per_obs(image_comparer):
     """Test scatterplot of per-obs points with no basis"""
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     pbmc = pbmc68k_reduced()
-    sc.pl.scatter(pbmc, x="HES4", y="percent_mito", color="n_genes", use_raw=False)
-    save_and_compare_images("scatter_HES_percent_mito_n_genes")
+    sc.pl.scatter(pbmc, x='HES4', y='percent_mito', color='n_genes', use_raw=False)
+    save_and_compare_images('scatter_HES_percent_mito_n_genes')
 
 
 def test_scatter_no_basis_per_var(image_comparer):
     """Test scatterplot of per-var points with no basis"""
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     pbmc = pbmc68k_reduced()
-    sc.pl.scatter(pbmc, x="AAAGCCTGGCTAAC-1", y="AAATTCGATGCACA-1", use_raw=False)
-    save_and_compare_images("scatter_AAAGCCTGGCTAAC-1_vs_AAATTCGATGCACA-1")
+    sc.pl.scatter(pbmc, x='AAAGCCTGGCTAAC-1', y='AAATTCGATGCACA-1', use_raw=False)
+    save_and_compare_images('scatter_AAAGCCTGGCTAAC-1_vs_AAATTCGATGCACA-1')
 
 
 @pytest.fixture
@@ -1270,10 +1270,10 @@ def pbmc_filtered() -> Callable[[], AnnData]:
 def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmpdir):
     adata = pbmc_filtered()
 
-    """Test scatterplots of raw layer with no basis."""
-    path1 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawNone.png"
-    path2 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawTrue.png"
-    path3 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawToAdata.png"
+    '''Test scatterplots of raw layer with no basis.'''
+    path1 = tmpdir / 'scatter_EGFL7_F12_FAM185A_rawNone.png'
+    path2 = tmpdir / 'scatter_EGFL7_F12_FAM185A_rawTrue.png'
+    path3 = tmpdir / 'scatter_EGFL7_F12_FAM185A_rawToAdata.png'
 
     sc.pl.scatter(adata, x='EGFL7', y='F12', color='FAM185A', use_raw=None)
     plt.savefig(path1)
@@ -1293,7 +1293,7 @@ def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmpdir):
 
 
 @pytest.mark.parametrize(
-    "x,y,color,use_raw",
+    'x,y,color,use_raw',
     [
         # test that plotting fails with a ValueError if trying to plot
         # var_names only found in raw and use_raw is False
@@ -1344,20 +1344,20 @@ def test_scatter_rep(tmpdir):
     """
     TESTDIR = Path(tmpdir)
     rep_args = {
-        "raw": {"use_raw": True},
-        "layer": {"layer": "layer", "use_raw": False},
-        "X": {"use_raw": False},
+        'raw': {'use_raw': True},
+        'layer': {'layer': 'layer', 'use_raw': False},
+        'X': {'use_raw': False},
     }
     states = pd.DataFrame.from_records(
         zip(
-            list(chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])),
-            list(chain.from_iterable(repeat("abc", 3))),
+            list(chain.from_iterable(repeat(x, 3) for x in ['X', 'raw', 'layer'])),
+            list(chain.from_iterable(repeat('abc', 3))),
             [1, 2, 3, 3, 1, 2, 2, 3, 1],
         ),
-        columns=["rep", "gene", "result"],
+        columns=['rep', 'gene', 'result'],
     )
-    states["outpth"] = [
-        TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"
+    states['outpth'] = [
+        TESTDIR / f'{state.gene}_{state.rep}_{state.result}.png'
         for state in states.itertuples()
     ]
     pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))
@@ -1365,15 +1365,15 @@ def test_scatter_rep(tmpdir):
 
     adata = AnnData(
         X=np.zeros((15, 3)),
-        layers={"layer": np.zeros((15, 3))},
-        obsm={"X_pca": coords},
-        var=pd.DataFrame(index=[x for x in list("abc")]),
-        obs=pd.DataFrame(index=[f"cell{i}" for i in range(15)]),
+        layers={'layer': np.zeros((15, 3))},
+        obsm={'X_pca': coords},
+        var=pd.DataFrame(index=[x for x in list('abc')]),
+        obs=pd.DataFrame(index=[f'cell{i}' for i in range(15)]),
     )
     adata.raw = adata.copy()
     adata.X[np.arange(15), pattern] = 1
     adata.raw.X[np.arange(15), (pattern + 1) % 3] = 1
-    adata.layers["layer"][np.arange(15), (pattern + 2) % 3] = 1
+    adata.layers['layer'][np.arange(15), (pattern + 2) % 3] = 1
 
     for state in states.itertuples():
         sc.pl.pca(adata, color=state.gene, **rep_args[state.rep], show=False)
@@ -1385,7 +1385,7 @@ def test_scatter_rep(tmpdir):
         if s1.result == s2.result:
             assert comp is None, comp
         else:
-            assert "Error" in comp, f"{s1.outpth}, {s2.outpth} aren't supposed to match"
+            assert 'Error' in comp, f"{s1.outpth}, {s2.outpth} aren't supposed to match"
 
 
 def test_no_copy():
@@ -1393,11 +1393,11 @@ def test_no_copy():
     # Tests that plotting functions don't make a copy from a view unless they
     # actually have to
     actual = pbmc68k_reduced()
-    sc.pl.umap(actual, color=["bulk_labels", "louvain"], show=False)  # Set colors
+    sc.pl.umap(actual, color=['bulk_labels', 'louvain'], show=False)  # Set colors
 
     view = actual[np.random.choice(actual.obs_names, size=actual.shape[0] // 5), :]
 
-    sc.pl.umap(view, color=["bulk_labels", "louvain"], show=False)
+    sc.pl.umap(view, color=['bulk_labels', 'louvain'], show=False)
     assert view.is_view
 
     rank_genes_groups_plotting_funcs = [
@@ -1423,8 +1423,8 @@ def test_no_copy():
     # TODO: Generating a dendrogram modifies the object, this should be
     # optional and also maybe not modify the object.
     for plotfunc in rank_genes_groups_plotting_funcs:
-        view = actual[actual.obs["bulk_labels"] == "Dendritic"]
-        plotfunc(view, ["Dendritic"], show=False)
+        view = actual[actual.obs['bulk_labels'] == 'Dendritic']
+        plotfunc(view, ['Dendritic'], show=False)
         assert view.is_view
 
 
@@ -1465,7 +1465,7 @@ def test_groupby_list(image_comparer):
     np.random.shuffle(cats)
     adata.obs['rand_cat'] = pd.Categorical(cat_val, categories=cats)
 
-    with mpl.rc_context({"figure.subplot.bottom": 0.5}):
+    with mpl.rc_context({'figure.subplot.bottom': 0.5}):
         sc.pl.dotplot(
             adata, ['Gata1', 'Gata2'], groupby=['rand_cat', 'cell_type'], swap_axes=True
         )
@@ -1477,36 +1477,36 @@ def test_color_cycler(caplog):
     import logging
 
     pbmc = pbmc68k_reduced()
-    colors = sns.color_palette("deep")
-    cyl = sns.rcmod.cycler('color', sns.color_palette("deep"))
+    colors = sns.color_palette('deep')
+    cyl = sns.rcmod.cycler('color', sns.color_palette('deep'))
 
     with caplog.at_level(logging.WARNING):
-        with plt.rc_context({'axes.prop_cycle': cyl, "patch.facecolor": colors[0]}):
-            sc.pl.umap(pbmc, color="phase")
+        with plt.rc_context({'axes.prop_cycle': cyl, 'patch.facecolor': colors[0]}):
+            sc.pl.umap(pbmc, color='phase')
             plt.show()
             plt.close()
 
-    assert caplog.text == ""
+    assert caplog.text == ''
 
 
 def test_repeated_colors_w_missing_value():
     # https://github.com/scverse/scanpy/issues/2133
     v = pd.Series(np.arange(10).astype(str))
     v[0] = np.nan
-    v = v.astype("category")
+    v = v.astype('category')
 
-    ad = sc.AnnData(obs=pd.DataFrame(v, columns=["value"]))
-    ad.obsm["X_umap"] = np.random.normal(size=(ad.n_obs, 2))
+    ad = sc.AnnData(obs=pd.DataFrame(v, columns=['value']))
+    ad.obsm['X_umap'] = np.random.normal(size=(ad.n_obs, 2))
 
-    sc.pl.umap(ad, color="value")
+    sc.pl.umap(ad, color='value')
 
     ad.uns['value_colors'][1] = ad.uns['value_colors'][0]
 
-    sc.pl.umap(ad, color="value")
+    sc.pl.umap(ad, color='value')
 
 
 @pytest.mark.parametrize(
-    "plot",
+    'plot',
     (
         sc.pl.rank_genes_groups_dotplot,
         sc.pl.rank_genes_groups_heatmap,
@@ -1532,13 +1532,13 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     )
 
     conditions = 'logfoldchanges >= 1 & pct_nz_group >= .25 & pct_nz_reference < .5'
-    df = sc.get.rank_genes_groups_df(adata, group=None, key="rank_genes_groups")
-    df = df.query(conditions)[["group", "names"]]
+    df = sc.get.rank_genes_groups_df(adata, group=None, key='rank_genes_groups')
+    df = df.query(conditions)[['group', 'names']]
 
-    var_names = {k: v.head(N_GENES).tolist() for k, v in df.groupby("group")["names"]}
+    var_names = {k: v.head(N_GENES).tolist() for k, v in df.groupby('group')['names']}
 
-    pth_a = tmp_path / f"{plot.__name__}_filter_a.png"
-    pth_b = tmp_path / f"{plot.__name__}_filter_b.png"
+    pth_a = tmp_path / f'{plot.__name__}_filter_a.png'
+    pth_b = tmp_path / f'{plot.__name__}_filter_b.png'
 
     plot(adata, key='rank_genes_groups_filtered', n_genes=N_GENES)
     plt.savefig(pth_a)
@@ -1551,7 +1551,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs("scrublet")
+@needs('scrublet')
 def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
 

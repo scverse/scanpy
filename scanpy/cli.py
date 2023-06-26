@@ -126,8 +126,8 @@ def main(
     """
     parser = ArgumentParser(
         description=(
-            "There are a few packages providing commands. "
-            "Try e.g. `pip install scanpy-scripts`!"
+            'There are a few packages providing commands. '
+            'Try e.g. `pip install scanpy-scripts`!'
         )
     )
     parser.set_defaults(func=parser.print_help)

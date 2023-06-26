@@ -333,7 +333,7 @@ def _validate_palette(adata, key):
     """
 
     _palette = []
-    color_key = f"{key}_colors"
+    color_key = f'{key}_colors'
 
     for color in adata.uns[color_key]:
         if not is_color_like(color):
@@ -397,10 +397,10 @@ def _set_colors_for_categorical_obs(
         if isinstance(palette, cabc.Sequence):
             if len(palette) < len(categories):
                 logg.warning(
-                    "Length of palette colors is smaller than the number of "
-                    f"categories (palette length: {len(palette)}, "
-                    f"categories length: {len(categories)}. "
-                    "Some categories will have the same color."
+                    'Length of palette colors is smaller than the number of '
+                    f'categories (palette length: {len(palette)}, '
+                    f'categories length: {len(categories)}. '
+                    'Some categories will have the same color.'
                 )
             # check that colors are valid
             _color_list = []
@@ -412,8 +412,8 @@ def _set_colors_for_categorical_obs(
                         color = additional_colors[color]
                     else:
                         raise ValueError(
-                            "The following color value of the given palette "
-                            f"is not valid: {color}"
+                            'The following color value of the given palette '
+                            f'is not valid: {color}'
                         )
                 _color_list.append(color)
 
@@ -482,7 +482,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
 def add_colors_for_categorical_sample_annotation(
     adata, key, palette=None, force_update_colors=False
 ):
-    color_key = f"{key}_colors"
+    color_key = f'{key}_colors'
     colors_needed = len(adata.obs[key].cat.categories)
     if palette and force_update_colors:
         _set_colors_for_categorical_obs(adata, key, palette)
@@ -507,7 +507,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
     basis_key = _get_basis(adata, basis)
 
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+        warnings.simplefilter('ignore')
         for ax in axs:
             edge_collection = nx.draw_networkx_edges(
                 g,
@@ -915,8 +915,8 @@ def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     width: horizontal space allocated for drawing
     height: vertical space allocated for drawing
     """
-    TOTAL = "total"
-    CURRENT = "current"
+    TOTAL = 'total'
+    CURRENT = 'current'
 
     def make_levels(levels, node=root, currentLevel=0, parent=None):
         """Compute the number of nodes for each level"""
@@ -1056,15 +1056,15 @@ def data_to_axis_points(ax: Axes, points_data: np.ndarray):
 
 def check_projection(projection):
     """Validation for projection argument."""
-    if projection not in {"2d", "3d"}:
+    if projection not in {'2d', '3d'}:
         raise ValueError(f"Projection must be '2d' or '3d', was '{projection}'.")
-    if projection == "3d":
+    if projection == '3d':
         from packaging.version import parse
 
         mpl_version = parse(mpl.__version__)
-        if mpl_version < parse("3.3.3"):
+        if mpl_version < parse('3.3.3'):
             raise ImportError(
-                f"3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}"
+                f'3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}'
             )
 
 
@@ -1192,8 +1192,8 @@ def _get_basis(adata: anndata.AnnData, basis: str):
     if basis in adata.obsm.keys():
         basis_key = basis
 
-    elif f"X_{basis}" in adata.obsm.keys():
-        basis_key = f"X_{basis}"
+    elif f'X_{basis}' in adata.obsm.keys():
+        basis_key = f'X_{basis}'
 
     return basis_key
 

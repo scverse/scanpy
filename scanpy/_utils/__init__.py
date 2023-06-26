@@ -43,7 +43,7 @@ EPS = 1e-15
 def check_versions():
     from .._compat import pkg_version
 
-    umap_version = pkg_version("umap-learn")
+    umap_version = pkg_version('umap-learn')
 
     if version.parse(anndata_version) < version.parse('0.6.10'):
         from .. import __version__
@@ -124,8 +124,8 @@ def deprecated_arg_names(arg_mapping: Mapping[str, str]):
 
 def _one_of_ours(obj, root: str):
     return (
-        hasattr(obj, "__name__")
-        and not obj.__name__.split(".")[-1].startswith("_")
+        hasattr(obj, '__name__')
+        and not obj.__name__.split('.')[-1].startswith('_')
         and getattr(
             obj, '__module__', getattr(obj, '__qualname__', obj.__name__)
         ).startswith(root)
@@ -179,7 +179,7 @@ def _check_array_function_arguments(**kwargs):
     invalid_args = [k for k, v in kwargs.items() if v is not None]
     if len(invalid_args) > 0:
         raise TypeError(
-            f"Arguments {invalid_args} are only valid if an AnnData object is passed."
+            f'Arguments {invalid_args} are only valid if an AnnData object is passed.'
         )
 
 
@@ -408,7 +408,7 @@ def sanitize_anndata(adata):
 def view_to_actual(adata):
     if adata.is_view:
         warnings.warn(
-            "Received a view of an AnnData. Making a copy.",
+            'Received a view of an AnnData. Making a copy.',
             stacklevel=2,
         )
         adata._init_as_actual(adata.copy())
@@ -467,9 +467,9 @@ def update_params(
         for key, val in new_params.items():
             if key not in old_params and check:
                 raise ValueError(
-                    '\''
+                    "'"
                     + key
-                    + '\' is not a valid parameter key, '
+                    + "' is not a valid parameter key, "
                     + 'consider one of \n'
                     + str(list(old_params.keys()))
                 )
@@ -758,7 +758,7 @@ def _choose_graph(adata, obsp, neighbors_key):
     """Choose connectivities from neighbbors or another obsp column"""
     if obsp is not None and neighbors_key is not None:
         raise ValueError(
-            'You can\'t specify both obsp, neighbors_key. ' 'Please select only one.'
+            "You can't specify both obsp, neighbors_key. " 'Please select only one.'
         )
 
     if obsp is not None:

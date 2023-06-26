@@ -130,7 +130,7 @@ def louvain(
             logg.debug('    using the undirected graph')
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if use_weights:
-            weights = np.array(g.es["weight"]).astype(np.float64)
+            weights = np.array(g.es['weight']).astype(np.float64)
         else:
             weights = None
         if flavor == 'vtraag':
@@ -139,13 +139,13 @@ def louvain(
             if partition_type is None:
                 partition_type = louvain.RBConfigurationVertexPartition
             if resolution is not None:
-                partition_kwargs["resolution_parameter"] = resolution
+                partition_kwargs['resolution_parameter'] = resolution
             if use_weights:
-                partition_kwargs["weights"] = weights
-            if version.parse(louvain.__version__) < version.parse("0.7.0"):
+                partition_kwargs['weights'] = weights
+            if version.parse(louvain.__version__) < version.parse('0.7.0'):
                 louvain.set_rng_seed(random_state)
             else:
-                partition_kwargs["seed"] = random_state
+                partition_kwargs['seed'] = random_state
             logg.info('    using the "louvain" package of Traag (2017)')
             part = louvain.find_partition(
                 g,

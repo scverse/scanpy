@@ -4,7 +4,7 @@ from scanpy.testing._helpers.data import pbmc3k
 from scanpy.testing._pytest.marks import needs
 
 
-@needs("harmonypy")
+@needs('harmonypy')
 def test_harmony_integrate():
     """
     Test that Harmony integrate works.

@@ -3,7 +3,7 @@ Shared docstrings for plotting function parameters.
 """
 
 
-doc_adata_color_etc = """\
+doc_adata_color_etc = '''\
 adata
     Annotated data matrix.
 color
@@ -21,9 +21,9 @@ layer
     adata.raw.X is plotted. If `use_raw=False` is set, then `adata.X` is plotted.
     If `layer` is set to a valid layer name, then the layer is plotted. `layer`
     takes precedence over `use_raw`.\
-"""
+'''
 
-doc_edges_arrows = """\
+doc_edges_arrows = '''\
 edges
     Show edges.
 edges_width
@@ -40,10 +40,10 @@ arrows
     Show arrows (deprecated in favour of `scvelo.pl.velocity_embedding`).
 arrows_kwds
     Passed to :meth:`~matplotlib.axes.Axes.quiver`\
-"""
+'''
 
 # Docs for pl.scatter
-doc_scatter_basic = """\
+doc_scatter_basic = '''\
 sort_order
     For continuous annotations used as color parameter, plot data points
     with higher values on top of others.
@@ -107,9 +107,9 @@ frameon
 title
     Provide title for panels either as string or list of strings,
     e.g. `['title1', 'title2', ...]`.
-"""
+'''
 
-doc_vbound_percentile = """\
+doc_vbound_percentile = '''\
 vmin
     The value representing the lower limit of the color scale. Values smaller than vmin are plotted
     with the same color as vmin. vmin can be a number, a string, a function or `None`. If
@@ -126,9 +126,9 @@ vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
     The format is the same as for `vmin`.
     Example: sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')\
-"""
+'''
 
-doc_vboundnorm = """\
+doc_vboundnorm = '''\
 vmin
     The value representing the lower limit of the color scale. Values smaller than vmin are plotted
     with the same color as vmin.
@@ -140,9 +140,9 @@ vcenter
 norm
     Custom color normalization object from matplotlib. See
     `https://matplotlib.org/stable/tutorials/colors/colormapnorms.html` for details.\
-"""
+'''
 
-doc_outline = """\
+doc_outline = '''\
 add_outline
     If set to True, this will add a thin border around groups of dots. In some situations
     this can enhance the aesthetics of the resulting image
@@ -154,9 +154,9 @@ outline_width
     Tuple with two width numbers used to adjust the outline. The first value is the width
     of the border color as a fraction of the scatter dot size (default: 0.3). The second value is
     width of the gap color (default: 0.05).\
-"""
+'''
 
-doc_panels = """\
+doc_panels = '''\
 ncols
     Number of panels per row.
 wspace
@@ -165,10 +165,10 @@ hspace
     Adjust the height of the space between multiple panels.
 return_fig
     Return the matplotlib figure.\
-"""
+'''
 
 # Docs for pl.pca, pl.tsne, … (everything in _tools.scatterplots)
-doc_scatter_embedding = f"""\
+doc_scatter_embedding = f'''\
 {doc_scatter_basic}
 {doc_vbound_percentile}
 {doc_outline}
@@ -176,9 +176,9 @@ doc_scatter_embedding = f"""\
 kwargs
     Arguments to pass to :func:`matplotlib.pyplot.scatter`,
     for instance: the maximum and minimum values (e.g. `vmin=-2, vmax=5`).\
-"""
+'''
 
-doc_show_save_ax = """\
+doc_show_save_ax = '''\
 show
      Show the plot, do not return axis.
 save
@@ -187,9 +187,9 @@ save
     Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
 ax
     A matplotlib axes object. Only works if plotting a single component.\
-"""
+'''
 
-doc_common_plot_args = """\
+doc_common_plot_args = '''\
 adata
     Annotated data matrix.
 var_names
@@ -243,9 +243,9 @@ layer
     Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
     If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
     then the layer is plotted. `layer` takes precedence over `use_raw`.\
-"""
+'''
 
-doc_rank_genes_groups_plot_args = """\
+doc_rank_genes_groups_plot_args = '''\
 adata
     Annotated data matrix.
 groups
@@ -269,9 +269,9 @@ min_logfoldchange
     min_logfoldchange
 key
     Key used to store the ranking results in `adata.uns`.\
-"""
+'''
 
-doc_rank_genes_groups_values_to_plot = """\
+doc_rank_genes_groups_values_to_plot = '''\
 values_to_plot
     Instead of the mean gene value, plot the values computed by `sc.rank_genes_groups`.
     The options are: ['scores', 'logfoldchanges', 'pvals', 'pvals_adj',
@@ -282,9 +282,9 @@ var_names
     to check their fold changes or p-values, instead of the top/bottom genes. The
     var_names could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
     :func:`~scanpy.pl.matrixplot`. See examples below.\
-"""
+'''
 
-doc_scatter_spatial = """\
+doc_scatter_spatial = '''\
 library_id
     library_id for Visium data, e.g. key in `adata.uns["spatial"]`.
 img_key
@@ -311,4 +311,4 @@ alpha_img
     Alpha value for image.
 bw
     Plot image data in gray scale.\
-"""
+'''

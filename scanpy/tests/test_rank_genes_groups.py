@@ -94,7 +94,7 @@ def test_results_dense():
             true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name]
         )
     assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
-    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
+    assert adata.uns['rank_genes_groups']['params']['use_raw'] is False
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
 
@@ -110,7 +110,7 @@ def test_results_dense():
     assert np.array_equal(
         true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7]
     )
-    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
+    assert adata.uns['rank_genes_groups']['params']['use_raw'] is False
 
 
 def test_results_sparse():
@@ -136,7 +136,7 @@ def test_results_sparse():
             true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name]
         )
     assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
-    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
+    assert adata.uns['rank_genes_groups']['params']['use_raw'] is False
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
 
@@ -152,14 +152,14 @@ def test_results_sparse():
     assert np.array_equal(
         true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7]
     )
-    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
+    assert adata.uns['rank_genes_groups']['params']['use_raw'] is False
 
 
 def test_results_layers():
     seed(1234)
 
     adata = get_example_data(sparse=False)
-    adata.layers["to_test"] = adata.X.copy()
+    adata.layers['to_test'] = adata.X.copy()
     adata.X = adata.X * np.random.randint(0, 2, adata.shape, dtype=bool)
 
     (
@@ -174,10 +174,10 @@ def test_results_layers():
         adata,
         'true_groups',
         method='wilcoxon',
-        layer="to_test",
+        layer='to_test',
         n_genes=20,
     )
-    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
+    assert adata.uns['rank_genes_groups']['params']['use_raw'] is False
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(
             true_scores_wilcoxon[name][:7],
@@ -196,7 +196,7 @@ def test_results_layers():
         adata,
         'true_groups',
         method='t-test',
-        layer="to_test",
+        layer='to_test',
         use_raw=False,
         n_genes=20,
     )
@@ -219,16 +219,16 @@ def test_rank_genes_groups_use_raw():
     pbmc = pbmc68k_reduced()
     assert pbmc.raw is not None
 
-    sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
+    sc.tl.rank_genes_groups(pbmc, groupby='bulk_labels', use_raw=True)
 
     pbmc = pbmc68k_reduced()
     del pbmc.raw
     assert pbmc.raw is None
 
     with pytest.raises(
-        ValueError, match="Received `use_raw=True`, but `adata.raw` is empty"
+        ValueError, match='Received `use_raw=True`, but `adata.raw` is empty'
     ):
-        sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
+        sc.tl.rank_genes_groups(pbmc, groupby='bulk_labels', use_raw=True)
 
 
 def test_singlets():
@@ -253,31 +253,31 @@ def test_wilcoxon_symmetry():
 
     rank_genes_groups(
         pbmc,
-        groupby="bulk_labels",
-        groups=["CD14+ Monocyte", "Dendritic"],
-        reference="Dendritic",
+        groupby='bulk_labels',
+        groups=['CD14+ Monocyte', 'Dendritic'],
+        reference='Dendritic',
         method='wilcoxon',
         rankby_abs=True,
     )
-    assert pbmc.uns["rank_genes_groups"]["params"]["use_raw"] is True
+    assert pbmc.uns['rank_genes_groups']['params']['use_raw'] is True
 
     stats_mono = (
-        rank_genes_groups_df(pbmc, group="CD14+ Monocyte")
-        .drop(columns="names")
+        rank_genes_groups_df(pbmc, group='CD14+ Monocyte')
+        .drop(columns='names')
         .to_numpy()
     )
 
     rank_genes_groups(
         pbmc,
-        groupby="bulk_labels",
-        groups=["CD14+ Monocyte", "Dendritic"],
-        reference="CD14+ Monocyte",
+        groupby='bulk_labels',
+        groups=['CD14+ Monocyte', 'Dendritic'],
+        reference='CD14+ Monocyte',
         method='wilcoxon',
         rankby_abs=True,
     )
 
     stats_dend = (
-        rank_genes_groups_df(pbmc, group="Dendritic").drop(columns="names").to_numpy()
+        rank_genes_groups_df(pbmc, group='Dendritic').drop(columns='names').to_numpy()
     )
 
     assert np.allclose(np.abs(stats_mono), np.abs(stats_dend))
@@ -298,7 +298,7 @@ def test_wilcoxon_tie_correction(reference):
     Y = pbmc.raw.X[mask_rest].toarray()
 
     # Handle scipy versions
-    if version.parse(scipy.__version__) >= version.parse("1.7.0"):
+    if version.parse(scipy.__version__) >= version.parse('1.7.0'):
         pvals = mannwhitneyu(X, Y, use_continuity=False, alternative='two-sided').pvalue
         pvals[np.isnan(pvals)] = 1.0
     else:

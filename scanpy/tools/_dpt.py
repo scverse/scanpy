@@ -22,8 +22,8 @@ def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
         time=start,
         deep=(
             'added\n'
-            '    \'X_diffmap\', diffmap coordinates (adata.obsm)\n'
-            '    \'diffmap_evals\', eigenvalues of transition matrix (adata.uns)'
+            "    'X_diffmap', diffmap coordinates (adata.obsm)\n"
+            "    'diffmap_evals', eigenvalues of transition matrix (adata.uns)"
         ),
     )
 
@@ -125,8 +125,8 @@ def dpt(
         logg.warning(
             'No root cell found. To compute pseudotime, pass the index or '
             'expression vector of a root cell, one of:\n'
-            '    adata.uns[\'iroot\'] = root_cell_index\n'
-            '    adata.var[\'xroot\'] = adata[root_cell_name, :].X'
+            "    adata.uns['iroot'] = root_cell_index\n"
+            "    adata.var['xroot'] = adata[root_cell_name, :].X"
         )
     if 'X_diffmap' not in adata.obsm.keys():
         logg.warning(

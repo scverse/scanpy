@@ -103,7 +103,7 @@ def _highly_variable_pearson_residuals(
             n = X_batch.shape[0]
             clip = np.sqrt(n)
         if clip < 0:
-            raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
+            raise ValueError('Pearson residuals require `clip>=0` or `clip=None`.')
 
         if sp_sparse.issparse(X_batch):
             sums_genes = np.sum(X_batch, axis=0)
@@ -176,13 +176,13 @@ def _highly_variable_pearson_residuals(
         adata.uns['hvg'] = {'flavor': 'pearson_residuals', 'computed_on': computed_on}
         logg.hint(
             'added\n'
-            '    \'highly_variable\', boolean vector (adata.var)\n'
-            '    \'highly_variable_rank\', float vector (adata.var)\n'
-            '    \'highly_variable_nbatches\', int vector (adata.var)\n'
-            '    \'highly_variable_intersection\', boolean vector (adata.var)\n'
-            '    \'means\', float vector (adata.var)\n'
-            '    \'variances\', float vector (adata.var)\n'
-            '    \'residual_variances\', float vector (adata.var)'
+            "    'highly_variable', boolean vector (adata.var)\n"
+            "    'highly_variable_rank', float vector (adata.var)\n"
+            "    'highly_variable_nbatches', int vector (adata.var)\n"
+            "    'highly_variable_intersection', boolean vector (adata.var)\n"
+            "    'means', float vector (adata.var)\n"
+            "    'variances', float vector (adata.var)\n"
+            "    'residual_variances', float vector (adata.var)"
         )
         adata.var['means'] = df['means'].values
         adata.var['variances'] = df['variances'].values
@@ -313,5 +313,5 @@ def highly_variable_genes(
         )
     else:
         raise ValueError(
-            "This is an experimental API and only `flavor=pearson_residuals` is available."
+            'This is an experimental API and only `flavor=pearson_residuals` is available.'
         )

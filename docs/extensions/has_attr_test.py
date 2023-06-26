@@ -10,4 +10,4 @@ def has_attr(obj_path: str, attr: str) -> bool:
 
 
 def setup(app: Sphinx):
-    DEFAULT_NAMESPACE["has_attr"] = has_attr
+    DEFAULT_NAMESPACE['has_attr'] = has_attr

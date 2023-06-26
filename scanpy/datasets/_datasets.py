@@ -124,7 +124,7 @@ def moignard15() -> ad.AnnData:
     gene_subset = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
     adata = adata[:, gene_subset].copy()  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
-    adata.uns["iroot"] = 532  # note that in Matlab/R, counting starts at 1
+    adata.uns['iroot'] = 532  # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups
     groups = {
         'HF': '#D7A83E',
@@ -242,7 +242,7 @@ def pbmc68k_reduced() -> ad.AnnData:
 
     filename = HERE / '10x_pbmc68k_reduced.h5ad'
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        warnings.filterwarnings('ignore', category=FutureWarning, module='anndata')
         return read(filename)
 
 
@@ -302,7 +302,7 @@ def pbmc3k_processed() -> ad.AnnData:
     Annotated data matrix.
     """
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        warnings.filterwarnings('ignore', category=FutureWarning, module='anndata')
         return read(
             settings.datasetdir / 'pbmc3k_processed.h5ad',
             backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad',
@@ -336,7 +336,7 @@ def _download_visium_dataset(
     sample_dir.mkdir(exist_ok=True)
 
     # Download spatial data
-    tar_filename = f"{sample_id}_spatial.tar.gz"
+    tar_filename = f'{sample_id}_spatial.tar.gz'
     tar_pth = sample_dir / tar_filename
     _utils.check_presence_download(
         filename=tar_pth, backup_url=url_prefix + tar_filename
@@ -348,15 +348,15 @@ def _download_visium_dataset(
 
     # Download counts
     _utils.check_presence_download(
-        filename=sample_dir / "filtered_feature_bc_matrix.h5",
-        backup_url=url_prefix + f"{sample_id}_filtered_feature_bc_matrix.h5",
+        filename=sample_dir / 'filtered_feature_bc_matrix.h5',
+        backup_url=url_prefix + f'{sample_id}_filtered_feature_bc_matrix.h5',
     )
 
     # Download image
     if download_image:
         _utils.check_presence_download(
-            filename=sample_dir / "image.tif",
-            backup_url=url_prefix + f"{sample_id}_image.tif",
+            filename=sample_dir / 'image.tif',
+            backup_url=url_prefix + f'{sample_id}_image.tif',
         )
 
 
@@ -410,17 +410,17 @@ def visium_sge(
     -------
     Annotated data matrix.
     """
-    if "V1_" in sample_id:
-        spaceranger_version = "1.1.0"
+    if 'V1_' in sample_id:
+        spaceranger_version = '1.1.0'
     else:
-        spaceranger_version = "1.2.0"
+        spaceranger_version = '1.2.0'
     _download_visium_dataset(
         sample_id, spaceranger_version, download_image=include_hires_tiff
     )
     if include_hires_tiff:
         adata = read_visium(
             settings.datasetdir / sample_id,
-            source_image_path=settings.datasetdir / sample_id / "image.tif",
+            source_image_path=settings.datasetdir / sample_id / 'image.tif',
         )
     else:
         adata = read_visium(settings.datasetdir / sample_id)

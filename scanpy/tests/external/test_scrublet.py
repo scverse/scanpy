@@ -14,7 +14,7 @@ from scanpy.testing._helpers.data import paul15, pbmc3k
 from scanpy.testing._pytest.marks import needs
 
 
-@needs("scrublet")
+@needs('scrublet')
 def test_scrublet():
     """
     Test that Scrublet run works.
@@ -25,13 +25,13 @@ def test_scrublet():
     sce.pp.scrublet(adata, use_approx_neighbors=False)
 
     # replace assertions by conditions
-    assert "predicted_doublet" in adata.obs.columns
-    assert "doublet_score" in adata.obs.columns
+    assert 'predicted_doublet' in adata.obs.columns
+    assert 'doublet_score' in adata.obs.columns
 
-    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+    assert adata.obs['predicted_doublet'].any(), 'Expect some doublets to be identified'
 
 
-@needs("scrublet")
+@needs('scrublet')
 def test_scrublet_batched():
     """
     Test that Scrublet run works with batched data.
@@ -40,18 +40,18 @@ def test_scrublet_batched():
     """
     adata = pbmc3k()
     adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
-    split = [adata[adata.obs["batch"] == x].copy() for x in ("a", "b")]
+    split = [adata[adata.obs['batch'] == x].copy() for x in ('a', 'b')]
 
     sce.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
 
     # replace assertions by conditions
-    assert "predicted_doublet" in adata.obs.columns
-    assert "doublet_score" in adata.obs.columns
+    assert 'predicted_doublet' in adata.obs.columns
+    assert 'doublet_score' in adata.obs.columns
 
-    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+    assert adata.obs['predicted_doublet'].any(), 'Expect some doublets to be identified'
     assert (
         'batches' in adata.uns['scrublet'].keys()
-    ), "Expect .uns to contain batch info"
+    ), 'Expect .uns to contain batch info'
 
     # Check that results are independent
     for s in split:
@@ -61,7 +61,7 @@ def test_scrublet_batched():
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
 
 
-@needs("scrublet")
+@needs('scrublet')
 def test_scrublet_data():
     """
     Test that Scrublet processing is arranged correctly.
@@ -114,8 +114,8 @@ def test_scrublet_data():
         return ad.AnnData(
             X,
             var=pd.DataFrame(index=adata_obs.var_names),
-            obs=pd.DataFrame({"total_counts": np.ravel(X.sum(axis=1))}),
-            obsm={"doublet_parents": parents.copy()},
+            obs=pd.DataFrame({'total_counts': np.ravel(X.sum(axis=1))}),
+            obsm={'doublet_parents': parents.copy()},
         )
 
     # Preprocess the data and make the simulated doublets
@@ -147,7 +147,7 @@ def test_scrublet_data():
     ).all()
 
 
-@needs("scrublet")
+@needs('scrublet')
 def test_scrublet_dense():
     """
     Test that Scrublet works for dense matrices.
@@ -158,13 +158,13 @@ def test_scrublet_dense():
     sce.pp.scrublet(adata, use_approx_neighbors=False)
 
     # replace assertions by conditions
-    assert "predicted_doublet" in adata.obs.columns
-    assert "doublet_score" in adata.obs.columns
+    assert 'predicted_doublet' in adata.obs.columns
+    assert 'doublet_score' in adata.obs.columns
 
-    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+    assert adata.obs['predicted_doublet'].any(), 'Expect some doublets to be identified'
 
 
-@needs("scrublet")
+@needs('scrublet')
 def test_scrublet_params():
     """
     Test that Scrublet args are passed.
@@ -205,7 +205,7 @@ def test_scrublet_params():
             assert_equal(default, curr)
 
 
-@needs("scrublet")
+@needs('scrublet')
 def test_scrublet_simulate_doublets():
     """
     Test that standalone Scrublet doublet simulation works.

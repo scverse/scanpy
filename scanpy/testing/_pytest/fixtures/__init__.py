@@ -25,7 +25,7 @@ __all__ = [
 
 @pytest.fixture(
     params=[sparse.csr_matrix, sparse.csc_matrix, asarray],
-    ids=["scipy-csr", "scipy-csc", "np-ndarray"],
+    ids=['scipy-csr', 'scipy-csc', 'np-ndarray'],
 )
 def array_type(request):
     """Function which converts passed array to one of the common array types."""

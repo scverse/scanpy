@@ -306,7 +306,7 @@ def compute_neighbors_umap(
     """
     with warnings.catch_warnings():
         # umap 0.5.0
-        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
+        warnings.filterwarnings('ignore', message=r'Tensorflow not installed')
         from umap.umap_ import nearest_neighbors
 
     random_state = check_random_state(random_state)
@@ -398,7 +398,7 @@ def _compute_connectivities_umap(
     """
     with warnings.catch_warnings():
         # umap 0.5.0
-        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
+        warnings.filterwarnings('ignore', message=r'Tensorflow not installed')
         from umap.umap_ import fuzzy_simplicial_set
 
     X = coo_matrix(([], ([], [])), shape=(n_obs, 1))
@@ -769,7 +769,7 @@ class Neighbors:
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         if method == 'umap' and not knn:
-            raise ValueError('`method = \'umap\' only with `knn = True`.')
+            raise ValueError("`method = 'umap' only with `knn = True`.")
         if method not in {'umap', 'gauss', 'rapids'}:
             raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
         if self._adata.shape[0] >= 10000 and not knn:

@@ -69,11 +69,11 @@ def test_pca_shapes():
     # https://github.com/scverse/scanpy/issues/1051
     adata = AnnData(np.random.randn(30, 20))
     sc.pp.pca(adata)
-    assert adata.obsm["X_pca"].shape == (30, 19)
+    assert adata.obsm['X_pca'].shape == (30, 19)
 
     adata = AnnData(np.random.randn(20, 30))
     sc.pp.pca(adata)
-    assert adata.obsm["X_pca"].shape == (20, 19)
+    assert adata.obsm['X_pca'].shape == (20, 19)
 
     with pytest.raises(ValueError):
         sc.pp.pca(adata, n_comps=100)
@@ -92,9 +92,9 @@ def test_pca_sparse():
     implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
     explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, copy=True)
 
-    assert np.allclose(implicit.uns["pca"]["variance"], explicit.uns["pca"]["variance"])
+    assert np.allclose(implicit.uns['pca']['variance'], explicit.uns['pca']['variance'])
     assert np.allclose(
-        implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"]
+        implicit.uns['pca']['variance_ratio'], explicit.uns['pca']['variance_ratio']
     )
     assert np.allclose(implicit.obsm['X_pca'], explicit.obsm['X_pca'])
     assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
@@ -111,7 +111,7 @@ def test_pca_reproducible(array_type):
     assert_equal(a, b)
     # Test that changing random seed changes result
     # Does not show up reliably with 32 bit computation
-    assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
+    assert not np.array_equal(a.obsm['X_pca'], c.obsm['X_pca'])
 
 
 def test_pca_chunked():
@@ -127,15 +127,15 @@ def test_pca_chunked():
 
     # Taking absolute value since sometimes dimensions are flipped
     np.testing.assert_allclose(
-        np.abs(chunked.obsm["X_pca"]), np.abs(default.obsm["X_pca"])
+        np.abs(chunked.obsm['X_pca']), np.abs(default.obsm['X_pca'])
     )
-    np.testing.assert_allclose(np.abs(chunked.varm["PCs"]), np.abs(default.varm["PCs"]))
+    np.testing.assert_allclose(np.abs(chunked.varm['PCs']), np.abs(default.varm['PCs']))
     np.testing.assert_allclose(
-        np.abs(chunked.uns["pca"]["variance"]), np.abs(default.uns["pca"]["variance"])
+        np.abs(chunked.uns['pca']['variance']), np.abs(default.uns['pca']['variance'])
     )
     np.testing.assert_allclose(
-        np.abs(chunked.uns["pca"]["variance_ratio"]),
-        np.abs(default.uns["pca"]["variance_ratio"]),
+        np.abs(chunked.uns['pca']['variance_ratio']),
+        np.abs(default.uns['pca']['variance_ratio']),
     )
 
 
@@ -146,11 +146,11 @@ def test_pca_n_pcs():
     """
     pbmc = pbmc3k_normalized()
     sc.pp.pca(pbmc, dtype=np.float64)
-    pbmc.obsm["X_pca_test"] = pbmc.obsm["X_pca"]
-    original = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca", copy=True)
-    renamed = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca_test", copy=True)
+    pbmc.obsm['X_pca_test'] = pbmc.obsm['X_pca']
+    original = sc.pp.neighbors(pbmc, n_pcs=5, use_rep='X_pca', copy=True)
+    renamed = sc.pp.neighbors(pbmc, n_pcs=5, use_rep='X_pca_test', copy=True)
 
-    assert np.allclose(original.obsm["X_pca"], renamed.obsm["X_pca_test"])
+    assert np.allclose(original.obsm['X_pca'], renamed.obsm['X_pca_test'])
     assert np.allclose(
-        original.obsp["distances"].toarray(), renamed.obsp["distances"].toarray()
+        original.obsp['distances'].toarray(), renamed.obsp['distances'].toarray()
     )

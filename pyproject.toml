@@ -177,6 +177,7 @@ select = [
     "E",  # Pycodestyle errors
     "W",  # Pycodestyle warnings
     "TID251",  # Banned imports
+    "Q",  # Quotes
 ]
 ignore = [
     # module imported but unused -> required for Scanpys API
@@ -190,6 +191,9 @@ ignore = [
     # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
     "E741",
 ]
+[tool.ruff.flake8-quotes]
+inline-quotes = 'single'
+multiline-quotes = 'single'
 [tool.ruff.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]

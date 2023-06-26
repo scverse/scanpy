@@ -28,9 +28,9 @@ X_frac = [[1, 0, 1], [3, 0, 1], [5, 6, 1]]
     params=[
         lambda: np.array,
         lambda: csr_matrix,
-        pytest.param(lambda: da.from_array, marks=[needs("dask")]),
+        pytest.param(lambda: da.from_array, marks=[needs('dask')]),
     ],
-    ids=["numpy-array", "sparse-csr", "dask-array"],
+    ids=['numpy-array', 'sparse-csr', 'dask-array'],
 )
 def typ(request):
     return request.param()
@@ -53,18 +53,18 @@ def test_normalize_total(typ, dtype):
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 def test_normalize_total_rep(typ, dtype):
     # Test that layer kwarg works
-    X = typ(sparse.random(100, 50, format="csr", density=0.2, dtype=dtype))
-    check_rep_mutation(sc.pp.normalize_total, X, fields=["layer"])
-    check_rep_results(sc.pp.normalize_total, X, fields=["layer"])
+    X = typ(sparse.random(100, 50, format='csr', density=0.2, dtype=dtype))
+    check_rep_mutation(sc.pp.normalize_total, X, fields=['layer'])
+    check_rep_results(sc.pp.normalize_total, X, fields=['layer'])
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 def test_normalize_total_layers(typ, dtype):
     adata = AnnData(typ(X_total), dtype=dtype)
-    adata.layers["layer"] = adata.X.copy()
-    with pytest.warns(FutureWarning, match=r".*layers.*deprecated"):
-        sc.pp.normalize_total(adata, layers=["layer"])
-    assert np.allclose(adata.layers["layer"].sum(axis=1), [3.0, 3.0, 3.0])
+    adata.layers['layer'] = adata.X.copy()
+    with pytest.warns(FutureWarning, match=r'.*layers.*deprecated'):
+        sc.pp.normalize_total(adata, layers=['layer'])
+    assert np.allclose(adata.layers['layer'].sum(axis=1), [3.0, 3.0, 3.0])
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
@@ -91,7 +91,7 @@ def test_normalize_pearson_residuals_inputchecks(pbmc3k_parametrized):
         _check_check_values_warnings(
             function=sc.experimental.pp.normalize_pearson_residuals,
             adata=adata_noninteger,
-            expected_warning="`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
+            expected_warning='`normalize_pearson_residuals()` expects raw count data, but non-integers were found.',
         )
 
     # errors should be raised for invalid theta values
@@ -168,15 +168,15 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
             list(ad.uns.keys()),
         )
     ), (
-        """Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, but only %s were found"""
+        '''Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, but only %s were found'''
         % (list(ad.uns.keys()))
     )
     assert 'X_pca' in list(
         ad.obsm.keys()
-    ), """Missing `obsm` key `'X_pca'`, only %s were found""" % (list(ad.obsm.keys()))
+    ), '''Missing `obsm` key `'X_pca'`, only %s were found''' % (list(ad.obsm.keys()))
     assert 'PCs' in list(
         ad.varm.keys()
-    ), """Missing `varm` key `'PCs'`, only %s were found""" % (list(ad.varm.keys()))
+    ), '''Missing `varm` key `'PCs'`, only %s were found''' % (list(ad.varm.keys()))
     assert ad.obsm['X_pca'].shape == (
         n_cells,
         n_comps,

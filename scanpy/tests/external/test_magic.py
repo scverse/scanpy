@@ -15,7 +15,7 @@ A_list = [
 ]
 
 
-@needs("magic")
+@needs('magic')
 def test_magic_default():
     A = np.array(A_list, dtype='float32')
     adata = AnnData(A)
@@ -28,7 +28,7 @@ def test_magic_default():
     assert adata.X.shape == A.shape
 
 
-@needs("magic")
+@needs('magic')
 def test_magic_pca_only():
     A = np.array(A_list, dtype='float32')
     # pca only
@@ -41,7 +41,7 @@ def test_magic_pca_only():
     assert adata.obsm['X_magic'].shape == (A.shape[0], n_pca)
 
 
-@needs("magic")
+@needs('magic')
 def test_magic_copy():
     A = np.array(A_list, dtype='float32')
     adata = AnnData(A)

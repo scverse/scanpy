@@ -55,10 +55,10 @@ def test_highly_variable_genes_basic():
     assert np.all(no_batch_hvg == adata.var.highly_variable)
     assert np.all(adata.var.highly_variable_intersection == adata.var.highly_variable)
 
-    adata.obs["batch"] = "a"
-    adata.obs.batch.loc[::2] = "b"
-    sc.pp.highly_variable_genes(adata, batch_key="batch")
-    assert adata.var["highly_variable"].any()
+    adata.obs['batch'] = 'a'
+    adata.obs.batch.loc[::2] = 'b'
+    sc.pp.highly_variable_genes(adata, batch_key='batch')
+    assert adata.var['highly_variable'].any()
 
     colnames = [
         'means',
@@ -68,7 +68,7 @@ def test_highly_variable_genes_basic():
         'highly_variable_intersection',
         'highly_variable',
     ]
-    hvg_df = sc.pp.highly_variable_genes(adata, batch_key="batch", inplace=False)
+    hvg_df = sc.pp.highly_variable_genes(adata, batch_key='batch', inplace=False)
     assert np.all(np.isin(colnames, hvg_df.columns))
 
 
@@ -305,10 +305,10 @@ def test_higly_variable_genes_compare_to_seurat():
     )
 
 
-@needs("skmisc")
+@needs('skmisc')
 def test_higly_variable_genes_compare_to_seurat_v3():
     seurat_hvg_info = pd.read_csv(
-        FILE_V3, sep=' ', dtype={"variances_norm": np.float64}
+        FILE_V3, sep=' ', dtype={'variances_norm': np.float64}
     )
 
     pbmc = pbmc3k()
@@ -344,19 +344,19 @@ def test_higly_variable_genes_compare_to_seurat_v3():
 
     batch = np.zeros((len(pbmc)), dtype=int)
     batch[1500:] = 1
-    pbmc.obs["batch"] = batch
+    pbmc.obs['batch'] = batch
     df = sc.pp.highly_variable_genes(
-        pbmc, n_top_genes=4000, flavor='seurat_v3', batch_key="batch", inplace=False
+        pbmc, n_top_genes=4000, flavor='seurat_v3', batch_key='batch', inplace=False
     )
     df.sort_values(
-        ["highly_variable_nbatches", "highly_variable_rank"],
+        ['highly_variable_nbatches', 'highly_variable_rank'],
         ascending=[False, True],
-        na_position="last",
+        na_position='last',
         inplace=True,
     )
     df = df.iloc[:4000]
     seurat_hvg_info_batch = pd.read_csv(
-        FILE_V3_BATCH, sep=' ', dtype={"variances_norm": np.float64}
+        FILE_V3_BATCH, sep=' ', dtype={'variances_norm': np.float64}
     )
 
     # ranks might be slightly different due to many genes having same normalized var
@@ -461,14 +461,14 @@ def test_highly_variable_genes_batches():
     assert np.all(np.isin(colnames, hvg1.columns))
 
 
-@needs("skmisc")
+@needs('skmisc')
 def test_seurat_v3_mean_var_output_with_batchkey():
     pbmc = pbmc3k()
     pbmc.var_names_make_unique()
     n_cells = pbmc.shape[0]
     batch = np.zeros((n_cells), dtype=int)
     batch[1500:] = 1
-    pbmc.obs["batch"] = batch
+    pbmc.obs['batch'] = batch
 
     # true_mean, true_var = _get_mean_var(pbmc.X)
     true_mean = np.mean(pbmc.X.toarray(), axis=0)
@@ -489,6 +489,6 @@ def test_cellranger_n_top_genes_warning():
 
     with pytest.warns(
         UserWarning,
-        match="`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
+        match='`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.',
     ):
-        sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
+        sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor='cell_ranger')

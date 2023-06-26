@@ -55,15 +55,15 @@ def test_combat_obs_names():
     # Test for fix to #1170
     X = np.random.random((200, 100))
     obs = pd.DataFrame(
-        {"batch": pd.Categorical(np.random.randint(0, 2, 200))},
+        {'batch': pd.Categorical(np.random.randint(0, 2, 200))},
         index=np.repeat(np.arange(100), 2).astype(str),  # Non-unique index
     )
     a = sc.AnnData(X, obs)
     b = a.copy()
     b.obs_names_make_unique()
 
-    sc.pp.combat(a, "batch")
-    sc.pp.combat(b, "batch")
+    sc.pp.combat(a, 'batch')
+    sc.pp.combat(b, 'batch')
 
     assert_equal(a.X, b.X)
 

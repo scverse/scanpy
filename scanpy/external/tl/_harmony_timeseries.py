@@ -131,10 +131,10 @@ def harmony_timeseries(
     try:
         import harmony
     except ImportError:
-        raise ImportError("\nplease install harmony:\n\n\tpip install harmonyTS")
+        raise ImportError('\nplease install harmony:\n\n\tpip install harmonyTS')
 
     adata = adata.copy() if copy else adata
-    logg.info("Harmony augmented affinity matrix")
+    logg.info('Harmony augmented affinity matrix')
 
     if adata.obs[tp].dtype.name != 'category':
         raise ValueError(f'{tp!r} column does not contain Categorical data')
@@ -154,10 +154,10 @@ def harmony_timeseries(
     # Force directed layouts
     layout = harmony.plot.force_directed_layout(aug_aff, adata.obs.index)
 
-    adata.obsm["X_harmony"] = np.asarray(layout)
-    adata.obsp["harmony_aff"] = aff
-    adata.obsp["harmony_aff_aug"] = aug_aff
-    adata.uns["harmony_timepoint_var"] = tp
-    adata.uns["harmony_timepoint_connections"] = np.asarray(timepoint_connections)
+    adata.obsm['X_harmony'] = np.asarray(layout)
+    adata.obsp['harmony_aff'] = aff
+    adata.obsp['harmony_aff_aug'] = aug_aff
+    adata.uns['harmony_timepoint_var'] = tp
+    adata.uns['harmony_timepoint_connections'] = np.asarray(timepoint_connections)
 
     return adata if copy else None

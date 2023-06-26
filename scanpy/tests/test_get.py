@@ -13,20 +13,20 @@ from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
-    "dim,transform,func",
+    'dim,transform,func',
     [
         (
-            "obs",
+            'obs',
             lambda x: x,
             sc.get.obs_df,
         ),
         (
-            "var",
+            'var',
             lambda x: x.T,
             sc.get.var_df,
         ),
     ],
-    ids=["obs_df", "var_df"],
+    ids=['obs_df', 'var_df'],
 )
 
 
@@ -39,12 +39,12 @@ def adata():
     return AnnData(
         X=np.ones((2, 2)),
         obs=pd.DataFrame(
-            {"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]
+            {'obs1': [0, 1], 'obs2': ['a', 'b']}, index=['cell1', 'cell2']
         ),
         var=pd.DataFrame(
-            {"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]
+            {'gene_symbols': ['genesymbol1', 'genesymbol2']}, index=['gene1', 'gene2']
         ),
-        layers={"double": sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},
+        layers={'double': sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},
         dtype=int,
     )
 
@@ -55,98 +55,98 @@ def adata():
 
 
 def test_obs_df(adata):
-    adata.obsm["eye"] = np.eye(2, dtype=int)
-    adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype='float64')
+    adata.obsm['eye'] = np.eye(2, dtype=int)
+    adata.obsm['sparse'] = sparse.csr_matrix(np.eye(2), dtype='float64')
 
     # make raw with different genes than adata
     adata.raw = AnnData(
         X=np.array([[1, 2, 3], [2, 4, 6]]),
         var=pd.DataFrame(
-            {"gene_symbols": ["raw1", "raw2", 'raw3']},
-            index=["gene2", "gene3", "gene4"],
+            {'gene_symbols': ['raw1', 'raw2', 'raw3']},
+            index=['gene2', 'gene3', 'gene4'],
         ),
         dtype='float64',
     )
     pd.testing.assert_frame_equal(
         sc.get.obs_df(
-            adata, keys=["gene2", "obs1"], obsm_keys=[("eye", 0), ("sparse", 1)]
+            adata, keys=['gene2', 'obs1'], obsm_keys=[('eye', 0), ('sparse', 1)]
         ),
         pd.DataFrame(
-            {"gene2": [1, 1], "obs1": [0, 1], "eye-0": [1, 0], "sparse-1": [0.0, 1.0]},
+            {'gene2': [1, 1], 'obs1': [0, 1], 'eye-0': [1, 0], 'sparse-1': [0.0, 1.0]},
             index=adata.obs_names,
         ),
     )
     pd.testing.assert_frame_equal(
         sc.get.obs_df(
             adata,
-            keys=["genesymbol2", "obs1"],
-            obsm_keys=[("eye", 0), ("sparse", 1)],
-            gene_symbols="gene_symbols",
+            keys=['genesymbol2', 'obs1'],
+            obsm_keys=[('eye', 0), ('sparse', 1)],
+            gene_symbols='gene_symbols',
         ),
         pd.DataFrame(
             {
-                "genesymbol2": [1, 1],
-                "obs1": [0, 1],
-                "eye-0": [1, 0],
-                "sparse-1": [0.0, 1.0],
+                'genesymbol2': [1, 1],
+                'obs1': [0, 1],
+                'eye-0': [1, 0],
+                'sparse-1': [0.0, 1.0],
             },
             index=adata.obs_names,
         ),
     )
     pd.testing.assert_frame_equal(
-        sc.get.obs_df(adata, keys=["gene2", "obs1"], layer="double"),
-        pd.DataFrame({"gene2": [2, 2], "obs1": [0, 1]}, index=adata.obs_names),
+        sc.get.obs_df(adata, keys=['gene2', 'obs1'], layer='double'),
+        pd.DataFrame({'gene2': [2, 2], 'obs1': [0, 1]}, index=adata.obs_names),
     )
 
     pd.testing.assert_frame_equal(
         sc.get.obs_df(
             adata,
-            keys=["raw2", "raw3", "obs1"],
-            gene_symbols="gene_symbols",
+            keys=['raw2', 'raw3', 'obs1'],
+            gene_symbols='gene_symbols',
             use_raw=True,
         ),
         pd.DataFrame(
-            {"raw2": [2.0, 4.0], "raw3": [3.0, 6.0], "obs1": [0, 1]},
+            {'raw2': [2.0, 4.0], 'raw3': [3.0, 6.0], 'obs1': [0, 1]},
             index=adata.obs_names,
         ),
     )
     # test only obs
     pd.testing.assert_frame_equal(
-        sc.get.obs_df(adata, keys=["obs1", "obs2"]),
-        pd.DataFrame({"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]),
+        sc.get.obs_df(adata, keys=['obs1', 'obs2']),
+        pd.DataFrame({'obs1': [0, 1], 'obs2': ['a', 'b']}, index=['cell1', 'cell2']),
     )
     # test only var
     pd.testing.assert_frame_equal(
-        sc.get.obs_df(adata, keys=["gene1", "gene2"]),
-        pd.DataFrame({"gene1": [1, 1], "gene2": [1, 1]}, index=adata.obs_names),
+        sc.get.obs_df(adata, keys=['gene1', 'gene2']),
+        pd.DataFrame({'gene1': [1, 1], 'gene2': [1, 1]}, index=adata.obs_names),
     )
     pd.testing.assert_frame_equal(
-        sc.get.obs_df(adata, keys=["gene1", "gene2"]),
-        pd.DataFrame({"gene1": [1, 1], "gene2": [1, 1]}, index=adata.obs_names),
+        sc.get.obs_df(adata, keys=['gene1', 'gene2']),
+        pd.DataFrame({'gene1': [1, 1], 'gene2': [1, 1]}, index=adata.obs_names),
     )
     # test handling of duplicated keys (in this case repeated gene names)
     pd.testing.assert_frame_equal(
-        sc.get.obs_df(adata, keys=["gene1", "gene2", "gene1", "gene1"]),
+        sc.get.obs_df(adata, keys=['gene1', 'gene2', 'gene1', 'gene1']),
         pd.DataFrame(
-            {"gene1": [1, 1], "gene2": [1, 1]},
+            {'gene1': [1, 1], 'gene2': [1, 1]},
             index=adata.obs_names,
-        )[["gene1", "gene2", "gene1", "gene1"]],
+        )[['gene1', 'gene2', 'gene1', 'gene1']],
     )
 
-    badkeys = ["badkey1", "badkey2"]
+    badkeys = ['badkey1', 'badkey2']
     with pytest.raises(KeyError) as badkey_err:
         sc.get.obs_df(adata, keys=badkeys)
     with pytest.raises(AssertionError):
-        sc.get.obs_df(adata, keys=["gene1"], use_raw=True, layer="double")
+        sc.get.obs_df(adata, keys=['gene1'], use_raw=True, layer='double')
     assert all(badkey_err.match(k) for k in badkeys)
 
     # test non unique index
     adata = sc.AnnData(
         np.arange(16).reshape(4, 4),
-        obs=pd.DataFrame(index=["a", "a", "b", "c"]),
-        var=pd.DataFrame(index=[f"gene{i}" for i in range(4)]),
+        obs=pd.DataFrame(index=['a', 'a', 'b', 'c']),
+        var=pd.DataFrame(index=[f'gene{i}' for i in range(4)]),
     )
-    df = sc.get.obs_df(adata, ["gene1"])
+    df = sc.get.obs_df(adata, ['gene1'])
     pd.testing.assert_index_equal(df.index, adata.obs_names)
 
 
@@ -154,23 +154,23 @@ def test_repeated_gene_symbols():
     """
     Gene symbols column allows repeats, but we can't unambiguously get data for these values.
     """
-    gene_symbols = [f"symbol_{i}" for i in ["a", "b", "b", "c"]]
-    var_names = pd.Index([f"id_{i}" for i in ["a", "b.1", "b.2", "c"]])
+    gene_symbols = [f'symbol_{i}' for i in ['a', 'b', 'b', 'c']]
+    var_names = pd.Index([f'id_{i}' for i in ['a', 'b.1', 'b.2', 'c']])
     adata = sc.AnnData(
         np.arange(3 * 4).reshape((3, 4)),
-        var=pd.DataFrame({"gene_symbols": gene_symbols}, index=var_names),
+        var=pd.DataFrame({'gene_symbols': gene_symbols}, index=var_names),
         dtype=np.float32,
     )
 
-    with pytest.raises(KeyError, match="symbol_b"):
-        sc.get.obs_df(adata, ["symbol_b"], gene_symbols="gene_symbols")
+    with pytest.raises(KeyError, match='symbol_b'):
+        sc.get.obs_df(adata, ['symbol_b'], gene_symbols='gene_symbols')
 
     expected = pd.DataFrame(
         np.arange(3 * 4).reshape((3, 4))[:, [0, 3]].astype(np.float32),
         index=adata.obs_names,
-        columns=["symbol_a", "symbol_c"],
+        columns=['symbol_a', 'symbol_c'],
     )
-    result = sc.get.obs_df(adata, ["symbol_a", "symbol_c"], gene_symbols="gene_symbols")
+    result = sc.get.obs_df(adata, ['symbol_a', 'symbol_c'], gene_symbols='gene_symbols')
 
     pd.testing.assert_frame_equal(expected, result)
 
@@ -182,7 +182,7 @@ def test_backed_vs_memory():
 
     # get location test h5ad file in datasets
     HERE = Path(sc.__file__).parent
-    adata_file = HERE / "datasets/10x_pbmc68k_reduced.h5ad"
+    adata_file = HERE / 'datasets/10x_pbmc68k_reduced.h5ad'
     adata_backed = sc.read(adata_file, backed='r')
     adata = sc.read_h5ad(adata_file)
 
@@ -197,8 +197,8 @@ def test_backed_vs_memory():
     # use non-sequential list of cell indices
     cell_indices = list(adata.obs_names[30::-2])
     pd.testing.assert_frame_equal(
-        sc.get.var_df(adata, keys=cell_indices + ["highly_variable"]),
-        sc.get.var_df(adata_backed, keys=cell_indices + ["highly_variable"]),
+        sc.get.var_df(adata, keys=cell_indices + ['highly_variable']),
+        sc.get.var_df(adata_backed, keys=cell_indices + ['highly_variable']),
     )
 
 
@@ -224,59 +224,59 @@ def test_column_content():
 
 
 def test_var_df(adata):
-    adata.varm["eye"] = np.eye(2, dtype=int)
-    adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype='float64')
+    adata.varm['eye'] = np.eye(2, dtype=int)
+    adata.varm['sparse'] = sparse.csr_matrix(np.eye(2), dtype='float64')
 
     pd.testing.assert_frame_equal(
         sc.get.var_df(
             adata,
-            keys=["cell2", "gene_symbols"],
-            varm_keys=[("eye", 0), ("sparse", 1)],
+            keys=['cell2', 'gene_symbols'],
+            varm_keys=[('eye', 0), ('sparse', 1)],
         ),
         pd.DataFrame(
             {
-                "cell2": [1, 1],
-                "gene_symbols": ["genesymbol1", "genesymbol2"],
-                "eye-0": [1, 0],
-                "sparse-1": [0.0, 1.0],
+                'cell2': [1, 1],
+                'gene_symbols': ['genesymbol1', 'genesymbol2'],
+                'eye-0': [1, 0],
+                'sparse-1': [0.0, 1.0],
             },
             index=adata.var_names,
         ),
     )
     pd.testing.assert_frame_equal(
-        sc.get.var_df(adata, keys=["cell1", "gene_symbols"], layer="double"),
+        sc.get.var_df(adata, keys=['cell1', 'gene_symbols'], layer='double'),
         pd.DataFrame(
-            {"cell1": [2, 2], "gene_symbols": ["genesymbol1", "genesymbol2"]},
+            {'cell1': [2, 2], 'gene_symbols': ['genesymbol1', 'genesymbol2']},
             index=adata.var_names,
         ),
     )
     # test only cells
     pd.testing.assert_frame_equal(
-        sc.get.var_df(adata, keys=["cell1", "cell2"]),
+        sc.get.var_df(adata, keys=['cell1', 'cell2']),
         pd.DataFrame(
-            {"cell1": [1, 1], "cell2": [1, 1]},
+            {'cell1': [1, 1], 'cell2': [1, 1]},
             index=adata.var_names,
         ),
     )
     # test only var columns
     pd.testing.assert_frame_equal(
-        sc.get.var_df(adata, keys=["gene_symbols"]),
+        sc.get.var_df(adata, keys=['gene_symbols']),
         pd.DataFrame(
-            {"gene_symbols": ["genesymbol1", "genesymbol2"]},
+            {'gene_symbols': ['genesymbol1', 'genesymbol2']},
             index=adata.var_names,
         ),
     )
 
     # test handling of duplicated keys (in this case repeated cell names)
     pd.testing.assert_frame_equal(
-        sc.get.var_df(adata, keys=["cell1", "cell2", "cell2", "cell1"]),
+        sc.get.var_df(adata, keys=['cell1', 'cell2', 'cell2', 'cell1']),
         pd.DataFrame(
-            {"cell1": [1, 1], "cell2": [1, 1]},
+            {'cell1': [1, 1], 'cell2': [1, 1]},
             index=adata.var_names,
-        )[["cell1", "cell2", "cell2", "cell1"]],
+        )[['cell1', 'cell2', 'cell2', 'cell1']],
     )
 
-    badkeys = ["badkey1", "badkey2"]
+    badkeys = ['badkey1', 'badkey2']
     with pytest.raises(KeyError) as badkey_err:
         sc.get.var_df(adata, keys=badkeys)
     assert all(badkey_err.match(k) for k in badkeys)
@@ -286,22 +286,22 @@ def test_var_df(adata):
 def test_just_mapping_keys(dim, transform, func):
     # https://github.com/scverse/scanpy/issues/1634
     # Test for error where just passing obsm_keys, but not keys, would cause error.
-    mapping_attr = f"{dim}m"
-    kwargs = {f"{mapping_attr}_keys": [("array", 0), ("array", 1)]}
+    mapping_attr = f'{dim}m'
+    kwargs = {f'{mapping_attr}_keys': [('array', 0), ('array', 1)]}
 
     adata = transform(
         sc.AnnData(
             X=np.zeros((5, 5)),
             obsm={
-                "array": np.arange(10).reshape((5, 2)),
+                'array': np.arange(10).reshape((5, 2)),
             },
         )
     )
 
     expected = pd.DataFrame(
         np.arange(10).reshape((5, 2)),
-        index=getattr(adata, f"{dim}_names"),
-        columns=["array-0", "array-1"],
+        index=getattr(adata, f'{dim}_names'),
+        columns=['array-0', 'array-1'],
     )
     result = func(adata, **kwargs)
 
@@ -319,25 +319,25 @@ def test_non_unique_cols_value_error():
         X=np.zeros((M, N)),
         obs=pd.DataFrame(
             np.arange(M * 2).reshape((M, 2)),
-            columns=["repeated_col", "repeated_col"],
-            index=[f"cell_{i}" for i in range(M)],
+            columns=['repeated_col', 'repeated_col'],
+            index=[f'cell_{i}' for i in range(M)],
         ),
         var=pd.DataFrame(
-            index=[f"gene_{i}" for i in range(N)],
+            index=[f'gene_{i}' for i in range(N)],
         ),
     )
     with pytest.raises(ValueError):
-        sc.get.obs_df(adata, ["repeated_col"])
+        sc.get.obs_df(adata, ['repeated_col'])
 
 
 def test_non_unique_var_index_value_error():
     adata = sc.AnnData(
         X=np.ones((2, 3)),
-        obs=pd.DataFrame(index=["cell-0", "cell-1"]),
-        var=pd.DataFrame(index=["gene-0", "gene-0", "gene-1"]),
+        obs=pd.DataFrame(index=['cell-0', 'cell-1']),
+        var=pd.DataFrame(index=['gene-0', 'gene-0', 'gene-1']),
     )
     with pytest.raises(ValueError):
-        sc.get.obs_df(adata, ["gene-0"])
+        sc.get.obs_df(adata, ['gene-0'])
 
 
 def test_keys_in_both_obs_and_var_index_value_error():
@@ -346,15 +346,15 @@ def test_keys_in_both_obs_and_var_index_value_error():
         X=np.zeros((M, N)),
         obs=pd.DataFrame(
             np.arange(M),
-            columns=["var_id"],
-            index=[f"cell_{i}" for i in range(M)],
+            columns=['var_id'],
+            index=[f'cell_{i}' for i in range(M)],
         ),
         var=pd.DataFrame(
-            index=["var_id"] + [f"gene_{i}" for i in range(N - 1)],
+            index=['var_id'] + [f'gene_{i}' for i in range(N - 1)],
         ),
     )
-    with pytest.raises(KeyError, match="var_id"):
-        sc.get.obs_df(adata, ["var_id"])
+    with pytest.raises(KeyError, match='var_id'):
+        sc.get.obs_df(adata, ['var_id'])
 
 
 @TRANSPOSE_PARAMS
@@ -363,91 +363,91 @@ def test_repeated_cols(dim, transform, func):
         sc.AnnData(
             np.ones((5, 10)),
             obs=pd.DataFrame(
-                np.ones((5, 2)), columns=["a_column_name", "a_column_name"]
+                np.ones((5, 2)), columns=['a_column_name', 'a_column_name']
             ),
-            var=pd.DataFrame(index=[f"gene-{i}" for i in range(10)]),
+            var=pd.DataFrame(index=[f'gene-{i}' for i in range(10)]),
         )
     )
     # (?s) is inline re.DOTALL
-    with pytest.raises(ValueError, match=rf"(?s)^adata\.{dim}.*a_column_name.*$"):
-        func(adata, ["gene_5"])
+    with pytest.raises(ValueError, match=rf'(?s)^adata\.{dim}.*a_column_name.*$'):
+        func(adata, ['gene_5'])
 
 
 @TRANSPOSE_PARAMS
 def test_repeated_index_vals(dim, transform, func):
     # THis one could be reverted, see:
     # https://github.com/scverse/scanpy/pull/1583#issuecomment-770641710
-    alt_dim = ["obs", "var"][dim == "obs"]
+    alt_dim = ['obs', 'var'][dim == 'obs']
     adata = transform(
         sc.AnnData(
             np.ones((5, 10)),
             var=pd.DataFrame(
-                index=["repeated_id"] * 2 + [f"gene-{i}" for i in range(8)]
+                index=['repeated_id'] * 2 + [f'gene-{i}' for i in range(8)]
             ),
         )
     )
 
     with pytest.raises(
         ValueError,
-        match=rf"(?s)adata\.{alt_dim}_names.*{alt_dim}_names_make_unique",
+        match=rf'(?s)adata\.{alt_dim}_names.*{alt_dim}_names_make_unique',
     ):
-        func(adata, "gene_5")
+        func(adata, 'gene_5')
 
 
 @pytest.fixture(
     params=[
-        "obs_df",
-        "var_df",
-        "obs_df:use_raw",
-        "obs_df:gene_symbols",
-        "obs_df:gene_symbols,use_raw",
+        'obs_df',
+        'var_df',
+        'obs_df:use_raw',
+        'obs_df:gene_symbols',
+        'obs_df:gene_symbols,use_raw',
     ]
 )
 def shared_key_adata(request):
     kind = request.param
     adata = sc.AnnData(
         np.arange(50).reshape((5, 10)),
-        obs=pd.DataFrame(np.zeros((5, 1)), columns=["var_id"]),
-        var=pd.DataFrame(index=["var_id"] + [f"gene_{i}" for i in range(1, 10)]),
+        obs=pd.DataFrame(np.zeros((5, 1)), columns=['var_id']),
+        var=pd.DataFrame(index=['var_id'] + [f'gene_{i}' for i in range(1, 10)]),
     )
-    if kind == "obs_df":
+    if kind == 'obs_df':
         return (
             adata,
             sc.get.obs_df,
             r"'var_id'.* adata\.obs .* adata.var_names",
         )
-    elif kind == "var_df":
+    elif kind == 'var_df':
         return (
             adata.T,
             sc.get.var_df,
             r"'var_id'.* adata\.var .* adata.obs_names",
         )
-    elif kind == "obs_df:use_raw":
+    elif kind == 'obs_df:use_raw':
         adata.raw = adata
-        adata.var_names = [f"gene_{i}" for i in range(10)]
+        adata.var_names = [f'gene_{i}' for i in range(10)]
         return (
             adata,
             partial(sc.get.obs_df, use_raw=True),
             r"'var_id'.* adata\.obs .* adata\.raw\.var_names",
         )
-    elif kind == "obs_df:gene_symbols":
-        adata.var["gene_symbols"] = adata.var_names
-        adata.var_names = [f"gene_{i}" for i in range(10)]
+    elif kind == 'obs_df:gene_symbols':
+        adata.var['gene_symbols'] = adata.var_names
+        adata.var_names = [f'gene_{i}' for i in range(10)]
         return (
             adata,
-            partial(sc.get.obs_df, gene_symbols="gene_symbols"),
+            partial(sc.get.obs_df, gene_symbols='gene_symbols'),
             r"'var_id'.* adata\.obs .* adata\.var\['gene_symbols'\]",
         )
-    elif kind == "obs_df:gene_symbols,use_raw":
+    elif kind == 'obs_df:gene_symbols,use_raw':
         base = adata.copy()
-        adata.var["gene_symbols"] = adata.var_names
-        adata.var_names = [f"gene_{i}" for i in range(10)]
+        adata.var['gene_symbols'] = adata.var_names
+        adata.var_names = [f'gene_{i}' for i in range(10)]
         base.raw = adata
         return (
             base,
             partial(
                 sc.get.obs_df,
-                gene_symbols="gene_symbols",
+                gene_symbols='gene_symbols',
                 use_raw=True,
             ),
             r"'var_id'.* adata\.obs .* adata\.raw\.var\['gene_symbols'\]",
@@ -461,10 +461,10 @@ def test_shared_key_errors(shared_key_adata):
 
     # This should error
     with pytest.raises(KeyError, match=regex):
-        func(adata, keys=["var_id"])
+        func(adata, keys=['var_id'])
 
     # This shouldn't error
-    _ = func(adata, keys=["gene_2"])
+    _ = func(adata, keys=['gene_2'])
 
 
 ##############################
@@ -478,35 +478,35 @@ def test_rank_genes_groups_df():
     adata = AnnData(
         a,
         obs=pd.DataFrame(
-            {"celltype": list(chain(repeat("a", 10), repeat("b", 10)))},
-            index=[f"cell{i}" for i in range(a.shape[0])],
+            {'celltype': list(chain(repeat('a', 10), repeat('b', 10)))},
+            index=[f'cell{i}' for i in range(a.shape[0])],
         ),
-        var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
+        var=pd.DataFrame(index=[f'gene{i}' for i in range(a.shape[1])]),
     )
-    sc.tl.rank_genes_groups(adata, groupby="celltype", method="wilcoxon", pts=True)
-    dedf = sc.get.rank_genes_groups_df(adata, "a")
-    assert dedf["pvals"].value_counts()[1.0] == 2
-    assert sc.get.rank_genes_groups_df(adata, "a", log2fc_max=0.1).shape[0] == 2
-    assert sc.get.rank_genes_groups_df(adata, "a", log2fc_min=0.1).shape[0] == 1
-    assert sc.get.rank_genes_groups_df(adata, "a", pval_cutoff=0.9).shape[0] == 1
-    del adata.uns["rank_genes_groups"]
+    sc.tl.rank_genes_groups(adata, groupby='celltype', method='wilcoxon', pts=True)
+    dedf = sc.get.rank_genes_groups_df(adata, 'a')
+    assert dedf['pvals'].value_counts()[1.0] == 2
+    assert sc.get.rank_genes_groups_df(adata, 'a', log2fc_max=0.1).shape[0] == 2
+    assert sc.get.rank_genes_groups_df(adata, 'a', log2fc_min=0.1).shape[0] == 1
+    assert sc.get.rank_genes_groups_df(adata, 'a', pval_cutoff=0.9).shape[0] == 1
+    del adata.uns['rank_genes_groups']
     sc.tl.rank_genes_groups(
         adata,
-        groupby="celltype",
-        method="wilcoxon",
-        key_added="different_key",
+        groupby='celltype',
+        method='wilcoxon',
+        key_added='different_key',
         pts=True,
     )
     with pytest.raises(KeyError):
-        sc.get.rank_genes_groups_df(adata, "a")
-    dedf2 = sc.get.rank_genes_groups_df(adata, "a", key="different_key")
+        sc.get.rank_genes_groups_df(adata, 'a')
+    dedf2 = sc.get.rank_genes_groups_df(adata, 'a', key='different_key')
     pd.testing.assert_frame_equal(dedf, dedf2)
     assert 'pct_nz_group' in dedf2.columns
     assert 'pct_nz_reference' in dedf2.columns
 
     # get all groups
-    dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
+    dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key='different_key')
     assert 'a' in dedf3['group'].unique()
     assert 'b' in dedf3['group'].unique()
     adata.var_names.name = 'pr1388'
-    sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
+    sc.get.rank_genes_groups_df(adata, group=None, key='different_key')

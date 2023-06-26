@@ -57,7 +57,7 @@ def paul15() -> AnnData:
 @cache
 def _pbmc3k_normalized() -> AnnData:
     pbmc = pbmc3k()
-    pbmc.X = pbmc.X.astype("float64")  # For better accuracy
+    pbmc.X = pbmc.X.astype('float64')  # For better accuracy
     sc.pp.filter_genes(pbmc, min_counts=1)
     sc.pp.log1p(pbmc)
     sc.pp.normalize_total(pbmc)

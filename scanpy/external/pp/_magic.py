@@ -11,7 +11,7 @@ from ..._settings import settings
 from ..._utils import AnyRandom
 
 
-MIN_VERSION = "2.0"
+MIN_VERSION = '2.0'
 
 
 def magic(
@@ -146,7 +146,7 @@ def magic(
 
     start = logg.info('computing MAGIC')
     all_or_pca = isinstance(name_list, (str, type(None)))
-    if all_or_pca and name_list not in {"all_genes", "pca_only", None}:
+    if all_or_pca and name_list not in {'all_genes', 'pca_only', None}:
         raise ValueError(
             "Invalid string value for `name_list`: "
             "Only `'all_genes'` and `'pca_only'` are allowed."
@@ -180,14 +180,14 @@ def magic(
         time=start,
         deep=(
             "added\n    'X_magic', PCA on MAGIC coordinates (adata.obsm)"
-            if name_list == "pca_only"
+            if name_list == 'pca_only'
             else ''
         ),
     )
     # update AnnData instance
-    if name_list == "pca_only":
+    if name_list == 'pca_only':
         # special case – update adata.obsm with smoothed values
-        adata.obsm["X_magic"] = X_magic.X
+        adata.obsm['X_magic'] = X_magic.X
     elif copy:
         # just return X_magic
         X_magic.raw = adata

@@ -10,23 +10,23 @@ from ..get import rank_genes_groups_df
 from .._utils import _doc_params
 
 
-_doc_org = """\
+_doc_org = '''\
 org
     Organism to query. Must be an organism in ensembl biomart. "hsapiens",
     "mmusculus", "drerio", etc.\
-"""
+'''
 
-_doc_host = """\
+_doc_host = '''\
 host
     A valid BioMart host URL. Alternative values include archive urls (like
     "grch37.ensembl.org") or regional mirrors (like "useast.ensembl.org").\
-"""
+'''
 
-_doc_use_cache = """\
+_doc_use_cache = '''\
 use_cache
     Whether pybiomart should use a cache for requests. Will create a
     `.pybiomart.sqlite` file in current directory if used.\
-"""
+'''
 
 
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
@@ -35,7 +35,7 @@ def simple_query(
     attrs: Union[Iterable[str], str],
     *,
     filters: Optional[Dict[str, Any]] = None,
-    host: str = "www.ensembl.org",
+    host: str = 'www.ensembl.org',
     use_cache: bool = False,
 ) -> pd.DataFrame:
     """\
@@ -56,16 +56,16 @@ def simple_query(
     elif isinstance(attrs, cabc.Iterable):
         attrs = list(attrs)
     else:
-        raise TypeError(f"attrs must be of type list or str, was {type(attrs)}.")
+        raise TypeError(f'attrs must be of type list or str, was {type(attrs)}.')
     try:
         from pybiomart import Server
     except ImportError:
         raise ImportError(
-            "This method requires the `pybiomart` module to be installed."
+            'This method requires the `pybiomart` module to be installed.'
         )
     server = Server(host, use_cache=use_cache)
-    dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets[
-        "{}_gene_ensembl".format(org)
+    dataset = server.marts['ENSEMBL_MART_ENSEMBL'].datasets[
+        '{}_gene_ensembl'.format(org)
     ]
     res = dataset.query(attributes=attrs, filters=filters, use_attr_names=True)
     return res
@@ -76,7 +76,7 @@ def biomart_annotations(
     org: str,
     attrs: Iterable[str],
     *,
-    host: str = "www.ensembl.org",
+    host: str = 'www.ensembl.org',
     use_cache: bool = False,
 ) -> pd.DataFrame:
     """\
@@ -113,9 +113,9 @@ def gene_coordinates(
     org: str,
     gene_name: str,
     *,
-    gene_attr: str = "external_gene_name",
+    gene_attr: str = 'external_gene_name',
     chr_exclude: Iterable[str] = (),
-    host: str = "www.ensembl.org",
+    host: str = 'www.ensembl.org',
     use_cache: bool = False,
 ) -> pd.DataFrame:
     """\
@@ -145,22 +145,22 @@ def gene_coordinates(
     """
     res = simple_query(
         org=org,
-        attrs=["chromosome_name", "start_position", "end_position"],
+        attrs=['chromosome_name', 'start_position', 'end_position'],
         filters={gene_attr: gene_name},
         host=host,
         use_cache=use_cache,
     )
-    return res[~res["chromosome_name"].isin(chr_exclude)]
+    return res[~res['chromosome_name'].isin(chr_exclude)]
 
 
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def mitochondrial_genes(
     org: str,
     *,
-    attrname: str = "external_gene_name",
-    host: str = "www.ensembl.org",
+    attrname: str = 'external_gene_name',
+    host: str = 'www.ensembl.org',
     use_cache: bool = False,
-    chromosome: str = "MT",
+    chromosome: str = 'MT',
 ) -> pd.DataFrame:
     """\
     Mitochondrial gene symbols for specific organism through BioMart.
@@ -191,7 +191,7 @@ def mitochondrial_genes(
     return simple_query(
         org,
         attrs=[attrname],
-        filters={"chromosome_name": [chromosome]},
+        filters={'chromosome_name': [chromosome]},
         host=host,
         use_cache=use_cache,
     )
@@ -202,7 +202,7 @@ def mitochondrial_genes(
 def enrich(
     container: Union[Iterable[str], Mapping[str, Iterable[str]]],
     *,
-    org: str = "hsapiens",
+    org: str = 'hsapiens',
     gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
 ) -> pd.DataFrame:
     """\
@@ -265,15 +265,15 @@ def enrich(
         from gprofiler import GProfiler
     except ImportError:
         raise ImportError(
-            "This method requires the `gprofiler-official` module to be installed."
+            'This method requires the `gprofiler-official` module to be installed.'
         )
-    gprofiler = GProfiler(user_agent="scanpy", return_dataframe=True)
+    gprofiler = GProfiler(user_agent='scanpy', return_dataframe=True)
     gprofiler_kwargs = dict(gprofiler_kwargs)
-    for k in ["organism"]:
+    for k in ['organism']:
         if gprofiler_kwargs.get(k) is not None:
             raise ValueError(
-                f"Argument `{k}` should be passed directly through `enrich`, "
-                "not through `gprofiler_kwargs`"
+                f'Argument `{k}` should be passed directly through `enrich`, '
+                'not through `gprofiler_kwargs`'
             )
     return gprofiler.profile(container, organism=org, **gprofiler_kwargs)
 
@@ -283,8 +283,8 @@ def _enrich_anndata(
     adata: AnnData,
     group: str,
     *,
-    org: Optional[str] = "hsapiens",
-    key: str = "rank_genes_groups",
+    org: Optional[str] = 'hsapiens',
+    key: str = 'rank_genes_groups',
     pval_cutoff: float = 0.05,
     log2fc_min: Optional[float] = None,
     log2fc_max: Optional[float] = None,
@@ -303,5 +303,5 @@ def _enrich_anndata(
     if gene_symbols is not None:
         gene_list = list(de[gene_symbols].dropna())
     else:
-        gene_list = list(de["names"].dropna())
+        gene_list = list(de['names'].dropna())
     return enrich(gene_list, org=org, gprofiler_kwargs=gprofiler_kwargs)

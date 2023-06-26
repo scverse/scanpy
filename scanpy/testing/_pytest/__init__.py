@@ -18,7 +18,7 @@ except ModuleNotFoundError:
 
     def pytest_addoption(parser):
         add_internet_tests_option(parser)
-        parser.addini("nunit_attach_on", "Dummy nunit replacement", default="any")
+        parser.addini('nunit_attach_on', 'Dummy nunit replacement', default='any')
 
 else:
 
@@ -28,21 +28,21 @@ else:
 
 def add_internet_tests_option(parser):
     parser.addoption(
-        "--internet-tests",
-        action="store_true",
+        '--internet-tests',
+        action='store_true',
         default=False,
         help=(
-            "Run tests that retrieve stuff from the internet. "
-            "This increases test time."
+            'Run tests that retrieve stuff from the internet. '
+            'This increases test time.'
         ),
     )
 
 
 def pytest_collection_modifyitems(config, items):
-    run_internet = config.getoption("--internet-tests")
-    skip_internet = pytest.mark.skip(reason="need --internet-tests option to run")
+    run_internet = config.getoption('--internet-tests')
+    skip_internet = pytest.mark.skip(reason='need --internet-tests option to run')
     for item in items:
         # All tests marked with `pytest.mark.internet` get skipped unless
         # `--run-internet` passed
-        if not run_internet and ("internet" in item.keywords):
+        if not run_internet and ('internet' in item.keywords):
             item.add_marker(skip_internet)

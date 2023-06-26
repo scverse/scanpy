@@ -17,7 +17,7 @@ def rank_genes_groups_df(
     adata: AnnData,
     group: Union[str, Iterable[str]],
     *,
-    key: str = "rank_genes_groups",
+    key: str = 'rank_genes_groups',
     pval_cutoff: Optional[float] = None,
     log2fc_min: Optional[float] = None,
     log2fc_max: Optional[float] = None,
@@ -67,13 +67,13 @@ def rank_genes_groups_df(
     d = d.sort_values(['group', 'level_0']).drop(columns='level_0')
 
     if pval_cutoff is not None:
-        d = d[d["pvals_adj"] < pval_cutoff]
+        d = d[d['pvals_adj'] < pval_cutoff]
     if log2fc_min is not None:
-        d = d[d["logfoldchanges"] > log2fc_min]
+        d = d[d['logfoldchanges'] > log2fc_min]
     if log2fc_max is not None:
-        d = d[d["logfoldchanges"] < log2fc_max]
+        d = d[d['logfoldchanges'] < log2fc_max]
     if gene_symbols is not None:
-        d = d.join(adata.var[gene_symbols], on="names")
+        d = d.join(adata.var[gene_symbols], on='names')
 
     for pts, name in {'pts': 'pct_nz_group', 'pts_rest': 'pct_nz_reference'}.items():
         if pts in adata.uns[key]:
@@ -102,11 +102,11 @@ def _check_indices(
 ) -> Tuple[List[str], List[str], List[str]]:
     """Common logic for checking indices for obs_df and var_df."""
     if use_raw:
-        alt_repr = "adata.raw"
+        alt_repr = 'adata.raw'
     else:
-        alt_repr = "adata"
+        alt_repr = 'adata'
 
-    alt_dim = ("obs", "var")[dim == "obs"]
+    alt_dim = ('obs', 'var')[dim == 'obs']
 
     alias_name = None
     if alias_index is not None:
@@ -115,7 +115,7 @@ def _check_indices(
         alt_search_repr = f"{alt_dim}['{alias_name}']"
     else:
         alt_names = pd.Series(alt_index, index=alt_index)
-        alt_search_repr = f"{alt_dim}_names"
+        alt_search_repr = f'{alt_dim}_names'
 
     col_keys = []
     index_keys = []
@@ -128,16 +128,16 @@ def _check_indices(
     if not dim_df.columns.is_unique:
         dup_cols = dim_df.columns[dim_df.columns.duplicated()].tolist()
         raise ValueError(
-            f"adata.{dim} contains duplicated columns. Please rename or remove "
-            "these columns first.\n`"
-            f"Duplicated columns {dup_cols}"
+            f'adata.{dim} contains duplicated columns. Please rename or remove '
+            'these columns first.\n`'
+            f'Duplicated columns {dup_cols}'
         )
 
     if not alt_index.is_unique:
         raise ValueError(
-            f"{alt_repr}.{alt_dim}_names contains duplicated items\n"
-            f"Please rename these {alt_dim} names first for example using "
-            f"`adata.{alt_dim}_names_make_unique()`"
+            f'{alt_repr}.{alt_dim}_names contains duplicated items\n'
+            f'Please rename these {alt_dim} names first for example using '
+            f'`adata.{alt_dim}_names_make_unique()`'
         )
 
     # use only unique keys, otherwise duplicated keys will
@@ -259,7 +259,7 @@ def obs_df(
     if use_raw:
         assert (
             layer is None
-        ), "Cannot specify use_raw=True and a layer at the same time."
+        ), 'Cannot specify use_raw=True and a layer at the same time.'
         var = adata.raw.var
     else:
         var = adata.var
@@ -271,7 +271,7 @@ def obs_df(
     obs_cols, var_idx_keys, var_symbols = _check_indices(
         adata.obs,
         var.index,
-        "obs",
+        'obs',
         keys,
         alias_index=alias_index,
         use_raw=use_raw,
@@ -303,7 +303,7 @@ def obs_df(
         df = df[keys]
 
     for k, idx in obsm_keys:
-        added_k = f"{k}-{idx}"
+        added_k = f'{k}-{idx}'
         val = adata.obsm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
@@ -342,7 +342,7 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
-    var_cols, obs_idx_keys, _ = _check_indices(adata.var, adata.obs_names, "var", keys)
+    var_cols, obs_idx_keys, _ = _check_indices(adata.var, adata.obs_names, 'var', keys)
 
     # initialize df
     df = pd.DataFrame(index=adata.var.index)
@@ -369,7 +369,7 @@ def var_df(
         df = df[keys]
 
     for k, idx in varm_keys:
-        added_k = f"{k}-{idx}"
+        added_k = f'{k}-{idx}'
         val = adata.varm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
@@ -386,7 +386,7 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     """
     # https://github.com/scverse/scanpy/issues/1546
     if not isinstance(use_raw, bool):
-        raise TypeError(f"use_raw expected to be bool, was {type(use_raw)}.")
+        raise TypeError(f'use_raw expected to be bool, was {type(use_raw)}.')
 
     is_layer = layer is not None
     is_raw = use_raw is not False
@@ -406,8 +406,8 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
         return adata.obsp[obsp]
     else:
         assert False, (
-            "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/scverse/scanpy/issues"
+            'That was unexpected. Please report this bug at:\n\n\t'
+            ' https://github.com/scverse/scanpy/issues'
         )
 
 
@@ -433,6 +433,6 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
         adata.obsp[obsp] = val
     else:
         assert False, (
-            "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/scverse/scanpy/issues"
+            'That was unexpected. Please report this bug at:\n\n\t'
+            ' https://github.com/scverse/scanpy/issues'
         )

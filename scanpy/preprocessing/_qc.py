@@ -45,8 +45,8 @@ def _choose_mtx_rep(adata, use_raw=False, layer=None):
 def describe_obs(
     adata: AnnData,
     *,
-    expr_type: str = "counts",
-    var_type: str = "genes",
+    expr_type: str = 'counts',
+    var_type: str = 'genes',
     qc_vars: Collection[str] = (),
     percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
     layer: Optional[str] = None,
@@ -87,7 +87,7 @@ def describe_obs(
     """
     if parallel is not None:
         warn(
-            "Argument `parallel` is deprecated, and currently has no effect.",
+            'Argument `parallel` is deprecated, and currently has no effect.',
             FutureWarning,
         )
     # Handle whether X is passed
@@ -99,36 +99,36 @@ def describe_obs(
             X.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     if issparse(X):
-        obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
+        obs_metrics[f'n_{var_type}_by_{expr_type}'] = X.getnnz(axis=1)
     else:
-        obs_metrics[f"n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
+        obs_metrics[f'n_{var_type}_by_{expr_type}'] = np.count_nonzero(X, axis=1)
     if log1p:
-        obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
-            obs_metrics[f"n_{var_type}_by_{expr_type}"]
+        obs_metrics[f'log1p_n_{var_type}_by_{expr_type}'] = np.log1p(
+            obs_metrics[f'n_{var_type}_by_{expr_type}']
         )
-    obs_metrics[f"total_{expr_type}"] = np.ravel(X.sum(axis=1))
+    obs_metrics[f'total_{expr_type}'] = np.ravel(X.sum(axis=1))
     if log1p:
-        obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(
-            obs_metrics[f"total_{expr_type}"]
+        obs_metrics[f'log1p_total_{expr_type}'] = np.log1p(
+            obs_metrics[f'total_{expr_type}']
         )
     if percent_top:
         percent_top = sorted(percent_top)
         proportions = top_segment_proportions(X, percent_top)
         for i, n in enumerate(percent_top):
-            obs_metrics[f"pct_{expr_type}_in_top_{n}_{var_type}"] = (
+            obs_metrics[f'pct_{expr_type}_in_top_{n}_{var_type}'] = (
                 proportions[:, i] * 100
             )
     for qc_var in qc_vars:
-        obs_metrics[f"total_{expr_type}_{qc_var}"] = np.ravel(
+        obs_metrics[f'total_{expr_type}_{qc_var}'] = np.ravel(
             X[:, adata.var[qc_var].values].sum(axis=1)
         )
         if log1p:
-            obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
-                obs_metrics[f"total_{expr_type}_{qc_var}"]
+            obs_metrics[f'log1p_total_{expr_type}_{qc_var}'] = np.log1p(
+                obs_metrics[f'total_{expr_type}_{qc_var}']
             )
-        obs_metrics[f"pct_{expr_type}_{qc_var}"] = (
-            obs_metrics[f"total_{expr_type}_{qc_var}"]
-            / obs_metrics[f"total_{expr_type}"]
+        obs_metrics[f'pct_{expr_type}_{qc_var}'] = (
+            obs_metrics[f'total_{expr_type}_{qc_var}']
+            / obs_metrics[f'total_{expr_type}']
             * 100
         )
     if inplace:
@@ -146,8 +146,8 @@ def describe_obs(
 def describe_var(
     adata: AnnData,
     *,
-    expr_type: str = "counts",
-    var_type: str = "genes",
+    expr_type: str = 'counts',
+    var_type: str = 'genes',
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace=False,
@@ -187,22 +187,22 @@ def describe_var(
     var_metrics = pd.DataFrame(index=adata.var_names)
     if issparse(X):
         # Current memory bottleneck for csr matrices:
-        var_metrics["n_cells_by_{expr_type}"] = X.getnnz(axis=0)
-        var_metrics["mean_{expr_type}"] = mean_variance_axis(X, axis=0)[0]
+        var_metrics['n_cells_by_{expr_type}'] = X.getnnz(axis=0)
+        var_metrics['mean_{expr_type}'] = mean_variance_axis(X, axis=0)[0]
     else:
-        var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
-        var_metrics["mean_{expr_type}"] = X.mean(axis=0)
+        var_metrics['n_cells_by_{expr_type}'] = np.count_nonzero(X, axis=0)
+        var_metrics['mean_{expr_type}'] = X.mean(axis=0)
     if log1p:
-        var_metrics["log1p_mean_{expr_type}"] = np.log1p(
-            var_metrics["mean_{expr_type}"]
+        var_metrics['log1p_mean_{expr_type}'] = np.log1p(
+            var_metrics['mean_{expr_type}']
         )
-    var_metrics["pct_dropout_by_{expr_type}"] = (
-        1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]
+    var_metrics['pct_dropout_by_{expr_type}'] = (
+        1 - var_metrics['n_cells_by_{expr_type}'] / X.shape[0]
     ) * 100
-    var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
+    var_metrics['total_{expr_type}'] = np.ravel(X.sum(axis=0))
     if log1p:
-        var_metrics["log1p_total_{expr_type}"] = np.log1p(
-            var_metrics["total_{expr_type}"]
+        var_metrics['log1p_total_{expr_type}'] = np.log1p(
+            var_metrics['total_{expr_type}']
         )
     # Relabel
     new_colnames = []
@@ -226,8 +226,8 @@ def describe_var(
 def calculate_qc_metrics(
     adata: AnnData,
     *,
-    expr_type: str = "counts",
-    var_type: str = "genes",
+    expr_type: str = 'counts',
+    var_type: str = 'genes',
     qc_vars: Collection[str] = (),
     percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
     layer: Optional[str] = None,
@@ -293,7 +293,7 @@ def calculate_qc_metrics(
     """
     if parallel is not None:
         warn(
-            "Argument `parallel` is deprecated, and currently has no effect.",
+            'Argument `parallel` is deprecated, and currently has no effect.',
             FutureWarning,
         )
     # Pass X so I only have to do it once
@@ -394,7 +394,7 @@ def top_segment_proportions(
     """
     # Pretty much just does dispatch
     if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
-        raise IndexError("Positions outside range of features.")
+        raise IndexError('Positions outside range of features.')
     if issparse(mtx):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)

@@ -136,10 +136,10 @@ def umap(
     # Compat for umap 0.4 -> 0.5
     with warnings.catch_warnings():
         # umap 0.5.0
-        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
+        warnings.filterwarnings('ignore', message=r'Tensorflow not installed')
         import umap
 
-    if version.parse(umap.__version__) >= version.parse("0.5.0"):
+    if version.parse(umap.__version__) >= version.parse('0.5.0'):
 
         def simplicial_set_embedding(*args, **kwargs):
             from umap.umap_ import simplicial_set_embedding
@@ -171,7 +171,7 @@ def umap(
         )
     else:
         init_coords = init_pos  # Let umap handle it
-    if hasattr(init_coords, "dtype"):
+    if hasattr(init_coords, 'dtype'):
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
     if random_state != 0:

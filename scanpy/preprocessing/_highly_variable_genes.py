@@ -148,11 +148,11 @@ def _highly_variable_genes_seurat_v3(
         adata.uns['hvg'] = {'flavor': 'seurat_v3'}
         logg.hint(
             'added\n'
-            '    \'highly_variable\', boolean vector (adata.var)\n'
-            '    \'highly_variable_rank\', float vector (adata.var)\n'
-            '    \'means\', float vector (adata.var)\n'
-            '    \'variances\', float vector (adata.var)\n'
-            '    \'variances_norm\', float vector (adata.var)'
+            "    'highly_variable', boolean vector (adata.var)\n"
+            "    'highly_variable_rank', float vector (adata.var)\n"
+            "    'means', float vector (adata.var)\n"
+            "    'variances', float vector (adata.var)\n"
+            "    'variances_norm', float vector (adata.var)"
         )
         adata.var['highly_variable'] = df['highly_variable'].values
         adata.var['highly_variable_rank'] = df['highly_variable_rank'].values
@@ -542,10 +542,10 @@ def highly_variable_genes(
         adata.uns['hvg'] = {'flavor': flavor}
         logg.hint(
             'added\n'
-            '    \'highly_variable\', boolean vector (adata.var)\n'
-            '    \'means\', float vector (adata.var)\n'
-            '    \'dispersions\', float vector (adata.var)\n'
-            '    \'dispersions_norm\', float vector (adata.var)'
+            "    'highly_variable', boolean vector (adata.var)\n"
+            "    'means', float vector (adata.var)\n"
+            "    'dispersions', float vector (adata.var)\n"
+            "    'dispersions_norm', float vector (adata.var)"
         )
         adata.var['highly_variable'] = df['highly_variable'].values
         adata.var['means'] = df['means'].values

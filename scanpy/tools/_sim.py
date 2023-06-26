@@ -439,7 +439,7 @@ class GRNsim:
             elif self.modelType == 'var':
                 Xdiff = self.Xdiff_var(X[t - 1])
             else:
-                raise ValueError(f"Unknown modelType {self.modelType!r}")
+                raise ValueError(f'Unknown modelType {self.modelType!r}')
             X[t] = X[t - 1] + Xdiff
             # add dynamic noise
             X[t] += noiseDyn * np.random.randn(self.dim)

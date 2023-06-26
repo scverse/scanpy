@@ -191,9 +191,9 @@ class DotPlot(BasePlot):
             # check that both matrices have the same shape
             if dot_color_df.shape != dot_size_df.shape:
                 logg.error(
-                    "the given dot_color_df data frame has a different shape than "
-                    "the data frame used for the dot size. Both data frames need "
-                    "to have the same index and columns"
+                    'the given dot_color_df data frame has a different shape than '
+                    'the data frame used for the dot size. Both data frames need '
+                    'to have the same index and columns'
                 )
 
             # Because genes (columns) can be duplicated (e.g. when the
@@ -447,7 +447,7 @@ class DotPlot(BasePlot):
         )
         size_legend_ax.set_xticks(np.arange(len(size)) + 0.5)
         labels = [
-            "{}".format(np.round((x * 100), decimals=0).astype(int)) for x in size_range
+            '{}'.format(np.round((x * 100), decimals=0).astype(int)) for x in size_range
         ]
         size_legend_ax.set_xticklabels(labels, fontsize='small')
 
@@ -680,12 +680,12 @@ class DotPlot(BasePlot):
             dot_max = np.ceil(max(frac) * 10) / 10
         else:
             if dot_max < 0 or dot_max > 1:
-                raise ValueError("`dot_max` value has to be between 0 and 1")
+                raise ValueError('`dot_max` value has to be between 0 and 1')
         if dot_min is None:
             dot_min = 0
         else:
             if dot_min < 0 or dot_min > 1:
-                raise ValueError("`dot_min` value has to be between 0 and 1")
+                raise ValueError('`dot_min` value has to be between 0 and 1')
 
         if dot_min != 0 or dot_max != 1:
             # clip frac between dot_min and  dot_max
@@ -709,7 +709,7 @@ class DotPlot(BasePlot):
                 edge_color = []
                 for color_value in cmap(normalize(mean_flat)):
                     lum = relative_luminance(color_value)
-                    edge_color.append(".15" if lum > 0.408 else "w")
+                    edge_color.append('.15' if lum > 0.408 else 'w')
 
             edge_lw = 1.5 if edge_lw is None else edge_lw
 

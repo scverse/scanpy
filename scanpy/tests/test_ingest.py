@@ -103,8 +103,8 @@ def test_neighbors_defaults(adatas, n):
 
 
 @pytest.mark.skipif(
-    pkg_version("anndata") < sc.tl._ingest.ANNDATA_MIN_VERSION,
-    reason="`AnnData.concatenate` does not concatenate `.obsm` in old anndata versions",
+    pkg_version('anndata') < sc.tl._ingest.ANNDATA_MIN_VERSION,
+    reason='`AnnData.concatenate` does not concatenate `.obsm` in old anndata versions',
 )
 def test_ingest_function(adatas):
     adata_ref = adatas[0].copy()

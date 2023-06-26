@@ -331,7 +331,7 @@ def log1p(
 @log1p.register(spmatrix)
 def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
     X = check_array(
-        X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
+        X, accept_sparse=('csr', 'csc'), dtype=(np.float64, np.float32), copy=copy
     )
     X.data = log1p(X.data, copy=False, base=base)
     return X
@@ -365,8 +365,8 @@ def log1p_anndata(
     layer: Optional[str] = None,
     obsm: Optional[str] = None,
 ) -> Optional[AnnData]:
-    if "log1p" in adata.uns_keys():
-        logg.warning("adata.X seems to be already log-transformed.")
+    if 'log1p' in adata.uns_keys():
+        logg.warning('adata.X seems to be already log-transformed.')
 
     adata = adata.copy() if copy else adata
     view_to_actual(adata)
@@ -374,7 +374,7 @@ def log1p_anndata(
     if chunked:
         if (layer is not None) or (obsm is not None):
             raise NotImplementedError(
-                "Currently cannot perform chunked operations on arrays not stored in X."
+                'Currently cannot perform chunked operations on arrays not stored in X.'
             )
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
@@ -383,7 +383,7 @@ def log1p_anndata(
         X = log1p(X, copy=False, base=base)
         _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
-    adata.uns["log1p"] = {"base": base}
+    adata.uns['log1p'] = {'base': base}
     if copy:
         return adata
 
@@ -556,7 +556,7 @@ def normalize_per_cell(
     if counts_per_cell_after is None:
         counts_per_cell_after = np.median(counts_per_cell)
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+        warnings.simplefilter('ignore')
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
         if not issparse(X):
@@ -749,9 +749,9 @@ def scale(
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:
-        raise ValueError(f"`layer` argument inappropriate for value of type {type(X)}")
+        raise ValueError(f'`layer` argument inappropriate for value of type {type(X)}')
     if obsm is not None:
-        raise ValueError(f"`obsm` argument inappropriate for value of type {type(X)}")
+        raise ValueError(f'`obsm` argument inappropriate for value of type {type(X)}')
     return scale_array(X, zero_center=zero_center, max_value=max_value, copy=copy)
 
 
@@ -768,7 +768,7 @@ def scale_array(
         X = X.copy()
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
-            "... be careful when using `max_value` " "without `zero_center`."
+            '... be careful when using `max_value` ' 'without `zero_center`.'
         )
 
     if np.issubdtype(X.dtype, np.integer):
@@ -783,7 +783,7 @@ def scale_array(
     std[std == 0] = 1
     if issparse(X):
         if zero_center:
-            raise ValueError("Cannot zero-center sparse matrix.")
+            raise ValueError('Cannot zero-center sparse matrix.')
         sparsefuncs.inplace_column_scale(X, 1 / std)
     else:
         if zero_center:
@@ -792,7 +792,7 @@ def scale_array(
 
     # do the clipping
     if max_value is not None:
-        logg.debug(f"... clipping at max_value {max_value}")
+        logg.debug(f'... clipping at max_value {max_value}')
         X[X > max_value] = max_value
 
     if return_mean_std:
@@ -813,8 +813,8 @@ def scale_sparse(
     # need to add the following here to make inplace logic work
     if zero_center:
         logg.info(
-            "... as `zero_center=True`, sparse input is "
-            "densified and may lead to large memory consumption"
+            '... as `zero_center=True`, sparse input is '
+            'densified and may lead to large memory consumption'
         )
         X = X.toarray()
         copy = False  # Since the data has been copied
@@ -840,7 +840,7 @@ def scale_anndata(
     adata = adata.copy() if copy else adata
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer, obsm=obsm)
-    X, adata.var["mean"], adata.var["std"] = scale(
+    X, adata.var['mean'], adata.var['std'] = scale(
         X,
         zero_center=zero_center,
         max_value=max_value,
@@ -905,7 +905,7 @@ def subsample(
         return X[obs_indices], obs_indices
 
 
-@deprecated_arg_names({"target_counts": "counts_per_cell"})
+@deprecated_arg_names({'target_counts': 'counts_per_cell'})
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: Optional[Union[int, Collection[int]]] = None,
@@ -950,7 +950,7 @@ def downsample_counts(
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
         raise ValueError(
-            "Must specify exactly one of `total_counts` or `counts_per_cell`."
+            'Must specify exactly one of `total_counts` or `counts_per_cell`.'
         )
     if copy:
         adata = adata.copy()

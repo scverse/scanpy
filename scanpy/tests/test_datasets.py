@@ -10,9 +10,9 @@ from anndata.tests.helpers import assert_adata_equal
 import subprocess
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def tmp_dataset_dir(tmpdir_factory):
-    new_dir = Path(tmpdir_factory.mktemp("scanpy_data"))
+    new_dir = Path(tmpdir_factory.mktemp('scanpy_data'))
     old_dir = sc.settings.datasetdir
     sc.settings.datasetdir = new_dir  # Set up
     yield sc.settings.datasetdir
@@ -41,7 +41,7 @@ def test_paul15(tmp_dataset_dir):
 def test_pbmc3k(tmp_dataset_dir):
     adata = sc.datasets.pbmc3k()
     assert adata.shape == (2700, 32738)
-    assert "CD8A" in adata.var_names
+    assert 'CD8A' in adata.var_names
 
 
 @pytest.mark.internet
@@ -56,7 +56,7 @@ def test_pbmc3k_processed(tmp_dataset_dir):
 
 @pytest.mark.internet
 def test_ebi_expression_atlas(tmp_dataset_dir):
-    adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
+    adata = sc.datasets.ebi_expression_atlas('E-MTAB-4888')
     assert adata.shape == (2315, 24051)  # This changes sometimes
 
 
@@ -64,8 +64,8 @@ def test_krumsiek11(tmp_dataset_dir):
     adata = sc.datasets.krumsiek11()
     assert adata.shape == (640, 11)
     assert all(
-        np.unique(adata.obs["cell_type"])
-        == np.array(["Ery", "Mk", "Mo", "Neu", "progenitor"])
+        np.unique(adata.obs['cell_type'])
+        == np.array(['Ery', 'Mk', 'Mo', 'Neu', 'progenitor'])
     )
 
 
@@ -89,21 +89,21 @@ def test_pbmc68k_reduced():
 @pytest.mark.internet
 def test_visium_datasets(tmp_dataset_dir, tmpdir):
     # Tests that reading/ downloading works and is does not have global effects
-    hheart = sc.datasets.visium_sge("V1_Human_Heart")
-    mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
-    hheart_again = sc.datasets.visium_sge("V1_Human_Heart")
+    hheart = sc.datasets.visium_sge('V1_Human_Heart')
+    mbrain = sc.datasets.visium_sge('V1_Adult_Mouse_Brain')
+    hheart_again = sc.datasets.visium_sge('V1_Human_Heart')
     assert_adata_equal(hheart, hheart_again)
 
     # Test that changing the dataset dir doesn't break reading
     sc.settings.datasetdir = Path(tmpdir)
-    mbrain_again = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
+    mbrain_again = sc.datasets.visium_sge('V1_Adult_Mouse_Brain')
     assert_adata_equal(mbrain, mbrain_again)
 
     # Test that downloading tissue image works
-    mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", include_hires_tiff=True)
-    expected_image_path = sc.settings.datasetdir / "V1_Adult_Mouse_Brain" / "image.tif"
+    mbrain = sc.datasets.visium_sge('V1_Adult_Mouse_Brain', include_hires_tiff=True)
+    expected_image_path = sc.settings.datasetdir / 'V1_Adult_Mouse_Brain' / 'image.tif'
     image_path = Path(
-        mbrain.uns["spatial"]["V1_Adult_Mouse_Brain"]["metadata"]["source_image_path"]
+        mbrain.uns['spatial']['V1_Adult_Mouse_Brain']['metadata']['source_image_path']
     )
     assert image_path == expected_image_path
 
@@ -122,4 +122,4 @@ def test_download_failure():
     from urllib.error import HTTPError
 
     with pytest.raises(HTTPError):
-        sc.datasets.ebi_expression_atlas("not_a_real_accession")
+        sc.datasets.ebi_expression_atlas('not_a_real_accession')

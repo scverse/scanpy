@@ -7,7 +7,7 @@ from scanpy.testing._helpers.data import pbmc3k
 from scanpy.testing._pytest.marks import needs
 
 
-@needs("samalg")
+@needs('samalg')
 def test_sam():
     adata_ref = pbmc3k()
     ix = np.random.choice(adata_ref.shape[0], size=200, replace=False)

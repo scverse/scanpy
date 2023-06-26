@@ -96,7 +96,7 @@ def test_timing(monkeypatch, capsys, logging_state):
 
 
 @pytest.mark.parametrize(
-    "func",
+    'func',
     [
         sc.logging.print_header,
         sc.logging.print_versions,
@@ -113,4 +113,4 @@ def test_call_outputs(func):
     with redirect_stdout(output_io):
         func()
     output = output_io.getvalue()
-    assert output != ""
+    assert output != ''

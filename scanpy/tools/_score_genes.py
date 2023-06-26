@@ -17,7 +17,7 @@ def _sparse_nanmean(X, axis):
     np.nanmean equivalent for sparse matrices
     """
     if not issparse(X):
-        raise TypeError("X must be a sparse matrix")
+        raise TypeError('X must be a sparse matrix')
 
     # count the number of nan elements per row/column (dep. on axis)
     Z = X.copy()
@@ -112,14 +112,14 @@ def score_genes(
     gene_list = set(gene_list_in_var)
 
     if len(gene_list) == 0:
-        raise ValueError("No valid genes were passed for scoring.")
+        raise ValueError('No valid genes were passed for scoring.')
 
     if gene_pool is None:
         gene_pool = list(var_names)
     else:
         gene_pool = [x for x in gene_pool if x in var_names]
     if not gene_pool:
-        raise ValueError("No valid genes were passed for reference set.")
+        raise ValueError('No valid genes were passed for reference set.')
 
     # Trying here to match the Seurat approach in scoring cells.
     # Basically we need to compare genes against random genes in a matched
@@ -263,5 +263,5 @@ def score_genes_cell_cycle(
     phase[np.all(scores < 0, axis=1)] = 'G1'
 
     adata.obs['phase'] = phase
-    logg.hint('    \'phase\', cell cycle phase (adata.obs)')
+    logg.hint("    'phase', cell cycle phase (adata.obs)")
     return adata if copy else None

@@ -201,7 +201,7 @@ def palantir(
     logg.info('Palantir Diffusion Maps in progress ...')
 
     if use_adjacency_matrix:
-        df = adata.obsp[distances_key] if distances_key else adata.obsp["distances"]
+        df = adata.obsp[distances_key] if distances_key else adata.obsp['distances']
     else:
         df = pd.DataFrame(adata.obsm['X_pca'], index=adata.obs_names)
 

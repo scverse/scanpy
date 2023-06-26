@@ -117,9 +117,9 @@ def dendrogram(
             for group in groupby[1:]:
                 # create new category by merging the given groupby categories
                 categorical = (
-                    categorical.astype(str) + "_" + adata.obs[group].astype(str)
+                    categorical.astype(str) + '_' + adata.obs[group].astype(str)
                 ).astype('category')
-        categorical.name = "_".join(groupby)
+        categorical.name = '_'.join(groupby)
 
         rep_df.set_index(categorical, inplace=True)
         categories = rep_df.index.categories

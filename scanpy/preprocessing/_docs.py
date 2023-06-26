@@ -1,15 +1,15 @@
 """Shared docstrings for preprocessing function parameters.
 """
 
-doc_expr_reps = """\
+doc_expr_reps = '''\
 layer
     If provided, use `adata.layers[layer]` for expression values instead
     of `adata.X`.
 use_raw
     If True, use `adata.raw.X` for expression values instead of `adata.X`.\
-"""
+'''
 
-doc_obs_qc_args = """\
+doc_obs_qc_args = '''\
 qc_vars
     Keys for boolean columns of `.var` which identify variables you could
     want to control for (e.g. "ERCC" or "mito").
@@ -17,16 +17,16 @@ percent_top
     Which proportions of top genes to cover. If empty or `None` don't
     calculate. Values are considered 1-indexed, `percent_top=[50]` finds
     cumulative proportion to the 50th most expressed gene.\
-"""
+'''
 
-doc_qc_metric_naming = """\
+doc_qc_metric_naming = '''\
 expr_type
     Name of kind of values in X.
 var_type
     The kind of thing the variables are.\
-"""
+'''
 
-doc_obs_qc_returns = """\
+doc_obs_qc_returns = '''\
 Observation level metrics include:
 
 `total_{var_type}_by_{expr_type}`
@@ -42,9 +42,9 @@ Observation level metrics include:
 `pct_{expr_type}_{qc_var}` – for `qc_var` in `qc_vars`
     E.g. "pct_counts_mito". Proportion of total counts for a cell which
     are mitochondrial.\
-"""
+'''
 
-doc_var_qc_returns = """\
+doc_var_qc_returns = '''\
 Variable level metrics include:
 
 `total_{expr_type}`
@@ -59,9 +59,9 @@ Variable level metrics include:
 `pct_dropout_by_{expr_type}`
     E.g. "pct_dropout_by_counts". Percentage of cells this feature does
     not appear in.\
-"""
+'''
 
-doc_adata_basic = """\
+doc_adata_basic = '''\
 adata
     Annotated data matrix.\
-"""
+'''

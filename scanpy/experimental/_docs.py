@@ -1,13 +1,13 @@
 """Shared docstrings for experimental function parameters.
 """
 
-doc_adata = """\
+doc_adata = '''\
 adata
     The annotated data matrix of shape `n_obs` × `n_vars`.
     Rows correspond to cells and columns to genes.
-"""
+'''
 
-doc_dist_params = """\
+doc_dist_params = '''\
 theta
     The negative binomial overdispersion parameter `theta` for Pearson residuals.
     Higher values correspond to less overdispersion \
@@ -19,27 +19,27 @@ clip
     `[-sqrt(n_obs), sqrt(n_obs)]`, where `n_obs` is the number of cells in the dataset (default behavior).
     * If any scalar `c`, residuals are clipped to the interval `[-c, c]`. Set \
     `clip=np.Inf` for no clipping.
-"""
+'''
 
-doc_check_values = """\
+doc_check_values = '''\
 check_values
     If `True`, checks if counts in selected layer are integers as expected by this
     function, and return a warning if non-integers are found. Otherwise, proceed
     without checking. Setting this to `False` can speed up code for large datasets.
-"""
+'''
 
-doc_layer = """\
+doc_layer = '''\
 layer
     Layer to use as input instead of `X`. If `None`, `X` is used.
-"""
+'''
 
-doc_subset = """\
+doc_subset = '''\
 subset
     Inplace subset to highly-variable genes if `True` otherwise merely indicate
     highly variable genes.
-"""
+'''
 
-doc_genes_batch_chunk = """\
+doc_genes_batch_chunk = '''\
 n_top_genes
     Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'` or
     `flavor='pearson_residuals'`.
@@ -54,26 +54,26 @@ chunksize
     If `flavor='pearson_residuals'`, this dertermines how many genes are processed at
     once while computing the residual variance. Choosing a smaller value will reduce
     the required memory.
-"""
+'''
 
-doc_pca_chunk = """\
+doc_pca_chunk = '''\
 n_comps
     Number of principal components to compute in the PCA step.
 random_state
     Random seed for setting the initial states for the optimization in the PCA step.
 kwargs_pca
     Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
-"""
+'''
 
-doc_inplace = """\
+doc_inplace = '''\
 inplace
     If `True`, update `adata` with results. Otherwise, return results. See below for
     details of what is returned.
-"""
+'''
 
-doc_copy = """\
+doc_copy = '''\
 copy
     If `True`, the function runs on a copy of the input object and returns the
     modified copy. Otherwise, the input object is modified direcly. Not compatible
     with `inplace=False`.
-"""
+'''

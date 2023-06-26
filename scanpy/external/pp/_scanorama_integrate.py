@@ -95,7 +95,7 @@ def scanorama_integrate(
     try:
         import scanorama
     except ImportError:
-        raise ImportError("\nplease install Scanorama:\n\n\tpip install scanorama")
+        raise ImportError('\nplease install Scanorama:\n\n\tpip install scanorama')
 
     # Get batch indices in linear time.
     curr_batch = None

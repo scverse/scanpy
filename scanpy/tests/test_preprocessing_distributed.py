@@ -12,10 +12,10 @@ from scanpy.testing._pytest.marks import needs
 
 
 HERE = Path(__file__).parent / Path('_data/')
-input_file = str(Path(HERE, "10x-10k-subset.zarr"))
+input_file = str(Path(HERE, '10x-10k-subset.zarr'))
 
 
-@needs("zarr")
+@needs('zarr')
 class TestPreprocessingDistributed:
     @pytest.fixture()
     def adata(self):
@@ -25,21 +25,21 @@ class TestPreprocessingDistributed:
 
     @pytest.fixture(
         params=[
-            pytest.param("direct", marks=[needs("zappy")]),
-            pytest.param("dask", marks=[needs("dask")]),
+            pytest.param('direct', marks=[needs('zappy')]),
+            pytest.param('dask', marks=[needs('dask')]),
         ]
     )
     def adata_dist(self, request):
         # regular anndata except for X, which we replace on the next line
         a = ad.read_zarr(input_file)
-        a.uns["dist-mode"] = request.param
-        input_file_X = f"{input_file}/X"
-        if request.param == "direct":
+        a.uns['dist-mode'] = request.param
+        input_file_X = f'{input_file}/X'
+        if request.param == 'direct':
             import zappy.direct
 
             a.X = zappy.direct.from_zarr(input_file_X)
             yield a
-        elif request.param == "dask":
+        elif request.param == 'dask':
             import dask.array as da
 
             a.X = da.from_zarr(input_file_X)
@@ -54,8 +54,8 @@ class TestPreprocessingDistributed:
         npt.assert_allclose(result, adata.X)
 
     def test_normalize_per_cell(self, adata, adata_dist):
-        if adata_dist.uns["dist-mode"] == "dask":
-            pytest.xfail("TODO: Test broken for dask")
+        if adata_dist.uns['dist-mode'] == 'dask':
+            pytest.xfail('TODO: Test broken for dask')
         normalize_per_cell(adata_dist)
         result = materialize_as_ndarray(adata_dist.X)
         normalize_per_cell(adata)
@@ -97,12 +97,12 @@ class TestPreprocessingDistributed:
             chunks = (chunks[0][0],) + chunks[1]
         # write metadata using regular anndata
         adata.write_zarr(temp_store, chunks)
-        if adata_dist.uns["dist-mode"] == "dask":
-            adata_dist.X.to_zarr(temp_store.dir_path("X"), overwrite=True)
-        elif adata_dist.uns["dist-mode"] == "direct":
-            adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks)
+        if adata_dist.uns['dist-mode'] == 'dask':
+            adata_dist.X.to_zarr(temp_store.dir_path('X'), overwrite=True)
+        elif adata_dist.uns['dist-mode'] == 'direct':
+            adata_dist.X.to_zarr(temp_store.dir_path('X'), chunks)
         else:
-            assert False, "add branch for new dist-mode"
+            assert False, 'add branch for new dist-mode'
         # read back as zarr directly and check it is the same as adata.X
         adata_log1p = ad.read_zarr(temp_store)
         log1p(adata)

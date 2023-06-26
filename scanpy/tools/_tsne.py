@@ -23,7 +23,7 @@ def tsne(
     n_jobs: Optional[int] = None,
     copy: bool = False,
     *,
-    metric: str = "euclidean",
+    metric: str = 'euclidean',
 ) -> Optional[AnnData]:
     """\
     t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
@@ -95,10 +95,10 @@ def tsne(
         n_jobs=n_jobs,
         metric=metric,
     )
-    if metric != "euclidean" and (
-        version.parse(sklearn.__version__) < version.parse("1.3.0rc1")
+    if metric != 'euclidean' and (
+        version.parse(sklearn.__version__) < version.parse('1.3.0rc1')
     ):
-        params_sklearn["square_distances"] = True
+        params_sklearn['square_distances'] = True
 
     # Backwards compat handling: Remove in scanpy 1.9.0
     if n_jobs != 1 and not use_fast_tsne:
@@ -113,8 +113,8 @@ def tsne(
     if use_fast_tsne:
         warnings.warn(
             FutureWarning(
-                "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "
-                "will be dropped in a future version of scanpy."
+                'Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE '
+                'will be dropped in a future version of scanpy.'
             )
         )
 
@@ -145,16 +145,16 @@ def tsne(
 
     # update AnnData instance
     adata.obsm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
-    adata.uns["tsne"] = {
-        "params": {
+    adata.uns['tsne'] = {
+        'params': {
             k: v
             for k, v in {
-                "perplexity": perplexity,
-                "early_exaggeration": early_exaggeration,
-                "learning_rate": learning_rate,
-                "n_jobs": n_jobs,
-                "metric": metric,
-                "use_rep": use_rep,
+                'perplexity': perplexity,
+                'early_exaggeration': early_exaggeration,
+                'learning_rate': learning_rate,
+                'n_jobs': n_jobs,
+                'metric': metric,
+                'use_rep': use_rep,
             }.items()
             if v is not None
         }

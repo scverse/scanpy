@@ -19,7 +19,7 @@ from anndata.tests.helpers import asarray, assert_equal
 # These functions can be used to check that functions are correctly using arugments like `layers`, `obsm`, etc.
 
 
-def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
+def check_rep_mutation(func, X, *, fields=('layer', 'obsm'), **kwargs):
     """Check that only the array meant to be modified is modified."""
     adata = sc.AnnData(X=X.copy(), dtype=X.dtype)
     for field in fields:
@@ -51,14 +51,14 @@ def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
         np.testing.assert_array_equal(X_array, result_array)
 
 
-def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
+def check_rep_results(func, X, *, fields=['layer', 'obsm'], **kwargs):
     """Checks that the results of a computation add values/ mutate the anndata object in a consistent way."""
     # Gen data
     empty_X = np.zeros(shape=X.shape, dtype=X.dtype)
     adata = sc.AnnData(
         X=empty_X.copy(),
-        layers={"layer": empty_X.copy()},
-        obsm={"obsm": empty_X.copy()},
+        layers={'layer': empty_X.copy()},
+        obsm={'obsm': empty_X.copy()},
     )
 
     adata_X = adata.copy()

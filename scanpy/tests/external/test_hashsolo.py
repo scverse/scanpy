@@ -22,10 +22,10 @@ def test_cell_demultiplexing():
     test_data = AnnData(np.random.randint(0, 100, size=x.shape), obs=x)
     sce.pp.hashsolo(test_data, test_data.obs.columns)
 
-    doublets = ["Doublet"] * 10
+    doublets = ['Doublet'] * 10
     classes = list(
-        np.repeat(np.arange(10), 98).reshape(98, 10, order="F").ravel().astype(str)
+        np.repeat(np.arange(10), 98).reshape(98, 10, order='F').ravel().astype(str)
     )
-    negatives = ["Negative"] * 10
+    negatives = ['Negative'] * 10
     classification = doublets + classes + negatives
-    assert all(test_data.obs["Classification"].astype(str) == classification)
+    assert all(test_data.obs['Classification'].astype(str) == classification)

@@ -140,13 +140,13 @@ def pca_loadings(
     components = np.array(components) - 1
 
     if np.any(components < 0):
-        raise ValueError("Component indices must be greater than zero.")
+        raise ValueError('Component indices must be greater than zero.')
 
     if n_points is None:
         n_points = min(30, adata.n_vars)
     elif adata.n_vars < n_points:
         raise ValueError(
-            f"Tried to plot {n_points} variables, but passed anndata only has {adata.n_vars}."
+            f'Tried to plot {n_points} variables, but passed anndata only has {adata.n_vars}.'
         )
 
     ranking(
@@ -349,8 +349,8 @@ def rank_genes_groups(
         n_panels_per_row = ncols
     if n_genes < 1:
         raise NotImplementedError(
-            "Specifying a negative number for n_genes has not been implemented for "
-            f"this plot. Received n_genes={n_genes}."
+            'Specifying a negative number for n_genes has not been implemented for '
+            f'this plot. Received n_genes={n_genes}.'
         )
 
     reference = str(adata.uns[key]['params']['reference'])
@@ -467,8 +467,8 @@ def _rank_genes_groups_plot(
     """
     if var_names is not None and n_genes is not None:
         raise ValueError(
-            "The arguments n_genes and var_names are mutually exclusive. Please "
-            "select only one."
+            'The arguments n_genes and var_names are mutually exclusive. Please '
+            'select only one.'
         )
 
     if var_names is None and n_genes is None:
@@ -539,7 +539,7 @@ def _rank_genes_groups_plot(
             if values_to_plot == 'logfoldchanges':
                 title = 'log fold change'
             else:
-                title = values_to_plot.replace("_", " ").replace('pvals', 'p-value')
+                title = values_to_plot.replace('_', ' ').replace('pvals', 'p-value')
 
         if plot_type == 'dotplot':
             from .._dotplot import dotplot
@@ -1466,7 +1466,7 @@ def embedding_density(
         and isinstance(group, cabc.Sequence)
     ):
         if ax is not None:
-            raise ValueError("Can only specify `ax` if no `group` sequence is given.")
+            raise ValueError('Can only specify `ax` if no `group` sequence is given.')
         fig, gs = _panel_grid(hspace, wspace, ncols, len(group))
 
         axs = []
@@ -1520,7 +1520,7 @@ def embedding_density(
 
         # Ensure title is blank as default
         if title is None:
-            title = group if group is not None else ""
+            title = group if group is not None else ''
 
         # Plot the graph
         fig_or_ax = embedding(
@@ -1551,7 +1551,7 @@ def embedding_density(
 
     if return_fig:
         return fig
-    savefig_or_show(f"{key}_", show=show, save=save)
+    savefig_or_show(f'{key}_', show=show, save=save)
     if show is False:
         return ax
 

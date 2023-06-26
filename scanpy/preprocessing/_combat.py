@@ -34,27 +34,27 @@ def _design_matrix(
     design = patsy.dmatrix(
         "~ 0 + C(Q('{}'), levels=batch_levels)".format(batch_key),
         model,
-        return_type="dataframe",
+        return_type='dataframe',
     )
     model = model.drop([batch_key], axis=1)
     numerical_covariates = model.select_dtypes('number').columns.values
 
-    logg.info(f"Found {design.shape[1]} batches\n")
+    logg.info(f'Found {design.shape[1]} batches\n')
     other_cols = [c for c in model.columns.values if c not in numerical_covariates]
 
     if other_cols:
-        col_repr = " + ".join("Q('{}')".format(x) for x in other_cols)
+        col_repr = ' + '.join("Q('{}')".format(x) for x in other_cols)
         factor_matrix = patsy.dmatrix(
-            "~ 0 + {}".format(col_repr), model[other_cols], return_type="dataframe"
+            '~ 0 + {}'.format(col_repr), model[other_cols], return_type='dataframe'
         )
 
         design = pd.concat((design, factor_matrix), axis=1)
-        logg.info(f"Found {len(other_cols)} categorical variables:")
-        logg.info("\t" + ", ".join(other_cols) + '\n')
+        logg.info(f'Found {len(other_cols)} categorical variables:')
+        logg.info('\t' + ', '.join(other_cols) + '\n')
 
     if numerical_covariates is not None:
-        logg.info(f"Found {len(numerical_covariates)} numerical variables:")
-        logg.info("\t" + ", ".join(numerical_covariates) + '\n')
+        logg.info(f'Found {len(numerical_covariates)} numerical variables:')
+        logg.info('\t' + ', '.join(numerical_covariates) + '\n')
 
         for nC in numerical_covariates:
             design[nC] = model[nC]
@@ -202,11 +202,11 @@ def combat(
     n_array = float(sum(n_batches))
 
     # standardize across genes using a pooled variance estimator
-    logg.info("Standardizing Data across genes.\n")
+    logg.info('Standardizing Data across genes.\n')
     s_data, design, var_pooled, stand_mean = _standardize_data(model, data, key)
 
     # fitting the parameters on the standardized data
-    logg.info("Fitting L/S model and finding priors\n")
+    logg.info('Fitting L/S model and finding priors\n')
     batch_design = design[design.columns[:n_batch]]
     # first estimate of the additive batch effect
     gamma_hat = (
@@ -225,7 +225,7 @@ def combat(
     a_prior = list(map(_aprior, delta_hat))
     b_prior = list(map(_bprior, delta_hat))
 
-    logg.info("Finding parametric adjustments\n")
+    logg.info('Finding parametric adjustments\n')
     # gamma star and delta star will be our empirical bayes (EB) estimators
     # for the additive and multiplicative batch effect per batch and cell
     gamma_star, delta_star = [], []
@@ -246,7 +246,7 @@ def combat(
         gamma_star.append(gamma)
         delta_star.append(delta)
 
-    logg.info("Adjusting data\n")
+    logg.info('Adjusting data\n')
     bayesdata = s_data
     gamma_star = np.array(gamma_star)
     delta_star = np.array(delta_star)

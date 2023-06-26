@@ -104,14 +104,14 @@ class _RankGenes:
 
         if len(invalid_groups_selected) > 0:
             raise ValueError(
-                "Could not calculate statistics for groups {} since they only "
-                "contain one sample.".format(', '.join(invalid_groups_selected))
+                'Could not calculate statistics for groups {} since they only '
+                'contain one sample.'.format(', '.join(invalid_groups_selected))
             )
 
         adata_comp = adata
         if layer is not None:
             if use_raw:
-                raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
+                raise ValueError('Cannot specify `layer` and have `use_raw=True`.')
             X = adata_comp.layers[layer]
         else:
             if use_raw and adata.raw is not None:
@@ -224,7 +224,7 @@ class _RankGenes:
 
             # TODO: Come up with better solution. Mask unexpressed genes?
             # See https://github.com/scipy/scipy/issues/10269
-            with np.errstate(invalid="ignore"):
+            with np.errstate(invalid='ignore'):
                 scores, pvals = stats.ttest_ind_from_stats(
                     mean1=mean_group,
                     std1=np.sqrt(var_group),
@@ -533,7 +533,7 @@ def rank_genes_groups(
     if use_raw is None:
         use_raw = adata.raw is not None
     elif use_raw is True and adata.raw is None:
-        raise ValueError("Received `use_raw=True`, but `adata.raw` is empty.")
+        raise ValueError('Received `use_raw=True`, but `adata.raw` is empty.')
 
     if method is None:
         logg.warning(
@@ -588,8 +588,8 @@ def rank_genes_groups(
 
     if check_nonnegative_integers(test_obj.X) and method != 'logreg':
         logg.warning(
-            "It seems you use rank_genes_groups on the raw count data. "
-            "Please logarithmize your data before calling rank_genes_groups."
+            'It seems you use rank_genes_groups on the raw count data. '
+            'Please logarithmize your data before calling rank_genes_groups.'
         )
 
     # for clarity, rename variable
@@ -757,10 +757,10 @@ def filter_rank_genes_groups(
             expm1_func = np.expm1
 
     logg.info(
-        f"Filtering genes using: "
-        f"min_in_group_fraction: {min_in_group_fraction} "
-        f"min_fold_change: {min_fold_change}, "
-        f"max_out_group_fraction: {max_out_group_fraction}"
+        f'Filtering genes using: '
+        f'min_in_group_fraction: {min_in_group_fraction} '
+        f'min_fold_change: {min_fold_change}, '
+        f'max_out_group_fraction: {max_out_group_fraction}'
     )
 
     for cluster in gene_names.columns:

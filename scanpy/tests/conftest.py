@@ -15,7 +15,7 @@ if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
     from scanpy.testing._pytest.fixtures import *  # noqa: F403
 
 
-scanpy.settings.verbosity = "hint"
+scanpy.settings.verbosity = 'hint'
 
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())
@@ -24,7 +24,7 @@ IMPORTED = frozenset(sys.modules.keys())
 @pytest.fixture(autouse=True)
 def close_figures_on_teardown():
     yield
-    pyplot.close("all")
+    pyplot.close('all')
 
 
 def clear_loggers():
@@ -43,7 +43,7 @@ def clear_loggers():
             logger.removeHandler(handler)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope='session', autouse=True)
 def close_logs_on_teardown(request):
     request.addfinalizer(clear_loggers)
 
@@ -55,10 +55,10 @@ def imported_modules():
 
 @pytest.fixture
 def check_same_image(add_nunit_attachment):
-    def _(pth1, pth2, *, tol: int, basename: str = ""):
+    def _(pth1, pth2, *, tol: int, basename: str = ''):
         def fmt_descr(descr):
-            if basename != "":
-                return f"{descr} ({basename})"
+            if basename != '':
+                return f'{descr} ({basename})'
             else:
                 return descr
 
@@ -68,10 +68,10 @@ def check_same_image(add_nunit_attachment):
             assert result is None, result
         except Exception as e:
             diff_pth = make_test_filename(pth2, 'failed-diff')
-            add_nunit_attachment(str(pth1), fmt_descr("Expected"))
-            add_nunit_attachment(str(pth2), fmt_descr("Result"))
+            add_nunit_attachment(str(pth1), fmt_descr('Expected'))
+            add_nunit_attachment(str(pth2), fmt_descr('Result'))
             if Path(diff_pth).is_file():
-                add_nunit_attachment(str(diff_pth), fmt_descr("Difference"))
+                add_nunit_attachment(str(diff_pth), fmt_descr('Difference'))
             raise e
 
     return _

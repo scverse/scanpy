@@ -795,7 +795,7 @@ def violin(
         g = sns.catplot(
             y=y,
             data=obs_tidy,
-            kind="violin",
+            kind='violin',
             scale=scale,
             col=x,
             col_order=keys,
@@ -814,7 +814,7 @@ def violin(
                     data=grouped_df.get_group(key),
                     jitter=jitter,
                     size=size,
-                    color="black",
+                    color='black',
                     ax=g.axes[0, ax_id],
                 )
         if log:
@@ -1077,13 +1077,13 @@ def heatmap(
             # or when groupby is a list of columns the colors are assigned on the fly,
             # which may create inconsistencies in multiple runs that require sorting
             # of the categories (eg. when dendrogram is plotted).
-            if groupby + "_colors" not in adata.uns:
+            if groupby + '_colors' not in adata.uns:
                 # if colors are not found, assign a new palette
                 # and save it using the same code for embeddings
                 from ._tools.scatterplots import _get_palette
 
                 _get_palette(adata, groupby)
-            groupby_colors = adata.uns[groupby + "_colors"]
+            groupby_colors = adata.uns[groupby + '_colors']
         else:
             # this case happen when adata.obs[groupby] is numeric
             # the values are converted into a category on the fly
@@ -1457,11 +1457,11 @@ def tracksplot(
     )
 
     # get categories colors:
-    if groupby + "_colors" not in adata.uns:
+    if groupby + '_colors' not in adata.uns:
         from ._utils import _set_default_colors_for_categorical_obs
 
         _set_default_colors_for_categorical_obs(adata, groupby)
-    groupby_colors = adata.uns[groupby + "_colors"]
+    groupby_colors = adata.uns[groupby + '_colors']
 
     if dendrogram:
         # compute dendrogram if needed and reorder
@@ -1591,7 +1591,7 @@ def tracksplot(
     # add lines to plot
     overlay_ax = fig.add_subplot(axs[1:-1, 0], sharex=first_ax)
     line_positions = np.cumsum(obs_tidy.T.index.value_counts(sort=False))[:-1]
-    overlay_ax.vlines(line_positions, 0, 1, lw=0.5, linestyle="--")
+    overlay_ax.vlines(line_positions, 0, 1, lw=0.5, linestyle='--')
     overlay_ax.axis('off')
     overlay_ax.set_ylim(0, 1)
 
@@ -1843,7 +1843,7 @@ def correlation_matrix(
             corr_matrix_ax.text(
                 row + 0.5,
                 col + 0.5,
-                f"{corr_matrix[row, col]:.2f}",
+                f'{corr_matrix[row, col]:.2f}',
                 ha='center',
                 va='center',
             )
@@ -1853,7 +1853,7 @@ def correlation_matrix(
     if ax is None:  # Plot colorbar
         colormap_ax = fig.add_subplot(gs[3])
         cobar = pl.colorbar(img_mat, cax=colormap_ax, orientation='horizontal')
-        cobar.solids.set_edgecolor("face")
+        cobar.solids.set_edgecolor('face')
         axs.append(colormap_ax)
 
     show = settings.autoshow if show is None else show
@@ -1961,13 +1961,13 @@ def _prepare_dataframe(
     else:
         # join the groupby values  using "_" to make a new 'category'
         categorical = obs_tidy[groupby].apply('_'.join, axis=1).astype('category')
-        categorical.name = "_".join(groupby)
+        categorical.name = '_'.join(groupby)
 
         # preserve category order
         from itertools import product
 
         order = {
-            "_".join(k): idx
+            '_'.join(k): idx
             for idx, k in enumerate(
                 product(*(obs_tidy[g].cat.categories for g in groupby))
             )
@@ -2090,7 +2090,7 @@ def _plot_gene_groups_brackets(
                 group_y_center = top[idx] + float(diff) / 2
                 if diff * 2 < len(group_labels[idx]):
                     # cut label to fit available space
-                    group_labels[idx] = group_labels[idx][: int(diff * 2)] + "."
+                    group_labels[idx] = group_labels[idx][: int(diff * 2)] + '.'
                 gene_groups_ax.text(
                     0.6,
                     group_y_center,
@@ -2201,10 +2201,10 @@ def _reorder_categories_after_dendrogram(
             var_group_positions = positions_ordered
         else:
             logg.warning(
-                "Groups are not reordered because the `groupby` categories "
-                "and the `var_group_labels` are different.\n"
-                f"categories: {_format_first_three_categories(categories)}\n"
-                f"var_group_labels: {_format_first_three_categories(var_group_labels)}"
+                'Groups are not reordered because the `groupby` categories '
+                'and the `var_group_labels` are different.\n'
+                f'categories: {_format_first_three_categories(categories)}\n'
+                f'var_group_labels: {_format_first_three_categories(var_group_labels)}'
             )
     else:
         var_names_idx_ordered = None
@@ -2244,16 +2244,16 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
         from ..tools._dendrogram import dendrogram
 
         logg.warning(
-            f"dendrogram data not found (using key={dendrogram_key}). "
-            "Running `sc.tl.dendrogram` with default parameters. For fine "
-            "tuning it is recommended to run `sc.tl.dendrogram` independently."
+            f'dendrogram data not found (using key={dendrogram_key}). '
+            'Running `sc.tl.dendrogram` with default parameters. For fine '
+            'tuning it is recommended to run `sc.tl.dendrogram` independently.'
         )
         dendrogram(adata, groupby, key_added=dendrogram_key)
 
     if 'dendrogram_info' not in adata.uns[dendrogram_key]:
         raise ValueError(
-            f"The given dendrogram key ({dendrogram_key!r}) does not contain "
-            "valid dendrogram information."
+            f'The given dendrogram key ({dendrogram_key!r}) does not contain '
+            'valid dendrogram information.'
         )
 
     return dendrogram_key
@@ -2319,7 +2319,7 @@ def _plot_dendrogram(
                 new_x_val = new_ticks[old_ticks.index(x_val)]
             else:
                 # find smaller and bigger indices
-                idx_next = np.searchsorted(old_ticks, x_val, side="left")
+                idx_next = np.searchsorted(old_ticks, x_val, side='left')
                 idx_prev = idx_next - 1
                 old_min = old_ticks[idx_prev]
                 old_max = old_ticks[idx_next]
@@ -2332,7 +2332,7 @@ def _plot_dendrogram(
         return new_xs
 
     dendro_info = adata.uns[dendrogram_key]['dendrogram_info']
-    leaves = dendro_info["ivl"]
+    leaves = dendro_info['ivl']
     icoord = np.array(dendro_info['icoord'])
     dcoord = np.array(dendro_info['dcoord'])
 
@@ -2340,8 +2340,8 @@ def _plot_dendrogram(
     # check that ticks has the same length as orig_ticks
     if ticks is not None and len(orig_ticks) != len(ticks):
         logg.warning(
-            "ticks argument does not have the same size as orig_ticks. "
-            "The argument will be ignored"
+            'ticks argument does not have the same size as orig_ticks. '
+            'The argument will be ignored'
         )
         ticks = None
 
@@ -2540,8 +2540,8 @@ def _check_var_names_type(var_names, var_group_labels, var_group_positions):
     if isinstance(var_names, cabc.Mapping):
         if var_group_labels is not None or var_group_positions is not None:
             logg.warning(
-                "`var_names` is a dictionary. This will reset the current "
-                "value of `var_group_labels` and `var_group_positions`."
+                '`var_names` is a dictionary. This will reset the current '
+                'value of `var_group_labels` and `var_group_positions`.'
             )
         var_group_labels = []
         _var_names = []

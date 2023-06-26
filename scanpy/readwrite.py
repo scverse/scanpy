@@ -42,7 +42,7 @@ avail_exts = {
     'soft.gz',
     'loom',
 } | text_exts
-"""Available file formats for reading data. """
+'''Available file formats for reading data. '''
 
 
 # --------------------------------------------------------------------------------
@@ -268,7 +268,7 @@ def _read_v3_10x_h5(filename, *, start=None):
     with h5py.File(str(filename), 'r') as f:
         try:
             dsets = {}
-            _collect_datasets(dsets, f["matrix"])
+            _collect_datasets(dsets, f['matrix'])
 
             from scipy.sparse import csr_matrix
 
@@ -337,7 +337,7 @@ def read_visium(
     path: Union[str, Path],
     genome: Optional[str] = None,
     *,
-    count_file: str = "filtered_feature_bc_matrix.h5",
+    count_file: str = 'filtered_feature_bc_matrix.h5',
     library_id: str = None,
     load_images: Optional[bool] = True,
     source_image_path: Optional[Union[str, Path]] = None,
@@ -402,22 +402,22 @@ def read_visium(
     path = Path(path)
     adata = read_10x_h5(path / count_file, genome=genome)
 
-    adata.uns["spatial"] = dict()
+    adata.uns['spatial'] = dict()
 
     from h5py import File
 
-    with File(path / count_file, mode="r") as f:
+    with File(path / count_file, mode='r') as f:
         attrs = dict(f.attrs)
     if library_id is None:
-        library_id = str(attrs.pop("library_ids")[0], "utf-8")
+        library_id = str(attrs.pop('library_ids')[0], 'utf-8')
 
-    adata.uns["spatial"][library_id] = dict()
+    adata.uns['spatial'][library_id] = dict()
 
     if load_images:
         tissue_positions_file = (
-            path / "spatial/tissue_positions.csv"
-            if (path / "spatial/tissue_positions.csv").exists()
-            else path / "spatial/tissue_positions_list.csv"
+            path / 'spatial/tissue_positions.csv'
+            if (path / 'spatial/tissue_positions.csv').exists()
+            else path / 'spatial/tissue_positions_list.csv'
         )
         files = dict(
             tissue_positions_file=tissue_positions_file,
@@ -429,7 +429,7 @@ def read_visium(
         # check if files exists, continue if images are missing
         for f in files.values():
             if not f.exists():
-                if any(x in str(f) for x in ["hires_image", "lowres_image"]):
+                if any(x in str(f) for x in ['hires_image', 'lowres_image']):
                     logg.warning(
                         f"You seem to be missing an image file.\n"
                         f"Could not find '{f}'."
@@ -437,30 +437,30 @@ def read_visium(
                 else:
                     raise OSError(f"Could not find '{f}'")
 
-        adata.uns["spatial"][library_id]['images'] = dict()
+        adata.uns['spatial'][library_id]['images'] = dict()
         for res in ['hires', 'lowres']:
             try:
-                adata.uns["spatial"][library_id]['images'][res] = imread(
+                adata.uns['spatial'][library_id]['images'][res] = imread(
                     str(files[f'{res}_image'])
                 )
             except Exception:
                 raise OSError(f"Could not find '{res}_image'")
 
         # read json scalefactors
-        adata.uns["spatial"][library_id]['scalefactors'] = json.loads(
+        adata.uns['spatial'][library_id]['scalefactors'] = json.loads(
             files['scalefactors_json_file'].read_bytes()
         )
 
-        adata.uns["spatial"][library_id]["metadata"] = {
-            k: (str(attrs[k], "utf-8") if isinstance(attrs[k], bytes) else attrs[k])
-            for k in ("chemistry_description", "software_version")
+        adata.uns['spatial'][library_id]['metadata'] = {
+            k: (str(attrs[k], 'utf-8') if isinstance(attrs[k], bytes) else attrs[k])
+            for k in ('chemistry_description', 'software_version')
             if k in attrs
         }
 
         # read coordinates
         positions = pd.read_csv(
             files['tissue_positions_file'],
-            header=1 if tissue_positions_file.name == "tissue_positions.csv" else None,
+            header=1 if tissue_positions_file.name == 'tissue_positions.csv' else None,
             index_col=0,
         )
         positions.columns = [
@@ -471,7 +471,7 @@ def read_visium(
             'pxl_row_in_fullres',
         ]
 
-        adata.obs = adata.obs.join(positions, how="left")
+        adata.obs = adata.obs.join(positions, how='left')
 
         adata.obsm['spatial'] = adata.obs[
             ['pxl_row_in_fullres', 'pxl_col_in_fullres']
@@ -485,7 +485,7 @@ def read_visium(
         if source_image_path is not None:
             # get an absolute path
             source_image_path = str(Path(source_image_path).resolve())
-            adata.uns["spatial"][library_id]["metadata"]["source_image_path"] = str(
+            adata.uns['spatial'][library_id]['metadata']['source_image_path'] = str(
                 source_image_path
             )
 
@@ -534,7 +534,7 @@ def read_10x_mtx(
     An :class:`~anndata.AnnData` object
     """
     path = Path(path)
-    prefix = "" if prefix is None else prefix
+    prefix = '' if prefix is None else prefix
     genefile_exists = (path / f'{prefix}genes.tsv').is_file()
     read = _read_legacy_10x_mtx if genefile_exists else _read_v3_10x_mtx
     adata = read(
@@ -561,7 +561,7 @@ def _read_legacy_10x_mtx(
     cache=False,
     cache_compression=_empty,
     *,
-    prefix="",
+    prefix='',
 ):
     """
     Read mex from output from Cell Ranger v2 or earlier versions
@@ -595,7 +595,7 @@ def _read_v3_10x_mtx(
     cache=False,
     cache_compression=_empty,
     *,
-    prefix="",
+    prefix='',
 ):
     """
     Read mtx from output from Cell Ranger v3 or later versions
@@ -866,19 +866,19 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
         # samples. Read that information first.
         samples_info = {}
         for line in file:
-            if line.startswith("!dataset_table_begin"):
+            if line.startswith('!dataset_table_begin'):
                 break
-            elif line.startswith("!subset_description"):
-                subset_description = line.split("=")[1].strip()
-            elif line.startswith("!subset_sample_id"):
-                subset_ids = line.split("=")[1].split(",")
+            elif line.startswith('!subset_description'):
+                subset_description = line.split('=')[1].strip()
+            elif line.startswith('!subset_sample_id'):
+                subset_ids = line.split('=')[1].split(',')
                 subset_ids = [x.strip() for x in subset_ids]
                 for k in subset_ids:
                     samples_info[k] = subset_description
         # Next line is the column headers (sample id's)
-        sample_names = file.readline().strip().split("\t")
+        sample_names = file.readline().strip().split('\t')
         # The column indices that contain gene expression data
-        indices = [i for i, x in enumerate(sample_names) if x.startswith("GSM")]
+        indices = [i for i, x in enumerate(sample_names) if x.startswith('GSM')]
         # Restrict the column headers to those that we keep
         sample_names = [sample_names[i] for i in indices]
         # Get a list of sample labels
@@ -889,9 +889,9 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
         for line in file:
             # This is what signals the end of the gene expression data
             # section in the file
-            if line.startswith("!dataset_table_end"):
+            if line.startswith('!dataset_table_end'):
                 break
-            V = line.split("\t")
+            V = line.split('\t')
             # Extract the values that correspond to gene expression measures
             # and convert the strings to numbers
             x = [float(V[i]) for i in indices]
@@ -900,7 +900,7 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
     # Convert the Python list of lists to a Numpy array and transpose to match
     # the Scanpy convention of storing samples in rows and variables in colums.
     X = np.array(X).T
-    obs = pd.DataFrame({"groups": groups}, index=sample_names)
+    obs = pd.DataFrame({'groups': groups}, index=sample_names)
     var = pd.DataFrame(index=gene_names)
     return AnnData(X=X, obs=obs, var=var, dtype=X.dtype)
 
@@ -1001,7 +1001,7 @@ def _download(url: str, path: Path):
     blocknum = 0
 
     try:
-        req = Request(url, headers={"User-agent": "scanpy-user"})
+        req = Request(url, headers={'User-agent': 'scanpy-user'})
 
         try:
             open_url = urlopen(req)
@@ -1016,14 +1016,14 @@ def _download(url: str, path: Path):
             open_url = urlopen(req, context=create_default_context(cafile=where()))
 
         with open_url as resp:
-            total = resp.info().get("content-length", None)
+            total = resp.info().get('content-length', None)
             with tqdm(
-                unit="B",
+                unit='B',
                 unit_scale=True,
                 miniters=1,
                 unit_divisor=1024,
                 total=total if total is None else int(total),
-            ) as t, path.open("wb") as f:
+            ) as t, path.open('wb') as f:
                 block = resp.read(blocksize)
                 while block:
                     f.write(block)

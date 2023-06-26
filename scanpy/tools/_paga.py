@@ -100,7 +100,7 @@ def paga(
             'You need to run `pp.neighbors` first to compute a neighborhood graph.'
         )
     if groups is None:
-        for k in ("leiden", "louvain"):
+        for k in ('leiden', 'louvain'):
             if k in adata.obs.columns:
                 groups = k
                 break

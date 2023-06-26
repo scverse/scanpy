@@ -137,7 +137,7 @@ def normalize_total(
     """
     if copy:
         if not inplace:
-            raise ValueError("`copy=True` cannot be used with `inplace=False`.")
+            raise ValueError('`copy=True` cannot be used with `inplace=False`.')
         adata = adata.copy()
 
     if max_fraction < 0 or max_fraction > 1:
@@ -147,15 +147,15 @@ def normalize_total(
     if layers is not None:
         warn(
             FutureWarning(
-                "The `layers` argument is deprecated. Instead, specify individual "
-                "layers to normalize with `layer`."
+                'The `layers` argument is deprecated. Instead, specify individual '
+                'layers to normalize with `layer`.'
             )
         )
     if layer_norm is not None:
         warn(
             FutureWarning(
-                "The `layer_norm` argument is deprecated. Specify the target size "
-                "factor directly with `target_sum`."
+                'The `layer_norm` argument is deprecated. Specify the target size '
+                'factor directly with `target_sum`.'
             )
         )
 
@@ -223,7 +223,7 @@ def normalize_total(
             adata, layer=layer_to_norm, target_sum=after, inplace=inplace
         )
         if not inplace:
-            dat[layer_to_norm] = res["X"]
+            dat[layer_to_norm] = res['X']
 
     logg.info(
         '    finished ({time_passed})',

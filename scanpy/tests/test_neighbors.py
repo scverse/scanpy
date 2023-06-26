@@ -144,11 +144,11 @@ def test_gauss_connectivities_euclidean(neigh):
 def test_metrics_argument():
     no_knn_euclidean = get_neighbors()
     no_knn_euclidean.compute_neighbors(
-        method="gauss", knn=False, n_neighbors=n_neighbors, metric="euclidean"
+        method='gauss', knn=False, n_neighbors=n_neighbors, metric='euclidean'
     )
     no_knn_manhattan = get_neighbors()
     no_knn_manhattan.compute_neighbors(
-        method="gauss", knn=False, n_neighbors=n_neighbors, metric="manhattan"
+        method='gauss', knn=False, n_neighbors=n_neighbors, metric='manhattan'
     )
     assert not np.allclose(no_knn_euclidean.distances, no_knn_manhattan.distances)
 
@@ -170,7 +170,7 @@ def test_restore_n_neighbors(neigh, conv):
     ad = AnnData(np.array(X))
     # Allow deprecated usage for now
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        warnings.filterwarnings('ignore', category=FutureWarning, module='anndata')
         ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1

@@ -102,12 +102,12 @@ def gearys_c(
     """
     if use_graph is None:
         # Fix for anndata<0.7
-        if hasattr(adata, "obsp") and "connectivities" in adata.obsp:
-            g = adata.obsp["connectivities"]
-        elif "neighbors" in adata.uns:
-            g = adata.uns["neighbors"]["connectivities"]
+        if hasattr(adata, 'obsp') and 'connectivities' in adata.obsp:
+            g = adata.obsp['connectivities']
+        elif 'neighbors' in adata.uns:
+            g = adata.uns['neighbors']['connectivities']
         else:
-            raise ValueError("Must run neighbors first.")
+            raise ValueError('Must run neighbors first.')
     else:
         raise NotImplementedError()
     if vals is None:
@@ -292,7 +292,7 @@ def _check_vals(vals):
     else:
         warnings.warn(
             UserWarning(
-                f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these.",
+                f'{len(idxer) - idxer.sum()} variables were constant, will return nan for these.',
             )
         )
     return vals[idxer], idxer, full_result
@@ -300,7 +300,7 @@ def _check_vals(vals):
 
 @gearys_c.register(sparse.csr_matrix)
 def _gearys_c(g, vals) -> np.ndarray:
-    assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
+    assert g.shape[0] == g.shape[1], '`g` should be a square adjacency matrix'
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
     if isinstance(vals, sparse.csr_matrix):

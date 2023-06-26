@@ -9,12 +9,12 @@ import scanpy.external as sce
 from scanpy.testing._pytest.marks import needs
 
 
-@needs("phenograph")
+@needs('phenograph')
 def test_phenograph():
     df = np.random.rand(1000, 40)
     dframe = pd.DataFrame(df)
     dframe.index, dframe.columns = (map(str, dframe.index), map(str, dframe.columns))
     adata = AnnData(dframe)
     sc.tl.pca(adata, n_comps=20)
-    sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
-    assert adata.obs['pheno_leiden'].shape[0], "phenograph_Community Detection Error!"
+    sce.tl.phenograph(adata, clustering_algo='leiden', k=50)
+    assert adata.obs['pheno_leiden'].shape[0], 'phenograph_Community Detection Error!'

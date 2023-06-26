@@ -49,7 +49,7 @@ def test_log1p_rep(count_matrix_format, base, dtype):
 def test_mean_var_sparse():
     from sklearn.utils.sparsefuncs import mean_variance_axis
 
-    csr64 = sp.random(10000, 1000, format="csr", dtype=np.float64)
+    csr64 = sp.random(10000, 1000, format='csr', dtype=np.float64)
     csc64 = csr64.tocsc()
 
     # Test that we're equivalent for 64 bit
@@ -121,7 +121,7 @@ def test_scale():
     v = adata[:, 0 : adata.shape[1] // 2]
     # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965
     assert v.is_view
-    with pytest.warns(Warning, match="view"):
+    with pytest.warns(Warning, match='view'):
         sc.pp.scale(v)
     assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
@@ -226,11 +226,11 @@ def test_regress_out_constants_equivalent():
     from sklearn.datasets import make_blobs
 
     X, cat = make_blobs(100, 20)
-    a = sc.AnnData(np.hstack([X, np.zeros((100, 5))]), obs={"cat": pd.Categorical(cat)})
-    b = sc.AnnData(X, obs={"cat": pd.Categorical(cat)})
+    a = sc.AnnData(np.hstack([X, np.zeros((100, 5))]), obs={'cat': pd.Categorical(cat)})
+    b = sc.AnnData(X, obs={'cat': pd.Categorical(cat)})
 
-    sc.pp.regress_out(a, "cat")
-    sc.pp.regress_out(b, "cat")
+    sc.pp.regress_out(a, 'cat')
+    sc.pp.regress_out(b, 'cat')
 
     np.testing.assert_equal(a[:, b.var_names].X, b.X)
 

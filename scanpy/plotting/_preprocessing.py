@@ -39,11 +39,11 @@ def highly_variable_genes(
     """
     if isinstance(adata_or_result, AnnData):
         result = adata_or_result.var
-        seurat_v3_flavor = adata_or_result.uns["hvg"]["flavor"] == "seurat_v3"
+        seurat_v3_flavor = adata_or_result.uns['hvg']['flavor'] == 'seurat_v3'
     else:
         result = adata_or_result
         if isinstance(result, pd.DataFrame):
-            seurat_v3_flavor = "variances_norm" in result.columns
+            seurat_v3_flavor = 'variances_norm' in result.columns
         else:
             seurat_v3_flavor = False
     if highly_variable_genes:

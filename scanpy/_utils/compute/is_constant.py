@@ -46,7 +46,7 @@ def _(a, axis=None):
     if axis is None:
         return np.array_equal(a, a.flat[0])
     if not isinstance(axis, Integral):
-        raise TypeError("axis must be integer or None.")
+        raise TypeError('axis must be integer or None.')
     assert axis in (0, 1)
     if axis == 0:
         return _is_constant_rows(a.T)
@@ -67,7 +67,7 @@ def _(a, axis=None):
         else:
             return (a.data == 0).all()
     if not isinstance(axis, Integral):
-        raise TypeError("axis must be integer or None.")
+        raise TypeError('axis must be integer or None.')
     assert axis in (0, 1)
     if axis == 1:
         return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape)
@@ -102,7 +102,7 @@ def _(a, axis=None):
         else:
             return (a.data == 0).all()
     if not isinstance(axis, Integral):
-        raise TypeError("axis must be integer or None.")
+        raise TypeError('axis must be integer or None.')
     assert axis in (0, 1)
     if axis == 0:
         return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape[::-1])

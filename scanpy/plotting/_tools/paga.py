@@ -129,7 +129,7 @@ def paga_compare(
             )[0]
             coords = _basis[:, dims]
             pos = (
-                pd.DataFrame(coords, columns=["x", "y"], index=adata.obs_names)
+                pd.DataFrame(coords, columns=['x', 'y'], index=adata.obs_names)
                 .groupby(adata.obs[color], observed=True)
                 .median()
                 .sort_index()
@@ -235,7 +235,7 @@ def _compute_pos(
         if len(pos) < adjacency_solid.shape[0]:
             raise ValueError(
                 'This is a forest and not a single tree. '
-                'Try another `layout`, e.g., {\'fr\'}.'
+                "Try another `layout`, e.g., {'fr'}."
             )
     else:
         # igraph layouts
@@ -840,7 +840,7 @@ def _paga_graph(
         if min_edge_width is not None or max_edge_width is not None:
             widths = np.clip(widths, min_edge_width, max_edge_width)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             nx.draw_networkx_edges(
                 nx_g_solid, pos, ax=ax, width=widths, edge_color='black'
             )
@@ -1216,7 +1216,7 @@ def paga_path(
         groups_axis.imshow(
             groups,
             aspect='auto',
-            interpolation="nearest",
+            interpolation='nearest',
             cmap=matplotlib.colors.ListedColormap(
                 # the following line doesn't work because of normalization
                 # adata.uns['paga_groups_colors'])

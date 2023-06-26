@@ -226,9 +226,9 @@ def test_use_raw_None():
     sc.tl.score_genes(adata, adata_raw.var_names[:3], use_raw=None)
 
 
-@pytest.mark.parametrize("gene_pool", [[], ["foo", "bar"]])
+@pytest.mark.parametrize('gene_pool', [[], ['foo', 'bar']])
 def test_invalid_gene_pool(gene_pool):
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
 
-    with pytest.raises(ValueError, match="reference set"):
+    with pytest.raises(ValueError, match='reference set'):
         sc.tl.score_genes(adata, adata.var_names[:3], gene_pool=gene_pool)

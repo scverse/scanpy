@@ -392,7 +392,7 @@ class StackedViolin(BasePlot):
         # All columns should have a unique name, yet, frequently
         # gene names are repeated in self.var_names,  otherwise the
         # violin plot will not distinguish those genes
-        _matrix.columns = [f"{x}_{idx}" for idx, x in enumerate(_matrix.columns)]
+        _matrix.columns = [f'{x}_{idx}' for idx, x in enumerate(_matrix.columns)]
 
         # transform the  dataframe into a dataframe having three columns:
         # the categories name (from groupby),
@@ -526,8 +526,8 @@ class StackedViolin(BasePlot):
             yticks = row_ax.get_yticks()
             row_ax.set_yticks([yticks[0], yticks[-1]])
             ticklabels = row_ax.get_yticklabels()
-            ticklabels[0].set_va("bottom")
-            ticklabels[-1].set_va("top")
+            ticklabels[0].set_va('bottom')
+            ticklabels[-1].set_va('top')
         else:
             row_ax.axis('off')
             # remove labels

@@ -22,12 +22,12 @@ def _filter_boring(dataframe: pd.DataFrame) -> pd.DataFrame:
 
 def sniff_url(accession: str):
     # Note that data is downloaded from gxa/sc/experiment, not experiments
-    base_url = f"https://www.ebi.ac.uk/gxa/sc/experiments/{accession}/"
+    base_url = f'https://www.ebi.ac.uk/gxa/sc/experiments/{accession}/'
     try:
         with urlopen(base_url):  # Check if server up/ dataset exists
             pass
     except HTTPError as e:
-        e.msg = f"{e.msg} ({base_url})"  # Report failed url
+        e.msg = f'{e.msg} ({base_url})'  # Report failed url
         raise
 
 
@@ -35,28 +35,28 @@ def sniff_url(accession: str):
 def download_experiment(accession: str):
     sniff_url(accession)
 
-    base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}"
-    design_url = f"{base_url}/download?accessKey=&fileType="
-    mtx_url = f"{base_url}/download/zip?accessKey=&fileType="
+    base_url = f'https://www.ebi.ac.uk/gxa/sc/experiment/{accession}'
+    design_url = f'{base_url}/download?accessKey=&fileType='
+    mtx_url = f'{base_url}/download/zip?accessKey=&fileType='
 
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     _download(
-        design_url + "experiment-design",
-        experiment_dir / "experimental_design.tsv",
+        design_url + 'experiment-design',
+        experiment_dir / 'experimental_design.tsv',
     )
     _download(
-        mtx_url + "quantification-raw",
-        experiment_dir / "expression_archive.zip",
+        mtx_url + 'quantification-raw',
+        experiment_dir / 'expression_archive.zip',
     )
 
 
 def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
     curline = stream.readline()
-    while curline.startswith(b"%"):
+    while curline.startswith(b'%'):
         curline = stream.readline()
-    n, m, _ = (int(x) for x in curline[:-1].split(b" "))
+    n, m, _ = (int(x) for x in curline[:-1].split(b' '))
 
     max_int32 = np.iinfo(np.int32).max
     if n > max_int32 or m > max_int32:
@@ -66,7 +66,7 @@ def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
 
     data = pd.read_csv(
         stream,
-        sep=r"\s+",
+        sep=r'\s+',
         header=None,
         dtype={0: coord_dtype, 1: coord_dtype, 2: np.float32},
     )
@@ -77,16 +77,16 @@ def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
 def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     info = archive.infolist()
     assert len(info) == 3
-    mtx_data_info = next(i for i in info if i.filename.endswith(".mtx"))
-    mtx_rows_info = next(i for i in info if i.filename.endswith(".mtx_rows"))
-    mtx_cols_info = next(i for i in info if i.filename.endswith(".mtx_cols"))
-    with archive.open(mtx_data_info, "r") as f:
+    mtx_data_info = next(i for i in info if i.filename.endswith('.mtx'))
+    mtx_rows_info = next(i for i in info if i.filename.endswith('.mtx_rows'))
+    mtx_cols_info = next(i for i in info if i.filename.endswith('.mtx_cols'))
+    with archive.open(mtx_data_info, 'r') as f:
         expr = read_mtx_from_stream(f)
-    with archive.open(mtx_rows_info, "r") as f:
+    with archive.open(mtx_rows_info, 'r') as f:
         # TODO: Check what other value could be
-        varname = pd.read_csv(f, sep="\t", header=None)[1]
-    with archive.open(mtx_cols_info, "r") as f:
-        obsname = pd.read_csv(f, sep="\t", header=None).iloc[:, 0]
+        varname = pd.read_csv(f, sep='\t', header=None)[1]
+    with archive.open(mtx_cols_info, 'r') as f:
+        obsname = pd.read_csv(f, sep='\t', header=None).iloc[:, 0]
     adata = anndata.AnnData(expr)
     adata.var_names = varname
     adata.obs_names = obsname
@@ -119,7 +119,7 @@ def ebi_expression_atlas(
     >>> adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
     """
     experiment_dir = settings.datasetdir / accession
-    dataset_path = experiment_dir / f"{accession}.h5ad"
+    dataset_path = experiment_dir / f'{accession}.h5ad'
     try:
         adata = anndata.read(dataset_path)
         if filter_boring:
@@ -131,14 +131,14 @@ def ebi_expression_atlas(
 
     download_experiment(accession)
 
-    logg.info(f"Downloaded {accession} to {experiment_dir.absolute()}")
+    logg.info(f'Downloaded {accession} to {experiment_dir.absolute()}')
 
-    with ZipFile(experiment_dir / "expression_archive.zip", "r") as f:
+    with ZipFile(experiment_dir / 'expression_archive.zip', 'r') as f:
         adata = read_expression_from_archive(f)
-    obs = pd.read_csv(experiment_dir / "experimental_design.tsv", sep="\t", index_col=0)
+    obs = pd.read_csv(experiment_dir / 'experimental_design.tsv', sep='\t', index_col=0)
 
     adata.obs[obs.columns] = obs
-    adata.write(dataset_path, compression="gzip")  # To be kind to disk space
+    adata.write(dataset_path, compression='gzip')  # To be kind to disk space
 
     if filter_boring:
         adata.obs = _filter_boring(adata.obs)
