@@ -7,6 +7,7 @@ from scipy.sparse import csr_matrix
 
 import scanpy as sc
 from scanpy import Neighbors
+from scanpy.neighbors.backends import ALGORITHMS
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
@@ -174,3 +175,8 @@ def test_restore_n_neighbors(neigh, conv):
         ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1
+
+
+@pytest.mark.parametrize('algo', [('', 'PyNNDescentTransformer')])
+def test_neighbor_backends(algo):
+    pass
