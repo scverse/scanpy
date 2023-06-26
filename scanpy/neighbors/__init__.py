@@ -30,7 +30,6 @@ N_PCS = (
     settings.N_PCS
 )  # Backwards compat, constants should be defined in only one place.
 
-_Backend = Literal['annoy', 'faiss', 'nmslib', 'pynndescent', 'sklearn']
 _Method = Literal['umap', 'gauss', 'rapids']
 _MetricFn = Callable[[np.ndarray, np.ndarray], float]
 # from sklearn.metrics.pairwise_distances.__doc__:
@@ -999,7 +998,7 @@ class Neighbors:
 
             # Setting the random initial vector
             random_state = check_random_state(random_state)
-            v0 = random_state.standard_normal((matrix.shape[0]))
+            v0 = random_state.standard_normal(matrix.shape[0])
             evals, evecs = scipy.sparse.linalg.eigsh(
                 matrix, k=n_comps, which=which, ncv=ncv, v0=v0
             )
