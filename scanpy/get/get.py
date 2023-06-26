@@ -57,14 +57,14 @@ def rank_genes_groups_df(
     if isinstance(group, str):
         group = [group]
     if group is None:
-        group = list(adata.uns[key]['names'].dtype.names)
-    colnames = ['names', 'scores', 'logfoldchanges', 'pvals', 'pvals_adj']
+        group = list(adata.uns[key]["names"].dtype.names)
+    colnames = ["names", "scores", "logfoldchanges", "pvals", "pvals_adj"]
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
-    d = pd.concat(d, axis=1, names=[None, 'group'], keys=colnames)
+    d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
     d = d.stack(level=1).reset_index()
-    d['group'] = pd.Categorical(d['group'], categories=group)
-    d = d.sort_values(['group', 'level_0']).drop(columns='level_0')
+    d["group"] = pd.Categorical(d["group"], categories=group)
+    d = d.sort_values(["group", "level_0"]).drop(columns="level_0")
 
     if pval_cutoff is not None:
         d = d[d["pvals_adj"] < pval_cutoff]
@@ -75,19 +75,19 @@ def rank_genes_groups_df(
     if gene_symbols is not None:
         d = d.join(adata.var[gene_symbols], on="names")
 
-    for pts, name in {'pts': 'pct_nz_group', 'pts_rest': 'pct_nz_reference'}.items():
+    for pts, name in {"pts": "pct_nz_group", "pts_rest": "pct_nz_reference"}.items():
         if pts in adata.uns[key]:
             pts_df = (
                 adata.uns[key][pts][group]
-                .rename_axis(index='names')
+                .rename_axis(index="names")
                 .reset_index()
-                .melt(id_vars='names', var_name='group', value_name=name)
+                .melt(id_vars="names", var_name="group", value_name=name)
             )
             d = d.merge(pts_df)
 
     # remove group column for backward compat if len(group) == 1
     if len(group) == 1:
-        d.drop(columns='group', inplace=True)
+        d.drop(columns="group", inplace=True)
 
     return d.reset_index(drop=True)
 
@@ -95,7 +95,7 @@ def rank_genes_groups_df(
 def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
-    dim: Literal['obs', 'var'],
+    dim: Literal["obs", "var"],
     keys: List[str],
     alias_index: Optional[pd.Index] = None,
     use_raw: bool = False,

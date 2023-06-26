@@ -9,8 +9,8 @@ import numpy as np
 def scanorama_integrate(
     adata: AnnData,
     key: str,
-    basis: str = 'X_pca',
-    adjusted_basis: str = 'X_scanorama',
+    basis: str = "X_pca",
+    adjusted_basis: str = "X_scanorama",
     knn: int = 20,
     sigma: float = 15,
     approx: bool = True,
@@ -107,7 +107,7 @@ def scanorama_integrate(
             curr_batch = batch_name
             if batch_name in batch_names:
                 # Contiguous batches important for preserving cell order.
-                raise ValueError('Detected non-contiguous batches.')
+                raise ValueError("Detected non-contiguous batches.")
             batch_names.append(batch_name)  # Preserve name order.
             name2idx[batch_name] = []
         name2idx[batch_name].append(idx)

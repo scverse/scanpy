@@ -67,7 +67,7 @@ def embedding(
     sort_order: bool = True,
     edges: bool = False,
     edges_width: float = 0.1,
-    edges_color: Union[str, Sequence[float], Sequence[str]] = 'grey',
+    edges_color: Union[str, Sequence[float], Sequence[str]] = "grey",
     neighbors_key: Optional[str] = None,
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
@@ -75,7 +75,7 @@ def embedding(
     components: Union[str, Sequence[str]] = None,
     dimensions: Optional[Union[Tuple[int, int], Sequence[Tuple[int, int]]]] = None,
     layer: Optional[str] = None,
-    projection: Literal['2d', '3d'] = '2d',
+    projection: Literal["2d", "3d"] = "2d",
     scale_factor: Optional[float] = None,
     color_map: Union[Colormap, str, None] = None,
     cmap: Union[Colormap, str, None] = None,
@@ -85,8 +85,8 @@ def embedding(
     size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
     legend_fontsize: Union[int, float, _FontSize, None] = None,
-    legend_fontweight: Union[int, _FontWeight] = 'bold',
-    legend_loc: str = 'right margin',
+    legend_fontweight: Union[int, _FontWeight] = "bold",
+    legend_loc: str = "right margin",
     legend_fontoutline: Optional[int] = None,
     colorbar_loc: Optional[str] = "right",
     vmax: Union[VBound, Sequence[VBound], None] = None,
@@ -95,7 +95,7 @@ def embedding(
     norm: Union[Normalize, Sequence[Normalize], None] = None,
     add_outline: Optional[bool] = False,
     outline_width: Tuple[float, float] = (0.3, 0.05),
-    outline_color: Tuple[str, str] = ('black', 'white'),
+    outline_color: Tuple[str, str] = ("black", "white"),
     ncols: int = 4,
     hspace: float = 0.25,
     wspace: Optional[float] = None,
@@ -133,7 +133,7 @@ def embedding(
     dimensions = _components_to_dimensions(
         components, dimensions, projection=projection, total_dims=basis_values.shape[1]
     )
-    args_3d = dict(projection='3d') if projection == '3d' else {}
+    args_3d = dict(projection="3d") if projection == "3d" else {}
 
     # Figure out if we're using raw
     if use_raw is None:
@@ -165,11 +165,11 @@ def embedding(
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
-    if 'edgecolor' not in kwargs:
+    if "edgecolor" not in kwargs:
         # by default turn off edge color. Otherwise, for
         # very small sizes the edge will not reduce its size
         # (https://github.com/scverse/scanpy/issues/293)
-        kwargs['edgecolor'] = 'none'
+        kwargs["edgecolor"] = "none"
 
     # Vectorized arguments
 
@@ -190,8 +190,8 @@ def embedding(
         norm = [norm]
 
     # Size
-    if 's' in kwargs and size is None:
-        size = kwargs.pop('s')
+    if "s" in kwargs and size is None:
+        size = kwargs.pop("s")
     if size is not None:
         # check if size is any type of sequence, and if so
         # set as ndarray
@@ -212,7 +212,7 @@ def embedding(
     if wspace is None:
         #  try to set a wspace that is not too large or too small given the
         #  current figure size
-        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
+        wspace = 0.75 / rcParams["figure.figsize"][0] + 0.02
 
     if components is not None:
         color, dimensions = list(zip(*product(color, dimensions)))
@@ -290,12 +290,12 @@ def embedding(
             ax = pl.subplot(grid[count], **args_3d)
             axs.append(ax)
         if not (settings._frameon if frameon is None else frameon):
-            ax.axis('off')
+            ax.axis("off")
         if title is None:
             if value_to_plot is not None:
                 ax.set_title(value_to_plot)
             else:
-                ax.set_title('')
+                ax.set_title("")
         else:
             try:
                 ax.set_title(title[count])
@@ -320,7 +320,7 @@ def embedding(
             normalize = None
 
         # make the scatter plot
-        if projection == '3d':
+        if projection == "3d":
             cax = ax.scatter(
                 coords[:, 0],
                 coords[:, 1],
@@ -360,10 +360,10 @@ def embedding(
 
                 # remove edge from kwargs if present
                 # because edge needs to be set to None
-                kwargs['edgecolor'] = 'none'
+                kwargs["edgecolor"] = "none"
 
                 # remove alpha for outline
-                alpha = kwargs.pop('alpha') if 'alpha' in kwargs else None
+                alpha = kwargs.pop("alpha") if "alpha" in kwargs else None
 
                 ax.scatter(
                     coords[:, 0],
@@ -386,7 +386,7 @@ def embedding(
                     **kwargs,
                 )
                 # if user did not set alpha, set alpha to 0.7
-                kwargs['alpha'] = 0.7 if alpha is None else alpha
+                kwargs["alpha"] = 0.7 if alpha is None else alpha
 
             cax = scatter(
                 coords[:, 0],
@@ -401,7 +401,7 @@ def embedding(
         # remove y and x ticks
         ax.set_yticks([])
         ax.set_xticks([])
-        if projection == '3d':
+        if projection == "3d":
             ax.set_zticks([])
 
         # set default axis_labels
@@ -410,7 +410,7 @@ def embedding(
 
         ax.set_xlabel(axis_labels[0])
         ax.set_ylabel(axis_labels[1])
-        if projection == '3d':
+        if projection == "3d":
             # shift the label closer to the axis
             ax.set_zlabel(axis_labels[2], labelpad=-7)
         ax.autoscale_view()
@@ -427,7 +427,7 @@ def embedding(
 
         if legend_fontoutline is not None:
             path_effect = [
-                patheffects.withStroke(linewidth=legend_fontoutline, foreground='w')
+                patheffects.withStroke(linewidth=legend_fontoutline, foreground="w")
             ]
         else:
             path_effect = None
@@ -468,8 +468,8 @@ def _panel_grid(hspace, wspace, ncols, num_panels):
     # each panel will have the size of rcParams['figure.figsize']
     fig = pl.figure(
         figsize=(
-            n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
-            n_panels_y * rcParams['figure.figsize'][1],
+            n_panels_x * rcParams["figure.figsize"][0] * (1 + wspace),
+            n_panels_y * rcParams["figure.figsize"][1],
         ),
     )
     left = 0.2 / n_panels_x
@@ -523,7 +523,7 @@ def _get_vboundnorm(
 
     """
     out = []
-    for v_name, v in [('vmin', vmin), ('vmax', vmax), ('vcenter', vcenter)]:
+    for v_name, v in [("vmin", vmin), ("vmax", vmax), ("vcenter", vcenter)]:
         if len(v) == 1:
             # this case usually happens when the user sets eg vmax=0.9, which
             # is internally converted into list of len=1, but is expected that this
@@ -541,7 +541,7 @@ def _get_vboundnorm(
                 v_value = None
 
         if v_value is not None:
-            if isinstance(v_value, str) and v_value.startswith('p'):
+            if isinstance(v_value, str) and v_value.startswith("p"):
                 try:
                     float(v_value[1:])
                 except ValueError:
@@ -665,7 +665,7 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     --------
     tl.umap
     """
-    return embedding(adata, 'umap', **kwargs)
+    return embedding(adata, "umap", **kwargs)
 
 
 @_wraps_plot_scatter
@@ -706,7 +706,7 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     --------
     tl.tsne
     """
-    return embedding(adata, 'tsne', **kwargs)
+    return embedding(adata, "tsne", **kwargs)
 
 
 @_wraps_plot_scatter
@@ -745,7 +745,7 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     --------
     tl.diffmap
     """
-    return embedding(adata, 'diffmap', **kwargs)
+    return embedding(adata, "diffmap", **kwargs)
 
 
 @_wraps_plot_scatter
@@ -792,12 +792,12 @@ def draw_graph(
     tl.draw_graph
     """
     if layout is None:
-        layout = str(adata.uns['draw_graph']['params']['layout'])
-    basis = 'draw_graph_' + layout
-    if 'X_' + basis not in adata.obsm_keys():
+        layout = str(adata.uns["draw_graph"]["params"]["layout"])
+    basis = "draw_graph_" + layout
+    if "X_" + basis not in adata.obsm_keys():
         raise ValueError(
-            'Did not find {} in adata.obs. Did you compute layout {}?'.format(
-                'draw_graph_' + layout, layout
+            "Did not find {} in adata.obs. Did you compute layout {}?".format(
+                "draw_graph_" + layout, layout
             )
         )
 
@@ -868,23 +868,23 @@ def pca(
     """
     if not annotate_var_explained:
         return embedding(
-            adata, 'pca', show=show, return_fig=return_fig, save=save, **kwargs
+            adata, "pca", show=show, return_fig=return_fig, save=save, **kwargs
         )
     else:
-        if 'pca' not in adata.obsm.keys() and 'X_pca' not in adata.obsm.keys():
+        if "pca" not in adata.obsm.keys() and "X_pca" not in adata.obsm.keys():
             raise KeyError(
                 f"Could not find entry in `obsm` for 'pca'.\n"
                 f"Available keys are: {list(adata.obsm.keys())}."
             )
 
         label_dict = {
-            'PC{}'.format(i + 1): 'PC{} ({}%)'.format(i + 1, round(v * 100, 2))
-            for i, v in enumerate(adata.uns['pca']['variance_ratio'])
+            "PC{}".format(i + 1): "PC{} ({}%)".format(i + 1, round(v * 100, 2))
+            for i, v in enumerate(adata.uns["pca"]["variance_ratio"])
         }
 
         if return_fig is True:
             # edit axis labels in returned figure
-            fig = embedding(adata, 'pca', return_fig=return_fig, **kwargs)
+            fig = embedding(adata, "pca", return_fig=return_fig, **kwargs)
             for ax in fig.axes:
                 ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
                 ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
@@ -892,7 +892,7 @@ def pca(
 
         else:
             # get the axs, edit the labels and apply show and save from user
-            axs = embedding(adata, 'pca', show=False, save=False, **kwargs)
+            axs = embedding(adata, "pca", show=False, save=False, **kwargs)
             if isinstance(axs, list):
                 for ax in axs:
                     ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
@@ -900,7 +900,7 @@ def pca(
             else:
                 axs.set_xlabel(label_dict[axs.xaxis.get_label().get_text()])
                 axs.set_ylabel(label_dict[axs.yaxis.get_label().get_text()])
-            _utils.savefig_or_show('pca', show=show, save=save)
+            _utils.savefig_or_show("pca", show=show, save=save)
             if show is False:
                 return axs
 
@@ -1023,7 +1023,7 @@ def spatial(
         else:
             ax.set_xlim(cur_coords[0], cur_coords[1])
             ax.set_ylim(cur_coords[3], cur_coords[2])
-    _utils.savefig_or_show('show', show=show, save=save)
+    _utils.savefig_or_show("show", show=show, save=save)
     if show is False or return_fig is True:
         return axs
 
@@ -1097,17 +1097,17 @@ def _add_categorical_legend(
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.91, box.height])
 
-    if legend_loc == 'right margin':
+    if legend_loc == "right margin":
         for label in cats:
             ax.scatter([], [], c=palette[label], label=label)
         ax.legend(
             frameon=False,
-            loc='center left',
+            loc="center left",
             bbox_to_anchor=(1, 0.5),
             ncol=(1 if len(cats) <= 14 else 2 if len(cats) <= 30 else 3),
             fontsize=legend_fontsize,
         )
-    elif legend_loc == 'on data':
+    elif legend_loc == "on data":
         # identify centroids to put labels
 
         all_pos = (
@@ -1126,8 +1126,8 @@ def _add_categorical_legend(
                 y_pos,
                 label,
                 weight=legend_fontweight,
-                verticalalignment='center',
-                horizontalalignment='center',
+                verticalalignment="center",
+                horizontalalignment="center",
                 fontsize=legend_fontsize,
                 path_effects=legend_fontoutline,
             )
@@ -1235,16 +1235,16 @@ def _basis2name(basis):
     """
 
     component_name = (
-        'DC'
-        if basis == 'diffmap'
-        else 'tSNE'
-        if basis == 'tsne'
-        else 'UMAP'
-        if basis == 'umap'
-        else 'PC'
-        if basis == 'pca'
-        else basis.replace('draw_graph_', '').upper()
-        if 'draw_graph' in basis
+        "DC"
+        if basis == "diffmap"
+        else "tSNE"
+        if basis == "tsne"
+        else "UMAP"
+        if basis == "umap"
+        else "PC"
+        if basis == "pca"
+        else basis.replace("draw_graph_", "").upper()
+        if "draw_graph" in basis
         else basis
     )
     return component_name
@@ -1264,7 +1264,7 @@ def _check_spot_size(
             "provided directly."
         )
     elif spot_size is None:
-        return spatial_data['scalefactors']['spot_diameter_fullres']
+        return spatial_data["scalefactors"]["spot_diameter_fullres"]
     else:
         return spot_size
 
@@ -1278,7 +1278,7 @@ def _check_scale_factor(
     if scale_factor is not None:
         return scale_factor
     elif spatial_data is not None and img_key is not None:
-        return spatial_data['scalefactors'][f"tissue_{img_key}_scalef"]
+        return spatial_data["scalefactors"][f"tissue_{img_key}_scalef"]
     else:
         return 1.0
 
@@ -1320,7 +1320,7 @@ def _check_img(
     """
     if img is None and spatial_data is not None and img_key is _empty:
         img_key = next(
-            (k for k in ['hires', 'lowres'] if k in spatial_data['images']),
+            (k for k in ["hires", "lowres"] if k in spatial_data["images"]),
         )  # Throws StopIteration Error if keys not present
     if img is None and spatial_data is not None and img_key is not None:
         img = spatial_data["images"][img_key]

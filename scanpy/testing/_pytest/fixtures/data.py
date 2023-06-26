@@ -13,11 +13,11 @@ from ..._helpers.data import pbmc3k
 
 
 @pytest.fixture(
-    scope='session',
+    scope="session",
     params=list(
-        product([sparse.csr_matrix.toarray, sparse.csr_matrix], ['float32', 'int64'])
+        product([sparse.csr_matrix.toarray, sparse.csr_matrix], ["float32", "int64"])
     ),
-    ids=lambda x: f'{x[0].__name__}-{x[1]}',
+    ids=lambda x: f"{x[0].__name__}-{x[1]}",
 )
 def _pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
     sparsity_func, dtype = request.param
@@ -64,7 +64,7 @@ def _prepare_pbmc_testdata(
         adata = adata[:1000, :500]
         sc.pp.filter_cells(adata, min_genes=1)
     np.random.seed(42)
-    adata.obs['batch'] = np.random.randint(0, 3, size=adata.shape[0])
+    adata.obs["batch"] = np.random.randint(0, 3, size=adata.shape[0])
     sc.pp.filter_genes(adata, min_cells=1)
     adata.X = sparsity_func(adata.X.astype(dtype))
     return adata

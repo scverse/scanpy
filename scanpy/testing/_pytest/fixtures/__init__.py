@@ -15,11 +15,11 @@ from .data import (
 
 
 __all__ = [
-    'array_type',
-    'float_dtype',
-    '_pbmc3ks_parametrized_session',
-    'pbmc3k_parametrized',
-    'pbmc3k_parametrized_small',
+    "array_type",
+    "float_dtype",
+    "_pbmc3ks_parametrized_session",
+    "pbmc3k_parametrized",
+    "pbmc3k_parametrized_small",
 ]
 
 

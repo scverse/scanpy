@@ -11,13 +11,13 @@ from ._utils import get_init_pos_from_paga
 from .._utils import AnyRandom, _choose_graph
 
 
-_LAYOUTS = ('fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa')
+_LAYOUTS = ("fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa")
 _Layout = Literal[_LAYOUTS]
 
 
 def draw_graph(
     adata: AnnData,
-    layout: _Layout = 'fa',
+    layout: _Layout = "fa",
     init_pos: Union[str, bool, None] = None,
     root: Optional[int] = None,
     random_state: AnyRandom = 0,
@@ -98,16 +98,16 @@ def draw_graph(
         Coordinates of graph layout. E.g. for layout='fa' (the default),
         the field is called 'X_draw_graph_fa'
     """
-    start = logg.info(f'drawing single-cell graph using layout {layout!r}')
+    start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     if layout not in _LAYOUTS:
-        raise ValueError(f'Provide a valid layout, one of {_LAYOUTS}.')
+        raise ValueError(f"Provide a valid layout, one of {_LAYOUTS}.")
     adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)
     # init coordinates
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
-    elif init_pos == 'paga' or init_pos:
+    elif init_pos == "paga" or init_pos:
         init_coords = get_init_pos_from_paga(
             adata,
             adjacency,
@@ -119,7 +119,7 @@ def draw_graph(
         np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2))
     # see whether fa2 is installed
-    if layout == 'fa':
+    if layout == "fa":
         try:
             from fa2 import ForceAtlas2
         except ImportError:
@@ -128,9 +128,9 @@ def draw_graph(
                 "To use the faster and better ForceAtlas2 layout, "
                 "install package 'fa2' (`pip install fa2`)."
             )
-            layout = 'fr'
+            layout = "fr"
     # actual drawing
-    if layout == 'fa':
+    if layout == "fa":
         forceatlas2 = ForceAtlas2(
             # Behavior alternatives
             outboundAttractionDistribution=False,  # Dissuade hubs
@@ -149,10 +149,10 @@ def draw_graph(
             # Log
             verbose=False,
         )
-        if 'maxiter' in kwds:
-            iterations = kwds['maxiter']
-        elif 'iterations' in kwds:
-            iterations = kwds['iterations']
+        if "maxiter" in kwds:
+            iterations = kwds["maxiter"]
+        elif "iterations" in kwds:
+            iterations = kwds["iterations"]
         else:
             iterations = 500
         positions = forceatlas2.forceatlas2(
@@ -164,22 +164,22 @@ def draw_graph(
         random.seed(random_state)
 
         g = _utils.get_igraph_from_adjacency(adjacency)
-        if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
+        if layout in {"fr", "drl", "kk", "grid_fr"}:
             ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-        elif 'rt' in layout:
+        elif "rt" in layout:
             if root is not None:
                 root = [root]
             ig_layout = g.layout(layout, root=root, **kwds)
         else:
             ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
-    adata.uns['draw_graph'] = {}
-    adata.uns['draw_graph']['params'] = dict(layout=layout, random_state=random_state)
-    key_added = f'X_draw_graph_{key_added_ext or layout}'
+    adata.uns["draw_graph"] = {}
+    adata.uns["draw_graph"]["params"] = dict(layout=layout, random_state=random_state)
+    key_added = f"X_draw_graph_{key_added_ext or layout}"
     adata.obsm[key_added] = positions
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
-        deep=f'added\n    {key_added!r}, graph_drawing coordinates (adata.obsm)',
+        deep=f"added\n    {key_added!r}, graph_drawing coordinates (adata.obsm)",
     )
     return adata if copy else None

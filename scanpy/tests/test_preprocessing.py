@@ -19,7 +19,7 @@ def test_log1p(tmp_path):
     ad = AnnData(A.copy())
     ad2 = AnnData(A.copy())
     ad3 = AnnData(A.copy())
-    ad3.filename = tmp_path / 'test.h5ad'
+    ad3.filename = tmp_path / "test.h5ad"
     sc.pp.log1p(ad)
     assert np.allclose(ad.X, A_l)
     sc.pp.log1p(ad2, chunked=True)
@@ -85,7 +85,7 @@ def test_mean_var_sparse():
 def test_normalize_per_cell():
     A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
     adata = AnnData(A.copy())
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts='n_counts2')
+    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts="n_counts2")
     assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now with copy option
     adata = AnnData(A.copy())
@@ -165,19 +165,19 @@ def test_recipe_plotting():
 def test_regress_out_ordinal():
     from scipy.sparse import random
 
-    adata = AnnData(random(1000, 100, density=0.6, format='csr'))
-    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
-    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    adata = AnnData(random(1000, 100, density=0.6, format="csr"))
+    adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
+    adata.obs["n_counts"] = adata.X.sum(axis=1)
 
     # results using only one processor
     single = sc.pp.regress_out(
-        adata, keys=['n_counts', 'percent_mito'], n_jobs=1, copy=True
+        adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
     )
     assert adata.X.shape == single.X.shape
 
     # results using 8 processors
     multi = sc.pp.regress_out(
-        adata, keys=['n_counts', 'percent_mito'], n_jobs=8, copy=True
+        adata, keys=["n_counts", "percent_mito"], n_jobs=8, copy=True
     )
 
     np.testing.assert_array_equal(single.X, multi.X)
@@ -186,14 +186,14 @@ def test_regress_out_ordinal():
 def test_regress_out_view():
     from scipy.sparse import random
 
-    adata = AnnData(random(500, 1100, density=0.2, format='csr'))
-    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
-    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    adata = AnnData(random(500, 1100, density=0.2, format="csr"))
+    adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
+    adata.obs["n_counts"] = adata.X.sum(axis=1)
     subset_adata = adata[:, :1050]
     subset_adata_copy = subset_adata.copy()
 
-    sc.pp.regress_out(subset_adata, keys=['n_counts', 'percent_mito'])
-    sc.pp.regress_out(subset_adata_copy, keys=['n_counts', 'percent_mito'])
+    sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
+    sc.pp.regress_out(subset_adata_copy, keys=["n_counts", "percent_mito"])
     assert_equal(subset_adata, subset_adata_copy)
     assert not subset_adata.is_view
 
@@ -202,21 +202,21 @@ def test_regress_out_categorical():
     from scipy.sparse import random
     import pandas as pd
 
-    adata = AnnData(random(1000, 100, density=0.6, format='csr'))
+    adata = AnnData(random(1000, 100, density=0.6, format="csr"))
     # create a categorical column
-    adata.obs['batch'] = pd.Categorical(np.random.randint(1, 4, size=adata.X.shape[0]))
+    adata.obs["batch"] = pd.Categorical(np.random.randint(1, 4, size=adata.X.shape[0]))
 
-    multi = sc.pp.regress_out(adata, keys='batch', n_jobs=8, copy=True)
+    multi = sc.pp.regress_out(adata, keys="batch", n_jobs=8, copy=True)
     assert adata.X.shape == multi.X.shape
 
 
 def test_regress_out_constants():
     adata = AnnData(np.hstack((np.full((10, 1), 0.0), np.full((10, 1), 1.0))))
-    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
-    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
+    adata.obs["n_counts"] = adata.X.sum(axis=1)
     adata_copy = adata.copy()
 
-    sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'])
+    sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
     assert_equal(adata, adata_copy)
 
 

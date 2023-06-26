@@ -45,44 +45,44 @@ def check_versions():
 
     umap_version = pkg_version("umap-learn")
 
-    if version.parse(anndata_version) < version.parse('0.6.10'):
+    if version.parse(anndata_version) < version.parse("0.6.10"):
         from .. import __version__
 
         raise ImportError(
-            f'Scanpy {__version__} needs anndata version >=0.6.10, '
-            f'not {anndata_version}.\nRun `pip install anndata -U --no-deps`.'
+            f"Scanpy {__version__} needs anndata version >=0.6.10, "
+            f"not {anndata_version}.\nRun `pip install anndata -U --no-deps`."
         )
 
-    if umap_version < version.parse('0.3.0'):
+    if umap_version < version.parse("0.3.0"):
         from . import __version__
 
         # make this a warning, not an error
         # it might be useful for people to still be able to run it
         logg.warning(
-            f'Scanpy {__version__} needs umap ' f'version >=0.3.0, not {umap_version}.'
+            f"Scanpy {__version__} needs umap " f"version >=0.3.0, not {umap_version}."
         )
 
 
 def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
-    if getattr(c_or_f, '__doc__', None) is None:
+    if getattr(c_or_f, "__doc__", None) is None:
         return None
     doc = inspect.getdoc(c_or_f)
-    if isinstance(c_or_f, type) and hasattr(c_or_f, '__init__'):
+    if isinstance(c_or_f, type) and hasattr(c_or_f, "__init__"):
         sig = inspect.signature(c_or_f.__init__)
     else:
         sig = inspect.signature(c_or_f)
 
     def type_doc(name: str):
         param: inspect.Parameter = sig.parameters[name]
-        cls = getattr(param.annotation, '__qualname__', repr(param.annotation))
+        cls = getattr(param.annotation, "__qualname__", repr(param.annotation))
         if param.default is not param.empty:
-            return f'{cls}, optional (default: {param.default!r})'
+            return f"{cls}, optional (default: {param.default!r})"
         else:
             return cls
 
-    return '\n'.join(
-        f'{line} : {type_doc(line)}' if line.strip() in sig.parameters else line
-        for line in doc.split('\n')
+    return "\n".join(
+        f"{line} : {type_doc(line)}" if line.strip() in sig.parameters else line
+        for line in doc.split("\n")
     )
 
 
@@ -101,7 +101,7 @@ def deprecated_arg_names(arg_mapping: Mapping[str, str]):
     def decorator(func):
         @wraps(func)
         def func_wrapper(*args, **kwargs):
-            warnings.simplefilter('always', DeprecationWarning)  # turn off filter
+            warnings.simplefilter("always", DeprecationWarning)  # turn off filter
             for old, new in arg_mapping.items():
                 if old in kwargs:
                     warnings.warn(
@@ -114,7 +114,7 @@ def deprecated_arg_names(arg_mapping: Mapping[str, str]):
                     val = kwargs.pop(old)
                     kwargs[new] = val
             # reset filter
-            warnings.simplefilter('default', DeprecationWarning)
+            warnings.simplefilter("default", DeprecationWarning)
             return func(*args, **kwargs)
 
         return func_wrapper
@@ -127,7 +127,7 @@ def _one_of_ours(obj, root: str):
         hasattr(obj, "__name__")
         and not obj.__name__.split(".")[-1].startswith("_")
         and getattr(
-            obj, '__module__', getattr(obj, '__qualname__', obj.__name__)
+            obj, "__module__", getattr(obj, "__qualname__", obj.__name__)
         ).startswith(root)
     )
 
@@ -145,7 +145,7 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
                     if callable(m) and _one_of_ours(m, root):
                         yield m
         elif isinstance(obj, ModuleType) and obj not in encountered:
-            if obj.__name__.startswith('scanpy.tests'):
+            if obj.__name__.startswith("scanpy.tests"):
                 # Python’s import mechanism seems to add this to `scanpy`’s attributes
                 continue
             encountered.add(obj)
@@ -215,13 +215,13 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
     g.add_edges(list(zip(sources, targets)))
     try:
-        g.es['weight'] = weights
+        g.es["weight"] = weights
     except KeyError:
         pass
     if g.vcount() != adjacency.shape[0]:
         logg.warning(
-            f'The constructed graph has only {g.vcount()} nodes. '
-            'Your adjacency matrix contained redundant nodes.'
+            f"The constructed graph has only {g.vcount()} nodes. "
+            "Your adjacency matrix contained redundant nodes."
         )
     return g
 
@@ -254,7 +254,7 @@ def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
     reference: str,
-    normalization: Literal['prediction', 'reference'] = 'prediction',
+    normalization: Literal["prediction", "reference"] = "prediction",
     threshold: float = 0.01,
     max_n_names: Optional[int] = 2,
 ):
@@ -287,7 +287,7 @@ def compute_association_matrix_of_groups(
         Matrix where rows correspond to the predicted labels and columns to the
         reference labels, entries are proportional to degree of association.
     """
-    if normalization not in {'prediction', 'reference'}:
+    if normalization not in {"prediction", "reference"}:
         raise ValueError(
             '`normalization` needs to be either "prediction" or "reference".'
         )
@@ -296,13 +296,13 @@ def compute_association_matrix_of_groups(
     for cat in cats:
         if cat in settings.categories_to_ignore:
             logg.info(
-                f'Ignoring category {cat!r} '
-                'as it’s in `settings.categories_to_ignore`.'
+                f"Ignoring category {cat!r} "
+                "as it’s in `settings.categories_to_ignore`."
             )
     asso_names = []
     asso_matrix = []
     for ipred_group, pred_group in enumerate(adata.obs[prediction].cat.categories):
-        if '?' in pred_group:
+        if "?" in pred_group:
             pred_group = str(ipred_group)
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.obs[prediction].values == pred_group
@@ -314,7 +314,7 @@ def compute_association_matrix_of_groups(
             mask_ref_or_pred[mask_pred] = 1
             # e.g. if the pred group is contained in mask_ref, mask_ref and
             # mask_ref_or_pred are the same
-            if normalization == 'prediction':
+            if normalization == "prediction":
                 # compute which fraction of the predicted group is contained in
                 # the ref group
                 ratio_contained = (
@@ -328,13 +328,13 @@ def compute_association_matrix_of_groups(
                 ) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
         name_list_pred = [
-            cats[i] if cats[i] not in settings.categories_to_ignore else ''
+            cats[i] if cats[i] not in settings.categories_to_ignore else ""
             for i in np.argsort(asso_matrix[-1])[::-1]
             if asso_matrix[-1][i] > threshold
         ]
-        asso_names += ['\n'.join(name_list_pred[:max_n_names])]
+        asso_names += ["\n".join(name_list_pred[:max_n_names])]
     Result = namedtuple(
-        'compute_association_matrix_of_groups', ['asso_names', 'asso_matrix']
+        "compute_association_matrix_of_groups", ["asso_names", "asso_matrix"]
     )
     return Result(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
 
@@ -467,10 +467,10 @@ def update_params(
         for key, val in new_params.items():
             if key not in old_params and check:
                 raise ValueError(
-                    '\''
+                    "'"
                     + key
-                    + '\' is not a valid parameter key, '
-                    + 'consider one of \n'
+                    + "' is not a valid parameter key, "
+                    + "consider one of \n"
                     + str(list(old_params.keys()))
                 )
             if val is not None:
@@ -500,11 +500,11 @@ def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
         return True
 
 
-def select_groups(adata, groups_order_subset='all', key='groups'):
+def select_groups(adata, groups_order_subset="all", key="groups"):
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
-    if key + '_masks' in adata.uns:
-        groups_masks = adata.uns[key + '_masks']
+    if key + "_masks" in adata.uns:
+        groups_masks = adata.uns[key + "_masks"]
     else:
         groups_masks = np.zeros(
             (len(adata.obs[key].cat.categories), adata.obs[key].values.size), dtype=bool
@@ -517,7 +517,7 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
                 mask = str(iname) == adata.obs[key].values
             groups_masks[iname] = mask
     groups_ids = list(range(len(groups_order)))
-    if groups_order_subset != 'all':
+    if groups_order_subset != "all":
         groups_ids = []
         for name in groups_order_subset:
             groups_ids.append(
@@ -533,8 +533,8 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
             )[0]
         if len(groups_ids) == 0:
             logg.debug(
-                f'{np.array(groups_order_subset)} invalid! specify valid '
-                f'groups_order (or indices) from {adata.obs[key].cat.categories}',
+                f"{np.array(groups_order_subset)} invalid! specify valid "
+                f"groups_order (or indices) from {adata.obs[key].cat.categories}",
             )
             from sys import exit
 
@@ -559,7 +559,7 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
 
     traceback.print_stack()
     log = (  # noqa: F841  # TODO Does this need fixing?
-        file if hasattr(file, 'write') else sys.stderr
+        file if hasattr(file, "write") else sys.stderr
     )
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
 
@@ -598,11 +598,11 @@ def subsample(
         Xsampled = np.array(X[rows])
     else:
         if seed < 0:
-            raise ValueError(f'Invalid seed value < 0: {seed}')
+            raise ValueError(f"Invalid seed value < 0: {seed}")
         n = int(X.shape[0] / subsample)
         np.random.seed(seed)
         Xsampled, rows = subsample_n(X, n=n)
-    logg.debug(f'... subsampled to {n} of {X.shape[0]} data points')
+    logg.debug(f"... subsampled to {n} of {X.shape[0]} data points")
     return Xsampled, rows
 
 
@@ -628,7 +628,7 @@ def subsample_n(
         Indices of rows that are stored in Xsampled.
     """
     if n < 0:
-        raise ValueError('n must be greater 0')
+        raise ValueError("n must be greater 0")
     np.random.seed(seed)
     n = X.shape[0] if (n == 0 or n > X.shape[0]) else n
     rows = np.random.choice(X.shape[0], size=n, replace=False)
@@ -706,18 +706,18 @@ class NeighborsView:
         self._connectivities = None
         self._distances = None
 
-        if key is None or key == 'neighbors':
-            if 'neighbors' not in adata.uns:
+        if key is None or key == "neighbors":
+            if "neighbors" not in adata.uns:
                 raise KeyError('No "neighbors" in .uns')
-            self._neighbors_dict = adata.uns['neighbors']
-            self._conns_key = 'connectivities'
-            self._dists_key = 'distances'
+            self._neighbors_dict = adata.uns["neighbors"]
+            self._conns_key = "connectivities"
+            self._dists_key = "distances"
         else:
             if key not in adata.uns:
                 raise KeyError(f'No "{key}" in .uns')
             self._neighbors_dict = adata.uns[key]
-            self._conns_key = self._neighbors_dict['connectivities_key']
-            self._dists_key = self._neighbors_dict['distances_key']
+            self._conns_key = self._neighbors_dict["connectivities_key"]
+            self._dists_key = self._neighbors_dict["distances_key"]
 
         if self._conns_key in adata.obsp:
             self._connectivities = adata.obsp[self._conns_key]
@@ -734,21 +734,21 @@ class NeighborsView:
         )
 
     def __getitem__(self, key):
-        if key == 'distances':
-            if 'distances' not in self:
+        if key == "distances":
+            if "distances" not in self:
                 raise KeyError(f'No "{self._dists_key}" in .obsp')
             return self._distances
-        elif key == 'connectivities':
-            if 'connectivities' not in self:
+        elif key == "connectivities":
+            if "connectivities" not in self:
                 raise KeyError(f'No "{self._conns_key}" in .obsp')
             return self._connectivities
         else:
             return self._neighbors_dict[key]
 
     def __contains__(self, key):
-        if key == 'distances':
+        if key == "distances":
             return self._distances is not None
-        elif key == 'connectivities':
+        elif key == "connectivities":
             return self._connectivities is not None
         else:
             return key in self._neighbors_dict
@@ -758,16 +758,16 @@ def _choose_graph(adata, obsp, neighbors_key):
     """Choose connectivities from neighbbors or another obsp column"""
     if obsp is not None and neighbors_key is not None:
         raise ValueError(
-            'You can\'t specify both obsp, neighbors_key. ' 'Please select only one.'
+            "You can't specify both obsp, neighbors_key. " "Please select only one."
         )
 
     if obsp is not None:
         return adata.obsp[obsp]
     else:
         neighbors = NeighborsView(adata, neighbors_key)
-        if 'connectivities' not in neighbors:
+        if "connectivities" not in neighbors:
             raise ValueError(
-                'You need to run `pp.neighbors` first '
-                'to compute a neighborhood graph.'
+                "You need to run `pp.neighbors` first "
+                "to compute a neighborhood graph."
             )
-        return neighbors['connectivities']
+        return neighbors["connectivities"]

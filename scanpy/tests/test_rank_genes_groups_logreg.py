@@ -14,16 +14,16 @@ def test_rank_genes_groups_with_renamed_categories(method):
 
     # for method in ['logreg', 't-test']:
 
-    sc.tl.rank_genes_groups(adata, 'blobs', method=method)
-    assert adata.uns['rank_genes_groups']['names'].dtype.names == ('0', '1', '2')
-    assert adata.uns['rank_genes_groups']['names'][0].tolist() == ('1', '3', '0')
+    sc.tl.rank_genes_groups(adata, "blobs", method=method)
+    assert adata.uns["rank_genes_groups"]["names"].dtype.names == ("0", "1", "2")
+    assert adata.uns["rank_genes_groups"]["names"][0].tolist() == ("1", "3", "0")
 
-    adata.rename_categories('blobs', ['Zero', 'One', 'Two'])
-    assert adata.uns['rank_genes_groups']['names'][0].tolist() == ('1', '3', '0')
+    adata.rename_categories("blobs", ["Zero", "One", "Two"])
+    assert adata.uns["rank_genes_groups"]["names"][0].tolist() == ("1", "3", "0")
 
-    sc.tl.rank_genes_groups(adata, 'blobs', method=method)
-    assert adata.uns['rank_genes_groups']['names'][0].tolist() == ('1', '3', '0')
-    assert adata.uns['rank_genes_groups']['names'].dtype.names == ('Zero', 'One', 'Two')
+    sc.tl.rank_genes_groups(adata, "blobs", method=method)
+    assert adata.uns["rank_genes_groups"]["names"][0].tolist() == ("1", "3", "0")
+    assert adata.uns["rank_genes_groups"]["names"].dtype.names == ("Zero", "One", "Two")
 
 
 def test_rank_genes_groups_with_renamed_categories_use_rep():
@@ -34,10 +34,10 @@ def test_rank_genes_groups_with_renamed_categories_use_rep():
     adata.X = adata.X[::-1, :]
 
     sc.tl.rank_genes_groups(
-        adata, 'blobs', method='logreg', layer="to_test", use_raw=False
+        adata, "blobs", method="logreg", layer="to_test", use_raw=False
     )
-    assert adata.uns['rank_genes_groups']['names'].dtype.names == ('0', '1', '2')
-    assert adata.uns['rank_genes_groups']['names'][0].tolist() == ('1', '3', '0')
+    assert adata.uns["rank_genes_groups"]["names"].dtype.names == ("0", "1", "2")
+    assert adata.uns["rank_genes_groups"]["names"][0].tolist() == ("1", "3", "0")
 
-    sc.tl.rank_genes_groups(adata, 'blobs', method="logreg")
-    assert not adata.uns['rank_genes_groups']['names'][0].tolist() == ('3', '1', '0')
+    sc.tl.rank_genes_groups(adata, "blobs", method="logreg")
+    assert not adata.uns["rank_genes_groups"]["names"][0].tolist() == ("3", "1", "0")

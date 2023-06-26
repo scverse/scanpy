@@ -115,7 +115,7 @@ def neigh() -> Neighbors:
 
 
 def test_umap_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(method='umap', n_neighbors=n_neighbors)
+    neigh.compute_neighbors(method="umap", n_neighbors=n_neighbors)
     assert np.allclose(neigh.distances.toarray(), distances_euclidean)
     assert np.allclose(neigh.connectivities.toarray(), connectivities_umap)
     neigh.compute_transitions()
@@ -124,7 +124,7 @@ def test_umap_connectivities_euclidean(neigh):
 
 
 def test_gauss_noknn_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(method='gauss', knn=False, n_neighbors=3)
+    neigh.compute_neighbors(method="gauss", knn=False, n_neighbors=3)
     assert np.allclose(neigh.distances, distances_euclidean_all)
     assert np.allclose(neigh.connectivities, connectivities_gauss_noknn)
     neigh.compute_transitions()
@@ -133,7 +133,7 @@ def test_gauss_noknn_connectivities_euclidean(neigh):
 
 
 def test_gauss_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(method='gauss', n_neighbors=n_neighbors)
+    neigh.compute_neighbors(method="gauss", n_neighbors=n_neighbors)
     assert np.allclose(neigh.distances.toarray(), distances_euclidean)
     assert np.allclose(neigh.connectivities.toarray(), connectivities_gauss_knn)
     neigh.compute_transitions()
@@ -157,20 +157,20 @@ def test_use_rep_argument():
     adata = AnnData(np.random.randn(30, 300))
     sc.pp.pca(adata)
     neigh_pca = Neighbors(adata)
-    neigh_pca.compute_neighbors(n_pcs=5, use_rep='X_pca')
+    neigh_pca.compute_neighbors(n_pcs=5, use_rep="X_pca")
     neigh_none = Neighbors(adata)
     neigh_none.compute_neighbors(n_pcs=5, use_rep=None)
     assert np.allclose(neigh_pca.distances.toarray(), neigh_none.distances.toarray())
 
 
-@pytest.mark.parametrize('conv', [csr_matrix.toarray, csr_matrix])
+@pytest.mark.parametrize("conv", [csr_matrix.toarray, csr_matrix])
 def test_restore_n_neighbors(neigh, conv):
-    neigh.compute_neighbors(method='gauss', n_neighbors=n_neighbors)
+    neigh.compute_neighbors(method="gauss", n_neighbors=n_neighbors)
 
     ad = AnnData(np.array(X))
     # Allow deprecated usage for now
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
+        ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1

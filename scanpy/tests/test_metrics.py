@@ -129,7 +129,7 @@ def test_morans_i_correctness():
 
 @pytest.mark.parametrize("metric", [sc.metrics.gearys_c, sc.metrics.morans_i])
 @pytest.mark.parametrize(
-    'array_type',
+    "array_type",
     [asarray, sparse.csr_matrix, sparse.csc_matrix],
     ids=lambda x: x.__name__,
 )

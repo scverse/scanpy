@@ -11,16 +11,16 @@ from scanpy.testing._pytest.marks import needs
 
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / '_images'
-FIGS = HERE / 'figures'
+ROOT = HERE / "_images"
+FIGS = HERE / "figures"
 
 
 @pytest.fixture(scope="module")
 def _pbmc_session():
     pbmc = pbmc68k_reduced()
-    sc.tl.paga(pbmc, groups='bulk_labels')
-    pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze().copy()
-    assert not pbmc.obs['cool_feature'].isna().all()
+    sc.tl.paga(pbmc, groups="bulk_labels")
+    pbmc.obs["cool_feature"] = pbmc[:, "CST3"].X.squeeze().copy()
+    assert not pbmc.obs["cool_feature"].isna().all()
     return pbmc
 
 
@@ -36,16 +36,16 @@ def pbmc(_pbmc_session):
         ("", sc.pl.paga),
         ("continuous", partial(sc.pl.paga, color="CST3")),
         ("continuous_obs", partial(sc.pl.paga, color="cool_feature")),
-        ("continuous_multiple", partial(sc.pl.paga, color=['CST3', 'GATA2'])),
+        ("continuous_multiple", partial(sc.pl.paga, color=["CST3", "GATA2"])),
         ("compare", partial(sc.pl.paga_compare, legend_fontoutline=2)),
         pytest.param(
             "compare_continuous",
-            partial(sc.pl.paga_compare, color='CST3', legend_fontsize=5),
+            partial(sc.pl.paga_compare, color="CST3", legend_fontsize=5),
             marks=pytest.mark.xfail(reason="expects .uns['paga']['pos']"),
         ),
         (
             "compare_pca",
-            partial(sc.pl.paga_compare, basis='X_pca', legend_fontweight='normal'),
+            partial(sc.pl.paga_compare, basis="X_pca", legend_fontweight="normal"),
         ),
     ],
 )
@@ -68,22 +68,22 @@ def test_paga_pie(image_comparer, pbmc):
     colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
 
     sc.pl.paga(pbmc, color=colors, colorbar=False)
-    save_and_compare_images('master_paga_pie')
+    save_and_compare_images("master_paga_pie")
 
 
 @needs("igraph")
 def test_paga_path(image_comparer, pbmc):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
-    pbmc.uns['iroot'] = 0
+    pbmc.uns["iroot"] = 0
     sc.tl.dpt(pbmc)
     sc.pl.paga_path(
         pbmc,
-        nodes=['Dendritic'],
-        keys=['HES4', 'SRM', 'CSTB'],
+        nodes=["Dendritic"],
+        keys=["HES4", "SRM", "CSTB"],
         show=False,
     )
-    save_and_compare_images('master_paga_path')
+    save_and_compare_images("master_paga_path")
 
 
 @needs("igraph")
@@ -96,7 +96,7 @@ def test_paga_compare(image_comparer):
 
     sc.pl.paga_compare(pbmc, basis="umap", show=False)
 
-    save_and_compare_images('master_paga_compare_pbmc3k')
+    save_and_compare_images("master_paga_compare_pbmc3k")
 
 
 @needs("igraph")

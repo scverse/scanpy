@@ -21,8 +21,8 @@ def dendrogram(
     use_rep: Optional[str] = None,
     var_names: Optional[Sequence[str]] = None,
     use_raw: Optional[bool] = None,
-    cor_method: str = 'pearson',
-    linkage_method: str = 'complete',
+    cor_method: str = "pearson",
+    linkage_method: str = "complete",
     optimal_ordering: bool = False,
     key_added: Optional[str] = None,
     inplace: bool = True,
@@ -99,13 +99,13 @@ def dendrogram(
     for group in groupby:
         if group not in adata.obs_keys():
             raise ValueError(
-                'groupby has to be a valid observation. '
-                f'Given value: {group}, valid observations: {adata.obs_keys()}'
+                "groupby has to be a valid observation. "
+                f"Given value: {group}, valid observations: {adata.obs_keys()}"
             )
         if not is_categorical_dtype(adata.obs[group]):
             raise ValueError(
-                'groupby has to be a categorical observation. '
-                f'Given value: {group}, Column type: {adata.obs[group].dtype}'
+                "groupby has to be a categorical observation. "
+                f"Given value: {group}, Column type: {adata.obs[group].dtype}"
             )
 
     if var_names is None:
@@ -118,7 +118,7 @@ def dendrogram(
                 # create new category by merging the given groupby categories
                 categorical = (
                     categorical.astype(str) + "_" + adata.obs[group].astype(str)
-                ).astype('category')
+                ).astype("category")
         categorical.name = "_".join(groupby)
 
         rep_df.set_index(categorical, inplace=True)
@@ -148,8 +148,8 @@ def dendrogram(
         use_rep=use_rep,
         cor_method=cor_method,
         linkage_method=linkage_method,
-        categories_ordered=dendro_info['ivl'],
-        categories_idx_ordered=dendro_info['leaves'],
+        categories_ordered=dendro_info["ivl"],
+        categories_idx_ordered=dendro_info["leaves"],
         dendrogram_info=dendro_info,
         correlation_matrix=corr_matrix.values,
     )
@@ -157,7 +157,7 @@ def dendrogram(
     if inplace:
         if key_added is None:
             key_added = f'dendrogram_{"_".join(groupby)}'
-        logg.info(f'Storing dendrogram info using `.uns[{key_added!r}]`')
+        logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
         adata.uns[key_added] = dat
     else:
         return dat

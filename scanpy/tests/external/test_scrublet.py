@@ -39,10 +39,10 @@ def test_scrublet_batched():
     Check that scrublet runs and detects some doublets.
     """
     adata = pbmc3k()
-    adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
+    adata.obs["batch"] = 1350 * ["a"] + 1350 * ["b"]
     split = [adata[adata.obs["batch"] == x].copy() for x in ("a", "b")]
 
-    sce.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
+    sce.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
 
     # replace assertions by conditions
     assert "predicted_doublet" in adata.obs.columns
@@ -50,7 +50,7 @@ def test_scrublet_batched():
 
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
     assert (
-        'batches' in adata.uns['scrublet'].keys()
+        "batches" in adata.uns["scrublet"].keys()
     ), "Expect .uns to contain batch info"
 
     # Check that results are independent
@@ -88,11 +88,11 @@ def test_scrublet_data():
         adata_pp = adata.copy()
         pp.filter_genes(adata_pp, min_cells=3)
         pp.filter_cells(adata_pp, min_genes=3)
-        adata_pp.layers['raw'] = adata_pp.X.copy()
+        adata_pp.layers["raw"] = adata_pp.X.copy()
         pp.normalize_total(adata_pp)
         logged = pp.log1p(adata_pp, copy=True)
         pp.highly_variable_genes(logged)
-        adata_pp = adata_pp[:, logged.var['highly_variable']]
+        adata_pp = adata_pp[:, logged.var["highly_variable"]]
 
         return adata_pp
 
@@ -110,7 +110,7 @@ def test_scrublet_data():
             ),
             (N_sim, adata_obs.n_obs),
         )
-        X = I @ adata_obs.layers['raw']
+        X = I @ adata_obs.layers["raw"]
         return ad.AnnData(
             X,
             var=pd.DataFrame(index=adata_obs.var_names),
@@ -122,7 +122,7 @@ def test_scrublet_data():
 
     adata_obs = preprocess_for_scrublet(pbmc3k())
     adata_sim = create_sim_from_parents(
-        adata_obs, adata_scrublet_auto_sim.uns['scrublet']['doublet_parents']
+        adata_obs, adata_scrublet_auto_sim.uns["scrublet"]["doublet_parents"]
     )
 
     # Apply the same post-normalisation the Scrublet function would
@@ -142,8 +142,8 @@ def test_scrublet_data():
     # the main function or manually provided
 
     assert (
-        adata_scrublet_manual_sim.obs['doublet_score']
-        == adata_scrublet_auto_sim.obs['doublet_score']
+        adata_scrublet_manual_sim.obs["doublet_score"]
+        == adata_scrublet_auto_sim.obs["doublet_score"]
     ).all()
 
 
@@ -180,24 +180,24 @@ def test_scrublet_params():
     default = sce.pp.scrublet(adata, use_approx_neighbors=False, copy=True)
 
     test_params = {
-        'expected_doublet_rate': 0.1,
-        'synthetic_doublet_umi_subsampling': 0.8,
-        'knn_dist_metric': 'manhattan',
-        'normalize_variance': False,
-        'log_transform': True,
-        'mean_center': False,
-        'n_prin_comps': 10,
-        'n_neighbors': 2,
-        'threshold': 0.1,
+        "expected_doublet_rate": 0.1,
+        "synthetic_doublet_umi_subsampling": 0.8,
+        "knn_dist_metric": "manhattan",
+        "normalize_variance": False,
+        "log_transform": True,
+        "mean_center": False,
+        "n_prin_comps": 10,
+        "n_neighbors": 2,
+        "threshold": 0.1,
     }
 
     # Test each parameter and make sure something changes
 
     for param in test_params.keys():
         test_args = {
-            'adata': adata,
-            'use_approx_neighbors': False,
-            'copy': True,
+            "adata": adata,
+            "use_approx_neighbors": False,
+            "copy": True,
             param: test_params[param],
         }
         curr = sc.external.pp.scrublet(**test_args)
@@ -215,13 +215,13 @@ def test_scrublet_simulate_doublets():
     adata_obs = pbmc3k()
     sc.pp.filter_genes(adata_obs, min_cells=3)
     sc.pp.filter_cells(adata_obs, min_genes=3)
-    adata_obs.layers['raw'] = adata_obs.X
+    adata_obs.layers["raw"] = adata_obs.X
     sc.pp.normalize_total(adata_obs)
     logged = sc.pp.log1p(adata_obs, copy=True)
 
     _ = sc.pp.highly_variable_genes(logged)
-    adata_obs = adata_obs[:, logged.var['highly_variable']]
+    adata_obs = adata_obs[:, logged.var["highly_variable"]]
 
-    adata_sim = sce.pp.scrublet_simulate_doublets(adata_obs, layer='raw')
+    adata_sim = sce.pp.scrublet_simulate_doublets(adata_obs, layer="raw")
 
-    assert 'doublet_parents' in adata_sim.obsm.keys()
+    assert "doublet_parents" in adata_sim.obsm.keys()

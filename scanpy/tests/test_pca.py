@@ -40,28 +40,28 @@ A_svd = np.array(
 
 
 def test_pca_transform(array_type):
-    A = array_type(A_list).astype('float32')
+    A = array_type(A_list).astype("float32")
     A_pca_abs = np.abs(A_pca)
     A_svd_abs = np.abs(A_svd)
 
     adata = AnnData(A)
 
-    sc.pp.pca(adata, n_comps=4, zero_center=True, svd_solver='arpack', dtype='float64')
+    sc.pp.pca(adata, n_comps=4, zero_center=True, svd_solver="arpack", dtype="float64")
 
-    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
+    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
     sc.pp.pca(
         adata,
         n_comps=5,
         zero_center=True,
-        svd_solver='randomized',
-        dtype='float64',
+        svd_solver="randomized",
+        dtype="float64",
         random_state=14,
     )
-    assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm['X_pca'])) < 2e-05
+    assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm["X_pca"])) < 2e-05
 
-    sc.pp.pca(adata, n_comps=4, zero_center=False, dtype='float64', random_state=14)
-    assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
+    sc.pp.pca(adata, n_comps=4, zero_center=False, dtype="float64", random_state=14)
+    assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_shapes():
@@ -96,8 +96,8 @@ def test_pca_sparse():
     assert np.allclose(
         implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"]
     )
-    assert np.allclose(implicit.obsm['X_pca'], explicit.obsm['X_pca'])
-    assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
+    assert np.allclose(implicit.obsm["X_pca"], explicit.obsm["X_pca"])
+    assert np.allclose(implicit.varm["PCs"], explicit.varm["PCs"])
 
 
 def test_pca_reproducible(array_type):

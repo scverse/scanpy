@@ -17,10 +17,10 @@ def test_run_wishbone():
 
     sce.tl.wishbone(
         adata=adata,
-        start_cell='ACAAGAGACTTATC-1',
+        start_cell="ACAAGAGACTTATC-1",
         components=[2, 3],
         num_waypoints=150,
     )
     assert all(
-        [k in adata.obs for k in ['trajectory_wishbone', 'branch_wishbone']]
+        [k in adata.obs for k in ["trajectory_wishbone", "branch_wishbone"]]
     ), "Run Wishbone Error!"

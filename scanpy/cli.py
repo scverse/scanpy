@@ -46,11 +46,11 @@ class _CommandDelegator(cabc.MutableMapping):
         try:
             return self.parser_map[k]
         except KeyError:
-            if which(f'{self.command}-{k}'):
+            if which(f"{self.command}-{k}"):
                 return _DelegatingParser(self, k)
             # Only here is the command list retrieved
             raise ArgumentError(
-                self.action, f'No command “{k}”. Choose from {set(self)}'
+                self.action, f"No command “{k}”. Choose from {set(self)}"
             )
 
     def __setitem__(self, k: str, v: ArgumentParser) -> None:
@@ -75,7 +75,7 @@ class _CommandDelegator(cabc.MutableMapping):
         if isinstance(other, _CommandDelegator):
             return all(
                 getattr(self, attr) == getattr(other, attr)
-                for attr in ['command', 'action', 'parser_map', 'runargs']
+                for attr in ["command", "action", "parser_map", "runargs"]
             )
         return self.parser_map == other
 
@@ -84,8 +84,8 @@ class _CommandDelegator(cabc.MutableMapping):
     def commands(self) -> FrozenSet[str]:
         return frozenset(
             binary.name[len(self.command) + 1 :]
-            for bin_dir in os.environ['PATH'].split(os.pathsep)
-            for binary in Path(bin_dir).glob(f'{self.command}-*')
+            for bin_dir in os.environ["PATH"].split(os.pathsep)
+            for binary in Path(bin_dir).glob(f"{self.command}-*")
             if os.access(binary, os.X_OK)
         )
 
@@ -94,7 +94,7 @@ class _DelegatingParser(ArgumentParser):
     """Just sets parse_args().func to run the subcommand"""
 
     def __init__(self, cd: _CommandDelegator, subcmd: str):
-        super().__init__(f'{cd.command}-{subcmd}', add_help=False)
+        super().__init__(f"{cd.command}-{subcmd}", add_help=False)
         self.cd = cd
         self.subcmd = subcmd
 
@@ -105,7 +105,7 @@ class _DelegatingParser(ArgumentParser):
     ) -> Tuple[Namespace, List[str]]:
         assert (
             args is not None and namespace is None
-        ), 'Only use DelegatingParser as subparser'
+        ), "Only use DelegatingParser as subparser"
         return Namespace(func=partial(run, [self.prog, *args], **self.cd.runargs)), []
 
 
@@ -134,11 +134,11 @@ def main(
 
     subparsers: _DelegatingSubparsersAction = parser.add_subparsers(
         action=_DelegatingSubparsersAction,
-        _command='scanpy',
-        _runargs={**runargs, 'check': check},
+        _command="scanpy",
+        _runargs={**runargs, "check": check},
     )
 
-    parser_settings = subparsers.add_parser('settings')
+    parser_settings = subparsers.add_parser("settings")
     parser_settings.set_defaults(func=_cmd_settings)
 
     args = parser.parse_args(argv)

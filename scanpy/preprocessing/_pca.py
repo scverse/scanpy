@@ -18,11 +18,11 @@ def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: Optional[int] = None,
     zero_center: Optional[bool] = True,
-    svd_solver: str = 'arpack',
+    svd_solver: str = "arpack",
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
-    dtype: str = 'float32',
+    dtype: str = "float32",
     copy: bool = False,
     chunked: bool = False,
     chunk_size: Optional[int] = None,
@@ -113,14 +113,14 @@ def pca(
              Explained variance, equivalent to the eigenvalues of the
              covariance matrix.
     """
-    logg_start = logg.info('computing PCA')
+    logg_start = logg.info("computing PCA")
 
     # chunked calculation is not randomized, anyways
-    if svd_solver in {'auto', 'randomized'} and not chunked:
+    if svd_solver in {"auto", "randomized"} and not chunked:
         logg.info(
-            'Note that scikit-learn\'s randomized PCA might not be exactly '
-            'reproducible across different computational platforms. For exact '
-            'reproducibility, choose `svd_solver=\'arpack\'.`'
+            "Note that scikit-learn's randomized PCA might not be exactly "
+            "reproducible across different computational platforms. For exact "
+            "reproducibility, choose `svd_solver='arpack'.`"
         )
     data_is_AnnData = isinstance(data, AnnData)
     if data_is_AnnData:
@@ -128,18 +128,18 @@ def pca(
     else:
         adata = AnnData(data, dtype=data.dtype)
 
-    if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
+    if use_highly_variable is True and "highly_variable" not in adata.var.keys():
         raise ValueError(
-            'Did not find adata.var[\'highly_variable\']. '
-            'Either your data already only consists of highly-variable genes '
-            'or consider running `pp.highly_variable_genes` first.'
+            "Did not find adata.var['highly_variable']. "
+            "Either your data already only consists of highly-variable genes "
+            "or consider running `pp.highly_variable_genes` first."
         )
     if use_highly_variable is None:
-        use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
+        use_highly_variable = True if "highly_variable" in adata.var.keys() else False
     if use_highly_variable:
-        logg.info('    on highly variable genes')
+        logg.info("    on highly variable genes")
     adata_comp = (
-        adata[:, adata.var['highly_variable']] if use_highly_variable else adata
+        adata[:, adata.var["highly_variable"]] if use_highly_variable else adata
     )
 
     if n_comps is None:
@@ -149,15 +149,15 @@ def pca(
         else:
             n_comps = settings.N_PCS
 
-    logg.info(f'    with n_comps={n_comps}')
+    logg.info(f"    with n_comps={n_comps}")
 
     random_state = check_random_state(random_state)
 
     X = adata_comp.X
 
     if chunked:
-        if not zero_center or random_state or svd_solver != 'arpack':
-            logg.debug('Ignoring zero_center, random_state, svd_solver')
+        if not zero_center or random_state or svd_solver != "arpack":
+            logg.debug("Ignoring zero_center, random_state, svd_solver")
 
         from sklearn.decomposition import IncrementalPCA
 
@@ -191,9 +191,9 @@ def pca(
 
         if svd_solver == "auto":
             svd_solver = "arpack"
-        if svd_solver not in {'lobpcg', 'arpack'}:
+        if svd_solver not in {"lobpcg", "arpack"}:
             raise ValueError(
-                'svd_solver: {svd_solver} can not be used with sparse input.\n'
+                "svd_solver: {svd_solver} can not be used with sparse input.\n"
                 'Use "arpack" (the default) or "lobpcg" instead.'
             )
 
@@ -201,21 +201,21 @@ def pca(
             X, n_comps, solver=svd_solver, random_state=random_state
         )
         # this is just a wrapper for the results
-        X_pca = output['X_pca']
+        X_pca = output["X_pca"]
         pca_ = PCA(
             n_components=n_comps, svd_solver=svd_solver, random_state=random_state
         )
-        pca_.components_ = output['components']
-        pca_.explained_variance_ = output['variance']
-        pca_.explained_variance_ratio_ = output['variance_ratio']
+        pca_.components_ = output["components"]
+        pca_.explained_variance_ = output["variance"]
+        pca_.explained_variance_ratio_ = output["variance_ratio"]
     elif not zero_center:
         from sklearn.decomposition import TruncatedSVD
 
         logg.debug(
-            '    without zero-centering: \n'
-            '    the explained variance does not correspond to the exact statistical defintion\n'
-            '    the first component, e.g., might be heavily influenced by different means\n'
-            '    the following components often resemble the exact PCA very closely'
+            "    without zero-centering: \n"
+            "    the explained variance does not correspond to the exact statistical defintion\n"
+            "    the first component, e.g., might be heavily influenced by different means\n"
+            "    the following components often resemble the exact PCA very closely"
         )
         pca_ = TruncatedSVD(
             n_components=n_comps, random_state=random_state, algorithm=svd_solver
@@ -228,30 +228,30 @@ def pca(
         X_pca = X_pca.astype(dtype)
 
     if data_is_AnnData:
-        adata.obsm['X_pca'] = X_pca
-        adata.uns['pca'] = {}
-        adata.uns['pca']['params'] = {
-            'zero_center': zero_center,
-            'use_highly_variable': use_highly_variable,
+        adata.obsm["X_pca"] = X_pca
+        adata.uns["pca"] = {}
+        adata.uns["pca"]["params"] = {
+            "zero_center": zero_center,
+            "use_highly_variable": use_highly_variable,
         }
         if use_highly_variable:
-            adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm['PCs'][adata.var['highly_variable']] = pca_.components_.T
+            adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
+            adata.varm["PCs"][adata.var["highly_variable"]] = pca_.components_.T
         else:
-            adata.varm['PCs'] = pca_.components_.T
-        adata.uns['pca']['variance'] = pca_.explained_variance_
-        adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
-        logg.info('    finished', time=logg_start)
+            adata.varm["PCs"] = pca_.components_.T
+        adata.uns["pca"]["variance"] = pca_.explained_variance_
+        adata.uns["pca"]["variance_ratio"] = pca_.explained_variance_ratio_
+        logg.info("    finished", time=logg_start)
         logg.debug(
-            'and added\n'
-            '    \'X_pca\', the PCA coordinates (adata.obs)\n'
-            '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
-            '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
-            '    \'pca_variance_ratio\', the variance ratio (adata.uns)'
+            "and added\n"
+            "    'X_pca', the PCA coordinates (adata.obs)\n"
+            "    'PC1', 'PC2', ..., the loadings (adata.var)\n"
+            "    'pca_variance', the variance / eigenvalues (adata.uns)\n"
+            "    'pca_variance_ratio', the variance ratio (adata.uns)"
         )
         return adata if copy else None
     else:
-        logg.info('    finished', time=logg_start)
+        logg.info("    finished", time=logg_start)
         if return_info:
             return (
                 X_pca,
@@ -263,11 +263,11 @@ def pca(
             return X_pca
 
 
-def _pca_with_sparse(X, npcs, solver='arpack', mu=None, random_state=None):
+def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(X.shape))
-    X = check_array(X, accept_sparse=['csr', 'csc'])
+    X = check_array(X, accept_sparse=["csr", "csc"])
 
     if mu is None:
         mu = X.mean(0).A.flatten()[None, :]
@@ -314,9 +314,9 @@ def _pca_with_sparse(X, npcs, solver='arpack', mu=None, random_state=None):
     ev_ratio = ev / total_var
 
     output = {
-        'X_pca': X_pca,
-        'variance': ev,
-        'variance_ratio': ev_ratio,
-        'components': v,
+        "X_pca": X_pca,
+        "variance": ev,
+        "variance_ratio": ev_ratio,
+        "components": v,
     }
     return output

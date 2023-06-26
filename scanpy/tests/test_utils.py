@@ -10,19 +10,19 @@ import pytest
 
 def test_descend_classes_and_funcs():
     # create module hierarchy
-    a = ModuleType('a')
-    a.b = ModuleType('a.b')
+    a = ModuleType("a")
+    a.b = ModuleType("a.b")
 
     # populate with classes
-    a.A = type('A', (), {})
+    a.A = type("A", (), {})
     a.A.__module__ = a.__name__
-    a.b.B = type('B', (), {})
+    a.b.B = type("B", (), {})
     a.b.B.__module__ = a.b.__name__
 
     # create a loop to check if that gets caught
     a.b.a = a
 
-    assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, 'a'))
+    assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, "a"))
 
 
 def test_check_nonnegative_integers():
@@ -42,7 +42,7 @@ def test_check_nonnegative_integers():
 
 
 @pytest.mark.parametrize(
-    'array_type', [asarray, csr_matrix, csc_matrix], ids=lambda x: x.__name__
+    "array_type", [asarray, csr_matrix, csc_matrix], ids=lambda x: x.__name__
 )
 def test_is_constant(array_type):
     from scanpy._utils import is_constant

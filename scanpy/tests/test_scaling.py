@@ -23,8 +23,8 @@ X_centered = [
 ]  # with gene std 1,0,1,0 and center 0,0,0,0
 
 
-@pytest.mark.parametrize('typ', [np.array, csr_matrix], ids=lambda x: x.__name__)
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize("typ", [np.array, csr_matrix], ids=lambda x: x.__name__)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_scale(typ, dtype):
     # test AnnData arguments
     # test scaling with default zero_center == True
