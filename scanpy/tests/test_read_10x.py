@@ -120,9 +120,26 @@ def test_error_missing_genome():
         sc.read_10x_h5(v3_pth, genome="not a genome")
 
 
-def test_read_visium_counts():
-    # Test that checks the read_visium function
-    visium_pth = VISIUM_ROOT / '1.0.0'
+@pytest.fixture(params=[1, 2])
+def visium_pth(request, tmp_path) -> Path:
+    visium1_pth = VISIUM_ROOT / '1.0.0'
+    if request.param == 1:
+        return visium1_pth
+    elif request.param == 2:
+        visium2_pth = tmp_path / 'visium2'
+        shutil.copytree(visium1_pth, visium2_pth)
+        header = 'barcode,in_tissue,array_row,array_col,pxl_row_in_fullres,pxl_col_in_fullres'
+        orig = visium2_pth / 'spatial' / 'tissue_positions_list.csv'
+        csv = f'{header}\n{orig.read_text()}'
+        orig.unlink()
+        (orig.parent / 'tissue_positions.csv').write_text(csv)
+        return visium2_pth
+    else:
+        assert False
+
+
+def test_read_visium_counts(visium_pth):
+    """Test checking that read_visium reads the right genome"""
     spec_genome_v3 = sc.read_visium(visium_pth, genome='GRCh38')
     nospec_genome_v3 = sc.read_visium(visium_pth)
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
