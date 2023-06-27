@@ -146,7 +146,7 @@ addopts = [
     "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]
-ignore = ["scanpy/tests/_images"]
+norecursedirs = ["scanpy/tests/_images"]
 xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
