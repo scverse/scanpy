@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from importlib import import_module
 from types import MappingProxyType, ModuleType
-from typing import Literal, Union
+from typing import TYPE_CHECKING, Literal, Union
 from collections.abc import Mapping, Generator
 
-from sklearn.neighbors import KNeighborsTransformer
+if TYPE_CHECKING:
+    from sklearn.neighbors import KNeighborsTransformer
 
 
 _Eponymous = Literal['annoy', 'faiss', 'nmslib', 'pynndescent']
