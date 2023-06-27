@@ -545,7 +545,7 @@ class Neighbors:
         # self._distances is unaffected by this
         if method == 'gauss':
             self._connectivities = _compute_connectivities_diffmap(
-                self._distances, self.n_neighbors, knn=knn
+                self._distances, self.n_neighbors
             )
         logg.debug('computed connectivities', time=start_connect)
         self._number_connected_components = 1

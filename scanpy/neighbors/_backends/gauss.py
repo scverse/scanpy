@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeVar, Union
+from typing import Union
 
 import numpy as np
 from numpy.typing import NDArray

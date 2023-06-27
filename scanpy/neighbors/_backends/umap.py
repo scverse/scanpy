@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import warnings
 from types import MappingProxyType
 from typing import Any, Union, Mapping
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.sparse import csr_matrix, coo_matrix
 from sklearn.utils import check_random_state
+from pynndescent import NNDescent
 
 from scanpy import settings
 from scanpy._utils import AnyRandom
@@ -19,7 +23,7 @@ def compute_neighbors_umap(
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     angular: bool = False,
     verbose: bool = False,
-):
+) -> tuple[NDArray[np.int32], NDArray[np.float32], NNDescent]:
     """This is from umap.fuzzy_simplicial_set [McInnes18]_.
     Given a set of data X, a neighborhood size, and a measure of distance
     compute the fuzzy simplicial set (here represented as a fuzzy graph in
@@ -105,8 +109,11 @@ def compute_neighbors_umap(
 
 
 def _get_sparse_matrix_from_indices_distances_umap(
-    knn_indices, knn_dists, n_obs, n_neighbors
-):
+    knn_indices: NDArray[np.int32],
+    knn_dists: NDArray[np.float32],
+    n_obs: int,
+    n_neighbors: int,
+) -> csr_matrix:
     rows = np.zeros((n_obs * n_neighbors), dtype=np.int64)
     cols = np.zeros((n_obs * n_neighbors), dtype=np.int64)
     vals = np.zeros((n_obs * n_neighbors), dtype=np.float64)
@@ -130,13 +137,13 @@ def _get_sparse_matrix_from_indices_distances_umap(
 
 
 def _compute_connectivities_umap(
-    knn_indices,
-    knn_dists,
-    n_obs,
-    n_neighbors,
-    set_op_mix_ratio=1.0,
-    local_connectivity=1.0,
-):
+    knn_indices: NDArray[np.int32],
+    knn_dists: NDArray[np.float32],
+    n_obs: int,
+    n_neighbors: int,
+    set_op_mix_ratio: float = 1.0,
+    local_connectivity: float = 1.0,
+) -> tuple[csr_matrix, csr_matrix]:
     """\
     This is from umap.fuzzy_simplicial_set [McInnes18]_.
 
