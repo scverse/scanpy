@@ -1,15 +1,15 @@
+from __future__ import annotations
+
 from types import MappingProxyType
 from typing import (
     Union,
     Optional,
     Any,
-    Mapping,
-    Callable,
     NamedTuple,
-    Generator,
     Tuple,
     Literal,
 )
+from collections.abc import MutableMapping, Mapping, Callable, Generator
 import warnings
 
 import numpy as np
@@ -17,8 +17,8 @@ import scipy
 from anndata import AnnData
 from scipy.sparse import issparse, coo_matrix, csr_matrix
 from sklearn.utils import check_random_state
-import sklearn_ann
 
+from .enums import _Metric, _MetricFn, _Method
 from .. import logging as logg
 from .. import _utils
 from .._utils import _doc_params, AnyRandom, NeighborsView
@@ -26,36 +26,8 @@ from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
 
 N_DCS = 15  # default number of diffusion components
-N_PCS = (
-    settings.N_PCS
-)  # Backwards compat, constants should be defined in only one place.
-
-_Method = Literal['umap', 'gauss', 'rapids']
-_MetricFn = Callable[[np.ndarray, np.ndarray], float]
-# from sklearn.metrics.pairwise_distances.__doc__:
-_MetricSparseCapable = Literal[
-    'cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan'
-]
-_MetricScipySpatial = Literal[
-    'braycurtis',
-    'canberra',
-    'chebyshev',
-    'correlation',
-    'dice',
-    'hamming',
-    'jaccard',
-    'kulsinski',
-    'mahalanobis',
-    'minkowski',
-    'rogerstanimoto',
-    'russellrao',
-    'seuclidean',
-    'sokalmichener',
-    'sokalsneath',
-    'sqeuclidean',
-    'yule',
-]
-_Metric = Union[_MetricSparseCapable, _MetricScipySpatial]
+# Backwards compat, constants should be defined in only one place.
+N_PCS = settings.N_PCS
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -66,7 +38,7 @@ def neighbors(
     use_rep: Optional[str] = None,
     knn: bool = True,
     random_state: AnyRandom = 0,
-    method: Optional[_Method] = 'umap',
+    method: _Method = 'umap',
     metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     key_added: Optional[str] = None,
@@ -327,7 +299,7 @@ def compute_neighbors_umap(
 
 
 def compute_neighbors_rapids(
-    X: np.ndarray, n_neighbors: int, metric: _Metric = 'euclidean'
+    X: np.ndarray, n_neighbors: int, metric: Union[_Metric, _MetricFn] = 'euclidean'
 ):
     """Compute nearest neighbors using RAPIDS cuml.
 
@@ -521,7 +493,7 @@ class OnFlySymMatrix:
         shape: Tuple[int, int],
         DC_start: int = 0,
         DC_end: int = -1,
-        rows: Optional[Mapping[Any, np.ndarray]] = None,
+        rows: Optional[MutableMapping[Any, np.ndarray]] = None,
         restrict_array: Optional[np.ndarray] = None,
     ):
         self.get_row = get_row
@@ -742,7 +714,7 @@ class Neighbors:
         method: _Method = 'umap',
         random_state: AnyRandom = 0,
         write_knn_indices: bool = False,
-        metric: _Metric = 'euclidean',
+        metric: Union[_Metric, _MetricFn] = 'euclidean',
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     ) -> None:
         """\
