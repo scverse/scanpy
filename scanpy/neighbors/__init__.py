@@ -20,6 +20,11 @@ from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import check_random_state
 
 from .enums import _Metric, _MetricFn, _Method
+from .common import (
+    _get_indices_distances_from_dense_matrix,
+    _get_sparse_matrix_from_indices_distances_numpy,
+)
+from .backends.gauss import _compute_connectivities_diffmap
 from .backends.umap import compute_neighbors_umap, _compute_connectivities_umap
 from .backends.rapids import compute_neighbors_rapids
 from .. import logging as logg
@@ -182,54 +187,6 @@ class FlatTree(NamedTuple):
 
 
 RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
-
-
-def _get_sparse_matrix_from_indices_distances_numpy(
-    indices, distances, n_obs, n_neighbors
-):
-    n_nonzero = n_obs * n_neighbors
-    indptr = np.arange(0, n_nonzero + 1, n_neighbors)
-    D = csr_matrix(
-        (
-            distances.copy().ravel(),  # copy the data, otherwise strange behavior here
-            indices.copy().ravel(),
-            indptr,
-        ),
-        shape=(n_obs, n_obs),
-    )
-    D.eliminate_zeros()
-    return D
-
-
-def _get_indices_distances_from_sparse_matrix(D, n_neighbors: int):
-    indices = np.zeros((D.shape[0], n_neighbors), dtype=int)
-    distances = np.zeros((D.shape[0], n_neighbors), dtype=D.dtype)
-    n_neighbors_m1 = n_neighbors - 1
-    for i in range(indices.shape[0]):
-        neighbors = D[i].nonzero()  # 'true' and 'spurious' zeros
-        indices[i, 0] = i
-        distances[i, 0] = 0
-        # account for the fact that there might be more than n_neighbors
-        # due to an approximate search
-        # [the point itself was not detected as its own neighbor during the search]
-        if len(neighbors[1]) > n_neighbors_m1:
-            sorted_indices = np.argsort(D[i][neighbors].A1)[:n_neighbors_m1]
-            indices[i, 1:] = neighbors[1][sorted_indices]
-            distances[i, 1:] = D[i][
-                neighbors[0][sorted_indices], neighbors[1][sorted_indices]
-            ]
-        else:
-            indices[i, 1:] = neighbors[1]
-            distances[i, 1:] = D[i][neighbors]
-    return indices, distances
-
-
-def _get_indices_distances_from_dense_matrix(D, n_neighbors: int):
-    sample_range = np.arange(D.shape[0])[:, None]
-    indices = np.argpartition(D, n_neighbors - 1, axis=1)[:, :n_neighbors]
-    indices = indices[sample_range, np.argsort(D[sample_range, indices])]
-    distances = D[sample_range, indices]
-    return indices, distances
 
 
 def _backwards_compat_get_full_X_diffmap(adata: AnnData) -> np.ndarray:
@@ -587,7 +544,9 @@ class Neighbors:
         # overwrite the umap connectivities if method is 'gauss'
         # self._distances is unaffected by this
         if method == 'gauss':
-            self._compute_connectivities_diffmap()
+            self._connectivities = _compute_connectivities_diffmap(
+                self._distances, self.n_neighbors, knn=self.knn
+            )
         logg.debug('computed connectivities', time=start_connect)
         self._number_connected_components = 1
         if issparse(self._connectivities):
@@ -595,76 +554,6 @@ class Neighbors:
 
             self._connected_components = connected_components(self._connectivities)
             self._number_connected_components = self._connected_components[0]
-
-    def _compute_connectivities_diffmap(self, density_normalize=True):
-        # init distances
-        if self.knn:
-            Dsq = self._distances.power(2)
-            indices, distances_sq = _get_indices_distances_from_sparse_matrix(
-                Dsq, self.n_neighbors
-            )
-        else:
-            Dsq = np.power(self._distances, 2)
-            indices, distances_sq = _get_indices_distances_from_dense_matrix(
-                Dsq, self.n_neighbors
-            )
-
-        # exclude the first point, the 0th neighbor
-        indices = indices[:, 1:]
-        distances_sq = distances_sq[:, 1:]
-
-        # choose sigma, the heuristic here doesn't seem to make much of a difference,
-        # but is used to reproduce the figures of Haghverdi et al. (2016)
-        if self.knn:
-            # as the distances are not sorted
-            # we have decay within the n_neighbors first neighbors
-            sigmas_sq = np.median(distances_sq, axis=1)
-        else:
-            # the last item is already in its sorted position through argpartition
-            # we have decay beyond the n_neighbors neighbors
-            sigmas_sq = distances_sq[:, -1] / 4
-        sigmas = np.sqrt(sigmas_sq)
-
-        # compute the symmetric weight matrix
-        if not issparse(self._distances):
-            Num = 2 * np.multiply.outer(sigmas, sigmas)
-            Den = np.add.outer(sigmas_sq, sigmas_sq)
-            W = np.sqrt(Num / Den) * np.exp(-Dsq / Den)
-            # make the weight matrix sparse
-            if not self.knn:
-                mask = W > 1e-14
-                W[~mask] = 0
-            else:
-                # restrict number of neighbors to ~k
-                # build a symmetric mask
-                mask = np.zeros(Dsq.shape, dtype=bool)
-                for i, row in enumerate(indices):
-                    mask[i, row] = True
-                    for j in row:
-                        if i not in set(indices[j]):
-                            W[j, i] = W[i, j]
-                            mask[j, i] = True
-                # set all entries that are not nearest neighbors to zero
-                W[~mask] = 0
-        else:
-            W = (
-                Dsq.copy()
-            )  # need to copy the distance matrix here; what follows is inplace
-            for i in range(len(Dsq.indptr[:-1])):
-                row = Dsq.indices[Dsq.indptr[i] : Dsq.indptr[i + 1]]
-                num = 2 * sigmas[i] * sigmas[row]
-                den = sigmas_sq[i] + sigmas_sq[row]
-                W.data[Dsq.indptr[i] : Dsq.indptr[i + 1]] = np.sqrt(num / den) * np.exp(
-                    -Dsq.data[Dsq.indptr[i] : Dsq.indptr[i + 1]] / den
-                )
-            W = W.tolil()
-            for i, row in enumerate(indices):
-                for j in row:
-                    if i not in set(indices[j]):
-                        W[j, i] = W[i, j]
-            W = W.tocsr()
-
-        self._connectivities = W
 
     def compute_transitions(self, density_normalize: bool = True):
         """\
