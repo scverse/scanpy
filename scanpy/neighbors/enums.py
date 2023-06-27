@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Union
-from collections.abc import Callable
+from typing import Literal, Union, Callable
 
 import numpy as np
 
