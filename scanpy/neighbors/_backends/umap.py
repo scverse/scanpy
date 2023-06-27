@@ -8,7 +8,7 @@ from sklearn.utils import check_random_state
 
 from scanpy import settings
 from scanpy._utils import AnyRandom
-from scanpy.neighbors.enums import _Metric, _MetricFn
+from scanpy.neighbors._enums import _Metric, _MetricFn
 
 
 def compute_neighbors_umap(

@@ -19,14 +19,14 @@ from anndata import AnnData
 from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import check_random_state
 
-from .enums import _Metric, _MetricFn, _Method
-from .common import (
+from ._enums import _Metric, _MetricFn, _Method
+from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_sparse_matrix_from_indices_distances_numpy,
 )
-from .backends.gauss import _compute_connectivities_diffmap
-from .backends.umap import compute_neighbors_umap, _compute_connectivities_umap
-from .backends.rapids import compute_neighbors_rapids
+from ._backends.gauss import _compute_connectivities_diffmap
+from ._backends.umap import compute_neighbors_umap, _compute_connectivities_umap
+from ._backends.rapids import compute_neighbors_rapids
 from .. import logging as logg
 from .. import _utils
 from .._utils import _doc_params, AnyRandom, NeighborsView

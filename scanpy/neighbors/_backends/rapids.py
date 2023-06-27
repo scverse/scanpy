@@ -2,7 +2,7 @@ from typing import Union
 
 import numpy as np
 
-from ..enums import _Metric, _MetricFn
+from .._enums import _Metric, _MetricFn
 
 
 def compute_neighbors_rapids(

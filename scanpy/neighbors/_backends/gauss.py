@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.sparse import issparse
 
-from ..common import _get_indices_distances_from_dense_matrix
+from .._common import _get_indices_distances_from_dense_matrix
 
 
 def _get_indices_distances_from_sparse_matrix(D, n_neighbors: int):
