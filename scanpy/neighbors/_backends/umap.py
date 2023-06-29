@@ -139,6 +139,7 @@ def _get_sparse_matrix_from_indices_distances_umap(
 def _compute_connectivities_umap(
     knn_indices: NDArray[np.int32],
     knn_dists: NDArray[np.float32],
+    *,
     n_obs: int,
     n_neighbors: int,
     set_op_mix_ratio: float = 1.0,

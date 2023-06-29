@@ -35,10 +35,10 @@ def _get_indices_distances_from_sparse_matrix(
 
 
 def _compute_connectivities_diffmap(
-    distances: Union[np.ndarray, csr_matrix], n_neighbors: int
+    distances: Union[np.ndarray, csr_matrix], n_neighbors: int, *, knn: bool
 ):
     # init distances
-    if issparse(distances):
+    if knn:
         Dsq = distances.power(2)
         indices, distances_sq = _get_indices_distances_from_sparse_matrix(
             Dsq, n_neighbors
@@ -55,7 +55,7 @@ def _compute_connectivities_diffmap(
 
     # choose sigma, the heuristic here doesn't seem to make much of a difference,
     # but is used to reproduce the figures of Haghverdi et al. (2016)
-    if issparse(distances):
+    if knn:
         # as the distances are not sorted
         # we have decay within the n_neighbors first neighbors
         sigmas_sq = np.median(distances_sq, axis=1)
@@ -71,8 +71,21 @@ def _compute_connectivities_diffmap(
         Den = np.add.outer(sigmas_sq, sigmas_sq)
         W = np.sqrt(Num / Den) * np.exp(-Dsq / Den)
         # make the weight matrix sparse
-        mask = W > 1e-14
-        W[~mask] = 0
+        if not knn:
+            mask = W > 1e-14
+            W[~mask] = 0
+        else:
+            # restrict number of neighbors to ~k
+            # build a symmetric mask
+            mask = np.zeros(Dsq.shape, dtype=bool)
+            for i, row in enumerate(indices):
+                mask[i, row] = True
+                for j in row:
+                    if i not in set(indices[j]):
+                        W[j, i] = W[i, j]
+                        mask[j, i] = True
+            # set all entries that are not nearest neighbors to zero
+            W[~mask] = 0
     else:
         W = Dsq.copy()  # need to copy the distance matrix here; what follows is inplace
         for i in range(len(Dsq.indptr[:-1])):

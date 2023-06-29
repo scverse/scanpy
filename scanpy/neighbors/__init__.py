@@ -311,6 +311,7 @@ class Neighbors:
         self._init_iroot()
         # use the graph in adata
         info_str = ''
+        self.knn: Optional[bool] = None
         self._distances: Union[np.ndarray, csr_matrix, None] = None
         self._connectivities: Union[np.ndarray, csr_matrix, None] = None
         self._transitions_sym: Union[np.ndarray, csr_matrix, None] = None
@@ -321,8 +322,10 @@ class Neighbors:
         if neighbors_key in adata.uns:
             neighbors = NeighborsView(adata, neighbors_key)
             if 'distances' in neighbors:
+                self.knn = issparse(neighbors['distances'])
                 self._distances = neighbors['distances']
             if 'connectivities' in neighbors:
+                self.knn = issparse(neighbors['connectivities'])
                 self._connectivities = neighbors['connectivities']
             if 'rp_forest' in neighbors:
                 self._rp_forest = neighbors['rp_forest']
@@ -372,10 +375,6 @@ class Neighbors:
             self.n_dcs = None
         if info_str != '':
             logg.debug(f'    initialized {info_str}')
-
-    @property
-    def knn(self) -> bool:
-        return issparse(self._distances)
 
     @property
     def rp_forest(self) -> Optional[RPForestDict]:
@@ -495,6 +494,7 @@ class Neighbors:
         # do not use the cached rp_forest
         self._rp_forest = None
         self.n_neighbors = n_neighbors
+        self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         # neighbor search
         use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or not knn
@@ -538,14 +538,14 @@ class Neighbors:
             self._distances, self._connectivities = _compute_connectivities_umap(
                 knn_indices,
                 knn_distances,
-                self._adata.shape[0],
-                self.n_neighbors,
+                n_obs=self._adata.shape[0],
+                n_neighbors=self.n_neighbors,
             )
         # overwrite the umap connectivities if method is 'gauss'
         # self._distances is unaffected by this
         if method == 'gauss':
             self._connectivities = _compute_connectivities_diffmap(
-                self._distances, self.n_neighbors
+                self._distances, self.n_neighbors, knn=self.knn
             )
         logg.debug('computed connectivities', time=start_connect)
         self._number_connected_components = 1
