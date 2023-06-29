@@ -918,7 +918,7 @@ def spatial(
     basis: str = "spatial",
     img: Union[np.ndarray, None] = None,
     img_key: Union[str, None, Empty] = _empty,
-    library_id: Union[str, Empty] = _empty,
+    library_id: Union[str, None, Empty] = _empty,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
     bw: Optional[bool] = False,
@@ -1284,7 +1284,7 @@ def _check_scale_factor(
 
 
 def _check_spatial_data(
-    uns: Mapping, library_id: Union[Empty, None, str]
+    uns: Mapping, library_id: Union[str, None, Empty]
 ) -> Tuple[Optional[str], Optional[Mapping]]:
     """
     Given a mapping, try and extract a library id/ mapping with spatial data.
