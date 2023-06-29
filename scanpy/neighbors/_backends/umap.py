@@ -8,22 +8,15 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csr_matrix, coo_matrix
 from sklearn.utils import check_random_state
-from pynndescent import NNDescent
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn_ann.utils import TransformerChecksMixin
 
 from scanpy import settings
 from scanpy._utils import AnyRandom
 from scanpy.neighbors._enums import _Metric, _MetricFn
 
 
-def compute_neighbors_umap(
-    X: Union[np.ndarray, csr_matrix],
-    n_neighbors: int,
-    random_state: AnyRandom = None,
-    metric: Union[_Metric, _MetricFn] = 'euclidean',
-    metric_kwds: Mapping[str, Any] = MappingProxyType({}),
-    angular: bool = False,
-    verbose: bool = False,
-) -> tuple[NDArray[np.int32], NDArray[np.float32], NNDescent]:
+class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator):
     """This is from umap.fuzzy_simplicial_set [McInnes18]_.
     Given a set of data X, a neighborhood size, and a measure of distance
     compute the fuzzy simplicial set (here represented as a fuzzy graph in
@@ -87,25 +80,68 @@ def compute_neighbors_umap(
     -------
     **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
     """
-    with warnings.catch_warnings():
-        # umap 0.5.0
-        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
-        from umap.umap_ import nearest_neighbors
 
-    random_state = check_random_state(random_state)
+    def __init__(
+        self,
+        n_neighbors: int,
+        random_state: AnyRandom = None,
+        metric: Union[_Metric, _MetricFn] = 'euclidean',
+        metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+        angular: bool = False,
+        verbose: bool = False,
+    ) -> None:
+        self.n_neighbors = n_neighbors
+        self.random_state = check_random_state(random_state)
+        self.metric = metric
+        self.metric_kwds = metric_kwds
+        self.angular = angular
+        self.verbose = verbose
+        self._fit_X_obs = None
+        self._knn_indices = None
+        self._knn_dists = None
+        self._forest = None
 
-    knn_indices, knn_dists, forest = nearest_neighbors(
-        X,
-        n_neighbors,
-        random_state=random_state,
-        metric=metric,
-        metric_kwds=metric_kwds,
-        angular=angular,
-        verbose=verbose,
-        n_jobs=settings.n_jobs,
-    )
+    def fit(self, X: np.ndarray | csr_matrix, y: Any = None) -> UMAPKNNTransformer:
+        with warnings.catch_warnings():
+            # umap 0.5.0
+            warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
+            from umap.umap_ import nearest_neighbors
 
-    return knn_indices, knn_dists, forest
+        self._fit_X_obs = X.shape[0]
+        self._knn_indices, self._knn_dists, self._forest = nearest_neighbors(
+            X,
+            self.n_neighbors,
+            random_state=self.random_state,
+            metric=self.metric,
+            metric_kwds=self.metric_kwds,
+            angular=self.angular,
+            verbose=self.verbose,
+            n_jobs=settings.n_jobs,
+        )
+
+        return self
+
+    def transform(self, X: np.ndarray | csr_matrix | None = None) -> csr_matrix:
+        self._transform_checks(X="no validation" if X is None else X)
+        if X is None:
+            return _get_sparse_matrix_from_indices_distances_umap(
+                self.knn_indices,
+                self.knn_dists,
+                n_obs=self._fit_X_obs,
+                n_neighbors=self.n_neighbors,
+            )
+        else:
+            raise NotImplementedError("")  # TODO
+
+    def fit_transform(self, X: np.ndarray | csr_matrix, y: Any = None) -> csr_matrix:
+        return self.fit(X, y).transform()
+
+    def _more_tags(self):
+        return {
+            "requires_y": False,
+            # TODO: is this correct?
+            "preserves_dtype": [np.float32],
+        }
 
 
 def _get_sparse_matrix_from_indices_distances_umap(
@@ -144,7 +180,7 @@ def compute_connectivities(
     n_neighbors: int,
     set_op_mix_ratio: float = 1.0,
     local_connectivity: float = 1.0,
-) -> tuple[csr_matrix, csr_matrix]:
+) -> csr_matrix:
     """\
     This is from umap.fuzzy_simplicial_set [McInnes18]_.
 
@@ -176,8 +212,4 @@ def compute_connectivities(
         # In umap-learn 0.4, this returns (result, sigmas, rhos)
         connectivities = connectivities[0]
 
-    distances = _get_sparse_matrix_from_indices_distances_umap(
-        knn_indices, knn_dists, n_obs, n_neighbors
-    )
-
-    return distances, connectivities.tocsr()
+    return connectivities.tocsr()

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Literal, Mapping
 
 import numpy as np
-from numpy import ndarray
 from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn_ann.utils import TransformerChecksMixin
@@ -27,6 +26,9 @@ _Metric = Literal[
     'cosine',
     'correlation',
 ]
+
+
+CudaArrayLike = np.ndarray  # TODO
 
 
 class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator):
@@ -64,7 +66,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
             # TODO: output_type=...,
         )
 
-    def fit(self, X: np.ndarray, y: Any = None) -> RapidsKNNTransformer:
+    def fit(self, X: CudaArrayLike, y: Any = None) -> RapidsKNNTransformer:
         """
         Parameters
         ----------
@@ -78,13 +80,10 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         self.nn.fit(X_contiguous)
         return self
 
-    def transform(self, X: np.ndarray) -> csr_matrix:
+    def transform(self, X: CudaArrayLike) -> csr_matrix:
         self._transform_checks(X)
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
         return self.nn.kneighbors_graph(X_contiguous)
-
-    def fit_transform(self, X: np.ndarray, y: Any = None) -> csr_matrix:
-        return self.fit(X, y).transform(X)
 
     def _more_tags(self):
         return {

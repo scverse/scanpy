@@ -520,8 +520,17 @@ class Neighbors:
             if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
-            knn_indices, knn_distances, forest = umap.compute_neighbors_umap(
-                X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds
+            transformer = umap.UMAPKNNTransformer(
+                n_neighbors=n_neighbors,
+                random_state=random_state,
+                metric=metric,
+                metric_kwds=metric_kwds,
+            )
+            self._distances = transformer.fit_transform(X)
+            knn_indices, knn_distances, forest = (
+                transformer._knn_indices,
+                transformer._knn_dists,
+                transformer._forest,
             )
             # very cautious here
             try:
@@ -537,7 +546,7 @@ class Neighbors:
         if not use_dense_distances or method in {'umap', 'rapids'}:
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
-            self._distances, self._connectivities = umap.compute_connectivities(
+            self._connectivities = umap.compute_connectivities(
                 knn_indices,
                 knn_distances,
                 n_obs=self._adata.shape[0],
