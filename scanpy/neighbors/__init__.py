@@ -24,9 +24,7 @@ from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_sparse_matrix_from_indices_distances_numpy,
 )
-from ._backends.gauss import _compute_connectivities_diffmap
-from ._backends.umap import compute_neighbors_umap, _compute_connectivities_umap
-from ._backends.rapids import compute_neighbors_rapids
+from ._backends import rapids, gauss, umap
 from .. import logging as logg
 from .. import _utils
 from .._utils import _doc_params, AnyRandom, NeighborsView
@@ -510,15 +508,19 @@ class Neighbors:
             else:
                 self._distances = _distances
         elif method == 'rapids':
-            knn_indices, knn_distances = compute_neighbors_rapids(
-                X, n_neighbors, metric=metric
+            knn_indices, knn_distances = (
+                rapids.RapidsKNNTransformer(
+                    n_neighbors=n_neighbors, metric=metric  # TODO: other args
+                )
+                .fit(X)
+                .kneighbors()
             )
         else:
             # non-euclidean case and approx nearest neighbors
             if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
-            knn_indices, knn_distances, forest = compute_neighbors_umap(
+            knn_indices, knn_distances, forest = umap.compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds
             )
             # very cautious here
@@ -535,7 +537,7 @@ class Neighbors:
         if not use_dense_distances or method in {'umap', 'rapids'}:
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
-            self._distances, self._connectivities = _compute_connectivities_umap(
+            self._distances, self._connectivities = umap.compute_connectivities(
                 knn_indices,
                 knn_distances,
                 n_obs=self._adata.shape[0],
@@ -544,7 +546,7 @@ class Neighbors:
         # overwrite the umap connectivities if method is 'gauss'
         # self._distances is unaffected by this
         if method == 'gauss':
-            self._connectivities = _compute_connectivities_diffmap(
+            self._connectivities = gauss.compute_connectivities(
                 self._distances, self.n_neighbors, knn=self.knn
             )
         logg.debug('computed connectivities', time=start_connect)

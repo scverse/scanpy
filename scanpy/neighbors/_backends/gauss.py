@@ -34,7 +34,7 @@ def _get_indices_distances_from_sparse_matrix(
     return indices, distances
 
 
-def _compute_connectivities_diffmap(
+def compute_connectivities(
     distances: Union[np.ndarray, csr_matrix], n_neighbors: int, *, knn: bool
 ):
     # init distances

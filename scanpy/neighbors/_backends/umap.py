@@ -136,7 +136,7 @@ def _get_sparse_matrix_from_indices_distances_umap(
     return result.tocsr()
 
 
-def _compute_connectivities_umap(
+def compute_connectivities(
     knn_indices: NDArray[np.int32],
     knn_dists: NDArray[np.float32],
     *,
