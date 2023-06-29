@@ -6,44 +6,24 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import issparse, csr_matrix
 
-from .._common import _get_indices_distances_from_dense_matrix
-
-
-def _get_indices_distances_from_sparse_matrix(
-    D: csr_matrix, n_neighbors: int
-) -> tuple[NDArray[np.int64], NDArray]:
-    indices = np.zeros((D.shape[0], n_neighbors), dtype=int)
-    distances = np.zeros((D.shape[0], n_neighbors), dtype=D.dtype)
-    n_neighbors_m1 = n_neighbors - 1
-    for i in range(indices.shape[0]):
-        neighbors = D[i].nonzero()  # 'true' and 'spurious' zeros
-        indices[i, 0] = i
-        distances[i, 0] = 0
-        # account for the fact that there might be more than n_neighbors
-        # due to an approximate search
-        # [the point itself was not detected as its own neighbor during the search]
-        if len(neighbors[1]) > n_neighbors_m1:
-            sorted_indices = np.argsort(D[i][neighbors].A1)[:n_neighbors_m1]
-            indices[i, 1:] = neighbors[1][sorted_indices]
-            distances[i, 1:] = D[i][
-                neighbors[0][sorted_indices], neighbors[1][sorted_indices]
-            ]
-        else:
-            indices[i, 1:] = neighbors[1]
-            distances[i, 1:] = D[i][neighbors]
-    return indices, distances
+from .._common import (
+    _get_indices_distances_from_dense_matrix,
+    _get_indices_distances_from_sparse_matrix,
+)
 
 
 def compute_connectivities(
     distances: Union[np.ndarray, csr_matrix], n_neighbors: int, *, knn: bool
 ):
     # init distances
-    if knn:
+    if issparse(distances):
+        assert isinstance(distances, csr_matrix)
         Dsq = distances.power(2)
         indices, distances_sq = _get_indices_distances_from_sparse_matrix(
             Dsq, n_neighbors
         )
     else:
+        assert isinstance(distances, np.ndarray)
         Dsq = np.power(distances, 2)
         indices, distances_sq = _get_indices_distances_from_dense_matrix(
             Dsq, n_neighbors
@@ -55,7 +35,7 @@ def compute_connectivities(
 
     # choose sigma, the heuristic here doesn't seem to make much of a difference,
     # but is used to reproduce the figures of Haghverdi et al. (2016)
-    if knn:
+    if issparse(distances):
         # as the distances are not sorted
         # we have decay within the n_neighbors first neighbors
         sigmas_sq = np.median(distances_sq, axis=1)
@@ -87,6 +67,7 @@ def compute_connectivities(
             # set all entries that are not nearest neighbors to zero
             W[~mask] = 0
     else:
+        assert isinstance(Dsq, csr_matrix)
         W = Dsq.copy()  # need to copy the distance matrix here; what follows is inplace
         for i in range(len(Dsq.indptr[:-1])):
             row = Dsq.indices[Dsq.indptr[i] : Dsq.indptr[i + 1]]

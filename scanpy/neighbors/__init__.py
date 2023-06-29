@@ -22,6 +22,7 @@ from sklearn.utils import check_random_state
 from ._enums import _Metric, _MetricFn, _Method
 from ._common import (
     _get_indices_distances_from_dense_matrix,
+    _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances_numpy,
 )
 from ._backends import rapids, gauss, umap
@@ -508,12 +509,11 @@ class Neighbors:
             else:
                 self._distances = _distances
         elif method == 'rapids':
-            knn_indices, knn_distances = (
-                rapids.RapidsKNNTransformer(
-                    n_neighbors=n_neighbors, metric=metric  # TODO: other args
-                )
-                .fit(X)
-                .kneighbors()
+            self._distances = rapids.RapidsKNNTransformer(
+                n_neighbors=n_neighbors, metric=metric  # TODO: other args
+            ).fit_transform(X)
+            knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
+                self._distances, n_neighbors
             )
         else:
             # non-euclidean case and approx nearest neighbors
