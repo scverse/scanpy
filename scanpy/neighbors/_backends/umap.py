@@ -9,6 +9,7 @@ from numpy.typing import NDArray
 from scipy.sparse import csr_matrix, coo_matrix
 from sklearn.utils import check_random_state
 from sklearn.base import BaseEstimator, TransformerMixin
+from pynndescent import NNDescent
 
 from ... import settings
 from ..._utils import AnyRandom
@@ -92,6 +93,12 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
     **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
     """
 
+    # fit attributes are supposed to only exist once fitted
+    fit_X_obs_: int
+    knn_indices_: NDArray[np.int32]
+    knn_dists_: NDArray[np.float32]
+    forest_: NNDescent | None
+
     def __init__(
         self,
         n_neighbors: int,
@@ -107,10 +114,6 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
         self.metric_kwds = metric_kwds
         self.angular = angular
         self.verbose = verbose
-        self._fit_X_obs = None
-        self._knn_indices = None
-        self._knn_dists = None
-        self._forest = None
 
     def fit(self, X: np.ndarray | csr_matrix, y: Any = None) -> UMAPKNNTransformer:
         """
@@ -124,8 +127,8 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
             warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
             from umap.umap_ import nearest_neighbors
 
-        self._fit_X_obs = X.shape[0]
-        self._knn_indices, self._knn_dists, self._forest = nearest_neighbors(
+        self.fit_X_obs_ = X.shape[0]
+        self.knn_indices_, self.knn_dists_, self.forest_ = nearest_neighbors(
             X,
             self.n_neighbors,
             random_state=self.random_state,
@@ -147,12 +150,12 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
             Data to search knn for.
             If None, simply return the knn graph created as part of indexing.
         """
-        self._transform_checks(X="no validation" if X is None else X)
+        self._transform_checks(X=X)
         if X is None:
             return _get_sparse_matrix_from_indices_distances(
-                self._knn_indices,
-                self._knn_dists,
-                n_obs=self._fit_X_obs,
+                self.knn_indices_,
+                self.knn_dists_,
+                n_obs=self.fit_X_obs_,
                 n_neighbors=self.n_neighbors,
             )
         else:

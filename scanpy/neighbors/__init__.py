@@ -531,9 +531,9 @@ class Neighbors:
             )
             self._distances = transformer.fit_transform(X)
             knn_indices, knn_distances, forest = (
-                transformer._knn_indices,
-                transformer._knn_dists,
-                transformer._forest,
+                transformer.knn_indices_,
+                transformer.knn_dists_,
+                transformer.forest_,
             )
             # very cautious here
             try:

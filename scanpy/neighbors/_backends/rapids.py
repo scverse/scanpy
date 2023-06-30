@@ -4,7 +4,8 @@ from typing import Any, Literal, Mapping
 
 import numpy as np
 from scipy.sparse import csr_matrix
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin, check_is_fitted
+from sklearn.exceptions import NotFittedError
 
 from ... import settings
 from ._common import TransformerChecksMixin, mappings
@@ -71,6 +72,14 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
             metric_params=metric_params,
             # TODO: output_type=...,
         )
+
+    def __sklearn_is_fitted__(self) -> bool:
+        try:
+            check_is_fitted(self.nn)
+        except NotFittedError:
+            return False
+        else:
+            return True
 
     def fit(self, X: CudaArrayLike, y: Any = None) -> RapidsKNNTransformer:
         """Index data for knn search."""
