@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
 
 
-def _get_sparse_matrix_from_indices_distances_numpy(
+def _get_sparse_matrix_from_indices_distances(
     indices: NDArray[np.int32],
     distances: NDArray[np.float32],
     n_obs: int,

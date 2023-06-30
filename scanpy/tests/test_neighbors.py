@@ -7,7 +7,7 @@ from scipy.sparse import csr_matrix
 
 import scanpy as sc
 from scanpy import Neighbors
-from scanpy.neighbors._backends import ALGORITHMS
+
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]

@@ -23,7 +23,7 @@ from ._enums import _Metric, _MetricFn, _Method
 from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
-    _get_sparse_matrix_from_indices_distances_numpy,
+    _get_sparse_matrix_from_indices_distances,
 )
 from ._backends import get_transformer, gauss, umap
 from .. import logging as logg
@@ -503,7 +503,7 @@ class Neighbors:
                 _distances, n_neighbors
             )
             if knn:
-                self._distances = _get_sparse_matrix_from_indices_distances_numpy(
+                self._distances = _get_sparse_matrix_from_indices_distances(
                     knn_indices, knn_distances, X.shape[0], n_neighbors
                 )
             else:

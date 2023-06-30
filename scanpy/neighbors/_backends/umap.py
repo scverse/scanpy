@@ -13,6 +13,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from ... import settings
 from ..._utils import AnyRandom
 from .._enums import _Metric, _MetricFn
+from .._common import _get_sparse_matrix_from_indices_distances
 from ._common import TransformerChecksMixin, mappings
 
 
@@ -148,7 +149,7 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
         """
         self._transform_checks(X="no validation" if X is None else X)
         if X is None:
-            return _get_sparse_matrix_from_indices_distances_umap(
+            return _get_sparse_matrix_from_indices_distances(
                 self._knn_indices,
                 self._knn_dists,
                 n_obs=self._fit_X_obs,
@@ -167,34 +168,6 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
             # TODO: is this correct?
             "preserves_dtype": [np.float32],
         }
-
-
-def _get_sparse_matrix_from_indices_distances_umap(
-    knn_indices: NDArray[np.int32],
-    knn_dists: NDArray[np.float32],
-    n_obs: int,
-    n_neighbors: int,
-) -> csr_matrix:
-    rows = np.zeros((n_obs * n_neighbors), dtype=np.int64)
-    cols = np.zeros((n_obs * n_neighbors), dtype=np.int64)
-    vals = np.zeros((n_obs * n_neighbors), dtype=np.float64)
-
-    for i in range(knn_indices.shape[0]):
-        for j in range(n_neighbors):
-            if knn_indices[i, j] == -1:
-                continue  # We didn't get the full knn for i
-            if knn_indices[i, j] == i:
-                val = 0.0
-            else:
-                val = knn_dists[i, j]
-
-            rows[i * n_neighbors + j] = i
-            cols[i * n_neighbors + j] = knn_indices[i, j]
-            vals[i * n_neighbors + j] = val
-
-    result = coo_matrix((vals, (rows, cols)), shape=(n_obs, n_obs))
-    result.eliminate_zeros()
-    return result.tocsr()
 
 
 def compute_connectivities(
