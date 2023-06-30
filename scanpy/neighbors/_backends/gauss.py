@@ -15,6 +15,18 @@ from .._common import (
 def compute_connectivities(
     distances: Union[np.ndarray, csr_matrix], n_neighbors: int, *, knn: bool
 ):
+    """
+    Derive gaussian connectivities between data points from their distances.
+
+    Parameters
+    ----------
+    distances
+        The input matrix of distances between data points.
+    n_neighbors
+        The number of nearest neighbors to consider.
+    knn
+        Specify if the distances have been restricted to k nearest neighbors.
+    """
     # init distances
     if issparse(distances):
         assert isinstance(distances, csr_matrix)

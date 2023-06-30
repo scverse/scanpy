@@ -2,18 +2,27 @@ from __future__ import annotations
 
 import warnings
 from types import MappingProxyType
-from typing import Any, Union, Mapping
+from typing import Any, Union, Mapping, Literal
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csr_matrix, coo_matrix
 from sklearn.utils import check_random_state
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn_ann.utils import TransformerChecksMixin
 
-from scanpy import settings
-from scanpy._utils import AnyRandom
-from scanpy.neighbors._enums import _Metric, _MetricFn
+from ... import settings
+from ..._utils import AnyRandom
+from .._enums import _Metric, _MetricFn
+from ._common import TransformerChecksMixin, mappings
+
+
+_Backend = _Algorithm = Literal['umap']
+
+_backends: dict[_Backend, set[_Algorithm]] = {
+    'umap': {'umap'},
+}
+
+BACKENDS, ALGORITHMS = mappings(_backends)
 
 
 class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator):
@@ -24,6 +33,7 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
     locally approximating geodesic distance at each point, creating a fuzzy
     simplicial set for each such point, and then combining all the local
     fuzzy simplicial sets into a global one via a fuzzy union.
+
     Parameters
     ----------
     X: array of shape (n_samples, n_features)
@@ -102,6 +112,12 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
         self._forest = None
 
     def fit(self, X: np.ndarray | csr_matrix, y: Any = None) -> UMAPKNNTransformer:
+        """
+        Calculate approximate knn index using PyNNDescent.
+
+        Since the PyNNDescent index is very close to a knn graph,
+        X’s knn graph already gets cached at this point.
+        """
         with warnings.catch_warnings():
             # umap 0.5.0
             warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
@@ -122,11 +138,19 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
         return self
 
     def transform(self, X: np.ndarray | csr_matrix | None = None) -> csr_matrix:
+        """Perform a knn search on the index.
+
+        Parameters
+        ----------
+        X
+            Data to search knn for.
+            If None, simply return the knn graph created as part of indexing.
+        """
         self._transform_checks(X="no validation" if X is None else X)
         if X is None:
             return _get_sparse_matrix_from_indices_distances_umap(
-                self.knn_indices,
-                self.knn_dists,
+                self._knn_indices,
+                self._knn_dists,
                 n_obs=self._fit_X_obs,
                 n_neighbors=self.n_neighbors,
             )
@@ -134,6 +158,7 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
             raise NotImplementedError("")  # TODO
 
     def fit_transform(self, X: np.ndarray | csr_matrix, y: Any = None) -> csr_matrix:
+        """Create a knn graph for X."""
         return self.fit(X, y).transform()
 
     def _more_tags(self):

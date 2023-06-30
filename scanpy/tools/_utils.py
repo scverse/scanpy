@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 import numpy as np
-from scipy.sparse import spmatrix
+from scipy.sparse import csr_matrix
 from anndata import AnnData
 
 from .. import logging as logg
@@ -31,7 +31,7 @@ def _choose_representation(
     use_rep: str | None = None,
     n_pcs: int | None = None,
     silent: bool = False,
-) -> np.ndarray | spmatrix:  # TODO: what else?
+) -> np.ndarray | csr_matrix:  # TODO: what else?
     verbosity = settings.verbosity
     if silent and settings.verbosity > 1:
         settings.verbosity = 1

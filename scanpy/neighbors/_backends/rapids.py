@@ -5,12 +5,12 @@ from typing import Any, Literal, Mapping
 import numpy as np
 from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn_ann.utils import TransformerChecksMixin
 
 from ... import settings
+from ._common import TransformerChecksMixin, mappings
 
-
-_Algorithm = Literal['auto', 'rbc', 'brute', 'ivfflat', 'ivfpq']
+_Backend = Literal['rapids']
+_Algorithm = Literal['rbc', 'brute', 'ivfflat', 'ivfpq']
 _Metric = Literal[
     'l1',
     'cityblock',
@@ -27,6 +27,12 @@ _Metric = Literal[
     'correlation',
 ]
 
+_backends: dict[_Backend, set[_Algorithm]] = {
+    'rapids': {'rbc', 'brute', 'ivfflat', 'ivfpq'},
+}
+
+BACKENDS, ALGORITHMS = mappings(_backends)
+
 
 CudaArrayLike = np.ndarray  # TODO
 
@@ -41,7 +47,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         self,
         *,
         handle=None,
-        algorithm: _Algorithm = 'auto',
+        algorithm: _Algorithm | Literal['auto'] = 'auto',
         n_neighbors: int,
         metric: _Metric = "euclidean",
         p: int = 2,
@@ -67,20 +73,13 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         )
 
     def fit(self, X: CudaArrayLike, y: Any = None) -> RapidsKNNTransformer:
-        """
-        Parameters
-        ----------
-        X: array of shape (n_samples, n_features)
-            The data to compute nearest neighbors for.
-        y
-            Not used, present for API consistency by convention.
-        """
-
+        """Index data for knn search."""
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
         self.nn.fit(X_contiguous)
         return self
 
     def transform(self, X: CudaArrayLike) -> csr_matrix:
+        """Perform knn search on the index."""
         self._transform_checks(X)
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
         return self.nn.kneighbors_graph(X_contiguous)

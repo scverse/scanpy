@@ -25,7 +25,7 @@ from ._common import (
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances_numpy,
 )
-from ._backends import rapids, gauss, umap
+from ._backends import get_transformer, gauss, umap
 from .. import logging as logg
 from .. import _utils
 from .._utils import _doc_params, AnyRandom, NeighborsView
@@ -509,8 +509,10 @@ class Neighbors:
             else:
                 self._distances = _distances
         elif method == 'rapids':
-            self._distances = rapids.RapidsKNNTransformer(
-                n_neighbors=n_neighbors, metric=metric  # TODO: other args
+            transformer_cls = get_transformer('rbc', 'rapids')
+            # TODO: other args
+            self._distances = transformer_cls(
+                n_neighbors=n_neighbors, metric=metric
             ).fit_transform(X)
             knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
                 self._distances, n_neighbors
@@ -520,7 +522,8 @@ class Neighbors:
             if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
-            transformer = umap.UMAPKNNTransformer(
+            transformer_cls = get_transformer('umap')
+            transformer = transformer_cls(
                 n_neighbors=n_neighbors,
                 random_state=random_state,
                 metric=metric,
