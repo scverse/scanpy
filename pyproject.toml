@@ -111,6 +111,7 @@ test-full = [
 doc = [
     "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
     "scanpydoc>=0.7.7",
+    "sphinx-autodoc-typehints",
     "myst-parser",
     "myst-nb",
     "sphinx-book-theme",
