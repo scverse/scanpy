@@ -176,9 +176,6 @@ def embedding(
 
     # turn color into a python list
     color = [color] if isinstance(color, str) or color is None else list(color)
-    marker = [marker] if isinstance(marker, str) or marker is None else list(marker)
-    if len(marker) != len(color) and len(marker) == 1:
-        marker = [marker[0] for _ in range(len(color))]
 
     if title is not None:
         # turn title into a python list if not None
@@ -223,6 +220,10 @@ def embedding(
         color, dimensions = list(zip(*product(color, dimensions)))
 
     color, dimensions = _broadcast_args(color, dimensions)
+
+    marker = [marker] if isinstance(marker, str) or marker is None else list(marker)
+    if len(marker) != len(color) and len(marker) == 1:
+        marker = [marker[0] for _ in range(len(color))]
 
     # 'color' is a list of names that want to be plotted.
     # Eg. ['Gene1', 'louvain', 'Gene2'].
