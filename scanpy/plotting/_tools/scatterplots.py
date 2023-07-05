@@ -104,6 +104,7 @@ def embedding(
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
     return_fig: Optional[bool] = None,
+    marker: Union[str, Sequence[str], None] = '.',
     **kwargs,
 ) -> Union[Figure, Axes, None]:
     """\
@@ -175,6 +176,10 @@ def embedding(
 
     # turn color into a python list
     color = [color] if isinstance(color, str) or color is None else list(color)
+    marker = [marker] if isinstance(marker, str) or marker is None else list(marker)
+    if len(marker) != len(color) and len(marker) == 1:
+        marker = [marker[0] for _ in range(len(color))]
+
     if title is not None:
         # turn title into a python list if not None
         title = [title] if isinstance(title, str) else list(title)
@@ -325,10 +330,10 @@ def embedding(
                 coords[:, 0],
                 coords[:, 1],
                 coords[:, 2],
-                marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 norm=normalize,
+                marker=marker[count],
                 **kwargs,
             )
         else:
@@ -369,20 +374,20 @@ def embedding(
                     coords[:, 0],
                     coords[:, 1],
                     s=bg_size,
-                    marker=".",
                     c=bg_color,
                     rasterized=settings._vector_friendly,
                     norm=normalize,
+                    marker=marker[count],
                     **kwargs,
                 )
                 ax.scatter(
                     coords[:, 0],
                     coords[:, 1],
                     s=gap_size,
-                    marker=".",
                     c=gap_color,
                     rasterized=settings._vector_friendly,
                     norm=normalize,
+                    marker=marker[count],
                     **kwargs,
                 )
                 # if user did not set alpha, set alpha to 0.7
@@ -391,10 +396,10 @@ def embedding(
             cax = scatter(
                 coords[:, 0],
                 coords[:, 1],
-                marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 norm=normalize,
+                marker=marker[count],
                 **kwargs,
             )
 
