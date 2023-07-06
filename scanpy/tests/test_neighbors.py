@@ -174,12 +174,3 @@ def test_restore_n_neighbors(neigh, conv):
         ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1
-
-
-def test_precomputed(neigh, mocker):
-    """With small data and non-euclidian metric, we use the `pre-computed` metric"""
-    from scanpy.neighbors._backends import umap
-
-    fn = mocker.patch.object(umap, 'precomputed', wraps=umap.precomputed)
-    neigh.compute_neighbors(method='umap', n_neighbors=n_neighbors, metric='cosine')
-    fn.assert_called()

@@ -8,24 +8,6 @@ from scipy.sparse import csr_matrix, coo_matrix
 from umap.utils import fast_knn_indices
 
 
-def precomputed(
-    X: NDArray[np.float32], n_neighbors: int
-) -> tuple[NDArray[np.int32], NDArray[np.float32]]:
-    """X is the return value of pairwise_distances()"""
-    # Note that this does not support sparse distance matrices yet ...
-    # Compute indices of n nearest neighbors
-    knn_indices = fast_knn_indices(X, n_neighbors)
-    # knn_indices = np.argsort(X)[:, :n_neighbors]
-    # Compute the nearest neighbor distances
-    #   (equivalent to np.sort(X)[:,:n_neighbors])
-    knn_dists = X[np.arange(X.shape[0])[:, None], knn_indices].copy()
-    # Prune any nearest neighbours that are infinite distance apart.
-    disconnected_index = knn_dists == np.inf
-    knn_indices[disconnected_index] = -1
-
-    return knn_indices, knn_dists
-
-
 def compute_connectivities(
     knn_indices: NDArray[np.int32],
     knn_dists: NDArray[np.float32],
