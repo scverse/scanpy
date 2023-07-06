@@ -507,15 +507,10 @@ class Neighbors:
         # neighbor search
         use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or not knn
         if use_dense_distances or (umap_shortcuts and X.shape[0] < 4096):
-            # TODO: are the two shortcuts actually different from each other?
-            # one of the two shortcuts
             _distances = pairwise_distances(X, metric=metric, **metric_kwds)
-            if use_dense_distances:
-                knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
-                    _distances, n_neighbors
-                )
-            else:
-                knn_indices, knn_distances = umap.precomputed(_distances, n_neighbors)
+            knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
+                _distances, n_neighbors
+            )
             if knn:
                 self._distances = _get_sparse_matrix_from_indices_distances(
                     knn_indices, knn_distances, X.shape[0], n_neighbors
