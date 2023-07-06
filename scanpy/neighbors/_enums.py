@@ -5,7 +5,7 @@ from typing import Literal, Union, Callable
 import numpy as np
 
 
-_Method = Literal['umap', 'gauss', 'rapids']
+_Method = Literal['umap', 'gauss', 'pynndescent', 'rapids']
 _MetricFn = Callable[[np.ndarray, np.ndarray], float]
 # from sklearn.metrics.pairwise_distances.__doc__:
 _MetricSparseCapable = Literal[

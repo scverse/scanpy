@@ -11,6 +11,7 @@ from typing import (
     MutableMapping,
     Mapping,
     Callable,
+    get_args,
 )
 
 import numpy as np
@@ -483,10 +484,15 @@ class Neighbors:
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
-        if method == 'umap' and not knn:
-            raise ValueError('`method = \'umap\' only with `knn = True`.')
-        if method not in {'umap', 'gauss', 'rapids'}:
-            raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
+        connectivity_method = 'gauss' if method == 'gauss' else 'umap'
+        if try_precomputed := (method in {'umap', 'gauss'}):
+            method = 'pynndescent'
+        # TODO check logic
+        if method == 'pynndescent' and not knn:
+            raise ValueError(f'`method = {method!r} only with `knn = True`.')
+        # TODO make third_party backends available
+        if method not in (methods := set(get_args(_Method))):
+            raise ValueError(f'`method` needs to be one of {methods}.')
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         # do not use the cached rp_forest
@@ -494,14 +500,12 @@ class Neighbors:
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
+
         # neighbor search
         use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or not knn
-        use_precomputed = (
-            not use_dense_distances
-            and X.shape[0] < 4096
-            and method in {'umap', 'gauss'}
-        )
-        if use_dense_distances or use_precomputed:
+        if use_dense_distances or (try_precomputed and X.shape[0] < 4096):
+            # TODO: are the two shortcuts actually different from each other?
+            # one of the two shortcuts
             _distances = pairwise_distances(X, metric=metric, **metric_kwds)
             if use_dense_distances:
                 knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
@@ -548,21 +552,19 @@ class Neighbors:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
-        if not use_dense_distances or method in {'umap', 'rapids'}:
-            # we need self._distances also for method == 'gauss' if we didn't
-            # use dense distances
+        if connectivity_method == 'umap':
             self._connectivities = umap.compute_connectivities(
                 knn_indices,
                 knn_distances,
                 n_obs=self._adata.shape[0],
                 n_neighbors=self.n_neighbors,
             )
-        # overwrite the umap connectivities if method is 'gauss'
-        # self._distances is unaffected by this
-        if method == 'gauss':
+        elif connectivity_method == 'gauss':
             self._connectivities = gauss.compute_connectivities(
                 self._distances, self.n_neighbors, knn=self.knn
             )
+        else:
+            assert False
         logg.debug('computed connectivities', time=start_connect)
         self._number_connected_components = 1
         if issparse(self._connectivities):
