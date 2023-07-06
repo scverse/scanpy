@@ -35,9 +35,7 @@ def get_transformer(
     actual_backend: _Backend = select_backend(ALGORITHMS, algorithm, backend)
     mod = import_backend(actual_backend)
     transformer_cls: type[TransformerMixin] = next(
-        cls
-        for name, cls in vars(mod).items()
-        if name.lower().startswith(algorithm.replace('_', ''))
+        cls for name, cls in vars(mod).items() if name.lower().startswith(backend)
     )
     return transformer_cls
 

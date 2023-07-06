@@ -45,7 +45,7 @@ def mappings(
     be2alg = MappingProxyType(
         {backend: frozenset(algos) for backend, algos in backend2algo.items()}
     )
-    all_algos: frozenset[ALG] = reduce(operator.or_, backend2algo.values(), frozenset())
+    all_algos: set[ALG] = reduce(operator.or_, backend2algo.values())
     alg2be = MappingProxyType(
         {
             algo: frozenset(

@@ -489,7 +489,7 @@ class Neighbors:
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         connectivity_method = 'gauss' if method == 'gauss' else 'umap'
-        if umap_shortcuts := (method in {'umap', 'gauss'}):
+        if shortcut := (method in {'umap', 'gauss'}):
             method = 'pynndescent'
         # TODO check logic: should that be raised for non-pynndescent methods?
         if method == 'pynndescent' and connectivity_method == 'umap' and not knn:
@@ -507,7 +507,7 @@ class Neighbors:
 
         # neighbor search
         use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or not knn
-        if use_dense_distances or (umap_shortcuts and X.shape[0] < 4096):
+        if shortcut and (use_dense_distances or X.shape[0] < 4096):
             _distances = pairwise_distances(X, metric=metric, **metric_kwds)
             knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
                 _distances, n_neighbors
@@ -520,10 +520,11 @@ class Neighbors:
                 self._distances = _distances
         else:
             # TODO: allow specifying algorithm
-            transformer_cls = get_transformer(backend=method)
+            algorithm = 'auto'
+            transformer_cls = get_transformer(algorithm, method)
 
             transformer_kwds = {}
-            if umap_shortcuts:
+            if shortcut:
                 # copied from UMAP’s `nearest_neighbors` function
                 assert method == 'pynndescent'
                 transformer_kwds.update(
