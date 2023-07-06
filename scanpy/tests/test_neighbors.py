@@ -7,8 +7,6 @@ from scipy.sparse import csr_matrix
 
 import scanpy as sc
 from scanpy import Neighbors
-from scanpy import metrics
-
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]

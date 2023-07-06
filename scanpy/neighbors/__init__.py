@@ -27,10 +27,9 @@ from ._common import (
 )
 from ._backends import get_transformer, gauss, umap
 from .. import logging as logg
-from .. import _utils
+from .. import _utils, settings
 from .._utils import _doc_params, AnyRandom, NeighborsView
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
-from .. import settings
 
 N_DCS = 15  # default number of diffusion components
 # Backwards compat, constants should be defined in only one place.
@@ -517,30 +516,38 @@ class Neighbors:
             knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
                 self._distances, n_neighbors
             )
-        else:
+        elif method in {'umap', 'gauss'}:
             # non-euclidean case and approx nearest neighbors
             if X.shape[0] < 4096:
-                X = pairwise_distances(X, metric=metric, **metric_kwds)
-                metric = 'precomputed'
-            transformer_cls = get_transformer('umap')
-            transformer = transformer_cls(
-                n_neighbors=n_neighbors,
-                random_state=random_state,
-                metric=metric,
-                metric_kwds=metric_kwds,
-            )
-            self._distances = transformer.fit_transform(X)
-            knn_indices, knn_distances, forest = (
-                transformer.knn_indices_,
-                transformer.knn_dists_,
-                transformer.forest_,
-            )
+                knn_indices, knn_distances = umap.precomputed(
+                    X, n_neighbors, metric=metric, metric_kwds=metric_kwds
+                )
+                forest = None
+                self._distances = _get_sparse_matrix_from_indices_distances(
+                    knn_indices, knn_distances, X.shape[0], n_neighbors
+                )
+            else:
+                transformer_cls = get_transformer('umap')
+                transformer = transformer_cls(
+                    n_neighbors=n_neighbors,
+                    random_state=random_state,
+                    metric=metric,
+                    metric_kwds=metric_kwds,
+                )
+                self._distances = transformer.fit_transform(X)
+                knn_indices, knn_distances, forest = (
+                    transformer.knn_indices_,
+                    transformer.knn_dists_,
+                    transformer.forest_,
+                )
             # very cautious here
             try:
                 if forest:
                     self._rp_forest = _make_forest_dict(forest)
             except Exception:  # TODO catch the correct exception
                 pass
+        else:
+            assert False
         # write indices as attributes
         if write_knn_indices:
             self.knn_indices = knn_indices

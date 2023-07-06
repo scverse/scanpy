@@ -7,9 +7,11 @@ from typing import Any, Union, Mapping, Literal
 import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csr_matrix, coo_matrix
+from sklearn.metrics import pairwise_distances
 from sklearn.utils import check_random_state
 from sklearn.base import BaseEstimator, TransformerMixin
 from pynndescent import NNDescent
+from umap.utils import fast_knn_indices
 
 from ... import settings
 from ..._utils import AnyRandom
@@ -171,6 +173,28 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
             # TODO: is this correct?
             "preserves_dtype": [np.float32],
         }
+
+
+def precomputed(
+    X: NDArray[np.float32],
+    n_neighbors: int,
+    *,
+    metric: _Metric | _MetricFn,
+    metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+) -> tuple[NDArray[np.int32], NDArray[np.float32]]:
+    X = pairwise_distances(X, metric=metric, **metric_kwds)
+    # Note that this does not support sparse distance matrices yet ...
+    # Compute indices of n nearest neighbors
+    knn_indices = fast_knn_indices(X, n_neighbors)
+    # knn_indices = np.argsort(X)[:, :n_neighbors]
+    # Compute the nearest neighbor distances
+    #   (equivalent to np.sort(X)[:,:n_neighbors])
+    knn_dists = X[np.arange(X.shape[0])[:, None], knn_indices].copy()
+    # Prune any nearest neighbours that are infinite distance apart.
+    disconnected_index = knn_dists == np.inf
+    knn_indices[disconnected_index] = -1
+
+    return knn_indices, knn_dists
 
 
 def compute_connectivities(
