@@ -43,6 +43,7 @@ def neighbors(
     adata: AnnData,
     n_neighbors: int = 15,
     n_pcs: Optional[int] = None,
+    *,
     use_rep: Optional[str] = None,
     knn: bool = True,
     random_state: AnyRandom = 0,
@@ -127,10 +128,10 @@ def neighbors(
         adata._init_as_actual(adata.copy())
     neighbors = Neighbors(adata)
     neighbors.compute_neighbors(
-        n_neighbors=n_neighbors,
-        knn=knn,
+        n_neighbors,
         n_pcs=n_pcs,
         use_rep=use_rep,
+        knn=knn,
         method=method,
         metric=metric,
         metric_kwds=metric_kwds,
@@ -452,9 +453,10 @@ class Neighbors:
     def compute_neighbors(
         self,
         n_neighbors: int = 30,
-        knn: bool = True,
         n_pcs: Optional[int] = None,
+        *,
         use_rep: Optional[str] = None,
+        knn: bool = True,
         method: _Method = 'umap',
         random_state: AnyRandom = 0,
         write_knn_indices: bool = False,
@@ -467,11 +469,11 @@ class Neighbors:
         Parameters
         ----------
         n_neighbors
-             Use this number of nearest neighbors.
-        knn
-             Restrict result to `n_neighbors` nearest neighbors.
+            Use this number of nearest neighbors.
         {n_pcs}
         {use_rep}
+        knn
+            Restrict result to `n_neighbors` nearest neighbors.
 
         Returns
         -------
