@@ -488,9 +488,9 @@ class Neighbors:
         connectivity_method = 'gauss' if method == 'gauss' else 'umap'
         if try_precomputed := (method in {'umap', 'gauss'}):
             method = 'pynndescent'
-        # TODO check logic
-        if method == 'pynndescent' and not knn:
-            raise ValueError(f'`method = {method!r} only with `knn = True`.')
+        # TODO check logic: should that be raised for non-pynndescent methods?
+        if method == 'pynndescent' and connectivity_method == 'umap' and not knn:
+            raise ValueError("`method = 'umap' only with `knn = True`.")
         # TODO make third_party backends available
         if method not in (methods := set(get_args(_Method))):
             raise ValueError(f'`method` needs to be one of {methods}.')
