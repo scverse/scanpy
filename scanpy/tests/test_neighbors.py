@@ -181,14 +181,3 @@ def test_precomputed(neigh, mocker):
     fn = mocker.patch('umap.utils.fast_knn_indices')
     neigh.compute_neighbors(method='umap', n_neighbors=n_neighbors, metric='cosine')
     fn.assert_called()
-
-
-def test_precomputed_disconnect(neigh):
-    pytest.fail(
-        "TODO: hit code path where disconnected graph parts appear (index == -1)"
-    )
-
-
-@pytest.mark.parametrize('algo', [('', 'PyNNDescentTransformer')])
-def test_neighbor_backends(algo):
-    pass
