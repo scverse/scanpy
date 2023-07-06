@@ -5,12 +5,12 @@ from typing import (
     Union,
     Optional,
     Any,
+    Mapping,
+    MutableMapping,
+    Callable,
     NamedTuple,
     Tuple,
     Literal,
-    MutableMapping,
-    Mapping,
-    Callable,
     get_args,
 )
 
