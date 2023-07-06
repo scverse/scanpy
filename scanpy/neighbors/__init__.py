@@ -19,6 +19,7 @@ import scipy
 from anndata import AnnData
 from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import check_random_state
+from pynndescent import NNDescent
 
 from ._enums import _Metric, _MetricFn, _Method
 from ._common import (
@@ -530,21 +531,15 @@ class Neighbors:
                 random_state=random_state,
             )
             self._distances = transformer.fit_transform(X)
-            if all(
-                hasattr(transformer, attr) for attr in ["knn_indices_", "knn_dists_"]
+            knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
+                self._distances, n_neighbors
+            )
+            if (index := getattr(transformer, "index_", None)) and isinstance(
+                index, NNDescent
             ):
-                knn_indices, knn_distances = (
-                    transformer.knn_indices_,
-                    transformer.knn_dists_,
-                )
-            else:
-                knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
-                    self._distances, n_neighbors
-                )
-            if forest := getattr(transformer, "forest_", None):
                 # very cautious here
                 try:
-                    self._rp_forest = _make_forest_dict(forest)
+                    self._rp_forest = _make_forest_dict(index)
                 except Exception:  # TODO catch the correct exception
                     pass
         # write indices as attributes
