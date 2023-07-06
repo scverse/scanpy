@@ -496,58 +496,52 @@ class Neighbors:
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         # neighbor search
         use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or not knn
-        if use_dense_distances:
+        use_precomputed = (
+            not use_dense_distances
+            and X.shape[0] < 4096
+            and method in {'umap', 'gauss'}
+        )
+        if use_dense_distances or use_precomputed:
             _distances = pairwise_distances(X, metric=metric, **metric_kwds)
-            knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
-                _distances, n_neighbors
-            )
+            if use_dense_distances:
+                knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
+                    _distances, n_neighbors
+                )
+            else:
+                knn_indices, knn_distances = umap.precomputed(_distances, n_neighbors)
             if knn:
                 self._distances = _get_sparse_matrix_from_indices_distances(
                     knn_indices, knn_distances, X.shape[0], n_neighbors
                 )
             else:
                 self._distances = _distances
-        elif method == 'rapids':
-            transformer_cls = get_transformer('rbc', 'rapids')
-            # TODO: other args
-            self._distances = transformer_cls(
-                n_neighbors=n_neighbors, metric=metric
-            ).fit_transform(X)
-            knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
-                self._distances, n_neighbors
+        else:
+            transformer_cls = get_transformer('auto', method)
+            # TODO: more args
+            transformer = transformer_cls(
+                n_neighbors=n_neighbors,
+                metric=metric,
+                metric_kwds=metric_kwds,
+                random_state=random_state,
             )
-        elif method in {'umap', 'gauss'}:
-            # non-euclidean case and approx nearest neighbors
-            if X.shape[0] < 4096:
-                knn_indices, knn_distances = umap.precomputed(
-                    X, n_neighbors, metric=metric, metric_kwds=metric_kwds
-                )
-                forest = None
-                self._distances = _get_sparse_matrix_from_indices_distances(
-                    knn_indices, knn_distances, X.shape[0], n_neighbors
-                )
-            else:
-                transformer_cls = get_transformer('umap')
-                transformer = transformer_cls(
-                    n_neighbors=n_neighbors,
-                    random_state=random_state,
-                    metric=metric,
-                    metric_kwds=metric_kwds,
-                )
-                self._distances = transformer.fit_transform(X)
-                knn_indices, knn_distances, forest = (
+            self._distances = transformer.fit_transform(X)
+            if all(
+                hasattr(transformer, attr) for attr in ["knn_indices_", "knn_dists_"]
+            ):
+                knn_indices, knn_distances = (
                     transformer.knn_indices_,
                     transformer.knn_dists_,
-                    transformer.forest_,
                 )
-            # very cautious here
-            try:
-                if forest:
+            else:
+                knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
+                    self._distances, n_neighbors
+                )
+            if forest := getattr(transformer, "forest_", None):
+                # very cautious here
+                try:
                     self._rp_forest = _make_forest_dict(forest)
-            except Exception:  # TODO catch the correct exception
-                pass
-        else:
-            assert False
+                except Exception:  # TODO catch the correct exception
+                    pass
         # write indices as attributes
         if write_knn_indices:
             self.knn_indices = knn_indices

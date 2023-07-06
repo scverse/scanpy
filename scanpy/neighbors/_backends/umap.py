@@ -7,7 +7,6 @@ from typing import Any, Union, Mapping, Literal
 import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csr_matrix, coo_matrix
-from sklearn.metrics import pairwise_distances
 from sklearn.utils import check_random_state
 from sklearn.base import BaseEstimator, TransformerMixin
 from pynndescent import NNDescent
@@ -176,13 +175,9 @@ class UMAPKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator
 
 
 def precomputed(
-    X: NDArray[np.float32],
-    n_neighbors: int,
-    *,
-    metric: _Metric | _MetricFn,
-    metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+    X: NDArray[np.float32], n_neighbors: int
 ) -> tuple[NDArray[np.int32], NDArray[np.float32]]:
-    X = pairwise_distances(X, metric=metric, **metric_kwds)
+    """X is the return value of pairwise_distances()"""
     # Note that this does not support sparse distance matrices yet ...
     # Compute indices of n nearest neighbors
     knn_indices = fast_knn_indices(X, n_neighbors)
