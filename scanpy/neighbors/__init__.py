@@ -21,13 +21,14 @@ from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import check_random_state
 from pynndescent import NNDescent
 
+from . import _connectivity
 from ._enums import _Metric, _MetricFn, _Method
 from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
-from ._backends import get_transformer, gauss, umap
+from ._backends import get_transformer
 from .. import logging as logg
 from .. import _utils, settings
 from .._utils import _doc_params, AnyRandom, NeighborsView
@@ -556,14 +557,14 @@ class Neighbors:
             self.knn_distances = knn_distances
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
         if connectivity_method == 'umap':
-            self._connectivities = umap.compute_connectivities(
+            self._connectivities = _connectivity.umap(
                 knn_indices,
                 knn_distances,
                 n_obs=self._adata.shape[0],
                 n_neighbors=self.n_neighbors,
             )
         elif connectivity_method == 'gauss':
-            self._connectivities = gauss.compute_connectivities(
+            self._connectivities = _connectivity.gauss(
                 self._distances, self.n_neighbors, knn=self.knn
             )
         else:
