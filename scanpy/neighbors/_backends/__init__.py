@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import ChainMap
-from typing import Union
+from typing import Union, Literal
 
 from . import umap, rapids, third_party
 from ._common import mappings, select_backend, Transformer
@@ -17,7 +17,7 @@ BACKENDS, ALGORITHMS = mappings(_backends)
 
 
 def get_transformer(
-    algorithm: _Algorithm, backend: _Backend | None = None
+    algorithm: _Algorithm | Literal['auto'] = 'auto', backend: _Backend | None = None
 ) -> type[Transformer]:
     """
     Get the transformer for a given algorithm and backend.

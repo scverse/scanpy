@@ -516,7 +516,8 @@ class Neighbors:
             else:
                 self._distances = _distances
         else:
-            transformer_cls = get_transformer('auto', method)
+            # TODO: allow specifying algorithm
+            transformer_cls = get_transformer(backend=method)
             # TODO: more args
             transformer = transformer_cls(
                 n_neighbors=n_neighbors,

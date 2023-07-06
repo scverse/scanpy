@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from collections.abc import Mapping, Iterable, Collection
 from functools import reduce
-from typing import Any, TypeVar, Protocol
+from typing import Any, TypeVar, Protocol, Literal
 from types import MappingProxyType
 
 import numpy as np
@@ -59,11 +59,13 @@ def mappings(
 
 def select_backend(
     algs: Mapping[ALG, Collection[BE]],
-    algorithm: ALG,
+    algorithm: ALG | Literal['auto'],
     backend: BE | None = None,
 ) -> BE:
     if backend is not None:
         return backend
+    if algorithm == 'auto':
+        raise ValueError('Need to either specify algorithm or backend')
 
     if (backends := algs.get(algorithm)) is None:
         msg = f'Unknown algorithm: {algorithm} is not in {set(algs)}'

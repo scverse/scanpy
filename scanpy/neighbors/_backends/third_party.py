@@ -30,7 +30,7 @@ def import_backend(backend: _Backend) -> ModuleType:
 
 
 def get_transformer(
-    algorithm: _Algorithm, backend: _Backend | None = None
+    algorithm: _Algorithm | Literal['auto'] = 'auto', backend: _Backend | None = None
 ) -> type[TransformerMixin]:
     actual_backend: _Backend = select_backend(ALGORITHMS, algorithm, backend)
     mod = import_backend(actual_backend)
