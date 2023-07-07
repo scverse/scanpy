@@ -207,7 +207,7 @@ def dpt_timeseries(
     show: Optional[bool] = None,
     save: Optional[bool] = None,
     as_heatmap: bool = True,
-    marker: Optional[Sequence[str]] = '.',
+    marker: Union[str, Sequence[str]] = '.',
 ):
     """\
     Heatmap of pseudotime series.
@@ -250,7 +250,7 @@ def dpt_groups_pseudotime(
     palette: Union[Sequence[str], Cycler, None] = None,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
-    marker: Union[str, Sequence[str], None] = '.',
+    marker: Union[str, Sequence[str]] = '.',
 ):
     """Plot groups and pseudotime."""
     _, (ax_grp, ax_ord) = pl.subplots(2, 1)
@@ -1220,7 +1220,7 @@ def sim(
     shuffle: bool = False,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
-    marker: Optional[Sequence[str]] = '.',
+    marker: Union[str, Sequence[str]] = '.',
 ):
     """\
     Plot results of simulation.

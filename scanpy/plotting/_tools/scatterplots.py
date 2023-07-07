@@ -104,7 +104,7 @@ def embedding(
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
     return_fig: Optional[bool] = None,
-    marker: Union[str, Sequence[str], None] = '.',
+    marker: Union[str, Sequence[str]] = '.',
     **kwargs,
 ) -> Union[Figure, Axes, None]:
     """\
@@ -221,7 +221,7 @@ def embedding(
 
     color, dimensions = _broadcast_args(color, dimensions)
 
-    marker = [marker] if isinstance(marker, str) or marker is None else list(marker)
+    marker = [marker] if isinstance(marker, str) else list(marker)
     if len(marker) != len(color) and len(marker) == 1:
         marker = [marker[0] for _ in range(len(color))]
 
