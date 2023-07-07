@@ -248,6 +248,21 @@ def test_emptycat():
         rank_genes_groups(pbmc, groupby='louvain')
 
 
+def test_log1p_save_restore(tmp_path):
+    """tests the sequence log1p→save→load→rank_genes_groups"""
+    from anndata import read
+
+    pbmc = pbmc68k_reduced()
+    sc.pp.log1p(pbmc)
+
+    path = tmp_path / 'test.h5ad'
+    pbmc.write(path)
+
+    pbmc = read(path)
+
+    sc.tl.rank_genes_groups(pbmc, groupby='bulk_labels', use_raw=True)
+
+
 def test_wilcoxon_symmetry():
     pbmc = pbmc68k_reduced()
 
