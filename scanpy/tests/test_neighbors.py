@@ -115,45 +115,49 @@ def neigh() -> Neighbors:
 
 
 @pytest.mark.parametrize('method', ['umap', 'gauss', 'pynndescent'])
-def test_distances_euclidean(neigh, method):
+def test_distances_euclidean(mocker, neigh, method):
     """umap and gauss behave the same for distances.
 
     They call pynndescent for large data.
     """
+    from pynndescent import NNDescent
+
+    # When trying to compress a too-small index, pynndescent complains
+    mocker.patch.object(NNDescent, 'compress_index', return_val=None)
+
     neigh.compute_neighbors(method=method, n_neighbors=n_neighbors)
-    assert np.allclose(neigh.distances.toarray(), distances_euclidean)
+    np.testing.assert_allclose(neigh.distances.toarray(), distances_euclidean)
 
 
-@pytest.mark.parametrize('method', ['gauss', 'pynndescent'])
-def test_distances_noknn(neigh, method):
-    """for some reason we allow knn=False for everything except umap"""
-    # TODO why just for umap and not e.g. for rapids
-    neigh.compute_neighbors(method=method, knn=False, n_neighbors=n_neighbors)
-    assert np.allclose(neigh.distances, distances_euclidean_all)
+def test_distances_noknn(neigh):
+    neigh.compute_neighbors(method='gauss', knn=False, n_neighbors=n_neighbors)
+    np.testing.assert_allclose(neigh.distances, distances_euclidean_all)
 
 
 def test_umap_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='umap', n_neighbors=n_neighbors)
-    assert np.allclose(neigh.connectivities.toarray(), connectivities_umap)
+    np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_umap)
     neigh.compute_transitions()
-    assert np.allclose(neigh.transitions_sym.toarray(), transitions_sym_umap)
-    assert np.allclose(neigh.transitions.toarray(), transitions_umap)
+    np.testing.assert_allclose(neigh.transitions_sym.toarray(), transitions_sym_umap)
+    np.testing.assert_allclose(neigh.transitions.toarray(), transitions_umap)
 
 
 def test_gauss_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='gauss', n_neighbors=n_neighbors)
-    assert np.allclose(neigh.connectivities.toarray(), connectivities_gauss_knn)
+    np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_gauss_knn)
     neigh.compute_transitions()
-    assert np.allclose(neigh.transitions_sym.toarray(), transitions_sym_gauss_knn)
-    assert np.allclose(neigh.transitions.toarray(), transitions_gauss_knn)
+    np.testing.assert_allclose(
+        neigh.transitions_sym.toarray(), transitions_sym_gauss_knn
+    )
+    np.testing.assert_allclose(neigh.transitions.toarray(), transitions_gauss_knn)
 
 
 def test_gauss_noknn_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='gauss', knn=False, n_neighbors=n_neighbors)
-    assert np.allclose(neigh.connectivities, connectivities_gauss_noknn)
+    np.testing.assert_allclose(neigh.connectivities, connectivities_gauss_noknn)
     neigh.compute_transitions()
-    assert np.allclose(neigh.transitions_sym, transitions_sym_gauss_noknn)
-    assert np.allclose(neigh.transitions, transitions_gauss_noknn)
+    np.testing.assert_allclose(neigh.transitions_sym, transitions_sym_gauss_noknn)
+    np.testing.assert_allclose(neigh.transitions, transitions_gauss_noknn)
 
 
 def test_metrics_argument():
@@ -175,7 +179,9 @@ def test_use_rep_argument():
     neigh_pca.compute_neighbors(n_pcs=5, use_rep='X_pca')
     neigh_none = Neighbors(adata)
     neigh_none.compute_neighbors(n_pcs=5, use_rep=None)
-    assert np.allclose(neigh_pca.distances.toarray(), neigh_none.distances.toarray())
+    np.testing.assert_allclose(
+        neigh_pca.distances.toarray(), neigh_none.distances.toarray()
+    )
 
 
 @pytest.mark.parametrize('conv', [csr_matrix.toarray, csr_matrix])

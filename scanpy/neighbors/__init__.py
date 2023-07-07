@@ -116,12 +116,6 @@ def neighbors(
     **distances** : sparse matrix of dtype `float32`.
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
-
-    Notes
-    -----
-    If `method='umap'`, it's highly recommended to install pynndescent ``pip install pynndescent``.
-    Installing `pynndescent` can significantly increase performance,
-    and in later versions it will become a hard dependency.
     """
     start = logg.info('computing neighbors')
     adata = adata.copy() if copy else adata
@@ -489,11 +483,11 @@ class Neighbors:
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         connectivity_method = 'gauss' if method == 'gauss' else 'umap'
+        if not (knn or method == 'gauss'):
+            # “knn=False” seems to be only intended for method “gauss”
+            raise ValueError(f'`method = {method!r} only with `knn = True`.')
         if shortcut := (method in {'umap', 'gauss'}):
             method = 'pynndescent'
-        # TODO check logic: should that be raised for non-pynndescent methods?
-        if method == 'pynndescent' and connectivity_method == 'umap' and not knn:
-            raise ValueError("`method = 'umap' only with `knn = True`.")
         # TODO make third_party backends available
         if method not in (methods := set(get_args(_Method))):
             raise ValueError(f'`method` needs to be one of {methods}.')
