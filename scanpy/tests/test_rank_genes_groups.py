@@ -339,3 +339,34 @@ def test_wilcoxon_tie_correction(reference):
     test_obj.compute_statistics('wilcoxon', tie_correct=True)
 
     np.testing.assert_allclose(test_obj.stats[groups[0]]['pvals'], pvals)
+
+
+# TODO: make self contained
+@pytest.mark.internet
+def test_rank_gene_groups_violin_gene_symbols(cache: pytest.Cache):
+    import ssl
+    import urllib.request
+
+    adata_file = cache.mkdir("rank_gene_groups_violin") / "test_adata.h5ad"
+
+    if not Path(adata_file).exists():
+        ssl._create_default_https_context = ssl._create_unverified_context
+        urllib.request.urlretrieve(
+            "https://apps-01.i-med.ac.at/resources/tmp/toy_adata.h5ad", adata_file
+        )
+
+    adata = sc.read_h5ad(adata_file)
+
+    t_celltypes = ["Naive CD4+ T cells", "Naive CD8+ T cells"]
+    sc.tl.rank_genes_groups(
+        adata,
+        groupby="cell_type",
+        groups=t_celltypes,
+        reference="rest",
+        method="wilcoxon",
+    )
+
+    # We get the KeyError here
+    sc.pl.rank_genes_groups_violin(
+        adata, groups=t_celltypes, n_genes=15, strip=False, gene_symbols="gene_symbols"
+    )
