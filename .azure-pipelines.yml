@@ -4,7 +4,7 @@ trigger:
 variables:
   python.version: '3.9'
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
-  PYTEST_ADDOPTS: '-v --color=yes --nunit-xml=nunit/test-results.xml'
+  PYTEST_ADDOPTS: '-v --color=yes --nunit-xml=cache/test-results.xml'
   ANNDATA_DEV: no
   RUN_COVERAGE: no
   TEST_EXTRA: 'test-full'
@@ -71,8 +71,8 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
-      mkdir -p ./scanpy/tests/figures
-      find . -type d \( -path "./scanpy/tests/figures*" -prune -o -path "./nunit" -prune -o -exec chmod -w {} \; \)
+      mkdir -p cache ./scanpy/tests/figures
+      find . -type d \( -path "./scanpy/tests/figures*" -prune -o -path "./cache" -prune -o -exec chmod -w {} \; \)
     displayName: 'Ensure that tests run without randomly writing files'
 
   - script: pytest
@@ -88,14 +88,14 @@ jobs:
   - task: PublishCodeCoverageResults@1
     inputs:
       codeCoverageTool: Cobertura
-      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      summaryFileLocation: 'cache/coverage.xml'
       failIfCoverageEmpty: true
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
   - task: PublishTestResults@2
     condition: succeededOrFailed()
     inputs:
-      testResultsFiles: 'nunit/test-results.xml'
+      testResultsFiles: 'cache/test-results.xml'
       testResultsFormat: NUnit
       testRunTitle: 'Publish test results for Python $(python.version)'
 
