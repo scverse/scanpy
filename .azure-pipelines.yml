@@ -70,6 +70,11 @@ jobs:
       pip list
     displayName: 'Display installed versions'
 
+  - script: |
+      mkdir -p ./scanpy/tests/figures
+      find . -type d \( -path "./scanpy/tests/figures" -prune \) -exec chmod -w {} \;
+    displayName: 'Ensure that tests run without randomly writing files'
+
   - script: pytest
     displayName: 'PyTest'
     condition: eq(variables['RUN_COVERAGE'], 'no')

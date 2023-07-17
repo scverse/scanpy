@@ -21,6 +21,7 @@
 /scanpy/tests/notebooks/figures/
 
 # Environment management
+/hatch.toml
 /Pipfile
 /Pipfile.lock
 /requirements*.lock
