@@ -10,15 +10,6 @@ from anndata.tests.helpers import assert_adata_equal
 import subprocess
 
 
-@pytest.fixture(scope="module")
-def tmp_dataset_dir(tmpdir_factory):
-    new_dir = Path(tmpdir_factory.mktemp("scanpy_data"))
-    old_dir = sc.settings.datasetdir
-    sc.settings.datasetdir = new_dir  # Set up
-    yield sc.settings.datasetdir
-    sc.settings.datasetdir = old_dir  # Tear down
-
-
 @pytest.mark.internet
 def test_burczynski06(tmp_dataset_dir):
     adata = sc.datasets.burczynski06()

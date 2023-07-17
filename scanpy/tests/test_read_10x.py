@@ -1,3 +1,4 @@
+from os import PathLike
 from pathlib import Path
 
 import h5py
@@ -127,7 +128,8 @@ def visium_pth(request, tmp_path) -> Path:
         return visium1_pth
     elif request.param == 2:
         visium2_pth = tmp_path / 'visium2'
-        shutil.copytree(visium1_pth, visium2_pth)
+        # copy only data, not file metadata
+        shutil.copytree(visium1_pth, visium2_pth, copy_function=shutil.copyfile)
         header = 'barcode,in_tissue,array_row,array_col,pxl_row_in_fullres,pxl_col_in_fullres'
         orig = visium2_pth / 'spatial' / 'tissue_positions_list.csv'
         csv = f'{header}\n{orig.read_text()}'
