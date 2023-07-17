@@ -72,7 +72,7 @@ jobs:
 
   - script: |
       mkdir -p ./scanpy/tests/figures
-      find . -type d \( -path "./scanpy/tests/figures" -prune \) -exec chmod -w {} \;
+      find . -type d \( -path "./scanpy/tests/figures" -prune -o -exec chmod -w {} \; \)
     displayName: 'Ensure that tests run without randomly writing files'
 
   - script: pytest
