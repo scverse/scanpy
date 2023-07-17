@@ -71,8 +71,8 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
-      mkdir -p cache ./scanpy/tests/figures
-      find . -type d \( -path "./scanpy/tests/figures*" -prune -o -path "./cache" -prune -o -exec chmod -w {} \; \)
+      mkdir -p data cache ./scanpy/tests/figures
+      find . -type d \( -path "./scanpy/tests/figures*" -prune -o -path "./cache" -prune -o -path "./data" -prune -o -exec chmod -w {} \; \)
     displayName: 'Ensure that tests run without randomly writing files'
 
   - script: pytest
