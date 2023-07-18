@@ -110,11 +110,10 @@ test-full = [
 ]
 doc = [
     "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
-    "scanpydoc>=0.7.11",
+    "scanpydoc>=0.8",
     "sphinx-autodoc-typehints",
     "myst-parser",
     "myst-nb",
-    "sphinx-book-theme",
     "sphinx-design",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
