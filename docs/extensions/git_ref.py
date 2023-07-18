@@ -1,3 +1,5 @@
+"""Extension to inject ``html_theme_options["repository_branch"]``."""
+
 from __future__ import annotations
 
 from functools import lru_cache

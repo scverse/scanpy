@@ -61,7 +61,7 @@ extensions = [
     'sphinx_autodoc_typehints',  # needs to be after napoleon
     'scanpydoc.autosummary_generate_imported',
     'scanpydoc.definition_list_typed_field',
-    'scanpydoc.rtd_github_links',
+    'scanpydoc.rtd_github_links',  # needs to be before sphinx.ext.linkcode
     'sphinx.ext.linkcode',
     'sphinx_design',
     'sphinxext.opengraph',
