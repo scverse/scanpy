@@ -1,18 +1,11 @@
 from typing import Optional, Union, Iterable, Dict, Literal
 from warnings import warn
 
+from .._compat import DaskArray
 import numpy as np
 from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
-
-try:
-    from dask.array import Array as DaskArray
-except ImportError:
-
-    class DaskArray:
-        pass
-
 
 from scanpy import logging as logg
 from scanpy._utils import view_to_actual

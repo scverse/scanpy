@@ -3,7 +3,9 @@ import numpy as np
 from anndata import AnnData
 
 import scanpy as sc
-from anndata.tests.helpers import assert_equal
+from anndata.tests.helpers import assert_equal, as_dense_dask_array, asarray
+import numpy as np
+from scipy import sparse
 
 from scanpy.testing._helpers.data import pbmc3k_normalized
 
@@ -37,6 +39,14 @@ A_svd = np.array(
         [-1.50180389, 5.56886849, 1.64034442, 2.24476032, -0.05109001],
     ]
 )
+
+
+@pytest.fixture(
+    params=[sparse.csr_matrix, sparse.csc_matrix, asarray, as_dense_dask_array],
+    ids=["scipy-csr", "scipy-csc", "np-ndarray", "dask-array"],
+)
+def array_type(request):
+    return request.param
 
 
 def test_pca_transform(array_type):

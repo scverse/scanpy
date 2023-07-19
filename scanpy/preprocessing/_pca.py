@@ -12,6 +12,7 @@ from .. import logging as logg
 from ._utils import _get_mean_var
 from .._utils import AnyRandom
 from .. import settings
+from .._compat import DaskArray
 
 
 def pca(
@@ -155,7 +156,18 @@ def pca(
 
     X = adata_comp.X
 
-    if chunked:
+    if isinstance(X, DaskArray):
+        from dask_ml.decomposition import PCA as daskPCA
+
+        if not zero_center or svd_solver != 'auto':
+            logg.debug('Ignoring zero_center, chunked , svd_solver')
+
+        # TODO: how to asses the different svd_solver names
+
+        pca_ = daskPCA(n_components=n_comps, svd_solver='auto', random_state=random_state)
+        X_pca = pca_.fit_transform(X)
+
+    elif chunked:
         if not zero_center or random_state or svd_solver != 'arpack':
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
