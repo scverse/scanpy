@@ -4,7 +4,6 @@ from anndata import AnnData
 
 import scanpy as sc
 from anndata.tests.helpers import assert_equal, as_dense_dask_array, asarray
-import numpy as np
 from scipy import sparse
 
 from scanpy.testing._helpers.data import pbmc3k_normalized
