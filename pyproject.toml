@@ -97,6 +97,7 @@ test = [
     "scanpy[leiden]",
     "zarr",
     "scanpy[dask]",
+    "scanpy[dask-ml]",
 ]
 test-full = [
     "scanpy[test]",
