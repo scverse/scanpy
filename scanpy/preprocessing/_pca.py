@@ -52,8 +52,8 @@ def pca(
     zero_center
         If `True`, compute standard PCA from covariance matrix.
         If `False`, omit zero-centering variables
-        (uses :class:`~sklearn.decomposition.TruncatedSVD` or
-        :class:`~dask_ml.decomposition.TruncatedSVD`),
+        (uses `~sklearn.decomposition.TruncatedSVD` or
+        `dask_ml.decomposition.TruncatedSVD`),
         which allows to handle sparse input efficiently.
         Passing `None` decides automatically based on sparseness of the data.
     svd_solver
@@ -75,8 +75,8 @@ def pca(
         currently only works with the `'arpack`' or `'lobpcg'` solvers.
 
         If X is a dask array, then `'randomized'` will use the randomized algorithm
-        from dask-ml. Otherwise, `'auto'` will be given to :class:`~dask_ml.decomposition.PCA` and
-        `'tsqr'` will be given to :class:`~dask_ml.decomposition.TruncatedSVD`.
+        from dask-ml. Otherwise, `'auto'` will be given to `dask_ml.decomposition.PCA` and
+        `'tsqr'` will be given to `dask_ml.decomposition.TruncatedSVD`.
 
 
     random_state
