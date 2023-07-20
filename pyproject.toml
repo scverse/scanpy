@@ -90,14 +90,14 @@ test-min = [
     "pytest>=4.4",
     "pytest-nunit",
     "profimp",
+    "scanpy[dask]",
+    "scanpy[dask-ml]",
 ]
 test = [
     "scanpy[test-min]",
     # Optional but important dependencies
     "scanpy[leiden]",
     "zarr",
-    "scanpy[dask]",
-    "scanpy[dask-ml]",
 ]
 test-full = [
     "scanpy[test]",
@@ -108,7 +108,6 @@ test-full = [
     "scanpy[harmony]",
     "scanpy[scanorama]",
     "scanpy[scrublet]",
-    "scanpy[dask-ml]",
 ]
 doc = [
     "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
