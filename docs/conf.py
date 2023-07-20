@@ -59,13 +59,12 @@ extensions = [
     'sphinx.ext.extlinks',
     'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
-    'scanpydoc.autosummary_generate_imported',
-    'scanpydoc.definition_list_typed_field',
-    'scanpydoc.rtd_github_links',  # needs to be before sphinx.ext.linkcode
+    'git_ref',  # needs to be before scanpydoc.rtd_github_links
+    'scanpydoc',  # needs to be before sphinx.ext.linkcode
     'sphinx.ext.linkcode',
     'sphinx_design',
     'sphinxext.opengraph',
-    *[p.stem for p in (HERE / 'extensions').glob('*.py')],
+    *[p.stem for p in (HERE / 'extensions').glob('*.py') if p.stem not in {'git_ref'}],
 ]
 
 # Generate the API documentation when building
@@ -131,7 +130,6 @@ html_theme = "scanpydoc"
 html_theme_options = {
     "repository_url": repository_url,
     "use_repository_button": True,
-    "logo_only": True,
     "show_toc_level": 4,  # show all levels in the sidebar
 }
 html_static_path = ['_static']

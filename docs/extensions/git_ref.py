@@ -7,6 +7,7 @@ from functools import lru_cache
 import re
 import subprocess
 from sphinx.application import Sphinx
+from sphinx.config import Config
 
 
 def git(*args: str) -> str:
@@ -33,9 +34,9 @@ def get() -> str | None:
     return git_ref
 
 
-def set_ref(app: Sphinx, pagename, templatename, context, doctree):
-    context['theme_repository_branch'] = get()
+def set_ref(app: Sphinx, config: Config):
+    app.config['html_theme_options']['repository_branch'] = get() or 'main'
 
 
 def setup(app: Sphinx) -> None:
-    app.connect("html-page-context", set_ref)
+    app.connect("config-inited", set_ref)
