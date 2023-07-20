@@ -107,6 +107,7 @@ test-full = [
     "scanpy[harmony]",
     "scanpy[scanorama]",
     "scanpy[scrublet]",
+    "scanpy[dask-ml]",
 ]
 doc = [
     "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
