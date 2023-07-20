@@ -1,18 +1,17 @@
 from typing import Optional, Union
 
 import numpy as np
+from anndata import AnnData
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
-from anndata import AnnData
-
 from .. import logging as logg
-from ._utils import _get_mean_var
-from .._utils import AnyRandom
 from .. import settings
 from .._compat import DaskArray
+from .._utils import AnyRandom
+from ._utils import _get_mean_var
 
 
 def pca(
@@ -194,8 +193,8 @@ def pca(
         X_pca = None
         pca_ = None
         if is_dask:
-            from dask_ml.decomposition import IncrementalPCA as daskIncrementalPCA
             import dask.array as da
+            from dask_ml.decomposition import IncrementalPCA as daskIncrementalPCA
 
             pca_ = daskIncrementalPCA(n_components=n_comps)
             X_pca = da.zeros((X.shape[0], n_comps), X.dtype)

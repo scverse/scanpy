@@ -1,11 +1,10 @@
-import pytest
 import numpy as np
+import pytest
 from anndata import AnnData
-
-import scanpy as sc
-from anndata.tests.helpers import assert_equal, as_dense_dask_array, asarray
+from anndata.tests.helpers import as_dense_dask_array, asarray, assert_equal
 from scipy import sparse
 
+import scanpy as sc
 from scanpy.testing._helpers.data import pbmc3k_normalized
 
 A_list = [
