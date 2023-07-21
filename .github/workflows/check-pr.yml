@@ -27,5 +27,14 @@ jobs:
     name: Check Milestone
     runs-on: ubuntu-latest
     steps:
-      - if: github.event.pull_request.milestone == null && contains( env.LABELS, 'no milestone' ) == false
-        run: exit 1
+      - name: Check if milestone or “no milestone” label is present
+        run: exit ${{ github.event.pull_request.milestone == null && ! contains( env.LABELS, 'no milestone' ) && '0' || '1'}}
+      - name: Check if relevant release notes are set
+        uses: tj-actions/verify-changed-files@v16
+        id: verify-changed-files
+        with:
+          files: docs/release-notes/${{ github.event.pull_request.milestone.title }}.md
+        if: github.event.pull_request.milestone != null
+      - name:
+        run: exit ${{ steps.verify-changed-files.outputs.files_changed && '0' || '1' }}
+        if: github.event.pull_request.milestone != null
