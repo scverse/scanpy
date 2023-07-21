@@ -30,8 +30,6 @@ jobs:
       - name: Check if milestone or “no milestone” label is present
         run: exit ${{ (github.event.pull_request.milestone != null || contains(env.LABELS, 'no milestone')) && '0' || '1'}}
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
         if: github.event.pull_request.milestone != null
       - name: Check if relevant release notes are set
         uses: tj-actions/verify-changed-files@v16
