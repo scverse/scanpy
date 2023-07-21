@@ -36,8 +36,7 @@ jobs:
         id: changes
         with:
           filters: |  # this is intentionally a string
-            relnotes:
-              - docs/release-notes/${{ github.event.pull_request.milestone.title }}.md
+            relnotes: 'docs/release-notes/${{ github.event.pull_request.milestone.title }}.md'
         if: github.event.pull_request.milestone != null
       - name: Check if relevant release notes are modified
         run: exit ${{ fromJSON(steps.changes.outputs.relnotes) && '0' || '1' }}
