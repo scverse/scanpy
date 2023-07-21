@@ -31,12 +31,12 @@ jobs:
         run: exit ${{ (github.event.pull_request.milestone != null || contains(env.LABELS, 'no milestone')) && '0' || '1'}}
       - uses: actions/checkout@v3
         if: github.event.pull_request.milestone != null
-      - name: Check if relevant release notes are set
+      - name: Find out if relevant release notes are modified
         uses: tj-actions/verify-changed-files@v16
         id: verify-changed-files
         with:
           files: docs/release-notes/${{ github.event.pull_request.milestone.title }}.md
         if: github.event.pull_request.milestone != null
-      - name:
+      - name: Check if relevant release notes are modified
         run: exit ${{ steps.verify-changed-files.outputs.files_changed && '0' || '1' }}
         if: github.event.pull_request.milestone != null
