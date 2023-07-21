@@ -32,11 +32,13 @@ jobs:
       - uses: actions/checkout@v3
         if: github.event.pull_request.milestone != null
       - name: Find out if relevant release notes are modified
-        uses: tj-actions/verify-changed-files@v16
-        id: verify-changed-files
+        uses: dorny/paths-filter@v2
+        id: changes
         with:
-          files: docs/release-notes/${{ github.event.pull_request.milestone.title }}.md
+          filters: |  # this is intentionally a string
+            relnotes:
+              - docs/release-notes/${{ github.event.pull_request.milestone.title }}.md
         if: github.event.pull_request.milestone != null
       - name: Check if relevant release notes are modified
-        run: exit ${{ steps.verify-changed-files.outputs.files_changed && '0' || '1' }}
+        run: exit ${{ steps.changes.outputs.relnotes && '0' || '1' }}
         if: github.event.pull_request.milestone != null
