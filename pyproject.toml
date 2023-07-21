@@ -108,7 +108,7 @@ test-full = [
 doc = [
     "sphinx>=4.4",
     "sphinx-rtd-theme>=1.0",
-    "scanpydoc[typehints]>=0.7.7",
+    "scanpydoc[typehints] >=0.7.7, <0.8",
     "myst-parser",
     "matplotlib!=3.6.1",
     "scanpy[paga]",
