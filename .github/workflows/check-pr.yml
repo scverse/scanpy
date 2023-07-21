@@ -40,5 +40,5 @@ jobs:
               - docs/release-notes/${{ github.event.pull_request.milestone.title }}.md
         if: github.event.pull_request.milestone != null
       - name: Check if relevant release notes are modified
-        run: exit ${{ steps.changes.outputs.relnotes && '0' || '1' }}
+        run: exit ${{ fromJSON(steps.changes.outputs.relnotes) && '0' || '1' }}
         if: github.event.pull_request.milestone != null
