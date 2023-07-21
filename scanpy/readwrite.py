@@ -298,7 +298,7 @@ def read_visium(
     genome: Optional[str] = None,
     *,
     count_file: str = "filtered_feature_bc_matrix.h5",
-    library_id: str = None,
+    library_id: Optional[str] = None,
     load_images: Optional[bool] = True,
     source_image_path: Optional[Union[str, Path]] = None,
 ) -> AnnData:
