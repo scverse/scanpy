@@ -126,7 +126,7 @@ intersphinx_mapping = dict(
 
 # -- Options for HTML output ----------------------------------------------
 
-html_theme = "sphinx-book_theme"
+html_theme = "sphinx_book_theme"
 html_theme_options = {
     "repository_url": repository_url,
     "use_repository_button": True,
