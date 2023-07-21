@@ -13,10 +13,10 @@ from numpy.random import negative_binomial, binomial, seed
 
 import scanpy as sc
 from anndata import AnnData
+from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 from scanpy._utils import select_groups
 
 
@@ -246,6 +246,21 @@ def test_emptycat():
 
     with pytest.raises(ValueError, match=rf"Could not calculate statistics.*{'11'}"):
         rank_genes_groups(pbmc, groupby='louvain')
+
+
+def test_log1p_save_restore(tmp_path):
+    """tests the sequence log1p→save→load→rank_genes_groups"""
+    from anndata import read
+
+    pbmc = pbmc68k_reduced()
+    sc.pp.log1p(pbmc)
+
+    path = tmp_path / 'test.h5ad'
+    pbmc.write(path)
+
+    pbmc = read(path)
+
+    sc.tl.rank_genes_groups(pbmc, groupby='bulk_labels', use_raw=True)
 
 
 def test_wilcoxon_symmetry():

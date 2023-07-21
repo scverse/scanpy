@@ -2,14 +2,13 @@
 Calculate overlaps of rank_genes_groups marker genes with marker gene dictionaries
 """
 import collections.abc as cabc
-from typing import Union, Optional, Dict
+from typing import Union, Optional, Dict, Literal
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 
 from .. import logging as logg
-from .._compat import Literal
 
 
 def _calc_overlap_count(markers1: dict, markers2: dict):

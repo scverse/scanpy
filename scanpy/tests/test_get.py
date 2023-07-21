@@ -9,7 +9,8 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.datasets._utils import filter_oldformatwarning
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._helpers.data import pbmc68k_reduced
+
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
     "dim,transform,func",
@@ -158,6 +159,7 @@ def test_repeated_gene_symbols():
     adata = sc.AnnData(
         np.arange(3 * 4).reshape((3, 4)),
         var=pd.DataFrame({"gene_symbols": gene_symbols}, index=var_names),
+        dtype=np.float32,
     )
 
     with pytest.raises(KeyError, match="symbol_b"):
@@ -175,7 +177,7 @@ def test_repeated_gene_symbols():
 
 @filter_oldformatwarning
 def test_backed_vs_memory():
-    "compares backed vs. memory"
+    """compares backed vs. memory"""
     from pathlib import Path
 
     # get location test h5ad file in datasets
@@ -201,7 +203,7 @@ def test_backed_vs_memory():
 
 
 def test_column_content():
-    "uses a larger dataset to test column order and content"
+    """uses a larger dataset to test column order and content"""
     adata = pbmc68k_reduced()
 
     # test that columns content is correct for obs_df

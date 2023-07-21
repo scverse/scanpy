@@ -127,7 +127,7 @@ _DEPENDENCIES_NUMERICS = [
     'pandas',
     ('sklearn', 'scikit-learn'),
     'statsmodels',
-    ('igraph', 'python-igraph'),
+    'igraph',
     'louvain',
     'leidenalg',
     'pynndescent',

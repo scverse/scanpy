@@ -3,8 +3,9 @@ import numpy as np
 from anndata import AnnData
 
 import scanpy as sc
-from scanpy.tests.fixtures import array_type, float_dtype
 from anndata.tests.helpers import assert_equal
+
+from scanpy.testing._helpers.data import pbmc3k_normalized
 
 A_list = [
     [0, 0, 7, 0, 0],
@@ -78,12 +79,12 @@ def test_pca_shapes():
         sc.pp.pca(adata, n_comps=100)
 
 
-def test_pca_sparse(pbmc3k_normalized):
+def test_pca_sparse():
     """
     Tests that implicitly centered pca on sparse arrays returns equivalent results to
     explicit centering on dense arrays.
     """
-    pbmc = pbmc3k_normalized
+    pbmc = pbmc3k_normalized()
 
     pbmc_dense = pbmc.copy()
     pbmc_dense.X = pbmc_dense.X.toarray()
@@ -99,8 +100,8 @@ def test_pca_sparse(pbmc3k_normalized):
     assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
 
 
-def test_pca_reproducible(pbmc3k_normalized, array_type):
-    pbmc = pbmc3k_normalized
+def test_pca_reproducible(array_type):
+    pbmc = pbmc3k_normalized()
     pbmc.X = array_type(pbmc.X)
 
     a = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
@@ -113,15 +114,16 @@ def test_pca_reproducible(pbmc3k_normalized, array_type):
     assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
-def test_pca_chunked(pbmc3k_normalized):
+def test_pca_chunked():
     # https://github.com/scverse/scanpy/issues/1590
     # But also a more general test
 
     # Subsetting for speed of test
-    pbmc = pbmc3k_normalized[::6].copy()
+    pbmc_full = pbmc3k_normalized()
+    pbmc = pbmc_full[::6].copy()
     pbmc.X = pbmc.X.astype(np.float64)
-    chunked = sc.pp.pca(pbmc3k_normalized, chunked=True, copy=True)
-    default = sc.pp.pca(pbmc3k_normalized, copy=True)
+    chunked = sc.pp.pca(pbmc_full, chunked=True, copy=True)
+    default = sc.pp.pca(pbmc_full, copy=True)
 
     # Taking absolute value since sometimes dimensions are flipped
     np.testing.assert_allclose(
@@ -137,12 +139,12 @@ def test_pca_chunked(pbmc3k_normalized):
     )
 
 
-def test_pca_n_pcs(pbmc3k_normalized):
+def test_pca_n_pcs():
     """
     Tests that the n_pcs parameter also works for
     representations not called "X_pca"
     """
-    pbmc = pbmc3k_normalized
+    pbmc = pbmc3k_normalized()
     sc.pp.pca(pbmc, dtype=np.float64)
     pbmc.obsm["X_pca_test"] = pbmc.obsm["X_pca"]
     original = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca", copy=True)

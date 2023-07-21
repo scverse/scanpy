@@ -7,6 +7,20 @@ import numpy as np
 from scipy import sparse
 
 from anndata.tests.helpers import asarray
+from .data import (
+    _pbmc3ks_parametrized_session,
+    pbmc3k_parametrized,
+    pbmc3k_parametrized_small,
+)
+
+
+__all__ = [
+    'array_type',
+    'float_dtype',
+    '_pbmc3ks_parametrized_session',
+    'pbmc3k_parametrized',
+    'pbmc3k_parametrized_small',
+]
 
 
 @pytest.fixture(

@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union, Optional, Literal
 
 import numpy as np
 import random
@@ -8,7 +8,6 @@ from scipy.sparse import spmatrix
 from .. import _utils
 from .. import logging as logg
 from ._utils import get_init_pos_from_paga
-from .._compat import Literal
 from .._utils import AnyRandom, _choose_graph
 
 

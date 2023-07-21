@@ -1,7 +1,7 @@
 """Reading and Writing
 """
 from pathlib import Path, PurePath
-from typing import Union, Dict, Optional, Tuple, BinaryIO
+from typing import Union, Dict, Optional, Tuple, BinaryIO, Literal
 
 import h5py
 import json
@@ -21,7 +21,6 @@ from anndata import (
 from anndata import read as read_h5ad
 
 from ._settings import settings
-from ._compat import Literal
 from ._utils import Empty, _empty
 from . import logging as logg
 
@@ -167,11 +166,15 @@ def read_10x_h5(
     :attr:`~anndata.AnnData.obs_names`
         Cell names
     :attr:`~anndata.AnnData.var_names`
-        Gene names
+        Gene names for a feature barcode matrix, probe names for a probe bc matrix
     :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
         Gene IDs
     :attr:`~anndata.AnnData.var`\\ `['feature_types']`
         Feature types
+    :attr:`~anndata.AnnData.obs`\\ `[filtered_barcodes]`
+        filtered barcodes if present in the matrix
+    :attr:`~anndata.AnnData.var`
+        Any additional metadata present in /matrix/features is read in.
     """
     start = logg.info(f'reading {filename}')
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
@@ -219,7 +222,7 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
                 )
 
             dsets = {}
-            _collect_datasets(dsets, f)
+            _collect_datasets(dsets, f[genome])
 
             # AnnData works with csr matrices
             # 10x stores the transposed data, so we do the transposition right away
@@ -253,7 +256,7 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
 def _collect_datasets(dsets: dict, group: h5py.Group):
     for k, v in group.items():
         if isinstance(v, h5py.Dataset):
-            dsets[k] = v[:]
+            dsets[k] = v[()]
         else:
             _collect_datasets(dsets, v)
 
@@ -278,15 +281,51 @@ def _read_v3_10x_h5(filename, *, start=None):
                 (data, dsets['indices'], dsets['indptr']),
                 shape=(N, M),
             )
+            obs_dict = {'obs_names': dsets['barcodes'].astype(str)}
+            var_dict = {'var_names': dsets['name'].astype(str)}
+
+            if 'gene_id' not in dsets:
+                # Read metadata specific to a feature-barcode matrix
+                var_dict['gene_ids'] = dsets['id'].astype(str)
+            else:
+                # Read metadata specific to a probe-barcode matrix
+                var_dict.update(
+                    {
+                        'gene_ids': dsets['gene_id'].astype(str),
+                        'probe_ids': dsets['id'].astype(str),
+                    }
+                )
+            var_dict['feature_types'] = dsets['feature_type'].astype(str)
+            if 'filtered_barcodes' in f['matrix']:
+                obs_dict['filtered_barcodes'] = dsets['filtered_barcodes'].astype(bool)
+
+            if 'features' in f['matrix']:
+                var_dict.update(
+                    (
+                        feature_metadata_name,
+                        dsets[feature_metadata_name].astype(
+                            bool if feature_metadata_item.dtype.kind == 'b' else str
+                        ),
+                    )
+                    for feature_metadata_name, feature_metadata_item in f['matrix'][
+                        'features'
+                    ].items()
+                    if isinstance(feature_metadata_item, h5py.Dataset)
+                    and feature_metadata_name
+                    not in [
+                        'name',
+                        'feature_type',
+                        'id',
+                        'gene_id',
+                        '_all_tag_keys',
+                    ]
+                )
+            else:
+                raise ValueError('10x h5 has no features group')
             adata = AnnData(
                 matrix,
-                obs=dict(obs_names=dsets['barcodes'].astype(str)),
-                var=dict(
-                    var_names=dsets['name'].astype(str),
-                    gene_ids=dsets['id'].astype(str),
-                    feature_types=dsets['feature_type'].astype(str),
-                    genome=dsets['genome'].astype(str),
-                ),
+                obs=obs_dict,
+                var=var_dict,
             )
             logg.info('', time=start)
             return adata
@@ -299,7 +338,7 @@ def read_visium(
     genome: Optional[str] = None,
     *,
     count_file: str = "filtered_feature_bc_matrix.h5",
-    library_id: str = None,
+    library_id: Optional[str] = None,
     load_images: Optional[bool] = True,
     source_image_path: Optional[Union[str, Path]] = None,
 ) -> AnnData:
@@ -340,11 +379,15 @@ def read_visium(
     :attr:`~anndata.AnnData.obs_names`
         Cell names
     :attr:`~anndata.AnnData.var_names`
-        Gene names
+        Gene names for a feature barcode matrix, probe names for a probe bc matrix
     :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
         Gene IDs
     :attr:`~anndata.AnnData.var`\\ `['feature_types']`
         Feature types
+    :attr:`~anndata.AnnData.obs`\\ `[filtered_barcodes]`
+        filtered barcodes if present in the matrix
+    :attr:`~anndata.AnnData.var`
+        Any additional metadata present in /matrix/features is read in.
     :attr:`~anndata.AnnData.uns`\\ `['spatial']`
         Dict of spaceranger output files with 'library_id' as key
     :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['images']`
@@ -371,8 +414,13 @@ def read_visium(
     adata.uns["spatial"][library_id] = dict()
 
     if load_images:
+        tissue_positions_file = (
+            path / "spatial/tissue_positions.csv"
+            if (path / "spatial/tissue_positions.csv").exists()
+            else path / "spatial/tissue_positions_list.csv"
+        )
         files = dict(
-            tissue_positions_file=path / 'spatial/tissue_positions_list.csv',
+            tissue_positions_file=tissue_positions_file,
             scalefactors_json_file=path / 'spatial/scalefactors_json.json',
             hires_image=path / 'spatial/tissue_hires_image.png',
             lowres_image=path / 'spatial/tissue_lowres_image.png',
@@ -410,16 +458,18 @@ def read_visium(
         }
 
         # read coordinates
-        positions = pd.read_csv(files['tissue_positions_file'], header=None)
+        positions = pd.read_csv(
+            files['tissue_positions_file'],
+            header=1 if tissue_positions_file.name == "tissue_positions.csv" else None,
+            index_col=0,
+        )
         positions.columns = [
-            'barcode',
             'in_tissue',
             'array_row',
             'array_col',
             'pxl_col_in_fullres',
             'pxl_row_in_fullres',
         ]
-        positions.index = positions['barcode']
 
         adata.obs = adata.obs.join(positions, how="left")
 
@@ -427,7 +477,7 @@ def read_visium(
             ['pxl_row_in_fullres', 'pxl_col_in_fullres']
         ].to_numpy()
         adata.obs.drop(
-            columns=['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres'],
+            columns=['pxl_row_in_fullres', 'pxl_col_in_fullres'],
             inplace=True,
         )
 
@@ -750,7 +800,11 @@ def _read(
     elif ext in {'mtx', 'mtx.gz'}:
         adata = read_mtx(filename)
     elif ext == 'csv':
-        adata = read_csv(filename, first_column_names=first_column_names)
+        if delimiter is None:
+            delimiter = ','
+        adata = read_csv(
+            filename, first_column_names=first_column_names, delimiter=delimiter
+        )
     elif ext in {'txt', 'tab', 'data', 'tsv'}:
         if ext == 'data':
             logg.hint(

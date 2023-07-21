@@ -1,14 +1,12 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 import warnings
 
 import numpy as np
 import pandas as pd
 import anndata as ad
-from packaging import version
 
 from .. import logging as logg, _utils
-from .._compat import Literal
 from .._settings import settings
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
@@ -174,7 +172,8 @@ def paul15() -> ad.AnnData:
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, 'r') as f:
-        X = f['data.debatched'][()]
+        # Coercing to float32 for backwards compatibility
+        X = f['data.debatched'][()].astype(np.float32)
         gene_names = f['data.debatched_rownames'][()].astype(str)
         cell_names = f['data.debatched_colnames'][()].astype(str)
         clusters = f['cluster.id'][()].flatten().astype(int)
@@ -194,7 +193,7 @@ def paul15() -> ad.AnnData:
     # remove 10 corrupted gene names
     infogenes_names = np.intersect1d(infogenes_names, adata.var_names)
     # restrict data array to the 3461 informative genes
-    adata = adata[:, infogenes_names]
+    adata = adata[:, infogenes_names].copy()
     # usually we'd set the root cell to an arbitrary cell in the MEP cluster
     # adata.uns['iroot'] = np.flatnonzero(adata.obs['paul15_clusters'] == '7MEP')[0]
     # here, set the root cell as in Haghverdi et al. (2016)
