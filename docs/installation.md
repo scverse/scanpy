@@ -24,7 +24,7 @@ pip install 'scanpy[leiden]'
 ```
 
 The extra `[leiden]` installs two packages that are needed for popular
-parts of scanpy but aren't requirements: [python-igraph] [^cite_csardi06] and [leiden] [^cite_traag18].
+parts of scanpy but aren't requirements: [igraph] [^cite_csardi06] and [leiden] [^cite_traag18].
 
 (dev-install-instructions)=
 
@@ -83,7 +83,7 @@ pip install --user scanpy
 
 - `brew install igraph`
 
-- If python-igraph still fails to install, see the question on [compiling igraph].
+- If igraph still fails to install, see the question on [compiling igraph].
   Alternatively consider installing gcc via `brew install gcc --without-multilib`
   and exporting the required variables:
 
@@ -125,5 +125,5 @@ The whole process takes just a couple of minutes.
 [leiden]: https://leidenalg.readthedocs.io
 [miniconda]: http://conda.pydata.org/miniconda.html
 [on github]: https://github.com/scverse/scanpy
-[python-igraph]: http://igraph.org/python/
+[igraph]: https://python.igraph.org/en/stable/
 [unofficial binaries]: https://www.lfd.uci.edu/~gohlke/pythonlibs/
