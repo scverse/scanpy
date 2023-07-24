@@ -280,8 +280,7 @@ def _scatter_obs(
             palettes = [palette]
     else:
         palettes = [palette for _ in range(len(keys))]
-    for i, palette in enumerate(palettes):
-        palettes[i] = _utils.default_palette(palette)
+    palettes = [_utils.default_palette(palette) for palette in palettes]
 
     if basis is not None:
         component_name = (
