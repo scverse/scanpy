@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Optional, Literal
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -9,7 +9,6 @@ from anndata import AnnData
 from .. import logging as logg
 from .._settings import settings, Verbosity
 from .._utils import sanitize_anndata, check_nonnegative_integers
-from .._compat import Literal
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
@@ -195,7 +194,7 @@ def _highly_variable_genes_single_batch(
     """
     X = adata.layers[layer] if layer is not None else adata.X
     if flavor == 'seurat':
-        if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
+        if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
             X *= np.log(adata.uns['log1p']['base'])
         X = np.expm1(X)
 

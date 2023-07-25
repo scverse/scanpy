@@ -1,14 +1,14 @@
 """\
 Perform clustering using PhenoGraph
 """
-from typing import Union, Tuple, Optional, Type, Any
+from typing import Union, Tuple, Optional, Type, Any, Literal
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+import scipy as sp
 from scipy.sparse import spmatrix
 
-from ..._compat import Literal
 from ...tools._leiden import MutableVertexPartition
 from ... import logging as logg
 
@@ -243,7 +243,7 @@ def phenograph(
     if copy:
         return communities, graph, Q
     else:
-        adata.obsp[ig_key] = graph
+        adata.obsp[ig_key] = graph.tocsr()
         if comm_key:
             adata.obs[comm_key] = pd.Categorical(communities)
         if Q:

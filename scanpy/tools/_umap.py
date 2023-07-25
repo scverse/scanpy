@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 import warnings
 
 import numpy as np
@@ -9,7 +9,6 @@ from sklearn.utils import check_random_state, check_array
 from ._utils import get_init_pos_from_paga, _choose_representation
 from .. import logging as logg
 from .._settings import settings
-from .._compat import Literal
 from .._utils import AnyRandom, NeighborsView
 
 

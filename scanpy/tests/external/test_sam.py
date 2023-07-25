@@ -3,11 +3,13 @@ import scanpy as sc
 import scanpy.external as sce
 import numpy as np
 
-pytest.importorskip("samalg")
+from scanpy.testing._helpers.data import pbmc3k
+from scanpy.testing._pytest.marks import needs
 
 
+@needs("samalg")
 def test_sam():
-    adata_ref = sc.datasets.pbmc3k()
+    adata_ref = pbmc3k()
     ix = np.random.choice(adata_ref.shape[0], size=200, replace=False)
     adata = adata_ref[ix, :].copy()
     sc.pp.normalize_total(adata, target_sum=10000)

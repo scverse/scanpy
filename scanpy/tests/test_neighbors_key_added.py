@@ -1,13 +1,12 @@
-from importlib.util import find_spec
-
 import scanpy as sc
 import numpy as np
 import pytest
 
+from scanpy.testing._pytest.marks import needs
+from scanpy.testing._helpers.data import pbmc68k_reduced
+
 n_neighbors = 5
 key = 'test'
-
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 
 
 @pytest.fixture
@@ -32,10 +31,8 @@ def test_neighbors_key_added(adata):
 
 
 # test functions with neighbors_key and obsp
-@pytest.mark.skipif(
-    not find_spec("igraph"),
-    reason="needs module `igraph` (`pip install python-igraph`)",
-)
+@needs("igraph")
+@needs("leidenalg")
 @pytest.mark.parametrize('field', ['neighbors_key', 'obsp'])
 def test_neighbors_key_obsp(adata, field):
     adata1 = adata.copy()
@@ -81,9 +78,9 @@ def test_neighbors_key_obsp(adata, field):
         )
 
 
+@needs("louvain")
 @pytest.mark.parametrize('field', ['neighbors_key', 'obsp'])
 def test_neighbors_key_obsp_louvain(adata, field):
-    pytest.importorskip("louvain")
     adata1 = adata.copy()
 
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)

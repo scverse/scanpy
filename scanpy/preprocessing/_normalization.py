@@ -1,4 +1,4 @@
-from typing import Optional, Union, Iterable, Dict
+from typing import Optional, Union, Iterable, Dict, Literal
 from warnings import warn
 
 import numpy as np
@@ -15,7 +15,6 @@ except ImportError:
 
 
 from scanpy import logging as logg
-from scanpy._compat import Literal
 from scanpy._utils import view_to_actual
 
 from scanpy.get import _get_obs_rep, _set_obs_rep
@@ -180,7 +179,7 @@ def normalize_total(
         # at least one cell as more than max_fraction of counts per cell
 
         gene_subset = (X > counts_per_cell[:, None] * max_fraction).sum(0)
-        gene_subset = np.ravel(gene_subset) == 0
+        gene_subset = np.asarray(np.ravel(gene_subset) == 0)
 
         msg += (
             ' The following highly-expressed genes are not considered during '

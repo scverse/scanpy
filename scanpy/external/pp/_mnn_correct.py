@@ -1,11 +1,10 @@
-from typing import Union, Collection, Optional, Any, Sequence, Tuple, List
+from typing import Union, Collection, Optional, Any, Sequence, Tuple, List, Literal
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 
 from ..._settings import settings
-from ..._compat import Literal
 
 
 def mnn_correct(

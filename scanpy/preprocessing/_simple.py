@@ -5,7 +5,7 @@ Compositions of these functions are found in sc.preprocess.recipes.
 from functools import singledispatch
 from numbers import Number
 import warnings
-from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
+from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Literal
 
 import numba
 import numpy as np
@@ -25,7 +25,6 @@ from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
 )
-from .._compat import Literal
 from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
