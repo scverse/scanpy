@@ -153,14 +153,16 @@ exclude = [
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
+    "--strict-markers",
     "-pscanpy.testing._pytest",
+    "-mnot internet",
 ]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
 xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
-    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
+    "internet: tests which rely on internet resources (enable with `-m internet`)",
 ]
 
 [tool.coverage.run]
