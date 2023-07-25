@@ -202,7 +202,9 @@ def pca(
         )
         # this is just a wrapper for the results
         X_pca = output['X_pca']
-        pca_ = PCA(n_components=n_comps, svd_solver=svd_solver)
+        pca_ = PCA(
+            n_components=n_comps, svd_solver=svd_solver, random_state=random_state
+        )
         pca_.components_ = output['components']
         pca_.explained_variance_ = output['variance']
         pca_.explained_variance_ratio_ = output['variance_ratio']

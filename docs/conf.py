@@ -65,8 +65,9 @@ extensions = [
     'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
     'scanpydoc.autosummary_generate_imported',
-    "sphinx_design",
-    "sphinxext.opengraph",
+    'scanpydoc.definition_list_typed_field',
+    'sphinx_design',
+    'sphinxext.opengraph',
     *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 

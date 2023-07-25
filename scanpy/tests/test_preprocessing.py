@@ -1,5 +1,4 @@
 from itertools import product
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,8 +9,8 @@ import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal, asarray
 
-from scanpy.tests.helpers import check_rep_mutation, check_rep_results
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._helpers import check_rep_mutation, check_rep_results
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 def test_log1p(tmp_path):

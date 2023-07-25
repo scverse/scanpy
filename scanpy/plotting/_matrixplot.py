@@ -1,4 +1,4 @@
-from typing import Optional, Union, Mapping  # Special
+from typing import Optional, Union, Mapping, Literal  # Special
 from typing import Sequence  # ABCs
 from typing import Tuple  # Classes
 
@@ -11,7 +11,6 @@ from matplotlib.colors import Normalize
 
 from .. import logging as logg
 from .._utils import _doc_params
-from .._compat import Literal
 from ._utils import fix_kwds, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show

@@ -7,7 +7,8 @@ from umap import UMAP
 import scanpy as sc
 from scanpy import settings
 from scanpy._compat import pkg_version
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._helpers.data import pbmc68k_reduced
+
 
 X = np.array(
     [

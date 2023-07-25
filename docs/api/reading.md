@@ -15,7 +15,7 @@ Read common file formats using
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    read
 ```
@@ -25,7 +25,7 @@ Read 10x formatted hdf5 files and directories containing `.mtx` files using
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    read_10x_h5
    read_10x_mtx
@@ -37,7 +37,7 @@ Read other formats using functions borrowed from {mod}`anndata`
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: generated/
+   :toctree: ../generated/
 
    read_h5ad
    read_csv

@@ -9,28 +9,24 @@
 # The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics
 # ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
-from importlib.util import find_spec
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from matplotlib.testing import setup
 
 setup()
 
 import scanpy as sc
+from scanpy.testing._pytest.marks import needs
 
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / 'pbmc3k_images'
 FIGS = HERE / 'figures'
 
-# TODO: Fix for newly varying clustering results
 
-
-@pytest.mark.xfail
-@pytest.mark.skipif(not find_spec("leidenalg"), reason="needs module `leidenalg`")
+@needs("leidenalg")
 def test_pbmc3k(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
 

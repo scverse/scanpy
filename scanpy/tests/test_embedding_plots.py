@@ -11,9 +11,12 @@ import pytest
 import seaborn as sns
 
 import scanpy as sc
+from scanpy.testing._helpers.data import pbmc3k_processed
 
-from scanpy.tests.test_plotting import ROOT, FIGS, HERE
-import scanpy.tests._data._cached_datasets as datasets
+
+HERE: Path = Path(__file__).parent
+ROOT = HERE / '_images'
+FIGS = HERE / 'figures'
 
 MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
 MISSING_VALUES_FIGS = FIGS / "embedding-missing-values"
@@ -32,9 +35,7 @@ def adata():
     from sklearn.cluster import DBSCAN
 
     empty_pixel = np.array([1.0, 1.0, 1.0, 0]).reshape(1, 1, -1)
-    image = imread(
-        Path(sc.__file__).parent.parent / "docs/_static/img/Scanpy_Logo_RGB.png"
-    )
+    image = imread(HERE.parent.parent / "docs/_static/img/Scanpy_Logo_RGB.png")
     x, y = np.where(np.logical_and.reduce(~np.equal(image, empty_pixel), axis=2))
 
     # Just using to calculate the hex coords
@@ -243,6 +244,25 @@ def test_dimension_broadcasting(adata, tmpdir, check_same_image):
     check_same_image(dims_pth, color_pth, tol=5)
 
 
+def test_marker_broadcasting(adata, tmpdir, check_same_image):
+    tmpdir = Path(tmpdir)
+
+    with pytest.raises(ValueError):
+        sc.pl.pca(adata, color=["label", "1_missing"], marker=[".", "^", "x"])
+
+    dims_pth = tmpdir / "broadcast_markers.png"
+    color_pth = tmpdir / "broadcast_colors_for_markers.png"
+
+    sc.pl.pca(adata, color=["label", "label", "label"], marker="^", show=False)
+    plt.savefig(dims_pth, dpi=40)
+    plt.close()
+    sc.pl.pca(adata, color="label", marker=["^", "^", "^"], show=False)
+    plt.savefig(color_pth, dpi=40)
+    plt.close()
+
+    check_same_image(dims_pth, color_pth, tol=5)
+
+
 def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
     tmpdir = Path(tmpdir)
     adata = adata.copy()
@@ -276,7 +296,7 @@ def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
 
 def test_embedding_colorbar_location(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = datasets.pbmc3k_processed().raw.to_adata()
+    adata = pbmc3k_processed().raw.to_adata()
 
     sc.pl.pca(adata, color="LDHB", colorbar_loc=None)
 
