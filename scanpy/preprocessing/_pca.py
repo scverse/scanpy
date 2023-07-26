@@ -52,8 +52,8 @@ def pca(
     zero_center
         If `True`, compute standard PCA from covariance matrix.
         If `False`, omit zero-centering variables
-        (uses `~sklearn.decomposition.TruncatedSVD` or
-        `dask_ml.decomposition.TruncatedSVD`),
+        (uses sklearn :class:`~sklearn.decomposition.TruncatedSVD` or
+        dask-ml :class:`~dask_ml.decomposition.TruncatedSVD`),
         which allows to handle sparse input efficiently.
         Passing `None` decides automatically based on sparseness of the data.
     svd_solver
