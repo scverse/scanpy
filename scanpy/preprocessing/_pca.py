@@ -35,8 +35,8 @@ def pca(
 
     .. versionchanged:: 1.5.0
 
-        In previous versions, computing a PCA on a sparse matrix would make a dense copy of
-        the array for mean centering.
+        In previous versions, computing a PCA on a sparse matrix would make
+        a dense copy of the array for mean centering.
         As of scanpy 1.5.0, mean centering is implicit.
         While results are extremely similar, they are not exactly the same.
         If you would like to reproduce the old results, pass a dense array.
@@ -47,8 +47,8 @@ def pca(
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     n_comps
-        Number of principal components to compute. Defaults to 50, or 1 - minimum
-        dimension size of selected representation.
+        Number of principal components to compute. Defaults to 50, or
+        1 - minimum dimension size of selected representation.
     zero_center
         If `True`, compute standard PCA from covariance matrix.
         If `False`, omit zero-centering variables
@@ -61,12 +61,18 @@ def pca(
 
         `'arpack'` (the default)
           for the ARPACK wrapper in SciPy (:func:`~scipy.sparse.linalg.svds`)
+          Not availible with dask arrays.
         `'randomized'`
-          for the randomized algorithm due to Halko (2009).
+          for the randomized algorithm due to Halko (2009). For dask arrays,
+          this will use :func:`~dask.arrays.linalg.svd_compressed`.
         `'auto'`
           chooses automatically depending on the size of the problem.
         `'lobpcg'`
-          An alternative SciPy solver.
+          An alternative SciPy solver. Not availible with dask arrays.
+        `'tsqr'`
+          Only availible with dask arrays. "tsqr"
+          algorithm from Benson et. al. (2013).
+
 
         .. versionchanged:: 1.4.5
            Default value changed from `'auto'` to `'arpack'`.
@@ -74,9 +80,11 @@ def pca(
         Efficient computation of the principal components of a sparse matrix
         currently only works with the `'arpack`' or `'lobpcg'` solvers.
 
-        If X is a dask array, then `'randomized'` will use the randomized algorithm
-        from dask-ml. Otherwise, `'auto'` will be given to `dask_ml.decomposition.PCA` and
-        `'tsqr'` will be given to `dask_ml.decomposition.TruncatedSVD`.
+        If X is a dask array, then `'randomized'` will use the randomized
+        algorithm from dask-ml. Otherwise, `'auto'` will be given to
+        dask-ml :class:`~dask_ml.decomposition.PCA` and
+        `'tsqr'` will be given to
+        dask-ml :class:`~dask_ml.decomposition.TruncatedSVD`.
 
 
     random_state
@@ -161,48 +169,26 @@ def pca(
 
     is_dask = isinstance(X, DaskArray)
 
+    # check_random_state returns a numpy RandomState when passed an int but
+    # dask needs an int for random state
     random_state = check_random_state(random_state) if not is_dask else random_state
 
-    if is_dask and not chunked:
-        # we will only let the user choose the randomized solver otherwise
-        # we will use our default
-        if svd_solver != 'randomized' and svd_solver != 'auto':
-            logg.debug('Ignoring svd_solver')
-        if zero_center:
-            from dask_ml.decomposition import PCA as daskPCA
-
-            # will let dask handle if not randomized
-            algorithm = 'randomized' if svd_solver == 'randomized' else 'auto'
-            pca_ = daskPCA(
-                n_components=n_comps, svd_solver=algorithm, random_state=random_state
-            )
-            X_pca = pca_.fit_transform(X)
-        else:
-            from dask_ml.decomposition import TruncatedSVD as daskSVD
-
-            # daskSVD only supports randomized and tsqr
-            algorithm = 'randomized' if svd_solver == 'randomized' else 'tsqr'
-            pca_ = daskSVD(
-                n_components=n_comps, algorithm=algorithm, random_state=random_state
-            )
-            X_pca = pca_.fit_transform(X)
-    elif chunked:
+    if chunked:
         if not zero_center or random_state or svd_solver != 'arpack':
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
-        X_pca = None
-        pca_ = None
         if is_dask:
-            import dask.array as da
-            from dask_ml.decomposition import IncrementalPCA as daskIncrementalPCA
+            from dask_ml.decomposition import IncrementalPCA
+            from dask.array import zeros
 
-            pca_ = daskIncrementalPCA(n_components=n_comps)
-            X_pca = da.zeros((X.shape[0], n_comps), X.dtype)
+            # daskSVD only supports randomized and tsqr
         else:
             from sklearn.decomposition import IncrementalPCA
+            from numpy import zeros
 
-            pca_ = IncrementalPCA(n_components=n_comps)
-            X_pca = np.zeros((X.shape[0], n_comps), X.dtype)
+        X_pca = zeros((X.shape[0], n_comps), X.dtype)
+
+        pca_ = IncrementalPCA(n_components=n_comps)
 
         for chunk, _, _ in adata_comp.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
@@ -212,7 +198,17 @@ def pca(
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     elif (not issparse(X) or svd_solver == "randomized") and zero_center:
-        from sklearn.decomposition import PCA
+        if is_dask:
+            from dask_ml.decomposition import PCA
+
+            # will let dask handle if not randomized or auto
+            if svd_solver != 'randomized' or svd_solver != 'auto':
+                svd_solver = 'auto'
+                logg.warning(
+                    'Ignoring svd_solver and using auto, dask_ml.decomposition.PCA only supports randomized and auto'
+                )
+        else:
+            from sklearn.decomposition import PCA
 
         if issparse(X) and svd_solver == "randomized":
             # This  is for backwards compat. Better behaviour would be to either error or use arpack.
@@ -248,7 +244,18 @@ def pca(
         pca_.explained_variance_ = output['variance']
         pca_.explained_variance_ratio_ = output['variance_ratio']
     elif not zero_center:
-        from sklearn.decomposition import TruncatedSVD
+        if is_dask:
+            from dask_ml.decomposition import TruncatedSVD
+
+            if svd_solver != 'randomized' or svd_solver != 'tsqr':
+                svd_solver = 'tsqr'
+                logg.warning(
+                    'Ignoring svd_solver and using tsqr, dask_ml.decomposition.TruncatedSVD only supports randomized and auto'
+                )
+            # daskSVD only supports randomized and tsqr
+            svd_solver = 'randomized' if svd_solver == 'randomized' else 'tsqr'
+        else:
+            from sklearn.decomposition import TruncatedSVD
 
         logg.debug(
             '    without zero-centering: \n'
