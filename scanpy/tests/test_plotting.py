@@ -1014,6 +1014,42 @@ def pbmc_scatterplots(_pbmc_scatterplots_session):
             ),
         ),
         (
+            'pca_one_marker',
+            partial(sc.pl.pca, color='louvain', marker='^'),
+        ),
+        (
+            'pca_one_marker_multiple_colors',
+            partial(sc.pl.pca, color=['louvain', 'bulk_labels'], marker='^'),
+        ),
+        (
+            'pca_multiple_markers_multiple_colors',
+            partial(sc.pl.pca, color=['louvain', 'bulk_labels'], marker=['^', 'x']),
+        ),
+        (
+            'pca_marker_with_dimensions',
+            partial(
+                sc.pl.pca, color='louvain', marker='^', dimensions=[(0, 1), (1, 2)]
+            ),
+        ),
+        (
+            'pca_markers_with_dimensions',
+            partial(
+                sc.pl.pca,
+                color='louvain',
+                marker=['^', 'x'],
+                dimensions=[(0, 1), (1, 2)],
+            ),
+        ),
+        (
+            'pca_markers_colors_with_dimensions',
+            partial(
+                sc.pl.pca,
+                color=['louvain', 'bulk_labels'],
+                marker=['^', 'x'],
+                dimensions=[(0, 1), (1, 2)],
+            ),
+        ),
+        (
             'pca_sparse_layer',
             partial(sc.pl.pca, color=['CD3D', 'CD79A'], layer='sparse', cmap='viridis'),
         ),

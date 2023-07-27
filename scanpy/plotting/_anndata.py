@@ -81,6 +81,7 @@ def scatter(
     right_margin: Optional[float] = None,
     left_margin: Optional[float] = None,
     size: Union[int, float, None] = None,
+    marker: Union[str, Sequence[str]] = '.',
     title: Optional[str] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -176,6 +177,7 @@ def _scatter_obs(
     right_margin=None,
     left_margin=None,
     size=None,
+    marker='.',
     title=None,
     show=None,
     save=None,
@@ -358,6 +360,7 @@ def _scatter_obs(
         right_margin=right_margin,
         left_margin=left_margin,
         sizes=[size for _ in keys],
+        markers=marker,
         color_map=color_map,
         show_ticks=show_ticks,
         ax=ax,
@@ -393,6 +396,7 @@ def _scatter_obs(
                         projection,
                         size=size,
                         alpha=alpha,
+                        marker=marker,
                     )
                     mask_remaining[mask] = False
                     if legend_loc.startswith('on data'):
@@ -418,6 +422,7 @@ def _scatter_obs(
                         projection,
                         size=size,
                         alpha=alpha,
+                        marker=marker,
                     )
                     if legend_loc.startswith('on data'):
                         add_centroid(centroids, name, Y, mask)
@@ -428,7 +433,7 @@ def _scatter_obs(
                 data.append(Y[mask_remaining, 2])
             axs[ikey].scatter(
                 *data,
-                marker='.',
+                marker=marker,
                 c='lightgrey',
                 s=size,
                 edgecolors='none',

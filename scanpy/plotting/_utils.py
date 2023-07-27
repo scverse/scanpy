@@ -95,6 +95,7 @@ def timeseries_subplot(
     palette: Union[Sequence[str], Cycler, None] = None,
     color_map='viridis',
     ax: Optional[Axes] = None,
+    marker: Union[str, Sequence[str]] = '.',
 ):
     """\
     Plot X.
@@ -125,13 +126,18 @@ def timeseries_subplot(
         colors = np.array(palette[: len(levels)].by_key()['color'])
         subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
 
+    if isinstance(marker, str):
+        marker = [marker]
+    if len(marker) != len(subsets) and len(marker) == 1:
+        marker = [marker[0] for _ in range(len(subsets))]
+
     if ax is None:
         ax = pl.subplot()
     for i, (x, y) in enumerate(subsets):
         ax.scatter(
             x,
             y,
-            marker='.',
+            marker=marker[i],
             edgecolor='face',
             s=rcParams['lines.markersize'],
             c=colors[i],
@@ -553,7 +559,9 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
         )
 
 
-def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
+def scatter_group(
+    ax, key, imask, adata, Y, projection='2d', size=3, alpha=None, marker='.'
+):
     """Scatter of group using representation of data Y."""
     mask = adata.obs[key].cat.categories[imask] == adata.obs[key].values
     color = adata.uns[key + '_colors'][imask]
@@ -568,7 +576,7 @@ def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None)
         data.append(Y[mask, 2])
     ax.scatter(
         *data,
-        marker='.',
+        marker=marker,
         alpha=alpha,
         c=color,
         edgecolors='none',
@@ -676,6 +684,7 @@ def scatter_base(
     axis_labels=None,
     colorbars=(False,),
     sizes=(1,),
+    markers='.',
     color_map='viridis',
     show_ticks=True,
     ax=None,
@@ -702,8 +711,12 @@ def scatter_base(
     # if we have a single array, transform it into a list with a single array
     if isinstance(colors, str):
         colors = [colors]
+    if isinstance(markers, str):
+        markers = [markers]
     if len(sizes) != len(colors) and len(sizes) == 1:
         sizes = [sizes[0] for _ in range(len(colors))]
+    if len(markers) != len(colors) and len(markers) == 1:
+        markers = [markers[0] for _ in range(len(colors))]
     axs, panel_pos, draw_region_width, figure_width = setup_axes(
         ax=ax,
         panels=colors,
@@ -715,6 +728,7 @@ def scatter_base(
     )
     for icolor, color in enumerate(colors):
         ax = axs[icolor]
+        marker = markers[icolor]
         bottom = panel_pos[0][0]
         height = panel_pos[1][0] - bottom
         Y_sort = Y
@@ -731,7 +745,7 @@ def scatter_base(
         if not isinstance(color, str) or color != 'white':
             sct = ax.scatter(
                 *data,
-                marker='.',
+                marker=marker,
                 c=color,
                 alpha=alpha,
                 edgecolors='none',  # 'face',
