@@ -6,6 +6,7 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc3k_normalized
+from scanpy.testing._pytest.marks import needs
 
 A_list = [
     [0, 0, 7, 0, 0],
@@ -39,8 +40,14 @@ A_svd = np.array(
 )
 
 
+@needs("dask_ml")
+@needs("dask")
+def as_dense_dask_array_pca(a):
+    return as_dense_dask_array(a)
+
+
 @pytest.fixture(
-    params=[sparse.csr_matrix, sparse.csc_matrix, asarray, as_dense_dask_array],
+    params=[sparse.csr_matrix, sparse.csc_matrix, asarray, as_dense_dask_array_pca],
     ids=["scipy-csr", "scipy-csc", "np-ndarray", "dask-array"],
 )
 def array_type(request):
