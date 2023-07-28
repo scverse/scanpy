@@ -18,7 +18,7 @@ def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: Optional[int] = None,
     zero_center: Optional[bool] = True,
-    svd_solver: str = 'arpack',
+    svd_solver: Optional[str] = None,
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
@@ -52,39 +52,44 @@ def pca(
     zero_center
         If `True`, compute standard PCA from covariance matrix.
         If `False`, omit zero-centering variables
-        (uses sklearn :class:`~sklearn.decomposition.TruncatedSVD` or
-        dask-ml :class:`~dask_ml.decomposition.TruncatedSVD`),
+        (uses *scikit-learn* :class:`~sklearn.decomposition.TruncatedSVD` or
+        *dask-ml* :class:`~dask_ml.decomposition.TruncatedSVD`),
         which allows to handle sparse input efficiently.
         Passing `None` decides automatically based on sparseness of the data.
     svd_solver
         SVD solver to use:
 
-        `'arpack'` (the default)
+        `None`
+          See `chunked` and `zero_center` descriptions to determine which class will be used.
+          Depending on the class and the type of X different values for default will be set.
+          If *scikit-learn* :class:`~sklearn.decomposition.PCA` is used, will give `'arpack'`,
+          if *scikit-learn* :class:`~sklearn.decomposition.TruncatedSVD` is used, will give `'randomized'`,
+          if *dask-ml* :class:`~dask_ml.decomposition.PCA` or :class:`~dask_ml.decomposition.IncrementalPCA` is used, will give `'auto'`,
+          if *dask-ml* :class:`~dask_ml.decomposition.TruncatedSVD` is used, will give `'tsqr'`
+        `'arpack'`
           for the ARPACK wrapper in SciPy (:func:`~scipy.sparse.linalg.svds`)
-          Not availible with dask arrays.
+          Not available with *dask* arrays.
         `'randomized'`
-          for the randomized algorithm due to Halko (2009). For dask arrays,
+          for the randomized algorithm due to Halko (2009). For *dask* arrays,
           this will use :func:`~dask.arrays.linalg.svd_compressed`.
         `'auto'`
           chooses automatically depending on the size of the problem.
         `'lobpcg'`
-          An alternative SciPy solver. Not availible with dask arrays.
+          An alternative SciPy solver. Not available with dask arrays.
         `'tsqr'`
-          Only availible with dask arrays. "tsqr"
+          Only available with *dask* arrays. "tsqr"
           algorithm from Benson et. al. (2013).
 
 
-        .. versionchanged:: 1.4.5
-           Default value changed from `'auto'` to `'arpack'`.
+        .. versionchanged:: 1.9.3
+           Default value changed from `'arpack'` to None.
 
         Efficient computation of the principal components of a sparse matrix
         currently only works with the `'arpack`' or `'lobpcg'` solvers.
 
-        If X is a dask array, then `'randomized'` will use the randomized
-        algorithm from dask-ml. Otherwise, `'auto'` will be given to
-        dask-ml :class:`~dask_ml.decomposition.PCA` and
-        `'tsqr'` will be given to
-        dask-ml :class:`~dask_ml.decomposition.TruncatedSVD`.
+        If X is a *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`, :class:`~dask_ml.decomposition.IncrementalPCA`,
+        or :class:`~dask_ml.decomposition.TruncatedSVD` will be used. Otherwise their *scikit-learn* counterparts :class:`~sklearn.decomposition.PCA`, :class:`~sklearn.decomposition.IncrementalPCA`, or :class:`~sklearn.decomposition.TruncatedSVD`
+        will be used.
 
 
     random_state
@@ -104,7 +109,10 @@ def pca(
     chunked
         If `True`, perform an incremental PCA on segments of `chunk_size`.
         The incremental PCA automatically zero centers and ignores settings of
-        `random_seed` and `svd_solver`. If `False`, perform a full PCA.
+        `random_seed` and `svd_solver`. Uses sklearn :class:`~sklearn.decomposition.IncrementalPCA` or
+        *dask-ml* :class:`~dask_ml.decomposition.IncrementalPCA`. If `False`, perform a full PCA and
+        use sklearn :class:`~sklearn.decomposition.PCA` or
+        *dask-ml* :class:`~dask_ml.decomposition.PCA`
     chunk_size
         Number of observations to include in each chunk.
         Required if `chunked=True` was passed.
@@ -177,18 +185,21 @@ def pca(
         if not zero_center or random_state or svd_solver != 'arpack':
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
+        incremental_pca_kwargs = dict()
         if is_dask:
             from dask_ml.decomposition import IncrementalPCA
             from dask.array import zeros
 
-            # daskSVD only supports randomized and tsqr
+            incremental_pca_kwargs['svd_solver'] = _handle_dask_ml_args(
+                svd_solver, 'IncrementalPCA'
+            )
         else:
             from sklearn.decomposition import IncrementalPCA
             from numpy import zeros
 
         X_pca = zeros((X.shape[0], n_comps), X.dtype)
 
-        pca_ = IncrementalPCA(n_components=n_comps)
+        pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
 
         for chunk, _, _ in adata_comp.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
@@ -201,14 +212,11 @@ def pca(
         if is_dask:
             from dask_ml.decomposition import PCA
 
-            # will let dask handle if not randomized or auto
-            if svd_solver != 'randomized' or svd_solver != 'auto':
-                svd_solver = 'auto'
-                logg.warning(
-                    'Ignoring svd_solver and using auto, dask_ml.decomposition.PCA only supports randomized and auto'
-                )
+            svd_solver = _handle_dask_ml_args(svd_solver, 'PCA')
         else:
             from sklearn.decomposition import PCA
+
+            svd_solver = _handle_sklearn_args(svd_solver, 'PCA')
 
         if issparse(X) and svd_solver == "randomized":
             # This  is for backwards compat. Better behaviour would be to either error or use arpack.
@@ -224,12 +232,12 @@ def pca(
     elif issparse(X) and zero_center:
         from sklearn.decomposition import PCA
 
-        if svd_solver == "auto":
-            svd_solver = "arpack"
-        if svd_solver not in {'lobpcg', 'arpack'}:
+        if svd_solver is None:
+            svd_solver = 'arpack'
+        elif svd_solver not in {'lobpcg', 'arpack'}:
             raise ValueError(
-                'svd_solver: {svd_solver} can not be used with sparse input.\n'
-                'Use "arpack" (the default) or "lobpcg" instead.'
+                f'svd_solver: {svd_solver} can not be used with sparse input.\n'
+                'Use "arpack" or "lobpcg" instead.'
             )
 
         output = _pca_with_sparse(
@@ -247,15 +255,11 @@ def pca(
         if is_dask:
             from dask_ml.decomposition import TruncatedSVD
 
-            if svd_solver != 'randomized' or svd_solver != 'tsqr':
-                svd_solver = 'tsqr'
-                logg.warning(
-                    'Ignoring svd_solver and using tsqr, dask_ml.decomposition.TruncatedSVD only supports randomized and auto'
-                )
-            # daskSVD only supports randomized and tsqr
-            svd_solver = 'randomized' if svd_solver == 'randomized' else 'tsqr'
+            svd_solver = _handle_dask_ml_args(svd_solver, 'TruncatedSVD')
         else:
             from sklearn.decomposition import TruncatedSVD
+
+            svd_solver = _handle_sklearn_args(svd_solver, 'TruncatedSVD')
 
         logg.debug(
             '    without zero-centering: \n'
@@ -366,3 +370,46 @@ def _pca_with_sparse(X, npcs, solver='arpack', mu=None, random_state=None):
         'components': v,
     }
     return output
+
+
+def _handle_dask_ml_args(svd_solver: str, method: str) -> str:
+    method2args = {
+        'PCA': {'auto', 'full', 'tsqr', 'randomized'},
+        'IncrementalPCA': {'auto', 'full', 'tsqr', 'randomized'},
+        'TruncatedSVD': {'tsqr', 'randomized'},
+    }
+    method2default = {
+        'PCA': 'auto',
+        'IncrementalPCA': 'auto',
+        'TruncatedSVD': 'tsqr',
+    }
+
+    return _handle_x_args('dask_ml', svd_solver, method, method2args, method2default)
+
+
+def _handle_sklearn_args(svd_solver: str, method: str) -> str:
+    method2args = {
+        'PCA': {'auto', 'full', 'arpack', 'randomized'},
+        'TruncatedSVD': {'arpack', 'randomized'},
+    }
+    method2default = {
+        'PCA': 'arpack',
+        'TruncatedSVD': 'randomized',
+    }
+
+    return _handle_x_args('sklearn', svd_solver, method, method2args, method2default)
+
+
+def _handle_x_args(lib, svd_solver, method, method2args, method2default):
+    changed = False
+
+    if svd_solver not in method2args[method]:
+        changed = True
+        svd_solver = method2default[method]
+
+    if changed:
+        logg.warning(
+            f'Ignoring svd_solver and using {svd_solver}, {lib}.decomposition.{method} only supports {method2args[method]}'
+        )
+
+    return svd_solver
