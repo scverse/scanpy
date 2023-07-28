@@ -37,7 +37,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: changes
         with:
-          filters: |  # this is intentionally a string
+          filters: | # this is intentionally a string
             relnotes: 'docs/release-notes/${{ github.event.pull_request.milestone.title }}.md'
         if: github.event.pull_request.milestone != null
       - name: Check if relevant release notes are modified
