@@ -31,17 +31,22 @@ jobs:
         uses: flying-sheep/check@v1
         with:
           success: ${{ github.event.pull_request.milestone != null || contains(env.LABELS, 'no milestone') }}
+      - uses: Shopify/task-list-checker@main
+        id: tasks
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
       - uses: actions/checkout@v3
-        if: github.event.pull_request.milestone != null
+        if: github.event.pull_request.milestone != null && !steps.tasks.outcome
       - name: Find out if relevant release notes are modified
         uses: dorny/paths-filter@v2
         id: changes
         with:
           filters: | # this is intentionally a string
             relnotes: 'docs/release-notes/${{ github.event.pull_request.milestone.title }}.md'
-        if: github.event.pull_request.milestone != null
+        if: github.event.pull_request.milestone != null && !steps.tasks.outcome
       - name: Check if relevant release notes are modified
         uses: flying-sheep/check@v1
         with:
           success: ${{ steps.changes.outputs.relnotes }}
-        if: github.event.pull_request.milestone != null
+        if: github.event.pull_request.milestone != null && !steps.tasks.outcome
