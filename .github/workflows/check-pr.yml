@@ -28,7 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check if milestone or “no milestone” label is present
-        run: exit ${{ (github.event.pull_request.milestone != null || contains(env.LABELS, 'no milestone')) && '0' || '1'}}
+        uses: flying-sheep/check@v1
+        with:
+          success: ${{ github.event.pull_request.milestone != null || contains(env.LABELS, 'no milestone') }}
       - uses: actions/checkout@v3
         if: github.event.pull_request.milestone != null
       - name: Find out if relevant release notes are modified
@@ -39,5 +41,7 @@ jobs:
             relnotes: 'docs/release-notes/${{ github.event.pull_request.milestone.title }}.md'
         if: github.event.pull_request.milestone != null
       - name: Check if relevant release notes are modified
-        run: exit ${{ fromJSON(steps.changes.outputs.relnotes) && '0' || '1' }}
+        uses: flying-sheep/check@v1
+        with:
+          success: ${{ steps.changes.outputs.relnotes }}
         if: github.event.pull_request.milestone != null
