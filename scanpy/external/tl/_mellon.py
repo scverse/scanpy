@@ -19,7 +19,7 @@ def mellon(
     """\
     Compute cell-state density with Mellon.
 
-    This function uses Mellon to compute the density of cell states,
+    This function uses the Mellon algorithm to compute the density of cell states,
     which is stored in the obs attribute of the AnnData object. The function returns
     the computed density. If `repr_key` is not found in the AnnData object,
     an error is raised suggesting the user to run the function `scanpy.external.tl.palantir(adata)`.
@@ -27,6 +27,10 @@ def mellon(
     Additionally, the density prediction model is serialized and stored in the `.uns` attribute
     of the AnnData object under the key `'{density_key}_predictor'`. This can be deserialized
     and used for prediction by using the `palantir.utils.run_density_evaluation` method.
+
+    The computed densities, `log_density` can be visualized using UMAPs. We recommend the visualization
+    of clipped log density. This procedure, which trims the very low density of outlier cells to the
+    lower 1% percentile, provides richer visualization in 2D embeddings such as UMAPs.
 
     Parameters
     ----------
@@ -54,13 +58,40 @@ def mellon(
         Array of log density values clipped between the 1st and 100th percentiles.
     adata.uns[density_key + "_predictor"]
         Serialized density prediction model.
+
+    Example
+    -------
+    >>> import scanpy.external as sce
+    >>> import scanpy as sc
+
+    **Load and preprocess data**
+
+    >>> adata = sc.read_csv(filename="data.csv")
+    >>> sc.pp.filter_cells(adata, min_counts=1000)
+    >>> sc.pp.filter_genes(adata, min_counts=10)
+    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.log1p(adata)
+    >>> sc.tl.pca(adata, n_comps=300)
+
+    **Run diffusion maps**
+
+    >>> sce.tl.palantir(adata, n_components=30, knn=30)
+
+    **Compute cell-state density with Mellon**
+
+    >>> sce.tl.mellon(adata, repr_key='X_palantir_diff_comp', density_key='mellon_log_density')
+
+    **Visualize the results**
+
+    >>> sc.pl.scatter(adata, color=["mellon_log_density", "mellon_log_density_clipped"], basis="umap")
     """
+
     _check_import()
     from mellon import DensityEstimator
 
     adata = adata.copy() if copy else adata
 
-    logg.info('Mellon Density Maps in progress ...')
+    logg.info('Mellon density inference in progress ...')
 
     # Check if 'X_palantir_diff_comp' key is in the adata object
     if repr_key not in adata.obsm.keys():

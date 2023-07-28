@@ -39,3 +39,12 @@
    tl.cyclone
 
 ```
+
+### Cell statistics
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated/
+
+   tl.mellon
+```
