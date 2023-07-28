@@ -40,18 +40,18 @@ A_svd = np.array(
 )
 
 
-@needs("dask_ml")
-@needs("dask")
-def as_dense_dask_array_pca(a):
-    return as_dense_dask_array(a)
-
-
+# If one uses dask for PCA it will always require dask-ml
 @pytest.fixture(
-    params=[sparse.csr_matrix, sparse.csc_matrix, asarray, as_dense_dask_array_pca],
+    params=[
+        lambda: sparse.csr_matrix,
+        lambda: sparse.csc_matrix,
+        lambda: np.array,
+        pytest.param(lambda: as_dense_dask_array, marks=[needs("dask_ml")]),
+    ],
     ids=["scipy-csr", "scipy-csc", "np-ndarray", "dask-array"],
 )
 def array_type(request):
-    return request.param
+    return request.param()
 
 
 def test_pca_transform(array_type):
