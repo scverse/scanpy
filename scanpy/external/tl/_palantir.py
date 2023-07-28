@@ -207,7 +207,7 @@ def palantir(
 
     # Diffusion maps
     dm_res = run_diffusion_maps(
-        data=df,
+        df,
         n_components=n_components,
         knn=knn,
         alpha=alpha,
