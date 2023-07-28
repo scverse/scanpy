@@ -20,6 +20,7 @@ KNOWN = dict(
     harmony="harmonyTS",
     harmonypy="harmonypy",
     magic="magic-impute",
+    mellon="mellon",
     palantir="palantir",
     phenograph="PhenoGraph",
     samalg="sam-algorithm",
