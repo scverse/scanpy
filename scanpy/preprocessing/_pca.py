@@ -83,6 +83,8 @@ def pca(
 
         .. versionchanged:: 1.9.3
            Default value changed from `'arpack'` to None.
+        .. versionchanged:: 1.4.5
+           Default value changed from `'auto'` to`'arpack'`.
 
         Efficient computation of the principal components of a sparse matrix
         currently only works with the `'arpack`' or `'lobpcg'` solvers.
