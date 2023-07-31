@@ -5,14 +5,11 @@ from typing import (
     Union,
     Optional,
     Any,
-    Mapping,
-    MutableMapping,
-    Callable,
     NamedTuple,
-    Tuple,
     Literal,
     get_args,
 )
+from collections.abc import Mapping, MutableMapping, Callable
 
 import numpy as np
 import scipy
@@ -48,6 +45,8 @@ def neighbors(
     knn: bool = True,
     random_state: AnyRandom = 0,
     method: _Method = 'umap',
+    transformer_cls: type | None = None,
+    transformer_kwds: Mapping[str, Any] = MappingProxyType({}),
     metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     key_added: Optional[str] = None,
@@ -88,6 +87,20 @@ def neighbors(
         with adaptive width [Haghverdi16]_) for computing connectivities.
         Use 'rapids' for the RAPIDS implementation of UMAP (experimental, GPU
         only).
+    transformer_cls
+        Approximate kNN search implementation following the API of
+        :class:`~sklearn.neighbors.KNeighborsTransformer`.
+        If `None`, it is derived from the `method`:
+
+        `'umap'`, `'gauss'`
+            For small data, we will calculate exact kNN, otherwise we use
+            :class:`~pynndescent.PyNNDescentTransformer`
+        `'rapids'`
+            A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
+    transformer_kwds
+        Additional parameters for the `transformer_cls`.
+        By default, the following parameters are passed on:
+        `n_neighbors`, `metric`, `metric_kwds`, and `random_state`.
     metric
         A known metric’s name or a callable that returns a distance.
     metric_kwds
@@ -127,6 +140,8 @@ def neighbors(
         use_rep=use_rep,
         knn=knn,
         method=method,
+        transformer_cls=transformer_cls,
+        transformer_kwds=transformer_kwds,
         metric=metric,
         metric_kwds=metric_kwds,
         random_state=random_state,
@@ -232,7 +247,7 @@ class OnFlySymMatrix:
     def __init__(
         self,
         get_row: Callable[[Any], np.ndarray],
-        shape: Tuple[int, int],
+        shape: tuple[int, int],
         DC_start: int = 0,
         DC_end: int = -1,
         rows: Optional[MutableMapping[Any, np.ndarray]] = None,
@@ -457,10 +472,10 @@ class Neighbors:
         method: _Method = 'umap',
         transformer_cls: type | None = None,
         transformer_kwds: Mapping[str, Any] = MappingProxyType({}),
-        random_state: AnyRandom = 0,
-        write_knn_indices: bool = False,
         metric: Union[_Metric, _MetricFn] = 'euclidean',
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+        random_state: AnyRandom = 0,
+        write_knn_indices: bool = False,
     ) -> None:
         """\
         Compute distances and connectivities of neighbors.
@@ -522,6 +537,7 @@ class Neighbors:
                 )
 
             # TODO: more args
+            # IMPORTANT: update the things you set in the docs
             transformer = transformer_cls(
                 n_neighbors=n_neighbors,
                 metric=metric,
