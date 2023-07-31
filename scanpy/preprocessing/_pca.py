@@ -407,10 +407,8 @@ def _handle_sklearn_args(svd_solver: str, method: str) -> str:
 
 
 def _handle_x_args(lib, svd_solver, method, method2args, method2default):
-    changed = False
-
-    if svd_solver not in method2args[method]:
-        changed = True
+    changed = svd_solver not in method2args[method]
+    if changed:
         svd_solver = method2default[method]
 
     if changed:
