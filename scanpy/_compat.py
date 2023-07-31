@@ -5,8 +5,7 @@ try:
 except ImportError:  # Python < 3.9
     from functools import lru_cache
 
-    def cache(func):
-        return lru_cache(maxsize=None)(func)
+    cache = lru_cache(maxsize=None)
 
 
 def pkg_metadata(package):
