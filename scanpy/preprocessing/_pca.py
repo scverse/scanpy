@@ -410,8 +410,6 @@ def _handle_x_args(lib, svd_solver, method, method2args, method2default):
     changed = svd_solver not in method2args[method]
     if changed:
         svd_solver = method2default[method]
-
-    if changed:
         logg.warning(
             f'Ignoring svd_solver and using {svd_solver}, {lib}.decomposition.{method} only supports {method2args[method]}'
         )
