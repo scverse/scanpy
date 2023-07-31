@@ -181,7 +181,11 @@ def pca(
 
     # check_random_state returns a numpy RandomState when passed an int but
     # dask needs an int for random state
-    random_state = check_random_state(random_state) if not is_dask else random_state
+    if not is_dask:
+        random_state = check_random_state(random_state)
+    elif not isinstance(random_state, int):
+        msg = f'random_state needs to be an int, not a {type(random_state).__name__} when passing a dask array'
+        raise TypeError(msg)
 
     if chunked:
         if not zero_center or random_state or svd_solver != 'arpack':
