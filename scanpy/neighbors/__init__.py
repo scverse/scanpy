@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from types import MappingProxyType
 from typing import (
     Union,
@@ -8,7 +9,6 @@ from typing import (
     NamedTuple,
     Literal,
     get_args,
-    TYPE_CHECKING,
 )
 from collections.abc import Mapping, MutableMapping, Callable
 
@@ -31,8 +31,10 @@ from .. import _utils, settings
 from .._utils import _doc_params, AnyRandom, NeighborsView
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 
-if TYPE_CHECKING:
+if sys.version_info >= (3, 9):
     RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
+else:
+    RPForestDict = Mapping
 
 
 N_DCS = 15  # default number of diffusion components
