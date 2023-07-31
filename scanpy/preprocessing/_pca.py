@@ -238,13 +238,7 @@ def pca(
     elif issparse(X) and zero_center:
         from sklearn.decomposition import PCA
 
-        if svd_solver is None:
-            svd_solver = 'arpack'
-        elif svd_solver not in {'lobpcg', 'arpack'}:
-            raise ValueError(
-                f'svd_solver: {svd_solver} can not be used with sparse input.\n'
-                'Use "arpack" or "lobpcg" instead.'
-            )
+        svd_solver = _handle_sklearn_args(svd_solver, 'PCA (with sparse input)')
 
         output = _pca_with_sparse(
             X, n_comps, solver=svd_solver, random_state=random_state
@@ -397,10 +391,12 @@ def _handle_sklearn_args(svd_solver: str, method: str) -> str:
     method2args = {
         'PCA': {'auto', 'full', 'arpack', 'randomized'},
         'TruncatedSVD': {'arpack', 'randomized'},
+        'PCA (with sparse input)': {'lobpcg', 'arpack'},
     }
     method2default = {
         'PCA': 'arpack',
         'TruncatedSVD': 'randomized',
+        'PCA (with sparse input)': 'arpack',
     }
 
     return _handle_x_args('sklearn', svd_solver, method, method2args, method2default)
