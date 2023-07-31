@@ -1,11 +1,12 @@
 from typing import Optional, Union
 
 import numpy as np
-from anndata import AnnData
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
+
+from anndata import AnnData
 
 from .. import logging as logg
 from .. import settings
