@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import pytest
 from anndata import AnnData
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, issparse
 
 import scanpy as sc
 from scanpy import Neighbors
@@ -114,7 +114,7 @@ def neigh() -> Neighbors:
     return get_neighbors()
 
 
-@pytest.mark.parametrize('method', ['umap', 'gauss', 'pynndescent'])
+@pytest.mark.parametrize('method', ['umap', 'gauss'])
 def test_distances_euclidean(mocker, neigh, method):
     """umap and gauss behave the same for distances.
 
@@ -129,9 +129,19 @@ def test_distances_euclidean(mocker, neigh, method):
     np.testing.assert_allclose(neigh.distances.toarray(), distances_euclidean)
 
 
-def test_distances_noknn(neigh):
-    neigh.compute_neighbors(method='gauss', knn=False, n_neighbors=n_neighbors)
-    np.testing.assert_allclose(neigh.distances, distances_euclidean_all)
+@pytest.mark.parametrize(
+    ('method', 'knn'),
+    [
+        # knn=False trivially returns all distances
+        pytest.param('gauss', False, id='knn=False'),
+        # pynndescent returns all distances when data is so small
+        pytest.param('pynndescent', True, id='pynndescent'),
+    ],
+)
+def test_distances_all(neigh, method, knn):
+    neigh.compute_neighbors(method=method, knn=knn, n_neighbors=n_neighbors)
+    dists = neigh.distances.toarray() if issparse(neigh.distances) else neigh.distances
+    np.testing.assert_allclose(dists, distances_euclidean_all)
 
 
 def test_umap_connectivities_euclidean(neigh):
