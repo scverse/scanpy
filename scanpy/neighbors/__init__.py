@@ -8,6 +8,7 @@ from typing import (
     NamedTuple,
     Literal,
     get_args,
+    TYPE_CHECKING,
 )
 from collections.abc import Mapping, MutableMapping, Callable
 
@@ -29,6 +30,10 @@ from .. import logging as logg
 from .. import _utils, settings
 from .._utils import _doc_params, AnyRandom, NeighborsView
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
+
+if TYPE_CHECKING:
+    RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
+
 
 N_DCS = 15  # default number of diffusion components
 # Backwards compat, constants should be defined in only one place.
@@ -197,9 +202,6 @@ class FlatTree(NamedTuple):
     offsets: None
     children: None
     indices: None
-
-
-RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 
 def _backwards_compat_get_full_X_diffmap(adata: AnnData) -> np.ndarray:

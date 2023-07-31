@@ -1,4 +1,4 @@
-from typing import Union, Iterable, Optional, MutableMapping, Generator
+from typing import TYPE_CHECKING, Union, Iterable, Optional, MutableMapping, Generator
 
 import pandas as pd
 import numpy as np
@@ -9,9 +9,12 @@ from anndata import AnnData
 
 from .. import settings
 from .. import logging as logg
-from ..neighbors import FlatTree, RPForestDict
+from ..neighbors import FlatTree
 from .._utils import NeighborsView
 from .._compat import pkg_version
+
+if TYPE_CHECKING:
+    from ..neighbors import RPForestDict
 
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
