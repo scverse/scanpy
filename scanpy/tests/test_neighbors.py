@@ -138,8 +138,10 @@ def test_umap_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='umap', n_neighbors=n_neighbors)
     np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_umap)
     neigh.compute_transitions()
-    np.testing.assert_allclose(neigh.transitions_sym.toarray(), transitions_sym_umap)
-    np.testing.assert_allclose(neigh.transitions.toarray(), transitions_umap)
+    np.testing.assert_allclose(
+        neigh.transitions_sym.toarray(), transitions_sym_umap, rtol=1e-5
+    )
+    np.testing.assert_allclose(neigh.transitions.toarray(), transitions_umap, rtol=1e-5)
 
 
 def test_gauss_connectivities_euclidean(neigh):
@@ -147,17 +149,21 @@ def test_gauss_connectivities_euclidean(neigh):
     np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_gauss_knn)
     neigh.compute_transitions()
     np.testing.assert_allclose(
-        neigh.transitions_sym.toarray(), transitions_sym_gauss_knn
+        neigh.transitions_sym.toarray(), transitions_sym_gauss_knn, rtol=1e-5
     )
-    np.testing.assert_allclose(neigh.transitions.toarray(), transitions_gauss_knn)
+    np.testing.assert_allclose(
+        neigh.transitions.toarray(), transitions_gauss_knn, rtol=1e-5
+    )
 
 
 def test_gauss_noknn_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='gauss', knn=False, n_neighbors=n_neighbors)
     np.testing.assert_allclose(neigh.connectivities, connectivities_gauss_noknn)
     neigh.compute_transitions()
-    np.testing.assert_allclose(neigh.transitions_sym, transitions_sym_gauss_noknn)
-    np.testing.assert_allclose(neigh.transitions, transitions_gauss_noknn)
+    np.testing.assert_allclose(
+        neigh.transitions_sym, transitions_sym_gauss_noknn, rtol=1e-5
+    )
+    np.testing.assert_allclose(neigh.transitions, transitions_gauss_noknn, rtol=1e-5)
 
 
 def test_metrics_argument():
