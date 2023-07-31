@@ -9,6 +9,7 @@ from sklearn.utils import sparsefuncs
 from scanpy import logging as logg
 from scanpy._utils import view_to_actual
 from scanpy.get import _get_obs_rep, _set_obs_rep
+
 from .._compat import DaskArray
 
 
