@@ -19,7 +19,7 @@ import scipy
 from anndata import AnnData
 from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import check_random_state
-from pynndescent import NNDescent
+from pynndescent import NNDescent, PyNNDescentTransformer
 
 from . import _connectivity
 from ._enums import _Metric, _MetricFn, _Method
@@ -28,7 +28,6 @@ from ._common import (
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
-from ._backends import get_transformer
 from .. import logging as logg
 from .. import _utils, settings
 from .._utils import _doc_params, AnyRandom, NeighborsView
@@ -148,9 +147,12 @@ def neighbors(
     neighbors_dict['connectivities_key'] = conns_key
     neighbors_dict['distances_key'] = dists_key
 
-    neighbors_dict['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
-    neighbors_dict['params']['random_state'] = random_state
-    neighbors_dict['params']['metric'] = metric
+    neighbors_dict['params'] = dict(
+        n_neighbors=neighbors.n_neighbors,
+        method=method,
+        random_state=random_state,
+        metric=metric,
+    )
     if metric_kwds:
         neighbors_dict['params']['metric_kwds'] = metric_kwds
     if use_rep is not None:
@@ -453,6 +455,8 @@ class Neighbors:
         use_rep: Optional[str] = None,
         knn: bool = True,
         method: _Method = 'umap',
+        transformer_cls: type | None = None,
+        transformer_kwds: Mapping[str, Any] = MappingProxyType({}),
         random_state: AnyRandom = 0,
         write_knn_indices: bool = False,
         metric: Union[_Metric, _MetricFn] = 'euclidean',
@@ -482,15 +486,10 @@ class Neighbors:
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
-        connectivity_method = 'gauss' if method == 'gauss' else 'umap'
-        if not (knn or method == 'gauss'):
-            # “knn=False” seems to be only intended for method “gauss”
-            raise ValueError(f'`method = {method!r} only with `knn = True`.')
-        if shortcut := (method in {'umap', 'gauss'}):
-            method = 'pynndescent'
-        # TODO make third_party backends available
-        if method not in (methods := set(get_args(_Method))):
-            raise ValueError(f'`method` needs to be one of {methods}.')
+        conn_method, transformer_cls, shortcut = self._handle_transform_args(
+            method, transformer_cls, knn=knn
+        )
+        del method  # don’t use after here
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         # do not use the cached rp_forest
@@ -513,14 +512,10 @@ class Neighbors:
             else:
                 self._distances = _distances
         else:
-            # TODO: allow specifying algorithm
-            algorithm = 'auto'
-            transformer_cls = get_transformer(algorithm, method)
-
-            transformer_kwds = {}
+            transformer_kwds = dict(transformer_kwds)
             if shortcut:
                 # copied from UMAP’s `nearest_neighbors` function
-                assert method == 'pynndescent'
+                assert transformer_cls is PyNNDescentTransformer
                 transformer_kwds.update(
                     n_trees=min(64, 5 + int(round((X.shape[0]) ** 0.5 / 20.0))),
                     n_iters=max(5, int(round(np.log2(X.shape[0])))),
@@ -551,14 +546,14 @@ class Neighbors:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
-        if connectivity_method == 'umap':
+        if conn_method == 'umap':
             self._connectivities = _connectivity.umap(
                 knn_indices,
                 knn_distances,
                 n_obs=self._adata.shape[0],
                 n_neighbors=self.n_neighbors,
             )
-        elif connectivity_method == 'gauss':
+        elif conn_method == 'gauss':
             self._connectivities = _connectivity.gauss(
                 self._distances, self.n_neighbors, knn=self.knn
             )
@@ -571,6 +566,28 @@ class Neighbors:
 
             self._connected_components = connected_components(self._connectivities)
             self._number_connected_components = self._connected_components[0]
+
+    @staticmethod
+    def _handle_transform_args(
+        method: _Method, transformer_cls: type | None, *, knn: bool
+    ) -> tuple[Literal['gauss', 'umap'], type, bool]:
+        if method not in (methods := set(get_args(_Method))):
+            raise ValueError(f'`method` needs to be one of {methods}.')
+        conn_method = 'gauss' if method == 'gauss' else 'umap'
+        shortcut = method in {'umap', 'gauss'} and (
+            transformer_cls is None or transformer_cls is PyNNDescentTransformer
+        )
+        if not knn and not (conn_method == 'gauss' and shortcut):
+            # “knn=False” seems to be only intended for method “gauss”
+            raise ValueError(f'`method = {method!r} only with `knn = True`.')
+
+        if shortcut or method == 'pynndescent':
+            transformer_cls = PyNNDescentTransformer
+        elif method == 'rapids':
+            from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
+
+            transformer_cls = RapidsKNNTransformer
+        return conn_method, transformer_cls, shortcut
 
     def compute_transitions(self, density_normalize: bool = True):
         """\
