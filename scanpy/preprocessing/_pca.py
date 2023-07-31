@@ -61,26 +61,25 @@ def pca(
         SVD solver to use:
 
         `None`
-          See `chunked` and `zero_center` descriptions to determine which class will be used.
-          Depending on the class and the type of X different values for default will be set.
-          If *scikit-learn* :class:`~sklearn.decomposition.PCA` is used, will give `'arpack'`,
-          if *scikit-learn* :class:`~sklearn.decomposition.TruncatedSVD` is used, will give `'randomized'`,
-          if *dask-ml* :class:`~dask_ml.decomposition.PCA` or :class:`~dask_ml.decomposition.IncrementalPCA` is used, will give `'auto'`,
-          if *dask-ml* :class:`~dask_ml.decomposition.TruncatedSVD` is used, will give `'tsqr'`
+            See `chunked` and `zero_center` descriptions to determine which class will be used.
+            Depending on the class and the type of X different values for default will be set.
+            If *scikit-learn* :class:`~sklearn.decomposition.PCA` is used, will give `'arpack'`,
+            if *scikit-learn* :class:`~sklearn.decomposition.TruncatedSVD` is used, will give `'randomized'`,
+            if *dask-ml* :class:`~dask_ml.decomposition.PCA` or :class:`~dask_ml.decomposition.IncrementalPCA` is used, will give `'auto'`,
+            if *dask-ml* :class:`~dask_ml.decomposition.TruncatedSVD` is used, will give `'tsqr'`
         `'arpack'`
-          for the ARPACK wrapper in SciPy (:func:`~scipy.sparse.linalg.svds`)
-          Not available with *dask* arrays.
+            for the ARPACK wrapper in SciPy (:func:`~scipy.sparse.linalg.svds`)
+            Not available with *dask* arrays.
         `'randomized'`
-          for the randomized algorithm due to Halko (2009). For *dask* arrays,
-          this will use :func:`~dask.arrays.linalg.svd_compressed`.
+            for the randomized algorithm due to Halko (2009). For *dask* arrays,
+            this will use :func:`~dask.arrays.linalg.svd_compressed`.
         `'auto'`
-          chooses automatically depending on the size of the problem.
+            chooses automatically depending on the size of the problem.
         `'lobpcg'`
-          An alternative SciPy solver. Not available with dask arrays.
+            An alternative SciPy solver. Not available with dask arrays.
         `'tsqr'`
-          Only available with *dask* arrays. "tsqr"
-          algorithm from Benson et. al. (2013).
-
+            Only available with *dask* arrays. "tsqr"
+            algorithm from Benson et. al. (2013).
 
         .. versionchanged:: 1.9.3
            Default value changed from `'arpack'` to None.
