@@ -207,6 +207,7 @@ def dpt_timeseries(
     show: Optional[bool] = None,
     save: Optional[bool] = None,
     as_heatmap: bool = True,
+    marker: Union[str, Sequence[str]] = '.',
 ):
     """\
     Heatmap of pseudotime series.
@@ -237,6 +238,7 @@ def dpt_timeseries(
             var_names=adata.var_names,
             highlights_x=adata.uns['dpt_changepoints'],
             xlim=[0, 1.3 * adata.X.shape[0]],
+            marker=marker,
         )
     pl.xlabel('dpt order')
     savefig_or_show('dpt_timeseries', save=save, show=show)
@@ -248,6 +250,7 @@ def dpt_groups_pseudotime(
     palette: Union[Sequence[str], Cycler, None] = None,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
+    marker: Union[str, Sequence[str]] = '.',
 ):
     """Plot groups and pseudotime."""
     _, (ax_grp, ax_ord) = pl.subplots(2, 1)
@@ -264,6 +267,7 @@ def dpt_groups_pseudotime(
         ),
         palette=palette,
         ax=ax_grp,
+        marker=marker,
     )
     timeseries_subplot(
         adata.obs['dpt_pseudotime'].values,
@@ -275,6 +279,7 @@ def dpt_groups_pseudotime(
         yticks=[0, 1],
         color_map=color_map,
         ax=ax_ord,
+        marker=marker,
     )
     savefig_or_show('dpt_groups_pseudotime', save=save, show=show)
 
@@ -1215,6 +1220,7 @@ def sim(
     shuffle: bool = False,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
+    marker: Union[str, Sequence[str]] = '.',
 ):
     """\
     Plot results of simulation.
@@ -1250,6 +1256,7 @@ def sim(
                 xlim=[0, 1.25 * adata.n_obs],
                 highlights_x=np.arange(tmax, n_realizations * tmax, tmax),
                 xlabel='realizations',
+                marker=marker,
             )
         else:
             # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
@@ -1273,6 +1280,7 @@ def sim(
             xlim=[0, 1.25 * adata.n_obs],
             highlights_x=np.arange(tmax, n_realizations * tmax, tmax),
             xlabel='index (arbitrary order)',
+            marker=marker,
         )
         savefig_or_show('sim_shuffled', save=save, show=show)
 
