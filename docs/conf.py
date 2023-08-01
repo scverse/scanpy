@@ -120,6 +120,7 @@ intersphinx_mapping = dict(
     networkx=('https://networkx.org/documentation/stable/', None),
     numpy=('https://numpy.org/doc/stable/', None),
     pandas=('https://pandas.pydata.org/pandas-docs/stable/', None),
+    pynndescent=('https://pynndescent.readthedocs.io/en/latest/', None),
     pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
     scipy=('https://docs.scipy.org/doc/scipy/', None),
