@@ -601,7 +601,8 @@ class Neighbors:
             if transformer_cls is not None:
                 msg = "Can’t specify both `method = 'rapids'` and `transformer_cls`."
                 raise ValueError(msg)
-            warn("method = 'rapids' is deprecated. Use transformer_cls = 'rapids'.")
+            msg = "method = 'rapids' is deprecated. Use transformer_cls = 'rapids'."
+            warn(msg, FutureWarning)
             method = 'umap'
             transformer_cls = 'rapids'
         elif method not in (methods := set(get_args(_Method))):
