@@ -64,7 +64,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
             p=p,
             algo_params=algo_params,
             metric_params=metric_params,
-            # TODO: output_type=...,
+            output_type='input',  # could also be None to respect global setting
         )
 
     def __sklearn_is_fitted__(self) -> bool:
@@ -87,10 +87,10 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
         return self.nn.kneighbors_graph(X_contiguous)
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, Any]:
+        """See :label:`sklearn:estimator_tags`"""
         return {
             "requires_y": False,
-            # TODO: are these correct?
             "preserves_dtype": [np.float32],
             "non_deterministic": True,
         }
