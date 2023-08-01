@@ -101,7 +101,7 @@ def neighbors(
 
         `'umap'`, `'gauss'`
             For small data, we will calculate exact kNN, otherwise we use
-            :class:`~pynndescent.PyNNDescentTransformer`
+            :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
         `'rapids'`
             A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
     transformer_kwds
