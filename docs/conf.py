@@ -110,6 +110,7 @@ pygments_dark_style = "native"
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
+    cuml=('https://docs.rapids.ai/api/cuml/stable/', None),
     cycler=('https://matplotlib.org/cycler/', None),
     h5py=('https://docs.h5py.org/en/stable/', None),
     ipython=('https://ipython.readthedocs.io/en/stable/', None),
