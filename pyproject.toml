@@ -155,7 +155,6 @@ addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "-pscanpy.testing._pytest",
-    "-mnot internet",
 ]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
