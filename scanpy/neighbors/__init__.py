@@ -11,6 +11,7 @@ from typing import (
     get_args,
 )
 from collections.abc import Mapping, MutableMapping, Callable
+from warnings import warn
 
 import numpy as np
 import scipy
@@ -20,7 +21,7 @@ from sklearn.utils import check_random_state
 from pynndescent import NNDescent, PyNNDescentTransformer
 
 from . import _connectivity
-from ._enums import _Metric, _MetricFn, _Method
+from ._enums import _Metric, _MetricFn, _Method, _KnownTransformer
 from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
@@ -52,7 +53,7 @@ def neighbors(
     knn: bool = True,
     random_state: AnyRandom = 0,
     method: _Method = 'umap',
-    transformer_cls: type | None = None,
+    transformer_cls: type | _KnownTransformer | None = None,
     transformer_kwds: Mapping[str, Any] = MappingProxyType({}),
     metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
@@ -92,15 +93,16 @@ def neighbors(
     method
         Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
         with adaptive width [Haghverdi16]_) for computing connectivities.
-        Use 'rapids' for the RAPIDS implementation of UMAP (experimental, GPU
-        only).
     transformer_cls
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
-        If `None`, it is derived from the `method`:
+        Also accepts the following known options:
 
-        `'umap'`, `'gauss'`
+        `None` (the default)
+            Behavior depends on data size.
             For small data, we will calculate exact kNN, otherwise we use
+            :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
+        `'pynndescent'`
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
         `'rapids'`
             A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
@@ -474,7 +476,7 @@ class Neighbors:
         use_rep: Optional[str] = None,
         knn: bool = True,
         method: _Method = 'umap',
-        transformer_cls: type | None = None,
+        transformer_cls: type | _KnownTransformer | None = None,
         transformer_kwds: Mapping[str, Any] = MappingProxyType({}),
         metric: Union[_Metric, _MetricFn] = 'euclidean',
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
@@ -505,10 +507,9 @@ class Neighbors:
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
-        conn_method, transformer_cls, shortcut = self._handle_transform_args(
+        method, transformer_cls, shortcut = self._handle_transform_args(
             method, transformer_cls, knn=knn
         )
-        del method  # don’t use after here
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         # do not use the cached rp_forest
@@ -566,19 +567,20 @@ class Neighbors:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
-        if conn_method == 'umap':
+        if method == 'umap':
             self._connectivities = _connectivity.umap(
                 knn_indices,
                 knn_distances,
                 n_obs=self._adata.shape[0],
                 n_neighbors=self.n_neighbors,
             )
-        elif conn_method == 'gauss':
+        elif method == 'gauss':
             self._connectivities = _connectivity.gauss(
                 self._distances, self.n_neighbors, knn=self.knn
             )
         else:
-            assert False
+            msg = f'{method!r} should have been coerced in _handle_transform_args'
+            raise AssertionError(msg)
         logg.debug('computed connectivities', time=start_connect)
         self._number_connected_components = 1
         if issparse(self._connectivities):
@@ -589,24 +591,44 @@ class Neighbors:
 
     @staticmethod
     def _handle_transform_args(
-        method: _Method, transformer_cls: type | None, *, knn: bool
-    ) -> tuple[Literal['gauss', 'umap'], type, bool]:
-        if method not in (methods := set(get_args(_Method))):
-            raise ValueError(f'`method` needs to be one of {methods}.')
+        method: _Method | Literal['gauss'],
+        transformer_cls: type | _KnownTransformer | None,
+        *,
+        knn: bool,
+    ) -> tuple[_Method, type, bool]:
+        # Coerce `method` to 'gauss' or 'umap'
+        if method == 'rapids':
+            if transformer_cls is not None:
+                msg = "Can’t specify both `method = 'rapids'` and `transformer_cls`."
+                raise ValueError(msg)
+            warn("method = 'rapids' is deprecated. Use transformer_cls = 'rapids'.")
+            method = 'umap'
+            transformer_cls = 'rapids'
+        elif method not in (methods := set(get_args(_Method))):
+            msg = f'`method` needs to be one of {methods}.'
+            raise ValueError(msg)
+
+        # Validate `knn`
         conn_method = 'gauss' if method == 'gauss' else 'umap'
-        shortcut = method in {'umap', 'gauss'} and (
-            transformer_cls is None or transformer_cls is PyNNDescentTransformer
-        )
+        shortcut = transformer_cls is None
         if not knn and not (conn_method == 'gauss' and shortcut):
             # “knn=False” seems to be only intended for method “gauss”
-            raise ValueError(f'`method = {method!r} only with `knn = True`.')
+            msg = f'`method = {method!r} only with `knn = True`.'
+            raise ValueError(msg)
 
-        if shortcut or method == 'pynndescent':
+        # Coerce `transformer_cls` to a class
+        if transformer_cls is None or transformer_cls == 'pynndescent':
             transformer_cls = PyNNDescentTransformer
-        elif method == 'rapids':
+        elif transformer_cls == 'rapids':
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
             transformer_cls = RapidsKNNTransformer
+        elif isinstance(transformer_cls, str):
+            msg = (
+                f'Unknown transformer class: {transformer_cls}. '
+                f'Try passing a class or one of {set(get_args(_KnownTransformer))}'
+            )
+            raise ValueError(msg)
         return conn_method, transformer_cls, shortcut
 
     def compute_transitions(self, density_normalize: bool = True):
