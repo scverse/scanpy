@@ -162,7 +162,7 @@ norecursedirs = ["scanpy/tests/_images"]
 xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
-    "internet: tests which rely on internet resources (enable with `-m internet`)",
+    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
 ]
 
 [tool.coverage.run]
