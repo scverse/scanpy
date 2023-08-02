@@ -699,7 +699,8 @@ def violin(
 
     Returns
     -------
-    A :class:`~matplotlib.axes.Axes` object if `ax` is `None` else `None`.
+    If `show==False`, a :class:`~seaborn.FacetGrid` object,
+    a :class:`~matplotlib.axes.Axes` or a list of it.
 
     Examples
     --------
