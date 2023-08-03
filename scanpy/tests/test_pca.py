@@ -167,9 +167,11 @@ def test_pca_layer():
     X_pca = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
     layer_pca = sc.pp.pca(pbmc, layer="counts", dtype=np.float64, copy=True)
 
-    assert np.allclose(X_pca.uns["pca"]["variance"], layer_pca.uns["pca"]["variance"])
-    assert np.allclose(
+    np.testing.assert_equal(
+        X_pca.uns["pca"]["variance"], layer_pca.uns["pca"]["variance"]
+    )
+    np.testing.assert_equal(
         X_pca.uns["pca"]["variance_ratio"], layer_pca.uns["pca"]["variance_ratio"]
     )
-    assert np.allclose(X_pca.obsm['X_pca'], layer_pca.obsm['X_pca'])
-    assert np.allclose(X_pca.varm['PCs'], layer_pca.varm['PCs'])
+    np.testing.assert_equal(X_pca.obsm['X_pca'], layer_pca.obsm['X_pca'])
+    np.testing.assert_equal(X_pca.varm['PCs'], layer_pca.varm['PCs'])
