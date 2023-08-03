@@ -50,7 +50,7 @@ class GroupBy:
     key
         Group key field in adata.obs.
     data
-        Element of the AnnData to aggregate (default None yields adata.X)
+        Element of the AnnData to aggregate (default None yields adata.X).  Should have the same dimensions as the AnnData object.
     weight
         Weight field in adata.obs of type float.
     key_set
