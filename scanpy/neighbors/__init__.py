@@ -12,6 +12,7 @@ from typing import (
 )
 from collections.abc import Mapping, MutableMapping, Callable
 from warnings import warn
+from igraph import Graph
 
 import numpy as np
 import scipy
@@ -443,18 +444,18 @@ class Neighbors:
         return self._transitions_sym
 
     @property
-    def eigen_values(self):
-        """Eigen values of transition matrix (numpy array)."""
+    def eigen_values(self) -> np.ndarray:
+        """Eigen values of transition matrix."""
         return self._eigen_values
 
     @property
-    def eigen_basis(self):
-        """Eigen basis of transition matrix (numpy array)."""
+    def eigen_basis(self) -> np.ndarray:
+        """Eigen basis of transition matrix."""
         return self._eigen_basis
 
     @property
-    def distances_dpt(self):
-        """DPT distances (on-fly matrix).
+    def distances_dpt(self) -> OnFlySymMatrix:
+        """DPT distances.
 
         This is yields [Haghverdi16]_, Eq. 15 from the supplement with the
         extensions of [Wolf19]_, supplement on random-walk based distance
@@ -462,7 +463,7 @@ class Neighbors:
         """
         return OnFlySymMatrix(self._get_dpt_row, shape=self._adata.shape)
 
-    def to_igraph(self):
+    def to_igraph(self) -> Graph:
         """Generate igraph from connectiviies."""
         return _utils.get_igraph_from_adjacency(self.connectivities)
 
@@ -811,7 +812,7 @@ class Neighbors:
         if xroot is not None and xroot.size == self._adata.shape[1]:
             self._set_iroot_via_xroot(xroot)
 
-    def _get_dpt_row(self, i):
+    def _get_dpt_row(self, i: int) -> np.ndarray:
         mask = None
         if self._number_connected_components > 1:
             label = self._connected_components[1][i]
