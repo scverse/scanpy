@@ -1,8 +1,8 @@
 """Rank genes according to differential expression.
 """
 from math import floor
-from typing import Iterable, Union, Optional
 from warnings import warn
+from typing import Iterable, Union, Optional, Literal
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,6 @@ from scipy.sparse import issparse, vstack
 from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
-from .._compat import Literal
 from ..get import _get_obs_rep, _check_mask
 from .._utils import check_nonnegative_integers
 from .._utils import Empty, _empty
@@ -92,10 +91,9 @@ class _RankGenes:
         layer=None,
         comp_pts=False,
     ):
-
         self.gene_mask = gene_mask
 
-        if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
+        if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
         else:
             self.expm1_func = np.expm1
@@ -376,7 +374,6 @@ class _RankGenes:
         tie_correct=False,
         **kwds,
     ):
-
         if method in {'t-test', 't-test_overestim_var'}:
             generate_test_results = self.t_test(method)
         elif method == 'wilcoxon':
@@ -779,7 +776,7 @@ def filter_rank_genes_groups(
             index=gene_names.index,
         )
 
-        if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
+        if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
             expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
         else:
             expm1_func = np.expm1

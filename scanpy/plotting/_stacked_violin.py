@@ -1,4 +1,4 @@
-from typing import Optional, Union, Mapping  # Special
+from typing import Optional, Union, Mapping, Literal  # Special
 from typing import Sequence  # ABCs
 from typing import Tuple  # Classes
 
@@ -9,7 +9,6 @@ from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like, Normalize
 from .. import logging as logg
 from .._utils import _doc_params
-from .._compat import Literal
 from ._utils import make_grid_spec, check_colornorm
 from ._utils import _AxesSubplot
 from ._utils import savefig_or_show
@@ -440,7 +439,6 @@ class StackedViolin(BasePlot):
         )
         axs_list = []
         for idx, row_label in enumerate(_color_df.index):
-
             row_ax = fig.add_subplot(gs[idx + 1, 1:-1])
             axs_list.append(row_ax)
 
@@ -652,27 +650,39 @@ def stacked_violin(
     Examples
     -------
 
-    Visualization of violin plots of a few genes grouped by the category 'bulk_labels':
+    Visualization of violin plots of a few genes grouped by the category `bulk_labels`:
 
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Same visualization but passing var_names as dict, which adds a grouping of
     the genes on top of the image:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get StackedViolin object for fine tuning
 
-    >>> vp = sc.pl.stacked_violin(adata, markers, 'bulk_labels', return_fig=True)
-    >>> vp.add_totals().style(ylim=(0,5)).show()
+    .. plot::
+        :context: close-figs
+
+        vp = sc.pl.stacked_violin(adata, markers, 'bulk_labels', return_fig=True)
+        vp.add_totals().style(ylim=(0,5)).show()
 
     The axes used can be obtained using the get_axes() method:
 
-    >>> axes_dict = vp.get_axes()
+    .. code-block:: python
+
+        axes_dict = vp.get_axes()
+        print(axes_dict)
 
     """
 

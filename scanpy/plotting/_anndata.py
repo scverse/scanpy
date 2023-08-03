@@ -3,7 +3,7 @@
 import collections.abc as cabc
 from itertools import product
 from collections import OrderedDict
-from typing import Optional, Union, Mapping  # Special
+from typing import Optional, Union, Mapping, Literal  # Special
 from typing import Sequence, Collection, Iterable  # ABCs
 from typing import Tuple, List  # Classes
 
@@ -24,7 +24,6 @@ from .. import get
 from .. import logging as logg
 from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params, _check_use_raw
-from .._compat import Literal
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes, check_colornorm
 from ._utils import ColorLike, _FontWeight, _FontSize
@@ -82,6 +81,7 @@ def scatter(
     right_margin: Optional[float] = None,
     left_margin: Optional[float] = None,
     size: Union[int, float, None] = None,
+    marker: Union[str, Sequence[str]] = '.',
     title: Optional[str] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -177,6 +177,7 @@ def _scatter_obs(
     right_margin=None,
     left_margin=None,
     size=None,
+    marker='.',
     title=None,
     show=None,
     save=None,
@@ -359,6 +360,7 @@ def _scatter_obs(
         right_margin=right_margin,
         left_margin=left_margin,
         sizes=[size for _ in keys],
+        markers=marker,
         color_map=color_map,
         show_ticks=show_ticks,
         ax=ax,
@@ -394,6 +396,7 @@ def _scatter_obs(
                         projection,
                         size=size,
                         alpha=alpha,
+                        marker=marker,
                     )
                     mask_remaining[mask] = False
                     if legend_loc.startswith('on data'):
@@ -419,6 +422,7 @@ def _scatter_obs(
                         projection,
                         size=size,
                         alpha=alpha,
+                        marker=marker,
                     )
                     if legend_loc.startswith('on data'):
                         add_centroid(centroids, name, Y, mask)
@@ -429,7 +433,7 @@ def _scatter_obs(
                 data.append(Y[mask_remaining, 2])
             axs[ikey].scatter(
                 *data,
-                marker='.',
+                marker=marker,
                 c='lightgrey',
                 s=size,
                 edgecolors='none',
@@ -520,7 +524,7 @@ def ranking(
     """\
     Plot rankings.
 
-    See, for example, how this is used in pl.pca_ranking.
+    See, for example, how this is used in pl.pca_loadings.
 
     Parameters
     ----------
@@ -916,11 +920,18 @@ def clustermap(
 
     Examples
     --------
-    Soon to come with figures. In the meanwile, see :func:`~seaborn.clustermap`.
 
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.krumsiek11()
-    >>> sc.pl.clustermap(adata, obs_keys='cell_type')
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.krumsiek11()
+        sc.pl.clustermap(adata)
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.clustermap(adata, obs_keys='cell_type')
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -1402,15 +1413,24 @@ def tracksplot(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.tracksplot(adata, markers, 'bulk_labels', dendrogram=True)
+
+    Using var_names as list:
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     .. currentmodule:: scanpy
 
@@ -2411,7 +2431,7 @@ def _plot_categories_as_colorblocks(
     labels = []
     label2code = {}  # dictionary of numerical values asigned to each label
     for code, (label, value) in enumerate(
-        obs_tidy.index.value_counts(sort=False).iteritems()
+        obs_tidy.index.value_counts(sort=False).items()
     ):
         ticks.append(value_sum + (value / 2))
         labels.append(label)

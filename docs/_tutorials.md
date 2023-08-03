@@ -2,7 +2,7 @@
 
 ## Clustering
 
-For getting started, we recommend Scanpy’s reimplementation {tutorial}`pbmc3k`
+For getting started, we recommend Scanpy’s reimplementation {doc}`/tutorials/pbmc3k`
 of Seurat’s [^cite_satija15] clustering tutorial for 3k PBMCs from 10x Genomics,
 containing preprocessing, clustering and the identification of cell types via
 known marker genes.
@@ -29,7 +29,9 @@ known marker genes.
 
 ## Visualization
 
-This tutorial shows how to visually explore genes using scanpy. {tutorial}`plotting/core`
+Learn how to visually explore genes using scanpy: {doc}`/tutorials/plotting/core`
+
+For advanced customization of your plots, see {doc}`/tutorials/plotting/advanced`
 
 ```{image} _static/img/stacked_violin_dotplot_matrixplot.png
 :width: 550px
@@ -37,7 +39,7 @@ This tutorial shows how to visually explore genes using scanpy. {tutorial}`plott
 
 ## Trajectory inference
 
-Get started with the following example for hematopoiesis for data of [^cite_paul15]: {tutorial}`paga-paul15`
+Get started with the following example for hematopoiesis for data of [^cite_paul15]: {doc}`/tutorials/paga-paul15`
 
 ```{image} _static/img/tutorials/paga_paul15.png
 :width: 450px
@@ -56,7 +58,7 @@ for two hematopoiesis datasets: [DPT example 1] [^cite_paul15] and [DPT example 
 
 ## Integrating datasets
 
-Map labels and embeddings of reference data to new data: {tutorial}`integrating-data-using-ingest`
+Map labels and embeddings of reference data to new data: {doc}`/tutorials/integrating-data-using-ingest`
 
 ```{image} https://scanpy-tutorials.readthedocs.io/en/latest/_images/integrating-data-using-ingest_21_0.png
 :width: 350px
@@ -64,8 +66,8 @@ Map labels and embeddings of reference data to new data: {tutorial}`integrating-
 
 ## Spatial data
 
-- Basic analysis of spatial data: {tutorial}`spatial/basic-analysis`
-- Integrating spatial data with scRNA-seq using scanorama: {tutorial}`spatial/integration-scanorama`
+- Basic analysis of spatial data: {doc}`/tutorials/spatial/basic-analysis`
+- Integrating spatial data with scRNA-seq using scanorama: {doc}`/tutorials/spatial/integration-scanorama`
 
 ```{image} _static/img/spatial-basic-analysis.png
 :width: 250px
@@ -77,7 +79,7 @@ Map labels and embeddings of reference data to new data: {tutorial}`integrating-
 
 ### Conversion: AnnData, SingleCellExperiment, and Seurat objects
 
-```{image} https://github.com/scverse/scanpy-in-R/raw/master/logo.png
+```{image} https://github.com/theislab/scanpy-in-R/raw/master/logo.png
 :align: right
 :width: 200px
 ```
@@ -96,7 +98,7 @@ See the [cell cycle] notebook.
 
 ### Normalization with Pearson Residuals
 
-Normalization of scRNA-seq data with Pearson Residuals, from [^cite_lause21]: {tutorial}`tutorial_pearson_residuals`
+Normalization of scRNA-seq data with Pearson Residuals, from [^cite_lause21]: {doc}`/tutorials/tutorial_pearson_residuals`
 
 ### Scaling Computations
 
@@ -138,3 +140,18 @@ See pseudotime-time inference on deep-learning based features for [cell cycle re
 [scanpy in r]: https://theislab.github.io/scanpy-in-R/
 [seurat to anndata]: https://github.com/LuckyMD/Code_snippets/blob/master/Seurat_to_anndata.ipynb
 [toggleswitch]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170430_krumsiek11/toggleswitch.ipynb
+
+
+```{toctree}
+:hidden: true
+:maxdepth: 1
+
+tutorials/pbmc3k
+tutorials/paga-paul15
+tutorials/plotting/core
+tutorials/plotting/advanced
+tutorials/integrating-data-using-ingest
+tutorials/spatial/basic-analysis
+tutorials/spatial/integration-scanorama
+tutorials/tutorial_pearson_residuals
+```

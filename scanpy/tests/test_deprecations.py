@@ -1,7 +1,7 @@
-import scanpy as sc
-from sklearn import preprocessing
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
 import pytest
+
+import scanpy as sc
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 def test_deprecate_multicore_tsne():

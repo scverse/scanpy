@@ -7,8 +7,13 @@
 /docs/_build/
 /docs/generated/
 /docs/data/
+/docs/api/generated
+/docs/external/generated
+/docs/jupyter_execute
 
 # tests
+/*coverage*
+/nunit/
 /.cache/
 /.pytest_cache/
 /scanpy/tests/test*.h5ad
@@ -16,8 +21,10 @@
 /scanpy/tests/notebooks/figures/
 
 # Environment management
+/hatch.toml
 /Pipfile
 /Pipfile.lock
+/requirements*.lock
 
 # always-ignore extensions
 *~
@@ -29,6 +36,7 @@ __pycache__/
 /scanpy.egg-info/
 /*-env/
 /env-*/
+/environment.yml
 
 # OS stuff
 .DS_Store
@@ -39,6 +47,3 @@ Thumbs.db
 # IDEs and editors
 /.idea/
 /.vscode/
-
-# Test artifacts
-**/test-results.xml

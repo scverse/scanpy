@@ -109,7 +109,7 @@ def score_genes(
             genes_to_ignore.append(gene)
     if len(genes_to_ignore) > 0:
         logg.warning(f'genes are not in var_names and ignored: {genes_to_ignore}')
-    gene_list = set(gene_list_in_var[:])
+    gene_list = set(gene_list_in_var)
 
     if len(gene_list) == 0:
         raise ValueError("No valid genes were passed for scoring.")
@@ -148,7 +148,7 @@ def score_genes(
     control_genes = set()
 
     # now pick `ctrl_size` genes from every cut
-    for cut in np.unique(obs_cut.loc[gene_list]):
+    for cut in np.unique(obs_cut.loc[list(gene_list)]):
         r_genes = np.array(obs_cut[obs_cut == cut].index)
         np.random.shuffle(r_genes)
         # uses full r_genes if ctrl_size > len(r_genes)
