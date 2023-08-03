@@ -173,7 +173,7 @@ def test_mask_length(array_type, float_dtype):
         sc.pp.pca(pbmc, mask=mask, copy=True, dtype=float_dtype)
 
 
-def test_mask_equal(float_dtype):
+def test_mask_argument_equivalence(float_dtype):
     # Test if pca result is equal when given mask as boolarray vs string
 
     pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
@@ -184,6 +184,23 @@ def test_mask_equal(float_dtype):
     pbmca = sc.pp.pca(pbmc, mask=mask, copy=True, dtype=float_dtype)
     pbmc_w_mask = sc.pp.pca(pbmc_w_mask, mask="mask", copy=True, dtype=float_dtype)
     assert np.allclose(pbmca.X.toarray(), pbmc_w_mask.X.toarray())
+
+
+def test_mask(array_type):
+    adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
+    adata.X = array_type(adata.X)
+
+    mask = np.random.choice([True, False], adata.shape[1])
+
+    adata_masked = adata[:, mask].copy()
+    sc.pp.pca(adata, mask=mask)
+    sc.pp.pca(adata_masked)
+
+    masked_var_loadings = adata.varm["PCs"][~mask]
+    np.testing.assert_equal(masked_var_loadings, np.zeros_like(masked_var_loadings))
+
+    np.testing.assert_equal(adata.obsm["X_pca"], adata_masked.obsm["X_pca"])
+    np.testing.assert_equal(adata.varm["PCs"][mask], adata_masked.varm["PCs"])
 
 
 def test_none(array_type, float_dtype):
