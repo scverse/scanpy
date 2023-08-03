@@ -38,6 +38,7 @@ A_svd = np.array(
     ]
 )
 
+
 def test_pca_transform(array_type):
     A = array_type(A_list).astype('float32')
     A_pca_abs = np.abs(A_pca)
@@ -77,6 +78,7 @@ def test_pca_shapes():
     with pytest.raises(ValueError):
         sc.pp.pca(adata, n_comps=100)
 
+
 def test_pca_sparse():
     """
     Tests that implicitly centered pca on sparse arrays returns equivalent results to
@@ -96,6 +98,7 @@ def test_pca_sparse():
     )
     assert np.allclose(implicit.obsm['X_pca'], explicit.obsm['X_pca'])
     assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
+
 
 def test_pca_reproducible(array_type):
     pbmc = pbmc3k_normalized()

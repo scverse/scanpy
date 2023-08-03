@@ -569,7 +569,6 @@ def normalize_per_cell(
 def regress_out(
     adata: AnnData,
     keys: Union[str, Sequence[str]],
-    *,
     layer: Optional[str] = None,
     n_jobs: Optional[int] = None,
     copy: bool = False,
@@ -627,10 +626,10 @@ def regress_out(
                 'we regress on the mean for each category.'
             )
         logg.debug('... regressing on per-gene means within categories')
-        regressors = np.zeros(adata.X.shape, dtype='float32')
+        regressors = np.zeros(X.shape, dtype='float32')
         for category in adata.obs[keys[0]].cat.categories:
             mask = (category == adata.obs[keys[0]]).values
-            for ix, x in enumerate(adata.X.T):
+            for ix, x in enumerate(X.T):
                 regressors[mask, ix] = x[mask].mean()
         variable_is_categorical = True
     # regress on one or several ordinal variables
@@ -644,13 +643,13 @@ def regress_out(
         # add column of ones at index 0 (first column)
         regressors.insert(0, 'ones', 1.0)
 
-    len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
-    n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
+    len_chunk = np.ceil(min(1000, X.shape[1]) / n_jobs).astype(int)
+    n_chunks = np.ceil(X.shape[1] / len_chunk).astype(int)
 
     tasks = []
     # split the adata.X matrix by columns in chunks of size n_chunk
     # (the last chunk could be of smaller size than the others)
-    chunk_list = np.array_split(adata.X, n_chunks, axis=1)
+    chunk_list = np.array_split(X, n_chunks, axis=1)
     if variable_is_categorical:
         regressors_chunk = np.array_split(regressors, n_chunks, axis=1)
     for idx, data_chunk in enumerate(chunk_list):
@@ -669,7 +668,8 @@ def regress_out(
 
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
-    adata.X = np.vstack(res).T.astype(adata.X.dtype)
+    _set_obs_rep(adata, np.vstack(res).T, layer=layer)
+    # adata.X = np.vstack(res).T.astype(adata.X.dtype)
     logg.info('    finished', time=start)
     return adata if copy else None
 

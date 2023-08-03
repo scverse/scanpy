@@ -182,6 +182,7 @@ def test_regress_out_ordinal():
 
     np.testing.assert_array_equal(single.X, multi.X)
 
+
 def test_regress_out_layer():
     from scipy.sparse import random
 
@@ -199,7 +200,8 @@ def test_regress_out_layer():
         adata, layer="counts", keys=['n_counts', 'percent_mito'], n_jobs=1, copy=True
     )
 
-    np.testing.assert_array_equal(single.X, layer.X)
+    np.testing.assert_array_equal(single.X, layer.layers["counts"])
+
 
 def test_regress_out_view():
     from scipy.sparse import random

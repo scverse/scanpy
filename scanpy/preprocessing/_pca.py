@@ -14,6 +14,7 @@ from .._utils import AnyRandom
 from .. import settings
 from ..get import _get_obs_rep
 
+
 def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: Optional[int] = None,
