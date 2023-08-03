@@ -16,11 +16,6 @@ import pandas as pd
 import collections.abc as cabc
 from scipy.sparse import coo_matrix, dia_matrix, spmatrix
 
-Score = Literal[
-    "diff-score", "fold-score", "t-score", "v-score", "t-score-pooled", "v-score-pooled"
-]
-
-
 class GroupBy:
     """
     Functionality for grouping and aggregating AnnData observations by key, per variable.
@@ -30,14 +25,8 @@ class GroupBy:
 
     Set `weight` for weighted sum, mean, and variance.
 
-    Set `explode` to True and use a key of type tuple to assign observations to multiple groups.
-    In this case, repetition of a key confers multiplicity of the observation in the group.
 
     Set `key_set` to a list of keys to most efficiently compute results for a subset of groups.
-
-    NaN values propagate, with the exception that `score_pairs` sets non-finite scores to 0 by
-    default. Use the pd_* methods to instead mask NaN values. These slower methods convert data
-    to dense format and do not currently support weight, explode, or key_set.
 
     **Implementation**
 
@@ -64,9 +53,6 @@ class GroupBy:
         Element of the AnnData to aggregate (default None yields adata.X)
     weight
         Weight field in adata.obs of type float.
-    explode
-        If False, each observation is assigned to the group keyed by adata.obs[key].
-        If True, each observation is assigned to all groups in tuple adata.obs[key].
     key_set
         Subset of keys to which to filter.
     """
@@ -75,7 +61,6 @@ class GroupBy:
     key: str
     data: Union[np.ndarray, spmatrix]
     weight: Optional[str]
-    explode: bool
     key_set: AbstractSet[str]
     _key_index: Optional[np.ndarray]  # caution, may be stale if attributes are updated
 
@@ -86,14 +71,12 @@ class GroupBy:
         *,
         data: Union[np.ndarray, spmatrix, None] = None,
         weight: Optional[str] = None,
-        explode: bool = False,
         key_set: Optional[Iterable[str]] = None,
     ):
         self.adata = adata
         self.data = adata.X if data is None else data
         self.key = key
         self.weight = weight
-        self.explode = explode
         self.key_set = None if key_set is None else dict.fromkeys(key_set).keys()
         self._key_index = None
 
@@ -200,7 +183,7 @@ class GroupBy:
             sq_mean = mean_ ** 2
         else:
             A_unweighted, _ = GroupBy(
-                self.adata, self.key, explode=self.explode, key_set=self.key_set
+                self.adata, self.key, key_set=self.key_set
             ).sparse_aggregator()
             mean_unweighted = utils.asarray(A_unweighted * self.data)
             sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted ** 2
@@ -281,20 +264,10 @@ class GroupBy:
             return keys, key_index, obs_index, weight_value
 
         key_value = self.adata.obs[self.key]
-        if self.explode:
-            assert isinstance(
-                key_value.iloc[0], tuple
-            ), "key type must be tuple to explode"
-            keys, key_index = np.unique(
-                _ndarray_from_seq([k for ks in key_value for k in ks]),
-                return_inverse=True,
-            )
-            obs_index = np.array([i for i, ks in enumerate(key_value) for _ in ks])
-        else:
-            keys, key_index = np.unique(
-                _ndarray_from_seq(key_value), return_inverse=True
-            )
-            obs_index = np.arange(len(key_index))
+        keys, key_index = np.unique(
+            _ndarray_from_seq(key_value), return_inverse=True
+        )
+        obs_index = np.arange(len(key_index))
         if self.weight is None:
             weight_value = None
         else:
