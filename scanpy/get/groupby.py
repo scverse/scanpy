@@ -1,4 +1,4 @@
-from collections import defaultdict
+from functools import cached_property
 from typing import (
     Optional,
     Iterable,
@@ -6,8 +6,8 @@ from typing import (
     Sequence,
     Tuple,
     Union,
-    NamedTuple,
     Literal,
+    List
 )
 
 from anndata import AnnData, utils
@@ -97,6 +97,31 @@ class GroupBy:
         self.key_set = None if key_set is None else dict.fromkeys(key_set).keys()
         self._key_index = None
 
+    @cached_property
+    def _superset_columns(self) -> List[str]:
+        """Find all columns which are a superset of the key column.
+
+        Returns:
+            List[str]: Superset columns.
+        """
+        columns = []
+        groupy_key_codes = self.adata.obs[self.key].astype('category')
+        for key in self.adata.obs:
+            if key != self.key:
+                key_codes = self.adata.obs[key].astype('category')
+                if all([key_codes[groupy_key_codes == group_key_code].nunique() == 1 for group_key_code in groupy_key_codes]):
+                    columns += [key]
+        return columns
+    
+    @cached_property
+    def df_grouped(self) -> pd.DataFrame:
+        df = self.adata.obs.copy()
+        if self.key_set is not None:
+            df = df[df[self.key].isin(self.key_set)]
+        if df[self.key].dtype.name == 'category':
+            df[self.key] = df[self.key].cat.remove_unused_categories()
+        return df.groupby(self.key).first()[self._superset_columns]
+
     def count(self) -> pd.Series:
         """
         Count the number of observations in each group.
@@ -121,14 +146,11 @@ class GroupBy:
         -------
             AnnData with sum in X indexed on obs by key with var from adata.
         """
-        A, keys = self.sparse_aggregator(normalize=False)
-        
+        A, _ = self.sparse_aggregator(normalize=False)
         return AnnData(
-            obs=pd.DataFrame(
-                index=pd.Index(keys, name=self.key),
-            ),
+            obs=self.df_grouped,
             var=pd.DataFrame(
-                index=pd.Index(self.adata.var_names.copy(), name=self.key),
+                index=pd.Index(self.adata.var_names.copy()),
             ),
             X=utils.asarray(A * self.data)
         )
@@ -141,13 +163,11 @@ class GroupBy:
         -------
             AnnData with means in X indexed on obs by key with var from adata.
         """
-        A, keys = self.sparse_aggregator(normalize=True)
+        A, _ = self.sparse_aggregator(normalize=True)
         return AnnData(
-            obs=pd.DataFrame(
-                index=pd.Index(keys, name=self.key),
-            ),
+            obs=self.df_grouped,
             var=pd.DataFrame(
-                index=pd.Index(self.adata.var_names.copy(), name=self.key),
+                index=pd.Index(self.adata.var_names.copy()),
             ),
             X=utils.asarray(A * self.data)
         )
@@ -172,7 +192,7 @@ class GroupBy:
             AnnData with mean and var in layers indexed on obs by key with var from adata.  Counts are in obs under counts.
         """
         assert dof >= 0
-        A, keys = self.sparse_aggregator(normalize=True)
+        A, _ = self.sparse_aggregator(normalize=True)
         count_ = np.bincount(self._key_index)
         mean_ = utils.asarray(A @ self.data)
         mean_sq = utils.asarray(A @ _power(self.data, 2))
@@ -190,15 +210,12 @@ class GroupBy:
         var_[precision * var_ < sq_mean] = 0
         if dof != 0:
             var_ *= (count_ / (count_ - dof))[:, np.newaxis]
-
+        obs = self.df_grouped
+        obs['count'] = count_
         return AnnData(
-            obs=pd.DataFrame(
-                index=pd.Index(keys, name=self.key),
-                columns=['count'],
-                data=count_
-            ),
+            obs=obs,
             var=pd.DataFrame(
-                index=pd.Index(self.adata.var_names.copy(), name=self.key),
+                index=pd.Index(self.adata.var_names.copy()),
             ),
             layers={
                 'mean': mean_,

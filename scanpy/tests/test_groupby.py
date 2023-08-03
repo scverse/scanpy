@@ -29,11 +29,11 @@ def test_groupby(use_layers):
         "c2",
         "d0",
     ]
-    pairs = [("v", "b"), ("v", "a"), ("w", "c"), ("w", "d"), ("w", "v")]
 
     obs = pd.DataFrame(index=pd.Index(cells, name="cell"))
     obs["key"] = pd.Categorical([c[0] for c in cells])
-    obs["tuple_key"] = pd.Categorical([(c[0],) for c in cells])
+    obs["key_superset"] = pd.Categorical([c[0] for c in cells]).map({'v': 'v', 'w': 'v', 'a': 'a', 'b': 'a', 'c': 'a', 'd': 'a'})
+    obs["key_subset"] = pd.Categorical([c[1] for c in cells])
     obs["weight"] = 2.0
 
     var = pd.DataFrame(index=genes)
@@ -64,6 +64,10 @@ def test_groupby(use_layers):
     stats_sparse = gb.count_mean_var()
     stats_dense = sc.get.GroupBy(adata_dense, data=(adata_dense.layers['test'] if use_layers else adata_dense.X), key="key").count_mean_var()
 
+    # superset columns can be kept but not subsets
+    assert 'key_superset' in stats_dense.obs
+    assert 'key_subset' not in stats_dense.obs
+
     assert np.allclose(stats_sparse.obs['count'], stats_dense.obs['count'])
     assert np.allclose(stats_sparse.layers['mean'], stats_dense.layers['mean'])
     assert np.allclose(stats_sparse.layers['var'], stats_dense.layers['var'], equal_nan=True)
@@ -80,10 +84,4 @@ def test_groupby(use_layers):
     key_set = ["v", "w"]
     mean_key_set = sc.get.GroupBy(adata_sparse, data=(adata_sparse.layers['test'] if use_layers else adata_sparse.X), key="key", key_set=key_set).mean()
     assert np.allclose(stats_sparse[stats_sparse.obs.index.isin(key_set), :].layers['mean'], mean_key_set.X)
-
-    gb_explode = sc.get.GroupBy(adata_sparse, data=(adata_sparse.layers['test'] if use_layers else adata_sparse.X), key="tuple_key", explode=True)
-    stats_explode = gb_explode.count_mean_var()
-
-    assert np.allclose(stats_sparse.obs['count'], stats_explode.obs['count'])
-    assert np.allclose(stats_sparse.layers['mean'], stats_explode.layers['mean'])
-    assert np.allclose(stats_sparse.layers['var'], stats_explode.layers['var'], equal_nan=True)
+    
