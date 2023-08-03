@@ -16,31 +16,6 @@ import pandas as pd
 import collections.abc as cabc
 from scipy.sparse import coo_matrix, dia_matrix, spmatrix
 
-
-class CountMeanVar(NamedTuple):
-    count: Optional[pd.Series] = None
-    mean: pd.DataFrame = None
-    var: Optional[pd.DataFrame] = None
-
-    @classmethod
-    def from_df(cls, df: pd.DataFrame) -> "CountMeanVar":
-        return CountMeanVar(
-            count=df["count"] if "count" in df.columns else None,
-            mean=df["mean"],
-            var=df["var"] if "var" in df.columns else None,
-        )
-
-    def map(self, f=lambda v: v, **fs) -> "CountMeanVar":
-        fs = defaultdict(lambda: f, fs)
-        return CountMeanVar(
-            **{
-                stat: fs[stat](val)
-                for stat, val in self._asdict().items()
-                if val is not None
-            }
-        )
-
-
 Score = Literal[
     "diff-score", "fold-score", "t-score", "v-score", "t-score-pooled", "v-score-pooled"
 ]
@@ -138,54 +113,46 @@ class GroupBy:
             name="count",
         )
 
-    def sum(self) -> pd.DataFrame:
+    def sum(self) -> AnnData:
         """
         Compute the sum per feature per group of observations.
 
         Returns
         -------
-        DataFrame of sums indexed by key with columns from adata.
+            AnnData with sum in X indexed on obs by key with var from adata.
         """
         A, keys = self.sparse_aggregator(normalize=False)
-        return pd.DataFrame(
-            index=pd.Index(keys, name=self.key, tupleize_cols=False),
-            columns=self.adata.var_names.copy(),
-            data=utils.asarray(A * self.data),
+        
+        return AnnData(
+            obs=pd.DataFrame(
+                index=pd.Index(keys, name=self.key),
+            ),
+            var=pd.DataFrame(
+                index=pd.Index(self.adata.var_names.copy(), name=self.key),
+            ),
+            X=utils.asarray(A * self.data)
         )
 
-    def mean(self) -> pd.DataFrame:
+    def mean(self) -> AnnData:
         """
         Compute the mean per feature per group of observations.
 
         Returns
         -------
-            DataFrame of means indexed by key with columns from adata.
+            AnnData with means in X indexed on obs by key with var from adata.
         """
         A, keys = self.sparse_aggregator(normalize=True)
-        return pd.DataFrame(
-            index=pd.Index(keys, name=self.key, tupleize_cols=False),
-            columns=self.adata.var_names.copy(),
-            data=utils.asarray(A * self.data),
+        return AnnData(
+            obs=pd.DataFrame(
+                index=pd.Index(keys, name=self.key),
+            ),
+            var=pd.DataFrame(
+                index=pd.Index(self.adata.var_names.copy(), name=self.key),
+            ),
+            X=utils.asarray(A * self.data)
         )
 
-    def var(self, dof: int = 1) -> pd.DataFrame:
-        """
-        Compute the variance per feature per group of observations.
-
-        See also count_mean_var, which is more efficient when the mean is also desired.
-
-        Params
-        ------
-        dof
-            Degrees of freedom for variance.
-
-        Returns
-        -------
-            DataFrame of variances indexed by key with columns from adata.
-        """
-        return self.count_mean_var(dof).var
-
-    def count_mean_var(self, dof: int = 1) -> CountMeanVar:
+    def count_mean_var(self, dof: int = 1) -> AnnData:
         """
         Compute the count, as well as mean and variance per feature, per group of observations.
 
@@ -202,7 +169,7 @@ class GroupBy:
 
         Returns
         -------
-            Dictionary with keys (count, mean, var) and values the corresponding Series and DataFrames.
+            AnnData with mean and var in layers indexed on obs by key with var from adata.  Counts are in obs under counts.
         """
         assert dof >= 0
         A, keys = self.sparse_aggregator(normalize=True)
@@ -224,15 +191,20 @@ class GroupBy:
         if dof != 0:
             var_ *= (count_ / (count_ - dof))[:, np.newaxis]
 
-        index = pd.Index(keys, name=self.key, tupleize_cols=False)
-        count_sr = pd.Series(index=index, data=count_, name="count")
-        mean_df = pd.DataFrame(
-            index=index.copy(), columns=self.adata.var_names.copy(), data=mean_
+        return AnnData(
+            obs=pd.DataFrame(
+                index=pd.Index(keys, name=self.key),
+                columns=['count'],
+                data=count_
+            ),
+            var=pd.DataFrame(
+                index=pd.Index(self.adata.var_names.copy(), name=self.key),
+            ),
+            layers={
+                'mean': mean_,
+                'var': var_
+            }
         )
-        var_df = pd.DataFrame(
-            index=index.copy(), columns=self.adata.var_names.copy(), data=var_
-        )
-        return CountMeanVar(count=count_sr, mean=mean_df, var=var_df)
 
     def sparse_aggregator(
         self, normalize: bool = False
@@ -316,39 +288,6 @@ class GroupBy:
             )
         self._key_index = key_index  # passed to count and count_mean_var to avoid re-extracting in the latter
         return keys, key_index, obs_index, weight_value
-
-    def pd_mean(self) -> pd.DataFrame:
-        """
-        Slower implementation of mean that masks NaN values.
-        """
-        assert (
-            (self.weight is None) and (self.explode is False) and (self.key_set is None)
-        )
-        df = pd.DataFrame(
-            index=self.adata.obs[self.key],
-            columns=self.adata.var_names,
-            data=utils.asarray(self.data),
-        )
-        return df.groupby(self.key).mean()
-
-    def _pd_count_mean_var_df(self) -> pd.DataFrame:
-        assert (
-            (self.weight is None) and (self.explode is False) and (self.key_set is None)
-        )
-        aggs = ["count", "mean", "var"]
-        df = pd.DataFrame(
-            index=self.adata.obs[self.key],
-            columns=self.adata.var_names,
-            data=utils.asarray(self.data),
-        )
-        return df.groupby(self.key).agg(aggs).swaplevel(axis=1).sort_index(axis=1)
-
-    def pd_count_mean_var(self) -> CountMeanVar:
-        """
-        Slower implementation of count_mean_var that masks NaN values.
-        """
-        return CountMeanVar.from_df(self._pd_count_mean_var_df())
-
 
 def _power(X, power):
     return X ** power if isinstance(X, np.ndarray) else X.power(power)
