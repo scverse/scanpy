@@ -15,7 +15,7 @@ from anndata import AnnData, utils
 import numpy as np
 import pandas as pd
 import collections.abc as cabc
-from scipy.sparse import coo_matrix, dia_matrix
+from scipy.sparse import coo_matrix, dia_matrix, spmatrix
 
 
 class CountMeanVar(NamedTuple):
@@ -86,6 +86,8 @@ class GroupBy:
     adata
     key
         Group key field in adata.obs.
+    data
+        Element of the AnnData to aggregate (default None yields adata.X)
     weight
         Weight field in adata.obs of type float.
     explode
@@ -97,6 +99,7 @@ class GroupBy:
 
     adata: AnnData
     key: str
+    data: Union[np.ndarray, spmatrix]
     weight: Optional[str]
     explode: bool
     key_set: AbstractSet[str]
@@ -107,11 +110,13 @@ class GroupBy:
         adata: AnnData,
         key: str,
         *,
+        data: Union[np.ndarray, spmatrix, None] = None,
         weight: Optional[str] = None,
         explode: bool = False,
         key_set: Optional[Iterable[str]] = None,
     ):
         self.adata = adata
+        self.data = adata.X if data is None else data
         self.key = key
         self.weight = weight
         self.explode = explode
@@ -143,11 +148,10 @@ class GroupBy:
         DataFrame of sums indexed by key with columns from adata.
         """
         A, keys = self.sparse_aggregator(normalize=False)
-        X = self.adata.X
         return pd.DataFrame(
             index=pd.Index(keys, name=self.key, tupleize_cols=False),
             columns=self.adata.var_names.copy(),
-            data=utils.asarray(A * X),
+            data=utils.asarray(A * self.data),
         )
 
     def mean(self) -> pd.DataFrame:
@@ -159,11 +163,10 @@ class GroupBy:
             DataFrame of means indexed by key with columns from adata.
         """
         A, keys = self.sparse_aggregator(normalize=True)
-        X = self.adata.X
         return pd.DataFrame(
             index=pd.Index(keys, name=self.key, tupleize_cols=False),
             columns=self.adata.var_names.copy(),
-            data=utils.asarray(A * X),
+            data=utils.asarray(A * self.data),
         )
 
     def var(self, dof: int = 1) -> pd.DataFrame:
@@ -204,20 +207,19 @@ class GroupBy:
         """
         assert dof >= 0
         A, keys = self.sparse_aggregator(normalize=True)
-        X = self.adata.X
         count_ = np.bincount(self._key_index)
-        mean_ = utils.asarray(A @ X)
-        mean_sq = utils.asarray(A @ _power(X, 2))
+        mean_ = utils.asarray(A @ self.data)
+        mean_sq = utils.asarray(A @ _power(self.data, 2))
         if self.weight is None:
             sq_mean = mean_ ** 2
         else:
             A_unweighted, _ = GroupBy(
                 self.adata, self.key, explode=self.explode, key_set=self.key_set
             ).sparse_aggregator()
-            mean_unweighted = utils.asarray(A_unweighted * X)
+            mean_unweighted = utils.asarray(A_unweighted * self.data)
             sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted ** 2
         var_ = mean_sq - sq_mean
-        precision = 2 << (42 if X.dtype == np.float64 else 20)
+        precision = 2 << (42 if self.data.dtype == np.float64 else 20)
         # detects loss of precision in mean_sq - sq_mean, which suggests variance is 0
         var_[precision * var_ < sq_mean] = 0
         if dof != 0:
@@ -358,7 +360,7 @@ class GroupBy:
             weight_value = np.ones(len(key_index))
         A = coo_matrix(
             (weight_value, (key_index, obs_index)),
-            shape=(len(keys), self.adata.X.shape[0]),
+            shape=(len(keys), self.data.shape[0]),
         )
         if normalize:
             n_row = A.shape[0]
@@ -422,7 +424,7 @@ class GroupBy:
         df = pd.DataFrame(
             index=self.adata.obs[self.key],
             columns=self.adata.var_names,
-            data=utils.asarray(self.adata.X),
+            data=utils.asarray(self.data),
         )
         return df.groupby(self.key).mean()
 
@@ -434,7 +436,7 @@ class GroupBy:
         df = pd.DataFrame(
             index=self.adata.obs[self.key],
             columns=self.adata.var_names,
-            data=utils.asarray(self.adata.X),
+            data=utils.asarray(self.data),
         )
         return df.groupby(self.key).agg(aggs).swaplevel(axis=1).sort_index(axis=1)
 

@@ -3,9 +3,16 @@ import scanpy as sc
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
+import pytest
 
-
-def test_groupby():
+@pytest.mark.parametrize(
+    'use_layers',
+    [
+        False,
+        True,
+    ],
+)
+def test_groupby(use_layers):
     genes = ["A", "B"]
     cells = [
         "v0",
@@ -50,13 +57,13 @@ def test_groupby():
         dtype=np.float32,
     )
 
-    adata_sparse = ad.AnnData(obs=obs, var=var, X=csr_matrix(X))
-    adata_dense = ad.AnnData(obs=obs, var=var, X=X)
+    adata_sparse = ad.AnnData(obs=obs, var=var, X=csr_matrix(X), layers={ 'test': csr_matrix(X) })
+    adata_dense = ad.AnnData(obs=obs, var=var, X=X, layers={ 'test': X.copy() }) # .copy needed?
 
-    gb = sc.get.GroupBy(adata_sparse, key="key")
+    gb = sc.get.GroupBy(adata_sparse, data=(adata_sparse.layers['test'] if use_layers else adata_sparse.X), key="key")
     stats_sparse = gb.count_mean_var()
-    stats_dense = sc.get.GroupBy(adata_dense, key="key").count_mean_var()
-    stats_pd = sc.get.GroupBy(adata_dense, key="key").pd_count_mean_var()
+    stats_dense = sc.get.GroupBy(adata_dense, data=(adata_dense.layers['test'] if use_layers else adata_dense.X), key="key").count_mean_var()
+    stats_pd = sc.get.GroupBy(adata_dense, data=(adata_dense.layers['test'] if use_layers else adata_dense.X), key="key").pd_count_mean_var()
 
     assert stats_sparse.count.equals(stats_dense.count)
     assert np.allclose(stats_sparse.mean, stats_dense.mean)
@@ -66,7 +73,7 @@ def test_groupby():
     assert np.allclose(stats_sparse.mean, stats_pd.mean)
     assert np.allclose(stats_sparse.var, stats_pd.var, equal_nan=True)
 
-    gb_weight = sc.get.GroupBy(adata_sparse, key="key", weight="weight")
+    gb_weight = sc.get.GroupBy(adata_sparse, data=(adata_sparse.layers['test'] if use_layers else adata_sparse.X), key="key", weight="weight")
     stats_weight = gb_weight.count_mean_var()
     sum_ = gb.sum()
     sum_weight = gb_weight.sum()
@@ -76,10 +83,10 @@ def test_groupby():
     assert np.allclose(stats_sparse.var, stats_dense.var, equal_nan=True)
 
     key_set = ["v", "w"]
-    mean_key_set = sc.get.GroupBy(adata_sparse, key="key", key_set=key_set).mean()
+    mean_key_set = sc.get.GroupBy(adata_sparse, data=(adata_sparse.layers['test'] if use_layers else adata_sparse.X), key="key", key_set=key_set).mean()
     assert np.allclose(stats_sparse.mean.loc[key_set], mean_key_set)
 
-    gb_explode = sc.get.GroupBy(adata_sparse, key="tuple_key", explode=True)
+    gb_explode = sc.get.GroupBy(adata_sparse, data=(adata_sparse.layers['test'] if use_layers else adata_sparse.X), key="tuple_key", explode=True)
     stats_explode = gb_explode.count_mean_var()
 
     assert stats_sparse.count.equals(stats_explode.count)
