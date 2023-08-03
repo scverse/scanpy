@@ -13,6 +13,7 @@ from typing import (
 from collections.abc import Mapping, MutableMapping, Callable
 from warnings import warn
 from igraph import Graph
+from networkx import non_neighbors
 
 import numpy as np
 import scipy
@@ -522,11 +523,15 @@ class Neighbors:
         # IMPORTANT: update the things you set in the docs
         transformer = self._make_transformer(
             transformer_cls,
-            n_neighbors=n_neighbors,
-            metric=metric,
-            metric_kwds=metric_kwds,
-            random_state=random_state,
-            **transformer_kwds,
+            **(
+                dict(
+                    n_neighbors=n_neighbors,
+                    metric=metric,
+                    metric_kwds=metric_kwds,
+                    random_state=random_state,
+                )
+                | transformer_kwds
+            ),
         )
         self._distances = transformer.fit_transform(X)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
@@ -637,6 +642,7 @@ class Neighbors:
             transformer_kwds = dict(
                 **transformer_kwds,
                 algorithm='brute',
+                n_neighbors=self._adata.n_obs - 1,
             )
         elif transformer_cls is None or transformer_cls == 'pynndescent':
             if transformer_cls is None:
