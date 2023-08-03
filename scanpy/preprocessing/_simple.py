@@ -669,7 +669,6 @@ def regress_out(
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
     _set_obs_rep(adata, np.vstack(res).T, layer=layer)
-    # adata.X = np.vstack(res).T.astype(adata.X.dtype)
     logg.info('    finished', time=start)
     return adata if copy else None
 
