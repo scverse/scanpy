@@ -581,14 +581,19 @@ class Neighbors:
         knn: bool,
         metric: _Metric | _MetricFn,
     ) -> tuple[_Method, type, Mapping[str, Any], bool]:
-        """Return effective `method` and `transformer_cls`.
+        """Return effective `method` and transformer.
 
         `method` will be coerced to `'gauss'` or `'umap'`.
         `transformer_cls` is coerced from a str or class to a class.
+        `transformer_kwds` is filled out in special cases (see below).
 
         If `transformer_cls` is `None` and there are few data points,
-        `transformer_cls` will be set to a brute force
+        `transformer_cls`/`transformer_kwds` will be set to a brute force
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
+
+        If `transformer_cls` is `None` and there are many data points,
+        `transformer_cls`/`transformer_kwds` will be set like `umap` does
+        (i.e. to a ~`pynndescent.PyNNDescentTransformer` with custom `n_trees` and `n_iter`).
         """
         if transformer_cls is None and transformer_kwds:
             msg = "can’t specify `transformer_kwds` when not also specifying `transformer_cls`."
