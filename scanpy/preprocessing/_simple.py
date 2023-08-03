@@ -569,6 +569,8 @@ def normalize_per_cell(
 def regress_out(
     adata: AnnData,
     keys: Union[str, Sequence[str]],
+    *,
+    layer: Optional[str] = None,
     n_jobs: Optional[int] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -585,6 +587,8 @@ def regress_out(
         The annotated data matrix.
     keys
         Keys for observation annotation on which to regress on.
+    layer
+        If provided, which element of layers to regress on.
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
@@ -596,21 +600,20 @@ def regress_out(
     Depending on `copy` returns or updates `adata` with the corrected data matrix.
     """
     start = logg.info(f'regressing out {keys}')
-    if issparse(adata.X):
-        logg.info('    sparse input is densified and may ' 'lead to high memory use')
     adata = adata.copy() if copy else adata
 
     sanitize_anndata(adata)
 
-    # TODO: This should throw an implicit modification warning
-    if adata.is_view:
-        adata._init_as_actual(adata.copy())
+    view_to_actual(adata)
 
     if isinstance(keys, str):
         keys = [keys]
 
-    if issparse(adata.X):
-        adata.X = adata.X.toarray()
+    X = _get_obs_rep(adata, layer=layer)
+
+    if issparse(X):
+        logg.info('    sparse input is densified and may ' 'lead to high memory use')
+        X = X.toarray()
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 

@@ -12,11 +12,13 @@ from .. import logging as logg
 from ._utils import _get_mean_var
 from .._utils import AnyRandom
 from .. import settings
-
+from ..get import _get_obs_rep
 
 def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: Optional[int] = None,
+    *,
+    layer: Optional[str] = None,
     zero_center: Optional[bool] = True,
     svd_solver: str = 'arpack',
     random_state: AnyRandom = 0,
@@ -49,6 +51,8 @@ def pca(
     n_comps
         Number of principal components to compute. Defaults to 50, or 1 - minimum
         dimension size of selected representation.
+    layer
+        If provided, which element of layers to use for PCA.
     zero_center
         If `True`, compute standard PCA from covariance matrix.
         If `False`, omit zero-centering variables
@@ -153,7 +157,7 @@ def pca(
 
     random_state = check_random_state(random_state)
 
-    X = adata_comp.X
+    X = _get_obs_rep(adata_comp, layer=layer)
 
     if chunked:
         if not zero_center or random_state or svd_solver != 'arpack':
