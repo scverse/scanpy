@@ -55,7 +55,7 @@ class GroupBy:
         Weight field in adata.obs of type float.
     key_set
         Subset of keys to which to filter.
-    df_key
+    groupby_df_key
         One of 'obs' or 'var' on which to groupby
     """
 
@@ -65,7 +65,8 @@ class GroupBy:
     weight: Optional[str]
     key_set: AbstractSet[str]
     _key_index: Optional[np.ndarray]  # caution, may be stale if attributes are updated
-    _df_key: str
+    _groupby_df_key: str
+    _base_key: str
 
     def __init__(
         self,
@@ -75,17 +76,17 @@ class GroupBy:
         data: Optional[Union[np.ndarray, spmatrix]] = None,
         weight: Optional[str] = None,
         key_set: Optional[Iterable[str]] = None,
-        df_key: str = 'obs',
+        groupby_df_key: str = 'obs',
     ):
         self.adata = adata
         self.data = adata.X if data is None else data
-        if df_key == 'var' and data is None:
+        if groupby_df_key == 'var' and data is None:
             self.data = self.data.T 
         self.key = key
         self.weight = weight
         self.key_set = None if key_set is None else dict.fromkeys(key_set).keys()
-        self._df_key = df_key
-        self._base_key = 'obs' if df_key != 'obs' else 'var'
+        self._groupby_df_key = groupby_df_key
+        self._base_key = 'obs' if groupby_df_key != 'obs' else 'var'
         self._key_index = None
 
     @cached_property
@@ -96,17 +97,17 @@ class GroupBy:
             List[str]: Superset columns.
         """
         columns = []
-        groupy_key_codes = getattr(self.adata, self._df_key)[self.key].astype('category')
-        for key in getattr(self.adata, self._df_key):
+        groupy_key_codes = getattr(self.adata, self._groupby_df_key)[self.key].astype('category')
+        for key in getattr(self.adata, self._groupby_df_key):
             if key != self.key:
-                key_codes = getattr(self.adata, self._df_key)[key].astype('category')
+                key_codes = getattr(self.adata, self._groupby_df_key)[key].astype('category')
                 if all([key_codes[groupy_key_codes == group_key_code].nunique() == 1 for group_key_code in groupy_key_codes]):
                     columns += [key]
         return columns
     
     @cached_property
     def df_grouped(self) -> pd.DataFrame:
-        df = getattr(self.adata, self._df_key).copy()
+        df = getattr(self.adata, self._groupby_df_key).copy()
         if self.key_set is not None:
             df = df[df[self.key].isin(self.key_set)]
         if df[self.key].dtype.name == 'category':
@@ -122,7 +123,7 @@ class GroupBy:
     @cached_property
     def obs_var_dict(self) -> dict:
         return {
-            self._df_key: self.df_grouped,
+            self._groupby_df_key: self.df_grouped,
             self._base_key: self.base_axis_indices
         }
 
@@ -154,7 +155,7 @@ class GroupBy:
         X = utils.asarray(A * self.data)
         return AnnData(
             **self.obs_var_dict,
-            X=X if self._df_key == 'obs' else X.T
+            X=X if self._groupby_df_key == 'obs' else X.T
         )
 
     def mean(self) -> AnnData:
@@ -169,7 +170,7 @@ class GroupBy:
         X = utils.asarray(A * self.data)
         return AnnData(
              **self.obs_var_dict,
-            X=X if self._df_key == 'obs' else X.T
+            X=X if self._groupby_df_key == 'obs' else X.T
         )
 
     def count_mean_var(self, dof: int = 1) -> AnnData:
@@ -200,7 +201,7 @@ class GroupBy:
             sq_mean = mean_ ** 2
         else:
             A_unweighted, _ = GroupBy(
-                self.adata, self.key, key_set=self.key_set, df_key=self._df_key
+                self.adata, self.key, key_set=self.key_set, groupby_df_key=self._groupby_df_key
             ).sparse_aggregator()
             mean_unweighted = utils.asarray(A_unweighted * self.data)
             sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted ** 2
@@ -211,12 +212,12 @@ class GroupBy:
         if dof != 0:
             var_ *= (count_ / (count_ - dof))[:, np.newaxis]
         obs_var_dict = self.obs_var_dict
-        obs_var_dict[self._df_key]['count'] = count_
+        obs_var_dict[self._groupby_df_key]['count'] = count_
         return AnnData(
              **obs_var_dict,
             layers={
-                'mean': mean_ if self._df_key == 'obs' else mean_.T,
-                'var': var_ if self._df_key == 'obs' else var_.T
+                'mean': mean_ if self._groupby_df_key == 'obs' else mean_.T,
+                'var': var_ if self._groupby_df_key == 'obs' else var_.T
             }
         )
 
@@ -277,7 +278,7 @@ class GroupBy:
                     weight_value = weight_value[mask]
             return keys, key_index, df_index, weight_value
 
-        key_value = getattr(self.adata, self._df_key)[self.key]
+        key_value = getattr(self.adata, self._groupby_df_key)[self.key]
         keys, key_index = np.unique(
             _ndarray_from_seq(key_value), return_inverse=True
         )
@@ -285,7 +286,7 @@ class GroupBy:
         if self.weight is None:
             weight_value = None
         else:
-            weight_value = getattr(self.adata, self._df_key)[self.weight].values[df_index]
+            weight_value = getattr(self.adata, self._groupby_df_key)[self.weight].values[df_index]
         if self.key_set is not None:
             keys, key_index, df_index, weight_value = _filter_indices(
                 self.key_set, keys, key_index, df_index, weight_value
