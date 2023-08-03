@@ -131,21 +131,25 @@ def test_distances_euclidean(mocker, neigh, method):
 
 
 @pytest.mark.parametrize(
-    ('transformer_cls', 'knn', 'kws'),
+    ('transformer_cls', 'kwds', 'knn'),
     [
         # knn=False trivially returns all distances
-        pytest.param(None, False, {}, id='knn=False'),
+        pytest.param(None, {}, False, id='knn=False'),
         # pynndescent returns all distances when data is so small
-        pytest.param('pynndescent', True, {}, id='pynndescent'),
-        # Brute force also returns all distances
+        pytest.param('pynndescent', {}, True, id='pynndescent'),
+        # Explicit brute force also returns all distances
         pytest.param(
-            KNeighborsTransformer, True, dict(algorithm='brute'), id='sklearn'
+            KNeighborsTransformer, dict(algorithm='brute'), True, id='sklearn'
         ),
     ],
 )
-def test_distances_all(neigh, transformer_cls, knn):
+def test_distances_all(neigh, transformer_cls, kwds, knn):
     neigh.compute_neighbors(
-        n_neighbors, transformer_cls=transformer_cls, method='gauss', knn=knn
+        n_neighbors,
+        transformer_cls=transformer_cls,
+        transformer_kwds=kwds,
+        method='gauss',
+        knn=knn,
     )
     dists = neigh.distances.toarray() if issparse(neigh.distances) else neigh.distances
     np.testing.assert_allclose(dists, distances_euclidean_all)

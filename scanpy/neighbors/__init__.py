@@ -23,7 +23,6 @@ from pynndescent import NNDescent, PyNNDescentTransformer
 from . import _connectivity
 from ._types import _Metric, _MetricFn, _Method, _KnownTransformer
 from ._common import (
-    _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
@@ -498,14 +497,17 @@ class Neighbors:
         -------
         Writes sparse graph attributes `.distances` and `.connectivities`.
         """
-        from sklearn.metrics import pairwise_distances
-
         start_neighbors = logg.debug('computing neighbors')
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
-        method, transformer_cls, shortcut = self._handle_transform_args(
-            method, transformer_cls, knn=knn
+        (
+            method,
+            transformer_cls,
+            transformer_kwds,
+            shortcut,
+        ) = self._handle_transform_args(
+            method, transformer_cls, transformer_kwds, knn=knn, metric=metric
         )
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
@@ -515,50 +517,38 @@ class Neighbors:
         self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
 
-        # neighbor search
-        use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or not knn
-        if shortcut and (use_dense_distances or X.shape[0] < 4096):
-            _distances = pairwise_distances(X, metric=metric, **metric_kwds)
-            knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
-                _distances, n_neighbors
-            )
-            if knn:
+        # TODO: more args
+        # IMPORTANT: update the things you set in the docs
+        transformer = self._make_transformer(
+            transformer_cls,
+            n_neighbors=n_neighbors,
+            metric=metric,
+            metric_kwds=metric_kwds,
+            random_state=random_state,
+            **transformer_kwds,
+        )
+        self._distances = transformer.fit_transform(X)
+        knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
+            self._distances, n_neighbors
+        )
+        if shortcut:
+            # self._distances is a sparse matrix with a diag of 1, fix that
+            self._distances[np.diag_indices_from(self.distances)] = 0
+            if knn:  # remove too far away entries and keep as sparse
                 self._distances = _get_sparse_matrix_from_indices_distances(
-                    knn_indices, knn_distances, X.shape[0], n_neighbors
+                    knn_indices, knn_distances, self._adata.n_obs, n_neighbors
                 )
-            else:
-                self._distances = _distances
-        else:
-            transformer_kwds = dict(transformer_kwds)
-            if shortcut:
-                # copied from UMAP’s `nearest_neighbors` function
-                assert transformer_cls is PyNNDescentTransformer
-                transformer_kwds.update(
-                    n_trees=min(64, 5 + int(round((X.shape[0]) ** 0.5 / 20.0))),
-                    n_iters=max(5, int(round(np.log2(X.shape[0])))),
-                )
+            else:  # convert to dense
+                self._distances = self._distances.toarray()
+        if (index := getattr(transformer, "index_", None)) and isinstance(
+            index, NNDescent
+        ):
+            # very cautious here
+            try:
+                self._rp_forest = _make_forest_dict(index)
+            except Exception:  # TODO catch the correct exception
+                pass
 
-            # TODO: more args
-            # IMPORTANT: update the things you set in the docs
-            transformer = transformer_cls(
-                n_neighbors=n_neighbors,
-                metric=metric,
-                metric_kwds=metric_kwds,
-                random_state=random_state,
-                **transformer_kwds,
-            )
-            self._distances = transformer.fit_transform(X)
-            knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
-                self._distances, n_neighbors
-            )
-            if (index := getattr(transformer, "index_", None)) and isinstance(
-                index, NNDescent
-            ):
-                # very cautious here
-                try:
-                    self._rp_forest = _make_forest_dict(index)
-                except Exception:  # TODO catch the correct exception
-                    pass
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
         if method == 'umap':
             self._connectivities = _connectivity.umap(
@@ -582,18 +572,36 @@ class Neighbors:
             self._connected_components = connected_components(self._connectivities)
             self._number_connected_components = self._connected_components[0]
 
-    @staticmethod
     def _handle_transform_args(
+        self,
         method: _Method | Literal['gauss'],
         transformer_cls: type | _KnownTransformer | None,
+        transformer_kwds: Mapping[str, Any],
         *,
         knn: bool,
-    ) -> tuple[_Method, type, bool]:
+        metric: _Metric | _MetricFn,
+    ) -> tuple[_Method, type, Mapping[str, Any], bool]:
         """Return effective `method` and `transformer_cls`.
 
-        `method` will be coerced to 'gauss' or 'umap'.
-        `transformer_cls` is coerced to a class.
+        `method` will be coerced to `'gauss'` or `'umap'`.
+        `transformer_cls` is coerced from a str or class to a class.
+
+        If `transformer_cls` is `None` and there are few data points,
+        `transformer_cls` will be set to a brute force
+        :class:`~sklearn.neighbors.KNeighborsTransformer`.
         """
+        if transformer_cls is None and transformer_kwds:
+            msg = "can’t specify `transformer_kwds` when not also specifying `transformer_cls`."
+            raise TypeError(msg)
+
+        # legacy logic
+        use_dense_distances = (
+            metric == 'euclidean' and self._adata.n_obs < 8192
+        ) or not knn
+        shortcut = transformer_cls is None and (
+            use_dense_distances or self._adata.n_obs < 4096
+        )
+
         # Coerce `method` to 'gauss' or 'umap'
         if method == 'rapids':
             if transformer_cls is not None:
@@ -609,14 +617,29 @@ class Neighbors:
 
         # Validate `knn`
         conn_method = 'gauss' if method == 'gauss' else 'umap'
-        shortcut = transformer_cls is None
-        if not knn and not (conn_method == 'gauss' and shortcut):
+        if not knn and not (conn_method == 'gauss' and transformer_cls is None):
             # “knn=False” seems to be only intended for method “gauss”
             msg = f'`method = {method!r} only with `knn = True`.'
             raise ValueError(msg)
 
         # Coerce `transformer_cls` to a class
-        if transformer_cls is None or transformer_cls == 'pynndescent':
+        if shortcut:
+            from sklearn.neighbors import KNeighborsTransformer
+
+            assert transformer_cls is None and not transformer_kwds
+            transformer_cls = KNeighborsTransformer
+            transformer_kwds = dict(
+                **transformer_kwds,
+                algorithm='brute',
+            )
+        elif transformer_cls is None or transformer_cls == 'pynndescent':
+            if transformer_cls is None:
+                # Use defaults from UMAP’s `nearest_neighbors` function
+                transformer_kwds = dict(
+                    **transformer_kwds,
+                    n_trees=min(64, 5 + int(round((self._adata.n_obs) ** 0.5 / 20.0))),
+                    n_iters=max(5, int(round(np.log2(self._adata.n_obs)))),
+                )
             transformer_cls = PyNNDescentTransformer
         elif transformer_cls == 'rapids':
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
@@ -628,7 +651,30 @@ class Neighbors:
                 f'Try passing a class or one of {set(get_args(_KnownTransformer))}'
             )
             raise ValueError(msg)
-        return conn_method, transformer_cls, shortcut
+        return conn_method, transformer_cls, transformer_kwds, shortcut
+
+    def _make_transformer(
+        self, transformer_cls, **transformer_kwds
+    ) -> object:  # TODO: KNeighborsTransformer Protocol
+        import inspect
+
+        if (
+            transformer_cls.__name__ == 'KNeighborsTransformer'
+            and transformer_kwds['n_neighbors'] == self._adata.n_obs
+        ):
+            # KNeighborsTransformer can’t handle `n_neighbors == n_obs`
+            transformer_kwds['n_neighbors'] = self._adata.n_obs - 1
+
+        sig = inspect.signature(transformer_cls)
+        if 'metric_params' in sig.parameters:
+            # needs to be a dict
+            transformer_kwds['metric_params'] = dict(
+                transformer_kwds.pop('metric_kwds')
+            )
+        if 'random_state' not in sig.parameters:
+            transformer_kwds.pop('random_state')
+
+        return transformer_cls(**transformer_kwds)
 
     def compute_transitions(self, density_normalize: bool = True):
         """\
