@@ -21,7 +21,7 @@ from sklearn.utils import check_random_state
 from pynndescent import NNDescent, PyNNDescentTransformer
 
 from . import _connectivity
-from ._enums import _Metric, _MetricFn, _Method, _KnownTransformer
+from ._types import _Metric, _MetricFn, _Method, _KnownTransformer
 from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
@@ -481,7 +481,6 @@ class Neighbors:
         metric: Union[_Metric, _MetricFn] = 'euclidean',
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
         random_state: AnyRandom = 0,
-        write_knn_indices: bool = False,
     ) -> None:
         """\
         Compute distances and connectivities of neighbors.
@@ -498,8 +497,6 @@ class Neighbors:
         Returns
         -------
         Writes sparse graph attributes `.distances` and `.connectivities`.
-        Also writes `.knn_indices` and `.knn_distances` if
-        `write_knn_indices==True`.
         """
         from sklearn.metrics import pairwise_distances
 
@@ -562,10 +559,6 @@ class Neighbors:
                     self._rp_forest = _make_forest_dict(index)
                 except Exception:  # TODO catch the correct exception
                     pass
-        # write indices as attributes
-        if write_knn_indices:
-            self.knn_indices = knn_indices
-            self.knn_distances = knn_distances
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
         if method == 'umap':
             self._connectivities = _connectivity.umap(
@@ -596,6 +589,11 @@ class Neighbors:
         *,
         knn: bool,
     ) -> tuple[_Method, type, bool]:
+        """Return effective `method` and `transformer_cls`.
+
+        `method` will be coerced to 'gauss' or 'umap'.
+        `transformer_cls` is coerced to a class.
+        """
         # Coerce `method` to 'gauss' or 'umap'
         if method == 'rapids':
             if transformer_cls is not None:
