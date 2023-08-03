@@ -523,15 +523,13 @@ class Neighbors:
         # IMPORTANT: update the things you set in the docs
         transformer = self._make_transformer(
             transformer_cls,
-            **(
-                dict(
-                    n_neighbors=n_neighbors,
-                    metric=metric,
-                    metric_kwds=metric_kwds,
-                    random_state=random_state,
-                )
-                | transformer_kwds
-            ),
+            dict(
+                n_neighbors=n_neighbors,
+                metric=metric,
+                metric_kwds=metric_kwds,
+                random_state=random_state,
+            )
+            | transformer_kwds,
         )
         self._distances = transformer.fit_transform(X)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
@@ -666,7 +664,7 @@ class Neighbors:
         return conn_method, transformer_cls, transformer_kwds, shortcut
 
     def _make_transformer(
-        self, transformer_cls, **transformer_kwds
+        self, transformer_cls: type, transformer_kwds: Mapping[str, Any]
     ) -> object:  # TODO: KNeighborsTransformer Protocol
         import inspect
 
