@@ -4,7 +4,6 @@ from typing import (
     Iterable,
     AbstractSet,
     Sequence,
-    Collection,
     Tuple,
     Union,
     NamedTuple,
@@ -235,102 +234,6 @@ class GroupBy:
         )
         return CountMeanVar(count=count_sr, mean=mean_df, var=var_df)
 
-    def score_pairs(
-        self,
-        score: Score,
-        pairs: Collection[Tuple[str, str]],
-        *,
-        return_stats: bool = False,
-        nan_to_zero: bool = True,
-    ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, CountMeanVar]]:
-        """
-        Compute scores per feature for pairs of groups of observations.
-
-        First, summary statistics are computed for each group key present in at least one pair.
-        Second, scores are computed from the summary statistics for each pair of keys in pairs.
-
-        Each pair has control/source/vehicle first and case/target/perturbation second.
-
-        Summary statistics are a subset of count (`n`), mean (`m`), and variance (`v`).
-
-        Available scoring functions:
-
-        - 'diff-score': `m1 - m0`
-        - 'fold-score': `m1 / m0`
-        - 't-score': `(m1 - m0) / sqrt(v0/n0 + v1/n1)`
-        - 'v-score': `(m1 - m0) / sqrt(v0 + v1)`
-        - 't-score-pooled': `(m1 - m0) / sqrt(v_pooled * (1/n0 + 1/n1))`
-        - 'v-score-pooled': `(m1 - m0) / sqrt(v_pooled)`
-
-        where `v_pooled = ((n0 - 1) * v0 + (n1 - 1) * v1) / (n0 + n1 - 2)`.
-
-        If weight is provided, then mean and variance are weighted.
-
-        Pairs are dropped if either group has no observations.
-
-        By default, all non-finite scores are reset to zero without warning.
-        Set `nan_to_zero=False` to investigate non-finite values more closely.
-
-        Params
-        ------
-        score
-            One of diff-score, fold-score, t-score, v-score, t-score-pooled, v-score-pooled.
-        pairs
-            List of ordered pairs of keys in adata.obs['key'].
-        return_stats
-            If True, also return dictionary of summary stats via tuple (scores, stats).
-        nan_to_zero: bool
-            If True, ignore divide-by-zero warnings and reset non-finite scores to zero.
-
-        Returns
-        -------
-        scores
-            DataFrame of scores indexed by key_0 and key_1 from each pair.
-        stats
-            If `return_stats=True` was specified, a dict of stat name to feature and observation
-        """
-        scores = {
-            "diff-score": (
-                lambda *args, **kwargs: CountMeanVar(mean=self.mean(*args, **kwargs)),
-                GroupBy._diff_score,
-            ),
-            "fold-score": (
-                lambda *args, **kwargs: CountMeanVar(mean=self.mean(*args, **kwargs)),
-                GroupBy._fold_score,
-            ),
-            "t-score": (self.count_mean_var, GroupBy._t_score),
-            "t-score-pooled": (self.count_mean_var, GroupBy._t_score_pooled),
-            "v-score": (self.count_mean_var, GroupBy._v_score),
-            "v-score-pooled": (self.count_mean_var, GroupBy._v_score_pooled),
-        }
-
-        stat_func, score_func = scores[score]
-        # key_set = set(k for p in pairs for k in p)
-        stats: CountMeanVar = stat_func()
-        # pairs = sorted(pairs)
-        i0, i1 = map(list, zip(*pairs))
-        with np.errstate(divide=("ignore" if nan_to_zero else "warn")):
-            data = score_func(
-                stats.map(
-                    lambda df: df.loc[i0].values,
-                    count=lambda df: df.loc[i0].values[:, np.newaxis],
-                ),
-                stats.map(
-                    lambda df: df.loc[i1].values,
-                    count=lambda df: df.loc[i1].values[:, np.newaxis],
-                ),
-            )
-        if nan_to_zero:
-            data[~np.isfinite(data)] = 0
-        index = pd.MultiIndex.from_tuples(
-            pairs, names=[self.key + "_0", self.key + "_1"]
-        )
-        df = pd.DataFrame(index=index, columns=self.adata.var_names.copy(), data=data)
-        if return_stats:
-            return df, stats
-        else:
-            return df
-
     def sparse_aggregator(
         self, normalize: bool = False
     ) -> Tuple[coo_matrix, np.ndarray]:
@@ -445,89 +348,6 @@ class GroupBy:
         Slower implementation of count_mean_var that masks NaN values.
         """
         return CountMeanVar.from_df(self._pd_count_mean_var_df())
-
-    def pd_score_pairs(
-        self, score: Score, pairs: Collection[Tuple[str, str]]
-    ) -> pd.DataFrame:
-        """
-        Slower implementation of score_pairs that masks NaN values.
-        """
-        assert (
-            (self.weight is None) and (self.explode is False) and (self.key_set is None)
-        )
-        scores = {
-            "diff-score": GroupBy._diff_score,
-            "fold-score": GroupBy._fold_score,
-            "t-score": GroupBy._t_score,
-            "t-score-pooled": GroupBy._t_score_pooled,
-            "v-score": GroupBy._v_score,
-            "v-score-pooled": GroupBy._v_score_pooled,
-        }
-        mean_only = score == "diff-score" or score == "fold-score"
-        if mean_only:
-            df = self.pd_mean()
-        else:
-            df = self._pd_count_mean_var_df()
-        dfs = df.loc[[p[0] for p in pairs]], df.loc[[p[1] for p in pairs]]
-        score_func = scores[score]
-        data = score_func(
-            *(
-                CountMeanVar(
-                    count=None if mean_only else df["count"].values,
-                    mean=df.values if mean_only else df["mean"].values,
-                    var=None if mean_only else df["var"].values,
-                )
-                for df in dfs
-            )
-        )
-        return pd.DataFrame(
-            index=pd.MultiIndex.from_tuples(
-                pairs, names=[self.key + "_0", self.key + "_1"]
-            ),
-            columns=dfs[0].columns if mean_only else dfs[1]["count"].columns,
-            data=data,
-        )[self.adata.var_names]
-
-    # score functions
-
-    @staticmethod
-    def _diff_score(cmv0: CountMeanVar, cmv1: CountMeanVar):
-        return cmv1.mean - cmv0.mean
-
-    @staticmethod
-    def _fold_score(cmv0: CountMeanVar, cmv1: CountMeanVar):
-        return cmv1.mean / cmv0.mean
-
-    @staticmethod
-    def _t_score(cmv0: CountMeanVar, cmv1: CountMeanVar):
-        std = np.sqrt(cmv0.var / cmv0.count + cmv1.var / cmv1.count) + (
-            cmv0.var + cmv1.var == 0
-        )
-        return (cmv1.mean - cmv0.mean) / std
-
-    @staticmethod
-    def _t_score_pooled(cmv0: CountMeanVar, cmv1: CountMeanVar):
-        var_pooled = GroupBy._var_pooled(cmv0, cmv1)
-        return (cmv1.mean - cmv0.mean) / np.sqrt(
-            var_pooled * (1 / cmv0.count + 1 / cmv1.count)
-        )
-
-    @staticmethod
-    def _v_score(cmv0: CountMeanVar, cmv1: CountMeanVar):
-        return (cmv1.mean - cmv0.mean) / (
-            np.sqrt(cmv0.var + cmv1.var) + (cmv0.var + cmv1.var == 0)
-        )
-
-    @staticmethod
-    def _v_score_pooled(cmv0: CountMeanVar, cmv1: CountMeanVar):
-        var_pooled = GroupBy._var_pooled(cmv0, cmv1)
-        return (cmv1.mean - cmv0.mean) / np.sqrt(var_pooled)
-
-    @staticmethod
-    def _var_pooled(cmv0: CountMeanVar, cmv1: CountMeanVar):
-        return ((cmv0.count - 1) * cmv0.var + (cmv1.count - 1) * cmv1.var) / (
-            cmv0.count + cmv1.count - 2
-        )
 
 
 def _power(X, power):

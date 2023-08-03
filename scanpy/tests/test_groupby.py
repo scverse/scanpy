@@ -92,24 +92,3 @@ def test_groupby(use_layers):
     assert stats_sparse.count.equals(stats_explode.count)
     assert np.allclose(stats_sparse.mean, stats_explode.mean)
     assert np.allclose(stats_sparse.var, stats_explode.var, equal_nan=True)
-
-    for score in [
-        "diff-score",
-        "fold-score",
-        "t-score",
-        "t-score-pooled",
-        "v-score",
-        "v-score-pooled",
-    ]:
-        score_sparse = gb.score_pairs(score, pairs=pairs, nan_to_zero=False)
-        score_explode = gb_explode.score_pairs(score, pairs, nan_to_zero=False)
-        score_pd = gb.pd_score_pairs(score, pairs=pairs)
-
-        assert np.allclose(score_sparse, score_explode, equal_nan=True)
-        assert np.allclose(score_sparse, score_pd, equal_nan=True)
-
-    score_nan = gb.score_pairs("t-score", pairs=pairs, nan_to_zero=False)
-    assert not np.all(np.isfinite(score_nan))
-
-    score_nan[~np.isfinite(score_nan)] = 0
-    assert np.allclose(score_nan, gb.score_pairs("t-score", pairs=pairs))
