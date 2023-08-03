@@ -4,6 +4,7 @@ from typing import Any, Literal
 from collections.abc import Mapping
 
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin, check_is_fitted
 from sklearn.exceptions import NotFittedError
@@ -27,9 +28,6 @@ _Metric = Literal[
     'cosine',
     'correlation',
 ]
-
-
-CudaArrayLike = np.ndarray  # TODO
 
 
 class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator):
@@ -75,13 +73,13 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         else:
             return True
 
-    def fit(self, X: CudaArrayLike, y: Any = None) -> RapidsKNNTransformer:
+    def fit(self, X: ArrayLike, y: Any = None) -> RapidsKNNTransformer:
         """Index data for knn search."""
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
         self.nn.fit(X_contiguous)
         return self
 
-    def transform(self, X: CudaArrayLike) -> csr_matrix:
+    def transform(self, X: ArrayLike) -> csr_matrix:
         """Perform knn search on the index."""
         self._transform_checks(X)
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
