@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from anndata import AnnData
 from scipy.sparse import csr_matrix, issparse
+from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
 from scanpy import Neighbors
@@ -130,12 +131,16 @@ def test_distances_euclidean(mocker, neigh, method):
 
 
 @pytest.mark.parametrize(
-    ('transformer_cls', 'knn'),
+    ('transformer_cls', 'knn', 'kws'),
     [
         # knn=False trivially returns all distances
-        pytest.param(None, False, id='knn=False'),
+        pytest.param(None, False, {}, id='knn=False'),
         # pynndescent returns all distances when data is so small
-        pytest.param('pynndescent', True, id='pynndescent'),
+        pytest.param('pynndescent', True, {}, id='pynndescent'),
+        # Brute force also returns all distances
+        pytest.param(
+            KNeighborsTransformer, True, dict(algorithm='brute'), id='sklearn'
+        ),
     ],
 )
 def test_distances_all(neigh, transformer_cls, knn):
