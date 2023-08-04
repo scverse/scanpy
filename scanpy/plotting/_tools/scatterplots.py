@@ -332,7 +332,7 @@ def embedding(
             )
 
             # Map nan values to na_color
-            current_cmap = pl.cm.get_cmap(color_map)
+            current_cmap = colormaps.get_cmap(color_map)
             current_cmap.set_bad(color=na_color)
 
         else:
