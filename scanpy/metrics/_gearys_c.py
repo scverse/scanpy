@@ -2,13 +2,14 @@ from functools import singledispatch
 from typing import Optional, Union
 import warnings
 
-
 from anndata import AnnData
-from scanpy.get import _get_obs_rep
 import numba
 import numpy as np
 import pandas as pd
 from scipy import sparse
+
+from ..get import _get_obs_rep
+from .._compat import fullname
 
 
 @singledispatch
@@ -327,4 +328,8 @@ def _gearys_c(g, vals) -> np.ndarray:
         full_result[idxer] = result
         return full_result
     else:
-        raise NotImplementedError()
+        msg = (
+            'Geary’s C metric not implemented for vals of type '
+            f'{fullname(type(vals))} and ndim {vals.ndim}.'
+        )
+        raise NotImplementedError(msg)

@@ -7,8 +7,9 @@ import numpy as np
 from scipy import sparse
 from numba import njit, prange
 
-from scanpy.get import _get_obs_rep
-from scanpy.metrics._gearys_c import _resolve_vals, _check_vals
+from ..get import _get_obs_rep
+from .._compat import fullname
+from ._gearys_c import _resolve_vals, _check_vals
 
 
 @singledispatch
@@ -255,4 +256,8 @@ def _morans_i(g, vals) -> np.ndarray:
         full_result[idxer] = result
         return full_result
     else:
-        raise NotImplementedError()
+        msg = (
+            'Moran’s I metric not implemented for vals of type '
+            f'{fullname(type(vals))} and ndim {vals.ndim}.'
+        )
+        raise NotImplementedError(msg)
