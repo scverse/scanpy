@@ -36,7 +36,7 @@ __all__ = [
 def _as_dask_array(x: ArrayLike) -> DaskArray:
     import dask.array as da
 
-    return da.from_array(x)
+    return da.asarray(x)
 
 
 @pytest.fixture(
