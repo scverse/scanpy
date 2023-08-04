@@ -320,7 +320,7 @@ def aggregated(
     write_to_xxxm = None
     if varm is not None:
         data = adata.varm[varm]
-        write_to_xxxm = True # the data will have to be transposed so this is accurate
+        write_to_xxxm = True  # the data will have to be transposed so this is accurate
     elif obsm is not None:
         data = adata.obsm[obsm]
         write_to_xxxm = True
