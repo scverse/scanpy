@@ -41,9 +41,6 @@ def test_check_nonnegative_integers():
     assert check_nonnegative_integers(X_) is False
 
 
-@pytest.mark.parametrize(
-    'array_type', [asarray, csr_matrix, csc_matrix], ids=lambda x: x.__name__
-)
 def test_is_constant(array_type):
     from scanpy._utils import is_constant
 

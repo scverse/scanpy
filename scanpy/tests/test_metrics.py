@@ -128,11 +128,6 @@ def test_morans_i_correctness():
 
 
 @pytest.mark.parametrize("metric", [sc.metrics.gearys_c, sc.metrics.morans_i])
-@pytest.mark.parametrize(
-    'array_type',
-    [asarray, sparse.csr_matrix, sparse.csc_matrix],
-    ids=lambda x: x.__name__,
-)
 def test_graph_metrics_w_constant_values(metric, array_type):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
