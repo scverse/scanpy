@@ -18,7 +18,7 @@ pytestmark = [needs("zarr")]
 
 
 @pytest.fixture()
-def adata(self):
+def adata():
     a = ad.read_zarr(input_file)  # regular anndata
     a.X = a.X[:]  # convert to numpy array
     return a
