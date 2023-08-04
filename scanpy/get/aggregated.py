@@ -345,7 +345,8 @@ def aggregated(
     )
 
 
-@aggregated.register(Array)
+@aggregated.register(np.ndarray)
+@aggregated.register(spmatrix)
 def aggregated_from_array(
     data,
     groupby_df: pd.DataFrame,
