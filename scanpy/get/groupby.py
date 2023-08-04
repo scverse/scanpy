@@ -19,13 +19,13 @@ from scipy.sparse import coo_matrix, dia_matrix, spmatrix
 
 class GroupBy:
     """
-    Functionality for grouping and aggregating AnnData observations by key, per variable.
+    Functionality for grouping and aggregating AnnData observations by key on `obs`
+     and if you want to do `var`, transpose the AnnData object first.
 
     There is currently support for count, sum, mean, and varience per group, and for scores
     derived from these per pair of groups.
 
     Set `weight` for weighted sum, mean, and variance.
-
 
     Set `key_set` to a list of keys to most efficiently compute results for a subset of groups.
 
@@ -56,8 +56,8 @@ class GroupBy:
         Weight field in adata.obs of type float.
     key_set
         Subset of keys to which to filter.
-    data_loc_key
-        One of 'obsm', 'layers', or 'varm' where data should be written
+    write_to_obsm
+        Whether to write to `obsm` or not
     """
 
     _adata: AnnData
@@ -66,6 +66,7 @@ class GroupBy:
     _weight: Optional[str]
     _key_set: AbstractSet[str]
     _key_index: Optional[np.ndarray]  # caution, may be stale if attributes are updated
+    _write_to_obsm: bool
 
     def __init__(
         self,
@@ -75,7 +76,7 @@ class GroupBy:
         *,
         weight: Optional[str] = None,
         key_set: Optional[Iterable[str]] = None,
-        data_loc_key: Optional[Literal['obsm']] = None,
+        write_to_obsm: bool = False,
     ):
         self._adata = adata
         self._data = data
@@ -83,7 +84,7 @@ class GroupBy:
         self._weight = weight
         self._key_set = None if key_set is None else dict.fromkeys(key_set).keys()
         self._key_index = None
-        self._data_loc_key = data_loc_key
+        self._write_to_obsm = write_to_obsm
 
     @cached_property
     def _superset_columns(self) -> List[str]:
@@ -150,9 +151,8 @@ class GroupBy:
         """
         A, _ = self._sparse_aggregator(normalize=False)
         X = utils.asarray(A * self._data)
-        data_loc_key = self._data_loc_key if self._data_loc_key is not None else 'X'
         data_dict = (
-            {data_loc_key: X} if data_loc_key == 'X' else {data_loc_key: {'sum': X}}
+            {'obsm': {'sum': X}} if self._write_to_obsm else { 'X': X }
         )
         return AnnData(**{**self._obs_var_dict, **data_dict})
 
@@ -166,9 +166,8 @@ class GroupBy:
         """
         A, _ = self._sparse_aggregator(normalize=True)
         X = utils.asarray(A * self._data)
-        data_loc_key = self._data_loc_key if self._data_loc_key is not None else 'X'
         data_dict = (
-            {data_loc_key: X} if data_loc_key == 'X' else {data_loc_key: {'mean': X}}
+            {'obsm': {'mean': X}} if self._write_to_obsm else { 'X': X }
         )
         return AnnData(**{**self._obs_var_dict, **data_dict})
 
@@ -204,7 +203,7 @@ class GroupBy:
                 data=self._data,
                 key=self._key,
                 key_set=self._key_set,
-                data_loc_key=self._data_loc_key,
+                write_to_obsm=self._write_to_obsm,
             )._sparse_aggregator()
             mean_unweighted = utils.asarray(A_unweighted * self._data)
             sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted**2
@@ -216,13 +215,11 @@ class GroupBy:
             var_ *= (count_ / (count_ - dof))[:, np.newaxis]
         obs_var_dict = self._obs_var_dict
         obs_var_dict['obs']['count'] = count_
-        data_loc_key = (
-            self._data_loc_key if self._data_loc_key is not None else 'layers'
-        )
+        write_to_obsm = 'obsm' if self._write_to_obsm else 'layers'
         return AnnData(
             **{
                 **obs_var_dict,
-                data_loc_key: {
+                write_to_obsm: {
                     'mean': mean_,
                     'var': var_,
                 },
@@ -329,13 +326,13 @@ def aggregated(
     varm=None,
 ):
     data = adata.X
-    data_loc_key = None
+    write_to_obsm = None
     if varm is not None:
         data = adata.varm[varm]
-        data_loc_key = 'obsm'
+        write_to_obsm = True  # the data will have to be transposed so this is accurate
     elif obsm is not None:
         data = adata.obsm[obsm]
-        data_loc_key = 'obsm'
+        write_to_obsm = True
     elif layer is not None:
         data = adata.layers[layer]
         if df_key == 'var':
@@ -348,7 +345,7 @@ def aggregated(
         key=by,
         weight=weight,
         key_set=key_set,
-        data_loc_key=data_loc_key,
+        write_to_obsm=write_to_obsm,
     )
     if how == 'count':
         data = groupby.count()
