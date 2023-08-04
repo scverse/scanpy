@@ -1,4 +1,4 @@
-from functools import cached_property
+from functools import singledispatch
 from typing import (
     Optional,
     Iterable,
@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 import collections.abc as cabc
 from scipy.sparse import coo_matrix, dia_matrix, spmatrix
+
+Array = Union[np.ndarray, spmatrix]
 
 
 class GroupBy:
@@ -62,70 +64,26 @@ class GroupBy:
 
     _adata: AnnData
     _key: str
-    _data: Union[np.ndarray, spmatrix]
+    _data: Array
     _weight: Optional[str]
     _key_set: AbstractSet[str]
     _key_index: Optional[np.ndarray]  # caution, may be stale if attributes are updated
-    _write_to_obsm: bool
 
     def __init__(
         self,
-        adata: AnnData,
+        df: pd.DataFrame,
         key: str,
-        data: Union[np.ndarray, spmatrix],
+        data: Array,
         *,
         weight: Optional[str] = None,
         key_set: Optional[Iterable[str]] = None,
-        write_to_obsm: bool = False,
     ):
-        self._adata = adata
+        self._df = df
         self._data = data
         self._key = key
         self._weight = weight
         self._key_set = None if key_set is None else dict.fromkeys(key_set).keys()
         self._key_index = None
-        self._write_to_obsm = write_to_obsm
-
-    @cached_property
-    def _superset_columns(self) -> List[str]:
-        """Find all columns which are a superset of the key column.
-
-        Returns:
-            List[str]: Superset columns.
-        """
-        columns = []
-        groupy_key_codes = self._adata.obs[self._key].astype('category')
-        for key in self._adata.obs:
-            if key != self._key:
-                key_codes = self._adata.obs[key].astype('category')
-                if all(
-                    [
-                        key_codes[groupy_key_codes == group_key_code].nunique() == 1
-                        for group_key_code in groupy_key_codes
-                    ]
-                ):
-                    columns += [key]
-        return columns
-
-    @cached_property
-    def _df_grouped(self) -> pd.DataFrame:
-        df = self._adata.obs.copy()
-        if self._key_set is not None:
-            df = df[df[self._key].isin(self._key_set)]
-        if df[self._key].dtype.name == 'category':
-            df[self._key] = df[self._key].cat.remove_unused_categories()
-        return df.groupby(self._key).first()[self._superset_columns]
-
-    @cached_property
-    def _base_axis_indices(self) -> pd.Index:
-        return pd.DataFrame(index=pd.Index(self._adata.var_names).copy())
-
-    @cached_property
-    def _obs_var_dict(self) -> dict:
-        return {
-            'obs': self._df_grouped,
-            'var': self._base_axis_indices,
-        }
 
     def count(self) -> AnnData:
         """
@@ -137,11 +95,9 @@ class GroupBy:
         """
         _, key_index, _, _ = self._extract_indices()
         count_ = np.bincount(key_index)
-        obs_var_dict = self._obs_var_dict
-        obs_var_dict['obs']['count'] = count_
-        return AnnData(**obs_var_dict)
+        return count_
 
-    def sum(self) -> AnnData:
+    def sum(self) -> Array:
         """
         Compute the sum per feature per group of observations.
 
@@ -150,13 +106,9 @@ class GroupBy:
             AnnData with sum in X indexed on obs by key with var from adata.
         """
         A, _ = self._sparse_aggregator(normalize=False)
-        X = utils.asarray(A * self._data)
-        data_dict = (
-            {'obsm': {'sum': X}} if self._write_to_obsm else { 'X': X }
-        )
-        return AnnData(**{**self._obs_var_dict, **data_dict})
+        return utils.asarray(A * self._data)
 
-    def mean(self) -> AnnData:
+    def mean(self) -> Array:
         """
         Compute the mean per feature per group of observations.
 
@@ -165,13 +117,9 @@ class GroupBy:
             AnnData with means in X indexed on obs by key with var from adata.
         """
         A, _ = self._sparse_aggregator(normalize=True)
-        X = utils.asarray(A * self._data)
-        data_dict = (
-            {'obsm': {'mean': X}} if self._write_to_obsm else { 'X': X }
-        )
-        return AnnData(**{**self._obs_var_dict, **data_dict})
+        return utils.asarray(A * self._data)
 
-    def count_mean_var(self, dof: int = 1) -> AnnData:
+    def count_mean_var(self, dof: int = 1) -> dict:
         """
         Compute the count, as well as mean and variance per feature, per group of observations.
 
@@ -199,11 +147,10 @@ class GroupBy:
             sq_mean = mean_**2
         else:
             A_unweighted, _ = GroupBy(
-                adata=self._adata,
+                df=self._df,
                 data=self._data,
                 key=self._key,
                 key_set=self._key_set,
-                write_to_obsm=self._write_to_obsm,
             )._sparse_aggregator()
             mean_unweighted = utils.asarray(A_unweighted * self._data)
             sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted**2
@@ -213,18 +160,7 @@ class GroupBy:
         var_[precision * var_ < sq_mean] = 0
         if dof != 0:
             var_ *= (count_ / (count_ - dof))[:, np.newaxis]
-        obs_var_dict = self._obs_var_dict
-        obs_var_dict['obs']['count'] = count_
-        write_to_obsm = 'obsm' if self._write_to_obsm else 'layers'
-        return AnnData(
-            **{
-                **obs_var_dict,
-                write_to_obsm: {
-                    'mean': mean_,
-                    'var': var_,
-                },
-            }
-        )
+        return {'mean': mean_, 'var': var_, 'count': count_}
 
     def _sparse_aggregator(
         self, normalize: bool = False
@@ -283,13 +219,13 @@ class GroupBy:
                     weight_value = weight_value[mask]
             return keys, key_index, df_index, weight_value
 
-        key_value = self._adata.obs[self._key]
+        key_value = self._df[self._key]
         keys, key_index = np.unique(_ndarray_from_seq(key_value), return_inverse=True)
         df_index = np.arange(len(key_index))
         if self._weight is None:
             weight_value = None
         else:
-            weight_value = self._adata.obs[self._weight].values[df_index]
+            weight_value = self._df[self._weight].values[df_index]
         if self._key_set is not None:
             keys, key_index, df_index, weight_value = _filter_indices(
                 self._key_set, keys, key_index, df_index, weight_value
@@ -313,11 +249,42 @@ def _ndarray_from_seq(lst: Sequence):
     return arr
 
 
+def _superset_columns(df: pd.DataFrame, groupby_key: str) -> List[str]:
+    """Find all columns which are a superset of the key column.
+
+    Returns:
+        List[str]: Superset columns.
+    """
+    columns = []
+    groupy_key_codes = df[groupby_key].astype('category')
+    for key in df:
+        if key != groupby_key:
+            key_codes = df[key].astype('category')
+            if all(
+                [
+                    key_codes[groupy_key_codes == group_key_code].nunique() == 1
+                    for group_key_code in groupy_key_codes
+                ]
+            ):
+                columns += [key]
+    return columns
+
+
+def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
+    df = df.copy()
+    if key_set is not None:
+        df = df[df[key].isin(key_set)]
+    if df[key].dtype.name == 'category':
+        df[key] = df[key].cat.remove_unused_categories()
+    return df.groupby(key).first()[_superset_columns(df, key)]
+
+
+@singledispatch
 def aggregated(
     adata: AnnData,
     by: str,
-    how: Literal['count', 'mean', 'sum', 'count_mean_var'],
-    df_key: Literal['obs', 'var'] = 'obs',
+    how: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
+    groupby_df_key: Literal['obs', 'var'] = 'obs',
     weight: Optional[str] = None,
     key_set: Optional[Iterable[str]] = None,
     dof: int = 1,
@@ -335,26 +302,60 @@ def aggregated(
         write_to_obsm = True
     elif layer is not None:
         data = adata.layers[layer]
-        if df_key == 'var':
+        if groupby_df_key == 'var':
             data = data.T
-    elif df_key == 'var':
+    elif groupby_df_key == 'var':
         data = data.T
+    return aggregated_from_array(
+        data,
+        groupby_df=getattr(adata, groupby_df_key),
+        groupby_df_key=groupby_df_key,
+        no_groupby_df=getattr(adata, 'var' if groupby_df_key == 'obs' else 'obs'),
+        by=by,
+        weight=weight,
+        key_set=key_set,
+        how=how,
+        dof=dof,
+        write_to_obsm=write_to_obsm,
+    )
+
+
+@aggregated.register(Array)
+def aggregated_from_array(
+    data,
+    groupby_df: pd.DataFrame,
+    groupby_df_key: str,
+    no_groupby_df: pd.DataFrame,
+    by: str,
+    write_to_obsm: bool,
+    weight: Optional[str] = None,
+    key_set: Optional[Iterable[str]] = None,
+    how: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
+    dof: int = 1,
+):
     groupby = GroupBy(
-        adata=adata if df_key == 'obs' else adata.T,
+        df=groupby_df,
         data=data,
         key=by,
         weight=weight,
         key_set=key_set,
-        write_to_obsm=write_to_obsm,
     )
+    obs_var_dict = {'obs': _df_grouped(groupby_df, by, key_set), 'var': no_groupby_df}
+    data_dict = {}
     if how == 'count':
-        data = groupby.count()
+        obs_var_dict['obs']['count'] = groupby.count()
     elif how == 'mean':
-        data = groupby.mean()
+        agg = groupby.mean()
+        data_dict = {'obsm': {'mean': agg}} if write_to_obsm else {'X': agg}
     elif how == 'sum':
-        data = groupby.sum()
+        agg = groupby.sum()
+        data_dict = {'obsm': {'sum': agg}} if write_to_obsm else {'X': agg}
     else:
-        data = groupby.count_mean_var(dof)
-    if df_key == 'var':
-        return data.T
-    return data
+        agg = groupby.count_mean_var(dof)
+        write_to_obsm = 'obsm' if write_to_obsm else 'layers'
+        obs_var_dict['obs']['count'] = agg['count']
+        data_dict = {write_to_obsm: {'mean': agg['mean'], 'var': agg['var']}}
+    adata_agg = AnnData(**{**data_dict, **obs_var_dict})
+    if groupby_df_key == 'var':
+        return adata_agg.T
+    return adata_agg

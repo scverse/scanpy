@@ -91,16 +91,16 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
 
     data_dict = {(data_key if data_key != 'layers' else 'layer'): 'test'}
     stats_sparse = sc.get.aggregated(
-        adata=adata_sparse,
+        adata_sparse,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='count_mean_var',
         **data_dict,
     )
     stats_dense = sc.get.aggregated(
-        adata=adata_dense,
+        adata_dense,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='count_mean_var',
         **data_dict,
     )
@@ -123,20 +123,20 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
     )
 
     stats_weight = sc.get.aggregated(
-        adata=adata_dense,
+        adata_dense,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='count_mean_var',
         weight="weight",
         **data_dict,
     )
     sum_ = sc.get.aggregated(
-        adata=adata_sparse, by="key", df_key=groupby_df_key, how='sum', **data_dict
+        adata_sparse, by="key", groupby_df_key=groupby_df_key, how='sum', **data_dict
     )
     sum_weight = sc.get.aggregated(
-        adata=adata_dense,
+        adata_dense,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='sum',
         weight="weight",
         **data_dict,
@@ -162,9 +162,9 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
 
     key_set = ["v", "w"]
     mean_key_set_adata = sc.get.aggregated(
-        adata=adata_dense,
+        adata_dense,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='mean',
         key_set=key_set,
         **data_dict,
@@ -270,15 +270,15 @@ def test_groupby_X(groupby_df_key):
         adata_dense = ad.AnnData(obs=df_base, var=df_groupby, X=csr_matrix(X).T)
 
     stats_sparse = sc.get.aggregated(
-        adata=adata_sparse,
+        adata_sparse,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='count_mean_var',
     )
     stats_dense = sc.get.aggregated(
-        adata=adata_dense,
+        adata_dense,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='count_mean_var',
     )
 
@@ -291,22 +291,24 @@ def test_groupby_X(groupby_df_key):
         getattr(stats_sparse, groupby_df_key)['count'],
     )
     assert np.allclose(stats_sparse.layers['mean'], stats_dense.layers['mean'])
-    assert np.allclose(stats_sparse.layers['var'], stats_dense.layers['var'], equal_nan=True)
+    assert np.allclose(
+        stats_sparse.layers['var'], stats_dense.layers['var'], equal_nan=True
+    )
 
     stats_weight = sc.get.aggregated(
-        adata=adata_dense,
+        adata_dense,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='count_mean_var',
         weight="weight",
     )
     sum_ = sc.get.aggregated(
-        adata=adata_sparse, by="key", df_key=groupby_df_key, how='sum'
+        adata_sparse, by="key", groupby_df_key=groupby_df_key, how='sum'
     )
     sum_weight = sc.get.aggregated(
-        adata=adata_dense,
+        adata_dense,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='sum',
         weight="weight",
     )
@@ -319,9 +321,9 @@ def test_groupby_X(groupby_df_key):
 
     key_set = ["v", "w"]
     mean_key_set_adata = sc.get.aggregated(
-        adata=adata_dense,
+        adata_dense,
         by="key",
-        df_key=groupby_df_key,
+        groupby_df_key=groupby_df_key,
         how='mean',
         key_set=key_set,
     )
@@ -340,7 +342,7 @@ def test_groupby_X(groupby_df_key):
         columns=getattr(
             adata_dense, f"{'var' if groupby_df_key == 'obs' else 'obs'}_names"
         ),
-        data=data_dense
+        data=data_dense,
     )
     grouped_agg_df = (
         df.groupby('key')
