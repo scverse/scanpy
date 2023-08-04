@@ -21,8 +21,7 @@ Array = Union[np.ndarray, spmatrix]
 
 class Aggregate:
     """
-    Functionality for grouping and aggregating AnnData observations by key on `obs`
-     and if you want to do `var`, transpose the AnnData object first.
+    Functionality for generic grouping and aggregating.
 
     There is currently support for count, sum, mean, and varience per group, and for scores
     derived from these per pair of groups.
