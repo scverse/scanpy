@@ -7,7 +7,6 @@ import pandas as pd
 import scanpy as sc
 from scipy import sparse
 
-from anndata.tests.helpers import asarray
 import pytest
 
 from scanpy.testing._helpers.data import pbmc68k_reduced
