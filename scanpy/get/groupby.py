@@ -49,49 +49,42 @@ class GroupBy:
 
     Params
     ------
-    adata
-    key
-        Group key field in adata.obs.
-    data
-        Element of the AnnData to aggregate (default None yields adata.X).  Should have the same dimensions as the AnnData object.
-    weight
-        Weight field in adata.obs of type float.
+    _groupby
+        `Series` containing values for grouping by.
+    _data
+        Data matrix for aggregation.
+    _weight
+        Weights to be used for aggergation.
     key_set
         Subset of keys to which to filter.
-    write_to_obsm
-        Whether to write to `obsm` or not
     """
 
-    _adata: AnnData
-    _key: str
+    _groupby: pd.Series
     _data: Array
-    _weight: Optional[str]
+    _weight: Union[pd.Series, Array]
     _key_set: AbstractSet[str]
     _key_index: Optional[np.ndarray]  # caution, may be stale if attributes are updated
 
     def __init__(
         self,
-        df: pd.DataFrame,
-        key: str,
+        groupby: pd.Series,
         data: Array,
-        *,
-        weight: Optional[str] = None,
+        weight: Union[pd.Series, Array] = None,
         key_set: Optional[Iterable[str]] = None,
     ):
-        self._df = df
+        self._groupby = groupby
         self._data = data
-        self._key = key
         self._weight = weight
         self._key_set = None if key_set is None else dict.fromkeys(key_set).keys()
         self._key_index = None
 
-    def count(self) -> AnnData:
+    def count(self) -> np.ndarray:
         """
         Count the number of observations in each group.
 
         Returns
         -------
-            Series of counts indexed by key.
+            Array of counts.
         """
         _, key_index, _, _ = self._extract_indices()
         count_ = np.bincount(key_index)
@@ -103,7 +96,7 @@ class GroupBy:
 
         Returns
         -------
-            AnnData with sum in X indexed on obs by key with var from adata.
+            Array of sum.
         """
         A, _ = self._sparse_aggregator(normalize=False)
         return utils.asarray(A * self._data)
@@ -114,7 +107,7 @@ class GroupBy:
 
         Returns
         -------
-            AnnData with means in X indexed on obs by key with var from adata.
+            Array of mean.
         """
         A, _ = self._sparse_aggregator(normalize=True)
         return utils.asarray(A * self._data)
@@ -136,7 +129,7 @@ class GroupBy:
 
         Returns
         -------
-            AnnData with mean and var in layers indexed on obs by key with var from adata.  Counts are in obs under counts.
+            dict with mean, count, and var keys.
         """
         assert dof >= 0
         A, _ = self._sparse_aggregator(normalize=True)
@@ -147,9 +140,9 @@ class GroupBy:
             sq_mean = mean_**2
         else:
             A_unweighted, _ = GroupBy(
-                df=self._df,
+                groupby=self._groupby,
                 data=self._data,
-                key=self._key,
+                weight=self._weight,
                 key_set=self._key_set,
             )._sparse_aggregator()
             mean_unweighted = utils.asarray(A_unweighted * self._data)
@@ -219,13 +212,13 @@ class GroupBy:
                     weight_value = weight_value[mask]
             return keys, key_index, df_index, weight_value
 
-        key_value = self._df[self._key]
+        key_value = self._groupby
         keys, key_index = np.unique(_ndarray_from_seq(key_value), return_inverse=True)
         df_index = np.arange(len(key_index))
         if self._weight is None:
             weight_value = None
         else:
-            weight_value = self._df[self._weight].values[df_index]
+            weight_value = self._weight.values[df_index]
         if self._key_set is not None:
             keys, key_index, df_index, weight_value = _filter_indices(
                 self._key_set, keys, key_index, df_index, weight_value
@@ -252,6 +245,10 @@ def _ndarray_from_seq(lst: Sequence):
 def _superset_columns(df: pd.DataFrame, groupby_key: str) -> List[str]:
     """Find all columns which are a superset of the key column.
 
+    Args:
+        df (pd.DataFrame): DataFrame which contains candidate columns.
+        groupby_key (str): Key for column of which to find superset of columns.
+
     Returns:
         List[str]: Superset columns.
     """
@@ -271,6 +268,16 @@ def _superset_columns(df: pd.DataFrame, groupby_key: str) -> List[str]:
 
 
 def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
+    """Generate a grouped-by dataframe (no aggregation) by a key with columns that are supersets of the key column
+
+    Args:
+        df (pd.DataFrame): DataFrame to be grouped.
+        key (str): Column to be grouped on.
+        key_set (List[str]): values in the `key` column to keep before groupby.
+
+    Returns:
+        pd.DataFrame: Grouped-by Dataframe.
+    """
     df = df.copy()
     if key_set is not None:
         df = df[df[key].isin(key_set)]
@@ -285,38 +292,57 @@ def aggregated(
     by: str,
     how: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
     groupby_df_key: Literal['obs', 'var'] = 'obs',
-    weight: Optional[str] = None,
+    weight_key: Optional[str] = None,
     key_set: Optional[Iterable[str]] = None,
     dof: int = 1,
     layer=None,
     obsm=None,
     varm=None,
-):
+) -> AnnData:
+    """Aggregate data based on one of the columns of one of the axes (`obs` or `var`).  If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
+
+    Args:
+        adata (AnnData): AnnData to be aggregated.
+        by (str): Key of the column to be grouped-by.
+        how (Literal[&#39;count&#39;, &#39;mean&#39;, &#39;sum&#39;, &#39;count_mean_var&#39;], optional): _description_. Defaults to 'count_mean_var'.
+        groupby_df_key (Literal[&#39;obs&#39;, &#39;var&#39;], optional): _description_. Defaults to 'obs'.
+        weight_key (Optional[str], optional): _description_. Defaults to None.  Key of the `groupby_df_key` containing weights for a weighted sum aggregation.
+        key_set (Optional[Iterable[str]], optional): _description_. Defaults to None. Subset of groupby_df_key on which to filter.
+        dof (int, optional): _description_. Defaults to 1. Degrees of freedom for variance.
+        layer (_type_, optional): _description_. Defaults to None.  If not None, key for aggregation data.
+        obsm (_type_, optional): _description_. Defaults to None. If not None, key for aggregation data.
+        varm (_type_, optional): _description_. Defaults to None. If not None, key for aggregation data.
+
+    Returns:
+        _type_: _description_
+    """
     data = adata.X
-    write_to_obsm = None
+    write_to_xxxm = None
     if varm is not None:
         data = adata.varm[varm]
-        write_to_obsm = True  # the data will have to be transposed so this is accurate
+        write_to_xxxm = True # the data will have to be transposed so this is accurate
     elif obsm is not None:
         data = adata.obsm[obsm]
-        write_to_obsm = True
+        write_to_xxxm = True
     elif layer is not None:
         data = adata.layers[layer]
         if groupby_df_key == 'var':
             data = data.T
-    elif groupby_df_key == 'var':
+    elif (
+        groupby_df_key == 'var'
+    ):  # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
         data = data.T
-    return aggregated_from_array(
+    return aggregated(
         data,
         groupby_df=getattr(adata, groupby_df_key),
         groupby_df_key=groupby_df_key,
-        no_groupby_df=getattr(adata, 'var' if groupby_df_key == 'obs' else 'obs'),
         by=by,
-        weight=weight,
+        write_to_xxxm=write_to_xxxm,
+        no_groupby_df=getattr(adata, 'var' if groupby_df_key == 'obs' else 'obs'),
+        weight_key=weight_key,
         key_set=key_set,
         how=how,
         dof=dof,
-        write_to_obsm=write_to_obsm,
     )
 
 
@@ -325,36 +351,55 @@ def aggregated_from_array(
     data,
     groupby_df: pd.DataFrame,
     groupby_df_key: str,
-    no_groupby_df: pd.DataFrame,
     by: str,
-    write_to_obsm: bool,
-    weight: Optional[str] = None,
+    write_to_xxxm: bool,
+    no_groupby_df: pd.DataFrame,
+    weight_key: Optional[str] = None,
     key_set: Optional[Iterable[str]] = None,
     how: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
     dof: int = 1,
-):
+) -> AnnData:
+    """Aggregate data based on one of the columns of one of a DataFrame.
+
+    Args:
+        data (Array): Data for aggregation.
+        groupby_df (pd.DataFrame): DataFrame with column to be grouped on.
+        groupby_df_key (str): Key of AnnData corresponding to the axis on which the grouped by data belongs.
+        by (str): Key of the groupby DataFrame for grouping.
+        write_to_xxxm (bool): Whether or not to write aggregation data to `varm` or `obsm` (based on `groupby_df_key`)
+        no_groupby_df (pd.DataFrame): DataFrame on the opposite axis of groupby_df_key.
+        weight_key (Optional[str], optional): _description_. Defaults to None.  Key of the `groupby_df_key` containing weights for a weighted sum aggregation.
+        key_set (Optional[Iterable[str]], optional): _description_. Defaults to None. Subset of groupby_df_key on which to filter.
+        how (Literal[&#39;count&#39;, &#39;mean&#39;, &#39;sum&#39;, &#39;count_mean_var&#39;], optional): _description_. Defaults to 'count_mean_var'.
+        dof (int, optional): _description_. Defaults to 1. Degrees of freedom for variance.
+
+    Returns:
+        AnnData: _description_
+    """
     groupby = GroupBy(
-        df=groupby_df,
+        groupby=groupby_df[by],
         data=data,
-        key=by,
-        weight=weight,
+        weight=groupby_df[weight_key] if weight_key is not None else None,
         key_set=key_set,
     )
+    # groupby df is put in `obs`, nongroupby in `var` to be transposed later as appropriate
     obs_var_dict = {'obs': _df_grouped(groupby_df, by, key_set), 'var': no_groupby_df}
     data_dict = {}
     if how == 'count':
-        obs_var_dict['obs']['count'] = groupby.count()
+        obs_var_dict['obs']['count'] = groupby.count()  # count goes in df
     elif how == 'mean':
         agg = groupby.mean()
-        data_dict = {'obsm': {'mean': agg}} if write_to_obsm else {'X': agg}
+        data_dict = {'obsm': {'mean': agg}} if write_to_xxxm else {'X': agg}
     elif how == 'sum':
         agg = groupby.sum()
-        data_dict = {'obsm': {'sum': agg}} if write_to_obsm else {'X': agg}
+        data_dict = {'obsm': {'sum': agg}} if write_to_xxxm else {'X': agg}
     else:
         agg = groupby.count_mean_var(dof)
-        write_to_obsm = 'obsm' if write_to_obsm else 'layers'
-        obs_var_dict['obs']['count'] = agg['count']
-        data_dict = {write_to_obsm: {'mean': agg['mean'], 'var': agg['var']}}
+        write_key = 'obsm' if write_to_xxxm else 'layers'
+        obs_var_dict['obs']['count'] = agg['count']  # count in df
+        data_dict = {
+            write_key: {'mean': agg['mean'], 'var': agg['var']}
+        }  # others in layers/obsm
     adata_agg = AnnData(**{**data_dict, **obs_var_dict})
     if groupby_df_key == 'var':
         return adata_agg.T

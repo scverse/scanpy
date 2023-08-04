@@ -127,7 +127,7 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
         by="key",
         groupby_df_key=groupby_df_key,
         how='count_mean_var',
-        weight="weight",
+        weight_key="weight",
         **data_dict,
     )
     sum_ = sc.get.aggregated(
@@ -138,7 +138,7 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
         by="key",
         groupby_df_key=groupby_df_key,
         how='sum',
-        weight="weight",
+        weight_key="weight",
         **data_dict,
     )
 
@@ -300,7 +300,7 @@ def test_groupby_X(groupby_df_key):
         by="key",
         groupby_df_key=groupby_df_key,
         how='count_mean_var',
-        weight="weight",
+        weight_key="weight",
     )
     sum_ = sc.get.aggregated(
         adata_sparse, by="key", groupby_df_key=groupby_df_key, how='sum'
@@ -310,7 +310,7 @@ def test_groupby_X(groupby_df_key):
         by="key",
         groupby_df_key=groupby_df_key,
         how='sum',
-        weight="weight",
+        weight_key="weight",
     )
 
     assert np.allclose(2 * sum_.X, sum_weight.X)
