@@ -23,8 +23,7 @@ class Aggregate:
     """
     Functionality for generic grouping and aggregating.
 
-    There is currently support for count, sum, mean, and varience per group, and for scores
-    derived from these per pair of groups.
+    There is currently support for count, sum, mean, and variance.
 
     Set `weight` for weighted sum, mean, and variance.
 
@@ -32,8 +31,8 @@ class Aggregate:
 
     **Implementation**
 
-    Moments are computed using weighted sum aggregation of AnnData obsevations per variable
-    (i.e., feature) via multiplication by a sparse coordinate matrix A, exposed by
+    Moments are computed using weighted sum aggregation of data by some feature
+    via multiplication by a sparse coordinate matrix A, exposed by
     `_sparse_aggregator`. The approach works with data in ndarray or scipy sparse formats, with
     no view or copy overhead on runtime or memory, even when filtering keys.
 
@@ -41,10 +40,6 @@ class Aggregate:
     entries in X with multiplicity the number of group memberships for that entry. This is
     O(data) for partitions (each observation belonging to exactly one group), independent of
     the number of groups.
-
-    To compute scores, first statistics are computed for each group in at least one pair, and
-    then scores are computed for each pair using the statistics. Runtime is dominated by the
-    former, so is effectively independent of the number of pairs.
 
     Params
     ------
