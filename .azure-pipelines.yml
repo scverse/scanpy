@@ -16,9 +16,9 @@ jobs:
     vmImage: 'ubuntu-22.04'
   strategy:
     matrix:
-      Python38:
+      Python3.8:
         python.version: '3.8'
-      Python39: {}
+      Python3.11: {}
       minimal_tests:
         TEST_EXTRA: 'test-min'
       anndata_dev:
