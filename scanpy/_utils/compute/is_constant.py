@@ -5,6 +5,8 @@ import numpy as np
 from numba import njit
 from scipy import sparse
 
+from ..._compat import DaskArray
+
 
 @singledispatch
 def is_constant(a, axis=None) -> np.ndarray:
@@ -41,6 +43,7 @@ def is_constant(a, axis=None) -> np.ndarray:
 
 
 @is_constant.register(np.ndarray)
+@is_constant.register(DaskArray)
 def _(a, axis=None):
     # Should eventually support nd, not now.
     if axis is None:
