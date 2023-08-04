@@ -956,6 +956,7 @@ def test_genes_symbols(image_comparer, id, fn):
 def _pbmc_scatterplots_session():
     # Wrapped in another fixture to avoid mutation
     pbmc = pbmc68k_reduced()
+    pbmc.obs["mask"] = pbmc.obs["louvain"].isin(["0", "1", "3"])
     pbmc.layers["sparse"] = pbmc.raw.X / 2
     pbmc.layers["test"] = pbmc.X.copy() + 100
     pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
@@ -1103,6 +1104,14 @@ def pbmc_scatterplots(_pbmc_scatterplots_session):
         (
             'umap_symbols',
             partial(sc.pl.umap, color=['1', '2', '3'], gene_symbols='numbers'),
+        ),
+        (
+            "pca_mask",
+            partial(
+                sc.pl.pca,
+                color=['LYZ', 'CD79A', 'louvain'],
+                mask="mask",
+            ),
         ),
     ],
 )
@@ -1613,21 +1622,6 @@ def test_scrublet_plots(image_comparer, plt):
 def test_umap_mask_equal(check_same_image):
     # they look the same the problem I think is something with the size of the dots in the scatterplot
     pbmc = sc.datasets.pbmc3k_processed()
-    '''
-    mpl.use('TkAgg')
-    ax = sc.pl.umap(pbmc, show=False)
-    sc.pl.umap(
-        pbmc[pbmc.obs["louvain"].isin(['B cells', 'NK cells'])],
-        color="LDHB",
-        ax=ax
-    )
-    sc.pl.umap(
-        pbmc,
-        color="LDHB",
-        mask=pbmc.obs["louvain"].isin(['B cells', 'NK cells']),
-        show=True,
-    )
-    '''
     # Check that all desired cells are coloured and masked cells gray
     ax = sc.pl.umap(pbmc, size=1.0, show=False)
     sc.pl.umap(
