@@ -42,16 +42,22 @@ class _CommandDelegator(cabc.MutableMapping):
         self.parser_map = {}
         self.runargs = runargs
 
+    def __contains__(self, k: str) -> bool:
+        if k in self.parser_map:
+            return True
+        try:
+            self[k]
+        except KeyError:
+            return False
+        return True
+
     def __getitem__(self, k: str) -> ArgumentParser:
         try:
             return self.parser_map[k]
         except KeyError:
             if which(f'{self.command}-{k}'):
                 return _DelegatingParser(self, k)
-            # Only here is the command list retrieved
-            raise ArgumentError(
-                self.action, f'No command “{k}”. Choose from {set(self)}'
-            )
+            raise
 
     def __setitem__(self, k: str, v: ArgumentParser) -> None:
         self.parser_map[k] = v
