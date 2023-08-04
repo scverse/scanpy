@@ -13,7 +13,6 @@ from typing import (
 from collections.abc import Mapping, MutableMapping, Callable
 from warnings import warn
 from igraph import Graph
-from networkx import non_neighbors
 
 import numpy as np
 import scipy
