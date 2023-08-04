@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from types import MappingProxyType
 from typing import (
+    TYPE_CHECKING,
     Union,
     Optional,
     Any,
@@ -12,7 +13,6 @@ from typing import (
 )
 from collections.abc import Mapping, MutableMapping, Callable
 from warnings import warn
-from igraph import Graph
 
 import numpy as np
 import scipy
@@ -20,6 +20,9 @@ from anndata import AnnData
 from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import check_random_state
 from pynndescent import NNDescent, PyNNDescentTransformer
+
+if TYPE_CHECKING:
+    from igraph import Graph
 
 from . import _connectivity
 from ._types import _Metric, _MetricFn, _Method, _KnownTransformer
@@ -518,17 +521,17 @@ class Neighbors:
         self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
 
-        # TODO: more args
-        # IMPORTANT: update the things you set in the docs
+        # IMPORTANT: when changing the parameters set here,
+        #            update them in the docs!
+        transformer_kwds_default = dict(
+            n_neighbors=n_neighbors,
+            metric=metric,
+            metric_kwds=metric_kwds,
+            random_state=random_state,
+        )
         transformer = self._make_transformer(
             transformer_cls,
-            dict(
-                n_neighbors=n_neighbors,
-                metric=metric,
-                metric_kwds=metric_kwds,
-                random_state=random_state,
-            )
-            | transformer_kwds,
+            {**transformer_kwds_default, **transformer_kwds},
         )
         self._distances = transformer.fit_transform(X)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
