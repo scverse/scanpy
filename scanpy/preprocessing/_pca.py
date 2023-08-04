@@ -28,7 +28,6 @@ def pca(
     random_state: AnyRandom = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
-    # layer: str = None,
     mask: Union[np.ndarray, str, None, Empty] = _empty,
     dtype: str = 'float32',
     copy: bool = False,
@@ -129,6 +128,9 @@ def pca(
              covariance matrix.
     """
     logg_start = logg.info('computing PCA')
+    if layer is not None and chunked:
+        # Current chunking implementation relies on pca being called on X
+        raise NotImplementedError("Cannot use `layer` and `chunked` at the same time.")
 
     # chunked calculation is not randomized, anyways
     if svd_solver in {'auto', 'randomized'} and not chunked:
@@ -168,26 +170,14 @@ def pca(
     if mask is _empty:
         mask = None
 
-    # Check mask, change to boolean array and apply masking
-    '''
-    use_raw = False
-    if layer is not None:
-        if adata.raw is not None:
-            if layer not in adata.layers.keys() or adata.layers.keys() is None:
-                use_raw = True
-                layer = None
-    X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
-    '''
-
     # Check mask and change to boolean array
-    save_to_uns = mask
+    mask_param = mask
 
     if mask is not None:
         mask = _check_mask(adata, mask, 1)
-        X = adata[:, mask]
-
-    # Apply masking
-    adata_comp = X if mask is not None else adata
+        adata_comp = adata[:, mask]
+    else:
+        adata_comp = adata
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
@@ -200,15 +190,13 @@ def pca(
 
     random_state = check_random_state(random_state)
 
-    X = _get_obs_rep(adata_comp, layer=layer)
-
     if chunked:
         if not zero_center or random_state or svd_solver != 'arpack':
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
         from sklearn.decomposition import IncrementalPCA
 
-        X_pca = np.zeros((X.shape[0], n_comps), X.dtype)
+        X_pca = np.zeros((adata_comp.shape[0], n_comps), adata.X.dtype)
 
         pca_ = IncrementalPCA(n_components=n_comps)
 
@@ -219,7 +207,10 @@ def pca(
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
-    elif (not issparse(X) or svd_solver == "randomized") and zero_center:
+    elif (
+        not issparse(X := _get_obs_rep(adata_comp, layer=layer))
+        or svd_solver == "randomized"
+    ) and zero_center:
         from sklearn.decomposition import PCA
 
         if issparse(X) and svd_solver == "randomized":
@@ -287,7 +278,7 @@ def pca(
             'params': {
                 'zero_center': zero_center,
                 'use_highly_variable': use_highly_variable,
-                'mask': save_to_uns,
+                'mask': mask_param,
             },
             'variance': pca_.explained_variance_,
             'variance_ratio': pca_.explained_variance_ratio_,

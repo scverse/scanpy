@@ -158,19 +158,21 @@ def test_pca_n_pcs():
     )
 
 
-def test_mask_highly_var_error(array_type, float_dtype):
+def test_mask_highly_var_error(array_type):
     # Test highly_variable ValueError
-    adata = array_type(A_list).astype('float32')
-    with pytest.raises(ValueError):
+    adata = AnnData(array_type(A_list).astype('float32'))
+    with pytest.raises(ValueError), pytest.warns(
+        FutureWarning, match="highly_variable"
+    ):
         sc.pp.pca(adata, use_highly_variable=True)
 
 
-def test_mask_length(array_type, float_dtype):
+def test_mask_length():
     # check warning on mask length
     pbmc = sc.datasets.pbmc68k_reduced()
     mask = np.random.choice([True, False], pbmc.shape[1] + 1)
     with pytest.raises(ValueError):
-        sc.pp.pca(pbmc, mask=mask, copy=True, dtype=float_dtype)
+        sc.pp.pca(pbmc, mask=mask, copy=True)
 
 
 def test_mask_argument_equivalence(float_dtype):
@@ -200,7 +202,10 @@ def test_mask(array_type):
     np.testing.assert_equal(masked_var_loadings, np.zeros_like(masked_var_loadings))
 
     np.testing.assert_equal(adata.obsm["X_pca"], adata_masked.obsm["X_pca"])
-    np.testing.assert_equal(adata.varm["PCs"][mask], adata_masked.varm["PCs"])
+    # There are slight difference based on whether the matrix was column or row major
+    np.testing.assert_allclose(
+        adata.varm["PCs"][mask], adata_masked.varm["PCs"], rtol=1e-11
+    )
 
 
 def test_none(array_type, float_dtype):
@@ -233,8 +238,8 @@ def test_pca_layer():
     layer_adata.layers["counts"] = X_adata.X.copy()
     del layer_adata.X
 
-    sc.pp.pca(X_adata, dtype=np.float64)
-    sc.pp.pca(layer_adata, layer="counts", dtype=np.float64)
+    sc.pp.pca(X_adata)
+    sc.pp.pca(layer_adata, layer="counts")
 
     assert layer_adata.uns["pca"]["params"]["layer"] == "counts"
     assert "layer" not in X_adata.uns["pca"]["params"]
