@@ -221,3 +221,29 @@ def test_none(array_type, float_dtype):
     assert not np.array_equal(without_var.obsm['X_pca'], with_var.obsm['X_pca'])
     with_no_mask = sc.pp.pca(adata, mask=None, copy=True, dtype=float_dtype)
     assert np.array_equal(without_var.obsm['X_pca'], with_no_mask.obsm['X_pca'])
+
+
+def test_pca_layer():
+    """
+    Tests that layers works the same way as .X
+    """
+    X_adata = pbmc3k_normalized()
+
+    layer_adata = X_adata.copy()
+    layer_adata.layers["counts"] = X_adata.X.copy()
+    del layer_adata.X
+
+    sc.pp.pca(X_adata, dtype=np.float64)
+    sc.pp.pca(layer_adata, layer="counts", dtype=np.float64)
+
+    assert layer_adata.uns["pca"]["params"]["layer"] == "counts"
+    assert "layer" not in X_adata.uns["pca"]["params"]
+
+    np.testing.assert_equal(
+        X_adata.uns["pca"]["variance"], layer_adata.uns["pca"]["variance"]
+    )
+    np.testing.assert_equal(
+        X_adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
+    )
+    np.testing.assert_equal(X_adata.obsm['X_pca'], layer_adata.obsm['X_pca'])
+    np.testing.assert_equal(X_adata.varm['PCs'], layer_adata.varm['PCs'])

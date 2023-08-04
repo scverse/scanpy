@@ -21,6 +21,8 @@ from .._utils import Empty, _empty
 def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: Optional[int] = None,
+    *,
+    layer: Optional[str] = None,
     zero_center: Optional[bool] = True,
     svd_solver: str = 'arpack',
     random_state: AnyRandom = 0,
@@ -55,6 +57,8 @@ def pca(
     n_comps
         Number of principal components to compute. Defaults to 50, or 1 - minimum
         dimension size of selected representation.
+    layer
+        If provided, which element of layers to use for PCA.
     zero_center
         If `True`, compute standard PCA from covariance matrix.
         If `False`, omit zero-centering variables
@@ -196,7 +200,7 @@ def pca(
 
     random_state = check_random_state(random_state)
 
-    X = adata_comp.X
+    X = _get_obs_rep(adata_comp, layer=layer)
 
     if chunked:
         if not zero_center or random_state or svd_solver != 'arpack':
@@ -272,19 +276,26 @@ def pca(
 
     if data_is_AnnData:
         adata.obsm['X_pca'] = X_pca
-        adata.uns['pca'] = {}
-        adata.uns['pca']['params'] = {
-            'zero_center': zero_center,
-            'mask': save_to_uns,
-            'use_highly_variable': use_highly_variable,
-        }
+
         if mask is not None:
             adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
             adata.varm['PCs'][mask] = pca_.components_.T
         else:
             adata.varm['PCs'] = pca_.components_.T
-        adata.uns['pca']['variance'] = pca_.explained_variance_
-        adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
+
+        uns_entry = {
+            'params': {
+                'zero_center': zero_center,
+                'use_highly_variable': use_highly_variable,
+                'mask': save_to_uns,
+            },
+            'variance': pca_.explained_variance_,
+            'variance_ratio': pca_.explained_variance_ratio_,
+        }
+        if layer is not None:
+            uns_entry['params']['layer'] = layer
+        adata.uns['pca'] = uns_entry
+
         logg.info('    finished', time=logg_start)
         logg.debug(
             'and added\n'
