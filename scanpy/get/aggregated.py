@@ -295,26 +295,26 @@ def aggregated(
     weight_key: Optional[str] = None,
     key_set: Optional[Iterable[str]] = None,
     dof: int = 1,
-    layer=None,
-    obsm=None,
-    varm=None,
+    layer: Optional[str] = None,
+    obsm: Optional[str] = None,
+    varm: Optional[str] = None,
 ) -> AnnData:
     """Aggregate data based on one of the columns of one of the axes (`obs` or `var`).  If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
 
     Args:
         adata (AnnData): AnnData to be aggregated.
         by (str): Key of the column to be grouped-by.
-        how (Literal[&#39;count&#39;, &#39;mean&#39;, &#39;sum&#39;, &#39;count_mean_var&#39;], optional): _description_. Defaults to 'count_mean_var'.
-        groupby_df_key (Literal[&#39;obs&#39;, &#39;var&#39;], optional): _description_. Defaults to 'obs'.
-        weight_key (Optional[str], optional): _description_. Defaults to None.  Key of the `groupby_df_key` containing weights for a weighted sum aggregation.
-        key_set (Optional[Iterable[str]], optional): _description_. Defaults to None. Subset of groupby_df_key on which to filter.
-        dof (int, optional): _description_. Defaults to 1. Degrees of freedom for variance.
-        layer (_type_, optional): _description_. Defaults to None.  If not None, key for aggregation data.
-        obsm (_type_, optional): _description_. Defaults to None. If not None, key for aggregation data.
-        varm (_type_, optional): _description_. Defaults to None. If not None, key for aggregation data.
+        how (Literal[&#39;count&#39;, &#39;mean&#39;, &#39;sum&#39;, &#39;count_mean_var&#39;], optional):  How to aggregate. Defaults to 'count_mean_var'.
+        groupby_df_key (Literal[&#39;obs&#39;, &#39;var&#39;], optional): Axis on which to find group by column. Defaults to 'obs'.
+        weight_key (Optional[str], optional): Key of the `groupby_df_key` containing weights for a weighted sum aggregation. Defaults to None.
+        key_set (Optional[Iterable[str]], optional): Subset of groupby_df_key on which to filter. Defaults to None.
+        dof (int, optional): Degrees of freedom for variance. Defaults to 1.
+        layer (str, optional): If not None, key for aggregation data. Defaults to None.
+        obsm (str, optional): If not None, key for aggregation data. Defaults to None.
+        varm (str, optional): If not None, key for aggregation data. Defaults to None.
 
     Returns:
-        _type_: _description_
+        AnnData: Aggregated AnnData.
     """
     data = adata.X
     write_to_xxxm = None
@@ -368,13 +368,13 @@ def aggregated_from_array(
         by (str): Key of the groupby DataFrame for grouping.
         write_to_xxxm (bool): Whether or not to write aggregation data to `varm` or `obsm` (based on `groupby_df_key`)
         no_groupby_df (pd.DataFrame): DataFrame on the opposite axis of groupby_df_key.
-        weight_key (Optional[str], optional): _description_. Defaults to None.  Key of the `groupby_df_key` containing weights for a weighted sum aggregation.
-        key_set (Optional[Iterable[str]], optional): _description_. Defaults to None. Subset of groupby_df_key on which to filter.
-        how (Literal[&#39;count&#39;, &#39;mean&#39;, &#39;sum&#39;, &#39;count_mean_var&#39;], optional): _description_. Defaults to 'count_mean_var'.
-        dof (int, optional): _description_. Defaults to 1. Degrees of freedom for variance.
+        weight_key (Optional[str], optional): Key of the `groupby_df_key` containing weights for a weighted sum aggregation. Defaults to None.
+        key_set (Optional[Iterable[str]], optional): Defaults to None. Subset of groupby_df_key on which to filter.
+        how (Literal[&#39;count&#39;, &#39;mean&#39;, &#39;sum&#39;, &#39;count_mean_var&#39;], optional): How to aggregate. Defaults to 'count_mean_var'.
+        dof (int, optional):  Degrees of freedom for variance. Defaults to 1.
 
     Returns:
-        AnnData: _description_
+        AnnData: Aggregated AnnData
     """
     groupby = Aggregate(
         groupby=groupby_df[by],
