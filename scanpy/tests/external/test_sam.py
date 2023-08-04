@@ -1,4 +1,3 @@
-import pytest
 import scanpy as sc
 import scanpy.external as sce
 import numpy as np

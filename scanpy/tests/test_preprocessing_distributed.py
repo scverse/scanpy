@@ -1,4 +1,3 @@
-from importlib.util import find_spec
 from pathlib import Path
 
 import anndata as ad
@@ -31,7 +30,7 @@ def adata(self):
         pytest.param("dask", marks=[needs("dask")]),
     ]
 )
-def adata_dist(self, request):
+def adata_dist(request):
     # regular anndata except for X, which we replace on the next line
     a = ad.read_zarr(input_file)
     a.uns["dist-mode"] = request.param
@@ -48,7 +47,7 @@ def adata_dist(self, request):
         yield a
 
 
-def test_log1p(self, adata, adata_dist):
+def test_log1p(adata, adata_dist):
     log1p(adata_dist)
     result = materialize_as_ndarray(adata_dist.X)
     log1p(adata)
@@ -57,7 +56,7 @@ def test_log1p(self, adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_normalize_per_cell(self, adata, adata_dist):
+def test_normalize_per_cell(adata, adata_dist):
     if adata_dist.uns["dist-mode"] == "dask":
         pytest.xfail("TODO: Test broken for dask")
     normalize_per_cell(adata_dist)
@@ -68,7 +67,7 @@ def test_normalize_per_cell(self, adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_normalize_total(self, adata, adata_dist):
+def test_normalize_total(adata, adata_dist):
     normalize_total(adata_dist)
     result = materialize_as_ndarray(adata_dist.X)
     normalize_total(adata)
@@ -77,7 +76,7 @@ def test_normalize_total(self, adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_filter_cells(self, adata, adata_dist):
+def test_filter_cells(adata, adata_dist):
     filter_cells(adata_dist, min_genes=3)
     result = materialize_as_ndarray(adata_dist.X)
     filter_cells(adata, min_genes=3)
@@ -86,7 +85,7 @@ def test_filter_cells(self, adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_filter_genes(self, adata, adata_dist):
+def test_filter_genes(adata, adata_dist):
     filter_genes(adata_dist, min_cells=2)
     result = materialize_as_ndarray(adata_dist.X)
     filter_genes(adata, min_cells=2)
@@ -95,7 +94,7 @@ def test_filter_genes(self, adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_write_zarr(self, adata, adata_dist):
+def test_write_zarr(adata, adata_dist):
     import zarr
 
     log1p(adata_dist)
