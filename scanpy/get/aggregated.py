@@ -19,7 +19,7 @@ from scipy.sparse import coo_matrix, dia_matrix, spmatrix
 Array = Union[np.ndarray, spmatrix]
 
 
-class GroupBy:
+class Aggregate:
     """
     Functionality for grouping and aggregating AnnData observations by key on `obs`
      and if you want to do `var`, transpose the AnnData object first.
@@ -139,7 +139,7 @@ class GroupBy:
         if self._weight is None:
             sq_mean = mean_**2
         else:
-            A_unweighted, _ = GroupBy(
+            A_unweighted, _ = Aggregate(
                 groupby=self._groupby,
                 data=self._data,
                 weight=self._weight,
@@ -376,7 +376,7 @@ def aggregated_from_array(
     Returns:
         AnnData: _description_
     """
-    groupby = GroupBy(
+    groupby = Aggregate(
         groupby=groupby_df[by],
         data=data,
         weight=groupby_df[weight_key] if weight_key is not None else None,

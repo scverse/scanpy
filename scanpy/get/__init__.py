@@ -4,4 +4,4 @@ from .get import rank_genes_groups_df, obs_df, var_df
 # Private
 from .get import _get_obs_rep, _set_obs_rep
 
-from .groupby import aggregated, aggregated_from_array
+from .aggregated import aggregated, aggregated_from_array
