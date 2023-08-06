@@ -2,6 +2,7 @@ import pytest
 
 import numpy as np
 import scanpy as sc
+import pandas as pd
 
 
 @pytest.mark.parametrize(
@@ -41,3 +42,19 @@ def test_rank_genes_groups_with_renamed_categories_use_rep():
 
     sc.tl.rank_genes_groups(adata, 'blobs', method="logreg")
     assert not adata.uns['rank_genes_groups']['names'][0].tolist() == ('3', '1', '0')
+
+
+def test_rank_genes_groups_with_unsorted_groups():
+    adata = sc.datasets.blobs(n_variables=4, n_centers=3, n_observations=200)
+    adata._sanitize()
+    adata.rename_categories('blobs', ['Zero', 'One', 'Two'])
+    bdata = adata.copy()
+    sc.tl.rank_genes_groups(
+        adata, 'blobs', groups=['Zero', 'One', 'Two'], method="logreg"
+    )
+    sc.tl.rank_genes_groups(
+        bdata, 'blobs', groups=['One', 'Two', 'Zero'], method="logreg"
+    )
+    array_ad = pd.DataFrame(adata.uns["rank_genes_groups"]["scores"]['One']).to_numpy()
+    array_bd = pd.DataFrame(bdata.uns["rank_genes_groups"]["scores"]['One']).to_numpy()
+    np.testing.assert_equal(array_ad, array_bd)
