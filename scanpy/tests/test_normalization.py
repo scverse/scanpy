@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+
 import pytest
 import numpy as np
 from anndata import AnnData
@@ -32,7 +36,7 @@ X_frac = [[1, 0, 1], [3, 0, 1], [5, 6, 1]]
     ],
     ids=["numpy-array", "sparse-csr", "dask-array"],
 )
-def typ(request):
+def typ(request) -> Callable[[], type]:
     return request.param()
 
 
