@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from functools import singledispatch
 from numbers import Integral
 
 import numpy as np
+from numpy.typing import NDArray
 from numba import njit
 from scipy import sparse
 
@@ -9,7 +12,7 @@ from ..._compat import DaskArray
 
 
 @singledispatch
-def is_constant(a, axis=None) -> np.ndarray:
+def is_constant(a, axis: int | None = None) -> bool | NDArray[np.bool_]:
     """
     Check whether values in array are constant.
 
@@ -43,8 +46,7 @@ def is_constant(a, axis=None) -> np.ndarray:
 
 
 @is_constant.register(np.ndarray)
-@is_constant.register(DaskArray)
-def _(a, axis=None):
+def _(a: NDArray, axis: int | None = None) -> bool | NDArray[np.bool_]:
     # Should eventually support nd, not now.
     if axis is None:
         return np.array_equal(a, a.flat[0])
@@ -57,13 +59,13 @@ def _(a, axis=None):
         return _is_constant_rows(a)
 
 
-def _is_constant_rows(a):
+def _is_constant_rows(a: NDArray) -> NDArray[np.bool_]:
     b = np.broadcast_to(a[:, 0][:, np.newaxis], a.shape)
     return (a == b).all(axis=1)
 
 
 @is_constant.register(sparse.csr_matrix)
-def _(a, axis=None):
+def _(a: sparse.csr_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
         if len(a.data) == np.multiply(*a.shape):
             return is_constant(a.data)
@@ -80,7 +82,12 @@ def _(a, axis=None):
 
 
 @njit
-def _is_constant_csr_rows(data, indices, indptr, shape):
+def _is_constant_csr_rows(
+    data: NDArray[np.number],
+    indices: NDArray[np.integer],
+    indptr: NDArray[np.integer],
+    shape: tuple[int, int],
+):
     N = len(indptr) - 1
     result = np.ones(N, dtype=np.bool_)
     for i in range(N):
@@ -98,7 +105,7 @@ def _is_constant_csr_rows(data, indices, indptr, shape):
 
 
 @is_constant.register(sparse.csc_matrix)
-def _(a, axis=None):
+def _(a: sparse.csc_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
         if len(a.data) == np.multiply(*a.shape):
             return is_constant(a.data)
@@ -112,3 +119,11 @@ def _(a, axis=None):
     elif axis == 1:
         a = a.T.tocsc()
         return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape[::-1])
+
+
+@is_constant.register(DaskArray)
+def _(a: DaskArray, axis: int | None = None) -> bool | NDArray[np.bool_]:
+    if axis is None:
+        v = a.flatten()[0]
+        return (a == v).all()
+    raise NotImplementedError('TODO')

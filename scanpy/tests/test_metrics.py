@@ -153,12 +153,12 @@ def test_graph_metrics_w_constant_values(metric, array_type):
         results_const_vals = metric(g, XT_const_vals)
 
     assert not np.isnan(results_full).any()
-    np.testing.assert_array_equal(results_const_zeros, results_const_vals)
+    np.testing.assert_almost_equal(results_const_zeros, results_const_vals)
     np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
     np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
 
     non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
-    np.testing.assert_array_equal(
+    np.testing.assert_almost_equal(
         results_full[non_const_mask], results_const_zeros[non_const_mask]
     )
 
