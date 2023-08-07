@@ -341,14 +341,12 @@ class _RankGenes:
         clf = LogisticRegression(**kwds)
         clf.fit(X, self.grouping.cat.codes)
         scores_all = clf.coef_
-        unique_codes = np.unique(self.grouping.cat.codes)
         for igroup, cat in enumerate(self.groups_order):
             if len(self.groups_order) <= 2:  # binary logistic regression
                 scores = scores_all[0]
             else:
-                cat = np.where(self.grouping.cat.categories == cat)[0][0]
-                cat = np.where(unique_codes == cat)[0][0]
-                scores = scores_all[cat]
+                cat_code: int = np.argmax(self.grouping.cat.categories == cat)
+                scores = scores_all[cat_code]
             yield igroup, scores, None
 
             if len(self.groups_order) <= 2:
