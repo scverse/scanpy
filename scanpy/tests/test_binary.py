@@ -36,7 +36,7 @@ def test_help_displayed(args: List[str], capsys: CaptureFixture):
     assert captured.out.startswith('usage: ')
 
 
-def test_help_output(set_path: type(None), capsys: CaptureFixture):
+def test_help_output(set_path: None, capsys: CaptureFixture):
     with pytest.raises(SystemExit, match='^0$'):
         main(['-h'])
     captured = capsys.readouterr()
@@ -47,7 +47,7 @@ def test_help_output(set_path: type(None), capsys: CaptureFixture):
     )
 
 
-def test_external(set_path: type(None)):
+def test_external(set_path: None):
     # We need to capture the output manually, since subprocesses don’t write to sys.stderr
     cmdline = ['testbin', '-t', '--testarg', 'testpos']
     cmd = main(cmdline, stdout=PIPE, encoding='utf-8', check=True)
@@ -58,4 +58,4 @@ def test_error_wrong_command(capsys: CaptureFixture):
     with pytest.raises(SystemExit, match='^2$'):
         main(['idonotexist--'])
     captured = capsys.readouterr()
-    assert 'No command “idonotexist--”. Choose from' in captured.err
+    assert "invalid choice: 'idonotexist--' (choose from" in captured.err
