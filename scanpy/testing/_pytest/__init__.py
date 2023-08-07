@@ -1,4 +1,5 @@
 """A private pytest plugin"""
+import pytest
 
 from .fixtures import *  # noqa: F403
 
