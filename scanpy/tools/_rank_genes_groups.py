@@ -349,9 +349,9 @@ class _RankGenes:
             else:
                 # cat code is index of cat value in .categories
                 cat_code: int = np.argmax(self.grouping.cat.categories == cat)
-                # index of scores array is index of cat code in array of existing codes
-                idx_scores: int = np.argmax(existing_codes == cat_code)
-                scores = scores_all[idx_scores]
+                # index of scores row is index of cat code in array of existing codes
+                scores_idx: int = np.argmax(existing_codes == cat_code)
+                scores = scores_all[scores_idx]
             yield igroup, scores, None
 
             if len(self.groups_order) <= 2:
