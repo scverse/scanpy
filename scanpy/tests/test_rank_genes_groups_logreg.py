@@ -45,16 +45,20 @@ def test_rank_genes_groups_with_renamed_categories_use_rep():
 
 
 def test_rank_genes_groups_with_unsorted_groups():
-    adata = sc.datasets.blobs(n_variables=4, n_centers=3, n_observations=200)
+    adata = sc.datasets.blobs(n_variables=10, n_centers=5, n_observations=200)
     adata._sanitize()
-    adata.rename_categories('blobs', ['Zero', 'One', 'Two'])
+    adata.rename_categories('blobs', ['Zero', 'One', 'Two', "Three", "Four"])
     bdata = adata.copy()
     sc.tl.rank_genes_groups(
-        adata, 'blobs', groups=['Zero', 'One', 'Two'], method="logreg"
+        adata, 'blobs', groups=['Zero', 'One', 'Three'], method="logreg"
     )
     sc.tl.rank_genes_groups(
-        bdata, 'blobs', groups=['One', 'Two', 'Zero'], method="logreg"
+        bdata, 'blobs', groups=['One', 'Three', 'Zero'], method="logreg"
     )
-    array_ad = pd.DataFrame(adata.uns["rank_genes_groups"]["scores"]['One']).to_numpy()
-    array_bd = pd.DataFrame(bdata.uns["rank_genes_groups"]["scores"]['One']).to_numpy()
+    array_ad = pd.DataFrame(
+        adata.uns["rank_genes_groups"]["scores"]['Three']
+    ).to_numpy()
+    array_bd = pd.DataFrame(
+        bdata.uns["rank_genes_groups"]["scores"]['Three']
+    ).to_numpy()
     np.testing.assert_equal(array_ad, array_bd)
