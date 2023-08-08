@@ -127,7 +127,7 @@ def _(a: sparse.csc_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]
 @is_constant.register(DaskArray)
 def _(a: DaskArray, axis: int | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
-        v = a[tuple(0 for _ in range(a.ndim))]
+        v = a[tuple(0 for _ in range(a.ndim))].compute()
         return (a == v).all()
     _check_axis_supported(axis)
     # TODO: use overlapping blocks and reduction instead of `drop_axis`

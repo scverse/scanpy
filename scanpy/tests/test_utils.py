@@ -66,12 +66,17 @@ def test_is_constant(array_type):
 @pytest.mark.parametrize(
     ('axis', 'expected'),
     [
+        pytest.param(None, False, id='None'),
         pytest.param(0, [True, True, False, False], id='0'),
         pytest.param(1, [False, False, True, True, False, True], id='1'),
     ],
 )
-def test_is_constant_dask(axis, expected):
+@pytest.mark.parametrize('block_type', [np.array, csr_matrix])
+def test_is_constant_dask(axis, expected, block_type):
     import dask.array as da
+
+    if (axis is None) and block_type is csr_matrix:
+        pytest.skip('dask has weak suppoer for scipy sparse matrices')
 
     x_data = [
         [0, 0, 1, 1],
@@ -81,7 +86,6 @@ def test_is_constant_dask(axis, expected):
         [0, 0, 1, 0],
         [0, 0, 0, 0],
     ]
-    x = da.from_array(np.array(x_data), chunks=2)
+    x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
 
-    assert not is_constant(x)
     np.testing.assert_array_equal(expected, is_constant(x, axis=axis))
