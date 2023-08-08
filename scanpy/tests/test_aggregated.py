@@ -92,14 +92,14 @@ def test_groupby_different_data_locations(data_key, dim):
         adata_sparse,
         by="key",
         dim=dim,
-        how='count_mean_var',
+        func='count_mean_var',
         **data_dict,
     )
     stats_dense = sc.get.aggregated(
         adata_dense,
         by="key",
         dim=dim,
-        how='count_mean_var',
+        func='count_mean_var',
         **data_dict,
     )
 
@@ -124,16 +124,16 @@ def test_groupby_different_data_locations(data_key, dim):
         adata_dense,
         by="key",
         dim=dim,
-        how='count_mean_var',
+        func='count_mean_var',
         weight_key="weight",
         **data_dict,
     )
-    sum_ = sc.get.aggregated(adata_sparse, by="key", dim=dim, how='sum', **data_dict)
+    sum_ = sc.get.aggregated(adata_sparse, by="key", dim=dim, func='sum', **data_dict)
     sum_weight = sc.get.aggregated(
         adata_dense,
         by="key",
         dim=dim,
-        how='sum',
+        func='sum',
         weight_key="weight",
         **data_dict,
     )
@@ -161,7 +161,7 @@ def test_groupby_different_data_locations(data_key, dim):
         adata_dense,
         by="key",
         dim=dim,
-        how='mean',
+        func='mean',
         key_set=key_set,
         **data_dict,
     )
@@ -263,13 +263,13 @@ def test_groupby_X(dim):
         adata_sparse,
         by="key",
         dim=dim,
-        how='count_mean_var',
+        func='count_mean_var',
     )
     stats_dense = sc.get.aggregated(
         adata_dense,
         by="key",
         dim=dim,
-        how='count_mean_var',
+        func='count_mean_var',
     )
 
     # superset columns can be kept but not subsets
@@ -289,15 +289,15 @@ def test_groupby_X(dim):
         adata_dense,
         by="key",
         dim=dim,
-        how='count_mean_var',
+        func='count_mean_var',
         weight_key="weight",
     )
-    sum_ = sc.get.aggregated(adata_sparse, by="key", dim=dim, how='sum')
+    sum_ = sc.get.aggregated(adata_sparse, by="key", dim=dim, func='sum')
     sum_weight = sc.get.aggregated(
         adata_dense,
         by="key",
         dim=dim,
-        how='sum',
+        func='sum',
         weight_key="weight",
     )
 
@@ -312,7 +312,7 @@ def test_groupby_X(dim):
         adata_dense,
         by="key",
         dim=dim,
-        how='mean',
+        func='mean',
         key_set=key_set,
     )
     subset_idx = getattr(stats_sparse, dim).index.isin(key_set)

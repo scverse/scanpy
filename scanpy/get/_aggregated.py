@@ -284,7 +284,7 @@ def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
 def aggregated(
     adata: AnnData,
     by: str,
-    how: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
+    func: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
     *,
     dim: Literal['obs', 'var'] = 'obs',
     weight_key: Optional[str] = None,
@@ -304,7 +304,7 @@ def aggregated(
             :class:`~anndata.AnnData` to be aggregated.
         by:
             Key of the column to be grouped-by.
-        how: 
+        func: 
             How to aggregate.
         dim:
             Axis on which to find group by column.
@@ -351,7 +351,7 @@ def aggregated(
         no_groupby_df=getattr(adata, 'var' if dim == 'obs' else 'obs'),
         weight_key=weight_key,
         key_set=key_set,
-        how=how,
+        func=func,
         dof=dof,
     )
 
@@ -367,7 +367,7 @@ def aggregated_from_array(
     no_groupby_df: pd.DataFrame,
     weight_key: Optional[str] = None,
     key_set: Optional[Iterable[str]] = None,
-    how: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
+    func: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
     dof: int = 1,
 ) -> AnnData:
     """\
@@ -391,7 +391,7 @@ def aggregated_from_array(
             Key of the `dim` containing weights for a weighted sum aggregation.
         key_set:
             Subset of dim on which to filter.
-        how:
+        func:
             How to aggregate.
         dof: 
             Degrees of freedom for variance. Defaults to 1.
@@ -410,12 +410,12 @@ def aggregated_from_array(
     # groupby df is put in `obs`, nongroupby in `var` to be transposed later as appropriate
     obs_var_dict = {'obs': _df_grouped(groupby_df, by, key_set), 'var': no_groupby_df}
     data_dict = {}
-    if how == 'count':
+    if func == 'count':
         obs_var_dict['obs']['count'] = groupby.count()  # count goes in df
-    elif how == 'mean':
+    elif func == 'mean':
         agg = groupby.mean()
         data_dict = {'obsm': {'mean': agg}} if write_to_xxxm else {'X': agg}
-    elif how == 'sum':
+    elif func == 'sum':
         agg = groupby.sum()
         data_dict = {'obsm': {'sum': agg}} if write_to_xxxm else {'X': agg}
     else:
