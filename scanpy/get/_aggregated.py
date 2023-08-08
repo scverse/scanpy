@@ -17,6 +17,7 @@ import collections.abc as cabc
 from scipy.sparse import coo_matrix, dia_matrix, spmatrix
 
 Array = Union[np.ndarray, spmatrix]
+AggType = Literal['count', 'mean', 'sum', 'var']
 
 
 class Aggregate:
@@ -284,7 +285,7 @@ def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
 def aggregated(
     adata: AnnData,
     by: str,
-    func: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
+    func: AggType | List[AggType],
     *,
     dim: Literal['obs', 'var'] = 'obs',
     weight_key: Optional[str] = None,
@@ -297,6 +298,8 @@ def aggregated(
     """\
         Aggregate data based on one of the columns of one of the axes (`obs` or `var`).
         If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
+        If `func` only has length 1 or is just an `AggType`, then aggregation data is written to `X`.
+        Otherwise, it is written to `layers` or `xxxm` as appropriate for the dimensions of the aggregation data.
 
     Parameters
     ----------
@@ -361,13 +364,13 @@ def aggregated(
 def aggregated_from_array(
     data,
     groupby_df: pd.DataFrame,
+    func: AggType | List[AggType],
     dim: str,
     by: str,
     write_to_xxxm: bool,
     no_groupby_df: pd.DataFrame,
     weight_key: Optional[str] = None,
     key_set: Optional[Iterable[str]] = None,
-    func: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
     dof: int = 1,
 ) -> AnnData:
     """\
@@ -379,6 +382,8 @@ def aggregated_from_array(
             Data for aggregation.
         groupby_df:
             `~pd.DataFrame` with column to be grouped on.
+        func:
+            How to aggregate.
         dim:
             Key of AnnData corresponding to the dim on which the grouped by data belongs.
         by:
@@ -391,8 +396,6 @@ def aggregated_from_array(
             Key of the `dim` containing weights for a weighted sum aggregation.
         key_set:
             Subset of dim on which to filter.
-        func:
-            How to aggregate.
         dof: 
             Degrees of freedom for variance. Defaults to 1.
 
@@ -409,22 +412,44 @@ def aggregated_from_array(
     )
     # groupby df is put in `obs`, nongroupby in `var` to be transposed later as appropriate
     obs_var_dict = {'obs': _df_grouped(groupby_df, by, key_set), 'var': no_groupby_df}
-    data_dict = {}
-    if func == 'count':
-        obs_var_dict['obs']['count'] = groupby.count()  # count goes in df
-    elif func == 'mean':
-        agg = groupby.mean()
-        data_dict = {'obsm': {'mean': agg}} if write_to_xxxm else {'X': agg}
-    elif func == 'sum':
+    data_dict = {
+        'layers': {},
+        'X': None,
+        'obsm': {},
+    }
+    func_set = func
+    write_key = 'obsm' if write_to_xxxm else 'layers'
+    if not isinstance(func, list):
+        func_set = [func]
+    func_set = set(func_set)
+    if 'sum' in func_set:  # sum is calculated separately from the rest
         agg = groupby.sum()
-        data_dict = {'obsm': {'sum': agg}} if write_to_xxxm else {'X': agg}
-    else:
+        if (
+            len(func_set) == 1 and not write_to_xxxm
+        ):  # put aggregation in X if it is the only one and the aggregation data is not coming from `xxxm`
+            data_dict['X'] = agg
+        else:
+            data_dict[write_key]['sum'] = agg
+    if (
+        'mean' in func_set and 'var' not in func_set
+    ):  # here and below for count, if var is present, these can be calculate alongside var
+        agg = groupby.mean()
+        if len(func_set) == 1 and not write_to_xxxm:
+            data_dict['X'] = agg
+        else:
+            data_dict[write_key]['mean'] = agg
+    if 'count' in func_set and 'var' not in func_set:
+        obs_var_dict['obs']['count'] = groupby.count()  # count goes in dim df
+    if 'var' in func_set:
         agg = groupby.count_mean_var(dof)
-        write_key = 'obsm' if write_to_xxxm else 'layers'
-        obs_var_dict['obs']['count'] = agg['count']  # count in df
-        data_dict = {
-            write_key: {'mean': agg['mean'], 'var': agg['var']}
-        }  # others in layers/obsm
+        if len(func_set) == 1 and not write_to_xxxm:
+            data_dict['X'] = agg['var']
+        else:
+            data_dict[write_key]['var'] = agg['var']
+            if 'mean' in func_set:
+                data_dict[write_key]['mean'] = agg['mean']
+            if 'count' in func_set:
+                obs_var_dict['obs']['count'] = agg['count']
     adata_agg = AnnData(**{**data_dict, **obs_var_dict})
     if dim == 'var':
         return adata_agg.T
