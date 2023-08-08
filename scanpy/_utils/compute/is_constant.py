@@ -29,13 +29,13 @@ def is_constant(a, axis=None) -> np.ndarray:
     >>> a = np.array([[0, 1], [0, 0]])
     >>> a
     array([[0, 1],
-            [0, 0]])
+           [0, 0]])
     >>> is_constant(a)
     False
     >>> is_constant(a, axis=0)
-    array([ False, True])
-    >>> is_constant(a, axis=1)
     array([ True, False])
+    >>> is_constant(a, axis=1)
+    array([False,  True])
     """
     raise NotImplementedError()
 
