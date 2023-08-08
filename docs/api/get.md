@@ -20,6 +20,5 @@ useful formats.
    get.var_df
    get.rank_genes_groups_df
    get.aggregated
-   get.aggregated_from_array
 
 ```

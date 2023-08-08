@@ -305,21 +305,21 @@ def aggregated(
         by:
             Key of the column to be grouped-by.
         how: 
-            How to aggregate. Defaults to 'count_mean_var'.
+            How to aggregate.
         dim:
-            Axis on which to find group by column. Defaults to 'obs'.
+            Axis on which to find group by column.
         weight_key:
-            Key of the `dim` containing weights for a weighted sum aggregation. Defaults to None.
+            Key of the `dim` containing weights for a weighted sum aggregation.
         key_set:
-            Subset of dim on which to filter. Defaults to None.
+            Subset of dim on which to filter.
         dof:
             Degrees of freedom for variance. Defaults to 1.
         layer:
-            If not None, key for aggregation data. Defaults to None.
+            If not None, key for aggregation data.
         obsm:
-            If not None, key for aggregation data. Defaults to None.
+            If not None, key for aggregation data.
         varm:
-            If not None, key for aggregation data. Defaults to None.
+            If not None, key for aggregation data.
 
     Returns
     -------
@@ -384,15 +384,15 @@ def aggregated_from_array(
         by:
             Key of the groupby `~pd.DataFrame` for grouping.
         write_to_xxxm:
-            Whether or not to write aggregation data to `varm` or `obsm` (based on `dim`)
+            Whether or not to write aggregation data to `varm` or `obsm` (based on `dim`).
         no_groupby_df:
             `~pd.DataFrame` on the opposite dim of dim.
         weight_key:
-            Key of the `dim` containing weights for a weighted sum aggregation. Defaults to None.
+            Key of the `dim` containing weights for a weighted sum aggregation.
         key_set:
-            Defaults to None. Subset of dim on which to filter.
+            Subset of dim on which to filter.
         how:
-            How to aggregate. Defaults to 'count_mean_var'.
+            How to aggregate.
         dof: 
             Degrees of freedom for variance. Defaults to 1.
 
