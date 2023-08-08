@@ -275,7 +275,7 @@ def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
     df = df.copy()
     if key_set is not None:
         df = df[df[key].isin(key_set)]
-    if df[key].dtype.name == 'category':
+    if pd.api.types.is_categorical_dtype(df[key]):
         df[key] = df[key].cat.remove_unused_categories()
     return df.groupby(key).first()[_superset_columns(df, key)]
 
@@ -285,6 +285,7 @@ def aggregated(
     adata: AnnData,
     by: str,
     how: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
+    *,
     groupby_df_key: Literal['obs', 'var'] = 'obs',
     weight_key: Optional[str] = None,
     key_set: Optional[Iterable[str]] = None,
