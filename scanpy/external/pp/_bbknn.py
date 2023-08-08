@@ -55,7 +55,7 @@ def bbknn(
     use_rep
         The dimensionality reduction in `.obsm` to use for neighbour detection. Defaults to PCA.
     approx
-        If `True`, use approximate neighbour finding - annoy or pyNNDescent. This results
+        If `True`, use approximate neighbour finding - annoy or PyNNDescent. This results
         in a quicker run time for large datasets while also potentially increasing the degree of
         batch correction.
     use_annoy
@@ -78,12 +78,13 @@ def bbknn(
         'kantorovich', 'wasserstein', 'tsss', 'true_angular', 'hamming', 'jaccard', 'dice', 'matching', 'kulsinski',
         'rogerstanimoto', 'russellrao', 'sokalsneath', 'sokalmichener', 'yule'])
 
-        KDTree supports members of the `sklearn.neighbors.KDTree.valid_metrics` list, or parameterised
-        `sklearn.neighbors.DistanceMetric` `objects
-        <https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.DistanceMetric.html>`_:
+        KDTree supports members of the :meth:`sklearn.neighbors.KDTree.valid_metrics` list, or parameterised
+        :class:`~sklearn.neighbors.DistanceMetric` objects:
 
         >>> sklearn.neighbors.KDTree.valid_metrics
         ['p', 'chebyshev', 'cityblock', 'minkowski', 'infinity', 'l2', 'euclidean', 'manhattan', 'l1']
+
+        .. note:: check the relevant documentation for up-to-date lists.
     copy
         If `True`, return a copy instead of writing to the supplied adata.
     neighbors_within_batch
