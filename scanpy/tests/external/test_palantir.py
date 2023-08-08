@@ -6,7 +6,9 @@ from scanpy.testing._helpers.data import pbmc3k_processed
 from scanpy.testing._pytest.marks import needs
 
 
-@needs("palantir")
+pytestmark = [needs('palantir')]
+
+
 def test_palantir_core():
     adata = pbmc3k_processed()
 

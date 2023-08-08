@@ -9,7 +9,9 @@ import scanpy.external as sce
 from scanpy.testing._pytest.marks import needs
 
 
-@needs("phenograph")
+pytestmark = [needs('phenograph')]
+
+
 def test_phenograph():
     df = np.random.rand(1000, 40)
     dframe = pd.DataFrame(df)
