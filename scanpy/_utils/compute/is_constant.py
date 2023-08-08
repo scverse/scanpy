@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from functools import singledispatch
+from functools import partial, singledispatch
 from numbers import Integral
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -9,6 +10,12 @@ from numba import njit
 from scipy import sparse
 
 from ..._compat import DaskArray
+
+
+def _check_axis_supported(axis: Any) -> None:
+    if not isinstance(axis, Integral):
+        raise TypeError("axis must be integer or None.")
+    assert axis in (0, 1)
 
 
 @singledispatch
@@ -34,13 +41,13 @@ def is_constant(a, axis: int | None = None) -> bool | NDArray[np.bool_]:
     >>> a = np.array([[0, 1], [0, 0]])
     >>> a
     array([[0, 1],
-            [0, 0]])
+           [0, 0]])
     >>> is_constant(a)
     False
     >>> is_constant(a, axis=0)
-    array([ False, True])
-    >>> is_constant(a, axis=1)
     array([ True, False])
+    >>> is_constant(a, axis=1)
+    array([False,  True])
     """
     raise NotImplementedError()
 
@@ -50,9 +57,7 @@ def _(a: NDArray, axis: int | None = None) -> bool | NDArray[np.bool_]:
     # Should eventually support nd, not now.
     if axis is None:
         return np.array_equal(a, a.flat[0])
-    if not isinstance(axis, Integral):
-        raise TypeError("axis must be integer or None.")
-    assert axis in (0, 1)
+    _check_axis_supported(axis)
     if axis == 0:
         return _is_constant_rows(a.T)
     elif axis == 1:
@@ -111,9 +116,7 @@ def _(a: sparse.csc_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]
             return is_constant(a.data)
         else:
             return (a.data == 0).all()
-    if not isinstance(axis, Integral):
-        raise TypeError("axis must be integer or None.")
-    assert axis in (0, 1)
+    _check_axis_supported(axis)
     if axis == 0:
         return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape[::-1])
     elif axis == 1:
@@ -124,6 +127,8 @@ def _(a: sparse.csc_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]
 @is_constant.register(DaskArray)
 def _(a: DaskArray, axis: int | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
-        v = a.flatten()[0]
+        v = a[tuple(0 for _ in range(a.ndim))]
         return (a == v).all()
-    raise NotImplementedError('TODO')
+    _check_axis_supported(axis)
+    # TODO: use overlapping blocks and reduction instead of `drop_axis`
+    return a.map_blocks(partial(is_constant, axis=axis), drop_axis=axis)

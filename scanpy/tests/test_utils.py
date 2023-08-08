@@ -1,11 +1,13 @@
 from types import ModuleType
-from scipy.sparse import csr_matrix, csc_matrix
+import pytest
+from scipy.sparse import csr_matrix
 import numpy as np
 
-from scanpy._utils import descend_classes_and_funcs, check_nonnegative_integers
-
-from anndata.tests.helpers import assert_equal, asarray
-import pytest
+from scanpy._utils import (
+    descend_classes_and_funcs,
+    check_nonnegative_integers,
+    is_constant,
+)
 
 
 def test_descend_classes_and_funcs():
@@ -42,8 +44,6 @@ def test_check_nonnegative_integers():
 
 
 def test_is_constant(array_type):
-    from scanpy._utils import is_constant
-
     constant_inds = [1, 3]
     A = np.arange(20).reshape(5, 4)
     A[constant_inds, :] = 10
@@ -61,3 +61,27 @@ def test_is_constant(array_type):
     np.testing.assert_array_equal(
         [False, True, False, True, False], is_constant(AT, axis=0)
     )
+
+
+@pytest.mark.parametrize(
+    ('axis', 'expected'),
+    [
+        pytest.param(0, [True, True, False, False], id='0'),
+        pytest.param(1, [False, False, True, True, False, True], id='1'),
+    ],
+)
+def test_is_constant_dask(axis, expected):
+    import dask.array as da
+
+    x_data = [
+        [0, 0, 1, 1],
+        [0, 0, 1, 1],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 0],
+    ]
+    x = da.from_array(np.array(x_data), chunks=2)
+
+    assert not is_constant(x)
+    np.testing.assert_array_equal(expected, is_constant(x, axis=axis))
