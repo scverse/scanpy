@@ -31,8 +31,8 @@ def test_neighbors_key_added(adata):
 
 
 # test functions with neighbors_key and obsp
-@needs("igraph")
-@needs("leidenalg")
+@needs('igraph')
+@needs('leidenalg')
 @pytest.mark.parametrize('field', ['neighbors_key', 'obsp'])
 def test_neighbors_key_obsp(adata, field):
     adata1 = adata.copy()
@@ -78,7 +78,7 @@ def test_neighbors_key_obsp(adata, field):
         )
 
 
-@needs("louvain")
+@needs('louvain')
 @pytest.mark.parametrize('field', ['neighbors_key', 'obsp'])
 def test_neighbors_key_obsp_louvain(adata, field):
     adata1 = adata.copy()

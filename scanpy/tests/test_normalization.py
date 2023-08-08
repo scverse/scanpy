@@ -32,9 +32,9 @@ X_frac = [[1, 0, 1], [3, 0, 1], [5, 6, 1]]
     params=[
         lambda: np.array,
         lambda: csr_matrix,
-        pytest.param(lambda: da.from_array, marks=[needs("dask")]),
+        pytest.param(lambda: da.from_array, marks=[needs('dask')]),
     ],
-    ids=["numpy-array", "sparse-csr", "dask-array"],
+    ids=['numpy-array', 'sparse-csr', 'dask-array'],
 )
 def typ(request) -> Callable[[], type]:
     return request.param()
