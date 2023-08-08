@@ -9,6 +9,7 @@ from scipy import sparse
 
 import pytest
 
+from scanpy._utils.compute.is_constant import is_constant
 from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
@@ -141,6 +142,8 @@ def test_graph_metrics_w_constant_values(metric, array_type):
         XT_const_vals = XT.copy()
         XT_const_vals[const_inds, :] = 42
 
+    assert is_constant(XT_zero_vals, axis=1).sum() == 10
+    assert is_constant(XT_const_vals, axis=1).sum() == 10
     results_full = metric(g, XT)
     # TODO: Check for warnings
     with pytest.warns(

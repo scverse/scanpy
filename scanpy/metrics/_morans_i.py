@@ -9,7 +9,7 @@ from numba import njit, prange
 
 from ..get import _get_obs_rep
 from .._compat import fullname, DaskArray
-from ._gearys_c import _resolve_vals, _check_vals
+from ._common import _resolve_vals, _check_vals
 
 
 @singledispatch
@@ -223,7 +223,7 @@ def _morans_i_mtx_csr(
 
 
 @morans_i.register(sparse.csr_matrix)
-def _morans_i(g, vals) -> np.ndarray:
+def _morans_i(g: sparse.csr_matrix, vals) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
