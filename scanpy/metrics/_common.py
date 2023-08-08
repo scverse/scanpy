@@ -7,8 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
-from ..get import _get_obs_rep
-from .._compat import fullname, DaskArray
+from .._compat import DaskArray
 
 
 @singledispatch
@@ -56,8 +55,4 @@ def _check_vals(vals):
                 f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these.",
             )
         )
-    new_vals = vals[idxer]
-    if isinstance(new_vals, DaskArray):
-        # numba can’t deal with dask arrays. TODO: fix implementation
-        new_vals = new_vals.compute()
-    return new_vals, idxer, full_result
+    return vals[idxer], idxer, full_result

@@ -1,8 +1,8 @@
 """Moran's I global spatial autocorrelation."""
-from typing import Union, Optional
 from functools import singledispatch
-from anndata import AnnData
+from typing import Union, Optional
 
+from anndata import AnnData
 import numpy as np
 from scipy import sparse
 from numba import njit, prange
@@ -241,10 +241,10 @@ def _morans_i(g: sparse.csr_matrix, vals) -> np.ndarray:
         )
         full_result[idxer] = result
         return full_result
-    elif isinstance(vals, (np.ndarray, DaskArray)) and vals.ndim == 1:
+    elif isinstance(vals, np.ndarray) and vals.ndim == 1:
         assert g.shape[0] == vals.shape[0]
         return _morans_i_vec(g_data, g.indices, g.indptr, vals)
-    elif isinstance(vals, (np.ndarray, DaskArray)) and vals.ndim == 2:
+    elif isinstance(vals, np.ndarray) and vals.ndim == 2:
         assert g.shape[0] == vals.shape[1]
         new_vals, idxer, full_result = _check_vals(vals)
         result = _morans_i_mtx(

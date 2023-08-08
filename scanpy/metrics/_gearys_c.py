@@ -1,11 +1,9 @@
 from functools import singledispatch
 from typing import Optional, Union
-import warnings
 
 from anndata import AnnData
 import numba
 import numpy as np
-import pandas as pd
 from scipy import sparse
 
 from ..get import _get_obs_rep
@@ -274,10 +272,10 @@ def _gearys_c(g, vals) -> np.ndarray:
         )
         full_result[idxer] = result
         return full_result
-    elif isinstance(vals, (np.ndarray, DaskArray)) and vals.ndim == 1:
+    elif isinstance(vals, np.ndarray) and vals.ndim == 1:
         assert g.shape[0] == vals.shape[0]
         return _gearys_c_vec(g_data, g.indices, g.indptr, vals)
-    elif isinstance(vals, (np.ndarray, DaskArray)) and vals.ndim == 2:
+    elif isinstance(vals, np.ndarray) and vals.ndim == 2:
         assert g.shape[0] == vals.shape[1]
         new_vals, idxer, full_result = _check_vals(vals)
         result = _gearys_c_mtx(g_data, g.indices, g.indptr, new_vals)
