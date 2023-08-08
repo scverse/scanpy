@@ -11,15 +11,15 @@ import pytest
     ['layers', 'obsm', 'varm'],
 )
 @pytest.mark.parametrize(
-    'groupby_df_key',
+    'dim',
     [
         'obs',
         'var',
     ],
 )
-def test_groupby_different_data_locations(data_key, groupby_df_key):
-    if (data_key == 'varm' and groupby_df_key == 'obs') or (
-        data_key == 'obsm' and groupby_df_key == 'var'
+def test_groupby_different_data_locations(data_key, dim):
+    if (data_key == 'varm' and dim == 'obs') or (
+        data_key == 'obsm' and dim == 'var'
     ):
         pytest.skip("invalid parameter combination")
     ax_base = ["A", "B"]
@@ -68,7 +68,7 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
         dtype=np.float32,
     )
     data_dense = X
-    if groupby_df_key == 'obs':
+    if dim == 'obs':
         data_sparse_mat_dict = {data_key: {'test': csr_matrix(X)}}
         adata_sparse = ad.AnnData(
             **{'obs': df_groupby, 'var': df_base, **data_sparse_mat_dict}
@@ -93,25 +93,25 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
     stats_sparse = sc.get.aggregated(
         adata_sparse,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='count_mean_var',
         **data_dict,
     )
     stats_dense = sc.get.aggregated(
         adata_dense,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='count_mean_var',
         **data_dict,
     )
 
     # superset columns can be kept but not subsets
-    assert 'key_superset' in getattr(stats_sparse, groupby_df_key)
-    assert 'key_subset' not in getattr(stats_sparse, groupby_df_key)
+    assert 'key_superset' in getattr(stats_sparse, dim)
+    assert 'key_subset' not in getattr(stats_sparse, dim)
 
     assert np.allclose(
-        getattr(stats_sparse, groupby_df_key)['count'],
-        getattr(stats_sparse, groupby_df_key)['count'],
+        getattr(stats_sparse, dim)['count'],
+        getattr(stats_sparse, dim)['count'],
     )
     assert np.allclose(
         getattr(stats_sparse, data_key)['mean'], getattr(stats_dense, data_key)['mean']
@@ -125,18 +125,18 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
     stats_weight = sc.get.aggregated(
         adata_dense,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='count_mean_var',
         weight_key="weight",
         **data_dict,
     )
     sum_ = sc.get.aggregated(
-        adata_sparse, by="key", groupby_df_key=groupby_df_key, how='sum', **data_dict
+        adata_sparse, by="key", dim=dim, how='sum', **data_dict
     )
     sum_weight = sc.get.aggregated(
         adata_dense,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='sum',
         weight_key="weight",
         **data_dict,
@@ -164,15 +164,15 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
     mean_key_set_adata = sc.get.aggregated(
         adata_dense,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='mean',
         key_set=key_set,
         **data_dict,
     )
-    subset_idx = getattr(stats_sparse, groupby_df_key).index.isin(key_set)
+    subset_idx = getattr(stats_sparse, dim).index.isin(key_set)
     subset_adata = (
         stats_sparse[subset_idx, :]
-        if groupby_df_key == 'obs'
+        if dim == 'obs'
         else stats_sparse[:, subset_idx]
     )
     subset_mean = getattr(subset_adata, data_key)['mean']
@@ -180,12 +180,12 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
     assert np.allclose(subset_mean, key_set_mean)
 
     df = pd.DataFrame(
-        index=getattr(adata_dense, groupby_df_key)["key"],
+        index=getattr(adata_dense, dim)["key"],
         columns=getattr(
-            adata_dense, f"{'var' if groupby_df_key == 'obs' else 'obs'}_names"
+            adata_dense, f"{'var' if dim == 'obs' else 'obs'}_names"
         ),
         data=data_dense.T
-        if groupby_df_key == 'var' and data_key != 'varm'
+        if dim == 'var' and data_key != 'varm'
         else data_dense,
     )
     grouped_agg_df = (
@@ -195,27 +195,27 @@ def test_groupby_different_data_locations(data_key, groupby_df_key):
         .sort_index(axis=1)
     )
     mean = getattr(stats_dense, data_key)['mean']
-    if groupby_df_key == 'var' and data_key != 'varm':
+    if dim == 'var' and data_key != 'varm':
         mean = mean.T
     assert np.allclose(mean, grouped_agg_df['mean'].values)
     var = getattr(stats_dense, data_key)['var']
-    if groupby_df_key == 'var' and data_key != 'varm':
+    if dim == 'var' and data_key != 'varm':
         var = var.T
     assert np.allclose(var, grouped_agg_df['var'].values, equal_nan=True)
     assert np.allclose(
-        getattr(stats_dense, groupby_df_key)['count'],
+        getattr(stats_dense, dim)['count'],
         grouped_agg_df['count']['A'].values,
     )  # returns for both columns but counts only needs one because it is the same
 
 
 @pytest.mark.parametrize(
-    'groupby_df_key',
+    'dim',
     [
         'obs',
         'var',
     ],
 )
-def test_groupby_X(groupby_df_key):
+def test_groupby_X(dim):
     ax_base = ["A", "B"]
     ax_groupby = [
         "v0",
@@ -262,7 +262,7 @@ def test_groupby_X(groupby_df_key):
         dtype=np.float32,
     )
     data_dense = X
-    if groupby_df_key == 'obs':
+    if dim == 'obs':
         adata_sparse = ad.AnnData(obs=df_groupby, var=df_base, X=csr_matrix(X))
         adata_dense = ad.AnnData(obs=df_groupby, var=df_base, X=X)
     else:
@@ -272,23 +272,23 @@ def test_groupby_X(groupby_df_key):
     stats_sparse = sc.get.aggregated(
         adata_sparse,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='count_mean_var',
     )
     stats_dense = sc.get.aggregated(
         adata_dense,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='count_mean_var',
     )
 
     # superset columns can be kept but not subsets
-    assert 'key_superset' in getattr(stats_sparse, groupby_df_key)
-    assert 'key_subset' not in getattr(stats_sparse, groupby_df_key)
+    assert 'key_superset' in getattr(stats_sparse, dim)
+    assert 'key_subset' not in getattr(stats_sparse, dim)
 
     assert np.allclose(
-        getattr(stats_sparse, groupby_df_key)['count'],
-        getattr(stats_sparse, groupby_df_key)['count'],
+        getattr(stats_sparse, dim)['count'],
+        getattr(stats_sparse, dim)['count'],
     )
     assert np.allclose(stats_sparse.layers['mean'], stats_dense.layers['mean'])
     assert np.allclose(
@@ -298,17 +298,17 @@ def test_groupby_X(groupby_df_key):
     stats_weight = sc.get.aggregated(
         adata_dense,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='count_mean_var',
         weight_key="weight",
     )
     sum_ = sc.get.aggregated(
-        adata_sparse, by="key", groupby_df_key=groupby_df_key, how='sum'
+        adata_sparse, by="key", dim=dim, how='sum'
     )
     sum_weight = sc.get.aggregated(
         adata_dense,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='sum',
         weight_key="weight",
     )
@@ -323,14 +323,14 @@ def test_groupby_X(groupby_df_key):
     mean_key_set_adata = sc.get.aggregated(
         adata_dense,
         by="key",
-        groupby_df_key=groupby_df_key,
+        dim=dim,
         how='mean',
         key_set=key_set,
     )
-    subset_idx = getattr(stats_sparse, groupby_df_key).index.isin(key_set)
+    subset_idx = getattr(stats_sparse, dim).index.isin(key_set)
     subset_adata = (
         stats_sparse[subset_idx, :]
-        if groupby_df_key == 'obs'
+        if dim == 'obs'
         else stats_sparse[:, subset_idx]
     )
     subset_mean = subset_adata.layers['mean']
@@ -338,9 +338,9 @@ def test_groupby_X(groupby_df_key):
     assert np.allclose(subset_mean, key_set_mean)
 
     df = pd.DataFrame(
-        index=getattr(adata_dense, groupby_df_key)["key"],
+        index=getattr(adata_dense, dim)["key"],
         columns=getattr(
-            adata_dense, f"{'var' if groupby_df_key == 'obs' else 'obs'}_names"
+            adata_dense, f"{'var' if dim == 'obs' else 'obs'}_names"
         ),
         data=data_dense,
     )
@@ -351,14 +351,14 @@ def test_groupby_X(groupby_df_key):
         .sort_index(axis=1)
     )
     mean = stats_dense.layers['mean']
-    if groupby_df_key == 'var':
+    if dim == 'var':
         mean = mean.T
     assert np.allclose(mean, grouped_agg_df['mean'].values)
     var = stats_dense.layers['var']
-    if groupby_df_key == 'var':
+    if dim == 'var':
         var = var.T
     assert np.allclose(var, grouped_agg_df['var'].values, equal_nan=True)
     assert np.allclose(
-        getattr(stats_dense, groupby_df_key)['count'],
+        getattr(stats_dense, dim)['count'],
         grouped_agg_df['count']['A'].values,
     )  # returns for both columns but counts only needs one because it is the same

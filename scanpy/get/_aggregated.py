@@ -286,7 +286,7 @@ def aggregated(
     by: str,
     how: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
     *,
-    groupby_df_key: Literal['obs', 'var'] = 'obs',
+    dim: Literal['obs', 'var'] = 'obs',
     weight_key: Optional[str] = None,
     key_set: Optional[Iterable[str]] = None,
     dof: int = 1,
@@ -294,22 +294,37 @@ def aggregated(
     obsm: Optional[str] = None,
     varm: Optional[str] = None,
 ) -> AnnData:
-    """Aggregate data based on one of the columns of one of the axes (`obs` or `var`).  If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
+    """\
+        Aggregate data based on one of the columns of one of the axes (`obs` or `var`).
+        If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
 
-    Args:
-        adata (AnnData): AnnData to be aggregated.
-        by (str): Key of the column to be grouped-by.
-        how (Literal[&#39;count&#39;, &#39;mean&#39;, &#39;sum&#39;, &#39;count_mean_var&#39;], optional):  How to aggregate. Defaults to 'count_mean_var'.
-        groupby_df_key (Literal[&#39;obs&#39;, &#39;var&#39;], optional): Axis on which to find group by column. Defaults to 'obs'.
-        weight_key (Optional[str], optional): Key of the `groupby_df_key` containing weights for a weighted sum aggregation. Defaults to None.
-        key_set (Optional[Iterable[str]], optional): Subset of groupby_df_key on which to filter. Defaults to None.
-        dof (int, optional): Degrees of freedom for variance. Defaults to 1.
-        layer (str, optional): If not None, key for aggregation data. Defaults to None.
-        obsm (str, optional): If not None, key for aggregation data. Defaults to None.
-        varm (str, optional): If not None, key for aggregation data. Defaults to None.
+    Parameters
+    ----------
+        adata:
+            :class:`~anndata.AnnData` to be aggregated.
+        by:
+            Key of the column to be grouped-by.
+        how: 
+            How to aggregate. Defaults to 'count_mean_var'.
+        dim:
+            Axis on which to find group by column. Defaults to 'obs'.
+        weight_key:
+            Key of the `dim` containing weights for a weighted sum aggregation. Defaults to None.
+        key_set:
+            Subset of dim on which to filter. Defaults to None.
+        dof:
+            Degrees of freedom for variance. Defaults to 1.
+        layer:
+            If not None, key for aggregation data. Defaults to None.
+        obsm:
+            If not None, key for aggregation data. Defaults to None.
+        varm:
+            If not None, key for aggregation data. Defaults to None.
 
-    Returns:
-        AnnData: Aggregated AnnData.
+    Returns
+    -------
+        AnnData:
+            Aggregated :class:`~anndata.AnnData`.
     """
     data = adata.X
     write_to_xxxm = None
@@ -321,19 +336,19 @@ def aggregated(
         write_to_xxxm = True
     elif layer is not None:
         data = adata.layers[layer]
-        if groupby_df_key == 'var':
+        if dim == 'var':
             data = data.T
     elif (
-        groupby_df_key == 'var'
+        dim == 'var'
     ):  # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
         data = data.T
     return aggregated(
         data,
-        groupby_df=getattr(adata, groupby_df_key),
-        groupby_df_key=groupby_df_key,
+        groupby_df=getattr(adata, dim),
+        dim=dim,
         by=by,
         write_to_xxxm=write_to_xxxm,
-        no_groupby_df=getattr(adata, 'var' if groupby_df_key == 'obs' else 'obs'),
+        no_groupby_df=getattr(adata, 'var' if dim == 'obs' else 'obs'),
         weight_key=weight_key,
         key_set=key_set,
         how=how,
@@ -346,7 +361,7 @@ def aggregated(
 def aggregated_from_array(
     data,
     groupby_df: pd.DataFrame,
-    groupby_df_key: str,
+    dim: str,
     by: str,
     write_to_xxxm: bool,
     no_groupby_df: pd.DataFrame,
@@ -355,22 +370,36 @@ def aggregated_from_array(
     how: Literal['count', 'mean', 'sum', 'count_mean_var'] = 'count_mean_var',
     dof: int = 1,
 ) -> AnnData:
-    """Aggregate data based on one of the columns of one of a DataFrame.
+    """\
+    Aggregate data based on one of the columns of one of a `~pd.DataFrame`.
 
-    Args:
-        data (Array): Data for aggregation.
-        groupby_df (pd.DataFrame): DataFrame with column to be grouped on.
-        groupby_df_key (str): Key of AnnData corresponding to the axis on which the grouped by data belongs.
-        by (str): Key of the groupby DataFrame for grouping.
-        write_to_xxxm (bool): Whether or not to write aggregation data to `varm` or `obsm` (based on `groupby_df_key`)
-        no_groupby_df (pd.DataFrame): DataFrame on the opposite axis of groupby_df_key.
-        weight_key (Optional[str], optional): Key of the `groupby_df_key` containing weights for a weighted sum aggregation. Defaults to None.
-        key_set (Optional[Iterable[str]], optional): Defaults to None. Subset of groupby_df_key on which to filter.
-        how (Literal[&#39;count&#39;, &#39;mean&#39;, &#39;sum&#39;, &#39;count_mean_var&#39;], optional): How to aggregate. Defaults to 'count_mean_var'.
-        dof (int, optional):  Degrees of freedom for variance. Defaults to 1.
+    Parameters
+    ----------
+        data:
+            Data for aggregation.
+        groupby_df:
+            `~pd.DataFrame` with column to be grouped on.
+        dim:
+            Key of AnnData corresponding to the dim on which the grouped by data belongs.
+        by:
+            Key of the groupby `~pd.DataFrame` for grouping.
+        write_to_xxxm:
+            Whether or not to write aggregation data to `varm` or `obsm` (based on `dim`)
+        no_groupby_df:
+            `~pd.DataFrame` on the opposite dim of dim.
+        weight_key:
+            Key of the `dim` containing weights for a weighted sum aggregation. Defaults to None.
+        key_set:
+            Defaults to None. Subset of dim on which to filter.
+        how:
+            How to aggregate. Defaults to 'count_mean_var'.
+        dof: 
+            Degrees of freedom for variance. Defaults to 1.
 
-    Returns:
-        AnnData: Aggregated AnnData
+    Returns
+    -------
+        AnnData:
+            Aggregated :class:`~anndata.AnnData`.
     """
     groupby = Aggregate(
         groupby=groupby_df[by],
@@ -397,6 +426,6 @@ def aggregated_from_array(
             write_key: {'mean': agg['mean'], 'var': agg['var']}
         }  # others in layers/obsm
     adata_agg = AnnData(**{**data_dict, **obs_var_dict})
-    if groupby_df_key == 'var':
+    if dim == 'var':
         return adata_agg.T
     return adata_agg
