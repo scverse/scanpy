@@ -315,6 +315,7 @@ def hashsolo(
 
     Examples
     -------
+    >>> import pytest; pytest.skip()
     >>> import anndata
     >>> import scanpy.external as sce
     >>> adata = anndata.read("data.h5ad")

@@ -244,7 +244,10 @@ def obs_df(
     ...     keys=["CD8B", "n_genes"],
     ...     obsm_keys=[("X_umap", 0), ("X_umap", 1)]
     ... )
-    >>> plotdf.plot.scatter("X_umap0", "X_umap1", c="CD8B")
+    >>> plotdf.columns
+    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
+    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")
+    <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 
     Calculating mean expression for marker genes by cluster:
 
