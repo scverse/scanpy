@@ -6,7 +6,9 @@ from scanpy.testing._helpers.data import pbmc3k
 from scanpy.testing._pytest.marks import needs
 
 
-@needs("wishbone")
+pytestmark = [needs('wishbone')]
+
+
 def test_run_wishbone():
     adata = pbmc3k()
     sc.pp.normalize_per_cell(adata)

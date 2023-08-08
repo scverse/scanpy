@@ -20,8 +20,8 @@ ROOT = HERE / '_images_paga_paul15_subsampled'
 FIGS = HERE / 'figures'
 
 
-@needs("igraph")
-@needs("louvain")
+@needs('igraph')
+@needs('louvain')
 def test_paga_paul15_subsampled(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=25)
 
