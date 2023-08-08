@@ -285,7 +285,7 @@ def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
 def aggregated(
     adata: AnnData,
     by: str,
-    func: AggType | List[AggType],
+    func: Union[AggType, List[AggType]],
     *,
     dim: Literal['obs', 'var'] = 'obs',
     weight_key: Optional[str] = None,
@@ -364,7 +364,7 @@ def aggregated(
 def aggregated_from_array(
     data,
     groupby_df: pd.DataFrame,
-    func: AggType | List[AggType],
+    func: Union[AggType, List[AggType]],
     dim: str,
     by: str,
     write_to_xxxm: bool,
