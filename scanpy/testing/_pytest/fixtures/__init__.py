@@ -4,7 +4,6 @@ This is kept seperate from the helpers file because it relies on pytest.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from collections.abc import Callable
 
 import pytest
@@ -13,9 +12,7 @@ from numpy.typing import ArrayLike
 from scipy import sparse
 from anndata.tests.helpers import asarray
 
-if TYPE_CHECKING:
-    from dask.array import Array as DaskArray
-
+from ...._compat import DaskArray
 from ..._pytest.marks import needs
 from .data import (
     _pbmc3ks_parametrized_session,
