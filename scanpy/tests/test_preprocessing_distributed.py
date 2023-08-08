@@ -26,8 +26,8 @@ def adata():
 
 @pytest.fixture(
     params=[
-        pytest.param("direct", marks=[needs('zappy')]),
-        pytest.param("dask", marks=[needs('dask')]),
+        pytest.param('direct', marks=[needs('zappy')]),
+        pytest.param('dask', marks=[needs('dask')]),
     ]
 )
 def adata_dist(request):
