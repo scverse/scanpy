@@ -18,9 +18,7 @@ import pytest
     ],
 )
 def test_groupby_different_data_locations(data_key, dim):
-    if (data_key == 'varm' and dim == 'obs') or (
-        data_key == 'obsm' and dim == 'var'
-    ):
+    if (data_key == 'varm' and dim == 'obs') or (data_key == 'obsm' and dim == 'var'):
         pytest.skip("invalid parameter combination")
     ax_base = ["A", "B"]
     ax_groupby = [
@@ -130,9 +128,7 @@ def test_groupby_different_data_locations(data_key, dim):
         weight_key="weight",
         **data_dict,
     )
-    sum_ = sc.get.aggregated(
-        adata_sparse, by="key", dim=dim, how='sum', **data_dict
-    )
+    sum_ = sc.get.aggregated(adata_sparse, by="key", dim=dim, how='sum', **data_dict)
     sum_weight = sc.get.aggregated(
         adata_dense,
         by="key",
@@ -171,9 +167,7 @@ def test_groupby_different_data_locations(data_key, dim):
     )
     subset_idx = getattr(stats_sparse, dim).index.isin(key_set)
     subset_adata = (
-        stats_sparse[subset_idx, :]
-        if dim == 'obs'
-        else stats_sparse[:, subset_idx]
+        stats_sparse[subset_idx, :] if dim == 'obs' else stats_sparse[:, subset_idx]
     )
     subset_mean = getattr(subset_adata, data_key)['mean']
     key_set_mean = get_single_agg(mean_key_set_adata, data_key, 'mean')
@@ -181,12 +175,8 @@ def test_groupby_different_data_locations(data_key, dim):
 
     df = pd.DataFrame(
         index=getattr(adata_dense, dim)["key"],
-        columns=getattr(
-            adata_dense, f"{'var' if dim == 'obs' else 'obs'}_names"
-        ),
-        data=data_dense.T
-        if dim == 'var' and data_key != 'varm'
-        else data_dense,
+        columns=getattr(adata_dense, f"{'var' if dim == 'obs' else 'obs'}_names"),
+        data=data_dense.T if dim == 'var' and data_key != 'varm' else data_dense,
     )
     grouped_agg_df = (
         df.groupby('key')
@@ -302,9 +292,7 @@ def test_groupby_X(dim):
         how='count_mean_var',
         weight_key="weight",
     )
-    sum_ = sc.get.aggregated(
-        adata_sparse, by="key", dim=dim, how='sum'
-    )
+    sum_ = sc.get.aggregated(adata_sparse, by="key", dim=dim, how='sum')
     sum_weight = sc.get.aggregated(
         adata_dense,
         by="key",
@@ -329,9 +317,7 @@ def test_groupby_X(dim):
     )
     subset_idx = getattr(stats_sparse, dim).index.isin(key_set)
     subset_adata = (
-        stats_sparse[subset_idx, :]
-        if dim == 'obs'
-        else stats_sparse[:, subset_idx]
+        stats_sparse[subset_idx, :] if dim == 'obs' else stats_sparse[:, subset_idx]
     )
     subset_mean = subset_adata.layers['mean']
     key_set_mean = mean_key_set_adata.X
@@ -339,9 +325,7 @@ def test_groupby_X(dim):
 
     df = pd.DataFrame(
         index=getattr(adata_dense, dim)["key"],
-        columns=getattr(
-            adata_dense, f"{'var' if dim == 'obs' else 'obs'}_names"
-        ),
+        columns=getattr(adata_dense, f"{'var' if dim == 'obs' else 'obs'}_names"),
         data=data_dense,
     )
     grouped_agg_df = (
