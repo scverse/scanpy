@@ -8,6 +8,7 @@ from scanpy._utils import (
     check_nonnegative_integers,
     is_constant,
 )
+from scanpy.testing._pytest.marks import needs
 
 
 def test_descend_classes_and_funcs():
@@ -63,6 +64,7 @@ def test_is_constant(array_type):
     )
 
 
+@needs('dask')
 @pytest.mark.parametrize(
     ('axis', 'expected'),
     [
