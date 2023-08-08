@@ -14,7 +14,7 @@ Genes = Collection[Union[str, int, bool]]
 
 
 def sandbag(
-    adata: Union[AnnData],
+    adata: AnnData,
     annotation: Optional[Mapping[str, Genes]] = None,
     *,
     fraction: float = 0.65,

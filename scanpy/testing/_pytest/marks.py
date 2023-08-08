@@ -15,14 +15,18 @@ KNOWN = dict(
     zarr="zarr",
     zappy="zappy",
     # external
-    scanorama="scanorama",
-    scrublet="scrublet",
+    bbknn="bbknn",
     harmony="harmonyTS",
     harmonypy="harmonypy",
     magic="magic-impute",
     palantir="palantir",
+    phate="phate",
     phenograph="PhenoGraph",
+    pypairs="pypairs",
     samalg="sam-algorithm",
+    scanorama="scanorama",
+    scrublet="scrublet",
+    trimap="trimap",
     wishbone="wishbone-dev",
 )
 
