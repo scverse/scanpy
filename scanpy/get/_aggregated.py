@@ -307,7 +307,7 @@ def aggregated(
             :class:`~anndata.AnnData` to be aggregated.
         by:
             Key of the column to be grouped-by.
-        func: 
+        func:
             How to aggregate.
         dim:
             Axis on which to find group by column.
@@ -396,7 +396,7 @@ def aggregated_from_array(
             Key of the `dim` containing weights for a weighted sum aggregation.
         key_set:
             Subset of dim on which to filter.
-        dof: 
+        dof:
             Degrees of freedom for variance. Defaults to 1.
 
     Returns
