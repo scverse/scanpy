@@ -49,7 +49,7 @@ class Aggregate:
         Data matrix for aggregation.
     _weight
         Weights to be used for aggergation.
-    key_set
+    _key_set
         Subset of keys to which to filter.
     """
 
