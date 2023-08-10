@@ -1,4 +1,5 @@
 from collections.abc import MutableMapping
+import doctest
 from typing import Iterable, Union, Optional
 
 import pandas as pd
@@ -13,10 +14,13 @@ from .. import logging as logg
 from ..neighbors import _rp_forest_generate
 from .._utils import NeighborsView
 from .._compat import pkg_version
+from ..testing._doctests import doctest_skip
+
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
+@doctest_skip('illustrative short example but not runnable')
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
