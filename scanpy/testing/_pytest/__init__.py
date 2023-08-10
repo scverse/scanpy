@@ -14,13 +14,16 @@ doctest_env_marker = pytest.mark.usefixtures('doctest_env')
 
 # Defining it here because it’s autouse.
 @pytest.fixture(autouse=True)
-def matplotlib_context():
+def test_context():
     """Switch to agg backend and close all figures at teardown."""
     from matplotlib import pyplot
+    import scanpy as sc
 
     old_backend = pyplot.rcParams['backend']
+
     pyplot.switch_backend('agg')
-    yield
+    with sc.settings.verbosity.override('hint'):
+        yield
     pyplot.close('all')
     pyplot.switch_backend(old_backend)
 

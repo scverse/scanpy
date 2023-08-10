@@ -2,17 +2,13 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from matplotlib import pyplot
-from matplotlib.testing.compare import compare_images, make_test_filename
 import pytest
 
-import scanpy
+# just import for the IMPORTED check
+import scanpy as _sc  # noqa: F401
 
 if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
     from scanpy.testing._pytest.fixtures import *  # noqa: F403
-
-
-scanpy.settings.verbosity = "hint"
 
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())
@@ -46,6 +42,8 @@ def imported_modules():
 
 @pytest.fixture
 def check_same_image(add_nunit_attachment):
+    from matplotlib.testing.compare import compare_images, make_test_filename
+
     def _(pth1, pth2, *, tol: int, basename: str = ""):
         def fmt_descr(descr):
             if basename != "":
@@ -70,6 +68,8 @@ def check_same_image(add_nunit_attachment):
 
 @pytest.fixture
 def image_comparer(check_same_image):
+    from matplotlib import pyplot
+
     def make_comparer(path_expected: Path, path_actual: Path, *, tol: int):
         def save_and_compare(basename, tol=tol):
             path_actual.mkdir(parents=True, exist_ok=True)
@@ -85,4 +85,6 @@ def image_comparer(check_same_image):
 
 @pytest.fixture
 def plt():
+    from matplotlib import pyplot
+
     return pyplot
