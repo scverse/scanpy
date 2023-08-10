@@ -9,8 +9,6 @@ import numpy as np
 from scipy import sparse
 from anndata import AnnData
 
-from ..._helpers.data import pbmc3k
-
 
 @pytest.fixture(
     scope='session',
@@ -20,6 +18,8 @@ from ..._helpers.data import pbmc3k
     ids=lambda x: f'{x[0].__name__}-{x[1]}',
 )
 def _pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
+    from ..._helpers.data import pbmc3k
+
     sparsity_func, dtype = request.param
     return {
         small: _prepare_pbmc_testdata(pbmc3k(), sparsity_func, dtype, small=small)
