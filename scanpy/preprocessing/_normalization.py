@@ -41,30 +41,6 @@ def _normalize_data(X, counts, after=None, copy=False):
     return X
 
 
-def heisenbug():
-    """
-    Example
-    -------
-    >>> import sys
-    >>> import scanpy as sc
-    >>> sc.settings.verbosity = 'info'
-    >>> sc.settings.verbosity
-    <Verbosity.info: 2>
-    >>> sc.settings.logfile = sys.stdout
-    >>> sc.settings.logfile  # doctest: +ELLIPSIS
-    <doctest._SpoofOut object at 0x...>
-    >>> sc.settings._root_logger.level
-    20
-    >>> sc.settings._root_logger.handlers
-    [<StreamHandler (INFO)>]
-    >>> sc.settings._root_logger.handlers[0].stream  # doctest: +ELLIPSIS
-    <doctest._SpoofOut object at 0x...>
-    >>> sc.logging.info('xxy') and None
-    xxy
-    """
-    pass
-
-
 def normalize_total(
     adata: AnnData,
     target_sum: Optional[float] = None,
