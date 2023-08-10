@@ -1,18 +1,22 @@
 """\
 Run the Self-Assembling Manifold algorithm
 """
-from typing import Optional, Union, Tuple, Any, Literal
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, Union, Tuple, Any, Literal
 
 from anndata import AnnData
 
+if TYPE_CHECKING:
+    from samalg import SAM
+
 from ... import logging as logg
 
-try:
-    from samalg import SAM
-except ImportError:
-    SAM = Any
+
+from ...testing._pytest.marks import needs
+from ...testing._doctests import doctest_mark
 
 
+@doctest_mark(needs('samalg'))
 def sam(
     adata: AnnData,
     max_iter: int = 10,

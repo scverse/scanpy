@@ -6,13 +6,15 @@ from typing import Union, Tuple, Optional, Type, Any, Literal
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-import scipy as sp
 from scipy.sparse import spmatrix
 
-from ...tools._leiden import MutableVertexPartition
 from ... import logging as logg
+from ...tools._leiden import MutableVertexPartition
+from ...testing._pytest.marks import needs
+from ...testing._doctests import doctest_mark
 
 
+@doctest_mark(needs('phenograph'))
 def phenograph(
     adata: Union[AnnData, np.ndarray, spmatrix],
     clustering_algo: Optional[Literal['louvain', 'leiden']] = 'louvain',

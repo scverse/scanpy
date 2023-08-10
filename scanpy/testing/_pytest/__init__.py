@@ -2,22 +2,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-import re
+from types import ModuleType
+from typing import TYPE_CHECKING, Any
 
-import pytest
-
-from scanpy.testing._pytest.marks import needs
+if TYPE_CHECKING:
+    import pytest
 
 from .fixtures import *  # noqa: F403
-
-
-external_tool_to_mod = dict(
-    harmony_integrate='harmonypy',
-    harmony_timeseries='harmony',
-    sam='samalg',
-    sandbag='pypairs',
-    scanorama_integrate='scanorama',
-)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -35,6 +26,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def pytest_collection_modifyitems(
     config: pytest.Config, items: Iterable[pytest.Item]
 ) -> None:
+    import pytest
+
     run_internet = config.getoption("--internet-tests")
     skip_internet = pytest.mark.skip(reason="need --internet-tests option to run")
     for item in items:
@@ -45,14 +38,28 @@ def pytest_collection_modifyitems(
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:
+    import pytest
+
     if not isinstance(item, pytest.DoctestItem):
         return
-    if not (
-        match := re.fullmatch(r'scanpy\.external\..+\.(?P<name>[^\.]+)', item.name)
-    ):
-        return
-    tool = match['name']
-    if tool in {'hashsolo'}:
-        return  # no deps
-    module = external_tool_to_mod.get(tool, tool)
-    item.add_marker(needs(module))
+    func = _import_name(item.name)
+    if marker := getattr(func, '_doctest_mark', None):
+        item.add_marker(marker)
+
+
+def _import_name(name: str) -> Any:
+    from importlib import import_module
+
+    parts = name.split('.')
+    obj = import_module(parts[0])
+    for i, name in enumerate(parts[1:]):
+        try:
+            obj = import_module(f'{obj.__name__}.{name}')
+        except ModuleNotFoundError:
+            break
+    for name in parts[i + 1 :]:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError:
+            raise RuntimeError(f'{parts[:i]}, {parts[i+1:]}, {obj} {name}')
+    return obj

@@ -8,11 +8,14 @@ from anndata import AnnData
 from packaging import version
 
 from ... import settings
+from ...testing._pytest.marks import needs
+from ...testing._doctests import doctest_mark
 
 
 Genes = Collection[Union[str, int, bool]]
 
 
+@doctest_mark(needs('pypairs'))
 def sandbag(
     adata: AnnData,
     annotation: Optional[Mapping[str, Genes]] = None,

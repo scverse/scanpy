@@ -2,11 +2,13 @@
 Use harmony to integrate cells from different experiments.
 """
 
-from typing import Optional
-
 from anndata import AnnData
 
+from ...testing._pytest.marks import needs
+from ...testing._doctests import doctest_mark
 
+
+@doctest_mark(needs('harmonypy'))
 def harmony_integrate(
     adata: AnnData,
     key: str,

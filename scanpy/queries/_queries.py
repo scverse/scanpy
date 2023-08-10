@@ -6,6 +6,8 @@ from typing import Any, Union, Optional, Iterable, Dict, Mapping
 import pandas as pd
 from anndata import AnnData
 
+from ..testing._pytest.marks import needs
+from ..testing._doctests import doctest_mark
 from ..get import rank_genes_groups_df
 from .._utils import _doc_params
 
@@ -71,6 +73,7 @@ def simple_query(
     return res
 
 
+@doctest_mark(needs('pybiomart'))
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def biomart_annotations(
     org: str,
@@ -100,9 +103,9 @@ def biomart_annotations(
 
     >>> import scanpy as sc
     >>> annot = sc.queries.biomart_annotations(
-            "hsapiens",
-            ["ensembl_gene_id", "start_position", "end_position", "chromosome_name"],
-        ).set_index("ensembl_gene_id")
+    ...     "hsapiens",
+    ...     ["ensembl_gene_id", "start_position", "end_position", "chromosome_name"],
+    ... ).set_index("ensembl_gene_id")
     >>> adata.var[annot.columns] = annot
     """
     return simple_query(org=org, attrs=attrs, host=host, use_cache=use_cache)

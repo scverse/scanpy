@@ -6,8 +6,11 @@ import pandas as pd
 from anndata import AnnData
 
 from ... import logging
+from ...testing._pytest.marks import needs
+from ...testing._doctests import doctest_mark
 
 
+@doctest_mark(needs('wishbone'))
 def wishbone(
     adata: AnnData,
     start_cell: str,

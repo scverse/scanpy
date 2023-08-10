@@ -1,23 +1,24 @@
-from typing import Union, Optional, Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union, Optional, Callable
 
 from anndata import AnnData
-import sklearn
 
-from ..._utils import lazy_import
+if TYPE_CHECKING:
+    from sklearn.neighbors import DistanceMetric
 
-
-# Import this lazily so we don’t slowly import sklearn.stats just for annotation
-lazy_import("sklearn.neighbors")
-del lazy_import
+from ...testing._pytest.marks import needs
+from ...testing._doctests import doctest_mark
 
 
+@doctest_mark(needs('bbknn'))
 def bbknn(
     adata: AnnData,
     batch_key: str = 'batch',
     use_rep: str = 'X_pca',
     approx: bool = True,
     use_annoy: bool = True,
-    metric: Union[str, Callable, 'sklearn.neighbors.DistanceMetric'] = 'euclidean',
+    metric: Union[str, Callable, DistanceMetric] = 'euclidean',
     copy: bool = False,
     *,
     neighbors_within_batch: int = 3,
