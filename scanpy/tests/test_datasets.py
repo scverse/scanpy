@@ -11,8 +11,8 @@ import subprocess
 
 
 @pytest.fixture(scope="module")
-def tmp_dataset_dir(tmpdir_factory):
-    new_dir = Path(tmpdir_factory.mktemp("scanpy_data"))
+def tmp_dataset_dir(tmp_path_factory):
+    new_dir = tmp_path_factory.mktemp("scanpy_data")
     old_dir = sc.settings.datasetdir
     sc.settings.datasetdir = new_dir  # Set up
     yield sc.settings.datasetdir

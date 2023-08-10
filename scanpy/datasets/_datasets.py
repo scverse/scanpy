@@ -91,10 +91,8 @@ def krumsiek11() -> ad.AnnData:
     Annotated data matrix.
     """
     filename = HERE / 'krumsiek11.txt'
-    verbosity_save = settings.verbosity
-    settings.verbosity = 'error'  # suppress output...
-    adata = read(filename, first_column_names=True)
-    settings.verbosity = verbosity_save
+    with settings.verbosity.override('error'):  # suppress output...
+        adata = read(filename, first_column_names=True)
     adata.uns['iroot'] = 0
     fate_labels = {0: 'Stem', 159: 'Mo', 319: 'Ery', 459: 'Mk', 619: 'Neu'}
     adata.uns['highlights'] = fate_labels

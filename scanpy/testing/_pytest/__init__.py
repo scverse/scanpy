@@ -1,7 +1,7 @@
 """A private pytest plugin"""
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Generator
 import sys
 from typing import Any
 
@@ -15,24 +15,18 @@ doctest_env_marker = pytest.mark.usefixtures('doctest_env')
 
 # Defining it here because it’s autouse.
 @pytest.fixture(autouse=True)
-def test_context(capsys):
-    """Switch to agg backend, close all figures at teardown, and reset settings."""
+def test_context() -> Generator[None, None, None]:
+    """Switch to agg backend, reset settings, and close all figures at teardown."""
     from matplotlib import pyplot
     from scanpy import settings
 
-    assert settings.verbosity == 'warning'  # the default
-    with capsys.disabled():
-        # this got assigned before pytest replaced the streams
-        assert settings.logfile is sys.stderr
-
-    old_backend = pyplot.rcParams['backend']
-    old_logfile, settings.logfile = settings.logfile, sys.stderr
     pyplot.switch_backend('agg')
-    with settings.verbosity.override('hint'):
-        yield
-    settings.logfile = old_logfile
+    settings.logfile = sys.stderr
+    settings.verbosity = 'hint'
+
+    yield
+
     pyplot.close('all')
-    pyplot.switch_backend(old_backend)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
