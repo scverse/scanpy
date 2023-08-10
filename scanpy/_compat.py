@@ -7,7 +7,7 @@ from packaging import version
 
 try:
     from contextlib import chdir
-except ImportError:
+except ImportError:  # Python < 3.11
     import os
     from contextlib import AbstractContextManager
 
