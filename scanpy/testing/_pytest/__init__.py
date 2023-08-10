@@ -23,6 +23,7 @@ def test_context() -> Generator[None, None, None]:
     pyplot.switch_backend('agg')
     settings.logfile = sys.stderr
     settings.verbosity = 'hint'
+    settings.autoshow = True
 
     yield
 
