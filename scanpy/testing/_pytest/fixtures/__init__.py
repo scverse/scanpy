@@ -3,11 +3,13 @@
 This is kept seperate from the helpers file because it relies on pytest.
 """
 from pathlib import Path
+
 import pytest
 import numpy as np
 from scipy import sparse
-
 from anndata.tests.helpers import asarray
+
+from ...._compat import chdir
 from .data import (
     _pbmc3ks_parametrized_session,
     pbmc3k_parametrized,
@@ -43,8 +45,7 @@ def float_dtype(request):
 def doctest_env(cache: pytest.Cache, tmp_path: Path) -> None:
     from scanpy import settings
 
-    old_wd = tmp_path.cwd()
     old_dd, settings.datasetdir = settings.datasetdir, cache.mkdir('scanpy-data')
-    yield
-    old_wd.cwd()
+    with chdir(tmp_path):
+        yield
     settings.datasetdir = old_dd

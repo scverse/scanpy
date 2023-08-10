@@ -111,9 +111,9 @@ def normalize_total(
     >>> sc.settings.verbosity = 2
     >>> np.set_printoptions(precision=2)
     >>> adata = AnnData(np.array([
-    ...    [3, 3, 3, 6, 6],
-    ...    [1, 1, 1, 2, 2],
-    ...    [1, 22, 1, 2, 2],
+    ...     [3, 3, 3, 6, 6],
+    ...     [1, 1, 1, 2, 2],
+    ...     [1, 22, 1, 2, 2],
     ... ]))
     >>> adata.X
     array([[ 3.,  3.,  3.,  6.,  6.],

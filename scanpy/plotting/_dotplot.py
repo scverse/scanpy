@@ -255,7 +255,7 @@ class DotPlot(BasePlot):
         x_padding: Optional[float] = DEFAULT_PLOT_X_PADDING,
         y_padding: Optional[float] = DEFAULT_PLOT_Y_PADDING,
     ):
-        """\
+        r"""\
         Modifies plot visual parameters
 
         Parameters
@@ -312,20 +312,20 @@ class DotPlot(BasePlot):
         Examples
         -------
 
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
         Change color map and apply it to the square behind the dot
 
-        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(cmap='RdBu_r', color_on='square').show()
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels') \
+        ...     .style(cmap='RdBu_r', color_on='square').show()
 
         Add edge to dots and plot a grid
 
-        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(dot_edge_color='black', dot_edge_lw=1, grid=True)\
-        ...               .show()
-
+        >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels') \
+        ...     .style(dot_edge_color='black', dot_edge_lw=1, grid=True) \
+        ...     .show()
         """
 
         # change only the values that had changed
@@ -395,8 +395,9 @@ class DotPlot(BasePlot):
 
         Set color bar title:
 
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
         >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
         """
