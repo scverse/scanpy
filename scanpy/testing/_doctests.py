@@ -9,6 +9,8 @@ F = TypeVar('F', bound=FunctionType)
 
 
 def doctest_needs(mod: str) -> Callable[[F], F]:
+    """Mark function with doctest dependency."""
+
     def decorator(func: F) -> F:
         try:
             from ._pytest.marks import needs
@@ -21,6 +23,7 @@ def doctest_needs(mod: str) -> Callable[[F], F]:
 
 
 def doctest_skip(reason: str) -> Callable[[F], F]:
+    """Mark function so doctest is skipped."""
     if not reason:
         raise ValueError("reason must not be empty")
 
