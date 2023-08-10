@@ -7,11 +7,10 @@ from anndata import AnnData
 if TYPE_CHECKING:
     from sklearn.neighbors import DistanceMetric
 
-from ...testing._pytest.marks import needs
-from ...testing._doctests import doctest_mark
+from ...testing._doctests import doctest_needs
 
 
-@doctest_mark(needs('bbknn'))
+@doctest_needs('bbknn')
 def bbknn(
     adata: AnnData,
     batch_key: str = 'batch',

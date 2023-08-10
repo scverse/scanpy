@@ -10,11 +10,10 @@ from scipy.sparse import spmatrix
 
 from ... import logging as logg
 from ...tools._leiden import MutableVertexPartition
-from ...testing._pytest.marks import needs
-from ...testing._doctests import doctest_mark
+from ...testing._doctests import doctest_needs
 
 
-@doctest_mark(needs('phenograph'))
+@doctest_needs('phenograph')
 def phenograph(
     adata: Union[AnnData, np.ndarray, spmatrix],
     clustering_algo: Optional[Literal['louvain', 'leiden']] = 'louvain',

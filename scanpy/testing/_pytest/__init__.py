@@ -2,13 +2,27 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from types import ModuleType
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    import pytest
+import pytest
 
 from .fixtures import *  # noqa: F403
+
+
+doctest_env_marker = pytest.mark.usefixtures('doctest_env')
+
+
+# Defining it here because it’s autouse.
+@pytest.fixture(autouse=True)
+def matplotlib_context():
+    """Switch to agg backend and close all figures at teardown."""
+    from matplotlib import pyplot
+
+    old_backend = pyplot.rcParams['backend']
+    pyplot.switch_backend('agg')
+    yield
+    pyplot.close('all')
+    pyplot.switch_backend(old_backend)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -42,6 +56,9 @@ def pytest_itemcollected(item: pytest.Item) -> None:
 
     if not isinstance(item, pytest.DoctestItem):
         return
+
+    item.add_marker(doctest_env_marker)
+
     func = _import_name(item.name)
     if marker := getattr(func, '_doctest_mark', None):
         item.add_marker(marker)

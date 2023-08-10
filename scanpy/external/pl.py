@@ -6,8 +6,7 @@ import matplotlib.pyplot as plt
 from anndata import AnnData
 from matplotlib.axes import Axes
 
-from ..testing._pytest.marks import needs
-from ..testing._doctests import doctest_mark
+from ..testing._doctests import doctest_needs
 from .._utils import _doc_params
 from ..plotting import embedding
 from ..plotting._docs import (
@@ -21,7 +20,7 @@ from ..plotting import _utils
 from .tl._wishbone import _anndata_to_wishbone
 
 
-@doctest_mark(needs('phate'))
+@doctest_needs('phate')
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,

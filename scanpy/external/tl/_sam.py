@@ -12,11 +12,10 @@ if TYPE_CHECKING:
 from ... import logging as logg
 
 
-from ...testing._pytest.marks import needs
-from ...testing._doctests import doctest_mark
+from ...testing._doctests import doctest_needs
 
 
-@doctest_mark(needs('samalg'))
+@doctest_needs('samalg')
 def sam(
     adata: AnnData,
     max_iter: int = 10,

@@ -9,11 +9,10 @@ import scipy.sparse as scp
 from ... import logging as logg
 from ..._settings import settings
 
-from ...testing._pytest.marks import needs
-from ...testing._doctests import doctest_mark
+from ...testing._doctests import doctest_needs
 
 
-@doctest_mark(needs('trimap'))
+@doctest_needs('trimap')
 def trimap(
     adata: AnnData,
     n_components: int = 2,

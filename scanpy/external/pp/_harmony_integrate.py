@@ -4,11 +4,10 @@ Use harmony to integrate cells from different experiments.
 
 from anndata import AnnData
 
-from ...testing._pytest.marks import needs
-from ...testing._doctests import doctest_mark
+from ...testing._doctests import doctest_needs
 
 
-@doctest_mark(needs('harmonypy'))
+@doctest_needs('harmonypy')
 def harmony_integrate(
     adata: AnnData,
     key: str,

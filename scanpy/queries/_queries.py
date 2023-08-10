@@ -6,8 +6,7 @@ from typing import Any, Union, Optional, Iterable, Dict, Mapping
 import pandas as pd
 from anndata import AnnData
 
-from ..testing._pytest.marks import needs
-from ..testing._doctests import doctest_mark
+from ..testing._doctests import doctest_needs
 from ..get import rank_genes_groups_df
 from .._utils import _doc_params
 
@@ -73,7 +72,7 @@ def simple_query(
     return res
 
 
-@doctest_mark(needs('pybiomart'))
+@doctest_needs('pybiomart')
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def biomart_annotations(
     org: str,

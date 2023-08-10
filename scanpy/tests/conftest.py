@@ -2,9 +2,6 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import matplotlib as mpl
-
-mpl.use('agg')
 from matplotlib import pyplot
 from matplotlib.testing.compare import compare_images, make_test_filename
 import pytest
@@ -19,12 +16,6 @@ scanpy.settings.verbosity = "hint"
 
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())
-
-
-@pytest.fixture(autouse=True)
-def close_figures_on_teardown():
-    yield
-    pyplot.close("all")
 
 
 def clear_loggers():

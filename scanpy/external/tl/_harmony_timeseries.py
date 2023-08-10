@@ -10,11 +10,10 @@ import pandas as pd
 from anndata import AnnData
 
 from ... import logging as logg
-from ...testing._pytest.marks import needs
-from ...testing._doctests import doctest_mark
+from ...testing._doctests import doctest_needs
 
 
-@doctest_mark(needs('harmony'))
+@doctest_needs('harmony')
 def harmony_timeseries(
     adata: AnnData,
     tp: str,

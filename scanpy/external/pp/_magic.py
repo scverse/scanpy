@@ -9,14 +9,13 @@ from packaging import version
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import AnyRandom
-from ...testing._pytest.marks import needs
-from ...testing._doctests import doctest_mark
+from ...testing._doctests import doctest_needs
 
 
 MIN_VERSION = "2.0"
 
 
-@doctest_mark(needs('magic'))
+@doctest_needs('magic')
 def magic(
     adata: AnnData,
     name_list: Union[Literal['all_genes', 'pca_only'], Sequence[str], None] = None,

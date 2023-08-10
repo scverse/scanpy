@@ -204,7 +204,7 @@ class BasePlot(object):
         dendrogram_key: Optional[str] = None,
         size: Optional[float] = 0.8,
     ):
-        """\
+        r"""\
         Show dendrogram based on the hierarchical clustering between the `groupby`
         categories. Categories are reordered to match the dendrogram order.
 
@@ -243,10 +243,15 @@ class BasePlot(object):
 
         Examples
         --------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
-
+        >>> plot = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').add_dendrogram()
+        >>> plot.plot_group_extra  # doctest: +NORMALIZE_WHITESPACE
+        {'kind': 'dendrogram',
+         'width': 0.8,
+         'dendrogram_key': None,
+         'dendrogram_ticks': array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5])}
         """
 
         if not show:
@@ -285,7 +290,7 @@ class BasePlot(object):
         size: Optional[float] = 0.8,
         color: Optional[Union[ColorLike, Sequence[ColorLike]]] = None,
     ):
-        """\
+        r"""\
         Show barplot for the number of cells in in `groupby` category.
 
         The barplot is by default shown on the right side of the plot or on top
@@ -316,9 +321,23 @@ class BasePlot(object):
 
         Examples
         --------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_totals().show()
+        >>> plot = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').add_totals()
+        >>> plot.plot_group_extra['counts_df']
+        bulk_labels
+        CD4+/CD25 T Reg                  68
+        CD4+/CD45RA+/CD25- Naive T        8
+        CD4+/CD45RO+ Memory              19
+        CD8+ Cytotoxic T                 54
+        CD8+/CD45RA+ Naive Cytotoxic     43
+        CD14+ Monocyte                  129
+        CD19+ B                          95
+        CD34+                            13
+        CD56+ NK                         31
+        Dendritic                       240
+        Name: count, dtype: int64
         """
         self.group_extra_size = size
 
@@ -366,7 +385,7 @@ class BasePlot(object):
         title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
         width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
     ):
-        """\
+        r"""\
         Configure legend parameters
 
         Parameters
@@ -389,10 +408,13 @@ class BasePlot(object):
 
         Set legend title:
 
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-        >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
-        >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
+        >>> dp = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels') \
+        ...     .legend(title='log(UMI counts + 1)')
+        >>> dp.color_legend_title
+        'log(UMI counts + 1)'
         """
 
         if not show:
@@ -501,7 +523,6 @@ class BasePlot(object):
         Returns
         -------
         None, updates color_legend_ax
-
         """
         cmap = pl.get_cmap(self.cmap)
 
@@ -580,7 +601,7 @@ class BasePlot(object):
         )
 
     def make_figure(self):
-        """
+        r"""
         Renders the image but does not call :func:`matplotlib.pyplot.show`. Useful
         when several plots are put together into one figure.
 
@@ -592,12 +613,13 @@ class BasePlot(object):
         Examples
         --------
 
+        >>> import scanpy as sc
         >>> import matplotlib.pyplot as plt
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         >>> fig, (ax0, ax1) = plt.subplots(1, 2)
-        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels', ax=ax0)\
-        ...               .style(cmap='Blues', edge_color='none').make_figure()
+        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels', ax=ax0) \
+        ...     .style(cmap='Blues', edge_color='none').make_figure()
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels', ax=ax1).make_figure()
         """
 
@@ -765,10 +787,10 @@ class BasePlot(object):
 
         Examples
         -------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').show()
-
+        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').show()
         """
 
         self.make_figure()
@@ -799,10 +821,10 @@ class BasePlot(object):
 
         Examples
         -------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').savefig('plot.pdf')
-
+        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').savefig('plot.pdf')
         """
         self.make_figure()
         pl.savefig(filename, bbox_inches=bbox_inches, **kwargs)

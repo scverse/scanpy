@@ -6,11 +6,10 @@ from anndata import AnnData
 import numpy as np
 
 
-from ...testing._pytest.marks import needs
-from ...testing._doctests import doctest_mark
+from ...testing._doctests import doctest_needs
 
 
-@doctest_mark(needs('scanorama'))
+@doctest_needs('scanorama')
 def scanorama_integrate(
     adata: AnnData,
     key: str,

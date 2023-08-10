@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 from types import FunctionType
-from typing import TYPE_CHECKING, TypeVar
+from typing import TypeVar
 from collections.abc import Callable
-
-
-if TYPE_CHECKING:
-    import pytest
 
 
 F = TypeVar('F', bound=FunctionType)
 
 
-def doctest_mark(mark: pytest.MarkDecorator) -> Callable[[F], F]:
+def doctest_needs(mod: str) -> Callable[[F], F]:
     def decorator(func: F) -> F:
-        func._doctest_mark = mark
+        try:
+            from ._pytest.marks import needs
+        except ImportError:
+            return func
+        func._doctest_mark = needs(mod)
         return func
 
     return decorator
