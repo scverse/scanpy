@@ -6,8 +6,7 @@ from typing import Union, Sequence, Optional, Literal
 from anndata import AnnData
 from packaging import version
 
-from ... import logging as logg
-from ..._settings import settings
+from ... import settings, logging as logg
 from ..._utils import AnyRandom
 from ...testing._doctests import doctest_needs
 

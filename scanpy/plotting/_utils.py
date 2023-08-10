@@ -16,8 +16,7 @@ from matplotlib.patches import Circle
 from matplotlib.collections import PatchCollection
 from cycler import Cycler, cycler
 
-from .. import logging as logg
-from .._settings import settings
+from .. import settings, logging as logg
 from .._utils import NeighborsView
 from . import palettes
 

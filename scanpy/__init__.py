@@ -3,14 +3,15 @@
 from ._metadata import __version__, within_flit
 
 if not within_flit():  # see function docstring on why this is there
+    from ._settings import ScanpyConfig as _SC, Verbosity
+
+    settings = _SC()
+
     from ._utils import check_versions
 
     check_versions()
     del check_versions, within_flit
 
-    # the actual API
-    # (start with settings as several tools are using it)
-    from ._settings import settings, Verbosity
     from . import tools as tl
     from . import preprocessing as pp
     from . import plotting as pl

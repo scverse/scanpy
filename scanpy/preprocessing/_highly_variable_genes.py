@@ -6,8 +6,7 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 
-from .. import logging as logg
-from .._settings import settings, Verbosity
+from .. import settings, Verbosity, logging as logg
 from .._utils import sanitize_anndata, check_nonnegative_integers
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray

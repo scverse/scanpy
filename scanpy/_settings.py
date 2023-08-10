@@ -51,6 +51,8 @@ class Verbosity(IntEnum):
         """\
         Temporarily override verbosity
         """
+        from . import settings
+
         settings.verbosity = verbosity
         yield self
         settings.verbosity = self
@@ -78,6 +80,8 @@ class ScanpyConfig:
     Config manager for scanpy.
     """
 
+    BOOM = False
+
     def __init__(
         self,
         *,
@@ -101,6 +105,10 @@ class ScanpyConfig:
         _low_resolution_warning: bool = True,
         n_pcs=50,
     ):
+        if self.BOOM:
+            raise RuntimeError('2 instas')
+        self.BOOM = True
+
         # logging
         self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
         self.logfile = logfile
@@ -494,6 +502,3 @@ class ScanpyConfig:
             for k, v in inspect.getmembers(self)
             if not k.startswith("_") and not k == 'getdoc'
         )
-
-
-settings = ScanpyConfig()

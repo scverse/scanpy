@@ -7,8 +7,7 @@ from anndata import AnnData
 from sklearn.utils import check_random_state, check_array
 
 from ._utils import get_init_pos_from_paga, _choose_representation
-from .. import logging as logg
-from .._settings import settings
+from .. import settings, logging as logg
 from .._utils import AnyRandom, NeighborsView
 
 

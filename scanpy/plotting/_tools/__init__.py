@@ -13,10 +13,9 @@ from typing import Union, Optional, List, Sequence, Iterable, Mapping, Literal
 
 from .._utils import savefig_or_show
 from ..._utils import _doc_params, sanitize_anndata, subsample
-from ... import logging as logg
+from ... import settings, logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
-from ..._settings import settings
 from .._docs import (
     doc_scatter_embedding,
     doc_show_save_ax,

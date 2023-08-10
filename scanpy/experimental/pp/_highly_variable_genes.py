@@ -8,8 +8,7 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 
-from scanpy import logging as logg
-from scanpy._settings import settings, Verbosity
+from scanpy import settings, Verbosity, logging as logg
 from scanpy._utils import check_nonnegative_integers, view_to_actual
 from scanpy.get import _get_obs_rep
 from scanpy._utils import _doc_params

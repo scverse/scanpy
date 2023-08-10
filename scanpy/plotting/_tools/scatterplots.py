@@ -45,8 +45,7 @@ from .._docs import (
     doc_scatter_spatial,
     doc_show_save_ax,
 )
-from ... import logging as logg
-from ..._settings import settings
+from ... import settings, logging as logg
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
 
 

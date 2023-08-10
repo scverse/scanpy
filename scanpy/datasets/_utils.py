@@ -5,7 +5,7 @@ from packaging import version
 
 import anndata as ad
 
-from .._settings import settings
+from .. import settings
 
 
 def check_datasetdir_exists(f):

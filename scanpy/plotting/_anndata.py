@@ -21,8 +21,7 @@ from matplotlib import patheffects
 from matplotlib.colors import is_color_like, Colormap, ListedColormap, Normalize
 
 from .. import get
-from .. import logging as logg
-from .._settings import settings
+from .. import settings, logging as logg
 from .._utils import sanitize_anndata, _doc_params, _check_use_raw
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes, check_colornorm

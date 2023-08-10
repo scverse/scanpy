@@ -9,12 +9,11 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib.colors import Normalize
 
-from .. import logging as logg
+from .. import settings, logging as logg
 from .._utils import _doc_params
 from ._utils import fix_kwds, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
-from .._settings import settings
 from ._docs import (
     doc_common_plot_args,
     doc_show_save_ax,

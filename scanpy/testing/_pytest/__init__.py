@@ -15,7 +15,7 @@ doctest_env_marker = pytest.mark.usefixtures('doctest_env')
 
 # Defining it here because it’s autouse.
 @pytest.fixture(autouse=True)
-def test_context() -> Generator[None, None, None]:
+def global_test_context() -> Generator[None, None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
     from matplotlib import pyplot
     from scanpy import settings

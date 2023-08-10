@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 
-from ..._settings import settings
+from ... import settings
 
 
 def mnn_correct(
