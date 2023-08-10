@@ -109,7 +109,7 @@ def normalize_total(
     >>> import sys
     >>> from anndata import AnnData
     >>> import scanpy as sc
-    >>> sc.settings.verbosity = 2
+    >>> sc.settings.verbosity = 'info'
     >>> sc.settings.logfile = sys.stdout  # for doctests
     >>> np.set_printoptions(precision=2)
     >>> adata = AnnData(np.array([

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+import sys
 from typing import Any
 
 import pytest
@@ -14,16 +15,22 @@ doctest_env_marker = pytest.mark.usefixtures('doctest_env')
 
 # Defining it here because it’s autouse.
 @pytest.fixture(autouse=True)
-def test_context():
-    """Switch to agg backend and close all figures at teardown."""
+def test_context(capsys):
+    """Switch to agg backend, close all figures at teardown, and reset settings."""
     from matplotlib import pyplot
-    import scanpy as sc
+    from scanpy import settings
+
+    assert settings.verbosity == 'warning'  # the default
+    with capsys.disabled():
+        # this got assigned before pytest replaced the streams
+        assert settings.logfile is sys.stderr
 
     old_backend = pyplot.rcParams['backend']
-
+    old_logfile, settings.logfile = settings.logfile, sys.stderr
     pyplot.switch_backend('agg')
-    with sc.settings.verbosity.override('hint'):
+    with settings.verbosity.override('hint'):
         yield
+    settings.logfile = old_logfile
     pyplot.close('all')
     pyplot.switch_backend(old_backend)
 

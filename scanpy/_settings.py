@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 import sys
 from contextlib import contextmanager
@@ -18,31 +20,44 @@ _VERBOSITY_TO_LOGLEVEL = {
     'hint': 'HINT',
     'debug': 'DEBUG',
 }
-# Python 3.7 ensures iteration order
+# Python 3.7+ ensures iteration order
 for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
     _VERBOSITY_TO_LOGLEVEL[v] = level
 
 
 class Verbosity(IntEnum):
     error = 0
-    warn = 1
+    warning = 1
     info = 2
     hint = 3
     debug = 4
 
+    def __eq__(self, other: Verbosity | int | str) -> bool:
+        if isinstance(other, Verbosity):
+            return self is other
+        if isinstance(other, int):
+            return self.value == other
+        if isinstance(other, str):
+            return self.name == other
+        return NotImplemented
+
     @property
     def level(self) -> int:
         # getLevelName(str) returns the int level…
-        return getLevelName(_VERBOSITY_TO_LOGLEVEL[self])
+        return getLevelName(_VERBOSITY_TO_LOGLEVEL[self.name])
 
     @contextmanager
-    def override(self, verbosity: "Verbosity") -> ContextManager["Verbosity"]:
+    def override(self, verbosity: Verbosity | str | int) -> ContextManager[Verbosity]:
         """\
         Temporarily override verbosity
         """
         settings.verbosity = verbosity
         yield self
         settings.verbosity = self
+
+
+# backwards compat
+Verbosity.warn = Verbosity.warning
 
 
 def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
@@ -66,7 +81,7 @@ class ScanpyConfig:
     def __init__(
         self,
         *,
-        verbosity: str = "warning",
+        verbosity: Verbosity | int | str = Verbosity.warning,
         plot_suffix: str = "",
         file_format_data: str = "h5ad",
         file_format_figs: str = "pdf",
@@ -158,7 +173,7 @@ class ScanpyConfig:
                 self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
             _type_check(verbosity, "verbosity", (str, int))
-        _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity])
+        _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity.name])
 
     @property
     def plot_suffix(self) -> str:
