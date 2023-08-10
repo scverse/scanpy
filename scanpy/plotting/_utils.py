@@ -1192,9 +1192,8 @@ def fix_kwds(kwds_dict, **kwargs):
 
     >>> def _example(**kwds):
     ...     return fix_kwds(kwds, key1="value1", key2="value2")
-    >>> example(key1="value10", key3="value3")
-        {'key1': 'value10, 'key2': 'value2', 'key3': 'value3'}
-
+    >>> _example(key1="value10", key3="value3")
+    {'key1': 'value10', 'key2': 'value2', 'key3': 'value3'}
     """
 
     kwargs.update(kwds_dict)
