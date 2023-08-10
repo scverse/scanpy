@@ -83,12 +83,14 @@ class StackedViolin(BasePlot):
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)
+    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)  # doctest: +ELLIPSIS
+    <scanpy.plotting._stacked_violin.StackedViolin object at 0x...>
 
     Using var_names as dict:
 
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)
+    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)  # doctest: +ELLIPSIS
+    <scanpy.plotting._stacked_violin.StackedViolin object at 0x...>
     """
 
     DEFAULT_SAVE_PREFIX = 'stacked_violin_'
@@ -212,7 +214,7 @@ class StackedViolin(BasePlot):
         x_padding: Optional[float] = DEFAULT_PLOT_X_PADDING,
         y_padding: Optional[float] = DEFAULT_PLOT_Y_PADDING,
     ):
-        """\
+        r"""\
         Modifies plot visual parameters
 
         Parameters
@@ -258,14 +260,14 @@ class StackedViolin(BasePlot):
 
         Examples
         -------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
         Change color map and turn off edges
 
-        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(row_palette='Blues', linewidth=0).show()
-
+        >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels') \
+        ...     .style(row_palette='Blues', linewidth=0).show()
         """
 
         # modify only values that had changed
