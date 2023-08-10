@@ -58,7 +58,11 @@ def rank_genes_groups_df(
         group = [group]
     if group is None:
         group = list(adata.uns[key]['names'].dtype.names)
-    colnames = ['names', 'scores', 'logfoldchanges', 'pvals', 'pvals_adj']
+    method = adata.uns[key]["params"]["method"]
+    if method == "logreg":
+        colnames = ['names', 'scores']
+    else:
+        colnames = ['names', 'scores', 'logfoldchanges', 'pvals', 'pvals_adj']
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, 'group'], keys=colnames)
@@ -66,12 +70,13 @@ def rank_genes_groups_df(
     d['group'] = pd.Categorical(d['group'], categories=group)
     d = d.sort_values(['group', 'level_0']).drop(columns='level_0')
 
-    if pval_cutoff is not None:
-        d = d[d["pvals_adj"] < pval_cutoff]
-    if log2fc_min is not None:
-        d = d[d["logfoldchanges"] > log2fc_min]
-    if log2fc_max is not None:
-        d = d[d["logfoldchanges"] < log2fc_max]
+    if method != "logreg":
+        if pval_cutoff is not None:
+            d = d[d["pvals_adj"] < pval_cutoff]
+        if log2fc_min is not None:
+            d = d[d["logfoldchanges"] > log2fc_min]
+        if log2fc_max is not None:
+            d = d[d["logfoldchanges"] < log2fc_max]
     if gene_symbols is not None:
         d = d.join(adata.var[gene_symbols], on="names")
 
