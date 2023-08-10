@@ -73,6 +73,7 @@ def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
             return datetime(2000, 1, 1, second=counter, microsecond=counter, tzinfo=tz)
 
     monkeypatch.setattr(log, 'datetime', IncTime)
+    s.logfile = sys.stderr
     s.verbosity = Verbosity.debug
 
     log.hint('1')
