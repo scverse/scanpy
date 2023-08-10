@@ -17,6 +17,7 @@ KNOWN = dict(
     zarr='zarr',
     zappy='zappy',
     pybiomart='pybiomart',
+    gprofiler='gprofiler-official',
     # external
     bbknn='bbknn',
     harmony='harmonyTS',

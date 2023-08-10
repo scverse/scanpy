@@ -110,6 +110,7 @@ def biomart_annotations(
     return simple_query(org=org, attrs=attrs, host=host, use_cache=use_cache)
 
 
+@doctest_needs('pybiomart')
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def gene_coordinates(
     org: str,
@@ -155,6 +156,7 @@ def gene_coordinates(
     return res[~res["chromosome_name"].isin(chr_exclude)]
 
 
+@doctest_needs('pybiomart')
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def mitochondrial_genes(
     org: str,
@@ -199,6 +201,7 @@ def mitochondrial_genes(
     )
 
 
+@doctest_needs('gprofiler')
 @singledispatch
 @_doc_params(doc_org=_doc_org)
 def enrich(
