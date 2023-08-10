@@ -18,3 +18,14 @@ def doctest_needs(mod: str) -> Callable[[F], F]:
         return func
 
     return decorator
+
+
+def doctest_skip(reason: str) -> Callable[[F], F]:
+    if not reason:
+        raise ValueError("reason must not be empty")
+
+    def decorator(func: F) -> F:
+        func._doctest_skip_reason = reason
+        return func
+
+    return decorator

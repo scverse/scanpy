@@ -62,6 +62,8 @@ def pytest_itemcollected(item: pytest.Item) -> None:
     func = _import_name(item.name)
     if marker := getattr(func, '_doctest_mark', None):
         item.add_marker(marker)
+    if skip_reason := getattr(func, '_doctest_skip_reason', False):
+        item.add_marker(pytest.mark.skip(reason=skip_reason))
 
 
 def _import_name(name: str) -> Any:
