@@ -87,7 +87,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest >=4.4, <7.1",  # https://github.com/pytest-dev/pytest/issues/9765
+    "pytest>=4.4",
     "pytest-nunit",
     "profimp",
 ]
