@@ -26,6 +26,7 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
         settings.verbosity = 1
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = 'X'
+    print(settings.N_PCS, type(settings.N_PCS))
     if use_rep is None:
         if adata.n_vars > settings.N_PCS:
             if 'X_pca' in adata.obsm.keys():
@@ -41,8 +42,9 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
                     'if you really want this, set `use_rep=\'X\'`.\n         '
                     'Falling back to preprocessing with `sc.pp.pca` and default params.'
                 )
-                X = pca(adata.X, n_comps= max(settings.N_PCS, n_pcs))
-                adata.obsm['X_pca'] = X[:, :n_pcs]
+                n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
+                X = pca(adata.X, n_comps=n_pcs_pca)
+                adata.obsm['X_pca'] = X
         else:
             logg.info('    using data matrix X directly')
             X = adata.X
