@@ -9,7 +9,6 @@ import numpy as np
 from scipy import sparse
 from anndata.tests.helpers import asarray
 
-from ...._compat import chdir
 from .data import (
     _pbmc3ks_parametrized_session,
     pbmc3k_parametrized,
@@ -44,6 +43,7 @@ def float_dtype(request):
 @pytest.fixture()
 def doctest_env(cache: pytest.Cache, tmp_path: Path) -> None:
     from scanpy import settings
+    from scanpy._compat import chdir
 
     old_dd, settings.datasetdir = settings.datasetdir, cache.mkdir('scanpy-data')
     with chdir(tmp_path):
