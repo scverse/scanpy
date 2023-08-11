@@ -41,7 +41,7 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
                     'if you really want this, set `use_rep=\'X\'`.\n         '
                     'Falling back to preprocessing with `sc.pp.pca` and default params.'
                 )
-                X = pca(adata.X)
+                X = pca(adata.X, n_comps= max(settings.N_PCS, n_pcs))
                 adata.obsm['X_pca'] = X[:, :n_pcs]
         else:
             logg.info('    using data matrix X directly')
