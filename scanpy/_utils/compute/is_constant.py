@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch
+from functools import partial, wraps, singledispatch
 from numbers import Integral
 from typing import Any
+from collections.abc import Callable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -12,13 +13,19 @@ from scipy import sparse
 from ..._compat import DaskArray
 
 
-def _check_axis_supported(axis: Any) -> None:
-    if not isinstance(axis, Integral):
-        raise TypeError('axis must be integer or None.')
-    if axis not in (0, 1):
-        raise NotImplementedError('We only support axis 0 and 1 at the moment')
+def _check_axis_supported(wrapped: Callable) -> Callable:
+    @wraps(wrapped)
+    def func(a, axis):
+        if not isinstance(axis, (None, Integral)):
+            raise TypeError('axis must be integer or None.')
+        if axis not in (0, 1):
+            raise NotImplementedError('We only support axis 0 and 1 at the moment')
+        wrapped(a, axis)
+
+    return func
 
 
+@_check_axis_supported
 @singledispatch
 def is_constant(a, axis: int | None = None) -> bool | NDArray[np.bool_]:
     """
@@ -58,7 +65,6 @@ def _(a: NDArray, axis: int | None = None) -> bool | NDArray[np.bool_]:
     # Should eventually support nd, not now.
     if axis is None:
         return np.array_equal(a, a.flat[0])
-    _check_axis_supported(axis)
     if axis == 0:
         return _is_constant_rows(a.T)
     elif axis == 1:
@@ -77,7 +83,6 @@ def _(a: sparse.csr_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]
             return is_constant(a.data)
         else:
             return (a.data == 0).all()
-    _check_axis_supported(axis)
     if axis == 1:
         return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape)
     elif axis == 0:
@@ -115,7 +120,6 @@ def _(a: sparse.csc_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]
             return is_constant(a.data)
         else:
             return (a.data == 0).all()
-    _check_axis_supported(axis)
     if axis == 0:
         return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape[::-1])
     elif axis == 1:
@@ -128,6 +132,5 @@ def _(a: DaskArray, axis: int | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
         v = a[tuple(0 for _ in range(a.ndim))].compute()
         return (a == v).all()
-    _check_axis_supported(axis)
     # TODO: use overlapping blocks and reduction instead of `drop_axis`
     return a.map_blocks(partial(is_constant, axis=axis), drop_axis=axis)
