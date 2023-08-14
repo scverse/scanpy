@@ -63,6 +63,9 @@ class ScanpyConfig:
     Config manager for scanpy.
     """
 
+    N_PCS: int
+    """Default number of principal components to use."""
+
     def __init__(
         self,
         *,
@@ -123,7 +126,6 @@ class ScanpyConfig:
         """Stores the previous memory usage."""
 
         self.N_PCS = n_pcs
-        """Default number of principal components to use."""
 
     @property
     def verbosity(self) -> Verbosity:

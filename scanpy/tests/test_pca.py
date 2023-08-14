@@ -169,3 +169,29 @@ def test_pca_n_pcs():
     assert np.allclose(
         original.obsp["distances"].toarray(), renamed.obsp["distances"].toarray()
     )
+
+
+def test_pca_layer():
+    """
+    Tests that layers works the same way as .X
+    """
+    X_adata = pbmc3k_normalized()
+
+    layer_adata = X_adata.copy()
+    layer_adata.layers["counts"] = X_adata.X.copy()
+    del layer_adata.X
+
+    sc.pp.pca(X_adata, dtype=np.float64)
+    sc.pp.pca(layer_adata, layer="counts", dtype=np.float64)
+
+    assert layer_adata.uns["pca"]["params"]["layer"] == "counts"
+    assert "layer" not in X_adata.uns["pca"]["params"]
+
+    np.testing.assert_equal(
+        X_adata.uns["pca"]["variance"], layer_adata.uns["pca"]["variance"]
+    )
+    np.testing.assert_equal(
+        X_adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
+    )
+    np.testing.assert_equal(X_adata.obsm['X_pca'], layer_adata.obsm['X_pca'])
+    np.testing.assert_equal(X_adata.varm['PCs'], layer_adata.varm['PCs'])

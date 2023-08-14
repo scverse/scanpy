@@ -30,7 +30,7 @@ def ingest(
     """\
     Map labels and embeddings from reference data to new data.
 
-    :tutorial:`integrating-data-using-ingest`
+    :doc:`tutorials:integrating-data-using-ingest`
 
     Integrates embeddings and annotations of an `adata` with a reference dataset
     `adata_ref` through projecting on a PCA (or alternate
@@ -98,9 +98,6 @@ def ingest(
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
     >>> sc.tl.ingest(adata, adata_ref, obs='cell_type')
-
-    .. _ingest PBMC tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
-    .. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
     """
     # anndata version check
     anndata_version = pkg_version("anndata")

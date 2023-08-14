@@ -155,6 +155,7 @@ exclude = [
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
+    "--strict-markers",
     "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]
