@@ -12,6 +12,7 @@ from .._utils import view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 from .._compat import DaskArray
 
+
 def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
