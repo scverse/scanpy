@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from functools import partial, wraps, singledispatch
 from numbers import Integral
-from typing import Any
 from collections.abc import Callable
 
 import numpy as np
@@ -15,12 +14,13 @@ from ..._compat import DaskArray
 
 def _check_axis_supported(wrapped: Callable) -> Callable:
     @wraps(wrapped)
-    def func(a, axis):
-        if not isinstance(axis, (None, Integral)):
-            raise TypeError('axis must be integer or None.')
-        if axis not in (0, 1):
-            raise NotImplementedError('We only support axis 0 and 1 at the moment')
-        wrapped(a, axis)
+    def func(a, axis=None):
+        if axis is not None:
+            if not isinstance(axis, Integral):
+                raise TypeError('axis must be integer or None.')
+            if axis not in (0, 1):
+                raise NotImplementedError('We only support axis 0 and 1 at the moment')
+        return wrapped(a, axis)
 
     return func
 
