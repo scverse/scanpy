@@ -16,7 +16,6 @@ from ._utils import _get_mean_var
 from ..get import _get_obs_rep
 
 
-
 def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: Optional[int] = None,
@@ -181,7 +180,6 @@ def pca(
 
     logg.info(f'    with n_comps={n_comps}')
 
-    
     X = _get_obs_rep(adata_comp, layer=layer)
 
     is_dask = isinstance(X, DaskArray)
@@ -423,7 +421,7 @@ def _handle_x_args(lib, svd_solver, method, method2args, method2default):
     if svd_solver not in method2args[method]:
         if svd_solver is not None:
             logg.warning(
-                f'Ignoring svd_solver and using {method2default[method]}, {lib}.decomposition.{method} only supports {method2args[method]}'
+                f'Ignoring {svd_solver} and using {method2default[method]}, {lib}.decomposition.{method} only supports {method2args[method]}'
             )
         svd_solver = method2default[method]
     return svd_solver
