@@ -309,10 +309,8 @@ def _superset_columns(df: pd.DataFrame, groupby_key: str) -> List[str]:
         if key != groupby_key:
             key_codes = df[key].astype('category')
             if all(
-                [
-                    key_codes[groupy_key_codes == group_key_code].nunique() == 1
-                    for group_key_code in groupy_key_codes
-                ]
+                key_codes[groupy_key_codes == group_key_code].nunique() == 1
+                for group_key_code in groupy_key_codes
             ):
                 columns += [key]
     return columns
