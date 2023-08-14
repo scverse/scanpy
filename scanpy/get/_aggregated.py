@@ -79,7 +79,7 @@ class Aggregate:
 
         Returns
         -------
-            Array of counts.
+        Array of counts.
         """
         _, key_index, _, _ = self._extract_indices()
         count_ = np.bincount(key_index)
@@ -91,7 +91,7 @@ class Aggregate:
 
         Returns
         -------
-            Array of sum.
+        Array of sum.
         """
         A, _ = self._sparse_aggregator(normalize=False)
         return utils.asarray(A * self._data)
