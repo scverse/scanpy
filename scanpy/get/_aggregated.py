@@ -130,6 +130,7 @@ class Aggregate:
         A, _ = self._sparse_aggregator(normalize=True)
         count_ = np.bincount(self._key_index)
         mean_ = utils.asarray(A @ self._data)
+        # sparse matrices do not support ** for elementwise power.
         mean_sq = utils.asarray(A @ _power(self._data, 2))
         if self._weight is None:
             sq_mean = mean_**2
@@ -222,7 +223,20 @@ class Aggregate:
         return keys, key_index, df_index, weight_value
 
 
-def _power(X, power):
+def _power(X: Array, power: Union[float, int]) -> Array:
+    """Generate elementwise power of a matrix.  Needed for sparse matrices because they do not support ** so the `.power` function is used.
+
+    Parameters
+    ----------
+    X
+        Matrix whose power is to be raised.
+    power
+        Integer power value
+
+    Returns
+    -------
+        Matrix whose power has been raised.
+    """
     return X ** power if isinstance(X, np.ndarray) else X.power(power)
 
 
