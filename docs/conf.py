@@ -265,7 +265,7 @@ extlinks = {
     "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
     "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
     "tutorial": (
-        "https://github.com/scverse/scanpy-tutorials/%s.ipynb",
+        "https://scanpy-tutorials.readthedocs.io/en/latest/%s.html",
         "tutorial: %s",
     ),
 }
