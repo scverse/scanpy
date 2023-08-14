@@ -64,24 +64,16 @@ def test_groupby_different_data_locations(data_key, dim, df_base, df_groupby, X)
         pytest.skip("invalid parameter combination")
     if dim == 'obs':
         data_sparse_mat_dict = {data_key: {'test': csr_matrix(X)}}
-        adata_sparse = ad.AnnData(
-            **{'obs': df_groupby, 'var': df_base, **data_sparse_mat_dict}
-        )
+        adata_sparse = ad.AnnData(obs=df_groupby, var=df_base, **data_sparse_mat_dict)
         data_dense_mat_dict = {data_key: {'test': X}}
-        adata_dense = ad.AnnData(
-            **{'obs': df_groupby, 'var': df_base, **data_dense_mat_dict}
-        )
+        adata_dense = ad.AnnData(obs=df_groupby, var=df_base, **data_dense_mat_dict)
     else:
         if data_key != 'varm':
             X = X.T
         data_sparse_mat_dict = {data_key: {'test': csr_matrix(X)}}
-        adata_sparse = ad.AnnData(
-            **{'obs': df_base, 'var': df_groupby, **data_sparse_mat_dict}
-        )
+        adata_sparse = ad.AnnData(obs=df_base, var=df_groupby, **data_sparse_mat_dict)
         data_dense_mat_dict = {data_key: {'test': X}}
-        adata_dense = ad.AnnData(
-            **{'obs': df_base, 'var': df_groupby, **data_dense_mat_dict}
-        )
+        adata_dense = ad.AnnData(obs=df_base, var=df_groupby, **data_dense_mat_dict)
 
     data_dict = {(data_key if data_key != 'layers' else 'layer'): 'test'}
     stats_sparse = sc.get.aggregated(
