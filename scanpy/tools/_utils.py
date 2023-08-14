@@ -26,7 +26,6 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
         settings.verbosity = 1
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = 'X'
-    print(settings.N_PCS, type(settings.N_PCS))
     if use_rep is None:
         if adata.n_vars > settings.N_PCS:
             if 'X_pca' in adata.obsm.keys():
