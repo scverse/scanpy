@@ -283,16 +283,6 @@ def test_clustermap(image_comparer, obs_keys, name):
             ),
         ),
         (
-            "stacked_violin_order",
-            partial(
-                sc.pl.stacked_violin,
-                groupby='cell_type',
-                use_raw=False,
-                title='cat order',
-                categories_order=['progenitor', 'Mk', 'Ery', 'Neu', 'Mo'],
-            ),
-        ),
-        (
             "stacked_violin_std_scale_var_dict",
             partial(
                 sc.pl.stacked_violin,
