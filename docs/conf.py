@@ -102,8 +102,6 @@ ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightF
 
 typehints_defaults = 'braces'
 
-scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
-
 pygments_style = "default"
 pygments_dark_style = "native"
 
@@ -124,7 +122,7 @@ intersphinx_mapping = dict(
     scipy=('https://docs.scipy.org/doc/scipy/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
-    scanpy_tutorials=(scanpy_tutorials_url, None),
+    tutorials=('https://scanpy-tutorials.readthedocs.io/en/latest/', None),
 )
 
 
@@ -144,7 +142,6 @@ html_title = "scanpy"
 
 def setup(app: Sphinx):
     """App setup hook."""
-    app.keep_going = True
     app.add_config_value(
         "recommonmark_config",
         {
@@ -264,8 +261,4 @@ def linkcode_resolve(domain, info):
 extlinks = {
     "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
     "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
-    "tutorial": (
-        "https://scanpy-tutorials.readthedocs.io/en/latest/%s.html",
-        "tutorial: %s",
-    ),
 }
