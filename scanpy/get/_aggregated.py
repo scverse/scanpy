@@ -144,6 +144,7 @@ class Aggregate:
             mean_unweighted = utils.asarray(A_unweighted * self._data)
             sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted**2
         var_ = mean_sq - sq_mean
+        # TODO: Why these values exaclty? Because they are high relative to the datatype? (unchanged from original code: https://github.com/scverse/anndata/pull/564)
         precision = 2 << (42 if self._data.dtype == np.float64 else 20)
         # detects loss of precision in mean_sq - sq_mean, which suggests variance is 0
         var_[precision * var_ < sq_mean] = 0
@@ -178,6 +179,7 @@ class Aggregate:
             df_index = np.arange(len(key_index))
         if self._weight is None:
             weight_value = np.ones(len(key_index))
+        # TODO: why a coo matrix here and a dia matrix below? (unchanged from original code: https://github.com/scverse/anndata/pull/564)
         A = coo_matrix(
             (weight_value, (key_index, df_index)),
             shape=(len(keys), self._data.shape[0]),
