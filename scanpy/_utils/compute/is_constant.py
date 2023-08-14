@@ -14,8 +14,9 @@ from ..._compat import DaskArray
 
 def _check_axis_supported(axis: Any) -> None:
     if not isinstance(axis, Integral):
-        raise TypeError("axis must be integer or None.")
-    assert axis in (0, 1)
+        raise TypeError('axis must be integer or None.')
+    if axis not in (0, 1):
+        raise NotImplementedError('We only support axis 0 and 1 at the moment')
 
 
 @singledispatch
@@ -76,9 +77,7 @@ def _(a: sparse.csr_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]
             return is_constant(a.data)
         else:
             return (a.data == 0).all()
-    if not isinstance(axis, Integral):
-        raise TypeError("axis must be integer or None.")
-    assert axis in (0, 1)
+    _check_axis_supported(axis)
     if axis == 1:
         return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape)
     elif axis == 0:
