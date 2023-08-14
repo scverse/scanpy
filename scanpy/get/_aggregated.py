@@ -21,7 +21,7 @@ AggType = Literal['count', 'mean', 'sum', 'var']
 
 
 class Aggregate:
-    """
+    """\
     Functionality for generic grouping and aggregating.
 
     There is currently support for count, sum, mean, and variance.
@@ -44,13 +44,13 @@ class Aggregate:
 
     Params
     ------
-    _groupby
+    groupby
         `Series` containing values for grouping by.
-    _data
+    data
         Data matrix for aggregation.
-    _weight
+    weight
         Weights to be used for aggergation.
-    _key_set
+    key_set
         Subset of keys to which to filter.
     """
 
@@ -97,18 +97,18 @@ class Aggregate:
         return utils.asarray(A * self._data)
 
     def mean(self) -> Array:
-        """
+        """\
         Compute the mean per feature per group of observations.
 
         Returns
         -------
-            Array of mean.
+        Array of mean.
         """
         A, _ = self._sparse_aggregator(normalize=True)
         return utils.asarray(A * self._data)
 
     def count_mean_var(self, dof: int = 1) -> dict:
-        """
+        """\
         Compute the count, as well as mean and variance per feature, per group of observations.
 
         The formula `Var(X) = E(X^2) - E(X)^2` suffers loss of precision when the variance is a
@@ -124,7 +124,7 @@ class Aggregate:
 
         Returns
         -------
-            dict with mean, count, and var keys.
+        dict with mean, count, and var keys.
         """
         assert dof >= 0
         A, _ = self._sparse_aggregator(normalize=True)
@@ -238,14 +238,19 @@ def _ndarray_from_seq(lst: Sequence):
 
 
 def _superset_columns(df: pd.DataFrame, groupby_key: str) -> List[str]:
-    """Find all columns which are a superset of the key column.
+    """\
+    Find all columns which are a superset of the key column.
 
-    Args:
-        df (pd.DataFrame): DataFrame which contains candidate columns.
-        groupby_key (str): Key for column of which to find superset of columns.
+    Params
+    ------
+    df
+        DataFrame which contains candidate columns.
+    groupby_key
+        Key for column of which to find superset of columns.
 
-    Returns:
-        List[str]: Superset columns.
+    Returns
+    -------
+    Superset columns.
     """
     columns = []
     groupy_key_codes = df[groupby_key].astype('category')
@@ -263,15 +268,22 @@ def _superset_columns(df: pd.DataFrame, groupby_key: str) -> List[str]:
 
 
 def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
-    """Generate a grouped-by dataframe (no aggregation) by a key with columns that are supersets of the key column
+    """\
+    Generate a grouped-by dataframe (no aggregation) by
+    a key with columns that are supersets of the key column.
 
-    Args:
-        df (pd.DataFrame): DataFrame to be grouped.
-        key (str): Column to be grouped on.
-        key_set (List[str]): values in the `key` column to keep before groupby.
+    Params
+    ------
+    df
+        DataFrame to be grouped.
+    key
+        Column to be grouped on.
+    key_set
+        Values in the `key` column to keep before groupby.
 
-    Returns:
-        pd.DataFrame: Grouped-by Dataframe.
+    Returns
+    -------
+    pd.DataFrame: Grouped-by Dataframe.
     """
     df = df.copy()
     if key_set is not None:
@@ -296,38 +308,37 @@ def aggregated(
     varm: Optional[str] = None,
 ) -> AnnData:
     """\
-        Aggregate data based on one of the columns of one of the axes (`obs` or `var`).
-        If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
-        If `func` only has length 1 or is just an `AggType`, then aggregation data is written to `X`.
-        Otherwise, it is written to `layers` or `xxxm` as appropriate for the dimensions of the aggregation data.
+    Aggregate data based on one of the columns of one of the axes (`obs` or `var`).
+    If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
+    If `func` only has length 1 or is just an `AggType`, then aggregation data is written to `X`.
+    Otherwise, it is written to `layers` or `xxxm` as appropriate for the dimensions of the aggregation data.
 
-    Parameters
-    ----------
-        adata:
-            :class:`~anndata.AnnData` to be aggregated.
-        by:
-            Key of the column to be grouped-by.
-        func:
-            How to aggregate.
-        dim:
-            Axis on which to find group by column.
-        weight_key:
-            Key of the `dim` containing weights for a weighted sum aggregation.
-        key_set:
-            Subset of dim on which to filter.
-        dof:
-            Degrees of freedom for variance. Defaults to 1.
-        layer:
-            If not None, key for aggregation data.
-        obsm:
-            If not None, key for aggregation data.
-        varm:
-            If not None, key for aggregation data.
+    Params
+    ------
+    adata
+        :class:`~anndata.AnnData` to be aggregated.
+    by
+        Key of the column to be grouped-by.
+    func
+        How to aggregate.
+    dim
+        Axis on which to find group by column.
+    weight_key
+        Key of the `dim` containing weights for a weighted sum aggregation.
+    key_set
+        Subset of dim on which to filter.
+    dof
+        Degrees of freedom for variance. Defaults to 1.
+    layer
+        If not None, key for aggregation data.
+    obsm
+        If not None, key for aggregation data.
+    varm
+        If not None, key for aggregation data.
 
     Returns
     -------
-        AnnData:
-            Aggregated :class:`~anndata.AnnData`.
+    Aggregated :class:`~anndata.AnnData`.
     """
     data = adata.X
     write_to_xxxm = None
@@ -373,37 +384,7 @@ def aggregated_from_array(
     key_set: Optional[Iterable[str]] = None,
     dof: int = 1,
 ) -> AnnData:
-    """\
-    Aggregate data based on one of the columns of one of a `~pd.DataFrame`.
-
-    Parameters
-    ----------
-        data:
-            Data for aggregation.
-        groupby_df:
-            `~pd.DataFrame` with column to be grouped on.
-        func:
-            How to aggregate.
-        dim:
-            Key of AnnData corresponding to the dim on which the grouped by data belongs.
-        by:
-            Key of the groupby `~pd.DataFrame` for grouping.
-        write_to_xxxm:
-            Whether or not to write aggregation data to `varm` or `obsm` (based on `dim`).
-        no_groupby_df:
-            `~pd.DataFrame` on the opposite dim of dim.
-        weight_key:
-            Key of the `dim` containing weights for a weighted sum aggregation.
-        key_set:
-            Subset of dim on which to filter.
-        dof:
-            Degrees of freedom for variance. Defaults to 1.
-
-    Returns
-    -------
-        AnnData:
-            Aggregated :class:`~anndata.AnnData`.
-    """
+    """Aggregate data based on one of the columns of one of a `~pd.DataFrame`."""
     groupby = Aggregate(
         groupby=groupby_df[by],
         data=data,
