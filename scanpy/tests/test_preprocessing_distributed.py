@@ -14,7 +14,7 @@ HERE = Path(__file__).parent / Path('_data/')
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
 
 
-pytestmark = [needs("zarr")]
+pytestmark = [needs('zarr')]
 
 
 @pytest.fixture()
@@ -26,8 +26,8 @@ def adata():
 
 @pytest.fixture(
     params=[
-        pytest.param("direct", marks=[needs("zappy")]),
-        pytest.param("dask", marks=[needs("dask")]),
+        pytest.param('direct', marks=[needs('zappy')]),
+        pytest.param('dask', marks=[needs('dask')]),
     ]
 )
 def adata_dist(request):
