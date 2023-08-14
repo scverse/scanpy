@@ -8,6 +8,7 @@ from typing import (
     Union,
     Literal,
     List,
+    get_args,
 )
 
 from anndata import AnnData, utils
@@ -346,7 +347,7 @@ def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
 def aggregated(
     adata: AnnData,
     by: str,
-    func: Union[AggType, List[AggType]],
+    func: Union[AggType, Iterable[AggType]],
     *,
     dim: Literal['obs', 'var'] = 'obs',
     weight_key: Optional[str] = None,
@@ -423,7 +424,7 @@ def aggregated(
 def aggregated_from_array(
     data,
     groupby_df: pd.DataFrame,
-    func: Union[AggType, List[AggType]],
+    func: Union[AggType, Iterable[AggType]],
     dim: str,
     by: str,
     write_to_xxxm: bool,
@@ -446,38 +447,37 @@ def aggregated_from_array(
         'X': None,
         'obsm': {},
     }
-    func_set = func
     write_key = 'obsm' if write_to_xxxm else 'layers'
-    if not isinstance(func, list):
-        func_set = [func]
-    func_set = set(func_set)
-    if 'sum' in func_set:  # sum is calculated separately from the rest
+    funcs = set([func] if isinstance(func, str) else func)
+    if unknown := funcs - set(get_args(AggType)):
+        raise ValueError(f'… {unknown} …')
+    if 'sum' in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
         if (
-            len(func_set) == 1 and not write_to_xxxm
+            len(funcs) == 1 and not write_to_xxxm
         ):  # put aggregation in X if it is the only one and the aggregation data is not coming from `xxxm`
             data_dict['X'] = agg
         else:
             data_dict[write_key]['sum'] = agg
     if (
-        'mean' in func_set and 'var' not in func_set
+        'mean' in funcs and 'var' not in funcs
     ):  # here and below for count, if var is present, these can be calculate alongside var
         agg = groupby.mean()
-        if len(func_set) == 1 and not write_to_xxxm:
+        if len(funcs) == 1 and not write_to_xxxm:
             data_dict['X'] = agg
         else:
             data_dict[write_key]['mean'] = agg
-    if 'count' in func_set and 'var' not in func_set:
+    if 'count' in funcs and 'var' not in funcs:
         obs_var_dict['obs']['count'] = groupby.count()  # count goes in dim df
-    if 'var' in func_set:
+    if 'var' in funcs:
         agg = groupby.count_mean_var(dof)
-        if len(func_set) == 1 and not write_to_xxxm:
+        if len(funcs) == 1 and not write_to_xxxm:
             data_dict['X'] = agg['var']
         else:
             data_dict[write_key]['var'] = agg['var']
-            if 'mean' in func_set:
+            if 'mean' in funcs:
                 data_dict[write_key]['mean'] = agg['mean']
-            if 'count' in func_set:
+            if 'count' in funcs:
                 obs_var_dict['obs']['count'] = agg['count']
     adata_agg = AnnData(**{**data_dict, **obs_var_dict})
     if dim == 'var':
