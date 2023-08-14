@@ -25,9 +25,8 @@ from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
 
 N_DCS = 15  # default number of diffusion components
-N_PCS = (
-    settings.N_PCS
-)  # Backwards compat, constants should be defined in only one place.
+# Backwards compat, constants should be defined in only one place.
+N_PCS = settings.N_PCS
 
 _Method = Literal['umap', 'gauss', 'rapids']
 _MetricFn = Callable[[np.ndarray, np.ndarray], float]

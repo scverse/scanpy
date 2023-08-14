@@ -4,6 +4,7 @@ build:
   tools:
     python: '3.9'
 sphinx:
+  fail_on_warning: true # do not change or you will be fired
   configuration: docs/conf.py
 python:
   install:
@@ -12,6 +13,3 @@ python:
     extra_requirements:
     - doc
     - leiden
-submodules:
-  include:
-     - "docs/tutorials"
