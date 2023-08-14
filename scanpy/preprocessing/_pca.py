@@ -188,7 +188,11 @@ def pca(
         raise TypeError(msg)
 
     if chunked:
-        if not zero_center or random_state or svd_solver != 'arpack':
+        if (
+            not zero_center
+            or random_state
+            or (svd_solver is not None and svd_solver != 'arpack')
+        ):
             logg.debug('Ignoring zero_center, random_state, svd_solver')
 
         incremental_pca_kwargs = dict()
@@ -403,11 +407,10 @@ def _handle_sklearn_args(svd_solver: str, method: str) -> str:
 
 
 def _handle_x_args(lib, svd_solver, method, method2args, method2default):
-    changed = svd_solver not in method2args[method]
-    if changed:
+    if svd_solver not in method2args[method]:
+        if svd_solver is not None:
+            logg.warning(
+                f'Ignoring svd_solver and using {method2default[method]}, {lib}.decomposition.{method} only supports {method2args[method]}'
+            )
         svd_solver = method2default[method]
-        logg.warning(
-            f'Ignoring svd_solver and using {svd_solver}, {lib}.decomposition.{method} only supports {method2args[method]}'
-        )
-
     return svd_solver
