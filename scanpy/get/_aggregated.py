@@ -352,9 +352,8 @@ def aggregated(
         data = adata.layers[layer]
         if dim == 'var':
             data = data.T
-    elif (
-        dim == 'var'
-    ):  # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
+    elif dim == 'var':
+        # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
         data = data.T
     return aggregated(
         data,
