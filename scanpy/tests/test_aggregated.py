@@ -22,18 +22,11 @@ def test_groupby_different_data_locations(data_key, dim):
         pytest.skip("invalid parameter combination")
     ax_base = ["A", "B"]
     ax_groupby = [
-        "v0",
-        "v1",
-        "v2",
-        "w0",
-        "w1",
-        "a1",
-        "a2",
-        "a3",
-        "b1",
-        "b2",
-        "c1",
-        "c2",
+        *["v0", "v1", "v2"],
+        *["w0", "w1"],
+        *["a1", "a2", "a3"],
+        *["b1", "b2"],
+        *["c1", "c2"],
         "d0",
     ]
 
@@ -49,18 +42,11 @@ def test_groupby_different_data_locations(data_key, dim):
 
     X = np.array(
         [
-            [0, -2],
-            [1, 13],
-            [2, 1],  # v
-            [3, 12],
-            [4, 2],  # w
-            [5, 11],
-            [6, 3],
-            [7, 10],  # a
-            [8, 4],
-            [9, 9],  # b
-            [10, 5],
-            [11, 8],  # c
+            *[[0, -2], [1, 13], [2, 1]],  # v
+            *[[3, 12], [4, 2]],  # w
+            *[[5, 11], [6, 3], [7, 10]],  # a
+            *[[8, 4], [9, 9]],  # b
+            *[[10, 5], [11, 8]],  # c
             [12, 6],  # d
         ],
         dtype=np.float32,
@@ -200,26 +186,16 @@ def test_groupby_different_data_locations(data_key, dim):
 
 @pytest.mark.parametrize(
     'dim',
-    [
-        'obs',
-        'var',
-    ],
+    ['obs', 'var'],
 )
 def test_groupby_X(dim):
     ax_base = ["A", "B"]
     ax_groupby = [
-        "v0",
-        "v1",
-        "v2",
-        "w0",
-        "w1",
-        "a1",
-        "a2",
-        "a3",
-        "b1",
-        "b2",
-        "c1",
-        "c2",
+        *["v0", "v1", "v2"],
+        *["w0", "w1"],
+        *["a1", "a2", "a3"],
+        *["b1", "b2"],
+        *["c1", "c2"],
         "d0",
     ]
 
@@ -235,18 +211,11 @@ def test_groupby_X(dim):
 
     X = np.array(
         [
-            [0, -2],
-            [1, 13],
-            [2, 1],  # v
-            [3, 12],
-            [4, 2],  # w
-            [5, 11],
-            [6, 3],
-            [7, 10],  # a
-            [8, 4],
-            [9, 9],  # b
-            [10, 5],
-            [11, 8],  # c
+            *[[0, -2], [1, 13], [2, 1]],  # v
+            *[[3, 12], [4, 2]],  # w
+            *[[5, 11], [6, 3], [7, 10]],  # a
+            *[[8, 4], [9, 9]],  # b
+            *[[10, 5], [11, 8]],  # c
             [12, 6],  # d
         ],
         dtype=np.float32,
