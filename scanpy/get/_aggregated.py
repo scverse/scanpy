@@ -392,13 +392,19 @@ def aggregated(
     """
     data = adata.X
     write_to_xxxm = None
-    if varm is not None:
+    is_varm_none = varm is None
+    is_obsm_none = obsm is None
+    is_layer_none = layer is None
+    assert (
+        sum([is_varm_none, is_obsm_none, is_layer_none]) > 1
+    ), "Please only provide one (or none) of varm, obsm, or layer"
+    if not is_varm_none:
         data = adata.varm[varm]
         write_to_xxxm = True  # the data will have to be transposed so this is accurate
-    elif obsm is not None:
+    elif not is_obsm_none:
         data = adata.obsm[obsm]
         write_to_xxxm = True
-    elif layer is not None:
+    elif not is_layer_none:
         data = adata.layers[layer]
         if dim == 'var':
             data = data.T
