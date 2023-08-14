@@ -191,25 +191,60 @@ class Aggregate:
             A = D * A
         return A, keys
 
-    def _extract_indices(self):
-        def _filter_indices(key_set, keys, key_index, df_index, weight_value=None):
-            keep = [i for i, k in enumerate(keys) if k in set(key_set)]
-            if len(keep) == 0:
-                raise ValueError("No keys in key_set found in adata.obs[key].")
-            elif len(keep) < len(keys):
-                mask = np.in1d(key_index, keep)
-                remap = np.zeros(len(keys), dtype=np.int64)
-                for i, j in enumerate(keep):
-                    remap[j] = i
-                keys = [keys[j] for j in keep]
-                key_index = np.array(
-                    [remap[i] for i in key_index[mask]], dtype=np.int64
-                )
-                df_index = df_index[mask]
-                if weight_value is not None:
-                    weight_value = weight_value[mask]
-            return keys, key_index, df_index, weight_value
+    def _filter_indices(
+        self,
+        keys: np.ndarray,
+        key_index: np.ndarray,
+        df_index: np.ndarray,
+        weight_value: Optional[Union[pd.Series, Array]] = None,
+    ) -> Tuple[np.ndarray, np.ndarray, Union[pd.Series, Array, None]]:
+        """Filter the values of keys, key_index, df_index, and optionally weight_value based on self._key_set.
 
+        Parameters
+        ----------
+        keys
+            Unique key values to be filtered.
+        key_index
+            Non-unique integer indices mapping keys to the df_index to be filtered.
+        df_index
+            An Index that the keys + key_index constitute to be filtered.
+        weight_value, optional
+            Weight values to be filtered., by default None
+
+        Returns
+        -------
+            Filtered versions of all arguments.
+
+        Raises
+        ------
+        ValueError
+           If no keys in key_set found in keys.
+        """
+        keep = [i for i, k in enumerate(keys) if k in set(self._key_set)]
+        if len(keep) == 0:
+            raise ValueError("No keys in key_set found in keys.")
+        elif len(keep) < len(keys):
+            mask = np.in1d(key_index, keep)
+            remap = np.zeros(len(keys), dtype=np.int64)
+            for i, j in enumerate(keep):
+                remap[j] = i
+            keys = [keys[j] for j in keep]
+            key_index = np.array([remap[i] for i in key_index[mask]], dtype=np.int64)
+            df_index = df_index[mask]
+            if weight_value is not None:
+                weight_value = weight_value[mask]
+        return keys, key_index, df_index, weight_value
+
+    def _extract_indices(
+        self,
+    ) -> Tuple[np.ndarray, np.ndarray, Union[pd.Series, Array, None]]:
+        """Extract indices from self._groupby with the goal of building a matrix that can be multiplied with the data to produce an aggregation statistics e.g., mean or variance.
+        These are filtered if a self._key_set is present.
+
+        Returns
+        -------
+            Unique keys, an array mapping those unique keys to an index, said index, and a weight if present.
+        """
         key_value = self._groupby
         keys, key_index = np.unique(_ndarray_from_seq(key_value), return_inverse=True)
         df_index = np.arange(len(key_index))
@@ -218,8 +253,8 @@ class Aggregate:
         else:
             weight_value = self._weight.values[df_index]
         if self._key_set is not None:
-            keys, key_index, df_index, weight_value = _filter_indices(
-                self._key_set, keys, key_index, df_index, weight_value
+            keys, key_index, df_index, weight_value = self._filter_indices(
+                keys, key_index, df_index, weight_value
             )
         self._key_index = key_index  # passed to count and count_mean_var to avoid re-extracting in the latter
         return keys, key_index, df_index, weight_value
