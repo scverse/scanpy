@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 import matplotlib  # noqa
+from sphinx.application import Sphinx
 from packaging.version import parse as parse_version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -14,7 +15,6 @@ HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / 'extensions')]
 import scanpy  # noqa
 
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 # -- General configuration ------------------------------------------------
 
@@ -98,8 +98,6 @@ ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightF
 
 typehints_defaults = 'braces'
 
-scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
-
 pygments_style = "default"
 pygments_dark_style = "native"
 
@@ -120,7 +118,7 @@ intersphinx_mapping = dict(
     scipy=('https://docs.scipy.org/doc/scipy/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
-    scanpy_tutorials=(scanpy_tutorials_url, None),
+    tutorials=('https://scanpy-tutorials.readthedocs.io/en/latest/', None),
 )
 
 
@@ -130,7 +128,6 @@ html_theme = "sphinx_book_theme"
 html_theme_options = {
     "repository_url": repository_url,
     "use_repository_button": True,
-    "show_toc_level": 4,  # show all levels in the sidebar
 }
 html_static_path = ['_static']
 html_css_files = ["css/override.css"]
@@ -139,12 +136,8 @@ html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 html_title = "scanpy"
 
 
-def setup(app):
+def setup(app: Sphinx):
     """App setup hook."""
-    # TODO: fix all warnings in a future PR
-    # Many come from the tutorials, like the workshop directory
-    # which is not included in the docs
-    #     app.warningiserror = on_rtd
     app.add_config_value(
         "recommonmark_config",
         {
@@ -215,8 +208,4 @@ plot_working_directory = HERE.parent  # Project root
 extlinks = {
     "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
     "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
-    "tutorial": (
-        "https://github.com/scverse/scanpy-tutorials/%s.ipynb",
-        "tutorial: %s",
-    ),
 }
