@@ -78,7 +78,7 @@ def test_is_constant_dask(axis, expected, block_type):
     import dask.array as da
 
     if (axis is None) and block_type is csr_matrix:
-        pytest.skip('dask has weak suppoer for scipy sparse matrices')
+        pytest.skip('Dask has weak support for scipy sparse matrices')
 
     x_data = [
         [0, 0, 1, 1],
