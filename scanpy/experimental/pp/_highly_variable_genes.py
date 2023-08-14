@@ -185,7 +185,7 @@ def _highly_variable_pearson_residuals(
             sums_genes = np.sum(X_batch, axis=0).ravel()
             sums_cells = np.sum(X_batch, axis=1).ravel()
             sum_total = np.sum(sums_genes)
-            X_batch = np.array(X_batch, order='F')
+            X_batch = np.array(X_batch, dtype=np.float64, order='F')
             calculate_res_dense(
                 X_batch,
                 sums_genes,
