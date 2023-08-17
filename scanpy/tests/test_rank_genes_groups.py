@@ -9,6 +9,7 @@ import pytest
 import numpy as np
 import pandas as pd
 import scipy
+from numpy.typing import NDArray
 from anndata import AnnData
 from packaging import version
 from scipy.stats import mannwhitneyu
@@ -22,7 +23,8 @@ from scanpy.get import rank_genes_groups_df
 from scanpy._utils import select_groups
 
 
-HERE = Path(__file__).parent / Path('_data/')
+HERE = Path(__file__).parent
+DATA_PATH = HERE / '_data/'
 
 
 # We test results for a simple generic example
@@ -45,21 +47,23 @@ def get_example_data(array_type: Callable[[np.ndarray], Any]) -> AnnData:
 
     # Create cluster according to groups
     adata.obs['true_groups'] = pd.Categorical(
-        np.concatenate(
-            (
-                np.zeros((10,), dtype=int),
-                np.ones((90,), dtype=int),
-            )
-        )
+        np.concatenate((np.zeros((10,), dtype=int), np.ones((90,), dtype=int)))
     )
 
     return adata
 
 
-def get_true_scores():
-    with Path(HERE, 'objs_t_test.pkl').open('rb') as f:
+def get_true_scores() -> (
+    tuple[
+        NDArray[np.object_],
+        NDArray[np.object_],
+        NDArray[np.floating],
+        NDArray[np.floating],
+    ]
+):
+    with (DATA_PATH / 'objs_t_test.pkl').open('rb') as f:
         true_scores_t_test, true_names_t_test = pickle.load(f)
-    with Path(HERE, 'objs_wilcoxon.pkl').open('rb') as f:
+    with (DATA_PATH / 'objs_wilcoxon.pkl').open('rb') as f:
         true_scores_wilcoxon, true_names_wilcoxon = pickle.load(f)
 
     return (
@@ -120,12 +124,7 @@ def test_results_layers(array_type):
     adata.layers["to_test"] = adata.X.copy()
     adata.X = adata.X * array_type(np.random.randint(0, 2, adata.shape, dtype=bool))
 
-    (
-        true_names_t_test,
-        true_names_wilcoxon,
-        true_scores_t_test,
-        true_scores_wilcoxon,
-    ) = get_true_scores()
+    _, _, true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
     # Wilcoxon
     rank_genes_groups(

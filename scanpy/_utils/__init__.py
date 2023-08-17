@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from weakref import WeakSet
 from collections import namedtuple
-from functools import partial, wraps
+from functools import partial, singledispatch, wraps
 from types import ModuleType, MethodType
 from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
 
@@ -27,6 +27,8 @@ from packaging import version
 
 from .._settings import settings
 from .. import logging as logg
+from .._compat import DaskArray
+from .compute.is_constant import is_constant  # noqa: F401
 
 
 class Empty(Enum):
@@ -484,21 +486,40 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
+_FlatSupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
+
+
+def check_nonnegative_integers(X: _FlatSupportedArray) -> bool:
     """Checks values of X to ensure it is count data"""
     from numbers import Integral
 
-    data = X if isinstance(X, np.ndarray) else X.data
+    data = get_values(X)
     # Check no negatives
     if np.signbit(data).any():
         return False
     # Check all are integers
-    elif issubclass(data.dtype.type, Integral):
+    if issubclass(data.dtype.type, Integral):
         return True
-    elif np.any(~np.equal(np.mod(data, 1), 0)):
+    # Check all are whole numbers
+    if ((data % 1) != 0).any():
         return False
-    else:
-        return True
+    return True
+
+
+@singledispatch
+def get_values(X: _FlatSupportedArray) -> np._SupportsArray:
+    raise NotImplementedError()
+
+
+@get_values.register(np.ndarray)
+@get_values.register(DaskArray)
+def _(X: np.ndarray) -> np._SupportsArray:
+    return X  # Doesn’t need to be flat
+
+
+@get_values.register(sparse.spmatrix)
+def _(X: sparse.spmatrix) -> np._SupportsArray:
+    return X.data
 
 
 def select_groups(
