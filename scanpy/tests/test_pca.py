@@ -62,20 +62,13 @@ def test_pca_transform(array_type):
 
     adata = AnnData(A)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        sc.pp.pca(adata, n_comps=4, zero_center=True, svd_solver=None, dtype='float64')
+    with warnings.catch_warnings(record=True) as record:
+        sc.pp.pca(adata, n_comps=4, zero_center=True, dtype='float64')
+    assert len(record) == 0
 
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
 
-    sparse_types = (sparse.csr_matrix, sparse.csc_matrix)
-    # Conditionally expect a warning based on array_type
-    context_manager = (
-        pytest.warns() if array_type in sparse_types else warnings.catch_warnings()
-    )
-    with context_manager:
-        if array_type in sparse_types:
-            warnings.simplefilter("error")
+    with warnings.catch_warnings(record=True) as record:
         sc.pp.pca(
             adata,
             n_comps=5,
@@ -84,11 +77,22 @@ def test_pca_transform(array_type):
             dtype='float64',
             random_state=14,
         )
+    if sparse.issparse(A):
+        assert any(
+            isinstance(r.message, UserWarning)
+            and "svd_solver 'randomized' does not work with sparse input"
+            in str(r.message)
+            for r in record
+        )
+    else:
+        assert len(record) == 0
+
     assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm['X_pca'])) < 2e-05
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
+    with warnings.catch_warnings(record=True) as record:
         sc.pp.pca(adata, n_comps=4, zero_center=False, dtype='float64', random_state=14)
+    assert len(record) == 0
+
     assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
 
 
