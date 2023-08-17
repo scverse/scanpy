@@ -493,7 +493,7 @@ def check_nonnegative_integers(X: _FlatSupportedArray) -> bool:
     """Checks values of X to ensure it is count data"""
     from numbers import Integral
 
-    data = get_values(X)
+    data = _get_values(X)
     # Check no negatives
     if np.signbit(data).any():
         return False
@@ -507,17 +507,17 @@ def check_nonnegative_integers(X: _FlatSupportedArray) -> bool:
 
 
 @singledispatch
-def get_values(X: _FlatSupportedArray) -> np._SupportsArray:
+def _get_values(X: _FlatSupportedArray) -> np._SupportsArray:
     raise NotImplementedError()
 
 
-@get_values.register(np.ndarray)
-@get_values.register(DaskArray)
+@_get_values.register(np.ndarray)
+@_get_values.register(DaskArray)
 def _(X: np.ndarray) -> np._SupportsArray:
     return X  # Doesn’t need to be flat
 
 
-@get_values.register(sparse.spmatrix)
+@_get_values.register(sparse.spmatrix)
 def _(X: sparse.spmatrix) -> np._SupportsArray:
     return X.data
 
