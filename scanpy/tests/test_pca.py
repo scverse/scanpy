@@ -79,9 +79,14 @@ def array_type(request):
         # No warnings expected for other combinations
         (asarray, 'randomized', True, False, None, None),
         (asarray, 'auto', True, False, None, None),
-        (as_dense_dask_array, 'randomized', True, False, None, None),
-        (as_dense_dask_array, 'auto', True, False, None, None),
-        # Add more combinations as needed...
+        pytest.param(
+            (as_dense_dask_array, 'randomized', True, False, None, None),
+            marks=[needs("dask_ml")],
+        ),
+        pytest.param(
+            (as_dense_dask_array, 'auto', True, False, None, None),
+            marks=[needs("dask_ml")],
+        ),
     ],
     ids=[
         "scipy-csr-randomized",
