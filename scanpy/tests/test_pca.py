@@ -55,6 +55,69 @@ def array_type(request):
     return request.param()
 
 
+# Creating the fixture for PCA warning tests
+@pytest.fixture(
+    params=[
+        # Format: (array_type, svd_solver, zero_center, expect_warning, expected_warning_type, expected_warning_message)
+        # Expecting a warning for randomized solver with sparse input
+        (
+            sparse.csr_matrix,
+            'randomized',
+            True,
+            True,
+            UserWarning,
+            "svd_solver 'randomized' does not work with sparse input",
+        ),
+        (
+            sparse.csc_matrix,
+            'randomized',
+            True,
+            True,
+            UserWarning,
+            "svd_solver 'randomized' does not work with sparse input",
+        ),
+        # No warnings expected for other combinations
+        (asarray, 'randomized', True, False, None, None),
+        (asarray, 'auto', True, False, None, None),
+        (as_dense_dask_array, 'randomized', True, False, None, None),
+        (as_dense_dask_array, 'auto', True, False, None, None),
+        # Add more combinations as needed...
+    ],
+    ids=[
+        "scipy-csr-randomized",
+        "scipy-csc-randomized",
+        "np-ndarray-randomized",
+        "np-ndarray-auto",
+        "dask-array-randomized",
+        "dask-array-auto",
+        # Add more ids as needed...
+    ],
+)
+def pca_params(request):
+    return request.param
+
+
+def test_pca_warnings(pca_params):
+    (
+        array_type,
+        svd_solver,
+        zero_center,
+        expect_warning,
+        expected_warning_type,
+        expected_warning_message,
+    ) = pca_params
+    A = array_type(A_list).astype('float32')
+    adata = AnnData(A)
+
+    if expect_warning:
+        with pytest.warns(expected_warning_type, match=expected_warning_message):
+            sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
+    else:
+        with warnings.catch_warnings(record=True) as record:
+            sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
+        assert len(record) == 0
+
+
 def test_pca_transform(array_type):
     A = array_type(A_list).astype('float32')
     A_pca_abs = np.abs(A_pca)
