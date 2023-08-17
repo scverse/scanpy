@@ -12,6 +12,7 @@ import scipy
 from numpy.typing import NDArray
 from anndata import AnnData
 from packaging import version
+from scipy import sparse
 from scipy.stats import mannwhitneyu
 from numpy.random import negative_binomial, binomial, seed
 
@@ -21,6 +22,7 @@ from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
 from scanpy._utils import select_groups
+from scanpy._compat import DaskArray
 
 
 HERE = Path(__file__).parent
@@ -117,12 +119,20 @@ def test_results(array_type):
     assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
 
+def elem_mul(x: np.ndarray | sparse.spmatrix | DaskArray, y: np.ndarray):
+    if isinstance(x, sparse.spmatrix):
+        # returns coo_matrix, so cast back to input type
+        return type(x)(x.multiply(y))
+    else:
+        return x * y
+
+
 def test_results_layers(array_type):
     seed(1234)
 
     adata = get_example_data(array_type)
     adata.layers["to_test"] = adata.X.copy()
-    adata.X = adata.X * array_type(np.random.randint(0, 2, adata.shape, dtype=bool))
+    adata.X = elem_mul(adata.X, np.random.randint(0, 2, adata.shape, dtype=bool))
 
     _, _, true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
