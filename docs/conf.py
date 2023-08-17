@@ -112,6 +112,7 @@ intersphinx_mapping = dict(
     cycler=('https://matplotlib.org/cycler/', None),
     h5py=('https://docs.h5py.org/en/stable/', None),
     ipython=('https://ipython.readthedocs.io/en/stable/', None),
+    igraph=('https://python.igraph.org/en/stable/api/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
     louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
     matplotlib=('https://matplotlib.org/stable/', None),
@@ -191,6 +192,7 @@ qualname_overrides = {
 nitpick_ignore = [
     # Will probably be documented
     ('py:class', 'scanpy._settings.Verbosity'),
+    ('py:class', 'scanpy.neighbors.OnFlySymMatrix'),
     # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
     ('py:class', 'seaborn.ClusterGrid'),
     # Won’t be documented
