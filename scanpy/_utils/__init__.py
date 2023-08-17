@@ -3,6 +3,8 @@
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
 """
+from __future__ import annotations
+
 import sys
 import inspect
 import warnings
@@ -17,6 +19,7 @@ from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
 
 import numpy as np
 from numpy import random
+from numpy.typing import NDArray
 from scipy import sparse
 from anndata import AnnData, __version__ as anndata_version
 from textwrap import dedent
@@ -24,8 +27,6 @@ from packaging import version
 
 from .._settings import settings
 from .. import logging as logg
-
-from .compute.is_constant import is_constant
 
 
 class Empty(Enum):
@@ -500,7 +501,11 @@ def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
         return True
 
 
-def select_groups(adata, groups_order_subset='all', key='groups'):
+def select_groups(
+    adata: AnnData,
+    groups_order_subset: list[str] | Literal['all'] = 'all',
+    key: str = 'groups',
+) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if key + '_masks' in adata.uns:
