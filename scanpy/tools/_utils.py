@@ -15,8 +15,8 @@ doc_use_rep = """\
 use_rep
     Use the indicated representation. `'X'` or any key for `.obsm` is valid.
     If `None`, the representation is chosen automatically:
-    For `.n_vars` < 50, `.X` is used, otherwise 'X_pca' is used.
-    If 'X_pca' is not present, it’s computed with default parameters.\
+    For `.n_vars` < :attr:`~scanpy._settings.ScanpyConfig.N_PCS` (default: 50), `.X` is used, otherwise 'X_pca' is used.
+    If 'X_pca' is not present, it’s computed with default parameters or `n_pcs` if present.\
 """
 
 doc_n_pcs = """\
@@ -52,8 +52,9 @@ def _choose_representation(
                     'if you really want this, set `use_rep=\'X\'`.\n         '
                     'Falling back to preprocessing with `sc.pp.pca` and default params.'
                 )
-                X = pca(adata.X)
-                adata.obsm['X_pca'] = X[:, :n_pcs]
+                n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
+                X = pca(adata.X, n_comps=n_pcs_pca)
+                adata.obsm['X_pca'] = X
         else:
             logg.info('    using data matrix X directly')
             X = adata.X

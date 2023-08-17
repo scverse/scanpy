@@ -4,29 +4,7 @@ import pytest
 from .fixtures import *  # noqa: F403
 
 
-# In case pytest-nunit is not installed, defines a dummy fixture
-try:
-    import pytest_nunit
-except ModuleNotFoundError:
-
-    @pytest.fixture
-    def add_nunit_attachment(request):
-        def noop(file, description):
-            pass
-
-        return noop
-
-    def pytest_addoption(parser):
-        add_internet_tests_option(parser)
-        parser.addini("nunit_attach_on", "Dummy nunit replacement", default="any")
-
-else:
-
-    def pytest_addoption(parser):
-        add_internet_tests_option(parser)
-
-
-def add_internet_tests_option(parser):
+def pytest_addoption(parser):
     parser.addoption(
         "--internet-tests",
         action="store_true",
