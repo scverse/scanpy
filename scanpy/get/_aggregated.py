@@ -145,7 +145,8 @@ class Aggregate:
             mean_unweighted = utils.asarray(A_unweighted * self._data)
             sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted**2
         var_ = mean_sq - sq_mean
-        # TODO: Why these values exaclty? Because they are high relative to the datatype? (unchanged from original code: https://github.com/scverse/anndata/pull/564)
+        # TODO: Why these values exactly? Because they are high relative to the datatype?
+        # (unchanged from original code: https://github.com/scverse/anndata/pull/564)
         precision = 2 << (42 if self._data.dtype == np.float64 else 20)
         # detects loss of precision in mean_sq - sq_mean, which suggests variance is 0
         var_[precision * var_ < sq_mean] = 0
