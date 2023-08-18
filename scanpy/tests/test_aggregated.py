@@ -2,7 +2,7 @@ import anndata as ad
 import scanpy as sc
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, csc_matrix
 import pytest
 
 
@@ -51,33 +51,22 @@ def X():
 def test_groupby_different_data_locations(data_key, dim, df_base, df_groupby, X):
     if (data_key == 'varm' and dim == 'obs') or (data_key == 'obsm' and dim == 'var'):
         pytest.skip("invalid parameter combination")
-    if dim == 'obs':
-        data_sparse_mat_dict = {data_key: {'test': csr_matrix(X)}}
-        adata_sparse = ad.AnnData(obs=df_groupby, var=df_base, **data_sparse_mat_dict)
-        data_dense_mat_dict = {data_key: {'test': X}}
-        adata_dense = ad.AnnData(obs=df_groupby, var=df_base, **data_dense_mat_dict)
-    else:
-        if data_key != 'varm':
-            X = X.T
-        data_sparse_mat_dict = {data_key: {'test': csr_matrix(X)}}
-        adata_sparse = ad.AnnData(obs=df_base, var=df_groupby, **data_sparse_mat_dict)
-        data_dense_mat_dict = {data_key: {'test': X}}
-        adata_dense = ad.AnnData(obs=df_base, var=df_groupby, **data_dense_mat_dict)
+
+    obs_df, var_df = (df_groupby, df_base) if dim == 'obs' else (df_base, df_groupby)
+    data = X.T if dim == 'var' and data_key != 'varm' else X
+    adata_sparse = ad.AnnData(obs=obs_df, var=var_df, **{data_key: {'test': csr_matrix(data)}})
+    adata_dense = ad.AnnData(obs=obs_df, var=var_df, **{data_key: {'test': data}})
 
     data_dict = {(data_key if data_key != 'layers' else 'layer'): 'test'}
-    stats_sparse = sc.get.aggregated(
-        adata_sparse,
-        by="key",
-        dim=dim,
-        func=['count', 'mean', 'var'],
-        **data_dict,
-    )
-    stats_dense = sc.get.aggregated(
-        adata_dense,
-        by="key",
-        dim=dim,
-        func=['count', 'mean', 'var'],
-        **data_dict,
+    stats_sparse, stats_dense = (
+        sc.get.aggregated(
+            adata,
+            by="key",
+            dim=dim,
+            func=['count', 'mean', 'var'],
+            **data_dict,
+        )
+        for adata in [adata_sparse, adata_dense]
     )
 
     # superset columns can be kept but not subsets
@@ -86,7 +75,7 @@ def test_groupby_different_data_locations(data_key, dim, df_base, df_groupby, X)
 
     assert np.allclose(
         getattr(stats_sparse, dim)['count'],
-        getattr(stats_sparse, dim)['count'],
+        getattr(stats_dense, dim)['count'],
     )
     assert np.allclose(
         getattr(stats_sparse, data_key)['mean'], getattr(stats_dense, data_key)['mean']
@@ -153,7 +142,7 @@ def test_groupby_different_data_locations(data_key, dim, df_base, df_groupby, X)
     df = pd.DataFrame(
         index=getattr(adata_dense, dim)["key"],
         columns=getattr(adata_dense, f"{'var' if dim == 'obs' else 'obs'}_names"),
-        data=X.T if dim == 'var' and data_key != 'varm' else X,
+        data=X,
     )
     grouped_agg_df = (
         df.groupby('key')
@@ -177,24 +166,19 @@ def test_groupby_different_data_locations(data_key, dim, df_base, df_groupby, X)
 
 @pytest.mark.parametrize('dim', ['obs', 'var'])
 def test_groupby_X(dim, df_base, df_groupby, X):
-    if dim == 'obs':
-        adata_sparse = ad.AnnData(obs=df_groupby, var=df_base, X=csr_matrix(X))
-        adata_dense = ad.AnnData(obs=df_groupby, var=df_base, X=X)
-    else:
-        adata_sparse = ad.AnnData(obs=df_base, var=df_groupby, X=X.T)
-        adata_dense = ad.AnnData(obs=df_base, var=df_groupby, X=csr_matrix(X).T)
+    obs_df, var_df = (df_groupby, df_base) if dim == 'obs' else (df_base, df_groupby)
+    data = X if dim == 'obs' else X.T
+    adata_sparse = ad.AnnData(obs=obs_df, var=var_df, X=csc_matrix(data))
+    adata_dense = ad.AnnData(obs=obs_df, var=var_df, X=data)
 
-    stats_sparse = sc.get.aggregated(
-        adata_sparse,
-        by="key",
-        dim=dim,
-        func=['count', 'mean', 'var'],
-    )
-    stats_dense = sc.get.aggregated(
-        adata_dense,
-        by="key",
-        dim=dim,
-        func=['count', 'mean', 'var'],
+    stats_sparse, stats_dense = (
+        sc.get.aggregated(
+            adata,
+            by="key",
+            dim=dim,
+            func=['count', 'mean', 'var'],
+        )
+        for adata in [adata_sparse, adata_dense]
     )
 
     # superset columns can be kept but not subsets
@@ -203,7 +187,7 @@ def test_groupby_X(dim, df_base, df_groupby, X):
 
     assert np.allclose(
         getattr(stats_sparse, dim)['count'],
-        getattr(stats_sparse, dim)['count'],
+        getattr(stats_dense, dim)['count'],
     )
     assert np.allclose(stats_sparse.layers['mean'], stats_dense.layers['mean'])
     assert np.allclose(
