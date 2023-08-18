@@ -35,30 +35,19 @@ def df_groupby():
 
 @pytest.fixture
 def X():
-    return np.array(
-        [
-            *[[0, -2], [1, 13], [2, 1]],  # v
-            *[[3, 12], [4, 2]],  # w
-            *[[5, 11], [6, 3], [7, 10]],  # a
-            *[[8, 4], [9, 9]],  # b
-            *[[10, 5], [11, 8]],  # c
-            [12, 6],  # d
-        ],
-        dtype=np.float32,
-    )
+    data = [
+        *[[0, -2], [1, 13], [2, 1]],  # v
+        *[[3, 12], [4, 2]],  # w
+        *[[5, 11], [6, 3], [7, 10]],  # a
+        *[[8, 4], [9, 9]],  # b
+        *[[10, 5], [11, 8]],  # c
+        [12, 6],  # d
+    ]
+    return np.array(data, dtype=np.float32)
 
 
-@pytest.mark.parametrize(
-    'data_key',
-    ['layers', 'obsm', 'varm'],
-)
-@pytest.mark.parametrize(
-    'dim',
-    [
-        'obs',
-        'var',
-    ],
-)
+@pytest.mark.parametrize('data_key', ['layers', 'obsm', 'varm'])
+@pytest.mark.parametrize('dim', ['obs', 'var'])
 def test_groupby_different_data_locations(data_key, dim, df_base, df_groupby, X):
     if (data_key == 'varm' and dim == 'obs') or (data_key == 'obsm' and dim == 'var'):
         pytest.skip("invalid parameter combination")
@@ -186,10 +175,7 @@ def test_groupby_different_data_locations(data_key, dim, df_base, df_groupby, X)
     )  # returns for both columns but counts only needs one because it is the same
 
 
-@pytest.mark.parametrize(
-    'dim',
-    ['obs', 'var'],
-)
+@pytest.mark.parametrize('dim', ['obs', 'var'])
 def test_groupby_X(dim, df_base, df_groupby, X):
     if dim == 'obs':
         adata_sparse = ad.AnnData(obs=df_groupby, var=df_base, X=csr_matrix(X))
