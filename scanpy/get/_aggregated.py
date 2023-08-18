@@ -456,15 +456,13 @@ def aggregated_from_array(
         raise ValueError(f'… {unknown} …')
     if 'sum' in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
-        if (
-            len(funcs) == 1 and not write_to_xxxm
-        ):  # put aggregation in X if it is the only one and the aggregation data is not coming from `xxxm`
+        # put aggregation in X if it is the only one and the aggregation data is not coming from `xxxm`
+        if len(funcs) == 1 and not write_to_xxxm:  
             data_dict['X'] = agg
         else:
             data_dict[write_key]['sum'] = agg
-    if (
-        'mean' in funcs and 'var' not in funcs
-    ):  # here and below for count, if var is present, these can be calculate alongside var
+    # here and below for count, if var is present, these can be calculate alongside var
+    if 'mean' in funcs and 'var' not in funcs:  
         agg = groupby.mean()
         if len(funcs) == 1 and not write_to_xxxm:
             data_dict['X'] = agg
