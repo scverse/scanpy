@@ -54,7 +54,9 @@ def test_groupby_different_data_locations(data_key, dim, df_base, df_groupby, X)
 
     obs_df, var_df = (df_groupby, df_base) if dim == 'obs' else (df_base, df_groupby)
     data = X.T if dim == 'var' and data_key != 'varm' else X
-    adata_sparse = ad.AnnData(obs=obs_df, var=var_df, **{data_key: {'test': csr_matrix(data)}})
+    adata_sparse = ad.AnnData(
+        obs=obs_df, var=var_df, **{data_key: {'test': csr_matrix(data)}}
+    )
     adata_dense = ad.AnnData(obs=obs_df, var=var_df, **{data_key: {'test': data}})
 
     data_dict = {(data_key if data_key != 'layers' else 'layer'): 'test'}

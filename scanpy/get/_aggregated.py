@@ -395,13 +395,13 @@ def aggregated(
     write_to_xxxm = None
     if sum([varm is None, obsm is None, layer is None]) > 1:
         raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
-    if not varm is None:
+    if varm is not None:
         data = adata.varm[varm]
         write_to_xxxm = True  # the data will have to be transposed so this is accurate
-    elif not obsm is None:
+    elif obsm is not None:
         data = adata.obsm[obsm]
         write_to_xxxm = True
-    elif not layer is None:
+    elif layer is not None:
         data = adata.layers[layer]
         if dim == 'var':
             data = data.T
@@ -457,12 +457,12 @@ def aggregated_from_array(
     if 'sum' in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
         # put aggregation in X if it is the only one and the aggregation data is not coming from `xxxm`
-        if len(funcs) == 1 and not write_to_xxxm:  
+        if len(funcs) == 1 and not write_to_xxxm:
             data_dict['X'] = agg
         else:
             data_dict[write_key]['sum'] = agg
     # here and below for count, if var is present, these can be calculate alongside var
-    if 'mean' in funcs and 'var' not in funcs:  
+    if 'mean' in funcs and 'var' not in funcs:
         agg = groupby.mean()
         if len(funcs) == 1 and not write_to_xxxm:
             data_dict['X'] = agg
