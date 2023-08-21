@@ -55,46 +55,53 @@ def array_type(request):
     return request.param()
 
 
-# Creating the fixture for PCA warning tests
-@pytest.fixture(
-    params=[
-        # Format: (array_type, svd_solver, zero_center, (expected_warning_type, expected_warning_message))
-        # Expecting a warning for randomized solver with sparse input
-        (
-            sparse.csr_matrix,
-            'randomized',
-            True,
-            (UserWarning, "not work with sparse input"),
-        ),
-        (
-            sparse.csc_matrix,
-            'randomized',
-            True,
-            (UserWarning, "not work with sparse input"),
-        ),
-        # No warnings expected for other combinations
-        (asarray, 'randomized', True, None),
-        (asarray, 'auto', True, None),
-        pytest.param(
-            (as_dense_dask_array, 'randomized', True, None),
-            marks=[needs("dask_ml")],
-        ),
-        pytest.param(
-            (as_dense_dask_array, 'auto', True, None),
-            marks=[needs("dask_ml")],
-        ),
-    ],
-    ids=[
-        "scipy-csr-randomized",
-        "scipy-csc-randomized",
-        "np-ndarray-randomized",
-        "np-ndarray-auto",
-        "dask-array-randomized",
-        "dask-array-auto",
-    ],
-)
-def pca_params(request):
+@pytest.fixture(params=[None, 'valid', 'invalid'])
+def svd_solver_type(request):
     return request.param
+
+
+@pytest.fixture(params=[True, False])
+def zero_center(request):
+    return request.param
+
+
+@pytest.fixture
+def pca_params(array_type, svd_solver_type, zero_center):
+    all_svd_solvers = {'auto', 'full', 'arpack', 'randomized', 'tsqr', 'lobpcg'}
+
+    expected_warning = None
+    svd_solver = None
+    if svd_solver_type is not None:
+        if array_type is as_dense_dask_array:
+            svd_solver = (
+                ['auto', 'full', 'tsqr', 'randomized']
+                if zero_center
+                else ['tsqr', 'randomized']
+            )
+        elif array_type in [sparse.csr_matrix, sparse.csc_matrix]:
+            svd_solver = (
+                ['lobpcg', 'arpack'] if zero_center else ['arpack', 'randomized']
+            )
+        else:
+            svd_solver = (
+                ['auto', 'full', 'arpack', 'randomized']
+                if zero_center
+                else ['arpack', 'randomized']
+            )
+        if svd_solver_type == 'invalid':
+            svd_solver = list(all_svd_solvers.difference(svd_solver))
+            expected_warning = (Warning, "Ignoring")
+
+        svd_solver = np.random.choice(svd_solver)
+    # explicit check for special case
+    if (
+        svd_solver == 'randomized'
+        and zero_center
+        and array_type in [sparse.csr_matrix, sparse.csc_matrix]
+    ):
+        expected_warning = (UserWarning, "not work with sparse input")
+
+    return (array_type, svd_solver, zero_center, expected_warning)
 
 
 def test_pca_warnings(pca_params):
@@ -115,6 +122,15 @@ def test_pca_warnings(pca_params):
         with warnings.catch_warnings(record=True) as record:
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
         assert len(record) == 0
+
+
+# This warning test is out of the fixture because it is a special case in the logic of the function
+def test_pca_warnings_sparse():
+    for array_type in (sparse.csr_matrix, sparse.csc_matrix):
+        A = array_type(A_list).astype('float32')
+        adata = AnnData(A)
+        with pytest.warns(UserWarning, match="not work with sparse input"):
+            sc.pp.pca(adata, svd_solver="randomized", zero_center=True)
 
 
 def test_pca_transform(array_type):
