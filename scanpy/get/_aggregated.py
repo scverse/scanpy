@@ -393,7 +393,7 @@ def aggregated(
     """
     data = adata.X
     write_to_xxxm = None
-    if sum([varm is None, obsm is None, layer is None]) < 2:
+    if sum(p is not None for p in [varm, obsm, layer]) > 1:
         raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
     if varm is not None:
         data = adata.varm[varm]
