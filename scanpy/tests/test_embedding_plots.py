@@ -244,6 +244,25 @@ def test_dimension_broadcasting(adata, tmpdir, check_same_image):
     check_same_image(dims_pth, color_pth, tol=5)
 
 
+def test_marker_broadcasting(adata, tmpdir, check_same_image):
+    tmpdir = Path(tmpdir)
+
+    with pytest.raises(ValueError):
+        sc.pl.pca(adata, color=["label", "1_missing"], marker=[".", "^", "x"])
+
+    dims_pth = tmpdir / "broadcast_markers.png"
+    color_pth = tmpdir / "broadcast_colors_for_markers.png"
+
+    sc.pl.pca(adata, color=["label", "label", "label"], marker="^", show=False)
+    plt.savefig(dims_pth, dpi=40)
+    plt.close()
+    sc.pl.pca(adata, color="label", marker=["^", "^", "^"], show=False)
+    plt.savefig(color_pth, dpi=40)
+    plt.close()
+
+    check_same_image(dims_pth, color_pth, tol=5)
+
+
 def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
     tmpdir = Path(tmpdir)
     adata = adata.copy()

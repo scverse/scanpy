@@ -41,10 +41,10 @@ def test_umap_init_dtype():
 
 
 @pytest.mark.parametrize(
-    "layout",
+    'layout',
     [
-        pytest.param("fa", marks=needs("fa2")),
-        pytest.param("fr", marks=needs("igraph")),
+        pytest.param('fa', marks=needs('fa2')),
+        pytest.param('fr', marks=needs('igraph')),
     ],
 )
 def test_umap_init_paga(layout):

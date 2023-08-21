@@ -1,6 +1,6 @@
 [![Stars](https://img.shields.io/github/stars/scverse/scanpy?logo=GitHub&color=yellow)](https://github.com/scverse/scanpy/stargazers)
 [![PyPI](https://img.shields.io/pypi/v/scanpy?logo=PyPI)](https://pypi.org/project/scanpy)
-[![PyPIDownloads](https://pepy.tech/badge/scanpy)](https://pepy.tech/project/scanpy)
+[![Downloads](https://static.pepy.tech/badge/scanpy)](https://pepy.tech/project/scanpy)
 [![Conda](https://img.shields.io/conda/dn/conda-forge/scanpy?logo=Anaconda)](https://anaconda.org/conda-forge/scanpy)
 [![Docs](https://readthedocs.com/projects/icb-scanpy/badge/?version=latest)](https://scanpy.readthedocs.io)
 [![Build Status](https://dev.azure.com/scverse/scanpy/_apis/build/status/theislab.scanpy?branchName=master)](https://dev.azure.com/scverse/scanpy/_build)
@@ -50,7 +50,7 @@ You can cite the scverse publication as follows:
 >
 > Isaac Virshup, Danila Bredikhin, Lukas Heumos, Giovanni Palla, Gregor Sturm, Adam Gayoso, Ilia Kats, Mikaela Koutrouli, Scverse Community, Bonnie Berger, Dana Pe’er, Aviv Regev, Sarah A. Teichmann, Francesca Finotello, F. Alexander Wolf, Nir Yosef, Oliver Stegle & Fabian J. Theis
 >
-> _Nat Biotechnol._ 2022 Apr 10. doi: [10.1038/s41587-023-01733-8](https://doi.org/10.1038/s41587-023-01733-8).
+> _Nat Biotechnol._ 2023 Apr 10. doi: [10.1038/s41587-023-01733-8](https://doi.org/10.1038/s41587-023-01733-8).
 
 [contributing guide]: CONTRIBUTING.md
 [discourse]: https://discourse.scverse.org/

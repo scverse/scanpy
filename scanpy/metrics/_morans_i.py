@@ -1,14 +1,15 @@
 """Moran's I global spatial autocorrelation."""
-from typing import Union, Optional
 from functools import singledispatch
-from anndata import AnnData
+from typing import Union, Optional
 
+from anndata import AnnData
 import numpy as np
 from scipy import sparse
 from numba import njit, prange
 
-from scanpy.get import _get_obs_rep
-from scanpy.metrics._gearys_c import _resolve_vals, _check_vals
+from ..get import _get_obs_rep
+from .._compat import fullname, DaskArray
+from ._common import _resolve_vals, _check_vals
 
 
 @singledispatch
@@ -222,7 +223,7 @@ def _morans_i_mtx_csr(
 
 
 @morans_i.register(sparse.csr_matrix)
-def _morans_i(g, vals) -> np.ndarray:
+def _morans_i(g: sparse.csr_matrix, vals) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
@@ -255,4 +256,8 @@ def _morans_i(g, vals) -> np.ndarray:
         full_result[idxer] = result
         return full_result
     else:
-        raise NotImplementedError()
+        msg = (
+            'Moran’s I metric not implemented for vals of type '
+            f'{fullname(type(vals))} and ndim {vals.ndim}.'
+        )
+        raise NotImplementedError(msg)

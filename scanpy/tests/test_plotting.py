@@ -43,7 +43,7 @@ sc.set_figure_params(dpi=40, color_map='viridis')
 # the ./figures folder to ./_images/
 
 
-@needs("leidenalg")
+@needs('leidenalg')
 def test_heatmap(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
@@ -1014,6 +1014,42 @@ def pbmc_scatterplots(_pbmc_scatterplots_session):
             ),
         ),
         (
+            'pca_one_marker',
+            partial(sc.pl.pca, color='louvain', marker='^'),
+        ),
+        (
+            'pca_one_marker_multiple_colors',
+            partial(sc.pl.pca, color=['louvain', 'bulk_labels'], marker='^'),
+        ),
+        (
+            'pca_multiple_markers_multiple_colors',
+            partial(sc.pl.pca, color=['louvain', 'bulk_labels'], marker=['^', 'x']),
+        ),
+        (
+            'pca_marker_with_dimensions',
+            partial(
+                sc.pl.pca, color='louvain', marker='^', dimensions=[(0, 1), (1, 2)]
+            ),
+        ),
+        (
+            'pca_markers_with_dimensions',
+            partial(
+                sc.pl.pca,
+                color='louvain',
+                marker=['^', 'x'],
+                dimensions=[(0, 1), (1, 2)],
+            ),
+        ),
+        (
+            'pca_markers_colors_with_dimensions',
+            partial(
+                sc.pl.pca,
+                color=['louvain', 'bulk_labels'],
+                marker=['^', 'x'],
+                dimensions=[(0, 1), (1, 2)],
+            ),
+        ),
+        (
             'pca_sparse_layer',
             partial(sc.pl.pca, color=['CD3D', 'CD79A'], layer='sparse', cmap='viridis'),
         ),
@@ -1551,7 +1587,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs("scrublet")
+@needs('scrublet')
 def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=30)
 

@@ -2,7 +2,7 @@ trigger:
 - master
 
 variables:
-  python.version: '3.9'
+  python.version: '3.11'
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
   PYTEST_ADDOPTS: '-v --color=yes --nunit-xml=test-data/test-results.xml'
   ANNDATA_DEV: no
@@ -16,13 +16,12 @@ jobs:
     vmImage: 'ubuntu-22.04'
   strategy:
     matrix:
-      Python38:
+      Python3.8:
         python.version: '3.8'
-      Python39: {}
+      Python3.11: {}
       minimal_tests:
         TEST_EXTRA: 'test-min'
       anndata_dev:
-        python.version: '3.9'
         ANNDATA_DEV: yes
         RUN_COVERAGE: yes
         PRERELEASE_DEPENDENCIES: yes
@@ -105,8 +104,8 @@ jobs:
 
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.9'
-    displayName: 'Use Python 3.9'
+      versionSpec: '3.11'
+    displayName: 'Use Python 3.11'
 
   - script: |
       python -m pip install --upgrade pip

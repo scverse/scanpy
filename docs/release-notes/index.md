@@ -8,6 +8,9 @@
 ```
 ## Version 1.9
 
+```{include} /release-notes/1.9.4.md
+```
+
 ```{include} /release-notes/1.9.3.md
 ```
 

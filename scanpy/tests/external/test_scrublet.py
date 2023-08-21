@@ -5,7 +5,6 @@ import scanpy.external as sce
 from anndata.tests.helpers import assert_equal
 import pandas as pd
 import anndata as ad
-from scanpy.get import _get_obs_rep
 import numpy as np
 import scanpy.preprocessing as pp
 import scipy.sparse as sparse
@@ -14,7 +13,9 @@ from scanpy.testing._helpers.data import paul15, pbmc3k
 from scanpy.testing._pytest.marks import needs
 
 
-@needs("scrublet")
+pytestmark = [needs('scrublet')]
+
+
 def test_scrublet():
     """
     Test that Scrublet run works.
@@ -31,7 +32,6 @@ def test_scrublet():
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
 
-@needs("scrublet")
 def test_scrublet_batched():
     """
     Test that Scrublet run works with batched data.
@@ -61,7 +61,6 @@ def test_scrublet_batched():
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
 
 
-@needs("scrublet")
 def test_scrublet_data():
     """
     Test that Scrublet processing is arranged correctly.
@@ -147,7 +146,6 @@ def test_scrublet_data():
     ).all()
 
 
-@needs("scrublet")
 def test_scrublet_dense():
     """
     Test that Scrublet works for dense matrices.
@@ -164,7 +162,6 @@ def test_scrublet_dense():
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
 
-@needs("scrublet")
 def test_scrublet_params():
     """
     Test that Scrublet args are passed.
@@ -205,7 +202,6 @@ def test_scrublet_params():
             assert_equal(default, curr)
 
 
-@needs("scrublet")
 def test_scrublet_simulate_doublets():
     """
     Test that standalone Scrublet doublet simulation works.

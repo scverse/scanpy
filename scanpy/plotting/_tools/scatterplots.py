@@ -104,6 +104,7 @@ def embedding(
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
     return_fig: Optional[bool] = None,
+    marker: Union[str, Sequence[str]] = '.',
     **kwargs,
 ) -> Union[Figure, Axes, None]:
     """\
@@ -175,6 +176,10 @@ def embedding(
 
     # turn color into a python list
     color = [color] if isinstance(color, str) or color is None else list(color)
+
+    # turn marker into a python list
+    marker = [marker] if isinstance(marker, str) else list(marker)
+
     if title is not None:
         # turn title into a python list if not None
         title = [title] if isinstance(title, str) else list(title)
@@ -217,7 +222,7 @@ def embedding(
     if components is not None:
         color, dimensions = list(zip(*product(color, dimensions)))
 
-    color, dimensions = _broadcast_args(color, dimensions)
+    color, dimensions, marker = _broadcast_args(color, dimensions, marker)
 
     # 'color' is a list of names that want to be plotted.
     # Eg. ['Gene1', 'louvain', 'Gene2'].
@@ -325,10 +330,10 @@ def embedding(
                 coords[:, 0],
                 coords[:, 1],
                 coords[:, 2],
-                marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 norm=normalize,
+                marker=marker[count],
                 **kwargs,
             )
         else:
@@ -369,20 +374,20 @@ def embedding(
                     coords[:, 0],
                     coords[:, 1],
                     s=bg_size,
-                    marker=".",
                     c=bg_color,
                     rasterized=settings._vector_friendly,
                     norm=normalize,
+                    marker=marker[count],
                     **kwargs,
                 )
                 ax.scatter(
                     coords[:, 0],
                     coords[:, 1],
                     s=gap_size,
-                    marker=".",
                     c=gap_color,
                     rasterized=settings._vector_friendly,
                     norm=normalize,
+                    marker=marker[count],
                     **kwargs,
                 )
                 # if user did not set alpha, set alpha to 0.7
@@ -391,10 +396,10 @@ def embedding(
             cax = scatter(
                 coords[:, 0],
                 coords[:, 1],
-                marker=".",
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 norm=normalize,
+                marker=marker[count],
                 **kwargs,
             )
 
@@ -918,7 +923,7 @@ def spatial(
     basis: str = "spatial",
     img: Union[np.ndarray, None] = None,
     img_key: Union[str, None, Empty] = _empty,
-    library_id: Union[str, Empty] = _empty,
+    library_id: Union[str, None, Empty] = _empty,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
     bw: Optional[bool] = False,
@@ -979,7 +984,7 @@ def spatial(
     --------
     :func:`scanpy.datasets.visium_sge`
         Example visium data.
-    :tutorial:`spatial/basic-analysis`
+    :doc:`tutorials:spatial/basic-analysis`
         Tutorial on spatial analysis.
     """
     # get default image params if available
@@ -1284,7 +1289,7 @@ def _check_scale_factor(
 
 
 def _check_spatial_data(
-    uns: Mapping, library_id: Union[Empty, None, str]
+    uns: Mapping, library_id: Union[str, None, Empty]
 ) -> Tuple[Optional[str], Optional[Mapping]]:
     """
     Given a mapping, try and extract a library id/ mapping with spatial data.
