@@ -164,11 +164,11 @@ markers = [
 ]
 
 [tool.coverage.run]
-data_file = "cache/coverage"
+data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
 omit = ["*/tests/*"]
 [tool.coverage.xml]
-output = "cache/coverage.xml"
+output = "test-data/coverage.xml"
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
 

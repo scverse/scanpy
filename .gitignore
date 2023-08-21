@@ -12,6 +12,7 @@
 
 # tests
 /*cache/
+/test-data/
 /scanpy/tests/test*.h5ad
 /scanpy/tests/figures/
 /scanpy/tests/notebooks/figures/
