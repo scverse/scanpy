@@ -108,8 +108,8 @@ def test_pca_warnings(pca_params):
     adata = AnnData(A)
 
     if expected_warning is not None:
-        expected_warning_type, expected_warning_message = expected_warning
-        with pytest.warns(expected_warning_type, match=expected_warning_message):
+        expected_warning_type, expected_warning_pattern = expected_warning
+        with pytest.warns(expected_warning_type, match=expected_warning_pattern):
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
     else:
         with warnings.catch_warnings(record=True) as record:
