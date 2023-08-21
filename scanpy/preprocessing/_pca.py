@@ -78,7 +78,7 @@ def pca(
             Not available with *dask* arrays.
         `'randomized'`
             for the randomized algorithm due to Halko (2009). For *dask* arrays,
-            this will use :func:`~dask.arrays.linalg.svd_compressed`.
+            this will use :func:`~dask.array.linalg.svd_compressed`.
         `'auto'`
             chooses automatically depending on the size of the problem.
         `'lobpcg'`
