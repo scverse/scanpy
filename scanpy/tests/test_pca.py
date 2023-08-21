@@ -90,7 +90,7 @@ def pca_params(array_type, svd_solver_type, zero_center):
             )
         if svd_solver_type == 'invalid':
             svd_solver = list(all_svd_solvers.difference(svd_solver))
-            expected_warning = (Warning, "Ignoring")
+            expected_warning = "Ignoring"
 
         svd_solver = np.random.choice(svd_solver)
     # explicit check for special case
@@ -99,24 +99,18 @@ def pca_params(array_type, svd_solver_type, zero_center):
         and zero_center
         and array_type in [sparse.csr_matrix, sparse.csc_matrix]
     ):
-        expected_warning = (UserWarning, "not work with sparse input")
+        expected_warning = "not work with sparse input"
 
-    return (array_type, svd_solver, zero_center, expected_warning)
+    return (svd_solver, expected_warning)
 
 
-def test_pca_warnings(pca_params):
-    (
-        array_type,
-        svd_solver,
-        zero_center,
-        expected_warning,
-    ) = pca_params
+def test_pca_warnings(array_type, zero_center, pca_params):
+    svd_solver, expected_warning = pca_params
     A = array_type(A_list).astype('float32')
     adata = AnnData(A)
 
     if expected_warning is not None:
-        expected_warning_type, expected_warning_pattern = expected_warning
-        with pytest.warns(expected_warning_type, match=expected_warning_pattern):
+        with pytest.warns(UserWarning, match=expected_warning):
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
     else:
         with warnings.catch_warnings(record=True) as record:
