@@ -230,6 +230,7 @@ def _highly_variable_pearson_residuals(
             sums_cells = np.array(X_batch.sum(axis=1)).ravel()
             sum_total = np.sum(sums_genes).squeeze()
             X_batch = X_batch.tocsc()
+            X_batch.eliminate_zeros()
             residual_gene_var = calculate_res_sparse(
                 X_batch.indptr,
                 X_batch.indices,
