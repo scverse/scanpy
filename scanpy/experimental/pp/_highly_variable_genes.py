@@ -47,6 +47,10 @@ def clac_clipped_res_sparse(
 
 @nb.njit
 def get_value(cell, sparse_idx, index, stop_idx, data) -> np.float64:
+    """
+    This function navigates the sparsity of the CSC (Compressed Sparse Column) matrix,
+    returning the value at the specified cell location if it exists, or zero otherwise.
+    """
     if sparse_idx < stop_idx and index[sparse_idx] == cell:
         return data[sparse_idx]
     else:
