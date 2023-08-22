@@ -33,15 +33,15 @@ def calculate_res_sparse(
     indptr,
     index,
     data,
+    *,
     sums_genes,
     sums_cells,
-    residuals,
     sum_total,
     clip,
     theta,
     n_genes,
     n_cells,
-):
+) -> NDArray[np.float64]:
     for gene in nb.prange(n_genes):
         start_idx = indptr[gene]
         stop_idx = indptr[gene + 1]
