@@ -59,17 +59,17 @@ def get_value(cell, sparse_idx, index, stop_idx, data) -> np.float64:
 
 @nb.njit(parallel=True)
 def calculate_res_sparse(
-    indptr,
-    index,
-    data,
+    indptr: NDArray[np.integer],
+    index: NDArray[np.integer],
+    data: NDArray[np.float64],
     *,
-    sums_genes,
-    sums_cells,
-    sum_total,
-    clip,
-    theta,
-    n_genes,
-    n_cells,
+    sums_genes: NDArray[np.float64],
+    sums_cells: NDArray[np.float64],
+    sum_total: np.float64,
+    clip: np.float64,
+    theta: np.float64,
+    n_genes: int,
+    n_cells: int,
 ) -> NDArray[np.float64]:
     residuals = np.zeros(n_genes, dtype=np.float64)
     for gene in nb.prange(n_genes):
@@ -115,8 +115,16 @@ def calculate_res_sparse(
 
 
 @nb.njit(parallel=True)
-def calculate_res_dense(
-    matrix, *, sums_genes, sums_cells, sum_total, clip, theta, n_genes, n_cells
+def _calculate_res_dense(
+    matrix,
+    *,
+    sums_genes: NDArray[np.float64],
+    sums_cells: NDArray[np.float64],
+    sum_total: np.float64,
+    clip: np.float64,
+    theta: np.float64,
+    n_genes: int,
+    n_cells: int,
 ) -> NDArray[np.float64]:
     def clac_clipped_res_dense(gene: int, cell: int) -> np.float64:
         mu = sums_genes[gene] * sums_cells[cell] / sum_total
@@ -209,28 +217,28 @@ def _highly_variable_pearson_residuals(
                 X_batch.indptr,
                 X_batch.indices,
                 X_batch.data.astype(np.float64),
-                sums_genes,
-                sums_cells,
-                np.float64(sum_total),
-                np.float64(clip),
-                np.float64(theta),
-                X_batch.shape[1],
-                X_batch.shape[0],
+                sums_genes=sums_genes,
+                sums_cells=sums_cells,
+                sum_total=np.float64(sum_total),
+                clip=np.float64(clip),
+                theta=np.float64(theta),
+                n_genes=X_batch.shape[1],
+                n_cells=X_batch.shape[0],
             )
         else:
             sums_genes = np.sum(X_batch, axis=0).ravel()
             sums_cells = np.sum(X_batch, axis=1).ravel()
             sum_total = np.sum(sums_genes)
             X_batch = np.array(X_batch, dtype=np.float64, order='F')
-            residual_gene_var = calculate_res_dense(
+            residual_gene_var = _calculate_res_dense(
                 X_batch,
-                sums_genes,
-                sums_cells,
-                np.float64(sum_total),
-                np.float64(clip),
-                np.float64(theta),
-                X_batch.shape[1],
-                X_batch.shape[0],
+                sums_genes=sums_genes,
+                sums_cells=sums_cells,
+                sum_total=np.float64(sum_total),
+                clip=np.float64(clip),
+                theta=np.float64(theta),
+                n_genes=X_batch.shape[1],
+                n_cells=X_batch.shape[0],
             )
 
         # Add 0 values for genes that were filtered out
