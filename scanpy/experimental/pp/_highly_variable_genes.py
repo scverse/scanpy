@@ -8,6 +8,7 @@ import pandas as pd
 import scipy.sparse as sp_sparse
 from anndata import AnnData
 from math import sqrt
+from numpy.typing import NDArray
 
 from scanpy import logging as logg
 from scanpy._settings import settings, Verbosity
@@ -42,6 +43,7 @@ def calculate_res_sparse(
     n_genes,
     n_cells,
 ) -> NDArray[np.float64]:
+    residuals = np.zeros(n_genes, dtype=np.float64)
     for gene in nb.prange(n_genes):
         start_idx = indptr[gene]
         stop_idx = indptr[gene + 1]
@@ -75,12 +77,15 @@ def calculate_res_sparse(
             var_sum += diff * diff
 
         residuals[gene] = var_sum / n_cells
+    return residuals
 
 
 @nb.njit(parallel=True)
 def calculate_res_dense(
     matrix, *, sums_genes, sums_cells, sum_total, clip, theta, n_genes, n_cells
 ) -> NDArray[np.float64]:
+    residuals = np.zeros(n_genes, dtype=np.float64)
+
     for gene in nb.prange(n_genes):
         sum_clipped_res = np.float64(0.0)
         for cell in range(n_cells):
@@ -106,6 +111,7 @@ def calculate_res_dense(
             var_sum += diff * diff
 
         residuals[gene] = var_sum / n_cells
+    return residuals
 
 
 def _highly_variable_pearson_residuals(
@@ -162,19 +168,17 @@ def _highly_variable_pearson_residuals(
         if clip < 0:
             raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
-        residual_gene_var = np.zeros((X_batch.shape[1]), dtype=np.float64)
         if sp_sparse.issparse(X_batch):
             sums_genes = np.array(X_batch.sum(axis=0)).ravel()
             sums_cells = np.array(X_batch.sum(axis=1)).ravel()
             sum_total = np.sum(sums_genes).squeeze()
             X_batch = X_batch.tocsc()
-            calculate_res_sparse(
+            residual_gene_var = calculate_res_sparse(
                 X_batch.indptr,
                 X_batch.indices,
                 X_batch.data.astype(np.float64),
                 sums_genes,
                 sums_cells,
-                residual_gene_var,
                 np.float64(sum_total),
                 np.float64(clip),
                 np.float64(theta),
@@ -186,11 +190,10 @@ def _highly_variable_pearson_residuals(
             sums_cells = np.sum(X_batch, axis=1).ravel()
             sum_total = np.sum(sums_genes)
             X_batch = np.array(X_batch, dtype=np.float64, order='F')
-            calculate_res_dense(
+            residual_gene_var = calculate_res_dense(
                 X_batch,
                 sums_genes,
                 sums_cells,
-                residual_gene_var,
                 np.float64(sum_total),
                 np.float64(clip),
                 np.float64(theta),
