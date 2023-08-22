@@ -1,24 +1,23 @@
+from __future__ import annotations
+
 from functools import singledispatch
-from typing import (
-    Optional,
-    Iterable,
-    AbstractSet,
-    Sequence,
-    Tuple,
-    Union,
-    Literal,
-    List,
-    get_args,
-)
+from typing import NamedTuple, Optional, Literal, Union as _U, get_args
+from collections.abc import Iterable, Set, Sequence
 
 from anndata import AnnData, utils
 import numpy as np
 import pandas as pd
-import collections.abc as cabc
+from numpy.typing import NDArray
 from scipy.sparse import coo_matrix, dia_matrix, spmatrix
 
-Array = Union[np.ndarray, spmatrix]
+Array = _U[np.ndarray, spmatrix]
 AggType = Literal['count', 'mean', 'sum', 'var']
+
+
+class CMV(NamedTuple):
+    count: NDArray[np.integer]
+    mean: NDArray[np.floating]
+    var: NDArray[np.floating]
 
 
 class Aggregate:
@@ -57,15 +56,15 @@ class Aggregate:
 
     _groupby: pd.Series
     _data: Array
-    _weight: Union[pd.Series, Array]
-    _key_set: AbstractSet[str]
+    _weight: pd.Series | Array
+    _key_set: Set[str]
     _key_index: Optional[np.ndarray]  # caution, may be stale if attributes are updated
 
     def __init__(
         self,
         groupby: pd.Series,
         data: Array,
-        weight: Union[pd.Series, Array] = None,
+        weight: pd.Series | Array = None,
         key_set: Optional[Iterable[str]] = None,
     ):
         self._groupby = groupby
@@ -108,7 +107,7 @@ class Aggregate:
         A, _ = self._sparse_aggregator(normalize=True)
         return utils.asarray(A * self._data)
 
-    def count_mean_var(self, dof: int = 1) -> dict:
+    def count_mean_var(self, dof: int = 1) -> CMV:
         """\
         Compute the count, as well as mean and variance per feature, per group of observations.
 
@@ -152,11 +151,11 @@ class Aggregate:
         var_[precision * var_ < sq_mean] = 0
         if dof != 0:
             var_ *= (count_ / (count_ - dof))[:, np.newaxis]
-        return {'mean': mean_, 'var': var_, 'count': count_}
+        return CMV(count=count_, mean=mean_, var=var_)
 
     def _sparse_aggregator(
         self, normalize: bool = False
-    ) -> Tuple[coo_matrix, np.ndarray]:
+    ) -> tuple[coo_matrix, NDArray[np.floating]]:
         """
         Form a coordinate-sparse matrix A such that rows of A * X
         are weighted sums of groups of rows of X.
@@ -198,8 +197,8 @@ class Aggregate:
         keys: np.ndarray,
         key_index: np.ndarray,
         df_index: np.ndarray,
-        weight_value: Optional[Union[pd.Series, Array]] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, Union[pd.Series, Array, None]]:
+        weight_value: pd.Series | Array | None = None,
+    ) -> tuple[np.ndarray, np.ndarray, pd.Series | Array | None]:
         """Filter the values of keys, key_index, df_index, and optionally weight_value based on self._key_set.
 
         Parameters
@@ -239,7 +238,7 @@ class Aggregate:
 
     def _extract_indices(
         self,
-    ) -> Tuple[np.ndarray, np.ndarray, Union[pd.Series, Array, None]]:
+    ) -> tuple[np.ndarray, np.ndarray, pd.Series | Array | None]:
         """Extract indices from self._groupby with the goal of building a matrix that can be multiplied with the data to produce an aggregation statistics e.g., mean or variance.
         These are filtered if a self._key_set is present.
 
@@ -262,7 +261,7 @@ class Aggregate:
         return keys, key_index, df_index, weight_value
 
 
-def _power(X: Array, power: Union[float, int]) -> Array:
+def _power(X: Array, power: float | int) -> Array:
     """Generate elementwise power of a matrix.  Needed for non-square sparse matrices because they do not support ** so the `.power` function is used.
 
     Parameters
@@ -282,7 +281,7 @@ def _power(X: Array, power: Union[float, int]) -> Array:
 def _ndarray_from_seq(lst: Sequence):
     # prevents expansion of iterables as axis
     n = len(lst)
-    if n > 0 and isinstance(lst[0], cabc.Iterable):
+    if n > 0 and isinstance(lst[0], Iterable):
         arr = np.empty(n, dtype=object)
         arr[:] = lst
     else:
@@ -290,7 +289,7 @@ def _ndarray_from_seq(lst: Sequence):
     return arr
 
 
-def _superset_columns(df: pd.DataFrame, groupby_key: str) -> List[str]:
+def _superset_columns(df: pd.DataFrame, groupby_key: str) -> list[str]:
     """\
     Find all columns which are a superset of the key column.
 
@@ -318,7 +317,7 @@ def _superset_columns(df: pd.DataFrame, groupby_key: str) -> List[str]:
     return columns
 
 
-def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
+def _df_grouped(df: pd.DataFrame, key: str, key_set: list[str]) -> pd.DataFrame:
     """\
     Generate a grouped-by dataframe (no aggregation) by
     a key with columns that are supersets of the key column.
@@ -348,7 +347,7 @@ def _df_grouped(df: pd.DataFrame, key: str, key_set: List[str]) -> pd.DataFrame:
 def aggregated(
     adata: AnnData,
     by: str,
-    func: Union[AggType, Iterable[AggType]],
+    func: AggType | Iterable[AggType],
     *,
     dim: Literal['obs', 'var'] = 'obs',
     weight_key: Optional[str] = None,
@@ -427,7 +426,7 @@ def aggregated(
 def aggregated_from_array(
     data,
     groupby_df: pd.DataFrame,
-    func: Union[AggType, Iterable[AggType]],
+    func: AggType | Iterable[AggType],
     dim: str,
     by: str,
     write_to_xxxm: bool,
@@ -471,15 +470,15 @@ def aggregated_from_array(
     if 'count' in funcs and 'var' not in funcs:
         obs_var_dict['obs']['count'] = groupby.count()  # count goes in dim df
     if 'var' in funcs:
-        agg = groupby.count_mean_var(dof)
+        aggs = groupby.count_mean_var(dof)
         if len(funcs) == 1 and not write_to_xxxm:
-            data_dict['X'] = agg['var']
+            data_dict['X'] = aggs.var
         else:
-            data_dict[write_key]['var'] = agg['var']
+            data_dict[write_key]['var'] = aggs.var
             if 'mean' in funcs:
-                data_dict[write_key]['mean'] = agg['mean']
+                data_dict[write_key]['mean'] = aggs.mean
             if 'count' in funcs:
-                obs_var_dict['obs']['count'] = agg['count']
+                obs_var_dict['obs']['count'] = aggs.count
     adata_agg = AnnData(**{**data_dict, **obs_var_dict})
     if dim == 'var':
         return adata_agg.T
