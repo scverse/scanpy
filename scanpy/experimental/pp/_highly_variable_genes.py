@@ -1,3 +1,4 @@
+from functools import partial
 import warnings
 from typing import Optional, Literal
 
@@ -180,38 +181,31 @@ def _highly_variable_pearson_residuals(
             raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
         if sp_sparse.issparse(X_batch):
-            sums_genes = np.array(X_batch.sum(axis=0)).ravel()
-            sums_cells = np.array(X_batch.sum(axis=1)).ravel()
-            sum_total = np.sum(sums_genes).squeeze()
             X_batch = X_batch.tocsc()
             X_batch.eliminate_zeros()
-            residual_gene_var = _calculate_res_sparse(
+            calculate_res = partial(
+                _calculate_res_sparse,
                 X_batch.indptr,
                 X_batch.indices,
                 X_batch.data.astype(np.float64),
-                sums_genes=sums_genes,
-                sums_cells=sums_cells,
-                sum_total=np.float64(sum_total),
-                clip=np.float64(clip),
-                theta=np.float64(theta),
-                n_genes=X_batch.shape[1],
-                n_cells=X_batch.shape[0],
             )
         else:
-            sums_genes = np.sum(X_batch, axis=0).ravel()
-            sums_cells = np.sum(X_batch, axis=1).ravel()
-            sum_total = np.sum(sums_genes)
             X_batch = np.array(X_batch, dtype=np.float64, order='F')
-            residual_gene_var = _calculate_res_dense(
-                X_batch,
-                sums_genes=sums_genes,
-                sums_cells=sums_cells,
-                sum_total=np.float64(sum_total),
-                clip=np.float64(clip),
-                theta=np.float64(theta),
-                n_genes=X_batch.shape[1],
-                n_cells=X_batch.shape[0],
-            )
+            calculate_res = partial(_calculate_res_dense, X_batch)
+
+        sums_genes = np.array(X_batch.sum(axis=0)).ravel()
+        sums_cells = np.array(X_batch.sum(axis=1)).ravel()
+        sum_total = np.sum(sums_genes).squeeze()
+
+        residual_gene_var = calculate_res(
+            sums_genes=sums_genes,
+            sums_cells=sums_cells,
+            sum_total=np.float64(sum_total),
+            clip=np.float64(clip),
+            theta=np.float64(theta),
+            n_genes=X_batch.shape[1],
+            n_cells=X_batch.shape[0],
+        )
 
         # Add 0 values for genes that were filtered out
         unmasked_residual_gene_var = np.zeros(len(nonzero_genes))
