@@ -114,60 +114,30 @@ def calculate_res_sparse(
     return residuals
 
 
-@nb.njit
-def clac_clipped_res_dense(
-    matrix,
-    sum_total,
-    sums_gene,
-    sums_cell,
-    theta,
-    clip,
-    gene,
-    cell,
-) -> np.float64:
-    mu = sums_gene * sums_cell / sum_total
-    value = matrix[cell, gene]
-
-    mu_sum = value - mu
-    pre_res = mu_sum / sqrt(mu + mu * mu / theta)
-    res = np.float64(min(max(pre_res, -clip), clip))
-    return res
-
-
 @nb.njit(parallel=True)
 def calculate_res_dense(
     matrix, *, sums_genes, sums_cells, sum_total, clip, theta, n_genes, n_cells
 ) -> NDArray[np.float64]:
+    def clac_clipped_res_dense(gene: int, cell: int) -> np.float64:
+        mu = sums_genes[gene] * sums_cells[cell] / sum_total
+        value = matrix[cell, gene]
+
+        mu_sum = value - mu
+        pre_res = mu_sum / sqrt(mu + mu * mu / theta)
+        res = np.float64(min(max(pre_res, -clip), clip))
+        return res
+
     residuals = np.zeros(n_genes, dtype=np.float64)
 
     for gene in nb.prange(n_genes):
         sum_clipped_res = np.float64(0.0)
         for cell in range(n_cells):
-            clipped_res = clac_clipped_res_dense(
-                matrix,
-                sum_total,
-                sums_genes[gene],
-                sums_cells[cell],
-                theta,
-                clip,
-                gene,
-                cell,
-            )
-            sum_clipped_res += clipped_res
+            sum_clipped_res += clac_clipped_res_dense(gene, cell)
         mean_clipped_res = sum_clipped_res / n_cells
 
         var_sum = np.float64(0.0)
         for cell in range(n_cells):
-            clipped_res = clac_clipped_res_dense(
-                matrix,
-                sum_total,
-                sums_genes[gene],
-                sums_cells[cell],
-                theta,
-                clip,
-                gene,
-                cell,
-            )
+            clipped_res = clac_clipped_res_dense(gene, cell)
             diff = clipped_res - mean_clipped_res
             var_sum += diff * diff
 
