@@ -263,7 +263,7 @@ class Aggregate:
 
 
 def _power(X: Array, power: Union[float, int]) -> Array:
-    """Generate elementwise power of a matrix.  Needed for sparse matrices because they do not support ** so the `.power` function is used.
+    """Generate elementwise power of a matrix.  Needed for non-square sparse matrices because they do not support ** so the `.power` function is used.
 
     Parameters
     ----------
@@ -453,7 +453,7 @@ def aggregated_from_array(
     write_key = 'obsm' if write_to_xxxm else 'layers'
     funcs = set([func] if isinstance(func, str) else func)
     if unknown := funcs - set(get_args(AggType)):
-        raise ValueError(f'… {unknown} …')
+        raise ValueError(f'func {unknown} is not one of {get_args(AggType)}')
     if 'sum' in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
         # put aggregation in X if it is the only one and the aggregation data is not coming from `xxxm`
