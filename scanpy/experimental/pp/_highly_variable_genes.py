@@ -29,6 +29,30 @@ from scanpy.experimental._docs import (
 )
 
 
+@nb.njit
+def clac_clipped_res_sparse(
+    value,
+    sum_total,
+    sums_gene,
+    sums_cell,
+    theta,
+    clip,
+) -> np.float64:
+    mu = sums_gene * sums_cell / sum_total
+    mu_sum = value - mu
+    pre_res = mu_sum / sqrt(mu + mu * mu / theta)
+    res = np.float64(min(max(pre_res, -clip), clip))
+    return res
+
+
+@nb.njit
+def get_value(cell, sparse_idx, index, stop_idx, data) -> np.float64:
+    if sparse_idx < stop_idx and index[sparse_idx] == cell:
+        return data[sparse_idx]
+    else:
+        return np.float64(0.0)
+
+
 @nb.njit(parallel=True)
 def calculate_res_sparse(
     indptr,
@@ -52,32 +76,58 @@ def calculate_res_sparse(
         var_sum = np.float64(0.0)
         sum_clipped_res = np.float64(0.0)
         for cell in range(n_cells):
-            mu = sums_genes[gene] * sums_cells[cell] / sum_total
-            value = np.float64(0.0)
-            if sparse_idx < stop_idx and index[sparse_idx] == cell:
-                value = data[sparse_idx]
+            value = get_value(cell, sparse_idx, index, stop_idx, data)
+            clipped_res = clac_clipped_res_sparse(
+                value=value,
+                sum_total=sum_total,
+                sums_gene=sums_genes[gene],
+                sums_cell=sums_cells[cell],
+                theta=theta,
+                clip=clip,
+            )
+            if value > 0:
                 sparse_idx += 1
-            mu_sum = value - mu
-            pre_res = mu_sum / sqrt(mu + mu * mu / theta)
-            clipped_res = min(max(pre_res, -clip), clip)
             sum_clipped_res += clipped_res
 
         mean_clipped_res = sum_clipped_res / n_cells
         sparse_idx = start_idx
         for cell in range(n_cells):
-            mu = sums_genes[gene] * sums_cells[cell] / sum_total
-            value = np.float64(0.0)
-            if sparse_idx < stop_idx and index[sparse_idx] == cell:
-                value = data[sparse_idx]
+            value = get_value(cell, sparse_idx, index, stop_idx, data)
+            clipped_res = clac_clipped_res_sparse(
+                value=value,
+                sum_total=sum_total,
+                sums_gene=sums_genes[gene],
+                sums_cell=sums_cells[cell],
+                theta=theta,
+                clip=clip,
+            )
+            if value > 0:
                 sparse_idx += 1
-            mu_sum = value - mu
-            pre_res = mu_sum / sqrt(mu + mu * mu / theta)
-            clipped_res = min(max(pre_res, -clip), clip)
             diff = clipped_res - mean_clipped_res
             var_sum += diff * diff
 
         residuals[gene] = var_sum / n_cells
     return residuals
+
+
+@nb.njit
+def clac_clipped_res_dense(
+    matrix,
+    sum_total,
+    sums_gene,
+    sums_cell,
+    theta,
+    clip,
+    gene,
+    cell,
+) -> np.float64:
+    mu = sums_gene * sums_cell / sum_total
+    value = matrix[cell, gene]
+
+    mu_sum = value - mu
+    pre_res = mu_sum / sqrt(mu + mu * mu / theta)
+    res = np.float64(min(max(pre_res, -clip), clip))
+    return res
 
 
 @nb.njit(parallel=True)
@@ -89,24 +139,31 @@ def calculate_res_dense(
     for gene in nb.prange(n_genes):
         sum_clipped_res = np.float64(0.0)
         for cell in range(n_cells):
-            mu = sums_genes[gene] * sums_cells[cell] / sum_total
-            value = matrix[cell, gene]
-
-            mu_sum = value - mu
-            pre_res = mu_sum / sqrt(mu + mu * mu / theta)
-            clipped_res = min(max(pre_res, -clip), clip)
+            clipped_res = clac_clipped_res_dense(
+                matrix,
+                sum_total,
+                sums_genes[gene],
+                sums_cells[cell],
+                theta,
+                clip,
+                gene,
+                cell,
+            )
             sum_clipped_res += clipped_res
-
         mean_clipped_res = sum_clipped_res / n_cells
 
         var_sum = np.float64(0.0)
         for cell in range(n_cells):
-            mu = sums_genes[gene] * sums_cells[cell] / sum_total
-            value = matrix[cell, gene]
-
-            mu_sum = value - mu
-            pre_res = mu_sum / sqrt(mu + mu * mu / theta)
-            clipped_res = min(max(pre_res, -clip), clip)
+            clipped_res = clac_clipped_res_dense(
+                matrix,
+                sum_total,
+                sums_genes[gene],
+                sums_cells[cell],
+                theta,
+                clip,
+                gene,
+                cell,
+            )
             diff = clipped_res - mean_clipped_res
             var_sum += diff * diff
 
