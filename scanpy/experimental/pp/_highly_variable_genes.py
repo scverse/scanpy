@@ -79,8 +79,8 @@ def calculate_res_sparse(
 
 @nb.njit(parallel=True)
 def calculate_res_dense(
-    matrix, sums_genes, sums_cells, residuals, sum_total, clip, theta, n_genes, n_cells
-):
+    matrix, *, sums_genes, sums_cells, sum_total, clip, theta, n_genes, n_cells
+) -> NDArray[np.float64]:
     for gene in nb.prange(n_genes):
         sum_clipped_res = np.float64(0.0)
         for cell in range(n_cells):
