@@ -1,4 +1,3 @@
-from multiprocessing.sharedctypes import Value
 import warnings
 from typing import Optional, Literal
 
@@ -17,48 +16,18 @@ from scanpy.get import _get_obs_rep
 from scanpy._utils import _doc_params
 from scanpy.preprocessing._utils import _get_mean_var
 from scanpy.preprocessing._distributed import materialize_as_ndarray
-from scanpy.preprocessing._simple import filter_genes
 from scanpy.experimental._docs import (
     doc_adata,
     doc_dist_params,
     doc_genes_batch_chunk,
     doc_check_values,
     doc_layer,
-    doc_copy,
     doc_inplace,
 )
 
 
-@nb.njit
-def clac_clipped_res_sparse(
-    value,
-    sum_total,
-    sums_gene,
-    sums_cell,
-    theta,
-    clip,
-) -> np.float64:
-    mu = sums_gene * sums_cell / sum_total
-    mu_sum = value - mu
-    pre_res = mu_sum / sqrt(mu + mu * mu / theta)
-    res = np.float64(min(max(pre_res, -clip), clip))
-    return res
-
-
-@nb.njit
-def get_value(cell, sparse_idx, index, stop_idx, data) -> np.float64:
-    """
-    This function navigates the sparsity of the CSC (Compressed Sparse Column) matrix,
-    returning the value at the specified cell location if it exists, or zero otherwise.
-    """
-    if sparse_idx < stop_idx and index[sparse_idx] == cell:
-        return data[sparse_idx]
-    else:
-        return np.float64(0.0)
-
-
 @nb.njit(parallel=True)
-def calculate_res_sparse(
+def _calculate_res_sparse(
     indptr: NDArray[np.integer],
     index: NDArray[np.integer],
     data: NDArray[np.float64],
@@ -71,6 +40,23 @@ def calculate_res_sparse(
     n_genes: int,
     n_cells: int,
 ) -> NDArray[np.float64]:
+    def get_value(cell: int, sparse_idx: int, stop_idx: int) -> np.float64:
+        """
+        This function navigates the sparsity of the CSC (Compressed Sparse Column) matrix,
+        returning the value at the specified cell location if it exists, or zero otherwise.
+        """
+        if sparse_idx < stop_idx and index[sparse_idx] == cell:
+            return data[sparse_idx]
+        else:
+            return np.float64(0.0)
+
+    def clac_clipped_res_sparse(gene: int, cell: int, value: np.float64) -> np.float64:
+        mu = sums_genes[gene] * sums_cells[cell] / sum_total
+        mu_sum = value - mu
+        pre_res = mu_sum / sqrt(mu + mu * mu / theta)
+        res = np.float64(min(max(pre_res, -clip), clip))
+        return res
+
     residuals = np.zeros(n_genes, dtype=np.float64)
     for gene in nb.prange(n_genes):
         start_idx = indptr[gene]
@@ -80,15 +66,8 @@ def calculate_res_sparse(
         var_sum = np.float64(0.0)
         sum_clipped_res = np.float64(0.0)
         for cell in range(n_cells):
-            value = get_value(cell, sparse_idx, index, stop_idx, data)
-            clipped_res = clac_clipped_res_sparse(
-                value=value,
-                sum_total=sum_total,
-                sums_gene=sums_genes[gene],
-                sums_cell=sums_cells[cell],
-                theta=theta,
-                clip=clip,
-            )
+            value = get_value(cell, sparse_idx, stop_idx)
+            clipped_res = clac_clipped_res_sparse(gene, cell, value)
             if value > 0:
                 sparse_idx += 1
             sum_clipped_res += clipped_res
@@ -96,15 +75,8 @@ def calculate_res_sparse(
         mean_clipped_res = sum_clipped_res / n_cells
         sparse_idx = start_idx
         for cell in range(n_cells):
-            value = get_value(cell, sparse_idx, index, stop_idx, data)
-            clipped_res = clac_clipped_res_sparse(
-                value=value,
-                sum_total=sum_total,
-                sums_gene=sums_genes[gene],
-                sums_cell=sums_cells[cell],
-                theta=theta,
-                clip=clip,
-            )
+            value = get_value(cell, sparse_idx, stop_idx)
+            clipped_res = clac_clipped_res_sparse(gene, cell, value)
             if value > 0:
                 sparse_idx += 1
             diff = clipped_res - mean_clipped_res
@@ -213,7 +185,7 @@ def _highly_variable_pearson_residuals(
             sum_total = np.sum(sums_genes).squeeze()
             X_batch = X_batch.tocsc()
             X_batch.eliminate_zeros()
-            residual_gene_var = calculate_res_sparse(
+            residual_gene_var = _calculate_res_sparse(
                 X_batch.indptr,
                 X_batch.indices,
                 X_batch.data.astype(np.float64),
