@@ -123,7 +123,7 @@ def test_subsample_copy_backed(tmp_path):
     adata_d.filename = filename
     # This should not throw an error
     assert sc.pp.subsample(adata_d, n_obs=40, copy=True).shape == (40, 10)
-    assert np.allclose(
+    np.testing.assert_array_equal(
         sc.pp.subsample(adata_m, n_obs=40, copy=True).X,
         sc.pp.subsample(adata_d, n_obs=40, copy=True).X,
     )
