@@ -21,6 +21,13 @@ class CMV(NamedTuple):
     var: NDArray[np.floating]
 
 
+class Indices(NamedTuple):
+    keys: np.ndarray
+    key_index: np.ndarray
+    df_index: np.ndarray
+    weight_value: pd.Series | Array | None
+
+
 @dataclass
 class Aggregate:
     """\
@@ -60,14 +67,12 @@ class Aggregate:
     data: Array
     weight: pd.Series | Array
     key_set: Set[str] | None
-    # caution, may be stale if attributes are updated
-    key_index: Iterable[str] | None = None
 
     def __post_init__(self):
         if self.key_set is not None and not isinstance(self.key_set, Set):
             self.key_set = dict.fromkeys(self.key_set).keys()
 
-    def count(self) -> np.ndarray:
+    def count(self, *, _indices: Indices | None = None) -> np.ndarray:
         """\
         Count the number of observations in each group.
 
@@ -75,9 +80,9 @@ class Aggregate:
         -------
         Array of counts.
         """
-        _, key_index, _, _ = self._extract_indices()
-        count_ = np.bincount(key_index)
-        return count_
+        if _indices is None:
+            _indices = self._extract_indices()
+        return np.bincount(_indices.key_index)
 
     def sum(self) -> Array:
         """\
@@ -90,7 +95,7 @@ class Aggregate:
         A, _ = self._sparse_aggregator(normalize=False)
         return utils.asarray(A * self.data)
 
-    def mean(self) -> Array:
+    def mean(self, *, _A: spmatrix | None = None) -> Array:
         """\
         Compute the mean per feature per group of observations.
 
@@ -98,10 +103,11 @@ class Aggregate:
         -------
         Array of mean.
         """
-        A, _ = self._sparse_aggregator(normalize=True)
-        return utils.asarray(A * self.data)
+        if _A is None:
+            _A, _ = self._sparse_aggregator(normalize=True)
+        return utils.asarray(_A @ self.data)
 
-    def count_mean_var(self, dof: int = 1) -> CMV:
+    def count_mean_var(self, dof: int = 1, *, _indices: Indices | None = None) -> CMV:
         """\
         Compute the count, as well as mean and variance per feature, per group of observations.
 
@@ -121,9 +127,11 @@ class Aggregate:
         Object with `count`, `mean`, and `var` attributes.
         """
         assert dof >= 0
-        A, _ = self._sparse_aggregator(normalize=True)
-        count_ = np.bincount(self.key_index)
-        mean_ = utils.asarray(A @ self.data)
+        if _indices is None:
+            _indices = self._extract_indices()
+        A, _ = self._sparse_aggregator(normalize=True, _indices=_indices)
+        count_ = self.count(_indices=_indices)
+        mean_ = self.mean(_A=A)
         # sparse matrices do not support ** for elementwise power.
         mean_sq = utils.asarray(A @ _power(self.data, 2))
         if self.weight is None:
@@ -132,7 +140,7 @@ class Aggregate:
             A_unweighted, _ = Aggregate(
                 groupby=self.groupby,
                 data=self.data,
-                weight=self.weight,
+                weight=self.weight,  # TODO: why pass weights when creating unweighted A?
                 key_set=self.key_set,
             )._sparse_aggregator()
             mean_unweighted = utils.asarray(A_unweighted * self.data)
@@ -148,7 +156,7 @@ class Aggregate:
         return CMV(count=count_, mean=mean_, var=var_)
 
     def _sparse_aggregator(
-        self, normalize: bool = False
+        self, normalize: bool = False, *, _indices: Indices | None = None
     ) -> tuple[coo_matrix, NDArray[np.floating]]:
         """\
         Form a coordinate-sparse matrix A such that rows of A * X
@@ -169,7 +177,9 @@ class Aggregate:
         keys
             An ndarray with keys[i] the group key corresponding to row i of A.
         """
-        keys, key_index, df_index, weight_value = self._extract_indices()
+        if _indices is None:
+            _indices = self._extract_indices()
+        keys, key_index, df_index, weight_value = _indices
         if df_index is None:
             df_index = np.arange(len(key_index))
         if self.weight is None:
@@ -186,13 +196,7 @@ class Aggregate:
             A = D * A
         return A, keys
 
-    def _filter_indices(
-        self,
-        keys: np.ndarray,
-        key_index: np.ndarray,
-        df_index: np.ndarray,
-        weight_value: pd.Series | Array | None = None,
-    ) -> tuple[np.ndarray, np.ndarray, pd.Series | Array | None]:
+    def _filter_indices(self, indices: Indices) -> Indices:
         """\
         Filter the values of keys, key_index, df_index, and optionally weight_value based on :attr:`key_set`.
 
@@ -216,6 +220,7 @@ class Aggregate:
         ValueError
             If no keys in key_set found in keys.
         """
+        keys, key_index, df_index, weight_value = indices
         keep = [i for i, k in enumerate(keys) if k in set(self.key_set)]
         if len(keep) == 0:
             raise ValueError("No keys in key_set found in keys.")
@@ -229,11 +234,9 @@ class Aggregate:
             df_index = df_index[mask]
             if weight_value is not None:
                 weight_value = weight_value[mask]
-        return keys, key_index, df_index, weight_value
+        return Indices(keys, key_index, df_index, weight_value)
 
-    def _extract_indices(
-        self,
-    ) -> tuple[np.ndarray, np.ndarray, pd.Series | Array | None]:
+    def _extract_indices(self) -> Indices:
         """\
         Extract indices from attr:`groupby` with the goal of building a matrix
         that can be multiplied with the data to produce an aggregation statistics e.g., mean or variance.
@@ -250,12 +253,10 @@ class Aggregate:
             weight_value = None
         else:
             weight_value = self.weight.values[df_index]
-        if self.key_set is not None:
-            keys, key_index, df_index, weight_value = self._filter_indices(
-                keys, key_index, df_index, weight_value
-            )
-        self.key_index = key_index  # passed to count and count_mean_var to avoid re-extracting in the latter
-        return keys, key_index, df_index, weight_value
+        indices = Indices(keys, key_index, df_index, weight_value)
+        if self.key_set is None:
+            return indices
+        return self._filter_indices(indices)
 
 
 def _power(X: Array, power: float | int) -> Array:
