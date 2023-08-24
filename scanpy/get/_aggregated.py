@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import singledispatch
-from typing import NamedTuple, Optional, Literal, Union as _U, get_args
+from typing import NamedTuple, Literal, Union as _U, get_args
 from collections.abc import Iterable, Set, Sequence
 
 from anndata import AnnData, utils
@@ -20,6 +21,7 @@ class CMV(NamedTuple):
     var: NDArray[np.floating]
 
 
+@dataclass
 class Aggregate:
     """\
     Functionality for generic grouping and aggregating.
@@ -54,24 +56,16 @@ class Aggregate:
         Subset of keys to which to filter.
     """
 
-    _groupby: pd.Series
-    _data: Array
-    _weight: pd.Series | Array
-    _key_set: Set[str]
-    _key_index: Optional[np.ndarray]  # caution, may be stale if attributes are updated
+    groupby: pd.Series
+    data: Array
+    weight: pd.Series | Array
+    key_set: Set[str] | None
+    # caution, may be stale if attributes are updated
+    key_index: Iterable[str] | None = None
 
-    def __init__(
-        self,
-        groupby: pd.Series,
-        data: Array,
-        weight: pd.Series | Array = None,
-        key_set: Optional[Iterable[str]] = None,
-    ):
-        self._groupby = groupby
-        self._data = data
-        self._weight = weight
-        self._key_set = None if key_set is None else dict.fromkeys(key_set).keys()
-        self._key_index = None
+    def __post_init__(self):
+        if self.key_set is not None and not isinstance(self.key_set, Set):
+            self.key_set = dict.fromkeys(self.key_set).keys()
 
     def count(self) -> np.ndarray:
         """\
@@ -94,7 +88,7 @@ class Aggregate:
         Array of sum.
         """
         A, _ = self._sparse_aggregator(normalize=False)
-        return utils.asarray(A * self._data)
+        return utils.asarray(A * self.data)
 
     def mean(self) -> Array:
         """\
@@ -105,7 +99,7 @@ class Aggregate:
         Array of mean.
         """
         A, _ = self._sparse_aggregator(normalize=True)
-        return utils.asarray(A * self._data)
+        return utils.asarray(A * self.data)
 
     def count_mean_var(self, dof: int = 1) -> CMV:
         """\
@@ -128,25 +122,25 @@ class Aggregate:
         """
         assert dof >= 0
         A, _ = self._sparse_aggregator(normalize=True)
-        count_ = np.bincount(self._key_index)
-        mean_ = utils.asarray(A @ self._data)
+        count_ = np.bincount(self.key_index)
+        mean_ = utils.asarray(A @ self.data)
         # sparse matrices do not support ** for elementwise power.
-        mean_sq = utils.asarray(A @ _power(self._data, 2))
-        if self._weight is None:
+        mean_sq = utils.asarray(A @ _power(self.data, 2))
+        if self.weight is None:
             sq_mean = mean_**2
         else:
             A_unweighted, _ = Aggregate(
-                groupby=self._groupby,
-                data=self._data,
-                weight=self._weight,
-                key_set=self._key_set,
+                groupby=self.groupby,
+                data=self.data,
+                weight=self.weight,
+                key_set=self.key_set,
             )._sparse_aggregator()
-            mean_unweighted = utils.asarray(A_unweighted * self._data)
+            mean_unweighted = utils.asarray(A_unweighted * self.data)
             sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted**2
         var_ = mean_sq - sq_mean
         # TODO: Why these values exactly? Because they are high relative to the datatype?
         # (unchanged from original code: https://github.com/scverse/anndata/pull/564)
-        precision = 2 << (42 if self._data.dtype == np.float64 else 20)
+        precision = 2 << (42 if self.data.dtype == np.float64 else 20)
         # detects loss of precision in mean_sq - sq_mean, which suggests variance is 0
         var_[precision * var_ < sq_mean] = 0
         if dof != 0:
@@ -178,12 +172,12 @@ class Aggregate:
         keys, key_index, df_index, weight_value = self._extract_indices()
         if df_index is None:
             df_index = np.arange(len(key_index))
-        if self._weight is None:
+        if self.weight is None:
             weight_value = np.ones(len(key_index))
         # TODO: why a coo matrix here and a dia matrix below? (unchanged from original code: https://github.com/scverse/anndata/pull/564)
         A = coo_matrix(
             (weight_value, (key_index, df_index)),
-            shape=(len(keys), self._data.shape[0]),
+            shape=(len(keys), self.data.shape[0]),
         )
         if normalize:
             n_row = A.shape[0]
@@ -200,7 +194,7 @@ class Aggregate:
         weight_value: pd.Series | Array | None = None,
     ) -> tuple[np.ndarray, np.ndarray, pd.Series | Array | None]:
         """\
-        Filter the values of keys, key_index, df_index, and optionally weight_value based on self._key_set.
+        Filter the values of keys, key_index, df_index, and optionally weight_value based on :attr:`key_set`.
 
         Params
         ------
@@ -222,7 +216,7 @@ class Aggregate:
         ValueError
             If no keys in key_set found in keys.
         """
-        keep = [i for i, k in enumerate(keys) if k in set(self._key_set)]
+        keep = [i for i, k in enumerate(keys) if k in set(self.key_set)]
         if len(keep) == 0:
             raise ValueError("No keys in key_set found in keys.")
         elif len(keep) < len(keys):
@@ -241,26 +235,26 @@ class Aggregate:
         self,
     ) -> tuple[np.ndarray, np.ndarray, pd.Series | Array | None]:
         """\
-        Extract indices from self._groupby with the goal of building a matrix
+        Extract indices from attr:`groupby` with the goal of building a matrix
         that can be multiplied with the data to produce an aggregation statistics e.g., mean or variance.
-        These are filtered if a self._key_set is present.
+        These are filtered if a :attr:`key_set` is present.
 
         Returns
         -------
         Unique keys, an array mapping those unique keys to an index, said index, and a weight if present.
         """
-        key_value = self._groupby
+        key_value = self.groupby
         keys, key_index = np.unique(_ndarray_from_seq(key_value), return_inverse=True)
         df_index = np.arange(len(key_index))
-        if self._weight is None:
+        if self.weight is None:
             weight_value = None
         else:
-            weight_value = self._weight.values[df_index]
-        if self._key_set is not None:
+            weight_value = self.weight.values[df_index]
+        if self.key_set is not None:
             keys, key_index, df_index, weight_value = self._filter_indices(
                 keys, key_index, df_index, weight_value
             )
-        self._key_index = key_index  # passed to count and count_mean_var to avoid re-extracting in the latter
+        self.key_index = key_index  # passed to count and count_mean_var to avoid re-extracting in the latter
         return keys, key_index, df_index, weight_value
 
 
@@ -356,12 +350,12 @@ def aggregated(
     func: AggType | Iterable[AggType],
     *,
     dim: Literal['obs', 'var'] = 'obs',
-    weight_key: Optional[str] = None,
-    key_set: Optional[Iterable[str]] = None,
+    weight_key: str | None = None,
+    key_set: Iterable[str] | None = None,
     dof: int = 1,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-    varm: Optional[str] = None,
+    layer: str | None = None,
+    obsm: str | None = None,
+    varm: str | None = None,
 ) -> AnnData:
     """\
     Aggregate data based on one of the columns of one of the axes (`obs` or `var`).
@@ -437,8 +431,8 @@ def aggregated_from_array(
     by: str,
     write_to_xxxm: bool,
     no_groupby_df: pd.DataFrame,
-    weight_key: Optional[str] = None,
-    key_set: Optional[Iterable[str]] = None,
+    weight_key: str | None = None,
+    key_set: Iterable[str] | None = None,
     dof: int = 1,
 ) -> AnnData:
     """Aggregate data based on one of the columns of one of a `~pd.DataFrame`."""
