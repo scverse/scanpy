@@ -107,6 +107,7 @@ test-full = [
     "scanpy[harmony]",
     "scanpy[scanorama]",
     "scanpy[scrublet]",
+    "scanpy[dask-ml]",
 ]
 doc = [
     "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
@@ -143,6 +144,7 @@ scrublet = ["scrublet"]  # Doublet detection
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
 dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
+dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.flit.sdist]
 exclude = [
