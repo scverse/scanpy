@@ -127,6 +127,8 @@ def test_subsample_copy_backed(tmp_path):
         sc.pp.subsample(adata_m, n_obs=40, copy=True).X,
         sc.pp.subsample(adata_d, n_obs=40, copy=True).X,
     )
+    with pytest.raises(NotImplementedError):
+        sc.pp.subsample(adata_d, n_obs=40, copy=False)
 
 
 def test_scale():

@@ -904,7 +904,12 @@ def subsample(
             else:
                 return data[obs_indices].copy()
         else:
-            data._inplace_subset_obs(obs_indices)
+            if data.isbacked:
+                raise NotImplementedError(
+                    "Inplace subsampling is not implemented for backed objects."
+                )
+            else:
+                data._inplace_subset_obs(obs_indices)
     else:
         X = data
         return X[obs_indices], obs_indices
