@@ -900,7 +900,7 @@ def subsample(
     if isinstance(data, AnnData):
         if copy:
             if data.isbacked:
-                return data[obs_indices].to_memory().copy()
+                return data[obs_indices].to_memory()
             else:
                 return data[obs_indices].copy()
         else:
