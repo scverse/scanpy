@@ -10,6 +10,7 @@ from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Liter
 import numba
 import numpy as np
 import scipy as sp
+import time
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs, check_array
 from pandas.api.types import is_categorical_dtype
@@ -714,6 +715,7 @@ def scale(
     X: Union[AnnData, spmatrix, np.ndarray],
     zero_center: bool = True,
     max_value: Optional[float] = None,
+    flavor: Optional[Literal['default', 'use_fastpp']] = 'default',
     copy: bool = False,
     layer: Optional[str] = None,
     obsm: Optional[str] = None,
@@ -757,6 +759,39 @@ def scale(
     return scale_array(X, zero_center=zero_center, max_value=max_value, copy=copy)
 
 
+@numba.njit(cache=True, parallel=True)
+def do_scale(X, maxv, nthr):
+    # nthr = numba.get_num_threads()
+    # t0= time.time()
+    s = np.zeros((nthr, X.shape[1]))
+    ss = np.zeros((nthr, X.shape[1]))
+    mean = np.zeros((X.shape[1]))
+    std = np.zeros((X.shape[1]))
+    n = X.shape[0]
+    for i in numba.prange(nthr):
+        for r in range(i, n, nthr):
+            for c in range(X.shape[1]):
+                v = X[r, c]
+                s[i, c] += v
+                ss[i, c] += v * v
+    for c in numba.prange(X.shape[1]):
+        s0 = s[:, c].sum()
+        mean[c] = s0 / n
+        std[c] = np.sqrt((ss[:, c].sum() - s0 * s0 / n) / (n - 1))
+
+    # with numba.objmode():
+    #    print ("finshed getting means, stddev", time.time()-t0)
+    for r, c in numba.pndindex(X.shape):
+        v = (X[r, c] - mean[c]) / std[c]
+        if maxv is not None:
+            X[r, c] = maxv if v > maxv else v
+        else:
+            X[r, c] = v
+    return X, mean, std
+    # with numba.objmode():
+    #    print ("finshed scaling values", time.time()-t0)
+
+
 @scale.register(np.ndarray)
 def scale_array(
     X,
@@ -765,6 +800,7 @@ def scale_array(
     max_value: Optional[float] = None,
     copy: bool = False,
     return_mean_std: bool = False,
+    flavor: Optional[Literal['default', 'use_fastpp']] = 'default',
 ):
     if copy:
         X = X.copy()
@@ -796,7 +832,6 @@ def scale_array(
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
         X[X > max_value] = max_value
-
     if return_mean_std:
         return X, mean, std
     else:
@@ -811,6 +846,7 @@ def scale_sparse(
     max_value: Optional[float] = None,
     copy: bool = False,
     return_mean_std: bool = False,
+    flavor: Optional[Literal['default', 'use_fastpp']] = 'default',
 ):
     # need to add the following here to make inplace logic work
     if zero_center:
@@ -835,6 +871,7 @@ def scale_anndata(
     *,
     zero_center: bool = True,
     max_value: Optional[float] = None,
+    flavor: Optional[Literal['default', 'use_fastpp']] = 'default',
     copy: bool = False,
     layer: Optional[str] = None,
     obsm: Optional[str] = None,
@@ -842,13 +879,18 @@ def scale_anndata(
     adata = adata.copy() if copy else adata
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer, obsm=obsm)
-    X, adata.var["mean"], adata.var["std"] = scale(
-        X,
-        zero_center=zero_center,
-        max_value=max_value,
-        copy=False,  # because a copy has already been made, if it were to be made
-        return_mean_std=True,
-    )
+    if flavor == 'default':
+        X, adata.var["mean"], adata.var["std"] = scale(
+            X,
+            zero_center=zero_center,
+            max_value=max_value,
+            copy=False,  # because a copy has already been made, if it were to be made
+            return_mean_std=True,
+        )
+    if flavor == 'use_fastpp':
+        X, adata.var["mean"], adata.var["std"] = do_scale(
+            X, max_value, numba.get_num_threads()
+        )
     _set_obs_rep(adata, X, layer=layer, obsm=obsm)
     if copy:
         return adata
