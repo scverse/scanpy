@@ -122,6 +122,8 @@ intersphinx_mapping = dict(
     scipy=('https://docs.scipy.org/doc/scipy/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
+    dask=('https://docs.dask.org/en/stable/', None),
+    dask_ml=('https://ml.dask.org/', None),
     tutorials=('https://scanpy-tutorials.readthedocs.io/en/latest/', None),
 )
 
