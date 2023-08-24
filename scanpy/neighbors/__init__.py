@@ -130,7 +130,7 @@ def neighbors(
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
     **distances** : sparse matrix of dtype `float64`.
-         Stores the distance matrix of the nearest neighbors search.
+        Stores the distance matrix of the nearest neighbors search.
 
     Notes
     -----
