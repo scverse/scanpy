@@ -898,16 +898,16 @@ def subsample(
         raise ValueError('Either pass `n_obs` or `fraction`.')
     obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
     if isinstance(data, AnnData):
-        if copy:
-            if data.isbacked:
+        if data.isbacked:
+            if copy:
                 return data[obs_indices].to_memory()
             else:
-                return data[obs_indices].copy()
-        else:
-            if data.isbacked:
                 raise NotImplementedError(
                     "Inplace subsampling is not implemented for backed objects."
                 )
+        else:
+            if copy:
+                return data[obs_indices].copy()
             else:
                 data._inplace_subset_obs(obs_indices)
     else:
