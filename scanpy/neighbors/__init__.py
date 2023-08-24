@@ -71,7 +71,7 @@ def neighbors(
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
-    Compute a neighborhood graph of observations [McInnes18]_.
+    Computes the nearest neighbors distance matrix and a neighborhood graph of observations [McInnes18]_.
 
     The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
     which also provides a method for estimating connectivities of data points -
@@ -130,8 +130,7 @@ def neighbors(
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
     **distances** : sparse matrix of dtype `float64`.
-        Instead of decaying weights, this stores distances for each pair of
-        neighbors.
+         Stores the distance matrix of the nearest neighbors search.
 
     Notes
     -----
