@@ -74,7 +74,7 @@ class Aggregate:
         self._key_index = None
 
     def count(self) -> np.ndarray:
-        """
+        """\
         Count the number of observations in each group.
 
         Returns
@@ -86,7 +86,7 @@ class Aggregate:
         return count_
 
     def sum(self) -> Array:
-        """
+        """\
         Compute the sum per feature per group of observations.
 
         Returns
@@ -124,7 +124,7 @@ class Aggregate:
 
         Returns
         -------
-        dict with mean, count, and var keys.
+        Object with `count`, `mean`, and `var` attributes.
         """
         assert dof >= 0
         A, _ = self._sparse_aggregator(normalize=True)
@@ -156,7 +156,7 @@ class Aggregate:
     def _sparse_aggregator(
         self, normalize: bool = False
     ) -> tuple[coo_matrix, NDArray[np.floating]]:
-        """
+        """\
         Form a coordinate-sparse matrix A such that rows of A * X
         are weighted sums of groups of rows of X.
 
@@ -199,10 +199,11 @@ class Aggregate:
         df_index: np.ndarray,
         weight_value: pd.Series | Array | None = None,
     ) -> tuple[np.ndarray, np.ndarray, pd.Series | Array | None]:
-        """Filter the values of keys, key_index, df_index, and optionally weight_value based on self._key_set.
+        """\
+        Filter the values of keys, key_index, df_index, and optionally weight_value based on self._key_set.
 
-        Parameters
-        ----------
+        Params
+        ------
         keys
             Unique key values to be filtered.
         key_index
@@ -214,12 +215,12 @@ class Aggregate:
 
         Returns
         -------
-            Filtered versions of all arguments.
+        Filtered versions of all arguments.
 
         Raises
         ------
         ValueError
-           If no keys in key_set found in keys.
+            If no keys in key_set found in keys.
         """
         keep = [i for i, k in enumerate(keys) if k in set(self._key_set)]
         if len(keep) == 0:
@@ -239,12 +240,14 @@ class Aggregate:
     def _extract_indices(
         self,
     ) -> tuple[np.ndarray, np.ndarray, pd.Series | Array | None]:
-        """Extract indices from self._groupby with the goal of building a matrix that can be multiplied with the data to produce an aggregation statistics e.g., mean or variance.
+        """\
+        Extract indices from self._groupby with the goal of building a matrix
+        that can be multiplied with the data to produce an aggregation statistics e.g., mean or variance.
         These are filtered if a self._key_set is present.
 
         Returns
         -------
-            Unique keys, an array mapping those unique keys to an index, said index, and a weight if present.
+        Unique keys, an array mapping those unique keys to an index, said index, and a weight if present.
         """
         key_value = self._groupby
         keys, key_index = np.unique(_ndarray_from_seq(key_value), return_inverse=True)
@@ -262,10 +265,13 @@ class Aggregate:
 
 
 def _power(X: Array, power: float | int) -> Array:
-    """Generate elementwise power of a matrix.  Needed for non-square sparse matrices because they do not support ** so the `.power` function is used.
+    """\
+    Generate elementwise power of a matrix.
 
-    Parameters
-    ----------
+    Needed for non-square sparse matrices because they do not support ** so the `.power` function is used.
+
+    Params
+    ------
     X
         Matrix whose power is to be raised.
     power
@@ -273,7 +279,7 @@ def _power(X: Array, power: float | int) -> Array:
 
     Returns
     -------
-        Matrix whose power has been raised.
+    Matrix whose power has been raised.
     """
     return X ** power if isinstance(X, np.ndarray) else X.power(power)
 
