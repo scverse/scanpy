@@ -115,6 +115,22 @@ def test_subsample_copy():
     assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
 
 
+def test_subsample_copy_backed(tmp_path):
+    A = np.random.rand(200, 10).astype(np.float32)
+    adata_m = AnnData(A.copy())
+    adata_d = AnnData(A.copy())
+    filename = tmp_path / 'test.h5ad'
+    adata_d.filename = filename
+    # This should not throw an error
+    assert sc.pp.subsample(adata_d, n_obs=40, copy=True).shape == (40, 10)
+    np.testing.assert_array_equal(
+        sc.pp.subsample(adata_m, n_obs=40, copy=True).X,
+        sc.pp.subsample(adata_d, n_obs=40, copy=True).X,
+    )
+    with pytest.raises(NotImplementedError):
+        sc.pp.subsample(adata_d, n_obs=40, copy=False)
+
+
 def test_scale():
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
@@ -181,6 +197,26 @@ def test_regress_out_ordinal():
     )
 
     np.testing.assert_array_equal(single.X, multi.X)
+
+
+def test_regress_out_layer():
+    from scipy.sparse import random
+
+    adata = AnnData(random(1000, 100, density=0.6, format='csr'))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+    adata.layers["counts"] = adata.X.copy()
+
+    single = sc.pp.regress_out(
+        adata, keys=['n_counts', 'percent_mito'], n_jobs=1, copy=True
+    )
+    assert adata.X.shape == single.X.shape
+
+    layer = sc.pp.regress_out(
+        adata, layer="counts", keys=['n_counts', 'percent_mito'], n_jobs=1, copy=True
+    )
+
+    np.testing.assert_array_equal(single.X, layer.layers["counts"])
 
 
 def test_regress_out_view():

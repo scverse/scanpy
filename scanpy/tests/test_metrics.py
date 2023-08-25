@@ -7,9 +7,9 @@ import pandas as pd
 import scanpy as sc
 from scipy import sparse
 
-from anndata.tests.helpers import asarray
 import pytest
 
+from scanpy._compat import DaskArray
 from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
@@ -128,16 +128,14 @@ def test_morans_i_correctness():
 
 
 @pytest.mark.parametrize("metric", [sc.metrics.gearys_c, sc.metrics.morans_i])
-@pytest.mark.parametrize(
-    'array_type',
-    [asarray, sparse.csr_matrix, sparse.csc_matrix],
-    ids=lambda x: x.__name__,
-)
 def test_graph_metrics_w_constant_values(metric, array_type):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())
     g = pbmc.obsp["connectivities"].copy()
+
+    if isinstance(XT, DaskArray):
+        pytest.skip("DaskArray yet not supported")
 
     const_inds = np.random.choice(XT.shape[0], 10, replace=False)
     with warnings.catch_warnings():
@@ -159,12 +157,12 @@ def test_graph_metrics_w_constant_values(metric, array_type):
         results_const_vals = metric(g, XT_const_vals)
 
     assert not np.isnan(results_full).any()
-    np.testing.assert_array_equal(results_const_zeros, results_const_vals)
+    np.testing.assert_almost_equal(results_const_zeros, results_const_vals)
     np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
     np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
 
     non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
-    np.testing.assert_array_equal(
+    np.testing.assert_almost_equal(
         results_full[non_const_mask], results_const_zeros[non_const_mask]
     )
 

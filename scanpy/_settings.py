@@ -63,6 +63,9 @@ class ScanpyConfig:
     Config manager for scanpy.
     """
 
+    N_PCS: int
+    """Default number of principal components to use."""
+
     def __init__(
         self,
         *,
@@ -123,7 +126,6 @@ class ScanpyConfig:
         """Stores the previous memory usage."""
 
         self.N_PCS = n_pcs
-        """Default number of principal components to use."""
 
     @property
     def verbosity(self) -> Verbosity:
@@ -301,9 +303,9 @@ class ScanpyConfig:
     @property
     def max_memory(self) -> Union[int, float]:
         """\
-        Maximal memory usage in Gigabyte.
+        Maximum memory usage in Gigabyte.
 
-        Is currently not well respected....
+        Is currently not well respected…
         """
         return self._max_memory
 
@@ -316,6 +318,10 @@ class ScanpyConfig:
     def n_jobs(self) -> int:
         """\
         Default number of jobs/ CPUs to use for parallel computing.
+
+        Set to `-1` in order to use all available cores.
+        Not all algorithms support special behavior for numbers < `-1`,
+        so make sure to leave this setting as >= `-1`.
         """
         return self._n_jobs
 

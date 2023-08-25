@@ -25,9 +25,8 @@ from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
 
 N_DCS = 15  # default number of diffusion components
-N_PCS = (
-    settings.N_PCS
-)  # Backwards compat, constants should be defined in only one place.
+# Backwards compat, constants should be defined in only one place.
+N_PCS = settings.N_PCS
 
 _Method = Literal['umap', 'gauss', 'rapids']
 _MetricFn = Callable[[np.ndarray, np.ndarray], float]
@@ -130,7 +129,7 @@ def neighbors(
     **connectivities** : sparse matrix of dtype `float32`.
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    **distances** : sparse matrix of dtype `float32`.
+    **distances** : sparse matrix of dtype `float64`.
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
 
