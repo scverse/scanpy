@@ -1,9 +1,5 @@
 import os
 import sys
-import importlib.util
-import inspect
-import re
-import subprocess
 from pathlib import Path
 from datetime import datetime
 from typing import Any
@@ -60,15 +56,15 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
-    'sphinx.ext.linkcode',
     'sphinx.ext.extlinks',
     'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
-    'scanpydoc.autosummary_generate_imported',
-    'scanpydoc.definition_list_typed_field',
+    'git_ref',  # needs to be before scanpydoc.rtd_github_links
+    'scanpydoc',  # needs to be before sphinx.ext.linkcode
+    'sphinx.ext.linkcode',
     'sphinx_design',
     'sphinxext.opengraph',
-    *[p.stem for p in (HERE / 'extensions').glob('*.py')],
+    *[p.stem for p in (HERE / 'extensions').glob('*.py') if p.stem not in {'git_ref'}],
 ]
 
 # Generate the API documentation when building
@@ -122,6 +118,8 @@ intersphinx_mapping = dict(
     scipy=('https://docs.scipy.org/doc/scipy/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
+    dask=('https://docs.dask.org/en/stable/', None),
+    dask_ml=('https://ml.dask.org/', None),
     tutorials=('https://scanpy-tutorials.readthedocs.io/en/latest/', None),
 )
 
@@ -207,55 +205,6 @@ plot_formats = [("png", 90)]
 plot_html_show_formats = False
 plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
-
-# Linkcode config
-
-
-def git(*args):
-    return subprocess.check_output(["git", *args]).strip().decode()
-
-
-# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
-# Current git reference. Uses branch/tag name if found, otherwise uses commit hash
-git_ref = None
-try:
-    git_ref = git("name-rev", "--name-only", "--no-undefined", "HEAD")
-    git_ref = re.sub(r"^(remotes/[^/]+|tags)/", "", git_ref)
-except Exception:
-    pass
-
-# (if no name found or relative ref, use commit hash instead)
-if not git_ref or re.search(r"[\^~]", git_ref):
-    try:
-        git_ref = git("rev-parse", "HEAD")
-    except Exception:
-        git_ref = "master"
-
-# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
-_module_path = os.path.dirname(importlib.util.find_spec("scanpy").origin)  # type: ignore
-
-
-def linkcode_resolve(domain, info):
-    if domain != "py":
-        return None
-
-    try:
-        obj: Any = sys.modules[info["module"]]
-        for part in info["fullname"].split("."):
-            obj = getattr(obj, part)
-        obj = inspect.unwrap(obj)
-
-        if isinstance(obj, property):
-            obj = inspect.unwrap(obj.fget)  # type: ignore
-
-        path = os.path.relpath(inspect.getsourcefile(obj), start=_module_path)  # type: ignore
-        src, lineno = inspect.getsourcelines(obj)
-    except Exception:
-        return None
-
-    path = f"{path}#L{lineno}-L{lineno + len(src) - 1}"
-    return f"{repository_url}/blob/{git_ref}/scanpy/{path}"
-
 
 # extlinks config
 extlinks = {
