@@ -489,18 +489,22 @@ def update_params(
 _FlatSupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
 
 
+def get_ufuncs(data: np.ndarray | DaskArray):
+    if isinstance(data, DaskArray):
+        import dask.array as da
+
+        return da
+    return np
+
+
 def check_nonnegative_integers(X: _FlatSupportedArray) -> bool:
     """Checks values of X to ensure it is count data"""
     from numbers import Integral
 
-    if isinstance(X, DaskArray):
-        from dask.array import signbit
-    else:
-        from numpy import signbit
-
+    ufuncs = get_ufuncs(X)
     data = _get_values(X)
     # Check no negatives
-    if signbit(data).any():
+    if ufuncs.signbit(data).any():
         return False
     # Check all are integers
     if issubclass(data.dtype.type, Integral):
