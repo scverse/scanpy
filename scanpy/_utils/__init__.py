@@ -403,12 +403,12 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
 
 
 # backwards compat... remove this in the future
-def sanitize_anndata(adata):
+def sanitize_anndata(adata: AnnData) -> None:
     """Transform string annotations to categoricals."""
     adata._sanitize()
 
 
-def view_to_actual(adata):
+def view_to_actual(adata: AnnData) -> None:
     if adata.is_view:
         warnings.warn(
             "Received a view of an AnnData. Making a copy.",
@@ -493,9 +493,14 @@ def check_nonnegative_integers(X: _FlatSupportedArray) -> bool:
     """Checks values of X to ensure it is count data"""
     from numbers import Integral
 
+    if isinstance(X, DaskArray):
+        from dask.array import signbit
+    else:
+        from numpy import signbit
+
     data = _get_values(X)
     # Check no negatives
-    if np.signbit(data).any():
+    if signbit(data).any():
         return False
     # Check all are integers
     if issubclass(data.dtype.type, Integral):

@@ -15,6 +15,7 @@ from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
 from .._utils import check_nonnegative_integers
+from .._compat import DaskArray
 
 
 _Method = Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']
@@ -91,10 +92,20 @@ class _RankGenes:
         layer: str | None = None,
         comp_pts: bool = False,
     ) -> None:
-        if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
-            self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
+        adata_comp = adata
+        if layer is not None:
+            if use_raw:
+                raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
+            X = adata_comp.layers[layer]
         else:
-            self.expm1_func = np.expm1
+            if use_raw and adata.raw is not None:
+                adata_comp = adata.raw
+            X = adata_comp.X
+
+        if isinstance(X, DaskArray):
+            import dask.array as ufuncs
+        else:
+            import numpy as ufuncs
 
         self.groups_order, self.groups_masks = _utils.select_groups(
             adata, groups, groupby
@@ -111,18 +122,15 @@ class _RankGenes:
                 "contain one sample.".format(', '.join(invalid_groups_selected))
             )
 
-        adata_comp = adata
-        if layer is not None:
-            if use_raw:
-                raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
-            X = adata_comp.layers[layer]
+        if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
+            self.expm1_func = lambda x: ufuncs.expm1(
+                x * ufuncs.log(adata.uns['log1p']['base'])
+            )
         else:
-            if use_raw and adata.raw is not None:
-                adata_comp = adata.raw
-            X = adata_comp.X
+            self.expm1_func = ufuncs.expm1
 
         # for correct getnnz calculation
-        if issparse(X):
+        if issparse(X):  # TODO: check for sparse-in-dask?
             X.eliminate_zeros()
 
         self.X = X
