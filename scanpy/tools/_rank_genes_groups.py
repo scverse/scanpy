@@ -14,7 +14,7 @@ from scipy.sparse import issparse, vstack
 from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
-from .._utils import check_nonnegative_integers, get_ufuncs
+from .._utils import check_nonnegative_integers
 
 
 _Method = Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']
@@ -101,8 +101,6 @@ class _RankGenes:
                 adata_comp = adata.raw
             X = adata_comp.X
 
-        self.ufuncs = get_ufuncs(X)
-
         # TODO: worth it to daskify?
         self.groups_order, self.groups_masks = _utils.select_groups(
             adata, groups, groupby
@@ -120,11 +118,9 @@ class _RankGenes:
             )
 
         if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
-            self.expm1_func = lambda x: self.ufuncs.expm1(
-                x * self.ufuncs.log(adata.uns['log1p']['base'])
-            )
+            self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
         else:
-            self.expm1_func = self.ufuncs.expm1
+            self.expm1_func = np.expm1
 
         # for correct getnnz calculation
         if issparse(X):  # TODO: check for sparse-in-dask?
@@ -158,16 +154,14 @@ class _RankGenes:
         n_genes = self.X.shape[1]
         n_groups = self.groups_masks.shape[0]
 
-        self.means = self.ufuncs.zeros((n_groups, n_genes))
-        self.vars = self.ufuncs.zeros((n_groups, n_genes))
-        self.pts = self.ufuncs.zeros((n_groups, n_genes)) if self.comp_pts else None
+        self.means = np.zeros((n_groups, n_genes))
+        self.vars = np.zeros((n_groups, n_genes))
+        self.pts = np.zeros((n_groups, n_genes)) if self.comp_pts else None
 
         if self.ireference is None:
-            self.means_rest = self.ufuncs.zeros((n_groups, n_genes))
-            self.vars_rest = self.ufuncs.zeros((n_groups, n_genes))
-            self.pts_rest = (
-                self.ufuncs.zeros((n_groups, n_genes)) if self.comp_pts else None
-            )
+            self.means_rest = np.zeros((n_groups, n_genes))
+            self.vars_rest = np.zeros((n_groups, n_genes))
+            self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
         else:
             mask_rest = self.groups_masks[self.ireference]
             X_rest = self.X[mask_rest]
@@ -180,7 +174,7 @@ class _RankGenes:
         if issparse(self.X):
             get_nonzeros = lambda X: X.getnnz(axis=0)
         else:  # TODO: check for sparse-in-dask?
-            get_nonzeros = lambda X: self.ufuncs.count_nonzero(X, axis=0)
+            get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
 
         for imask, mask in enumerate(self.groups_masks):
             X_mask = self.X[mask]
