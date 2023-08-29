@@ -101,7 +101,6 @@ class _RankGenes:
                 adata_comp = adata.raw
             X = adata_comp.X
 
-        # TODO: worth it to daskify?
         self.groups_order, self.groups_masks = _utils.select_groups(
             adata, groups, groupby
         )
@@ -123,7 +122,7 @@ class _RankGenes:
             self.expm1_func = np.expm1
 
         # for correct getnnz calculation
-        if issparse(X):  # TODO: check for sparse-in-dask?
+        if issparse(X):
             X.eliminate_zeros()
 
         self.X = X
@@ -173,7 +172,7 @@ class _RankGenes:
 
         if issparse(self.X):
             get_nonzeros = lambda X: X.getnnz(axis=0)
-        else:  # TODO: check for sparse-in-dask?
+        else:
             get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
 
         for imask, mask in enumerate(self.groups_masks):

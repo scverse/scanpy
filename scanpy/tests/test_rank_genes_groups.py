@@ -14,6 +14,7 @@ from anndata import AnnData
 from packaging import version
 from scipy import sparse
 from scipy.stats import mannwhitneyu
+from anndata.tests.helpers import asarray
 from numpy.random import negative_binomial, binomial, seed
 
 import scanpy as sc
@@ -74,6 +75,18 @@ def get_true_scores() -> (
         true_scores_t_test,
         true_scores_wilcoxon,
     )
+
+
+@pytest.fixture(
+    params=[
+        pytest.param(asarray, id='numpy-ndarray'),
+        pytest.param(sparse.csr_matrix, id='scipy-csr'),
+        pytest.param(sparse.csc_matrix, id='scipy-csc'),
+    ]
+)
+def array_type(request: pytest.FixtureRequest):
+    """Overrided array_type without dask, for the time being"""
+    return request.param
 
 
 def test_results(array_type):
