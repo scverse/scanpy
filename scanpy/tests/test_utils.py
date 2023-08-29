@@ -28,20 +28,17 @@ def test_descend_classes_and_funcs():
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, 'a'))
 
 
-def test_check_nonnegative_integers():
-    X = np.random.poisson(size=(100, 100)).astype(np.float64)
-    assert check_nonnegative_integers(X) is True
-    assert check_nonnegative_integers(-X) is False
-
-    X_ = X + np.random.normal(size=(100, 100))
-    assert check_nonnegative_integers(X_) is False
-
-    X = csr_matrix(X)
-    assert check_nonnegative_integers(X) is True
-    assert check_nonnegative_integers(-X) is False
-
-    X_ = csr_matrix(X_)
-    assert check_nonnegative_integers(X_) is False
+@pytest.mark.parametrize(
+    ('mk_add', 'expected'),
+    [(lambda: 0, True), (lambda: np.random.normal(size=(100, 100)), False)],
+)
+def test_check_nonnegative_integers(array_type, mk_add, expected):
+    X = array_type(
+        np.random.poisson(size=(100, 100)).astype(np.float64) + (add := mk_add())
+    )
+    assert check_nonnegative_integers(X) is expected
+    if isinstance(add, np.ndarray):
+        assert check_nonnegative_integers(-X) is False
 
 
 def test_is_constant(array_type):
