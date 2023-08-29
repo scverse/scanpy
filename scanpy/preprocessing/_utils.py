@@ -11,7 +11,7 @@ def _get_mean_var(X: _FlatSupportedArray, *, axis=0):
     else:
         ufuncs = get_ufuncs(X)
         mean = ufuncs.mean(X, axis=axis, dtype=np.float64)
-        mean_sq = ufuncs.power(X, 2).mean(axis=axis, dtype=np.float64)
+        mean_sq = ufuncs.multiply(X, X).mean(axis=axis, dtype=np.float64)
         var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
     var *= X.shape[axis] / (X.shape[axis] - 1)
