@@ -1,8 +1,13 @@
 from __future__ import annotations
 
-from typing import Literal, Union, Callable
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Union as _U
+from collections.abc import Callable
 
 import numpy as np
+from scipy.sparse import spmatrix
+
+if TYPE_CHECKING:
+    from typing import Self
 
 
 _Method = Literal['umap', 'gauss']
@@ -33,4 +38,25 @@ _MetricScipySpatial = Literal[
     'sqeuclidean',
     'yule',
 ]
-_Metric = Union[_MetricSparseCapable, _MetricScipySpatial]
+_Metric = _U[_MetricSparseCapable, _MetricScipySpatial]
+
+
+class KnnTransformerLike(Protocol):
+    """See :class:`~sklearn.neighbors.KNeighborsTransformer`."""
+
+    def fit(self, X, y: None = None):
+        ...
+
+    def transform(self, X) -> spmatrix:
+        ...
+
+    # from TransformerMixin
+    def fit_transform(self, X, y: None = None) -> spmatrix:
+        ...
+
+    # from BaseEstimator
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
+        ...
+
+    def set_params(self, **params: Any) -> Self:
+        ...

@@ -4,7 +4,6 @@ import sys
 from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
-    Protocol,
     TypedDict,
     Union,
     Optional,
