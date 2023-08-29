@@ -12,10 +12,10 @@ from anndata import AnnData
 
 from .. import logging as logg
 from .. import settings
-from .._compat import DaskArray
+from .._compat import DaskArray, pkg_version
 from .._utils import AnyRandom
-from ._utils import _get_mean_var
 from ..get import _get_obs_rep
+from ._utils import _get_mean_var
 
 
 def pca(
