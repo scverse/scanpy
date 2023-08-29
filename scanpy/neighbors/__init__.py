@@ -4,6 +4,8 @@ import sys
 from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
+    Protocol,
+    TypedDict,
     Union,
     Optional,
     Any,
@@ -23,6 +25,7 @@ from pynndescent import NNDescent, PyNNDescentTransformer
 
 if TYPE_CHECKING:
     from igraph import Graph
+    from ._types import KnnTransformerLike
 
 from . import _connectivity
 from ._types import _Metric, _MetricFn, _Method, _KnownTransformer
@@ -46,6 +49,19 @@ N_DCS = 15  # default number of diffusion components
 N_PCS = settings.N_PCS
 
 
+class KwdsForTransformer(TypedDict):
+    """Keyword arguments passed to a _KnownTransformer.
+
+    IMPORTANT: when changing the parameters set here,
+    update the “*ignored*” part in the parameter docs!
+    """
+
+    n_neighbors: int
+    metric: Union[_Metric, _MetricFn]
+    metric_params: Mapping[str, Any]
+    random_state: AnyRandom
+
+
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def neighbors(
     adata: AnnData,
@@ -54,12 +70,11 @@ def neighbors(
     *,
     use_rep: Optional[str] = None,
     knn: bool = True,
-    random_state: AnyRandom = 0,
     method: _Method = 'umap',
-    transformer_cls: type | _KnownTransformer | None = None,
-    transformer_kwds: Mapping[str, Any] = MappingProxyType({}),
+    transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+    random_state: AnyRandom = 0,
     key_added: Optional[str] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -84,6 +99,8 @@ def neighbors(
         If `knn` is `True`, number of nearest neighbors to be searched. If `knn`
         is `False`, a Gaussian kernel width is set to the distance of the
         `n_neighbors` neighbor.
+
+        *ignored if ``transformer`` is an instance.*
     {n_pcs}
     {use_rep}
     knn
@@ -91,12 +108,10 @@ def neighbors(
         `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
-    random_state
-        A numpy random seed.
     method
         Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
         with adaptive width [Haghverdi16]_) for computing connectivities.
-    transformer_cls
+    transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
         Also accepts the following known options:
@@ -109,14 +124,18 @@ def neighbors(
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
         `'rapids'`
             A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
-    transformer_kwds
-        Additional parameters for the `transformer_cls`.
-        By default, the following parameters are passed on:
-        `n_neighbors`, `metric`, `metric_kwds`, and `random_state`.
     metric
         A known metric’s name or a callable that returns a distance.
+
+        *ignored if ``transformer`` is an instance.*
     metric_kwds
         Options for the metric.
+
+        *ignored if ``transformer`` is an instance.*
+    random_state
+        A numpy random seed.
+
+        *ignored if ``transformer`` is an instance.*
     key_added
         If not specified, the neighbors data is stored in .uns['neighbors'],
         distances and connectivities are stored in .obsp['distances'] and
@@ -152,8 +171,7 @@ def neighbors(
         use_rep=use_rep,
         knn=knn,
         method=method,
-        transformer_cls=transformer_cls,
-        transformer_kwds=transformer_kwds,
+        transformer=transformer,
         metric=metric,
         metric_kwds=metric_kwds,
         random_state=random_state,
@@ -479,8 +497,7 @@ class Neighbors:
         use_rep: Optional[str] = None,
         knn: bool = True,
         method: _Method = 'umap',
-        transformer_cls: type | _KnownTransformer | None = None,
-        transformer_kwds: Mapping[str, Any] = MappingProxyType({}),
+        transformer: KnnTransformerLike | _KnownTransformer | None = None,
         metric: Union[_Metric, _MetricFn] = 'euclidean',
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
         random_state: AnyRandom = 0,
@@ -505,14 +522,18 @@ class Neighbors:
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
-        (
-            method,
-            transformer_cls,
-            transformer_kwds,
-            shortcut,
-        ) = self._handle_transform_args(
-            method, transformer_cls, transformer_kwds, knn=knn, metric=metric
+
+        # default keyword arguments when `transformer` is not an instance
+        transformer_kwds_default = KwdsForTransformer(
+            n_neighbors=n_neighbors,
+            metric=metric,
+            metric_params=metric_kwds,  # most use _params, not _kwds
+            random_state=random_state,
         )
+        method, transformer, shortcut = self._handle_transformer(
+            method, transformer, knn=knn, kwds=transformer_kwds_default
+        )
+
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         # do not use the cached rp_forest
@@ -520,19 +541,6 @@ class Neighbors:
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
-
-        # IMPORTANT: when changing the parameters set here,
-        #            update them in the docs!
-        transformer_kwds_default = dict(
-            n_neighbors=n_neighbors,
-            metric=metric,
-            metric_kwds=metric_kwds,
-            random_state=random_state,
-        )
-        transformer = self._make_transformer(
-            transformer_cls,
-            {**transformer_kwds_default, **transformer_kwds},
-        )
         self._distances = transformer.fit_transform(X)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
             self._distances, n_neighbors
@@ -578,115 +586,91 @@ class Neighbors:
             self._connected_components = connected_components(self._connectivities)
             self._number_connected_components = self._connected_components[0]
 
-    def _handle_transform_args(
+    def _handle_transformer(
         self,
         method: _Method | Literal['gauss'],
-        transformer_cls: type | _KnownTransformer | None,
-        transformer_kwds: Mapping[str, Any],
+        transformer: KnnTransformerLike | _KnownTransformer | None,
         *,
         knn: bool,
-        metric: _Metric | _MetricFn,
-    ) -> tuple[_Method, type, Mapping[str, Any], bool]:
+        kwds: KwdsForTransformer,
+    ) -> tuple[_Method, KnnTransformerLike, bool]:
         """Return effective `method` and transformer.
 
         `method` will be coerced to `'gauss'` or `'umap'`.
-        `transformer_cls` is coerced from a str or class to a class.
-        `transformer_kwds` is filled out in special cases (see below).
+        `transformer` is coerced from a str or instance to an instance class.
 
-        If `transformer_cls` is `None` and there are few data points,
-        `transformer_cls`/`transformer_kwds` will be set to a brute force
+        If `transformer` is `None` and there are few data points,
+        `transformer` will be set to a brute force
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
 
-        If `transformer_cls` is `None` and there are many data points,
-        `transformer_cls`/`transformer_kwds` will be set like `umap` does
-        (i.e. to a ~`pynndescent.PyNNDescentTransformer` with custom `n_trees` and `n_iter`).
+        If `transformer` is `None` and there are many data points,
+        `transformer` will be set like `umap` does (i.e. to a
+        ~`pynndescent.PyNNDescentTransformer` with custom `n_trees` and `n_iter`).
         """
-        if transformer_cls is None and transformer_kwds:
-            msg = "can’t specify `transformer_kwds` when not also specifying `transformer_cls`."
-            raise TypeError(msg)
-
         # legacy logic
         use_dense_distances = (
-            metric == 'euclidean' and self._adata.n_obs < 8192
+            kwds['metric'] == 'euclidean' and self._adata.n_obs < 8192
         ) or not knn
-        shortcut = transformer_cls is None and (
+        shortcut = transformer is None and (
             use_dense_distances or self._adata.n_obs < 4096
         )
 
         # Coerce `method` to 'gauss' or 'umap'
         if method == 'rapids':
-            if transformer_cls is not None:
-                msg = "Can’t specify both `method = 'rapids'` and `transformer_cls`."
+            if transformer is not None:
+                msg = "Can’t specify both `method = 'rapids'` and `transformer`."
                 raise ValueError(msg)
-            msg = "method = 'rapids' is deprecated. Use transformer_cls = 'rapids'."
+            msg = "method = 'rapids' is deprecated. Use transformer = 'rapids'."
             warn(msg, FutureWarning)
             method = 'umap'
-            transformer_cls = 'rapids'
+            transformer = 'rapids'
         elif method not in (methods := set(get_args(_Method))):
             msg = f'`method` needs to be one of {methods}.'
             raise ValueError(msg)
 
         # Validate `knn`
         conn_method = 'gauss' if method == 'gauss' else 'umap'
-        if not knn and not (conn_method == 'gauss' and transformer_cls is None):
+        if not knn and not (conn_method == 'gauss' and transformer is None):
             # “knn=False” seems to be only intended for method “gauss”
             msg = f'`method = {method!r} only with `knn = True`.'
             raise ValueError(msg)
 
-        # Coerce `transformer_cls` to a class
+        # Coerce `transformer` to an instance
         if shortcut:
             from sklearn.neighbors import KNeighborsTransformer
 
-            assert transformer_cls is None and not transformer_kwds
-            transformer_cls = KNeighborsTransformer
-            transformer_kwds = dict(
-                **transformer_kwds,
+            assert transformer is None
+            transformer = KNeighborsTransformer(
                 algorithm='brute',
-                n_neighbors=self._adata.n_obs - 1,
+                n_jobs=settings.n_jobs,
+                n_neighbors=self._adata.n_obs - 1,  # ignore n_neighbors
+                metric=kwds['metric'],
+                metric_params=dict(kwds['metric_params']),  # needs dict
+                # no random_state
             )
-        elif transformer_cls is None or transformer_cls == 'pynndescent':
-            if transformer_cls is None:
+        elif transformer is None or transformer == 'pynndescent':
+            kwds = kwds.copy()
+            kwds['metric_kwds'] = kwds.pop('metric_params')
+            if transformer is None:
                 # Use defaults from UMAP’s `nearest_neighbors` function
-                transformer_kwds = dict(
-                    **transformer_kwds,
+                kwds.update(
+                    n_jobs=settings.n_jobs,
                     n_trees=min(64, 5 + int(round((self._adata.n_obs) ** 0.5 / 20.0))),
                     n_iters=max(5, int(round(np.log2(self._adata.n_obs)))),
                 )
-            transformer_cls = PyNNDescentTransformer
-        elif transformer_cls == 'rapids':
+            transformer = PyNNDescentTransformer(**kwds)
+        elif transformer == 'rapids':
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
-            transformer_cls = RapidsKNNTransformer
-        elif isinstance(transformer_cls, str):
+            transformer = RapidsKNNTransformer(**kwds)
+        elif isinstance(transformer, str):
             msg = (
-                f'Unknown transformer class: {transformer_cls}. '
+                f'Unknown transformer: {transformer}. '
                 f'Try passing a class or one of {set(get_args(_KnownTransformer))}'
             )
             raise ValueError(msg)
-        return conn_method, transformer_cls, transformer_kwds, shortcut
-
-    def _make_transformer(
-        self, transformer_cls: type, transformer_kwds: Mapping[str, Any]
-    ) -> object:  # TODO: KNeighborsTransformer Protocol
-        import inspect
-
-        if (
-            transformer_cls.__name__ == 'KNeighborsTransformer'
-            and transformer_kwds['n_neighbors'] == self._adata.n_obs
-        ):
-            # KNeighborsTransformer can’t handle `n_neighbors == n_obs`
-            transformer_kwds['n_neighbors'] = self._adata.n_obs - 1
-
-        sig = inspect.signature(transformer_cls)
-        if 'metric_params' in sig.parameters:
-            # needs to be a dict
-            transformer_kwds['metric_params'] = dict(
-                transformer_kwds.pop('metric_kwds')
-            )
-        if 'random_state' not in sig.parameters:
-            transformer_kwds.pop('random_state')
-
-        return transformer_cls(**transformer_kwds)
+        # else `transformer` is probably an instance
+        return conn_method, transformer, shortcut
 
     def compute_transitions(self, density_normalize: bool = True):
         """\
