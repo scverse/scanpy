@@ -91,6 +91,21 @@ class _RankGenes:
         layer: str | None = None,
         comp_pts: bool = False,
     ) -> None:
+        if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
+            self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
+        else:
+            self.expm1_func = np.expm1
+
+        # Singlet groups cause division by zero errors
+        invalid_groups_selected = set(self.groups_order) & set(
+            adata.obs[groupby].value_counts().loc[lambda x: x < 2].index
+        )
+
+        if len(invalid_groups_selected) > 0:
+            raise ValueError(
+                "Could not calculate statistics for groups {} since they only "
+                "contain one sample.".format(', '.join(invalid_groups_selected))
+            )
         adata_comp = adata
         if layer is not None:
             if use_raw:
@@ -104,22 +119,6 @@ class _RankGenes:
         self.groups_order, self.groups_masks = _utils.select_groups(
             adata, groups, groupby
         )
-
-        # Singlet groups cause division by zero errors
-        invalid_groups_selected = set(self.groups_order) & set(
-            adata.obs[groupby].value_counts().loc[lambda x: x < 2].index
-        )
-
-        if len(invalid_groups_selected) > 0:
-            raise ValueError(
-                "Could not calculate statistics for groups {} since they only "
-                "contain one sample.".format(', '.join(invalid_groups_selected))
-            )
-
-        if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
-            self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
-        else:
-            self.expm1_func = np.expm1
 
         # for correct getnnz calculation
         if issparse(X):
