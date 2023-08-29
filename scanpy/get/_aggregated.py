@@ -444,12 +444,13 @@ def aggregated_from_array(
         key_set=key_set,
     )
     # groupby df is put in `obs`, nongroupby in `var` to be transposed later as appropriate
-    obs_var_dict = {'obs': _df_grouped(groupby_df, by, key_set), 'var': no_groupby_df}
-    data_dict = {
-        'layers': {},
-        'X': None,
-        'obsm': {},
-    }
+    adata_kw = dict(
+        X=None,
+        layers={},
+        obs=_df_grouped(groupby_df, by, key_set),
+        var=no_groupby_df,
+        obsm={},
+    )
     write_key = 'obsm' if write_to_xxxm else 'layers'
     funcs = set([func] if isinstance(func, str) else func)
     if unknown := funcs - set(get_args(AggType)):
@@ -458,29 +459,29 @@ def aggregated_from_array(
         agg = groupby.sum()
         # put aggregation in X if it is the only one and the aggregation data is not coming from `xxxm`
         if len(funcs) == 1 and not write_to_xxxm:
-            data_dict['X'] = agg
+            adata_kw['X'] = agg
         else:
-            data_dict[write_key]['sum'] = agg
+            adata_kw[write_key]['sum'] = agg
     # here and below for count, if var is present, these can be calculate alongside var
     if 'mean' in funcs and 'var' not in funcs:
         agg = groupby.mean()
         if len(funcs) == 1 and not write_to_xxxm:
-            data_dict['X'] = agg
+            adata_kw['X'] = agg
         else:
-            data_dict[write_key]['mean'] = agg
+            adata_kw[write_key]['mean'] = agg
     if 'count' in funcs and 'var' not in funcs:
-        obs_var_dict['obs']['count'] = groupby.count()  # count goes in dim df
+        adata_kw['obs']['count'] = groupby.count()  # count goes in dim df
     if 'var' in funcs:
         aggs = groupby.count_mean_var(dof)
         if len(funcs) == 1 and not write_to_xxxm:
-            data_dict['X'] = aggs.var
+            adata_kw['X'] = aggs.var
         else:
-            data_dict[write_key]['var'] = aggs.var
+            adata_kw[write_key]['var'] = aggs.var
             if 'mean' in funcs:
-                data_dict[write_key]['mean'] = aggs.mean
+                adata_kw[write_key]['mean'] = aggs.mean
             if 'count' in funcs:
-                obs_var_dict['obs']['count'] = aggs.count
-    adata_agg = AnnData(**{**data_dict, **obs_var_dict})
+                adata_kw['obs']['count'] = aggs.count
+    adata_agg = AnnData(**adata_kw)
     if dim == 'var':
         return adata_agg.T
     return adata_agg
