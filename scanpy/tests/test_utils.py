@@ -30,7 +30,10 @@ def test_descend_classes_and_funcs():
 
 @pytest.mark.parametrize(
     ('mk_add', 'expected'),
-    [(lambda: 0, True), (lambda: np.random.normal(size=(100, 100)), False)],
+    [
+        pytest.param(lambda: 0, True, id='0'),
+        pytest.param(lambda: np.random.normal(size=(100, 100)), False, id='normal'),
+    ],
 )
 def test_check_nonnegative_integers(array_type, mk_add, expected):
     X = array_type(
