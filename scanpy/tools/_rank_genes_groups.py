@@ -96,6 +96,10 @@ class _RankGenes:
         else:
             self.expm1_func = np.expm1
 
+        self.groups_order, self.groups_masks = _utils.select_groups(
+            adata, groups, groupby
+        )
+
         # Singlet groups cause division by zero errors
         invalid_groups_selected = set(self.groups_order) & set(
             adata.obs[groupby].value_counts().loc[lambda x: x < 2].index
@@ -106,6 +110,7 @@ class _RankGenes:
                 "Could not calculate statistics for groups {} since they only "
                 "contain one sample.".format(', '.join(invalid_groups_selected))
             )
+
         adata_comp = adata
         if layer is not None:
             if use_raw:
@@ -115,10 +120,6 @@ class _RankGenes:
             if use_raw and adata.raw is not None:
                 adata_comp = adata.raw
             X = adata_comp.X
-
-        self.groups_order, self.groups_masks = _utils.select_groups(
-            adata, groups, groupby
-        )
 
         # for correct getnnz calculation
         if issparse(X):
