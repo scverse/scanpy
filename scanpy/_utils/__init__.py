@@ -503,7 +503,7 @@ def check_nonnegative_integers(X: _FlatSupportedArray) -> bool:
 
     ufuncs = get_ufuncs(X)
     # get (possibly nonzero) values as (possibly flat) array
-    data = X if not sparse.issparse(x) else X.data
+    data: np.ndarray | DaskArray = X.data if sparse.issparse(X) else X
     # Check no negatives
     if ufuncs.signbit(data).any():
         return False
@@ -514,22 +514,6 @@ def check_nonnegative_integers(X: _FlatSupportedArray) -> bool:
     if ((data % 1) != 0).any():
         return False
     return True
-
-
-@singledispatch
-def _get_values(X: _FlatSupportedArray) -> np._SupportsArray:
-    raise NotImplementedError()
-
-
-@_get_values.register(np.ndarray)
-@_get_values.register(DaskArray)
-def _(X: np.ndarray) -> np._SupportsArray:
-    return X  # Doesn’t need to be flat
-
-
-@_get_values.register(sparse.spmatrix)
-def _(X: sparse.spmatrix) -> np._SupportsArray:
-    return X.data
 
 
 def select_groups(
