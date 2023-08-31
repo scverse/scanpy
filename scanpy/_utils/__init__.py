@@ -497,23 +497,29 @@ def get_ufuncs(data: np.ndarray | DaskArray):
     return np
 
 
-def check_nonnegative_integers(X: _SupportedArray) -> bool:
-    """Checks values of X to ensure it is count data"""
+def check_nonnegative_integers(X: _SupportedArray) -> np.bool_ | DaskArray:
+    """\
+    Checks values of X to ensure it is count data.
+
+    When passed a dask array, it will return a scalar dask “array” evaluating to a boolean.
+    """
     from numbers import Integral
 
     ufuncs = get_ufuncs(X)
     # get (possibly nonzero) values as (possibly flat) array
     data: np.ndarray | DaskArray = X.data if sparse.issparse(X) else X
-    # Check no negatives
-    if ufuncs.signbit(data).any():
-        return False
-    # Check all are integers
-    if issubclass(data.dtype.type, Integral):
-        return True
-    # Check all are whole numbers
-    if ((data % 1) != 0).any():
-        return False
-    return True
+    # return bool or lazy dask array resolving to one
+    return (
+        # Check no negatives
+        (~ufuncs.signbit(data).any())
+        & (
+            # Check all are integers
+            issubclass(data.dtype.type, Integral)
+            |
+            # Check all are whole numbers
+            (~((data % 1) != 0).any())
+        )
+    )
 
 
 def select_groups(

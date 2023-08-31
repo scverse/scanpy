@@ -9,6 +9,7 @@ from scanpy._utils import (
     is_constant,
 )
 from scanpy.testing._pytest.marks import needs
+from scanpy._compat import DaskArray
 
 
 def test_descend_classes_and_funcs():
@@ -48,7 +49,13 @@ def test_descend_classes_and_funcs():
 def test_check_nonnegative_integers(array_type, array_value, expected):
     X = array_type(array_value)
 
-    assert check_nonnegative_integers(X) is expected
+    received = check_nonnegative_integers(X)
+    if isinstance(X, DaskArray):
+        assert isinstance(received, DaskArray)
+        # compute
+        received = received.compute()
+    # convert to python bool
+    assert received.item() is expected
 
 
 def test_is_constant(array_type):
