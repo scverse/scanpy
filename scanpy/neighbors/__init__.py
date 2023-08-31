@@ -136,12 +136,12 @@ def neighbors(
 
         *ignored if ``transformer`` is an instance.*
     key_added
-        If not specified, the neighbors data is stored in .uns['neighbors'],
-        distances and connectivities are stored in .obsp['distances'] and
-        .obsp['connectivities'] respectively.
+        If not specified, the neighbors data is stored in `.uns['neighbors']`,
+        distances and connectivities are stored in `.obsp['distances']` and
+        `.obsp['connectivities']` respectively.
         If specified, the neighbors data is added to .uns[key_added],
-        distances are stored in .obsp[key_added+'_distances'] and
-        connectivities in .obsp[key_added+'_connectivities'].
+        distances are stored in `.obsp[key_added+'_distances']` and
+        connectivities in `.obsp[key_added+'_connectivities']`.
     copy
         Return a copy instead of writing to adata.
 
@@ -349,7 +349,7 @@ class Neighbors:
     n_dcs
         Number of diffusion components to use.
     neighbors_key
-        Where to look in .uns and .obsp for neighbors data
+        Where to look in `.uns` and `.obsp` for neighbors data
     """
 
     def __init__(
