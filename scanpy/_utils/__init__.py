@@ -502,7 +502,8 @@ def check_nonnegative_integers(X: _FlatSupportedArray) -> bool:
     from numbers import Integral
 
     ufuncs = get_ufuncs(X)
-    data = _get_values(X)
+    # get (possibly nonzero) values as (possibly flat) array
+    data = X if not sparse.issparse(x) else X.data
     # Check no negatives
     if ufuncs.signbit(data).any():
         return False

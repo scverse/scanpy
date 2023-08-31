@@ -9,9 +9,8 @@ def _get_mean_var(X: _FlatSupportedArray, *, axis=0):
     if sparse.issparse(X):  # TODO: sparse-in-dask?
         mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
-        ufuncs = get_ufuncs(X)
-        mean = ufuncs.mean(X, axis=axis, dtype=np.float64)
-        mean_sq = ufuncs.multiply(X, X).mean(axis=axis, dtype=np.float64)
+        mean = X.mean(axis=axis, dtype=np.float64)
+        mean_sq = (X * X).mean(axis=axis, dtype=np.float64)
         var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
     var *= X.shape[axis] / (X.shape[axis] - 1)
