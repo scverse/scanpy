@@ -8,7 +8,7 @@ except ImportError:
         pass
 
 
-__all__ = ['DaskArray', 'DaskTask', 'fullname', 'pkg_metadata', 'pkg_version']
+__all__ = ['DaskArray', 'fullname', 'pkg_metadata', 'pkg_version']
 
 
 def fullname(typ: type) -> str:
