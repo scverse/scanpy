@@ -197,6 +197,7 @@ nitpick_ignore = [
     ('py:class', 'scanpy.plotting._utils._AxesSubplot'),
     ('py:class', 'scanpy._utils.Empty'),
     ('py:class', 'numpy.random.mtrand.RandomState'),
+    ('py:class', 'scanpy.neighbors._types.KnnTransformerLike'),
     # Will work once scipy 1.8 is released
     ('py:class', 'scipy.sparse.base.spmatrix'),
     ('py:class', 'scipy.sparse.csr.csr_matrix'),
