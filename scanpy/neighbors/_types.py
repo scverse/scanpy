@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Union as _U
-from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Union as _U, Callable as _C
 
 import numpy as np
 from scipy.sparse import spmatrix
@@ -14,7 +13,7 @@ _Method = Literal['umap', 'gauss']
 
 _KnownTransformer = Literal['pynndescent', 'rapids']
 
-_MetricFn = Callable[[np.ndarray, np.ndarray], float]
+_MetricFn = _C[[np.ndarray, np.ndarray], float]
 # from sklearn.metrics.pairwise_distances.__doc__:
 _MetricSparseCapable = Literal[
     'cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan'
