@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from weakref import WeakSet
 from collections import namedtuple
-from functools import partial, singledispatch, wraps
+from functools import partial, wraps
 from types import ModuleType, MethodType
 from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
 
@@ -486,7 +486,7 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-_FlatSupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
+_SupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
 
 
 def get_ufuncs(data: np.ndarray | DaskArray):
@@ -497,7 +497,7 @@ def get_ufuncs(data: np.ndarray | DaskArray):
     return np
 
 
-def check_nonnegative_integers(X: _FlatSupportedArray) -> bool:
+def check_nonnegative_integers(X: _SupportedArray) -> bool:
     """Checks values of X to ensure it is count data"""
     from numbers import Integral
 

@@ -2,11 +2,11 @@ import numpy as np
 import numba
 from scipy import sparse
 
-from .._utils import _FlatSupportedArray, get_ufuncs
+from .._utils import _SupportedArray
 
 
-def _get_mean_var(X: _FlatSupportedArray, *, axis=0):
-    if sparse.issparse(X):  # TODO: sparse-in-dask?
+def _get_mean_var(X: _SupportedArray, *, axis=0):
+    if sparse.issparse(X):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
         mean = X.mean(axis=axis, dtype=np.float64)
