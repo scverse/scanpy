@@ -1,6 +1,13 @@
 from packaging import version
 
 try:
+    from functools import cache
+except ImportError:  # Python < 3.9
+    from functools import lru_cache
+
+    cache = lru_cache(maxsize=None)
+
+try:
     from dask.array import Array as DaskArray
 except ImportError:
 
@@ -8,7 +15,7 @@ except ImportError:
         pass
 
 
-__all__ = ['DaskArray', 'fullname', 'pkg_metadata', 'pkg_version']
+__all__ = ['cache', 'DaskArray', 'fullname', 'pkg_metadata', 'pkg_version']
 
 
 def fullname(typ: type) -> str:
@@ -25,6 +32,7 @@ def pkg_metadata(package):
     return m(package)
 
 
+@cache
 def pkg_version(package):
     from importlib.metadata import version as v
 

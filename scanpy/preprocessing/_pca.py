@@ -2,6 +2,7 @@ import warnings
 from typing import Optional, Union
 
 import numpy as np
+from packaging import version
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
@@ -11,10 +12,10 @@ from anndata import AnnData
 
 from .. import logging as logg
 from .. import settings
-from .._compat import DaskArray
+from .._compat import DaskArray, pkg_version
 from .._utils import AnyRandom
-from ._utils import _get_mean_var
 from ..get import _get_obs_rep
+from ._utils import _get_mean_var
 
 
 def pca(
@@ -156,7 +157,10 @@ def pca(
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
-        adata = AnnData(data, dtype=data.dtype)
+        if pkg_version('anndata') < version.parse('0.8.0rc1'):
+            adata = AnnData(data, dtype=data.dtype)
+        else:
+            adata = AnnData(data)
 
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
         raise ValueError(
