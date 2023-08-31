@@ -31,10 +31,18 @@ def test_descend_classes_and_funcs():
 @pytest.mark.parametrize(
     ('array_value', 'expected'),
     [
-        pytest.param(np.random.poisson(size=(100, 100)).astype(np.float64), True, id='poisson-float64'),
-        pytest.param(np.random.poisson(size=(100, 100)).astype(np.uint32), True, id='poisson-uint32')
+        pytest.param(
+            np.random.poisson(size=(100, 100)).astype(np.float64),
+            True,
+            id='poisson-float64',
+        ),
+        pytest.param(
+            np.random.poisson(size=(100, 100)).astype(np.uint32),
+            True,
+            id='poisson-uint32',
+        ),
         pytest.param(np.random.normal(size=(100, 100)), False, id='normal'),
-        pytest.param(np.array([[0, 0, 0,], [0, -1, 0]. [0, 0, 0]]), False, id="middle"),
+        pytest.param(np.array([[0, 0, 0], [0, -1, 0], [0, 0, 0]]), False, id='middle'),
     ],
 )
 def test_check_nonnegative_integers(array_type, array_value, expected):
