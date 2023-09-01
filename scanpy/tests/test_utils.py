@@ -31,36 +31,40 @@ def test_descend_classes_and_funcs():
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, 'a'))
 
 
+array_kinds = [pytest.param(DaskArray, marks=[needs('dask')], id='dask'), bool]
+
+
 @pytest.mark.parametrize(
     ('lazy_op', 'left', 'right', 'expected'),
     [
-        (lazy_and, False, lambda: pytest.fail('False and b() evaluated b'), False),
-        (lazy_and, True, lambda: 'hi!', 'hi!'),
-        (lazy_or, True, lambda: pytest.fail('True or b() evaluated b'), True),
-        (lazy_or, False, lambda: 'hi!', 'hi!'),
+        pytest.param(lazy_and, False, pytest.fail, False, id='false-and-fail'),
+        pytest.param(lazy_and, True, lambda: 'hi!', 'hi!', id='true-and-pass'),
+        pytest.param(lazy_or, True, pytest.fail, True, id='true-or-fail'),
+        pytest.param(lazy_or, False, lambda: 'hi!', 'hi!', id='false-or-pass'),
     ],
 )
-def test_lazy_bool(lazy_op, left, right, expected):
+@pytest.mark.parametrize('kind_left', array_kinds)
+@pytest.mark.parametrize('kind_right', array_kinds)
+def test_lazy_bool(lazy_op, kind_left, left, kind_right, right, expected):
+    if kind_left is DaskArray:
+        import dask.array as da
+
+        left_unwrapped = left
+
+        def left():
+            return da.array(left_unwrapped)
+
+    if kind_right is DaskArray:
+        import dask.array as da
+
+        right_unwrapped = right
+
+        def right():
+            return da.array(True).map_blocks(
+                lambda _: right_unwrapped(), meta=np.bool_(True)
+            )
+
     assert lazy_op(left, right) == expected
-
-
-@needs('dask')
-@pytest.mark.parametrize(
-    ('lazy_op', 'mk_left', 'right', 'expected'),
-    [
-        (
-            lazy_and,
-            lambda da: da.zeros(2).any(),
-            lambda: pytest.fail('a and b() eagerly evaluated b'),
-            np.bool_(False),
-        )
-    ],
-)
-def test_lazy_bool_dask(lazy_op, mk_left, right, expected):
-    import dask.array as da
-
-    right_scalar = da.ones((), dtype=np.bool_).map_blocks(right)
-    assert lazy_op(mk_left(da), right_scalar) == expected
 
 
 @pytest.mark.parametrize(
