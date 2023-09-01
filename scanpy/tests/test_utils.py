@@ -1,3 +1,4 @@
+from functools import partial
 from types import ModuleType
 import pytest
 from scipy.sparse import csr_matrix
@@ -31,38 +32,30 @@ def test_descend_classes_and_funcs():
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, 'a'))
 
 
-array_kinds = [pytest.param(DaskArray, marks=[needs('dask')], id='dask'), bool]
+array_kinds = [pytest.param('dask', marks=[needs('dask')]), 'bool']
 
 
 @pytest.mark.parametrize(
     ('lazy_op', 'left', 'right', 'expected'),
     [
         pytest.param(lazy_and, False, pytest.fail, False, id='false-and-fail'),
-        pytest.param(lazy_and, True, lambda: 'hi!', 'hi!', id='true-and-pass'),
+        pytest.param(lazy_and, True, lambda: False, False, id='true-and-pass'),
         pytest.param(lazy_or, True, pytest.fail, True, id='true-or-fail'),
-        pytest.param(lazy_or, False, lambda: 'hi!', 'hi!', id='false-or-pass'),
+        pytest.param(lazy_or, False, lambda: True, True, id='false-or-pass'),
     ],
 )
 @pytest.mark.parametrize('kind_left', array_kinds)
 @pytest.mark.parametrize('kind_right', array_kinds)
 def test_lazy_bool(lazy_op, kind_left, left, kind_right, right, expected):
-    if kind_left is DaskArray:
+    if 'dask' in {kind_left, kind_right}:
         import dask.array as da
-
-        left_unwrapped = left
-
-        def left():
-            return da.array(left_unwrapped)
-
-    if kind_right is DaskArray:
-        import dask.array as da
-
-        right_unwrapped = right
-
-        def right():
-            return da.array(True).map_blocks(
-                lambda _: right_unwrapped(), meta=np.bool_(True)
-            )
+    if kind_left == 'dask':
+        left = da.array(left)
+    if kind_right == 'dask':
+        right = partial(
+            lambda cb: da.array(True).map_blocks(lambda _: cb(), meta=np.bool_(True)),
+            right,
+        )
 
     assert lazy_op(left, right) == expected
 
