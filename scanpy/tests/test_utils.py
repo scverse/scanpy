@@ -7,6 +7,8 @@ from scanpy._utils import (
     descend_classes_and_funcs,
     check_nonnegative_integers,
     is_constant,
+    lazy_and,
+    lazy_or,
 )
 from scanpy.testing._pytest.marks import needs
 from scanpy._compat import DaskArray
@@ -27,6 +29,38 @@ def test_descend_classes_and_funcs():
     a.b.a = a
 
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, 'a'))
+
+
+@pytest.mark.parametrize(
+    ('lazy_op', 'left', 'right', 'expected'),
+    [
+        (lazy_and, False, lambda: pytest.fail('False and b() evaluated b'), False),
+        (lazy_and, True, lambda: 'hi!', 'hi!'),
+        (lazy_or, True, lambda: pytest.fail('True or b() evaluated b'), True),
+        (lazy_or, False, lambda: 'hi!', 'hi!'),
+    ],
+)
+def test_lazy_bool(lazy_op, left, right, expected):
+    assert lazy_op(left, right) == expected
+
+
+@needs('dask')
+@pytest.mark.parametrize(
+    ('lazy_op', 'mk_left', 'right', 'expected'),
+    [
+        (
+            lazy_and,
+            lambda da: da.zeros(2).any(),
+            lambda: pytest.fail('a and b() eagerly evaluated b'),
+            np.bool_(False),
+        )
+    ],
+)
+def test_lazy_bool_dask(lazy_op, mk_left, right, expected):
+    import dask.array as da
+
+    right_scalar = da.ones((), dtype=np.bool_).map_blocks(right)
+    assert lazy_op(mk_left(da), right_scalar) == expected
 
 
 @pytest.mark.parametrize(

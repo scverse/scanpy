@@ -486,7 +486,24 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
+_BoolScalar = Union[bool, np.bool_, DaskArray]
 _SupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
+
+
+def lazy_and(left: _BoolScalar, right: Callable[[], _BoolScalar]) -> _BoolScalar:
+    if not isinstance(left, DaskArray):
+        return left and right()
+    from dask.delayed import delayed
+
+    return left & delayed(right)
+
+
+def lazy_or(left: _BoolScalar, right: Callable[[], _BoolScalar]) -> _BoolScalar:
+    if not isinstance(left, DaskArray):
+        return left or right()
+    from dask.delayed import delayed
+
+    return left | delayed(right)
 
 
 def get_ufuncs(data: np.ndarray | DaskArray):
@@ -509,16 +526,16 @@ def check_nonnegative_integers(X: _SupportedArray) -> np.bool_ | DaskArray:
     # get (possibly nonzero) values as (possibly flat) array
     data: np.ndarray | DaskArray = X.data if sparse.issparse(X) else X
     # return bool or lazy dask array resolving to one
-    return (
-        # Check no negatives
-        (~ufuncs.signbit(data).any())
-        & (
-            # Check all are integers
-            issubclass(data.dtype.type, Integral)
-            |
-            # Check all are whole numbers
-            (~((data % 1) != 0).any())
-        )
+    return lazy_and(
+        # none are negative
+        ~ufuncs.signbit(data).any(),
+        # and
+        lambda: lazy_or(
+            # either all are integers
+            issubclass(data.dtype.type, Integral),
+            # or all are whole numbers
+            lambda: ~((data % 1) != 0).any(),
+        ),
     )
 
 
