@@ -490,22 +490,16 @@ _BoolScalar = Union[bool, np.bool_, DaskArray]
 _SupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
 
 
-def _delayed_bool(fn: Callable[[], _BoolScalar]) -> DaskArray:
-    import dask.array as da
-
-    return da.array(True).map_blocks(lambda _: fn(), meta=np.bool_(True))
-
-
 def lazy_and(left: _BoolScalar, right: Callable[[], _BoolScalar]) -> _BoolScalar:
     if not isinstance(left, DaskArray):
         return left and right()
-    return left & _delayed_bool(right)
+    return left.map_blocks(lambda l: l and right())
 
 
 def lazy_or(left: _BoolScalar, right: Callable[[], _BoolScalar]) -> _BoolScalar:
     if not isinstance(left, DaskArray):
         return left or right()
-    return left | _delayed_bool(right)
+    return left.map_blocks(lambda l: l or right())
 
 
 def get_ufuncs(data: np.ndarray | DaskArray):
