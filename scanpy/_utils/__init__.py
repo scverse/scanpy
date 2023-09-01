@@ -486,20 +486,29 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-_BoolScalar = Union[bool, np.bool_, DaskArray]
+_EagerBool = Union[bool, np.bool_]
+_BoolScalar = Union[_EagerBool, DaskArray]
 _SupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
 
 
-def lazy_and(left: _BoolScalar, right: Callable[[], _BoolScalar]) -> _BoolScalar:
-    if not isinstance(left, DaskArray):
-        return left and right()
-    return left.map_blocks(lambda l: l and right())
+def _call_or_return(maybe_cb: Any):
+    return maybe_cb() if callable(maybe_cb) else maybe_cb
 
 
-def lazy_or(left: _BoolScalar, right: Callable[[], _BoolScalar]) -> _BoolScalar:
+def lazy_and(
+    left: _BoolScalar, right: Callable[[], _EagerBool] | DaskArray
+) -> _BoolScalar:
     if not isinstance(left, DaskArray):
-        return left or right()
-    return left.map_blocks(lambda l: l or right())
+        return left and _call_or_return(right)
+    return left.map_blocks(lambda l: l and _call_or_return(right), meta=np.bool_(True))
+
+
+def lazy_or(
+    left: _BoolScalar, right: Callable[[], _EagerBool] | DaskArray
+) -> _BoolScalar:
+    if not isinstance(left, DaskArray):
+        return left or _call_or_return(right)
+    return left.map_blocks(lambda l: l or _call_or_return(right), meta=np.bool_(True))
 
 
 def get_ufuncs(data: np.ndarray | DaskArray):
@@ -526,11 +535,11 @@ def check_nonnegative_integers(X: _SupportedArray) -> np.bool_ | DaskArray:
         # none are negative
         ~ufuncs.signbit(data).any(),
         # and
-        lambda: lazy_or(
+        lazy_or(
             # either all are integers
             issubclass(data.dtype.type, Integral),
             # or all are whole numbers
-            lambda: ~((data % 1) != 0).any(),
+            ~((data % 1) != 0).any(),
         ),
     )
 

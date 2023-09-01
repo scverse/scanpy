@@ -52,11 +52,10 @@ def test_lazy_bool(lazy_op, kind_left, left, kind_right, right, expected):
     if kind_left == 'dask':
         left = da.array(left)
     if kind_right == 'dask':
-        right = partial(
-            lambda cb: da.array(True).map_blocks(lambda _: cb(), meta=np.bool_(True)),
-            right,
+        unwrapped_right = right
+        right = da.array(True).map_blocks(
+            lambda _: unwrapped_right(), meta=np.bool_(True)
         )
-
     assert lazy_op(left, right) == expected
 
 
