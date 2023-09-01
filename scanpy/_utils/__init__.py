@@ -496,7 +496,7 @@ def _call_or_return(maybe_cb: Any):
 
 
 def lazy_and(
-    left: _BoolScalar | Callable[[], _EagerBool],
+    left: _BoolScalar | Callable[[], _BoolScalar],
     right: _BoolScalar | Callable[[], _EagerBool],
 ) -> _BoolScalar:
     left = _call_or_return(left)
@@ -506,7 +506,7 @@ def lazy_and(
 
 
 def lazy_or(
-    left: _BoolScalar | Callable[[], _EagerBool],
+    left: _BoolScalar | Callable[[], _BoolScalar],
     right: _BoolScalar | Callable[[], _EagerBool],
 ) -> _BoolScalar:
     left = _call_or_return(left)
