@@ -497,7 +497,7 @@ def _call_or_return(maybe_cb: Any):
 
 def lazy_and(
     left: _BoolScalar | Callable[[], _EagerBool],
-    right: Callable[[], _EagerBool] | DaskArray,
+    right: DaskArray | Callable[[], _EagerBool],
 ) -> _BoolScalar:
     left = _call_or_return(left)
     if not isinstance(left, DaskArray):
@@ -507,7 +507,7 @@ def lazy_and(
 
 def lazy_or(
     left: _BoolScalar | Callable[[], _EagerBool],
-    right: Callable[[], _EagerBool] | DaskArray,
+    right: DaskArray | Callable[[], _EagerBool],
 ) -> _BoolScalar:
     left = _call_or_return(left)
     if not isinstance(left, DaskArray):
