@@ -87,6 +87,7 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
         assert isinstance(received, DaskArray)
         # compute
         received = received.compute()
+        assert not isinstance(received, DaskArray)
     if isinstance(received, np.bool_):
         # convert to python bool
         received = received.item()
