@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeAlias, Union, Callable, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from .._compat import DaskArray
 
 if TYPE_CHECKING:
+    from typing import TypeAlias, Union, Callable, Any
+
     _EagerBool: TypeAlias = Union[bool, np.bool_]
     _BoolScalar: TypeAlias = Union[_EagerBool, DaskArray]
     _Left: TypeAlias = Union[_BoolScalar, Callable[[], _BoolScalar]]
