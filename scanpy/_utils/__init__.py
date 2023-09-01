@@ -496,16 +496,20 @@ def _call_or_return(maybe_cb: Any):
 
 
 def lazy_and(
-    left: _BoolScalar, right: Callable[[], _EagerBool] | DaskArray
+    left: _BoolScalar | Callable[[], _EagerBool],
+    right: Callable[[], _EagerBool] | DaskArray,
 ) -> _BoolScalar:
+    left = _call_or_return(left)
     if not isinstance(left, DaskArray):
         return left and _call_or_return(right)
     return left.map_blocks(lambda l: l and _call_or_return(right), meta=np.bool_(True))
 
 
 def lazy_or(
-    left: _BoolScalar, right: Callable[[], _EagerBool] | DaskArray
+    left: _BoolScalar | Callable[[], _EagerBool],
+    right: Callable[[], _EagerBool] | DaskArray,
 ) -> _BoolScalar:
+    left = _call_or_return(left)
     if not isinstance(left, DaskArray):
         return left or _call_or_return(right)
     return left.map_blocks(lambda l: l or _call_or_return(right), meta=np.bool_(True))

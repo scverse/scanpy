@@ -46,11 +46,14 @@ array_kinds = [pytest.param('dask', marks=[needs('dask')]), 'bool']
 )
 @pytest.mark.parametrize('kind_left', array_kinds)
 @pytest.mark.parametrize('kind_right', array_kinds)
-def test_lazy_bool(lazy_op, kind_left, left, kind_right, right, expected):
+@pytest.mark.parametrize('lazy_left', [True, False], ids=['lazy_left', 'nonlazy_left'])
+def test_lazy_bool(lazy_op, kind_left, lazy_left, left, kind_right, right, expected):
     if 'dask' in {kind_left, kind_right}:
         import dask.array as da
     if kind_left == 'dask':
         left = da.array(left)
+    if lazy_left:
+        left = partial(lambda x: x, left)
     if kind_right == 'dask':
         unwrapped_right = right
         right = da.array(True).map_blocks(
