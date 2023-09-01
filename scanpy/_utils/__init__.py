@@ -29,6 +29,7 @@ from .._settings import settings
 from .. import logging as logg
 from .._compat import DaskArray
 from .compute.is_constant import is_constant  # noqa: F401
+from ._dask import lazy_and, lazy_or, get_ufuncs  # noqa: F401
 
 
 class Empty(Enum):
@@ -486,41 +487,7 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-_EagerBool = Union[bool, np.bool_]
-_BoolScalar = Union[_EagerBool, DaskArray]
 _SupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
-
-
-def _call_or_return(maybe_cb: Any):
-    return maybe_cb() if callable(maybe_cb) else maybe_cb
-
-
-def lazy_and(
-    left: _BoolScalar | Callable[[], _BoolScalar],
-    right: _BoolScalar | Callable[[], _EagerBool],
-) -> _BoolScalar:
-    left = _call_or_return(left)
-    if not isinstance(left, DaskArray):
-        return left and _call_or_return(right)
-    return left.map_blocks(lambda l: l and _call_or_return(right), meta=np.bool_(True))
-
-
-def lazy_or(
-    left: _BoolScalar | Callable[[], _BoolScalar],
-    right: _BoolScalar | Callable[[], _EagerBool],
-) -> _BoolScalar:
-    left = _call_or_return(left)
-    if not isinstance(left, DaskArray):
-        return left or _call_or_return(right)
-    return left.map_blocks(lambda l: l or _call_or_return(right), meta=np.bool_(True))
-
-
-def get_ufuncs(data: np.ndarray | DaskArray):
-    if isinstance(data, DaskArray):
-        import dask.array as da
-
-        return da
-    return np
 
 
 def check_nonnegative_integers(X: _SupportedArray) -> np.bool_ | DaskArray:
