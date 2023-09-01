@@ -29,7 +29,12 @@ def _lazy_bool_op(left: _Left, right: _Right, /, *, cmp) -> _BoolScalar:
     left = _call_or_return(left)
     if not isinstance(left, DaskArray):
         return cmp(left, right)
-    return left.map_blocks(lambda l: cmp(l, right), meta=np.bool_(True))
+
+    def chain(l: _EagerBool) -> _EagerBool:
+        rv = cmp(l, right)
+        return rv.compute() if isinstance(rv, DaskArray) else rv
+
+    return left.map_blocks(chain, meta=np.bool_(True))
 
 
 def lazy_and(left: _Left, right: _Right, /) -> _BoolScalar:

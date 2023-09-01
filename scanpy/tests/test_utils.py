@@ -59,7 +59,11 @@ def test_lazy_bool(lazy_op, kind_left, lazy_left, left, kind_right, right, expec
         right = da.array(True).map_blocks(
             lambda _: unwrapped_right(), meta=np.bool_(True)
         )
-    assert lazy_op(left, right) == expected
+    rv = lazy_op(left, right)
+    if isinstance(rv, DaskArray):
+        rv = rv.compute()
+    assert not isinstance(rv, DaskArray), 'graph should be flattened'
+    assert rv == expected
 
 
 @pytest.mark.parametrize(
