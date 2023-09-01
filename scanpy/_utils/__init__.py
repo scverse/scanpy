@@ -490,7 +490,7 @@ def update_params(
 _SupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
 
 
-def check_nonnegative_integers(X: _SupportedArray) -> np.bool_ | DaskArray:
+def check_nonnegative_integers(X: _SupportedArray) -> np.bool_ | bool | DaskArray:
     """\
     Checks values of X to ensure it is count data.
 

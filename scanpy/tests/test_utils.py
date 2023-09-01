@@ -87,8 +87,10 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
         assert isinstance(received, DaskArray)
         # compute
         received = received.compute()
-    # convert to python bool
-    assert received.item() is expected
+    if isinstance(received, np.bool_):
+        # convert to python bool
+        received = received.item()
+    assert received is expected
 
 
 def test_is_constant(array_type):
