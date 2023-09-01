@@ -181,8 +181,8 @@ def umap(
     neigh_params = neighbors['params']
     X = _choose_representation(
         adata,
-        neigh_params.get('use_rep', None),
-        neigh_params.get('n_pcs', None),
+        use_rep=neigh_params.get('use_rep', None),
+        n_pcs=neigh_params.get('n_pcs', None),
         silent=True,
     )
     if method == 'umap':

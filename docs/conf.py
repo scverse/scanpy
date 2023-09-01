@@ -104,15 +104,18 @@ pygments_dark_style = "native"
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
+    cuml=('https://docs.rapids.ai/api/cuml/stable/', None),
     cycler=('https://matplotlib.org/cycler/', None),
     h5py=('https://docs.h5py.org/en/stable/', None),
     ipython=('https://ipython.readthedocs.io/en/stable/', None),
+    igraph=('https://python.igraph.org/en/stable/api/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
     louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
     matplotlib=('https://matplotlib.org/stable/', None),
     networkx=('https://networkx.org/documentation/stable/', None),
     numpy=('https://numpy.org/doc/stable/', None),
     pandas=('https://pandas.pydata.org/pandas-docs/stable/', None),
+    pynndescent=('https://pynndescent.readthedocs.io/en/latest/', None),
     pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
     scipy=('https://docs.scipy.org/doc/scipy/', None),
@@ -187,12 +190,14 @@ qualname_overrides = {
 nitpick_ignore = [
     # Will probably be documented
     ('py:class', 'scanpy._settings.Verbosity'),
+    ('py:class', 'scanpy.neighbors.OnFlySymMatrix'),
     # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
     ('py:class', 'seaborn.ClusterGrid'),
     # Won’t be documented
     ('py:class', 'scanpy.plotting._utils._AxesSubplot'),
     ('py:class', 'scanpy._utils.Empty'),
     ('py:class', 'numpy.random.mtrand.RandomState'),
+    ('py:class', 'scanpy.neighbors._types.KnnTransformerLike'),
     # Will work once scipy 1.8 is released
     ('py:class', 'scipy.sparse.base.spmatrix'),
     ('py:class', 'scipy.sparse.csr.csr_matrix'),

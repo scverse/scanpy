@@ -1,5 +1,4 @@
-from collections.abc import MutableMapping
-from typing import Iterable, Union, Optional
+from typing import Union, Iterable, Optional, MutableMapping, Generator
 
 import pandas as pd
 import numpy as np
@@ -10,9 +9,10 @@ from anndata import AnnData
 
 from .. import settings
 from .. import logging as logg
-from ..neighbors import _rp_forest_generate
+from ..neighbors import FlatTree, RPForestDict
 from .._utils import NeighborsView
 from .._compat import pkg_version
+
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
@@ -133,6 +133,27 @@ def ingest(
 
     logg.info('    finished', time=start)
     return ing.to_adata(inplace)
+
+
+def _rp_forest_generate(
+    rp_forest_dict: RPForestDict,
+) -> Generator[FlatTree, None, None]:
+    props = FlatTree._fields
+    num_trees = len(rp_forest_dict[props[0]]['start']) - 1
+
+    for i in range(num_trees):
+        tree = []
+        for prop in props:
+            start = rp_forest_dict[prop]['start'][i]
+            end = rp_forest_dict[prop]['start'][i + 1]
+            tree.append(rp_forest_dict[prop]['data'][start:end])
+        yield FlatTree(*tree)
+
+    tree = []
+    for prop in props:
+        start = rp_forest_dict[prop]['start'][num_trees]
+        tree.append(rp_forest_dict[prop]['data'][start:])
+    yield FlatTree(*tree)
 
 
 class _DimDict(MutableMapping):

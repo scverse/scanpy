@@ -89,6 +89,7 @@ scanpy = "scanpy.cli:console_main"
 test-min = [
     "pytest>=4.4",
     "pytest-nunit",
+    "pytest-mock",
     "profimp",
 ]
 test = [
