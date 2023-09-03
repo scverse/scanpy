@@ -46,7 +46,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         p: int = 2,
         algo_params: Mapping[str, Any] | None = None,
         metric_params: Mapping[str, Any] | None = None,
-        random_state = None,
+        random_state=None,
     ) -> None:
         from cuml.neighbors import NearestNeighbors
 
