@@ -129,6 +129,11 @@ def test_pbmc3k(image_comparer):
     # sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=8)
     # save_and_compare_images('rank_genes_groups_4')
 
+    if adata[adata.obs['leiden'] == '4', 'CST3'].X.mean() < 1:
+        (  # switch clusters
+            adata.obs['leiden'][adata.obs['leiden'] == '4'],
+            adata.obs['leiden'][adata.obs['leiden'] == '5'],
+        ) = ('5', '4')
     new_cluster_names = [
         'CD4 T cells',
         'CD14+ Monocytes',
