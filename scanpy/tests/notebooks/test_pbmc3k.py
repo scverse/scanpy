@@ -9,6 +9,7 @@
 # The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics
 # ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -27,8 +28,7 @@ ROOT = HERE / '_images_pbmc3k'
 
 @needs('leidenalg')
 def test_pbmc3k(image_comparer):
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=20)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=20)
 
     adata = sc.read(
         './data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad'

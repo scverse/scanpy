@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -79,8 +80,8 @@ def check_same_image(add_nunit_attachment):
 
 @pytest.fixture
 def image_comparer(check_same_image):
-    def save_and_compare(base_pth: Path, *, tol: int):
-        base_pth = Path(base_pth)
+    def save_and_compare(*path_parts: Path | os.PathLike, tol: int):
+        base_pth = Path(*path_parts)
 
         if not base_pth.is_dir():
             base_pth.mkdir()

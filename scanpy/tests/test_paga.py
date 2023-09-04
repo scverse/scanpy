@@ -51,8 +51,7 @@ def pbmc(_pbmc_session):
     ],
 )
 def test_paga_plots(image_comparer, pbmc, test_id, func):
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=30)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
     common = dict(threshold=0.5, max_edge_width=1.0, random_state=0, show=False)
 
@@ -61,8 +60,7 @@ def test_paga_plots(image_comparer, pbmc, test_id, func):
 
 
 def test_paga_pie(image_comparer, pbmc):
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=30)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
     colors = {
         c: {cm.Set1(_): 0.33 for _ in range(3)}
@@ -75,8 +73,7 @@ def test_paga_pie(image_comparer, pbmc):
 
 
 def test_paga_path(image_comparer, pbmc):
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc.uns['iroot'] = 0
     sc.tl.dpt(pbmc)
@@ -91,8 +88,7 @@ def test_paga_path(image_comparer, pbmc):
 
 def test_paga_compare(image_comparer):
     # Tests that https://github.com/scverse/scanpy/issues/1887 is fixed
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc3k_processed()
     sc.tl.paga(pbmc, groups="louvain")

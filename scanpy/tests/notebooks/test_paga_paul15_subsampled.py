@@ -2,6 +2,7 @@
 # Hematopoiesis: trace myeloid and erythroid differentiation for data of [Paul *et al.* (2015)](http://doi.org/10.1016/j.cell.2015.11.013).
 #
 # This is the subsampled notebook for testing.
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -22,8 +23,7 @@ ROOT = HERE / '_images_paga_paul15_subsampled'
 @needs('igraph')
 @needs('louvain')
 def test_paga_paul15_subsampled(image_comparer, plt):
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=25)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=25)
 
     adata = paul15()
     sc.pp.subsample(adata, n_obs=200)

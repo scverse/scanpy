@@ -162,8 +162,7 @@ def test_missing_values_categorical(
     legend_loc,
     groupsfunc,
 ):
-    def save_and_compare_images(x):
-        return image_comparer(MISSING_VALUES_ROOT / x, tol=15)
+    save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
 
     base_name = fixture_request.node.name
 
@@ -183,8 +182,7 @@ def test_missing_values_categorical(
 def test_missing_values_continuous(
     fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds
 ):
-    def save_and_compare_images(x):
-        return image_comparer(MISSING_VALUES_ROOT / x, tol=15)
+    save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
 
     base_name = fixture_request.node.name
 
@@ -293,8 +291,7 @@ def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
 
 
 def test_embedding_colorbar_location(image_comparer):
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     adata = pbmc3k_processed().raw.to_adata()
 
@@ -307,8 +304,7 @@ def test_embedding_colorbar_location(image_comparer):
 
 
 def test_visium_circles(image_comparer):  # standard visium data
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
@@ -332,8 +328,7 @@ def test_visium_default(image_comparer):  # default values
     if parse_version(mpl.__version__) < parse_version("3.7.0"):
         pytest.xfail("Matplotlib 3.7.0+ required for this test")
 
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=5)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
@@ -345,8 +340,7 @@ def test_visium_default(image_comparer):  # default values
 
 
 def test_visium_empty_img_key(image_comparer):  # visium coordinates but image empty
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
@@ -360,8 +354,7 @@ def test_visium_empty_img_key(image_comparer):  # visium coordinates but image e
 
 
 def test_spatial_general(image_comparer):  # general coordinates
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
@@ -386,8 +379,7 @@ def test_spatial_general(image_comparer):  # general coordinates
 
 
 def test_spatial_external_img(image_comparer):  # external image
-    def save_and_compare_images(x):
-        return image_comparer(ROOT / x, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
     adata.obs = adata.obs.astype({'array_row': 'str'})
