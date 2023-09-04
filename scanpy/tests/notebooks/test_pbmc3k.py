@@ -9,25 +9,26 @@
 # The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics
 # ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
-
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from matplotlib.testing import setup
 
 setup()
 
 import scanpy as sc
+from scanpy.testing._pytest.marks import needs
 
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / '_images_pbmc3k'
 
 
+@needs('leidenalg')
 def test_pbmc3k(image_comparer):
-    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=20)
+    def save_and_compare_images(x):
+        return image_comparer(ROOT / x, tol=20)
 
     adata = sc.read(
         './data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad'
@@ -104,23 +105,23 @@ def test_pbmc3k(image_comparer):
 
     # Clustering the graph
 
-    sc.tl.louvain(adata)
-    # sc.pl.umap(adata, color=['louvain', 'CST3', 'NKG7'], show=False)
+    sc.tl.leiden(adata, resolution=0.9)
+    # sc.pl.umap(adata, color=['leiden', 'CST3', 'NKG7'], show=False)
     # save_and_compare_images('umap_2')
-    sc.pl.scatter(adata, 'CST3', 'NKG7', color='louvain', show=False)
+    sc.pl.scatter(adata, 'CST3', 'NKG7', color='leiden', show=False)
     save_and_compare_images('scatter_3')
 
     # Finding marker genes
 
-    sc.tl.rank_genes_groups(adata, 'louvain')
+    sc.tl.rank_genes_groups(adata, 'leiden')
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images('rank_genes_groups_1')
 
-    sc.tl.rank_genes_groups(adata, 'louvain', method='logreg')
+    sc.tl.rank_genes_groups(adata, 'leiden', method='logreg')
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images('rank_genes_groups_2')
 
-    sc.tl.rank_genes_groups(adata, 'louvain', groups=['0'], reference='1')
+    sc.tl.rank_genes_groups(adata, 'leiden', groups=['0'], reference='1')
     sc.pl.rank_genes_groups(adata, groups='0', n_genes=20, show=False)
     save_and_compare_images('rank_genes_groups_3')
 
@@ -138,12 +139,12 @@ def test_pbmc3k(image_comparer):
         'Dendritic cells',
         'Megakaryocytes',
     ]
-    adata.rename_categories('louvain', new_cluster_names)
+    adata.rename_categories('leiden', new_cluster_names)
 
-    # sc.pl.umap(adata, color='louvain', legend_loc='on data', title='', frameon=False, show=False)
+    # sc.pl.umap(adata, color='leiden', legend_loc='on data', title='', frameon=False, show=False)
     # save_and_compare_images('umap_3')
 
     sc.pl.violin(
-        adata, ['CST3', 'NKG7', 'PPBP'], groupby='louvain', rotation=90, show=False
+        adata, ['CST3', 'NKG7', 'PPBP'], groupby='leiden', rotation=90, show=False
     )
     save_and_compare_images('violin_2')

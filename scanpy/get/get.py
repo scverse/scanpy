@@ -1,12 +1,11 @@
 """This module contains helper functions for accessing data."""
-from typing import Optional, Iterable, Tuple, Union, List
+from typing import Optional, Iterable, Tuple, Union, List, Literal
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import spmatrix
 
 from anndata import AnnData
-from .._compat import Literal
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -39,9 +38,9 @@ def rank_genes_groups_df(
     key
         Key differential expression groups were stored under.
     pval_cutoff
-        Minimum adjusted pval to return.
+        Return only adjusted p-values below the  cutoff.
     log2fc_min
-        Minumum logfc to return.
+        Minimum logfc to return.
     log2fc_max
         Maximum logfc to return.
     gene_symbols
@@ -59,7 +58,11 @@ def rank_genes_groups_df(
         group = [group]
     if group is None:
         group = list(adata.uns[key]['names'].dtype.names)
-    colnames = ['names', 'scores', 'logfoldchanges', 'pvals', 'pvals_adj']
+    method = adata.uns[key]["params"]["method"]
+    if method == "logreg":
+        colnames = ['names', 'scores']
+    else:
+        colnames = ['names', 'scores', 'logfoldchanges', 'pvals', 'pvals_adj']
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, 'group'], keys=colnames)
@@ -67,12 +70,13 @@ def rank_genes_groups_df(
     d['group'] = pd.Categorical(d['group'], categories=group)
     d = d.sort_values(['group', 'level_0']).drop(columns='level_0')
 
-    if pval_cutoff is not None:
-        d = d[d["pvals_adj"] < pval_cutoff]
-    if log2fc_min is not None:
-        d = d[d["logfoldchanges"] > log2fc_min]
-    if log2fc_max is not None:
-        d = d[d["logfoldchanges"] < log2fc_max]
+    if method != "logreg":
+        if pval_cutoff is not None:
+            d = d[d["pvals_adj"] < pval_cutoff]
+        if log2fc_min is not None:
+            d = d[d["logfoldchanges"] > log2fc_min]
+        if log2fc_max is not None:
+            d = d[d["logfoldchanges"] < log2fc_max]
     if gene_symbols is not None:
         d = d.join(adata.var[gene_symbols], on="names")
 
@@ -385,7 +389,7 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     """
     Choose array aligned with obs annotation.
     """
-    # https://github.com/theislab/scanpy/issues/1546
+    # https://github.com/scverse/scanpy/issues/1546
     if not isinstance(use_raw, bool):
         raise TypeError(f"use_raw expected to be bool, was {type(use_raw)}.")
 
@@ -408,7 +412,7 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     else:
         assert False, (
             "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/theislab/scanpy/issues"
+            " https://github.com/scverse/scanpy/issues"
         )
 
 
@@ -435,5 +439,5 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
     else:
         assert False, (
             "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/theislab/scanpy/issues"
+            " https://github.com/scverse/scanpy/issues"
         )

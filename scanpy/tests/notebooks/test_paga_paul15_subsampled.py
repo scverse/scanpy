@@ -2,25 +2,30 @@
 # Hematopoiesis: trace myeloid and erythroid differentiation for data of [Paul *et al.* (2015)](http://doi.org/10.1016/j.cell.2015.11.013).
 #
 # This is the subsampled notebook for testing.
-
 from pathlib import Path
 
 import numpy as np
 from matplotlib.testing import setup
+import pytest
 
 setup()
 
 import scanpy as sc
+from scanpy.testing._pytest.marks import needs
+from scanpy.testing._helpers.data import paul15
 
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / '_images_paga_paul15_subsampled'
 
 
+@needs('igraph')
+@needs('louvain')
 def test_paga_paul15_subsampled(image_comparer, plt):
-    save_and_compare_images = lambda x: image_comparer(ROOT / x, tol=25)
+    def save_and_compare_images(x):
+        return image_comparer(ROOT / x, tol=25)
 
-    adata = sc.datasets.paul15()
+    adata = paul15()
     sc.pp.subsample(adata, n_obs=200)
     del adata.uns['iroot']
     adata.X = adata.X.astype('float64')
@@ -38,6 +43,8 @@ def test_paga_paul15_subsampled(image_comparer, plt):
     sc.tl.draw_graph(adata)
 
     sc.pl.draw_graph(adata, color='paul15_clusters', legend_loc='on data')
+
+    # TODO: currently needs skip if louvain isn't installed, do major rework
 
     # Clustering and PAGA
     sc.tl.louvain(adata, resolution=1.0)

@@ -1,6 +1,19 @@
 import collections.abc as cabc
 from copy import copy
-from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple
+from numbers import Integral
+from itertools import combinations, product
+from typing import (
+    Collection,
+    Union,
+    Optional,
+    Sequence,
+    Any,
+    Mapping,
+    List,
+    Tuple,
+    Literal,
+)
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -9,8 +22,7 @@ from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from pandas.api.types import is_categorical_dtype
-from matplotlib import pyplot as pl, colors
-from matplotlib.cm import get_cmap
+from matplotlib import pyplot as pl, colors, colormaps
 from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import Colormap, Normalize
@@ -37,7 +49,6 @@ from .._docs import (
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
-from ..._compat import Literal
 
 
 @_doc_params(
@@ -62,6 +73,7 @@ def embedding(
     arrows_kwds: Optional[Mapping[str, Any]] = None,
     groups: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
+    dimensions: Optional[Union[Tuple[int, int], Sequence[Tuple[int, int]]]] = None,
     layer: Optional[str] = None,
     projection: Literal['2d', '3d'] = '2d',
     scale_factor: Optional[float] = None,
@@ -76,6 +88,7 @@ def embedding(
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
+    colorbar_loc: Optional[str] = "right",
     vmax: Union[VBound, Sequence[VBound], None] = None,
     vmin: Union[VBound, Sequence[VBound], None] = None,
     vcenter: Union[VBound, Sequence[VBound], None] = None,
@@ -91,6 +104,7 @@ def embedding(
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
     return_fig: Optional[bool] = None,
+    marker: Union[str, Sequence[str]] = '.',
     **kwargs,
 ) -> Union[Figure, Axes, None]:
     """\
@@ -109,37 +123,20 @@ def embedding(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
+    #####################
+    # Argument handling #
+    #####################
+
     check_projection(projection)
     sanitize_anndata(adata)
 
-    # Setting up color map for continuous values
-    if color_map is not None:
-        if cmap is not None:
-            raise ValueError("Cannot specify both `color_map` and `cmap`.")
-        else:
-            cmap = color_map
-    cmap = copy(get_cmap(cmap))
-    cmap.set_bad(na_color)
-    kwargs["cmap"] = cmap
-
-    # Prevents warnings during legend creation
-    na_color = colors.to_hex(na_color, keep_alpha=True)
-
-    if size is not None:
-        kwargs['s'] = size
-    if 'edgecolor' not in kwargs:
-        # by default turn off edge color. Otherwise, for
-        # very small sizes the edge will not reduce its size
-        # (https://github.com/theislab/scanpy/issues/293)
-        kwargs['edgecolor'] = 'none'
-
-    if groups:
-        if isinstance(groups, str):
-            groups = [groups]
-
+    basis_values = _get_basis(adata, basis)
+    dimensions = _components_to_dimensions(
+        components, dimensions, projection=projection, total_dims=basis_values.shape[1]
+    )
     args_3d = dict(projection='3d') if projection == '3d' else {}
 
-    # Deal with Raw
+    # Figure out if we're using raw
     if use_raw is None:
         # check if adata.raw is set
         use_raw = layer is None and adata.raw is not None
@@ -148,56 +145,44 @@ def embedding(
             "Cannot use both a layer and the raw representation. Was passed:"
             f"use_raw={use_raw}, layer={layer}."
         )
-
-    if wspace is None:
-        #  try to set a wspace that is not too large or too small given the
-        #  current figure size
-        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
-    if adata.raw is None and use_raw:
+    if use_raw and adata.raw is None:
         raise ValueError(
             "`use_raw` is set to True but AnnData object does not have raw. "
             "Please check."
         )
+
+    if isinstance(groups, str):
+        groups = [groups]
+
+    # Color map
+    if color_map is not None:
+        if cmap is not None:
+            raise ValueError("Cannot specify both `color_map` and `cmap`.")
+        else:
+            cmap = color_map
+    cmap = copy(colormaps.get_cmap(cmap))
+    cmap.set_bad(na_color)
+    kwargs["cmap"] = cmap
+    # Prevents warnings during legend creation
+    na_color = colors.to_hex(na_color, keep_alpha=True)
+
+    if 'edgecolor' not in kwargs:
+        # by default turn off edge color. Otherwise, for
+        # very small sizes the edge will not reduce its size
+        # (https://github.com/scverse/scanpy/issues/293)
+        kwargs['edgecolor'] = 'none'
+
+    # Vectorized arguments
+
     # turn color into a python list
     color = [color] if isinstance(color, str) or color is None else list(color)
+
+    # turn marker into a python list
+    marker = [marker] if isinstance(marker, str) else list(marker)
+
     if title is not None:
         # turn title into a python list if not None
         title = [title] if isinstance(title, str) else list(title)
-
-    # get the points position and the components list
-    # (only if components is not None)
-    data_points, components_list = _get_data_points(
-        adata, basis, projection, components, scale_factor
-    )
-
-    # Setup layout.
-    # Most of the code is for the case when multiple plots are required
-    # 'color' is a list of names that want to be plotted.
-    # Eg. ['Gene1', 'louvain', 'Gene2'].
-    # component_list is a list of components [[0,1], [1,2]]
-    if (
-        not isinstance(color, str)
-        and isinstance(color, cabc.Sequence)
-        and len(color) > 1
-    ) or len(components_list) > 1:
-        if ax is not None:
-            raise ValueError(
-                "Cannot specify `ax` when plotting multiple panels "
-                "(each for a given value of 'color')."
-            )
-        if len(components_list) == 0:
-            components_list = [None]
-
-        # each plot needs to be its own panel
-        num_panels = len(color) * len(components_list)
-        fig, grid = _panel_grid(hspace, wspace, ncols, num_panels)
-    else:
-        if len(components_list) == 0:
-            components_list = [None]
-        grid = None
-        if ax is None:
-            fig = pl.figure()
-            ax = fig.add_subplot(111, **args_3d)
 
     # turn vmax and vmin into a sequence
     if isinstance(vmax, str) or not isinstance(vmax, cabc.Sequence):
@@ -209,28 +194,62 @@ def embedding(
     if isinstance(norm, Normalize) or not isinstance(norm, cabc.Sequence):
         norm = [norm]
 
-    if 's' in kwargs:
+    # Size
+    if 's' in kwargs and size is None:
         size = kwargs.pop('s')
-
     if size is not None:
         # check if size is any type of sequence, and if so
         # set as ndarray
-        import pandas.core.series
-
         if (
             size is not None
-            and isinstance(size, (cabc.Sequence, pandas.core.series.Series, np.ndarray))
+            and isinstance(size, (cabc.Sequence, pd.Series, np.ndarray))
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
     else:
         size = 120000 / adata.shape[0]
 
-    # make the plots
-    axs = []
-    import itertools
+    ##########
+    # Layout #
+    ##########
+    # Most of the code is for the case when multiple plots are required
 
-    idx_components = range(len(components_list))
+    if wspace is None:
+        #  try to set a wspace that is not too large or too small given the
+        #  current figure size
+        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
+
+    if components is not None:
+        color, dimensions = list(zip(*product(color, dimensions)))
+
+    color, dimensions, marker = _broadcast_args(color, dimensions, marker)
+
+    # 'color' is a list of names that want to be plotted.
+    # Eg. ['Gene1', 'louvain', 'Gene2'].
+    # component_list is a list of components [[0,1], [1,2]]
+    if (
+        not isinstance(color, str)
+        and isinstance(color, cabc.Sequence)
+        and len(color) > 1
+    ) or len(dimensions) > 1:
+        if ax is not None:
+            raise ValueError(
+                "Cannot specify `ax` when plotting multiple panels "
+                "(each for a given value of 'color')."
+            )
+
+        # each plot needs to be its own panel
+        fig, grid = _panel_grid(hspace, wspace, ncols, len(color))
+    else:
+        grid = None
+        if ax is None:
+            fig = pl.figure()
+            ax = fig.add_subplot(111, **args_3d)
+
+    ############
+    # Plotting #
+    ############
+    axs = []
 
     # use itertools.product to make a plot for each color and for each component
     # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
@@ -238,9 +257,7 @@ def embedding(
     #     color=gene1, components=[1,2], color=gene1, components=[2,3],
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
-    for count, (value_to_plot, component_idx) in enumerate(
-        itertools.product(color, idx_components)
-    ):
+    for count, (value_to_plot, dims) in enumerate(zip(color, dimensions)):
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
@@ -270,7 +287,7 @@ def embedding(
             size = np.array(size)[order]
         color_source_vector = color_source_vector[order]
         color_vector = color_vector[order]
-        _data_points = data_points[component_idx][order, :]
+        coords = basis_values[:, dims][order, :]
 
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
@@ -310,21 +327,22 @@ def embedding(
         # make the scatter plot
         if projection == '3d':
             cax = ax.scatter(
-                _data_points[:, 0],
-                _data_points[:, 1],
-                _data_points[:, 2],
-                marker=".",
+                coords[:, 0],
+                coords[:, 1],
+                coords[:, 2],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 norm=normalize,
+                marker=marker[count],
                 **kwargs,
             )
         else:
-
             scatter = (
                 partial(ax.scatter, s=size, plotnonfinite=True)
                 if scale_factor is None
-                else partial(circles, s=size, ax=ax)  # size in circles is radius
+                else partial(
+                    circles, s=size, ax=ax, scale_factor=scale_factor
+                )  # size in circles is radius
             )
 
             if add_outline:
@@ -353,35 +371,35 @@ def embedding(
                 alpha = kwargs.pop('alpha') if 'alpha' in kwargs else None
 
                 ax.scatter(
-                    _data_points[:, 0],
-                    _data_points[:, 1],
+                    coords[:, 0],
+                    coords[:, 1],
                     s=bg_size,
-                    marker=".",
                     c=bg_color,
                     rasterized=settings._vector_friendly,
                     norm=normalize,
+                    marker=marker[count],
                     **kwargs,
                 )
                 ax.scatter(
-                    _data_points[:, 0],
-                    _data_points[:, 1],
+                    coords[:, 0],
+                    coords[:, 1],
                     s=gap_size,
-                    marker=".",
                     c=gap_color,
                     rasterized=settings._vector_friendly,
                     norm=normalize,
+                    marker=marker[count],
                     **kwargs,
                 )
                 # if user did not set alpha, set alpha to 0.7
                 kwargs['alpha'] = 0.7 if alpha is None else alpha
 
             cax = scatter(
-                _data_points[:, 0],
-                _data_points[:, 1],
-                marker=".",
+                coords[:, 0],
+                coords[:, 1],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 norm=normalize,
+                marker=marker[count],
                 **kwargs,
             )
 
@@ -393,12 +411,7 @@ def embedding(
 
         # set default axis_labels
         name = _basis2name(basis)
-        if components is not None:
-            axis_labels = [name + str(x + 1) for x in components_list[component_idx]]
-        elif projection == '3d':
-            axis_labels = [name + str(x + 1) for x in range(3)]
-        else:
-            axis_labels = [name + str(x + 1) for x in range(2)]
+        axis_labels = [name + str(d + 1) for d in dims]
 
         ax.set_xlabel(axis_labels[0])
         ax.set_ylabel(axis_labels[1])
@@ -425,12 +438,12 @@ def embedding(
             path_effect = None
 
         # Adding legends
-        if categorical:
+        if categorical or color_vector.dtype == bool:
             _add_categorical_legend(
                 ax,
                 color_source_vector,
                 palette=_get_palette(adata, value_to_plot),
-                scatter_array=_data_points,
+                scatter_array=coords,
                 legend_loc=legend_loc,
                 legend_fontweight=legend_fontweight,
                 legend_fontsize=legend_fontsize,
@@ -439,9 +452,10 @@ def embedding(
                 na_in_legend=na_in_legend,
                 multi_panel=bool(grid),
             )
-        else:
-            # TODO: na_in_legend should have some effect here
-            pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
+        elif colorbar_loc is not None:
+            pl.colorbar(
+                cax, ax=ax, pad=0.01, fraction=0.08, aspect=30, location=colorbar_loc
+            )
 
     if return_fig is True:
         return fig
@@ -618,6 +632,43 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.umap(adata)
+
+    Colour points by discrete variable (Louvain clusters).
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color="louvain")
+
+    Colour points by gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color="HES4")
+
+    Plot muliple umaps for different gene expressions.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.umap(adata, color=["HES4", "TNFRSF4"])
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.umap
     """
     return embedding(adata, 'umap', **kwargs)
 
@@ -643,6 +694,22 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.tsne(adata)
+        sc.pl.tsne(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.tsne
     """
     return embedding(adata, 'tsne', **kwargs)
 
@@ -666,6 +733,22 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.diffmap(adata)
+        sc.pl.diffmap(adata, color='bulk_labels')
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.diffmap
     """
     return embedding(adata, 'diffmap', **kwargs)
 
@@ -696,6 +779,22 @@ def draw_graph(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.draw_graph(adata)
+        sc.pl.draw_graph(adata, color=['phase', 'bulk_labels'])
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.draw_graph
     """
     if layout is None:
         layout = str(adata.uns['draw_graph']['params']['layout'])
@@ -740,13 +839,43 @@ def pca(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca(adata)
+
+    Colour points by discrete variable (Louvain clusters).
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="louvain")
+
+    Colour points by gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca(adata, color="CST3")
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    tl.pca
+    pp.pca
     """
     if not annotate_var_explained:
         return embedding(
             adata, 'pca', show=show, return_fig=return_fig, save=save, **kwargs
         )
     else:
-
         if 'pca' not in adata.obsm.keys() and 'X_pca' not in adata.obsm.keys():
             raise KeyError(
                 f"Could not find entry in `obsm` for 'pca'.\n"
@@ -794,7 +923,7 @@ def spatial(
     basis: str = "spatial",
     img: Union[np.ndarray, None] = None,
     img_key: Union[str, None, Empty] = _empty,
-    library_id: Union[str, Empty] = _empty,
+    library_id: Union[str, None, Empty] = _empty,
     crop_coord: Tuple[int, int, int, int] = None,
     alpha_img: float = 1.0,
     bw: Optional[bool] = False,
@@ -855,7 +984,7 @@ def spatial(
     --------
     :func:`scanpy.datasets.visium_sge`
         Example visium data.
-    :tutorial:`spatial/basic-analysis`
+    :doc:`tutorials:spatial/basic-analysis`
         Tutorial on spatial analysis.
     """
     # get default image params if available
@@ -905,115 +1034,39 @@ def spatial(
 
 
 # Helpers
-def _get_data_points(
-    adata, basis, projection, components, scale_factor
-) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
-    """
-    Returns the data points corresponding to the selected basis, projection and/or components.
+def _components_to_dimensions(
+    components: Optional[Union[str, Collection[str]]],
+    dimensions: Optional[Union[Collection[int], Collection[Collection[int]]]],
+    *,
+    projection: Literal["2d", "3d"] = "2d",
+    total_dims: int,
+) -> List[Collection[int]]:
+    """Normalize components/ dimensions args for embedding plots."""
+    # TODO: Deprecate components kwarg
+    ndims = {"2d": 2, "3d": 3}[projection]
+    if components is None and dimensions is None:
+        dimensions = [tuple(i for i in range(ndims))]
+    elif components is not None and dimensions is not None:
+        raise ValueError("Cannot provide both dimensions and components")
 
-    Because multiple components are given (eg components=['1,2', '2,3'] the
-    returned data are lists, containing each of the components. When only one component is plotted
-    the list length is 1.
-
-    Returns
-    -------
-    data_points
-        Each entry is a numpy array containing the data points
-    components
-        The cleaned list of components. Eg. [(0,1)] or [(0,1), (1,2)]
-        for components = [1,2] and components=['1,2', '2,3'] respectively
-    """
-
-    if basis in adata.obsm.keys():
-        basis_key = basis
-
-    elif f"X_{basis}" in adata.obsm.keys():
-        basis_key = f"X_{basis}"
-    else:
-        raise KeyError(
-            f"Could not find entry in `obsm` for '{basis}'.\n"
-            f"Available keys are: {list(adata.obsm.keys())}."
-        )
-
-    n_dims = 2
-    if projection == '3d':
-        # check if the data has a third dimension
-        if adata.obsm[basis_key].shape[1] == 2:
-            if settings._low_resolution_warning:
-                logg.warning(
-                    'Selected projections is "3d" but only two dimensions '
-                    'are available. Only these two dimensions will be plotted'
-                )
-        else:
-            n_dims = 3
-
-    if components == 'all':
-        from itertools import combinations
-
-        r_value = 3 if projection == '3d' else 2
-        _components_list = np.arange(adata.obsm[basis_key].shape[1]) + 1
-        components = [
-            ",".join(map(str, x)) for x in combinations(_components_list, r=r_value)
-        ]
-
-    components_list = []
-    offset = 0
-    if basis == 'diffmap':
-        offset = 1
-    if components is not None:
-        # components have different formats, either a list with integers, a string
-        # or a list of strings.
-
+    # TODO: Consider deprecating this
+    # If components is not None, parse them and set dimensions
+    if components == "all":
+        dimensions = list(combinations(range(total_dims), ndims))
+    elif components is not None:
         if isinstance(components, str):
-            # eg: components='1,2'
-            components_list.append(
-                tuple(int(x.strip()) - 1 + offset for x in components.split(','))
-            )
+            components = [components]
+        # Components use 1 based indexing
+        dimensions = [[int(dim) - 1 for dim in c.split(",")] for c in components]
 
-        elif isinstance(components, cabc.Sequence):
-            if isinstance(components[0], int):
-                # components=[1,2]
-                components_list.append(tuple(int(x) - 1 + offset for x in components))
-            else:
-                # in this case, the components are str
-                # eg: components=['1,2'] or components=['1,2', '2,3]
-                # More than one component can be given and is stored
-                # as a new item of components_list
-                for comp in components:
-                    components_list.append(
-                        tuple(int(x.strip()) - 1 + offset for x in comp.split(','))
-                    )
+    if all(isinstance(el, Integral) for el in dimensions):
+        dimensions = [dimensions]
+    # if all(isinstance(el, Collection) for el in dimensions):
+    for dims in dimensions:
+        if len(dims) != ndims or not all(isinstance(d, Integral) for d in dims):
+            raise ValueError()
 
-        else:
-            raise ValueError(
-                "Given components: '{}' are not valid. Please check. "
-                "A valid example is `components='2,3'`"
-            )
-        # check if the components are present in the data
-        try:
-            data_points = []
-            for comp in components_list:
-                data_points.append(adata.obsm[basis_key][:, comp])
-        except Exception:  # TODO catch the correct exception
-            raise ValueError(
-                "Given components: '{}' are not valid. Please check. "
-                "A valid example is `components='2,3'`"
-            )
-
-        if basis == 'diffmap':
-            # remove the offset added in the case of diffmap, such that
-            # plot_scatter can print the labels correctly.
-            components_list = [
-                tuple(number - 1 for number in comp) for comp in components_list
-            ]
-    else:
-        data_points = [np.array(adata.obsm[basis_key])[:, offset : offset + n_dims]]
-        components_list = []
-
-    if scale_factor is not None:  # if basis need scale for img background
-        data_points[0] = np.multiply(data_points[0], scale_factor)
-
-    return data_points, components_list
+    return dimensions
 
 
 def _add_categorical_legend(
@@ -1038,7 +1091,10 @@ def _add_categorical_legend(
         color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
         palette = palette.copy()
         palette["NA"] = na_color
-    cats = color_source_vector.categories
+    if color_source_vector.dtype == bool:
+        cats = pd.Categorical(color_source_vector.astype(str)).categories
+    else:
+        cats = color_source_vector.categories
 
     if multi_panel is True:
         # Shrink current axis by 10% to fit legend and match
@@ -1058,10 +1114,15 @@ def _add_categorical_legend(
         )
     elif legend_loc == 'on data':
         # identify centroids to put labels
+
         all_pos = (
             pd.DataFrame(scatter_array, columns=["x", "y"])
             .groupby(color_source_vector, observed=True)
             .median()
+            # Have to sort_index since if observed=True and categorical is unordered
+            # the order of values in .index is undefined. Related issue:
+            # https://github.com/pandas-dev/pandas/issues/25167
+            .sort_index()
         )
 
         for label, x_pos, y_pos in all_pos.itertuples():
@@ -1075,9 +1136,16 @@ def _add_categorical_legend(
                 fontsize=legend_fontsize,
                 path_effects=legend_fontoutline,
             )
-        # TODO: wtf
-        # this is temporary storage for access by other tools
-        _utils._tmp_cluster_pos = all_pos.values
+
+
+def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
+    """Get array for basis from anndata. Just tries to add 'X_'."""
+    if basis in adata.obsm:
+        return adata.obsm[basis]
+    elif f"X_{basis}" in adata.obsm:
+        return adata.obsm[f"X_{basis}"]
+    else:
+        raise KeyError(f"Could not find '{basis}' or 'X_{basis}' in .obsm")
 
 
 def _get_color_source_vector(
@@ -1106,13 +1174,16 @@ def _get_color_source_vector(
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
     if groups and is_categorical_dtype(values):
-        values = values.replace(values.categories.difference(groups), np.nan)
+        values = values.remove_categories(values.categories.difference(groups))
     return values
 
 
 def _get_palette(adata, values_key: str, palette=None):
     color_key = f"{values_key}_colors"
-    values = pd.Categorical(adata.obs[values_key])
+    if adata.obs[values_key].dtype == bool:
+        values = pd.Categorical(adata.obs[values_key].astype(str))
+    else:
+        values = pd.Categorical(adata.obs[values_key])
     if palette:
         _utils._set_colors_for_categorical_obs(adata, values_key, palette)
     elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
@@ -1143,22 +1214,24 @@ def _color_vector(
     to_hex = partial(colors.to_hex, keep_alpha=True)
     if values_key is None:
         return np.broadcast_to(to_hex(na_color), adata.n_obs), False
-    if not is_categorical_dtype(values):
-        return values, False
-    else:  # is_categorical_dtype(values)
+    if is_categorical_dtype(values) or values.dtype == bool:
+        if values.dtype == bool:
+            values = pd.Categorical(values.astype(str))
         color_map = {
             k: to_hex(v)
             for k, v in _get_palette(adata, values_key, palette=palette).items()
         }
         # If color_map does not have unique values, this can be slow as the
         # result is not categorical
-        color_vector = values.map(color_map)
+        color_vector = pd.Categorical(values.map(color_map))
 
         # Set color to 'missing color' for all missing values
         if color_vector.isna().any():
             color_vector = color_vector.add_categories([to_hex(na_color)])
             color_vector = color_vector.fillna(to_hex(na_color))
         return color_vector, True
+    elif not is_categorical_dtype(values):
+        return values, False
 
 
 def _basis2name(basis):
@@ -1216,7 +1289,7 @@ def _check_scale_factor(
 
 
 def _check_spatial_data(
-    uns: Mapping, library_id: Union[Empty, None, str]
+    uns: Mapping, library_id: Union[str, None, Empty]
 ) -> Tuple[Optional[str], Optional[Mapping]]:
     """
     Given a mapping, try and extract a library id/ mapping with spatial data.
@@ -1283,3 +1356,16 @@ def _check_na_color(
         else:
             na_color = "lightgray"
     return na_color
+
+
+def _broadcast_args(*args):
+    """Broadcasts arguments to a common length."""
+    from itertools import repeat
+
+    lens = [len(arg) for arg in args]
+    longest = max(lens)
+    if not (set(lens) == {1, longest} or set(lens) == {longest}):
+        raise ValueError(f"Could not broadast together arguments with shapes: {lens}.")
+    return list(
+        [[arg[0] for _ in range(longest)] if len(arg) == 1 else arg for arg in args]
+    )

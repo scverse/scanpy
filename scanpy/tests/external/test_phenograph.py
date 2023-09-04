@@ -1,13 +1,13 @@
-import pytest
-
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 
 import scanpy as sc
 import scanpy.external as sce
+from scanpy.testing._pytest.marks import needs
 
-pytest.importorskip("phenograph")
+
+pytestmark = [needs('phenograph')]
 
 
 def test_phenograph():

@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Optional, Literal
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,6 @@ from anndata import AnnData
 from ... import logging as logg
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
-from ..._compat import Literal
 
 
 def filter_genes_dispersion(
@@ -236,7 +235,7 @@ def filter_genes_dispersion(
 
 
 def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
-    """ Filter genes by coefficient of variance and mean."""
+    """Filter genes by coefficient of variance and mean."""
     return _filter_genes(X, Ecutoff, cvFilter, np.std)
 
 

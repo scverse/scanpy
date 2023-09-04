@@ -2,7 +2,7 @@ import warnings
 import collections.abc as cabc
 from abc import ABC
 from functools import lru_cache
-from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable
+from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable, Literal
 import anndata
 
 import numpy as np
@@ -18,12 +18,8 @@ from cycler import Cycler, cycler
 
 from .. import logging as logg
 from .._settings import settings
-from .._compat import Literal
 from .._utils import NeighborsView
 from . import palettes
-
-
-_tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
 
 ColorLike = Union[str, Tuple[float, ...]]
 _IGraphLayout = Literal['fa', 'fr', 'rt', 'rt_circular', 'drl', 'eq_tree', ...]
@@ -34,7 +30,7 @@ _FontSize = Literal[
 VBound = Union[str, float, Callable[[Sequence[float]], float]]
 
 
-class _AxesSubplot(Axes, axes.SubplotBase, ABC):
+class _AxesSubplot(Axes, axes.SubplotBase):
     """Intersection between Axes and SubplotBase: Has methods of both"""
 
 
@@ -99,6 +95,7 @@ def timeseries_subplot(
     palette: Union[Sequence[str], Cycler, None] = None,
     color_map='viridis',
     ax: Optional[Axes] = None,
+    marker: Union[str, Sequence[str]] = '.',
 ):
     """\
     Plot X.
@@ -129,13 +126,18 @@ def timeseries_subplot(
         colors = np.array(palette[: len(levels)].by_key()['color'])
         subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
 
+    if isinstance(marker, str):
+        marker = [marker]
+    if len(marker) != len(subsets) and len(marker) == 1:
+        marker = [marker[0] for _ in range(len(subsets))]
+
     if ax is None:
         ax = pl.subplot()
     for i, (x, y) in enumerate(subsets):
         ax.scatter(
             x,
             y,
-            marker='.',
+            marker=marker[i],
             edgecolor='face',
             s=rcParams['lines.markersize'],
             c=colors[i],
@@ -382,7 +384,12 @@ def _set_colors_for_categorical_obs(
     """
     from matplotlib.colors import to_hex
 
-    categories = adata.obs[value_to_plot].cat.categories
+    if adata.obs[value_to_plot].dtype == bool:
+        categories = (
+            adata.obs[value_to_plot].astype(str).astype('category').cat.categories
+        )
+    else:
+        categories = adata.obs[value_to_plot].cat.categories
     # check is palette is a valid matplotlib colormap
     if isinstance(palette, str) and palette in pl.colormaps():
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
@@ -447,8 +454,13 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     -------
     None
     """
+    if adata.obs[value_to_plot].dtype == bool:
+        categories = (
+            adata.obs[value_to_plot].astype(str).astype('category').cat.categories
+        )
+    else:
+        categories = adata.obs[value_to_plot].cat.categories
 
-    categories = adata.obs[value_to_plot].cat.categories
     length = len(categories)
 
     # check if default matplotlib palette has enough colors
@@ -470,13 +482,12 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
                 "'grey' color will be used for all categories."
             )
 
-    adata.uns[value_to_plot + '_colors'] = palette[:length]
+    _set_colors_for_categorical_obs(adata, value_to_plot, palette[:length])
 
 
 def add_colors_for_categorical_sample_annotation(
     adata, key, palette=None, force_update_colors=False
 ):
-
     color_key = f"{key}_colors"
     colors_needed = len(adata.obs[key].cat.categories)
     if palette and force_update_colors:
@@ -548,7 +559,9 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
         )
 
 
-def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
+def scatter_group(
+    ax, key, imask, adata, Y, projection='2d', size=3, alpha=None, marker='.'
+):
     """Scatter of group using representation of data Y."""
     mask = adata.obs[key].cat.categories[imask] == adata.obs[key].values
     color = adata.uns[key + '_colors'][imask]
@@ -563,7 +576,7 @@ def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None)
         data.append(Y[mask, 2])
     ax.scatter(
         *data,
-        marker='.',
+        marker=marker,
         alpha=alpha,
         c=color,
         edgecolors='none',
@@ -671,6 +684,7 @@ def scatter_base(
     axis_labels=None,
     colorbars=(False,),
     sizes=(1,),
+    markers='.',
     color_map='viridis',
     show_ticks=True,
     ax=None,
@@ -697,8 +711,12 @@ def scatter_base(
     # if we have a single array, transform it into a list with a single array
     if isinstance(colors, str):
         colors = [colors]
+    if isinstance(markers, str):
+        markers = [markers]
     if len(sizes) != len(colors) and len(sizes) == 1:
         sizes = [sizes[0] for _ in range(len(colors))]
+    if len(markers) != len(colors) and len(markers) == 1:
+        markers = [markers[0] for _ in range(len(colors))]
     axs, panel_pos, draw_region_width, figure_width = setup_axes(
         ax=ax,
         panels=colors,
@@ -710,6 +728,7 @@ def scatter_base(
     )
     for icolor, color in enumerate(colors):
         ax = axs[icolor]
+        marker = markers[icolor]
         bottom = panel_pos[0][0]
         height = panel_pos[1][0] - bottom
         Y_sort = Y
@@ -726,7 +745,7 @@ def scatter_base(
         if not isinstance(color, str) or color != 'white':
             sct = ax.scatter(
                 *data,
-                marker='.',
+                marker=marker,
                 c=color,
                 alpha=alpha,
                 edgecolors='none',  # 'face',
@@ -1063,7 +1082,9 @@ def check_projection(projection):
             )
 
 
-def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
+def circles(
+    x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, scale_factor=1.0, **kwargs
+):
     """
     Taken from here: https://gist.github.com/syrte/592a062c562cd2a98a83
     Make a scatter plot of circles.
@@ -1105,7 +1126,9 @@ def circles(x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, **kwargs):
 
     # You can set `facecolor` with an array for each patch,
     # while you can only set `facecolors` with a value for all.
-
+    if scale_factor != 1.0:
+        x = x * scale_factor
+        y = y * scale_factor
     zipped = np.broadcast(x, y, s)
     patches = [Circle((x_, y_), s_) for x_, y_, s_ in zipped]
     collection = PatchCollection(patches, **kwargs)
@@ -1180,7 +1203,6 @@ def fix_kwds(kwds_dict, **kwargs):
 
 
 def _get_basis(adata: anndata.AnnData, basis: str):
-
     if basis in adata.obsm.keys():
         basis_key = basis
 

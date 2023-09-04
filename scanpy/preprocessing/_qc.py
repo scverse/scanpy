@@ -106,7 +106,7 @@ def describe_obs(
         obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
             obs_metrics[f"n_{var_type}_by_{expr_type}"]
         )
-    obs_metrics[f"total_{expr_type}"] = X.sum(axis=1)
+    obs_metrics[f"total_{expr_type}"] = np.ravel(X.sum(axis=1))
     if log1p:
         obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(
             obs_metrics[f"total_{expr_type}"]
@@ -119,8 +119,8 @@ def describe_obs(
                 proportions[:, i] * 100
             )
     for qc_var in qc_vars:
-        obs_metrics[f"total_{expr_type}_{qc_var}"] = X[:, adata.var[qc_var].values].sum(
-            axis=1
+        obs_metrics[f"total_{expr_type}_{qc_var}"] = np.ravel(
+            X[:, adata.var[qc_var].values].sum(axis=1)
         )
         if log1p:
             obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(

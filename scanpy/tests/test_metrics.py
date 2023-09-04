@@ -1,14 +1,20 @@
 from operator import eq
 from string import ascii_letters
+import warnings
 
 import numpy as np
 import pandas as pd
 import scanpy as sc
 from scipy import sparse
 
+import pytest
+
+from scanpy._compat import DaskArray
+from scanpy.testing._helpers.data import pbmc68k_reduced
+
 
 def test_gearys_c_consistency():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
 
@@ -65,7 +71,7 @@ def test_gearys_c_correctness():
 
 
 def test_morans_i_consistency():
-    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
 
@@ -119,6 +125,46 @@ def test_morans_i_correctness():
             sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
         )
         assert sc.metrics.morans_i(adata, vals=connected) == 1.0
+
+
+@pytest.mark.parametrize("metric", [sc.metrics.gearys_c, sc.metrics.morans_i])
+def test_graph_metrics_w_constant_values(metric, array_type):
+    # https://github.com/scverse/scanpy/issues/1806
+    pbmc = pbmc68k_reduced()
+    XT = array_type(pbmc.raw.X.T.copy())
+    g = pbmc.obsp["connectivities"].copy()
+
+    if isinstance(XT, DaskArray):
+        pytest.skip("DaskArray yet not supported")
+
+    const_inds = np.random.choice(XT.shape[0], 10, replace=False)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", sparse.SparseEfficiencyWarning)
+        XT_zero_vals = XT.copy()
+        XT_zero_vals[const_inds, :] = 0
+        XT_const_vals = XT.copy()
+        XT_const_vals[const_inds, :] = 42
+
+    results_full = metric(g, XT)
+    # TODO: Check for warnings
+    with pytest.warns(
+        UserWarning, match=r"10 variables were constant, will return nan for these"
+    ):
+        results_const_zeros = metric(g, XT_zero_vals)
+    with pytest.warns(
+        UserWarning, match=r"10 variables were constant, will return nan for these"
+    ):
+        results_const_vals = metric(g, XT_const_vals)
+
+    assert not np.isnan(results_full).any()
+    np.testing.assert_almost_equal(results_const_zeros, results_const_vals)
+    np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
+    np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
+
+    non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
+    np.testing.assert_almost_equal(
+        results_full[non_const_mask], results_const_zeros[non_const_mask]
+    )
 
 
 def test_confusion_matrix():

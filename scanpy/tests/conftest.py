@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib as mpl
 
@@ -9,6 +10,9 @@ from matplotlib.testing.compare import compare_images, make_test_filename
 import pytest
 
 import scanpy
+
+if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
+    from scanpy.testing._pytest.fixtures import *  # noqa: F403
 
 
 scanpy.settings.verbosity = "hint"
@@ -21,6 +25,27 @@ IMPORTED = frozenset(sys.modules.keys())
 def close_figures_on_teardown():
     yield
     pyplot.close("all")
+
+
+def clear_loggers():
+    """Remove handlers from all loggers
+
+    Fixes: https://github.com/scverse/scanpy/issues/1736
+
+    Code from: https://github.com/pytest-dev/pytest/issues/5502#issuecomment-647157873
+    """
+    import logging
+
+    loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+    for logger in loggers:
+        handlers = getattr(logger, 'handlers', [])
+        for handler in handlers:
+            logger.removeHandler(handler)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def close_logs_on_teardown(request):
+    request.addfinalizer(clear_loggers)
 
 
 @pytest.fixture

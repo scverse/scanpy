@@ -1,4 +1,4 @@
-from typing import List, Optional, NamedTuple
+from typing import List, Optional, NamedTuple, Literal
 
 import numpy as np
 import scipy as sp
@@ -8,7 +8,6 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 from .. import _utils
 from .. import logging as logg
 from ..neighbors import Neighbors
-from .._compat import Literal
 
 _AVAIL_MODELS = {'v1.0', 'v1.2'}
 
@@ -27,13 +26,13 @@ def paga(
     By quantifying the connectivity of partitions (groups, clusters) of the
     single-cell graph, partition-based graph abstraction (PAGA) generates a much
     simpler abstracted graph (*PAGA graph*) of partitions, in which edge weights
-    represent confidence in the presence of connections. By tresholding this
+    represent confidence in the presence of connections. By thresholding this
     confidence in :func:`~scanpy.pl.paga`, a much simpler representation of the
     manifold data is obtained, which is nonetheless faithful to the topology of
     the manifold.
 
     The confidence should be interpreted as the ratio of the actual versus the
-    expected value of connetions under the null model of randomly connecting
+    expected value of connections under the null model of randomly connecting
     partitions. We do not provide a p-value as this null model does not
     precisely capture what one would consider "connected" in real data, hence it
     strongly overestimates the expected value. See an extensive discussion of
@@ -215,7 +214,7 @@ class PAGA:
         inter_es = _utils.get_sparse_from_igraph(cg, weight_attr='weight') / 2
         connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
-        n_neighbors_sq = self._neighbors.n_neighbors ** 2
+        n_neighbors_sq = self._neighbors.n_neighbors**2
         for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
             # have n_neighbors**2 inside sqrt for backwards compat
             geom_mean_approx_knn = np.sqrt(n_neighbors_sq * ns[i] * ns[j])
@@ -503,7 +502,7 @@ def paga_compare_paths(
     n_paths = 0
     n_agreeing_paths = 0
     # loop over all pairs of leaf nodes in the reference adata1
-    for (r, s) in itertools.combinations(leaf_nodes1, r=2):
+    for r, s in itertools.combinations(leaf_nodes1, r=2):
         r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
         on1_g1, on2_g1 = [orig_names1[int(i)] for i in [r, s]]
         on1_g2, on2_g2 = [orig_names2[int(i)] for i in [r2, s2]]

@@ -1,14 +1,15 @@
 """Moran's I global spatial autocorrelation."""
-from typing import Union, Optional
 from functools import singledispatch
-from anndata import AnnData
+from typing import Union, Optional
 
+from anndata import AnnData
 import numpy as np
 from scipy import sparse
 from numba import njit, prange
 
-from scanpy.get import _get_obs_rep
-from scanpy.metrics._gearys_c import _resolve_vals
+from ..get import _get_obs_rep
+from .._compat import fullname, DaskArray
+from ._common import _resolve_vals, _check_vals
 
 
 @singledispatch
@@ -222,31 +223,41 @@ def _morans_i_mtx_csr(
 
 
 @morans_i.register(sparse.csr_matrix)
-def _morans_i(g, vals) -> np.ndarray:
+def _morans_i(g: sparse.csr_matrix, vals) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
     if isinstance(vals, sparse.csr_matrix):
         assert g.shape[0] == vals.shape[1]
-        return _morans_i_mtx_csr(
+        new_vals, idxer, full_result = _check_vals(vals)
+        result = _morans_i_mtx_csr(
             g_data,
             g.indices,
             g.indptr,
-            vals.data.astype(np.float_, copy=False),
-            vals.indices,
-            vals.indptr,
-            vals.shape,
+            new_vals.data.astype(np.float_, copy=False),
+            new_vals.indices,
+            new_vals.indptr,
+            new_vals.shape,
         )
+        full_result[idxer] = result
+        return full_result
     elif isinstance(vals, np.ndarray) and vals.ndim == 1:
         assert g.shape[0] == vals.shape[0]
         return _morans_i_vec(g_data, g.indices, g.indptr, vals)
     elif isinstance(vals, np.ndarray) and vals.ndim == 2:
         assert g.shape[0] == vals.shape[1]
-        return _morans_i_mtx(
+        new_vals, idxer, full_result = _check_vals(vals)
+        result = _morans_i_mtx(
             g_data,
             g.indices,
             g.indptr,
-            vals.astype(np.float_, copy=False),
+            new_vals.astype(np.float_, copy=False),
         )
+        full_result[idxer] = result
+        return full_result
     else:
-        raise NotImplementedError()
+        msg = (
+            'Moran’s I metric not implemented for vals of type '
+            f'{fullname(type(vals))} and ndim {vals.ndim}.'
+        )
+        raise NotImplementedError(msg)

@@ -1,14 +1,28 @@
 repos:
--   repo: https://github.com/python/black
-    rev: 20.8b1
+-   repo: https://github.com/psf/black
+    rev: 23.7.0
     hooks:
     -   id: black
--   repo: https://gitlab.com/pycqa/flake8
-    rev: 3.8.4
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.0.286
     hooks:
-    -   id: flake8
--   repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: v1.5.5
+    -   id: ruff
+        args: ["--fix"]
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
     hooks:
-    -   id: autopep8
-        args: ["-i"]
+    -   id: trailing-whitespace
+        exclude: scanpy/tests/_data
+    -   id: end-of-file-fixer
+        exclude: scanpy/tests/_data
+    -   id: check-added-large-files
+    -   id: check-case-conflict
+    -   id: check-toml
+    -   id: check-yaml
+    -   id: check-merge-conflict
+    -   id: detect-private-key
+    -   id: no-commit-to-branch
+        args: ["--branch=master", "--branch=main"]
+
+ci:
+    autofix_prs: false

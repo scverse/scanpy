@@ -5,7 +5,7 @@ Compositions of these functions are found in sc.preprocess.recipes.
 from functools import singledispatch
 from numbers import Number
 import warnings
-from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
+from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Literal
 
 import numba
 import numpy as np
@@ -24,7 +24,6 @@ from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
 )
-from .._compat import Literal
 from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
@@ -83,7 +82,7 @@ def filter_cells(
         Boolean index mask that does filtering. `True` means that the
         cell is kept. `False` means the cell is removed.
     number_per_cell
-        Depending on what was tresholded (`counts` or `genes`),
+        Depending on what was thresholded (`counts` or `genes`),
         the array stores `n_counts` or `n_cells` per gene.
 
     Examples
@@ -218,7 +217,7 @@ def filter_genes(
         Boolean index mask that does filtering. `True` means that the
         gene is kept. `False` means the gene is removed.
     number_per_gene
-        Depending on what was tresholded (`counts` or `cells`), the array stores
+        Depending on what was thresholded (`counts` or `cells`), the array stores
         `n_counts` or `n_cells` per gene.
     """
     if copy:
@@ -315,7 +314,7 @@ def log1p(
     chunk_size
         `n_obs` of the chunks to process the data in.
     layer
-        Entry of layers to tranform.
+        Entry of layers to transform.
     obsm
         Entry of obsm to transform.
 
@@ -344,13 +343,11 @@ def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
         if not np.issubdtype(X.dtype, np.floating):
-            X = X.astype(np.floating)
+            X = X.astype(float)
         else:
             X = X.copy()
-    elif not (
-        np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, np.complex)
-    ):
-        X = X.astype(np.floating)
+    elif not (np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, complex)):
+        X = X.astype(float)
     np.log1p(X, out=X)
     if base is not None:
         np.divide(X, np.log(base), out=X)
@@ -572,6 +569,7 @@ def normalize_per_cell(
 def regress_out(
     adata: AnnData,
     keys: Union[str, Sequence[str]],
+    layer: Optional[str] = None,
     n_jobs: Optional[int] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -588,6 +586,8 @@ def regress_out(
         The annotated data matrix.
     keys
         Keys for observation annotation on which to regress on.
+    layer
+        If provided, which element of layers to regress on.
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
@@ -599,21 +599,20 @@ def regress_out(
     Depending on `copy` returns or updates `adata` with the corrected data matrix.
     """
     start = logg.info(f'regressing out {keys}')
-    if issparse(adata.X):
-        logg.info('    sparse input is densified and may ' 'lead to high memory use')
     adata = adata.copy() if copy else adata
 
     sanitize_anndata(adata)
 
-    # TODO: This should throw an implicit modification warning
-    if adata.is_view:
-        adata._init_as_actual(adata.copy())
+    view_to_actual(adata)
 
     if isinstance(keys, str):
         keys = [keys]
 
-    if issparse(adata.X):
-        adata.X = adata.X.toarray()
+    X = _get_obs_rep(adata, layer=layer)
+
+    if issparse(X):
+        logg.info('    sparse input is densified and may ' 'lead to high memory use')
+        X = X.toarray()
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 
@@ -627,10 +626,10 @@ def regress_out(
                 'we regress on the mean for each category.'
             )
         logg.debug('... regressing on per-gene means within categories')
-        regressors = np.zeros(adata.X.shape, dtype='float32')
+        regressors = np.zeros(X.shape, dtype='float32')
         for category in adata.obs[keys[0]].cat.categories:
             mask = (category == adata.obs[keys[0]]).values
-            for ix, x in enumerate(adata.X.T):
+            for ix, x in enumerate(X.T):
                 regressors[mask, ix] = x[mask].mean()
         variable_is_categorical = True
     # regress on one or several ordinal variables
@@ -644,13 +643,13 @@ def regress_out(
         # add column of ones at index 0 (first column)
         regressors.insert(0, 'ones', 1.0)
 
-    len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
-    n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
+    len_chunk = np.ceil(min(1000, X.shape[1]) / n_jobs).astype(int)
+    n_chunks = np.ceil(X.shape[1] / len_chunk).astype(int)
 
     tasks = []
     # split the adata.X matrix by columns in chunks of size n_chunk
     # (the last chunk could be of smaller size than the others)
-    chunk_list = np.array_split(adata.X, n_chunks, axis=1)
+    chunk_list = np.array_split(X, n_chunks, axis=1)
     if variable_is_categorical:
         regressors_chunk = np.array_split(regressors, n_chunks, axis=1)
     for idx, data_chunk in enumerate(chunk_list):
@@ -669,7 +668,7 @@ def regress_out(
 
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
-    adata.X = np.vstack(res).T.astype(adata.X.dtype)
+    _set_obs_rep(adata, np.vstack(res).T, layer=layer)
     logg.info('    finished', time=start)
     return adata if copy else None
 
@@ -686,7 +685,6 @@ def _regress_out_chunk(data):
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
     for col_index in range(data_chunk.shape[1]):
-
         # if all values are identical, the statsmodel.api.GLM throws an error;
         # but then no regression is necessary anyways...
         if not (data_chunk[:, col_index] != data_chunk[0, col_index]).any():
@@ -900,10 +898,18 @@ def subsample(
         raise ValueError('Either pass `n_obs` or `fraction`.')
     obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
     if isinstance(data, AnnData):
-        if copy:
-            return data[obs_indices].copy()
+        if data.isbacked:
+            if copy:
+                return data[obs_indices].to_memory()
+            else:
+                raise NotImplementedError(
+                    "Inplace subsampling is not implemented for backed objects."
+                )
         else:
-            data._inplace_subset_obs(obs_indices)
+            if copy:
+                return data[obs_indices].copy()
+            else:
+                data._inplace_subset_obs(obs_indices)
     else:
         X = data
         return X[obs_indices], obs_indices

@@ -14,7 +14,7 @@ import shutil
 import sys
 from pathlib import Path
 from types import MappingProxyType
-from typing import Optional, Union, List, Tuple, Mapping
+from typing import Optional, Union, List, Tuple, Mapping, Literal
 
 import numpy as np
 import scipy as sp
@@ -22,7 +22,6 @@ from anndata import AnnData
 
 from .. import _utils, readwrite, logging as logg
 from .._settings import settings
-from .._compat import Literal
 
 
 def sim(
@@ -73,7 +72,7 @@ def sim(
 
     Examples
     --------
-    See this `use case <https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11>`__
+    See this `use case <https://github.com/scverse/scanpy_usage/tree/master/170430_krumsiek11>`__
     """
     params = locals()
     if params_file:
@@ -505,7 +504,7 @@ class GRNsim:
         return Xdiff
 
     def hill_a(self, x, threshold=0.1, power=2):
-        """ Activating hill function. """
+        """Activating hill function."""
         x_pow = np.power(x, power)
         threshold_pow = np.power(threshold, power)
         return x_pow / (x_pow + threshold_pow)
@@ -520,7 +519,7 @@ class GRNsim:
         return threshold_pow / (x_pow + threshold_pow)
 
     def nhill_a(self, x, threshold=0.1, power=2, ichild=2):
-        """ Normalized activating hill function. """
+        """Normalized activating hill function."""
         x_pow = np.power(x, power)
         threshold_pow = np.power(threshold, power)
         return x_pow / (x_pow + threshold_pow) * (1 + threshold_pow)
@@ -1053,7 +1052,7 @@ class StaticCauseEffect:
             line=lambda x: x,
             noise=lambda x: 0,
             absline=np.abs,
-            parabola=lambda x: x ** 2,
+            parabola=lambda x: x**2,
             sawtooth=lambda x: 0.5 * x - np.floor(0.5 * x),
             tanh=lambda x: np.tanh(2 * x),
         )

@@ -2,7 +2,7 @@ import warnings
 import collections.abc as cabc
 from pathlib import Path
 from types import MappingProxyType
-from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple
+from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple, Literal
 
 import numpy as np
 import pandas as pd
@@ -14,12 +14,12 @@ from matplotlib import patheffects
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like, Colormap
 from scipy.sparse import issparse
+from sklearn.utils import check_random_state
 
 from .. import _utils
 from .._utils import matrix, _IGraphLayout, _FontWeight, _FontSize
 from ... import _utils as _sc_utils, logging as logg
 from ..._settings import settings
-from ..._compat import Literal
 
 
 def paga_compare(
@@ -46,6 +46,8 @@ def paga_compare(
     save=None,
     title_graph=None,
     groups_graph=None,
+    *,
+    pos=None,
     **paga_graph_params,
 ):
     """\
@@ -83,17 +85,18 @@ def paga_compare(
         suptitle = color if title is None else title
         title, title_graph = '', ''
     if basis is None:
-        if 'X_draw_graph_fa' in adata.obsm.keys():
+        if 'X_draw_graph_fa' in adata.obsm:
             basis = 'draw_graph_fa'
-        elif 'X_umap' in adata.obsm.keys():
+        elif 'X_umap' in adata.obsm:
             basis = 'umap'
-        elif 'X_tsne' in adata.obsm.keys():
+        elif 'X_tsne' in adata.obsm:
             basis = 'tsne'
-        elif 'X_draw_graph_fr' in adata.obsm.keys():
+        elif 'X_draw_graph_fr' in adata.obsm:
             basis = 'draw_graph_fr'
         else:
             basis = 'umap'
-    from .scatterplots import embedding
+
+    from .scatterplots import embedding, _get_basis, _components_to_dimensions
 
     embedding(
         adata,
@@ -116,11 +119,23 @@ def paga_compare(
         show=False,
         save=False,
     )
-    if 'pos' not in paga_graph_params:
+
+    if pos is None:
         if color == adata.uns['paga']['groups']:
-            paga_graph_params['pos'] = _utils._tmp_cluster_pos
+            # TODO: Use dimensions here
+            _basis = _get_basis(adata, basis)
+            dims = _components_to_dimensions(
+                components=components, dimensions=None, total_dims=_basis.shape[1]
+            )[0]
+            coords = _basis[:, dims]
+            pos = (
+                pd.DataFrame(coords, columns=["x", "y"], index=adata.obs_names)
+                .groupby(adata.obs[color], observed=True)
+                .median()
+                .sort_index()
+            ).to_numpy()
         else:
-            paga_graph_params['pos'] = adata.uns['paga']['pos']
+            pos = adata.uns['paga']['pos']
     xlim, ylim = axs[0].get_xlim(), axs[0].get_ylim()
     axs[1].set_xlim(xlim)
     axs[1].set_ylim(ylim)
@@ -143,6 +158,7 @@ def paga_compare(
         labels=labels,
         colors=color,
         frameon=frameon,
+        pos=pos,
         **paga_graph_params,
     )
     if suptitle is not None:
@@ -161,7 +177,10 @@ def _compute_pos(
     root=0,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
 ):
+    import random
     import networkx as nx
+
+    random_state = check_random_state(random_state)
 
     nx_g_solid = nx.Graph(adjacency_solid)
     if layout is None:
@@ -177,9 +196,9 @@ def _compute_pos(
             )
             layout = 'fr'
     if layout == 'fa':
-        np.random.seed(random_state)
+        # np.random.seed(random_state)
         if init_pos is None:
-            init_coords = np.random.random((adjacency_solid.shape[0], 2))
+            init_coords = random_state.random_sample((adjacency_solid.shape[0], 2))
         else:
             init_coords = init_pos.copy()
         forceatlas2 = ForceAtlas2(
@@ -220,6 +239,7 @@ def _compute_pos(
             )
     else:
         # igraph layouts
+        random.seed(random_state.bytes(8))
         g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
         if 'rt' in layout:
             g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
@@ -230,9 +250,11 @@ def _compute_pos(
             pos_list = g.layout(layout).coords
         else:
             # I don't know why this is necessary
-            np.random.seed(random_state)
+            # np.random.seed(random_state)
             if init_pos is None:
-                init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
+                init_coords = random_state.random_sample(
+                    (adjacency_solid.shape[0], 2)
+                ).tolist()
             else:
                 init_pos = init_pos.copy()
                 # this is a super-weird hack that is necessary as igraph’s
@@ -353,9 +375,8 @@ def paga(
         graph is connected). If this is `None` or an empty list, the root
         vertices are automatically calculated based on topological sorting.
     transitions
-        Key for `.uns['paga']` that specifies the matrix that – for instance
-        `'transistions_confidence'` – that specifies the matrix that stores the
-        arrows.
+        Key for `.uns['paga']` that specifies the matrix that stores the
+        arrows, for instance `'transitions_confidence'`.
     solid_edges
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn solid black.
@@ -395,7 +416,7 @@ def paga(
     cax
         A matplotlib axes object for a potential colorbar.
     cb_kwds
-        Keyword arguments for :class:`~matplotlib.colorbar.ColorbarBase`,
+        Keyword arguments for :class:`~matplotlib.colorbar.Colorbar`,
         for instance, `ticks`.
     add_pos
         Add the positions to `adata.uns['paga']`.
@@ -416,6 +437,24 @@ def paga(
     -------
     If `show==False`, one or more :class:`~matplotlib.axes.Axes` objects.
     Adds `'pos'` to `adata.uns['paga']` if `add_pos` is `True`.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.tl.paga(adata, groups='louvain')
+        sc.pl.paga(adata)
+
+    You can increase node and edge sizes by specifying additional arguments.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.paga(adata, node_size_scale=10, edge_width_scale=2)
 
     Notes
     -----
@@ -923,7 +962,7 @@ def _paga_graph(
                 s = np.abs(xy).max()
 
                 sct = ax.scatter(
-                    [xx], [yy], marker=xy, s=s ** 2 * groups_sizes[ix], color=color
+                    [xx], [yy], marker=xy, s=s**2 * groups_sizes[ix], color=color
                 )
 
             if node_labels is not None:

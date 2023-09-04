@@ -1,12 +1,15 @@
 import pytest
 import scanpy as sc
+from scanpy.testing._helpers.data import pbmc68k_reduced
+from scanpy.testing._pytest.marks import needs
 
 
 @pytest.fixture
 def adata_neighbors():
-    return sc.datasets.pbmc68k_reduced()
+    return pbmc68k_reduced()
 
 
+@needs('leidenalg')
 def test_leiden_basic(adata_neighbors):
     sc.tl.leiden(adata_neighbors)
 
@@ -14,8 +17,8 @@ def test_leiden_basic(adata_neighbors):
 @pytest.mark.parametrize(
     'clustering,key',
     [
-        (sc.tl.louvain, 'louvain'),
-        (sc.tl.leiden, 'leiden'),
+        pytest.param(sc.tl.louvain, 'louvain', marks=needs('louvain')),
+        pytest.param(sc.tl.leiden, 'leiden', marks=needs('leidenalg')),
     ],
 )
 def test_clustering_subset(adata_neighbors, clustering, key):
@@ -41,10 +44,11 @@ def test_clustering_subset(adata_neighbors, clustering, key):
 
         # Original category's cells assigned only to new categories
         nonzero_cat = cat_counts[cat_counts > 0].index
-        common_cat = nonzero_cat & adata_neighbors.obs[key].cat.categories
+        common_cat = nonzero_cat.intersection(adata_neighbors.obs[key].cat.categories)
         assert len(common_cat) == 0
 
 
+@needs('louvain')
 def test_louvain_basic(adata_neighbors):
     sc.tl.louvain(adata_neighbors)
     sc.tl.louvain(adata_neighbors, use_weights=True)
@@ -52,6 +56,7 @@ def test_louvain_basic(adata_neighbors):
     sc.tl.louvain(adata_neighbors, flavor="igraph")
 
 
+@needs('louvain')
 def test_partition_type(adata_neighbors):
     import louvain
 

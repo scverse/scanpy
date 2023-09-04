@@ -1,13 +1,14 @@
 from functools import singledispatch
 from typing import Optional, Union
 
-
 from anndata import AnnData
-from scanpy.get import _get_obs_rep
 import numba
 import numpy as np
-import pandas as pd
 from scipy import sparse
+
+from ..get import _get_obs_rep
+from .._compat import fullname, DaskArray
+from ._common import _resolve_vals, _check_vals
 
 
 @singledispatch
@@ -250,26 +251,6 @@ def _gearys_c_mtx_csr(
 ###############################################################################
 # Interface
 ###############################################################################
-@singledispatch
-def _resolve_vals(val):
-    return np.asarray(val)
-
-
-@_resolve_vals.register(np.ndarray)
-@_resolve_vals.register(sparse.csr_matrix)
-def _(val):
-    return val
-
-
-@_resolve_vals.register(sparse.spmatrix)
-def _(val):
-    return sparse.csr_matrix(val)
-
-
-@_resolve_vals.register(pd.DataFrame)
-@_resolve_vals.register(pd.Series)
-def _(val):
-    return val.to_numpy()
 
 
 @gearys_c.register(sparse.csr_matrix)
@@ -279,20 +260,30 @@ def _gearys_c(g, vals) -> np.ndarray:
     g_data = g.data.astype(np.float_, copy=False)
     if isinstance(vals, sparse.csr_matrix):
         assert g.shape[0] == vals.shape[1]
-        return _gearys_c_mtx_csr(
+        new_vals, idxer, full_result = _check_vals(vals)
+        result = _gearys_c_mtx_csr(
             g_data,
             g.indices,
             g.indptr,
-            vals.data.astype(np.float_, copy=False),
-            vals.indices,
-            vals.indptr,
-            vals.shape,
+            new_vals.data.astype(np.float_, copy=False),
+            new_vals.indices,
+            new_vals.indptr,
+            new_vals.shape,
         )
+        full_result[idxer] = result
+        return full_result
     elif isinstance(vals, np.ndarray) and vals.ndim == 1:
         assert g.shape[0] == vals.shape[0]
         return _gearys_c_vec(g_data, g.indices, g.indptr, vals)
     elif isinstance(vals, np.ndarray) and vals.ndim == 2:
         assert g.shape[0] == vals.shape[1]
-        return _gearys_c_mtx(g_data, g.indices, g.indptr, vals)
+        new_vals, idxer, full_result = _check_vals(vals)
+        result = _gearys_c_mtx(g_data, g.indices, g.indptr, new_vals)
+        full_result[idxer] = result
+        return full_result
     else:
-        raise NotImplementedError()
+        msg = (
+            'Geary’s C metric not implemented for vals of type '
+            f'{fullname(type(vals))} and ndim {vals.ndim}.'
+        )
+        raise NotImplementedError(msg)

@@ -3,7 +3,7 @@
 import collections.abc as cabc
 from itertools import product
 from collections import OrderedDict
-from typing import Optional, Union, Mapping  # Special
+from typing import Optional, Union, Mapping, Literal  # Special
 from typing import Sequence, Collection, Iterable  # ABCs
 from typing import Tuple, List  # Classes
 
@@ -24,7 +24,6 @@ from .. import get
 from .. import logging as logg
 from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params, _check_use_raw
-from .._compat import Literal
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes, check_colornorm
 from ._utils import ColorLike, _FontWeight, _FontSize
@@ -82,6 +81,7 @@ def scatter(
     right_margin: Optional[float] = None,
     left_margin: Optional[float] = None,
     size: Union[int, float, None] = None,
+    marker: Union[str, Sequence[str]] = '.',
     title: Optional[str] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -121,14 +121,18 @@ def scatter(
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     args = locals()
+    if _check_use_raw(adata, use_raw):
+        var_index = adata.raw.var.index
+    else:
+        var_index = adata.var.index
     if basis is not None:
         return _scatter_obs(**args)
     if x is None or y is None:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
     if (
-        (x in adata.obs.keys() or x in adata.var.index)
-        and (y in adata.obs.keys() or y in adata.var.index)
-        and (color is None or color in adata.obs.keys() or color in adata.var.index)
+        (x in adata.obs.keys() or x in var_index)
+        and (y in adata.obs.keys() or y in var_index)
+        and (color is None or color in adata.obs.keys() or color in var_index)
     ):
         return _scatter_obs(**args)
     if (
@@ -173,6 +177,7 @@ def _scatter_obs(
     right_margin=None,
     left_margin=None,
     size=None,
+    marker='.',
     title=None,
     show=None,
     save=None,
@@ -355,6 +360,7 @@ def _scatter_obs(
         right_margin=right_margin,
         left_margin=left_margin,
         sizes=[size for _ in keys],
+        markers=marker,
         color_map=color_map,
         show_ticks=show_ticks,
         ax=ax,
@@ -390,6 +396,7 @@ def _scatter_obs(
                         projection,
                         size=size,
                         alpha=alpha,
+                        marker=marker,
                     )
                     mask_remaining[mask] = False
                     if legend_loc.startswith('on data'):
@@ -415,6 +422,7 @@ def _scatter_obs(
                         projection,
                         size=size,
                         alpha=alpha,
+                        marker=marker,
                     )
                     if legend_loc.startswith('on data'):
                         add_centroid(centroids, name, Y, mask)
@@ -425,7 +433,7 @@ def _scatter_obs(
                 data.append(Y[mask_remaining, 2])
             axs[ikey].scatter(
                 *data,
-                marker='.',
+                marker=marker,
                 c='lightgrey',
                 s=size,
                 edgecolors='none',
@@ -459,7 +467,6 @@ def _scatter_obs(
                     all_pos[iname] = centroids[name]
                 else:
                     all_pos[iname] = [np.nan, np.nan]
-            _utils._tmp_cluster_pos = all_pos
             if legend_loc == 'on data export':
                 filename = settings.writedir / 'pos.csv'
                 logg.warning(f'exporting label positions to {filename}')
@@ -517,7 +524,7 @@ def ranking(
     """\
     Plot rankings.
 
-    See, for example, how this is used in pl.pca_ranking.
+    See, for example, how this is used in pl.pca_loadings.
 
     Parameters
     ----------
@@ -592,9 +599,13 @@ def ranking(
             pl.text(ig, score[g], labels[g], **txt_args)
         if include_lowest:
             score_mid = (score[g] + score[neg_indices[0]]) / 2
-            pl.text(len(indices), score_mid, '⋮', **txt_args)
-            for ig, g in enumerate(neg_indices):
-                pl.text(ig + len(indices) + 2, score[g], labels[g], **txt_args)
+            if (len(indices) + len(neg_indices)) < len(order_scores):
+                pl.text(len(indices), score_mid, '⋮', **txt_args)
+                for ig, g in enumerate(neg_indices):
+                    pl.text(ig + len(indices) + 2, score[g], labels[g], **txt_args)
+            else:
+                for ig, g in enumerate(neg_indices):
+                    pl.text(ig + len(indices), score[g], labels[g], **txt_args)
             pl.xticks([])
         pl.title(keys[iscore].replace('_', ' '))
         if n_panels <= 5 or iscore > n_cols:
@@ -689,6 +700,53 @@ def violin(
     Returns
     -------
     A :class:`~matplotlib.axes.Axes` object if `ax` is `None` else `None`.
+
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.violin(adata, keys='S_score')
+
+    Plot by category. Rotate x-axis labels so that they do not overlap.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90)
+
+    Set order of categories to be plotted or select specific categories to be plotted.
+
+    .. plot::
+        :context: close-figs
+
+        groupby_order = ['CD34+', 'CD19+ B']
+        sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90,
+            order=groupby_order)
+
+    Plot multiple keys.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys=['S_score', 'G2M_score'], groupby='bulk_labels',
+            rotation=90)
+
+    For large datasets consider omitting the overlaid scatter plot.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.violin(adata, keys='S_score', stripplot=False)
+
+    .. currentmodule:: scanpy
+
+    See also
+    --------
+    pl.stacked_violin
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -862,11 +920,18 @@ def clustermap(
 
     Examples
     --------
-    Soon to come with figures. In the meanwile, see :func:`~seaborn.clustermap`.
 
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.krumsiek11()
-    >>> sc.pl.clustermap(adata, obs_keys='cell_type')
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.krumsiek11()
+        sc.pl.clustermap(adata)
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.clustermap(adata, obs_keys='cell_type')
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -956,19 +1021,20 @@ def heatmap(
 
     Examples
     -------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True, swap_axes=True)
+    .. plot::
+        :context: close-figs
 
-    Using var_names as dict:
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.heatmap(adata, markers, groupby='bulk_labels', swap_axes=True)
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. currentmodule:: scanpy
 
     See also
     --------
-    rank_genes_groups_heatmap: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    pl.rank_genes_groups_heatmap
+    tl.rank_genes_groups
     """
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
@@ -1347,15 +1413,24 @@ def tracksplot(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.tracksplot(adata, markers, 'bulk_labels', dendrogram=True)
+
+    Using var_names as list:
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+        sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+    .. plot::
+        :context: close-figs
+
+        markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+        sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     .. currentmodule:: scanpy
 
@@ -1599,10 +1674,16 @@ def dendrogram(
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, 'bulk_labels')
-    >>> sc.pl.dendrogram(adata, 'bulk_labels')
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.dendrogram(adata, 'bulk_labels')
+        sc.pl.dendrogram(adata, 'bulk_labels')
+
+    .. currentmodule:: scanpy
+
     """
     if ax is None:
         _, ax = pl.subplots()
@@ -1884,7 +1965,7 @@ def _prepare_dataframe(
         categorical.name = groupby[0]
     else:
         # join the groupby values  using "_" to make a new 'category'
-        categorical = obs_tidy[groupby].agg('_'.join, axis=1).astype('category')
+        categorical = obs_tidy[groupby].apply('_'.join, axis=1).astype('category')
         categorical.name = "_".join(groupby)
 
         # preserve category order
@@ -2350,7 +2431,7 @@ def _plot_categories_as_colorblocks(
     labels = []
     label2code = {}  # dictionary of numerical values asigned to each label
     for code, (label, value) in enumerate(
-        obs_tidy.index.value_counts(sort=False).iteritems()
+        obs_tidy.index.value_counts(sort=False).items()
     ):
         ticks.append(value_sum + (value / 2))
         labels.append(label)

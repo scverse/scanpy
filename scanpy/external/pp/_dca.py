@@ -1,9 +1,8 @@
 from types import MappingProxyType
-from typing import Optional, Sequence, Union, Mapping, Any
+from typing import Optional, Sequence, Union, Mapping, Any, Literal
 
 from anndata import AnnData
 
-from ..._compat import Literal
 from ..._utils import AnyRandom
 
 

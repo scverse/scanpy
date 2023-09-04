@@ -62,7 +62,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         float
             std of gaussian
         """
-        lam_o = 1 / (std_o ** 2)
+        lam_o = 1 / (std_o**2)
         n = len(data)
         lam = 1 / np.var(data) if len(data) > 1 else lam_o
         lam_n = lam_o + n * lam
@@ -77,7 +77,11 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
 
     all_indices = np.empty(data.shape[0])
     num_of_barcodes = data.shape[1]
-    number_of_non_noise_barcodes = num_of_barcodes - number_of_noise_barcodes
+    number_of_non_noise_barcodes = (
+        num_of_barcodes - number_of_noise_barcodes
+        if number_of_noise_barcodes is not None
+        else 2
+    )
 
     num_of_noise_barcodes = num_of_barcodes - number_of_non_noise_barcodes
 
@@ -91,11 +95,13 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     # barcodes with rank < k are considered to be noise
     global_signal_counts = np.ravel(data_sort[:, -1])
     global_noise_counts = np.ravel(data_sort[:, :-number_of_non_noise_barcodes])
-    global_mu_signal_o, global_sigma_signal_o = np.mean(global_signal_counts), np.std(
-        global_signal_counts
+    global_mu_signal_o, global_sigma_signal_o = (
+        np.mean(global_signal_counts),
+        np.std(global_signal_counts),
     )
-    global_mu_noise_o, global_sigma_noise_o = np.mean(global_noise_counts), np.std(
-        global_noise_counts
+    global_mu_noise_o, global_sigma_noise_o = (
+        np.mean(global_noise_counts),
+        np.std(global_noise_counts),
     )
 
     noise_params_dict = {}
@@ -196,7 +202,11 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         # each cell and each hypothesis probability
         for prob_idx, log_prob in enumerate(log_probs_list):
             log_likelihoods_for_each_hypothesis[indices, prob_idx] = log_prob
-    return log_likelihoods_for_each_hypothesis, all_indices, counter_to_barcode_combo
+    return (
+        log_likelihoods_for_each_hypothesis,
+        all_indices,
+        counter_to_barcode_combo,
+    )
 
 
 def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
@@ -233,7 +243,8 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
         np.exp(log_likelihoods_for_each_hypothesis)
         * priors
         / np.sum(
-            np.multiply(np.exp(log_likelihoods_for_each_hypothesis), priors), axis=1
+            np.multiply(np.exp(log_likelihoods_for_each_hypothesis), priors),
+            axis=1,
         )[:, None]
     )
     most_likely_hypothesis = np.argmax(probs_hypotheses, axis=1)
@@ -249,7 +260,7 @@ def hashsolo(
     cell_hashing_columns: list,
     priors: list = [0.01, 0.8, 0.19],
     pre_existing_clusters: str = None,
-    number_of_noise_barcodes: int = 2,
+    number_of_noise_barcodes: int = None,
     inplace: bool = True,
 ):
     """Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
@@ -260,49 +271,66 @@ def hashsolo(
     Parameters
     ----------
     adata
-        Anndata object with cell hashes in .obs columns
+        The (annotated) data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
     cell_hashing_columns
-        list specifying which columns in adata.obs
-        are cell hashing counts
+        A list specifying `.obs` columns that contain cell hashing counts.
     priors
-        a list of your prior for each hypothesis
-        first element is your prior for the negative hypothesis
-        second element is your prior for the singlet hypothesis
-        third element is your prior for the doublet hypothesis
-        We use [0.01, 0.8, 0.19] by default because we assume the barcodes
-        in your cell hashing matrix are those cells which have passed QC
-        in the transcriptome space, e.g. UMI counts, pct mito reads, etc.
+        A list specifying the prior probability of each hypothesis, in
+        the order `[negative, singlet, doublet]`. The default is set to
+        `[0.01, 0.8, 0.19]` assuming barcode counts are from cells that
+        have passed QC in the transcriptome space, e.g. UMI counts, pct
+        mito reads, etc.
     pre_existing_clusters
-        column in adata.obs for how to break up demultiplexing
-        for example leiden or cell types, not batches though
+        The column in `.obs` containing pre-existing cluster assignments
+        (e.g. Leiden clusters or cell types, but not batch assignments).
+        If provided, demultiplexing will be performed separately for each
+        cluster.
     number_of_noise_barcodes
-        Use this if you wish change the number of barcodes used to create the
-        noise distribution. The default is number of cell hashes - 2.
+        The number of barcodes used to create the noise distribution.
+        Defaults to `len(cell_hashing_columns) - 2`.
     inplace
-        To do operation in place
+        Whether to update `adata` in-place or return a copy.
 
     Returns
     -------
-    adata
-        if inplace is False returns AnnData with demultiplexing results
-        in .obs attribute otherwise does is in place
+    adata : anndata.AnnData
+        A copy of the input `adata` if `inplace=False`, otherwise the input
+        `adata`. The following fields are added:
+
+        `.obs["most_likely_hypothesis"]`
+            Index of the most likely hypothesis, where `0` corresponds to negative,
+            `1` to singlet, and `2` to doublet.
+        `.obs["cluster_feature"]`
+            The cluster assignments used for demultiplexing.
+        `.obs["negative_hypothesis_probability"]`
+            Probability of the negative hypothesis.
+        `.obs["singlet_hypothesis_probability"]`
+            Probability of the singlet hypothesis.
+        `.obs["doublet_hypothesis_probability"]`
+            Probability of the doublet hypothesis.
+        `.obs["Classification"]`:
+            Classification of the cell, one of the barcodes in `cell_hashing_columns`,
+            `"Negative"`, or `"Doublet"`.
 
     Examples
     -------
     >>> import anndata
     >>> import scanpy.external as sce
-    >>> data = anndata.read("data.h5ad")
-    >>> sce.pp.hashsolo(data, ['Hash1', 'Hash2', 'Hash3'])
-    >>> data.obs.head()
+    >>> adata = anndata.read("data.h5ad")
+    >>> sce.pp.hashsolo(adata, ['Hash1', 'Hash2', 'Hash3'])
+    >>> adata.obs.head()
     """
     print(
         "Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
     )
-
+    adata = adata.copy() if not inplace else adata
     data = adata.obs[cell_hashing_columns].values
     if not check_nonnegative_integers(data):
         raise ValueError("Cell hashing counts must be non-negative")
-    if number_of_noise_barcodes >= len(cell_hashing_columns):
+    if (number_of_noise_barcodes is not None) and (
+        number_of_noise_barcodes >= len(cell_hashing_columns)
+    ):
         raise ValueError(
             "number_of_noise_barcodes must be at least one less \
         than the number of samples you have as determined by the number of \
@@ -327,7 +355,9 @@ def hashsolo(
         for cluster_feature in unique_cluster_features:
             cluster_feature_bool_vector = adata.obs[cluster_features] == cluster_feature
             posterior_dict = _calculate_bayes_rule(
-                data[cluster_feature_bool_vector], priors, number_of_noise_barcodes
+                data[cluster_feature_bool_vector],
+                priors,
+                number_of_noise_barcodes,
             )
             results.loc[
                 cluster_feature_bool_vector, "most_likely_hypothesis"

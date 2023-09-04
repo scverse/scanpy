@@ -1,10 +1,13 @@
-import pytest
 import numpy as np
+import pytest
+import warnings
 from anndata import AnnData
+from anndata.tests.helpers import as_dense_dask_array, asarray, assert_equal
+from scipy import sparse
 
 import scanpy as sc
-from scanpy.tests.fixtures import array_type, float_dtype
-from anndata.tests.helpers import assert_equal
+from scanpy.testing._helpers.data import pbmc3k_normalized
+from scanpy.testing._pytest.marks import needs
 
 A_list = [
     [0, 0, 7, 0, 0],
@@ -38,6 +41,92 @@ A_svd = np.array(
 )
 
 
+# If one uses dask for PCA it will always require dask-ml
+@pytest.fixture(
+    params=[
+        lambda: sparse.csr_matrix,
+        lambda: sparse.csc_matrix,
+        lambda: asarray,
+        pytest.param(lambda: as_dense_dask_array, marks=[needs("dask_ml")]),
+    ],
+    ids=["scipy-csr", "scipy-csc", "np-ndarray", "dask-array"],
+)
+def array_type(request):
+    return request.param()
+
+
+@pytest.fixture(params=[None, 'valid', 'invalid'])
+def svd_solver_type(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def zero_center(request):
+    return request.param
+
+
+@pytest.fixture
+def pca_params(array_type, svd_solver_type, zero_center):
+    all_svd_solvers = {'auto', 'full', 'arpack', 'randomized', 'tsqr', 'lobpcg'}
+
+    expected_warning = None
+    svd_solver = None
+    if svd_solver_type is not None:
+        if array_type is as_dense_dask_array:
+            svd_solver = (
+                ['auto', 'full', 'tsqr', 'randomized']
+                if zero_center
+                else ['tsqr', 'randomized']
+            )
+        elif array_type in [sparse.csr_matrix, sparse.csc_matrix]:
+            svd_solver = (
+                ['lobpcg', 'arpack'] if zero_center else ['arpack', 'randomized']
+            )
+        else:
+            svd_solver = (
+                ['auto', 'full', 'arpack', 'randomized']
+                if zero_center
+                else ['arpack', 'randomized']
+            )
+        if svd_solver_type == 'invalid':
+            svd_solver = list(all_svd_solvers.difference(svd_solver))
+            expected_warning = "Ignoring"
+
+        svd_solver = np.random.choice(svd_solver)
+    # explicit check for special case
+    if (
+        svd_solver == 'randomized'
+        and zero_center
+        and array_type in [sparse.csr_matrix, sparse.csc_matrix]
+    ):
+        expected_warning = "not work with sparse input"
+
+    return (svd_solver, expected_warning)
+
+
+def test_pca_warnings(array_type, zero_center, pca_params):
+    svd_solver, expected_warning = pca_params
+    A = array_type(A_list).astype('float32')
+    adata = AnnData(A)
+
+    if expected_warning is not None:
+        with pytest.warns(UserWarning, match=expected_warning):
+            sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
+    else:
+        with warnings.catch_warnings(record=True) as record:
+            sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
+        assert len(record) == 0
+
+
+# This warning test is out of the fixture because it is a special case in the logic of the function
+def test_pca_warnings_sparse():
+    for array_type in (sparse.csr_matrix, sparse.csc_matrix):
+        A = array_type(A_list).astype('float32')
+        adata = AnnData(A)
+        with pytest.warns(UserWarning, match="not work with sparse input"):
+            sc.pp.pca(adata, svd_solver="randomized", zero_center=True)
+
+
 def test_pca_transform(array_type):
     A = array_type(A_list).astype('float32')
     A_pca_abs = np.abs(A_pca)
@@ -45,27 +134,43 @@ def test_pca_transform(array_type):
 
     adata = AnnData(A)
 
-    sc.pp.pca(adata, n_comps=4, zero_center=True, svd_solver='arpack', dtype='float64')
+    with warnings.catch_warnings(record=True) as record:
+        sc.pp.pca(adata, n_comps=4, zero_center=True, dtype='float64')
+    assert len(record) == 0
 
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
 
-    sc.pp.pca(
-        adata,
-        n_comps=5,
-        zero_center=True,
-        svd_solver='randomized',
-        dtype='float64',
-        random_state=14,
-    )
+    with warnings.catch_warnings(record=True) as record:
+        sc.pp.pca(
+            adata,
+            n_comps=5,
+            zero_center=True,
+            svd_solver='randomized',
+            dtype='float64',
+            random_state=14,
+        )
+    if sparse.issparse(A):
+        assert any(
+            isinstance(r.message, UserWarning)
+            and "svd_solver 'randomized' does not work with sparse input"
+            in str(r.message)
+            for r in record
+        )
+    else:
+        assert len(record) == 0
+
     assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm['X_pca'])) < 2e-05
 
-    sc.pp.pca(adata, n_comps=4, zero_center=False, dtype='float64', random_state=14)
+    with warnings.catch_warnings(record=True) as record:
+        sc.pp.pca(adata, n_comps=4, zero_center=False, dtype='float64', random_state=14)
+    assert len(record) == 0
+
     assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
 
 
 def test_pca_shapes():
     """Tests that n_comps behaves correctly"""
-    # https://github.com/theislab/scanpy/issues/1051
+    # https://github.com/scverse/scanpy/issues/1051
     adata = AnnData(np.random.randn(30, 20))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (30, 19)
@@ -78,12 +183,12 @@ def test_pca_shapes():
         sc.pp.pca(adata, n_comps=100)
 
 
-def test_pca_sparse(pbmc3k_normalized):
+def test_pca_sparse():
     """
     Tests that implicitly centered pca on sparse arrays returns equivalent results to
     explicit centering on dense arrays.
     """
-    pbmc = pbmc3k_normalized
+    pbmc = pbmc3k_normalized()
 
     pbmc_dense = pbmc.copy()
     pbmc_dense.X = pbmc_dense.X.toarray()
@@ -99,30 +204,30 @@ def test_pca_sparse(pbmc3k_normalized):
     assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
 
 
-# This will take a while to run, but irreproducibility may
-# not show up for float32 unless the matrix is large enough
-def test_pca_reproducible(pbmc3k_normalized, array_type, float_dtype):
-    pbmc = pbmc3k_normalized
+def test_pca_reproducible(array_type):
+    pbmc = pbmc3k_normalized()
     pbmc.X = array_type(pbmc.X)
 
-    a = sc.pp.pca(pbmc, copy=True, dtype=float_dtype, random_state=42)
-    b = sc.pp.pca(pbmc, copy=True, dtype=float_dtype, random_state=42)
-    c = sc.pp.pca(pbmc, copy=True, dtype=float_dtype, random_state=0)
+    a = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
+    b = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
+    c = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=0)
 
     assert_equal(a, b)
     # Test that changing random seed changes result
+    # Does not show up reliably with 32 bit computation
     assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
-def test_pca_chunked(pbmc3k_normalized):
-    # https://github.com/theislab/scanpy/issues/1590
+def test_pca_chunked():
+    # https://github.com/scverse/scanpy/issues/1590
     # But also a more general test
 
     # Subsetting for speed of test
-    pbmc = pbmc3k_normalized[::6].copy()
+    pbmc_full = pbmc3k_normalized()
+    pbmc = pbmc_full[::6].copy()
     pbmc.X = pbmc.X.astype(np.float64)
-    chunked = sc.pp.pca(pbmc3k_normalized, chunked=True, copy=True)
-    default = sc.pp.pca(pbmc3k_normalized, copy=True)
+    chunked = sc.pp.pca(pbmc_full, chunked=True, copy=True)
+    default = sc.pp.pca(pbmc_full, copy=True)
 
     # Taking absolute value since sometimes dimensions are flipped
     np.testing.assert_allclose(
@@ -136,3 +241,46 @@ def test_pca_chunked(pbmc3k_normalized):
         np.abs(chunked.uns["pca"]["variance_ratio"]),
         np.abs(default.uns["pca"]["variance_ratio"]),
     )
+
+
+def test_pca_n_pcs():
+    """
+    Tests that the n_pcs parameter also works for
+    representations not called "X_pca"
+    """
+    pbmc = pbmc3k_normalized()
+    sc.pp.pca(pbmc, dtype=np.float64)
+    pbmc.obsm["X_pca_test"] = pbmc.obsm["X_pca"]
+    original = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca", copy=True)
+    renamed = sc.pp.neighbors(pbmc, n_pcs=5, use_rep="X_pca_test", copy=True)
+
+    assert np.allclose(original.obsm["X_pca"], renamed.obsm["X_pca_test"])
+    assert np.allclose(
+        original.obsp["distances"].toarray(), renamed.obsp["distances"].toarray()
+    )
+
+
+def test_pca_layer():
+    """
+    Tests that layers works the same way as .X
+    """
+    X_adata = pbmc3k_normalized()
+
+    layer_adata = X_adata.copy()
+    layer_adata.layers["counts"] = X_adata.X.copy()
+    del layer_adata.X
+
+    sc.pp.pca(X_adata, dtype=np.float64)
+    sc.pp.pca(layer_adata, layer="counts", dtype=np.float64)
+
+    assert layer_adata.uns["pca"]["params"]["layer"] == "counts"
+    assert "layer" not in X_adata.uns["pca"]["params"]
+
+    np.testing.assert_equal(
+        X_adata.uns["pca"]["variance"], layer_adata.uns["pca"]["variance"]
+    )
+    np.testing.assert_equal(
+        X_adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
+    )
+    np.testing.assert_equal(X_adata.obsm['X_pca'], layer_adata.obsm['X_pca'])
+    np.testing.assert_equal(X_adata.varm['PCs'], layer_adata.varm['PCs'])

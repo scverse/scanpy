@@ -10,7 +10,7 @@ def test_cell_demultiplexing():
     random.seed(52)
     signal = stats.poisson.rvs(1000, 1, 990)
     doublet_signal = stats.poisson.rvs(1000, 1, 10)
-    x = np.reshape(stats.poisson.rvs(5, 1, 10000), (1000, 10))
+    x = np.reshape(stats.poisson.rvs(500, 1, 10000), (1000, 10))
     for idx, signal_count in enumerate(signal):
         col_pos = idx % 10
         x[idx, col_pos] = signal_count

@@ -1,33 +1,39 @@
 from packaging import version
 
 try:
-    from typing import Literal
+    from functools import cache
+except ImportError:  # Python < 3.9
+    from functools import lru_cache
+
+    cache = lru_cache(maxsize=None)
+
+try:
+    from dask.array import Array as DaskArray
 except ImportError:
-    try:
-        from typing_extensions import Literal
-    except ImportError:
 
-        class LiteralMeta(type):
-            def __getitem__(cls, values):
-                if not isinstance(values, tuple):
-                    values = (values,)
-                return type('Literal_', (Literal,), dict(__args__=values))
+    class DaskArray:
+        pass
 
-        class Literal(metaclass=LiteralMeta):
-            pass
+
+__all__ = ['cache', 'DaskArray', 'fullname', 'pkg_metadata', 'pkg_version']
+
+
+def fullname(typ: type) -> str:
+    module = typ.__module__
+    name = typ.__qualname__
+    if module == 'builtins' or module is None:
+        return name
+    return f'{module}.{name}'
 
 
 def pkg_metadata(package):
-    try:
-        from importlib.metadata import metadata as m
-    except ImportError:  # < Python 3.8: Use backport module
-        from importlib_metadata import metadata as m
+    from importlib.metadata import metadata as m
+
     return m(package)
 
 
+@cache
 def pkg_version(package):
-    try:
-        from importlib.metadata import version as v
-    except ImportError:  # < Python 3.8: Use backport module
-        from importlib_metadata import version as v
+    from importlib.metadata import version as v
+
     return version.parse(v(package))

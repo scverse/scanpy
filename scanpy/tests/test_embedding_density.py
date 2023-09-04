@@ -1,7 +1,7 @@
 import numpy as np
 from anndata import AnnData
-
 import scanpy as sc
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 def test_embedding_density():
@@ -22,6 +22,6 @@ def test_embedding_density():
 
 def test_embedding_density_plot():
     # Test that sc.pl.embedding_density() runs without error
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     sc.tl.embedding_density(adata, 'umap')
     sc.pl.embedding_density(adata, 'umap', 'umap_density', show=False)

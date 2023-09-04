@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union, Optional, Literal
 
 import numpy as np
 import random
@@ -8,7 +8,6 @@ from scipy.sparse import spmatrix
 from .. import _utils
 from .. import logging as logg
 from ._utils import get_init_pos_from_paga
-from .._compat import Literal
 from .._utils import AnyRandom, _choose_graph
 
 
@@ -86,10 +85,9 @@ def draw_graph(
     copy
         Return a copy instead of writing to adata.
     **kwds
-        Parameters of chosen igraph layout. See e.g. `fruchterman-reingold`_
-        [Fruchterman91]_. One of the most important ones is `maxiter`.
-
-        .. _fruchterman-reingold: http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold
+        Parameters of chosen igraph layout. See e.g.
+        :meth:`~igraph.GraphBase.layout_fruchterman_reingold` [Fruchterman91]_.
+        One of the most important ones is `maxiter`.
 
     Returns
     -------

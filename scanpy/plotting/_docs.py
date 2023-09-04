@@ -50,6 +50,11 @@ sort_order
 groups
     Restrict to a few categories in categorical observation annotation.
     The default is not to restrict to any groups.
+dimensions
+    0-indexed dimensions of the embedding to plot as integers. E.g. [(0, 1), (1, 2)].
+    Unlike `components`, this argument is used in the same way as `colors`, e.g. is
+    used to specify a single plot at a time. Will eventually replace the components
+    argument.
 components
     For instance, `['1,2', '2,3']`. To plot all available components use
     `components='all'`.
@@ -68,6 +73,9 @@ legend_fontweight
 legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
+colorbar_loc
+    Where to place the colorbar for continous variables. If `None`, no colorbar
+    is added.
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
@@ -181,7 +189,6 @@ ax
     A matplotlib axes object. Only works if plotting a single component.\
 """
 
-
 doc_common_plot_args = """\
 adata
     Annotated data matrix.
@@ -236,6 +243,45 @@ layer
     Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
     If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
     then the layer is plotted. `layer` takes precedence over `use_raw`.\
+"""
+
+doc_rank_genes_groups_plot_args = """\
+adata
+    Annotated data matrix.
+groups
+    The groups for which to show the gene ranking.
+n_genes
+    Number of genes to show. This can be a negative number to show for
+    example the down regulated genes. eg: num_genes=-10. Is ignored if
+    `gene_names` is passed.
+gene_symbols
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
+    refer to the index column of the `.var` DataFrame. Setting this option allows
+    alternative names to be used.
+groupby
+    The key of the observation grouping to consider. By default,
+    the groupby is chosen from the rank genes groups parameter but
+    other groupby options can be used.  It is expected that
+    groupby is a categorical. If groupby is not a categorical observation,
+    it would be subdivided into `num_categories` (see :func:`~scanpy.pl.dotplot`).
+min_logfoldchange
+    Value to filter genes in groups if their logfoldchange is less than the
+    min_logfoldchange
+key
+    Key used to store the ranking results in `adata.uns`.\
+"""
+
+doc_rank_genes_groups_values_to_plot = """\
+values_to_plot
+    Instead of the mean gene value, plot the values computed by `sc.rank_genes_groups`.
+    The options are: ['scores', 'logfoldchanges', 'pvals', 'pvals_adj',
+    'log10_pvals', 'log10_pvals_adj']. When plotting logfoldchanges a divergent
+    colormap is recommended. See examples below.
+var_names
+    Genes to plot. Sometimes is useful to pass a specific list of var names (e.g. genes)
+    to check their fold changes or p-values, instead of the top/bottom genes. The
+    var_names could be a dictionary or a list as in :func:`~scanpy.pl.dotplot` or
+    :func:`~scanpy.pl.matrixplot`. See examples below.\
 """
 
 doc_scatter_spatial = """\

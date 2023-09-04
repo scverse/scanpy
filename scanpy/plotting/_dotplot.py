@@ -1,4 +1,4 @@
-from typing import Optional, Union, Mapping  # Special
+from typing import Optional, Union, Mapping, Literal  # Special
 from typing import Sequence  # ABCs
 from typing import Tuple  # Classes
 
@@ -11,7 +11,6 @@ from matplotlib.colors import Normalize
 
 from .. import logging as logg
 from .._utils import _doc_params
-from .._compat import Literal
 from ._utils import make_grid_spec, fix_kwds, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._utils import savefig_or_show
@@ -192,8 +191,8 @@ class DotPlot(BasePlot):
             # check that both matrices have the same shape
             if dot_color_df.shape != dot_size_df.shape:
                 logg.error(
-                    "the given dot_color_df data frame has a different shape than"
-                    "the data frame used for the dot size. Both data frames need"
+                    "the given dot_color_df data frame has a different shape than "
+                    "the data frame used for the dot size. Both data frames need "
                     "to have the same index and columns"
                 )
 
@@ -336,8 +335,8 @@ class DotPlot(BasePlot):
             self.dot_max = dot_max
         if dot_min != self.dot_min:
             self.dot_min = dot_min
-        if dot_min != self.dot_min:
-            self.smallest_dot = dot_min
+        if smallest_dot != self.smallest_dot:
+            self.smallest_dot = smallest_dot
         if largest_dot != self.largest_dot:
             self.largest_dot = largest_dot
         if color_on != self.color_on:
@@ -433,7 +432,7 @@ class DotPlot(BasePlot):
         else:
             size_values = size_range
 
-        size = size_values ** self.size_exponent
+        size = size_values**self.size_exponent
         size = size * (self.largest_dot - self.smallest_dot) + self.smallest_dot
 
         # plot size bar
@@ -472,7 +471,6 @@ class DotPlot(BasePlot):
         size_legend_ax.set_xlim(xmin - 0.15, xmax + 0.5)
 
     def _plot_legend(self, legend_ax, return_ax_dict, normalize):
-
         # to maintain the fixed height size of the legends, a
         # spacer of variable height is added at the bottom.
         # The structure for the legends is:
@@ -696,7 +694,7 @@ class DotPlot(BasePlot):
             # re-scale frac between 0 and 1
             frac = (frac - dot_min) / old_range
 
-        size = frac ** size_exponent
+        size = frac**size_exponent
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
         normalize = check_colornorm(vmin, vmax, vcenter, norm)

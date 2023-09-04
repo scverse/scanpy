@@ -1,10 +1,11 @@
-import pytest
 import numpy as np
 from anndata import AnnData
 
 import scanpy as sc
+from scanpy.testing._pytest.marks import needs
 
-pytest.importorskip("magic", minversion=sc.external.pp._magic.MIN_VERSION)
+
+pytestmark = [needs('magic')]
 
 A_list = [
     [0, 0, 7, 0, 0],
