@@ -115,6 +115,22 @@ def test_subsample_copy():
     assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
 
 
+def test_subsample_copy_backed(tmp_path):
+    A = np.random.rand(200, 10).astype(np.float32)
+    adata_m = AnnData(A.copy())
+    adata_d = AnnData(A.copy())
+    filename = tmp_path / 'test.h5ad'
+    adata_d.filename = filename
+    # This should not throw an error
+    assert sc.pp.subsample(adata_d, n_obs=40, copy=True).shape == (40, 10)
+    np.testing.assert_array_equal(
+        sc.pp.subsample(adata_m, n_obs=40, copy=True).X,
+        sc.pp.subsample(adata_d, n_obs=40, copy=True).X,
+    )
+    with pytest.raises(NotImplementedError):
+        sc.pp.subsample(adata_d, n_obs=40, copy=False)
+
+
 def test_scale():
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
