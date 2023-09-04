@@ -36,10 +36,9 @@ ROOT = HERE / '_images'
 sc.pl.set_rcParams_defaults()
 sc.set_figure_params(dpi=40, color_map='viridis')
 
-#####
-# Test images are saved under the folder ./figures
-# if test images need to be updated, simply copy them from
-# the ./figures folder to ./_images/
+
+# Test images are saved in the directory ./_images/<test-name>/
+# If test images need to be updated, simply copy actual.png to expected.png.
 
 
 @needs('leidenalg')
