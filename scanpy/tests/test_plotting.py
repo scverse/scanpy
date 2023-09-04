@@ -1178,9 +1178,8 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same
     save_and_compare_images('embedding_outline_vmin_vmax')
 
 
-def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmpdir, check_same_image):
-    TESTDIR = Path(tmpdir)
-    pbmc = sc.datasets.pbmc68k_reduced()
+def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_image):
+    pbmc = pbmc68k_reduced()
 
     import matplotlib as mpl
     import matplotlib.pyplot as plt
@@ -1229,7 +1228,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmpdir, check_same_ima
         norm=norm,
         wspace=0.5,
     )
-    plt.savefig(TESTDIR / 'umap_norm_fig0.png')
+    plt.savefig(tmp_path / 'umap_norm_fig0.png')
     plt.close()
 
     sc.pl.umap(
@@ -1239,7 +1238,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmpdir, check_same_ima
         norm=divnorm,
         wspace=0.5,
     )
-    plt.savefig(TESTDIR / 'umap_norm_fig1.png')
+    plt.savefig(tmp_path / 'umap_norm_fig1.png')
     plt.close()
 
     sc.pl.umap(
@@ -1251,16 +1250,16 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmpdir, check_same_ima
         vmax=6000,
         wspace=0.5,
     )
-    plt.savefig(TESTDIR / 'umap_norm_fig2.png')
+    plt.savefig(tmp_path / 'umap_norm_fig2.png')
     plt.close()
 
     check_same_image(
-        TESTDIR / 'umap_norm_fig1.png', TESTDIR / 'umap_norm_fig2.png', tol=1
+        tmp_path / 'umap_norm_fig1.png', tmp_path / 'umap_norm_fig2.png', tol=1
     )
 
     with pytest.raises(AssertionError):
         check_same_image(
-            TESTDIR / 'umap_norm_fig1.png', TESTDIR / 'umap_norm_fig0.png', tol=1
+            tmp_path / 'umap_norm_fig1.png', tmp_path / 'umap_norm_fig0.png', tol=1
         )
 
 
