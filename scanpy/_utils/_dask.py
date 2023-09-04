@@ -15,8 +15,27 @@ if TYPE_CHECKING:
 
 
 def _lazy_bool_op(
-    left: _BoolScalar, right: Callable[[], _BoolScalar], /, *, cmp
+    left: _BoolScalar,
+    right: Callable[[], _BoolScalar],
+    /,
+    *,
+    cmp: Callable[[_BoolScalar, Callable[[], _BoolScalar]], _BoolScalar],
 ) -> _BoolScalar:
+    """\
+    Transparent boolean operators for dask and plain python.
+
+    For dask alone, the right argument wouldn’t need to be callable,
+    But for simplicity’s sake, we require it to in any case.
+    That way the pattern is always ``lazy_*(left_value, lambda: right_expr)``.
+
+    E.g. in the nested case:
+
+    >>> True and (False or True)
+    True
+    >>> # corresponds to
+    >>> lazy_and(True, lambda: lazy_or(False, lambda: True))
+    True
+    """
     if callable(left):
         raise TypeError('only right operand should be callable')
     if not callable(right):
