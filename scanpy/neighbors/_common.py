@@ -36,6 +36,9 @@ def _get_indices_distances_from_dense_matrix(D: NDArray[np.float32], n_neighbors
 def _get_indices_distances_from_sparse_matrix(
     D: csr_matrix, n_neighbors: int
 ) -> tuple[NDArray[np.int64], NDArray]:
+    if (shortcut := _ind_dist_shortcut(D, n_neighbors)) is not None:
+        return shortcut
+
     indices = np.zeros((D.shape[0], n_neighbors), dtype=int)
     distances = np.zeros((D.shape[0], n_neighbors), dtype=D.dtype)
     n_neighbors_m1 = n_neighbors - 1
@@ -56,3 +59,23 @@ def _get_indices_distances_from_sparse_matrix(
             indices[i, 1:] = neighbors[1]
             distances[i, 1:] = D[i][neighbors]
     return indices, distances
+
+
+def _ind_dist_shortcut(
+    distances: csr_matrix, n_neighbors: int
+) -> tuple[NDArray[np.int_], NDArray[np.float_]] | None:
+    """\
+    Shortcut for RAPIDS-style distance matrices.
+
+    These have exactly `n_neighbors` entries per row.
+    """
+    n_obs = distances.shape[0]  # shape is square
+    if (
+        distances.nnz != (n_obs * n_neighbors)
+        or (distances.getnnz(axis=1) != n_neighbors).any()
+    ):
+        return None
+    return (
+        distances.indices.reshape(n_obs, n_neighbors),
+        distances.data.reshape(n_obs, n_neighbors),
+    )
