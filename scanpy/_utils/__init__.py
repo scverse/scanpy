@@ -506,11 +506,11 @@ def check_nonnegative_integers(X: _SupportedArray) -> np.bool_ | bool | DaskArra
         # none are negative
         ~ufuncs.signbit(data).any(),
         # and
-        lazy_or(
+        lambda: lazy_or(
             # either all are integers
             issubclass(data.dtype.type, Integral),
             # or all are whole numbers
-            ~((data % 1) != 0).any(),
+            lambda: ~((data % 1) != 0).any(),
         ),
     )
 
