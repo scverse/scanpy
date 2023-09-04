@@ -1193,6 +1193,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
 
     norm = Normalize(0, 10000)
     divnorm = DivNorm(200, 150, 6000)
+
     # allowed
     sc.pl.umap(
         pbmc,
