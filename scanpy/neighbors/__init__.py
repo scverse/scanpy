@@ -123,6 +123,9 @@ def neighbors(
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
         `'rapids'`
             A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
+
+            .. deprecated:: 1.10.0
+               Use :func:`rapids_singlecell.tl.neighbors` instead.
     metric
         A known metric’s name or a callable that returns a distance.
 
@@ -631,8 +634,6 @@ class Neighbors:
             if transformer is not None:
                 msg = "Can’t specify both `method = 'rapids'` and `transformer`."
                 raise ValueError(msg)
-            msg = "method = 'rapids' is deprecated. Use transformer = 'rapids'."
-            warn(msg, FutureWarning)
             method = 'umap'
             transformer = 'rapids'
         elif method not in (methods := set(get_args(_Method))):
@@ -671,6 +672,11 @@ class Neighbors:
                 )
             transformer = PyNNDescentTransformer(**kwds)
         elif transformer == 'rapids':
+            msg = (
+                "`transformer='rapids'` is deprecated. "
+                'Use `rapids_singlecell.tl.neighbors` instead.'
+            )
+            warn(msg, FutureWarning)
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
             transformer = RapidsKNNTransformer(**kwds)
