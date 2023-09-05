@@ -108,7 +108,7 @@ def umap(
             GPU accelerated implementation.
 
             .. deprecated:: 1.10.0
-                Use :func:`rapids_singlecell.tl.louvain` instead.
+                Use :func:`rapids_singlecell.tl.umap` instead.
     neighbors_key
         If not specified, umap looks .uns['neighbors'] for neighbors settings
         and .obsp['connectivities'] for connectivities
