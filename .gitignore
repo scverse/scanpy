@@ -17,8 +17,8 @@
 /.cache/
 /.pytest_cache/
 /scanpy/tests/test*.h5ad
-/scanpy/tests/figures/
-/scanpy/tests/notebooks/figures/
+/scanpy/tests/**/*actual.png
+/scanpy/tests/**/*failed-diff.png
 
 # Environment management
 /hatch.toml

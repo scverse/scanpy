@@ -1,5 +1,6 @@
 from types import MappingProxyType
 from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Literal
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -69,7 +70,16 @@ def louvain(
         Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     flavor
         Choose between to packages for computing the clustering.
-        ``'vtraag'`` is much more powerful, and the default.
+
+        ``'vtraag'``
+            Much more powerful than ``'igraph'``, and the default.
+        ``'igraph'``
+            Built in ``igraph`` method.
+        ``'rapids'``
+            GPU accelerated implementation.
+
+            .. deprecated:: 1.10.0
+                Use :func:`rapids_singlecell.tl.louvain` instead.
     directed
         Interpret the ``adjacency`` matrix as directed graph?
     use_weights
@@ -157,6 +167,11 @@ def louvain(
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
     elif flavor == 'rapids':
+        msg = (
+            "`flavor='rapids'` is deprecated. "
+            'Use `rapids_singlecell.tl.louvain` instead.'
+        )
+        warnings.warn(msg, FutureWarning)
         # nvLouvain only works with undirected graphs,
         # and `adjacency` must have a directed edge in both directions
         import cudf

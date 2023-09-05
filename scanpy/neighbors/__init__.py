@@ -78,7 +78,7 @@ def neighbors(
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
-    Compute a neighborhood graph of observations [McInnes18]_.
+    Computes the nearest neighbors distance matrix and a neighborhood graph of observations [McInnes18]_.
 
     The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
     which also provides a method for estimating connectivities of data points -
@@ -123,6 +123,9 @@ def neighbors(
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
         `'rapids'`
             A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
+
+            .. deprecated:: 1.10.0
+               Use :func:`rapids_singlecell.tl.neighbors` instead.
     metric
         A known metric’s name or a callable that returns a distance.
 
@@ -156,8 +159,7 @@ def neighbors(
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
     **distances** : sparse matrix of dtype `float64`.
-        Instead of decaying weights, this stores distances for each pair of
-        neighbors.
+        Stores the distance matrix of the nearest neighbors search.
 
     Examples
     --------
@@ -631,8 +633,6 @@ class Neighbors:
             if transformer is not None:
                 msg = "Can’t specify both `method = 'rapids'` and `transformer`."
                 raise ValueError(msg)
-            msg = "method = 'rapids' is deprecated. Use transformer = 'rapids'."
-            warn(msg, FutureWarning)
             method = 'umap'
             transformer = 'rapids'
         elif method not in (methods := set(get_args(_Method))):
@@ -671,6 +671,11 @@ class Neighbors:
                 )
             transformer = PyNNDescentTransformer(**kwds)
         elif transformer == 'rapids':
+            msg = (
+                "`transformer='rapids'` is deprecated. "
+                'Use `rapids_singlecell.tl.neighbors` instead.'
+            )
+            warn(msg, FutureWarning)
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
             transformer = RapidsKNNTransformer(**kwds)

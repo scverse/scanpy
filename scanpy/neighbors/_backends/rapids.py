@@ -46,6 +46,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         p: int = 2,
         algo_params: Mapping[str, Any] | None = None,
         metric_params: Mapping[str, Any] | None = None,
+        random_state=None,
     ) -> None:
         from cuml.neighbors import NearestNeighbors
 
@@ -83,7 +84,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         """Perform knn search on the index."""
         self._transform_checks(X)
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
-        return self.nn.kneighbors_graph(X_contiguous)
+        return self.nn.kneighbors_graph(X_contiguous, mode="distance")
 
     def _more_tags(self) -> dict[str, Any]:
         """See :label:`sklearn:estimator_tags`"""
