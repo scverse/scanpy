@@ -22,7 +22,7 @@ def cite_role(
     lineno: int,
     inliner: Inliner,
     options: Mapping[str, Any] = MappingProxyType({}),
-    content: Sequence[str] = [],
+    content: Sequence[str] = (),
 ) -> tuple[list[nodes.Node], list[nodes.system_message]]:
     key = utils.unescape(text)
     node = nodes.citation_reference(f'[{key}]_', key)
