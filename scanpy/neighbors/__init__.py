@@ -169,7 +169,7 @@ def neighbors(
     >>> sc.pp.neighbors(adata, 20, metric='cosine')
     >>> # Provide your own transformer for more control and flexibility
     >>> from sklearn.neighbors import KNeighborsTransformer
-    >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='cosine', algorithm='ball_tree')
+    >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='manhattan', algorithm='kd_tree')
     >>> sc.pp.neighbors(adata, transformer=transformer)
     >>> # now you can e.g. access the index: `transformer._tree`
     """
