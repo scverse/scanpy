@@ -1,6 +1,8 @@
-from collections.abc import MutableMapping
+from __future__ import annotations
+
 import doctest
-from typing import Iterable, Union, Optional
+from collections.abc import Iterable, MutableMapping, Generator
+from typing import Union, Optional
 
 import pandas as pd
 import numpy as np
@@ -11,10 +13,11 @@ from anndata import AnnData
 
 from .. import settings
 from .. import logging as logg
-from ..neighbors import _rp_forest_generate
+from ..neighbors import FlatTree, RPForestDict
 from .._utils import NeighborsView
 from .._compat import pkg_version
 from ..testing._doctests import doctest_skip
+
 
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
@@ -34,7 +37,7 @@ def ingest(
     """\
     Map labels and embeddings from reference data to new data.
 
-    :tutorial:`integrating-data-using-ingest`
+    :doc:`tutorials:integrating-data-using-ingest`
 
     Integrates embeddings and annotations of an `adata` with a reference dataset
     `adata_ref` through projecting on a PCA (or alternate
@@ -102,9 +105,6 @@ def ingest(
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
     >>> sc.tl.ingest(adata, adata_ref, obs='cell_type')
-
-    .. _ingest PBMC tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pbmcs-using-ingest.html
-    .. _ingest Pancreas tutorial: https://scanpy-tutorials.readthedocs.io/en/latest/integrating-pancreas-using-ingest.html
     """
     # anndata version check
     anndata_version = pkg_version("anndata")
@@ -140,6 +140,27 @@ def ingest(
 
     logg.info('    finished', time=start)
     return ing.to_adata(inplace)
+
+
+def _rp_forest_generate(
+    rp_forest_dict: RPForestDict,
+) -> Generator[FlatTree, None, None]:
+    props = FlatTree._fields
+    num_trees = len(rp_forest_dict[props[0]]['start']) - 1
+
+    for i in range(num_trees):
+        tree = []
+        for prop in props:
+            start = rp_forest_dict[prop]['start'][i]
+            end = rp_forest_dict[prop]['start'][i + 1]
+            tree.append(rp_forest_dict[prop]['data'][start:end])
+        yield FlatTree(*tree)
+
+    tree = []
+    for prop in props:
+        start = rp_forest_dict[prop]['start'][num_trees]
+        tree.append(rp_forest_dict[prop]['data'][start:])
+    yield FlatTree(*tree)
 
 
 class _DimDict(MutableMapping):

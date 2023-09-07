@@ -1,11 +1,14 @@
 from types import ModuleType
-from scipy.sparse import csr_matrix, csc_matrix
+import pytest
+from scipy.sparse import csr_matrix
 import numpy as np
 
-from scanpy._utils import descend_classes_and_funcs, check_nonnegative_integers
-
-from anndata.tests.helpers import assert_equal, asarray
-import pytest
+from scanpy._utils import (
+    descend_classes_and_funcs,
+    check_nonnegative_integers,
+    is_constant,
+)
+from scanpy.testing._pytest.marks import needs
 
 
 def test_descend_classes_and_funcs():
@@ -41,12 +44,7 @@ def test_check_nonnegative_integers():
     assert check_nonnegative_integers(X_) is False
 
 
-@pytest.mark.parametrize(
-    'array_type', [asarray, csr_matrix, csc_matrix], ids=lambda x: x.__name__
-)
 def test_is_constant(array_type):
-    from scanpy._utils import is_constant
-
     constant_inds = [1, 3]
     A = np.arange(20).reshape(5, 4)
     A[constant_inds, :] = 10
@@ -64,3 +62,32 @@ def test_is_constant(array_type):
     np.testing.assert_array_equal(
         [False, True, False, True, False], is_constant(AT, axis=0)
     )
+
+
+@needs('dask')
+@pytest.mark.parametrize(
+    ('axis', 'expected'),
+    [
+        pytest.param(None, False, id='None'),
+        pytest.param(0, [True, True, False, False], id='0'),
+        pytest.param(1, [False, False, True, True, False, True], id='1'),
+    ],
+)
+@pytest.mark.parametrize('block_type', [np.array, csr_matrix])
+def test_is_constant_dask(axis, expected, block_type):
+    import dask.array as da
+
+    if (axis is None) and block_type is csr_matrix:
+        pytest.skip('Dask has weak support for scipy sparse matrices')
+
+    x_data = [
+        [0, 0, 1, 1],
+        [0, 0, 1, 1],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 0],
+    ]
+    x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
+
+    np.testing.assert_array_equal(expected, is_constant(x, axis=axis))

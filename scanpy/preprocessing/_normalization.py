@@ -6,18 +6,11 @@ from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
-try:
-    from dask.array import Array as DaskArray
-except ImportError:
 
-    class DaskArray:
-        pass
-
-
-from scanpy import logging as logg
-from scanpy._utils import view_to_actual
-
-from scanpy.get import _get_obs_rep, _set_obs_rep
+from .. import logging as logg
+from .._utils import view_to_actual
+from ..get import _get_obs_rep, _set_obs_rep
+from .._compat import DaskArray
 
 
 def _normalize_data(X, counts, after=None, copy=False):

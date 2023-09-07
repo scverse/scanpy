@@ -1,5 +1,3 @@
-import pytest
-
 import scanpy as sc
 import scanpy.external as sce
 from scanpy.testing._helpers.data import pbmc3k

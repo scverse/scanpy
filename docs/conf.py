@@ -1,14 +1,11 @@
 import os
 import sys
-import importlib.util
-import inspect
-import re
-import subprocess
 from pathlib import Path
 from datetime import datetime
 from typing import Any
 
 import matplotlib  # noqa
+from sphinx.application import Sphinx
 from packaging.version import parse as parse_version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -18,7 +15,6 @@ HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / 'extensions')]
 import scanpy  # noqa
 
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 # -- General configuration ------------------------------------------------
 
@@ -60,15 +56,15 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
-    'sphinx.ext.linkcode',
     'sphinx.ext.extlinks',
     'matplotlib.sphinxext.plot_directive',
     'sphinx_autodoc_typehints',  # needs to be after napoleon
-    'scanpydoc.autosummary_generate_imported',
-    'scanpydoc.definition_list_typed_field',
+    'git_ref',  # needs to be before scanpydoc.rtd_github_links
+    'scanpydoc',  # needs to be before sphinx.ext.linkcode
+    'sphinx.ext.linkcode',
     'sphinx_design',
     'sphinxext.opengraph',
-    *[p.stem for p in (HERE / 'extensions').glob('*.py')],
+    *[p.stem for p in (HERE / 'extensions').glob('*.py') if p.stem not in {'git_ref'}],
 ]
 
 # Generate the API documentation when building
@@ -102,29 +98,33 @@ ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightF
 
 typehints_defaults = 'braces'
 
-scanpy_tutorials_url = 'https://scanpy-tutorials.readthedocs.io/en/latest/'
-
 pygments_style = "default"
 pygments_dark_style = "native"
 
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
+    cuml=('https://docs.rapids.ai/api/cuml/stable/', None),
     cycler=('https://matplotlib.org/cycler/', None),
+    dask=('https://docs.dask.org/en/stable/', None),
+    dask_ml=('https://ml.dask.org/', None),
     h5py=('https://docs.h5py.org/en/stable/', None),
     ipython=('https://ipython.readthedocs.io/en/stable/', None),
+    igraph=('https://python.igraph.org/en/stable/api/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
     louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
     matplotlib=('https://matplotlib.org/stable/', None),
     networkx=('https://networkx.org/documentation/stable/', None),
     numpy=('https://numpy.org/doc/stable/', None),
     pandas=('https://pandas.pydata.org/pandas-docs/stable/', None),
+    pynndescent=('https://pynndescent.readthedocs.io/en/latest/', None),
     pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
+    rapids_singlecell=('https://rapids-singlecell.readthedocs.io/en/latest/', None),
     scipy=('https://docs.scipy.org/doc/scipy/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
-    scanpy_tutorials=(scanpy_tutorials_url, None),
+    tutorials=('https://scanpy-tutorials.readthedocs.io/en/latest/', None),
 )
 
 
@@ -134,8 +134,6 @@ html_theme = "sphinx_book_theme"
 html_theme_options = {
     "repository_url": repository_url,
     "use_repository_button": True,
-    "logo_only": True,
-    "show_toc_level": 4,  # show all levels in the sidebar
 }
 html_static_path = ['_static']
 html_css_files = ["css/override.css"]
@@ -144,12 +142,8 @@ html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
 html_title = "scanpy"
 
 
-def setup(app):
+def setup(app: Sphinx):
     """App setup hook."""
-    # TODO: fix all warnings in a future PR
-    # Many come from the tutorials, like the workshop directory
-    # which is not included in the docs
-    #     app.warningiserror = on_rtd
     app.add_config_value(
         "recommonmark_config",
         {
@@ -197,12 +191,14 @@ qualname_overrides = {
 nitpick_ignore = [
     # Will probably be documented
     ('py:class', 'scanpy._settings.Verbosity'),
+    ('py:class', 'scanpy.neighbors.OnFlySymMatrix'),
     # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
     ('py:class', 'seaborn.ClusterGrid'),
     # Won’t be documented
     ('py:class', 'scanpy.plotting._utils._AxesSubplot'),
     ('py:class', 'scanpy._utils.Empty'),
     ('py:class', 'numpy.random.mtrand.RandomState'),
+    ('py:class', 'scanpy.neighbors._types.KnnTransformerLike'),
     # Will work once scipy 1.8 is released
     ('py:class', 'scipy.sparse.base.spmatrix'),
     ('py:class', 'scipy.sparse.csr.csr_matrix'),
@@ -216,61 +212,8 @@ plot_html_show_formats = False
 plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
 
-# Linkcode config
-
-
-def git(*args):
-    return subprocess.check_output(["git", *args]).strip().decode()
-
-
-# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
-# Current git reference. Uses branch/tag name if found, otherwise uses commit hash
-git_ref = None
-try:
-    git_ref = git("name-rev", "--name-only", "--no-undefined", "HEAD")
-    git_ref = re.sub(r"^(remotes/[^/]+|tags)/", "", git_ref)
-except Exception:
-    pass
-
-# (if no name found or relative ref, use commit hash instead)
-if not git_ref or re.search(r"[\^~]", git_ref):
-    try:
-        git_ref = git("rev-parse", "HEAD")
-    except Exception:
-        git_ref = "master"
-
-# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
-_module_path = os.path.dirname(importlib.util.find_spec("scanpy").origin)  # type: ignore
-
-
-def linkcode_resolve(domain, info):
-    if domain != "py":
-        return None
-
-    try:
-        obj: Any = sys.modules[info["module"]]
-        for part in info["fullname"].split("."):
-            obj = getattr(obj, part)
-        obj = inspect.unwrap(obj)
-
-        if isinstance(obj, property):
-            obj = inspect.unwrap(obj.fget)  # type: ignore
-
-        path = os.path.relpath(inspect.getsourcefile(obj), start=_module_path)  # type: ignore
-        src, lineno = inspect.getsourcelines(obj)
-    except Exception:
-        return None
-
-    path = f"{path}#L{lineno}-L{lineno + len(src) - 1}"
-    return f"{repository_url}/blob/{git_ref}/scanpy/{path}"
-
-
 # extlinks config
 extlinks = {
     "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
     "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
-    "tutorial": (
-        "https://github.com/scverse/scanpy-tutorials/%s.ipynb",
-        "tutorial: %s",
-    ),
 }

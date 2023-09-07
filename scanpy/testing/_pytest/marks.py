@@ -14,6 +14,7 @@ KNOWN = dict(
     fa2='fa2',
     igraph='igraph',
     dask='dask',
+    dask_ml='dask-ml',
     zarr='zarr',
     zappy='zappy',
     pybiomart='pybiomart',

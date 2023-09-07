@@ -75,7 +75,7 @@ def tsne(
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    **X_tsne** : `np.ndarray` (`adata.obs`, dtype `float`)
+    **X_tsne** : `np.ndarray` (`adata.obsm`, dtype `float`)
         tSNE coordinates of data.
     """
     import sklearn

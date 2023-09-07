@@ -292,7 +292,7 @@ def pbmc3k() -> ad.AnnData:
 def pbmc3k_processed() -> ad.AnnData:
     """Processed 3k PBMCs from 10x Genomics.
 
-    Processed using the `basic tutorial <https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html>`__.
+    Processed using the basic tutorial :doc:`tutorials:pbmc3k`.
 
     Returns
     -------
