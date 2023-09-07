@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 from typing import Optional
 
 import numpy as np
+from scipy.sparse import csr_matrix
+from anndata import AnnData
+
 from .. import logging as logg
 from ._pca import pca
 from .. import settings
@@ -20,7 +25,13 @@ n_pcs
 """
 
 
-def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
+def _choose_representation(
+    adata: AnnData,
+    *,
+    use_rep: str | None = None,
+    n_pcs: int | None = None,
+    silent: bool = False,
+) -> np.ndarray | csr_matrix:  # TODO: what else?
     verbosity = settings.verbosity
     if silent and settings.verbosity > 1:
         settings.verbosity = 1

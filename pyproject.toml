@@ -89,6 +89,7 @@ scanpy = "scanpy.cli:console_main"
 test-min = [
     "pytest>=4.4",
     "pytest-nunit",
+    "pytest-mock",
     "profimp",
 ]
 test = [
@@ -111,11 +112,11 @@ test-full = [
 ]
 doc = [
     "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
-    "scanpydoc>=0.7.11",
+    "sphinx-book-theme",
+    "scanpydoc>=0.9.5",
     "sphinx-autodoc-typehints",
     "myst-parser",
     "myst-nb",
-    "sphinx-book-theme",
     "sphinx-design",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
@@ -128,8 +129,7 @@ dev = [
     # getting the dev version
     "setuptools_scm",
     # static checking
-    "black>=20.8b1",
-    "docutils",
+    "pre-commit",
 ]
 # Algorithms
 paga = ["igraph"]

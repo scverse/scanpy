@@ -100,7 +100,15 @@ def umap(
     copy
         Return a copy instead of writing to adata.
     method
-        Use the original 'umap' implementation, or 'rapids' (experimental, GPU only)
+        Chosen implementation.
+
+        ``'umap'``
+            Umap’s simplical set embedding.
+        ``'rapids'``
+            GPU accelerated implementation.
+
+            .. deprecated:: 1.10.0
+                Use :func:`rapids_singlecell.tl.umap` instead.
     neighbors_key
         If not specified, umap looks .uns['neighbors'] for neighbors settings
         and .obsp['connectivities'] for connectivities
@@ -181,8 +189,8 @@ def umap(
     neigh_params = neighbors['params']
     X = _choose_representation(
         adata,
-        neigh_params.get('use_rep', None),
-        neigh_params.get('n_pcs', None),
+        use_rep=neigh_params.get('use_rep', None),
+        n_pcs=neigh_params.get('n_pcs', None),
         silent=True,
     )
     if method == 'umap':
@@ -207,6 +215,11 @@ def umap(
             verbose=settings.verbosity > 3,
         )
     elif method == 'rapids':
+        msg = (
+            "`method='rapids'` is deprecated. "
+            'Use `rapids_singlecell.tl.louvain` instead.'
+        )
+        warnings.warn(msg, FutureWarning)
         metric = neigh_params.get('metric', 'euclidean')
         if metric != 'euclidean':
             raise ValueError(
