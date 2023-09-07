@@ -32,8 +32,7 @@ __all__ = [
 ]
 
 
-def _as_dense_dask_array(x: ArrayLike) -> 
-:
+def _as_dense_dask_array(x: ArrayLike) -> DaskArray:
     import dask.array as da
 
     return da.from_array(asarray(x))
