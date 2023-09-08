@@ -9,7 +9,8 @@ import numpy as np
 from scipy import sparse
 
 from ..readwrite import _download
-from .. import settings, logging as logg
+from .._settings import settings
+from .. import logging as logg
 from ._utils import check_datasetdir_exists
 
 
