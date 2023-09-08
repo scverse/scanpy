@@ -502,3 +502,6 @@ class ScanpyConfig:
             for k, v in inspect.getmembers(self)
             if not k.startswith("_") and not k == 'getdoc'
         )
+
+
+settings = ScanpyConfig()

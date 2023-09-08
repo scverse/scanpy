@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 import anndata as ad
 
-from .. import settings, logging as logg, _utils
+from .. import logging as logg, _utils
+from .._settings import settings
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
 
