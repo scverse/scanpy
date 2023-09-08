@@ -49,7 +49,7 @@ def blobs(
         cluster_std=cluster_std,
         random_state=0,
     )
-    return ad.AnnData(X, obs=dict(blobs=y.astype(str)), dtype=X.dtype)
+    return ad.AnnData(X, obs=dict(blobs=y.astype(str)))
 
 
 @check_datasetdir_exists
@@ -172,13 +172,13 @@ def paul15() -> ad.AnnData:
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, 'r') as f:
-        X = f['data.debatched'][()]
+        X = f['data.debatched'][()].astype(np.float32)
         gene_names = f['data.debatched_rownames'][()].astype(str)
         cell_names = f['data.debatched_colnames'][()].astype(str)
         clusters = f['cluster.id'][()].flatten().astype(int)
         infogenes_names = f['info.genes_strings'][()].astype(str)
     # each row has to correspond to a observation, therefore transpose
-    adata = ad.AnnData(X.transpose(), dtype=np.float32)
+    adata = ad.AnnData(X.transpose())
     adata.var_names = gene_names
     adata.row_names = cell_names
     # names reflecting the cell type identifications from the paper
