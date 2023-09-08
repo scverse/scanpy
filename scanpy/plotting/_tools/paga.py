@@ -18,7 +18,8 @@ from sklearn.utils import check_random_state
 
 from .. import _utils
 from .._utils import matrix, _IGraphLayout, _FontWeight, _FontSize
-from ... import _utils as _sc_utils, settings, logging as logg
+from ... import _utils as _sc_utils, logging as logg
+from ..._settings import settings
 
 
 def paga_compare(
