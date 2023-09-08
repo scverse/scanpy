@@ -284,8 +284,7 @@ def palantir_results(
 
     Returns
     -------
-    PResults
-        PResults object with pseudotime, entropy, branch probabilities and waypoints.
+    PResults object with pseudotime, entropy, branch probabilities and waypoints.
     """
     logg.info('Palantir computing waypoints..')
 

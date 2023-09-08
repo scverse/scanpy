@@ -25,6 +25,14 @@ for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
     _VERBOSITY_TO_LOGLEVEL[v] = level
 
 
+# Collected from the print_* functions in matplotlib.backends
+_Format = Union[
+    Literal['png', 'jpg', 'tif', 'tiff'],
+    Literal['pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf'],
+    Literal['raw', 'rgba'],
+]
+
+
 class Verbosity(IntEnum):
     error = 0
     warning = 1
@@ -400,15 +408,6 @@ class ScanpyConfig:
     # --------------------------------------------------------------------------------
     # Functions
     # --------------------------------------------------------------------------------
-
-    # Collected from the print_* functions in matplotlib.backends
-    # fmt: off
-    _Format = Literal[
-        'png', 'jpg', 'tif', 'tiff',
-        'pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf',
-        'raw', 'rgba',
-    ]
-    # fmt: on
 
     def set_figure_params(
         self,

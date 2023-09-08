@@ -111,7 +111,7 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
+    "sphinx>=4.4",
     "sphinx-book-theme",
     "scanpydoc>=0.9.5",
     "sphinx-autodoc-typehints",
@@ -123,7 +123,9 @@ doc = [
     "nbsphinx",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
+    # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga]",
+    "sam-algorithm",
 ]
 dev = [
     # getting the dev version
