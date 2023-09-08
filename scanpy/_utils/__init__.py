@@ -22,7 +22,8 @@ from anndata import AnnData, __version__ as anndata_version
 from textwrap import dedent
 from packaging import version
 
-from .. import settings, logging as logg
+from .._settings import settings
+from .. import logging as logg
 
 from .compute.is_constant import is_constant
 
