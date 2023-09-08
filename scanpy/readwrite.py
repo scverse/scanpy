@@ -20,7 +20,7 @@ from anndata import (
 )
 from anndata import read as read_h5ad
 
-from . import settings
+from ._settings import settings
 from ._utils import Empty, _empty
 from . import logging as logg
 
