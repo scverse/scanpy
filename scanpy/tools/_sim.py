@@ -20,7 +20,8 @@ import numpy as np
 import scipy as sp
 from anndata import AnnData
 
-from .. import _utils, readwrite, settings, logging as logg
+from .. import _utils, readwrite, logging as logg
+from .._settings import settings
 
 
 def sim(
