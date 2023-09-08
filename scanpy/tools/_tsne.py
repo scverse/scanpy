@@ -6,7 +6,8 @@ from anndata import AnnData
 
 from .._utils import _doc_params, AnyRandom
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
-from .. import settings, logging as logg
+from .. import logging as logg
+from .._settings import settings
 
 
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)

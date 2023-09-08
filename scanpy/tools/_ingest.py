@@ -11,13 +11,12 @@ from sklearn.utils import check_random_state
 from scipy.sparse import issparse
 from anndata import AnnData
 
-from .. import settings
 from .. import logging as logg
+from .._settings import settings
 from ..neighbors import FlatTree, RPForestDict
 from .._utils import NeighborsView
 from .._compat import pkg_version
 from ..testing._doctests import doctest_skip
-
 
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")

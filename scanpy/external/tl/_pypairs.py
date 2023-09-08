@@ -7,7 +7,7 @@ import pandas as pd
 from anndata import AnnData
 from packaging import version
 
-from ... import settings
+from ..._settings import settings
 from ...testing._doctests import doctest_needs
 
 

@@ -35,7 +35,7 @@ class _RootLogger(logging.RootLogger):
         time: datetime = None,
         deep: Optional[str] = None,
     ) -> datetime:
-        from . import settings
+        from ._settings import settings
 
         now = datetime.now(timezone.utc)
         time_passed: timedelta = None if time is None else now - time
@@ -239,34 +239,34 @@ def error(
     extra
         Additional values you can specify in `msg` like `{time_passed}`.
     """
-    from . import settings
+    from ._settings import settings
 
     return settings._root_logger.error(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def warning(msg, *, time=None, deep=None, extra=None) -> datetime:
-    from . import settings
+    from ._settings import settings
 
     return settings._root_logger.warning(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def info(msg, *, time=None, deep=None, extra=None) -> datetime:
-    from . import settings
+    from ._settings import settings
 
     return settings._root_logger.info(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def hint(msg, *, time=None, deep=None, extra=None) -> datetime:
-    from . import settings
+    from ._settings import settings
 
     return settings._root_logger.hint(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def debug(msg, *, time=None, deep=None, extra=None) -> datetime:
-    from . import settings
+    from ._settings import settings
 
     return settings._root_logger.debug(msg, time=time, deep=deep, extra=extra)

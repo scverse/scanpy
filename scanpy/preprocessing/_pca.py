@@ -11,7 +11,7 @@ from sklearn.utils.extmath import svd_flip
 from anndata import AnnData
 
 from .. import logging as logg
-from .. import settings
+from .._settings import settings
 from .._compat import DaskArray, pkg_version
 from .._utils import AnyRandom
 from ..get import _get_obs_rep

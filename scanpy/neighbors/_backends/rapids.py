@@ -9,7 +9,7 @@ from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin, check_is_fitted
 from sklearn.exceptions import NotFittedError
 
-from ... import settings
+from ..._settings import settings
 from ._common import TransformerChecksMixin
 
 _Algorithm = Literal['rbc', 'brute', 'ivfflat', 'ivfpq']

@@ -51,8 +51,6 @@ class Verbosity(IntEnum):
         """\
         Temporarily override verbosity
         """
-        from . import settings
-
         settings.verbosity = verbosity
         yield self
         settings.verbosity = self

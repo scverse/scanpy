@@ -8,7 +8,7 @@ from anndata import AnnData
 
 from .. import logging as logg
 from ._pca import pca
-from .. import settings
+from .._settings import settings
 from .._utils import _choose_graph
 
 doc_use_rep = """\

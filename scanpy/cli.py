@@ -116,7 +116,7 @@ class _DelegatingParser(ArgumentParser):
 
 
 def _cmd_settings() -> None:
-    from . import settings
+    from ._settings import settings
 
     print(settings)
 
