@@ -10,7 +10,8 @@ from anndata import AnnData
 from math import sqrt
 from numpy.typing import NDArray
 
-from scanpy import settings, Verbosity, logging as logg
+from scanpy import logging as logg
+from scanpy._settings import settings, Verbosity
 from scanpy._utils import check_nonnegative_integers, view_to_actual
 from scanpy.get import _get_obs_rep
 from scanpy._utils import _doc_params
