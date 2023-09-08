@@ -172,7 +172,7 @@ def paul15() -> ad.AnnData:
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, 'r') as f:
-        X = f['data.debatched'][()]
+        X = f['data.debatched'][()].astype(np.float32)
         gene_names = f['data.debatched_rownames'][()].astype(str)
         cell_names = f['data.debatched_colnames'][()].astype(str)
         clusters = f['cluster.id'][()].flatten().astype(int)
