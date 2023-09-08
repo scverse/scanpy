@@ -21,7 +21,7 @@ from anndata.tests.helpers import asarray, assert_equal
 
 def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
     """Check that only the array meant to be modified is modified."""
-    adata = sc.AnnData(X=X.copy(), dtype=X.dtype)
+    adata = sc.AnnData(X=X.copy())
     for field in fields:
         sc.get._set_obs_rep(adata, X, **{field: field})
     X_array = asarray(X)
