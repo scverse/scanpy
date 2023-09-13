@@ -125,7 +125,7 @@ def neighbors(
             A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
 
             .. deprecated:: 1.10.0
-               Use :func:`rapids_singlecell.tl.neighbors` instead.
+               Use :func:`rapids_singlecell.pp.neighbors` instead.
     metric
         A known metric’s name or a callable that returns a distance.
 
