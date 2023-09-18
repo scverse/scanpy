@@ -462,7 +462,9 @@ def rank_genes_groups(
         Key from `adata.layers` whose value will be used to perform tests on.
     groups
         Subset of groups, e.g. [`'g1'`, `'g2'`, `'g3'`], to which comparison
-        shall be restricted, or `'all'` (default), for all groups.
+        shall be restricted, or `'all'` (default), for all groups. Note that if
+        `reference='rest'` all groups will still be used as the reference, not
+        just those specified in `groups`.
     reference
         If `'rest'`, compare each group to the union of the rest of the group.
         If a group identifier, compare with respect to this group.
