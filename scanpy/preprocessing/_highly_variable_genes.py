@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
 from anndata import AnnData
+import numba
+import time
 
 
 from .. import logging as logg
@@ -12,6 +14,7 @@ from .._utils import sanitize_anndata, check_nonnegative_integers
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
+from statsmodels import robust
 
 
 def _highly_variable_genes_seurat_v3(
@@ -173,6 +176,122 @@ def _highly_variable_genes_seurat_v3(
         return df
 
 
+@numba.njit(cache=True, parallel=True)
+def get_mean_var_disp(shp, indptr, indices, data, n, m, nthr):
+    nr = len(indptr) - 1
+    s = np.zeros((nthr, m), dtype=np.int64)
+    ss = np.zeros((nthr, m), dtype=np.int64)
+    mean = np.zeros(m)
+    var = np.zeros(m)
+    for i in numba.prange(nthr):
+        for r in range(i, nr, nthr):
+            for j in range(indptr[r], indptr[r + 1]):
+                c = indices[j]
+                if c >= m:
+                    continue
+                v = data[j]
+                s[i, c] += v
+                ss[i, c] += v * v
+    for c in numba.prange(m):
+        s0 = s[:, c].sum()
+        mean[c] = s0 / n
+        var[c] = (ss[:, c].sum() - s0 * s0 / n) / (n - 1)
+        if mean[c] == 0:
+            mean[c] = 1e-12  # set entries equal to zero to small value
+    # now actually compute the dispersion
+    dispersion = var / mean
+    return mean, var, dispersion
+
+
+def _highly_variable_genes_fastpp(
+    adata: AnnData,
+    nrows: int,  # real number of rows after initial filtering
+    ncols: int,  # ignore column indices ncols and above
+    colmask,  # prior column mask, if any
+    n_top_genes: int = None,
+    n_bins: int = 20,
+) -> pd.DataFrame:
+    """\
+    See `highly_variable_genes`.
+    Returns
+    -------
+    A DataFrame that contains the columns
+    `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
+    """
+
+    t0 = time.time()
+    # X = adata.X
+
+    # mean, var = materialize_as_ndarray(_get_mean_var(X))
+    # mean, var = _get_mean_var(X)
+
+    # now actually compute the dispersion
+    # mean[mean == 0] = 1e-12  # set entries equal to zero to small value
+    # dispersion = var / mean
+    nthr = numba.get_num_threads()
+    print(type(nrows))
+    print(type(ncols))
+    print(type(nthr))
+    mean, var, dispersion = get_mean_var_disp(
+        adata.X.shape, adata.X.indptr, adata.X.indices, adata.X.data, nrows, ncols, nthr
+    )
+
+    print("got mean,var", time.time() - t0)
+
+    # all of the following quantities are "per-gene" here
+    df = pd.DataFrame()
+    df['means'] = mean
+    df['dispersions'] = dispersion
+
+    df['mean_bin'] = pd.cut(
+        df['means'],
+        np.r_[-np.inf, np.percentile(df['means'], np.arange(10, 105, 5)), np.inf],
+    )
+    disp_grouped = df.groupby('mean_bin')['dispersions']
+    disp_median_bin = disp_grouped.median()
+    # the next line raises the warning: "Mean of empty slice"
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        disp_mad_bin = disp_grouped.apply(robust.mad)
+        df['dispersions_norm'] = (
+            df['dispersions'].values - disp_median_bin[df['mean_bin'].values].values
+        ) / disp_mad_bin[df['mean_bin'].values].values
+
+    dispersion_norm = df['dispersions_norm'].values
+    dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
+    dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
+    if n_top_genes > adata.n_vars:
+        # logg.info(f'`n_top_genes` > `adata.n_var`, returning all genes.')
+        n_top_genes = adata.n_vars
+    disp_cut_off = dispersion_norm[n_top_genes - 1]
+    gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off
+    # logg.debug(
+    #    f'the {n_top_genes} top genes correspond to a '
+    #    f'normalized dispersion cutoff of {disp_cut_off}'
+    # )
+
+    # df['highly_variable'] = gene_subset
+
+    if ncols < adata.shape[1]:
+        adata.var['highly_variable'] = np.zeros(adata.shape[1], dtype=bool)
+        adata.var['means'] = np.zeros(adata.shape[1], dtype=np.float32)
+        adata.var['dispersions'] = np.zeros(adata.shape[1], dtype=np.float32)
+        adata.var['dispersions_norm'] = np.zeros(adata.shape[1], dtype=np.float32)
+        adata.var['highly_variable'][colmask] = gene_subset
+        adata.var['means'][colmask] = df['means'].values
+        adata.var['dispersions'][colmask] = df['dispersions'].values
+        adata.var['dispersions_norm'][colmask] = df['dispersions_norm'].values.astype(
+            'float32', copy=False
+        )
+    else:
+        adata.var['highly_variable'] = gene_subset
+        adata.var['means'] = df['means'].values
+        adata.var['dispersions'] = df['dispersions'].values
+        adata.var['dispersions_norm'] = df['dispersions_norm'].values.astype(
+            'float32', copy=False
+        )
+
+
 def _highly_variable_genes_single_batch(
     adata: AnnData,
     layer: Optional[str] = None,
@@ -294,14 +413,17 @@ def _highly_variable_genes_single_batch(
 def highly_variable_genes(
     adata: AnnData,
     layer: Optional[str] = None,
+    nrows: Optional[int] = None,
+    ncols: Optional[int] = None,
+    keepcols: Optional[int] = None,
     n_top_genes: Optional[int] = None,
     min_disp: Optional[float] = 0.5,
     max_disp: Optional[float] = np.inf,
     min_mean: Optional[float] = 0.0125,
     max_mean: Optional[float] = 3,
     span: Optional[float] = 0.3,
-    n_bins: int = 20,
-    flavor: Literal['seurat', 'cell_ranger', 'seurat_v3'] = 'seurat',
+    n_bins: Optional[int] = 20,
+    flavor: Literal['seurat', 'cell_ranger', 'seurat_v3', 'use_fastpp'] = 'seurat',
     subset: bool = False,
     inplace: bool = True,
     batch_key: Optional[str] = None,
@@ -437,7 +559,10 @@ def highly_variable_genes(
             subset=subset,
             inplace=inplace,
         )
-
+    if flavor == 'use_fastpp':
+        return _highly_variable_genes_fastpp(
+            adata, nrows, ncols, keepcols, n_top_genes=n_top_genes
+        )
     if batch_key is None:
         df = _highly_variable_genes_single_batch(
             adata,

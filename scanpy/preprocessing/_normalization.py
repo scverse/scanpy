@@ -2,6 +2,9 @@ from typing import Optional, Union, Iterable, Dict, Literal
 from warnings import warn
 
 import numpy as np
+import numba
+import time
+import math
 from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
@@ -231,3 +234,24 @@ def normalize_total(
         return adata
     elif not inplace:
         return dat
+
+
+def normtotal_log1p(adata, target, ncols):
+    t0 = time.time()
+
+    @numba.njit(cache=True, parallel=True)
+    def _normtotal_log1p(data, ind, indices, tt, ncols):
+        for i in numba.prange(len(ind) - 1):
+            row = data[ind[i] : ind[i + 1]]
+            rowind = indices[ind[i] : ind[i + 1]]
+            # total = np.sum(row)
+            total = 1e-12
+            for j in range(len(row)):
+                if rowind[j] < ncols:
+                    total += row[j]
+            sf = tt / total
+            for j in range(len(row)):
+                row[j] = math.log1p(row[j] * sf)
+
+    _normtotal_log1p(adata.X.data, adata.X.indptr, adata.X.indices, target, ncols)
+    print("norm_log: total", time.time() - t0)
