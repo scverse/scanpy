@@ -133,17 +133,17 @@ def combat(
     key: str = 'batch',
     covariates: Optional[Collection[str]] = None,
     inplace: bool = True,
+    adata2: AnnData = None,
+    key2: str = 'batch',
 ) -> Union[AnnData, np.ndarray, None]:
     """\
     ComBat function for batch effect correction [Johnson07]_ [Leek12]_
     [Pedersen12]_.
-
     Corrects for batch effects by fitting linear models, gains statistical power
     via an EB framework where information is borrowed across genes.
-    This uses the implementation `combat.py`_ [Pedersen12]_.
-
+    This uses the implementation `combat.py`_ [Pedersen12]_  and the adjustment
+    for control cells to account for different composition [Boettcher20]_ .
     .. _combat.py: https://github.com/brentp/combat.py
-
     Parameters
     ----------
     adata
@@ -160,7 +160,16 @@ def combat(
         removal of biological signal in unbalanced designs.
     inplace
         Whether to replace adata.X or to return the corrected data
-
+    adata2
+        Annotated data matrix where the same correction will be applied as for adata.
+        This is particularly useful to account for compositional changes in a dataset 
+        or to compute correction factors on a reference subset and apply them to all 
+        data.
+    key2
+        Key to a categorical annotation from :attr:`~anndata.AnnData.obs`
+        that will be used for batch effect removal. Has to contain at most as many 
+        categories as the key parameter.
+    
     Returns
     -------
     Depending on the value of `inplace`, either returns the corrected matrix or
@@ -180,19 +189,31 @@ def combat(
             )
 
         if key in covariates:
-            raise ValueError('Batch key and covariates cannot overlap')
+            raise ValueError('Batch key and covariates cannot overlap.')
 
         if len(covariates) != len(set(covariates)):
-            raise ValueError('Covariates must be unique')
+            raise ValueError('Covariates must be unique.')
 
     # only works on dense matrices so far
     if issparse(adata.X):
         X = adata.X.A.T
     else:
         X = adata.X.T
-    data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names)
+    data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names,)
 
-    sanitize_anndata(adata)
+    sc.utils.sanitize_anndata(adata)
+    
+    #check if adata2 is present and meaningful format
+    if adata2 is not None:
+        if key2 not in adata2.obs_keys():
+            raise ValueError('Could not find the key {!r} in adata2.obs'.format(key))
+        if covariates is not None:
+            if key2 in covariates:
+                raise ValueError('Batch key and covariates cannot overlap.')
+        # only works on dense matrices so far    
+        data2 = adata2.to_df().T
+
+        sc.utils.sanitize_anndata(adata2)
 
     # construct a pandas series of the batch annotation
     model = adata.obs[[key] + (covariates if covariates else [])]
@@ -203,11 +224,12 @@ def combat(
 
     # standardize across genes using a pooled variance estimator
     logg.info("Standardizing Data across genes.\n")
-    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, key)
+    s_data, design, var_pooled, stand_mean, grand_mean = _standardize_data(model, data, key)
 
     # fitting the parameters on the standardized data
     logg.info("Fitting L/S model and finding priors\n")
     batch_design = design[design.columns[:n_batch]]
+    
     # first estimate of the additive batch effect
     gamma_hat = (
         la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T
@@ -268,10 +290,62 @@ def combat(
 
     vpsq = np.sqrt(var_pooled).reshape((len(var_pooled), 1))
     bayesdata = bayesdata * np.dot(vpsq, np.ones((1, int(n_array)))) + stand_mean
-
+    
+    #online adaptation of a second dataframe
+    if isinstance(data2, pd.DataFrame):
+     
+        #initialise variables
+        model2 = adata2.obs[[key2]]
+        batch_items2 = model2.groupby(key2).groups.items()
+        batch_levels2, batch_info2 = zip(*batch_items2)
+        which_batches2 = np.in1d(batch_levels, batch_levels2)
+        n_batches = np.array([len(v) for v in batch_info2])
+        n_array = float(sum(n_batches))
+        idx = np.flatnonzero(np.invert(which_batches2)) # get empty levels
+        non_idx =np.flatnonzero(which_batches2)
+        for j in reversed(idx):
+            #print(j)
+            del batch_info[j] #remove empty levels
+            del batch_levels[j] #remove empty levels
+        #n_batch = len(batch_info2)
+        #n_batches = n_batches[non_idx] #remove empty levels
+        # drop intercept and create design matrix
+        drop_cols = [cname for cname, inter in  ((model2 == 1).all()).iteritems() if inter == True]
+        drop_idxs = [list(model.columns).index(cdrop) for cdrop in drop_cols]
+        model2 = model2[[c for c in model2.columns if not c in drop_cols]]
+        numerical_covariates = []
+        design = _design_matrix(model2, key2, batch_levels2)
+        batch_design = design[design.columns[:n_batch]]
+        
+        #pre-process data
+        logg.info("Standardizing additional Data across genes.\n")
+        stand_mean = np.dot(grand_mean.T.reshape((len(grand_mean), 1)), np.ones((1, int(n_array))))
+        vpsq = np.dot(np.sqrt(var_pooled).reshape((len(var_pooled), 1)), np.ones((1, int(n_array))))
+        s_data = ((data2 - stand_mean) / vpsq)
+        # select the correct gamma_star and delta_star columns
+        
+        gamma_star_sub = gamma_star[non_idx,:]
+        delta_star_sub = delta_star[non_idx,:]
+        new_bayes = s_data
+        #correct data
+        logg.info("Adjusting additional data\n")
+        for j, batch_idxs in enumerate(batch_info2):
+            
+            dsq = np.sqrt(delta_star_sub[j,:])
+            dsq = dsq.reshape((len(dsq), 1))
+            denom =  np.dot(dsq, np.ones((1, n_batches[j])))
+            numer = np.array(new_bayes[batch_idxs] - np.dot(batch_design.loc[batch_idxs], gamma_star_sub).T)
+            del dsq
+            new_bayes[batch_idxs] = numer / denom
+        
+        new_bayes = new_bayes * vpsq + stand_mean
+        bayesdata = np.concatenate([bayesdata, new_bayes], axis=1) #column bind
+    
     # put back into the adata object or return
-    if inplace:
+    if inplace and not isinstance(data2, pd.DataFrame):
         adata.X = bayesdata.values.transpose()
+    elif isinstance(data2, pd.DataFrame):
+        return bayesdata
     else:
         return bayesdata.values.transpose()
 
