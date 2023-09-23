@@ -955,13 +955,13 @@ class BasePlot(object):
         # verts and codes are used by PathPatch to make the brackets
         verts = []
         codes = []
+        if rotation is None and group_labels:
+            if max([len(x) for x in group_labels]) > 4:
+                rotation = 90
+            else:
+                rotation = 0
         if orientation == 'top':
             # rotate labels if any of them is longer than 4 characters
-            if rotation is None and group_labels:
-                if max([len(x) for x in group_labels]) > 4:
-                    rotation = 90
-                else:
-                    rotation = 0
             for idx, (left_coor, right_coor) in enumerate(zip(left, right)):
                 verts.append((left_coor, 0))  # lower-left
                 verts.append((left_coor, 0.6))  # upper-left
@@ -983,6 +983,7 @@ class BasePlot(object):
                     rotation=rotation,
                 )
         else:
+            rotation -= 90
             top = left
             bottom = right
             for idx, (top_coor, bottom_coor) in enumerate(zip(top, bottom)):
@@ -998,16 +999,16 @@ class BasePlot(object):
 
                 diff = bottom[idx] - top[idx]
                 group_y_center = top[idx] + float(diff) / 2
-                if diff * 2 < len(group_labels[idx]):
-                    # cut label to fit available space
-                    group_labels[idx] = group_labels[idx][: int(diff * 2)] + "."
+                # if diff * 2 < len(group_labels[idx]):
+                #    # cut label to fit available space
+                #    group_labels[idx] = group_labels[idx][: int(diff * 2)] + "."
                 gene_groups_ax.text(
-                    1.1,
+                    0.8,
                     group_y_center,
                     group_labels[idx],
-                    ha='right',
+                    ha='left',
                     va='center',
-                    rotation=270,
+                    rotation=rotation,
                     fontsize='small',
                 )
 
