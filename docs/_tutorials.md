@@ -3,7 +3,7 @@
 ## Clustering
 
 For getting started, we recommend Scanpy’s reimplementation {doc}`tutorials:pbmc3k`
-of Seurat’s [^cite_satija15] clustering tutorial for 3k PBMCs from 10x Genomics,
+of Seurat’s {cite}`Satija15` clustering tutorial for 3k PBMCs from 10x Genomics,
 containing preprocessing, clustering and the identification of cell types via
 known marker genes.
 
@@ -39,22 +39,22 @@ For advanced customization of your plots, see {doc}`tutorials:plotting/advanced`
 
 ## Trajectory inference
 
-Get started with the following example for hematopoiesis for data of [^cite_paul15]: {doc}`tutorials:paga-paul15`
+Get started with the following example for hematopoiesis for data of {cite}`Paul15`: {doc}`tutorials:paga-paul15`
 
 ```{image} _static/img/tutorials/paga_paul15.png
 :width: 450px
 ```
 
 More examples for trajectory inference on complex datasets can be found in the
-[PAGA](https://github.com/theislab/paga) repository [^cite_wolf19], for instance, multi-resolution analyses of whole
-animals, such as for [planaria] for data of [^cite_plass18].
+[PAGA](https://github.com/theislab/paga) repository {cite}`Wolf19`, for instance, multi-resolution analyses of whole
+animals, such as for [planaria] for data of {cite}`Plass18`.
 
 ```{image} _static/img/tutorials/paga_planaria.png
 :width: 350px
 ```
 
-As a reference for simple pseudotime analyses, we provide the diffusion pseudotime (DPT) analyses of [^cite_haghverdi16]
-for two hematopoiesis datasets: [DPT example 1] [^cite_paul15] and [DPT example 2] [^cite_moignard15].
+As a reference for simple pseudotime analyses, we provide the diffusion pseudotime (DPT) analyses of {cite}`Haghverdi16`
+for two hematopoiesis datasets: [DPT example 1] {cite}`Paul15` and [DPT example 2] {cite}`Moignard15`.
 
 ## Integrating datasets
 
@@ -98,7 +98,7 @@ See the [cell cycle] notebook.
 
 ### Normalization with Pearson Residuals
 
-Normalization of scRNA-seq data with Pearson Residuals, from [^cite_lause21]: {doc}`tutorials:tutorial_pearson_residuals`
+Normalization of scRNA-seq data with Pearson Residuals, from {cite}`Lause21`: {doc}`tutorials:tutorial_pearson_residuals`
 
 ### Scaling Computations
 
@@ -106,7 +106,7 @@ Normalization of scRNA-seq data with Pearson Residuals, from [^cite_lause21]: {d
 
 ### Simulations
 
-Simulating single cells using literature-curated gene regulatory networks [^cite_wittmann09].
+Simulating single cells using literature-curated gene regulatory networks {cite}`Wittmann09`.
 
 ```{image} _static/img/tutorials/170430_krumsiek11/timeseries.png
 :align: right
@@ -118,7 +118,7 @@ Simulating single cells using literature-curated gene regulatory networks [^cite
 
 ### Images
 
-See pseudotime-time inference on deep-learning based features for [cell cycle reconstruction] from image data [^cite_eulenberg17].
+See pseudotime-time inference on deep-learning based features for [cell cycle reconstruction] from image data {cite}`Eulenberg17`.
 
 % User Examples
 % ~~~~~~~~~~~~~

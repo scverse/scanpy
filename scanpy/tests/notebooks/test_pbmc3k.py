@@ -9,6 +9,7 @@
 # The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics
 # ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -22,13 +23,12 @@ from scanpy.testing._pytest.marks import needs
 
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / 'pbmc3k_images'
-FIGS = HERE / 'figures'
+ROOT = HERE / '_images_pbmc3k'
 
 
 @needs('leidenalg')
 def test_pbmc3k(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=20)
 
     adata = sc.read(
         './data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad'
@@ -129,6 +129,11 @@ def test_pbmc3k(image_comparer):
     # sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=8)
     # save_and_compare_images('rank_genes_groups_4')
 
+    if adata[adata.obs['leiden'] == '4', 'CST3'].X.mean() < 1:
+        (  # switch clusters
+            adata.obs['leiden'][adata.obs['leiden'] == '4'],
+            adata.obs['leiden'][adata.obs['leiden'] == '5'],
+        ) = ('5', '4')
     new_cluster_names = [
         'CD4 T cells',
         'CD14+ Monocytes',
