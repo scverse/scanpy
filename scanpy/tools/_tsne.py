@@ -42,6 +42,8 @@ def tsne(
         Annotated data matrix.
     {doc_n_pcs}
     {use_rep}
+    n_components
+        Dimension of the embedded space.
     perplexity
         The perplexity is related to the number of nearest neighbors that
         is used in other manifold learning algorithms. Larger datasets
