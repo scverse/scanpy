@@ -13,6 +13,7 @@ from .. import logging as logg
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(
     adata: AnnData,
+    n_components = 2,
     n_pcs: Optional[int] = None,
     use_rep: Optional[str] = None,
     perplexity: Union[float, int] = 30,
@@ -87,6 +88,7 @@ def tsne(
     # params for sklearn
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     params_sklearn = dict(
+        n_components=n_components,
         perplexity=perplexity,
         random_state=random_state,
         verbose=settings.verbosity > 3,
@@ -149,6 +151,7 @@ def tsne(
         "params": {
             k: v
             for k, v in {
+                "n_components": n_components,
                 "perplexity": perplexity,
                 "early_exaggeration": early_exaggeration,
                 "learning_rate": learning_rate,
