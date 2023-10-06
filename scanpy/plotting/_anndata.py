@@ -799,7 +799,7 @@ def violin(
             y=y,
             data=obs_tidy,
             kind="violin",
-            scale=scale,
+            density_norm=scale,
             col=x,
             col_order=keys,
             sharey=False,
