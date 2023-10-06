@@ -1298,7 +1298,13 @@ def test_scatter_no_basis_per_obs(image_comparer, color):
 
     pbmc = pbmc68k_reduced()
     sc.pl.scatter(
-        pbmc, x="HES4", y="percent_mito", color=color, use_raw=False, palette='Set2'
+        pbmc,
+        x="HES4",
+        y="percent_mito",
+        color=color,
+        use_raw=False,
+        # palette only applies to categorical, i.e. color=='bulk_labels'
+        palette='Set2',
     )
     save_and_compare_images(f"scatter_HES_percent_mito_{color}")
 
