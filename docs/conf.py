@@ -106,6 +106,8 @@ intersphinx_mapping = dict(
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     cuml=('https://docs.rapids.ai/api/cuml/stable/', None),
     cycler=('https://matplotlib.org/cycler/', None),
+    dask=('https://docs.dask.org/en/stable/', None),
+    dask_ml=('https://ml.dask.org/', None),
     h5py=('https://docs.h5py.org/en/stable/', None),
     ipython=('https://ipython.readthedocs.io/en/stable/', None),
     igraph=('https://python.igraph.org/en/stable/api/', None),
@@ -118,11 +120,10 @@ intersphinx_mapping = dict(
     pynndescent=('https://pynndescent.readthedocs.io/en/latest/', None),
     pytest=('https://docs.pytest.org/en/latest/', None),
     python=('https://docs.python.org/3', None),
+    rapids_singlecell=('https://rapids-singlecell.readthedocs.io/en/latest/', None),
     scipy=('https://docs.scipy.org/doc/scipy/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
-    dask=('https://docs.dask.org/en/stable/', None),
-    dask_ml=('https://ml.dask.org/', None),
     tutorials=('https://scanpy-tutorials.readthedocs.io/en/latest/', None),
 )
 

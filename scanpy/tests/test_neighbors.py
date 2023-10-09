@@ -145,7 +145,7 @@ def test_distances_euclidean(mocker, neigh, method):
         ),
     ],
 )
-def test_distances_all(neigh, transformer, knn):
+def test_distances_all(neigh: Neighbors, transformer, knn):
     neigh.compute_neighbors(
         n_neighbors, transformer=transformer, method='gauss', knn=knn
     )
