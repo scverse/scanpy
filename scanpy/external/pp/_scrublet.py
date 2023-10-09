@@ -166,12 +166,10 @@ def scrublet(
     adata_obs = adata.copy()
 
     def _run_scrublet(ad_obs, ad_sim=None):
-
         # With no adata_sim we assume the regular use case, starting with raw
         # counts and simulating doublets
 
         if ad_sim is None:
-
             pp.filter_genes(ad_obs, min_cells=3)
             pp.filter_cells(ad_obs, min_genes=3)
 
@@ -238,9 +236,7 @@ def scrublet(
         batches = np.unique(adata.obs[batch_key])
         scrubbed = [
             _run_scrublet(
-                adata_obs[
-                    adata_obs.obs[batch_key] == batch,
-                ],
+                adata_obs[adata_obs.obs[batch_key] == batch,],
                 adata_sim,
             )
             for batch in batches

@@ -471,7 +471,6 @@ class DotPlot(BasePlot):
         size_legend_ax.set_xlim(xmin - 0.15, xmax + 0.5)
 
     def _plot_legend(self, legend_ax, return_ax_dict, normalize):
-
         # to maintain the fixed height size of the legends, a
         # spacer of variable height is added at the bottom.
         # The structure for the legends is:
