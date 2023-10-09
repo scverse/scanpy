@@ -20,7 +20,8 @@ from scanpy.get import rank_genes_groups_df
 from scanpy._utils import select_groups
 
 
-HERE = Path(__file__).parent / Path('_data/')
+HERE = Path(__file__).parent
+data_path = HERE / '_data'
 
 
 # We test results for a simple generic example
@@ -57,9 +58,9 @@ def get_example_data(*, sparse=False):
 
 
 def get_true_scores():
-    with Path(HERE, 'objs_t_test.pkl').open('rb') as f:
+    with (data_path / 'objs_t_test.pkl').open('rb') as f:
         true_scores_t_test, true_names_t_test = pickle.load(f)
-    with Path(HERE, 'objs_wilcoxon.pkl').open('rb') as f:
+    with (data_path / 'objs_wilcoxon.pkl').open('rb') as f:
         true_scores_wilcoxon, true_names_wilcoxon = pickle.load(f)
 
     return (
@@ -339,3 +340,22 @@ def test_wilcoxon_tie_correction(reference):
     test_obj.compute_statistics('wilcoxon', tie_correct=True)
 
     np.testing.assert_allclose(test_obj.stats[groups[0]]['pvals'], pvals)
+
+
+def test_rank_gene_groups_violin_gene_symbols():
+    adata = sc.read_h5ad(data_path / 't-cells.h5ad')
+
+    t_celltypes = ['Naive CD4+ T cells', 'Naive CD8+ T cells']
+    sc.tl.rank_genes_groups(
+        adata,
+        groupby='cell_type',
+        groups=t_celltypes,
+        reference='rest',
+        method='wilcoxon',
+        use_raw=False,
+    )
+
+    # We get the KeyError here
+    sc.pl.rank_genes_groups_violin(
+        adata, groups=t_celltypes, n_genes=15, strip=False, gene_symbols='gene_symbols'
+    )
