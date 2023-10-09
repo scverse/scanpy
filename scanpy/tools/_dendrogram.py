@@ -2,6 +2,8 @@
 Computes a dendrogram based on a given categorical observation.
 """
 
+from __future__ import annotations
+
 from typing import Optional, Sequence, Dict, Any
 
 import pandas as pd
