@@ -1,7 +1,7 @@
+from __future__ import annotations
+
 import warnings
 import collections.abc as cabc
-from abc import ABC
-from functools import lru_cache
 from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable, Literal
 import anndata
 
