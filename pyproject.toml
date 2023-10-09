@@ -158,6 +158,7 @@ addopts = [
     "--strict-markers",
     "-pscanpy.testing._pytest",
 ]
+# filterwarnings = ["error"]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
 xfail_strict = true
@@ -199,3 +200,4 @@ ignore = [
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
 [tool.ruff.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
+"pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"

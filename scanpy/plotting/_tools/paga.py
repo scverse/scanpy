@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy
 from anndata import AnnData
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import CategoricalDtype
 from matplotlib import pyplot as pl, rcParams, ticker
 from matplotlib import patheffects
 from matplotlib.axes import Axes
@@ -756,7 +756,7 @@ def _paga_graph(
     if (
         isinstance(colors, str)
         and colors in adata.obs
-        and not is_categorical_dtype(adata.obs[colors])
+        and not isinstance(adata.obs[colors].dtype, CategoricalDtype)
     ):
         x_color = []
         cats = adata.obs[groups_key].cat.categories
@@ -769,7 +769,7 @@ def _paga_graph(
     if (
         isinstance(colors, str)
         and colors in adata.obs
-        and is_categorical_dtype(adata.obs[colors])
+        and isinstance(adata.obs[colors].dtype, CategoricalDtype)
     ):
         asso_names, asso_matrix = _sc_utils.compute_association_matrix_of_groups(
             adata,
@@ -1146,7 +1146,7 @@ def paga_path(
                 x_tick_locs.append(len(x))
                 for anno in annotations:
                     series = adata.obs[anno]
-                    if is_categorical_dtype(series):
+                    if isinstance(series.dtype, CategoricalDtype):
                         series = series.cat.codes
                     anno_dict[anno] += list(series.values[idcs])
         if n_avg > 1:
@@ -1261,7 +1261,9 @@ def paga_path(
             arr = np.array(anno_dict[anno])[None, :]
             if anno not in color_maps_annotations:
                 color_map_anno = (
-                    'Vega10' if is_categorical_dtype(adata.obs[anno]) else 'Greys'
+                    'Vega10'
+                    if isinstance(adata.obs[anno].dtype, CategoricalDtype)
+                    else 'Greys'
                 )
             else:
                 color_map_anno = color_maps_annotations[anno]
