@@ -1,8 +1,9 @@
 from functools import partial
 from types import ModuleType
+
 import pytest
-from scipy.sparse import csr_matrix
 import numpy as np
+from scipy.sparse import csr_matrix
 
 from scanpy._utils import (
     descend_classes_and_funcs,

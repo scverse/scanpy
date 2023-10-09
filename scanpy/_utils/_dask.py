@@ -20,6 +20,7 @@ def _lazy_bool_op(
     /,
     *,
     cmp: Callable[[_BoolScalar, Callable[[], _BoolScalar]], _BoolScalar],
+    name: str,
 ) -> _BoolScalar:
     """\
     Transparent boolean operators for dask and plain python.
@@ -48,11 +49,11 @@ def _lazy_bool_op(
         rv = cmp(l, right)
         return rv.compute() if isinstance(rv, DaskArray) else rv
 
-    return left.map_blocks(chain, meta=np.bool_(True))
+    return left.map_blocks(chain, meta=np.bool_(True), name=name)
 
 
-lazy_and = partial(_lazy_bool_op, cmp=lambda l, r: l and r())
-lazy_or = partial(_lazy_bool_op, cmp=lambda l, r: l or r())
+lazy_and = partial(_lazy_bool_op, cmp=lambda l, r: l and r(), name='and')
+lazy_or = partial(_lazy_bool_op, cmp=lambda l, r: l or r(), name='or')
 
 
 def get_ufuncs(data: np.ndarray | DaskArray):
