@@ -85,7 +85,6 @@ def test_scrublet_data():
     # Replicate the preprocessing steps used by the main function
 
     def preprocess_for_scrublet(adata):
-
         adata_pp = adata.copy()
         pp.filter_genes(adata_pp, min_cells=3)
         pp.filter_cells(adata_pp, min_genes=3)
@@ -100,7 +99,6 @@ def test_scrublet_data():
     # Simulate doublets using the same parents
 
     def create_sim_from_parents(adata, parents):
-
         # Now simulate doublets based on the randomly selected parents used
         # previously
 

@@ -871,7 +871,6 @@ def pca(
             adata, 'pca', show=show, return_fig=return_fig, save=save, **kwargs
         )
     else:
-
         if 'pca' not in adata.obsm.keys() and 'X_pca' not in adata.obsm.keys():
             raise KeyError(
                 f"Could not find entry in `obsm` for 'pca'.\n"
