@@ -891,6 +891,8 @@ def pca(
             # edit axis labels in returned figure
             fig = embedding(adata, 'pca', return_fig=return_fig, **kwargs)
             for ax in fig.axes:
+                if ax.get_label() == "<colorbar>":
+                    continue
                 ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
                 ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
             return fig
