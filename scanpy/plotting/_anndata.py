@@ -273,15 +273,14 @@ def _scatter_obs(
     palette_was_none = False
     if palette is None:
         palette_was_none = True
-    if isinstance(palette, cabc.Sequence):
+    if isinstance(palette, cabc.Sequence) and not isinstance(palette, str):
         if not is_color_like(palette[0]):
             palettes = palette
         else:
             palettes = [palette]
     else:
         palettes = [palette for _ in range(len(keys))]
-    for i, palette in enumerate(palettes):
-        palettes[i] = _utils.default_palette(palette)
+    palettes = [_utils.default_palette(palette) for palette in palettes]
 
     if basis is not None:
         component_name = (
@@ -375,8 +374,7 @@ def _scatter_obs(
         centroids[name] = Y_mask[i]
 
     # loop over all categorical annotation and plot it
-    for i, ikey in enumerate(categoricals):
-        palette = palettes[i]
+    for ikey, palette in zip(categoricals, palettes):
         key = keys[ikey]
         _utils.add_colors_for_categorical_sample_annotation(
             adata, key, palette, force_update_colors=not palette_was_none
@@ -801,7 +799,7 @@ def violin(
             y=y,
             data=obs_tidy,
             kind="violin",
-            scale=scale,
+            density_norm=scale,
             col=x,
             col_order=keys,
             sharey=False,

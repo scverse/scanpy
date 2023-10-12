@@ -125,7 +125,7 @@ def neighbors(
             A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
 
             .. deprecated:: 1.10.0
-               Use :func:`rapids_singlecell.tl.neighbors` instead.
+               Use :func:`rapids_singlecell.pp.neighbors` instead.
     metric
         A known metric’s name or a callable that returns a distance.
 
@@ -139,12 +139,12 @@ def neighbors(
 
         *ignored if ``transformer`` is an instance.*
     key_added
-        If not specified, the neighbors data is stored in .uns['neighbors'],
-        distances and connectivities are stored in .obsp['distances'] and
-        .obsp['connectivities'] respectively.
+        If not specified, the neighbors data is stored in `.uns['neighbors']`,
+        distances and connectivities are stored in `.obsp['distances']` and
+        `.obsp['connectivities']` respectively.
         If specified, the neighbors data is added to .uns[key_added],
-        distances are stored in .obsp[key_added+'_distances'] and
-        connectivities in .obsp[key_added+'_connectivities'].
+        distances are stored in `.obsp[key_added+'_distances']` and
+        connectivities in `.obsp[key_added+'_connectivities']`.
     copy
         Return a copy instead of writing to adata.
 
@@ -351,7 +351,7 @@ class Neighbors:
     n_dcs
         Number of diffusion components to use.
     neighbors_key
-        Where to look in .uns and .obsp for neighbors data
+        Where to look in `.uns` and `.obsp` for neighbors data
     """
 
     def __init__(

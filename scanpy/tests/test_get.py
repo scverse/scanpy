@@ -37,7 +37,7 @@ def adata():
     adata.layers['double'] is sparse np.ones((2,2)) * 2 to also test sparse matrices
     """
     return AnnData(
-        X=np.ones((2, 2)),
+        X=np.ones((2, 2), dtype=int),
         obs=pd.DataFrame(
             {"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]
         ),
@@ -45,7 +45,6 @@ def adata():
             {"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]
         ),
         layers={"double": sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},
-        dtype=int,
     )
 
 
@@ -60,12 +59,11 @@ def test_obs_df(adata):
 
     # make raw with different genes than adata
     adata.raw = AnnData(
-        X=np.array([[1, 2, 3], [2, 4, 6]]),
+        X=np.array([[1, 2, 3], [2, 4, 6]], dtype=np.float64),
         var=pd.DataFrame(
             {"gene_symbols": ["raw1", "raw2", 'raw3']},
             index=["gene2", "gene3", "gene4"],
         ),
-        dtype='float64',
     )
     pd.testing.assert_frame_equal(
         sc.get.obs_df(
@@ -157,9 +155,8 @@ def test_repeated_gene_symbols():
     gene_symbols = [f"symbol_{i}" for i in ["a", "b", "b", "c"]]
     var_names = pd.Index([f"id_{i}" for i in ["a", "b.1", "b.2", "c"]])
     adata = sc.AnnData(
-        np.arange(3 * 4).reshape((3, 4)),
+        np.arange(3 * 4, dtype=np.float32).reshape((3, 4)),
         var=pd.DataFrame({"gene_symbols": gene_symbols}, index=var_names),
-        dtype=np.float32,
     )
 
     with pytest.raises(KeyError, match="symbol_b"):

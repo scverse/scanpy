@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 import collections.abc as cabc
 from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable, Literal
@@ -318,10 +320,12 @@ def savefig_or_show(
         pl.close()  # clear figure
 
 
-def default_palette(palette: Union[Sequence[str], Cycler, None] = None) -> Cycler:
+def default_palette(
+    palette: Union[str, Sequence[str], Cycler, None] = None
+) -> str | Cycler:
     if palette is None:
         return rcParams['axes.prop_cycle']
-    elif not isinstance(palette, Cycler):
+    elif not isinstance(palette, (str, Cycler)):
         return cycler(color=palette)
     else:
         return palette
