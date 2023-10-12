@@ -20,6 +20,7 @@ on:
       - synchronize
 
 jobs:
+  # This job verifies that the milestone is present or not necessary.
   check-milestone:
     name: Check Milestone
     runs-on: ubuntu-latest
@@ -28,18 +29,22 @@ jobs:
         uses: flying-sheep/check@v1
         with:
           success: ${{ github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
+  # This job verifies if the checklist is still there and determines if “check-relnotes” needs to be run.
   checklist:
     name: Checklist
     runs-on: ubuntu-latest
     steps:
       - name: Check if all checkboxes are checked
         id: all-checked
+        # The third checkbox is “no relnotes necessary”.
+        # If it’s not checked, we run the “check-relnotes” job.
         continue-on-error: true
         uses: mheap/require-checklist-action@v2
         with:
           requireChecklist: true
     outputs:
       all-checked: ${{ steps.all-checked.outcome == 'success' }}
+  # This job verifies that the relevant release notes file has been modified.
   check-relnotes:
     name: Check for release notes
     runs-on: ubuntu-latest
