@@ -34,6 +34,7 @@ jobs:
     steps:
       - name: Check if all checkboxes are checked
         id: all-checked
+        continue-on-error: true
         uses: mheap/require-checklist-action@v2
         with:
           requireChecklist: true
