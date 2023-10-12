@@ -19,9 +19,6 @@ on:
       # code change (e.g. this workflow)
       - synchronize
 
-env:
-  LABELS: ${{ join( github.event.pull_request.labels.*.name, '|' ) }}
-
 jobs:
   check-milestone:
     name: Check Milestone
@@ -30,23 +27,20 @@ jobs:
       - name: Check if milestone or “no milestone” label is present
         uses: flying-sheep/check@v1
         with:
-          success: ${{ github.event.pull_request.milestone != null || contains(env.LABELS, 'no milestone') }}
-      - uses: Shopify/task-list-checker@main
-        id: tasks
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
+          success: ${{ github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
+  check-relnotes:
+    name: Check for release notes
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.milestone != null && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀')
+    steps:
       - uses: actions/checkout@v3
-        if: github.event.pull_request.milestone != null && steps.tasks.outputs.outstandingTasks.remaining > 0
       - name: Find out if relevant release notes are modified
         uses: dorny/paths-filter@v2
         id: changes
         with:
           filters: | # this is intentionally a string
             relnotes: 'docs/release-notes/${{ github.event.pull_request.milestone.title }}.md'
-        if: github.event.pull_request.milestone != null && steps.tasks.outputs.outstandingTasks.remaining > 0
       - name: Check if relevant release notes are modified
         uses: flying-sheep/check@v1
         with:
           success: ${{ steps.changes.outputs.relnotes }}
-        if: github.event.pull_request.milestone != null && steps.tasks.outputs.outstandingTasks.remaining > 0
