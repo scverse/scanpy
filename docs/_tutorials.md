@@ -2,8 +2,8 @@
 
 ## Clustering
 
-For getting started, we recommend Scanpy’s reimplementation {doc}`/tutorials/pbmc3k`
-of Seurat’s [^cite_satija15] clustering tutorial for 3k PBMCs from 10x Genomics,
+For getting started, we recommend Scanpy’s reimplementation {doc}`tutorials:pbmc3k`
+of Seurat’s {cite}`Satija15` clustering tutorial for 3k PBMCs from 10x Genomics,
 containing preprocessing, clustering and the identification of cell types via
 known marker genes.
 
@@ -29,9 +29,9 @@ known marker genes.
 
 ## Visualization
 
-Learn how to visually explore genes using scanpy: {doc}`/tutorials/plotting/core`
+Learn how to visually explore genes using scanpy: {doc}`tutorials:plotting/core`
 
-For advanced customization of your plots, see {doc}`/tutorials/plotting/advanced`
+For advanced customization of your plots, see {doc}`tutorials:plotting/advanced`
 
 ```{image} _static/img/stacked_violin_dotplot_matrixplot.png
 :width: 550px
@@ -39,26 +39,26 @@ For advanced customization of your plots, see {doc}`/tutorials/plotting/advanced
 
 ## Trajectory inference
 
-Get started with the following example for hematopoiesis for data of [^cite_paul15]: {doc}`/tutorials/paga-paul15`
+Get started with the following example for hematopoiesis for data of {cite}`Paul15`: {doc}`tutorials:paga-paul15`
 
 ```{image} _static/img/tutorials/paga_paul15.png
 :width: 450px
 ```
 
 More examples for trajectory inference on complex datasets can be found in the
-[PAGA](https://github.com/theislab/paga) repository [^cite_wolf19], for instance, multi-resolution analyses of whole
-animals, such as for [planaria] for data of [^cite_plass18].
+[PAGA](https://github.com/theislab/paga) repository {cite}`Wolf19`, for instance, multi-resolution analyses of whole
+animals, such as for [planaria] for data of {cite}`Plass18`.
 
 ```{image} _static/img/tutorials/paga_planaria.png
 :width: 350px
 ```
 
-As a reference for simple pseudotime analyses, we provide the diffusion pseudotime (DPT) analyses of [^cite_haghverdi16]
-for two hematopoiesis datasets: [DPT example 1] [^cite_paul15] and [DPT example 2] [^cite_moignard15].
+As a reference for simple pseudotime analyses, we provide the diffusion pseudotime (DPT) analyses of {cite}`Haghverdi16`
+for two hematopoiesis datasets: [DPT example 1] {cite}`Paul15` and [DPT example 2] {cite}`Moignard15`.
 
 ## Integrating datasets
 
-Map labels and embeddings of reference data to new data: {doc}`/tutorials/integrating-data-using-ingest`
+Map labels and embeddings of reference data to new data: {doc}`tutorials:integrating-data-using-ingest`
 
 ```{image} https://scanpy-tutorials.readthedocs.io/en/latest/_images/integrating-data-using-ingest_21_0.png
 :width: 350px
@@ -66,8 +66,8 @@ Map labels and embeddings of reference data to new data: {doc}`/tutorials/integr
 
 ## Spatial data
 
-- Basic analysis of spatial data: {doc}`/tutorials/spatial/basic-analysis`
-- Integrating spatial data with scRNA-seq using scanorama: {doc}`/tutorials/spatial/integration-scanorama`
+- Basic analysis of spatial data: {doc}`tutorials:spatial/basic-analysis`
+- Integrating spatial data with scRNA-seq using scanorama: {doc}`tutorials:spatial/integration-scanorama`
 
 ```{image} _static/img/spatial-basic-analysis.png
 :width: 250px
@@ -98,7 +98,7 @@ See the [cell cycle] notebook.
 
 ### Normalization with Pearson Residuals
 
-Normalization of scRNA-seq data with Pearson Residuals, from [^cite_lause21]: {doc}`/tutorials/tutorial_pearson_residuals`
+Normalization of scRNA-seq data with Pearson Residuals, from {cite}`Lause21`: {doc}`tutorials:tutorial_pearson_residuals`
 
 ### Scaling Computations
 
@@ -106,7 +106,7 @@ Normalization of scRNA-seq data with Pearson Residuals, from [^cite_lause21]: {d
 
 ### Simulations
 
-Simulating single cells using literature-curated gene regulatory networks [^cite_wittmann09].
+Simulating single cells using literature-curated gene regulatory networks {cite}`Wittmann09`.
 
 ```{image} _static/img/tutorials/170430_krumsiek11/timeseries.png
 :align: right
@@ -118,7 +118,7 @@ Simulating single cells using literature-curated gene regulatory networks [^cite
 
 ### Images
 
-See pseudotime-time inference on deep-learning based features for [cell cycle reconstruction] from image data [^cite_eulenberg17].
+See pseudotime-time inference on deep-learning based features for [cell cycle reconstruction] from image data {cite}`Eulenberg17`.
 
 % User Examples
 % ~~~~~~~~~~~~~
@@ -140,18 +140,3 @@ See pseudotime-time inference on deep-learning based features for [cell cycle re
 [scanpy in r]: https://theislab.github.io/scanpy-in-R/
 [seurat to anndata]: https://github.com/LuckyMD/Code_snippets/blob/master/Seurat_to_anndata.ipynb
 [toggleswitch]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170430_krumsiek11/toggleswitch.ipynb
-
-
-```{toctree}
-:hidden: true
-:maxdepth: 1
-
-tutorials/pbmc3k
-tutorials/paga-paul15
-tutorials/plotting/core
-tutorials/plotting/advanced
-tutorials/integrating-data-using-ingest
-tutorials/spatial/basic-analysis
-tutorials/spatial/integration-scanorama
-tutorials/tutorial_pearson_residuals
-```

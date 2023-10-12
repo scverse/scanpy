@@ -5,6 +5,7 @@ Use harmony to integrate cells from different experiments.
 from typing import Optional
 
 from anndata import AnnData
+import numpy as np
 
 
 def harmony_integrate(
@@ -79,6 +80,8 @@ def harmony_integrate(
     except ImportError:
         raise ImportError("\nplease install harmonypy:\n\n\tpip install harmonypy")
 
-    harmony_out = harmonypy.run_harmony(adata.obsm[basis], adata.obs, key, **kwargs)
+    X = adata.obsm[basis].astype(np.float64)
+
+    harmony_out = harmonypy.run_harmony(X, adata.obs, key, **kwargs)
 
     adata.obsm[adjusted_basis] = harmony_out.Z_corr.T

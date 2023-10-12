@@ -115,6 +115,22 @@ def test_subsample_copy():
     assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
 
 
+def test_subsample_copy_backed(tmp_path):
+    A = np.random.rand(200, 10).astype(np.float32)
+    adata_m = AnnData(A.copy())
+    adata_d = AnnData(A.copy())
+    filename = tmp_path / 'test.h5ad'
+    adata_d.filename = filename
+    # This should not throw an error
+    assert sc.pp.subsample(adata_d, n_obs=40, copy=True).shape == (40, 10)
+    np.testing.assert_array_equal(
+        sc.pp.subsample(adata_m, n_obs=40, copy=True).X,
+        sc.pp.subsample(adata_d, n_obs=40, copy=True).X,
+    )
+    with pytest.raises(NotImplementedError):
+        sc.pp.subsample(adata_d, n_obs=40, copy=False)
+
+
 def test_scale():
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
@@ -147,7 +163,7 @@ def test_scale_array(count_matrix_format, zero_center):
     Test that running sc.pp.scale on an anndata object and an array returns the same results.
     """
     X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
-    adata = sc.AnnData(X=X.copy(), dtype=np.float64)
+    adata = sc.AnnData(X=X.copy().astype(np.float64))
 
     sc.pp.scale(adata, zero_center=zero_center)
     scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
@@ -274,7 +290,7 @@ def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     TARGET = 1000
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = AnnData(X=count_matrix_format(X), dtype=dtype)
+    adata = AnnData(X=count_matrix_format(X).astype(dtype))
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(
             adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace
@@ -306,7 +322,7 @@ def test_downsample_counts_per_cell_multiple_targets(
     TARGETS = np.random.randint(500, 1500, 1000)
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = AnnData(X=count_matrix_format(X), dtype=dtype)
+    adata = AnnData(X=count_matrix_format(X).astype(dtype))
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
@@ -332,7 +348,7 @@ def test_downsample_counts_per_cell_multiple_targets(
 def test_downsample_total_counts(count_matrix_format, replace, dtype):
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata_orig = AnnData(X=count_matrix_format(X), dtype=dtype)
+    adata_orig = AnnData(X=count_matrix_format(X))
     total = X.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))

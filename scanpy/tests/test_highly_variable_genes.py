@@ -305,7 +305,7 @@ def test_higly_variable_genes_compare_to_seurat():
     )
 
 
-@needs("skmisc")
+@needs('skmisc')
 def test_higly_variable_genes_compare_to_seurat_v3():
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=' ', dtype={"variances_norm": np.float64}
@@ -461,7 +461,7 @@ def test_highly_variable_genes_batches():
     assert np.all(np.isin(colnames, hvg1.columns))
 
 
-@needs("skmisc")
+@needs('skmisc')
 def test_seurat_v3_mean_var_output_with_batchkey():
     pbmc = pbmc3k()
     pbmc.var_names_make_unique()
@@ -483,7 +483,7 @@ def test_seurat_v3_mean_var_output_with_batchkey():
 
 def test_cellranger_n_top_genes_warning():
     X = np.random.poisson(2, (100, 30))
-    adata = sc.AnnData(X, dtype=X.dtype)
+    adata = sc.AnnData(X)
     sc.pp.normalize_total(adata)
     sc.pp.log1p(adata)
 

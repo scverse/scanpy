@@ -341,12 +341,17 @@ class _RankGenes:
         clf = LogisticRegression(**kwds)
         clf.fit(X, self.grouping.cat.codes)
         scores_all = clf.coef_
-        for igroup, _ in enumerate(self.groups_order):
+        # not all codes necessarily appear in data
+        existing_codes = np.unique(self.grouping.cat.codes)
+        for igroup, cat in enumerate(self.groups_order):
             if len(self.groups_order) <= 2:  # binary logistic regression
                 scores = scores_all[0]
             else:
-                scores = scores_all[igroup]
-
+                # cat code is index of cat value in .categories
+                cat_code: int = np.argmax(self.grouping.cat.categories == cat)
+                # index of scores row is index of cat code in array of existing codes
+                scores_idx: int = np.argmax(existing_codes == cat_code)
+                scores = scores_all[scores_idx]
             yield igroup, scores, None
 
             if len(self.groups_order) <= 2:
@@ -457,7 +462,9 @@ def rank_genes_groups(
         Key from `adata.layers` whose value will be used to perform tests on.
     groups
         Subset of groups, e.g. [`'g1'`, `'g2'`, `'g3'`], to which comparison
-        shall be restricted, or `'all'` (default), for all groups.
+        shall be restricted, or `'all'` (default), for all groups. Note that if
+        `reference='rest'` all groups will still be used as the reference, not
+        just those specified in `groups`.
     reference
         If `'rest'`, compare each group to the union of the rest of the group.
         If a group identifier, compare with respect to this group.

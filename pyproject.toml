@@ -58,7 +58,7 @@ dependencies = [
     "matplotlib>=3.4",
     "pandas>=1.0",
     "scipy>=1.4",
-    "seaborn",
+    "seaborn!=0.13.0",
     "h5py>=3",
     "tqdm",
     "scikit-learn>=0.24",
@@ -89,6 +89,7 @@ scanpy = "scanpy.cli:console_main"
 test-min = [
     "pytest>=4.4",
     "pytest-nunit",
+    "pytest-mock",
     "profimp",
 ]
 test = [
@@ -107,14 +108,15 @@ test-full = [
     "scanpy[harmony]",
     "scanpy[scanorama]",
     "scanpy[scrublet]",
+    "scanpy[dask-ml]",
 ]
 doc = [
     "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
-    "scanpydoc>=0.7.11",
+    "sphinx-book-theme",
+    "scanpydoc>=0.9.5",
     "sphinx-autodoc-typehints",
     "myst-parser",
     "myst-nb",
-    "sphinx-book-theme",
     "sphinx-design",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
@@ -127,8 +129,7 @@ dev = [
     # getting the dev version
     "setuptools_scm",
     # static checking
-    "black>=20.8b1",
-    "docutils",
+    "pre-commit",
 ]
 # Algorithms
 paga = ["igraph"]
@@ -143,6 +144,7 @@ scrublet = ["scrublet"]  # Doublet detection
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
 dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
+dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.flit.sdist]
 exclude = [
@@ -153,6 +155,7 @@ exclude = [
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
+    "--strict-markers",
     "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]

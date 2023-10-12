@@ -60,7 +60,10 @@ While computational functions will return arrays and values, it can be harder to
 
 To make this easier, we use the `image_comparer` fixture for comparing plotting results (search the test suite for example usage).
 This is used to check that generated plots look the same as they did previously.
-Reference images (the expected output) are kept `scanpy/tests/_images` and compared with the results of running the test suite by running the tests.
+Reference images (the expected output) are stored as `expected.png` to relevant tests directory under `scanpy/tests/_images`.
+When run, the test suite will generate `actual.png` files for each check.
+These files are compared, and if the `actual` plot differs from the reference plot, a `diff` of the images is also generated.
+Paths for all these files will be reported when a test fails, and images for failed plots can be viewed via the :doc:`CI interface <ci>`.
 
 A common gotcha here is that plots often change slightly on different machines/ OSs.
 `scanpy`'s test suite sets a number of environment variables to ensure as similar of plots as possible.

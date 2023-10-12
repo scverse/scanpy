@@ -85,10 +85,9 @@ def draw_graph(
     copy
         Return a copy instead of writing to adata.
     **kwds
-        Parameters of chosen igraph layout. See e.g. `fruchterman-reingold`_
-        [Fruchterman91]_. One of the most important ones is `maxiter`.
-
-        .. _fruchterman-reingold: http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold
+        Parameters of chosen igraph layout. See e.g.
+        :meth:`~igraph.GraphBase.layout_fruchterman_reingold` [Fruchterman91]_.
+        One of the most important ones is `maxiter`.
 
     Returns
     -------
