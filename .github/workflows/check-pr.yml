@@ -44,7 +44,7 @@ jobs:
     name: Check for release notes
     runs-on: ubuntu-latest
     needs: checklist
-    if: ${{ !needs.checklist.outputs.all-checked && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
+    if: ${{ needs.checklist.outputs.all-checked == 'false' && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
     steps:
       - uses: actions/checkout@v3
       - name: Find out if relevant release notes are modified
