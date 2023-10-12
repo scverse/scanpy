@@ -19,6 +19,7 @@ def blobs(
     n_centers: int = 5,
     cluster_std: float = 1.0,
     n_observations: int = 640,
+    random_state: int = 0,
 ) -> ad.AnnData:
     """\
     Gaussian Blobs.
@@ -34,6 +35,8 @@ def blobs(
     n_observations
         Number of observations. By default, this is the same observation number
         as in :func:`scanpy.datasets.krumsiek11`.
+    random_state
+        Determines random number generation for dataset creation.
 
     Returns
     -------
@@ -47,7 +50,7 @@ def blobs(
         n_features=n_variables,
         centers=n_centers,
         cluster_std=cluster_std,
-        random_state=0,
+        random_state=random_state,
     )
     return ad.AnnData(X, obs=dict(blobs=y.astype(str)))
 
