@@ -39,7 +39,7 @@ jobs:
         with:
           requireChecklist: true
     outputs:
-      all-checked: ${{ steps.all-checked.outcome }}
+      all-checked: ${{ steps.all-checked.outcome == 'success' }}
   check-relnotes:
     name: Check for release notes
     runs-on: ubuntu-latest
