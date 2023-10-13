@@ -71,7 +71,7 @@ dependencies = [
     "umap-learn>=0.3.10",
     "packaging",
     "session-info",
-    # for getting the stable version
+    "get-annotations; python_version < '3.10'",
 ]
 dynamic = ["version"]
 
