@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import collections.abc as cabc
 from copy import copy
 from numbers import Integral
@@ -13,7 +15,6 @@ from typing import (
     Tuple,
     Literal,
 )
-from warnings import warn
 
 import numpy as np
 import pandas as pd
