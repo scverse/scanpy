@@ -92,7 +92,8 @@ def scanorama_integrate(
     Finally, run Scanorama. Afterwards, there will be a new table in
     ``adata.obsm`` containing the Scanorama embeddings.
 
-    >>> sce.pp.scanorama_integrate(adata, 'batch')
+    >>> sce.pp.scanorama_integrate(adata, 'batch', verbose=1)
+    Processing datasets a <=> b
     >>> 'X_scanorama' in adata.obsm
     True
     """
