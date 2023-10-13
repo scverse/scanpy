@@ -158,7 +158,6 @@ addopts = [
     "--strict-markers",
     "-pscanpy.testing._pytest",
 ]
-# filterwarnings = ["error"]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
 xfail_strict = true
