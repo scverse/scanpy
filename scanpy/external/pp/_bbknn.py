@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Union, Optional, Callable
 from anndata import AnnData
 
 if TYPE_CHECKING:
-    from sklearn.neighbors import DistanceMetric
+    from sklearn.metrics import DistanceMetric
 
 from ...testing._doctests import doctest_needs
 
