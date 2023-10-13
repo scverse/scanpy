@@ -78,8 +78,8 @@ def bbknn(
         'kantorovich', 'wasserstein', 'tsss', 'true_angular', 'hamming', 'jaccard', 'dice', 'matching', 'kulsinski',
         'rogerstanimoto', 'russellrao', 'sokalsneath', 'sokalmichener', 'yule'])
 
-        KDTree supports members of the :meth:`sklearn.neighbors.KDTree.valid_metrics` list, or parameterised
-        :class:`~sklearn.neighbors.DistanceMetric` objects:
+        KDTree supports members of :class:`sklearn.neighbors.KDTree`’s ``valid_metrics`` list, or parameterised
+        :class:`~sklearn.metrics.DistanceMetric` objects:
 
         >>> sklearn.neighbors.KDTree.valid_metrics
         ['p', 'chebyshev', 'cityblock', 'minkowski', 'infinity', 'l2', 'euclidean', 'manhattan', 'l1']

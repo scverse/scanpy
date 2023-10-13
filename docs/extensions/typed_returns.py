@@ -16,6 +16,8 @@ def process_return(lines):
 
 def scanpy_parse_returns_section(self, section):
     lines_raw = list(process_return(self._dedent(self._consume_to_next_section())))
+    if lines_raw[0] == ':':
+        lines_raw.pop(0)
     lines = self._format_block(':returns: ', lines_raw)
     if lines and lines[-1]:
         lines.append('')
