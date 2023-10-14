@@ -19,7 +19,7 @@ def blobs(
     n_centers: int = 5,
     cluster_std: float = 1.0,
     n_observations: int = 640,
-    random_state: int = 0,
+    random_state: AnyRandom = 0,
 ) -> ad.AnnData:
     """\
     Gaussian Blobs.
