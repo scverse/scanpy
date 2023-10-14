@@ -10,6 +10,7 @@ from .. import logging as logg, _utils
 from .._settings import settings
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
+from .._utils import AnyRandom
 
 HERE = Path(__file__).parent
 
