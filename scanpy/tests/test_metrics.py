@@ -1,5 +1,7 @@
+from functools import partial
 from operator import eq
 from string import ascii_letters
+import sys
 import warnings
 
 import numpy as np
@@ -13,22 +15,39 @@ from scanpy._compat import DaskArray
 from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
+mark_flaky = pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason='This used to work reliably, but doesn’t anymore in old Python versions',
+)
+
+
 @pytest.fixture(scope="session", params=[sc.metrics.gearys_c, sc.metrics.morans_i])
-def metric(request):
+def metric(request: pytest.FixtureRequest):
     return request.param
 
 
-def test_consistency(metric):
+@pytest.fixture(
+    scope="session",
+    params=[
+        pytest.param(eq, marks=[mark_flaky]),
+        pytest.param(partial(np.testing.assert_allclose, rtol=1e-15), id='allclose'),
+    ],
+)
+def assert_equal(request: pytest.FixtureRequest):
+    return request.param
+
+
+def test_consistency(metric, assert_equal):
     pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
 
-    np.testing.assert_almost_equal(
+    assert_equal(
         metric(g, pbmc.obs["percent_mito"]),
         metric(pbmc, vals=pbmc.obs["percent_mito"]),
     )
 
-    np.testing.assert_almost_equal(  # Test that series and vectors return same value
+    assert_equal(  # Test that series and vectors return same value
         metric(g, pbmc.obs["percent_mito"]),
         metric(g, pbmc.obs["percent_mito"].values),
     )
@@ -50,27 +69,30 @@ def test_consistency(metric):
     )
 
 
-def test_correctness(metric):
+@pytest.mark.parametrize(
+    ('metric', 'size', 'expected'),
+    [
+        pytest.param(sc.metrics.gearys_c, 30, 0.0, id='gearys_c'),
+        pytest.param(sc.metrics.morans_i, 50, 1.0, id='morans_i'),
+    ],
+)
+def test_correctness(metric, size, expected, assert_equal):
     # Test case with perfectly seperated groups
     connected = np.zeros(100)
-    connected[np.random.choice(100, size=30, replace=False)] = 1
+    connected[np.random.choice(100, size=size, replace=False)] = 1
     graph = np.zeros((100, 100))
     graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
     graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
     graph = sparse.csr_matrix(graph)
 
-    assert metric(graph, connected) == 0.0
-    np.testing.assert_almost_equal(
+    assert metric(graph, connected) == expected
+    assert_equal(
         metric(graph, connected),
         metric(graph, sparse.csr_matrix(connected)),
     )
-    # Check for anndata > 0.7
-    if hasattr(sc.AnnData, "obsp"):
-        # Checking that obsp works
-        adata = sc.AnnData(
-            sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
-        )
-        assert metric(adata, vals=connected) == 0.0
+    # Checking that obsp works
+    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})
+    assert metric(adata, vals=connected) == expected
 
 
 def test_graph_metrics_w_constant_values(metric, array_type):
