@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import singledispatch
 from typing import Optional, Union
 import warnings
@@ -299,7 +301,7 @@ def _check_vals(vals):
 
 
 @gearys_c.register(sparse.csr_matrix)
-def _gearys_c(g, vals) -> np.ndarray:
+def _gearys_c(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
