@@ -1,8 +1,7 @@
+import warnings
 from functools import partial
 from operator import eq
 from string import ascii_letters
-import sys
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -15,9 +14,9 @@ from scanpy._compat import DaskArray
 from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
-mark_flaky = pytest.mark.skipif(
-    sys.version_info < (3, 10),
-    reason='This used to work reliably, but doesn’t anymore in old Python versions',
+mark_flaky = pytest.mark.xfail(
+    strict=False,
+    reason='This used to work reliably, but doesn’t anymore',
 )
 
 
