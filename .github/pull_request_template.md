@@ -7,6 +7,4 @@ Please be sure to follow the guidelines in our contribution guide (https://scanp
 - [ ] Closes #
 - [ ] Tests included or not required because:
 <!-- Only check the following box if you did not include release nodes -->
-<!-- ignore-task-list-start -->
 - [ ] Release notes not necessary because:
-<!-- ignore-task-list-end -->
