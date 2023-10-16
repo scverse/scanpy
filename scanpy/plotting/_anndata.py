@@ -12,7 +12,7 @@ import pandas as pd
 from anndata import AnnData
 from cycler import Cycler
 from matplotlib.axes import Axes
-from pandas.api.types import is_categorical_dtype, is_numeric_dtype
+from pandas.api.types import CategoricalDtype, is_numeric_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
@@ -311,7 +311,7 @@ def _scatter_obs(
         colorbar = None
         # test whether we have categorial or continuous annotation
         if key in adata.obs_keys():
-            if is_categorical_dtype(adata.obs[key]):
+            if isinstance(adata.obs[key].dtype, CategoricalDtype):
                 categorical = True
             else:
                 c = adata.obs[key]
@@ -765,7 +765,7 @@ def violin(
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
         if kwds.get('palette', None) is None:
-            if not is_categorical_dtype(adata.obs[groupby]):
+            if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
                 raise ValueError(
                     f'The column `adata.obs[{groupby!r}]` needs to be categorical, '
                     f'but is of dtype {adata.obs[groupby].dtype}.'
@@ -1062,7 +1062,9 @@ def heatmap(
     else:
         categorical = True
         # get categories colors
-        if isinstance(groupby, str) and is_categorical_dtype(adata.obs[groupby]):
+        if isinstance(groupby, str) and isinstance(
+            adata.obs[groupby].dtype, CategoricalDtype
+        ):
             # saved category colors only work when groupby is valid adata.obs
             # categorical column. When groupby is a numerical column
             # or when groupby is a list of columns the colors are assigned on the fly,
