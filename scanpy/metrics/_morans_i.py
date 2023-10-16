@@ -185,10 +185,7 @@ def _morans_i_mtx(
     return out
 
 
-@njit(
-    cache=True,
-    parallel=True,
-)
+@njit(cache=True, parallel=True)
 def _morans_i_mtx_csr(
     g_data: np.ndarray,
     g_indices: np.ndarray,
