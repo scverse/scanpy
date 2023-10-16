@@ -94,7 +94,7 @@ def test_correctness(metric, size, expected, assert_equal):
     assert metric(adata, vals=connected) == expected
 
 
-def test_graph_metrics_w_constant_values(metric, array_type):
+def test_graph_metrics_w_constant_values(metric, array_type, assert_equal):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())
@@ -123,14 +123,12 @@ def test_graph_metrics_w_constant_values(metric, array_type):
         results_const_vals = metric(g, XT_const_vals)
 
     assert not np.isnan(results_full).any()
-    np.testing.assert_almost_equal(results_const_zeros, results_const_vals)
+    assert_equal(results_const_zeros, results_const_vals)
     np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
     np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
 
     non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
-    np.testing.assert_almost_equal(
-        results_full[non_const_mask], results_const_zeros[non_const_mask]
-    )
+    assert_equal(results_full[non_const_mask], results_const_zeros[non_const_mask])
 
 
 def test_confusion_matrix():
