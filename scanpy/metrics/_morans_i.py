@@ -1,4 +1,6 @@
 """Moran's I global spatial autocorrelation."""
+from __future__ import annotations
+
 from functools import singledispatch
 from typing import Union, Optional
 
@@ -8,7 +10,7 @@ from scipy import sparse
 from numba import njit, prange
 
 from ..get import _get_obs_rep
-from .._compat import fullname, DaskArray
+from .._compat import fullname
 from ._common import _resolve_vals, _check_vals
 
 
@@ -186,10 +188,7 @@ def _morans_i_mtx(
     return out
 
 
-@njit(
-    cache=True,
-    parallel=True,
-)
+@njit(cache=True, parallel=True)
 def _morans_i_mtx_csr(
     g_data: np.ndarray,
     g_indices: np.ndarray,
@@ -223,7 +222,7 @@ def _morans_i_mtx_csr(
 
 
 @morans_i.register(sparse.csr_matrix)
-def _morans_i(g: sparse.csr_matrix, vals) -> np.ndarray:
+def _morans_i(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
