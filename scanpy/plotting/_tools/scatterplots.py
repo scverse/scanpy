@@ -886,8 +886,10 @@ def pca(
             # edit axis labels in returned figure
             fig = embedding(adata, 'pca', return_fig=return_fig, **kwargs)
             for ax in fig.axes:
-                ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
-                ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
+                if xlabel := label_dict.get(ax.xaxis.get_label().get_text()):
+                    ax.set_xlabel(xlabel)
+                if ylabel := label_dict.get(ax.yaxis.get_label().get_text()):
+                    ax.set_ylabel(ylabel)
             return fig
 
         else:
