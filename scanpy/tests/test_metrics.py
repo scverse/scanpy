@@ -13,41 +13,44 @@ from scanpy._compat import DaskArray
 from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
-def test_gearys_c_consistency():
+@pytest.fixture(scope="session", params=[sc.metrics.gearys_c, sc.metrics.morans_i])
+def metric(request):
+    return request.param
+
+
+def test_consistency(metric):
     pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
 
-    assert eq(
-        sc.metrics.gearys_c(g, pbmc.obs["percent_mito"]),
-        sc.metrics.gearys_c(pbmc, vals=pbmc.obs["percent_mito"]),
+    np.testing.assert_almost_equal(
+        metric(g, pbmc.obs["percent_mito"]),
+        metric(pbmc, vals=pbmc.obs["percent_mito"]),
     )
 
-    assert eq(  # Test that series and vectors return same value
-        sc.metrics.gearys_c(g, pbmc.obs["percent_mito"]),
-        sc.metrics.gearys_c(g, pbmc.obs["percent_mito"].values),
+    np.testing.assert_almost_equal(  # Test that series and vectors return same value
+        metric(g, pbmc.obs["percent_mito"]),
+        metric(g, pbmc.obs["percent_mito"].values),
     )
 
-    np.testing.assert_array_equal(
-        sc.metrics.gearys_c(pbmc, obsm="X_pca"),
-        sc.metrics.gearys_c(g, pbmc.obsm["X_pca"].T),
+    np.testing.assert_almost_equal(
+        metric(pbmc, obsm="X_pca"),
+        metric(g, pbmc.obsm["X_pca"].T),
     )
 
-    all_genes = sc.metrics.gearys_c(pbmc, layer="raw")
-    first_gene = sc.metrics.gearys_c(
-        pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
-    )
+    all_genes = metric(pbmc, layer="raw")
+    first_gene = metric(pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw"))
 
     np.testing.assert_allclose(all_genes[0], first_gene)
 
     # Test that results are similar for sparse and dense reps of same data
     np.testing.assert_allclose(
-        sc.metrics.gearys_c(pbmc, layer="raw"),
-        sc.metrics.gearys_c(pbmc, vals=pbmc.layers["raw"].T.toarray()),
+        metric(pbmc, layer="raw"),
+        metric(pbmc, vals=pbmc.layers["raw"].T.toarray()),
     )
 
 
-def test_gearys_c_correctness():
+def test_correctness(metric):
     # Test case with perfectly seperated groups
     connected = np.zeros(100)
     connected[np.random.choice(100, size=30, replace=False)] = 1
@@ -56,10 +59,10 @@ def test_gearys_c_correctness():
     graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
     graph = sparse.csr_matrix(graph)
 
-    assert sc.metrics.gearys_c(graph, connected) == 0.0
-    assert eq(
-        sc.metrics.gearys_c(graph, connected),
-        sc.metrics.gearys_c(graph, sparse.csr_matrix(connected)),
+    assert metric(graph, connected) == 0.0
+    np.testing.assert_almost_equal(
+        metric(graph, connected),
+        metric(graph, sparse.csr_matrix(connected)),
     )
     # Check for anndata > 0.7
     if hasattr(sc.AnnData, "obsp"):
@@ -67,67 +70,9 @@ def test_gearys_c_correctness():
         adata = sc.AnnData(
             sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
         )
-        assert sc.metrics.gearys_c(adata, vals=connected) == 0.0
+        assert metric(adata, vals=connected) == 0.0
 
 
-def test_morans_i_consistency():
-    pbmc = pbmc68k_reduced()
-    pbmc.layers["raw"] = pbmc.raw.X.copy()
-    g = pbmc.obsp["connectivities"]
-
-    assert eq(
-        sc.metrics.morans_i(g, pbmc.obs["percent_mito"]),
-        sc.metrics.morans_i(pbmc, vals=pbmc.obs["percent_mito"]),
-    )
-
-    assert eq(  # Test that series and vectors return same value
-        sc.metrics.morans_i(g, pbmc.obs["percent_mito"]),
-        sc.metrics.morans_i(g, pbmc.obs["percent_mito"].values),
-    )
-
-    np.testing.assert_array_equal(
-        sc.metrics.morans_i(pbmc, obsm="X_pca"),
-        sc.metrics.morans_i(g, pbmc.obsm["X_pca"].T),
-    )
-
-    all_genes = sc.metrics.morans_i(pbmc, layer="raw")
-    first_gene = sc.metrics.morans_i(
-        pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
-    )
-
-    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-5)
-
-    # Test that results are similar for sparse and dense reps of same data
-    np.testing.assert_allclose(
-        sc.metrics.morans_i(pbmc, layer="raw"),
-        sc.metrics.morans_i(pbmc, vals=pbmc.layers["raw"].T.toarray()),
-    )
-
-
-def test_morans_i_correctness():
-    # Test case with perfectly seperated groups
-    connected = np.zeros(100)
-    connected[np.random.choice(100, size=50, replace=False)] = 1
-    graph = np.zeros((100, 100))
-    graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
-    graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
-    graph = sparse.csr_matrix(graph)
-
-    assert sc.metrics.morans_i(graph, connected) == 1.0
-    assert eq(
-        sc.metrics.morans_i(graph, connected),
-        sc.metrics.morans_i(graph, sparse.csr_matrix(connected)),
-    )
-    # Check for anndata > 0.7
-    if hasattr(sc.AnnData, "obsp"):
-        # Checking that obsp works
-        adata = sc.AnnData(
-            sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
-        )
-        assert sc.metrics.morans_i(adata, vals=connected) == 1.0
-
-
-@pytest.mark.parametrize("metric", [sc.metrics.gearys_c, sc.metrics.morans_i])
 def test_graph_metrics_w_constant_values(metric, array_type):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
