@@ -48,7 +48,7 @@ def adata():
     order = np.argsort(labels)
     adata = sc.AnnData(
         make_blobs(
-            pd.value_counts(labels[order]).values,
+            pd.Series(labels[order]).value_counts().values,
             n_features=20,
             shuffle=False,
             random_state=42,
