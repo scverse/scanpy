@@ -10,7 +10,7 @@ except (ImportError, LookupError):
         from ._version import __version__
     except ModuleNotFoundError:
         raise RuntimeError(
-            "anndata is not correctly installed. Please install it, e.g. with pip."
+            "scanpy is not correctly installed. Please install it, e.g. with pip."
         )
 
 from ._utils import check_versions
