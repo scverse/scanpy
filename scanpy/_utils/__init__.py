@@ -3,6 +3,8 @@
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
 """
+from __future__ import annotations
+
 import sys
 import inspect
 import warnings
@@ -17,6 +19,7 @@ from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
 
 import numpy as np
 from numpy import random
+from numpy.typing import NDArray
 from scipy import sparse
 from anndata import AnnData, __version__ as anndata_version
 from textwrap import dedent
@@ -24,8 +27,9 @@ from packaging import version
 
 from .._settings import settings
 from .. import logging as logg
-
-from .compute.is_constant import is_constant
+from .._compat import DaskArray
+from .compute.is_constant import is_constant  # noqa: F401
+from ._dask import lazy_and, lazy_or, get_ufuncs  # noqa: F401
 
 
 class Empty(Enum):
@@ -400,12 +404,12 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
 
 
 # backwards compat... remove this in the future
-def sanitize_anndata(adata):
+def sanitize_anndata(adata: AnnData) -> None:
     """Transform string annotations to categoricals."""
     adata._sanitize()
 
 
-def view_to_actual(adata):
+def view_to_actual(adata: AnnData) -> None:
     if adata.is_view:
         warnings.warn(
             "Received a view of an AnnData. Making a copy.",
@@ -483,24 +487,39 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
-    """Checks values of X to ensure it is count data"""
+_SupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
+
+
+def check_nonnegative_integers(X: _SupportedArray) -> np.bool_ | bool | DaskArray:
+    """\
+    Checks values of X to ensure it is count data.
+
+    When passed a dask array, it will return a scalar dask “array” evaluating to a boolean.
+    """
     from numbers import Integral
 
-    data = X if isinstance(X, np.ndarray) else X.data
-    # Check no negatives
-    if np.signbit(data).any():
-        return False
-    # Check all are integers
-    elif issubclass(data.dtype.type, Integral):
-        return True
-    elif np.any(~np.equal(np.mod(data, 1), 0)):
-        return False
-    else:
-        return True
+    ufuncs = get_ufuncs(X)
+    # get (possibly nonzero) values as (possibly flat) array
+    data: np.ndarray | DaskArray = X.data if sparse.issparse(X) else X
+    # return bool or lazy dask array resolving to one
+    return lazy_and(
+        # none are negative
+        ~ufuncs.signbit(data).any(),
+        # and
+        lambda: lazy_or(
+            # either all are integers
+            issubclass(data.dtype.type, Integral),
+            # or all are whole numbers
+            lambda: ~((data % 1) != 0).any(),
+        ),
+    )
 
 
-def select_groups(adata, groups_order_subset='all', key='groups'):
+def select_groups(
+    adata: AnnData,
+    groups_order_subset: list[str] | Literal['all'] = 'all',
+    key: str = 'groups',
+) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if key + '_masks' in adata.uns:

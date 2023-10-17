@@ -1,14 +1,19 @@
+from functools import partial
 from types import ModuleType
+
 import pytest
-from scipy.sparse import csr_matrix
 import numpy as np
+from scipy.sparse import csr_matrix
 
 from scanpy._utils import (
     descend_classes_and_funcs,
     check_nonnegative_integers,
     is_constant,
+    lazy_and,
+    lazy_or,
 )
 from scanpy.testing._pytest.marks import needs
+from scanpy._compat import DaskArray
 
 
 def test_descend_classes_and_funcs():
@@ -28,20 +33,69 @@ def test_descend_classes_and_funcs():
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, 'a'))
 
 
-def test_check_nonnegative_integers():
-    X = np.random.poisson(size=(100, 100)).astype(np.float64)
-    assert check_nonnegative_integers(X) is True
-    assert check_nonnegative_integers(-X) is False
+array_kinds = [pytest.param('dask', marks=[needs('dask')]), 'bool']
 
-    X_ = X + np.random.normal(size=(100, 100))
-    assert check_nonnegative_integers(X_) is False
 
-    X = csr_matrix(X)
-    assert check_nonnegative_integers(X) is True
-    assert check_nonnegative_integers(-X) is False
+@pytest.mark.parametrize(
+    ('lazy_op', 'left', 'right', 'expected'),
+    [
+        pytest.param(lazy_and, False, pytest.fail, False, id='false-and-fail'),
+        pytest.param(lazy_and, True, lambda: False, False, id='true-and-pass'),
+        pytest.param(lazy_or, True, pytest.fail, True, id='true-or-fail'),
+        pytest.param(lazy_or, False, lambda: True, True, id='false-or-pass'),
+    ],
+)
+@pytest.mark.parametrize('kind_left', array_kinds)
+@pytest.mark.parametrize('kind_right', array_kinds)
+def test_lazy_bool(lazy_op, kind_left, left, kind_right, right, expected):
+    if 'dask' in {kind_left, kind_right}:
+        import dask.array as da
+    if kind_left == 'dask':
+        left = da.array(left)
+    if kind_right == 'dask':
+        right = partial(
+            lambda unwrapped_right: da.array(True).map_blocks(
+                lambda _: unwrapped_right(), meta=np.bool_(True)
+            ),
+            right,
+        )
+    rv = lazy_op(left, right)
+    if isinstance(rv, DaskArray):
+        rv = rv.compute()
+    assert not isinstance(rv, DaskArray), 'graph should be flattened'
+    assert rv == expected
 
-    X_ = csr_matrix(X_)
-    assert check_nonnegative_integers(X_) is False
+
+@pytest.mark.parametrize(
+    ('array_value', 'expected'),
+    [
+        pytest.param(
+            np.random.poisson(size=(100, 100)).astype(np.float64),
+            True,
+            id='poisson-float64',
+        ),
+        pytest.param(
+            np.random.poisson(size=(100, 100)).astype(np.uint32),
+            True,
+            id='poisson-uint32',
+        ),
+        pytest.param(np.random.normal(size=(100, 100)), False, id='normal'),
+        pytest.param(np.array([[0, 0, 0], [0, -1, 0], [0, 0, 0]]), False, id='middle'),
+    ],
+)
+def test_check_nonnegative_integers(array_type, array_value, expected):
+    X = array_type(array_value)
+
+    received = check_nonnegative_integers(X)
+    if isinstance(X, DaskArray):
+        assert isinstance(received, DaskArray)
+        # compute
+        received = received.compute()
+        assert not isinstance(received, DaskArray)
+    if isinstance(received, np.bool_):
+        # convert to python bool
+        received = received.item()
+    assert received is expected
 
 
 def test_is_constant(array_type):
