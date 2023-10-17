@@ -209,7 +209,7 @@ def palantir(
 
     # Diffusion maps
     dm_res = run_diffusion_maps(
-        data_df=df,
+        df,
         n_components=n_components,
         knn=knn,
         alpha=alpha,
@@ -293,7 +293,7 @@ def palantir_results(
 
     ms_data = pd.DataFrame(adata.obsm[ms_data], index=adata.obs_names)
     pr_res = run_palantir(
-        ms_data=ms_data,
+        ms_data,
         early_cell=early_cell,
         terminal_states=terminal_states,
         knn=knn,

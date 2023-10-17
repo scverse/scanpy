@@ -2,11 +2,13 @@
 Computes a dendrogram based on a given categorical observation.
 """
 
+from __future__ import annotations
+
 from typing import Optional, Sequence, Dict, Any
 
 import pandas as pd
 from anndata import AnnData
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
 from .._utils import _doc_params
@@ -16,7 +18,7 @@ from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def dendrogram(
     adata: AnnData,
-    groupby: str,
+    groupby: str | Sequence[str],
     n_pcs: Optional[int] = None,
     use_rep: Optional[str] = None,
     var_names: Optional[Sequence[str]] = None,
@@ -103,7 +105,7 @@ def dendrogram(
                 'groupby has to be a valid observation. '
                 f'Given value: {group}, valid observations: {adata.obs_keys()}'
             )
-        if not is_categorical_dtype(adata.obs[group]):
+        if not isinstance(adata.obs[group].dtype, CategoricalDtype):
             raise ValueError(
                 'groupby has to be a categorical observation. '
                 f'Given value: {group}, Column type: {adata.obs[group].dtype}'

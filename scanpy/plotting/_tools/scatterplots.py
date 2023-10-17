@@ -1,3 +1,7 @@
+from __future__ import annotations
+from collections import defaultdict
+
+import inspect
 import collections.abc as cabc
 from copy import copy
 from numbers import Integral
@@ -20,7 +24,7 @@ from anndata import AnnData
 from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import CategoricalDtype
 from matplotlib import pyplot as pl, colors, colormaps
 from matplotlib import rcParams
 from matplotlib import patheffects
@@ -579,11 +583,31 @@ def _get_vboundnorm(
     return tuple(out)
 
 
-def _wraps_plot_scatter(wrapper):
-    import inspect
+def _get_signature(obj: Any, *, eval_str: bool) -> inspect.Signature:
+    """inspect.signature wrapper with eval_str support on Python < 3.10"""
+    try:
+        from inspect import get_annotations
+    except ImportError:
+        from get_annotations import get_annotations
 
-    params = inspect.signature(embedding).parameters.copy()
-    wrapper_sig = inspect.signature(wrapper)
+    sig_uneval = inspect.signature(obj)
+    annotations = defaultdict(
+        lambda: inspect.Signature.empty, get_annotations(obj, eval_str=eval_str)
+    )
+
+    parameters = [
+        inspect.Parameter(
+            name, param.kind, default=param.default, annotation=annotations[name]
+        )
+        for name, param in sig_uneval.parameters.items()
+    ]
+
+    return inspect.Signature(parameters, return_annotation=annotations["return"])
+
+
+def _wraps_plot_scatter(wrapper):
+    params = _get_signature(embedding, eval_str=True).parameters.copy()
+    wrapper_sig = _get_signature(wrapper, eval_str=True)
     wrapper_params = wrapper_sig.parameters.copy()
 
     params.pop("basis")
@@ -890,8 +914,10 @@ def pca(
             # edit axis labels in returned figure
             fig = embedding(adata, 'pca', return_fig=return_fig, **kwargs)
             for ax in fig.axes:
-                ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
-                ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
+                if xlabel := label_dict.get(ax.xaxis.get_label().get_text()):
+                    ax.set_xlabel(xlabel)
+                if ylabel := label_dict.get(ax.yaxis.get_label().get_text()):
+                    ax.set_ylabel(ylabel)
             return fig
 
         else:
@@ -1149,7 +1175,12 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
 
 
 def _get_color_source_vector(
-    adata, value_to_plot, use_raw=False, gene_symbols=None, layer=None, groups=None
+    adata: AnnData,
+    value_to_plot,
+    use_raw=False,
+    gene_symbols=None,
+    layer=None,
+    groups=None,
 ):
     """
     Get array from adata that colors will be based on.
@@ -1173,7 +1204,7 @@ def _get_color_source_vector(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
-    if groups and is_categorical_dtype(values):
+    if groups and isinstance(values, pd.Categorical):
         values = values.remove_categories(values.categories.difference(groups))
     return values
 
@@ -1197,8 +1228,12 @@ def _get_palette(adata, values_key: str, palette=None):
 
 
 def _color_vector(
-    adata, values_key: str, values, palette, na_color="lightgray"
-) -> Tuple[np.ndarray, bool]:
+    adata: AnnData,
+    values_key: str,
+    values: np.ndarray | pd.api.extensions.ExtensionArray,
+    palette,
+    na_color="lightgray",
+) -> Tuple[np.ndarray | pd.api.extensions.ExtensionArray, bool]:
     """
     Map array of values to array of hex (plus alpha) codes.
 
@@ -1214,24 +1249,24 @@ def _color_vector(
     to_hex = partial(colors.to_hex, keep_alpha=True)
     if values_key is None:
         return np.broadcast_to(to_hex(na_color), adata.n_obs), False
-    if is_categorical_dtype(values) or values.dtype == bool:
-        if values.dtype == bool:
-            values = pd.Categorical(values.astype(str))
-        color_map = {
-            k: to_hex(v)
-            for k, v in _get_palette(adata, values_key, palette=palette).items()
-        }
-        # If color_map does not have unique values, this can be slow as the
-        # result is not categorical
-        color_vector = pd.Categorical(values.map(color_map))
-
-        # Set color to 'missing color' for all missing values
-        if color_vector.isna().any():
-            color_vector = color_vector.add_categories([to_hex(na_color)])
-            color_vector = color_vector.fillna(to_hex(na_color))
-        return color_vector, True
-    elif not is_categorical_dtype(values):
+    if not isinstance(values.dtype, CategoricalDtype) and values.dtype != bool:
         return values, False
+
+    if values.dtype == bool:
+        values = pd.Categorical(values.astype(str))
+    color_map = {
+        k: to_hex(v)
+        for k, v in _get_palette(adata, values_key, palette=palette).items()
+    }
+    # If color_map does not have unique values, this can be slow as the
+    # result is not categorical
+    color_vector = pd.Categorical(values.map(color_map))
+
+    # Set color to 'missing color' for all missing values
+    if color_vector.isna().any():
+        color_vector = color_vector.add_categories([to_hex(na_color)])
+        color_vector = color_vector.fillna(to_hex(na_color))
+    return color_vector, True
 
 
 def _basis2name(basis):
