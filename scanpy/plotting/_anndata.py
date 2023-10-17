@@ -12,7 +12,7 @@ import pandas as pd
 from anndata import AnnData
 from cycler import Cycler
 from matplotlib.axes import Axes
-from pandas.api.types import is_categorical_dtype, is_numeric_dtype
+from pandas.api.types import CategoricalDtype, is_numeric_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
@@ -273,15 +273,14 @@ def _scatter_obs(
     palette_was_none = False
     if palette is None:
         palette_was_none = True
-    if isinstance(palette, cabc.Sequence):
+    if isinstance(palette, cabc.Sequence) and not isinstance(palette, str):
         if not is_color_like(palette[0]):
             palettes = palette
         else:
             palettes = [palette]
     else:
         palettes = [palette for _ in range(len(keys))]
-    for i, palette in enumerate(palettes):
-        palettes[i] = _utils.default_palette(palette)
+    palettes = [_utils.default_palette(palette) for palette in palettes]
 
     if basis is not None:
         component_name = (
@@ -314,7 +313,7 @@ def _scatter_obs(
         colorbar = None
         # test whether we have categorial or continuous annotation
         if key in adata.obs_keys():
-            if is_categorical_dtype(adata.obs[key]):
+            if isinstance(adata.obs[key].dtype, CategoricalDtype):
                 categorical = True
             else:
                 c = adata.obs[key]
@@ -375,8 +374,7 @@ def _scatter_obs(
         centroids[name] = Y_mask[i]
 
     # loop over all categorical annotation and plot it
-    for i, ikey in enumerate(categoricals):
-        palette = palettes[i]
+    for ikey, palette in zip(categoricals, palettes):
         key = keys[ikey]
         _utils.add_colors_for_categorical_sample_annotation(
             adata, key, palette, force_update_colors=not palette_was_none
@@ -772,7 +770,7 @@ def violin(
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
         if kwds.get('palette', None) is None:
-            if not is_categorical_dtype(adata.obs[groupby]):
+            if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
                 raise ValueError(
                     f'The column `adata.obs[{groupby!r}]` needs to be categorical, '
                     f'but is of dtype {adata.obs[groupby].dtype}.'
@@ -801,7 +799,7 @@ def violin(
             y=y,
             data=obs_tidy,
             kind="violin",
-            scale=scale,
+            density_norm=scale,
             col=x,
             col_order=keys,
             sharey=False,
@@ -1076,7 +1074,9 @@ def heatmap(
     else:
         categorical = True
         # get categories colors
-        if isinstance(groupby, str) and is_categorical_dtype(adata.obs[groupby]):
+        if isinstance(groupby, str) and isinstance(
+            adata.obs[groupby].dtype, CategoricalDtype
+        ):
             # saved category colors only work when groupby is valid adata.obs
             # categorical column. When groupby is a numerical column
             # or when groupby is a list of columns the colors are assigned on the fly,

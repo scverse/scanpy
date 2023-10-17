@@ -12,7 +12,7 @@ import numpy as np
 import scipy as sp
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs, check_array
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import CategoricalDtype
 from anndata import AnnData
 
 from .. import logging as logg
@@ -618,7 +618,9 @@ def regress_out(
 
     # regress on a single categorical variable
     variable_is_categorical = False
-    if keys[0] in adata.obs_keys() and is_categorical_dtype(adata.obs[keys[0]]):
+    if keys[0] in adata.obs_keys() and isinstance(
+        adata.obs[keys[0]].dtype, CategoricalDtype
+    ):
         if len(keys) > 1:
             raise ValueError(
                 'If providing categorical variable, '
