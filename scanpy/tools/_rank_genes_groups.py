@@ -1,25 +1,27 @@
 """Rank genes according to differential expression.
 """
+from __future__ import annotations
+
 from math import floor
-from typing import Iterable, Union, Optional, Literal
+from typing import Generator, Iterable, Union, Optional, Literal, get_args
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 from anndata import AnnData
 from scipy.sparse import issparse, vstack
 
 from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
-from ..get import _get_obs_rep
 from .._utils import check_nonnegative_integers
 
 
-_Method = Optional[Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']]
+_Method = Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']
 _CorrMethod = Literal['benjamini-hochberg', 'bonferroni']
 
 
-def _select_top_n(scores, n_top):
+def _select_top_n(scores: NDArray, n_top: int):
     n_from = scores.shape[0]
     reference_indices = np.arange(n_from, dtype=int)
     partition = np.argpartition(scores, -n_top)[-n_top:]
@@ -80,14 +82,15 @@ def _tiecorrect(ranks):
 class _RankGenes:
     def __init__(
         self,
-        adata,
-        groups,
-        groupby,
+        adata: AnnData,
+        groups: list[str] | Literal['all'],
+        groupby: str,
+        *,
         reference='rest',
-        use_raw=True,
-        layer=None,
-        comp_pts=False,
-    ):
+        use_raw: bool = True,
+        layer: str | None = None,
+        comp_pts: bool = False,
+    ) -> None:
         if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
         else:
@@ -145,7 +148,8 @@ class _RankGenes:
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
         self.grouping = adata.obs.loc[self.grouping_mask, groupby]
 
-    def _basic_stats(self):
+    def _basic_stats(self) -> None:
+        """Set self.{means,vars,pts}{,_rest} depending on X."""
         n_genes = self.X.shape[1]
         n_groups = self.groups_masks.shape[0]
 
@@ -192,17 +196,19 @@ class _RankGenes:
                 # deleting the next line causes a memory leak for some reason
                 del X_rest
 
-    def t_test(self, method):
+    def t_test(
+        self, method: Literal['t-test', 't-test_overestim_var']
+    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from scipy import stats
 
         self._basic_stats()
 
-        for group_index, mask in enumerate(self.groups_masks):
+        for group_index, (mask, mean_group, var_group) in enumerate(
+            zip(self.groups_masks, self.means, self.vars)
+        ):
             if self.ireference is not None and group_index == self.ireference:
                 continue
 
-            mean_group = self.means[group_index]
-            var_group = self.vars[group_index]
             ns_group = np.count_nonzero(mask)
 
             if self.ireference is not None:
@@ -242,7 +248,9 @@ class _RankGenes:
 
             yield group_index, scores, pvals
 
-    def wilcoxon(self, tie_correct):
+    def wilcoxon(
+        self, tie_correct: bool
+    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from scipy import stats
 
         self._basic_stats()
@@ -327,7 +335,9 @@ class _RankGenes:
 
                 yield group_index, scores[group_index], pvals
 
-    def logreg(self, **kwds):
+    def logreg(
+        self, **kwds
+    ) -> Generator[tuple[int, NDArray[np.floating], None], None, None]:
         # if reference is not set, then the groups listed will be compared to the rest
         # if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
@@ -359,13 +369,14 @@ class _RankGenes:
 
     def compute_statistics(
         self,
-        method,
-        corr_method='benjamini-hochberg',
-        n_genes_user=None,
-        rankby_abs=False,
-        tie_correct=False,
+        method: _Method,
+        *,
+        corr_method: _CorrMethod = 'benjamini-hochberg',
+        n_genes_user: int | None = None,
+        rankby_abs: bool = False,
+        tie_correct: bool = False,
         **kwds,
-    ):
+    ) -> None:
         if method in {'t-test', 't-test_overestim_var'}:
             generate_test_results = self.t_test(method)
         elif method == 'wilcoxon':
@@ -439,7 +450,7 @@ def rank_genes_groups(
     pts: bool = False,
     key_added: Optional[str] = None,
     copy: bool = False,
-    method: _Method = None,
+    method: _Method | None = None,
     corr_method: _CorrMethod = 'benjamini-hochberg',
     tie_correct: bool = False,
     layer: Optional[str] = None,
@@ -552,7 +563,7 @@ def rank_genes_groups(
         rankby_abs = not kwds.pop('only_positive')  # backwards compat
 
     start = logg.info('ranking genes')
-    avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon', 'logreg'}
+    avail_methods = set(get_args(_Method))
     if method not in avail_methods:
         raise ValueError(f'Method must be one of {avail_methods}.')
 
@@ -591,7 +602,15 @@ def rank_genes_groups(
         corr_method=corr_method,
     )
 
-    test_obj = _RankGenes(adata, groups_order, groupby, reference, use_raw, layer, pts)
+    test_obj = _RankGenes(
+        adata,
+        groups_order,
+        groupby,
+        reference=reference,
+        use_raw=use_raw,
+        layer=layer,
+        comp_pts=pts,
+    )
 
     if check_nonnegative_integers(test_obj.X) and method != 'logreg':
         logg.warning(
@@ -610,7 +629,12 @@ def rank_genes_groups(
     logg.debug(f'with sizes: {np.count_nonzero(test_obj.groups_masks, axis=1)}')
 
     test_obj.compute_statistics(
-        method, corr_method, n_genes_user, rankby_abs, tie_correct, **kwds
+        method,
+        corr_method=corr_method,
+        n_genes_user=n_genes_user,
+        rankby_abs=rankby_abs,
+        tie_correct=tie_correct,
+        **kwds,
     )
 
     if test_obj.pts is not None:

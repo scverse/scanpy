@@ -33,7 +33,9 @@ __all__ = [
 def _as_dense_dask_array(x: ArrayLike) -> DaskArray:
     import dask.array as da
 
-    return da.from_array(asarray(x))
+    x = asarray(x)
+    quarter_shape = tuple(np.ceil(np.array(x.shape) / 2))
+    return da.from_array(x, chunks=quarter_shape)
 
 
 @pytest.fixture(
