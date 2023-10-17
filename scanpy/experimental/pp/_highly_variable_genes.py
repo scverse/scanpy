@@ -143,7 +143,7 @@ def _highly_variable_pearson_residuals(
     computed_on = layer if layer else 'adata.X'
 
     # Check for raw counts
-    if check_values and not check_nonnegative_integers(X):
+    if check_values and (check_nonnegative_integers(X) is False):
         warnings.warn(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,
