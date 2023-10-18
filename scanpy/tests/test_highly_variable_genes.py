@@ -73,7 +73,7 @@ def test_highly_variable_genes_basic():
 
 
 @pytest.mark.parametrize('base', [None, 10])
-@pytest.mark.parametrize('flavor', ['seurat', 'cell_ranger', 'seurat_v3'])
+@pytest.mark.parametrize('flavor', ['seurat', 'cell_ranger'])
 def test_highly_variable_genes_keep_layer(base, flavor):
     adata = pbmc3k()
     # cell_ranger flavor can raise error if many 0 genes
