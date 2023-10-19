@@ -39,19 +39,19 @@ jobs:
         id: checked-issue
         with:
           text: ${{ github.event.pull_request.body }}
-          regex: '^- \[x\] Closes'
+          regex: '^\s*- \[x\] Closes'
       - name: Check if the “Tests” checkbox is checked
         uses: actions-ecosystem/action-regex-match@v2
         id: checked-tests
         with:
           text: ${{ github.event.pull_request.body }}
-          regex: '^- \[x\] Tests'
+          regex: '^\s*- \[x\] Tests'
       - name: Check if the “Release notes” checkbox is checked and filled
         uses: actions-ecosystem/action-regex-match@v2
         id: checked-relnotes
         with:
           text: ${{ github.event.pull_request.body }}
-          regex: '^- \[x\] Release notes not necessary because:(.*)$'
+          regex: '^\s*- \[x\] Release notes not necessary because:(.*)$'
       - name: Verify that the closes issue and tests checkboxes are checked
         uses: flying-sheep/check@v1
         with:
