@@ -35,21 +35,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check if the “Closes issue” checkbox is checked
-        uses: actions-ecosystem/action-regex-match@v2
+        uses: kaisugi/action-regex-match@v1.0.0
         id: checked-issue
         with:
           text: ${{ github.event.pull_request.body }}
           regex: '^\s*- \[x\] Closes'
           flags: m
       - name: Check if the “Tests” checkbox is checked
-        uses: actions-ecosystem/action-regex-match@v2
+        uses: kaisugi/action-regex-match@v1.0.0
         id: checked-tests
         with:
           text: ${{ github.event.pull_request.body }}
           regex: '^\s*- \[x\] Tests'
           flags: m
       - name: Check if the “Release notes” checkbox is checked and filled
-        uses: actions-ecosystem/action-regex-match@v2
+        uses: kaisugi/action-regex-match@v1.0.0
         id: checked-relnotes
         with:
           text: ${{ github.event.pull_request.body }}
