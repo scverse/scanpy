@@ -34,22 +34,36 @@ jobs:
     name: Checklist
     runs-on: ubuntu-latest
     steps:
-      - name: Check if all checkboxes are checked
-        id: all-checked
-        # The third checkbox is “no relnotes necessary”.
-        # If it’s not checked, we run the “check-relnotes” job.
-        continue-on-error: true
-        uses: mheap/require-checklist-action@v2
+      - name: Check if the “Closes issue” checkbox is checked
+        uses: actions-ecosystem/action-regex-match@v2
+        id: checked-issue
         with:
-          requireChecklist: true
+          text: ${{ github.event.pull_request.body }}
+          regex: '^- \[x\] Closes'
+      - name: Check if the “Tests” checkbox is checked
+        uses: actions-ecosystem/action-regex-match@v2
+        id: checked-tests
+        with:
+          text: ${{ github.event.pull_request.body }}
+          regex: '^- \[x\] Tests'
+      - name: Check if the “Release notes” checkbox is checked and filled
+        uses: actions-ecosystem/action-regex-match@v2
+        id: checked-relnotes
+        with:
+          text: ${{ github.event.pull_request.body }}
+          regex: '^- \[x\] Release notes not necessary because:(.*)$'
+      - name: Verify that the closes issue and tests checkboxes are checked
+        uses: flying-sheep/check@v1
+        with:
+          success: ${{ steps.checked-issue.outputs.match != '' && steps.checked-tests.outputs.match != '' }}
     outputs:
-      all-checked: ${{ steps.all-checked.outcome == 'success' }}
+      no-relnotes-reason: ${{ steps.checked-relnotes.outputs.group1 }}
   # This job verifies that the relevant release notes file has been modified.
   check-relnotes:
     name: Check for release notes
     runs-on: ubuntu-latest
     needs: checklist
-    if: ${{ needs.checklist.outputs.all-checked == 'false' && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
+    if: ${{ needs.checklist.outputs.no-relnotes-reason == '' && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
     steps:
       - uses: actions/checkout@v3
       - name: Find out if relevant release notes are modified
