@@ -31,6 +31,8 @@ def umap(
     copy: bool = False,
     method: Literal['umap', 'rapids'] = 'umap',
     neighbors_key: Optional[str] = None,
+    densmap: Optional[bool] = False,
+    dens_lambda: Optional[float] = 0.2
 ) -> Optional[AnnData]:
     """\
     Embed the neighborhood graph using UMAP [McInnes18]_.
@@ -101,12 +103,10 @@ def umap(
         Return a copy instead of writing to adata.
     method
         Chosen implementation.
-
         ``'umap'``
             Umap’s simplical set embedding.
         ``'rapids'``
             GPU accelerated implementation.
-
             .. deprecated:: 1.10.0
                 Use :func:`rapids_singlecell.tl.umap` instead.
     neighbors_key
@@ -115,6 +115,10 @@ def umap(
         (default storage places for pp.neighbors).
         If specified, umap looks .uns[neighbors_key] for neighbors settings and
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+    densmap
+        Use DensMAP to compute the coordinates
+    dens_lambda
+        Specify a lambda value to be used by DensMAP
 
     Returns
     -------
@@ -141,6 +145,18 @@ def umap(
             f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap'
         )
 
+    if random_state != 0:
+        adata.uns['umap']['params']['random_state'] = random_state
+    random_state = check_random_state(random_state)
+
+    neigh_params = neighbors['params']
+    X = _choose_representation(
+        adata,
+        use_rep=neigh_params.get('use_rep', None),
+        n_pcs=neigh_params.get('n_pcs', None),
+        silent=True,
+    )
+
     # Compat for umap 0.4 -> 0.5
     with warnings.catch_warnings():
         # umap 0.5.0
@@ -152,10 +168,18 @@ def umap(
         def simplicial_set_embedding(*args, **kwargs):
             from umap.umap_ import simplicial_set_embedding
 
+            kwds = {
+                "lambda": dens_lambda,
+                "frac": 0.3,
+                "var_shift": 0.1,
+                "n_neighbors": neigh_params.get('n_neighbors', 15),
+                "graph_dists": neighbors['distances'].tocoo().todok()
+            } if densmap else {}
+
             X_umap, _ = simplicial_set_embedding(
                 *args,
-                densmap=False,
-                densmap_kwds={},
+                densmap=densmap,
+                densmap_kwds=kwds,
                 output_dens=False,
                 **kwargs,
             )
@@ -182,17 +206,6 @@ def umap(
     if hasattr(init_coords, "dtype"):
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
-    if random_state != 0:
-        adata.uns['umap']['params']['random_state'] = random_state
-    random_state = check_random_state(random_state)
-
-    neigh_params = neighbors['params']
-    X = _choose_representation(
-        adata,
-        use_rep=neigh_params.get('use_rep', None),
-        n_pcs=neigh_params.get('n_pcs', None),
-        silent=True,
-    )
     if method == 'umap':
         # the data matrix X is really only used for determining the number of connected components
         # for the init condition in the UMAP embedding
