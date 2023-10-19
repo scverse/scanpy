@@ -194,9 +194,14 @@ def _highly_variable_genes_single_batch(
     """
     X = adata.layers[layer] if layer is not None else adata.X
     if flavor == 'seurat':
+        X = X.copy()
         if 'log1p' in adata.uns_keys() and adata.uns['log1p'].get('base') is not None:
             X *= np.log(adata.uns['log1p']['base'])
-        X = np.expm1(X)
+        # use out if possible. only possible since we copy X
+        if isinstance(X, np.ndarray):
+            np.expm1(X, out=X)
+        else:
+            X = np.expm1(X)
 
     mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
