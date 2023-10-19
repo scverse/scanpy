@@ -35,7 +35,7 @@ def get() -> str | None:
 
 
 def set_ref(app: Sphinx, config: Config):
-    app.config['html_theme_options']['repository_branch'] = get() or 'main'
+    app.config["html_theme_options"]["repository_branch"] = get() or "main"
 
 
 def setup(app: Sphinx) -> None:

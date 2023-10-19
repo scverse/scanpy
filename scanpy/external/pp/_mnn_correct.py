@@ -11,8 +11,8 @@ def mnn_correct(
     *datas: Union[AnnData, np.ndarray],
     var_index: Optional[Collection[str]] = None,
     var_subset: Optional[Collection[str]] = None,
-    batch_key: str = 'batch',
-    index_unique: str = '-',
+    batch_key: str = "batch",
+    index_unique: str = "-",
     batch_categories: Optional[Collection[Any]] = None,
     k: int = 20,
     sigma: float = 1.0,
@@ -22,7 +22,7 @@ def mnn_correct(
     var_adj: bool = True,
     compute_angle: bool = False,
     mnn_order: Optional[Sequence[int]] = None,
-    svd_mode: Literal['svd', 'rsvd', 'irlb'] = 'rsvd',
+    svd_mode: Literal["svd", "rsvd", "irlb"] = "rsvd",
     do_concatenate: bool = True,
     save_raw: bool = False,
     n_jobs: Optional[int] = None,
@@ -127,8 +127,8 @@ def mnn_correct(
         import mnnpy
     except ImportError:
         raise ImportError(
-            'Please install the package mnnpy '
-            '(https://github.com/chriscainx/mnnpy). '
+            "Please install the package mnnpy "
+            "(https://github.com/chriscainx/mnnpy). "
         )
 
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
@@ -136,7 +136,7 @@ def mnn_correct(
     if n_jobs < 2:
         mnnpy.settings.normalization = "single"
     else:
-        mnnpy.settings.normalization = 'parallel'
+        mnnpy.settings.normalization = "parallel"
 
     datas, mnn_list, angle_list = mnn_correct(
         *datas,

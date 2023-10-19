@@ -31,7 +31,7 @@ def _sparse_nanmean(X, axis):
     Y.eliminate_zeros()
 
     # the average
-    s = Y.sum(axis, dtype='float64')  # float64 for score_genes function compatibility)
+    s = Y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
     m = s / n_elements
 
     return m
@@ -43,7 +43,7 @@ def score_genes(
     ctrl_size: int = 50,
     gene_pool: Optional[Sequence[str]] = None,
     n_bins: int = 25,
-    score_name: str = 'score',
+    score_name: str = "score",
     random_state: AnyRandom = 0,
     copy: bool = False,
     use_raw: Optional[bool] = None,
@@ -92,7 +92,7 @@ def score_genes(
     --------
     See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
-    start = logg.info(f'computing score {score_name!r}')
+    start = logg.info(f"computing score {score_name!r}")
     adata = adata.copy() if copy else adata
     use_raw = _check_use_raw(adata, use_raw)
 
@@ -108,7 +108,7 @@ def score_genes(
         else:
             genes_to_ignore.append(gene)
     if len(genes_to_ignore) > 0:
-        logg.warning(f'genes are not in var_names and ignored: {genes_to_ignore}')
+        logg.warning(f"genes are not in var_names and ignored: {genes_to_ignore}")
     gene_list = set(gene_list_in_var)
 
     if len(gene_list) == 0:
@@ -144,7 +144,7 @@ def score_genes(
     ]  # Sometimes (and I don't know how) missing data may be there, with nansfor
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
-    obs_cut = obs_avg.rank(method='min') // n_items
+    obs_cut = obs_avg.rank(method="min") // n_items
     control_genes = set()
 
     # now pick `ctrl_size` genes from every cut
@@ -162,27 +162,27 @@ def score_genes(
     if issparse(X_list):
         X_list = np.array(_sparse_nanmean(X_list, axis=1)).flatten()
     else:
-        X_list = np.nanmean(X_list, axis=1, dtype='float64')
+        X_list = np.nanmean(X_list, axis=1, dtype="float64")
 
     X_control = _adata[:, control_genes].X
     if issparse(X_control):
         X_control = np.array(_sparse_nanmean(X_control, axis=1)).flatten()
     else:
-        X_control = np.nanmean(X_control, axis=1, dtype='float64')
+        X_control = np.nanmean(X_control, axis=1, dtype="float64")
 
     score = X_list - X_control
 
     adata.obs[score_name] = pd.Series(
-        np.array(score).ravel(), index=adata.obs_names, dtype='float64'
+        np.array(score).ravel(), index=adata.obs_names, dtype="float64"
     )
 
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
         deep=(
-            'added\n'
-            f'    {score_name!r}, score of gene set (adata.obs).\n'
-            f'    {len(control_genes)} total control genes are used.'
+            "added\n"
+            f"    {score_name!r}, score of gene set (adata.obs).\n"
+            f"    {len(control_genes)} total control genes are used."
         ),
     )
     return adata if copy else None
@@ -235,33 +235,33 @@ def score_genes_cell_cycle(
     --------
     See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
-    logg.info('calculating cell cycle phase')
+    logg.info("calculating cell cycle phase")
 
     adata = adata.copy() if copy else adata
     ctrl_size = min(len(s_genes), len(g2m_genes))
     # add s-score
     score_genes(
-        adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size, **kwargs
+        adata, gene_list=s_genes, score_name="S_score", ctrl_size=ctrl_size, **kwargs
     )
     # add g2m-score
     score_genes(
         adata,
         gene_list=g2m_genes,
-        score_name='G2M_score',
+        score_name="G2M_score",
         ctrl_size=ctrl_size,
         **kwargs,
     )
-    scores = adata.obs[['S_score', 'G2M_score']]
+    scores = adata.obs[["S_score", "G2M_score"]]
 
     # default phase is S
-    phase = pd.Series('S', index=scores.index)
+    phase = pd.Series("S", index=scores.index)
 
     # if G2M is higher than S, it's G2M
-    phase[scores.G2M_score > scores.S_score] = 'G2M'
+    phase[scores.G2M_score > scores.S_score] = "G2M"
 
     # if all scores are negative, it's G1...
-    phase[np.all(scores < 0, axis=1)] = 'G1'
+    phase[np.all(scores < 0, axis=1)] = "G1"
 
-    adata.obs['phase'] = phase
-    logg.hint('    \'phase\', cell cycle phase (adata.obs)')
+    adata.obs["phase"] = phase
+    logg.hint("    'phase', cell cycle phase (adata.obs)")
     return adata if copy else None

@@ -65,14 +65,14 @@ def diffmap(
     e.g. `adata.obsm["X_diffmap"][:,1]`
     """
     if neighbors_key is None:
-        neighbors_key = 'neighbors'
+        neighbors_key = "neighbors"
 
     if neighbors_key not in adata.uns:
         raise ValueError(
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
+            "You need to run `pp.neighbors` first to compute a neighborhood graph."
         )
     if n_comps <= 2:
-        raise ValueError('Provide any value greater than 2 for `n_comps`. ')
+        raise ValueError("Provide any value greater than 2 for `n_comps`. ")
     adata = adata.copy() if copy else adata
     _diffmap(
         adata, n_comps=n_comps, neighbors_key=neighbors_key, random_state=random_state

@@ -20,7 +20,7 @@ except ImportError:
     class MutableVertexPartition:
         pass
 
-    MutableVertexPartition.__module__ = 'louvain.VertexPartition'
+    MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
 def louvain(
@@ -28,9 +28,9 @@ def louvain(
     resolution: Optional[float] = None,
     random_state: _utils.AnyRandom = 0,
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
-    key_added: str = 'louvain',
+    key_added: str = "louvain",
     adjacency: Optional[spmatrix] = None,
-    flavor: Literal['vtraag', 'igraph', 'rapids'] = 'vtraag',
+    flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
@@ -115,10 +115,10 @@ def louvain(
         When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
     """
     partition_kwargs = dict(partition_kwargs)
-    start = logg.info('running Louvain clustering')
-    if (flavor != 'vtraag') and (partition_type is not None):
+    start = logg.info("running Louvain clustering")
+    if (flavor != "vtraag") and (partition_type is not None):
         raise ValueError(
-            '`partition_type` is only a valid argument ' 'when `flavour` is "vtraag"'
+            "`partition_type` is only a valid argument " 'when `flavour` is "vtraag"'
         )
     adata = adata.copy() if copy else adata
     if adjacency is None:
@@ -131,19 +131,19 @@ def louvain(
             restrict_categories,
             adjacency,
         )
-    if flavor in {'vtraag', 'igraph'}:
-        if flavor == 'igraph' and resolution is not None:
+    if flavor in {"vtraag", "igraph"}:
+        if flavor == "igraph" and resolution is not None:
             logg.warning('`resolution` parameter has no effect for flavor "igraph"')
-        if directed and flavor == 'igraph':
+        if directed and flavor == "igraph":
             directed = False
         if not directed:
-            logg.debug('    using the undirected graph')
+            logg.debug("    using the undirected graph")
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if use_weights:
             weights = np.array(g.es["weight"]).astype(np.float64)
         else:
             weights = None
-        if flavor == 'vtraag':
+        if flavor == "vtraag":
             import louvain
 
             if partition_type is None:
@@ -166,10 +166,10 @@ def louvain(
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
-    elif flavor == 'rapids':
+    elif flavor == "rapids":
         msg = (
             "`flavor='rapids'` is deprecated. "
-            'Use `rapids_singlecell.tl.louvain` instead.'
+            "Use `rapids_singlecell.tl.louvain` instead."
         )
         warnings.warn(msg, FutureWarning)
         # nvLouvain only works with undirected graphs,
@@ -189,7 +189,7 @@ def louvain(
             weights = None
         g = cugraph.Graph()
 
-        if hasattr(g, 'add_adj_list'):
+        if hasattr(g, "add_adj_list"):
             g.add_adj_list(offsets, indices, weights)
         else:
             g.from_cudf_adjlist(offsets, indices, weights)
@@ -201,11 +201,11 @@ def louvain(
             louvain_parts, _ = cugraph.louvain(g)
         groups = (
             louvain_parts.to_pandas()
-            .sort_values('vertex')[['partition']]
+            .sort_values("vertex")[["partition"]]
             .to_numpy()
             .ravel()
         )
-    elif flavor == 'taynaud':
+    elif flavor == "taynaud":
         # this is deprecated
         import networkx as nx
         import community
@@ -218,8 +218,8 @@ def louvain(
     else:
         raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
     if restrict_to is not None:
-        if key_added == 'louvain':
-            key_added += '_R'
+        if key_added == "louvain":
+            key_added += "_R"
         groups = rename_groups(
             adata,
             key_added,
@@ -229,20 +229,20 @@ def louvain(
             groups,
         )
     adata.obs[key_added] = pd.Categorical(
-        values=groups.astype('U'),
+        values=groups.astype("U"),
         categories=natsorted(map(str, np.unique(groups))),
     )
-    adata.uns['louvain'] = {}
-    adata.uns['louvain']['params'] = dict(
+    adata.uns["louvain"] = {}
+    adata.uns["louvain"]["params"] = dict(
         resolution=resolution,
         random_state=random_state,
     )
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
         deep=(
-            f'found {len(np.unique(groups))} clusters and added\n'
-            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+            f"found {len(np.unique(groups))} clusters and added\n"
+            f"    {key_added!r}, the cluster labels (adata.obs, categorical)"
         ),
     )
     return adata if copy else None
