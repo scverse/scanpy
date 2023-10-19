@@ -79,14 +79,15 @@ def test_highly_variable_genes_keep_layer(base, flavor):
     # cell_ranger flavor can raise error if many 0 genes
     sc.pp.filter_genes(adata, min_counts=1)
 
-    if flavor != 'seurat_v3':
-        sc.pp.log1p(adata, base=base)
+    sc.pp.log1p(adata, base=base)
     X_orig = adata.X.copy()
 
-    if flavor == 'seurat_v3':
+    if flavor == 'seurat':
         sc.pp.highly_variable_genes(adata, n_top_genes=50, flavor=flavor)
-    else:
+    elif flavor == 'cell_ranger':
         sc.pp.highly_variable_genes(adata, flavor=flavor)
+    else:
+        assert False
 
     assert np.allclose(X_orig.A, adata.X.A)
 
