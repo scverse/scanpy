@@ -29,7 +29,7 @@ jobs:
         uses: flying-sheep/check@v1
         with:
           success: ${{ github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
-  # This job verifies if the checklist is still there and determines if “check-relnotes” needs to be run.
+  # This job verifies if the required checkboxs are checked and determines if “check-relnotes” needs to be run.
   checklist:
     name: Checklist
     runs-on: ubuntu-latest
@@ -40,18 +40,21 @@ jobs:
         with:
           text: ${{ github.event.pull_request.body }}
           regex: '^\s*- \[x\] Closes'
+          flags: m
       - name: Check if the “Tests” checkbox is checked
         uses: actions-ecosystem/action-regex-match@v2
         id: checked-tests
         with:
           text: ${{ github.event.pull_request.body }}
           regex: '^\s*- \[x\] Tests'
+          flags: m
       - name: Check if the “Release notes” checkbox is checked and filled
         uses: actions-ecosystem/action-regex-match@v2
         id: checked-relnotes
         with:
           text: ${{ github.event.pull_request.body }}
           regex: '^\s*- \[x\] Release notes not necessary because:(.*)$'
+          flags: m
       - name: Verify that the closes issue and tests checkboxes are checked
         uses: flying-sheep/check@v1
         with:
