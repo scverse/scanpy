@@ -72,6 +72,26 @@ def test_highly_variable_genes_basic():
     assert np.all(np.isin(colnames, hvg_df.columns))
 
 
+@pytest.mark.parametrize('base', [None, 10])
+@pytest.mark.parametrize('flavor', ['seurat', 'cell_ranger'])
+def test_highly_variable_genes_keep_layer(base, flavor):
+    adata = pbmc3k()
+    # cell_ranger flavor can raise error if many 0 genes
+    sc.pp.filter_genes(adata, min_counts=1)
+
+    sc.pp.log1p(adata, base=base)
+    X_orig = adata.X.copy()
+
+    if flavor == 'seurat':
+        sc.pp.highly_variable_genes(adata, n_top_genes=50, flavor=flavor)
+    elif flavor == 'cell_ranger':
+        sc.pp.highly_variable_genes(adata, flavor=flavor)
+    else:
+        assert False
+
+    assert np.allclose(X_orig.A, adata.X.A)
+
+
 def _check_pearson_hvg_columns(output_df, n_top_genes):
     assert pd.api.types.is_float_dtype(output_df['residual_variances'].dtype)
 
