@@ -136,19 +136,19 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
     if encountered is None:
         encountered = WeakSet()
     for obj in vars(mod).values():
-        if not _one_of_ours(obj, root):
+        if not _one_of_ours(obj, root) or obj in encountered:
             continue
+        encountered.add(obj)
         if callable(obj) and not isinstance(obj, MethodType):
             yield obj
             if isinstance(obj, type):
                 for m in vars(obj).values():
                     if callable(m) and _one_of_ours(m, root):
                         yield m
-        elif isinstance(obj, ModuleType) and obj not in encountered:
+        elif isinstance(obj, ModuleType):
             if obj.__name__.startswith('scanpy.tests'):
                 # Python’s import mechanism seems to add this to `scanpy`’s attributes
                 continue
-            encountered.add(obj)
             yield from descend_classes_and_funcs(obj, root, encountered)
 
 
