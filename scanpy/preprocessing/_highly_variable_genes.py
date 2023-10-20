@@ -1,5 +1,6 @@
 import warnings
 from typing import Optional, Literal
+from legacy_api_wrap import legacy_api
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -296,8 +297,24 @@ def _highly_variable_genes_single_batch(
     return df
 
 
+@legacy_api(
+    "layer",
+    "n_top_genes",
+    "min_disp",
+    "max_disp",
+    "min_mean",
+    "max_mean",
+    "span",
+    "n_bins",
+    "flavor",
+    "subset",
+    "inplace",
+    "batch_key",
+    "check_values",
+)
 def highly_variable_genes(
     adata: AnnData,
+    *,
     layer: Optional[str] = None,
     n_top_genes: Optional[int] = None,
     min_disp: Optional[float] = 0.5,
