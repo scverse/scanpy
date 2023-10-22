@@ -743,9 +743,18 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
+def diffmap(
+    adata,
+    *,
+    dimensions: Optional[Union[Tuple[int, int], Sequence[Tuple[int, int]]]] = (1, 2),
+    components: Union[str, Sequence[str]] = None,
+    **kwargs,
+) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in Diffusion Map basis.
+
+    The first dimension of a diffusion map is uninformative, so we start plotting from
+    the second dimension by default.
 
     Parameters
     ----------
@@ -773,7 +782,9 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     --------
     tl.diffmap
     """
-    return embedding(adata, 'diffmap', **kwargs)
+    return embedding(
+        adata, 'diffmap', dimensions=dimensions, components=components, **kwargs
+    )
 
 
 @_wraps_plot_scatter
