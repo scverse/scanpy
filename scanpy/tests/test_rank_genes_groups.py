@@ -1,33 +1,26 @@
-from __future__ import annotations
-
-import pickle
-from pathlib import Path
-from collections.abc import Callable
-from typing import Any
-
 import pytest
+
+from packaging import version
+from pathlib import Path
+import pickle
+
 import numpy as np
 import pandas as pd
 import scipy
-from numpy.typing import NDArray
-from anndata import AnnData
-from packaging import version
-from scipy import sparse
+from scipy import sparse as sp
 from scipy.stats import mannwhitneyu
-from anndata.tests.helpers import asarray
 from numpy.random import negative_binomial, binomial, seed
 
 import scanpy as sc
+from anndata import AnnData
 from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
 from scanpy._utils import select_groups
-from scanpy._compat import DaskArray
 
 
-HERE = Path(__file__).parent
-DATA_PATH = HERE / '_data/'
+HERE = Path(__file__).parent / Path('_data/')
 
 
 # We test results for a simple generic example
@@ -36,7 +29,7 @@ DATA_PATH = HERE / '_data/'
 # results differ (very) slightly
 
 
-def get_example_data(array_type: Callable[[np.ndarray], Any]) -> AnnData:
+def get_example_data(*, sparse=False):
     # create test object
     adata = AnnData(
         np.multiply(binomial(1, 0.15, (100, 20)), negative_binomial(2, 0.25, (100, 20)))
@@ -46,27 +39,27 @@ def get_example_data(array_type: Callable[[np.ndarray], Any]) -> AnnData:
         binomial(1, 0.9, (10, 5)), negative_binomial(1, 0.5, (10, 5))
     )
 
-    adata.X = array_type(adata.X)
+    # The following construction is inefficient, but makes sure that the same data is used in the sparse case
+    if sparse:
+        adata.X = sp.csr_matrix(adata.X)
 
     # Create cluster according to groups
     adata.obs['true_groups'] = pd.Categorical(
-        np.concatenate((np.zeros((10,), dtype=int), np.ones((90,), dtype=int)))
+        np.concatenate(
+            (
+                np.zeros((10,), dtype=int),
+                np.ones((90,), dtype=int),
+            )
+        )
     )
 
     return adata
 
 
-def get_true_scores() -> (
-    tuple[
-        NDArray[np.object_],
-        NDArray[np.object_],
-        NDArray[np.floating],
-        NDArray[np.floating],
-    ]
-):
-    with (DATA_PATH / 'objs_t_test.pkl').open('rb') as f:
+def get_true_scores():
+    with Path(HERE, 'objs_t_test.pkl').open('rb') as f:
         true_scores_t_test, true_names_t_test = pickle.load(f)
-    with (DATA_PATH / 'objs_wilcoxon.pkl').open('rb') as f:
+    with Path(HERE, 'objs_wilcoxon.pkl').open('rb') as f:
         true_scores_wilcoxon, true_names_wilcoxon = pickle.load(f)
 
     return (
@@ -77,22 +70,10 @@ def get_true_scores() -> (
     )
 
 
-@pytest.fixture(
-    params=[
-        pytest.param(asarray, id='numpy-ndarray'),
-        pytest.param(sparse.csr_matrix, id='scipy-csr'),
-        pytest.param(sparse.csc_matrix, id='scipy-csc'),
-    ]
-)
-def array_type(request: pytest.FixtureRequest):
-    """Overrided array_type without dask, for the time being"""
-    return request.param
-
-
-def test_results(array_type):
+def test_results_dense():
     seed(1234)
 
-    adata = get_example_data(array_type)
+    adata = get_example_data()
     assert adata.raw is None  # Assumption for later checks
 
     (
@@ -132,22 +113,61 @@ def test_results(array_type):
     assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
 
-def elem_mul(x: np.ndarray | sparse.spmatrix | DaskArray, y: np.ndarray):
-    if isinstance(x, sparse.spmatrix):
-        # returns coo_matrix, so cast back to input type
-        return type(x)(x.multiply(y))
-    else:
-        return x * y
-
-
-def test_results_layers(array_type):
+def test_results_sparse():
     seed(1234)
 
-    adata = get_example_data(array_type)
-    adata.layers["to_test"] = adata.X.copy()
-    adata.X = elem_mul(adata.X, np.random.randint(0, 2, adata.shape, dtype=bool))
+    adata = get_example_data(sparse=True)
 
-    _, _, true_scores_t_test, true_scores_wilcoxon = get_true_scores()
+    (
+        true_names_t_test,
+        true_names_wilcoxon,
+        true_scores_t_test,
+        true_scores_wilcoxon,
+    ) = get_true_scores()
+
+    rank_genes_groups(adata, 'true_groups', n_genes=20, method='t-test')
+
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups'][
+        'names'
+    ].astype(true_names_t_test.dtype)
+
+    for name in true_scores_t_test.dtype.names:
+        assert np.allclose(
+            true_scores_t_test[name], adata.uns['rank_genes_groups']['scores'][name]
+        )
+    assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
+
+    rank_genes_groups(adata, 'true_groups', n_genes=20, method='wilcoxon')
+
+    adata.uns['rank_genes_groups']['names'] = adata.uns['rank_genes_groups'][
+        'names'
+    ].astype(true_names_wilcoxon.dtype)
+
+    for name in true_scores_t_test.dtype.names:
+        assert np.allclose(
+            true_scores_wilcoxon[name][:7],
+            adata.uns['rank_genes_groups']['scores'][name][:7],
+        )
+    assert np.array_equal(
+        true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7]
+    )
+    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
+
+
+def test_results_layers():
+    seed(1234)
+
+    adata = get_example_data(sparse=False)
+    adata.layers["to_test"] = adata.X.copy()
+    adata.X = adata.X * np.random.randint(0, 2, adata.shape, dtype=bool)
+
+    (
+        true_names_t_test,
+        true_names_wilcoxon,
+        true_scores_t_test,
+        true_scores_wilcoxon,
+    ) = get_true_scores()
 
     # Wilcoxon
     rank_genes_groups(

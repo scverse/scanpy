@@ -1,14 +1,11 @@
-from pathlib import Path
-
 import pytest
 import pandas as pd
 import numpy as np
 import scanpy as sc
-
+from pathlib import Path
 from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
-
 
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
 FILE_V3 = Path(__file__).parent / Path('_scripts/seurat_hvg_v3.csv.gz')
@@ -73,6 +70,26 @@ def test_highly_variable_genes_basic():
     ]
     hvg_df = sc.pp.highly_variable_genes(adata, batch_key="batch", inplace=False)
     assert np.all(np.isin(colnames, hvg_df.columns))
+
+
+@pytest.mark.parametrize('base', [None, 10])
+@pytest.mark.parametrize('flavor', ['seurat', 'cell_ranger'])
+def test_highly_variable_genes_keep_layer(base, flavor):
+    adata = pbmc3k()
+    # cell_ranger flavor can raise error if many 0 genes
+    sc.pp.filter_genes(adata, min_counts=1)
+
+    sc.pp.log1p(adata, base=base)
+    X_orig = adata.X.copy()
+
+    if flavor == 'seurat':
+        sc.pp.highly_variable_genes(adata, n_top_genes=50, flavor=flavor)
+    elif flavor == 'cell_ranger':
+        sc.pp.highly_variable_genes(adata, flavor=flavor)
+    else:
+        assert False
+
+    assert np.allclose(X_orig.A, adata.X.A)
 
 
 def _check_pearson_hvg_columns(output_df, n_top_genes):
