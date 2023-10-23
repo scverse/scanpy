@@ -136,6 +136,10 @@ class Scrublet:
 
         if not isinstance(counts_matrix, sparse.csc_matrix):
             counts_matrix = sparse.csc_matrix(counts_matrix)
+        if total_counts is None:
+            total_counts = self._E_obs.sum(1).A.squeeze()
+        if n_neighbors is None:
+            n_neighbors = int(round(0.5 * np.sqrt(self._E_obs.shape[0])))
 
         # initialize counts matrices
         self._E_obs = counts_matrix
@@ -143,10 +147,7 @@ class Scrublet:
         self._E_obs_norm = None
         self._E_sim_norm = None
 
-        if total_counts is None:
-            self._total_counts_obs = self._E_obs.sum(1).A.squeeze()
-        else:
-            self._total_counts_obs = total_counts
+        self._total_counts_obs = total_counts
 
         self._gene_filter = np.arange(self._E_obs.shape[1])
         self._embeddings = {}
@@ -156,9 +157,6 @@ class Scrublet:
         self.expected_doublet_rate = expected_doublet_rate
         self.stdev_doublet_rate = stdev_doublet_rate
         self.random_state = random_state
-
-        if self.n_neighbors is None:
-            self.n_neighbors = int(round(0.5 * np.sqrt(self._E_obs.shape[0])))
 
     def simulate_doublets(
         self,
@@ -212,7 +210,6 @@ class Scrublet:
             self._E_sim = E1 + E2
             self._total_counts_sim = tots1 + tots2
         self.doublet_parents_ = pair_ix
-        return
 
     def set_manifold(
         self, manifold_obs: NDArray[np.float64], manifold_sim: NDArray[np.float64]

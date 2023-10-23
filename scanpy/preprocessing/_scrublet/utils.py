@@ -1,4 +1,4 @@
-from typing import Literal, overload
+from typing import Literal, Union as _U, overload
 
 import numpy as np
 import scipy
@@ -9,7 +9,7 @@ from sklearn.neighbors import NearestNeighbors
 
 from scanpy._utils import AnyRandom
 
-Scale = Literal["linear", "log", "symlog", "logit"] | str
+Scale = _U[Literal["linear", "log", "symlog", "logit"], str]
 
 
 ########## USEFUL SPARSE FUNCTIONS
