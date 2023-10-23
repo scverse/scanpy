@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 import time
-from typing import Literal, cast
+from typing import cast
 
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
 from scipy import sparse
 from numpy.typing import NDArray
 
 from ..._utils import AnyRandom
 from .utils import (
-    Scale,
-    custom_cmap,
-    darken_cmap,
     get_knn_graph,
     pipeline_apply_gene_filter,
     pipeline_get_gene_filter,
@@ -603,158 +598,3 @@ class Scrublet:
             print('\tEstimated  = {:.1f}%'.format(100 * self.overall_doublet_rate_))
 
         return self.predicted_doublets_
-
-    ######## Viz functions ########
-
-    def plot_histogram(
-        self,
-        *,
-        scale_hist_obs: Scale = 'log',
-        scale_hist_sim: Scale = 'linear',
-        fig_size: tuple[int | float, int | float] = (8, 3),
-    ):
-        """\
-        Plot histogram of doublet scores for observed transcriptomes and simulated doublets
-
-        The histogram for simulated doublets is useful for determining the correct doublet
-        score threshold. To set threshold to a new value, T, run call_doublets(threshold=T).
-        """
-
-        fig, axs = plt.subplots(1, 2, figsize=fig_size)
-
-        ax: Axes = axs[0]
-        ax.hist(
-            self.doublet_scores_obs_,
-            np.linspace(0, 1, 50),
-            color='gray',
-            linewidth=0,
-            density=True,
-        )
-        ax.set_yscale(scale_hist_obs)
-        yl = ax.get_ylim()
-        ax.set_ylim(yl)
-        ax.plot(self.threshold_ * np.ones(2), yl, c='black', linewidth=1)
-        ax.set_title('Observed transcriptomes')
-        ax.set_xlabel('Doublet score')
-        ax.set_ylabel('Prob. density')
-
-        ax = axs[1]
-        ax.hist(
-            self.doublet_scores_sim_,
-            np.linspace(0, 1, 50),
-            color='gray',
-            linewidth=0,
-            density=True,
-        )
-        ax.set_yscale(scale_hist_sim)
-        yl = ax.get_ylim()
-        ax.set_ylim(yl)
-        ax.plot(self.threshold_ * np.ones(2), yl, c='black', linewidth=1)
-        ax.set_title('Simulated doublets')
-        ax.set_xlabel('Doublet score')
-        ax.set_ylabel('Prob. density')
-
-        fig.tight_layout()
-
-        return fig, axs
-
-    def set_embedding(
-        self, *, embedding_name: str, coordinates: NDArray[np.floating]
-    ) -> None:
-        """Add a 2-D embedding for the observed transcriptomes"""
-        self._embeddings[embedding_name] = coordinates
-
-    def plot_embedding(
-        self,
-        *,
-        embedding_name: str,
-        score: Literal["raw", "zscore"] = 'raw',
-        marker_size: int = 5,
-        order_points: bool = False,
-        fig_size: tuple[int | float, int | float] = (8, 4),
-        color_map=None,
-    ):
-        """Plot doublet predictions on 2-D embedding of observed transcriptomes"""
-
-        # from matplotlib.lines import Line2D
-        if embedding_name not in self._embeddings:
-            print(
-                'Cannot find "{}" in embeddings. First add the embedding using `set_embedding`.'.format(
-                    embedding_name
-                )
-            )
-            return
-
-        # TO DO: check if self.predicted_doublets exists; plot raw scores only if it doesn't
-
-        fig, axs = plt.subplots(1, 2, figsize=fig_size)
-
-        x = self._embeddings[embedding_name][:, 0]
-        y = self._embeddings[embedding_name][:, 1]
-        xl = (x.min() - x.ptp() * 0.05, x.max() + x.ptp() * 0.05)
-        yl = (y.min() - y.ptp() * 0.05, y.max() + y.ptp() * 0.05)
-
-        ax: Axes = axs[1]
-        if score == 'raw':
-            color_dat = self.doublet_scores_obs_
-            vmin = color_dat.min()
-            vmax = color_dat.max()
-            if color_map is None:
-                cmap_use = darken_cmap(plt.cm.Reds, 0.9)
-            else:
-                cmap_use = color_map
-        elif score == 'zscore':
-            color_dat = self.z_scores_
-            vmin = -color_dat.max()
-            vmax = color_dat.max()
-            if color_map is None:
-                cmap_use = darken_cmap(plt.cm.RdBu_r, 0.9)
-            else:
-                cmap_use = color_map
-        if order_points:
-            o = np.argsort(color_dat)
-        else:
-            o = np.arange(len(color_dat))
-        pp = ax.scatter(
-            x[o],
-            y[o],
-            s=marker_size,
-            edgecolors=None,
-            c=color_dat[o],
-            cmap=cmap_use,
-            vmin=vmin,
-            vmax=vmax,
-        )
-        ax.set_xlim(xl)
-        ax.set_ylim(yl)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title('Doublet score')
-        ax.set_xlabel(embedding_name + ' 1')
-        ax.set_ylabel(embedding_name + ' 2')
-        fig.colorbar(pp, ax=ax)
-
-        ax = axs[0]
-        called_doubs = self.predicted_doublets_
-        ax.scatter(
-            x[o],
-            y[o],
-            s=marker_size,
-            edgecolors=None,
-            c=called_doubs[o],
-            cmap=custom_cmap([[0.7, 0.7, 0.7], [0, 0, 0]]),
-        )
-        ax.set_xlim(xl)
-        ax.set_ylim(yl)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title('Predicted doublets')
-        # singlet_marker = Line2D([], [], color=[.7,.7,.7], marker='o', markersize=5, label='Singlet', linewidth=0)
-        # doublet_marker = Line2D([], [], color=[.0,.0,.0], marker='o', markersize=5, label='Doublet', linewidth=0)
-        # ax.legend(handles = [singlet_marker, doublet_marker])
-        ax.set_xlabel(embedding_name + ' 1')
-        ax.set_ylabel(embedding_name + ' 2')
-
-        fig.tight_layout()
-
-        return fig, axs
