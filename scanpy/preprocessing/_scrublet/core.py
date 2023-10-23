@@ -356,8 +356,8 @@ class Scrublet:
         if synthetic_doublet_umi_subsampling < 1:
             self._E_sim, self._total_counts_sim = subsample_counts(
                 E1 + E2,
-                synthetic_doublet_umi_subsampling,
-                tots1 + tots2,
+                rate=synthetic_doublet_umi_subsampling,
+                original_totals=tots1 + tots2,
                 random_seed=self.random_state,
             )
         else:
