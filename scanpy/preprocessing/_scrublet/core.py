@@ -1,9 +1,17 @@
-import time
-import numpy as np
-import scipy.sparse
-import matplotlib.pyplot as plt
+from __future__ import annotations
 
+import time
+from typing import Literal, cast
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from scipy import sparse
+from numpy.typing import NDArray
+
+from ..._utils import AnyRandom
 from .utils import (
+    Scale,
     custom_cmap,
     darken_cmap,
     get_knn_graph,
@@ -24,50 +32,52 @@ from .utils import (
 class Scrublet:
     def __init__(
         self,
-        counts_matrix,
-        total_counts=None,
-        sim_doublet_ratio=2.0,
-        n_neighbors=None,
-        expected_doublet_rate=0.1,
-        stdev_doublet_rate=0.02,
-        random_state=0,
-    ):
-        '''Initialize Scrublet object with counts matrix and doublet prediction parameters
+        counts_matrix: sparse.spmatrix | NDArray[np.integer],
+        *,
+        total_counts: NDArray[np.integer] | None = None,
+        sim_doublet_ratio: float = 2.0,
+        n_neighbors: int | None = None,
+        expected_doublet_rate: float = 0.1,
+        stdev_doublet_rate: float = 0.02,
+        random_state: AnyRandom = 0,
+    ) -> None:
+        """\
+        Initialize Scrublet object with counts matrix and doublet prediction parameters
 
         Parameters
         ----------
-        counts_matrix : scipy sparse matrix or ndarray, shape (n_cells, n_genes)
-            Matrix containing raw (unnormalized) UMI-based transcript counts.
-            Converted into a scipy.sparse.csc_matrix.
+        counts_matrix
+            Matrix with shape (n_cells, n_genes) containing raw (unnormalized)
+            UMI-based transcript counts.
+            Converted into a :class:`scipy.sparse.csc_matrix`.
 
-        total_counts : ndarray, shape (n_cells,), optional (default: None)
-            Array of total UMI counts per cell. If `None`, this is calculated
-            as the row sums of `counts_matrix`.
+        total_counts
+            Array with shape (n_cells,) of total UMI counts per cell.
+            If `None`, this is calculated as the row sums of `counts_matrix`.
 
-        sim_doublet_ratio : float, optional (default: 2.0)
+        sim_doublet_ratio
             Number of doublets to simulate relative to the number of observed
             transcriptomes.
 
-        n_neighbors : int, optional (default: None)
+        n_neighbors
             Number of neighbors used to construct the KNN graph of observed
-            transcriptomes and simulated doublets. If `None`, this is
-            set to round(0.5 * sqrt(n_cells))
+            transcriptomes and simulated doublets.
+            If `None`, this is set to round(0.5 * sqrt(n_cells))
 
-        expected_doublet_rate : float, optional (default: 0.1)
+        expected_doublet_rate
             The estimated doublet rate for the experiment.
 
-        stdev_doublet_rate : float, optional (default: 0.02)
+        stdev_doublet_rate
             Uncertainty in the expected doublet rate.
 
-        random_state : int, optional (default: 0)
+        random_state
             Random state for doublet simulation, approximate
             nearest neighbor search, and PCA/TruncatedSVD.
 
         Attributes
         ----------
         predicted_doublets_ : ndarray, shape (n_cells,)
-            Boolean mask of predicted doublets in the observed
-            transcriptomes.
+            Boolean mask of predicted doublets in the observed transcriptomes.
 
         doublet_scores_obs_ : ndarray, shape (n_cells,)
             Doublet scores for observed transcriptomes.
@@ -76,12 +86,10 @@ class Scrublet:
             Doublet scores for simulated doublets.
 
         doublet_errors_obs_ : ndarray, shape (n_cells,)
-            Standard error in the doublet scores for observed
-            transcriptomes.
+            Standard error in the doublet scores for observed transcriptomes.
 
         doublet_errors_sim_ : ndarray, shape (n_doublets,)
-            Standard error in the doublet scores for simulated
-            doublets.
+            Standard error in the doublet scores for simulated doublets.
 
         threshold_: float
             Doublet score threshold for calling a transcriptome
@@ -92,13 +100,11 @@ class Scrublet:
             Z = `(doublet_score_obs_ - threhsold_) / doublet_errors_obs_`
 
         detected_doublet_rate_: float
-            Fraction of observed transcriptomes that have been called
-            doublets.
+            Fraction of observed transcriptomes that have been called doublets.
 
         detectable_doublet_fraction_: float
             Estimated fraction of doublets that are detectable, i.e.,
-            fraction of simulated doublets with doublet scores above
-            `threshold_`
+            fraction of simulated doublets with doublet scores above `threshold_`
 
         overall_doublet_rate_: float
             Estimated overall doublet rate,
@@ -123,12 +129,10 @@ class Scrublet:
             A list of arrays of the indices of the doublet neighbors of
             each observed transcriptome (the ith entry is an array of
             the doublet neighbors of transcriptome i).
-        '''
+        """
 
-        if not scipy.sparse.issparse(counts_matrix):
-            counts_matrix = scipy.sparse.csc_matrix(counts_matrix)
-        elif not scipy.sparse.isspmatrix_csc(counts_matrix):
-            counts_matrix = counts_matrix.tocsc()
+        if not isinstance(counts_matrix, sparse.csc_matrix):
+            counts_matrix = sparse.csc_matrix(counts_matrix)
 
         # initialize counts matrices
         self._E_obs = counts_matrix
@@ -157,21 +161,22 @@ class Scrublet:
 
     def scrub_doublets(
         self,
-        synthetic_doublet_umi_subsampling=1.0,
-        use_approx_neighbors=True,
-        distance_metric='euclidean',
-        get_doublet_neighbor_parents=False,
-        min_counts=3,
-        min_cells=3,
-        min_gene_variability_pctl=85,
-        log_transform=False,
-        mean_center=True,
-        normalize_variance=True,
-        n_prin_comps=30,
-        svd_solver='arpack',
-        verbose=True,
-    ):
-        '''Standard pipeline for preprocessing, doublet simulation, and doublet prediction
+        *,
+        synthetic_doublet_umi_subsampling: float = 1.0,
+        use_approx_neighbors: bool = True,
+        distance_metric: str = 'euclidean',
+        get_doublet_neighbor_parents: bool = False,
+        min_counts: int = 3,
+        min_cells: int = 3,
+        min_gene_variability_pctl: float | int = 85,
+        log_transform: bool = False,
+        mean_center: bool = True,
+        normalize_variance: bool = True,
+        n_prin_comps: int = 30,
+        svd_solver: str = 'arpack',
+        verbose: bool = True,
+    ) -> tuple[NDArray[np.float64], NDArray[np.bool_] | None]:
+        """Standard pipeline for preprocessing, doublet simulation, and doublet prediction
 
         Automatically sets a threshold for calling doublets, but it's best to check
         this by running plot_histogram() afterwards and adjusting threshold
@@ -250,7 +255,7 @@ class Scrublet:
         threshold_, detected_doublet_rate_,
         detectable_doublet_fraction_, overall_doublet_rate_,
         doublet_parents_, doublet_neighbor_parents_
-        '''
+        """
         t0 = time.time()
 
         self._E_sim = None
@@ -313,9 +318,12 @@ class Scrublet:
         return self.doublet_scores_obs_, self.predicted_doublets_
 
     def simulate_doublets(
-        self, sim_doublet_ratio=None, synthetic_doublet_umi_subsampling=1.0
-    ):
-        '''Simulate doublets by adding the counts of random observed transcriptome pairs.
+        self,
+        *,
+        sim_doublet_ratio: float | None = None,
+        synthetic_doublet_umi_subsampling: float = 1.0,
+    ) -> None:
+        """Simulate doublets by adding the counts of random observed transcriptome pairs.
 
         Arguments
         ---------
@@ -333,7 +341,7 @@ class Scrublet:
         Sets
         ----
         doublet_parents_
-        '''
+        """
 
         if sim_doublet_ratio is None:
             sim_doublet_ratio = self.sim_doublet_ratio
@@ -363,8 +371,11 @@ class Scrublet:
         self.doublet_parents_ = pair_ix
         return
 
-    def set_manifold(self, manifold_obs, manifold_sim):
-        '''Set the manifold coordinates used in k-nearest-neighbor graph construction
+    def set_manifold(
+        self, manifold_obs: NDArray[np.integer], manifold_sim: NDArray[np.integer]
+    ) -> None:
+        """\
+        Set the manifold coordinates used in k-nearest-neighbor graph construction
 
         Arguments
         ---------
@@ -381,19 +392,19 @@ class Scrublet:
         Sets
         ----
         manifold_obs_, manifold_sim_,
-        '''
+        """
 
         self.manifold_obs_ = manifold_obs
         self.manifold_sim_ = manifold_sim
-        return
 
     def calculate_doublet_scores(
         self,
-        use_approx_neighbors=True,
-        distance_metric='euclidean',
-        get_doublet_neighbor_parents=False,
-    ):
-        '''Calculate doublet scores for observed transcriptomes and simulated doublets
+        use_approx_neighbors: bool = True,
+        distance_metric: str = 'euclidean',
+        get_doublet_neighbor_parents: bool = False,
+    ) -> NDArray[np.float64]:
+        """\
+        Calculate doublet scores for observed transcriptomes and simulated doublets
 
         Requires that manifold_obs_ and manifold_sim_ have already been set.
 
@@ -420,8 +431,7 @@ class Scrublet:
         doublet_scores_obs_, doublet_scores_sim_,
         doublet_errors_obs_, doublet_errors_sim_,
         doublet_neighbor_parents_
-
-        '''
+        """
 
         self._nearest_neighbor_classifier(
             k=self.n_neighbors,
@@ -435,23 +445,24 @@ class Scrublet:
 
     def _nearest_neighbor_classifier(
         self,
-        k=40,
-        use_approx_nn=True,
-        distance_metric='euclidean',
-        exp_doub_rate=0.1,
-        stdev_doub_rate=0.03,
-        get_neighbor_parents=False,
-    ):
+        k: int = 40,
+        *,
+        use_approx_nn: bool = True,
+        distance_metric: str = 'euclidean',
+        exp_doub_rate: float = 0.1,
+        stdev_doub_rate: float = 0.03,
+        get_neighbor_parents: bool = False,
+    ) -> None:
         manifold = np.vstack((self.manifold_obs_, self.manifold_sim_))
         doub_labels = np.concatenate(
             (
-                np.zeros(self.manifold_obs_.shape[0], dtype=int),
-                np.ones(self.manifold_sim_.shape[0], dtype=int),
+                np.zeros(self.manifold_obs_.shape[0], dtype=np.int64),
+                np.ones(self.manifold_sim_.shape[0], dtype=np.int64),
             )
         )
 
-        n_obs = np.sum(doub_labels == 0)
-        n_sim = np.sum(doub_labels == 1)
+        n_obs: int = (doub_labels == 0).sum()
+        n_sim: int = (doub_labels == 1).sum()
 
         # Adjust k (number of nearest neighbors) based on the ratio of simulated to observed cells
         k_adj = int(round(k * (1 + n_sim / float(n_obs))))
@@ -467,12 +478,12 @@ class Scrublet:
         )
 
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
-        doub_neigh_mask = doub_labels[neighbors] == 1
-        n_sim_neigh = doub_neigh_mask.sum(1)
+        doub_neigh_mask: NDArray[np.bool_] = doub_labels[neighbors] == 1
+        n_sim_neigh: NDArray[np.int64] = doub_neigh_mask.sum(1)
 
         rho = exp_doub_rate
         r = n_sim / float(n_obs)
-        nd = n_sim_neigh.astype(float)
+        nd = n_sim_neigh.astype(np.float64)
         N = float(k_adj)
 
         # Bayesian
@@ -511,10 +522,12 @@ class Scrublet:
                 else:
                     neighbor_parents.append([])
             self.doublet_neighbor_parents_ = np.array(neighbor_parents)
-        return
 
-    def call_doublets(self, threshold=None, verbose=True):
-        '''Call trancriptomes as doublets or singlets
+    def call_doublets(
+        self, *, threshold: float | None = None, verbose: bool = True
+    ) -> NDArray[np.bool_] | None:
+        """\
+        Call trancriptomes as doublets or singlets
 
         Arguments
         ---------
@@ -534,7 +547,7 @@ class Scrublet:
         predicted_doublets_, z_scores_, threshold_,
         detected_doublet_rate_, detectable_doublet_fraction,
         overall_doublet_rate_
-        '''
+        """
 
         if threshold is None:
             # automatic threshold detection
@@ -542,7 +555,7 @@ class Scrublet:
             from skimage.filters import threshold_minimum
 
             try:
-                threshold = threshold_minimum(self.doublet_scores_sim_)
+                threshold = cast(float, threshold_minimum(self.doublet_scores_sim_))
                 if verbose:
                     print(
                         "Automatically set threshold at doublet score = {:.2f}".format(
@@ -564,8 +577,10 @@ class Scrublet:
         self.predicted_doublets_ = Ld_obs > threshold
         self.z_scores_ = Z
         self.threshold_ = threshold
-        self.detected_doublet_rate_ = (Ld_obs > threshold).sum() / float(len(Ld_obs))
-        self.detectable_doublet_fraction_ = (Ld_sim > threshold).sum() / float(
+        self.detected_doublet_rate_: float = (Ld_obs > threshold).sum() / float(
+            len(Ld_obs)
+        )
+        self.detectable_doublet_fraction_: float = (Ld_sim > threshold).sum() / float(
             len(Ld_sim)
         )
         self.overall_doublet_rate_ = (
@@ -592,18 +607,22 @@ class Scrublet:
     ######## Viz functions ########
 
     def plot_histogram(
-        self, scale_hist_obs='log', scale_hist_sim='linear', fig_size=(8, 3)
+        self,
+        *,
+        scale_hist_obs: Scale = 'log',
+        scale_hist_sim: Scale = 'linear',
+        fig_size: tuple[int | float, int | float] = (8, 3),
     ):
-        '''Plot histogram of doublet scores for observed transcriptomes and simulated doublets
+        """\
+        Plot histogram of doublet scores for observed transcriptomes and simulated doublets
 
         The histogram for simulated doublets is useful for determining the correct doublet
         score threshold. To set threshold to a new value, T, run call_doublets(threshold=T).
-
-        '''
+        """
 
         fig, axs = plt.subplots(1, 2, figsize=fig_size)
 
-        ax = axs[0]
+        ax: Axes = axs[0]
         ax.hist(
             self.doublet_scores_obs_,
             np.linspace(0, 1, 50),
@@ -639,21 +658,23 @@ class Scrublet:
 
         return fig, axs
 
-    def set_embedding(self, embedding_name, coordinates):
-        '''Add a 2-D embedding for the observed transcriptomes'''
+    def set_embedding(
+        self, *, embedding_name: str, coordinates: NDArray[np.floating]
+    ) -> None:
+        """Add a 2-D embedding for the observed transcriptomes"""
         self._embeddings[embedding_name] = coordinates
-        return
 
     def plot_embedding(
         self,
-        embedding_name,
-        score='raw',
-        marker_size=5,
-        order_points=False,
-        fig_size=(8, 4),
+        *,
+        embedding_name: str,
+        score: Literal["raw", "zscore"] = 'raw',
+        marker_size: int = 5,
+        order_points: bool = False,
+        fig_size: tuple[int | float, int | float] = (8, 4),
         color_map=None,
     ):
-        '''Plot doublet predictions on 2-D embedding of observed transcriptomes'''
+        """Plot doublet predictions on 2-D embedding of observed transcriptomes"""
 
         # from matplotlib.lines import Line2D
         if embedding_name not in self._embeddings:
@@ -673,7 +694,7 @@ class Scrublet:
         xl = (x.min() - x.ptp() * 0.05, x.max() + x.ptp() * 0.05)
         yl = (y.min() - y.ptp() * 0.05, y.max() + y.ptp() * 0.05)
 
-        ax = axs[1]
+        ax: Axes = axs[1]
         if score == 'raw':
             color_dat = self.doublet_scores_obs_
             vmin = color_dat.min()

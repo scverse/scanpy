@@ -1,18 +1,22 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 
+from ..preprocessing._scrublet.utils import Scale
 from . import _utils
 
 
 def scrublet_score_distribution(
     adata,
-    scale_hist_obs: str = 'log',
-    scale_hist_sim: str = 'linear',
-    figsize: tuple[float, float] = (8, 3),
+    *,
+    scale_hist_obs: Scale = 'log',
+    scale_hist_sim: Scale = 'linear',
+    figsize: tuple[float | int, float | int] = (8, 3),
     return_fig: bool = False,
     show: bool = True,
     save: str | bool | None = None,

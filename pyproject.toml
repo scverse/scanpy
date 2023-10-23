@@ -98,6 +98,7 @@ test = [
     "scanpy[leiden]",
     "zarr",
     "scanpy[dask]",
+    "scanpy[scrublet-threshold]",
 ]
 test-full = [
     "scanpy[test]",
@@ -139,6 +140,7 @@ magic = ["magic-impute>=2.0"]  # MAGIC imputation method
 skmisc = ["scikit-misc>=0.1.3"]  # highly_variable_genes method 'seurat_v3'
 harmony = ["harmonypy"]  # Harmony dataset integration
 scanorama = ["scanorama"]  # Scanorama dataset integration
+scrublet-threshold = ["scikit-image"]  # Doublet detection with automatic thresholds
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
 dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine

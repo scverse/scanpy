@@ -1,24 +1,29 @@
 import os
-import time
+from typing import Literal, overload
 
 import numpy as np
 import scipy
 import scipy.stats
-import scipy.sparse
+from scipy import sparse
+from numpy.typing import NDArray
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.neighbors import NearestNeighbors
+
+from scanpy._utils import AnyRandom
+
+Scale = Literal["linear", "log", "symlog", "logit"] | str
+
 
 ########## PREPROCESSING PIPELINE
 
 
-def print_optional(string, verbose=True):
+def print_optional(string, verbose: bool = True) -> None:
     if verbose:
         print(string)
-    return
 
 
-def pipeline_normalize(self, postnorm_total=None):
-    '''Total counts normalization'''
+def pipeline_normalize(self, postnorm_total: float | None = None):
+    """Total counts normalization"""
     if postnorm_total is None:
         postnorm_total = self._total_counts_obs.mean()
 
@@ -36,19 +41,21 @@ def pipeline_normalize(self, postnorm_total=None):
 
 
 def pipeline_get_gene_filter(
-    self, min_counts=3, min_cells=3, min_gene_variability_pctl=85
-):
-    '''Identify highly variable genes expressed above a minimum level'''
+    self,
+    min_counts: int = 3,
+    min_cells: int = 3,
+    min_gene_variability_pctl: float | int = 85,
+) -> None:
+    """Identify highly variable genes expressed above a minimum level"""
     self._gene_filter = filter_genes(
         self._E_obs_norm,
         min_counts=min_counts,
         min_cells=min_cells,
         min_vscore_pctl=min_gene_variability_pctl,
     )
-    return
 
 
-def pipeline_apply_gene_filter(self):
+def pipeline_apply_gene_filter(self) -> None:
     if self._E_obs is not None:
         self._E_obs = self._E_obs[:, self._gene_filter]
     if self._E_obs_norm is not None:
@@ -57,26 +64,23 @@ def pipeline_apply_gene_filter(self):
         self._E_sim = self._E_sim[:, self._gene_filter]
     if self._E_sim_norm is not None:
         self._E_sim_norm = self._E_sim_norm[:, self._gene_filter]
-    return
 
 
-def pipeline_mean_center(self):
+def pipeline_mean_center(self) -> None:
     gene_means = self._E_obs_norm.mean(0)
     self._E_obs_norm = self._E_obs_norm - gene_means
     if self._E_sim_norm is not None:
         self._E_sim_norm = self._E_sim_norm - gene_means
-    return
 
 
-def pipeline_normalize_variance(self):
+def pipeline_normalize_variance(self) -> None:
     gene_stdevs = np.sqrt(sparse_var(self._E_obs_norm))
     self._E_obs_norm = sparse_multiply(self._E_obs_norm.T, 1 / gene_stdevs).T
     if self._E_sim_norm is not None:
         self._E_sim_norm = sparse_multiply(self._E_sim_norm.T, 1 / gene_stdevs).T
-    return
 
 
-def pipeline_zscore(self):
+def pipeline_zscore(self) -> None:
     gene_means = self._E_obs_norm.mean(0)
     gene_stdevs = np.sqrt(sparse_var(self._E_obs_norm))
     self._E_obs_norm = np.array(
@@ -86,17 +90,21 @@ def pipeline_zscore(self):
         self._E_sim_norm = np.array(
             sparse_zscore(self._E_sim_norm, gene_means, gene_stdevs)
         )
-    return
 
 
-def pipeline_log_transform(self, pseudocount=1):
+def pipeline_log_transform(self, pseudocount: int = 1) -> None:
     self._E_obs_norm = log_normalize(self._E_obs_norm, pseudocount)
     if self._E_sim_norm is not None:
         self._E_sim_norm = log_normalize(self._E_sim_norm, pseudocount)
-    return
 
 
-def pipeline_truncated_svd(self, n_prin_comps=30, random_state=0, algorithm='arpack'):
+def pipeline_truncated_svd(
+    self,
+    n_prin_comps: int = 30,
+    *,
+    random_state: AnyRandom = 0,
+    algorithm: Literal['arpack', 'randomized'] = 'arpack',
+):
     svd = TruncatedSVD(
         n_components=n_prin_comps, random_state=random_state, algorithm=algorithm
     ).fit(self._E_obs_norm)
@@ -104,12 +112,18 @@ def pipeline_truncated_svd(self, n_prin_comps=30, random_state=0, algorithm='arp
     return
 
 
-def pipeline_pca(self, n_prin_comps=50, random_state=0, svd_solver='arpack'):
-    if scipy.sparse.issparse(self._E_obs_norm):
+def pipeline_pca(
+    self,
+    n_prin_comps: int = 50,
+    *,
+    random_state: AnyRandom = 0,
+    svd_solver: Literal['auto', 'full', 'arpack', 'randomized'] = 'arpack',
+):
+    if sparse.issparse(self._E_obs_norm):
         X_obs = self._E_obs_norm.toarray()
     else:
         X_obs = self._E_obs_norm
-    if scipy.sparse.issparse(self._E_sim_norm):
+    if sparse.issparse(self._E_sim_norm):
         X_sim = self._E_sim_norm.toarray()
     else:
         X_sim = self._E_sim_norm
@@ -121,14 +135,14 @@ def pipeline_pca(self, n_prin_comps=50, random_state=0, svd_solver='arpack'):
     return
 
 
-def matrix_multiply(X, Y):
+def matrix_multiply(X: sparse.spmatrix | NDArray, Y: sparse.spmatrix | NDArray):
     if not type(X) == np.ndarray:
-        if scipy.sparse.issparse(X):
+        if sparse.issparse(X):
             X = X.toarray()
         else:
             X = np.array(X)
     if not type(Y) == np.ndarray:
-        if scipy.sparse.issparse(Y):
+        if sparse.issparse(Y):
             Y = Y.toarray()
         else:
             Y = np.array(Y)
@@ -182,26 +196,35 @@ def make_genes_unique(orig_gene_list):
 ########## USEFUL SPARSE FUNCTIONS
 
 
-def sparse_var(E, axis=0):
-    '''variance across the specified axis'''
+def sparse_var(
+    E: sparse.csr_matrix | sparse.csc_matrix,
+    *,
+    axis: Literal[0, 1] = 0,
+) -> NDArray[np.float64]:
+    """variance across the specified axis"""
 
-    mean_gene = E.mean(axis=axis).A.squeeze()
-    tmp = E.copy()
+    mean_gene: NDArray[np.float64] = E.mean(axis=axis).A.squeeze()
+    tmp: sparse.csc_matrix | sparse.csr_matrix = E.copy()
     tmp.data **= 2
     return tmp.mean(axis=axis).A.squeeze() - mean_gene**2
 
 
-def sparse_multiply(E, a):
-    '''multiply each row of E by a scalar'''
+def sparse_multiply(E: sparse.csr_matrix | sparse.csc_matrix, a):
+    """multiply each row of E by a scalar"""
 
     nrow = E.shape[0]
-    w = scipy.sparse.lil_matrix((nrow, nrow))
+    w = sparse.lil_matrix((nrow, nrow))
     w.setdiag(a)
     return w * E
 
 
-def sparse_zscore(E, gene_mean=None, gene_stdev=None):
-    '''z-score normalize each column of E'''
+def sparse_zscore(
+    E: sparse.csr_matrix | sparse.csc_matrix,
+    *,
+    gene_mean: NDArray[np.float64] | None = None,
+    gene_stdev: NDArray[np.float64] | None = None,
+):
+    """z-score normalize each column of E"""
 
     if gene_mean is None:
         gene_mean = E.mean(0)
@@ -210,7 +233,13 @@ def sparse_zscore(E, gene_mean=None, gene_stdev=None):
     return sparse_multiply((E - gene_mean).T, 1 / gene_stdev).T
 
 
-def subsample_counts(E, rate, original_totals, random_seed=0):
+def subsample_counts(
+    E: sparse.csr_matrix | sparse.csc_matrix,
+    *,
+    rate: float,
+    original_totals,
+    random_seed: AnyRandom = 0,
+) -> tuple[sparse.csr_matrix | sparse.csc_matrix, NDArray[np.int64]]:
     if rate < 1:
         np.random.seed(random_seed)
         E.data = np.random.binomial(np.round(E.data).astype(int), rate)
@@ -228,7 +257,12 @@ def subsample_counts(E, rate, original_totals, random_seed=0):
 ########## GENE FILTERING
 
 
-def runningquantile(x, y, p, nBins):
+def runningquantile(
+    x: NDArray[np.float64],
+    y: NDArray[np.float64],
+    p: float | int,
+    nBins: int,
+):
     ind = np.argsort(x)
     x = x[ind]
     y = y[ind]
@@ -251,11 +285,18 @@ def runningquantile(x, y, p, nBins):
     return xOut, yOut
 
 
-def get_vscores(E, min_mean=0, nBins=50, fit_percentile=0.1, error_wt=1):
-    '''
+def get_vscores(
+    E,
+    *,
+    min_mean: float | int = 0,
+    nBins: int = 50,
+    fit_percentile: float = 0.1,
+    error_wt: float | int = 1,
+):
+    """
     Calculate v-score (above-Poisson noise statistic) for genes in the input counts matrix
     Return v-scores and other stats
-    '''
+    """
 
     mu_gene = E.mean(axis=0).A.squeeze()
     gene_ix = np.nonzero(mu_gene > min_mean)[0]
@@ -299,16 +340,16 @@ def get_vscores(E, min_mean=0, nBins=50, fit_percentile=0.1, error_wt=1):
 def filter_genes(
     E,
     base_ix=[],
-    min_vscore_pctl=85,
-    min_counts=3,
-    min_cells=3,
-    show_vscore_plot=False,
-    sample_name='',
+    min_vscore_pctl: float | int = 85,
+    min_counts: int = 3,
+    min_cells: int = 3,
+    show_vscore_plot: bool = False,
+    sample_name: str | None = None,
 ):
-    '''
+    """
     Filter genes by expression level and variability
     Return list of filtered gene indices
-    '''
+    """
 
     if len(base_ix) == 0:
         base_ix = np.arange(E.shape[0])
@@ -337,19 +378,20 @@ def filter_genes(
         plt.scatter(
             np.log10(mu_gene),
             np.log10(FF_gene),
-            c=[0.8, 0.8, 0.8],
+            c=(0.8, 0.8, 0.8),
             alpha=0.3,
             edgecolors=None,
         )
         plt.scatter(
             np.log10(mu_gene)[ix],
             np.log10(FF_gene)[ix],
-            c=[0, 0, 0],
+            c=(0, 0, 0),
             alpha=0.3,
             edgecolors=None,
         )
         plt.plot(np.log10(xTh), np.log10(yTh))
-        plt.title(sample_name)
+        if sample_name is not None:
+            plt.title(sample_name)
         plt.xlabel('log10(mean)')
         plt.ylabel('log10(Fano factor)')
         plt.show()
@@ -361,14 +403,18 @@ def filter_genes(
 
 
 def tot_counts_norm(
-    E, total_counts=None, exclude_dominant_frac=1, included=[], target_total=None
+    E: sparse.spmatrix,
+    total_counts: NDArray[np.intp] | None = None,
+    exclude_dominant_frac: float = 1.0,
+    included=[],
+    target_total: float | None = None,
 ):
-    '''
+    """
     Cell-level total counts normalization of input counts matrix, excluding overly abundant genes if desired.
     Return normalized counts, average total counts, and (if exclude_dominant_frac < 1) list of genes used to calculate total counts
-    '''
+    """
 
-    E = E.tocsc()
+    E = sparse.csc_matrix(E)
     ncell = E.shape[0]
     if total_counts is None:
         if len(included) == 0:
@@ -376,7 +422,7 @@ def tot_counts_norm(
                 tots_use = E.sum(axis=1)
             else:
                 tots = E.sum(axis=1)
-                wtmp = scipy.sparse.lil_matrix((ncell, ncell))
+                wtmp = sparse.lil_matrix((ncell, ncell))
                 wtmp.setdiag(1.0 / tots)
                 included = np.asarray(
                     ~(((wtmp * E) > exclude_dominant_frac).sum(axis=0) > 0)
@@ -391,7 +437,7 @@ def tot_counts_norm(
     if target_total is None:
         target_total = np.mean(tots_use)
 
-    w = scipy.sparse.lil_matrix((ncell, ncell))
+    w = sparse.lil_matrix((ncell, ncell))
     w.setdiag(float(target_total) / tots_use)
     Enorm = w * E
 
@@ -410,10 +456,10 @@ def get_pca(
     random_state=0,
     svd_solver='arpack',
 ):
-    '''
+    """
     Run PCA on the counts matrix E, gene-level normalizing if desired
     Return PCA coordinates
-    '''
+    """
     # If keep_sparse is True, gene-level normalization maintains sparsity
     #     (no centering) and TruncatedSVD is used instead of normal PCA.
 
@@ -445,21 +491,22 @@ def get_pca(
 
 def preprocess_and_pca(
     E,
-    total_counts_normalize=True,
-    norm_exclude_abundant_gene_frac=1,
-    min_counts=3,
-    min_cells=5,
-    min_vscore_pctl=85,
-    gene_filter=None,
-    num_pc=50,
-    sparse_pca=False,
-    zscore_normalize=True,
-    show_vscore_plot=False,
+    *,
+    total_counts_normalize: bool = True,
+    norm_exclude_abundant_gene_frac: float = 1.0,
+    min_counts: int = 3,
+    min_cells: int = 5,
+    min_vscore_pctl: float | int = 85,
+    gene_filter: NDArray[np.intp] | None = None,
+    num_pc: int = 50,
+    sparse_pca: bool = False,
+    zscore_normalize: bool = True,
+    show_vscore_plot: bool = False,
 ):
-    '''
+    """
     Total counts normalize, filter genes, run PCA
     Return PCA coordinates and filtered gene indices
-    '''
+    """
 
     if total_counts_normalize:
         print('Total count normalizing')
@@ -489,13 +536,45 @@ def preprocess_and_pca(
 ########## GRAPH CONSTRUCTION
 
 
+@overload
 def get_knn_graph(
-    X, k=5, dist_metric='euclidean', approx=False, return_edges=True, random_seed=0
+    X,
+    k: int = 5,
+    *,
+    dist_metric: str = 'euclidean',
+    approx: bool = False,
+    return_edges: Literal[True] = True,
+    random_seed: AnyRandom = 0,
+) -> tuple[set[tuple[int, int]], NDArray[np.int64]]:
+    ...
+
+
+@overload
+def get_knn_graph(
+    X,
+    k: int = 5,
+    *,
+    dist_metric: str = 'euclidean',
+    approx: bool = False,
+    return_edges: Literal[False],
+    random_seed: AnyRandom = 0,
+) -> NDArray[np.int64]:
+    ...
+
+
+def get_knn_graph(
+    X,
+    k: int = 5,
+    *,
+    dist_metric: str = 'euclidean',
+    approx: bool = False,
+    return_edges: bool = True,
+    random_seed: AnyRandom = 0,
 ):
-    '''
+    """
     Build k-nearest-neighbor graph
     Return edge list and nearest neighbor matrix
-    '''
+    """
 
     # t0 = time.time()
     if approx:
@@ -535,7 +614,7 @@ def get_knn_graph(
         knn = nbrs.kneighbors(return_distance=False)
 
     if return_edges:
-        links = set([])
+        links = set()
         for i in range(knn.shape[0]):
             for j in knn[i, :]:
                 links.add(tuple(sorted((i, j))))
@@ -546,8 +625,8 @@ def get_knn_graph(
     return knn
 
 
-def build_adj_mat(edges, n_nodes):
-    A = scipy.sparse.lil_matrix((n_nodes, n_nodes))
+def build_adj_mat(edges, n_nodes: int) -> sparse.csc_matrix:
+    A = sparse.lil_matrix((n_nodes, n_nodes))
     for e in edges:
         i, j = e
         A[i, j] = 1
@@ -558,7 +637,14 @@ def build_adj_mat(edges, n_nodes):
 ########## 2-D EMBEDDINGS
 
 
-def get_umap(X, n_neighbors=10, min_dist=0.1, metric='euclidean', random_state=0):
+def get_umap(
+    X,
+    *,
+    n_neighbors: int = 10,
+    min_dist: float = 0.1,
+    metric: str = 'euclidean',
+    random_state: AnyRandom = 0,
+):
     import umap
 
     return umap.UMAP(
@@ -569,7 +655,14 @@ def get_umap(X, n_neighbors=10, min_dist=0.1, metric='euclidean', random_state=0
     ).fit_transform(X)
 
 
-def get_tsne(X, angle=0.5, perplexity=30, random_state=0, verbose=False):
+def get_tsne(
+    X,
+    *,
+    angle: float = 0.5,
+    perplexity: int = 30,
+    random_state: AnyRandom = 0,
+    verbose: bool = False,
+):
     from sklearn.manifold import TSNE
 
     return TSNE(
@@ -578,7 +671,12 @@ def get_tsne(X, angle=0.5, perplexity=30, random_state=0, verbose=False):
 
 
 def get_force_layout(
-    X, n_neighbors=5, approx_neighbors=False, n_iter=300, verbose=False
+    X,
+    *,
+    n_neighbors: int = 5,
+    approx_neighbors: bool = False,
+    n_iter: int = 300,
+    verbose: bool = False,
 ):
     edges = get_knn_graph(X, k=n_neighbors, approx=approx_neighbors, return_edges=True)[
         0
@@ -588,8 +686,9 @@ def get_force_layout(
 
 def run_force_layout(
     links,
-    n_cells,
-    n_iter=100,
+    n_cells: int,
+    *,
+    n_iter: int = 100,
     edgeWeightInfluence=1,
     barnesHutTheta=2,
     scalingRatio=1,
@@ -655,7 +754,12 @@ def get_louvain_clusters(nodes, edges):
 
 
 def rank_enriched_genes(
-    E, gene_list, cell_mask, min_counts=3, min_cells=3, verbose=False
+    E,
+    gene_list,
+    cell_mask,
+    min_counts: int = 3,
+    min_cells: int = 3,
+    verbose: bool = False,
 ):
     gix = (E[cell_mask, :] >= min_counts).sum(0).A.squeeze() >= min_cells
     print_optional('%i cells in group' % (sum(cell_mask)), verbose)
