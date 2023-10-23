@@ -12,6 +12,7 @@ from ._dotplot import DotPlot, dotplot
 from ._matrixplot import MatrixPlot, matrixplot
 from ._stacked_violin import StackedViolin, stacked_violin
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
+from ._scrublet import scrublet_score_distribution
 
 from ._tools.scatterplots import (
     embedding,

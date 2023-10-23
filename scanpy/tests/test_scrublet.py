@@ -1,7 +1,6 @@
 import pytest
 
 import scanpy as sc
-import scanpy.external as sce
 from anndata.tests.helpers import assert_equal
 import pandas as pd
 import anndata as ad
@@ -10,10 +9,6 @@ import scanpy.preprocessing as pp
 import scipy.sparse as sparse
 
 from scanpy.testing._helpers.data import paul15, pbmc3k
-from scanpy.testing._pytest.marks import needs
-
-
-pytestmark = [needs('scrublet')]
 
 
 def test_scrublet():
@@ -23,7 +18,7 @@ def test_scrublet():
     Check that scrublet runs and detects some doublets.
     """
     adata = pbmc3k()
-    sce.pp.scrublet(adata, use_approx_neighbors=False)
+    sc.pp.scrublet(adata, use_approx_neighbors=False)
 
     # replace assertions by conditions
     assert "predicted_doublet" in adata.obs.columns
@@ -42,7 +37,7 @@ def test_scrublet_batched():
     adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
     split = [adata[adata.obs["batch"] == x].copy() for x in ("a", "b")]
 
-    sce.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
 
     # replace assertions by conditions
     assert "predicted_doublet" in adata.obs.columns
@@ -55,7 +50,7 @@ def test_scrublet_batched():
 
     # Check that results are independent
     for s in split:
-        sce.pp.scrublet(s, use_approx_neighbors=False)
+        sc.pp.scrublet(s, use_approx_neighbors=False)
     merged = sc.concat(split)
 
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
@@ -70,7 +65,7 @@ def test_scrublet_data():
     random_state = 1234
 
     # Run Scrublet and let the main function run simulations
-    adata_scrublet_auto_sim = sce.pp.scrublet(
+    adata_scrublet_auto_sim = sc.pp.scrublet(
         pbmc3k(),
         use_approx_neighbors=False,
         copy=True,
@@ -129,7 +124,7 @@ def test_scrublet_data():
     pp.normalize_total(adata_obs, target_sum=1e6)
     pp.normalize_total(adata_sim, target_sum=1e6)
 
-    adata_scrublet_manual_sim = sce.pp.scrublet(
+    adata_scrublet_manual_sim = sc.pp.scrublet(
         adata_obs,
         adata_sim=adata_sim,
         use_approx_neighbors=False,
@@ -153,7 +148,7 @@ def test_scrublet_dense():
     Check that scrublet runs and detects some doublets when a dense matrix is supplied.
     """
     adata = paul15()[:500].copy()
-    sce.pp.scrublet(adata, use_approx_neighbors=False)
+    sc.pp.scrublet(adata, use_approx_neighbors=False)
 
     # replace assertions by conditions
     assert "predicted_doublet" in adata.obs.columns
@@ -174,7 +169,7 @@ def test_scrublet_params():
 
     # Get the default output
 
-    default = sce.pp.scrublet(adata, use_approx_neighbors=False, copy=True)
+    default = sc.pp.scrublet(adata, use_approx_neighbors=False, copy=True)
 
     test_params = {
         'expected_doublet_rate': 0.1,
@@ -197,7 +192,7 @@ def test_scrublet_params():
             'copy': True,
             param: test_params[param],
         }
-        curr = sc.external.pp.scrublet(**test_args)
+        curr = sc.pp.scrublet(**test_args)
         with pytest.raises(AssertionError):
             assert_equal(default, curr)
 
@@ -218,6 +213,6 @@ def test_scrublet_simulate_doublets():
     _ = sc.pp.highly_variable_genes(logged)
     adata_obs = adata_obs[:, logged.var['highly_variable']]
 
-    adata_sim = sce.pp.scrublet_simulate_doublets(adata_obs, layer='raw')
+    adata_sim = sc.pp.scrublet_simulate_doublets(adata_obs, layer='raw')
 
     assert 'doublet_parents' in adata_sim.obsm.keys()

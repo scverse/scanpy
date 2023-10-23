@@ -1612,24 +1612,23 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs('scrublet')
 def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
     adata = pbmc3k()
-    sc.external.pp.scrublet(adata, use_approx_neighbors=False)
+    sc.pp.scrublet(adata, use_approx_neighbors=False)
 
-    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
+    sc.pl.scrublet_score_distribution(adata, return_fig=True)
     save_and_compare_images('scrublet')
 
     del adata.uns['scrublet']['threshold']
     adata.obs['predicted_doublet'] = False
 
-    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
+    sc.pl.scrublet_score_distribution(adata, return_fig=True)
     save_and_compare_images('scrublet_no_threshold')
 
     adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
-    sc.external.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
 
-    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
+    sc.pl.scrublet_score_distribution(adata, return_fig=True)
     save_and_compare_images('scrublet_with_batches')
