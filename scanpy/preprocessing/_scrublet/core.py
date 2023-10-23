@@ -7,24 +7,10 @@ from scipy import sparse
 from numpy.typing import NDArray
 
 from ..._utils import AnyRandom
-from .utils import (
-    get_knn_graph,
-    pipeline_mean_center,
-    pipeline_normalize_variance,
-    pipeline_pca,
-    pipeline_truncated_svd,
-    pipeline_zscore,
-    subsample_counts,
-)
+from .utils import get_knn_graph, subsample_counts
 
-__all__ = [
-    "Scrublet",
-    "pipeline_mean_center",
-    "pipeline_zscore",
-    "pipeline_normalize_variance",
-    "pipeline_pca",
-    "pipeline_truncated_svd",
-]
+
+__all__ = ["Scrublet"]
 
 
 class Scrublet:
@@ -165,16 +151,16 @@ class Scrublet:
 
         Arguments
         ---------
-        sim_doublet_ratio : float, optional (default: None)
+        sim_doublet_ratio
             Number of doublets to simulate relative to the number of observed
             transcriptomes. If `None`, self.sim_doublet_ratio is used.
 
-        synthetic_doublet_umi_subsampling : float, optional (defuault: 1.0)
-            Rate for sampling UMIs when creating synthetic doublets. If 1.0,
-            each doublet is created by simply adding the UMIs from two randomly
-            sampled observed transcriptomes. For values less than 1, the
-            UMI counts are added and then randomly sampled at the specified
-            rate.
+        synthetic_doublet_umi_subsampling
+            Rate for sampling UMIs when creating synthetic doublets.
+            If 1.0, each doublet is created by simply adding the UMIs from two randomly
+            sampled observed transcriptomes.
+            For values less than 1, the UMI counts are added and then randomly sampled
+            at the specified rate.
 
         Sets
         ----
@@ -217,12 +203,14 @@ class Scrublet:
 
         Arguments
         ---------
-        manifold_obs: ndarray, shape (n_cells, n_features)
+        manifold_obs
+            (shape: n_cells × n_features)
             The single-cell "manifold" coordinates (e.g., PCA coordinates)
             for observed transcriptomes. Nearest neighbors are found using
             the union of `manifold_obs` and `manifold_sim` (see below).
 
-        manifold_sim: ndarray, shape (n_doublets, n_features)
+        manifold_sim
+            (shape: n_doublets × n_features)
             The single-cell "manifold" coordinates (e.g., PCA coordinates)
             for simulated doublets. Nearest neighbors are found using
             the union of `manifold_obs` (see above) and `manifold_sim`.
@@ -248,17 +236,17 @@ class Scrublet:
 
         Arguments
         ---------
-        use_approx_neighbors : bool, optional (default: True)
+        use_approx_neighbors
             Use approximate nearest neighbor method (annoy) for the KNN
             classifier.
 
-        distance_metric : str, optional (default: 'euclidean')
+        distance_metric
             Distance metric used when finding nearest neighbors. For list of
             valid values, see the documentation for annoy (if `use_approx_neighbors`
             is True) or sklearn.neighbors.NearestNeighbors (if `use_approx_neighbors`
             is False).
 
-        get_doublet_neighbor_parents : bool, optional (default: False)
+        get_doublet_neighbor_parents
             If True, return the parent transcriptomes that generated the
             doublet neighbors of each observed transcriptome. This information can
             be used to infer the cell states that generated a given
@@ -369,7 +357,7 @@ class Scrublet:
 
         Arguments
         ---------
-        threshold : float, optional (default: None)
+        threshold
             Doublet score threshold for calling a transcriptome
             a doublet. If `None`, this is set automatically by looking
             for the minimum between the two modes of the `doublet_scores_sim_`
@@ -377,7 +365,7 @@ class Scrublet:
             using the `doublet_scores_sim_` histogram and/or based on
             co-localization of predicted doublets in a 2-D embedding.
 
-        verbose : bool, optional (default: True)
+        verbose
             If True, print summary statistics.
 
         Sets

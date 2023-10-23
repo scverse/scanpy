@@ -9,7 +9,8 @@ from ... import logging as logg
 from ... import preprocessing as pp
 from ...get import _get_obs_rep
 from ..._utils import AnyRandom
-from . import core as sl
+from .core import Scrublet
+from . import pipeline
 
 
 def scrublet(
@@ -385,7 +386,7 @@ def _scrublet_call_doublets(
     # Note: Scrublet() will sparse adata_obs.X if it's not already, but this
     # matrix won't get used if we pre-set the normalised slots.
 
-    scrub = sl.Scrublet(
+    scrub = Scrublet(
         adata_obs.X,
         n_neighbors=n_neighbors,
         expected_doublet_rate=expected_doublet_rate,
@@ -404,11 +405,11 @@ def _scrublet_call_doublets(
     # Call scrublet-specific preprocessing where specified
 
     if mean_center and normalize_variance:
-        sl.pipeline_zscore(scrub)
+        pipeline.zscore(scrub)
     elif mean_center:
-        sl.pipeline_mean_center(scrub)
+        pipeline.mean_center(scrub)
     elif normalize_variance:
-        sl.pipeline_normalize_variance(scrub)
+        pipeline.normalize_variance(scrub)
 
     # Do PCA. Scrublet fits to the observed matrix and decomposes both observed
     # and simulated based on that fit, so we'll just let it do its thing rather
@@ -421,12 +422,10 @@ def _scrublet_call_doublets(
             scrub._E_obs_norm = np.asarray(scrub._E_obs_norm)
         if isinstance(scrub._E_sim_norm, np.matrix):
             scrub._E_sim_norm = np.asarray(scrub._E_sim_norm)
-        sl.pipeline_pca(
-            scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
-        )
+        pipeline.pca(scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state)
     else:
         logg.info('Embedding transcriptomes using Truncated SVD...')
-        sl.pipeline_truncated_svd(
+        pipeline.truncated_svd(
             scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
         )
 
@@ -489,7 +488,7 @@ def scrublet_simulate_doublets(
     layer=None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
-    random_seed: int = 0,
+    random_seed: AnyRandom = 0,
 ) -> AnnData:
     """\
     Simulate doublets by adding the counts of random observed transcriptome pairs.
@@ -533,7 +532,7 @@ def scrublet_simulate_doublets(
     """
 
     X = _get_obs_rep(adata, layer=layer)
-    scrub = sl.Scrublet(X)
+    scrub = Scrublet(X, random_state=random_seed)
 
     scrub.simulate_doublets(
         sim_doublet_ratio=sim_doublet_ratio,

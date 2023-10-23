@@ -1,11 +1,15 @@
 """This module contains helper functions for accessing data."""
-from typing import Optional, Iterable, Tuple, Union, List, Literal
+from typing import TYPE_CHECKING, Optional, Iterable, Tuple, Union, List, Literal
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import spmatrix
 
 from anndata import AnnData
+
+if TYPE_CHECKING:
+    from anndata._core.views import ArrayView
+    from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -385,7 +389,21 @@ def var_df(
     return df
 
 
-def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
+def _get_obs_rep(
+    adata: AnnData,
+    *,
+    use_raw: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
+) -> (
+    np.ndarray
+    | spmatrix
+    | pd.DataFrame
+    | ArrayView
+    | BaseCompressedSparseDataset
+    | None
+):
     """
     Choose array aligned with obs annotation.
     """
