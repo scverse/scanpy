@@ -14,6 +14,81 @@ __all__ = ["Scrublet"]
 
 
 class Scrublet:
+    predicted_doublets_: NDArray[np.bool_]
+    """(shape: n_cells)
+    Boolean mask of predicted doublets in the observed transcriptomes.
+    """
+
+    doublet_scores_obs_: NDArray[np.float64]
+    """(shape: n_cells)
+    Doublet scores for observed transcriptomes.
+    """
+
+    doublet_scores_sim_: NDArray[np.float64]
+    """(shape: n_doublets)
+    Doublet scores for simulated doublets.
+    """
+
+    doublet_errors_obs_: NDArray[np.float64]
+    """(shape: n_cells)
+    Standard error in the doublet scores for observed transcriptomes.
+    """
+
+    doublet_errors_sim_: NDArray[np.float64]
+    """(shape: n_doublets)
+    Standard error in the doublet scores for simulated doublets.
+    """
+
+    threshold_: float
+    """Doublet score threshold for calling a transcriptome a doublet."""
+
+    z_scores_: NDArray[np.float64]
+    """(shape: n_cells)
+    Z-score conveying confidence in doublet calls.
+    Z = `(doublet_score_obs_ - threhsold_) / doublet_errors_obs_`
+    """
+
+    detected_doublet_rate_: float
+    """Fraction of observed transcriptomes that have been called doublets."""
+
+    detectable_doublet_fraction_: float
+    """Estimated fraction of doublets that are detectable, i.e.,
+    fraction of simulated doublets with doublet scores above `threshold_`
+    """
+
+    overall_doublet_rate_: float
+    """Estimated overall doublet rate,
+    `detected_doublet_rate_ / detectable_doublet_fraction_`.
+    Should agree (roughly) with `expected_doublet_rate`.
+    """
+
+    manifold_obs_: NDArray[np.float64]
+    """(shape: n_cells × n_features)
+    The single-cell "manifold" coordinates (e.g., PCA coordinates)
+    for observed transcriptomes. Nearest neighbors are found using
+    the union of `manifold_obs_` and `manifold_sim_` (see below).
+    """
+
+    manifold_sim_: NDArray[np.float64]
+    """shape (n_doublets × n_features)
+    The single-cell "manifold" coordinates (e.g., PCA coordinates)
+    for simulated doublets. Nearest neighbors are found using
+    the union of `manifold_obs_` (see above) and `manifold_sim_`.
+    """
+
+    doublet_parents_: NDArray[np.intp]
+    """(shape: n_doublets × 2)
+    Indices of the observed transcriptomes used to generate the
+    simulated doublets.
+    """
+
+    doublet_neighbor_parents_: list
+    """(length: n_cells)
+    A list of arrays of the indices of the doublet neighbors of
+    each observed transcriptome (the ith entry is an array of
+    the doublet neighbors of transcriptome i).
+    """
+
     def __init__(
         self,
         counts_matrix: sparse.spmatrix | NDArray[np.integer],
@@ -57,62 +132,6 @@ class Scrublet:
         random_state
             Random state for doublet simulation, approximate
             nearest neighbor search, and PCA/TruncatedSVD.
-
-        Attributes
-        ----------
-        predicted_doublets_ : ndarray, shape (n_cells,)
-            Boolean mask of predicted doublets in the observed transcriptomes.
-
-        doublet_scores_obs_ : ndarray, shape (n_cells,)
-            Doublet scores for observed transcriptomes.
-
-        doublet_scores_sim_ : ndarray, shape (n_doublets,)
-            Doublet scores for simulated doublets.
-
-        doublet_errors_obs_ : ndarray, shape (n_cells,)
-            Standard error in the doublet scores for observed transcriptomes.
-
-        doublet_errors_sim_ : ndarray, shape (n_doublets,)
-            Standard error in the doublet scores for simulated doublets.
-
-        threshold_: float
-            Doublet score threshold for calling a transcriptome
-            a doublet.
-
-        z_scores_ : ndarray, shape (n_cells,)
-            Z-score conveying confidence in doublet calls.
-            Z = `(doublet_score_obs_ - threhsold_) / doublet_errors_obs_`
-
-        detected_doublet_rate_: float
-            Fraction of observed transcriptomes that have been called doublets.
-
-        detectable_doublet_fraction_: float
-            Estimated fraction of doublets that are detectable, i.e.,
-            fraction of simulated doublets with doublet scores above `threshold_`
-
-        overall_doublet_rate_: float
-            Estimated overall doublet rate,
-            `detected_doublet_rate_ / detectable_doublet_fraction_`.
-            Should agree (roughly) with `expected_doublet_rate`.
-
-        manifold_obs_: ndarray, shape (n_cells, n_features)
-            The single-cell "manifold" coordinates (e.g., PCA coordinates)
-            for observed transcriptomes. Nearest neighbors are found using
-            the union of `manifold_obs_` and `manifold_sim_` (see below).
-
-        manifold_sim_: ndarray, shape (n_doublets, n_features)
-            The single-cell "manifold" coordinates (e.g., PCA coordinates)
-            for simulated doublets. Nearest neighbors are found using
-            the union of `manifold_obs_` (see above) and `manifold_sim_`.
-
-        doublet_parents_ : ndarray, shape (n_doublets, 2)
-            Indices of the observed transcriptomes used to generate the
-            simulated doublets.
-
-        doublet_neighbor_parents_ : list, length n_cells
-            A list of arrays of the indices of the doublet neighbors of
-            each observed transcriptome (the ith entry is an array of
-            the doublet neighbors of transcriptome i).
         """
 
         if not isinstance(counts_matrix, sparse.csc_matrix):
@@ -196,7 +215,7 @@ class Scrublet:
         return
 
     def set_manifold(
-        self, manifold_obs: NDArray[np.integer], manifold_sim: NDArray[np.integer]
+        self, manifold_obs: NDArray[np.float64], manifold_sim: NDArray[np.float64]
     ) -> None:
         """\
         Set the manifold coordinates used in k-nearest-neighbor graph construction
