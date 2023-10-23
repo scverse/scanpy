@@ -1,10 +1,11 @@
 """This module contains helper functions for accessing data."""
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional, Iterable, Tuple, Union, List, Literal
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import spmatrix
-
 from anndata import AnnData
 
 if TYPE_CHECKING:
