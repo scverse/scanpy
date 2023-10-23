@@ -1,19 +1,23 @@
-from anndata import AnnData
-from typing import Optional
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
+from anndata import AnnData
+from typing import Optional
 from scipy import sparse
 
-
-from .. import logging as logg
-from .. import preprocessing as pp
-from ..get import _get_obs_rep
+from ... import logging as logg
+from ... import preprocessing as pp
+from ...get import _get_obs_rep
+from ..._utils import AnyRandom
+from . import core as sl
 
 
 def scrublet(
     adata: AnnData,
     adata_sim: Optional[AnnData] = None,
-    batch_key: str = None,
+    *,
+    batch_key: str | None = None,
     sim_doublet_ratio: float = 2.0,
     expected_doublet_rate: float = 0.05,
     stdev_doublet_rate: float = 0.02,
@@ -29,7 +33,7 @@ def scrublet(
     threshold: Optional[float] = None,
     verbose: bool = True,
     copy: bool = False,
-    random_state: int = 0,
+    random_state: int | AnyRandom = 0,
 ) -> Optional[AnnData]:
     """\
     Predict doublets using Scrublet [Wolock19]_.
@@ -151,12 +155,6 @@ def scrublet(
     :func:`~scanpy.pl.scrublet_score_distribution`: Plot histogram of doublet
         scores for observed transcriptomes and simulated doublets.
     """
-    try:
-        import scrublet as sl
-    except ImportError:
-        raise ImportError(
-            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
-        )
 
     if copy:
         adata = adata.copy()
@@ -279,6 +277,7 @@ def scrublet(
 def _scrublet_call_doublets(
     adata_obs: AnnData,
     adata_sim: AnnData,
+    *,
     n_neighbors: Optional[int] = None,
     expected_doublet_rate: float = 0.05,
     stdev_doublet_rate: float = 0.02,
@@ -289,7 +288,7 @@ def _scrublet_call_doublets(
     knn_dist_metric: str = 'euclidean',
     get_doublet_neighbor_parents: bool = False,
     threshold: Optional[float] = None,
-    random_state: int = 0,
+    random_state: int | AnyRandom = 0,
     verbose: bool = True,
 ) -> AnnData:
     """\
@@ -381,12 +380,6 @@ def _scrublet_call_doublets(
         ``.uns['scrublet']['parameters']``
             Dictionary of Scrublet parameters
     """
-    try:
-        import scrublet as sl
-    except ImportError:
-        raise ImportError(
-            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
-        )
 
     # Estimate n_neighbors if not provided, and create scrublet object.
 
@@ -542,12 +535,6 @@ def scrublet_simulate_doublets(
     :func:`~scanpy.pl.scrublet_score_distribution`: Plot histogram of doublet
         scores for observed transcriptomes and simulated doublets.
     """
-    try:
-        import scrublet as sl
-    except ImportError:
-        raise ImportError(
-            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
-        )
 
     X = _get_obs_rep(adata, layer=layer)
     scrub = sl.Scrublet(X)
