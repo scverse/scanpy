@@ -84,11 +84,13 @@ def pipeline_zscore(self) -> None:
     gene_means = self._E_obs_norm.mean(0)
     gene_stdevs = np.sqrt(sparse_var(self._E_obs_norm))
     self._E_obs_norm = np.array(
-        sparse_zscore(self._E_obs_norm, gene_means, gene_stdevs)
+        sparse_zscore(self._E_obs_norm, gene_mean=gene_means, gene_stdev=gene_stdevs)
     )
     if self._E_sim_norm is not None:
         self._E_sim_norm = np.array(
-            sparse_zscore(self._E_sim_norm, gene_means, gene_stdevs)
+            sparse_zscore(
+                self._E_sim_norm, gene_mean=gene_means, gene_stdev=gene_stdevs
+            )
         )
 
 
@@ -104,12 +106,11 @@ def pipeline_truncated_svd(
     *,
     random_state: AnyRandom = 0,
     algorithm: Literal['arpack', 'randomized'] = 'arpack',
-):
+) -> None:
     svd = TruncatedSVD(
         n_components=n_prin_comps, random_state=random_state, algorithm=algorithm
     ).fit(self._E_obs_norm)
     self.set_manifold(svd.transform(self._E_obs_norm), svd.transform(self._E_sim_norm))
-    return
 
 
 def pipeline_pca(
@@ -118,7 +119,7 @@ def pipeline_pca(
     *,
     random_state: AnyRandom = 0,
     svd_solver: Literal['auto', 'full', 'arpack', 'randomized'] = 'arpack',
-):
+) -> None:
     if sparse.issparse(self._E_obs_norm):
         X_obs = self._E_obs_norm.toarray()
     else:
@@ -132,10 +133,11 @@ def pipeline_pca(
         n_components=n_prin_comps, random_state=random_state, svd_solver=svd_solver
     ).fit(X_obs)
     self.set_manifold(pca.transform(X_obs), pca.transform(X_sim))
-    return
 
 
-def matrix_multiply(X: sparse.spmatrix | NDArray, Y: sparse.spmatrix | NDArray):
+def matrix_multiply(
+    X: sparse.spmatrix | NDArray, Y: sparse.spmatrix | NDArray
+) -> NDArray:
     if not type(X) == np.ndarray:
         if sparse.issparse(X):
             X = X.toarray()
@@ -149,48 +151,11 @@ def matrix_multiply(X: sparse.spmatrix | NDArray, Y: sparse.spmatrix | NDArray):
     return np.dot(X, Y)
 
 
-def log_normalize(X, pseudocount=1):
+def log_normalize(
+    X: sparse.csr_matrix | sparse.csc_matrix, pseudocount: int = 1
+) -> sparse.csr_matrix | sparse.csc_matrix:
     X.data = np.log10(X.data + pseudocount)
     return X
-
-
-########## LOADING DATA
-def load_genes(filename, delimiter='\t', column=0, skip_rows=0):
-    gene_list = []
-    gene_dict = {}
-
-    with open(filename) as f:
-        for iL in range(skip_rows):
-            f.readline()
-        for l in f:
-            gene = l.strip('\n').split(delimiter)[column]
-            if gene in gene_dict:
-                gene_dict[gene] += 1
-                gene_list.append(gene + '__' + str(gene_dict[gene]))
-                if gene_dict[gene] == 2:
-                    i = gene_list.index(gene)
-                    gene_list[i] = gene + '__1'
-            else:
-                gene_dict[gene] = 1
-                gene_list.append(gene)
-    return gene_list
-
-
-def make_genes_unique(orig_gene_list):
-    gene_list = []
-    gene_dict = {}
-
-    for gene in orig_gene_list:
-        if gene in gene_dict:
-            gene_dict[gene] += 1
-            gene_list.append(gene + '__' + str(gene_dict[gene]))
-            if gene_dict[gene] == 2:
-                i = gene_list.index(gene)
-                gene_list[i] = gene + '__1'
-        else:
-            gene_dict[gene] = 1
-            gene_list.append(gene)
-    return gene_list
 
 
 ########## USEFUL SPARSE FUNCTIONS
@@ -209,7 +174,9 @@ def sparse_var(
     return tmp.mean(axis=axis).A.squeeze() - mean_gene**2
 
 
-def sparse_multiply(E: sparse.csr_matrix | sparse.csc_matrix, a):
+def sparse_multiply(
+    E: sparse.csr_matrix | sparse.csc_matrix, a: float | int | NDArray[np.float64]
+) -> sparse.csr_matrix | sparse.csc_matrix:
     """multiply each row of E by a scalar"""
 
     nrow = E.shape[0]
@@ -223,7 +190,7 @@ def sparse_zscore(
     *,
     gene_mean: NDArray[np.float64] | None = None,
     gene_stdev: NDArray[np.float64] | None = None,
-):
+) -> sparse.csr_matrix | sparse.csc_matrix:
     """z-score normalize each column of E"""
 
     if gene_mean is None:
@@ -444,95 +411,6 @@ def tot_counts_norm(
     return Enorm.tocsc()
 
 
-########## DIMENSIONALITY REDUCTION
-
-
-def get_pca(
-    E,
-    base_ix=[],
-    numpc=50,
-    keep_sparse=False,
-    normalize=True,
-    random_state=0,
-    svd_solver='arpack',
-):
-    """
-    Run PCA on the counts matrix E, gene-level normalizing if desired
-    Return PCA coordinates
-    """
-    # If keep_sparse is True, gene-level normalization maintains sparsity
-    #     (no centering) and TruncatedSVD is used instead of normal PCA.
-
-    if len(base_ix) == 0:
-        base_ix = np.arange(E.shape[0])
-
-    if keep_sparse:
-        if normalize:
-            zstd = np.sqrt(sparse_var(E[base_ix, :]))
-            Z = sparse_multiply(E.T, 1 / zstd).T
-        else:
-            Z = E
-        pca = TruncatedSVD(
-            n_components=numpc, random_state=random_state, algorithm=svd_solver
-        )
-
-    else:
-        if normalize:
-            zmean = E[base_ix, :].mean(0)
-            zstd = np.sqrt(sparse_var(E[base_ix, :]))
-            Z = sparse_multiply((E - zmean).T, 1 / zstd).T
-        else:
-            Z = E
-        pca = PCA(n_components=numpc, random_state=random_state, svd_solver=svd_solver)
-
-    pca.fit(Z[base_ix, :])
-    return pca.transform(Z)
-
-
-def preprocess_and_pca(
-    E,
-    *,
-    total_counts_normalize: bool = True,
-    norm_exclude_abundant_gene_frac: float = 1.0,
-    min_counts: int = 3,
-    min_cells: int = 5,
-    min_vscore_pctl: float | int = 85,
-    gene_filter: NDArray[np.intp] | None = None,
-    num_pc: int = 50,
-    sparse_pca: bool = False,
-    zscore_normalize: bool = True,
-    show_vscore_plot: bool = False,
-):
-    """
-    Total counts normalize, filter genes, run PCA
-    Return PCA coordinates and filtered gene indices
-    """
-
-    if total_counts_normalize:
-        print('Total count normalizing')
-        E = tot_counts_norm(E, exclude_dominant_frac=norm_exclude_abundant_gene_frac)[0]
-
-    if gene_filter is None:
-        print('Finding highly variable genes')
-        gene_filter = filter_genes(
-            E,
-            min_vscore_pctl=min_vscore_pctl,
-            min_counts=min_counts,
-            min_cells=min_cells,
-            show_vscore_plot=show_vscore_plot,
-        )
-
-    print('Using %i genes for PCA' % len(gene_filter))
-    PCdat = get_pca(
-        E[:, gene_filter],
-        numpc=num_pc,
-        keep_sparse=sparse_pca,
-        normalize=zscore_normalize,
-    )
-
-    return PCdat, gene_filter
-
-
 ########## GRAPH CONSTRUCTION
 
 
@@ -623,152 +501,3 @@ def get_knn_graph(
 
         return links, knn
     return knn
-
-
-def build_adj_mat(edges, n_nodes: int) -> sparse.csc_matrix:
-    A = sparse.lil_matrix((n_nodes, n_nodes))
-    for e in edges:
-        i, j = e
-        A[i, j] = 1
-        A[j, i] = 1
-    return A.tocsc()
-
-
-########## 2-D EMBEDDINGS
-
-
-def get_umap(
-    X,
-    *,
-    n_neighbors: int = 10,
-    min_dist: float = 0.1,
-    metric: str = 'euclidean',
-    random_state: AnyRandom = 0,
-):
-    import umap
-
-    return umap.UMAP(
-        n_neighbors=n_neighbors,
-        min_dist=min_dist,
-        metric=metric,
-        random_state=random_state,
-    ).fit_transform(X)
-
-
-def get_tsne(
-    X,
-    *,
-    angle: float = 0.5,
-    perplexity: int = 30,
-    random_state: AnyRandom = 0,
-    verbose: bool = False,
-):
-    from sklearn.manifold import TSNE
-
-    return TSNE(
-        angle=angle, perplexity=perplexity, random_state=random_state, verbose=verbose
-    ).fit_transform(X)
-
-
-def get_force_layout(
-    X,
-    *,
-    n_neighbors: int = 5,
-    approx_neighbors: bool = False,
-    n_iter: int = 300,
-    verbose: bool = False,
-):
-    edges = get_knn_graph(X, k=n_neighbors, approx=approx_neighbors, return_edges=True)[
-        0
-    ]
-    return run_force_layout(edges, X.shape[0], verbose=verbose)
-
-
-def run_force_layout(
-    links,
-    n_cells: int,
-    *,
-    n_iter: int = 100,
-    edgeWeightInfluence=1,
-    barnesHutTheta=2,
-    scalingRatio=1,
-    gravity=0.05,
-    jitterTolerance=1,
-    verbose=False,
-):
-    from fa2 import ForceAtlas2
-    import networkx as nx
-
-    G = nx.Graph()
-    G.add_nodes_from(range(n_cells))
-    G.add_edges_from(list(links))
-
-    forceatlas2 = ForceAtlas2(
-        # Behavior alternatives
-        outboundAttractionDistribution=False,  # Dissuade hubs
-        linLogMode=False,  # NOT IMPLEMENTED
-        adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
-        edgeWeightInfluence=edgeWeightInfluence,
-        # Performance
-        jitterTolerance=jitterTolerance,  # Tolerance
-        barnesHutOptimize=True,
-        barnesHutTheta=barnesHutTheta,
-        multiThreaded=False,  # NOT IMPLEMENTED
-        # Tuning
-        scalingRatio=scalingRatio,
-        strongGravityMode=False,
-        gravity=gravity,
-        # Log
-        verbose=verbose,
-    )
-
-    positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=n_iter)
-    positions = np.array([positions[i] for i in sorted(positions.keys())])
-    return positions
-
-
-########## CLUSTERING
-
-
-def get_spectral_clusters(A, k):
-    from sklearn.cluster import SpectralClustering
-
-    spec = SpectralClustering(
-        n_clusters=k, random_state=0, affinity='precomputed', assign_labels='discretize'
-    )
-    return spec.fit_predict(A)
-
-
-def get_louvain_clusters(nodes, edges):
-    import networkx as nx
-    import community
-
-    G = nx.Graph()
-    G.add_nodes_from(nodes)
-    G.add_edges_from(edges)
-
-    return np.array(list(community.best_partition(G).values()))
-
-
-########## GENE ENRICHMENT
-
-
-def rank_enriched_genes(
-    E,
-    gene_list,
-    cell_mask,
-    min_counts: int = 3,
-    min_cells: int = 3,
-    verbose: bool = False,
-):
-    gix = (E[cell_mask, :] >= min_counts).sum(0).A.squeeze() >= min_cells
-    print_optional('%i cells in group' % (sum(cell_mask)), verbose)
-    print_optional('Considering %i genes' % (sum(gix)), verbose)
-
-    gene_list = gene_list[gix]
-
-    z = sparse_zscore(E[:, gix])
-    scores = z[cell_mask, :].mean(0).A.squeeze()
-    o = np.argsort(-scores)
-
-    return gene_list[o], scores[o]
