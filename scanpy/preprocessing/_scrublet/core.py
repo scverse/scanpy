@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import cast
 
 import numpy as np
@@ -10,18 +9,22 @@ from numpy.typing import NDArray
 from ..._utils import AnyRandom
 from .utils import (
     get_knn_graph,
-    pipeline_apply_gene_filter,
-    pipeline_get_gene_filter,
-    pipeline_log_transform,
     pipeline_mean_center,
-    pipeline_normalize,
     pipeline_normalize_variance,
     pipeline_pca,
     pipeline_truncated_svd,
     pipeline_zscore,
-    print_optional,
     subsample_counts,
 )
+
+__all__ = [
+    "Scrublet",
+    "pipeline_mean_center",
+    "pipeline_zscore",
+    "pipeline_normalize_variance",
+    "pipeline_pca",
+    "pipeline_truncated_svd",
+]
 
 
 class Scrublet:
@@ -151,166 +154,6 @@ class Scrublet:
 
         if self.n_neighbors is None:
             self.n_neighbors = int(round(0.5 * np.sqrt(self._E_obs.shape[0])))
-
-    ######## Core Scrublet functions ########
-
-    def scrub_doublets(
-        self,
-        *,
-        synthetic_doublet_umi_subsampling: float = 1.0,
-        use_approx_neighbors: bool = True,
-        distance_metric: str = 'euclidean',
-        get_doublet_neighbor_parents: bool = False,
-        min_counts: int = 3,
-        min_cells: int = 3,
-        min_gene_variability_pctl: float | int = 85,
-        log_transform: bool = False,
-        mean_center: bool = True,
-        normalize_variance: bool = True,
-        n_prin_comps: int = 30,
-        svd_solver: str = 'arpack',
-        verbose: bool = True,
-    ) -> tuple[NDArray[np.float64], NDArray[np.bool_] | None]:
-        """Standard pipeline for preprocessing, doublet simulation, and doublet prediction
-
-        Automatically sets a threshold for calling doublets, but it's best to check
-        this by running plot_histogram() afterwards and adjusting threshold
-        with call_doublets(threshold=new_threshold) if necessary.
-
-        Arguments
-        ---------
-        synthetic_doublet_umi_subsampling : float, optional (defuault: 1.0)
-            Rate for sampling UMIs when creating synthetic doublets. If 1.0,
-            each doublet is created by simply adding the UMIs from two randomly
-            sampled observed transcriptomes. For values less than 1, the
-            UMI counts are added and then randomly sampled at the specified
-            rate.
-
-        use_approx_neighbors : bool, optional (default: True)
-            Use approximate nearest neighbor method (annoy) for the KNN
-            classifier.
-
-        distance_metric : str, optional (default: 'euclidean')
-            Distance metric used when finding nearest neighbors. For list of
-            valid values, see the documentation for annoy (if `use_approx_neighbors`
-            is True) or sklearn.neighbors.NearestNeighbors (if `use_approx_neighbors`
-            is False).
-
-        get_doublet_neighbor_parents : bool, optional (default: False)
-            If True, return the parent transcriptomes that generated the
-            doublet neighbors of each observed transcriptome. This information can
-            be used to infer the cell states that generated a given
-            doublet state.
-
-        min_counts : float, optional (default: 3)
-            Used for gene filtering prior to PCA. Genes expressed at fewer than
-            `min_counts` in fewer than `min_cells` (see below) are excluded.
-
-        min_cells : int, optional (default: 3)
-            Used for gene filtering prior to PCA. Genes expressed at fewer than
-            `min_counts` (see above) in fewer than `min_cells` are excluded.
-
-        min_gene_variability_pctl : float, optional (default: 85.0)
-            Used for gene filtering prior to PCA. Keep the most highly variable genes
-            (in the top min_gene_variability_pctl percentile), as measured by
-            the v-statistic [Klein et al., Cell 2015].
-
-        log_transform : bool, optional (default: False)
-            If True, log-transform the counts matrix (log10(1+TPM)).
-            `sklearn.decomposition.TruncatedSVD` will be used for dimensionality
-            reduction, unless `mean_center` is True.
-
-        mean_center : bool, optional (default: True)
-            If True, center the data such that each gene has a mean of 0.
-            `sklearn.decomposition.PCA` will be used for dimensionality
-            reduction.
-
-        normalize_variance : bool, optional (default: True)
-            If True, normalize the data such that each gene has a variance of 1.
-            `sklearn.decomposition.TruncatedSVD` will be used for dimensionality
-            reduction, unless `mean_center` is True.
-
-        n_prin_comps : int, optional (default: 30)
-            Number of principal components used to embed the transcriptomes prior
-            to k-nearest-neighbor graph construction.
-
-        svd_solver : str, optional (default: 'arpack')
-            SVD solver to use. See available options for
-            `svd_solver` from `sklearn.decomposition.PCA` or
-            `algorithm` from `sklearn.decomposition.TruncatedSVD`
-
-        verbose : bool, optional (default: True)
-            If True, print progress updates.
-
-        Sets
-        ----
-        doublet_scores_obs_, doublet_errors_obs_,
-        doublet_scores_sim_, doublet_errors_sim_,
-        predicted_doublets_, z_scores_
-        threshold_, detected_doublet_rate_,
-        detectable_doublet_fraction_, overall_doublet_rate_,
-        doublet_parents_, doublet_neighbor_parents_
-        """
-        t0 = time.time()
-
-        self._E_sim = None
-        self._E_obs_norm = None
-        self._E_sim_norm = None
-        self._gene_filter = np.arange(self._E_obs.shape[1])
-
-        print_optional('Preprocessing...', verbose)
-        pipeline_normalize(self)
-        pipeline_get_gene_filter(
-            self,
-            min_counts=min_counts,
-            min_cells=min_cells,
-            min_gene_variability_pctl=min_gene_variability_pctl,
-        )
-        pipeline_apply_gene_filter(self)
-
-        print_optional('Simulating doublets...', verbose)
-        self.simulate_doublets(
-            sim_doublet_ratio=self.sim_doublet_ratio,
-            synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
-        )
-        pipeline_normalize(self, postnorm_total=1e6)
-        if log_transform:
-            pipeline_log_transform(self)
-        if mean_center and normalize_variance:
-            pipeline_zscore(self)
-        elif mean_center:
-            pipeline_mean_center(self)
-        elif normalize_variance:
-            pipeline_normalize_variance(self)
-
-        if mean_center:
-            print_optional('Embedding transcriptomes using PCA...', verbose)
-            pipeline_pca(
-                self,
-                n_prin_comps=n_prin_comps,
-                random_state=self.random_state,
-                svd_solver=svd_solver,
-            )
-        else:
-            print_optional('Embedding transcriptomes using Truncated SVD...', verbose)
-            pipeline_truncated_svd(
-                self,
-                n_prin_comps=n_prin_comps,
-                random_state=self.random_state,
-                algorithm=svd_solver,
-            )
-
-        print_optional('Calculating doublet scores...', verbose)
-        self.calculate_doublet_scores(
-            use_approx_neighbors=use_approx_neighbors,
-            distance_metric=distance_metric,
-            get_doublet_neighbor_parents=get_doublet_neighbor_parents,
-        )
-        self.call_doublets(verbose=verbose)
-
-        t1 = time.time()
-        print_optional('Elapsed time: {:.1f} seconds'.format(t1 - t0), verbose)
-        return self.doublet_scores_obs_, self.predicted_doublets_
 
     def simulate_doublets(
         self,

@@ -17,55 +17,6 @@ Scale = Literal["linear", "log", "symlog", "logit"] | str
 ########## PREPROCESSING PIPELINE
 
 
-def print_optional(string, verbose: bool = True) -> None:
-    if verbose:
-        print(string)
-
-
-def pipeline_normalize(self, postnorm_total: float | None = None):
-    """Total counts normalization"""
-    if postnorm_total is None:
-        postnorm_total = self._total_counts_obs.mean()
-
-    self._E_obs_norm = tot_counts_norm(
-        self._E_obs, target_total=postnorm_total, total_counts=self._total_counts_obs
-    )
-
-    if self._E_sim is not None:
-        self._E_sim_norm = tot_counts_norm(
-            self._E_sim,
-            target_total=postnorm_total,
-            total_counts=self._total_counts_sim,
-        )
-    return
-
-
-def pipeline_get_gene_filter(
-    self,
-    min_counts: int = 3,
-    min_cells: int = 3,
-    min_gene_variability_pctl: float | int = 85,
-) -> None:
-    """Identify highly variable genes expressed above a minimum level"""
-    self._gene_filter = filter_genes(
-        self._E_obs_norm,
-        min_counts=min_counts,
-        min_cells=min_cells,
-        min_vscore_pctl=min_gene_variability_pctl,
-    )
-
-
-def pipeline_apply_gene_filter(self) -> None:
-    if self._E_obs is not None:
-        self._E_obs = self._E_obs[:, self._gene_filter]
-    if self._E_obs_norm is not None:
-        self._E_obs_norm = self._E_obs_norm[:, self._gene_filter]
-    if self._E_sim is not None:
-        self._E_sim = self._E_sim[:, self._gene_filter]
-    if self._E_sim_norm is not None:
-        self._E_sim_norm = self._E_sim_norm[:, self._gene_filter]
-
-
 def pipeline_mean_center(self) -> None:
     gene_means = self._E_obs_norm.mean(0)
     self._E_obs_norm = self._E_obs_norm - gene_means
@@ -92,12 +43,6 @@ def pipeline_zscore(self) -> None:
                 self._E_sim_norm, gene_mean=gene_means, gene_stdev=gene_stdevs
             )
         )
-
-
-def pipeline_log_transform(self, pseudocount: int = 1) -> None:
-    self._E_obs_norm = log_normalize(self._E_obs_norm, pseudocount)
-    if self._E_sim_norm is not None:
-        self._E_sim_norm = log_normalize(self._E_sim_norm, pseudocount)
 
 
 def pipeline_truncated_svd(
@@ -133,29 +78,6 @@ def pipeline_pca(
         n_components=n_prin_comps, random_state=random_state, svd_solver=svd_solver
     ).fit(X_obs)
     self.set_manifold(pca.transform(X_obs), pca.transform(X_sim))
-
-
-def matrix_multiply(
-    X: sparse.spmatrix | NDArray, Y: sparse.spmatrix | NDArray
-) -> NDArray:
-    if not type(X) == np.ndarray:
-        if sparse.issparse(X):
-            X = X.toarray()
-        else:
-            X = np.array(X)
-    if not type(Y) == np.ndarray:
-        if sparse.issparse(Y):
-            Y = Y.toarray()
-        else:
-            Y = np.array(Y)
-    return np.dot(X, Y)
-
-
-def log_normalize(
-    X: sparse.csr_matrix | sparse.csc_matrix, pseudocount: int = 1
-) -> sparse.csr_matrix | sparse.csc_matrix:
-    X.data = np.log10(X.data + pseudocount)
-    return X
 
 
 ########## USEFUL SPARSE FUNCTIONS
@@ -302,68 +224,6 @@ def get_vscores(
     CV_input = np.sqrt(b)
 
     return v_scores, CV_eff, CV_input, gene_ix, mu_gene, FF_gene, a, b
-
-
-def filter_genes(
-    E,
-    base_ix=[],
-    min_vscore_pctl: float | int = 85,
-    min_counts: int = 3,
-    min_cells: int = 3,
-    show_vscore_plot: bool = False,
-    sample_name: str | None = None,
-):
-    """
-    Filter genes by expression level and variability
-    Return list of filtered gene indices
-    """
-
-    if len(base_ix) == 0:
-        base_ix = np.arange(E.shape[0])
-
-    Vscores, CV_eff, CV_input, gene_ix, mu_gene, FF_gene, a, b = get_vscores(
-        E[base_ix, :]
-    )
-    ix2 = Vscores > 0
-    Vscores = Vscores[ix2]
-    gene_ix = gene_ix[ix2]
-    mu_gene = mu_gene[ix2]
-    FF_gene = FF_gene[ix2]
-    min_vscore = np.percentile(Vscores, min_vscore_pctl)
-    ix = ((E[:, gene_ix] >= min_counts).sum(0).A.squeeze() >= min_cells) & (
-        Vscores >= min_vscore
-    )
-
-    if show_vscore_plot:
-        import matplotlib.pyplot as plt
-
-        x_min = 0.5 * np.min(mu_gene)
-        x_max = 2 * np.max(mu_gene)
-        xTh = x_min * np.exp(np.log(x_max / x_min) * np.linspace(0, 1, 100))
-        yTh = (1 + a) * (1 + b) + b * xTh
-        plt.figure(figsize=(8, 6))
-        plt.scatter(
-            np.log10(mu_gene),
-            np.log10(FF_gene),
-            c=(0.8, 0.8, 0.8),
-            alpha=0.3,
-            edgecolors=None,
-        )
-        plt.scatter(
-            np.log10(mu_gene)[ix],
-            np.log10(FF_gene)[ix],
-            c=(0, 0, 0),
-            alpha=0.3,
-            edgecolors=None,
-        )
-        plt.plot(np.log10(xTh), np.log10(yTh))
-        if sample_name is not None:
-            plt.title(sample_name)
-        plt.xlabel('log10(mean)')
-        plt.ylabel('log10(Fano factor)')
-        plt.show()
-
-    return gene_ix[ix]
 
 
 ########## CELL NORMALIZATION
