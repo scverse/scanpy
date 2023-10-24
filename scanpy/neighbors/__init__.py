@@ -37,10 +37,7 @@ from .. import _utils, settings
 from .._utils import _doc_params, AnyRandom, NeighborsView
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 
-if sys.version_info >= (3, 9):
-    RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
-else:
-    RPForestDict = Mapping
+RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 
 N_DCS = 15  # default number of diffusion components
