@@ -41,7 +41,7 @@ sc.set_figure_params(dpi=40, color_map="viridis")
 # If test images need to be updated, simply copy actual.png to expected.png.
 
 
-@needs("leidenalg")
+@needs.leidenalg
 def test_heatmap(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
@@ -1612,7 +1612,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs("scrublet")
+@needs.scrublet
 def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 

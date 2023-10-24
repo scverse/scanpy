@@ -26,7 +26,7 @@ HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images_pbmc3k"
 
 
-@needs("leidenalg")
+@needs.leidenalg
 def test_pbmc3k(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
 

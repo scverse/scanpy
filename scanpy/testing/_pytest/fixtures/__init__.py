@@ -42,7 +42,7 @@ def _as_dense_dask_array(x: ArrayLike) -> DaskArray:
         pytest.param(sparse.csr_matrix, id="scipy-csr"),
         pytest.param(sparse.csc_matrix, id="scipy-csc"),
         # Dask doesn’t support scipy sparse matrices, so only dense here
-        pytest.param(_as_dense_dask_array, marks=[needs("dask")], id="dask-array"),
+        pytest.param(_as_dense_dask_array, marks=[needs.dask], id="dask-array"),
     ]
 )
 def array_type(

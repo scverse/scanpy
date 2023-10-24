@@ -64,7 +64,7 @@ def test_is_constant(array_type):
     )
 
 
-@needs("dask")
+@needs.dask
 @pytest.mark.parametrize(
     ("axis", "expected"),
     [

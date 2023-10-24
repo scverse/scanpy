@@ -47,7 +47,7 @@ A_svd = np.array(
         lambda: sparse.csr_matrix,
         lambda: sparse.csc_matrix,
         lambda: asarray,
-        pytest.param(lambda: as_dense_dask_array, marks=[needs("dask_ml")]),
+        pytest.param(lambda: as_dense_dask_array, marks=[needs.dask_ml]),
     ],
     ids=["scipy-csr", "scipy-csc", "np-ndarray", "dask-array"],
 )

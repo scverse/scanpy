@@ -14,7 +14,7 @@ HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
 
 
-pytestmark = [needs("igraph")]
+pytestmark = [needs.igraph]
 
 
 @pytest.fixture(scope="module")

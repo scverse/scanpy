@@ -4,7 +4,7 @@ from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
 
 
-pytestmark = [needs("scanorama")]
+pytestmark = [needs.scanorama]
 
 
 def test_scanorama_integrate():
