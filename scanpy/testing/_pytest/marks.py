@@ -13,6 +13,7 @@ KNOWN = dict(
     igraph="igraph",
     dask="dask",
     dask_ml="dask-ml",
+    skimage="scikit-image",
     zarr="zarr",
     zappy="zappy",
     # external

@@ -1612,6 +1612,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
+@needs("skimage")
 def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
