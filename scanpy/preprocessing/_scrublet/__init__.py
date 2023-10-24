@@ -398,8 +398,8 @@ def _scrublet_call_doublets(
     # Ensure normalised matrix sparseness as Scrublet does
     # https://github.com/swolock/scrublet/blob/67f8ecbad14e8e1aa9c89b43dac6638cebe38640/src/scrublet/scrublet.py#L100
 
-    scrub._E_obs_norm = sparse.csc_matrix(adata_obs.X)
-    scrub._E_sim_norm = sparse.csc_matrix(adata_sim.X)
+    scrub._counts_obs_norm = sparse.csc_matrix(adata_obs.X)
+    scrub._counts_sim_norm = sparse.csc_matrix(adata_sim.X)
 
     scrub.doublet_parents_ = adata_sim.obsm["doublet_parents"]
 
@@ -419,10 +419,10 @@ def _scrublet_call_doublets(
     if mean_center:
         logg.info("Embedding transcriptomes using PCA...")
         # Sklearn PCA doesn't like matrices, so convert to arrays
-        if isinstance(scrub._E_obs_norm, np.matrix):
-            scrub._E_obs_norm = np.asarray(scrub._E_obs_norm)
-        if isinstance(scrub._E_sim_norm, np.matrix):
-            scrub._E_sim_norm = np.asarray(scrub._E_sim_norm)
+        if isinstance(scrub._counts_obs_norm, np.matrix):
+            scrub._counts_obs_norm = np.asarray(scrub._counts_obs_norm)
+        if isinstance(scrub._counts_sim_norm, np.matrix):
+            scrub._counts_sim_norm = np.asarray(scrub._counts_sim_norm)
         pipeline.pca(scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state)
     else:
         logg.info("Embedding transcriptomes using Truncated SVD...")
@@ -541,7 +541,7 @@ def scrublet_simulate_doublets(
         synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
     )
 
-    adata_sim = AnnData(scrub._E_sim)
+    adata_sim = AnnData(scrub._counts_sim)
     adata_sim.obs["n_counts"] = scrub._total_counts_sim
     adata_sim.obsm["doublet_parents"] = scrub.doublet_parents_
     adata_sim.uns["scrublet"] = {"parameters": {"sim_doublet_ratio": sim_doublet_ratio}}

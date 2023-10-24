@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 from typing import Literal, Union as _U, overload
 
 import numpy as np
 from scipy import sparse
 from numpy.typing import NDArray
-from sklearn.neighbors import NearestNeighbors
 
 from ..._utils import AnyRandom, get_random_state
 
@@ -117,6 +118,7 @@ def get_knn_graph(
     Build k-nearest-neighbor graph
     Return edge list and nearest neighbor matrix
     """
+    from sklearn.neighbors import NearestNeighbors
 
     # t0 = time.time()
     if approx:

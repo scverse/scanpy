@@ -78,7 +78,7 @@ def test_scrublet_data():
 
     # Replicate the preprocessing steps used by the main function
 
-    def preprocess_for_scrublet(adata):
+    def preprocess_for_scrublet(adata: ad.AnnData) -> ad.AnnData:
         adata_pp = adata.copy()
         pp.filter_genes(adata_pp, min_cells=3)
         pp.filter_cells(adata_pp, min_genes=3)
@@ -88,11 +88,11 @@ def test_scrublet_data():
         pp.highly_variable_genes(logged)
         adata_pp = adata_pp[:, logged.var["highly_variable"]]
 
-        return adata_pp
+        return adata_pp.copy()
 
     # Simulate doublets using the same parents
 
-    def create_sim_from_parents(adata, parents):
+    def create_sim_from_parents(adata: ad.AnnData, parents) -> ad.AnnData:
         # Now simulate doublets based on the randomly selected parents used
         # previously
 
@@ -102,13 +102,13 @@ def test_scrublet_data():
                 np.ones(2 * N_sim),
                 (np.repeat(np.arange(N_sim), 2), parents.flat),
             ),
-            (N_sim, adata_obs.n_obs),
+            (N_sim, adata.n_obs),
         )
-        X = I @ adata_obs.layers["raw"]
+        X = I @ adata.layers["raw"]
         return ad.AnnData(
             X,
-            var=pd.DataFrame(index=adata_obs.var_names),
-            obs=pd.DataFrame({"total_counts": np.ravel(X.sum(axis=1))}),
+            var=pd.DataFrame(index=adata.var_names),
+            obs={"total_counts": np.ravel(X.sum(axis=1))},
             obsm={"doublet_parents": parents.copy()},
         )
 
