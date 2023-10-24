@@ -41,7 +41,7 @@ def normalize_total(
     max_fraction: float = 0.05,
     key_added: Optional[str] = None,
     layer: Optional[str] = None,
-    layers: Union[Literal['all'], Iterable[str]] = None,
+    layers: Union[Literal["all"], Iterable[str]] = None,
     layer_norm: Optional[str] = None,
     inplace: bool = True,
     copy: bool = False,
@@ -134,7 +134,7 @@ def normalize_total(
         adata = adata.copy()
 
     if max_fraction < 0 or max_fraction > 1:
-        raise ValueError('Choose max_fraction between 0 and 1.')
+        raise ValueError("Choose max_fraction between 0 and 1.")
 
     # Deprecated features
     if layers is not None:
@@ -152,7 +152,7 @@ def normalize_total(
             )
         )
 
-    if layers == 'all':
+    if layers == "all":
         layers = adata.layers.keys()
     elif isinstance(layers, str):
         raise ValueError(
@@ -164,7 +164,7 @@ def normalize_total(
     X = _get_obs_rep(adata, layer=layer)
 
     gene_subset = None
-    msg = 'normalizing counts per cell'
+    msg = "normalizing counts per cell"
     if exclude_highly_expressed:
         counts_per_cell = X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
@@ -175,8 +175,8 @@ def normalize_total(
         gene_subset = np.asarray(np.ravel(gene_subset) == 0)
 
         msg += (
-            ' The following highly-expressed genes are not considered during '
-            f'normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}'
+            " The following highly-expressed genes are not considered during "
+            f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
         )
         counts_per_cell = X[:, gene_subset].sum(1)
     else:
@@ -186,7 +186,7 @@ def normalize_total(
 
     cell_subset = counts_per_cell > 0
     if not np.all(cell_subset):
-        warn(UserWarning('Some cells have zero counts'))
+        warn(UserWarning("Some cells have zero counts"))
 
     if inplace:
         if key_added is not None:
@@ -202,9 +202,9 @@ def normalize_total(
         )
 
     # Deprecated features
-    if layer_norm == 'after':
+    if layer_norm == "after":
         after = target_sum
-    elif layer_norm == 'X':
+    elif layer_norm == "X":
         after = np.median(counts_per_cell[cell_subset])
     elif layer_norm is None:
         after = None
@@ -219,12 +219,12 @@ def normalize_total(
             dat[layer_to_norm] = res["X"]
 
     logg.info(
-        '    finished ({time_passed})',
+        "    finished ({time_passed})",
         time=start,
     )
     if key_added is not None:
         logg.debug(
-            f'and added {key_added!r}, counts per cell before normalization (adata.obs)'
+            f"and added {key_added!r}, counts per cell before normalization (adata.obs)"
         )
 
     if copy:

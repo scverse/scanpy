@@ -104,7 +104,7 @@ def tot_counts_norm(
                     ~(((wtmp * E) > exclude_dominant_frac).sum(axis=0) > 0)
                 )[0, :]
                 tots_use = E[:, included].sum(axis=1)
-                print('Excluded %i genes from normalization' % (np.sum(~included)))
+                print("Excluded %i genes from normalization" % (np.sum(~included)))
         else:
             tots_use = E[:, included].sum(axis=1)
     else:
@@ -128,7 +128,7 @@ def get_knn_graph(
     X,
     k: int = 5,
     *,
-    dist_metric: str = 'euclidean',
+    dist_metric: str = "euclidean",
     approx: bool = False,
     return_edges: Literal[True] = True,
     random_seed: AnyRandom = 0,
@@ -141,7 +141,7 @@ def get_knn_graph(
     X,
     k: int = 5,
     *,
-    dist_metric: str = 'euclidean',
+    dist_metric: str = "euclidean",
     approx: bool = False,
     return_edges: Literal[False],
     random_seed: AnyRandom = 0,
@@ -153,7 +153,7 @@ def get_knn_graph(
     X,
     k: int = 5,
     *,
-    dist_metric: str = 'euclidean',
+    dist_metric: str = "euclidean",
     approx: bool = False,
     return_edges: bool = True,
     random_seed: AnyRandom = 0,
@@ -173,8 +173,8 @@ def get_knn_graph(
     if approx:
         # print('Using approximate nearest neighbor search')
 
-        if dist_metric == 'cosine':
-            dist_metric = 'angular'
+        if dist_metric == "cosine":
+            dist_metric = "angular"
         npc = X.shape[1]
         ncell = X.shape[0]
         annoy_index = AnnoyIndex(npc, metric=dist_metric)
@@ -192,9 +192,9 @@ def get_knn_graph(
     else:
         # print('Using sklearn NearestNeighbors')
 
-        if dist_metric == 'cosine':
+        if dist_metric == "cosine":
             nbrs = NearestNeighbors(
-                n_neighbors=k, metric=dist_metric, algorithm='brute'
+                n_neighbors=k, metric=dist_metric, algorithm="brute"
             ).fit(X)
         else:
             nbrs = NearestNeighbors(n_neighbors=k, metric=dist_metric).fit(X)

@@ -6,7 +6,7 @@ from scanpy.testing._helpers.data import pbmc3k
 from scanpy.testing._pytest.marks import needs
 
 
-pytestmark = [needs('samalg')]
+pytestmark = [needs("samalg")]
 
 
 def test_sam():
@@ -18,4 +18,4 @@ def test_sam():
     sce.tl.sam(adata, inplace=True)
     uns_keys = list(adata.uns.keys())
     obsm_keys = list(adata.obsm.keys())
-    assert all(['sam' in uns_keys, 'X_umap' in obsm_keys, 'neighbors' in uns_keys])
+    assert all(["sam" in uns_keys, "X_umap" in obsm_keys, "neighbors" in uns_keys])

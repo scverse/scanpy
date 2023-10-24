@@ -1,17 +1,12 @@
 [build-system]
-build-backend = "flit_core.buildapi"
-requires = [
-    "flit_core >=3.4,<4",
-    "setuptools_scm",
-    "tomli",
-    "importlib_metadata>=0.7; python_version < '3.8'",
-]
+build-backend = "hatchling.build"
+requires = ["hatchling", "hatch-vcs"]
 
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-requires-python = ">=3.8"
-license = {file = "LICENSE"}
+requires-python = ">=3.9"
+license = "BSD-3-clause"
 authors = [
     {name = "Alex Wolf"},
     {name = "Philipp Angerer"},
@@ -31,7 +26,7 @@ maintainers = [
     {name = "Philipp Angerer", email = "phil.angerer@gmail.com"},
     {name = "Alex Wolf", email = "f.alex.wolf@gmx.de"},
 ]
-readme = {file = "README.md", content-type="text/markdown"}
+readme = "README.md"
 classifiers = [
     "License :: OSI Approved :: BSD License",
     "Development Status :: 5 - Production/Stable",
@@ -44,7 +39,6 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -146,11 +140,12 @@ rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculati
 dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
 dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
-[tool.flit.sdist]
-exclude = [
-    "scanpy/tests",
-    "setup.py",
-]
+[tool.hatch.build]
+exclude = ["scanpy/tests"]
+[tool.hatch.version]
+source = "vcs"
+[tool.hatch.build.hooks.vcs]
+version-file = "scanpy/_version.py"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -171,9 +166,6 @@ source_pkgs = ["scanpy"]
 omit = ["*/tests/*"]
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
-
-[tool.black]
-skip-string-normalization = true
 
 [tool.ruff]
 select = [

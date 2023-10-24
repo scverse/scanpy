@@ -242,7 +242,7 @@ class Scrublet:
     def calculate_doublet_scores(
         self,
         use_approx_neighbors: bool = True,
-        distance_metric: str = 'euclidean',
+        distance_metric: str = "euclidean",
         get_doublet_neighbor_parents: bool = False,
     ) -> NDArray[np.float64]:
         """\
@@ -290,7 +290,7 @@ class Scrublet:
         k: int = 40,
         *,
         use_approx_nn: bool = True,
-        distance_metric: str = 'euclidean',
+        distance_metric: str = "euclidean",
         exp_doub_rate: float = 0.1,
         stdev_doub_rate: float = 0.03,
         get_neighbor_parents: bool = False,
@@ -431,17 +431,17 @@ class Scrublet:
 
         if verbose:
             print(
-                'Detected doublet rate = {:.1f}%'.format(
+                "Detected doublet rate = {:.1f}%".format(
                     100 * self.detected_doublet_rate_
                 )
             )
             print(
-                'Estimated detectable doublet fraction = {:.1f}%'.format(
+                "Estimated detectable doublet fraction = {:.1f}%".format(
                     100 * self.detectable_doublet_fraction_
                 )
             )
-            print('Overall doublet rate:')
-            print('\tExpected   = {:.1f}%'.format(100 * self.expected_doublet_rate))
-            print('\tEstimated  = {:.1f}%'.format(100 * self.overall_doublet_rate_))
+            print("Overall doublet rate:")
+            print("\tExpected   = {:.1f}%".format(100 * self.expected_doublet_rate))
+            print("\tEstimated  = {:.1f}%".format(100 * self.overall_doublet_rate_))
 
         return self.predicted_doublets_

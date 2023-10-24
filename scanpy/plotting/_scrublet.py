@@ -14,8 +14,8 @@ from . import _utils
 def scrublet_score_distribution(
     adata,
     *,
-    scale_hist_obs: Scale = 'log',
-    scale_hist_sim: Scale = 'linear',
+    scale_hist_obs: Scale = "log",
+    scale_hist_sim: Scale = "linear",
     figsize: tuple[float | int, float | int] = (8, 3),
     return_fig: bool = False,
     show: bool = True,
@@ -67,7 +67,7 @@ def scrublet_score_distribution(
         ax.hist(
             scores,
             np.linspace(0, 1, 50),
-            color='gray',
+            color="gray",
             linewidth=0,
             density=True,
         )
@@ -76,21 +76,21 @@ def scrublet_score_distribution(
         ax.set_ylim(yl)
 
         if threshold is not None:
-            ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+            ax.plot(threshold * np.ones(2), yl, c="black", linewidth=1)
 
         ax.set_title(title)
-        ax.set_xlabel('Doublet score')
-        ax.set_ylabel('Prob. density')
+        ax.set_xlabel("Doublet score")
+        ax.set_ylabel("Prob. density")
 
-    if 'scrublet' not in adata.uns:
+    if "scrublet" not in adata.uns:
         raise ValueError(
-            'Please run scrublet before trying to generate the scrublet plot.'
+            "Please run scrublet before trying to generate the scrublet plot."
         )
 
     # If batched_by is populated, then we know Scrublet was run over multiple batches
 
-    if 'batched_by' in adata.uns['scrublet']:
-        batched_by = adata.uns['scrublet']['batched_by']
+    if "batched_by" in adata.uns["scrublet"]:
+        batched_by = adata.uns["scrublet"]["batched_by"]
         batches = adata.obs[batched_by].astype("category", copy=False)
         n_batches = len(batches.cat.categories)
         figsize = (figsize[0], figsize[1] * n_batches)
@@ -104,12 +104,12 @@ def scrublet_score_distribution(
 
     for idx, (batch_key, sub_obs) in enumerate(adata.obs.groupby(batches)):
         # We'll need multiple rows if Scrublet was run in multiple batches
-        if 'batched_by' in adata.uns['scrublet']:
-            threshold = adata.uns["scrublet"]['batches'][batch_key].get(
+        if "batched_by" in adata.uns["scrublet"]:
+            threshold = adata.uns["scrublet"]["batches"][batch_key].get(
                 "threshold", None
             )
-            doublet_scores_sim = adata.uns['scrublet']['batches'][batch_key][
-                'doublet_scores_sim'
+            doublet_scores_sim = adata.uns["scrublet"]["batches"][batch_key][
+                "doublet_scores_sim"
             ]
             axis_lab_suffix = " (%s)" % batch_key
             obs_ax = axs[idx][0]
@@ -117,8 +117,8 @@ def scrublet_score_distribution(
 
         else:
             threshold = adata.uns["scrublet"].get("threshold", None)
-            doublet_scores_sim = adata.uns['scrublet']['doublet_scores_sim']
-            axis_lab_suffix = ''
+            doublet_scores_sim = adata.uns["scrublet"]["doublet_scores_sim"]
+            axis_lab_suffix = ""
             obs_ax = axs[0]
             sim_ax = axs[1]
 
@@ -140,7 +140,7 @@ def scrublet_score_distribution(
 
     fig.tight_layout()
 
-    _utils.savefig_or_show('scrublet_score_distribution', show=show, save=save)
+    _utils.savefig_or_show("scrublet_score_distribution", show=show, save=save)
     if return_fig:
         return fig
     elif not show:

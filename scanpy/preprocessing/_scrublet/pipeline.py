@@ -46,7 +46,7 @@ def truncated_svd(
     n_prin_comps: int = 30,
     *,
     random_state: AnyRandom = 0,
-    algorithm: Literal['arpack', 'randomized'] = 'arpack',
+    algorithm: Literal["arpack", "randomized"] = "arpack",
 ) -> None:
     svd = TruncatedSVD(
         n_components=n_prin_comps, random_state=random_state, algorithm=algorithm
@@ -59,7 +59,7 @@ def pca(
     n_prin_comps: int = 50,
     *,
     random_state: AnyRandom = 0,
-    svd_solver: Literal['auto', 'full', 'arpack', 'randomized'] = 'arpack',
+    svd_solver: Literal["auto", "full", "arpack", "randomized"] = "arpack",
 ) -> None:
     if sparse.issparse(self._E_obs_norm):
         X_obs = self._E_obs_norm.toarray()

@@ -104,7 +104,7 @@ def recipe_pearson_residuals(
     """
 
     hvg_args = dict(
-        flavor='pearson_residuals',
+        flavor="pearson_residuals",
         n_top_genes=n_top_genes,
         batch_key=batch_key,
         theta=theta,
@@ -116,11 +116,11 @@ def recipe_pearson_residuals(
     if inplace:
         experimental.pp.highly_variable_genes(adata, **hvg_args, inplace=True)
         # TODO: are these copies needed?
-        adata_pca = adata[:, adata.var['highly_variable']].copy()
+        adata_pca = adata[:, adata.var["highly_variable"]].copy()
     else:
         hvg = experimental.pp.highly_variable_genes(adata, **hvg_args, inplace=False)
         # TODO: are these copies needed?
-        adata_pca = adata[:, hvg['highly_variable']].copy()
+        adata_pca = adata[:, hvg["highly_variable"]].copy()
 
     experimental.pp.normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
@@ -128,16 +128,16 @@ def recipe_pearson_residuals(
     pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
 
     if inplace:
-        normalization_param = adata_pca.uns['pearson_residuals_normalization']
+        normalization_param = adata_pca.uns["pearson_residuals_normalization"]
         normalization_dict = dict(
             **normalization_param, pearson_residuals_df=adata_pca.to_df()
         )
 
-        adata.uns['pca'] = adata_pca.uns['pca']
-        adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
-        adata.varm['PCs'][adata.var['highly_variable']] = adata_pca.varm['PCs']
-        adata.uns['pearson_residuals_normalization'] = normalization_dict
-        adata.obsm['X_pca'] = adata_pca.obsm['X_pca']
+        adata.uns["pca"] = adata_pca.uns["pca"]
+        adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
+        adata.varm["PCs"][adata.var["highly_variable"]] = adata_pca.varm["PCs"]
+        adata.uns["pearson_residuals_normalization"] = normalization_dict
+        adata.obsm["X_pca"] = adata_pca.obsm["X_pca"]
         return None
     else:
         return adata_pca, hvg

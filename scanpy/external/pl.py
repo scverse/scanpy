@@ -67,7 +67,7 @@ def phate(adata, **kwargs) -> Union[List[Axes], None]:
     ...     color_map='tab20',
     ... )
     """
-    return embedding(adata, 'phate', **kwargs)
+    return embedding(adata, "phate", **kwargs)
 
 
 @_wraps_plot_scatter
@@ -92,7 +92,7 @@ def trimap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    return embedding(adata, 'trimap', **kwargs)
+    return embedding(adata, "trimap", **kwargs)
 
 
 @_wraps_plot_scatter
@@ -128,13 +128,13 @@ def harmony_timeseries(
     for i, tp in enumerate(tps):
         p = embedding(
             adata,
-            'harmony',
+            "harmony",
             color=tp_name,
             groups=tp,
             title=tp,
             show=False,
             ax=axes[i],
-            legend_loc='none',
+            legend_loc="none",
         )
         p.set_axis_off()
     if return_fig:
@@ -145,11 +145,11 @@ def harmony_timeseries(
 
 def sam(
     adata: AnnData,
-    projection: Union[str, np.ndarray] = 'X_umap',
+    projection: Union[str, np.ndarray] = "X_umap",
     c: Optional[Union[str, np.ndarray]] = None,
-    cmap: str = 'Spectral_r',
+    cmap: str = "Spectral_r",
     linewidth: float = 0.0,
-    edgecolor: str = 'k',
+    edgecolor: str = "k",
     axes: Optional[Axes] = None,
     colorbar: bool = True,
     s: float = 10.0,
@@ -179,7 +179,7 @@ def sam(
             dt = adata.obsm[projection]
         except KeyError:
             raise ValueError(
-                'Please create a projection first using run_umap or run_tsne'
+                "Please create a projection first using run_umap or run_tsne"
             )
     else:
         dt = projection
@@ -315,11 +315,11 @@ def wishbone_marker_trajectory(
         ax=ax,
     )
 
-    adata.uns['trunk_wishbone'] = ret_values['Trunk']
-    adata.uns['branch1_wishbone'] = ret_values['Branch1']
-    adata.uns['branch2_wishbone'] = ret_values['Branch2']
+    adata.uns["trunk_wishbone"] = ret_values["Trunk"]
+    adata.uns["branch1_wishbone"] = ret_values["Branch1"]
+    adata.uns["branch2_wishbone"] = ret_values["Branch2"]
 
-    _utils.savefig_or_show('wishbone_trajectory', show=show, save=save)
+    _utils.savefig_or_show("wishbone_trajectory", show=show, save=save)
 
     if return_fig:
         return fig
