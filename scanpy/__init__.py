@@ -35,8 +35,8 @@ if not within_flit():  # see function docstring on why this is there
     # has to be done at the end, after everything has been imported
     import sys
 
-    sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["tl", "pp", "pl"]})
+    sys.modules.update({f'{__name__}.{m}': globals()[m] for m in ['tl', 'pp', 'pl']})
     from ._utils import annotate_doc_types
 
-    annotate_doc_types(sys.modules[__name__], "scanpy")
+    annotate_doc_types(sys.modules[__name__], 'scanpy')
     del sys, annotate_doc_types
