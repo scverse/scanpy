@@ -17,7 +17,7 @@ from scanpy.testing._helpers.data import pbmc68k_reduced
 
 mark_flaky = pytest.mark.xfail(
     strict=False,
-    reason='This used to work reliably, but doesn’t anymore',
+    reason="This used to work reliably, but doesn’t anymore",
 )
 
 
@@ -31,7 +31,7 @@ def metric(request: pytest.FixtureRequest):
     params=[
         # pytest.param(eq, marks=[mark_flaky]),
         pytest.param(eq),
-        pytest.param(partial(np.testing.assert_allclose, rtol=1e-14), id='allclose'),
+        pytest.param(partial(np.testing.assert_allclose, rtol=1e-14), id="allclose"),
     ],
 )
 def assert_equal(request: pytest.FixtureRequest):
@@ -85,10 +85,10 @@ def test_consistency(metric, equality_check):
 
 
 @pytest.mark.parametrize(
-    ('metric', 'size', 'expected'),
+    ("metric", "size", "expected"),
     [
-        pytest.param(sc.metrics.gearys_c, 30, 0.0, id='gearys_c'),
-        pytest.param(sc.metrics.morans_i, 50, 1.0, id='morans_i'),
+        pytest.param(sc.metrics.gearys_c, 30, 0.0, id="gearys_c"),
+        pytest.param(sc.metrics.morans_i, 50, 1.0, id="morans_i"),
     ],
 )
 def test_correctness(metric, size, expected):

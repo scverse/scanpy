@@ -18,13 +18,13 @@ def sam(
     max_iter: int = 10,
     num_norm_avg: int = 50,
     k: int = 20,
-    distance: str = 'correlation',
-    standardization: Literal['Normalizer', 'StandardScaler', 'None'] = 'StandardScaler',
+    distance: str = "correlation",
+    standardization: Literal["Normalizer", "StandardScaler", "None"] = "StandardScaler",
     weight_pcs: bool = False,
     sparse_pca: bool = False,
     n_pcs: Optional[int] = 150,
     n_genes: Optional[int] = 3000,
-    projection: Literal['umap', 'tsne', 'None'] = 'umap',
+    projection: Literal["umap", "tsne", "None"] = "umap",
     inplace: bool = True,
     verbose: bool = True,
 ) -> Union[SAM, Tuple[SAM, AnnData]]:
@@ -192,17 +192,17 @@ def sam(
         from samalg import SAM
     except ImportError:
         raise ImportError(
-            '\nplease install sam-algorithm: \n\n'
-            '\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n'
-            '\tcd self-assembling-manifold\n'
-            '\tpip install .'
+            "\nplease install sam-algorithm: \n\n"
+            "\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n"
+            "\tcd self-assembling-manifold\n"
+            "\tpip install ."
         )
 
-    logg.info('Self-assembling manifold')
+    logg.info("Self-assembling manifold")
 
     s = SAM(counts=adata, inplace=inplace)
 
-    logg.info('Running SAM')
+    logg.info("Running SAM")
     s.run(
         max_iter=max_iter,
         num_norm_avg=num_norm_avg,
@@ -217,8 +217,8 @@ def sam(
         verbose=verbose,
     )
 
-    s.adata.uns['sam'] = {}
-    for attr in ['nnm', 'preprocess_args', 'run_args', 'ranked_genes']:
-        s.adata.uns['sam'][attr] = s.adata.uns.pop(attr, None)
+    s.adata.uns["sam"] = {}
+    for attr in ["nnm", "preprocess_args", "run_args", "ranked_genes"]:
+        s.adata.uns["sam"][attr] = s.adata.uns.pop(attr, None)
 
     return s if inplace else (s, s.adata)

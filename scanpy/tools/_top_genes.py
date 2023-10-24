@@ -20,8 +20,8 @@ def correlation_matrix(
     groupby: Optional[str] = None,
     group: Optional[int] = None,
     n_genes: int = 20,
-    data: Literal['Complete', 'Group', 'Rest'] = 'Complete',
-    method: Literal['pearson', 'kendall', 'spearman'] = 'pearson',
+    data: Literal["Complete", "Group", "Rest"] = "Complete",
+    method: Literal["pearson", "kendall", "spearman"] = "pearson",
     annotation_key: Optional[str] = None,
 ) -> None:
     """\
@@ -71,10 +71,10 @@ def correlation_matrix(
     # At the moment, only calculate one table (Think about what comes next)
     if name_list is None:
         name_list = list()
-        for j, k in enumerate(adata.uns['rank_genes_groups_gene_names']):
+        for j, k in enumerate(adata.uns["rank_genes_groups_gene_names"]):
             if j >= n_genes:
                 break
-            name_list.append(adata.uns['rank_genes_groups_gene_names'][j][group])
+            name_list.append(adata.uns["rank_genes_groups_gene_names"][j][group])
     else:
         if len(name_list) > n_genes:
             name_list = name_list[0:n_genes]
@@ -82,8 +82,8 @@ def correlation_matrix(
     # If special method (later) , truncate
     adata_relevant = adata[:, name_list]
     # This line just makes group_mask access easier. Nothing else but 'all' will stand here.
-    groups = 'all'
-    if data == 'Complete' or groupby is None:
+    groups = "all"
+    if data == "Complete" or groupby is None:
         if issparse(adata_relevant.X):
             Data_array = adata_relevant.X.todense()
         else:
@@ -91,18 +91,18 @@ def correlation_matrix(
     else:
         # get group_mask
         groups_order, groups_masks = select_groups(adata, groups, groupby)
-        if data == 'Group':
+        if data == "Group":
             if issparse(adata_relevant.X):
                 Data_array = adata_relevant.X[groups_masks[group], :].todense()
             else:
                 Data_array = adata_relevant.X[groups_masks[group], :]
-        elif data == 'Rest':
+        elif data == "Rest":
             if issparse(adata_relevant.X):
                 Data_array = adata_relevant.X[~groups_masks[group], :].todense()
             else:
                 Data_array = adata_relevant.X[~groups_masks[group], :]
         else:
-            logg.error('data argument should be either <Complete> or <Group> or <Rest>')
+            logg.error("data argument should be either <Complete> or <Group> or <Rest>")
 
     # Distinguish between sparse and non-sparse data
 
@@ -110,9 +110,9 @@ def correlation_matrix(
     cor_table = DF_array.corr(method=method)
     if annotation_key is None:
         if groupby is None:
-            adata.uns['Correlation_matrix'] = cor_table
+            adata.uns["Correlation_matrix"] = cor_table
         else:
-            adata.uns['Correlation_matrix' + groupby + str(group)] = cor_table
+            adata.uns["Correlation_matrix" + groupby + str(group)] = cor_table
     else:
         adata.uns[annotation_key] = cor_table
 
@@ -148,13 +148,13 @@ def ROC_AUC_analysis(
 
     # Assume group takes an int value for one group for the moment.
     name_list = list()
-    for j, k in enumerate(adata.uns['rank_genes_groups_gene_names']):
+    for j, k in enumerate(adata.uns["rank_genes_groups_gene_names"]):
         if j >= n_genes:
             break
-        name_list.append(adata.uns['rank_genes_groups_gene_names'][j][group])
+        name_list.append(adata.uns["rank_genes_groups_gene_names"][j][group])
 
     # TODO: For the moment, see that everything works for comparison against the rest. Resolve issues later.
-    groups = 'all'
+    groups = "all"
     groups_order, groups_masks = select_groups(adata, groups, groupby)
 
     # Use usual convention, better for looping later.
@@ -183,10 +183,10 @@ def ROC_AUC_analysis(
             y_true, y_score, pos_label=None, sample_weight=None, drop_intermediate=False
         )
         roc_auc[name_list[i]] = metrics.auc(fpr[name_list[i]], tpr[name_list[i]])
-    adata.uns['ROCfpr' + groupby + str(group)] = fpr
-    adata.uns['ROCtpr' + groupby + str(group)] = tpr
-    adata.uns['ROCthresholds' + groupby + str(group)] = thresholds
-    adata.uns['ROC_AUC' + groupby + str(group)] = roc_auc
+    adata.uns["ROCfpr" + groupby + str(group)] = fpr
+    adata.uns["ROCtpr" + groupby + str(group)] = tpr
+    adata.uns["ROCthresholds" + groupby + str(group)] = thresholds
+    adata.uns["ROC_AUC" + groupby + str(group)] = roc_auc
 
 
 def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99):
