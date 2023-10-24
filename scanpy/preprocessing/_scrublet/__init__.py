@@ -10,6 +10,7 @@ from ... import preprocessing as pp
 from ...get import _get_obs_rep
 from ..._utils import AnyRandom
 from .core import Scrublet
+from .utils import AnnoyDist
 from . import pipeline
 
 
@@ -22,7 +23,7 @@ def scrublet(
     expected_doublet_rate: float = 0.05,
     stdev_doublet_rate: float = 0.02,
     synthetic_doublet_umi_subsampling: float = 1.0,
-    knn_dist_metric: str = "euclidean",
+    knn_dist_metric: AnnoyDist = "euclidean",
     normalize_variance: bool = True,
     log_transform: bool = False,
     mean_center: bool = True,
@@ -282,7 +283,7 @@ def _scrublet_call_doublets(
     normalize_variance: bool = True,
     n_prin_comps: int = 30,
     use_approx_neighbors: bool = True,
-    knn_dist_metric: str = "euclidean",
+    knn_dist_metric: AnnoyDist = "euclidean",
     get_doublet_neighbor_parents: bool = False,
     threshold: float | None = None,
     random_state: AnyRandom = 0,

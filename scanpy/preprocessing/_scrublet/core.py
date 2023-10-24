@@ -7,7 +7,7 @@ from scipy import sparse
 from numpy.typing import NDArray
 
 from ..._utils import AnyRandom
-from .utils import get_knn_graph, subsample_counts
+from .utils import AnnoyDist, get_knn_graph, subsample_counts
 
 
 __all__ = ["Scrublet"]
@@ -242,7 +242,7 @@ class Scrublet:
     def calculate_doublet_scores(
         self,
         use_approx_neighbors: bool = True,
-        distance_metric: str = "euclidean",
+        distance_metric: AnnoyDist = "euclidean",
         get_doublet_neighbor_parents: bool = False,
     ) -> NDArray[np.float64]:
         """\
@@ -290,7 +290,7 @@ class Scrublet:
         k: int = 40,
         *,
         use_approx_nn: bool = True,
-        distance_metric: str = "euclidean",
+        distance_metric: AnnoyDist = "euclidean",
         exp_doub_rate: float = 0.1,
         stdev_doub_rate: float = 0.03,
         get_neighbor_parents: bool = False,

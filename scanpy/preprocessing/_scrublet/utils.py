@@ -1,13 +1,11 @@
 from typing import Literal, Union as _U, overload
 
 import numpy as np
-import scipy
-import scipy.stats
 from scipy import sparse
 from numpy.typing import NDArray
 from sklearn.neighbors import NearestNeighbors
 
-from scanpy._utils import AnyRandom
+from ..._utils import AnyRandom, get_random_state
 
 Scale = _U[Literal["linear", "log", "symlog", "logit"], str]
 
@@ -62,8 +60,8 @@ def subsample_counts(
     random_seed: AnyRandom = 0,
 ) -> tuple[sparse.csr_matrix | sparse.csc_matrix, NDArray[np.int64]]:
     if rate < 1:
-        np.random.seed(random_seed)
-        E.data = np.random.binomial(np.round(E.data).astype(int), rate)
+        random_seed = get_random_state(random_seed)
+        E.data = random_seed.binomial(np.round(E.data).astype(int), rate)
         current_totals = E.sum(1).A.squeeze()
         unsampled_orig_totals = original_totals - current_totals
         unsampled_downsamp_totals = np.random.binomial(
@@ -75,52 +73,9 @@ def subsample_counts(
     return E, final_downsamp_totals
 
 
-########## CELL NORMALIZATION
-
-
-def tot_counts_norm(
-    E: sparse.spmatrix,
-    total_counts: NDArray[np.intp] | None = None,
-    exclude_dominant_frac: float = 1.0,
-    included=[],
-    target_total: float | None = None,
-):
-    """
-    Cell-level total counts normalization of input counts matrix, excluding overly abundant genes if desired.
-    Return normalized counts, average total counts, and (if exclude_dominant_frac < 1) list of genes used to calculate total counts
-    """
-
-    E = sparse.csc_matrix(E)
-    ncell = E.shape[0]
-    if total_counts is None:
-        if len(included) == 0:
-            if exclude_dominant_frac == 1:
-                tots_use = E.sum(axis=1)
-            else:
-                tots = E.sum(axis=1)
-                wtmp = sparse.lil_matrix((ncell, ncell))
-                wtmp.setdiag(1.0 / tots)
-                included = np.asarray(
-                    ~(((wtmp * E) > exclude_dominant_frac).sum(axis=0) > 0)
-                )[0, :]
-                tots_use = E[:, included].sum(axis=1)
-                print("Excluded %i genes from normalization" % (np.sum(~included)))
-        else:
-            tots_use = E[:, included].sum(axis=1)
-    else:
-        tots_use = total_counts.copy()
-
-    if target_total is None:
-        target_total = np.mean(tots_use)
-
-    w = sparse.lil_matrix((ncell, ncell))
-    w.setdiag(float(target_total) / tots_use)
-    Enorm = w * E
-
-    return Enorm.tocsc()
-
-
 ########## GRAPH CONSTRUCTION
+
+AnnoyDist = Literal["angular", "euclidean", "manhattan", "hamming", "dot"]
 
 
 @overload
@@ -128,7 +83,7 @@ def get_knn_graph(
     X,
     k: int = 5,
     *,
-    dist_metric: str = "euclidean",
+    dist_metric: AnnoyDist = "euclidean",
     approx: bool = False,
     return_edges: Literal[True] = True,
     random_seed: AnyRandom = 0,
@@ -141,7 +96,7 @@ def get_knn_graph(
     X,
     k: int = 5,
     *,
-    dist_metric: str = "euclidean",
+    dist_metric: AnnoyDist = "euclidean",
     approx: bool = False,
     return_edges: Literal[False],
     random_seed: AnyRandom = 0,
@@ -153,7 +108,7 @@ def get_knn_graph(
     X,
     k: int = 5,
     *,
-    dist_metric: str = "euclidean",
+    dist_metric: AnnoyDist = "euclidean",
     approx: bool = False,
     return_edges: bool = True,
     random_seed: AnyRandom = 0,
@@ -167,10 +122,10 @@ def get_knn_graph(
     if approx:
         try:
             from annoy import AnnoyIndex
-        except Exception:
-            approx = False
-            print('Could not find library "annoy" for approx. nearest neighbor search')
-    if approx:
+        except ImportError as e:
+            raise ValueError(
+                'Could not find library "annoy" for approx. nearest neighbor search'
+            ) from e
         # print('Using approximate nearest neighbor search')
 
         if dist_metric == "cosine":
@@ -184,11 +139,10 @@ def get_knn_graph(
             annoy_index.add_item(i, list(X[i, :]))
         annoy_index.build(10)  # 10 trees
 
-        knn = []
-        for iCell in range(ncell):
-            knn.append(annoy_index.get_nns_by_item(iCell, k + 1)[1:])
-        knn = np.array(knn, dtype=int)
-
+        knn = np.array(
+            [annoy_index.get_nns_by_item(c, k + 1)[1:] for c in range(ncell)],
+            dtype=np.intp,
+        )
     else:
         # print('Using sklearn NearestNeighbors')
 
@@ -198,15 +152,14 @@ def get_knn_graph(
             ).fit(X)
         else:
             nbrs = NearestNeighbors(n_neighbors=k, metric=dist_metric).fit(X)
-        knn = nbrs.kneighbors(return_distance=False)
+        knn: NDArray[np.intp] = nbrs.kneighbors(return_distance=False)
 
     if return_edges:
         links = set()
         for i in range(knn.shape[0]):
             for j in knn[i, :]:
                 links.add(tuple(sorted((i, j))))
-
         # print('kNN graph built in %.3f sec' %(time.time() - t0))
-
         return links, knn
+
     return knn
