@@ -81,21 +81,21 @@ class DotPlot(BasePlot):
 
     """
 
-    DEFAULT_SAVE_PREFIX = 'dotplot_'
+    DEFAULT_SAVE_PREFIX = "dotplot_"
     # default style parameters
-    DEFAULT_COLORMAP = 'winter'
-    DEFAULT_COLOR_ON = 'dot'
+    DEFAULT_COLORMAP = "winter"
+    DEFAULT_COLOR_ON = "dot"
     DEFAULT_DOT_MAX = None
     DEFAULT_DOT_MIN = None
     DEFAULT_SMALLEST_DOT = 0.0
     DEFAULT_LARGEST_DOT = 200.0
-    DEFAULT_DOT_EDGECOLOR = 'black'
+    DEFAULT_DOT_EDGECOLOR = "black"
     DEFAULT_DOT_EDGELW = 0.2
     DEFAULT_SIZE_EXPONENT = 1.5
 
     # default legend parameters
-    DEFAULT_SIZE_LEGEND_TITLE = 'Fraction of cells\nin group (%)'
-    DEFAULT_COLOR_LEGEND_TITLE = 'Mean expression\nin group'
+    DEFAULT_SIZE_LEGEND_TITLE = "Fraction of cells\nin group (%)"
+    DEFAULT_COLOR_LEGEND_TITLE = "Mean expression\nin group"
     DEFAULT_LEGENDS_WIDTH = 1.5  # inches
     DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
@@ -118,7 +118,7 @@ class DotPlot(BasePlot):
         layer: Optional[str] = None,
         expression_cutoff: float = 0.0,
         mean_only_expressed: bool = False,
-        standard_scale: Literal['var', 'group'] = None,
+        standard_scale: Literal["var", "group"] = None,
         dot_color_df: Optional[pd.DataFrame] = None,
         dot_size_df: Optional[pd.DataFrame] = None,
         ax: Optional[_AxesSubplot] = None,
@@ -177,16 +177,16 @@ class DotPlot(BasePlot):
             else:
                 dot_color_df = self.obs_tidy.groupby(level=0).mean()
 
-            if standard_scale == 'group':
+            if standard_scale == "group":
                 dot_color_df = dot_color_df.sub(dot_color_df.min(1), axis=0)
                 dot_color_df = dot_color_df.div(dot_color_df.max(1), axis=0).fillna(0)
-            elif standard_scale == 'var':
+            elif standard_scale == "var":
                 dot_color_df -= dot_color_df.min(0)
                 dot_color_df = (dot_color_df / dot_color_df.max(0)).fillna(0)
             elif standard_scale is None:
                 pass
             else:
-                logg.warning('Unknown type for standard_scale, ignored')
+                logg.warning("Unknown type for standard_scale, ignored")
         else:
             # check that both matrices have the same shape
             if dot_color_df.shape != dot_size_df.shape:
@@ -243,7 +243,7 @@ class DotPlot(BasePlot):
     def style(
         self,
         cmap: str = DEFAULT_COLORMAP,
-        color_on: Optional[Literal['dot', 'square']] = DEFAULT_COLOR_ON,
+        color_on: Optional[Literal["dot", "square"]] = DEFAULT_COLOR_ON,
         dot_max: Optional[float] = DEFAULT_DOT_MAX,
         dot_min: Optional[float] = DEFAULT_DOT_MIN,
         smallest_dot: Optional[float] = DEFAULT_SMALLEST_DOT,
@@ -440,8 +440,8 @@ class DotPlot(BasePlot):
             np.arange(len(size)) + 0.5,
             np.repeat(0, len(size)),
             s=size,
-            color='gray',
-            edgecolor='black',
+            color="gray",
+            edgecolor="black",
             linewidth=self.dot_edge_lw,
             zorder=100,
         )
@@ -449,23 +449,23 @@ class DotPlot(BasePlot):
         labels = [
             "{}".format(np.round((x * 100), decimals=0).astype(int)) for x in size_range
         ]
-        size_legend_ax.set_xticklabels(labels, fontsize='small')
+        size_legend_ax.set_xticklabels(labels, fontsize="small")
 
         # remove y ticks and labels
         size_legend_ax.tick_params(
-            axis='y', left=False, labelleft=False, labelright=False
+            axis="y", left=False, labelleft=False, labelright=False
         )
 
         # remove surrounding lines
-        size_legend_ax.spines['right'].set_visible(False)
-        size_legend_ax.spines['top'].set_visible(False)
-        size_legend_ax.spines['left'].set_visible(False)
-        size_legend_ax.spines['bottom'].set_visible(False)
+        size_legend_ax.spines["right"].set_visible(False)
+        size_legend_ax.spines["top"].set_visible(False)
+        size_legend_ax.spines["left"].set_visible(False)
+        size_legend_ax.spines["bottom"].set_visible(False)
         size_legend_ax.grid(False)
 
         ymax = size_legend_ax.get_ylim()[1]
         size_legend_ax.set_ylim(-1.05 - self.largest_dot * 0.003, 4)
-        size_legend_ax.set_title(self.size_title, y=ymax + 0.45, size='small')
+        size_legend_ax.set_title(self.size_title, y=ymax + 0.45, size="small")
 
         xmin, xmax = size_legend_ax.get_xlim()
         size_legend_ax.set_xlim(xmin - 0.15, xmax + 0.5)
@@ -497,13 +497,13 @@ class DotPlot(BasePlot):
         if self.show_size_legend:
             size_legend_ax = fig.add_subplot(legend_gs[1])
             self._plot_size_legend(size_legend_ax)
-            return_ax_dict['size_legend_ax'] = size_legend_ax
+            return_ax_dict["size_legend_ax"] = size_legend_ax
 
         if self.show_colorbar:
             color_legend_ax = fig.add_subplot(legend_gs[3])
 
             self._plot_colorbar(color_legend_ax, normalize)
-            return_ax_dict['color_legend_ax'] = color_legend_ax
+            return_ax_dict["color_legend_ax"] = color_legend_ax
 
     def _mainplot(self, ax):
         # work on a copy of the dataframes. This is to avoid changes
@@ -523,9 +523,9 @@ class DotPlot(BasePlot):
         if self.are_axes_swapped:
             _size_df = _size_df.T
             _color_df = _color_df.T
-        self.cmap = self.kwds.get('cmap', self.cmap)
-        if 'cmap' in self.kwds:
-            del self.kwds['cmap']
+        self.cmap = self.kwds.get("cmap", self.cmap)
+        if "cmap" in self.kwds:
+            del self.kwds["cmap"]
 
         normalize, dot_min, dot_max = self._dotplot(
             _size_df,
@@ -558,12 +558,12 @@ class DotPlot(BasePlot):
         dot_size,
         dot_color,
         dot_ax,
-        cmap: str = 'Reds',
-        color_on: Optional[str] = 'dot',
+        cmap: str = "Reds",
+        color_on: Optional[str] = "dot",
         y_label: Optional[str] = None,
         dot_max: Optional[float] = None,
         dot_min: Optional[float] = None,
-        standard_scale: Literal['var', 'group'] = None,
+        standard_scale: Literal["var", "group"] = None,
         smallest_dot: Optional[float] = 0.0,
         largest_dot: Optional[float] = 200,
         size_exponent: Optional[float] = 2,
@@ -638,22 +638,22 @@ class DotPlot(BasePlot):
 
         """
         assert dot_size.shape == dot_color.shape, (
-            'please check that dot_size ' 'and dot_color dataframes have the same shape'
+            "please check that dot_size " "and dot_color dataframes have the same shape"
         )
 
         assert list(dot_size.index) == list(dot_color.index), (
-            'please check that dot_size ' 'and dot_color dataframes have the same index'
+            "please check that dot_size " "and dot_color dataframes have the same index"
         )
 
         assert list(dot_size.columns) == list(dot_color.columns), (
-            'please check that the dot_size '
-            'and dot_color dataframes have the same columns'
+            "please check that the dot_size "
+            "and dot_color dataframes have the same columns"
         )
 
-        if standard_scale == 'group':
+        if standard_scale == "group":
             dot_color = dot_color.sub(dot_color.min(1), axis=0)
             dot_color = dot_color.div(dot_color.max(1), axis=0).fillna(0)
-        elif standard_scale == 'var':
+        elif standard_scale == "var":
             dot_color -= dot_color.min(0)
             dot_color = (dot_color / dot_color.max(0)).fillna(0)
         elif standard_scale is None:
@@ -673,9 +673,9 @@ class DotPlot(BasePlot):
         x = x.flatten() + 0.5
         frac = dot_size.values.flatten()
         mean_flat = dot_color.values.flatten()
-        cmap = pl.get_cmap(kwds.get('cmap', cmap))
-        if 'cmap' in kwds:
-            del kwds['cmap']
+        cmap = pl.get_cmap(kwds.get("cmap", cmap))
+        if "cmap" in kwds:
+            del kwds["cmap"]
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
         else:
@@ -699,7 +699,7 @@ class DotPlot(BasePlot):
         size = size * (largest_dot - smallest_dot) + smallest_dot
         normalize = check_colornorm(vmin, vmax, vcenter, norm)
 
-        if color_on == 'square':
+        if color_on == "square":
             if edge_color is None:
                 from seaborn.utils import relative_luminance
 
@@ -717,20 +717,20 @@ class DotPlot(BasePlot):
             # (squares with the asigned colormap). Circles will be plotted
             # on top
             dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
-            for axis in ['top', 'bottom', 'left', 'right']:
+            for axis in ["top", "bottom", "left", "right"]:
                 dot_ax.spines[axis].set_linewidth(1.5)
             kwds = fix_kwds(
                 kwds,
                 s=size,
                 cmap=cmap,
                 linewidth=edge_lw,
-                facecolor='none',
+                facecolor="none",
                 edgecolor=edge_color,
                 norm=normalize,
             )
             dot_ax.scatter(x, y, **kwds)
         else:
-            edge_color = 'none' if edge_color is None else edge_color
+            edge_color = "none" if edge_color is None else edge_color
             edge_lw = 0.0 if edge_lw is None else edge_lw
 
             color = cmap(normalize(mean_flat))
@@ -757,10 +757,10 @@ class DotPlot(BasePlot):
         dot_ax.set_xticklabels(
             [dot_color.columns[idx] for idx, _ in enumerate(x_ticks)],
             rotation=90,
-            ha='center',
+            ha="center",
             minor=False,
         )
-        dot_ax.tick_params(axis='both', labelsize='small')
+        dot_ax.tick_params(axis="both", labelsize="small")
         dot_ax.grid(False)
         dot_ax.set_ylabel(y_label)
 
@@ -770,7 +770,7 @@ class DotPlot(BasePlot):
         dot_ax.set_ylim(dot_color.shape[0], 0)
         dot_ax.set_xlim(0, dot_color.shape[1])
 
-        if color_on == 'dot':
+        if color_on == "dot":
             # add padding to the x and y lims when the color is not in the square
             # default y range goes from 0.5 to num cols + 0.5
             # and default x range goes from 0.5 to num rows + 0.5, thus
@@ -782,7 +782,7 @@ class DotPlot(BasePlot):
             dot_ax.set_xlim(-x_padding, dot_color.shape[1] + x_padding)
 
         if grid:
-            dot_ax.grid(True, color='gray', linewidth=0.1)
+            dot_ax.grid(True, color="gray", linewidth=0.1)
             dot_ax.set_axisbelow(True)
 
         return normalize, dot_min, dot_max
@@ -803,10 +803,10 @@ def dotplot(
     num_categories: int = 7,
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
-    cmap: str = 'Reds',
+    cmap: str = "Reds",
     dot_max: Optional[float] = DotPlot.DEFAULT_DOT_MAX,
     dot_min: Optional[float] = DotPlot.DEFAULT_DOT_MIN,
-    standard_scale: Optional[Literal['var', 'group']] = None,
+    standard_scale: Optional[Literal["var", "group"]] = None,
     smallest_dot: Optional[float] = DotPlot.DEFAULT_SMALLEST_DOT,
     title: Optional[str] = None,
     colorbar_title: Optional[str] = DotPlot.DEFAULT_COLOR_LEGEND_TITLE,
@@ -933,9 +933,9 @@ def dotplot(
 
     # backwards compatibility: previous version of dotplot used `color_map`
     # instead of `cmap`
-    cmap = kwds.get('color_map', cmap)
-    if 'color_map' in kwds:
-        del kwds['color_map']
+    cmap = kwds.get("color_map", cmap)
+    if "color_map" in kwds:
+        del kwds["color_map"]
 
     dp = DotPlot(
         adata,
@@ -973,7 +973,7 @@ def dotplot(
         dot_max=dot_max,
         dot_min=dot_min,
         smallest_dot=smallest_dot,
-        dot_edge_lw=kwds.pop('linewidth', DotPlot.DEFAULT_DOT_EDGELW),
+        dot_edge_lw=kwds.pop("linewidth", DotPlot.DEFAULT_DOT_EDGELW),
     ).legend(colorbar_title=colorbar_title, size_title=size_title)
 
     if return_fig:

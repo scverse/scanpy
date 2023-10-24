@@ -3,4 +3,4 @@
 import sys
 
 
-print('test', *sys.argv[1:])
+print("test", *sys.argv[1:])

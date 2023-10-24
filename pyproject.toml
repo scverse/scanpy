@@ -167,9 +167,6 @@ omit = ["*/tests/*"]
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
 
-[tool.black]
-skip-string-normalization = true
-
 [tool.ruff]
 select = [
     "F",  # Pyflakes

@@ -136,8 +136,8 @@ def harmony_timeseries(
     adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")
 
-    if adata.obs[tp].dtype.name != 'category':
-        raise ValueError(f'{tp!r} column does not contain Categorical data')
+    if adata.obs[tp].dtype.name != "category":
+        raise ValueError(f"{tp!r} column does not contain Categorical data")
     timepoints = adata.obs[tp].cat.categories.tolist()
     timepoint_connections = pd.DataFrame(np.array([timepoints[:-1], timepoints[1:]]).T)
 

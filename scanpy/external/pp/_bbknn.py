@@ -13,11 +13,11 @@ del lazy_import
 
 def bbknn(
     adata: AnnData,
-    batch_key: str = 'batch',
-    use_rep: str = 'X_pca',
+    batch_key: str = "batch",
+    use_rep: str = "X_pca",
     approx: bool = True,
     use_annoy: bool = True,
-    metric: Union[str, Callable, 'sklearn.neighbors.DistanceMetric'] = 'euclidean',
+    metric: Union[str, Callable, "sklearn.neighbors.DistanceMetric"] = "euclidean",
     copy: bool = False,
     *,
     neighbors_within_batch: int = 3,
@@ -130,7 +130,7 @@ def bbknn(
     try:
         from bbknn import bbknn
     except ImportError:
-        raise ImportError('Please install bbknn: `pip install bbknn`.')
+        raise ImportError("Please install bbknn: `pip install bbknn`.")
     return bbknn(
         adata=adata,
         batch_key=batch_key,

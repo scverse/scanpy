@@ -17,31 +17,31 @@ HERE = Path(__file__).parent
 
 @pytest.fixture
 def set_path(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv('PATH', str(HERE / '_scripts'), prepend=os.pathsep)
+    monkeypatch.setenv("PATH", str(HERE / "_scripts"), prepend=os.pathsep)
 
 
 def test_builtin_settings(capsys: CaptureFixture):
-    main(['settings'])
+    main(["settings"])
     captured = capsys.readouterr()
-    assert captured.out == f'{scanpy.settings}\n'
+    assert captured.out == f"{scanpy.settings}\n"
 
 
-@pytest.mark.parametrize('args', [[], ['-h']])
+@pytest.mark.parametrize("args", [[], ["-h"]])
 def test_help_displayed(args: List[str], capsys: CaptureFixture):
     try:  # -h raises it, no args doesn’t. Maybe not ideal but meh.
         main(args)
     except SystemExit as se:
         assert se.code == 0
     captured = capsys.readouterr()
-    assert captured.out.startswith('usage: ')
+    assert captured.out.startswith("usage: ")
 
 
 def test_help_output(set_path: None, capsys: CaptureFixture):
-    with pytest.raises(SystemExit, match='^0$'):
-        main(['-h'])
+    with pytest.raises(SystemExit, match="^0$"):
+        main(["-h"])
     captured = capsys.readouterr()
     assert re.search(
-        r'^positional arguments:\n\s+\{settings,[\w,-]*testbin[\w,-]*\}$',
+        r"^positional arguments:\n\s+\{settings,[\w,-]*testbin[\w,-]*\}$",
         captured.out,
         re.MULTILINE,
     )
@@ -49,13 +49,13 @@ def test_help_output(set_path: None, capsys: CaptureFixture):
 
 def test_external(set_path: None):
     # We need to capture the output manually, since subprocesses don’t write to sys.stderr
-    cmdline = ['testbin', '-t', '--testarg', 'testpos']
-    cmd = main(cmdline, stdout=PIPE, encoding='utf-8', check=True)
-    assert cmd.stdout == 'test -t --testarg testpos\n'
+    cmdline = ["testbin", "-t", "--testarg", "testpos"]
+    cmd = main(cmdline, stdout=PIPE, encoding="utf-8", check=True)
+    assert cmd.stdout == "test -t --testarg testpos\n"
 
 
 def test_error_wrong_command(capsys: CaptureFixture):
-    with pytest.raises(SystemExit, match='^2$'):
-        main(['idonotexist--'])
+    with pytest.raises(SystemExit, match="^2$"):
+        main(["idonotexist--"])
     captured = capsys.readouterr()
     assert "invalid choice: 'idonotexist--' (choose from" in captured.err

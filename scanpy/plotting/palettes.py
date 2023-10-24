@@ -7,9 +7,9 @@ from matplotlib import cm, colors
 # See https://github.com/scverse/scanpy/issues/387
 vega_10 = list(map(colors.to_hex, cm.tab10.colors))
 vega_10_scanpy = vega_10.copy()
-vega_10_scanpy[2] = '#279e68'  # green
-vega_10_scanpy[4] = '#aa40fc'  # purple
-vega_10_scanpy[8] = '#b5bd61'  # kakhi
+vega_10_scanpy[2] = "#279e68"  # green
+vega_10_scanpy[4] = "#aa40fc"  # purple
+vega_10_scanpy[8] = "#b5bd61"  # kakhi
 
 # default matplotlib 2.0 palette
 # see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
@@ -24,8 +24,8 @@ vega_20_scanpy = [
     *vega_20[1:15:2],
     *vega_20[17::2],
     # manual additions:
-    '#ad494a',
-    '#8c6d31',
+    "#ad494a",
+    "#8c6d31",
 ]
 vega_20_scanpy[2] = vega_10_scanpy[2]
 vega_20_scanpy[4] = vega_10_scanpy[4]
@@ -63,7 +63,7 @@ zeileis_28 = [
     "#f6c4e1",
     "#f79cd4",
     # these last ones were added:
-    '#7f7f7f',
+    "#7f7f7f",
     "#c7c7c7",
     "#1CE6FF",
     "#336600",
@@ -188,20 +188,20 @@ def _plot_color_cycle(clists: Mapping[str, Sequence[str]]):
 
     fig, axes = plt.subplots(nrows=len(clists))  # type: plt.Figure, plt.Axes
     fig.subplots_adjust(top=0.95, bottom=0.01, left=0.3, right=0.99)
-    axes[0].set_title('Color Maps/Cycles', fontsize=14)
+    axes[0].set_title("Color Maps/Cycles", fontsize=14)
 
     for ax, (name, clist) in zip(axes, clists.items()):
         n = len(clist)
         ax.imshow(
             np.arange(n)[None, :].repeat(2, 0),
-            aspect='auto',
+            aspect="auto",
             cmap=ListedColormap(clist),
             norm=BoundaryNorm(np.arange(n + 1) - 0.5, n),
         )
         pos = list(ax.get_position().bounds)
         x_text = pos[0] - 0.01
         y_text = pos[1] + pos[3] / 2.0
-        fig.text(x_text, y_text, name, va='center', ha='right', fontsize=10)
+        fig.text(x_text, y_text, name, va="center", ha="right", fontsize=10)
 
     # Turn off all ticks & spines
     for ax in axes:
@@ -209,7 +209,7 @@ def _plot_color_cycle(clists: Mapping[str, Sequence[str]]):
     fig.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _plot_color_cycle(
         {name: colors for name, colors in globals().items() if isinstance(colors, list)}
     )

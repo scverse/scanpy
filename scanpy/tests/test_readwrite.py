@@ -6,15 +6,15 @@ from scanpy.readwrite import _slugify
 
 
 @pytest.mark.parametrize(
-    'path',
+    "path",
     [
-        PureWindowsPath(r'C:\foo\bar'),
-        PureWindowsPath(r'.\C\foo\bar'),
-        PureWindowsPath(r'C\foo\bar'),
-        PurePosixPath('/C/foo/bar'),
-        PurePosixPath('./C/foo/bar'),
-        PurePosixPath('C/foo/bar'),
+        PureWindowsPath(r"C:\foo\bar"),
+        PureWindowsPath(r".\C\foo\bar"),
+        PureWindowsPath(r"C\foo\bar"),
+        PurePosixPath("/C/foo/bar"),
+        PurePosixPath("./C/foo/bar"),
+        PurePosixPath("C/foo/bar"),
     ],
 )
 def test_slugify(path):
-    assert _slugify(path) == 'C-foo-bar'
+    assert _slugify(path) == "C-foo-bar"

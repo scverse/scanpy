@@ -12,11 +12,11 @@ from . import logging
 from .logging import _set_log_level, _set_log_file, _RootLogger
 
 _VERBOSITY_TO_LOGLEVEL = {
-    'error': 'ERROR',
-    'warning': 'WARNING',
-    'info': 'INFO',
-    'hint': 'HINT',
-    'debug': 'DEBUG',
+    "error": "ERROR",
+    "warning": "WARNING",
+    "info": "INFO",
+    "hint": "HINT",
+    "debug": "DEBUG",
 }
 # Python 3.7 ensures iteration order
 for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
@@ -79,7 +79,7 @@ class ScanpyConfig:
         cachedir: Union[str, Path] = "./cache/",
         datasetdir: Union[str, Path] = "./data/",
         figdir: Union[str, Path] = "./figures/",
-        cache_compression: Union[str, None] = 'lzf',
+        cache_compression: Union[str, None] = "lzf",
         max_memory=15,
         n_jobs=1,
         logfile: Union[str, Path, None] = None,
@@ -293,7 +293,7 @@ class ScanpyConfig:
 
     @cache_compression.setter
     def cache_compression(self, cache_compression: Optional[str]):
-        if cache_compression not in {'lzf', 'gzip', None}:
+        if cache_compression not in {"lzf", "gzip", None}:
             raise ValueError(
                 f"`cache_compression` ({cache_compression}) "
                 "must be in {'lzf', 'gzip', None}"
@@ -341,7 +341,7 @@ class ScanpyConfig:
     def logpath(self, logpath: Union[str, Path, None]):
         _type_check(logpath, "logfile", (str, Path))
         # set via “file object” branch of logfile.setter
-        self.logfile = Path(logpath).open('a')
+        self.logfile = Path(logpath).open("a")
         self._logpath = Path(logpath)
 
     @property
@@ -359,7 +359,7 @@ class ScanpyConfig:
 
     @logfile.setter
     def logfile(self, logfile: Union[str, Path, TextIO, None]):
-        if not hasattr(logfile, 'write') and logfile:
+        if not hasattr(logfile, "write") and logfile:
             self.logpath = logfile
         else:  # file object
             if not logfile:  # None or ''
@@ -462,14 +462,14 @@ class ScanpyConfig:
         if transparent is not None:
             rcParams["savefig.transparent"] = transparent
         if facecolor is not None:
-            rcParams['figure.facecolor'] = facecolor
-            rcParams['axes.facecolor'] = facecolor
+            rcParams["figure.facecolor"] = facecolor
+            rcParams["axes.facecolor"] = facecolor
         if scanpy:
             from .plotting._rcmod import set_rcParams_scanpy
 
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
         if figsize is not None:
-            rcParams['figure.figsize'] = figsize
+            rcParams["figure.figsize"] = figsize
         self._frameon = frameon
 
     @staticmethod
@@ -480,10 +480,10 @@ class ScanpyConfig:
         return getattr(builtins, "__IPYTHON__", False)
 
     def __str__(self) -> str:
-        return '\n'.join(
-            f'{k} = {v!r}'
+        return "\n".join(
+            f"{k} = {v!r}"
             for k, v in inspect.getmembers(self)
-            if not k.startswith("_") and not k == 'getdoc'
+            if not k.startswith("_") and not k == "getdoc"
         )
 
 
