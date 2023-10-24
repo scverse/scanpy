@@ -1,14 +1,16 @@
 from __future__ import annotations
+from functools import partial
 import sys
 
 from typing import cast
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 
 import numpy as np
 from scipy import sparse
+from numpy.random import RandomState
 from numpy.typing import NDArray
 
-from ..._utils import AnyRandom
+from ..._utils import AnyRandom, get_random_state
 from .utils import AnnoyDist, get_knn_graph, subsample_counts
 
 
@@ -59,108 +61,129 @@ class Scrublet:
 
     # init fields
 
-    counts_obs: sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer] = field(
-        **kw_only(False)
-    )
-    total_counts_obs: NDArray[np.integer] | None = None
+    counts_obs: InitVar[
+        sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer]
+    ] = field(**kw_only(False))
+    total_counts_obs: InitVar[NDArray[np.integer] | None] = None
     sim_doublet_ratio: float = 2.0
-    n_neighbors: int | None = None
+    n_neighbors: InitVar[int | None] = None
     expected_doublet_rate: float = 0.1
     stdev_doublet_rate: float = 0.02
-    random_state: AnyRandom = 0
+    random_state: InitVar[AnyRandom] = 0
 
     # private fields
 
-    _counts_obs_norm: sparse.csr_matrix | sparse.csc_matrix | None = None
+    _n_neighbors: int = field(init=False, repr=False)
+    _random_state: RandomState = field(init=False, repr=False)
 
-    _counts_sim: sparse.csr_matrix | sparse.csc_matrix | None = None
-    _total_counts_sim: NDArray[np.integer] | None = None
-    _counts_sim_norm: sparse.csr_matrix | sparse.csc_matrix | None = None
+    _counts_obs: sparse.csc_matrix = field(init=False, repr=False)
+    _total_counts_obs: NDArray[np.integer] = field(init=False, repr=False)
+    _counts_obs_norm: sparse.csr_matrix | sparse.csc_matrix = field(
+        init=False, repr=False
+    )
+
+    _counts_sim: sparse.csr_matrix | sparse.csc_matrix = field(init=False, repr=False)
+    _total_counts_sim: NDArray[np.integer] = field(init=False, repr=False)
+    _counts_sim_norm: sparse.csr_matrix | sparse.csc_matrix | None = field(
+        default=None, init=False, repr=False
+    )
 
     # Fields set by methods
 
-    predicted_doublets_: NDArray[np.bool_] | None = None
+    predicted_doublets_: NDArray[np.bool_] | None = field(init=False)
     """(shape: n_cells)
     Boolean mask of predicted doublets in the observed transcriptomes.
     """
 
-    doublet_scores_obs_: NDArray[np.float64] | None = None
+    doublet_scores_obs_: NDArray[np.float64] = field(init=False)
     """(shape: n_cells)
     Doublet scores for observed transcriptomes.
     """
 
-    doublet_scores_sim_: NDArray[np.float64] | None = None
+    doublet_scores_sim_: NDArray[np.float64] = field(init=False)
     """(shape: n_doublets)
     Doublet scores for simulated doublets.
     """
 
-    doublet_errors_obs_: NDArray[np.float64] | None = None
+    doublet_errors_obs_: NDArray[np.float64] = field(init=False)
     """(shape: n_cells)
     Standard error in the doublet scores for observed transcriptomes.
     """
 
-    doublet_errors_sim_: NDArray[np.float64] | None = None
+    doublet_errors_sim_: NDArray[np.float64] = field(init=False)
     """(shape: n_doublets)
     Standard error in the doublet scores for simulated doublets.
     """
 
-    threshold_: float | None = None
+    threshold_: float = field(init=False)
     """Doublet score threshold for calling a transcriptome a doublet."""
 
-    z_scores_: NDArray[np.float64] | None = None
+    z_scores_: NDArray[np.float64] = field(init=False)
     """(shape: n_cells)
     Z-score conveying confidence in doublet calls.
     Z = `(doublet_score_obs_ - threhsold_) / doublet_errors_obs_`
     """
 
-    detected_doublet_rate_: float | None = None
+    detected_doublet_rate_: float = field(init=False)
     """Fraction of observed transcriptomes that have been called doublets."""
 
-    detectable_doublet_fraction_: float | None = None
+    detectable_doublet_fraction_: float = field(init=False)
     """Estimated fraction of doublets that are detectable, i.e.,
     fraction of simulated doublets with doublet scores above `threshold_`
     """
 
-    overall_doublet_rate_: float | None = None
+    overall_doublet_rate_: float = field(init=False)
     """Estimated overall doublet rate,
     `detected_doublet_rate_ / detectable_doublet_fraction_`.
     Should agree (roughly) with `expected_doublet_rate`.
     """
 
-    manifold_obs_: NDArray[np.float64] | None = None
+    manifold_obs_: NDArray[np.float64] = field(init=False)
     """(shape: n_cells × n_features)
     The single-cell "manifold" coordinates (e.g., PCA coordinates)
     for observed transcriptomes. Nearest neighbors are found using
     the union of `manifold_obs_` and `manifold_sim_` (see below).
     """
 
-    manifold_sim_: NDArray[np.float64] | None = None
+    manifold_sim_: NDArray[np.float64] = field(init=False)
     """shape (n_doublets × n_features)
     The single-cell "manifold" coordinates (e.g., PCA coordinates)
     for simulated doublets. Nearest neighbors are found using
     the union of `manifold_obs_` (see above) and `manifold_sim_`.
     """
 
-    doublet_parents_: NDArray[np.intp] | None = None
+    doublet_parents_: NDArray[np.intp] = field(init=False)
     """(shape: n_doublets × 2)
     Indices of the observed transcriptomes used to generate the
     simulated doublets.
     """
 
-    doublet_neighbor_parents_: list[NDArray[np.intp]] | None = None
+    doublet_neighbor_parents_: list[NDArray[np.intp]] = field(init=False)
     """(length: n_cells)
     A list of arrays of the indices of the doublet neighbors of
     each observed transcriptome (the ith entry is an array of
     the doublet neighbors of transcriptome i).
     """
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.counts_obs, sparse.csc_matrix):
-            self.counts_obs = sparse.csc_matrix(self.counts_obs)
-        if self.total_counts_obs is None:
-            self.total_counts_obs = self.counts_obs.sum(1).A.squeeze()
-        if self.n_neighbors is None:
-            self.n_neighbors = int(round(0.5 * np.sqrt(self.counts_obs.shape[0])))
+    def __post_init__(
+        self,
+        counts_obs: sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer],
+        total_counts_obs: NDArray[np.integer] | None,
+        n_neighbors: int | None,
+        random_state: AnyRandom,
+    ) -> None:
+        self._counts_obs = sparse.csc_matrix(counts_obs)
+        self._total_counts_obs = (
+            self._counts_obs.sum(1).A.squeeze()
+            if total_counts_obs is None
+            else total_counts_obs
+        )
+        self._n_neighbors = (
+            int(round(0.5 * np.sqrt(self._counts_obs.shape[0])))
+            if n_neighbors is None
+            else n_neighbors
+        )
+        self._random_state = get_random_state(random_state)
 
     def simulate_doublets(
         self,
@@ -193,22 +216,21 @@ class Scrublet:
         else:
             self.sim_doublet_ratio = sim_doublet_ratio
 
-        n_obs = self.counts_obs.shape[0]
+        n_obs = self._counts_obs.shape[0]
         n_sim = int(n_obs * sim_doublet_ratio)
 
-        np.random.seed(self.random_state)
-        pair_ix = np.random.randint(0, n_obs, size=(n_sim, 2))
+        pair_ix = self._random_state.randint(0, n_obs, size=(n_sim, 2))
 
-        E1 = self.counts_obs[pair_ix[:, 0], :]
-        E2 = self.counts_obs[pair_ix[:, 1], :]
-        tots1 = self.total_counts_obs[pair_ix[:, 0]]
-        tots2 = self.total_counts_obs[pair_ix[:, 1]]
+        E1 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 0], :])
+        E2 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 1], :])
+        tots1 = self._total_counts_obs[pair_ix[:, 0]]
+        tots2 = self._total_counts_obs[pair_ix[:, 1]]
         if synthetic_doublet_umi_subsampling < 1:
             self._counts_sim, self._total_counts_sim = subsample_counts(
                 E1 + E2,
                 rate=synthetic_doublet_umi_subsampling,
                 original_totals=tots1 + tots2,
-                random_seed=self.random_state,
+                random_seed=self._random_state,
             )
         else:
             self._counts_sim = E1 + E2
@@ -280,7 +302,7 @@ class Scrublet:
         """
 
         self._nearest_neighbor_classifier(
-            k=self.n_neighbors,
+            k=self._n_neighbors,
             exp_doub_rate=self.expected_doublet_rate,
             stdev_doub_rate=self.stdev_doublet_rate,
             use_approx_nn=use_approx_neighbors,
@@ -320,7 +342,7 @@ class Scrublet:
             dist_metric=distance_metric,
             approx=use_approx_nn,
             return_edges=False,
-            random_seed=self.random_state,
+            random_seed=self._random_state,
         )
 
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
@@ -366,8 +388,8 @@ class Scrublet:
                     )
                     neighbor_parents.append(this_doub_neigh_parents)
                 else:
-                    neighbor_parents.append([])
-            self.doublet_neighbor_parents_ = np.array(neighbor_parents)
+                    neighbor_parents.append(np.array([], dtype=np.intp))
+            self.doublet_neighbor_parents_ = neighbor_parents
 
     def call_doublets(
         self, *, threshold: float | None = None, verbose: bool = True

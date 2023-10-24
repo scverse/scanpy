@@ -418,16 +418,11 @@ def _scrublet_call_doublets(
 
     if mean_center:
         logg.info("Embedding transcriptomes using PCA...")
-        # Sklearn PCA doesn't like matrices, so convert to arrays
-        if isinstance(scrub._counts_obs_norm, np.matrix):
-            scrub._counts_obs_norm = np.asarray(scrub._counts_obs_norm)
-        if isinstance(scrub._counts_sim_norm, np.matrix):
-            scrub._counts_sim_norm = np.asarray(scrub._counts_sim_norm)
-        pipeline.pca(scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state)
+        pipeline.pca(scrub, n_prin_comps=n_prin_comps, random_state=scrub._random_state)
     else:
         logg.info("Embedding transcriptomes using Truncated SVD...")
         pipeline.truncated_svd(
-            scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
+            scrub, n_prin_comps=n_prin_comps, random_state=scrub._random_state
         )
 
     # Score the doublets

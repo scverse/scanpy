@@ -17,7 +17,7 @@ Scale = _U[Literal["linear", "log", "symlog", "logit"], str]
 def sparse_var(
     E: sparse.csr_matrix | sparse.csc_matrix,
     *,
-    axis: Literal[0, 1] = 0,
+    axis: Literal[0, 1],
 ) -> NDArray[np.float64]:
     """variance across the specified axis"""
 
@@ -49,7 +49,7 @@ def sparse_zscore(
     if gene_mean is None:
         gene_mean = E.mean(0)
     if gene_stdev is None:
-        gene_stdev = np.sqrt(sparse_var(E))
+        gene_stdev = np.sqrt(sparse_var(E, axis=0))
     return sparse_multiply((E - gene_mean).T, 1 / gene_stdev).T
 
 
