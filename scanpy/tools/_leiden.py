@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Sequence, Type
+from typing import Optional, Tuple, Sequence, Type, Literal
 
 import numpy as np
 import pandas as pd
@@ -36,6 +36,7 @@ def leiden(
     neighbors_key: Optional[str] = None,
     obsp: Optional[str] = None,
     copy: bool = False,
+    flavor: Literal['default', 'katana'] = 'default',
     **partition_kwargs,
 ) -> Optional[AnnData]:
     """\
@@ -104,57 +105,103 @@ def leiden(
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
-    try:
-        import leidenalg
-    except ImportError:
-        raise ImportError(
-            'Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`.'
-        )
-    partition_kwargs = dict(partition_kwargs)
+    if flavor == 'default':
+        try:
+            import leidenalg
+        except ImportError:
+            raise ImportError(
+                'Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`.'
+            )
+        partition_kwargs = dict(partition_kwargs)
 
-    start = logg.info('running Leiden clustering')
-    adata = adata.copy() if copy else adata
-    # are we clustering a user-provided graph or the default AnnData one?
-    if adjacency is None:
-        adjacency = _utils._choose_graph(adata, obsp, neighbors_key)
-    if restrict_to is not None:
-        restrict_key, restrict_categories = restrict_to
-        adjacency, restrict_indices = restrict_adjacency(
-            adata,
-            restrict_key,
-            restrict_categories,
-            adjacency,
+        start = logg.info('running Leiden clustering')
+        adata = adata.copy() if copy else adata
+        # are we clustering a user-provided graph or the default AnnData one?
+        if adjacency is None:
+            adjacency = _utils._choose_graph(adata, obsp, neighbors_key)
+        if restrict_to is not None:
+            restrict_key, restrict_categories = restrict_to
+            adjacency, restrict_indices = restrict_adjacency(
+                adata,
+                restrict_key,
+                restrict_categories,
+                adjacency,
+            )
+        # convert it to igraph
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
+        # flip to the default partition type if not overriden by the user
+        if partition_type is None:
+            partition_type = leidenalg.RBConfigurationVertexPartition
+        # Prepare find_partition arguments as a dictionary,
+        # appending to whatever the user provided. It needs to be this way
+        # as this allows for the accounting of a None resolution
+        # (in the case of a partition variant that doesn't take it on input)
+        if use_weights:
+            partition_kwargs['weights'] = np.array(g.es['weight']).astype(np.float64)
+        partition_kwargs['n_iterations'] = n_iterations
+        partition_kwargs['seed'] = random_state
+        if resolution is not None:
+            partition_kwargs['resolution_parameter'] = resolution
+        # clustering proper
+        part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
+        # store output into adata.obs
+        groups = np.array(part.membership)
+        if restrict_to is not None:
+            if key_added == 'leiden':
+                key_added += '_R'
+            groups = rename_groups(
+                adata,
+                key_added,
+                restrict_key,
+                restrict_categories,
+                restrict_indices,
+                groups,
+            )
+
+    elif flavor == 'katana':
+        from scanpy._utils import _choose_graph
+
+        adjacency = _choose_graph(adata, obsp=None, neighbors_key=None)
+
+        sources, targets = adjacency.nonzero()
+        weights = adjacency[sources, targets]
+        if isinstance(weights, np.matrix):
+            weights = weights.A1
+        start = logg.info('running Leiden clustering')
+
+        from katana.local.analytics import (
+            leiden_clustering,
+            LeidenClusteringStatistics,
+            LeidenClusteringPlan,
         )
-    # convert it to igraph
-    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
-    # flip to the default partition type if not overriden by the user
-    if partition_type is None:
-        partition_type = leidenalg.RBConfigurationVertexPartition
-    # Prepare find_partition arguments as a dictionary,
-    # appending to whatever the user provided. It needs to be this way
-    # as this allows for the accounting of a None resolution
-    # (in the case of a partition variant that doesn't take it on input)
-    if use_weights:
-        partition_kwargs['weights'] = np.array(g.es['weight']).astype(np.float64)
-    partition_kwargs['n_iterations'] = n_iterations
-    partition_kwargs['seed'] = random_state
-    if resolution is not None:
-        partition_kwargs['resolution_parameter'] = resolution
-    # clustering proper
-    part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
-    # store output into adata.obs
-    groups = np.array(part.membership)
-    if restrict_to is not None:
-        if key_added == 'leiden':
-            key_added += '_R'
-        groups = rename_groups(
-            adata,
-            key_added,
-            restrict_key,
-            restrict_categories,
-            restrict_indices,
-            groups,
+        from katana.local.import_data import from_edge_list_arrays
+
+        property_dict = {"value": weights}
+        graph = from_edge_list_arrays(sources, targets, property_dict)
+
+        enable_vf = True
+        modularity_threshold_per_round = 0.0001
+        modularity_threshold_total = 0.0001
+        max_iterations = 1000000
+        min_graph_size = 0
+        resolution = 1.0
+        randomness = 0
+
+        leiden_plan = LeidenClusteringPlan.deterministic(
+            enable_vf,
+            modularity_threshold_per_round,
+            modularity_threshold_total,
+            max_iterations,
+            min_graph_size,
+            resolution,
+            randomness,
         )
+        # leiden_plan = LeidenClusteringPlan.do_all(enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size, resolution, randomness)
+        leiden_clustering(graph, "value", "leiden_output", plan=leiden_plan)
+        stats = LeidenClusteringStatistics(graph, "value", "leiden_output")
+        print(stats)
+        groups = graph.get_node_property("leiden_output").to_numpy().astype('int')
+
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),
         categories=natsorted(map(str, np.unique(groups))),
