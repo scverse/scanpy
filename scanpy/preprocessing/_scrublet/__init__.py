@@ -47,7 +47,7 @@ def scrublet(
     and directly call functions of Scrublet(). You may also undertake your own
     preprocessing, simulate doublets with
     :func:`~scanpy.pp.scrublet_simulate_doublets`, and run the core scrublet
-    function :func:`~scanpy.pp.scrublet.scrublet`.
+    function :func:`~scanpy.pp.scrublet`.
 
     .. note::
         More information and bug reports `here
