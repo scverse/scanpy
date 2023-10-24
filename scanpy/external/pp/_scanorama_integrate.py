@@ -64,7 +64,7 @@ def scanorama_integrate(
         large value that runs within available memory.
     kwargs
         Any additional arguments will be passed to
-        ``scanorama.integrate()``.
+        ``scanorama.assemble()``.
 
     Returns
     -------
