@@ -22,7 +22,7 @@ from ..testing._doctests import doctest_skip
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
-@doctest_skip('illustrative short example but not runnable')
+@doctest_skip("illustrative short example but not runnable")
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,

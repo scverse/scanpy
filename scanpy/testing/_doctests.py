@@ -5,7 +5,7 @@ from typing import TypeVar
 from collections.abc import Callable
 
 
-F = TypeVar('F', bound=FunctionType)
+F = TypeVar("F", bound=FunctionType)
 
 
 def doctest_needs(mod: str) -> Callable[[F], F]:

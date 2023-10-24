@@ -9,7 +9,7 @@ import numpy as np
 from ...testing._doctests import doctest_needs
 
 
-@doctest_needs('scanorama')
+@doctest_needs("scanorama")
 def scanorama_integrate(
     adata: AnnData,
     key: str,

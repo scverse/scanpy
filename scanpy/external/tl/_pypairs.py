@@ -14,7 +14,7 @@ from ...testing._doctests import doctest_needs
 Genes = Collection[Union[str, int, bool]]
 
 
-@doctest_needs('pypairs')
+@doctest_needs("pypairs")
 def sandbag(
     adata: AnnData,
     annotation: Optional[Mapping[str, Genes]] = None,

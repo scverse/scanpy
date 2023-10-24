@@ -8,7 +8,7 @@ import numpy as np
 from ...testing._doctests import doctest_needs
 
 
-@doctest_needs('harmonypy')
+@doctest_needs("harmonypy")
 def harmony_integrate(
     adata: AnnData,
     key: str,

@@ -71,7 +71,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
 _Method = Literal["overlap_count", "overlap_coef", "jaccard"]
 
 
-@doctest_needs('leidenalg')
+@doctest_needs("leidenalg")
 def marker_gene_overlap(
     adata: AnnData,
     reference_markers: Union[Dict[str, set], Dict[str, list]],

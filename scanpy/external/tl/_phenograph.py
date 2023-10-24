@@ -13,7 +13,7 @@ from ...tools._leiden import MutableVertexPartition
 from ...testing._doctests import doctest_needs
 
 
-@doctest_needs('phenograph')
+@doctest_needs("phenograph")
 def phenograph(
     adata: Union[AnnData, np.ndarray, spmatrix],
     clustering_algo: Optional[Literal["louvain", "leiden"]] = "louvain",

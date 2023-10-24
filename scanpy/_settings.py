@@ -27,9 +27,9 @@ for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
 
 # Collected from the print_* functions in matplotlib.backends
 _Format = Union[
-    Literal['png', 'jpg', 'tif', 'tiff'],
-    Literal['pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf'],
-    Literal['raw', 'rgba'],
+    Literal["png", "jpg", "tif", "tiff"],
+    Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"],
+    Literal["raw", "rgba"],
 ]
 
 

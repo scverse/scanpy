@@ -11,7 +11,7 @@ from ..._utils import AnyRandom
 from ...testing._doctests import doctest_needs
 
 
-@doctest_needs('phate')
+@doctest_needs("phate")
 def phate(
     adata: AnnData,
     n_components: int = 2,

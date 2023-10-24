@@ -15,7 +15,7 @@ from ... import logging as logg
 from ...testing._doctests import doctest_needs
 
 
-@doctest_needs('samalg')
+@doctest_needs("samalg")
 def sam(
     adata: AnnData,
     max_iter: int = 10,

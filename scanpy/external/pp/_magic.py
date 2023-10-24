@@ -15,7 +15,7 @@ from ...testing._doctests import doctest_needs
 MIN_VERSION = "2.0"
 
 
-@doctest_needs('magic')
+@doctest_needs("magic")
 def magic(
     adata: AnnData,
     name_list: Union[Literal["all_genes", "pca_only"], Sequence[str], None] = None,

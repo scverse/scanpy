@@ -11,7 +11,7 @@ from ..._settings import settings
 from ...testing._doctests import doctest_needs
 
 
-@doctest_needs('trimap')
+@doctest_needs("trimap")
 def trimap(
     adata: AnnData,
     n_components: int = 2,

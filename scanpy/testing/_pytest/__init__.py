@@ -10,7 +10,7 @@ import pytest
 from .fixtures import *  # noqa: F403
 
 
-doctest_env_marker = pytest.mark.usefixtures('doctest_env')
+doctest_env_marker = pytest.mark.usefixtures("doctest_env")
 
 
 # Defining it here because it’s autouse.
@@ -20,14 +20,14 @@ def global_test_context() -> Generator[None, None, None]:
     from matplotlib import pyplot
     from scanpy import settings
 
-    pyplot.switch_backend('agg')
+    pyplot.switch_backend("agg")
     settings.logfile = sys.stderr
-    settings.verbosity = 'hint'
+    settings.verbosity = "hint"
     settings.autoshow = True
 
     yield
 
-    pyplot.close('all')
+    pyplot.close("all")
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -65,25 +65,25 @@ def pytest_itemcollected(item: pytest.Item) -> None:
     item.add_marker(doctest_env_marker)
 
     func = _import_name(item.name)
-    if marker := getattr(func, '_doctest_mark', None):
+    if marker := getattr(func, "_doctest_mark", None):
         item.add_marker(marker)
-    if skip_reason := getattr(func, '_doctest_skip_reason', False):
+    if skip_reason := getattr(func, "_doctest_skip_reason", False):
         item.add_marker(pytest.mark.skip(reason=skip_reason))
 
 
 def _import_name(name: str) -> Any:
     from importlib import import_module
 
-    parts = name.split('.')
+    parts = name.split(".")
     obj = import_module(parts[0])
     for i, name in enumerate(parts[1:]):
         try:
-            obj = import_module(f'{obj.__name__}.{name}')
+            obj = import_module(f"{obj.__name__}.{name}")
         except ModuleNotFoundError:
             break
     for name in parts[i + 1 :]:
         try:
             obj = getattr(obj, name)
         except AttributeError:
-            raise RuntimeError(f'{parts[:i]}, {parts[i+1:]}, {obj} {name}')
+            raise RuntimeError(f"{parts[:i]}, {parts[i+1:]}, {obj} {name}")
     return obj

@@ -10,7 +10,7 @@ from ... import logging as logg
 from ...testing._doctests import doctest_needs
 
 
-@doctest_needs('palantir')
+@doctest_needs("palantir")
 def palantir(
     adata: AnnData,
     n_components: int = 10,

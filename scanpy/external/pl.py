@@ -20,7 +20,7 @@ from ..plotting import _utils
 from .tl._wishbone import _anndata_to_wishbone
 
 
-@doctest_needs('phate')
+@doctest_needs("phate")
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,

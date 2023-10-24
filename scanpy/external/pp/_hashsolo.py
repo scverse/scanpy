@@ -257,7 +257,7 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
     }
 
 
-@doctest_skip('Illustrative but not runnable doctest code')
+@doctest_skip("Illustrative but not runnable doctest code")
 def hashsolo(
     adata: anndata.AnnData,
     cell_hashing_columns: list,
