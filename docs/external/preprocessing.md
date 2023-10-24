@@ -17,6 +17,15 @@
 
 ```
 
+### Sample demultiplexing
+
+```{eval-rst}
+.. autosummary::
+   :toctree: ../generated/
+
+   pp.hashsolo
+```
+
 ### Imputation
 
 Note that the fundamental limitations of imputation are still under [debate](https://github.com/scverse/scanpy/issues/189).
