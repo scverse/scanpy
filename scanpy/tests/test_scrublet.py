@@ -141,20 +141,35 @@ def test_scrublet_data():
     ).all()
 
 
-def test_scrublet_dense():
+@pytest.fixture(scope="module")
+def _scrub_small_sess() -> ad.AnnData:
+    # Reduce size of input for faster test
+    adata = pbmc3k()[:500].copy()
+    sc.pp.filter_genes(adata, min_counts=100)
+
+    sc.pp.scrublet(adata, use_approx_neighbors=False)
+    return adata
+
+
+@pytest.fixture()
+def scrub_small(_scrub_small_sess: ad.AnnData):
+    return _scrub_small_sess.copy()
+
+
+def test_scrublet_dense(scrub_small: ad.AnnData):
     """
     Test that Scrublet works for dense matrices.
 
     Check that scrublet runs and detects some doublets when a dense matrix is supplied.
     """
-    adata = paul15()[:500].copy()
-    sc.pp.scrublet(adata, use_approx_neighbors=False)
 
     # replace assertions by conditions
-    assert "predicted_doublet" in adata.obs.columns
-    assert "doublet_score" in adata.obs.columns
+    assert "predicted_doublet" in scrub_small.obs.columns
+    assert "doublet_score" in scrub_small.obs.columns
 
-    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+    assert scrub_small.obs[
+        "predicted_doublet"
+    ].any(), "Expect some doublets to be identified"
 
 
 test_params = {
@@ -171,27 +186,17 @@ test_params = {
 
 
 @pytest.mark.parametrize(("param", "value"), test_params.items())
-def test_scrublet_params(param, value):
+def test_scrublet_params(scrub_small: ad.AnnData, param, value):
     """
     Test that Scrublet args are passed.
 
     Check that changes to parameters change scrublet results.
     """
-    # Reduce size of input for faster test
-    adata = pbmc3k()[:500].copy()
-    sc.pp.filter_genes(adata, min_counts=100)
-
-    # Get the default output
-
-    default = sc.pp.scrublet(adata, use_approx_neighbors=False, copy=True)
-
-    # Test each parameter and make sure something changes
-
     curr = sc.pp.scrublet(
-        adata=adata, use_approx_neighbors=False, copy=True, **{param: value}
+        adata=scrub_small, use_approx_neighbors=False, copy=True, **{param: value}
     )
     with pytest.raises(AssertionError):
-        assert_equal(default, curr)
+        assert_equal(scrub_small, curr)
 
 
 def test_scrublet_simulate_doublets():
