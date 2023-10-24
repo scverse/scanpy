@@ -18,7 +18,7 @@ from anndata import (
     read_loom,
     read_hdf,
 )
-from anndata import read as read_h5ad
+from anndata import read_h5ad
 
 from ._settings import settings
 from ._utils import Empty, _empty

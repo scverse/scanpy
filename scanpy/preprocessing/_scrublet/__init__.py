@@ -182,7 +182,7 @@ def scrublet(
 
             logged = pp.log1p(ad_obs, copy=True)
             pp.highly_variable_genes(logged)
-            ad_obs = ad_obs[:, logged.var['highly_variable']]
+            ad_obs = ad_obs[:, logged.var['highly_variable']].copy()
 
             # Simulate the doublets based on the raw expressions from the normalised
             # and filtered object.
@@ -234,7 +234,7 @@ def scrublet(
         batches = np.unique(adata.obs[batch_key])
         scrubbed = [
             _run_scrublet(
-                adata_obs[adata_obs.obs[batch_key] == batch],
+                adata_obs[adata_obs.obs[batch_key] == batch].copy(),
                 adata_sim,
             )
             for batch in batches

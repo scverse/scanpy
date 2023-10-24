@@ -137,9 +137,9 @@ class Scrublet:
         if not isinstance(counts_matrix, sparse.csc_matrix):
             counts_matrix = sparse.csc_matrix(counts_matrix)
         if total_counts is None:
-            total_counts = self._E_obs.sum(1).A.squeeze()
+            total_counts = counts_matrix.sum(1).A.squeeze()
         if n_neighbors is None:
-            n_neighbors = int(round(0.5 * np.sqrt(self._E_obs.shape[0])))
+            n_neighbors = int(round(0.5 * np.sqrt(counts_matrix.shape[0])))
 
         # initialize counts matrices
         self._E_obs = counts_matrix

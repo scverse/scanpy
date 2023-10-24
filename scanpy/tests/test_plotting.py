@@ -1618,17 +1618,17 @@ def test_scrublet_plots(image_comparer, plt):
     adata = pbmc3k()
     sc.pp.scrublet(adata, use_approx_neighbors=False)
 
-    sc.pl.scrublet_score_distribution(adata, return_fig=True)
+    sc.pl.scrublet_score_distribution(adata, return_fig=True, show=False)
     save_and_compare_images('scrublet')
 
     del adata.uns['scrublet']['threshold']
     adata.obs['predicted_doublet'] = False
 
-    sc.pl.scrublet_score_distribution(adata, return_fig=True)
+    sc.pl.scrublet_score_distribution(adata, return_fig=True, show=False)
     save_and_compare_images('scrublet_no_threshold')
 
     adata.obs['batch'] = 1350 * ['a'] + 1350 * ['b']
     sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key='batch')
 
-    sc.pl.scrublet_score_distribution(adata, return_fig=True)
+    sc.pl.scrublet_score_distribution(adata, return_fig=True, show=False)
     save_and_compare_images('scrublet_with_batches')
