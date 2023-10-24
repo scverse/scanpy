@@ -157,7 +157,21 @@ def test_scrublet_dense():
     assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
 
-def test_scrublet_params():
+test_params = {
+    "expected_doublet_rate": 0.1,
+    "synthetic_doublet_umi_subsampling": 0.8,
+    "knn_dist_metric": "manhattan",
+    "normalize_variance": False,
+    "log_transform": True,
+    "mean_center": False,
+    "n_prin_comps": 10,
+    "n_neighbors": 2,
+    "threshold": 0.1,
+}
+
+
+@pytest.mark.parametrize(("param", "value"), test_params.items())
+def test_scrublet_params(param, value):
     """
     Test that Scrublet args are passed.
 
@@ -171,30 +185,13 @@ def test_scrublet_params():
 
     default = sc.pp.scrublet(adata, use_approx_neighbors=False, copy=True)
 
-    test_params = {
-        "expected_doublet_rate": 0.1,
-        "synthetic_doublet_umi_subsampling": 0.8,
-        "knn_dist_metric": "manhattan",
-        "normalize_variance": False,
-        "log_transform": True,
-        "mean_center": False,
-        "n_prin_comps": 10,
-        "n_neighbors": 2,
-        "threshold": 0.1,
-    }
-
     # Test each parameter and make sure something changes
 
-    for param in test_params.keys():
-        test_args = {
-            "adata": adata,
-            "use_approx_neighbors": False,
-            "copy": True,
-            param: test_params[param],
-        }
-        curr = sc.pp.scrublet(**test_args)
-        with pytest.raises(AssertionError):
-            assert_equal(default, curr)
+    curr = sc.pp.scrublet(
+        adata=adata, use_approx_neighbors=False, copy=True, **{param: value}
+    )
+    with pytest.raises(AssertionError):
+        assert_equal(default, curr)
 
 
 def test_scrublet_simulate_doublets():

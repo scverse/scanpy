@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+from scipy import sparse
 from sklearn.decomposition import PCA, TruncatedSVD
 
 from ..._utils import AnyRandom
@@ -14,9 +15,9 @@ if TYPE_CHECKING:
 
 def mean_center(self: Scrublet) -> None:
     gene_means = self._counts_obs_norm.mean(0)
-    self._counts_obs_norm = self._counts_obs_norm - gene_means
+    self._counts_obs_norm = sparse.csc_matrix(self._counts_obs_norm - gene_means)
     if self._counts_sim_norm is not None:
-        self._counts_sim_norm = self._counts_sim_norm - gene_means
+        self._counts_sim_norm = sparse.csc_matrix(self._counts_sim_norm - gene_means)
 
 
 def normalize_variance(self: Scrublet) -> None:

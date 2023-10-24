@@ -28,14 +28,18 @@ def sparse_var(
 
 
 def sparse_multiply(
-    E: sparse.csr_matrix | sparse.csc_matrix, a: float | int | NDArray[np.float64]
+    E: sparse.csr_matrix | sparse.csc_matrix | NDArray[np.float64],
+    a: float | int | NDArray[np.float64],
 ) -> sparse.csr_matrix | sparse.csc_matrix:
     """multiply each row of E by a scalar"""
 
     nrow = E.shape[0]
     w = sparse.lil_matrix((nrow, nrow))
     w.setdiag(a)
-    return w * E
+    r = w @ E
+    if isinstance(r, (np.matrix, np.ndarray)):
+        return sparse.csc_matrix(r)
+    return r
 
 
 def sparse_zscore(
@@ -50,7 +54,7 @@ def sparse_zscore(
         gene_mean = E.mean(0)
     if gene_stdev is None:
         gene_stdev = np.sqrt(sparse_var(E, axis=0))
-    return sparse_multiply((E - gene_mean).T, 1 / gene_stdev).T
+    return sparse_multiply(np.asarray((E - gene_mean).T), 1 / gene_stdev).T
 
 
 def subsample_counts(
