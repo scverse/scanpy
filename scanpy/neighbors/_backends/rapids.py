@@ -12,21 +12,21 @@ from sklearn.exceptions import NotFittedError
 from ..._settings import settings
 from ._common import TransformerChecksMixin
 
-_Algorithm = Literal['rbc', 'brute', 'ivfflat', 'ivfpq']
+_Algorithm = Literal["rbc", "brute", "ivfflat", "ivfpq"]
 _Metric = Literal[
-    'l1',
-    'cityblock',
-    'taxicab',
-    'manhattan',
-    'euclidean',
-    'l2',
-    'braycurtis',
-    'canberra',
-    'minkowski',
-    'chebyshev',
-    'jensenshannon',
-    'cosine',
-    'correlation',
+    "l1",
+    "cityblock",
+    "taxicab",
+    "manhattan",
+    "euclidean",
+    "l2",
+    "braycurtis",
+    "canberra",
+    "minkowski",
+    "chebyshev",
+    "jensenshannon",
+    "cosine",
+    "correlation",
 ]
 
 
@@ -40,7 +40,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         self,
         *,
         handle=None,
-        algorithm: _Algorithm | Literal['auto'] = 'auto',
+        algorithm: _Algorithm | Literal["auto"] = "auto",
         n_neighbors: int,
         metric: _Metric = "euclidean",
         p: int = 2,
@@ -63,7 +63,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
             p=p,
             algo_params=algo_params,
             metric_params=metric_params,
-            output_type='input',  # could also be None to respect global setting
+            output_type="input",  # could also be None to respect global setting
         )
 
     def __sklearn_is_fitted__(self) -> bool:

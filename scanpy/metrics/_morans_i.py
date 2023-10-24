@@ -256,7 +256,7 @@ def _morans_i(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.nd
         return full_result
     else:
         msg = (
-            'Moran’s I metric not implemented for vals of type '
-            f'{fullname(type(vals))} and ndim {vals.ndim}.'
+            "Moran’s I metric not implemented for vals of type "
+            f"{fullname(type(vals))} and ndim {vals.ndim}."
         )
         raise NotImplementedError(msg)

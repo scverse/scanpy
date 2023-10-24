@@ -68,7 +68,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
     return jacc_results
 
 
-_Method = Literal['overlap_count', 'overlap_coef', 'jaccard']
+_Method = Literal["overlap_count", "overlap_coef", "jaccard"]
 
 
 @doctest_needs('leidenalg')
@@ -76,12 +76,12 @@ def marker_gene_overlap(
     adata: AnnData,
     reference_markers: Union[Dict[str, set], Dict[str, list]],
     *,
-    key: str = 'rank_genes_groups',
-    method: _Method = 'overlap_count',
-    normalize: Optional[Literal['reference', 'data']] = None,
+    key: str = "rank_genes_groups",
+    method: _Method = "overlap_count",
+    normalize: Optional[Literal["reference", "data"]] = None,
     top_n_markers: Optional[int] = None,
     adj_pval_threshold: Optional[float] = None,
-    key_added: str = 'marker_gene_overlap',
+    key_added: str = "marker_gene_overlap",
     inplace: bool = False,
 ):
     """\
@@ -159,29 +159,29 @@ def marker_gene_overlap(
     # Test user inputs
     if inplace:
         raise NotImplementedError(
-            'Writing Pandas dataframes to h5ad is currently under development.'
-            '\nPlease use `inplace=False`.'
+            "Writing Pandas dataframes to h5ad is currently under development."
+            "\nPlease use `inplace=False`."
         )
 
     if key not in adata.uns:
         raise ValueError(
-            'Could not find marker gene data. '
-            'Please run `sc.tl.rank_genes_groups()` first.'
+            "Could not find marker gene data. "
+            "Please run `sc.tl.rank_genes_groups()` first."
         )
 
-    avail_methods = {'overlap_count', 'overlap_coef', 'jaccard', 'enrich'}
+    avail_methods = {"overlap_count", "overlap_coef", "jaccard", "enrich"}
     if method not in avail_methods:
-        raise ValueError(f'Method must be one of {avail_methods}.')
+        raise ValueError(f"Method must be one of {avail_methods}.")
 
-    if normalize == 'None':
+    if normalize == "None":
         normalize = None
 
-    avail_norm = {'reference', 'data', None}
+    avail_norm = {"reference", "data", None}
     if normalize not in avail_norm:
-        raise ValueError(f'Normalize must be one of {avail_norm}.')
+        raise ValueError(f"Normalize must be one of {avail_norm}.")
 
-    if normalize is not None and method != 'overlap_count':
-        raise ValueError('Can only normalize with method=`overlap_count`.')
+    if normalize is not None and method != "overlap_count":
+        raise ValueError("Can only normalize with method=`overlap_count`.")
 
     if not all(isinstance(val, cabc.Set) for val in reference_markers.values()):
         try:
@@ -190,81 +190,81 @@ def marker_gene_overlap(
             }
         except Exception:
             raise ValueError(
-                'Please ensure that `reference_markers` contains '
-                'sets or lists of markers as values.'
+                "Please ensure that `reference_markers` contains "
+                "sets or lists of markers as values."
             )
 
     if adj_pval_threshold is not None:
-        if 'pvals_adj' not in adata.uns[key]:
+        if "pvals_adj" not in adata.uns[key]:
             raise ValueError(
-                'Could not find adjusted p-value data. '
-                'Please run `sc.tl.rank_genes_groups()` with a '
-                'method that outputs adjusted p-values.'
+                "Could not find adjusted p-value data. "
+                "Please run `sc.tl.rank_genes_groups()` with a "
+                "method that outputs adjusted p-values."
             )
 
         if adj_pval_threshold < 0:
             logg.warning(
-                '`adj_pval_threshold` was set below 0. Threshold will be set to 0.'
+                "`adj_pval_threshold` was set below 0. Threshold will be set to 0."
             )
             adj_pval_threshold = 0
         elif adj_pval_threshold > 1:
             logg.warning(
-                '`adj_pval_threshold` was set above 1. Threshold will be set to 1.'
+                "`adj_pval_threshold` was set above 1. Threshold will be set to 1."
             )
             adj_pval_threshold = 1
 
         if top_n_markers is not None:
             logg.warning(
-                'Both `adj_pval_threshold` and `top_n_markers` is set. '
-                '`adj_pval_threshold` will be ignored.'
+                "Both `adj_pval_threshold` and `top_n_markers` is set. "
+                "`adj_pval_threshold` will be ignored."
             )
 
     if top_n_markers is not None and top_n_markers < 1:
         logg.warning(
-            '`top_n_markers` was set below 1. `top_n_markers` will be set to 1.'
+            "`top_n_markers` was set below 1. `top_n_markers` will be set to 1."
         )
         top_n_markers = 1
 
     # Get data-derived marker genes in a dictionary of sets
     data_markers = dict()
-    cluster_ids = adata.uns[key]['names'].dtype.names
+    cluster_ids = adata.uns[key]["names"].dtype.names
 
     for group in cluster_ids:
         if top_n_markers is not None:
-            n_genes = min(top_n_markers, adata.uns[key]['names'].shape[0])
-            data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
+            n_genes = min(top_n_markers, adata.uns[key]["names"].shape[0])
+            data_markers[group] = set(adata.uns[key]["names"][group][:n_genes])
         elif adj_pval_threshold is not None:
-            n_genes = (adata.uns[key]['pvals_adj'][group] < adj_pval_threshold).sum()
-            data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
+            n_genes = (adata.uns[key]["pvals_adj"][group] < adj_pval_threshold).sum()
+            data_markers[group] = set(adata.uns[key]["names"][group][:n_genes])
             if n_genes == 0:
                 logg.warning(
-                    'No marker genes passed the significance threshold of '
-                    f'{adj_pval_threshold} for cluster {group!r}.'
+                    "No marker genes passed the significance threshold of "
+                    f"{adj_pval_threshold} for cluster {group!r}."
                 )
         # Use top 100 markers as default if top_n_markers = None
         else:
-            data_markers[group] = set(adata.uns[key]['names'][group][:100])
+            data_markers[group] = set(adata.uns[key]["names"][group][:100])
 
     # Find overlaps
-    if method == 'overlap_count':
+    if method == "overlap_count":
         marker_match = _calc_overlap_count(reference_markers, data_markers)
-        if normalize == 'reference':
+        if normalize == "reference":
             # Ensure rows sum to 1
             ref_lengths = np.array(
                 [len(reference_markers[m_group]) for m_group in reference_markers]
             )
             marker_match = marker_match / ref_lengths[:, np.newaxis]
             marker_match = np.nan_to_num(marker_match)
-        elif normalize == 'data':
+        elif normalize == "data":
             # Ensure columns sum to 1
             data_lengths = np.array(
                 [len(data_markers[dat_group]) for dat_group in data_markers]
             )
             marker_match = marker_match / data_lengths
             marker_match = np.nan_to_num(marker_match)
-    elif method == 'overlap_coef':
+    elif method == "overlap_coef":
         marker_match = _calc_overlap_coef(reference_markers, data_markers)
-    elif method == 'jaccard':
+    elif method == "jaccard":
         marker_match = _calc_jaccard(reference_markers, data_markers)
 
     # Note:
@@ -284,6 +284,6 @@ def marker_gene_overlap(
     # Store the results
     if inplace:
         adata.uns[key_added] = marker_matching_df
-        logg.hint(f'added\n    {key_added!r}, marker overlap scores (adata.uns)')
+        logg.hint(f"added\n    {key_added!r}, marker overlap scores (adata.uns)")
     else:
         return marker_matching_df

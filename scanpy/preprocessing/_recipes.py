@@ -20,7 +20,7 @@ def recipe_weinreb17(
     mean_threshold: float = 0.01,
     cv_threshold: int = 2,
     n_pcs: int = 50,
-    svd_solver='randomized',
+    svd_solver="randomized",
     random_state: AnyRandom = 0,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -43,7 +43,7 @@ def recipe_weinreb17(
     from scipy.sparse import issparse
 
     if issparse(adata.X):
-        raise ValueError('`recipe_weinreb16 does not support sparse matrices.')
+        raise ValueError("`recipe_weinreb16 does not support sparse matrices.")
     if copy:
         adata = adata.copy()
     if log:
@@ -60,7 +60,7 @@ def recipe_weinreb17(
         random_state=random_state,
     )
     # update adata
-    adata.obsm['X_pca'] = X_pca
+    adata.obsm["X_pca"] = X_pca
     return adata if copy else None
 
 
@@ -146,15 +146,15 @@ def recipe_zheng17(
     -------
     Returns or updates `adata` depending on `copy`.
     """
-    start = logg.info('running recipe zheng17')
+    start = logg.info("running recipe zheng17")
     if copy:
         adata = adata.copy()
     # only consider genes with more than 1 count
     pp.filter_genes(adata, min_counts=1)
     # normalize with total UMI count per cell
-    normalize_total(adata, key_added='n_counts_all')
+    normalize_total(adata, key_added="n_counts_all")
     filter_result = filter_genes_dispersion(
-        adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False
+        adata.X, flavor="cell_ranger", n_top_genes=n_top_genes, log=False
     )
     if plot:  # should not import at the top of the file
         from ..plotting import _preprocessing as ppp
@@ -167,5 +167,5 @@ def recipe_zheng17(
     if log:
         pp.log1p(adata)  # log transform: X = log(X + 1)
     pp.scale(adata)
-    logg.info('    finished', time=start)
+    logg.info("    finished", time=start)
     return adata if copy else None

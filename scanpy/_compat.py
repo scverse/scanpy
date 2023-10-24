@@ -19,15 +19,15 @@ except ImportError:
         pass
 
 
-__all__ = ['cache', 'DaskArray', 'fullname', 'pkg_metadata', 'pkg_version']
+__all__ = ["cache", "DaskArray", "fullname", "pkg_metadata", "pkg_version"]
 
 
 def fullname(typ: type) -> str:
     module = typ.__module__
     name = typ.__qualname__
-    if module == 'builtins' or module is None:
+    if module == "builtins" or module is None:
         return name
-    return f'{module}.{name}'
+    return f"{module}.{name}"
 
 
 try:

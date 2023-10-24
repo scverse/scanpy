@@ -18,15 +18,15 @@ MIN_VERSION = "2.0"
 @doctest_needs('magic')
 def magic(
     adata: AnnData,
-    name_list: Union[Literal['all_genes', 'pca_only'], Sequence[str], None] = None,
+    name_list: Union[Literal["all_genes", "pca_only"], Sequence[str], None] = None,
     *,
     knn: int = 5,
     decay: Optional[float] = 1,
     knn_max: Optional[int] = None,
-    t: Union[Literal['auto'], int] = 3,
+    t: Union[Literal["auto"], int] = 3,
     n_pca: Optional[int] = 100,
-    solver: Literal['exact', 'approximate'] = 'exact',
-    knn_dist: str = 'euclidean',
+    solver: Literal["exact", "approximate"] = "exact",
+    knn_dist: str = "euclidean",
     random_state: AnyRandom = None,
     n_jobs: Optional[int] = None,
     verbose: bool = False,
@@ -134,19 +134,19 @@ def magic(
         from magic import MAGIC, __version__
     except ImportError:
         raise ImportError(
-            'Please install magic package via `pip install --user '
-            'git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`'
+            "Please install magic package via `pip install --user "
+            "git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`"
         )
     else:
         if not version.parse(__version__) >= version.parse(MIN_VERSION):
             raise ImportError(
-                'scanpy requires magic-impute >= '
-                f'v{MIN_VERSION} (detected: v{__version__}). '
-                'Please update magic package via `pip install --user '
-                '--upgrade magic-impute`'
+                "scanpy requires magic-impute >= "
+                f"v{MIN_VERSION} (detected: v{__version__}). "
+                "Please update magic package via `pip install --user "
+                "--upgrade magic-impute`"
             )
 
-    start = logg.info('computing MAGIC')
+    start = logg.info("computing MAGIC")
     all_or_pca = isinstance(name_list, (str, type(None)))
     if all_or_pca and name_list not in {"all_genes", "pca_only", None}:
         raise ValueError(
@@ -178,12 +178,12 @@ def magic(
         **kwargs,
     ).fit_transform(adata, genes=name_list)
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
         deep=(
             "added\n    'X_magic', PCA on MAGIC coordinates (adata.obsm)"
             if name_list == "pca_only"
-            else ''
+            else ""
         ),
     )
     # update AnnData instance

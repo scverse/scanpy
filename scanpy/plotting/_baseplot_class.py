@@ -56,7 +56,7 @@ class BasePlot(object):
     BasePlot(adata, ...).legend(title='legend').style(cmap='binary').show()
     """
 
-    DEFAULT_SAVE_PREFIX = 'baseplot_'
+    DEFAULT_SAVE_PREFIX = "baseplot_"
     MIN_FIGURE_HEIGHT = 2.5
     DEFAULT_CATEGORY_HEIGHT = 0.35
     DEFAULT_CATEGORY_WIDTH = 0.37
@@ -64,9 +64,9 @@ class BasePlot(object):
     # gridspec parameter. Sets the space between mainplot, dendrogram and legend
     DEFAULT_WSPACE = 0
 
-    DEFAULT_COLORMAP = 'winter'
+    DEFAULT_COLORMAP = "winter"
     DEFAULT_LEGENDS_WIDTH = 1.5
-    DEFAULT_COLOR_LEGEND_TITLE = 'Expression\nlevel in group'
+    DEFAULT_COLOR_LEGEND_TITLE = "Expression\nlevel in group"
 
     MAX_NUM_CATEGORIES = 500  # maximum number of categories allowed to be plotted
 
@@ -79,7 +79,7 @@ class BasePlot(object):
         log: bool = False,
         num_categories: int = 7,
         categories_order: Optional[Sequence[str]] = None,
-        title: Optional['str'] = None,
+        title: Optional["str"] = None,
         figsize: Optional[Tuple[float, float]] = None,
         gene_symbols: Optional[str] = None,
         var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
@@ -141,7 +141,7 @@ class BasePlot(object):
         self.log = log
         self.kwds = kwds
 
-        VBoundNorm = namedtuple('VBoundNorm', ['vmin', 'vmax', 'vcenter', 'norm'])
+        VBoundNorm = namedtuple("VBoundNorm", ["vmin", "vmax", "vcenter", "norm"])
         self.vboundnorm = VBoundNorm(vmin=vmin, vmax=vmax, vcenter=vcenter, norm=norm)
 
         # set default values for legend
@@ -276,17 +276,17 @@ class BasePlot(object):
 
         self.group_extra_size = size
         self.plot_group_extra = {
-            'kind': 'dendrogram',
-            'width': size,
-            'dendrogram_key': dendrogram_key,
-            'dendrogram_ticks': dendro_ticks,
+            "kind": "dendrogram",
+            "width": size,
+            "dendrogram_key": dendrogram_key,
+            "dendrogram_ticks": dendro_ticks,
         }
         return self
 
     def add_totals(
         self,
         show: Optional[bool] = True,
-        sort: Literal['ascending', 'descending'] = None,
+        sort: Literal["ascending", "descending"] = None,
         size: Optional[float] = 0.8,
         color: Optional[Union[ColorLike, Sequence[ColorLike]]] = None,
     ):
@@ -348,18 +348,18 @@ class BasePlot(object):
             return self
 
         _sort = True if sort is not None else False
-        _ascending = True if sort == 'ascending' else False
+        _ascending = True if sort == "ascending" else False
         counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
 
         if _sort:
             self.categories_order = counts_df.index
 
         self.plot_group_extra = {
-            'kind': 'group_totals',
-            'width': size,
-            'sort': sort,
-            'counts_df': counts_df,
-            'color': color,
+            "kind": "group_totals",
+            "width": size,
+            "sort": sort,
+            "counts_df": counts_df,
+            "color": color,
         }
         return self
 
@@ -432,24 +432,24 @@ class BasePlot(object):
         return self.ax_dict
 
     def _plot_totals(
-        self, total_barplot_ax: Axes, orientation: Literal['top', 'right']
+        self, total_barplot_ax: Axes, orientation: Literal["top", "right"]
     ):
         """
         Makes the bar plot for totals
         """
         params = self.plot_group_extra
-        counts_df = params['counts_df']
+        counts_df = params["counts_df"]
         if self.categories_order is not None:
             counts_df = counts_df.loc[self.categories_order]
-        if params['color'] is None:
-            if f'{self.groupby}_colors' in self.adata.uns:
-                color = self.adata.uns[f'{self.groupby}_colors']
+        if params["color"] is None:
+            if f"{self.groupby}_colors" in self.adata.uns:
+                color = self.adata.uns[f"{self.groupby}_colors"]
             else:
-                color = 'salmon'
+                color = "salmon"
         else:
-            color = params['color']
+            color = params["color"]
 
-        if orientation == 'top':
+        if orientation == "top":
             counts_df.plot(
                 kind="bar",
                 color=color,
@@ -464,7 +464,7 @@ class BasePlot(object):
             for p in total_barplot_ax.patches:
                 p.set_x(p.get_x() + 0.5)
                 if p.get_height() >= 1000:
-                    display_number = f'{np.round(p.get_height()/1000, decimals=1)}k'
+                    display_number = f"{np.round(p.get_height()/1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_height(), decimals=1)
                 total_barplot_ax.annotate(
@@ -480,7 +480,7 @@ class BasePlot(object):
             #     total_barplot_ax.spines[k].set_visible(False)
             total_barplot_ax.set_ylim(0, max_y * 1.4)
 
-        elif orientation == 'right':
+        elif orientation == "right":
             counts_df.plot(
                 kind="barh",
                 color=color,
@@ -494,7 +494,7 @@ class BasePlot(object):
             max_x = max([p.get_width() for p in total_barplot_ax.patches])
             for p in total_barplot_ax.patches:
                 if p.get_width() >= 1000:
-                    display_number = f'{np.round(p.get_width()/1000, decimals=1)}k'
+                    display_number = f"{np.round(p.get_width()/1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_width(), decimals=1)
                 total_barplot_ax.annotate(
@@ -532,12 +532,12 @@ class BasePlot(object):
         mappable = ScalarMappable(norm=normalize, cmap=cmap)
 
         matplotlib.colorbar.Colorbar(
-            color_legend_ax, mappable=mappable, orientation='horizontal'
+            color_legend_ax, mappable=mappable, orientation="horizontal"
         )
 
-        color_legend_ax.set_title(self.color_legend_title, fontsize='small')
+        color_legend_ax.set_title(self.color_legend_title, fontsize="small")
 
-        color_legend_ax.xaxis.set_tick_params(labelsize='small')
+        color_legend_ax.xaxis.set_tick_params(labelsize="small")
 
     def _plot_legend(self, legend_ax, return_ax_dict, normalize):
         # to maintain the fixed height size of the legends, a
@@ -558,7 +558,7 @@ class BasePlot(object):
         color_legend_ax = fig.add_subplot(legend_gs[1])
 
         self._plot_colorbar(color_legend_ax, normalize)
-        return_ax_dict['color_legend_ax'] = color_legend_ax
+        return_ax_dict["color_legend_ax"] = color_legend_ax
 
     def _mainplot(self, ax):
         y_labels = self.categories
@@ -582,9 +582,9 @@ class BasePlot(object):
 
         x_ticks = np.arange(len(x_labels)) + 0.5
         ax.set_xticks(x_ticks)
-        ax.set_xticklabels(x_labels, rotation=90, ha='center', minor=False)
+        ax.set_xticklabels(x_labels, rotation=90, ha="center", minor=False)
 
-        ax.tick_params(axis='both', labelsize='small')
+        ax.tick_params(axis="both", labelsize="small")
         ax.grid(False)
 
         # to be consistent with the heatmap plot, is better to
@@ -681,14 +681,14 @@ class BasePlot(object):
             width_ratios = [mainplot_width, var_groups_height]
             # gridspec is the same but rows and columns are swapped
 
-        if self.fig_title is not None and self.fig_title.strip() != '':
+        if self.fig_title is not None and self.fig_title.strip() != "":
             # for the figure title use the ax that contains
             # all the main graphical elements (main plot, dendrogram etc)
             # otherwise the title may overlay with the figure.
             # also, this puts the title centered on the main figure and not
             # centered between the main figure and the legends
             _ax = self.fig.add_subplot(gs[0, 0])
-            _ax.axis('off')
+            _ax.axis("off")
             _ax.set_title(self.fig_title)
 
         # the main plot is divided into three rows and two columns
@@ -707,36 +707,36 @@ class BasePlot(object):
             height_ratios=height_ratios,
         )
         main_ax = self.fig.add_subplot(mainplot_gs[2, 0])
-        return_ax_dict['mainplot_ax'] = main_ax
+        return_ax_dict["mainplot_ax"] = main_ax
         if not self.are_axes_swapped:
             if self.plot_group_extra is not None:
                 group_extra_ax = self.fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
-                group_extra_orientation = 'right'
+                group_extra_orientation = "right"
             if self.has_var_groups:
                 gene_groups_ax = self.fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
-                var_group_orientation = 'top'
+                var_group_orientation = "top"
         else:
             if self.plot_group_extra:
                 group_extra_ax = self.fig.add_subplot(mainplot_gs[1, 0], sharex=main_ax)
-                group_extra_orientation = 'top'
+                group_extra_orientation = "top"
             if self.has_var_groups:
                 gene_groups_ax = self.fig.add_subplot(mainplot_gs[2, 1], sharey=main_ax)
-                var_group_orientation = 'right'
+                var_group_orientation = "right"
 
         if self.plot_group_extra is not None:
-            if self.plot_group_extra['kind'] == 'dendrogram':
+            if self.plot_group_extra["kind"] == "dendrogram":
                 _plot_dendrogram(
                     group_extra_ax,
                     self.adata,
                     self.groupby,
-                    dendrogram_key=self.plot_group_extra['dendrogram_key'],
-                    ticks=self.plot_group_extra['dendrogram_ticks'],
+                    dendrogram_key=self.plot_group_extra["dendrogram_key"],
+                    ticks=self.plot_group_extra["dendrogram_ticks"],
                     orientation=group_extra_orientation,
                 )
-            if self.plot_group_extra['kind'] == 'group_totals':
+            if self.plot_group_extra["kind"] == "group_totals":
                 self._plot_totals(group_extra_ax, group_extra_orientation)
 
-            return_ax_dict['group_extra_ax'] = group_extra_ax
+            return_ax_dict["group_extra_ax"] = group_extra_ax
 
         # plot group legends on top or left of main_ax (if given)
         if self.has_var_groups:
@@ -749,15 +749,15 @@ class BasePlot(object):
                 right_adjustment=0.7,
                 orientation=var_group_orientation,
             )
-            return_ax_dict['gene_group_ax'] = gene_groups_ax
+            return_ax_dict["gene_group_ax"] = gene_groups_ax
 
         # plot the mainplot
         normalize = self._mainplot(main_ax)
 
         # code from pandas.plot in add_totals adds
         # minor ticks that need to be removed
-        main_ax.yaxis.set_tick_params(which='minor', left=False, right=False)
-        main_ax.xaxis.set_tick_params(which='minor', top=False, bottom=False, length=0)
+        main_ax.yaxis.set_tick_params(which="minor", left=False, right=False)
+        main_ax.xaxis.set_tick_params(which="minor", top=False, bottom=False, length=0)
         main_ax.set_zorder(100)
         if self.legends_width > 0:
             legend_ax = self.fig.add_subplot(gs[0, 1])
@@ -800,7 +800,7 @@ class BasePlot(object):
         else:
             pl.show()
 
-    def savefig(self, filename: str, bbox_inches: Optional[str] = 'tight', **kwargs):
+    def savefig(self, filename: str, bbox_inches: Optional[str] = "tight", **kwargs):
         """
         Save the current figure
 
@@ -852,13 +852,13 @@ class BasePlot(object):
             """used to clean up warning message"""
             _categories = list(_categories)
             if len(_categories) > 3:
-                _categories = _categories[:3] + ['etc.']
-            return ', '.join(_categories)
+                _categories = _categories[:3] + ["etc."]
+            return ", ".join(_categories)
 
         key = _get_dendrogram_key(self.adata, dendrogram, self.groupby)
 
         dendro_info = self.adata.uns[key]
-        if self.groupby != dendro_info['groupby']:
+        if self.groupby != dendro_info["groupby"]:
             raise ValueError(
                 "Incompatible observations. The precomputed dendrogram contains "
                 f"information for the observation: '{self.groupby}' while the plot is "
@@ -867,8 +867,8 @@ class BasePlot(object):
             )
 
         # order of groupby categories
-        categories_idx_ordered = dendro_info['categories_idx_ordered']
-        categories_ordered = dendro_info['categories_ordered']
+        categories_idx_ordered = dendro_info["categories_idx_ordered"]
+        categories_ordered = dendro_info["categories_ordered"]
 
         if len(self.categories) != len(categories_idx_ordered):
             raise ValueError(
@@ -917,7 +917,7 @@ class BasePlot(object):
             var_names_ordered = None
 
         self.categories_idx_ordered = categories_idx_ordered
-        self.categories_order = dendro_info['categories_ordered']
+        self.categories_order = dendro_info["categories_ordered"]
         self.var_names_idx_order = var_names_idx_ordered
         self.var_names_ordered = var_names_ordered
 
@@ -929,7 +929,7 @@ class BasePlot(object):
         left_adjustment: float = -0.3,
         right_adjustment: float = 0.3,
         rotation: Optional[float] = None,
-        orientation: Literal['top', 'right'] = 'top',
+        orientation: Literal["top", "right"] = "top",
     ):
         """\
         Draws brackets that represent groups of genes on the give axis.
@@ -977,7 +977,7 @@ class BasePlot(object):
         # verts and codes are used by PathPatch to make the brackets
         verts = []
         codes = []
-        if orientation == 'top':
+        if orientation == "top":
             # rotate labels if any of them is longer than 4 characters
             if rotation is None and group_labels:
                 if max([len(x) for x in group_labels]) > 4:
@@ -1000,8 +1000,8 @@ class BasePlot(object):
                     group_x_center,
                     1.1,
                     group_labels[idx],
-                    ha='center',
-                    va='bottom',
+                    ha="center",
+                    va="bottom",
                     rotation=rotation,
                 )
         else:
@@ -1027,24 +1027,24 @@ class BasePlot(object):
                     1.1,
                     group_y_center,
                     group_labels[idx],
-                    ha='right',
-                    va='center',
+                    ha="right",
+                    va="center",
                     rotation=270,
-                    fontsize='small',
+                    fontsize="small",
                 )
 
         path = Path(verts, codes)
 
-        patch = patches.PathPatch(path, facecolor='none', lw=1.5)
+        patch = patches.PathPatch(path, facecolor="none", lw=1.5)
 
         gene_groups_ax.add_patch(patch)
         gene_groups_ax.grid(False)
-        gene_groups_ax.axis('off')
+        gene_groups_ax.axis("off")
         # remove y ticks
-        gene_groups_ax.tick_params(axis='y', left=False, labelleft=False)
+        gene_groups_ax.tick_params(axis="y", left=False, labelleft=False)
         # remove x ticks and labels
         gene_groups_ax.tick_params(
-            axis='x', bottom=False, labelbottom=False, labeltop=False
+            axis="x", bottom=False, labelbottom=False, labeltop=False
         )
 
     def _update_var_groups(self):

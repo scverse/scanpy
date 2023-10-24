@@ -5,7 +5,7 @@ import scanpy as sc
 from scanpy.testing._pytest.marks import needs
 
 
-pytestmark = [needs('magic')]
+pytestmark = [needs("magic")]
 
 A_list = [
     [0, 0, 7, 0, 0],
@@ -18,7 +18,7 @@ A_list = [
 
 
 def test_magic_default():
-    A = np.array(A_list, dtype='float32')
+    A = np.array(A_list, dtype="float32")
     adata = AnnData(A)
     sc.external.pp.magic(adata, knn=1)
     # check raw unchanged
@@ -30,19 +30,19 @@ def test_magic_default():
 
 
 def test_magic_pca_only():
-    A = np.array(A_list, dtype='float32')
+    A = np.array(A_list, dtype="float32")
     # pca only
     adata = AnnData(A)
     n_pca = 3
-    sc.external.pp.magic(adata, knn=1, name_list='pca_only', n_pca=n_pca)
+    sc.external.pp.magic(adata, knn=1, name_list="pca_only", n_pca=n_pca)
     # check raw unchanged
     np.testing.assert_array_equal(adata.X, A)
     # check .X shape consistent with n_pca
-    assert adata.obsm['X_magic'].shape == (A.shape[0], n_pca)
+    assert adata.obsm["X_magic"].shape == (A.shape[0], n_pca)
 
 
 def test_magic_copy():
-    A = np.array(A_list, dtype='float32')
+    A = np.array(A_list, dtype="float32")
     adata = AnnData(A)
     adata_copy = sc.external.pp.magic(adata, knn=1, copy=True)
     # check adata unchanged

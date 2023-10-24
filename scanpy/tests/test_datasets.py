@@ -112,10 +112,10 @@ def test_visium_datasets(tmp_dataset_dir, tmpdir):
 
     # Test that tissue image is a tif image file (using `file`)
     process = subprocess.run(
-        ['file', '--mime-type', image_path], stdout=subprocess.PIPE
+        ["file", "--mime-type", image_path], stdout=subprocess.PIPE
     )
     output = process.stdout.strip().decode()  # make process output string
-    assert output == str(image_path) + ': image/tiff'
+    assert output == str(image_path) + ": image/tiff"
 
 
 def test_download_failure():

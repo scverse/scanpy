@@ -25,9 +25,9 @@ def cite_role(
     content: Sequence[str] = (),
 ) -> tuple[list[nodes.Node], list[nodes.system_message]]:
     key = utils.unescape(text)
-    node = nodes.citation_reference(f'[{key}]_', key)
+    node = nodes.citation_reference(f"[{key}]_", key)
     return [node], []
 
 
 def setup(app: Sphinx):
-    app.add_role('cite', cite_role, override=True)
+    app.add_role("cite", cite_role, override=True)

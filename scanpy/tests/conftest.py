@@ -28,7 +28,7 @@ def clear_loggers():
 
     loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
     for logger in loggers:
-        handlers = getattr(logger, 'handlers', [])
+        handlers = getattr(logger, "handlers", [])
         for handler in handlers:
             logger.removeHandler(handler)
 
@@ -59,7 +59,7 @@ def check_same_image(add_nunit_attachment):
             result = compare_images(str(pth1), str(pth2), tol=tol)
             assert result is None, result
         except Exception as e:
-            diff_pth = make_test_filename(pth2, 'failed-diff')
+            diff_pth = make_test_filename(pth2, "failed-diff")
             add_nunit_attachment(str(pth1), fmt_descr("Expected"))
             add_nunit_attachment(str(pth2), fmt_descr("Result"))
             if Path(diff_pth).is_file():
@@ -78,8 +78,8 @@ def image_comparer(check_same_image):
 
         if not base_pth.is_dir():
             base_pth.mkdir()
-        expected_pth = base_pth / 'expected.png'
-        actual_pth = base_pth / 'actual.png'
+        expected_pth = base_pth / "expected.png"
+        actual_pth = base_pth / "actual.png"
         pyplot.savefig(actual_pth, dpi=40)
         pyplot.close()
         if not expected_pth.is_file():
