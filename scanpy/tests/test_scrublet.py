@@ -151,12 +151,10 @@ def test_scrublet_dense():
     sc.pp.scrublet(adata, use_approx_neighbors=False)
 
     # replace assertions by conditions
-    assert "predicted_doublet" in scrub_small.obs.columns
-    assert "doublet_score" in scrub_small.obs.columns
+    assert "predicted_doublet" in adata.obs.columns
+    assert "doublet_score" in adata.obs.columns
 
-    assert scrub_small.obs[
-        "predicted_doublet"
-    ].any(), "Expect some doublets to be identified"
+    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
 
 
 @pytest.fixture(scope="module")

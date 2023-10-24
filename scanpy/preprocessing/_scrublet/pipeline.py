@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from scipy import sparse
-from sklearn.decomposition import PCA, TruncatedSVD
 
 from ..._utils import AnyRandom
 from .utils import sparse_var, sparse_multiply, sparse_zscore
@@ -50,6 +49,7 @@ def truncated_svd(
 ) -> None:
     if self._counts_sim_norm is None:
         raise RuntimeError("_counts_sim_norm is not set")
+    from sklearn.decomposition import TruncatedSVD
 
     svd = TruncatedSVD(
         n_components=n_prin_comps, random_state=random_state, algorithm=algorithm
@@ -68,6 +68,7 @@ def pca(
 ) -> None:
     if self._counts_sim_norm is None:
         raise RuntimeError("_counts_sim_norm is not set")
+    from sklearn.decomposition import PCA
 
     X_obs = self._counts_obs_norm.toarray()
     X_sim = self._counts_sim_norm.toarray()
