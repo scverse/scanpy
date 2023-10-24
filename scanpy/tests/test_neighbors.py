@@ -115,7 +115,7 @@ def neigh() -> Neighbors:
     return get_neighbors()
 
 
-@pytest.mark.parametrize('method', ['umap', 'gauss'])
+@pytest.mark.parametrize("method", ["umap", "gauss"])
 def test_distances_euclidean(mocker, neigh, method):
     """umap and gauss behave the same for distances.
 
@@ -124,37 +124,37 @@ def test_distances_euclidean(mocker, neigh, method):
     from pynndescent import NNDescent
 
     # When trying to compress a too-small index, pynndescent complains
-    mocker.patch.object(NNDescent, 'compress_index', return_val=None)
+    mocker.patch.object(NNDescent, "compress_index", return_val=None)
 
     neigh.compute_neighbors(n_neighbors, method=method)
     np.testing.assert_allclose(neigh.distances.toarray(), distances_euclidean)
 
 
 @pytest.mark.parametrize(
-    ('transformer', 'knn'),
+    ("transformer", "knn"),
     [
         # knn=False trivially returns all distances
-        pytest.param(None, False, id='knn=False'),
+        pytest.param(None, False, id="knn=False"),
         # pynndescent returns all distances when data is so small
-        pytest.param('pynndescent', True, id='pynndescent'),
+        pytest.param("pynndescent", True, id="pynndescent"),
         # Explicit brute force also returns all distances
         pytest.param(
-            KNeighborsTransformer(n_neighbors=n_neighbors, algorithm='brute'),
+            KNeighborsTransformer(n_neighbors=n_neighbors, algorithm="brute"),
             True,
-            id='sklearn',
+            id="sklearn",
         ),
     ],
 )
 def test_distances_all(neigh: Neighbors, transformer, knn):
     neigh.compute_neighbors(
-        n_neighbors, transformer=transformer, method='gauss', knn=knn
+        n_neighbors, transformer=transformer, method="gauss", knn=knn
     )
     dists = neigh.distances.toarray() if issparse(neigh.distances) else neigh.distances
     np.testing.assert_allclose(dists, distances_euclidean_all)
 
 
 def test_umap_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(n_neighbors, method='umap')
+    neigh.compute_neighbors(n_neighbors, method="umap")
     np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_umap)
     neigh.compute_transitions()
     np.testing.assert_allclose(
@@ -164,7 +164,7 @@ def test_umap_connectivities_euclidean(neigh):
 
 
 def test_gauss_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(n_neighbors, method='gauss')
+    neigh.compute_neighbors(n_neighbors, method="gauss")
     np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_gauss_knn)
     neigh.compute_transitions()
     np.testing.assert_allclose(
@@ -176,7 +176,7 @@ def test_gauss_connectivities_euclidean(neigh):
 
 
 def test_gauss_noknn_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(n_neighbors, method='gauss', knn=False)
+    neigh.compute_neighbors(n_neighbors, method="gauss", knn=False)
     np.testing.assert_allclose(neigh.connectivities, connectivities_gauss_noknn)
     neigh.compute_transitions()
     np.testing.assert_allclose(
@@ -201,7 +201,7 @@ def test_use_rep_argument():
     adata = AnnData(np.random.randn(30, 300))
     sc.pp.pca(adata)
     neigh_pca = Neighbors(adata)
-    neigh_pca.compute_neighbors(n_pcs=5, use_rep='X_pca')
+    neigh_pca.compute_neighbors(n_pcs=5, use_rep="X_pca")
     neigh_none = Neighbors(adata)
     neigh_none.compute_neighbors(n_pcs=5, use_rep=None)
     np.testing.assert_allclose(
@@ -209,14 +209,14 @@ def test_use_rep_argument():
     )
 
 
-@pytest.mark.parametrize('conv', [csr_matrix.toarray, csr_matrix])
+@pytest.mark.parametrize("conv", [csr_matrix.toarray, csr_matrix])
 def test_restore_n_neighbors(neigh, conv):
-    neigh.compute_neighbors(n_neighbors, method='gauss')
+    neigh.compute_neighbors(n_neighbors, method="gauss")
 
     ad = AnnData(np.array(X))
     # Allow deprecated usage for now
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
+        ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1

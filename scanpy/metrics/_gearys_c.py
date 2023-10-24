@@ -285,7 +285,7 @@ def _gearys_c(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.nd
         return full_result
     else:
         msg = (
-            'Geary’s C metric not implemented for vals of type '
-            f'{fullname(type(vals))} and ndim {vals.ndim}.'
+            "Geary’s C metric not implemented for vals of type "
+            f"{fullname(type(vals))} and ndim {vals.ndim}."
         )
         raise NotImplementedError(msg)

@@ -30,7 +30,7 @@ def _pearson_residuals(X, theta, clip, check_values, copy=False):
     if theta <= 0:
         # TODO: would "underdispersion" with negative theta make sense?
         # then only theta=0 were undefined..
-        raise ValueError('Pearson residuals require theta > 0')
+        raise ValueError("Pearson residuals require theta > 0")
     # prepare clipping
     if clip is None:
         n = X.shape[0]
@@ -121,9 +121,9 @@ def normalize_pearson_residuals(
 
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer)
-    computed_on = layer if layer else 'adata.X'
+    computed_on = layer if layer else "adata.X"
 
-    msg = f'computing analytic Pearson residuals on {computed_on}'
+    msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
 
     residuals = _pearson_residuals(X, theta, clip, check_values, copy=~inplace)
@@ -131,11 +131,11 @@ def normalize_pearson_residuals(
 
     if inplace:
         _set_obs_rep(adata, residuals, layer=layer)
-        adata.uns['pearson_residuals_normalization'] = settings_dict
+        adata.uns["pearson_residuals_normalization"] = settings_dict
     else:
         results_dict = dict(X=residuals, **settings_dict)
 
-    logg.info('    finished ({time_passed})', time=start)
+    logg.info("    finished ({time_passed})", time=start)
 
     if copy:
         return adata
@@ -210,18 +210,18 @@ def normalize_pearson_residuals_pca(
     """
 
     # check if HVG selection is there if user wants to use it
-    if use_highly_variable and 'highly_variable' not in adata.var_keys():
+    if use_highly_variable and "highly_variable" not in adata.var_keys():
         raise ValueError(
             "You passed `use_highly_variable=True`, but no HVG selection was found "
             "(e.g., there was no 'highly_variable' column in adata.var).'"
         )
 
     # default behavior: if there is a HVG selection, we will use it
-    if use_highly_variable is None and 'highly_variable' in adata.var_keys():
+    if use_highly_variable is None and "highly_variable" in adata.var_keys():
         use_highly_variable = True
 
     if use_highly_variable:
-        adata_sub = adata[:, adata.var['highly_variable']].copy()
+        adata_sub = adata[:, adata.var["highly_variable"]].copy()
         adata_pca = AnnData(
             adata_sub.X.copy(), obs=adata_sub.obs[[]], var=adata_sub.var[[]]
         )
@@ -234,16 +234,16 @@ def normalize_pearson_residuals_pca(
     pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
 
     if inplace:
-        norm_settings = adata_pca.uns['pearson_residuals_normalization']
+        norm_settings = adata_pca.uns["pearson_residuals_normalization"]
         norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
         if use_highly_variable:
-            adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm['PCs'][adata.var['highly_variable']] = adata_pca.varm['PCs']
+            adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
+            adata.varm["PCs"][adata.var["highly_variable"]] = adata_pca.varm["PCs"]
         else:
-            adata.varm['PCs'] = adata_pca.varm['PCs']
-        adata.uns['pca'] = adata_pca.uns['pca']
-        adata.uns['pearson_residuals_normalization'] = norm_dict
-        adata.obsm['X_pca'] = adata_pca.obsm['X_pca']
+            adata.varm["PCs"] = adata_pca.varm["PCs"]
+        adata.uns["pca"] = adata_pca.uns["pca"]
+        adata.uns["pearson_residuals_normalization"] = norm_dict
+        adata.obsm["X_pca"] = adata_pca.obsm["X_pca"]
         return None
     else:
         return adata_pca

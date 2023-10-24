@@ -18,19 +18,19 @@ from scanpy._compat import DaskArray
 
 def test_descend_classes_and_funcs():
     # create module hierarchy
-    a = ModuleType('a')
-    a.b = ModuleType('a.b')
+    a = ModuleType("a")
+    a.b = ModuleType("a.b")
 
     # populate with classes
-    a.A = type('A', (), {})
+    a.A = type("A", (), {})
     a.A.__module__ = a.__name__
-    a.b.B = type('B', (), {})
+    a.b.B = type("B", (), {})
     a.b.B.__module__ = a.b.__name__
 
     # create a loop to check if that gets caught
     a.b.a = a
 
-    assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, 'a'))
+    assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, "a"))
 
 
 array_kinds = [pytest.param('dask', marks=[needs('dask')]), 'bool']
@@ -118,21 +118,21 @@ def test_is_constant(array_type):
     )
 
 
-@needs('dask')
+@needs("dask")
 @pytest.mark.parametrize(
-    ('axis', 'expected'),
+    ("axis", "expected"),
     [
-        pytest.param(None, False, id='None'),
-        pytest.param(0, [True, True, False, False], id='0'),
-        pytest.param(1, [False, False, True, True, False, True], id='1'),
+        pytest.param(None, False, id="None"),
+        pytest.param(0, [True, True, False, False], id="0"),
+        pytest.param(1, [False, False, True, True, False, True], id="1"),
     ],
 )
-@pytest.mark.parametrize('block_type', [np.array, csr_matrix])
+@pytest.mark.parametrize("block_type", [np.array, csr_matrix])
 def test_is_constant_dask(axis, expected, block_type):
     import dask.array as da
 
     if (axis is None) and block_type is csr_matrix:
-        pytest.skip('Dask has weak support for scipy sparse matrices')
+        pytest.skip("Dask has weak support for scipy sparse matrices")
 
     x_data = [
         [0, 0, 1, 1],
