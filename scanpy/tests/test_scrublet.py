@@ -141,6 +141,24 @@ def test_scrublet_data():
     ).all()
 
 
+def test_scrublet_dense():
+    """
+    Test that Scrublet works for dense matrices.
+
+    Check that scrublet runs and detects some doublets when a dense matrix is supplied.
+    """
+    adata = paul15()[:500].copy()
+    sc.pp.scrublet(adata, use_approx_neighbors=False)
+
+    # replace assertions by conditions
+    assert "predicted_doublet" in scrub_small.obs.columns
+    assert "doublet_score" in scrub_small.obs.columns
+
+    assert scrub_small.obs[
+        "predicted_doublet"
+    ].any(), "Expect some doublets to be identified"
+
+
 @pytest.fixture(scope="module")
 def _scrub_small_sess() -> ad.AnnData:
     # Reduce size of input for faster test
@@ -154,22 +172,6 @@ def _scrub_small_sess() -> ad.AnnData:
 @pytest.fixture()
 def scrub_small(_scrub_small_sess: ad.AnnData):
     return _scrub_small_sess.copy()
-
-
-def test_scrublet_dense(scrub_small: ad.AnnData):
-    """
-    Test that Scrublet works for dense matrices.
-
-    Check that scrublet runs and detects some doublets when a dense matrix is supplied.
-    """
-
-    # replace assertions by conditions
-    assert "predicted_doublet" in scrub_small.obs.columns
-    assert "doublet_score" in scrub_small.obs.columns
-
-    assert scrub_small.obs[
-        "predicted_doublet"
-    ].any(), "Expect some doublets to be identified"
 
 
 test_params = {
