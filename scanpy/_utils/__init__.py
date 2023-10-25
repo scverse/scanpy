@@ -122,6 +122,14 @@ def deprecated_arg_names(arg_mapping: Mapping[str, str]):
     return decorator
 
 
+def deprecated_func(func: Calling[..., Optional[any]]) -> None:
+    """
+    Decorator that marks function as deprecated. It will raise FutureWarning for user.
+    """
+    @wraps(func)
+	raise FutureWarning(f"{func.__name__} is deprecated! ")
+
+
 def _one_of_ours(obj, root: str):
     return (
         hasattr(obj, "__name__")
