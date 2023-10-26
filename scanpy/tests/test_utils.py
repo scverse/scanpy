@@ -1,10 +1,9 @@
-from functools import partial
 from types import ModuleType
 
 import pytest
 import numpy as np
-from scipy import sparse
 from scipy.sparse import csr_matrix
+from anndata.tests.helpers import asarray
 
 from scanpy._utils import (
     descend_classes_and_funcs,
@@ -34,14 +33,10 @@ def test_descend_classes_and_funcs():
 
 
 def test_elem_mul(array_type):
-    m1 = array_type([[0, 1], [1, 0]])
-    m2 = array_type([[2, 2], [3, 2]])
-    expd = np.array([[0, 2], [3, 0]])
-    res = elem_mul(m1, m2)
-    if isinstance(res, DaskArray):
-        res = res.compute()
-    elif isinstance(res, sparse.spmatrix):
-        res = res.todense().A
+    m1 = array_type([[0, 1, 1], [1, 0, 1]])
+    m2 = array_type([[2, 2, 1], [3, 2, 0]])
+    expd = np.array([[0, 2, 1], [3, 0, 0]])
+    res = asarray(elem_mul(m1, m2))
     np.testing.assert_array_equal(res, expd)
 
 

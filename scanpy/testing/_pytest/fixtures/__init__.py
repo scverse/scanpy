@@ -30,7 +30,10 @@ __all__ = [
 ]
 
 
-def _as_dense_dask_array(x: ArrayLike) -> DaskArray:
+def _as_dense_da(x: ArrayLike) -> DaskArray:
+    if isinstance(x, DaskArray):
+        return x
+
     import dask.array as da
 
     x = asarray(x)
@@ -38,13 +41,17 @@ def _as_dense_dask_array(x: ArrayLike) -> DaskArray:
     return da.from_array(x, chunks=quarter_shape)
 
 
+def _as_csr_da(x: ArrayLike) -> DaskArray:
+    return _as_dense_da(x).map_blocks(sparse.csr_matrix)
+
+
 @pytest.fixture(
     params=[
-        pytest.param(asarray, id="numpy-ndarray"),
-        pytest.param(sparse.csr_matrix, id="scipy-csr"),
-        pytest.param(sparse.csc_matrix, id="scipy-csc"),
-        # Dask doesn’t support scipy sparse matrices, so only dense here
-        pytest.param(_as_dense_dask_array, marks=[needs("dask")], id="dask-array"),
+        pytest.param(asarray, id="numpy_ndarray"),
+        pytest.param(sparse.csr_matrix, id="scipy_csr"),
+        pytest.param(sparse.csc_matrix, id="scipy_csc"),
+        pytest.param(_as_dense_da, marks=[needs("dask")], id="dask_array_dense"),
+        pytest.param(_as_csr_da, marks=[needs("dask")], id="dask_array_sparse"),
     ]
 )
 def array_type(
