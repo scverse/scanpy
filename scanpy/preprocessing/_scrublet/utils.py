@@ -6,6 +6,7 @@ import numpy as np
 from scipy import sparse
 from numpy.typing import NDArray
 
+from ... import logging as logg
 from ..._utils import AnyRandom, get_random_state
 
 Scale = _U[Literal["linear", "log", "symlog", "logit"], str]
@@ -124,7 +125,6 @@ def get_knn_graph(
     """
     from sklearn.neighbors import NearestNeighbors
 
-    # t0 = time.time()
     if approx:
         try:
             from annoy import AnnoyIndex
@@ -132,7 +132,7 @@ def get_knn_graph(
             raise ValueError(
                 'Could not find library "annoy" for approx. nearest neighbor search'
             ) from e
-        # print('Using approximate nearest neighbor search')
+        t0 = logg.info("Using approximate nearest neighbor search")
 
         if dist_metric == "cosine":
             dist_metric = "angular"
@@ -150,7 +150,7 @@ def get_knn_graph(
             dtype=np.intp,
         )
     else:
-        # print('Using sklearn NearestNeighbors')
+        t0 = logg.info("Using sklearn NearestNeighbors")
 
         if dist_metric == "cosine":
             nbrs = NearestNeighbors(
@@ -165,7 +165,7 @@ def get_knn_graph(
         for i in range(knn.shape[0]):
             for j in knn[i, :]:
                 links.add(tuple(sorted((i, j))))
-        # print('kNN graph built in %.3f sec' %(time.time() - t0))
+        logg.info("kNN graph built in {time_passed:.3} sec", time=t0)
         return links, knn
 
     return knn

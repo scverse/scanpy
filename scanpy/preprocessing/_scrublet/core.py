@@ -10,6 +10,7 @@ from scipy import sparse
 from numpy.random import RandomState
 from numpy.typing import NDArray
 
+from ... import logging as logg
 from ..._utils import AnyRandom, get_random_state
 from .utils import AnnoyDist, get_knn_graph, subsample_counts
 
@@ -408,7 +409,7 @@ class Scrublet:
             co-localization of predicted doublets in a 2-D embedding.
 
         verbose
-            If True, print summary statistics.
+            If True, log summary statistics.
 
         Sets
         ----
@@ -425,16 +426,15 @@ class Scrublet:
             try:
                 threshold = cast(float, threshold_minimum(self.doublet_scores_sim_))
                 if verbose:
-                    print(
-                        "Automatically set threshold at doublet score = {:.2f}".format(
-                            threshold
-                        )
+                    logg.info(
+                        f"Automatically set threshold at doublet score = {threshold:.2f}"
                     )
             except Exception:
                 self.predicted_doublets_ = None
                 if verbose:
-                    print(
-                        "Warning: failed to automatically identify doublet score threshold. Run `call_doublets` with user-specified threshold."
+                    logg.warning(
+                        "Failed to automatically identify doublet score threshold. "
+                        "Run `call_doublets` with user-specified threshold."
                     )
                 return self.predicted_doublets_
 
@@ -454,18 +454,12 @@ class Scrublet:
         )
 
         if verbose:
-            print(
-                "Detected doublet rate = {:.1f}%".format(
-                    100 * self.detected_doublet_rate_
-                )
+            logg.info(
+                f"Detected doublet rate = {100 * self.detected_doublet_rate_:.1f}%\n"
+                f"Estimated detectable doublet fraction = {100 * self.detectable_doublet_fraction_:.1f}%\n"
+                "Overall doublet rate:\n"
+                f"\tExpected   = {100 * self.expected_doublet_rate:.1f}%\n"
+                f"\tEstimated  = {100 * self.overall_doublet_rate_:.1f}%"
             )
-            print(
-                "Estimated detectable doublet fraction = {:.1f}%".format(
-                    100 * self.detectable_doublet_fraction_
-                )
-            )
-            print("Overall doublet rate:")
-            print("\tExpected   = {:.1f}%".format(100 * self.expected_doublet_rate))
-            print("\tEstimated  = {:.1f}%".format(100 * self.overall_doublet_rate_))
 
         return self.predicted_doublets_
