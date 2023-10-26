@@ -27,7 +27,7 @@ class _RootLogger(logging.RootLogger):
         msg: str,
         *,
         extra: Optional[dict] = None,
-        time: datetime | None = None,
+        time: Optional[datetime] = None,
         deep: Optional[str] = None,
     ) -> datetime:
         from . import settings
