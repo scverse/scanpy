@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
@@ -20,7 +19,6 @@ import scipy
 from anndata import AnnData
 from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import check_random_state
-from pynndescent import NNDescent, PyNNDescentTransformer
 
 if TYPE_CHECKING:
     from igraph import Graph
@@ -564,14 +562,15 @@ class Neighbors:
                 )
             else:  # convert to dense
                 self._distances = self._distances.toarray()
-        if (index := getattr(transformer, "index_", None)) and isinstance(
-            index, NNDescent
-        ):
-            # very cautious here
-            try:
-                self._rp_forest = _make_forest_dict(index)
-            except Exception:  # TODO catch the correct exception
-                pass
+        if index := getattr(transformer, "index_", None):
+            from pynndescent import NNDescent
+
+            if isinstance(index, NNDescent):
+                # very cautious here
+                try:
+                    self._rp_forest = _make_forest_dict(index)
+                except Exception:  # TODO catch the correct exception
+                    pass
 
         start_connect = logg.debug("computed neighbors", time=start_neighbors)
         if method == "umap":
@@ -657,6 +656,8 @@ class Neighbors:
                 # no random_state
             )
         elif transformer is None or transformer == "pynndescent":
+            from pynndescent import PyNNDescentTransformer
+
             kwds = kwds.copy()
             kwds["metric_kwds"] = kwds.pop("metric_params")
             if transformer is None:
