@@ -342,7 +342,6 @@ class Scrublet:
             k=k_adj,
             dist_metric=distance_metric,
             approx=use_approx_nn,
-            return_edges=False,
             random_seed=self._random_state,
         )
 

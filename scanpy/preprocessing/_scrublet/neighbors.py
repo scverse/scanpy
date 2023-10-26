@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, overload
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -11,41 +11,14 @@ from ..._utils import AnyRandom
 AnnoyDist = Literal["angular", "euclidean", "manhattan", "hamming", "dot"]
 
 
-@overload
 def get_knn_graph(
     X,
     k: int = 5,
     *,
     dist_metric: AnnoyDist = "euclidean",
     approx: bool = False,
-    return_edges: Literal[True] = True,
     random_seed: AnyRandom = 0,
-) -> tuple[set[tuple[int, int]], NDArray[np.int64]]:
-    ...
-
-
-@overload
-def get_knn_graph(
-    X,
-    k: int = 5,
-    *,
-    dist_metric: AnnoyDist = "euclidean",
-    approx: bool = False,
-    return_edges: Literal[False],
-    random_seed: AnyRandom = 0,
-) -> NDArray[np.int64]:
-    ...
-
-
-def get_knn_graph(
-    X,
-    k: int = 5,
-    *,
-    dist_metric: AnnoyDist = "euclidean",
-    approx: bool = False,
-    return_edges: bool = True,
-    random_seed: AnyRandom = 0,
-):
+) -> NDArray[np.intp]:
     """
     Build k-nearest-neighbor graph
     Return edge list and nearest neighbor matrix
@@ -87,12 +60,6 @@ def get_knn_graph(
             nbrs = NearestNeighbors(n_neighbors=k, metric=dist_metric).fit(X)
         knn: NDArray[np.intp] = nbrs.kneighbors(return_distance=False)
 
-    if return_edges:
-        links = set()
-        for i in range(knn.shape[0]):
-            for j in knn[i, :]:
-                links.add(tuple(sorted((i, j))))
-        logg.info("kNN graph built in {time_passed:.3} sec", time=t0)
-        return links, knn
+    logg.info("kNN graph built in {time_passed:.3} sec", time=t0)
 
     return knn
