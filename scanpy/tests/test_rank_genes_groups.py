@@ -122,6 +122,7 @@ def test_results(array_type):
     assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_results_layers(array_type):
     seed(1234)
 

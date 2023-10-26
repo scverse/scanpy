@@ -49,8 +49,21 @@ ARRAY_TYPES_SPARSE = tuple(
 )
 
 ARRAY_TYPES_SUPPORTED = (
-    at for attrs, ats in _AT_MAP.items() if attrs != ("dask", "sparse") for at in ats
+    (
+        pytest.param(
+            *at.values,
+            marks=[pytest.mark.xfail(reason="sparse-in-dask not supported"), *at.marks],
+            id=at.id,
+        )
+        if attrs == ("dask", "sparse")
+        else at
+    )
+    for attrs, ats in _AT_MAP.items()
+    for at in ats
 )
-"""Sparse matrices in dask arrays aren’t officially supported upstream"""
+"""
+Sparse matrices in dask arrays aren’t officially supported upstream,
+so add xfail to them.
+"""
 
 ARRAY_TYPES = tuple(at for ats in _AT_MAP.values() for at in ats)

@@ -33,7 +33,8 @@ def test_descend_classes_and_funcs():
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, "a"))
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+# TODO: add support for dask-in-sparse
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
 def test_elem_mul(array_type):
     m1 = array_type([[0, 1, 1], [1, 0, 1]])
     m2 = array_type([[2, 2, 1], [3, 2, 0]])

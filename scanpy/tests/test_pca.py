@@ -10,14 +10,16 @@ from scanpy.testing._helpers.data import pbmc3k_normalized
 from scanpy.testing._pytest.marks import needs
 from scanpy.testing._pytest.params import ARRAY_TYPES_MEM, ARRAY_TYPES_DASK
 
-A_list = [
-    [0, 0, 7, 0, 0],
-    [8, 5, 0, 2, 0],
-    [6, 0, 0, 2, 5],
-    [0, 0, 0, 1, 0],
-    [8, 8, 2, 1, 0],
-    [0, 0, 0, 4, 5],
-]
+A_list = np.array(
+    [
+        [0, 0, 7, 0, 0],
+        [8, 5, 0, 2, 0],
+        [6, 0, 0, 2, 5],
+        [0, 0, 0, 1, 0],
+        [8, 8, 2, 1, 0],
+        [0, 0, 0, 4, 5],
+    ]
+)
 
 A_pca = np.array(
     [
@@ -53,7 +55,7 @@ A_svd = np.array(
     ]
 )
 def array_type(request: pytest.FixtureRequest):
-    return request.param()
+    return request.param
 
 
 @pytest.fixture(params=[None, "valid", "invalid"])
