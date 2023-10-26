@@ -3,11 +3,13 @@ from types import ModuleType
 
 import pytest
 import numpy as np
+from scipy import sparse
 from scipy.sparse import csr_matrix
 
 from scanpy._utils import (
     descend_classes_and_funcs,
     check_nonnegative_integers,
+    elem_mul,
     is_constant,
 )
 from scanpy.testing._pytest.marks import needs
@@ -29,6 +31,18 @@ def test_descend_classes_and_funcs():
     a.b.a = a
 
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, "a"))
+
+
+def test_elem_mul(array_type):
+    m1 = array_type([[0, 1], [1, 0]])
+    m2 = array_type([[2, 2], [3, 2]])
+    expd = np.array([[0, 2], [3, 0]])
+    res = elem_mul(m1, m2)
+    if isinstance(res, DaskArray):
+        res = res.compute()
+    elif isinstance(res, sparse.spmatrix):
+        res = res.todense().A
+    np.testing.assert_array_equal(res, expd)
 
 
 @pytest.mark.parametrize(

@@ -491,12 +491,26 @@ _MemoryArray = Union[NDArray, _DataMatrix]
 _SupportedArray = Union[_MemoryArray, DaskArray]
 
 
+@singledispatch
 def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
+    raise NotImplementedError
+
+
+@elem_mul.register(np.ndarray)
+@elem_mul.register(sparse.spmatrix)
+def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
     if isinstance(x, sparse.spmatrix):
         # returns coo_matrix, so cast back to input type
         return type(x)(x.multiply(y))
     else:
         return x * y
+
+
+@elem_mul.register(DaskArray)
+def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
+    import dask.array as da
+
+    return da.multiply(x, y)
 
 
 @singledispatch
