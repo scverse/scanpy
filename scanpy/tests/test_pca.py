@@ -2,12 +2,13 @@ import numpy as np
 import pytest
 import warnings
 from anndata import AnnData
-from anndata.tests.helpers import as_dense_dask_array, asarray, assert_equal
+from anndata.tests.helpers import as_dense_dask_array, assert_equal
 from scipy import sparse
 
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc3k_normalized
 from scanpy.testing._pytest.marks import needs
+from scanpy.testing._pytest.params import ARRAY_TYPES_MEM, ARRAY_TYPES_DASK
 
 A_list = [
     [0, 0, 7, 0, 0],
@@ -44,24 +45,24 @@ A_svd = np.array(
 # If one uses dask for PCA it will always require dask-ml
 @pytest.fixture(
     params=[
-        lambda: sparse.csr_matrix,
-        lambda: sparse.csc_matrix,
-        lambda: asarray,
-        pytest.param(lambda: as_dense_dask_array, marks=[needs("dask_ml")]),
-    ],
-    ids=["scipy-csr", "scipy-csc", "np-ndarray", "dask-array"],
+        *ARRAY_TYPES_MEM,
+        *(
+            pytest.param(*at.values, marks=[*at.marks, needs("dask_ml")])
+            for at in ARRAY_TYPES_DASK
+        ),
+    ]
 )
-def array_type(request):
+def array_type(request: pytest.FixtureRequest):
     return request.param()
 
 
 @pytest.fixture(params=[None, "valid", "invalid"])
-def svd_solver_type(request):
+def svd_solver_type(request: pytest.FixtureRequest):
     return request.param
 
 
 @pytest.fixture(params=[True, False])
-def zero_center(request):
+def zero_center(request: pytest.FixtureRequest):
     return request.param
 
 

@@ -19,6 +19,7 @@ from numpy.random import negative_binomial, binomial, seed
 
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc68k_reduced
+from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
@@ -34,6 +35,7 @@ DATA_PATH = HERE / "_data"
 # results differ (very) slightly
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def get_example_data(array_type: Callable[[np.ndarray], Any]) -> AnnData:
     # create test object
     adata = AnnData(
@@ -75,18 +77,8 @@ def get_true_scores() -> (
     )
 
 
-@pytest.fixture(
-    params=[
-        pytest.param(asarray, id="numpy-ndarray"),
-        pytest.param(sparse.csr_matrix, id="scipy-csr"),
-        pytest.param(sparse.csc_matrix, id="scipy-csc"),
-    ]
-)
-def array_type(request: pytest.FixtureRequest):
-    """Overrided array_type without dask, for the time being"""
-    return request.param
-
-
+# TODO: Make dask compatible
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_results(array_type):
     seed(1234)
 

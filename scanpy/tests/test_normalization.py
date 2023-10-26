@@ -1,19 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
 import pytest
 import numpy as np
 from anndata import AnnData
 from scipy.sparse import csr_matrix
 from scipy import sparse
-
-from scanpy.testing._pytest.marks import needs
-
-try:
-    import dask.array as da
-except ImportError:
-    da = None
+from anndata.tests.helpers import assert_equal
 
 import scanpy as sc
 from scanpy.testing._helpers import (
@@ -21,13 +13,14 @@ from scanpy.testing._helpers import (
     check_rep_results,
     _check_check_values_warnings,
 )
-from anndata.tests.helpers import assert_equal, asarray
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 
 X_total = [[1, 0], [3, 0], [5, 6]]
 X_frac = [[1, 0, 1], [3, 0, 1], [5, 6, 1]]
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
@@ -41,6 +34,7 @@ def test_normalize_total(array_type, dtype):
     assert np.allclose(np.ravel(adata.X[:, 1:3].sum(axis=1)), [1.0, 1.0, 1.0])
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_rep(array_type, dtype):
     # Test that layer kwarg works
@@ -49,6 +43,7 @@ def test_normalize_total_rep(array_type, dtype):
     check_rep_results(sc.pp.normalize_total, X, fields=["layer"])
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_layers(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
@@ -58,6 +53,7 @@ def test_normalize_total_layers(array_type, dtype):
     assert np.allclose(adata.layers["layer"].sum(axis=1), [3.0, 3.0, 3.0])
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_view(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))

@@ -13,6 +13,7 @@ from scanpy._utils import (
 )
 from scanpy.testing._pytest.marks import needs
 from scanpy._compat import DaskArray
+from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SUPPORTED
 
 
 def test_descend_classes_and_funcs():
@@ -32,6 +33,7 @@ def test_descend_classes_and_funcs():
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, "a"))
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_elem_mul(array_type):
     m1 = array_type([[0, 1, 1], [1, 0, 1]])
     m2 = array_type([[2, 2, 1], [3, 2, 0]])
@@ -40,6 +42,7 @@ def test_elem_mul(array_type):
     np.testing.assert_array_equal(res, expd)
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
     ("array_value", "expected"),
     [
@@ -72,6 +75,8 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
     assert received is expected
 
 
+# TODO: Make it work for sparse-in-dask
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
 def test_is_constant(array_type):
     constant_inds = [1, 3]
     A = np.arange(20).reshape(5, 4)
