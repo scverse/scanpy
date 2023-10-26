@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Union as _U, overload
+from typing import Literal, overload
 
 import numpy as np
 from numpy.typing import NDArray
@@ -8,7 +8,6 @@ from numpy.typing import NDArray
 from ... import logging as logg
 from ..._utils import AnyRandom
 
-Scale = _U[Literal["linear", "log", "symlog", "logit"], str]
 AnnoyDist = Literal["angular", "euclidean", "manhattan", "hamming", "dot"]
 
 

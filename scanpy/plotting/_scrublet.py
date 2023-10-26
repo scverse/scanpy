@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Literal, Union as _U
 
 import numpy as np
 import pandas as pd
@@ -9,8 +10,10 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from ..preprocessing._scrublet.neighbors import Scale
 from . import _utils
+
+
+Scale = _U[Literal["linear", "log", "symlog", "logit"], str]
 
 
 def scrublet_score_distribution(
@@ -131,7 +134,7 @@ def scrublet_score_distribution(
 def _plot_scores(
     ax: Axes,
     scores: np.ndarray,
-    scale: str,
+    scale: Scale,
     title: str,
     threshold: float | None = None,
 ) -> None:
