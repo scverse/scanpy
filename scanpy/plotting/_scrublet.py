@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import Literal
-
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 
-from ..preprocessing._scrublet.utils import Scale
+from ..preprocessing._scrublet.neighbors import Scale
 from . import _utils
 
 

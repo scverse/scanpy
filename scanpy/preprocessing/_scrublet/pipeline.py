@@ -6,7 +6,7 @@ import numpy as np
 from scipy import sparse
 
 from ..._utils import AnyRandom
-from .utils import sparse_var, sparse_multiply, sparse_zscore
+from .sparse_utils import sparse_var, sparse_multiply, sparse_zscore
 
 if TYPE_CHECKING:
     from .core import Scrublet

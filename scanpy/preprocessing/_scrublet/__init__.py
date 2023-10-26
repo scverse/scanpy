@@ -9,9 +9,9 @@ from ... import logging as logg
 from ... import preprocessing as pp
 from ...get import _get_obs_rep
 from ..._utils import AnyRandom
-from .core import Scrublet
-from .utils import AnnoyDist
 from . import pipeline
+from .core import Scrublet
+from .neighbors import AnnoyDist
 
 
 def scrublet(

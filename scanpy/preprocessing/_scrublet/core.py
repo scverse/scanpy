@@ -1,5 +1,4 @@
 from __future__ import annotations
-from functools import partial
 import sys
 
 from typing import cast
@@ -12,7 +11,8 @@ from numpy.typing import NDArray
 
 from ... import logging as logg
 from ..._utils import AnyRandom, get_random_state
-from .utils import AnnoyDist, get_knn_graph, subsample_counts
+from .neighbors import AnnoyDist, get_knn_graph
+from .sparse_utils import subsample_counts
 
 
 __all__ = ["Scrublet"]
