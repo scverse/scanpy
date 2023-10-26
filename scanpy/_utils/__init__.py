@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from weakref import WeakSet
 from collections import namedtuple
-from functools import partial, wraps
+from functools import partial, singledispatch, wraps
 from types import ModuleType, MethodType
 from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
 
@@ -29,7 +29,6 @@ from .._settings import settings
 from .. import logging as logg
 from .._compat import DaskArray
 from .compute.is_constant import is_constant  # noqa: F401
-from ._dask import lazy_and, lazy_or, get_ufuncs  # noqa: F401
 
 
 class Empty(Enum):
@@ -490,29 +489,30 @@ def update_params(
 _SupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
 
 
-def check_nonnegative_integers(X: _SupportedArray) -> np.bool_ | bool | DaskArray:
-    """\
-    Checks values of X to ensure it is count data.
+@singledispatch
+def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
+    """Checks values of X to ensure it is count data"""
+    raise NotImplementedError
 
-    When passed a dask array, it will return a scalar dask “array” evaluating to a boolean.
-    """
+
+@check_nonnegative_integers.register(np.ndarray)
+@check_nonnegative_integers.register(sparse.spmatrix)
+def _check_nonnegative_integers_in_mem(X: np.ndarray | sparse.spmatrix) -> bool:
     from numbers import Integral
 
-    ufuncs = get_ufuncs(X)
-    # get (possibly nonzero) values as (possibly flat) array
-    data: np.ndarray | DaskArray = X.data if sparse.issparse(X) else X
-    # return bool or lazy dask array resolving to one
-    return lazy_and(
-        # none are negative
-        ~ufuncs.signbit(data).any(),
-        # and
-        lambda: lazy_or(
-            # either all are integers
-            issubclass(data.dtype.type, Integral),
-            # or all are whole numbers
-            lambda: ~((data % 1) != 0).any(),
-        ),
-    )
+    data = X if isinstance(X, np.ndarray) else X.data
+    # Check no negatives
+    if np.signbit(data).any():
+        return False
+    # Check all are integers
+    elif issubclass(data.dtype.type, Integral):
+        return True
+    return not np.any((data % 1) != 0)
+
+
+@check_nonnegative_integers.register(DaskArray)
+def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
+    return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
 
 
 def select_groups(

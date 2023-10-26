@@ -79,9 +79,9 @@ def get_true_scores() -> (
 
 @pytest.fixture(
     params=[
-        pytest.param(asarray, id='numpy-ndarray'),
-        pytest.param(sparse.csr_matrix, id='scipy-csr'),
-        pytest.param(sparse.csc_matrix, id='scipy-csc'),
+        pytest.param(asarray, id="numpy-ndarray"),
+        pytest.param(sparse.csr_matrix, id="scipy-csr"),
+        pytest.param(sparse.csc_matrix, id="scipy-csc"),
     ]
 )
 def array_type(request: pytest.FixtureRequest):

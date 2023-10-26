@@ -197,7 +197,7 @@ class _RankGenes:
                 del X_rest
 
     def t_test(
-        self, method: Literal['t-test', 't-test_overestim_var']
+        self, method: Literal["t-test", "t-test_overestim_var"]
     ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from scipy import stats
 
