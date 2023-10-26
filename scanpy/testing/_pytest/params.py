@@ -48,7 +48,7 @@ ARRAY_TYPES_SPARSE = tuple(
     at for (_, spsty), ats in _AT_MAP.items() if spsty == "dense" for at in ats
 )
 
-ARRAY_TYPES_SUPPORTED = (
+ARRAY_TYPES_SUPPORTED = tuple(
     (
         pytest.param(
             *at.values,
