@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from ..preprocessing._scrublet.neighbors import Scale
 from . import _utils
 
 
 def scrublet_score_distribution(
-    adata,
+    adata: AnnData,
     *,
     scale_hist_obs: Scale = "log",
     scale_hist_sim: Scale = "linear",
@@ -18,7 +22,7 @@ def scrublet_score_distribution(
     return_fig: bool = False,
     show: bool = True,
     save: str | bool | None = None,
-):
+) -> Figure | Sequence[tuple[Axes, Axes]] | tuple[Axes, Axes] | None:
     """\
     Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
 
@@ -32,17 +36,15 @@ def scrublet_score_distribution(
     adata
         An AnnData object resulting from :func:`~scanpy.pp.scrublet`.
     scale_hist_obs
-        Set y axis scale transformation in matplotlib for the plot of observed
-        transcriptomes (e.g. "linear", "log", "symlog", "logit")
+        Set y axis scale transformation in matplotlib for the plot of observed transcriptomes
     scale_hist_sim
-        Set y axis scale transformation in matplotlib for the plot of simulated
-        doublets (e.g. "linear", "log", "symlog", "logit")
+        Set y axis scale transformation in matplotlib for the plot of simulated doublets
     figsize
         width, height
     show
-         Show the plot, do not return axis.
+        Show the plot, do not return axis.
     save
-        If `True` or a `str`, save the figure.
+        If :data:`True` or a :class:`str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
 
@@ -58,27 +60,6 @@ def scrublet_score_distribution(
     :func:`~scanpy.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
         simulation separately for advanced usage.
     """
-
-    def _plot_scores(
-        ax: Axes, scores: np.ndarray, scale: str, title: str, threshold=None
-    ):
-        ax.hist(
-            scores,
-            np.linspace(0, 1, 50),
-            color="gray",
-            linewidth=0,
-            density=True,
-        )
-        ax.set_yscale(scale)
-        yl = ax.get_ylim()
-        ax.set_ylim(yl)
-
-        if threshold is not None:
-            ax.plot(threshold * np.ones(2), yl, c="black", linewidth=1)
-
-        ax.set_title(title)
-        ax.set_xlabel("Doublet score")
-        ax.set_ylabel("Prob. density")
 
     if "scrublet" not in adata.uns:
         raise ValueError(
@@ -101,6 +82,8 @@ def scrublet_score_distribution(
     fig, axs = plt.subplots(n_batches, 2, figsize=figsize)
 
     for idx, (batch_key, sub_obs) in enumerate(adata.obs.groupby(batches)):
+        obs_ax: Axes
+        sim_ax: Axes
         # We'll need multiple rows if Scrublet was run in multiple batches
         if "batched_by" in adata.uns["scrublet"]:
             threshold = adata.uns["scrublet"]["batches"][batch_key].get(
@@ -143,3 +126,29 @@ def scrublet_score_distribution(
         return fig
     elif not show:
         return axs
+
+
+def _plot_scores(
+    ax: Axes,
+    scores: np.ndarray,
+    scale: str,
+    title: str,
+    threshold: float | None = None,
+) -> None:
+    ax.hist(
+        scores,
+        np.linspace(0, 1, 50),
+        color="gray",
+        linewidth=0,
+        density=True,
+    )
+    ax.set_yscale(scale)
+    yl = ax.get_ylim()
+    ax.set_ylim(yl)
+
+    if threshold is not None:
+        ax.plot(threshold * np.ones(2), yl, c="black", linewidth=1)
+
+    ax.set_title(title)
+    ax.set_xlabel("Doublet score")
+    ax.set_ylabel("Prob. density")
