@@ -486,7 +486,17 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-_SupportedArray = Union[np.ndarray, sparse.spmatrix, DaskArray]
+_DataMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
+_MemoryArray = Union[NDArray, _DataMatrix]
+_SupportedArray = Union[_MemoryArray, DaskArray]
+
+
+def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
+    if isinstance(x, sparse.spmatrix):
+        # returns coo_matrix, so cast back to input type
+        return type(x)(x.multiply(y))
+    else:
+        return x * y
 
 
 @singledispatch
@@ -497,7 +507,7 @@ def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
 
 @check_nonnegative_integers.register(np.ndarray)
 @check_nonnegative_integers.register(sparse.spmatrix)
-def _check_nonnegative_integers_in_mem(X: np.ndarray | sparse.spmatrix) -> bool:
+def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
     data = X if isinstance(X, np.ndarray) else X.data

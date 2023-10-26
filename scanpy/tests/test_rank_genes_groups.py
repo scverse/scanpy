@@ -22,9 +22,7 @@ from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from scanpy.get import rank_genes_groups_df
-from scanpy._utils import select_groups
-from scanpy._compat import DaskArray
-
+from scanpy._utils import select_groups, elem_mul
 
 HERE = Path(__file__).parent
 DATA_PATH = HERE / "_data"
@@ -130,14 +128,6 @@ def test_results(array_type):
         true_names_wilcoxon[:7], adata.uns["rank_genes_groups"]["names"][:7]
     )
     assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
-
-
-def elem_mul(x: np.ndarray | sparse.spmatrix | DaskArray, y: np.ndarray):
-    if isinstance(x, sparse.spmatrix):
-        # returns coo_matrix, so cast back to input type
-        return type(x)(x.multiply(y))
-    else:
-        return x * y
 
 
 def test_results_layers(array_type):

@@ -1,16 +1,17 @@
+from typing import Literal
 import numpy as np
 import numba
 from scipy import sparse
 
-from .._utils import _SupportedArray
+from .._utils import _SupportedArray, elem_mul
 
 
-def _get_mean_var(X: _SupportedArray, *, axis=0):
-    if sparse.issparse(X):
+def _get_mean_var(X: _SupportedArray, *, axis: Literal[0, 1] = 0) -> _SupportedArray:
+    if isinstance(X, sparse.spmatrix):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
         mean = X.mean(axis=axis, dtype=np.float64)
-        mean_sq = (X * X).mean(axis=axis, dtype=np.float64)
+        mean_sq = elem_mul(X, X).mean(axis=axis, dtype=np.float64)
         var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
     var *= X.shape[axis] / (X.shape[axis] - 1)
