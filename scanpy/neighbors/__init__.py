@@ -787,8 +787,7 @@ class Neighbors:
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
         logg.info(
-            f"    eigenvalues of transition matrix\n"
-            f"{indent(str(evals), '    ')}"
+            f"    eigenvalues of transition matrix\n" f"{indent(str(evals), '    ')}"
         )
         if self._number_connected_components > len(evals) / 2:
             logg.warning("Transition matrix has many disconnected components!")
