@@ -65,7 +65,7 @@ def svd_solver_type(request: pytest.FixtureRequest):
     return request.param
 
 
-@pytest.fixture(params=[True, False])
+@pytest.fixture(params=[True, False], ids=["zero_center", "no_zero_center"])
 def zero_center(request: pytest.FixtureRequest):
     return request.param
 
@@ -123,6 +123,11 @@ def test_pca_warnings(array_type, zero_center, pca_params):
     else:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
+            warnings.filterwarnings(
+                "ignore",
+                "pkg_resources is deprecated as an API",
+                DeprecationWarning,
+            )
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
 
 
