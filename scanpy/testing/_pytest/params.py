@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Literal
 
 import pytest
@@ -14,7 +15,16 @@ if TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
 
 
-_AT_MAP: dict[
+def param_with(
+    at: ParameterSet,
+    *,
+    marks: Iterable[pytest.Mark | pytest.MarkDecorator] = (),
+    id: str | None = None,
+) -> ParameterSet:
+    return pytest.param(*at.values, marks=[*at.marks, *marks], id=id or at.id)
+
+
+MAP_ARRAY_TYPES: dict[
     tuple[Literal["mem", "dask"], Literal["dense", "sparse"]],
     tuple[ParameterSet, ...],
 ] = {
@@ -35,30 +45,26 @@ _AT_MAP: dict[
 }
 
 ARRAY_TYPES_MEM = tuple(
-    at for (strg, _), ats in _AT_MAP.items() if strg == "mem" for at in ats
+    at for (strg, _), ats in MAP_ARRAY_TYPES.items() if strg == "mem" for at in ats
 )
 ARRAY_TYPES_DASK = tuple(
-    at for (strg, _), ats in _AT_MAP.items() if strg == "dask" for at in ats
+    at for (strg, _), ats in MAP_ARRAY_TYPES.items() if strg == "dask" for at in ats
 )
 
 ARRAY_TYPES_DENSE = tuple(
-    at for (_, spsty), ats in _AT_MAP.items() if spsty == "dense" for at in ats
+    at for (_, spsty), ats in MAP_ARRAY_TYPES.items() if spsty == "dense" for at in ats
 )
 ARRAY_TYPES_SPARSE = tuple(
-    at for (_, spsty), ats in _AT_MAP.items() if spsty == "dense" for at in ats
+    at for (_, spsty), ats in MAP_ARRAY_TYPES.items() if spsty == "dense" for at in ats
 )
 
 ARRAY_TYPES_SUPPORTED = tuple(
     (
-        pytest.param(
-            *at.values,
-            marks=[pytest.mark.xfail(reason="sparse-in-dask not supported"), *at.marks],
-            id=at.id,
-        )
+        param_with(at, marks=[pytest.mark.xfail(reason="sparse-in-dask not supported")])
         if attrs == ("dask", "sparse")
         else at
     )
-    for attrs, ats in _AT_MAP.items()
+    for attrs, ats in MAP_ARRAY_TYPES.items()
     for at in ats
 )
 """
@@ -66,4 +72,4 @@ Sparse matrices in dask arrays aren’t officially supported upstream,
 so add xfail to them.
 """
 
-ARRAY_TYPES = tuple(at for ats in _AT_MAP.values() for at in ats)
+ARRAY_TYPES = tuple(at for ats in MAP_ARRAY_TYPES.values() for at in ats)

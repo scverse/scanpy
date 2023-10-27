@@ -230,7 +230,13 @@ def pca(
             X_pca[start:end] = pca_.transform(chunk)
     elif (not issparse(X) or svd_solver == "randomized") and zero_center:
         if is_dask:
-            from dask_ml.decomposition import PCA
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    "pkg_resources is deprecated as an API",
+                    DeprecationWarning,
+                )
+                from dask_ml.decomposition import PCA
 
             svd_solver = _handle_dask_ml_args(svd_solver, "PCA")
         else:
