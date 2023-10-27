@@ -774,9 +774,9 @@ def _read(
             logg.debug(f"reading sheet {sheet} from file {filename}")
             return read_hdf(filename, sheet)
     # read other file types
-    path_cache = settings.cachedir / _slugify(filename).replace(
-        "." + ext, ".h5ad"
-    )  # type: Path
+    path_cache: Path = settings.cachedir / _slugify(filename).replace(
+        f".{ext}", ".h5ad"
+    )
     if path_cache.suffix in {".gz", ".bz2"}:
         path_cache = path_cache.with_suffix("")
     if cache and path_cache.is_file():

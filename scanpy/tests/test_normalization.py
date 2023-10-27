@@ -159,15 +159,15 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
             list(ad.uns.keys()),
         )
     ), (
-        """Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, but only %s were found"""
-        % (list(ad.uns.keys()))
+        "Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, "
+        f"but only {list(ad.uns.keys())} were found"
     )
     assert "X_pca" in list(
         ad.obsm.keys()
-    ), """Missing `obsm` key `'X_pca'`, only %s were found""" % (list(ad.obsm.keys()))
+    ), f"Missing `obsm` key `'X_pca'`, only {list(ad.obsm.keys())} were found"
     assert "PCs" in list(
         ad.varm.keys()
-    ), """Missing `varm` key `'PCs'`, only %s were found""" % (list(ad.varm.keys()))
+    ), f"Missing `varm` key `'PCs'`, only {list(ad.varm.keys())} were found"
     assert ad.obsm["X_pca"].shape == (
         n_cells,
         n_comps,
