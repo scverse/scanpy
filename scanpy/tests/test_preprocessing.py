@@ -51,7 +51,6 @@ def test_log1p_rep(count_matrix_format, base, dtype):
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
 def test_mean_var(array_type):
     pbmc = pbmc3k()
-    pbmc.var_names_make_unique()
     pbmc.X = array_type(pbmc.X)
 
     true_mean = np.mean(asarray(pbmc.X), axis=0)
