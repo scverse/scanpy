@@ -1,10 +1,15 @@
 # Making a release
 
+First, check out {doc}`versioning` to see which kind of release you want to make.
+That page also explains concepts like *pre-releases* and applications thereof.
+
+## Actually making the release
+
 1. Go to GitHub’s [releases][] page
 2. Click “Draft a new release”
 3. Click “Choose a tag” and type the version of the tag you want to release, such as `1.9.6`
 4. Click “**+ Create new tag: 1.\<minor>.\<patch>** on publish”
-5. If the version is a pre-release version, such as `1.7.0rc1` or `1.10.0a1`, tick the “Set as a pre-release” checkbox
+5. If the version is a *pre-release* version, such as `1.7.0rc1` or `1.10.0a1`, tick the “Set as a pre-release” checkbox
 
 [releases]: https://github.com/scverse/scanpy/releases
 
@@ -27,3 +32,33 @@ After a *major* or *minor* release has been made:
 - Create a new branch for this release series, like `1.7.x`. This should get a new release notes file.
 
 [meeseeksdev]: https://meeseeksbox.github.io
+
+## Debugging the build process
+
+If you changed something about the build process (e.g. [Hatchling’s build configuration][hatch-build]),
+or something about the package’s structure,
+you might want to manually check if the build and upload process behaves as expected:
+
+```shell
+# Clear out old distributions
+rm -r dist
+
+# Build source distribution and wheel both
+python -m build
+
+# Now check those build artifacts
+twine check dist/*
+
+# List the wheel archive’s contents
+bsdtar -tf dist/*.whl
+
+# Upload to TestPyPI
+twine upload --repository testpypi dist/*
+```
+
+The above approximates what the [publish workflow][] does automatically for us.
+If you want to replicate the process more exactly, make sure you are careful,
+and create a version tag before building (make sure you delete it after uploading to TestPyPI!).
+
+[hatch-build]: https://hatch.pypa.io/latest/config/build/
+[publish workflow]: https://github.com/scverse/scanpy/tree/master/.github/workflows/publish.yml
