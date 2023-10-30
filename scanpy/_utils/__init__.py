@@ -486,8 +486,8 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-_DataMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
-_MemoryArray = Union[NDArray, _DataMatrix]
+_SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
+_MemoryArray = Union[NDArray, _SparseMatrix]
 _SupportedArray = Union[_MemoryArray, DaskArray]
 
 
