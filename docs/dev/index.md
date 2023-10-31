@@ -12,8 +12,8 @@ testing
 documentation
 external-tools
 ci
-release
 versioning
+release
 ```
 
 Parts of the guidelines have been adapted from the [pandas](https://pandas.pydata.org/pandas-docs/stable/development/index.html) and [MDAnalysis](https://userguide.mdanalysis.org/stable/contributing.html) guides.
