@@ -18,7 +18,7 @@ At a `point` release, there should be no changes beyond bug fixes.
 Valid version numbers are described in [PEP 440](https://peps.python.org/pep-0440/).
 
 [Pre-releases](https://peps.python.org/pep-0440/#pre-releases)
-:   should have versions like `1.7.0a1`, `1.7.0b1`, or `1.7.0rc2`.
+:   should have versions like `1.7.0rc1` or `1.7.0rc2`.
 [Development versions](https://peps.python.org/pep-0440/#developmental-releases)
 :   should look like `1.8.0.dev0`, with a commit hash optionally appended as a local version identifier (e.g. `1.8.0.dev2+g00ad77b`).
 
