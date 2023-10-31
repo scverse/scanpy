@@ -52,7 +52,13 @@ twine check dist/*
 # List the wheel archive’s contents
 bsdtar -tf dist/*.whl
 
-# Upload to TestPyPI
+```
+
+You can also upload the package to <test.pypi.org> ([tutorial][testpypi tutorial])
+
+[testpypi tutorial]: https://packaging.python.org/en/latest/tutorials/packaging-projects/#uploading-the-distribution-archives
+
+```
 twine upload --repository testpypi dist/*
 ```
 
