@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 _Method = Literal["umap", "gauss"]
 
-_KnownTransformer = Literal["pynndescent", "rapids"]
+_KnownTransformer = Literal["pynndescent", "sklearn", "rapids"]
 
 _MetricFn = _C[[np.ndarray, np.ndarray], float]
 # from sklearn.metrics.pairwise_distances.__doc__:

@@ -13,6 +13,7 @@ from typing import (
 )
 from collections.abc import Mapping, MutableMapping, Callable
 from warnings import warn
+from networkx import non_neighbors
 
 import numpy as np
 import scipy
@@ -504,7 +505,7 @@ class Neighbors:
         *,
         use_rep: Optional[str] = None,
         knn: bool = True,
-        method: _Method = "umap",
+        method: _Method | None = "umap",
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
         metric: Union[_Metric, _MetricFn] = "euclidean",
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
@@ -521,10 +522,14 @@ class Neighbors:
         {use_rep}
         knn
             Restrict result to `n_neighbors` nearest neighbors.
+        method
+            See :func:`scanpy.pp.neighbors`.
+            If `None`, skip calculating connectivities.
 
         Returns
         -------
-        Writes sparse graph attributes `.distances` and `.connectivities`.
+        Writes sparse graph attributes `.distances` and,
+        if `method` is not `None`, `.connectivities`.
         """
         start_neighbors = logg.debug("computing neighbors")
         if n_neighbors > self._adata.shape[0]:  # very small datasets
@@ -584,7 +589,7 @@ class Neighbors:
             self._connectivities = _connectivity.gauss(
                 self._distances, self.n_neighbors, knn=self.knn
             )
-        else:
+        elif method is not None:
             msg = f"{method!r} should have been coerced in _handle_transform_args"
             raise AssertionError(msg)
         logg.debug("computed connectivities", time=start_connect)
@@ -597,12 +602,12 @@ class Neighbors:
 
     def _handle_transformer(
         self,
-        method: _Method | Literal["gauss"],
+        method: _Method | Literal["gauss"] | None,
         transformer: KnnTransformerLike | _KnownTransformer | None,
         *,
         knn: bool,
         kwds: KwdsForTransformer,
-    ) -> tuple[_Method, KnnTransformerLike, bool]:
+    ) -> tuple[_Method | None, KnnTransformerLike, bool]:
         """Return effective `method` and transformer.
 
         `method` will be coerced to `'gauss'` or `'umap'`.
@@ -620,8 +625,8 @@ class Neighbors:
         use_dense_distances = (
             kwds["metric"] == "euclidean" and self._adata.n_obs < 8192
         ) or not knn
-        shortcut = transformer is None and (
-            use_dense_distances or self._adata.n_obs < 4096
+        shortcut = transformer == "sklearn" or (
+            transformer is None and (use_dense_distances or self._adata.n_obs < 4096)
         )
 
         # Coerce `method` to 'gauss' or 'umap'
@@ -631,12 +636,12 @@ class Neighbors:
                 raise ValueError(msg)
             method = "umap"
             transformer = "rapids"
-        elif method not in (methods := set(get_args(_Method))):
+        elif method not in (methods := set(get_args(_Method))) and method is not None:
             msg = f"`method` needs to be one of {methods}."
             raise ValueError(msg)
 
         # Validate `knn`
-        conn_method = "gauss" if method == "gauss" else "umap"
+        conn_method = method if method in {"gauss", None} else "umap"
         if not knn and not (conn_method == "gauss" and transformer is None):
             # “knn=False” seems to be only intended for method “gauss”
             msg = f"`method = {method!r} only with `knn = True`."
@@ -646,11 +651,14 @@ class Neighbors:
         if shortcut:
             from sklearn.neighbors import KNeighborsTransformer
 
-            assert transformer is None
+            assert transformer in {None, "sklearn"}
+            n_neighbors = self._adata.n_obs - 1
+            if knn:  # only obey n_neighbors arg if knn set
+                n_neighbors = min(n_neighbors, kwds["n_neighbors"])
             transformer = KNeighborsTransformer(
                 algorithm="brute",
                 n_jobs=settings.n_jobs,
-                n_neighbors=self._adata.n_obs - 1,  # ignore n_neighbors
+                n_neighbors=n_neighbors,
                 metric=kwds["metric"],
                 metric_params=dict(kwds["metric_params"]),  # needs dict
                 # no random_state

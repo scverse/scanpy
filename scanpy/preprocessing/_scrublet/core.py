@@ -3,6 +3,7 @@ import sys
 
 from typing import cast
 from dataclasses import InitVar, dataclass, field
+from anndata import AnnData
 
 import numpy as np
 from scipy import sparse
@@ -11,7 +12,12 @@ from numpy.typing import NDArray
 
 from ... import logging as logg
 from ..._utils import AnyRandom, get_random_state
-from .neighbors import AnnoyDist, get_knn_graph
+from ...neighbors import (
+    Neighbors,
+    _Metric,
+    _MetricFn,
+    _get_indices_distances_from_sparse_matrix,
+)
 from .sparse_utils import subsample_counts
 
 
@@ -269,7 +275,7 @@ class Scrublet:
     def calculate_doublet_scores(
         self,
         use_approx_neighbors: bool = True,
-        distance_metric: AnnoyDist = "euclidean",
+        distance_metric: _Metric | _MetricFn = "euclidean",
         get_doublet_neighbor_parents: bool = False,
     ) -> NDArray[np.float64]:
         """\
@@ -317,7 +323,7 @@ class Scrublet:
         k: int = 40,
         *,
         use_approx_nn: bool = True,
-        distance_metric: AnnoyDist = "euclidean",
+        distance_metric: _Metric | _MetricFn = "euclidean",
         exp_doub_rate: float = 0.1,
         stdev_doub_rate: float = 0.03,
         get_neighbor_parents: bool = False,
@@ -337,13 +343,16 @@ class Scrublet:
         k_adj = int(round(k * (1 + n_sim / float(n_obs))))
 
         # Find k_adj nearest neighbors
-        neighbors = get_knn_graph(
-            manifold,
-            k=k_adj,
-            dist_metric=distance_metric,
-            approx=use_approx_nn,
-            random_seed=self._random_state,
+        knn = Neighbors(AnnData(manifold))
+        knn.compute_neighbors(
+            k_adj,
+            metric=distance_metric,
+            knn=True,
+            transformer="pynndescent" if use_approx_nn else "sklearn",
+            method=None,
+            random_state=self._random_state,
         )
+        neighbors, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
 
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
         doub_neigh_mask: NDArray[np.bool_] = doub_labels[neighbors] == 1

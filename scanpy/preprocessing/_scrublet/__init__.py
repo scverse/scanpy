@@ -9,9 +9,9 @@ from ... import logging as logg
 from ... import preprocessing as pp
 from ...get import _get_obs_rep
 from ..._utils import AnyRandom
+from ...neighbors import Neighbors, _Metric, _MetricFn
 from . import pipeline
 from .core import Scrublet
-from .neighbors import AnnoyDist
 
 
 def scrublet(
@@ -23,7 +23,7 @@ def scrublet(
     expected_doublet_rate: float = 0.05,
     stdev_doublet_rate: float = 0.02,
     synthetic_doublet_umi_subsampling: float = 1.0,
-    knn_dist_metric: AnnoyDist = "euclidean",
+    knn_dist_metric: _Metric | _MetricFn = "euclidean",
     normalize_variance: bool = True,
     log_transform: bool = False,
     mean_center: bool = True,
@@ -283,7 +283,7 @@ def _scrublet_call_doublets(
     normalize_variance: bool = True,
     n_prin_comps: int = 30,
     use_approx_neighbors: bool = True,
-    knn_dist_metric: AnnoyDist = "euclidean",
+    knn_dist_metric: _Metric | _MetricFn = "euclidean",
     get_doublet_neighbor_parents: bool = False,
     threshold: float | None = None,
     random_state: AnyRandom = 0,

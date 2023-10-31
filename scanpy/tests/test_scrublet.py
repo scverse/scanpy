@@ -138,10 +138,10 @@ def test_scrublet_data():
     # Require that the doublet scores are the same whether simulation is via
     # the main function or manually provided
 
-    assert (
-        adata_scrublet_manual_sim.obs["doublet_score"]
-        == adata_scrublet_auto_sim.obs["doublet_score"]
-    ).all()
+    pd.testing.assert_series_equal(
+        adata_scrublet_manual_sim.obs["doublet_score"],
+        adata_scrublet_auto_sim.obs["doublet_score"],
+    )
 
 
 def test_scrublet_dense():
