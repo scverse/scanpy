@@ -12,6 +12,7 @@ from typing import (
     get_args,
 )
 from collections.abc import Mapping, MutableMapping, Callable
+from textwrap import indent
 from warnings import warn
 
 import numpy as np
@@ -786,8 +787,7 @@ class Neighbors:
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
         logg.info(
-            "    eigenvalues of transition matrix\n"
-            "    {}".format(str(evals).replace("\n", "\n    "))
+            f"    eigenvalues of transition matrix\n" f"{indent(str(evals), '    ')}"
         )
         if self._number_connected_components > len(evals) / 2:
             logg.warning("Transition matrix has many disconnected components!")
