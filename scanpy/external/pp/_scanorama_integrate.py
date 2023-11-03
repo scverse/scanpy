@@ -6,11 +6,15 @@ from anndata import AnnData
 import numpy as np
 
 
+from ...testing._doctests import doctest_needs
+
+
+@doctest_needs("scanorama")
 def scanorama_integrate(
     adata: AnnData,
     key: str,
-    basis: str = 'X_pca',
-    adjusted_basis: str = 'X_scanorama',
+    basis: str = "X_pca",
+    adjusted_basis: str = "X_scanorama",
     knn: int = 20,
     sigma: float = 15,
     approx: bool = True,
@@ -60,7 +64,7 @@ def scanorama_integrate(
         large value that runs within available memory.
     kwargs
         Any additional arguments will be passed to
-        ``scanorama.integrate()``.
+        ``scanorama.assemble()``.
 
     Returns
     -------
@@ -88,7 +92,8 @@ def scanorama_integrate(
     Finally, run Scanorama. Afterwards, there will be a new table in
     ``adata.obsm`` containing the Scanorama embeddings.
 
-    >>> sce.pp.scanorama_integrate(adata, 'batch')
+    >>> sce.pp.scanorama_integrate(adata, 'batch', verbose=1)
+    Processing datasets a <=> b
     >>> 'X_scanorama' in adata.obsm
     True
     """
@@ -107,7 +112,7 @@ def scanorama_integrate(
             curr_batch = batch_name
             if batch_name in batch_names:
                 # Contiguous batches important for preserving cell order.
-                raise ValueError('Detected non-contiguous batches.')
+                raise ValueError("Detected non-contiguous batches.")
             batch_names.append(batch_name)  # Preserve name order.
             name2idx[batch_name] = []
         name2idx[batch_name].append(idx)

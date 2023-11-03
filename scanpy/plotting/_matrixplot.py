@@ -81,12 +81,12 @@ class MatrixPlot(BasePlot):
         sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
     """
 
-    DEFAULT_SAVE_PREFIX = 'matrixplot_'
-    DEFAULT_COLOR_LEGEND_TITLE = 'Mean expression\nin group'
+    DEFAULT_SAVE_PREFIX = "matrixplot_"
+    DEFAULT_COLOR_LEGEND_TITLE = "Mean expression\nin group"
 
     # default style parameters
-    DEFAULT_COLORMAP = rcParams['image.cmap']
-    DEFAULT_EDGE_COLOR = 'gray'
+    DEFAULT_COLORMAP = rcParams["image.cmap"]
+    DEFAULT_EDGE_COLOR = "gray"
     DEFAULT_EDGE_LW = 0.1
 
     def __init__(
@@ -105,7 +105,7 @@ class MatrixPlot(BasePlot):
         var_group_labels: Optional[Sequence[str]] = None,
         var_group_rotation: Optional[float] = None,
         layer: Optional[str] = None,
-        standard_scale: Literal['var', 'group'] = None,
+        standard_scale: Literal["var", "group"] = None,
         ax: Optional[_AxesSubplot] = None,
         values_df: Optional[pd.DataFrame] = None,
         vmin: Optional[float] = None,
@@ -142,16 +142,16 @@ class MatrixPlot(BasePlot):
             # compute mean value
             values_df = self.obs_tidy.groupby(level=0).mean()
 
-            if standard_scale == 'group':
+            if standard_scale == "group":
                 values_df = values_df.sub(values_df.min(1), axis=0)
                 values_df = values_df.div(values_df.max(1), axis=0).fillna(0)
-            elif standard_scale == 'var':
+            elif standard_scale == "var":
                 values_df -= values_df.min(0)
                 values_df = (values_df / values_df.max(0)).fillna(0)
             elif standard_scale is None:
                 pass
             else:
-                logg.warning('Unknown type for standard_scale, ignored')
+                logg.warning("Unknown type for standard_scale, ignored")
 
         self.values_df = values_df
 
@@ -230,9 +230,9 @@ class MatrixPlot(BasePlot):
 
         if self.are_axes_swapped:
             _color_df = _color_df.T
-        cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
-        if 'cmap' in self.kwds:
-            del self.kwds['cmap']
+        cmap = pl.get_cmap(self.kwds.get("cmap", self.cmap))
+        if "cmap" in self.kwds:
+            del self.kwds["cmap"]
         normalize = check_colornorm(
             self.vboundnorm.vmin,
             self.vboundnorm.vmax,
@@ -240,7 +240,7 @@ class MatrixPlot(BasePlot):
             self.vboundnorm.norm,
         )
 
-        for axis in ['top', 'bottom', 'left', 'right']:
+        for axis in ["top", "bottom", "left", "right"]:
             ax.spines[axis].set_linewidth(1.5)
 
         kwds = fix_kwds(
@@ -261,9 +261,9 @@ class MatrixPlot(BasePlot):
 
         x_ticks = np.arange(len(x_labels)) + 0.5
         ax.set_xticks(x_ticks)
-        ax.set_xticklabels(x_labels, rotation=90, ha='center', minor=False)
+        ax.set_xticklabels(x_labels, rotation=90, ha="center", minor=False)
 
-        ax.tick_params(axis='both', labelsize='small')
+        ax.tick_params(axis="both", labelsize="small")
         ax.grid(False)
 
         # to be consistent with the heatmap plot, is better to
@@ -298,7 +298,7 @@ def matrixplot(
     var_group_labels: Optional[Sequence[str]] = None,
     var_group_rotation: Optional[float] = None,
     layer: Optional[str] = None,
-    standard_scale: Literal['var', 'group'] = None,
+    standard_scale: Literal["var", "group"] = None,
     values_df: Optional[pd.DataFrame] = None,
     swap_axes: bool = False,
     show: Optional[bool] = None,

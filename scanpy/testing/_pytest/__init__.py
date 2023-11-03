@@ -1,32 +1,36 @@
 """A private pytest plugin"""
+from __future__ import annotations
+
+from collections.abc import Iterable, Generator
+import sys
+from typing import Any
+
 import pytest
 
 from .fixtures import *  # noqa: F403
 
 
-# In case pytest-nunit is not installed, defines a dummy fixture
-try:
-    import pytest_nunit
-except ModuleNotFoundError:
-
-    @pytest.fixture
-    def add_nunit_attachment(request):
-        def noop(file, description):
-            pass
-
-        return noop
-
-    def pytest_addoption(parser):
-        add_internet_tests_option(parser)
-        parser.addini("nunit_attach_on", "Dummy nunit replacement", default="any")
-
-else:
-
-    def pytest_addoption(parser):
-        add_internet_tests_option(parser)
+doctest_env_marker = pytest.mark.usefixtures("doctest_env")
 
 
-def add_internet_tests_option(parser):
+# Defining it here because it’s autouse.
+@pytest.fixture(autouse=True)
+def global_test_context() -> Generator[None, None, None]:
+    """Switch to agg backend, reset settings, and close all figures at teardown."""
+    from matplotlib import pyplot
+    from scanpy import settings
+
+    pyplot.switch_backend("agg")
+    settings.logfile = sys.stderr
+    settings.verbosity = "hint"
+    settings.autoshow = True
+
+    yield
+
+    pyplot.close("all")
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--internet-tests",
         action="store_true",
@@ -38,7 +42,11 @@ def add_internet_tests_option(parser):
     )
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: Iterable[pytest.Item]
+) -> None:
+    import pytest
+
     run_internet = config.getoption("--internet-tests")
     skip_internet = pytest.mark.skip(reason="need --internet-tests option to run")
     for item in items:
@@ -46,3 +54,36 @@ def pytest_collection_modifyitems(config, items):
         # `--run-internet` passed
         if not run_internet and ("internet" in item.keywords):
             item.add_marker(skip_internet)
+
+
+def pytest_itemcollected(item: pytest.Item) -> None:
+    import pytest
+
+    if not isinstance(item, pytest.DoctestItem):
+        return
+
+    item.add_marker(doctest_env_marker)
+
+    func = _import_name(item.name)
+    if marker := getattr(func, "_doctest_mark", None):
+        item.add_marker(marker)
+    if skip_reason := getattr(func, "_doctest_skip_reason", False):
+        item.add_marker(pytest.mark.skip(reason=skip_reason))
+
+
+def _import_name(name: str) -> Any:
+    from importlib import import_module
+
+    parts = name.split(".")
+    obj = import_module(parts[0])
+    for i, name in enumerate(parts[1:]):
+        try:
+            obj = import_module(f"{obj.__name__}.{name}")
+        except ModuleNotFoundError:
+            break
+    for name in parts[i + 1 :]:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError:
+            raise RuntimeError(f"{parts[:i]}, {parts[i+1:]}, {obj} {name}")
+    return obj

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 import sys
 from contextlib import contextmanager
@@ -12,37 +14,58 @@ from . import logging
 from .logging import _set_log_level, _set_log_file, _RootLogger
 
 _VERBOSITY_TO_LOGLEVEL = {
-    'error': 'ERROR',
-    'warning': 'WARNING',
-    'info': 'INFO',
-    'hint': 'HINT',
-    'debug': 'DEBUG',
+    "error": "ERROR",
+    "warning": "WARNING",
+    "info": "INFO",
+    "hint": "HINT",
+    "debug": "DEBUG",
 }
-# Python 3.7 ensures iteration order
+# Python 3.7+ ensures iteration order
 for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
     _VERBOSITY_TO_LOGLEVEL[v] = level
 
 
+# Collected from the print_* functions in matplotlib.backends
+_Format = Union[
+    Literal["png", "jpg", "tif", "tiff"],
+    Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"],
+    Literal["raw", "rgba"],
+]
+
+
 class Verbosity(IntEnum):
     error = 0
-    warn = 1
+    warning = 1
     info = 2
     hint = 3
     debug = 4
 
+    def __eq__(self, other: Verbosity | int | str) -> bool:
+        if isinstance(other, Verbosity):
+            return self is other
+        if isinstance(other, int):
+            return self.value == other
+        if isinstance(other, str):
+            return self.name == other
+        return NotImplemented
+
     @property
     def level(self) -> int:
         # getLevelName(str) returns the int level…
-        return getLevelName(_VERBOSITY_TO_LOGLEVEL[self])
+        return getLevelName(_VERBOSITY_TO_LOGLEVEL[self.name])
 
     @contextmanager
-    def override(self, verbosity: "Verbosity") -> ContextManager["Verbosity"]:
+    def override(self, verbosity: Verbosity | str | int) -> ContextManager[Verbosity]:
         """\
         Temporarily override verbosity
         """
         settings.verbosity = verbosity
         yield self
         settings.verbosity = self
+
+
+# backwards compat
+Verbosity.warn = Verbosity.warning
 
 
 def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
@@ -63,10 +86,13 @@ class ScanpyConfig:
     Config manager for scanpy.
     """
 
+    N_PCS: int
+    """Default number of principal components to use."""
+
     def __init__(
         self,
         *,
-        verbosity: str = "warning",
+        verbosity: Verbosity | int | str = Verbosity.warning,
         plot_suffix: str = "",
         file_format_data: str = "h5ad",
         file_format_figs: str = "pdf",
@@ -76,7 +102,7 @@ class ScanpyConfig:
         cachedir: Union[str, Path] = "./cache/",
         datasetdir: Union[str, Path] = "./data/",
         figdir: Union[str, Path] = "./figures/",
-        cache_compression: Union[str, None] = 'lzf',
+        cache_compression: Union[str, None] = "lzf",
         max_memory=15,
         n_jobs=1,
         logfile: Union[str, Path, None] = None,
@@ -123,7 +149,6 @@ class ScanpyConfig:
         """Stores the previous memory usage."""
 
         self.N_PCS = n_pcs
-        """Default number of principal components to use."""
 
     @property
     def verbosity(self) -> Verbosity:
@@ -158,7 +183,7 @@ class ScanpyConfig:
                 self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
             _type_check(verbosity, "verbosity", (str, int))
-        _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity])
+        _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity.name])
 
     @property
     def plot_suffix(self) -> str:
@@ -291,7 +316,7 @@ class ScanpyConfig:
 
     @cache_compression.setter
     def cache_compression(self, cache_compression: Optional[str]):
-        if cache_compression not in {'lzf', 'gzip', None}:
+        if cache_compression not in {"lzf", "gzip", None}:
             raise ValueError(
                 f"`cache_compression` ({cache_compression}) "
                 "must be in {'lzf', 'gzip', None}"
@@ -301,9 +326,9 @@ class ScanpyConfig:
     @property
     def max_memory(self) -> Union[int, float]:
         """\
-        Maximal memory usage in Gigabyte.
+        Maximum memory usage in Gigabyte.
 
-        Is currently not well respected....
+        Is currently not well respected…
         """
         return self._max_memory
 
@@ -316,6 +341,10 @@ class ScanpyConfig:
     def n_jobs(self) -> int:
         """\
         Default number of jobs/ CPUs to use for parallel computing.
+
+        Set to `-1` in order to use all available cores.
+        Not all algorithms support special behavior for numbers < `-1`,
+        so make sure to leave this setting as >= `-1`.
         """
         return self._n_jobs
 
@@ -335,7 +364,7 @@ class ScanpyConfig:
     def logpath(self, logpath: Union[str, Path, None]):
         _type_check(logpath, "logfile", (str, Path))
         # set via “file object” branch of logfile.setter
-        self.logfile = Path(logpath).open('a')
+        self.logfile = Path(logpath).open("a")
         self._logpath = Path(logpath)
 
     @property
@@ -353,7 +382,7 @@ class ScanpyConfig:
 
     @logfile.setter
     def logfile(self, logfile: Union[str, Path, TextIO, None]):
-        if not hasattr(logfile, 'write') and logfile:
+        if not hasattr(logfile, "write") and logfile:
             self.logpath = logfile
         else:  # file object
             if not logfile:  # None or ''
@@ -379,15 +408,6 @@ class ScanpyConfig:
     # --------------------------------------------------------------------------------
     # Functions
     # --------------------------------------------------------------------------------
-
-    # Collected from the print_* functions in matplotlib.backends
-    # fmt: off
-    _Format = Literal[
-        'png', 'jpg', 'tif', 'tiff',
-        'pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf',
-        'raw', 'rgba',
-    ]
-    # fmt: on
 
     def set_figure_params(
         self,
@@ -456,14 +476,14 @@ class ScanpyConfig:
         if transparent is not None:
             rcParams["savefig.transparent"] = transparent
         if facecolor is not None:
-            rcParams['figure.facecolor'] = facecolor
-            rcParams['axes.facecolor'] = facecolor
+            rcParams["figure.facecolor"] = facecolor
+            rcParams["axes.facecolor"] = facecolor
         if scanpy:
             from .plotting._rcmod import set_rcParams_scanpy
 
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
         if figsize is not None:
-            rcParams['figure.figsize'] = figsize
+            rcParams["figure.figsize"] = figsize
         self._frameon = frameon
 
     @staticmethod
@@ -474,10 +494,10 @@ class ScanpyConfig:
         return getattr(builtins, "__IPYTHON__", False)
 
     def __str__(self) -> str:
-        return '\n'.join(
-            f'{k} = {v!r}'
+        return "\n".join(
+            f"{k} = {v!r}"
             for k, v in inspect.getmembers(self)
-            if not k.startswith("_") and not k == 'getdoc'
+            if not k.startswith("_") and not k == "getdoc"
         )
 
 

@@ -58,14 +58,14 @@ def highly_variable_genes(
     else:
         var_or_disp = result.dispersions
         var_or_disp_norm = result.dispersions_norm
-    size = rcParams['figure.figsize']
+    size = rcParams["figure.figsize"]
     pl.figure(figsize=(2 * size[0], size[1]))
     pl.subplots_adjust(wspace=0.3)
     for idx, d in enumerate([var_or_disp_norm, var_or_disp]):
         pl.subplot(1, 2, idx + 1)
         for label, color, mask in zip(
-            ['highly variable genes', 'other genes'],
-            ['black', 'grey'],
+            ["highly variable genes", "other genes"],
+            ["black", "grey"],
             [gene_subset, ~gene_subset],
         ):
             if False:
@@ -74,23 +74,23 @@ def highly_variable_genes(
                 means_, var_or_disps_ = means[mask], d[mask]
             pl.scatter(means_, var_or_disps_, label=label, c=color, s=1)
         if log:  # there's a bug in autoscale
-            pl.xscale('log')
-            pl.yscale('log')
+            pl.xscale("log")
+            pl.yscale("log")
             y_min = np.min(var_or_disp)
             y_min = 0.95 * y_min if y_min > 0 else 1e-1
             pl.xlim(0.95 * np.min(means), 1.05 * np.max(means))
             pl.ylim(y_min, 1.05 * np.max(var_or_disp))
         if idx == 0:
             pl.legend()
-        pl.xlabel(('$log_{10}$ ' if False else '') + 'mean expressions of genes')
-        data_type = 'dispersions' if not seurat_v3_flavor else 'variances'
+        pl.xlabel(("$log_{10}$ " if False else "") + "mean expressions of genes")
+        data_type = "dispersions" if not seurat_v3_flavor else "variances"
         pl.ylabel(
-            ('$log_{10}$ ' if False else '')
-            + '{} of genes'.format(data_type)
-            + (' (normalized)' if idx == 0 else ' (not normalized)')
+            ("$log_{10}$ " if False else "")
+            + "{} of genes".format(data_type)
+            + (" (normalized)" if idx == 0 else " (not normalized)")
         )
 
-    _utils.savefig_or_show('filter_genes_dispersion', show=show, save=save)
+    _utils.savefig_or_show("filter_genes_dispersion", show=show, save=save)
     if show is False:
         return pl.gca()
 

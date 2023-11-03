@@ -1,23 +1,23 @@
-from typing import Union, Optional, Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union, Optional, Callable
 
 from anndata import AnnData
-import sklearn
 
-from ..._utils import lazy_import
+if TYPE_CHECKING:
+    from sklearn.metrics import DistanceMetric
 
-
-# Import this lazily so we don’t slowly import sklearn.stats just for annotation
-lazy_import("sklearn.neighbors")
-del lazy_import
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("bbknn")
 def bbknn(
     adata: AnnData,
-    batch_key: str = 'batch',
-    use_rep: str = 'X_pca',
+    batch_key: str = "batch",
+    use_rep: str = "X_pca",
     approx: bool = True,
     use_annoy: bool = True,
-    metric: Union[str, Callable, 'sklearn.neighbors.DistanceMetric'] = 'euclidean',
+    metric: Union[str, Callable, DistanceMetric] = "euclidean",
     copy: bool = False,
     *,
     neighbors_within_batch: int = 3,
@@ -55,7 +55,7 @@ def bbknn(
     use_rep
         The dimensionality reduction in `.obsm` to use for neighbour detection. Defaults to PCA.
     approx
-        If `True`, use approximate neighbour finding - annoy or pyNNDescent. This results
+        If `True`, use approximate neighbour finding - annoy or PyNNDescent. This results
         in a quicker run time for large datasets while also potentially increasing the degree of
         batch correction.
     use_annoy
@@ -78,12 +78,13 @@ def bbknn(
         'kantorovich', 'wasserstein', 'tsss', 'true_angular', 'hamming', 'jaccard', 'dice', 'matching', 'kulsinski',
         'rogerstanimoto', 'russellrao', 'sokalsneath', 'sokalmichener', 'yule'])
 
-        KDTree supports members of the `sklearn.neighbors.KDTree.valid_metrics` list, or parameterised
-        `sklearn.neighbors.DistanceMetric` `objects
-        <https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.DistanceMetric.html>`_:
+        KDTree supports members of :class:`sklearn.neighbors.KDTree`’s ``valid_metrics`` list, or parameterised
+        :class:`~sklearn.metrics.DistanceMetric` objects:
 
         >>> sklearn.neighbors.KDTree.valid_metrics
         ['p', 'chebyshev', 'cityblock', 'minkowski', 'infinity', 'l2', 'euclidean', 'manhattan', 'l1']
+
+        .. note:: check the relevant documentation for up-to-date lists.
     copy
         If `True`, return a copy instead of writing to the supplied adata.
     neighbors_within_batch
@@ -130,7 +131,7 @@ def bbknn(
     try:
         from bbknn import bbknn
     except ImportError:
-        raise ImportError('Please install bbknn: `pip install bbknn`.')
+        raise ImportError("Please install bbknn: `pip install bbknn`.")
     return bbknn(
         adata=adata,
         batch_key=batch_key,

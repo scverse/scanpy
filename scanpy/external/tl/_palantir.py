@@ -7,8 +7,10 @@ import pandas as pd
 from anndata import AnnData
 
 from ... import logging as logg
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("palantir")
 def palantir(
     adata: AnnData,
     n_components: int = 10,
@@ -198,16 +200,16 @@ def palantir(
 
     adata = adata.copy() if copy else adata
 
-    logg.info('Palantir Diffusion Maps in progress ...')
+    logg.info("Palantir Diffusion Maps in progress ...")
 
     if use_adjacency_matrix:
         df = adata.obsp[distances_key] if distances_key else adata.obsp["distances"]
     else:
-        df = pd.DataFrame(adata.obsm['X_pca'], index=adata.obs_names)
+        df = pd.DataFrame(adata.obsm["X_pca"], index=adata.obs_names)
 
     # Diffusion maps
     dm_res = run_diffusion_maps(
-        data_df=df,
+        df,
         n_components=n_components,
         knn=knn,
         alpha=alpha,
@@ -220,17 +222,17 @@ def palantir(
         imp_df = run_magic_imputation(
             data=adata.to_df(), dm_res=dm_res, n_steps=n_steps
         )
-        adata.layers['palantir_imp'] = imp_df
+        adata.layers["palantir_imp"] = imp_df
 
     (
-        adata.obsm['X_palantir_diff_comp'],
-        adata.uns['palantir_EigenValues'],
-        adata.obsp['palantir_diff_op'],
-        adata.obsm['X_palantir_multiscale'],
+        adata.obsm["X_palantir_diff_comp"],
+        adata.uns["palantir_EigenValues"],
+        adata.obsp["palantir_diff_op"],
+        adata.obsm["X_palantir_multiscale"],
     ) = (
-        dm_res['EigenVectors'].to_numpy(),
-        dm_res['EigenValues'].to_numpy(),
-        dm_res['T'],
+        dm_res["EigenVectors"].to_numpy(),
+        dm_res["EigenValues"].to_numpy(),
+        dm_res["T"],
         ms_data.to_numpy(),
     )
 
@@ -240,7 +242,7 @@ def palantir(
 def palantir_results(
     adata: AnnData,
     early_cell: str,
-    ms_data: str = 'X_palantir_multiscale',
+    ms_data: str = "X_palantir_multiscale",
     terminal_states: List = None,
     knn: int = 30,
     num_waypoints: int = 1200,
@@ -282,17 +284,16 @@ def palantir_results(
 
     Returns
     -------
-    PResults
-        PResults object with pseudotime, entropy, branch probabilities and waypoints.
+    PResults object with pseudotime, entropy, branch probabilities and waypoints.
     """
-    logg.info('Palantir computing waypoints..')
+    logg.info("Palantir computing waypoints..")
 
     _check_import()
     from palantir.core import run_palantir
 
     ms_data = pd.DataFrame(adata.obsm[ms_data], index=adata.obs_names)
     pr_res = run_palantir(
-        ms_data=ms_data,
+        ms_data,
         early_cell=early_cell,
         terminal_states=terminal_states,
         knn=knn,
@@ -310,4 +311,4 @@ def _check_import():
     try:
         import palantir
     except ImportError:
-        raise ImportError('\nplease install palantir:\n\tpip install palantir')
+        raise ImportError("\nplease install palantir:\n\tpip install palantir")

@@ -10,7 +10,7 @@ from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.testing._pytest.marks import needs
 
 
-HERE = Path(__file__).parent / Path('_data/')
+HERE = Path(__file__).parent / Path("_data/")
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
 
 

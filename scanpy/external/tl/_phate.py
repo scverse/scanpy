@@ -5,23 +5,25 @@ from typing import Optional, Union, Literal
 
 from anndata import AnnData
 
-from ..._settings import settings
 from ... import logging as logg
+from ..._settings import settings
 from ..._utils import AnyRandom
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("phate")
 def phate(
     adata: AnnData,
     n_components: int = 2,
     k: int = 5,
     a: int = 15,
     n_landmark: int = 2000,
-    t: Union[int, str] = 'auto',
+    t: Union[int, str] = "auto",
     gamma: float = 1.0,
     n_pca: int = 100,
-    knn_dist: str = 'euclidean',
-    mds_dist: str = 'euclidean',
-    mds: Literal['classic', 'metric', 'nonmetric'] = 'metric',
+    knn_dist: str = "euclidean",
+    mds_dist: str = "euclidean",
+    mds: Literal["classic", "metric", "nonmetric"] = "metric",
     n_jobs: Optional[int] = None,
     random_state: AnyRandom = None,
     verbose: Union[bool, int, None] = None,
@@ -120,7 +122,7 @@ def phate(
     (2000, 2)
     >>> sce.pl.phate(adata)
     """
-    start = logg.info('computing PHATE')
+    start = logg.info("computing PHATE")
     adata = adata.copy() if copy else adata
     verbosity = settings.verbosity if verbose is None else verbose
     verbose = verbosity if isinstance(verbosity, bool) else verbosity >= 2
@@ -129,8 +131,8 @@ def phate(
         import phate
     except ImportError:
         raise ImportError(
-            'You need to install the package `phate`: please run `pip install '
-            '--user phate` in a terminal.'
+            "You need to install the package `phate`: please run `pip install "
+            "--user phate` in a terminal."
         )
     X_phate = phate.PHATE(
         n_components=n_components,
@@ -149,10 +151,10 @@ def phate(
         **kwargs,
     ).fit_transform(adata)
     # update AnnData instance
-    adata.obsm['X_phate'] = X_phate  # annotate samples with PHATE coordinates
+    adata.obsm["X_phate"] = X_phate  # annotate samples with PHATE coordinates
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
-        deep=('added\n' "    'X_phate', PHATE coordinates (adata.obsm)"),
+        deep=("added\n" "    'X_phate', PHATE coordinates (adata.obsm)"),
     )
     return adata if copy else None

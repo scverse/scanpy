@@ -76,12 +76,12 @@ def tsne(
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    **X_tsne** : `np.ndarray` (`adata.obs`, dtype `float`)
+    **X_tsne** : `np.ndarray` (`adata.obsm`, dtype `float`)
         tSNE coordinates of data.
     """
     import sklearn
 
-    start = logg.info('computing tSNE')
+    start = logg.info("computing tSNE")
     adata = adata.copy() if copy else adata
     X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     # params for sklearn
@@ -126,7 +126,7 @@ def tsne(
             tsne = TSNE(**params_sklearn)
             logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
             # need to transform to float64 for MulticoreTSNE...
-            X_tsne = tsne.fit_transform(X.astype('float64'))
+            X_tsne = tsne.fit_transform(X.astype("float64"))
         except ImportError:
             use_fast_tsne = False
             warnings.warn(
@@ -140,11 +140,11 @@ def tsne(
         # unfortunately, sklearn does not allow to set a minimum number
         # of iterations for barnes-hut tSNE
         tsne = TSNE(**params_sklearn)
-        logg.info('    using sklearn.manifold.TSNE')
+        logg.info("    using sklearn.manifold.TSNE")
         X_tsne = tsne.fit_transform(X)
 
     # update AnnData instance
-    adata.obsm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
+    adata.obsm["X_tsne"] = X_tsne  # annotate samples with tSNE coordinates
     adata.uns["tsne"] = {
         "params": {
             k: v
@@ -161,7 +161,7 @@ def tsne(
     }
 
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
         deep="added\n    'X_tsne', tSNE coordinates (adata.obsm)",
     )

@@ -6,31 +6,32 @@ from typing import Union, Tuple, Optional, Type, Any, Literal
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-import scipy as sp
 from scipy.sparse import spmatrix
 
-from ...tools._leiden import MutableVertexPartition
 from ... import logging as logg
+from ...tools._leiden import MutableVertexPartition
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("phenograph")
 def phenograph(
     adata: Union[AnnData, np.ndarray, spmatrix],
-    clustering_algo: Optional[Literal['louvain', 'leiden']] = 'louvain',
+    clustering_algo: Optional[Literal["louvain", "leiden"]] = "louvain",
     k: int = 30,
     directed: bool = False,
     prune: bool = False,
     min_cluster_size: int = 10,
     jaccard: bool = True,
     primary_metric: Literal[
-        'euclidean',
-        'manhattan',
-        'correlation',
-        'cosine',
+        "euclidean",
+        "manhattan",
+        "correlation",
+        "cosine",
     ] = "euclidean",
     n_jobs: int = -1,
     q_tol: float = 1e-3,
     louvain_time_limit: int = 2000,
-    nn_method: Literal['kdtree', 'brute'] = 'kdtree',
+    nn_method: Literal["kdtree", "brute"] = "kdtree",
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     resolution_parameter: float = 1,
     n_iterations: int = -1,
@@ -212,7 +213,7 @@ def phenograph(
     comm_key = (
         "pheno_{}".format(clustering_algo)
         if clustering_algo in ["louvain", "leiden"]
-        else ''
+        else ""
     )
     ig_key = "pheno_{}_ig".format("jaccard" if jaccard else "gaussian")
     q_key = "pheno_{}_q".format("jaccard" if jaccard else "gaussian")

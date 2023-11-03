@@ -1,13 +1,13 @@
-import pytest
 import numpy as np
+import pytest
+import warnings
 from anndata import AnnData
-from scipy.sparse import csr_matrix
-import anndata as ad
+from anndata.tests.helpers import as_dense_dask_array, asarray, assert_equal
+from scipy import sparse
 
 import scanpy as sc
-from anndata.tests.helpers import assert_equal
-
 from scanpy.testing._helpers.data import pbmc3k_normalized
+from scanpy.testing._pytest.marks import needs
 
 A_list = [
     [0, 0, 7, 0, 0],
@@ -41,29 +41,131 @@ A_svd = np.array(
 )
 
 
+# If one uses dask for PCA it will always require dask-ml
+@pytest.fixture(
+    params=[
+        lambda: sparse.csr_matrix,
+        lambda: sparse.csc_matrix,
+        lambda: asarray,
+        pytest.param(lambda: as_dense_dask_array, marks=[needs("dask_ml")]),
+    ],
+    ids=["scipy-csr", "scipy-csc", "np-ndarray", "dask-array"],
+)
+def array_type(request):
+    return request.param()
+
+
+@pytest.fixture(params=[None, "valid", "invalid"])
+def svd_solver_type(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def zero_center(request):
+    return request.param
+
+
+@pytest.fixture
+def pca_params(array_type, svd_solver_type, zero_center):
+    all_svd_solvers = {"auto", "full", "arpack", "randomized", "tsqr", "lobpcg"}
+
+    expected_warning = None
+    svd_solver = None
+    if svd_solver_type is not None:
+        if array_type is as_dense_dask_array:
+            svd_solver = (
+                ["auto", "full", "tsqr", "randomized"]
+                if zero_center
+                else ["tsqr", "randomized"]
+            )
+        elif array_type in [sparse.csr_matrix, sparse.csc_matrix]:
+            svd_solver = (
+                ["lobpcg", "arpack"] if zero_center else ["arpack", "randomized"]
+            )
+        else:
+            svd_solver = (
+                ["auto", "full", "arpack", "randomized"]
+                if zero_center
+                else ["arpack", "randomized"]
+            )
+        if svd_solver_type == "invalid":
+            svd_solver = list(all_svd_solvers.difference(svd_solver))
+            expected_warning = "Ignoring"
+
+        svd_solver = np.random.choice(svd_solver)
+    # explicit check for special case
+    if (
+        svd_solver == "randomized"
+        and zero_center
+        and array_type in [sparse.csr_matrix, sparse.csc_matrix]
+    ):
+        expected_warning = "not work with sparse input"
+
+    return (svd_solver, expected_warning)
+
+
+def test_pca_warnings(array_type, zero_center, pca_params):
+    svd_solver, expected_warning = pca_params
+    A = array_type(A_list).astype("float32")
+    adata = AnnData(A)
+
+    if expected_warning is not None:
+        with pytest.warns(UserWarning, match=expected_warning):
+            sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
+    else:
+        with warnings.catch_warnings(record=True) as record:
+            sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
+        assert len(record) == 0
+
+
+# This warning test is out of the fixture because it is a special case in the logic of the function
+def test_pca_warnings_sparse():
+    for array_type in (sparse.csr_matrix, sparse.csc_matrix):
+        A = array_type(A_list).astype("float32")
+        adata = AnnData(A)
+        with pytest.warns(UserWarning, match="not work with sparse input"):
+            sc.pp.pca(adata, svd_solver="randomized", zero_center=True)
+
+
 def test_pca_transform(array_type):
-    A = array_type(A_list).astype('float32')
+    A = array_type(A_list).astype("float32")
     A_pca_abs = np.abs(A_pca)
     A_svd_abs = np.abs(A_svd)
 
     adata = AnnData(A)
 
-    sc.pp.pca(adata, n_comps=4, zero_center=True, svd_solver='arpack', dtype='float64')
+    with warnings.catch_warnings(record=True) as record:
+        sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
+    assert len(record) == 0
 
-    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
+    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
-    sc.pp.pca(
-        adata,
-        n_comps=5,
-        zero_center=True,
-        svd_solver='randomized',
-        dtype='float64',
-        random_state=14,
-    )
-    assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm['X_pca'])) < 2e-05
+    with warnings.catch_warnings(record=True) as record:
+        sc.pp.pca(
+            adata,
+            n_comps=5,
+            zero_center=True,
+            svd_solver="randomized",
+            dtype="float64",
+            random_state=14,
+        )
+    if sparse.issparse(A):
+        assert any(
+            isinstance(r.message, UserWarning)
+            and "svd_solver 'randomized' does not work with sparse input"
+            in str(r.message)
+            for r in record
+        )
+    else:
+        assert len(record) == 0
 
-    sc.pp.pca(adata, n_comps=4, zero_center=False, dtype='float64', random_state=14)
-    assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm['X_pca'])) < 2e-05
+    assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm["X_pca"])) < 2e-05
+
+    with warnings.catch_warnings(record=True) as record:
+        sc.pp.pca(adata, n_comps=4, zero_center=False, dtype="float64", random_state=14)
+    assert len(record) == 0
+
+    assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_shapes():
@@ -98,8 +200,8 @@ def test_pca_sparse():
     assert np.allclose(
         implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"]
     )
-    assert np.allclose(implicit.obsm['X_pca'], explicit.obsm['X_pca'])
-    assert np.allclose(implicit.varm['PCs'], explicit.varm['PCs'])
+    assert np.allclose(implicit.obsm["X_pca"], explicit.obsm["X_pca"])
+    assert np.allclose(implicit.varm["PCs"], explicit.varm["PCs"])
 
 
 def test_pca_reproducible(array_type):
@@ -160,7 +262,7 @@ def test_pca_n_pcs():
 
 def test_mask_highly_var_error(array_type):
     # Test highly_variable ValueError
-    adata = AnnData(array_type(A_list).astype('float32'))
+    adata = AnnData(array_type(A_list).astype("float32"))
     with pytest.raises(ValueError), pytest.warns(
         FutureWarning, match="highly_variable"
     ):
@@ -189,6 +291,8 @@ def test_mask_argument_equivalence(float_dtype):
 
 
 def test_mask(array_type):
+    if array_type is as_dense_dask_array:
+        pytest.xfail("TODO: Dask arrays are not is not supported")
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
 
@@ -211,7 +315,7 @@ def test_mask(array_type):
 def test_none(array_type, float_dtype):
     # Test if pca result is equal without highly variable and with-but mask is None
     # and if pca takes highly variable as mask as default
-    A = array_type(A_list).astype('float32')
+    A = array_type(A_list).astype("float32")
     adata = AnnData(A)
 
     without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
@@ -221,11 +325,11 @@ def test_none(array_type, float_dtype):
     mask[1] = True
     adata.var["highly_variable"] = mask
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
-    assert without_var.uns['pca']['params']['mask'] is None
-    assert with_var.uns['pca']['params']['mask'] == "highly_variable"
-    assert not np.array_equal(without_var.obsm['X_pca'], with_var.obsm['X_pca'])
+    assert without_var.uns["pca"]["params"]["mask"] is None
+    assert with_var.uns["pca"]["params"]["mask"] == "highly_variable"
+    assert not np.array_equal(without_var.obsm["X_pca"], with_var.obsm["X_pca"])
     with_no_mask = sc.pp.pca(adata, mask=None, copy=True, dtype=float_dtype)
-    assert np.array_equal(without_var.obsm['X_pca'], with_no_mask.obsm['X_pca'])
+    assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
 
 
 def test_pca_layer():
@@ -250,5 +354,5 @@ def test_pca_layer():
     np.testing.assert_equal(
         X_adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
     )
-    np.testing.assert_equal(X_adata.obsm['X_pca'], layer_adata.obsm['X_pca'])
-    np.testing.assert_equal(X_adata.varm['PCs'], layer_adata.varm['PCs'])
+    np.testing.assert_equal(X_adata.obsm["X_pca"], layer_adata.obsm["X_pca"])
+    np.testing.assert_equal(X_adata.varm["PCs"], layer_adata.varm["PCs"])

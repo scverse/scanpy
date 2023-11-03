@@ -6,17 +6,19 @@ from typing import Optional, Union, Literal
 from anndata import AnnData
 import scipy.sparse as scp
 
-from ..._settings import settings
 from ... import logging as logg
+from ..._settings import settings
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("trimap")
 def trimap(
     adata: AnnData,
     n_components: int = 2,
     n_inliers: int = 10,
     n_outliers: int = 5,
     n_random: int = 5,
-    metric: Literal['angular', 'euclidean', 'hamming', 'manhattan'] = 'euclidean',
+    metric: Literal["angular", "euclidean", "hamming", "manhattan"] = "euclidean",
     weight_adj: float = 500.0,
     lr: float = 1000.0,
     n_iters: int = 400,
@@ -86,24 +88,24 @@ def trimap(
     try:
         from trimap import TRIMAP
     except ImportError:
-        raise ImportError('\nplease install trimap: \n\n\tsudo pip install trimap')
+        raise ImportError("\nplease install trimap: \n\n\tsudo pip install trimap")
     adata = adata.copy() if copy else adata
-    start = logg.info('computing TriMap')
+    start = logg.info("computing TriMap")
     adata = adata.copy() if copy else adata
     verbosity = settings.verbosity if verbose is None else verbose
     verbose = verbosity if isinstance(verbosity, bool) else verbosity > 0
 
-    if 'X_pca' in adata.obsm:
-        n_dim_pca = adata.obsm['X_pca'].shape[1]
-        X = adata.obsm['X_pca'][:, : min(n_dim_pca, 100)]
+    if "X_pca" in adata.obsm:
+        n_dim_pca = adata.obsm["X_pca"].shape[1]
+        X = adata.obsm["X_pca"][:, : min(n_dim_pca, 100)]
     else:
         X = adata.X
         if scp.issparse(X):
             raise ValueError(
-                'trimap currently does not support sparse matrices. Please'
-                'use a dense matrix or apply pca first.'
+                "trimap currently does not support sparse matrices. Please"
+                "use a dense matrix or apply pca first."
             )
-        logg.warning('`X_pca` not found. Run `sc.pp.pca` first for speedup.')
+        logg.warning("`X_pca` not found. Run `sc.pp.pca` first for speedup.")
     X_trimap = TRIMAP(
         n_dims=n_components,
         n_inliers=n_inliers,
@@ -115,9 +117,9 @@ def trimap(
         n_iters=n_iters,
         verbose=verbose,
     ).fit_transform(X)
-    adata.obsm['X_trimap'] = X_trimap
+    adata.obsm["X_trimap"] = X_trimap
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
         deep="added\n    'X_trimap', TriMap coordinates (adata.obsm)",
     )

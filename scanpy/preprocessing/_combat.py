@@ -37,7 +37,7 @@ def _design_matrix(
         return_type="dataframe",
     )
     model = model.drop([batch_key], axis=1)
-    numerical_covariates = model.select_dtypes('number').columns.values
+    numerical_covariates = model.select_dtypes("number").columns.values
 
     logg.info(f"Found {design.shape[1]} batches\n")
     other_cols = [c for c in model.columns.values if c not in numerical_covariates]
@@ -50,11 +50,11 @@ def _design_matrix(
 
         design = pd.concat((design, factor_matrix), axis=1)
         logg.info(f"Found {len(other_cols)} categorical variables:")
-        logg.info("\t" + ", ".join(other_cols) + '\n')
+        logg.info("\t" + ", ".join(other_cols) + "\n")
 
     if numerical_covariates is not None:
         logg.info(f"Found {len(numerical_covariates)} numerical variables:")
-        logg.info("\t" + ", ".join(numerical_covariates) + '\n')
+        logg.info("\t" + ", ".join(numerical_covariates) + "\n")
 
         for nC in numerical_covariates:
             design[nC] = model[nC]
@@ -108,7 +108,7 @@ def _standardize_data(
 
     # Compute the means
     if np.sum(var_pooled == 0) > 0:
-        print(f'Found {np.sum(var_pooled == 0)} genes with zero variance.')
+        print(f"Found {np.sum(var_pooled == 0)} genes with zero variance.")
     stand_mean = np.dot(
         grand_mean.T.reshape((len(grand_mean), 1)), np.ones((1, int(n_array)))
     )
@@ -130,7 +130,7 @@ def _standardize_data(
 
 def combat(
     adata: AnnData,
-    key: str = 'batch',
+    key: str = "batch",
     covariates: Optional[Collection[str]] = None,
     inplace: bool = True,
 ) -> Union[AnnData, np.ndarray, None]:
@@ -169,21 +169,21 @@ def combat(
 
     # check the input
     if key not in adata.obs_keys():
-        raise ValueError('Could not find the key {!r} in adata.obs'.format(key))
+        raise ValueError("Could not find the key {!r} in adata.obs".format(key))
 
     if covariates is not None:
         cov_exist = np.isin(covariates, adata.obs_keys())
         if np.any(~cov_exist):
             missing_cov = np.array(covariates)[~cov_exist].tolist()
             raise ValueError(
-                'Could not find the covariate(s) {!r} in adata.obs'.format(missing_cov)
+                "Could not find the covariate(s) {!r} in adata.obs".format(missing_cov)
             )
 
         if key in covariates:
-            raise ValueError('Batch key and covariates cannot overlap')
+            raise ValueError("Batch key and covariates cannot overlap")
 
         if len(covariates) != len(set(covariates)):
-            raise ValueError('Covariates must be unique')
+            raise ValueError("Covariates must be unique")
 
     # only works on dense matrices so far
     if issparse(adata.X):

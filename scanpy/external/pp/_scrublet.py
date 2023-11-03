@@ -18,7 +18,7 @@ def scrublet(
     expected_doublet_rate: float = 0.05,
     stdev_doublet_rate: float = 0.02,
     synthetic_doublet_umi_subsampling: float = 1.0,
-    knn_dist_metric: str = 'euclidean',
+    knn_dist_metric: str = "euclidean",
     normalize_variance: bool = True,
     log_transform: bool = False,
     mean_center: bool = True,
@@ -131,7 +131,7 @@ def scrublet(
         ``.obs['doublet_score']``
             Doublet scores for each observed transcriptome
 
-        ``.obs['predicted_doublets']``
+        ``.obs['predicted_doublet']``
             Boolean indicating predicted doublet status
 
         ``.uns['scrublet']['doublet_scores_sim']``
@@ -155,13 +155,13 @@ def scrublet(
         import scrublet as sl
     except ImportError:
         raise ImportError(
-            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
+            "Please install scrublet: `pip install scrublet` or `conda install scrublet`."
         )
 
     if copy:
         adata = adata.copy()
 
-    start = logg.info('Running Scrublet')
+    start = logg.info("Running Scrublet")
 
     adata_obs = adata.copy()
 
@@ -177,21 +177,21 @@ def scrublet(
             # selection of genes following normalisation and variability filtering. So
             # we need to save the raw and subset at the same time.
 
-            ad_obs.layers['raw'] = ad_obs.X.copy()
+            ad_obs.layers["raw"] = ad_obs.X.copy()
             pp.normalize_total(ad_obs)
 
             # HVG process needs log'd data.
 
             logged = pp.log1p(ad_obs, copy=True)
             pp.highly_variable_genes(logged)
-            ad_obs = ad_obs[:, logged.var['highly_variable']]
+            ad_obs = ad_obs[:, logged.var["highly_variable"]]
 
             # Simulate the doublets based on the raw expressions from the normalised
             # and filtered object.
 
             ad_sim = scrublet_simulate_doublets(
                 ad_obs,
-                layer='raw',
+                layer="raw",
                 sim_doublet_ratio=sim_doublet_ratio,
                 synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
             )
@@ -222,12 +222,12 @@ def scrublet(
             verbose=verbose,
         )
 
-        return {'obs': ad_obs.obs, 'uns': ad_obs.uns['scrublet']}
+        return {"obs": ad_obs.obs, "uns": ad_obs.uns["scrublet"]}
 
     if batch_key is not None:
         if batch_key not in adata.obs.keys():
             raise ValueError(
-                '`batch_key` must be a column of .obs in the input annData object.'
+                "`batch_key` must be a column of .obs in the input annData object."
             )
 
         # Run Scrublet independently on batches and return just the
@@ -241,7 +241,7 @@ def scrublet(
             )
             for batch in batches
         ]
-        scrubbed_obs = pd.concat([scrub['obs'] for scrub in scrubbed])
+        scrubbed_obs = pd.concat([scrub["obs"] for scrub in scrubbed])
 
         # Now reset the obs to get the scrublet scores
 
@@ -249,26 +249,26 @@ def scrublet(
 
         # Save the .uns from each batch separately
 
-        adata.uns['scrublet'] = {}
-        adata.uns['scrublet']['batches'] = dict(
-            zip(batches, [scrub['uns'] for scrub in scrubbed])
+        adata.uns["scrublet"] = {}
+        adata.uns["scrublet"]["batches"] = dict(
+            zip(batches, [scrub["uns"] for scrub in scrubbed])
         )
 
         # Record that we've done batched analysis, so e.g. the plotting
         # function knows what to do.
 
-        adata.uns['scrublet']['batched_by'] = batch_key
+        adata.uns["scrublet"]["batched_by"] = batch_key
 
     else:
         scrubbed = _run_scrublet(adata_obs, adata_sim)
 
         # Copy outcomes to input object from our processed version
 
-        adata.obs['doublet_score'] = scrubbed['obs']['doublet_score']
-        adata.obs['predicted_doublet'] = scrubbed['obs']['predicted_doublet']
-        adata.uns['scrublet'] = scrubbed['uns']
+        adata.obs["doublet_score"] = scrubbed["obs"]["doublet_score"]
+        adata.obs["predicted_doublet"] = scrubbed["obs"]["predicted_doublet"]
+        adata.uns["scrublet"] = scrubbed["uns"]
 
-    logg.info('    Scrublet finished', time=start)
+    logg.info("    Scrublet finished", time=start)
 
     if copy:
         return adata
@@ -286,7 +286,7 @@ def _scrublet_call_doublets(
     normalize_variance: bool = True,
     n_prin_comps: int = 30,
     use_approx_neighbors: bool = True,
-    knn_dist_metric: str = 'euclidean',
+    knn_dist_metric: str = "euclidean",
     get_doublet_neighbor_parents: bool = False,
     threshold: Optional[float] = None,
     random_state: int = 0,
@@ -385,7 +385,7 @@ def _scrublet_call_doublets(
         import scrublet as sl
     except ImportError:
         raise ImportError(
-            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
+            "Please install scrublet: `pip install scrublet` or `conda install scrublet`."
         )
 
     # Estimate n_neighbors if not provided, and create scrublet object.
@@ -410,7 +410,7 @@ def _scrublet_call_doublets(
     scrub._E_obs_norm = sparse.csc_matrix(adata_obs.X)
     scrub._E_sim_norm = sparse.csc_matrix(adata_sim.X)
 
-    scrub.doublet_parents_ = adata_sim.obsm['doublet_parents']
+    scrub.doublet_parents_ = adata_sim.obsm["doublet_parents"]
 
     # Call scrublet-specific preprocessing where specified
 
@@ -426,7 +426,7 @@ def _scrublet_call_doublets(
     # than trying to use Scanpy's PCA wrapper of the same functions.
 
     if mean_center:
-        logg.info('Embedding transcriptomes using PCA...')
+        logg.info("Embedding transcriptomes using PCA...")
         # Sklearn PCA doesn't like matrices, so convert to arrays
         if isinstance(scrub._E_obs_norm, np.matrix):
             scrub._E_obs_norm = np.asarray(scrub._E_obs_norm)
@@ -436,7 +436,7 @@ def _scrublet_call_doublets(
             scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
         )
     else:
-        logg.info('Embedding transcriptomes using Truncated SVD...')
+        logg.info("Embedding transcriptomes using Truncated SVD...")
         sl.pipeline_truncated_svd(
             scrub, n_prin_comps=n_prin_comps, random_state=scrub.random_state
         )
@@ -455,22 +455,22 @@ def _scrublet_call_doublets(
 
     # Store results in AnnData for return
 
-    adata_obs.obs['doublet_score'] = scrub.doublet_scores_obs_
+    adata_obs.obs["doublet_score"] = scrub.doublet_scores_obs_
 
     # Store doublet Scrublet metadata
 
-    adata_obs.uns['scrublet'] = {
-        'doublet_scores_sim': scrub.doublet_scores_sim_,
-        'doublet_parents': adata_sim.obsm['doublet_parents'],
-        'parameters': {
-            'expected_doublet_rate': expected_doublet_rate,
-            'sim_doublet_ratio': (
-                adata_sim.uns.get('scrublet', {})
-                .get('parameters', {})
-                .get('sim_doublet_ratio', None)
+    adata_obs.uns["scrublet"] = {
+        "doublet_scores_sim": scrub.doublet_scores_sim_,
+        "doublet_parents": adata_sim.obsm["doublet_parents"],
+        "parameters": {
+            "expected_doublet_rate": expected_doublet_rate,
+            "sim_doublet_ratio": (
+                adata_sim.uns.get("scrublet", {})
+                .get("parameters", {})
+                .get("sim_doublet_ratio", None)
             ),
-            'n_neighbors': n_neighbors,
-            'random_state': random_state,
+            "n_neighbors": n_neighbors,
+            "random_state": random_state,
         },
     }
 
@@ -481,15 +481,15 @@ def _scrublet_call_doublets(
     # still use this object to generate the plot and derive a threshold
     # manually.
 
-    if hasattr(scrub, 'threshold_'):
-        adata_obs.uns['scrublet']['threshold'] = scrub.threshold_
-        adata_obs.obs['predicted_doublet'] = scrub.predicted_doublets_
+    if hasattr(scrub, "threshold_"):
+        adata_obs.uns["scrublet"]["threshold"] = scrub.threshold_
+        adata_obs.obs["predicted_doublet"] = scrub.predicted_doublets_
     else:
-        adata_obs.obs['predicted_doublet'] = False
+        adata_obs.obs["predicted_doublet"] = False
 
     if get_doublet_neighbor_parents:
-        adata_obs.uns['scrublet'][
-            'doublet_neighbor_parents'
+        adata_obs.uns["scrublet"][
+            "doublet_neighbor_parents"
         ] = scrub.doublet_neighbor_parents_
 
     return adata_obs
@@ -546,7 +546,7 @@ def scrublet_simulate_doublets(
         import scrublet as sl
     except ImportError:
         raise ImportError(
-            'Please install scrublet: `pip install scrublet` or `conda install scrublet`.'
+            "Please install scrublet: `pip install scrublet` or `conda install scrublet`."
         )
 
     X = _get_obs_rep(adata, layer=layer)
@@ -558,7 +558,7 @@ def scrublet_simulate_doublets(
     )
 
     adata_sim = AnnData(scrub._E_sim)
-    adata_sim.obs['n_counts'] = scrub._total_counts_sim
-    adata_sim.obsm['doublet_parents'] = scrub.doublet_parents_
-    adata_sim.uns['scrublet'] = {'parameters': {'sim_doublet_ratio': sim_doublet_ratio}}
+    adata_sim.obs["n_counts"] = scrub._total_counts_sim
+    adata_sim.obsm["doublet_parents"] = scrub.doublet_parents_
+    adata_sim.uns["scrublet"] = {"parameters": {"sim_doublet_ratio": sim_doublet_ratio}}
     return adata_sim

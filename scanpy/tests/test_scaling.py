@@ -51,10 +51,10 @@ X_centered_for_mask = [
 ]
 
 
-@pytest.mark.parametrize('typ', [np.array, csr_matrix], ids=lambda x: x.__name__)
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize("typ", [np.array, csr_matrix], ids=lambda x: x.__name__)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize(
-    'mask, X, X_centered, X_scaled',
+    ("mask", "X", "X_centered", "X_scaled"),
     [
         (None, X_original, X_centered_original, X_scaled_original),
         (
@@ -68,15 +68,15 @@ X_centered_for_mask = [
 def test_scale(typ, dtype, mask, X, X_centered, X_scaled):
     # test AnnData arguments
     # test scaling with default zero_center == True
-    adata0 = AnnData(typ(X), dtype=dtype)
+    adata0 = AnnData(typ(X).astype(dtype))
     sc.pp.scale(adata0, mask=mask)
     assert np.allclose(csr_matrix(adata0.X).toarray(), X_centered)
     # test scaling with explicit zero_center == True
-    adata1 = AnnData(typ(X), dtype=dtype)
+    adata1 = AnnData(typ(X).astype(dtype))
     sc.pp.scale(adata1, zero_center=True, mask=mask)
     assert np.allclose(csr_matrix(adata1.X).toarray(), X_centered)
     # test scaling with explicit zero_center == False
-    adata2 = AnnData(typ(X), dtype=dtype)
+    adata2 = AnnData(typ(X).astype(dtype))
     sc.pp.scale(adata2, zero_center=False, mask=mask)
     assert np.allclose(csr_matrix(adata2.X).toarray(), X_scaled)
     # test bare count arguments, for simplicity only with explicit copy=True
@@ -96,9 +96,9 @@ def test_scale(typ, dtype, mask, X, X_centered, X_scaled):
 
 def test_mask_string():
     with pytest.raises(ValueError):
-        sc.pp.scale(np.array(X_original), mask='mask')
-    adata = AnnData(np.array(X_for_mask), dtype='float32')
-    adata.obs['some cells'] = np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool)
-    sc.pp.scale(adata, mask='some cells')
+        sc.pp.scale(np.array(X_original), mask="mask")
+    adata = AnnData(np.array(X_for_mask), dtype="float32")
+    adata.obs["some cells"] = np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool)
+    sc.pp.scale(adata, mask="some cells")
     assert np.array_equal(adata.X, X_centered_for_mask)
     assert "mean of some cells" in adata.var.keys()
