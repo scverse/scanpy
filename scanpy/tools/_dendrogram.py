@@ -91,7 +91,8 @@ def dendrogram(
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.dendrogram(adata, groupby='bulk_labels')
-    >>> sc.pl.dendrogram(adata)
+    >>> sc.pl.dendrogram(adata, groupby='bulk_labels')
+    <Axes: >
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """

@@ -5,29 +5,16 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import matplotlib as mpl
-
-mpl.use("agg")
-from matplotlib import pyplot
-from matplotlib.testing.compare import compare_images, make_test_filename
 import pytest
 
-import scanpy
+# just import for the IMPORTED check
+import scanpy as _sc  # noqa: F401
 
 if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
     from scanpy.testing._pytest.fixtures import *  # noqa: F403
 
-
-scanpy.settings.verbosity = "hint"
-
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())
-
-
-@pytest.fixture(autouse=True)
-def close_figures_on_teardown():
-    yield
-    pyplot.close("all")
 
 
 def clear_loggers():
@@ -58,6 +45,8 @@ def imported_modules():
 
 @pytest.fixture
 def check_same_image(add_nunit_attachment):
+    from matplotlib.testing.compare import compare_images, make_test_filename
+
     def _(pth1, pth2, *, tol: int, basename: str = ""):
         def fmt_descr(descr):
             if basename != "":
@@ -82,6 +71,8 @@ def check_same_image(add_nunit_attachment):
 
 @pytest.fixture
 def image_comparer(check_same_image):
+    from matplotlib import pyplot
+
     def save_and_compare(*path_parts: Path | os.PathLike, tol: int):
         base_pth = Path(*path_parts)
 
@@ -100,4 +91,6 @@ def image_comparer(check_same_image):
 
 @pytest.fixture
 def plt():
+    from matplotlib import pyplot
+
     return pyplot
