@@ -492,7 +492,7 @@ def rank_genes_groups(
         Compute the fraction of cells expressing the genes.
     key_added
         The key in `adata.uns` information is saved to.
-    **kwds
+    kwds
         Are passed to test methods. Currently this affects only parameters that
         are passed to :class:`sklearn.linear_model.LogisticRegression`.
         For instance, you can pass `penalty='l1'` to try to come up with a
@@ -501,25 +501,25 @@ def rank_genes_groups(
 
     Returns
     -------
-    **names** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    names : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the gene
         names. Ordered according to scores.
-    **scores** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    scores : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the z-score
         underlying the computation of a p-value for each gene for each
         group. Ordered according to scores.
-    **logfoldchanges** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    logfoldchanges : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
         Note: this is an approximation calculated from mean-log values.
-    **pvals** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    pvals : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         p-values.
-    **pvals_adj** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    pvals_adj : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Corrected p-values.
-    **pts** : `pandas.DataFrame` (`.uns['rank_genes_groups']`)
+    pts : `pandas.DataFrame` (`.uns['rank_genes_groups']`)
         Fraction of cells expressing the genes for each group.
-    **pts_rest** : `pandas.DataFrame` (`.uns['rank_genes_groups']`)
+    pts_rest : `pandas.DataFrame` (`.uns['rank_genes_groups']`)
         Only if `reference` is set to `'rest'`.
         Fraction of cells from the union of the rest of each group
         expressing the genes.

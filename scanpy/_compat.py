@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
 from packaging import version
 
 try:
@@ -24,6 +28,25 @@ def fullname(typ: type) -> str:
     if module == "builtins" or module is None:
         return name
     return f"{module}.{name}"
+
+
+try:
+    from contextlib import chdir
+except ImportError:  # Python < 3.11
+    import os
+    from contextlib import AbstractContextManager
+
+    @dataclass
+    class chdir(AbstractContextManager):
+        path: Path
+        _old_cwd: list[Path] = field(default_factory=list)
+
+        def __enter__(self) -> None:
+            self._old_cwd.append(Path.cwd())
+            os.chdir(self.path)
+
+        def __exit__(self, *_excinfo) -> None:
+            os.chdir(self._old_cwd.pop())
 
 
 def pkg_metadata(package):

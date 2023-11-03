@@ -1,6 +1,7 @@
 from contextlib import redirect_stdout
 from datetime import datetime
 from io import StringIO
+from pathlib import Path
 import sys
 
 import pytest
@@ -9,19 +10,11 @@ from scanpy import Verbosity, settings as s, logging as log
 import scanpy as sc
 
 
-@pytest.fixture
-def logging_state():
-    verbosity_orig = s.verbosity
-    yield
-    s.logfile = sys.stderr
-    s.verbosity = verbosity_orig
-
-
 def test_defaults():
     assert s.logpath is None
 
 
-def test_formats(capsys, logging_state):
+def test_formats(capsys: pytest.CaptureFixture):
     s.logfile = sys.stderr
     s.verbosity = Verbosity.debug
     log.error("0")
@@ -36,7 +29,7 @@ def test_formats(capsys, logging_state):
     assert capsys.readouterr().err == "    4\n"
 
 
-def test_deep(capsys, logging_state):
+def test_deep(capsys: pytest.CaptureFixture):
     s.logfile = sys.stderr
     s.verbosity = Verbosity.hint
     log.hint("0")
@@ -50,7 +43,7 @@ def test_deep(capsys, logging_state):
     assert capsys.readouterr().err == "--> 3: 3!\n"
 
 
-def test_logfile(tmp_path, logging_state):
+def test_logfile(tmp_path: Path):
     s.verbosity = Verbosity.hint
 
     io = StringIO()
@@ -69,8 +62,7 @@ def test_logfile(tmp_path, logging_state):
     assert s.logpath.read_text() == "--> test2\n"
 
 
-def test_timing(monkeypatch, capsys, logging_state):
-    s.logfile = sys.stderr
+def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
     counter = 0
 
     class IncTime:
@@ -81,6 +73,7 @@ def test_timing(monkeypatch, capsys, logging_state):
             return datetime(2000, 1, 1, second=counter, microsecond=counter, tzinfo=tz)
 
     monkeypatch.setattr(log, "datetime", IncTime)
+    s.logfile = sys.stderr
     s.verbosity = Verbosity.debug
 
     log.hint("1")

@@ -165,7 +165,7 @@ def neighbors(
     >>> sc.pp.neighbors(adata, 20, metric='cosine')
     >>> # Provide your own transformer for more control and flexibility
     >>> from sklearn.neighbors import KNeighborsTransformer
-    >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='cosine', algorithm='ball_tree')
+    >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='manhattan', algorithm='kd_tree')
     >>> sc.pp.neighbors(adata, transformer=transformer)
     >>> # now you can e.g. access the index: `transformer._tree`
     """
@@ -528,7 +528,9 @@ class Neighbors:
         Writes sparse graph attributes `.distances` and `.connectivities`.
         """
         start_neighbors = logg.debug("computing neighbors")
-        if n_neighbors > self._adata.shape[0]:  # very small datasets
+        if transformer is not None and not isinstance(transformer, str):
+            n_neighbors = transformer.get_params()["n_neighbors"]
+        elif n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f"n_obs too small: adjusting to `n_neighbors = {n_neighbors}`")
 
