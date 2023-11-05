@@ -707,7 +707,7 @@ def _regress_out_chunk(data):
                     data_chunk[:, col_index], sm.add_constant(regres), family=sm.families.Gaussian()
                 ).fit()
                 #calculat result as resid + intercept
-                new_column = result.resid_response + result.params[0]
+                new_column = result.resid_response + result.params.iloc[0]
             else:
                 #don't add intercept
                 result = sm.GLM(
