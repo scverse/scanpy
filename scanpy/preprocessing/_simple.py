@@ -571,6 +571,7 @@ def regress_out(
     layer: Optional[str] = None,
     n_jobs: Optional[int] = None,
     copy: bool = False,
+    add_intercept: bool = False
 ) -> Optional[AnnData]:
     """\
     Regress out (mostly) unwanted sources of variation.
@@ -584,14 +585,16 @@ def regress_out(
     adata
         The annotated data matrix.
     keys
-        Keys for observation annotation on which to regress on.
+        Keys for observation annotation on which to regress.
     layer
-        If provided, which element of layers to regress on.
+        If provided, which element of layers to use in regression.
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
     copy
         Determines whether a copy of `adata` is returned.
+    add_intercept
+        If True, regress_out will add intercept back to residuals in order to transform results back into gene-count space. Defaults to False
 
     Returns
     -------
@@ -697,10 +700,16 @@ def _regress_out_chunk(data):
         else:
             regres = regressors
         try:
-            result = sm.GLM(
-                data_chunk[:, col_index], regres, family=sm.families.Gaussian()
-            ).fit()
-            new_column = result.resid_response
+            if add_intercept:
+                result = sm.GLM(
+                    sm.add_constant(data_chunk[:, col_index]), regres, family=sm.families.Gaussian()
+                ).fit()
+                new_column = result.resid_response + result.params[0]
+            else:
+                result = sm.GLM(
+                    data_chunk[:, col_index], regres, family=sm.families.Gaussian()
+                ).fit()
+                new_column = result.resid_response
         except PerfectSeparationError:  # this emulates R's behavior
             logg.warning("Encountered PerfectSeparationError, setting to 0 as in R.")
             new_column = np.zeros(data_chunk.shape[0])
