@@ -702,11 +702,14 @@ def _regress_out_chunk(data):
             regres = regressors
         try:
             if add_intercept:
+                #add constant to regres to get intercept in results
                 result = sm.GLM(
-                    sm.add_constant(data_chunk[:, col_index]), regres, family=sm.families.Gaussian()
+                    data_chunk[:, col_index], sm.add_constant(regres), family=sm.families.Gaussian()
                 ).fit()
+                #calculat result as resid + intercept
                 new_column = result.resid_response + result.params[0]
             else:
+                #don't add intercept
                 result = sm.GLM(
                     data_chunk[:, col_index], regres, family=sm.families.Gaussian()
                 ).fit()
