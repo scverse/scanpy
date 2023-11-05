@@ -663,7 +663,7 @@ def regress_out(
             regres = regressors_chunk[idx]
         else:
             regres = regressors
-        tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
+        tasks.append(tuple((data_chunk, regres, variable_is_categorical, add_intercept)))
 
     from joblib import Parallel, delayed
 
@@ -683,6 +683,7 @@ def _regress_out_chunk(data):
     data_chunk = data[0]
     regressors = data[1]
     variable_is_categorical = data[2]
+    add_intercept = data[3]
 
     responses_chunk_list = []
     import statsmodels.api as sm
