@@ -3,6 +3,8 @@
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
 """
+from __future__ import annotations
+
 import sys
 import inspect
 import warnings
@@ -11,12 +13,13 @@ from enum import Enum
 from pathlib import Path
 from weakref import WeakSet
 from collections import namedtuple
-from functools import partial, wraps
+from functools import partial, singledispatch, wraps
 from types import ModuleType, MethodType
 from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
 
 import numpy as np
 from numpy import random
+from numpy.typing import NDArray
 from scipy import sparse
 from anndata import AnnData, __version__ as anndata_version
 from textwrap import dedent
@@ -24,8 +27,8 @@ from packaging import version
 
 from .._settings import settings
 from .. import logging as logg
-
-from .compute.is_constant import is_constant
+from .._compat import DaskArray
+from .compute.is_constant import is_constant  # noqa: F401
 
 
 class Empty(Enum):
@@ -400,12 +403,12 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
 
 
 # backwards compat... remove this in the future
-def sanitize_anndata(adata):
+def sanitize_anndata(adata: AnnData) -> None:
     """Transform string annotations to categoricals."""
     adata._sanitize()
 
 
-def view_to_actual(adata):
+def view_to_actual(adata: AnnData) -> None:
     if adata.is_view:
         warnings.warn(
             "Received a view of an AnnData. Making a copy.",
@@ -483,8 +486,41 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
+_SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
+_MemoryArray = Union[NDArray, _SparseMatrix]
+_SupportedArray = Union[_MemoryArray, DaskArray]
+
+
+@singledispatch
+def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
+    raise NotImplementedError
+
+
+@elem_mul.register(np.ndarray)
+@elem_mul.register(sparse.spmatrix)
+def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
+    if isinstance(x, sparse.spmatrix):
+        # returns coo_matrix, so cast back to input type
+        return type(x)(x.multiply(y))
+    return x * y
+
+
+@elem_mul.register(DaskArray)
+def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
+    import dask.array as da
+
+    return da.map_blocks(elem_mul, x, y)
+
+
+@singledispatch
+def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
     """Checks values of X to ensure it is count data"""
+    raise NotImplementedError
+
+
+@check_nonnegative_integers.register(np.ndarray)
+@check_nonnegative_integers.register(sparse.spmatrix)
+def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
     data = X if isinstance(X, np.ndarray) else X.data
@@ -494,13 +530,19 @@ def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
     # Check all are integers
     elif issubclass(data.dtype.type, Integral):
         return True
-    elif np.any(~np.equal(np.mod(data, 1), 0)):
-        return False
-    else:
-        return True
+    return not np.any((data % 1) != 0)
 
 
-def select_groups(adata, groups_order_subset="all", key="groups"):
+@check_nonnegative_integers.register(DaskArray)
+def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
+    return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
+
+
+def select_groups(
+    adata: AnnData,
+    groups_order_subset: list[str] | Literal["all"] = "all",
+    key: str = "groups",
+) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if key + "_masks" in adata.uns:
