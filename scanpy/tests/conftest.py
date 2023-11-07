@@ -98,6 +98,8 @@ def plt():
 
 @pytest.fixture
 def tmp_dataset_dir(tmp_path_factory):
+    import scanpy
+
     new_dir = tmp_path_factory.mktemp("scanpy_data")
     old_dir = scanpy.settings.datasetdir
     scanpy.settings.datasetdir = new_dir  # Set up
@@ -107,6 +109,8 @@ def tmp_dataset_dir(tmp_path_factory):
 
 @pytest.fixture
 def tmp_write_dir(tmp_path_factory):
+    import scanpy
+
     new_dir = tmp_path_factory.mktemp("scanpy_write")
     old_dir = scanpy.settings.writedir
     scanpy.settings.writedir = new_dir  # Set up
