@@ -2,14 +2,17 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+from __future__ import annotations
+
 from functools import singledispatch
 from numbers import Number
 import warnings
-from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Literal
+from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Literal, NamedTuple
 
 import numba
 import numpy as np
 import scipy as sp
+import pandas as pd
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs, check_array
 from pandas.api.types import CategoricalDtype
@@ -565,6 +568,13 @@ def normalize_per_cell(
     return X if copy else None
 
 
+class RegressionTask(NamedTuple):
+    data_chunk: np.ndarray
+    regressors: np.ndarray | pd.DataFrame
+    variable_is_categorical: bool
+    add_intercept: bool
+
+
 def regress_out(
     adata: AnnData,
     keys: Union[str, Sequence[str]],
@@ -663,7 +673,7 @@ def regress_out(
             regres = regressors_chunk[idx]
         else:
             regres = regressors
-        tasks.append(tuple((data_chunk, regres, variable_is_categorical, add_intercept)))
+        tasks.append(RegressionTask(data_chunk, regres, variable_is_categorical, add_intercept))
 
     from joblib import Parallel, delayed
 
@@ -677,46 +687,39 @@ def regress_out(
     return adata if copy else None
 
 
-def _regress_out_chunk(data):
-    # data is a tuple containing the selected columns from adata.X
-    # and the regressors dataFrame
-    data_chunk = data[0]
-    regressors = data[1]
-    variable_is_categorical = data[2]
-    add_intercept = data[3]
-
-    responses_chunk_list = []
+def _regress_out_chunk(task: RegressionTask):
     import statsmodels.api as sm
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
-    for col_index in range(data_chunk.shape[1]):
+    responses_chunk_list = []
+    for col_index in range(task.data_chunk.shape[1]):
         # if all values are identical, the statsmodel.api.GLM throws an error;
         # but then no regression is necessary anyways...
-        if not (data_chunk[:, col_index] != data_chunk[0, col_index]).any():
-            responses_chunk_list.append(data_chunk[:, col_index])
+        if not (task.data_chunk[:, col_index] != task.data_chunk[0, col_index]).any():
+            responses_chunk_list.append(task.data_chunk[:, col_index])
             continue
 
-        if variable_is_categorical:
-            regres = np.c_[np.ones(regressors.shape[0]), regressors[:, col_index]]
+        if task.variable_is_categorical:
+            regres = np.c_[np.ones(task.regressors.shape[0]), task.regressors[:, col_index]]
         else:
-            regres = regressors
+            regres = task.regressors
         try:
-            if add_intercept:
+            if task.add_intercept:
                 #add constant to regres to get intercept in results
                 result = sm.GLM(
-                    data_chunk[:, col_index], sm.add_constant(regres), family=sm.families.Gaussian()
+                    task.data_chunk[:, col_index], sm.add_constant(regres), family=sm.families.Gaussian()
                 ).fit()
                 #calculat result as resid + intercept
                 new_column = result.resid_response + result.params.iloc[0]
             else:
                 #don't add intercept
                 result = sm.GLM(
-                    data_chunk[:, col_index], regres, family=sm.families.Gaussian()
+                    task.data_chunk[:, col_index], regres, family=sm.families.Gaussian()
                 ).fit()
                 new_column = result.resid_response
         except PerfectSeparationError:  # this emulates R's behavior
             logg.warning("Encountered PerfectSeparationError, setting to 0 as in R.")
-            new_column = np.zeros(data_chunk.shape[0])
+            new_column = np.zeros(task.data_chunk.shape[0])
 
         responses_chunk_list.append(new_column)
 
