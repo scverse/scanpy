@@ -21,7 +21,7 @@ class needs(pytest.MarkDecorator, Enum):
         name: str, start: int, count: int, last_values: list[str]
     ) -> str:
         """Distribution name for matching modules"""
-        return name.lower().replace("_", "-")
+        return name.replace("_", "-")
 
     dask = auto()
     dask_ml = auto()
@@ -51,7 +51,7 @@ class needs(pytest.MarkDecorator, Enum):
 
     def __init__(self, mod: str) -> None:
         reason = f"needs module `{self._name_}`"
-        if self._name_ != mod.lower().replace("-", "_"):
+        if self._name_.casefold() != mod.casefold().replace("-", "_"):
             reason = f"{reason} (`pip install {mod}`)"
         dec = pytest.mark.skipif(not find_spec(self._name_), reason=reason)
         super().__init__(dec.mark)
