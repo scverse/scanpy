@@ -1,8 +1,10 @@
 from __future__ import annotations
 from enum import Enum, auto
 from importlib.util import find_spec
+from typing import TYPE_CHECKING
 
-import pytest
+if TYPE_CHECKING:
+    import pytest
 
 
 class needs(pytest.MarkDecorator, Enum):
@@ -21,28 +23,33 @@ class needs(pytest.MarkDecorator, Enum):
         """Distribution name for matching modules"""
         return name.lower().replace("_", "-")
 
-    leidenalg = auto()
-    louvain = auto()
-    skmisc = "scikit-misc"
-    fa2 = auto()
-    igraph = auto()
     dask = auto()
     dask_ml = auto()
+    fa2 = auto()
+    gprofiler = "gprofiler-official"
+    leidenalg = auto()
+    louvain = auto()
+    igraph = auto()
+    pybiomart = auto()
     skimage = "scikit-image"
+    skmisc = "scikit-misc"
     zarr = auto()
     zappy = auto()
     # external
-    scanorama = auto()
     harmony = "harmonyTS"
     harmonypy = auto()
     magic = "magic-impute"
     palantir = auto()
+    phate = auto()
     phenograph = "PhenoGraph"
+    pypairs = auto()
     samalg = "sam-algorithm"
+    scanorama = auto()
     scrublet = auto()
+    trimap = auto()
     wishbone = "wishbone-dev"
 
-    def __init__(self, mod: str):
+    def __init__(self, mod: str) -> None:
         reason = f"needs module `{self._name_}`"
         if self._name_ != mod.lower().replace("-", "_"):
             reason = f"{reason} (`pip install {mod}`)"

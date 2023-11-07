@@ -6,8 +6,10 @@ import pandas as pd
 from anndata import AnnData
 
 from ... import logging
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("wishbone")
 def wishbone(
     adata: AnnData,
     start_cell: str,

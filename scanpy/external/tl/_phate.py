@@ -5,11 +5,13 @@ from typing import Optional, Union, Literal
 
 from anndata import AnnData
 
-from ..._settings import settings
 from ... import logging as logg
+from ..._settings import settings
 from ..._utils import AnyRandom
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("phate")
 def phate(
     adata: AnnData,
     n_components: int = 2,

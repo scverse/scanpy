@@ -242,22 +242,26 @@ def obs_df(
     --------
     Getting value for plotting:
 
+    >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> plotdf = sc.get.obs_df(
-            pbmc,
-            keys=["CD8B", "n_genes"],
-            obsm_keys=[("X_umap", 0), ("X_umap", 1)]
-        )
-    >>> plotdf.plot.scatter("X_umap0", "X_umap1", c="CD8B")
+    ...     pbmc,
+    ...     keys=["CD8B", "n_genes"],
+    ...     obsm_keys=[("X_umap", 0), ("X_umap", 1)]
+    ... )
+    >>> plotdf.columns
+    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
+    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")
+    <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 
     Calculating mean expression for marker genes by cluster:
 
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> marker_genes = ['CD79A', 'MS4A1', 'CD8A', 'CD8B', 'LYZ']
     >>> genedf = sc.get.obs_df(
-            pbmc,
-            keys=["louvain", *marker_genes]
-        )
+    ...     pbmc,
+    ...     keys=["louvain", *marker_genes]
+    ... )
     >>> grouped = genedf.groupby("louvain")
     >>> mean, var = grouped.mean(), grouped.var()
     """

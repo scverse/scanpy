@@ -91,9 +91,9 @@ def filter_cells(
     >>> adata = sc.datasets.krumsiek11()
     >>> adata.n_obs
     640
-    >>> adata.var_names
-    ['Gata2' 'Gata1' 'Fog1' 'EKLF' 'Fli1' 'SCL' 'Cebpa'
-     'Pu.1' 'cJun' 'EgrNab' 'Gfi1']
+    >>> adata.var_names.tolist()  # doctest: +NORMALIZE_WHITESPACE
+    ['Gata2', 'Gata1', 'Fog1', 'EKLF', 'Fli1', 'SCL',
+     'Cebpa', 'Pu.1', 'cJun', 'EgrNab', 'Gfi1']
     >>> # add some true zeros
     >>> adata.X[adata.X < 0.3] = 0
     >>> # simply compute the number of genes per cell
@@ -104,10 +104,9 @@ def filter_cells(
     1
     >>> # filter manually
     >>> adata_copy = adata[adata.obs['n_genes'] >= 3]
-    >>> adata_copy.obs['n_genes'].min()
-    >>> adata.n_obs
+    >>> adata_copy.n_obs
     554
-    >>> adata.obs['n_genes'].min()
+    >>> adata_copy.obs['n_genes'].min()
     3
     >>> # actually do some filtering
     >>> sc.pp.filter_cells(adata, min_genes=3)
@@ -490,28 +489,28 @@ def normalize_per_cell(
     Examples
     --------
     >>> import scanpy as sc
-    >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
+    >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32))
     >>> print(adata.X.sum(axis=1))
-    [  1.   3.  11.]
+    [ 1.  3. 11.]
     >>> sc.pp.normalize_per_cell(adata)
     >>> print(adata.obs)
-    >>> print(adata.X.sum(axis=1))
        n_counts
     0       1.0
     1       3.0
     2      11.0
-    [ 3.  3.  3.]
-    >>> sc.pp.normalize_per_cell(
-    >>>     adata, counts_per_cell_after=1,
-    >>>     key_n_counts='n_counts2',
-    >>> )
-    >>> print(adata.obs)
     >>> print(adata.X.sum(axis=1))
+    [3. 3. 3.]
+    >>> sc.pp.normalize_per_cell(
+    ...     adata, counts_per_cell_after=1,
+    ...     key_n_counts='n_counts2',
+    ... )
+    >>> print(adata.obs)
        n_counts  n_counts2
     0       1.0        3.0
     1       3.0        3.0
     2      11.0        3.0
-    [ 1.  1.  1.]
+    >>> print(adata.X.sum(axis=1))
+    [1. 1. 1.]
     """
     if isinstance(data, AnnData):
         start = logg.info("normalizing by total count per cell")

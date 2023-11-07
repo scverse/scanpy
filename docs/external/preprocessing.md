@@ -1,6 +1,7 @@
 ## Preprocessing: PP
 
 ```{eval-rst}
+.. module:: scanpy.external.pp
 .. currentmodule:: scanpy.external
 ```
 

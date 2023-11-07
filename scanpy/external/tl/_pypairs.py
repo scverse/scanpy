@@ -7,14 +7,16 @@ import pandas as pd
 from anndata import AnnData
 from packaging import version
 
-from ... import settings
+from ..._settings import settings
+from ...testing._doctests import doctest_needs
 
 
 Genes = Collection[Union[str, int, bool]]
 
 
+@doctest_needs("pypairs")
 def sandbag(
-    adata: Union[AnnData],
+    adata: AnnData,
     annotation: Optional[Mapping[str, Genes]] = None,
     *,
     fraction: float = 0.65,

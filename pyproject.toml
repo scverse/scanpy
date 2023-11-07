@@ -50,7 +50,8 @@ dependencies = [
     # numpy needs a version due to #1320
     "numpy>=1.17.0",
     "matplotlib>=3.4",
-    "pandas>=1.0",
+    # pandas 2.1.2 has pandas/issues/52927
+    "pandas >=1.1.1, !=2.1.2",
     "scipy>=1.4",
     "seaborn!=0.13.0",
     "h5py>=3",
@@ -81,7 +82,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=4.4",
+    "pytest>=7.4.2",
     "pytest-nunit",
     "pytest-mock",
     "profimp",
@@ -105,7 +106,7 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
+    "sphinx>=5",
     "sphinx-book-theme",
     "scanpydoc>=0.9.5",
     "sphinx-autodoc-typehints",
@@ -117,7 +118,9 @@ doc = [
     "nbsphinx",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
+    # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga]",
+    "sam-algorithm",
 ]
 dev = [
     # getting the dev version
@@ -151,6 +154,7 @@ version-file = "scanpy/_version.py"
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
+    "--doctest-modules",
     "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]

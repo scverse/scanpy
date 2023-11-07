@@ -9,6 +9,7 @@ import pandas as pd
 from anndata import AnnData
 
 from .. import logging as logg
+from ..testing._doctests import doctest_needs
 
 
 def _calc_overlap_count(markers1: dict, markers2: dict):
@@ -70,6 +71,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
 _Method = Literal["overlap_count", "overlap_coef", "jaccard"]
 
 
+@doctest_needs("leidenalg")
 def marker_gene_overlap(
     adata: AnnData,
     reference_markers: Union[Dict[str, set], Dict[str, list]],
@@ -140,8 +142,8 @@ def marker_gene_overlap(
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.pp.pca(adata, svd_solver='arpack')
     >>> sc.pp.neighbors(adata)
-    >>> sc.tl.louvain(adata)
-    >>> sc.tl.rank_genes_groups(adata, groupby='louvain')
+    >>> sc.tl.leiden(adata)
+    >>> sc.tl.rank_genes_groups(adata, groupby='leiden')
     >>> marker_genes = {
     ...     'CD4 T cells': {'IL7R'},
     ...     'CD14+ Monocytes': {'CD14', 'LYZ'},
