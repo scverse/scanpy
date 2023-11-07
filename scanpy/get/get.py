@@ -57,18 +57,18 @@ def rank_genes_groups_df(
     if isinstance(group, str):
         group = [group]
     if group is None:
-        group = list(adata.uns[key]['names'].dtype.names)
+        group = list(adata.uns[key]["names"].dtype.names)
     method = adata.uns[key]["params"]["method"]
     if method == "logreg":
-        colnames = ['names', 'scores']
+        colnames = ["names", "scores"]
     else:
-        colnames = ['names', 'scores', 'logfoldchanges', 'pvals', 'pvals_adj']
+        colnames = ["names", "scores", "logfoldchanges", "pvals", "pvals_adj"]
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
-    d = pd.concat(d, axis=1, names=[None, 'group'], keys=colnames)
+    d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
     d = d.stack(level=1).reset_index()
-    d['group'] = pd.Categorical(d['group'], categories=group)
-    d = d.sort_values(['group', 'level_0']).drop(columns='level_0')
+    d["group"] = pd.Categorical(d["group"], categories=group)
+    d = d.sort_values(["group", "level_0"]).drop(columns="level_0")
 
     if method != "logreg":
         if pval_cutoff is not None:
@@ -80,19 +80,19 @@ def rank_genes_groups_df(
     if gene_symbols is not None:
         d = d.join(adata.var[gene_symbols], on="names")
 
-    for pts, name in {'pts': 'pct_nz_group', 'pts_rest': 'pct_nz_reference'}.items():
+    for pts, name in {"pts": "pct_nz_group", "pts_rest": "pct_nz_reference"}.items():
         if pts in adata.uns[key]:
             pts_df = (
                 adata.uns[key][pts][group]
-                .rename_axis(index='names')
+                .rename_axis(index="names")
                 .reset_index()
-                .melt(id_vars='names', var_name='group', value_name=name)
+                .melt(id_vars="names", var_name="group", value_name=name)
             )
             d = d.merge(pts_df)
 
     # remove group column for backward compat if len(group) == 1
     if len(group) == 1:
-        d.drop(columns='group', inplace=True)
+        d.drop(columns="group", inplace=True)
 
     return d.reset_index(drop=True)
 
@@ -100,7 +100,7 @@ def rank_genes_groups_df(
 def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
-    dim: Literal['obs', 'var'],
+    dim: Literal["obs", "var"],
     keys: List[str],
     alias_index: Optional[pd.Index] = None,
     use_raw: bool = False,
@@ -242,22 +242,26 @@ def obs_df(
     --------
     Getting value for plotting:
 
+    >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> plotdf = sc.get.obs_df(
-            pbmc,
-            keys=["CD8B", "n_genes"],
-            obsm_keys=[("X_umap", 0), ("X_umap", 1)]
-        )
-    >>> plotdf.plot.scatter("X_umap0", "X_umap1", c="CD8B")
+    ...     pbmc,
+    ...     keys=["CD8B", "n_genes"],
+    ...     obsm_keys=[("X_umap", 0), ("X_umap", 1)]
+    ... )
+    >>> plotdf.columns
+    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
+    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")
+    <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 
     Calculating mean expression for marker genes by cluster:
 
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> marker_genes = ['CD79A', 'MS4A1', 'CD8A', 'CD8B', 'LYZ']
     >>> genedf = sc.get.obs_df(
-            pbmc,
-            keys=["louvain", *marker_genes]
-        )
+    ...     pbmc,
+    ...     keys=["louvain", *marker_genes]
+    ... )
     >>> grouped = genedf.groupby("louvain")
     >>> mean, var = grouped.mean(), grouped.var()
     """

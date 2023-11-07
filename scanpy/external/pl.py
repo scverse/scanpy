@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from anndata import AnnData
 from matplotlib.axes import Axes
 
+from ..testing._doctests import doctest_needs
 from .._utils import _doc_params
 from ..plotting import embedding
 from ..plotting._docs import (
@@ -19,6 +20,7 @@ from ..plotting import _utils
 from .tl._wishbone import _anndata_to_wishbone
 
 
+@doctest_needs("phate")
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -66,7 +68,7 @@ def phate(adata, **kwargs) -> Union[List[Axes], None]:
     ...     color_map='tab20',
     ... )
     """
-    return embedding(adata, 'phate', **kwargs)
+    return embedding(adata, "phate", **kwargs)
 
 
 @_wraps_plot_scatter
@@ -91,7 +93,7 @@ def trimap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    return embedding(adata, 'trimap', **kwargs)
+    return embedding(adata, "trimap", **kwargs)
 
 
 @_wraps_plot_scatter
@@ -127,13 +129,13 @@ def harmony_timeseries(
     for i, tp in enumerate(tps):
         p = embedding(
             adata,
-            'harmony',
+            "harmony",
             color=tp_name,
             groups=tp,
             title=tp,
             show=False,
             ax=axes[i],
-            legend_loc='none',
+            legend_loc="none",
         )
         p.set_axis_off()
     if return_fig:
@@ -144,11 +146,11 @@ def harmony_timeseries(
 
 def sam(
     adata: AnnData,
-    projection: Union[str, np.ndarray] = 'X_umap',
+    projection: Union[str, np.ndarray] = "X_umap",
     c: Optional[Union[str, np.ndarray]] = None,
-    cmap: str = 'Spectral_r',
+    cmap: str = "Spectral_r",
     linewidth: float = 0.0,
-    edgecolor: str = 'k',
+    edgecolor: str = "k",
     axes: Optional[Axes] = None,
     colorbar: bool = True,
     s: float = 10.0,
@@ -178,7 +180,7 @@ def sam(
             dt = adata.obsm[projection]
         except KeyError:
             raise ValueError(
-                'Please create a projection first using run_umap or run_tsne'
+                "Please create a projection first using run_umap or run_tsne"
             )
     else:
         dt = projection
@@ -314,11 +316,11 @@ def wishbone_marker_trajectory(
         ax=ax,
     )
 
-    adata.uns['trunk_wishbone'] = ret_values['Trunk']
-    adata.uns['branch1_wishbone'] = ret_values['Branch1']
-    adata.uns['branch2_wishbone'] = ret_values['Branch2']
+    adata.uns["trunk_wishbone"] = ret_values["Trunk"]
+    adata.uns["branch1_wishbone"] = ret_values["Branch1"]
+    adata.uns["branch2_wishbone"] = ret_values["Branch2"]
 
-    _utils.savefig_or_show('wishbone_trajectory', show=show, save=save)
+    _utils.savefig_or_show("wishbone_trajectory", show=show, save=save)
 
     if return_fig:
         return fig
@@ -328,8 +330,8 @@ def wishbone_marker_trajectory(
 
 def scrublet_score_distribution(
     adata,
-    scale_hist_obs: str = 'log',
-    scale_hist_sim: str = 'linear',
+    scale_hist_obs: str = "log",
+    scale_hist_sim: str = "linear",
     figsize: Optional[Tuple[float, float]] = (8, 3),
     return_fig: bool = False,
     show: bool = True,
@@ -381,7 +383,7 @@ def scrublet_score_distribution(
         ax.hist(
             scores,
             np.linspace(0, 1, 50),
-            color='gray',
+            color="gray",
             linewidth=0,
             density=True,
         )
@@ -390,21 +392,21 @@ def scrublet_score_distribution(
         ax.set_ylim(yl)
 
         if threshold is not None:
-            ax.plot(threshold * np.ones(2), yl, c='black', linewidth=1)
+            ax.plot(threshold * np.ones(2), yl, c="black", linewidth=1)
 
         ax.set_title(title)
-        ax.set_xlabel('Doublet score')
-        ax.set_ylabel('Prob. density')
+        ax.set_xlabel("Doublet score")
+        ax.set_ylabel("Prob. density")
 
-    if 'scrublet' not in adata.uns:
+    if "scrublet" not in adata.uns:
         raise ValueError(
-            'Please run scrublet before trying to generate the scrublet plot.'
+            "Please run scrublet before trying to generate the scrublet plot."
         )
 
     # If batched_by is populated, then we know Scrublet was run over multiple batches
 
-    if 'batched_by' in adata.uns['scrublet']:
-        batched_by = adata.uns['scrublet']['batched_by']
+    if "batched_by" in adata.uns["scrublet"]:
+        batched_by = adata.uns["scrublet"]["batched_by"]
         batches = adata.obs[batched_by].astype("category", copy=False)
         n_batches = len(batches.cat.categories)
         figsize = (figsize[0], figsize[1] * n_batches)
@@ -418,12 +420,12 @@ def scrublet_score_distribution(
 
     for idx, (batch_key, sub_obs) in enumerate(adata.obs.groupby(batches)):
         # We'll need multiple rows if Scrublet was run in multiple batches
-        if 'batched_by' in adata.uns['scrublet']:
-            threshold = adata.uns["scrublet"]['batches'][batch_key].get(
+        if "batched_by" in adata.uns["scrublet"]:
+            threshold = adata.uns["scrublet"]["batches"][batch_key].get(
                 "threshold", None
             )
-            doublet_scores_sim = adata.uns['scrublet']['batches'][batch_key][
-                'doublet_scores_sim'
+            doublet_scores_sim = adata.uns["scrublet"]["batches"][batch_key][
+                "doublet_scores_sim"
             ]
             axis_lab_suffix = " (%s)" % batch_key
             obs_ax = axs[idx][0]
@@ -431,8 +433,8 @@ def scrublet_score_distribution(
 
         else:
             threshold = adata.uns["scrublet"].get("threshold", None)
-            doublet_scores_sim = adata.uns['scrublet']['doublet_scores_sim']
-            axis_lab_suffix = ''
+            doublet_scores_sim = adata.uns["scrublet"]["doublet_scores_sim"]
+            axis_lab_suffix = ""
             obs_ax = axs[0]
             sim_ax = axs[1]
 
@@ -454,7 +456,7 @@ def scrublet_score_distribution(
 
     fig.tight_layout()
 
-    _utils.savefig_or_show('scrublet_score_distribution', show=show, save=save)
+    _utils.savefig_or_show("scrublet_score_distribution", show=show, save=save)
     if return_fig:
         return fig
     elif not show:

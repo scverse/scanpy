@@ -28,20 +28,20 @@ X_total = [[1, 0], [3, 0], [5, 6]]
 X_frac = [[1, 0, 1], [3, 0, 1], [5, 6, 1]]
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total(array_type, dtype):
-    adata = AnnData(array_type(X_total), dtype=dtype)
-    sc.pp.normalize_total(adata, key_added='n_counts')
+    adata = AnnData(array_type(X_total).astype(dtype))
+    sc.pp.normalize_total(adata, key_added="n_counts")
     assert np.allclose(np.ravel(adata.X.sum(axis=1)), [3.0, 3.0, 3.0])
-    sc.pp.normalize_total(adata, target_sum=1, key_added='n_counts2')
+    sc.pp.normalize_total(adata, target_sum=1, key_added="n_counts2")
     assert np.allclose(np.ravel(adata.X.sum(axis=1)), [1.0, 1.0, 1.0])
 
-    adata = AnnData(array_type(X_frac), dtype=dtype)
+    adata = AnnData(array_type(X_frac).astype(dtype))
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
     assert np.allclose(np.ravel(adata.X[:, 1:3].sum(axis=1)), [1.0, 1.0, 1.0])
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_rep(array_type, dtype):
     # Test that layer kwarg works
     X = array_type(sparse.random(100, 50, format="csr", density=0.2, dtype=dtype))
@@ -49,18 +49,18 @@ def test_normalize_total_rep(array_type, dtype):
     check_rep_results(sc.pp.normalize_total, X, fields=["layer"])
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_layers(array_type, dtype):
-    adata = AnnData(array_type(X_total), dtype=dtype)
+    adata = AnnData(array_type(X_total).astype(dtype))
     adata.layers["layer"] = adata.X.copy()
     with pytest.warns(FutureWarning, match=r".*layers.*deprecated"):
         sc.pp.normalize_total(adata, layers=["layer"])
     assert np.allclose(adata.layers["layer"].sum(axis=1), [3.0, 3.0, 3.0])
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_view(array_type, dtype):
-    adata = AnnData(array_type(X_total), dtype=dtype)
+    adata = AnnData(array_type(X_total).astype(dtype))
     v = adata[:, :]
 
     sc.pp.normalize_total(v)
@@ -74,7 +74,7 @@ def test_normalize_pearson_residuals_inputchecks(pbmc3k_parametrized):
     adata = pbmc3k_parametrized()
 
     # depending on check_values, warnings should be raised for non-integer data
-    if adata.X.dtype == 'float32':
+    if adata.X.dtype == "float32":
         adata_noninteger = adata.copy()
         x, y = np.nonzero(adata_noninteger.X)
         adata_noninteger.X[x[0], y[0]] = 0.5
@@ -87,21 +87,21 @@ def test_normalize_pearson_residuals_inputchecks(pbmc3k_parametrized):
 
     # errors should be raised for invalid theta values
     for theta in [0, -1]:
-        with pytest.raises(ValueError, match='Pearson residuals require theta > 0'):
+        with pytest.raises(ValueError, match="Pearson residuals require theta > 0"):
             sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=theta)
 
     with pytest.raises(
-        ValueError, match='Pearson residuals require `clip>=0` or `clip=None`.'
+        ValueError, match="Pearson residuals require `clip>=0` or `clip=None`."
     ):
         sc.experimental.pp.normalize_pearson_residuals(adata.copy(), clip=-1)
 
 
 @pytest.mark.parametrize(
-    'sparsity_func', [np.array, csr_matrix], ids=lambda x: x.__name__
+    "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
 )
-@pytest.mark.parametrize('dtype', ['float32', 'int64'])
-@pytest.mark.parametrize('theta', [0.01, 1, 100, np.Inf])
-@pytest.mark.parametrize('clip', [None, 1, np.Inf])
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+@pytest.mark.parametrize("theta", [0.01, 1, 100, np.Inf])
+@pytest.mark.parametrize("clip", [None, 1, np.Inf])
 def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
     # toy data
     X = np.array([[3, 6], [2, 4], [1, 0]])
@@ -118,21 +118,21 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
         residuals_reference = (X - mu) / np.sqrt(mu + mu**2 / theta)
 
     # compute output to test
-    adata = AnnData(sparsity_func(X), dtype=dtype)
+    adata = AnnData(sparsity_func(X).astype(dtype))
     output = sc.experimental.pp.normalize_pearson_residuals(
         adata, theta=theta, clip=clip, inplace=False
     )
-    output_X = output['X']
+    output_X = output["X"]
     sc.experimental.pp.normalize_pearson_residuals(
         adata, theta=theta, clip=clip, inplace=True
     )
 
     # check for correct new `adata.uns` keys
-    assert np.all(np.isin(['pearson_residuals_normalization'], list(adata.uns.keys())))
+    assert np.all(np.isin(["pearson_residuals_normalization"], list(adata.uns.keys())))
     assert np.all(
         np.isin(
-            ['theta', 'clip', 'computed_on'],
-            list(adata.uns['pearson_residuals_normalization'].keys()),
+            ["theta", "clip", "computed_on"],
+            list(adata.uns["pearson_residuals_normalization"].keys()),
         )
     )
     # test against inplace
@@ -155,34 +155,34 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
 def _check_pearson_pca_fields(ad, n_cells, n_comps):
     assert np.all(
         np.isin(
-            ['pearson_residuals_normalization', 'pca'],
+            ["pearson_residuals_normalization", "pca"],
             list(ad.uns.keys()),
         )
     ), (
-        """Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, but only %s were found"""
-        % (list(ad.uns.keys()))
+        "Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, "
+        f"but only {list(ad.uns.keys())} were found"
     )
-    assert 'X_pca' in list(
+    assert "X_pca" in list(
         ad.obsm.keys()
-    ), """Missing `obsm` key `'X_pca'`, only %s were found""" % (list(ad.obsm.keys()))
-    assert 'PCs' in list(
+    ), f"Missing `obsm` key `'X_pca'`, only {list(ad.obsm.keys())} were found"
+    assert "PCs" in list(
         ad.varm.keys()
-    ), """Missing `varm` key `'PCs'`, only %s were found""" % (list(ad.varm.keys()))
-    assert ad.obsm['X_pca'].shape == (
+    ), f"Missing `varm` key `'PCs'`, only {list(ad.varm.keys())} were found"
+    assert ad.obsm["X_pca"].shape == (
         n_cells,
         n_comps,
-    ), 'Wrong shape of PCA output in `X_pca`'
+    ), "Wrong shape of PCA output in `X_pca`"
 
 
-@pytest.mark.parametrize('n_hvgs', [100, 200])
-@pytest.mark.parametrize('n_comps', [30, 50])
+@pytest.mark.parametrize("n_hvgs", [100, 200])
+@pytest.mark.parametrize("n_comps", [30, 50])
 def test_normalize_pearson_residuals_pca(pbmc3k_parametrized_small, n_hvgs, n_comps):
     adata = pbmc3k_parametrized_small()
     n_cells, n_genes = adata.shape
 
     adata_with_hvgs = adata.copy()
     sc.experimental.pp.highly_variable_genes(
-        adata_with_hvgs, flavor='pearson_residuals', n_top_genes=n_hvgs
+        adata_with_hvgs, flavor="pearson_residuals", n_top_genes=n_hvgs
     )
     adata_not_using_hvgs = adata_with_hvgs.copy()
 
@@ -214,12 +214,12 @@ def test_normalize_pearson_residuals_pca(pbmc3k_parametrized_small, n_hvgs, n_co
     assert adata_pca_not_using_hvgs.shape == (n_cells, n_genes)
 
     # check PC shapes to see whether or not HVGs were used for PCA
-    assert adata_pca.varm['PCs'].shape == (n_genes, n_comps)
-    assert adata_pca_with_hvgs.varm['PCs'].shape == (
+    assert adata_pca.varm["PCs"].shape == (n_genes, n_comps)
+    assert adata_pca_with_hvgs.varm["PCs"].shape == (
         n_hvgs,
         n_comps,
     )
-    assert adata_pca_not_using_hvgs.varm['PCs'].shape == (n_genes, n_comps)
+    assert adata_pca_not_using_hvgs.varm["PCs"].shape == (n_genes, n_comps)
 
     ### inplace = True ###
     # modifies the input adata object
@@ -245,19 +245,19 @@ def test_normalize_pearson_residuals_pca(pbmc3k_parametrized_small, n_hvgs, n_co
 
         # check shapes: inplace adata's should always retains original shape
         assert ad.shape == (n_cells, n_genes)
-        assert ad.varm['PCs'].shape == (n_genes, n_comps)
+        assert ad.varm["PCs"].shape == (n_genes, n_comps)
 
     # check if there are columns of all-zeros in the PCs shapes
     # to see whether or not HVGs were used for PCA
     # no all-zero-colums should exist
-    assert sum(np.sum(np.abs(adata.varm['PCs']), axis=1) == 0) == 0
+    assert sum(np.sum(np.abs(adata.varm["PCs"]), axis=1) == 0) == 0
     # number of all-zero-colums should be number of non-hvgs
     assert (
-        sum(np.sum(np.abs(adata_with_hvgs.varm['PCs']), axis=1) == 0)
+        sum(np.sum(np.abs(adata_with_hvgs.varm["PCs"]), axis=1) == 0)
         == n_genes - n_hvgs
     )
     # no all-zero-colums should exist
-    assert sum(np.sum(np.abs(adata_not_using_hvgs.varm['PCs']), axis=1) == 0) == 0
+    assert sum(np.sum(np.abs(adata_not_using_hvgs.varm["PCs"]), axis=1) == 0) == 0
 
     # compare PCA results beteen inplace/outplace
     for ad_inplace, ad_outplace in zip(
@@ -265,13 +265,13 @@ def test_normalize_pearson_residuals_pca(pbmc3k_parametrized_small, n_hvgs, n_co
         [adata, adata_with_hvgs, adata_not_using_hvgs],
     ):
         np.testing.assert_array_equal(
-            ad_inplace.obsm['X_pca'],
-            ad_outplace.obsm['X_pca'],
+            ad_inplace.obsm["X_pca"],
+            ad_outplace.obsm["X_pca"],
         )
 
 
-@pytest.mark.parametrize('n_hvgs', [100, 200])
-@pytest.mark.parametrize('n_comps', [30, 50])
+@pytest.mark.parametrize("n_hvgs", [100, 200])
+@pytest.mark.parametrize("n_comps", [30, 50])
 def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n_comps):
     adata = pbmc3k_parametrized_small()
     n_cells, n_genes = adata.shape
@@ -288,22 +288,22 @@ def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n
     # check adata output shape (only HVGs in output)
     assert adata_pca.shape == (n_cells, n_hvgs)
     # check PC shape (non-hvgs are removed, so only `n_hvgs` genes)
-    assert adata_pca.varm['PCs'].shape == (n_hvgs, n_comps)
+    assert adata_pca.varm["PCs"].shape == (n_hvgs, n_comps)
 
     # check hvg df
     assert np.all(
         np.isin(
             [
-                'means',
-                'variances',
-                'residual_variances',
-                'highly_variable_rank',
-                'highly_variable',
+                "means",
+                "variances",
+                "residual_variances",
+                "highly_variable_rank",
+                "highly_variable",
             ],
             list(hvg.columns),
         )
     )
-    assert np.sum(hvg['highly_variable']) == n_hvgs
+    assert np.sum(hvg["highly_variable"]) == n_hvgs
     assert hvg.shape[0] == n_genes
 
     ### inplace = True ###
@@ -318,6 +318,6 @@ def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n
     # check adata shape (no change to input)
     assert adata.shape == (n_cells, n_genes)
     # check PC shape (non-hvgs are masked with 0s, so original number of genes)
-    assert adata.varm['PCs'].shape == (n_genes, n_comps)
+    assert adata.varm["PCs"].shape == (n_genes, n_comps)
     # number of all-zero-colums should be number of non-hvgs
-    assert sum(np.sum(np.abs(adata.varm['PCs']), axis=1) == 0) == n_genes - n_hvgs
+    assert sum(np.sum(np.abs(adata.varm["PCs"]), axis=1) == 0) == n_genes - n_hvgs

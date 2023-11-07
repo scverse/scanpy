@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import singledispatch
 from typing import Optional, Union
 
@@ -7,7 +9,7 @@ import numpy as np
 from scipy import sparse
 
 from ..get import _get_obs_rep
-from .._compat import fullname, DaskArray
+from .._compat import fullname
 from ._common import _resolve_vals, _check_vals
 
 
@@ -254,7 +256,7 @@ def _gearys_c_mtx_csr(
 
 
 @gearys_c.register(sparse.csr_matrix)
-def _gearys_c(g, vals) -> np.ndarray:
+def _gearys_c(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
@@ -283,7 +285,7 @@ def _gearys_c(g, vals) -> np.ndarray:
         return full_result
     else:
         msg = (
-            'Geary’s C metric not implemented for vals of type '
-            f'{fullname(type(vals))} and ndim {vals.ndim}.'
+            "Geary’s C metric not implemented for vals of type "
+            f"{fullname(type(vals))} and ndim {vals.ndim}."
         )
         raise NotImplementedError(msg)

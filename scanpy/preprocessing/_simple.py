@@ -12,7 +12,7 @@ import numpy as np
 import scipy as sp
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs, check_array
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import CategoricalDtype
 from anndata import AnnData
 
 from .. import logging as logg
@@ -91,9 +91,9 @@ def filter_cells(
     >>> adata = sc.datasets.krumsiek11()
     >>> adata.n_obs
     640
-    >>> adata.var_names
-    ['Gata2' 'Gata1' 'Fog1' 'EKLF' 'Fli1' 'SCL' 'Cebpa'
-     'Pu.1' 'cJun' 'EgrNab' 'Gfi1']
+    >>> adata.var_names.tolist()  # doctest: +NORMALIZE_WHITESPACE
+    ['Gata2', 'Gata1', 'Fog1', 'EKLF', 'Fli1', 'SCL',
+     'Cebpa', 'Pu.1', 'cJun', 'EgrNab', 'Gfi1']
     >>> # add some true zeros
     >>> adata.X[adata.X < 0.3] = 0
     >>> # simply compute the number of genes per cell
@@ -104,10 +104,9 @@ def filter_cells(
     1
     >>> # filter manually
     >>> adata_copy = adata[adata.obs['n_genes'] >= 3]
-    >>> adata_copy.obs['n_genes'].min()
-    >>> adata.n_obs
+    >>> adata_copy.n_obs
     554
-    >>> adata.obs['n_genes'].min()
+    >>> adata_copy.obs['n_genes'].min()
     3
     >>> # actually do some filtering
     >>> sc.pp.filter_cells(adata, min_genes=3)
@@ -117,14 +116,14 @@ def filter_cells(
     3
     """
     if copy:
-        logg.warning('`copy` is deprecated, use `inplace` instead.')
+        logg.warning("`copy` is deprecated, use `inplace` instead.")
     n_given_options = sum(
         option is not None for option in [min_genes, min_counts, max_genes, max_counts]
     )
     if n_given_options != 1:
         raise ValueError(
-            'Only provide one of the optional parameters `min_counts`, '
-            '`min_genes`, `max_counts`, `max_genes` per call.'
+            "Only provide one of the optional parameters `min_counts`, "
+            "`min_genes`, `max_counts`, `max_genes` per call."
         )
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -134,9 +133,9 @@ def filter_cells(
         if not inplace:
             return cell_subset, number
         if min_genes is None and max_genes is None:
-            adata.obs['n_counts'] = number
+            adata.obs["n_counts"] = number
         else:
-            adata.obs['n_genes'] = number
+            adata.obs["n_genes"] = number
         adata._inplace_subset_obs(cell_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
@@ -154,20 +153,20 @@ def filter_cells(
 
     s = np.sum(~cell_subset)
     if s > 0:
-        msg = f'filtered out {s} cells that have '
+        msg = f"filtered out {s} cells that have "
         if min_genes is not None or min_counts is not None:
-            msg += 'less than '
+            msg += "less than "
             msg += (
-                f'{min_genes} genes expressed'
+                f"{min_genes} genes expressed"
                 if min_counts is None
-                else f'{min_counts} counts'
+                else f"{min_counts} counts"
             )
         if max_genes is not None or max_counts is not None:
-            msg += 'more than '
+            msg += "more than "
             msg += (
-                f'{max_genes} genes expressed'
+                f"{max_genes} genes expressed"
                 if max_counts is None
-                else f'{max_counts} counts'
+                else f"{max_counts} counts"
             )
         logg.info(msg)
     return cell_subset, number_per_cell
@@ -221,14 +220,14 @@ def filter_genes(
         `n_counts` or `n_cells` per gene.
     """
     if copy:
-        logg.warning('`copy` is deprecated, use `inplace` instead.')
+        logg.warning("`copy` is deprecated, use `inplace` instead.")
     n_given_options = sum(
         option is not None for option in [min_cells, min_counts, max_cells, max_counts]
     )
     if n_given_options != 1:
         raise ValueError(
-            'Only provide one of the optional parameters `min_counts`, '
-            '`min_cells`, `max_counts`, `max_cells` per call.'
+            "Only provide one of the optional parameters `min_counts`, "
+            "`min_cells`, `max_counts`, `max_cells` per call."
         )
 
     if isinstance(data, AnnData):
@@ -245,9 +244,9 @@ def filter_genes(
         if not inplace:
             return gene_subset, number
         if min_cells is None and max_cells is None:
-            adata.var['n_counts'] = number
+            adata.var["n_counts"] = number
         else:
-            adata.var['n_cells'] = number
+            adata.var["n_cells"] = number
         adata._inplace_subset_var(gene_subset)
         return adata if copy else None
 
@@ -266,16 +265,16 @@ def filter_genes(
 
     s = np.sum(~gene_subset)
     if s > 0:
-        msg = f'filtered out {s} genes that are detected '
+        msg = f"filtered out {s} genes that are detected "
         if min_cells is not None or min_counts is not None:
-            msg += 'in less than '
+            msg += "in less than "
             msg += (
-                f'{min_cells} cells' if min_counts is None else f'{min_counts} counts'
+                f"{min_cells} cells" if min_counts is None else f"{min_counts} counts"
             )
         if max_cells is not None or max_counts is not None:
-            msg += 'in more than '
+            msg += "in more than "
             msg += (
-                f'{max_cells} cells' if max_counts is None else f'{max_counts} counts'
+                f"{max_cells} cells" if max_counts is None else f"{max_counts} counts"
             )
         logg.info(msg)
     return gene_subset, number_per_gene
@@ -436,10 +435,10 @@ def normalize_per_cell(
     data: Union[AnnData, np.ndarray, spmatrix],
     counts_per_cell_after: Optional[float] = None,
     counts_per_cell: Optional[np.ndarray] = None,
-    key_n_counts: str = 'n_counts',
+    key_n_counts: str = "n_counts",
     copy: bool = False,
-    layers: Union[Literal['all'], Iterable[str]] = (),
-    use_rep: Optional[Literal['after', 'X']] = None,
+    layers: Union[Literal["all"], Iterable[str]] = (),
+    use_rep: Optional[Literal["after", "X"]] = None,
     min_counts: int = 1,
 ) -> Optional[AnnData]:
     """\
@@ -490,31 +489,31 @@ def normalize_per_cell(
     Examples
     --------
     >>> import scanpy as sc
-    >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
+    >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32))
     >>> print(adata.X.sum(axis=1))
-    [  1.   3.  11.]
+    [ 1.  3. 11.]
     >>> sc.pp.normalize_per_cell(adata)
     >>> print(adata.obs)
-    >>> print(adata.X.sum(axis=1))
        n_counts
     0       1.0
     1       3.0
     2      11.0
-    [ 3.  3.  3.]
-    >>> sc.pp.normalize_per_cell(
-    >>>     adata, counts_per_cell_after=1,
-    >>>     key_n_counts='n_counts2',
-    >>> )
-    >>> print(adata.obs)
     >>> print(adata.X.sum(axis=1))
+    [3. 3. 3.]
+    >>> sc.pp.normalize_per_cell(
+    ...     adata, counts_per_cell_after=1,
+    ...     key_n_counts='n_counts2',
+    ... )
+    >>> print(adata.obs)
        n_counts  n_counts2
     0       1.0        3.0
     1       3.0        3.0
     2      11.0        3.0
-    [ 1.  1.  1.]
+    >>> print(adata.X.sum(axis=1))
+    [1. 1. 1.]
     """
     if isinstance(data, AnnData):
-        start = logg.info('normalizing by total count per cell')
+        start = logg.info("normalizing by total count per cell")
         adata = data.copy() if copy else data
         if counts_per_cell is None:
             cell_subset, counts_per_cell = materialize_as_ndarray(
@@ -525,10 +524,10 @@ def normalize_per_cell(
             counts_per_cell = counts_per_cell[cell_subset]
         normalize_per_cell(adata.X, counts_per_cell_after, counts_per_cell)
 
-        layers = adata.layers.keys() if layers == 'all' else layers
-        if use_rep == 'after':
+        layers = adata.layers.keys() if layers == "all" else layers
+        if use_rep == "after":
             after = counts_per_cell_after
-        elif use_rep == 'X':
+        elif use_rep == "X":
             after = np.median(counts_per_cell[cell_subset])
         elif use_rep is None:
             after = None
@@ -540,8 +539,8 @@ def normalize_per_cell(
             adata.layers[layer] = temp
 
         logg.info(
-            '    finished ({time_passed}): normalized adata.X and added'
-            f'    {key_n_counts!r}, counts per cell before normalization (adata.obs)',
+            "    finished ({time_passed}): normalized adata.X and added"
+            f"    {key_n_counts!r}, counts per cell before normalization (adata.obs)",
             time=start,
         )
         return adata if copy else None
@@ -549,7 +548,7 @@ def normalize_per_cell(
     X = data.copy() if copy else data
     if counts_per_cell is None:
         if not copy:
-            raise ValueError('Can only be run with copy=True')
+            raise ValueError("Can only be run with copy=True")
         cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
         X = X[cell_subset]
         counts_per_cell = counts_per_cell[cell_subset]
@@ -598,7 +597,7 @@ def regress_out(
     -------
     Depending on `copy` returns or updates `adata` with the corrected data matrix.
     """
-    start = logg.info(f'regressing out {keys}')
+    start = logg.info(f"regressing out {keys}")
     adata = adata.copy() if copy else adata
 
     sanitize_anndata(adata)
@@ -611,22 +610,24 @@ def regress_out(
     X = _get_obs_rep(adata, layer=layer)
 
     if issparse(X):
-        logg.info('    sparse input is densified and may ' 'lead to high memory use')
+        logg.info("    sparse input is densified and may " "lead to high memory use")
         X = X.toarray()
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 
     # regress on a single categorical variable
     variable_is_categorical = False
-    if keys[0] in adata.obs_keys() and is_categorical_dtype(adata.obs[keys[0]]):
+    if keys[0] in adata.obs_keys() and isinstance(
+        adata.obs[keys[0]].dtype, CategoricalDtype
+    ):
         if len(keys) > 1:
             raise ValueError(
-                'If providing categorical variable, '
-                'only a single one is allowed. For this one '
-                'we regress on the mean for each category.'
+                "If providing categorical variable, "
+                "only a single one is allowed. For this one "
+                "we regress on the mean for each category."
             )
-        logg.debug('... regressing on per-gene means within categories')
-        regressors = np.zeros(X.shape, dtype='float32')
+        logg.debug("... regressing on per-gene means within categories")
+        regressors = np.zeros(X.shape, dtype="float32")
         for category in adata.obs[keys[0]].cat.categories:
             mask = (category == adata.obs[keys[0]]).values
             for ix, x in enumerate(X.T):
@@ -641,7 +642,7 @@ def regress_out(
             regressors = adata.obs.copy()
 
         # add column of ones at index 0 (first column)
-        regressors.insert(0, 'ones', 1.0)
+        regressors.insert(0, "ones", 1.0)
 
     len_chunk = np.ceil(min(1000, X.shape[1]) / n_jobs).astype(int)
     n_chunks = np.ceil(X.shape[1] / len_chunk).astype(int)
@@ -669,7 +670,7 @@ def regress_out(
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
     _set_obs_rep(adata, np.vstack(res).T, layer=layer)
-    logg.info('    finished', time=start)
+    logg.info("    finished", time=start)
     return adata if copy else None
 
 
@@ -701,7 +702,7 @@ def _regress_out_chunk(data):
             ).fit()
             new_column = result.resid_response
         except PerfectSeparationError:  # this emulates R's behavior
-            logg.warning('Encountered PerfectSeparationError, setting to 0 as in R.')
+            logg.warning("Encountered PerfectSeparationError, setting to 0 as in R.")
             new_column = np.zeros(data_chunk.shape[0])
 
         responses_chunk_list.append(new_column)
@@ -775,8 +776,8 @@ def scale_array(
 
     if np.issubdtype(X.dtype, np.integer):
         logg.info(
-            '... as scaling leads to float results, integer '
-            'input is cast to float, returning copy.'
+            "... as scaling leads to float results, integer "
+            "input is cast to float, returning copy."
         )
         X = X.astype(float)
 
@@ -891,11 +892,11 @@ def subsample(
         new_n_obs = n_obs
     elif fraction is not None:
         if fraction > 1 or fraction < 0:
-            raise ValueError(f'`fraction` needs to be within [0, 1], not {fraction}')
+            raise ValueError(f"`fraction` needs to be within [0, 1], not {fraction}")
         new_n_obs = int(fraction * old_n_obs)
-        logg.debug(f'... subsampled to {new_n_obs} data points')
+        logg.debug(f"... subsampled to {new_n_obs} data points")
     else:
-        raise ValueError('Either pass `n_obs` or `fraction`.')
+        raise ValueError("Either pass `n_obs` or `fraction`.")
     obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
     if isinstance(data, AnnData):
         if data.isbacked:

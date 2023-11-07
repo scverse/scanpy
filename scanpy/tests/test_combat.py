@@ -13,38 +13,38 @@ def test_norm():
 
     # load in data
     adata = sc.datasets.blobs()
-    key = 'blobs'
+    key = "blobs"
     data = pd.DataFrame(data=adata.X.T, index=adata.var_names, columns=adata.obs_names)
 
     # construct a pandas series of the batch annotation
     batch = pd.Series(adata.obs[key])
-    model = pd.DataFrame({'batch': batch})
+    model = pd.DataFrame({"batch": batch})
 
     # standardize the data
-    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, 'batch')
+    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, "batch")
 
     assert np.allclose(s_data.mean(axis=1), np.zeros(s_data.shape[0]))
 
 
 def test_covariates():
     adata = sc.datasets.blobs()
-    key = 'blobs'
+    key = "blobs"
 
     X1 = sc.pp.combat(adata, key=key, inplace=False)
 
     np.random.seed(0)
-    adata.obs['cat1'] = np.random.binomial(3, 0.5, size=(adata.n_obs))
-    adata.obs['cat2'] = np.random.binomial(2, 0.1, size=(adata.n_obs))
-    adata.obs['num1'] = np.random.normal(size=(adata.n_obs))
+    adata.obs["cat1"] = np.random.binomial(3, 0.5, size=(adata.n_obs))
+    adata.obs["cat2"] = np.random.binomial(2, 0.1, size=(adata.n_obs))
+    adata.obs["num1"] = np.random.normal(size=(adata.n_obs))
 
     X2 = sc.pp.combat(
-        adata, key=key, covariates=['cat1', 'cat2', 'num1'], inplace=False
+        adata, key=key, covariates=["cat1", "cat2", "num1"], inplace=False
     )
-    sc.pp.combat(adata, key=key, covariates=['cat1', 'cat2', 'num1'], inplace=True)
+    sc.pp.combat(adata, key=key, covariates=["cat1", "cat2", "num1"], inplace=True)
 
     assert X1.shape == X2.shape
 
-    df = adata.obs[['cat1', 'cat2', 'num1', key]]
+    df = adata.obs[["cat1", "cat2", "num1", key]]
     batch_cats = adata.obs[key].cat.categories
     design = _design_matrix(df, key, batch_cats)
 
@@ -79,13 +79,13 @@ def test_silhouette():
     adata = sc.datasets.blobs()
 
     # apply combat
-    sc.pp.combat(adata, 'blobs')
+    sc.pp.combat(adata, "blobs")
 
     # compute pca
     sc.tl.pca(adata)
-    X_pca = adata.obsm['X_pca']
+    X_pca = adata.obsm["X_pca"]
 
     # compute silhouette coefficient in pca
-    sh = silhouette_score(X_pca[:, :2], adata.obs['blobs'].values)
+    sh = silhouette_score(X_pca[:, :2], adata.obs["blobs"].values)
 
     assert sh < 0.1

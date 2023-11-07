@@ -6,8 +6,10 @@ import pandas as pd
 from anndata import AnnData
 
 from ... import logging
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("wishbone")
 def wishbone(
     adata: AnnData,
     start_cell: str,
@@ -122,7 +124,7 @@ def wishbone(
     # Run the algorithm
     components = list(components)
     res = c_wishbone(
-        adata.obsm['X_diffmap'][:, components],
+        adata.obsm["X_diffmap"][:, components],
         s=s,
         k=k,
         l=k,
@@ -135,12 +137,12 @@ def wishbone(
     trajectory = (trajectory - np.min(trajectory)) / (
         np.max(trajectory) - np.min(trajectory)
     )
-    adata.obs['trajectory_wishbone'] = np.asarray(trajectory)
+    adata.obs["trajectory_wishbone"] = np.asarray(trajectory)
 
     # branch_ = None
     if branch:
         branches = res["Branches"].astype(int)
-        adata.obs['branch_wishbone'] = np.asarray(branches)
+        adata.obs["branch_wishbone"] = np.asarray(branches)
 
 
 def _anndata_to_wishbone(adata: AnnData):
@@ -148,7 +150,7 @@ def _anndata_to_wishbone(adata: AnnData):
 
     scdata = SCData(adata.to_df())
     scdata.diffusion_eigenvectors = pd.DataFrame(
-        adata.obsm['X_diffmap'], index=adata.obs_names
+        adata.obsm["X_diffmap"], index=adata.obs_names
     )
     wb = Wishbone(scdata)
     wb.trajectory = adata.obs["trajectory_wishbone"]
