@@ -3,11 +3,11 @@
 #
 # This started out with a demonstration that Scanpy would allow to reproduce most of Seurat's
 # ([Satija *et al.*, 2015](https://doi.org/10.1038/nbt.3192)) clustering tutorial as described on
-# http://satijalab.org/seurat/pbmc3k_tutorial.html (July 26, 2017), which we gratefully acknowledge.
+# https://satijalab.org/seurat/articles/pbmc3k_tutorial.html (July 26, 2017), which we gratefully acknowledge.
 # In the meanwhile, we have added and removed several pieces.
 #
 # The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics
-# ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
+# ([here](https://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 from functools import partial
 from pathlib import Path
@@ -31,7 +31,7 @@ def test_pbmc3k(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
 
     adata = sc.read(
-        "./data/pbmc3k_raw.h5ad", backup_url="http://falexwolf.de/data/pbmc3k_raw.h5ad"
+        "./data/pbmc3k_raw.h5ad", backup_url="https://falexwolf.de/data/pbmc3k_raw.h5ad"
     )
 
     # Preprocessing

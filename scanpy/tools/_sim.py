@@ -1,4 +1,4 @@
-# Author: Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (https://falexwolf.de)
 """Simulate Data
 
 Simulate stochastic dynamic systems to model gene expression dynamics and
