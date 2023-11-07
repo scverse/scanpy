@@ -32,7 +32,7 @@ Two large toolkits extending our ecosystem to new modalities have had their manu
 
 ### scVelo on the cover of Nature Biotechnology {small}`2020-12-01`
 
-Scanpy's counterpart for RNA velocity, [scVelo](http://scvelo.org/), made it on the cover of [Nature Biotechnology](https://www.nature.com/nbt/volumes/38/issues/12) \[[tweet](https://twitter.com/NatureBiotech/status/1334647540030070792)\].
+Scanpy's counterpart for RNA velocity, [scVelo](https://scvelo.org/), made it on the cover of [Nature Biotechnology](https://www.nature.com/nbt/volumes/38/issues/12) \[[tweet](https://twitter.com/NatureBiotech/status/1334647540030070792)\].
 
 ### Scanpy selected among 20 papers for 20 years of Genome Biology {small}`2020-08-01`
 

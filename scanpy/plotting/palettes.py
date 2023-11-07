@@ -36,7 +36,7 @@ default_20 = vega_20_scanpy
 
 # https://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
 # update 1
-# orig reference http://epub.wu.ac.at/1692/1/document.pdf
+# orig reference https://research.wu.ac.at/en/publications/escaping-rgbland-selecting-colors-for-statistical-graphics-26
 zeileis_28 = [
     "#023fa5",
     "#7d87b9",
@@ -71,7 +71,7 @@ zeileis_28 = [
 
 default_28 = zeileis_28
 
-# from http://godsnotwheregodsnot.blogspot.de/2012/09/color-distribution-methodology.html
+# from https://godsnotwheregodsnot.blogspot.com/2012/09/color-distribution-methodology.html
 godsnot_102 = [
     # "#000000",  # remove the black, as often, we have black colored annotation
     "#FFFF00",

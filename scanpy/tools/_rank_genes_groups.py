@@ -488,7 +488,7 @@ def rank_genes_groups(
         `'wilcoxon'` uses Wilcoxon rank-sum,
         `'logreg'` uses logistic regression. See [Ntranos18]_,
         `here <https://github.com/scverse/scanpy/issues/95>`__ and `here
-        <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
+        <https://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
         for why this is meaningful.
     corr_method
         p-value correction method.
