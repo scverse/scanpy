@@ -331,7 +331,7 @@ def default_palette(
         return palette
 
 
-def _validate_palette(adata, key):
+def _validate_palette(adata: anndata.AnnData, key: str) -> None:
     """
     checks if the list of colors in adata.uns[f'{key}_colors'] is valid
     and updates the color list in adata.uns[f'{key}_colors'] if needed.
@@ -359,8 +359,9 @@ def _validate_palette(adata, key):
                 break
         _palette.append(color)
     # Don't modify if nothing changed
-    if _palette is not None and list(_palette) != list(adata.uns[color_key]):
-        adata.uns[color_key] = _palette
+    if _palette is None or np.equal(_palette, adata.uns[color_key]).all():
+        return
+    adata.uns[color_key] = _palette
 
 
 def _set_colors_for_categorical_obs(
