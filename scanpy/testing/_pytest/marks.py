@@ -41,7 +41,7 @@ class needs(pytest.MarkDecorator, Enum):
     magic = "magic-impute"
     palantir = auto()
     phate = auto()
-    phenograph = "PhenoGraph"
+    phenograph = auto()
     pypairs = auto()
     samalg = "sam-algorithm"
     scanorama = auto()
