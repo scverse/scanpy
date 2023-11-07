@@ -7,7 +7,16 @@ from __future__ import annotations
 from functools import singledispatch
 from numbers import Number
 import warnings
-from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Literal, NamedTuple
+from typing import (
+    Union,
+    Optional,
+    Tuple,
+    Collection,
+    Sequence,
+    Iterable,
+    Literal,
+    NamedTuple,
+)
 
 import numba
 import numpy as np
@@ -581,7 +590,7 @@ def regress_out(
     layer: Optional[str] = None,
     n_jobs: Optional[int] = None,
     copy: bool = False,
-    add_intercept: bool = False
+    add_intercept: bool = False,
 ) -> Optional[AnnData]:
     """\
     Regress out (mostly) unwanted sources of variation.
@@ -673,7 +682,9 @@ def regress_out(
             regres = regressors_chunk[idx]
         else:
             regres = regressors
-        tasks.append(RegressionTask(data_chunk, regres, variable_is_categorical, add_intercept))
+        tasks.append(
+            RegressionTask(data_chunk, regres, variable_is_categorical, add_intercept)
+        )
 
     from joblib import Parallel, delayed
 
@@ -700,19 +711,23 @@ def _regress_out_chunk(task: RegressionTask):
             continue
 
         if task.variable_is_categorical:
-            regres = np.c_[np.ones(task.regressors.shape[0]), task.regressors[:, col_index]]
+            regres = np.c_[
+                np.ones(task.regressors.shape[0]), task.regressors[:, col_index]
+            ]
         else:
             regres = task.regressors
         try:
             if task.add_intercept:
-                #add constant to regres to get intercept in results
+                # add constant to regres to get intercept in results
                 result = sm.GLM(
-                    task.data_chunk[:, col_index], sm.add_constant(regres), family=sm.families.Gaussian()
+                    task.data_chunk[:, col_index],
+                    sm.add_constant(regres),
+                    family=sm.families.Gaussian(),
                 ).fit()
-                #calculat result as resid + intercept
+                # calculat result as resid + intercept
                 new_column = result.resid_response + result.params.iloc[0]
             else:
-                #don't add intercept
+                # don't add intercept
                 result = sm.GLM(
                     task.data_chunk[:, col_index], regres, family=sm.families.Gaussian()
                 ).fit()
