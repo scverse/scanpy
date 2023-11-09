@@ -1,10 +1,10 @@
 from __future__ import annotations
+
 from enum import Enum, auto
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import pytest
+import pytest
 
 
 class needs(pytest.MarkDecorator, Enum):
