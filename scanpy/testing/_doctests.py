@@ -22,7 +22,7 @@ def doctest_needs(mod: str) -> Callable[[F], F]:
             raise KeyError(
                 f"Unknown dependency {mod}. If it isn’t a typo, "
                 "please add it to `needs` enum in `scanpy.testing._pytests.marks`."
-            )
+            ) from None
         return func
 
     return decorator
