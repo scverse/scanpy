@@ -7,8 +7,10 @@ import pandas as pd
 from anndata import AnnData
 
 from ... import logging as logg
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("palantir")
 def palantir(
     adata: AnnData,
     n_components: int = 10,
@@ -282,8 +284,7 @@ def palantir_results(
 
     Returns
     -------
-    PResults
-        PResults object with pseudotime, entropy, branch probabilities and waypoints.
+    PResults object with pseudotime, entropy, branch probabilities and waypoints.
     """
     logg.info("Palantir computing waypoints..")
 

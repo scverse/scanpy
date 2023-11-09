@@ -123,7 +123,7 @@ The whole process takes just a couple of minutes.
 [from pypi]: https://pypi.org/project/scanpy
 [gcfntnu/scanpy]: https://hub.docker.com/r/gcfntnu/scanpy
 [leiden]: https://leidenalg.readthedocs.io
-[miniconda]: http://conda.pydata.org/miniconda.html
+[miniconda]: https://docs.conda.io/projects/miniconda/en/latest/
 [on github]: https://github.com/scverse/scanpy
 [igraph]: https://python.igraph.org/en/stable/
 [unofficial binaries]: https://www.lfd.uci.edu/~gohlke/pythonlibs/

@@ -1001,6 +1001,7 @@ def spatial(
     This function behaves very similarly to other embedding plots like
     :func:`~scanpy.pl.umap`
 
+    >>> import scanpy as sc
     >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")

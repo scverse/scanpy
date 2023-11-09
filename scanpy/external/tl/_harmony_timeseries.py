@@ -10,8 +10,10 @@ import pandas as pd
 from anndata import AnnData
 
 from ... import logging as logg
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("harmony")
 def harmony_timeseries(
     adata: AnnData,
     tp: str,
@@ -103,7 +105,7 @@ def harmony_timeseries(
     ... )
     >>> time_points = adata.obs["sample"].str.split("_", expand=True)[0]
     >>> adata.obs["time_points"] = pd.Categorical(
-    ....    time_points, categories=['sa1', 'sa2', 'sa3']
+    ...     time_points, categories=['sa1', 'sa2', 'sa3']
     ... )
 
     Normalize and filter for highly expressed genes

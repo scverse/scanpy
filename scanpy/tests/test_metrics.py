@@ -12,6 +12,7 @@ import pytest
 
 from scanpy._compat import DaskArray
 from scanpy.testing._helpers.data import pbmc68k_reduced
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 
 mark_flaky = pytest.mark.xfail(
@@ -94,6 +95,7 @@ def test_correctness(metric, size, expected, assert_equal):
     assert metric(adata, vals=connected) == expected
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_graph_metrics_w_constant_values(metric, array_type, assert_equal):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()

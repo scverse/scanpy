@@ -1,7 +1,9 @@
 from __future__ import annotations
 from importlib.util import find_spec
+from typing import TYPE_CHECKING
 
-import pytest
+if TYPE_CHECKING:
+    import pytest
 
 
 # Mapping from module name to PyPI name
@@ -15,26 +17,38 @@ KNOWN = dict(
     dask_ml="dask-ml",
     zarr="zarr",
     zappy="zappy",
+    pybiomart="pybiomart",
+    gprofiler="gprofiler-official",
     # external
-    scanorama="scanorama",
-    scrublet="scrublet",
+    bbknn="bbknn",
     harmony="harmonyTS",
     harmonypy="harmonypy",
     magic="magic-impute",
     palantir="palantir",
+    phate="phate",
     phenograph="PhenoGraph",
+    pypairs="pypairs",
     samalg="sam-algorithm",
+    scanorama="scanorama",
+    scrublet="scrublet",
+    trimap="trimap",
     wishbone="wishbone-dev",
 )
 
 
-def needs(mod: str):
+def needs(mod: str) -> pytest.MarkDecorator:
     """
     Returns a pytest skip marker evaluated at module import.
 
     This allows us to see the amount of skipped tests at the start of a test run.
     :func:`pytest.importorskip` skips tests after they started running.
     """
+
+    try:
+        import pytest
+    except ImportError:
+        return lambda func: func
+
     try:
         dist = KNOWN[mod]
     except KeyError:

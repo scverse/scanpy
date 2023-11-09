@@ -595,9 +595,8 @@ class DPT(Neighbors):
                 for iseg, seg_connects in enumerate(ssegs_connects)
                 if iseg != trunk
             ]
-            prev_connecting_points = segs_connects[  # noqa: F841  TODO Evaluate whether to assign the variable or not
-                iseg
-            ]
+            # TODO Evaluate whether to assign the variable or not
+            prev_connecting_points = segs_connects[iseg]  # noqa: F841
             for jseg_cnt, jseg in enumerate(prev_connecting_segments):
                 iseg_cnt = 0
                 for iseg_new, seg_new in enumerate(ssegs):

@@ -28,6 +28,7 @@ def test_deferred_imports(imported_modules):
         "umap",  # neighbors, tl.umap
         "seaborn",  # plotting
         "sklearn.metrics",  # neighbors
+        "pynndescent",  # neighbors
         "networkx",  # diffmap, paga, plotting._utils
         # TODO: 'matplotlib.pyplot',
         # TODO (maybe): 'numba',
