@@ -163,8 +163,10 @@ def combat(
 
     Returns
     -------
-    Depending on the value of `inplace`, either returns the corrected matrix or
-    or modifies `adata.X`.
+    Returns :class:`numpy.ndarray` if `inplace=True`, else returns an `AnnData` object where it sets the following field:
+
+    `adata.X` (:class:`numpy.ndarray`, dtype `float`)
+        Corrected data matrix.
     """
 
     # check the input
