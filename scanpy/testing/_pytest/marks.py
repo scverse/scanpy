@@ -36,6 +36,7 @@ class needs(pytest.MarkDecorator, Enum):
     zarr = auto()
     zappy = auto()
     # external
+    bbknn = auto()
     harmony = "harmonyTS"
     harmonypy = auto()
     magic = "magic-impute"
