@@ -1124,7 +1124,7 @@ def circles(
     License
     --------
     This code is under [The BSD 3-Clause License]
-    (http://opensource.org/licenses/BSD-3-Clause)
+    (https://opensource.org/license/bsd-3-clause/)
     """
 
     # You can set `facecolor` with an array for each patch,

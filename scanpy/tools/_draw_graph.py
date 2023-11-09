@@ -54,7 +54,7 @@ def draw_graph(
         Annotated data matrix.
     layout
         'fa' (`ForceAtlas2`) or any valid `igraph layout
-        <http://igraph.org/c/doc/igraph-Layout.html>`__. Of particular interest
+        <https://igraph.org/c/doc/igraph-Layout.html>`__. Of particular interest
         are 'fr' (Fruchterman Reingold), 'grid_fr' (Grid Fruchterman Reingold,
         faster than 'fr'), 'kk' (Kamadi Kawai', slower than 'fr'), 'lgl' (Large
         Graph, very fast), 'drl' (Distributed Recursive Layout, pretty fast) and

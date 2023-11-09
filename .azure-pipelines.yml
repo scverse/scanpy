@@ -4,7 +4,7 @@ trigger:
 variables:
   python.version: '3.11'
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
-  PYTEST_ADDOPTS: '-v --color=yes --nunit-xml=nunit/test-results.xml'
+  PYTEST_ADDOPTS: '-v --color=yes --nunit-xml=test-data/test-results.xml'
   ANNDATA_DEV: no
   RUN_COVERAGE: no
   TEST_EXTRA: 'test-full'
@@ -82,14 +82,14 @@ jobs:
   - task: PublishCodeCoverageResults@1
     inputs:
       codeCoverageTool: Cobertura
-      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      summaryFileLocation: 'test-data/coverage.xml'
       failIfCoverageEmpty: true
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
   - task: PublishTestResults@2
     condition: succeededOrFailed()
     inputs:
-      testResultsFiles: 'nunit/test-results.xml'
+      testResultsFiles: 'test-data/test-results.xml'
       testResultsFormat: NUnit
       testRunTitle: 'Publish test results for Python $(python.version)'
 

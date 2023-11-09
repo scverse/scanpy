@@ -1,5 +1,5 @@
 # PAGA for hematopoiesis in mouse [(Paul *et al.*, 2015)](https://doi.org/10.1016/j.cell.2015.11.013)
-# Hematopoiesis: trace myeloid and erythroid differentiation for data of [Paul *et al.* (2015)](http://doi.org/10.1016/j.cell.2015.11.013).
+# Hematopoiesis: trace myeloid and erythroid differentiation for data of [Paul *et al.* (2015)](https://doi.org/10.1016/j.cell.2015.11.013).
 #
 # This is the subsampled notebook for testing.
 from functools import partial
