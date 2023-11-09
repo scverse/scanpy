@@ -98,14 +98,12 @@ def dpt(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields (If `n_branchings==0`, no field `adata.obs['dpt_groups']` will be written):
 
-    If `n_branchings==0`, no field `dpt_groups` will be written.
-
-    `dpt_pseudotime` : :class:`pandas.Series` (`adata.obs`, dtype `float`)
+    `adata.obs['dpt_pseudotime']` (:class:`pandas.Series`, dtype `float`)
         Array of dim (number of samples) that stores the pseudotime of each
         cell, that is, the DPT distance with respect to the root cell.
-    `dpt_groups` : :class:`pandas.Series` (`adata.obs`, dtype `category`)
+    `adata.obs['dpt_groups']` (:class:`pandas.Series`, dtype `category`)
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell. The groups  typically correspond to
         'progenitor cells', 'undecided cells' or 'branches' of a process.

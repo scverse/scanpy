@@ -104,15 +104,15 @@ def louvain(
 
     Returns
     -------
-    :obj:`None`
-        By default (``copy=False``), updates ``adata`` with the following fields:
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-        ``adata.obs['louvain']`` (:class:`pandas.Series`, dtype ``category``)
-            Array of dim (number of samples) that stores the subgroup id
-            (``'0'``, ``'1'``, ...) for each cell.
+    `adata.obs[key_added]` (:class:`pandas.Series`, dtype ``category``)
+        Array of dim (number of samples) that stores the subgroup id
+        (``'0'``, ``'1'``, ...) for each cell.
 
-    :class:`~anndata.AnnData`
-        When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
+    `adata.uns['louvain']['params']` (:class:`dict`)
+        A dict with the values for the parameters `resolution`, `random_state`,
+        and `n_iterations`.
     """
     partition_kwargs = dict(partition_kwargs)
     start = logg.info("running Louvain clustering")
