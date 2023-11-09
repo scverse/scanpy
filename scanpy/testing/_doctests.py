@@ -15,13 +15,14 @@ def doctest_needs(mod: str) -> Callable[[F], F]:
         from ._pytest.marks import needs
     except ImportError:
         mark = None
-    try:
-        mark = needs[mod]
-    except KeyError:
-        raise KeyError(
-            f"Unknown dependency {mod}. If it isn’t a typo, "
-            "please add it to `needs` enum in `scanpy.testing._pytests.marks`."
-        ) from None
+    else:
+        try:
+            mark = needs[mod]
+        except KeyError:
+            raise KeyError(
+                f"Unknown dependency {mod}. If it isn’t a typo, "
+                "please add it to `needs` enum in `scanpy.testing._pytests.marks`."
+            ) from None
 
     def decorator(func: F) -> F:
         if mark is not None:
