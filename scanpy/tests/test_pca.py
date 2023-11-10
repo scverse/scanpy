@@ -14,7 +14,7 @@ from scipy import sparse
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc3k_normalized
 from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED, param_with
+from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SUPPORTED, param_with
 
 A_list = np.array(
     [
@@ -193,8 +193,10 @@ def test_pca_transform(array_type):
 
 
 def test_pca_shapes():
-    """Tests that n_comps behaves correctly"""
-    # https://github.com/scverse/scanpy/issues/1051
+    """
+    Tests that n_comps behaves correctly
+    See https://github.com/scverse/scanpy/issues/1051
+    """
     adata = AnnData(np.random.randn(30, 20))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (30, 19)
@@ -243,8 +245,10 @@ def test_pca_reproducible(array_type):
 
 
 def test_pca_chunked():
-    # https://github.com/scverse/scanpy/issues/1590
-    # But also a more general test
+    """
+    See https://github.com/scverse/scanpy/issues/1590
+    But this is also a more general test
+    """
 
     # Subsetting for speed of test
     pbmc_full = pbmc3k_normalized()
@@ -284,8 +288,11 @@ def test_pca_n_pcs():
     )
 
 
+# We use all ARRAY_TYPES here since this error should be raised before
+# PCA can realize that it got a Dask array
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_mask_highly_var_error(array_type):
-    # Test highly_variable ValueError
+    """Test highly_variable ValueError"""
     adata = AnnData(array_type(A_list).astype("float32"))
     with pytest.raises(ValueError), pytest.warns(
         FutureWarning, match="highly_variable"
@@ -294,7 +301,7 @@ def test_mask_highly_var_error(array_type):
 
 
 def test_mask_length():
-    # check warning on mask length
+    """Check warning on mask length"""
     pbmc = sc.datasets.pbmc68k_reduced()
     mask = np.random.choice([True, False], pbmc.shape[1] + 1)
     with pytest.raises(ValueError):
@@ -302,7 +309,7 @@ def test_mask_length():
 
 
 def test_mask_argument_equivalence(float_dtype):
-    # Test if pca result is equal when given mask as boolarray vs string
+    """Test if pca result is equal when given mask as boolarray vs string"""
 
     pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
     mask = np.random.choice([True, False], pbmc.shape[1])
@@ -337,8 +344,10 @@ def test_mask(array_type):
 
 
 def test_none(array_type, float_dtype):
-    # Test if pca result is equal without highly variable and with-but mask is None
-    # and if pca takes highly variable as mask as default
+    """
+    Test if pca result is equal without highly variable and with-but mask is None
+    and if pca takes highly variable as mask as default
+    """
     A = array_type(A_list).astype("float32")
     adata = AnnData(A)
 
