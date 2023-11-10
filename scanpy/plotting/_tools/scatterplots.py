@@ -52,7 +52,7 @@ from .._docs import (
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
-from scanpy.get.get import _check_mask
+from ...get import _check_mask
 
 
 @_doc_params(
