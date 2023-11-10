@@ -174,18 +174,15 @@ def pca(
 
     # Check for use_highly_varible
     if use_highly_variable is not None:
-        warn(
-            "Argument `use_highly_variable` is deprecated, consider using the mask argument."
-            'Use_highly_variable=True can be called through mask="highly_variable"'
-            "Use_highly_variable=False can be called through mask=None",
-            FutureWarning,
-        )
-    if use_highly_variable is not None and mask is not _empty:
-        raise ValueError(
-            "These arguments are incompatible."
-            'Use_highly_variable=True can be called through mask="highly_variable"'
+        hint = (
+            'Use_highly_variable=True can be called through mask="highly_variable". '
             "Use_highly_variable=False can be called through mask=None"
         )
+        msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
+        warn(msg, FutureWarning)
+        if mask is not _empty:
+            msg = f"These arguments are incompatible. {hint}"
+            raise ValueError(msg)
     if use_highly_variable:
         mask = "highly_variable"
     if use_highly_variable is None and mask is _empty:
