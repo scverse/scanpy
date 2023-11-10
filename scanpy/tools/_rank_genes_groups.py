@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from math import floor
-from warnings import warn
 from typing import Generator, Iterable, Union, Optional, Literal, get_args
 
 import numpy as np
@@ -15,7 +14,7 @@ from scipy.sparse import issparse, vstack
 from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
-from ..get import _get_obs_rep, _check_mask
+from ..get import _check_mask
 from .._utils import check_nonnegative_integers
 from .._utils import Empty, _empty
 
@@ -89,8 +88,8 @@ class _RankGenes:
         groups: list[str] | Literal["all"],
         groupby: str,
         *,
-        gene_mask=None,
-        reference="rest",
+        gene_mask: NDArray[np.bool_] | None = None,
+        reference: Literal["rest"] | str = "rest",
         use_raw: bool = True,
         layer: str | None = None,
         comp_pts: bool = False,
@@ -455,21 +454,21 @@ class _RankGenes:
 def rank_genes_groups(
     adata: AnnData,
     groupby: str,
-    mask: Union[np.ndarray, str, None, Empty] = _empty,
-    use_raw: Optional[bool] = None,
-    groups: Union[Literal["all"], Iterable[str]] = "all",
+    mask: NDArray[np.bool_] | str | None | Empty = _empty,
+    use_raw: bool | None = None,
+    groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
-    n_genes: Optional[int] = None,
+    n_genes: int | None = None,
     rankby_abs: bool = False,
     pts: bool = False,
-    key_added: Optional[str] = None,
+    key_added: str | None = None,
     copy: bool = False,
     method: _Method | None = None,
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     **kwds,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Rank genes for characterizing groups.
 
@@ -567,9 +566,8 @@ def rank_genes_groups(
 
     if mask is _empty:
         mask = None
-
-    if mask is not None:
-        _check_mask(adata, mask, 1)
+    elif mask is not None:
+        mask = _check_mask(adata, mask, 1)
 
     if use_raw is None:
         use_raw = adata.raw is not None

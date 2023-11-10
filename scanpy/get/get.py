@@ -1,8 +1,11 @@
 """This module contains helper functions for accessing data."""
+from __future__ import annotations
+
 from typing import Optional, Iterable, Tuple, Union, List, Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 from scipy.sparse import spmatrix
 
 from anndata import AnnData
@@ -448,10 +451,10 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
 
 
 def _check_mask(
-    adata: Union[AnnData, np.ndarray],
-    mask: Union[str, np.ndarray],
+    adata: AnnData | np.ndarray,
+    mask: str | NDArray[np.bool_],
     axis: int = 0,
-) -> np.ndarray:  # Could also be a series, but should be one or the other
+) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
     """
     Validate mask argument
     Params
@@ -462,21 +465,22 @@ def _check_mask(
     axis
         The axis being masked
     """
-    if isinstance(mask, str) and not isinstance(adata, AnnData):
-        raise ValueError(
-            "Cannot refer to mask with string without providing anndata object as argument"
-        )
     if isinstance(mask, str):
+        if not isinstance(adata, AnnData):
+            msg = "Cannot refer to mask with string without providing anndata object as argument"
+            raise ValueError(msg)
+
         annot = ("obs", "var")[axis]
         if (axis == 1 and mask not in adata.var.keys()) or (
             axis == 0 and mask not in adata.obs.keys()
         ):
-            raise ValueError(
+            msg = (
                 f"Did not find adata.{annot}[{mask}]. "
                 "Either add the mask first to adata.var"
                 "or consider using the mask argument with a boolean array"
             )
-        mask_array = adata.var[mask].values if axis == 1 else adata.obs[mask].values
+            raise ValueError(msg)
+        mask_array = (adata.var if axis == 1 else adata.obs)[mask].to_numpy()
     else:
         if len(mask) != adata.shape[axis]:
             raise ValueError("The shape of the mask do not match the data")
