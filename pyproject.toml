@@ -107,7 +107,7 @@ test-full = [
 ]
 doc = [
     "sphinx>=5",
-    "sphinx-book-theme",
+    "sphinx-book-theme>=1.0.1",
     "scanpydoc>=0.9.5",
     "sphinx-autodoc-typehints",
     "myst-parser",
