@@ -49,7 +49,7 @@ dependencies = [
     "anndata>=0.7.4",
     # numpy needs a version due to #1320
     "numpy>=1.17.0",
-    "matplotlib>=3.4",
+    "matplotlib>=3.6",
     # pandas 2.1.2 has pandas/issues/52927
     "pandas >=1.1.1, !=2.1.2",
     "scipy>=1.4",
@@ -107,7 +107,7 @@ test-full = [
 ]
 doc = [
     "sphinx>=5",
-    "sphinx-book-theme",
+    "sphinx-book-theme>=1.0.1",
     "scanpydoc>=0.9.5",
     "sphinx-autodoc-typehints",
     "myst-parser",
@@ -163,11 +163,15 @@ xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
+    "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
 ]
 
 [tool.coverage.run]
+data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
 omit = ["*/tests/*"]
+[tool.coverage.xml]
+output = "test-data/coverage.xml"
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
 
