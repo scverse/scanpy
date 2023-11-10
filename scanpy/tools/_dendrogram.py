@@ -85,7 +85,7 @@ def dendrogram(
     -------
     Returns `None` if `inplace=True`, else returns a `dict` with dendrogram information. Sets the following field if `inplace=True`:
 
-    `adata.uns[key_added]` (:class:`dict`)
+    `adata.uns[key_added]` : :class:`dict`
         Dendrogram information.
 
     Examples

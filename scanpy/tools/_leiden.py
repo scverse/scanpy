@@ -99,11 +99,11 @@ def leiden(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obs[key_added]` (:class:`pandas.Series`, dtype ``category``)
+    `adata.obs[key_added]` : :class:`pandas.Series` (dtype ``category``)
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 
-    `adata.uns['leiden']['params']` (:class:`dict`)
+    `adata.uns['leiden']['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """

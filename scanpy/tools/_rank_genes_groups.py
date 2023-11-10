@@ -516,25 +516,25 @@ def rank_genes_groups(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.uns['rank_genes_groups']['names']` (structured :class:`numpy.ndarray`, dtype `object`)
+    `adata.uns['rank_genes_groups']['names']` : structured :class:`numpy.ndarray` (dtype `object`)
         Structured array to be indexed by group id storing the gene
         names. Ordered according to scores.
-    `adata.uns['rank_genes_groups']['scores']` (structured :class:`numpy.ndarray`, dtype `object`)
+    `adata.uns['rank_genes_groups']['scores']` : structured :class:`numpy.ndarray` (dtype `object`)
         Structured array to be indexed by group id storing the z-score
         underlying the computation of a p-value for each gene for each
         group. Ordered according to scores.
-    `adata.uns['rank_genes_groups']['logfoldchanges']` (structured :class:`numpy.ndarray`, dtype `object`)
+    `adata.uns['rank_genes_groups']['logfoldchanges']` : structured :class:`numpy.ndarray` (dtype `object`)
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
         Note: this is an approximation calculated from mean-log values.
-    `adata.uns['rank_genes_groups']['pvals']` (structured :class:`numpy.ndarray`, dtype `float`)
+    `adata.uns['rank_genes_groups']['pvals']` : structured :class:`numpy.ndarray` (dtype `float`)
         p-values.
-    `adata.uns['rank_genes_groups']['pvals_adj']` (structured :class:`numpy.ndarray`, dtype `float`)
+    `adata.uns['rank_genes_groups']['pvals_adj']` : structured :class:`numpy.ndarray` (dtype `float`)
         Corrected p-values.
-    `adata.uns['rank_genes_groups']['pts']` (:class:`pandas.DataFrame`, dtype `float`)
+    `adata.uns['rank_genes_groups']['pts']` : :class:`pandas.DataFrame` (dtype `float`)
         Fraction of cells expressing the genes for each group.
-    `adata.uns['rank_genes_groups']['pts_rest']` (:class:`pandas.DataFrame`, dtype `float`)
+    `adata.uns['rank_genes_groups']['pts_rest']` : :class:`pandas.DataFrame` (dtype `float`)
         Only if `reference` is set to `'rest'`.
         Fraction of cells from the union of the rest of each group
         expressing the genes.

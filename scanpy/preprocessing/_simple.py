@@ -485,7 +485,7 @@ def normalize_per_cell(
     -------
     Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
 
-    `adata.X` (:class:`numpy.ndarray` or :class:`scipy.sparse._csr.csr_matrix`, dtype `float`)
+    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Normalized count data matrix.
 
     Examples
@@ -599,7 +599,7 @@ def regress_out(
     -------
     Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
 
-    `adata.X` (:class:`numpy.ndarray` or :class:`scipy.sparse._csr.csr_matrix`, dtype `float`)
+    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Normalized count data matrix.
     """
     start = logg.info(f"regressing out {keys}")
@@ -754,13 +754,13 @@ def scale(
     -------
     Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
 
-    `adata.X` (:class:`numpy.ndarray` or :class:`scipy.sparse._csr.csr_matrix`, dtype `float`)
+    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Scaled count data matrix.
-    `adata.var['mean']` (:class:`pandas.Series`, dtype `float`)
+    `adata.var['mean']` : :class:`pandas.Series` (dtype `float`)
         Means per gene before scaling.
-    `adata.var['std']` (:class:`pandas.Series`, dtype `float`)
+    `adata.var['std']` : :class:`pandas.Series` (dtype `float`)
         Standard deviations per gene before scaling.
-    `adata.var['var']` (:class:`pandas.Series`, dtype `float`)
+    `adata.var['var']` : :class:`pandas.Series` (dtype `float`)
         Variances per gene before scaling.
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)

@@ -394,25 +394,25 @@ def highly_variable_genes(
 
     Returns :class:`~pandas.DataFrame` with calculated metrics if `inplace=True`, else returns an `AnnData` object where it sets the following field:
 
-    `adata.var['highly_variable']` (:class:`pandas.Series, dtype `bool`)
+    `adata.var['highly_variable']` : :class:`pandas.Series` (dtype `bool`)
         boolean indicator of highly-variable genes
-    `adata.var['means']` (:class:`pandas.Series`, dtype `float`)
+    `adata.var['means']` : :class:`pandas.Series` (dtype `float`)
         means per gene
-    `adata.var['dispersions']` (:class:`pandas.Series`, dtype `float`)
+    `adata.var['dispersions']` : :class:`pandas.Series` (dtype `float`)
         For dispersion-based flavors, dispersions per gene
-    `adata.var['dispersions_norm']` (:class:`pandas.Series`, dtype `float`)
+    `adata.var['dispersions_norm']` : :class:`pandas.Series` (dtype `float`)
         For dispersion-based flavors, normalized dispersions per gene
-    `adata.var['variances']` (:class:`pandas.Series`, dtype `float`)
+    `adata.var['variances']` : :class:`pandas.Series` (dtype `float`)
         For `flavor='seurat_v3'`, variance per gene
-    `adata.var['variances_norm']` (:class:`pandas.Series`, dtype `float`)
+    `adata.var['variances_norm']` : :class:`pandas.Series` (dtype `float`)
         For `flavor='seurat_v3'`, normalized variance per gene, averaged in
         the case of multiple batches
-    `adata.var['highly_variable_rank']` (:class:`pandas.Series`, dtype `float`)
+    `adata.var['highly_variable_rank']` : :class:`pandas.Series` (dtype `float`)
         For `flavor='seurat_v3'`, rank of the gene according to normalized
         variance, median rank in the case of multiple batches
-    `adata.var['highly_variable_nbatches']` (:class:`pandas.Series`, dtype `int`)
+    `adata.var['highly_variable_nbatches']` : :class:`pandas.Series` (dtype `int`)
         If batch_key is given, this denotes in how many batches genes are detected as HVG
-    `adata.var['highly_variable_intersection']` (:class:`pandas.Series`, dtype `bool`)
+    `adata.var['highly_variable_intersection']` : :class:`pandas.Series` (dtype `bool`)
         If batch_key is given, this denotes the genes that are highly variable in all batches
 
     Notes
