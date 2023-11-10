@@ -1,3 +1,4 @@
+from typing import Literal
 import numpy as np
 import pytest
 import warnings
@@ -71,7 +72,9 @@ def zero_center(request: pytest.FixtureRequest):
 
 
 @pytest.fixture
-def pca_params(array_type, svd_solver_type, zero_center):
+def pca_params(
+    array_type, svd_solver_type: Literal[None, "valid", "invalid"], zero_center
+):
     all_svd_solvers = {"auto", "full", "arpack", "randomized", "tsqr", "lobpcg"}
 
     expected_warning = None
@@ -120,7 +123,9 @@ def test_pca_warnings(array_type, zero_center, pca_params):
     if expected_warning is not None:
         with pytest.warns(UserWarning, match=expected_warning):
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
-    else:
+        return
+
+    try:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             warnings.filterwarnings(
@@ -129,6 +134,12 @@ def test_pca_warnings(array_type, zero_center, pca_params):
                 DeprecationWarning,
             )
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
+    except UserWarning:
+        # TODO: Fix this case, maybe by increasing test data size.
+        # https://github.com/scverse/scanpy/issues/2744
+        if svd_solver == "lobpcg":
+            pytest.xfail(reason="lobpcg doesn’t work with this small test data")
+        raise
 
 
 # This warning test is out of the fixture because it is a special case in the logic of the function
