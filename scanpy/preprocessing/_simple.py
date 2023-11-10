@@ -778,25 +778,19 @@ def scale_array(
         X = X.copy()
     if mask is not None:
         mask = _check_mask(X, mask, 0)
+        scale_rv = scale_array(
+            X[mask, :],
+            zero_center=zero_center,
+            max_value=max_value,
+            copy=False,
+            return_mean_std=return_mean_std,
+            mask=None,
+        )
         if return_mean_std:
-            X[mask, :], mean, std = scale_array(
-                X[mask, :],
-                zero_center=zero_center,
-                max_value=max_value,
-                copy=False,
-                return_mean_std=return_mean_std,
-                mask=None,
-            )
+            X[mask, :], mean, std = scale_rv
             return X, mean, std
         else:
-            X[mask, :] = scale_array(
-                X[mask, :],
-                zero_center=zero_center,
-                max_value=max_value,
-                copy=False,
-                return_mean_std=return_mean_std,
-                mask=None,
-            )
+            X[mask, :] = scale_rv
             return X
 
     if not zero_center and max_value is not None:
