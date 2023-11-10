@@ -76,9 +76,9 @@ def embedding_density(
     -------
     Sets the following fields (`key_added` defaults to `[basis]_density_[groupby]`, where `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa` and `[groupby]` denotes the parameter input):
 
-    `adata.obs[key_added]` (:class:`numpy.ndarray`, dtype `float`)
+    `adata.obs[key_added]` : :class:`numpy.ndarray` (dtype `float`)
         Embedding density values for each cell.
-    `adata.uns['[key_added]_params']` (:class:`dict`)
+    `adata.uns['[key_added]_params']` : :class:`dict`
         A dict with the values for the parameters `covariate` (for the `groupby` parameter) and `components`.
 
     Examples
