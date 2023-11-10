@@ -2,6 +2,8 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+from __future__ import annotations
+
 from functools import singledispatch
 from numbers import Number
 import warnings
@@ -10,6 +12,7 @@ from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Liter
 import numba
 import numpy as np
 import scipy as sp
+from numpy.typing import NDArray
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs, check_array
 from pandas.api.types import CategoricalDtype
@@ -712,13 +715,13 @@ def _regress_out_chunk(data):
 
 @singledispatch
 def scale(
-    X: Union[AnnData, spmatrix, np.ndarray],
+    X: AnnData | spmatrix | np.ndarray,
     zero_center: bool = True,
-    max_value: Optional[float] = None,
+    max_value: float | None = None,
     copy: bool = False,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-    mask: Union[np.ndarray, str, None] = None,
+    layer: str | None = None,
+    obsm: str | None = None,
+    mask: NDArray[np.bool_] | str | None = None,
 ):
     """\
     Scale data to unit variance and zero mean.
@@ -763,14 +766,14 @@ def scale(
 
 @scale.register(np.ndarray)
 def scale_array(
-    X,
+    X: np.ndarray,
     *,
     zero_center: bool = True,
-    max_value: Optional[float] = None,
+    max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask: Union[np.ndarray, None] = None,
-):
+    mask: NDArray[np.bool_] | None = None,
+) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
     if copy:
         X = X.copy()
     if mask is not None:
@@ -832,14 +835,14 @@ def scale_array(
 
 @scale.register(spmatrix)
 def scale_sparse(
-    X,
+    X: spmatrix,
     *,
     zero_center: bool = True,
-    max_value: Optional[float] = None,
+    max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask: Union[np.ndarray, None] = None,
-):
+    mask: NDArray[np.bool_] | None = None,
+) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
     # need to add the following here to make inplace logic work
     if zero_center:
         logg.info(
@@ -863,17 +866,17 @@ def scale_anndata(
     adata: AnnData,
     *,
     zero_center: bool = True,
-    max_value: Optional[float] = None,
+    max_value: float | None = None,
     copy: bool = False,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-    mask: Union[np.ndarray, str, None] = None,
-) -> Optional[AnnData]:
+    layer: str | None = None,
+    obsm: str | None = None,
+    mask: NDArray[np.bool_] | str | None = None,
+) -> AnnData | None:
     adata = adata.copy() if copy else adata
     str_mean_std = ("mean", "std")
     if mask is not None:
         if isinstance(mask, str):
-            str_mean_std = ("mean of " + mask, "std of " + mask)
+            str_mean_std = (f"mean of {mask}", f"std of {mask}")
         else:
             str_mean_std = ("mean with mask", "std with mask")
         mask = _check_mask(adata, mask, 0)

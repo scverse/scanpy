@@ -1,11 +1,12 @@
 from __future__ import annotations
-from collections import defaultdict
 
 import inspect
 import collections.abc as cabc
+from collections import defaultdict
 from copy import copy
 from numbers import Integral
 from itertools import combinations, product
+from functools import partial
 from typing import (
     Collection,
     Union,
@@ -21,15 +22,15 @@ from typing import (
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from numpy.typing import NDArray
+from pandas.api.types import CategoricalDtype
 from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from pandas.api.types import CategoricalDtype
 from matplotlib import pyplot as pl, colors, colormaps
 from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import Colormap, Normalize
-from functools import partial
 
 from .. import _utils
 from .._utils import (
@@ -66,7 +67,7 @@ def embedding(
     basis: str,
     *,
     color: Union[str, Sequence[str], None] = None,
-    mask: Union[np.ndarray, str, None] = None,
+    mask: NDArray[np.bool_] | str | None = None,
     gene_symbols: Optional[str] = None,
     use_raw: Optional[bool] = None,
     sort_order: bool = True,
@@ -76,8 +77,8 @@ def embedding(
     neighbors_key: Optional[str] = None,
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
-    groups: Optional[str] = None,
-    components: Union[str, Sequence[str]] = None,
+    groups: str | Sequence[str] | None = None,
+    components: str | Sequence[str] | None = None,
     dimensions: Optional[Union[Tuple[int, int], Sequence[Tuple[int, int]]]] = None,
     layer: Optional[str] = None,
     projection: Literal["2d", "3d"] = "2d",
@@ -287,7 +288,7 @@ def embedding(
         color_vector, categorical = _color_vector(
             adata,
             value_to_plot,
-            color_source_vector,
+            values=color_source_vector,
             palette=palette,
             na_color=na_color,
         )
@@ -1196,12 +1197,13 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
 
 def _get_color_source_vector(
     adata: AnnData,
-    value_to_plot,
-    mask=None,
-    use_raw=False,
-    gene_symbols=None,
-    layer=None,
-    groups=None,
+    value_to_plot: str,
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    use_raw: bool = False,
+    gene_symbols: str | None = None,
+    layer: str | None = None,
+    groups: Sequence[str] | None = None,
 ):
     """
     Get array from adata that colors will be based on.
@@ -1253,9 +1255,10 @@ def _get_palette(adata, values_key: str, palette=None):
 def _color_vector(
     adata: AnnData,
     values_key: str,
+    *,
     values: np.ndarray | pd.api.extensions.ExtensionArray,
-    palette,
-    na_color="lightgray",
+    palette: str | Sequence[str] | Cycler | None,
+    na_color: ColorLike = "lightgray",
 ) -> Tuple[np.ndarray | pd.api.extensions.ExtensionArray, bool]:
     """
     Map array of values to array of hex (plus alpha) codes.
