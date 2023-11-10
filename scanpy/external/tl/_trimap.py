@@ -6,10 +6,12 @@ from typing import Optional, Union, Literal
 from anndata import AnnData
 import scipy.sparse as scp
 
-from ..._settings import settings
 from ... import logging as logg
+from ..._settings import settings
+from ...testing._doctests import doctest_needs
 
 
+@doctest_needs("trimap")
 def trimap(
     adata: AnnData,
     n_components: int = 2,

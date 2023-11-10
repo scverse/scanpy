@@ -1,11 +1,3 @@
-#!/usr/bin/env python
-from scipy.stats import norm
-from scanpy._utils import check_nonnegative_integers
-from itertools import product
-import anndata
-import numpy as np
-import pandas as pd
-
 """
 HashSolo script provides a probabilistic cell hashing demultiplexing method
 which generates a noise distribution and signal distribution for
@@ -22,6 +14,16 @@ second highest barcode from a noise distribution. A negative two highest
 barcodes should come from noise distributions. We test each of these
 hypotheses in a bayesian fashion, and select the most probable hypothesis.
 """
+
+from itertools import product
+
+import anndata
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
+
+from ..._utils import check_nonnegative_integers
+from ...testing._doctests import doctest_skip
 
 
 def _calculate_log_likelihoods(data, number_of_noise_barcodes):
@@ -255,6 +257,7 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
     }
 
 
+@doctest_skip("Illustrative but not runnable doctest code")
 def hashsolo(
     adata: anndata.AnnData,
     cell_hashing_columns: list,

@@ -6,6 +6,7 @@ from anndata import AnnData
 from matplotlib.axes import Axes
 from sklearn.utils import deprecated
 
+from ..testing._doctests import doctest_needs
 from .._utils import _doc_params
 from ..plotting import embedding
 from ..plotting import _scrublet
@@ -20,6 +21,7 @@ from ..plotting import _utils
 from .tl._wishbone import _anndata_to_wishbone
 
 
+@doctest_needs("phate")
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,

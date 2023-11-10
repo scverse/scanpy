@@ -95,10 +95,8 @@ def krumsiek11() -> ad.AnnData:
     Annotated data matrix.
     """
     filename = HERE / "krumsiek11.txt"
-    verbosity_save = settings.verbosity
-    settings.verbosity = "error"  # suppress output...
-    adata = read(filename, first_column_names=True)
-    settings.verbosity = verbosity_save
+    with settings.verbosity.override("error"):  # suppress output...
+        adata = read(filename, first_column_names=True)
     adata.uns["iroot"] = 0
     fate_labels = {0: "Stem", 159: "Mo", 319: "Ery", 459: "Mk", 619: "Neu"}
     adata.uns["highlights"] = fate_labels
@@ -173,7 +171,7 @@ def paul15() -> ad.AnnData:
 
     filename = settings.datasetdir / "paul15/paul15.h5"
     filename.parent.mkdir(exist_ok=True)
-    backup_url = "http://falexwolf.de/data/paul15.h5"
+    backup_url = "https://falexwolf.de/data/paul15.h5"
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, "r") as f:
         # Coercing to float32 for backwards compatibility
@@ -258,12 +256,12 @@ def pbmc3k() -> ad.AnnData:
 
     The data consists in 3k PBMCs from a Healthy Donor and is freely available
     from 10x Genomics (`here
-    <http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz>`__
+    <https://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz>`__
     from this `webpage
     <https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k>`__).
 
     The exact same data is also used in Seurat's
-    `basic clustering tutorial <https://satijalab.org/seurat/pbmc3k_tutorial.html>`__.
+    `basic clustering tutorial <https://satijalab.org/seurat/articles/pbmc3k_tutorial.html>`__.
 
     .. note::
 
@@ -289,7 +287,7 @@ def pbmc3k() -> ad.AnnData:
     -------
     Annotated data matrix.
     """
-    url = "http://falexwolf.de/data/pbmc3k_raw.h5ad"
+    url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
     adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 

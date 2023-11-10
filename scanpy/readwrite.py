@@ -648,9 +648,9 @@ def write(
         File extension from wich to infer file format. If `None`, defaults to
         `sc.settings.file_format_data`.
     compression
-        See http://docs.h5py.org/en/latest/high/dataset.html.
+        See https://docs.h5py.org/en/latest/high/dataset.html.
     compression_opts
-        See http://docs.h5py.org/en/latest/high/dataset.html.
+        See https://docs.h5py.org/en/latest/high/dataset.html.
     """
     filename = Path(filename)  # allow passing strings
     if is_valid_filename(filename):
@@ -774,9 +774,9 @@ def _read(
             logg.debug(f"reading sheet {sheet} from file {filename}")
             return read_hdf(filename, sheet)
     # read other file types
-    path_cache = settings.cachedir / _slugify(filename).replace(
-        "." + ext, ".h5ad"
-    )  # type: Path
+    path_cache: Path = settings.cachedir / _slugify(filename).replace(
+        f".{ext}", ".h5ad"
+    )
     if path_cache.suffix in {".gz", ".bz2"}:
         path_cache = path_cache.with_suffix("")
     if cache and path_cache.is_file():
@@ -852,12 +852,12 @@ def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
     Read a SOFT format data file.
 
     The SOFT format is documented here
-    http://www.ncbi.nlm.nih.gov/geo/info/soft2.html.
+    https://www.ncbi.nlm.nih.gov/geo/info/soft.html.
 
     Notes
     -----
     The function is based on a script by Kerby Shedden.
-    http://dept.stat.lsa.umich.edu/~kshedden/Python-Workshop/gene_expression_comparison.html
+    https://dept.stat.lsa.umich.edu/~kshedden/Python-Workshop/gene_expression_comparison.html
     """
     import gzip
 
@@ -915,7 +915,7 @@ def is_float(string: str) -> float:
 
     See also
     --------
-    http://stackoverflow.com/questions/736043/checking-if-a-string-can-be-converted-to-float-in-python
+    https://stackoverflow.com/questions/736043/checking-if-a-string-can-be-converted-to-float-in-python
     """
     try:
         float(string)

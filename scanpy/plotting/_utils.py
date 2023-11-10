@@ -331,7 +331,7 @@ def default_palette(
         return palette
 
 
-def _validate_palette(adata, key):
+def _validate_palette(adata: anndata.AnnData, key: str) -> None:
     """
     checks if the list of colors in adata.uns[f'{key}_colors'] is valid
     and updates the color list in adata.uns[f'{key}_colors'] if needed.
@@ -359,8 +359,9 @@ def _validate_palette(adata, key):
                 break
         _palette.append(color)
     # Don't modify if nothing changed
-    if _palette is not None and list(_palette) != list(adata.uns[color_key]):
-        adata.uns[color_key] = _palette
+    if _palette is None or np.equal(_palette, adata.uns[color_key]).all():
+        return
+    adata.uns[color_key] = _palette
 
 
 def _set_colors_for_categorical_obs(
@@ -1123,7 +1124,7 @@ def circles(
     License
     --------
     This code is under [The BSD 3-Clause License]
-    (http://opensource.org/licenses/BSD-3-Clause)
+    (https://opensource.org/license/bsd-3-clause/)
     """
 
     # You can set `facecolor` with an array for each patch,
@@ -1194,9 +1195,8 @@ def fix_kwds(kwds_dict, **kwargs):
 
     >>> def _example(**kwds):
     ...     return fix_kwds(kwds, key1="value1", key2="value2")
-    >>> example(key1="value10", key3="value3")
-        {'key1': 'value10, 'key2': 'value2', 'key3': 'value3'}
-
+    >>> _example(key1="value10", key3="value3")
+    {'key1': 'value10', 'key2': 'value2', 'key3': 'value3'}
     """
 
     kwargs.update(kwds_dict)

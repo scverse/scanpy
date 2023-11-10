@@ -1,22 +1,31 @@
+from typing import Literal
 import numpy as np
 import pytest
 import warnings
 from anndata import AnnData
-from anndata.tests.helpers import as_dense_dask_array, asarray, assert_equal
+from anndata.tests.helpers import (
+    as_dense_dask_array,
+    as_sparse_dask_array,
+    assert_equal,
+    asarray,
+)
 from scipy import sparse
 
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc3k_normalized
 from scanpy.testing._pytest.marks import needs
+from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED, param_with
 
-A_list = [
-    [0, 0, 7, 0, 0],
-    [8, 5, 0, 2, 0],
-    [6, 0, 0, 2, 5],
-    [0, 0, 0, 1, 0],
-    [8, 8, 2, 1, 0],
-    [0, 0, 0, 4, 5],
-]
+A_list = np.array(
+    [
+        [0, 0, 7, 0, 0],
+        [8, 5, 0, 2, 0],
+        [6, 0, 0, 2, 5],
+        [0, 0, 0, 1, 0],
+        [8, 8, 2, 1, 0],
+        [0, 0, 0, 4, 5],
+    ]
+)
 
 A_pca = np.array(
     [
@@ -44,55 +53,57 @@ A_svd = np.array(
 # If one uses dask for PCA it will always require dask-ml
 @pytest.fixture(
     params=[
-        lambda: sparse.csr_matrix,
-        lambda: sparse.csc_matrix,
-        lambda: asarray,
-        pytest.param(lambda: as_dense_dask_array, marks=[needs("dask_ml")]),
-    ],
-    ids=["scipy-csr", "scipy-csc", "np-ndarray", "dask-array"],
+        param_with(at, marks=[needs("dask_ml")]) if "dask" in at.id else at
+        for at in ARRAY_TYPES_SUPPORTED
+    ]
 )
-def array_type(request):
-    return request.param()
-
-
-@pytest.fixture(params=[None, "valid", "invalid"])
-def svd_solver_type(request):
+def array_type(request: pytest.FixtureRequest):
     return request.param
 
 
-@pytest.fixture(params=[True, False])
-def zero_center(request):
+@pytest.fixture(params=[None, "valid", "invalid"])
+def svd_solver_type(request: pytest.FixtureRequest):
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=["zero_center", "no_zero_center"])
+def zero_center(request: pytest.FixtureRequest):
     return request.param
 
 
 @pytest.fixture
-def pca_params(array_type, svd_solver_type, zero_center):
+def pca_params(
+    array_type, svd_solver_type: Literal[None, "valid", "invalid"], zero_center
+):
     all_svd_solvers = {"auto", "full", "arpack", "randomized", "tsqr", "lobpcg"}
 
     expected_warning = None
     svd_solver = None
     if svd_solver_type is not None:
-        if array_type is as_dense_dask_array:
+        # TODO: are these right for sparse?
+        if array_type in {as_dense_dask_array, as_sparse_dask_array}:
             svd_solver = (
-                ["auto", "full", "tsqr", "randomized"]
+                {"auto", "full", "tsqr", "randomized"}
                 if zero_center
-                else ["tsqr", "randomized"]
+                else {"tsqr", "randomized"}
             )
-        elif array_type in [sparse.csr_matrix, sparse.csc_matrix]:
+        elif array_type in {sparse.csr_matrix, sparse.csc_matrix}:
             svd_solver = (
-                ["lobpcg", "arpack"] if zero_center else ["arpack", "randomized"]
+                {"lobpcg", "arpack"} if zero_center else {"arpack", "randomized"}
+            )
+        elif array_type is asarray:
+            svd_solver = (
+                {"auto", "full", "arpack", "randomized"}
+                if zero_center
+                else {"arpack", "randomized"}
             )
         else:
-            svd_solver = (
-                ["auto", "full", "arpack", "randomized"]
-                if zero_center
-                else ["arpack", "randomized"]
-            )
+            assert False, f"Unknown array type {array_type}"
         if svd_solver_type == "invalid":
-            svd_solver = list(all_svd_solvers.difference(svd_solver))
+            svd_solver = all_svd_solvers - svd_solver
             expected_warning = "Ignoring"
 
-        svd_solver = np.random.choice(svd_solver)
+        svd_solver = np.random.choice(list(svd_solver))
     # explicit check for special case
     if (
         svd_solver == "randomized"
@@ -112,10 +123,23 @@ def test_pca_warnings(array_type, zero_center, pca_params):
     if expected_warning is not None:
         with pytest.warns(UserWarning, match=expected_warning):
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
-    else:
-        with warnings.catch_warnings(record=True) as record:
+        return
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            warnings.filterwarnings(
+                "ignore",
+                "pkg_resources is deprecated as an API",
+                DeprecationWarning,
+            )
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
-        assert len(record) == 0
+    except UserWarning:
+        # TODO: Fix this case, maybe by increasing test data size.
+        # https://github.com/scverse/scanpy/issues/2744
+        if svd_solver == "lobpcg":
+            pytest.xfail(reason="lobpcg doesn’t work with this small test data")
+        raise
 
 
 # This warning test is out of the fixture because it is a special case in the logic of the function

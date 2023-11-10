@@ -99,20 +99,24 @@ def normalize_total(
 
     Example
     --------
+    >>> import sys
     >>> from anndata import AnnData
     >>> import scanpy as sc
-    >>> sc.settings.verbosity = 2
+    >>> sc.settings.verbosity = 'info'
+    >>> sc.settings.logfile = sys.stdout  # for doctests
     >>> np.set_printoptions(precision=2)
     >>> adata = AnnData(np.array([
-    ...    [3, 3, 3, 6, 6],
-    ...    [1, 1, 1, 2, 2],
-    ...    [1, 22, 1, 2, 2],
-    ... ]))
+    ...     [3, 3, 3, 6, 6],
+    ...     [1, 1, 1, 2, 2],
+    ...     [1, 22, 1, 2, 2],
+    ... ], dtype='float32'))
     >>> adata.X
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
            [ 1., 22.,  1.,  2.,  2.]], dtype=float32)
     >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, inplace=False)['X']
+    normalizing counts per cell
+        finished (0:00:00)
     >>> X_norm
     array([[0.14, 0.14, 0.14, 0.29, 0.29],
            [0.14, 0.14, 0.14, 0.29, 0.29],
@@ -121,8 +125,9 @@ def normalize_total(
     ...     adata, target_sum=1, exclude_highly_expressed=True,
     ...     max_fraction=0.2, inplace=False
     ... )['X']
-    The following highly-expressed genes are not considered during normalization factor computation:
+    normalizing counts per cell. The following highly-expressed genes are not considered during normalization factor computation:
     ['1', '3', '4']
+        finished (0:00:00)
     >>> X_norm
     array([[ 0.5,  0.5,  0.5,  1. ,  1. ],
            [ 0.5,  0.5,  0.5,  1. ,  1. ],
@@ -175,7 +180,7 @@ def normalize_total(
         gene_subset = np.asarray(np.ravel(gene_subset) == 0)
 
         msg += (
-            " The following highly-expressed genes are not considered during "
+            ". The following highly-expressed genes are not considered during "
             f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
         )
         counts_per_cell = X[:, gene_subset].sum(1)

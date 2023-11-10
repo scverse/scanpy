@@ -1,14 +1,19 @@
 """Logging and Profiling
 """
+from __future__ import annotations
+
 import logging
 import sys
 from functools import update_wrapper, partial
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG
 from datetime import datetime, timedelta, timezone
-from typing import Optional, IO
+from typing import TYPE_CHECKING, Optional, IO
 import warnings
 
 import anndata.logging
+
+if TYPE_CHECKING:
+    from ._settings import ScanpyConfig
 
 
 HINT = (INFO + DEBUG) // 2
@@ -30,7 +35,7 @@ class _RootLogger(logging.RootLogger):
         time: Optional[datetime] = None,
         deep: Optional[str] = None,
     ) -> datetime:
-        from . import settings
+        from ._settings import settings
 
         now = datetime.now(timezone.utc)
         time_passed: timedelta = None if time is None else now - time
@@ -61,7 +66,7 @@ class _RootLogger(logging.RootLogger):
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
-def _set_log_file(settings):
+def _set_log_file(settings: ScanpyConfig):
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
@@ -75,7 +80,7 @@ def _set_log_file(settings):
     root.addHandler(h)
 
 
-def _set_log_level(settings, level: int):
+def _set_log_level(settings: ScanpyConfig, level: int):
     root = settings._root_logger
     root.setLevel(level)
     (h,) = root.handlers  # may only be 1
