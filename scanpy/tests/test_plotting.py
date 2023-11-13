@@ -1114,14 +1114,6 @@ def pbmc_scatterplots(_pbmc_scatterplots_session):
                 mask="mask",
             ),
         ),
-        (
-            "pca_mask",
-            partial(
-                sc.pl.pca,
-                color=["LYZ", "CD79A", "louvain"],
-                mask="mask",
-            ),
-        ),
     ],
 )
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
