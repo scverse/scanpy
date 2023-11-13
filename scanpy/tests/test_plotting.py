@@ -13,6 +13,7 @@ setup()
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -1119,13 +1120,8 @@ def pbmc_scatterplots(_pbmc_scatterplots_session):
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
-    # https://github.com/scverse/scanpy/issues/849
-    if id == "3dprojection" and version.parse(mpl.__version__) < version.parse("3.3.3"):
-        with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
-            fn(pbmc_scatterplots, show=False)
-    else:
-        fn(pbmc_scatterplots, show=False)
-        save_and_compare_images(id)
+    fn(pbmc_scatterplots, show=False)
+    save_and_compare_images(id)
 
 
 def test_scatter_embedding_groups_and_size(image_comparer):
@@ -1645,66 +1641,43 @@ def test_scrublet_plots(image_comparer, plt):
 
 
 def test_umap_mask_equal(tmp_path, check_same_image):
-    # they look the same the problem I think is something with the size of the dots in the scatterplot
+    """Check that all desired cells are coloured and masked cells gray"""
     pbmc = sc.datasets.pbmc3k_processed()
-    # Check that all desired cells are coloured and masked cells gray
-    ax = sc.pl.umap(pbmc, size=1.0, show=False)
-    sc.pl.umap(
-        pbmc[pbmc.obs["louvain"].isin(["B cells", "NK cells"])],
-        size=1.0,
-        color="LDHB",
-        ax=ax,
-    )
+    mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
-    plt.savefig(tmp_path / "umap_mask_fig1")
+    ax = sc.pl.umap(pbmc, size=8.0, show=False)
+    sc.pl.umap(pbmc[mask], size=8.0, color="LDHB", ax=ax)
+    plt.savefig(p1 := tmp_path / "umap_mask_fig1")
     plt.close()
 
-    sc.pl.umap(
-        pbmc,
-        size=1.0,
-        color="LDHB",
-        mask=pbmc.obs["louvain"].isin(["B cells", "NK cells"]),
-    )
-
-    plt.savefig(tmp_path / "umap_mask_fig2")
+    sc.pl.umap(pbmc, size=8.0, color="LDHB", mask=mask)
+    plt.savefig(p2 := tmp_path / "umap_mask_fig2")
     plt.close()
 
-    check_same_image(
-        tmp_path / "umap_mask_fig1.png", tmp_path / "umap_mask_fig2.png", tol=1
-    )
+    check_same_image(p1, p2, tol=1)
 
 
 def test_umap_mask_mult_plots():
-    # Check that multiple images are plotted when color is a list.
+    """Check that multiple images are plotted when color is a list."""
     pbmc = sc.datasets.pbmc3k_processed()
     color = ["LDHB", "LYZ", "CD79A"]
-    assert len(
-        sc.pl.umap(
-            pbmc,
-            color=color,
-            mask=pbmc.obs["louvain"].isin(["B cells", "NK cells"]),
-            show=False,
-        )
-    ) == len(color)
+    mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+    axes = sc.pl.umap(pbmc, color=color, mask=mask, show=False)
+    assert isinstance(axes, list)
+    assert len(axes) == len(color)
 
 
 def test_string_mask(tmp_path, check_same_image):
-    # Check that the same mask given as string or bool array provides the same result
+    """Check that the same mask given as string or bool array provides the same result"""
     pbmc = sc.datasets.pbmc3k_processed()
-    pbmc.obs["mask"] = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
-    sc.pl.umap(
-        pbmc, mask=pbmc.obs["louvain"].isin(["B cells", "NK cells"]), color="LDHB"
-    )
-    plt.savefig(tmp_path / "umap_mask_fig1")
-    plt.close()
-    sc.pl.umap(
-        pbmc,
-        color="LDHB",
-        mask="mask",
-    )
-    plt.savefig(tmp_path / "umap_mask_fig2")
+    pbmc.obs["mask"] = mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+
+    sc.pl.umap(pbmc, mask=mask, color="LDHB")
+    plt.savefig(p1 := tmp_path / "umap_mask_fig1")
     plt.close()
 
-    check_same_image(
-        tmp_path / "umap_mask_fig1.png", tmp_path / "umap_mask_fig2.png", tol=1
-    )
+    sc.pl.umap(pbmc, color="LDHB", mask="mask")
+    plt.savefig(p2 := tmp_path / "umap_mask_fig2")
+    plt.close()
+
+    check_same_image(p1, p2, tol=1)
