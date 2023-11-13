@@ -798,7 +798,6 @@ def violin(
             col=x,
             col_order=keys,
             sharey=False,
-            order=keys,
             cut=0,
             inner=None,
             **kwds,

@@ -53,7 +53,7 @@ dependencies = [
     # pandas 2.1.2 has pandas/issues/52927
     "pandas >=1.1.1, !=2.1.2",
     "scipy>=1.4",
-    "seaborn!=0.13.0",
+    "seaborn>=0.13.0",
     "h5py>=3",
     "tqdm",
     "scikit-learn>=0.24",
