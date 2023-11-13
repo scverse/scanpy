@@ -114,7 +114,8 @@ def pca(
         By default uses them if they have been determined beforehand.
     mask
         To run pca only on a certain set of genes given by a boolean array
-        or a string referring to an array in var
+        or a string referring to an array in :attr:`~anndata.AnnData.var`.
+        By default, uses `.var['highly_variable']` if available, else everything.
     layer
         Layer of `adata` to use as expression values.
     dtype
@@ -135,7 +136,7 @@ def pca(
 
     Returns
     -------
-    X_pca : :class:`~scipy.sparse.spmatrix`, :class:`~numpy.ndarray`
+    X_pca : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray`
         If `data` is array-like and `return_info=False` was passed,
         this function only returns `X_pca`…
     adata : anndata.AnnData
@@ -172,30 +173,12 @@ def pca(
         else:
             adata = AnnData(data)
 
-    # Check for use_highly_varible
-    if use_highly_variable is not None:
-        hint = (
-            'Use_highly_variable=True can be called through mask="highly_variable". '
-            "Use_highly_variable=False can be called through mask=None"
-        )
-        msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
-        warn(msg, FutureWarning)
-        if mask is not _empty:
-            msg = f"These arguments are incompatible. {hint}"
-            raise ValueError(msg)
-    if use_highly_variable:
-        mask = "highly_variable"
-    if use_highly_variable is None and mask is _empty:
-        if "highly_variable" in adata.var.keys():
-            mask = "highly_variable"
-            use_highly_variable = True
-
-    if mask is _empty:
-        mask = None
+    # Unify new mask argument and deprecated use_highly_varible argument
+    # Store `mask_param` for later reference
+    mask_param = mask = _handle_mask_param(adata, mask, use_highly_variable)
+    del use_highly_variable
 
     # Check mask and change to boolean array
-    mask_param = mask
-
     if mask is not None:
         mask = _check_mask(adata, mask, "var")
         adata_comp = adata[:, mask]
@@ -329,7 +312,7 @@ def pca(
         uns_entry = {
             "params": {
                 "zero_center": zero_center,
-                "use_highly_variable": use_highly_variable,
+                "use_highly_variable": mask_param == "highly_variable",
                 "mask": mask_param,
             },
             "variance": pca_.explained_variance_,
@@ -359,6 +342,36 @@ def pca(
             )
         else:
             return X_pca
+
+
+def _handle_mask_param(
+    adata: AnnData,
+    mask: np.ndarray | str | Empty | None,
+    use_highly_variable: bool | None,
+) -> np.ndarray | str | None:
+    """Unify new mask argument and deprecated use_highly_varible argument."""
+    # First, verify and possibly warn
+    if use_highly_variable is not None:
+        hint = (
+            'Use_highly_variable=True can be called through mask="highly_variable". '
+            "Use_highly_variable=False can be called through mask=None"
+        )
+        msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
+        warn(msg, FutureWarning)
+        if mask is not _empty:
+            msg = f"These arguments are incompatible. {hint}"
+            raise ValueError(msg)
+
+    # Handle default case and explicit use_highly_variable=True
+    if use_highly_variable or (
+        use_highly_variable is None
+        and mask is _empty
+        and "highly_variable" in adata.var.keys()
+    ):
+        return "highly_variable"
+
+    # Without highly variable genes, we don’t use a mask by default
+    return None if mask is _empty else mask
 
 
 def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):
