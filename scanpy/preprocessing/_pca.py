@@ -226,7 +226,7 @@ def pca(
             from sklearn.decomposition import IncrementalPCA
             from numpy import zeros
 
-        X_pca = zeros((adata_comp.shape[0], n_comps), adata.X.dtype)
+        X_pca = zeros((X.shape[0], n_comps), X.dtype)
 
         pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
 
