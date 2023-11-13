@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import sys
 import inspect
 import collections.abc as cabc
-from collections import defaultdict
 from copy import copy
 from numbers import Integral
 from itertools import combinations, product
@@ -593,31 +593,14 @@ def _get_vboundnorm(
     return tuple(out)
 
 
-def _get_signature(obj: Any, *, eval_str: bool) -> inspect.Signature:
-    """inspect.signature wrapper with eval_str support on Python < 3.10"""
-    try:
-        from inspect import get_annotations
-    except ImportError:
-        from get_annotations import get_annotations
-
-    sig_uneval = inspect.signature(obj)
-    annotations = defaultdict(
-        lambda: inspect.Signature.empty, get_annotations(obj, eval_str=eval_str)
-    )
-
-    parameters = [
-        inspect.Parameter(
-            name, param.kind, default=param.default, annotation=annotations[name]
-        )
-        for name, param in sig_uneval.parameters.items()
-    ]
-
-    return inspect.Signature(parameters, return_annotation=annotations["return"])
-
-
 def _wraps_plot_scatter(wrapper):
-    params = _get_signature(embedding, eval_str=True).parameters.copy()
-    wrapper_sig = _get_signature(wrapper, eval_str=True)
+    """Update the wrapper function to use the correct signature."""
+    if sys.version_info < (3, 10):
+        # Python 3.9 does not support `eval_str`, so we only support this in 3.10+
+        return wrapper
+
+    params = inspect.signature(embedding, eval_str=True).parameters.copy()
+    wrapper_sig = inspect.signature(wrapper, eval_str=True)
     wrapper_params = wrapper_sig.parameters.copy()
 
     params.pop("basis")
