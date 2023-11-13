@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from typing import Optional, Union
 from warnings import warn
@@ -39,7 +41,7 @@ def pca(
     Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition.
-    Uses the implementation of scikit-learn [Pedregosa11]_.
+    Uses the implementation of *scikit-learn* [Pedregosa11]_.
 
     .. versionchanged:: 1.5.0
 
@@ -98,11 +100,12 @@ def pca(
         Efficient computation of the principal components of a sparse matrix
         currently only works with the `'arpack`' or `'lobpcg'` solvers.
 
-        If X is a *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`, :class:`~dask_ml.decomposition.IncrementalPCA`,
-        or :class:`~dask_ml.decomposition.TruncatedSVD` will be used. Otherwise their *scikit-learn* counterparts :class:`~sklearn.decomposition.PCA`, :class:`~sklearn.decomposition.IncrementalPCA`, or :class:`~sklearn.decomposition.TruncatedSVD`
-        will be used.
-
-
+        If X is a *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`,
+        :class:`~dask_ml.decomposition.IncrementalPCA`, or
+        :class:`~dask_ml.decomposition.TruncatedSVD` will be used.
+        Otherwise their *scikit-learn* counterparts :class:`~sklearn.decomposition.PCA`,
+        :class:`~sklearn.decomposition.IncrementalPCA`, or
+        :class:`~sklearn.decomposition.TruncatedSVD` will be used.
     random_state
         Change to use different initial states for the optimization.
     return_info
@@ -136,21 +139,22 @@ def pca(
 
     Returns
     -------
-    X_pca : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray`
-        If `data` is array-like and `return_info=False` was passed,
-        this function only returns `X_pca`…
-    adata : anndata.AnnData
-        …otherwise if `copy=True` it returns or else adds fields to `adata`:
+    If `data` is array-like and `return_info=False` was passed,
+    this function returns the PCA representation of `data` as an
+    array of the same type as the input array.
 
-        `.obsm['X_pca']`
-             PCA representation of data.
-        `.varm['PCs']`
-             The principal components containing the loadings.
-        `.uns['pca']['variance_ratio']`
-             Ratio of explained variance.
-        `.uns['pca']['variance']`
-             Explained variance, equivalent to the eigenvalues of the
-             covariance matrix.
+    Otherwise, it returns `None` if `copy=False`, else an updated `AnnData` object.
+    Sets the following fields:
+
+    `.obsm['X_pca']` : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
+        PCA representation of data.
+    `.varm['PCs']` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
+        The principal components containing the loadings.
+    `.uns['pca']['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+        Ratio of explained variance.
+    `.uns['pca']['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+        Explained variance, equivalent to the eigenvalues of the
+        covariance matrix.
     """
     logg_start = logg.info("computing PCA")
     if layer is not None and chunked:
