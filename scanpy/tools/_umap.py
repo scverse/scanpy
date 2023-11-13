@@ -130,7 +130,7 @@ def umap(
 
     if neighbors_key not in adata.uns:
         raise ValueError(
-            f'Did not find .uns["{neighbors_key}"]. Run `sc.pp.neighbors` first.'
+            f"Did not find .uns[{neighbors_key!r}]. Run `sc.pp.neighbors` first."
         )
     start = logg.info("computing UMAP")
 

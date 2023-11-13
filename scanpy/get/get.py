@@ -473,18 +473,18 @@ def _check_mask(
         annot: pd.DataFrame = getattr(data, dim)
         if mask not in annot.columns:
             msg = (
-                f"Did not find adata.{dim}[{mask}]. "
-                f"Either add the mask first to adata.{dim}"
-                "or consider using the mask argument with a boolean array"
+                f"Did not find `adata.{dim}[{mask!r}]`. "
+                f"Either add the mask first to `adata.{dim}`"
+                "or consider using the mask argument with a boolean array."
             )
             raise ValueError(msg)
         mask_array = annot[mask].to_numpy()
     else:
         if len(mask) != data.shape[0 if dim == "obs" else 1]:
-            raise ValueError("The shape of the mask do not match the data")
+            raise ValueError("The shape of the mask do not match the data.")
         mask_array = mask
 
     if not pd.api.types.is_bool_dtype(mask_array.dtype):
-        raise ValueError("Mask array must be boolean")
+        raise ValueError("Mask array must be boolean.")
 
     return mask_array
