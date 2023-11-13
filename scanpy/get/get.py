@@ -451,9 +451,9 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
 
 
 def _check_mask(
-    adata: AnnData | np.ndarray,
+    data: AnnData | np.ndarray,
     mask: str | NDArray[np.bool_],
-    axis: int = 0,
+    dim: Literal["obs", "var"],
 ) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
     """
     Validate mask argument
@@ -462,31 +462,29 @@ def _check_mask(
     adata
     mask
         The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
-    axis
+    dim
         The axis being masked
     """
     if isinstance(mask, str):
-        if not isinstance(adata, AnnData):
+        if not isinstance(data, AnnData):
             msg = "Cannot refer to mask with string without providing anndata object as argument"
             raise ValueError(msg)
 
-        annot = ("obs", "var")[axis]
-        if (axis == 1 and mask not in adata.var.keys()) or (
-            axis == 0 and mask not in adata.obs.keys()
-        ):
+        annot: pd.DataFrame = getattr(data, dim)
+        if mask not in annot.columns:
             msg = (
-                f"Did not find adata.{annot}[{mask}]. "
-                "Either add the mask first to adata.var"
+                f"Did not find adata.{dim}[{mask}]. "
+                f"Either add the mask first to adata.{dim}"
                 "or consider using the mask argument with a boolean array"
             )
             raise ValueError(msg)
-        mask_array = (adata.var if axis == 1 else adata.obs)[mask].to_numpy()
+        mask_array = annot[mask].to_numpy()
     else:
-        if len(mask) != adata.shape[axis]:
+        if len(mask) != data.shape[0 if dim == "obs" else 1]:
             raise ValueError("The shape of the mask do not match the data")
         mask_array = mask
 
-    if not pd.api.types.is_bool_dtype(mask_array):
+    if not pd.api.types.is_bool_dtype(mask_array.dtype):
         raise ValueError("Mask array must be boolean")
 
     return mask_array

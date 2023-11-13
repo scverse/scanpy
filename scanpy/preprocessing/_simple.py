@@ -777,7 +777,7 @@ def scale_array(
     if copy:
         X = X.copy()
     if mask is not None:
-        mask = _check_mask(X, mask, 0)
+        mask = _check_mask(X, mask, "obs")
         scale_rv = scale_array(
             X[mask, :],
             zero_center=zero_center,
@@ -873,7 +873,7 @@ def scale_anndata(
             str_mean_std = (f"mean of {mask}", f"std of {mask}")
         else:
             str_mean_std = ("mean with mask", "std with mask")
-        mask = _check_mask(adata, mask, 0)
+        mask = _check_mask(adata, mask, "obs")
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer, obsm=obsm)
     X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(

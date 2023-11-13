@@ -146,7 +146,7 @@ def embedding(
     if groups is not None and mask is not None:
         raise ValueError("Groups and mask arguments are incompatible.")
     if mask is not None:
-        mask = _check_mask(adata, mask, 0)
+        mask = _check_mask(adata, mask, "obs")
 
     # Figure out if we're using raw
     if use_raw is None:
@@ -334,11 +334,6 @@ def embedding(
                 vcenter_float,
                 norm_obj,
             )
-
-            # Map nan values to na_color
-            current_cmap = colormaps.get_cmap(color_map)
-            current_cmap.set_bad(color=na_color)
-
         else:
             normalize = None
 

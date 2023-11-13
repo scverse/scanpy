@@ -567,7 +567,7 @@ def rank_genes_groups(
     if mask is _empty:
         mask = None
     elif mask is not None:
-        mask = _check_mask(adata, mask, 1)
+        mask = _check_mask(adata, mask, "var")
 
     if use_raw is None:
         use_raw = adata.raw is not None

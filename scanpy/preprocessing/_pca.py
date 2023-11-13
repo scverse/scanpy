@@ -197,7 +197,7 @@ def pca(
     mask_param = mask
 
     if mask is not None:
-        mask = _check_mask(adata, mask, 1)
+        mask = _check_mask(adata, mask, "var")
         adata_comp = adata[:, mask]
     else:
         adata_comp = adata
