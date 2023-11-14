@@ -1647,11 +1647,11 @@ def test_umap_mask_equal(tmp_path, check_same_image):
 
     ax = sc.pl.umap(pbmc, size=8.0, show=False)
     sc.pl.umap(pbmc[mask], size=8.0, color="LDHB", ax=ax)
-    plt.savefig(p1 := tmp_path / "umap_mask_fig1")
+    plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
     plt.close()
 
     sc.pl.umap(pbmc, size=8.0, color="LDHB", mask=mask)
-    plt.savefig(p2 := tmp_path / "umap_mask_fig2")
+    plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
     check_same_image(p1, p2, tol=1)
@@ -1673,11 +1673,11 @@ def test_string_mask(tmp_path, check_same_image):
     pbmc.obs["mask"] = mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
     sc.pl.umap(pbmc, mask=mask, color="LDHB")
-    plt.savefig(p1 := tmp_path / "umap_mask_fig1")
+    plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
     plt.close()
 
     sc.pl.umap(pbmc, color="LDHB", mask="mask")
-    plt.savefig(p2 := tmp_path / "umap_mask_fig2")
+    plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
     check_same_image(p1, p2, tol=1)
