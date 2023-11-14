@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from math import floor
-from typing import Generator, Iterable, Literal, get_args
+from typing import Literal, get_args
+from collections.abc import Generator, Iterable
 
 import numpy as np
 import pandas as pd

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import Any, Mapping, Optional, Dict
+from typing import Any
+from collections.abc import Mapping
 from warnings import warn
 
 import numpy as np
@@ -82,12 +83,12 @@ def normalize_pearson_residuals(
     adata: AnnData,
     *,
     theta: float = 100,
-    clip: Optional[float] = None,
+    clip: float | None = None,
     check_values: bool = True,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> Optional[Dict[str, np.ndarray]]:
+) -> dict[str, np.ndarray] | None:
     """\
     Applies analytic Pearson residual normalization, based on [Lause21]_.
 
