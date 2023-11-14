@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from math import floor
-from typing import Generator, Iterable, Union, Optional, Literal, get_args
+from typing import Generator, Iterable, Literal, get_args
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,6 @@ from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
 from ..get import _check_mask
 from .._utils import check_nonnegative_integers
-from .._utils import Empty, _empty
 
 
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
@@ -128,9 +127,6 @@ class _RankGenes:
         # for correct getnnz calculation
         if issparse(X):
             X.eliminate_zeros()
-
-        # if self.gene_mask is _empty:
-        #    self.gene_mask = None
 
         if self.gene_mask is not None:
             self.X = X[:, self.gene_mask]
@@ -454,7 +450,7 @@ class _RankGenes:
 def rank_genes_groups(
     adata: AnnData,
     groupby: str,
-    mask: NDArray[np.bool_] | str | None | Empty = _empty,
+    mask: NDArray[np.bool_] | str | None = None,
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
@@ -564,9 +560,7 @@ def rank_genes_groups(
     >>> sc.pl.rank_genes_groups(adata)
     """
 
-    if mask is _empty:
-        mask = None
-    elif mask is not None:
+    if mask is not None:
         mask = _check_mask(adata, mask, "var")
 
     if use_raw is None:
