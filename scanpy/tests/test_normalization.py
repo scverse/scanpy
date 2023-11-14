@@ -186,6 +186,7 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
         pytest.param(
             True, dict(use_highly_variable=False), "n_genes", id="hvg_opt_out"
         ),
+        pytest.param(False, dict(mask="test_mask"), "n_unmasked", id="mask"),
     ],
 )
 def test_normalize_pearson_residuals_pca(
@@ -198,8 +199,12 @@ def test_normalize_pearson_residuals_pca(
 ):
     adata = pbmc3k_parametrized_small()
     n_cells, n_genes = adata.shape
+    n_unmasked = n_genes - 5
+    adata.var["test_mask"] = np.r_[
+        np.repeat(True, n_unmasked), np.repeat(False, n_genes - n_unmasked)
+    ]
     n_var_copy = locals()[n_var_copy_name]
-    assert isinstance(n_var_copy, int)
+    assert isinstance(n_var_copy, (int, np.integer))
 
     if do_hvg:
         sc.experimental.pp.highly_variable_genes(
