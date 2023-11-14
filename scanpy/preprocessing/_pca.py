@@ -366,7 +366,7 @@ def _handle_mask_param(
         and mask is _empty
         and "highly_variable" in adata.var.keys()
     ):
-        return "highly_variable"
+        mask = "highly_variable"
 
     # Without highly variable genes, we don’t use a mask by default
     if mask is _empty or mask is None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
-from types import MappingProxyType
 
+from types import MappingProxyType
 from typing import Any, Mapping, Optional, Dict
 from warnings import warn
 
@@ -8,14 +8,18 @@ import numpy as np
 from anndata import AnnData
 from scipy.sparse import issparse
 
-from scanpy import logging as logg
-
-from scanpy._utils import view_to_actual, check_nonnegative_integers, Empty, _empty
-from scanpy.get import _get_obs_rep, _set_obs_rep
-from scanpy._utils import _doc_params
-from scanpy.preprocessing._pca import pca, _handle_mask_param
-from scanpy.preprocessing._docs import doc_mask_hvg
-from scanpy.experimental._docs import (
+from ... import logging as logg
+from ...get import _get_obs_rep, _set_obs_rep
+from ..._utils import (
+    view_to_actual,
+    check_nonnegative_integers,
+    Empty,
+    _empty,
+    _doc_params,
+)
+from ...preprocessing._pca import pca, _handle_mask_param
+from ...preprocessing._docs import doc_mask_hvg
+from ...experimental._docs import (
     doc_adata,
     doc_dist_params,
     doc_layer,

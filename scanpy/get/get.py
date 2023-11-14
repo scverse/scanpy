@@ -459,11 +459,12 @@ def _check_mask(
     Validate mask argument
     Params
     ------
-    adata
+    data
+        Annotated data matrix or numpy array.
     mask
         The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
     dim
-        The axis being masked
+        The dimension being masked.
     """
     if isinstance(mask, str):
         if not isinstance(data, AnnData):
