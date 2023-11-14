@@ -16,11 +16,15 @@ from anndata import AnnData
 from .. import logging as logg
 from .._settings import settings
 from .._compat import DaskArray, pkg_version
-from .._utils import AnyRandom, Empty, _empty
+from .._utils import AnyRandom, Empty, _empty, _doc_params
 from ..get import _check_mask, _get_obs_rep
 from ._utils import _get_mean_var
+from ._docs import doc_mask_hvg
 
 
+@_doc_params(
+    mask_hvg=doc_mask_hvg,
+)
 def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: Optional[int] = None,
@@ -30,8 +34,8 @@ def pca(
     svd_solver: Optional[str] = None,
     random_state: AnyRandom = 0,
     return_info: bool = False,
-    use_highly_variable: Optional[bool] = None,
-    mask: Union[np.ndarray, str, None, Empty] = _empty,
+    mask: np.ndarray | str | None | Empty = _empty,
+    use_highly_variable: bool | None = None,
     dtype: str = "float32",
     copy: bool = False,
     chunked: bool = False,
@@ -111,14 +115,7 @@ def pca(
     return_info
         Only relevant when not passing an :class:`~anndata.AnnData`:
         see “Returns”.
-    use_highly_variable
-        Whether to use highly variable genes only, stored in
-        `.var['highly_variable']`.
-        By default uses them if they have been determined beforehand.
-    mask
-        To run pca only on a certain set of genes given by a boolean array
-        or a string referring to an array in :attr:`~anndata.AnnData.var`.
-        By default, uses `.var['highly_variable']` if available, else everything.
+    {mask_hvg}
     layer
         Layer of `adata` to use as expression values.
     dtype
@@ -178,16 +175,9 @@ def pca(
             adata = AnnData(data)
 
     # Unify new mask argument and deprecated use_highly_varible argument
-    # Store `mask_param` for later reference
-    mask_param = mask = _handle_mask_param(adata, mask, use_highly_variable)
+    mask_param, mask = _handle_mask_param(adata, mask, use_highly_variable)
     del use_highly_variable
-
-    # Check mask and change to boolean array
-    if mask is not None:
-        mask = _check_mask(adata, mask, "var")
-        adata_comp = adata[:, mask]
-    else:
-        adata_comp = adata
+    adata_comp = adata[:, mask] if mask is not None else adata
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
@@ -352,8 +342,12 @@ def _handle_mask_param(
     adata: AnnData,
     mask: np.ndarray | str | Empty | None,
     use_highly_variable: bool | None,
-) -> np.ndarray | str | None:
-    """Unify new mask argument and deprecated use_highly_varible argument."""
+) -> tuple[np.ndarray | str | None, np.ndarray | None]:
+    """\
+    Unify new mask argument and deprecated use_highly_varible argument.
+
+    Returns both the normalized mask parameter and the validated mask array.
+    """
     # First, verify and possibly warn
     if use_highly_variable is not None:
         hint = (
@@ -375,7 +369,9 @@ def _handle_mask_param(
         return "highly_variable"
 
     # Without highly variable genes, we don’t use a mask by default
-    return None if mask is _empty else mask
+    if mask is _empty or mask is None:
+        return None, None
+    return mask, _check_mask(adata, mask, "var")
 
 
 def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):

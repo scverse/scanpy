@@ -289,18 +289,13 @@ def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n
     assert adata_pca.varm["PCs"].shape == (n_hvgs, n_comps)
 
     # check hvg df
-    assert np.all(
-        np.isin(
-            [
-                "means",
-                "variances",
-                "residual_variances",
-                "highly_variable_rank",
-                "highly_variable",
-            ],
-            list(hvg.columns),
-        )
-    )
+    assert {
+        "means",
+        "variances",
+        "residual_variances",
+        "highly_variable_rank",
+        "highly_variable",
+    } <= set(hvg.columns)
     assert np.sum(hvg["highly_variable"]) == n_hvgs
     assert hvg.shape[0] == n_genes
 
