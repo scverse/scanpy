@@ -68,30 +68,41 @@ def test_normalize_total_view(array_type, dtype):
     assert_equal(adata, v)
 
 
-def test_normalize_pearson_residuals_inputchecks(pbmc3k_parametrized):
+def test_normalize_pearson_residuals_warnings(pbmc3k_parametrized):
     adata = pbmc3k_parametrized()
 
+    if np.issubdtype(adata.X.dtype, np.integer):
+        pytest.skip("Can’t store non-integral data with int dtype")
+
     # depending on check_values, warnings should be raised for non-integer data
-    if adata.X.dtype == "float32":
-        adata_noninteger = adata.copy()
-        x, y = np.nonzero(adata_noninteger.X)
-        adata_noninteger.X[x[0], y[0]] = 0.5
+    adata_noninteger = adata.copy()
+    x, y = np.nonzero(adata_noninteger.X)
+    adata_noninteger.X[x[0], y[0]] = 0.5
 
-        _check_check_values_warnings(
-            function=sc.experimental.pp.normalize_pearson_residuals,
-            adata=adata_noninteger,
-            expected_warning="`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
-        )
+    _check_check_values_warnings(
+        function=sc.experimental.pp.normalize_pearson_residuals,
+        adata=adata_noninteger,
+        expected_warning="`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
+    )
 
-    # errors should be raised for invalid theta values
-    for theta in [0, -1]:
-        with pytest.raises(ValueError, match="Pearson residuals require theta > 0"):
-            sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=theta)
 
-    with pytest.raises(
-        ValueError, match="Pearson residuals require `clip>=0` or `clip=None`."
-    ):
-        sc.experimental.pp.normalize_pearson_residuals(adata.copy(), clip=-1)
+@pytest.mark.parametrize(
+    ("params", "match"),
+    [
+        pytest.param(dict(theta=0), r"Pearson residuals require theta > 0", id="theta"),
+        pytest.param(
+            dict(theta=-1), r"Pearson residuals require theta > 0", id="theta"
+        ),
+        pytest.param(
+            dict(clip=-1), r"Pearson residuals require `clip>=0` or `clip=None`."
+        ),
+    ],
+)
+def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
+    adata = pbmc3k_parametrized()
+
+    with pytest.raises(ValueError, match=match):
+        sc.experimental.pp.normalize_pearson_residuals(adata, **params)
 
 
 @pytest.mark.parametrize(

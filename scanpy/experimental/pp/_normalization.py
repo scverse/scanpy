@@ -231,7 +231,7 @@ def normalize_pearson_residuals_pca(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
     pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
-    n_comps = adata.obsm["X_pca"].shape[1]  # might be None
+    n_comps = adata_pca.obsm["X_pca"].shape[1]  # might be None
 
     if inplace:
         norm_settings = adata_pca.uns["pearson_residuals_normalization"]
