@@ -95,7 +95,7 @@ def ingest(
 
     `adata.obs[obs]` : :class:`pandas.Series` (dtype ``category``)
         Mapped labels.
-    `adata.obsm['X_umap' | 'X_pca']` : :class:`np.ndarray` (dtype ``float``)
+    `adata.obsm['X_umap' | 'X_pca']` : :class:`numpy.ndarray` (dtype ``float``)
         Mapped embeddings. `'X_umap'` if `embedding_method` is `'umap'`, `'X_pca'` if `embedding_method` is `'pca'`.
 
     Example
