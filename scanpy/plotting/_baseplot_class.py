@@ -18,6 +18,8 @@ from .. import logging as logg
 from ._utils import make_grid_spec, check_colornorm
 from ._utils import ColorLike, _AxesSubplot
 from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
+from ..get.get import obs_df
+from .._utils import sanitize_anndata, _doc_params, _check_use_raw
 
 _VarNames = Union[str, Sequence[str]]
 
@@ -91,6 +93,7 @@ class BasePlot(object):
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
         norm: Optional[Normalize] = None,
+        col_groups: Optional[Union[str, Sequence[str]]] = None,
         **kwds,
     ):
         self.var_names = var_names
@@ -123,21 +126,9 @@ class BasePlot(object):
                 "Plot would be very large."
             )
 
-        if categories_order is not None:
-            if set(self.obs_tidy.index.categories) != set(categories_order):
-                logg.error(
-                    "Please check that the categories given by "
-                    "the `order` parameter match the categories that "
-                    "want to be reordered.\n\n"
-                    "Mismatch: "
-                    f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
-                    f"Given order categories: {categories_order}\n\n"
-                    f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
-                )
-                return
-
         self.adata = adata
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
+        self.col_groups = [col_groups] if isinstance(col_groups, str) else col_groups
         self.log = log
         self.kwds = kwds
 
@@ -170,6 +161,53 @@ class BasePlot(object):
         self.fig = None
         self.ax_dict = None
         self.ax = ax
+
+        if self.col_groups:
+            sanitize_anndata(adata)
+            use_raw = _check_use_raw(adata, use_raw)
+            self.obs_tidy = obs_df(
+                adata=adata,
+                keys=self.var_names + self.groupby + self.col_groups,
+                use_raw=use_raw,
+                layer=layer,
+                gene_symbols=gene_symbols,
+            ).set_index(self.groupby + self.col_groups)
+            if len(self.groupby) == 1:
+                self.categories = self.obs_tidy.index.get_level_values(
+                    level=self.groupby[0]
+                ).categories
+            else:
+                pass
+
+        if categories_order is not None:
+            if self.col_groups:
+                if set(self.obs_tidy.index.get_level_values(0).categories) != set(
+                    categories_order
+                ) and set(self.obs_tidy.index.get_level_values(1).categories) != set(
+                    categories_order
+                ):
+                    logg.error(
+                        "Please check that the categories given by "
+                        "the `order` parameter match the categories that "
+                        "want to be reordered.\n\n"
+                        "Mismatch: \n\n"
+                        f"{set(self.obs_tidy.index.get_level_values(0).categories).difference(categories_order)}\n\n"
+                        f"Given order categories: {categories_order}\n\n"
+                        f"{groupby[0]} categories: {list(self.obs_tidy.index.get_level_values(0).categories)}\n"
+                    )
+                    return
+            else:
+                if set(self.obs_tidy.index.categories) != set(categories_order):
+                    logg.error(
+                        "Please check that the categories given by "
+                        "the `order` parameter match the categories that "
+                        "want to be reordered.\n\n"
+                        "Mismatch: "
+                        f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
+                        f"Given order categories: {categories_order}\n\n"
+                        f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
+                    )
+                    return
 
     def swap_axes(self, swap_axes: Optional[bool] = True):
         """
@@ -563,6 +601,8 @@ class BasePlot(object):
     def _mainplot(self, ax):
         y_labels = self.categories
         x_labels = self.var_names
+        if self.col_groups:
+            x_labels = self.obs_tidy.index.get_level_values(level=1).categories
 
         if self.var_names_idx_order is not None:
             x_labels = [x_labels[x] for x in self.var_names_idx_order]
@@ -628,9 +668,24 @@ class BasePlot(object):
 
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
-            mainplot_width = (
-                len(self.var_names) * category_width + self.group_extra_size
-            )
+
+            if self.col_groups:
+                mainplot_width = (
+                    len(
+                        self.obs_tidy.reset_index()
+                        .loc[:, self.col_groups]
+                        .apply('_'.join, axis=1)
+                        .unique()
+                    )
+                    * len(self.var_names)
+                    * category_width
+                    + self.group_extra_size
+                )
+            else:
+                mainplot_width = (
+                    len(self.var_names) * category_width + self.group_extra_size
+                )
+
             if self.are_axes_swapped:
                 mainplot_height, mainplot_width = mainplot_width, mainplot_height
 

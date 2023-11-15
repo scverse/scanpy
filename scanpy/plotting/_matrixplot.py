@@ -112,6 +112,7 @@ class MatrixPlot(BasePlot):
         vmax: Optional[float] = None,
         vcenter: Optional[float] = None,
         norm: Optional[Normalize] = None,
+        col_groups: Optional[Union[str, Sequence[str]]] = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -135,12 +136,26 @@ class MatrixPlot(BasePlot):
             vmax=vmax,
             vcenter=vcenter,
             norm=norm,
+            col_groups=col_groups,
             **kwds,
         )
 
         if values_df is None:
             # compute mean value
-            values_df = self.obs_tidy.groupby(level=0).mean()
+            if self.col_groups:
+                values_df = (
+                    self.obs_tidy.groupby(self.groupby + self.col_groups)
+                    .mean()
+                    .unstack(level=self.col_groups, fill_value=0)
+                )
+                if len(self.var_names) == 1:
+                    values_df.columns = values_df.columns.droplevel()
+                if type(values_df.columns) is pd.core.indexes.multi.MultiIndex:
+                    values_df.columns = values_df.columns.map('_'.join)
+                if type(values_df.index) is pd.core.indexes.multi.MultiIndex:
+                    values_df.index = values_df.index.map('_'.join)
+            else:
+                values_df = self.obs_tidy.groupby(level=0).mean()
 
             if standard_scale == "group":
                 values_df = values_df.sub(values_df.min(1), axis=0)
@@ -309,6 +324,7 @@ def matrixplot(
     vmax: Optional[float] = None,
     vcenter: Optional[float] = None,
     norm: Optional[Normalize] = None,
+    col_groups: Optional[Union[str, Sequence[str]]] = None,
     **kwds,
 ) -> Union[MatrixPlot, dict, None]:
     """\
@@ -395,6 +411,7 @@ def matrixplot(
         vmax=vmax,
         vcenter=vcenter,
         norm=norm,
+        col_groups=col_groups,
         **kwds,
     )
 
