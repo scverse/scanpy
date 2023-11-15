@@ -133,7 +133,7 @@ def combat(
     key: str = "batch",
     covariates: Optional[Collection[str]] = None,
     inplace: bool = True,
-) -> Union[AnnData, np.ndarray, None]:
+) -> Union[np.ndarray, None]:
     """\
     ComBat function for batch effect correction [Johnson07]_ [Leek12]_
     [Pedersen12]_.
@@ -163,7 +163,7 @@ def combat(
 
     Returns
     -------
-    Returns :class:`numpy.ndarray` if `inplace=True`, else returns an `AnnData` object where it sets the following field:
+    Returns :class:`numpy.ndarray` if `inplace=True`, else returns `None` and sets the following field in the `adata` object:
 
     `adata.X` : :class:`numpy.ndarray` (dtype `float`)
         Corrected data matrix.

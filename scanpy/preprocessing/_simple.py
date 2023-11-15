@@ -599,8 +599,8 @@ def regress_out(
     -------
     Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
 
-    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
-        Normalized count data matrix.
+    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
+        Corrected count data matrix.
     """
     start = logg.info(f"regressing out {keys}")
     adata = adata.copy() if copy else adata
@@ -754,7 +754,7 @@ def scale(
     -------
     Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
 
-    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
+    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Scaled count data matrix.
     `adata.var['mean']` : :class:`pandas.Series` (dtype `float`)
         Means per gene before scaling.
@@ -967,7 +967,10 @@ def downsample_counts(
 
     Returns
     -------
-    Depending on `copy` returns or updates an `adata` with downsampled `.X`.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+
+    `adata.X` : :class:`numpy.ndarray` | :class:`~scipy.sparse.spmatrix` (dtype `float`)
+        Downsampled counts matrix.
     """
     # This logic is all dispatch
     total_counts_call = total_counts is not None

@@ -146,16 +146,15 @@ def neighbors(
 
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following:
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    See `key_added` parameter description for the storage path of
-    connectivities and distances.
-
-    **connectivities** : sparse matrix of dtype `float32`.
+    `adata.obsp['distances' | key_added+'_distances']` : :class:`~scipy.sparse.csr_matrix` (dtype `float`)
+        Distance matrix of the nearest neighbors search. Each row (cell) has `n_neighbors`-1 non-zero entries. These are the distances to their `n_neighbors`-1 nearest neighbors (excluding the cell itself).
+    `adata.obsp['connectivities' | key_added+'_connectivities']` : :class:`~scipy.sparse._csr.csr_matrix` (dtype `float`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    **distances** : sparse matrix of dtype `float64`.
-        Stores the distance matrix of the nearest neighbors search.
+    `adata.uns['neighbors' | key_added]` : :class:`dict`
+        neighbors parameters.
 
     Examples
     --------

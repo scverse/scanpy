@@ -121,7 +121,10 @@ def umap(
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following field:
 
     `adata.obsm['X_umap']` : :class:`numpy.ndarray` (dtype `float`)
-        tSNE coordinates of data.
+        UMAP coordinates of data.
+    `adata.uns['umap']` : :class:`dict`
+        UMAP parameters.
+
     """
     adata = adata.copy() if copy else adata
 

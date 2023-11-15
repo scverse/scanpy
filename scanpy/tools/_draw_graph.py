@@ -93,10 +93,11 @@ def draw_graph(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following field:
 
-    `adata.obsm['X_draw_graph_[layout]']` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_draw_graph_[layout | key_added_ext]']` : :class:`numpy.ndarray` (dtype `float`)
         Coordinates of graph layout. E.g. for `layout='fa'` (the default),
-        the field is called `'X_draw_graph_fa'`.
-
+        the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
+    `adata.uns['draw_graph']`: :class:`dict`
+        `draw_graph` parameters.
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     if layout not in _LAYOUTS:

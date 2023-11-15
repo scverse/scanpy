@@ -91,10 +91,12 @@ def ingest(
 
     Returns
     -------
-    * if `inplace=False` returns a copy of `adata`
-      with mapped embeddings and labels in `obsm` and `obs` correspondingly
-    * if `inplace=True` returns `None` and updates `adata.obsm` and `adata.obs`
-      with mapped embeddings and labels
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+
+    `adata.obs[obs]` : :class:`pandas.Series` (dtype ``category``)
+        Mapped labels.
+    `adata.obsm['X_umap' | 'X_pca']` : :class:`np.ndarray` (dtype ``float``)
+        Mapped embeddings. `'X_umap'` if `embedding_method` is `'umap'`, `'X_pca'` if `embedding_method` is `'pca'`.
 
     Example
     -------

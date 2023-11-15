@@ -78,7 +78,6 @@ def paga(
     `adata.uns['connectivities']` : :class:`numpy.ndarray` (dtype `float`)
         The full adjacency matrix of the abstracted graph, weights correspond to
         confidence in the connectivities of partitions.
-
     `adata.uns['connectivities_tree']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
