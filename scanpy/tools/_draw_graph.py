@@ -91,7 +91,7 @@ def draw_graph(
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following field:
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
     `adata.obsm['X_draw_graph_[layout | key_added_ext]']` : :class:`numpy.ndarray` (dtype `float`)
         Coordinates of graph layout. E.g. for `layout='fa'` (the default),

@@ -74,9 +74,9 @@ def tsne(
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following field:
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsm['X_tsne']` : :class:`numpy.ndarray` | :class: `` (dtype `float`)
+    `adata.obsm['X_tsne']` : :class:`numpy.ndarray` (dtype `float`)
         tSNE coordinates of data.
     `adata.uns['tsne']` : :class:`dict`
         tSNE parameters.

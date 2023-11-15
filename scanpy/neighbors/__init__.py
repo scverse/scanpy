@@ -148,9 +148,9 @@ def neighbors(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsp['distances' | key_added+'_distances']` : :class:`~scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.obsp['distances' | key_added+'_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Distance matrix of the nearest neighbors search. Each row (cell) has `n_neighbors`-1 non-zero entries. These are the distances to their `n_neighbors`-1 nearest neighbors (excluding the cell itself).
-    `adata.obsp['connectivities' | key_added+'_connectivities']` : :class:`~scipy.sparse._csr.csr_matrix` (dtype `float`)
+    `adata.obsp['connectivities' | key_added+'_connectivities']` : :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
     `adata.uns['neighbors' | key_added]` : :class:`dict`

@@ -106,7 +106,7 @@ def louvain(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obs[key_added]` : :class:`pandas.Series` (dtype ``category``)
+    `adata.obs['louvain' | key_added]` : :class:`pandas.Series` (dtype ``category``)
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 

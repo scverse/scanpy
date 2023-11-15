@@ -969,7 +969,7 @@ def downsample_counts(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.X` : :class:`numpy.ndarray` | :class:`~scipy.sparse.spmatrix` (dtype `float`)
+    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse.spmatrix` (dtype `float`)
         Downsampled counts matrix.
     """
     # This logic is all dispatch
