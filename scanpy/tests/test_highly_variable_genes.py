@@ -514,3 +514,54 @@ def test_cellranger_n_top_genes_warning():
         match="`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
     ):
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
+
+
+@pytest.mark.parametrize(
+    "flavor",
+    [
+        "seurat",
+    ],
+)  # TODO: check seurat_v3
+@pytest.mark.parametrize("subset", [True, False])
+@pytest.mark.parametrize("inplace", [True, False])
+def test_highly_variable_genes_subset_inplace_consistency(
+    flavor,
+    subset,
+    inplace,
+):
+    if flavor == "seurat" or flavor == "cell_ranger":
+        adata = sc.datasets.blobs(random_state=0)
+    elif flavor == "seurat_v3":
+        adata = sc.datasets.blobs(random_state=0)
+        adata.X = np.expm1(adata.X).astype(int)
+
+    # batch = np.random.binomial(4, 0.5, size=(adata.n_obs))
+    # adata.obs["batch"] = batch
+    # adata.obs["batch"] = adata.obs["batch"].astype("category")
+
+    # cleanup var
+    del adata.var
+    n_genes = adata.shape[1]
+
+    output_df = sc.pp.highly_variable_genes(
+        adata,
+        flavor=flavor,
+        n_top_genes=10,
+        # batch_key="batch",
+        subset=subset,
+        inplace=inplace,
+    )
+
+    if inplace:
+        assert output_df is None
+
+        if subset:
+            assert len(adata.var) == 10
+        else:
+            assert len(adata.var) == n_genes
+
+    else:
+        if subset:
+            assert len(output_df) == 10
+        else:
+            assert len(output_df) == n_genes

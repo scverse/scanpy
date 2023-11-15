@@ -144,7 +144,7 @@ def _highly_variable_genes_seurat_v3(
     df["highly_variable"] = False
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
 
-    if inplace or subset:
+    if inplace:
         adata.uns["hvg"] = {"flavor": "seurat_v3"}
         logg.hint(
             "added\n"
@@ -170,6 +170,9 @@ def _highly_variable_genes_seurat_v3(
     else:
         if batch_key is None:
             df = df.drop(["highly_variable_nbatches"], axis=1)
+        if subset:
+            df = df.iloc[df.highly_variable.values, :]
+
         return df
 
 
@@ -543,7 +546,7 @@ def highly_variable_genes(
 
     logg.info("    finished", time=start)
 
-    if inplace or subset:
+    if inplace:
         adata.uns["hvg"] = {"flavor": flavor}
         logg.hint(
             "added\n"
@@ -558,6 +561,7 @@ def highly_variable_genes(
         adata.var["dispersions_norm"] = df["dispersions_norm"].values.astype(
             "float32", copy=False
         )
+
         if batch_key is not None:
             adata.var["highly_variable_nbatches"] = df[
                 "highly_variable_nbatches"
@@ -567,5 +571,17 @@ def highly_variable_genes(
             ].values
         if subset:
             adata._inplace_subset_var(df["highly_variable"].values)
+
     else:
+        ### if not inplace, dont update adata.var, right?
+        # if batch_key is not None:
+        #     adata.var["highly_variable_nbatches"] = df[
+        #         "highly_variable_nbatches"
+        #     ].values
+        #     adata.var["highly_variable_intersection"] = df[
+        #         "highly_variable_intersection"
+        #     ].values
+        if subset:
+            df = df.iloc[df.highly_variable.values, :]
+
         return df
