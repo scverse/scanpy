@@ -564,9 +564,9 @@ def test_highly_variable_genes_subset_inplace_consistency(
             assert len(adata.var) == n_genes
 
     else:
+        assert output_df is not None
+
         if subset:
             assert len(output_df) == 10
         else:
             assert len(output_df) == n_genes
-
-    print(f"flavor={flavor}, subset={subset}, inplace={inplace}")
