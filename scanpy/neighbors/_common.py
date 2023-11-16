@@ -65,15 +65,21 @@ def _ind_dist_shortcut(
     distances: csr_matrix, n_neighbors: int
 ) -> tuple[NDArray[np.int_], NDArray[np.float_]] | None:
     """\
-    Shortcut for RAPIDS-style distance matrices.
+    Shortcut for scipy or RAPIDS style distance matrices.
 
-    These have exactly `n_neighbors` entries per row.
+    These have `n_neighbors` or `n_neighbors + 1` entries per row.
+    Therefore, this function will return matrices with either
+    `n_neighbors` or `n_neighbors + 1` columns.
     """
     n_obs = distances.shape[0]  # shape is square
-    if (
-        distances.nnz != (n_obs * n_neighbors)
-        or (distances.getnnz(axis=1) != n_neighbors).any()
-    ):
+    # Check if we have a compatible number of entries
+    if distances.nnz == n_obs * (n_neighbors + 1):
+        n_neighbors += 1
+    elif distances.nnz != n_obs * n_neighbors:
+        return None
+    # Check if each row has the correct number of entries
+    # TODO: Support duplicates
+    if (distances.getnnz(axis=1) != n_neighbors).any():
         return None
     return (
         distances.indices.reshape(n_obs, n_neighbors),
