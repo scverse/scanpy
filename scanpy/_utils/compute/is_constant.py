@@ -80,7 +80,7 @@ def is_constant(
 def _(a: NDArray, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool_]:
     # Should eventually support nd, not now.
     if axis is None:
-        return np.array_equal(a, a.flat[0])
+        return (a == a.flat[0]).all()
     if axis == 0:
         return _is_constant_rows(a.T)
     elif axis == 1:
