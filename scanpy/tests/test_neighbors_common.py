@@ -22,7 +22,7 @@ def mk_knn_matrix(n_obs: int, n_neighbors: int, *, plus_one: bool = False):
     )
 
 
-@pytest.mark.parametrize("n_neighbors", [3, None])
+@pytest.mark.parametrize("n_neighbors", [3, pytest.param(None, id="all")])
 @pytest.mark.parametrize(
     "mk_mat",
     [
