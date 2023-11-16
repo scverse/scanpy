@@ -561,10 +561,7 @@ class Neighbors:
             self._distances[np.diag_indices_from(self.distances)] = 0
             if knn:  # remove too far away entries and keep as sparse
                 self._distances = _get_sparse_matrix_from_indices_distances(
-                    knn_indices,
-                    knn_distances,
-                    n_obs=self._adata.n_obs,
-                    n_neighbors=n_neighbors,
+                    knn_indices, knn_distances
                 )
             else:  # convert to dense
                 self._distances = self._distances.toarray()

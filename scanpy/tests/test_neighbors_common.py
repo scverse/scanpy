@@ -31,9 +31,7 @@ def mk_knn_matrix(
         # Don’t use the first column, as that can be the cell itself
         dists[n_obs // 4 : n_obs, 2] = 0.0
     idxs = np.arange(n_obs * n_neighbors).reshape((n_obs, n_neighbors))
-    mat = _get_sparse_matrix_from_indices_distances(
-        idxs, dists, n_obs=n_obs, n_neighbors=n_neighbors
-    )
+    mat = _get_sparse_matrix_from_indices_distances(idxs, dists)
     if duplicates:
         # Make sure the actual matrix has a regular sparsity pattern
         assert is_constant(mat.getnnz(axis=1))
