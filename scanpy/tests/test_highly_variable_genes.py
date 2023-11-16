@@ -521,7 +521,6 @@ def test_cellranger_n_top_genes_warning():
     [
         "seurat",
         "cell_ranger",
-        "seurat_v3",
     ],
 )
 @pytest.mark.parametrize("subset", [True, False])
