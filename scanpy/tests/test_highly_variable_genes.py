@@ -520,8 +520,8 @@ def test_cellranger_n_top_genes_warning():
     "flavor",
     [
         "seurat",
-        # "cell_ranger", TODO
-        # "seurat_v3", TODO
+        "cell_ranger",
+        "seurat_v3",
     ],
 )
 @pytest.mark.parametrize("subset", [True, False])
@@ -532,14 +532,16 @@ def test_highly_variable_genes_subset_inplace_consistency(
     inplace,
 ):
     if flavor == "seurat" or flavor == "cell_ranger":
-        adata = sc.datasets.blobs(random_state=0)
-    elif flavor == "seurat_v3":
-        adata = sc.datasets.blobs(random_state=0)
-        adata.X = np.expm1(adata.X).astype(int)
+        adata = pbmc3k()
+        sc.pp.filter_genes(adata, min_cells=10)
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
 
-    # batch = np.random.binomial(4, 0.5, size=(adata.n_obs))
-    # adata.obs["batch"] = batch
-    # adata.obs["batch"] = adata.obs["batch"].astype("category")
+    elif flavor == "seurat_v3":
+        adata = pbmc3k()
+        sc.pp.filter_genes(adata, min_cells=10)
+    else:
+        raise ValueError(f"Unknown flavor {flavor}")
 
     # cleanup var
     del adata.var
@@ -549,7 +551,6 @@ def test_highly_variable_genes_subset_inplace_consistency(
         adata,
         flavor=flavor,
         n_top_genes=10,
-        # batch_key="batch",
         subset=subset,
         inplace=inplace,
     )
@@ -567,3 +568,5 @@ def test_highly_variable_genes_subset_inplace_consistency(
             assert len(output_df) == 10
         else:
             assert len(output_df) == n_genes
+
+    print(f"flavor={flavor}, subset={subset}, inplace={inplace}")
