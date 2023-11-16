@@ -16,11 +16,12 @@ def _get_sparse_matrix_from_indices_distances(
         (
             distances.copy().ravel(),  # copy the data, otherwise strange behavior here
             indices.copy().ravel(),
-            np.arange(0, n_nonzero + 1, n_neighbors),
+            np.arange(0, n_nonzero + 1, n_neighbors),  # indptr
         ),
         shape=(n_obs, n_obs),
     )
-    D.eliminate_zeros()
+    # Don’t eliminate zeroes so the shortcut can still work
+    # D.eliminate_zeros()
     return D
 
 
