@@ -2,11 +2,13 @@ from functools import partial
 
 import pytest
 import numpy as np
-from scipy import sparse
 from sklearn.neighbors import KNeighborsTransformer
 
 from scanpy._utils.compute.is_constant import is_constant
-from scanpy.neighbors._common import _ind_dist_shortcut
+from scanpy.neighbors._common import (
+    _ind_dist_shortcut,
+    _get_sparse_matrix_from_indices_distances,
+)
 
 
 def mk_knn_matrix(
@@ -18,13 +20,13 @@ def mk_knn_matrix(
 ):
     if plus_one:
         n_neighbors += 1
-    n_nonzero = n_obs * n_neighbors
     dists = np.random.randn(n_obs * n_neighbors)
     if duplicates:
         dists[n_obs // 4 : n_obs] = 0.0
     idxs = np.arange(n_obs * n_neighbors)
-    indptr = np.arange(0, n_nonzero + 1, n_neighbors)
-    mat = sparse.csr_matrix((dists, idxs, indptr), shape=(n_obs, n_obs))
+    mat = _get_sparse_matrix_from_indices_distances(
+        dists, idxs, n_obs=n_obs, n_neighbors=n_neighbors
+    )
     if duplicates:
         # Make sure the actual matrix has a regular sparsity pattern
         assert is_constant(mat.getnnz(axis=1))
