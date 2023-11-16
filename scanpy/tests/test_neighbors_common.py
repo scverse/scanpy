@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from functools import partial
+from collections.abc import Callable
 
 import pytest
 import numpy as np
+from scipy import sparse
 from sklearn.neighbors import KNeighborsTransformer
 
 from scanpy._utils.compute.is_constant import is_constant
@@ -17,7 +21,7 @@ def mk_knn_matrix(
     *,
     plus_one: bool = False,
     duplicates: bool = False,
-):
+) -> sparse.csr_matrix:
     if plus_one:
         n_neighbors += 1
     dists = np.random.randn(n_obs * n_neighbors)
@@ -25,7 +29,7 @@ def mk_knn_matrix(
         dists[n_obs // 4 : n_obs] = 0.0
     idxs = np.arange(n_obs * n_neighbors)
     mat = _get_sparse_matrix_from_indices_distances(
-        dists, idxs, n_obs=n_obs, n_neighbors=n_neighbors
+        idxs, dists, n_obs=n_obs, n_neighbors=n_neighbors
     )
     if duplicates:
         # Make sure the actual matrix has a regular sparsity pattern
@@ -52,7 +56,9 @@ def mk_knn_matrix(
         ),
     ],
 )
-def test_ind_dist_shortcut(n_neighbors, mk_mat):
+def test_ind_dist_shortcut(
+    n_neighbors: int, mk_mat: Callable[[int, int], sparse.csr_matrix]
+):
     n_obs = 500
     if n_neighbors is None:
         n_neighbors = n_obs - 1  # KNeighborsTransformer will add 1

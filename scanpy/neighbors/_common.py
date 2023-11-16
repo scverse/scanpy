@@ -6,8 +6,8 @@ from scipy.sparse import csr_matrix
 
 
 def _get_sparse_matrix_from_indices_distances(
-    indices: NDArray[np.int32],
-    distances: NDArray[np.float32],
+    indices: NDArray[np.int32 | np.int64],
+    distances: NDArray[np.float32 | np.float64],
     *,
     n_obs: int,
     n_neighbors: int,
@@ -26,7 +26,9 @@ def _get_sparse_matrix_from_indices_distances(
     return D
 
 
-def _get_indices_distances_from_dense_matrix(D: NDArray[np.float32], n_neighbors: int):
+def _get_indices_distances_from_dense_matrix(
+    D: NDArray[np.float32 | np.float64], n_neighbors: int
+):
     sample_range = np.arange(D.shape[0])[:, None]
     indices = np.argpartition(D, n_neighbors - 1, axis=1)[:, :n_neighbors]
     indices = indices[sample_range, np.argsort(D[sample_range, indices])]
@@ -36,7 +38,7 @@ def _get_indices_distances_from_dense_matrix(D: NDArray[np.float32], n_neighbors
 
 def _get_indices_distances_from_sparse_matrix(
     D: csr_matrix, n_neighbors: int
-) -> tuple[NDArray[np.int64], NDArray]:
+) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
     if (shortcut := _ind_dist_shortcut(D, n_neighbors)) is not None:
         return shortcut
 
@@ -64,7 +66,7 @@ def _get_indices_distances_from_sparse_matrix(
 
 def _ind_dist_shortcut(
     distances: csr_matrix, n_neighbors: int
-) -> tuple[NDArray[np.int_], NDArray[np.float_]] | None:
+) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]] | None:
     """\
     Shortcut for scipy or RAPIDS style distance matrices.
 

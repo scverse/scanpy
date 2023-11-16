@@ -29,8 +29,7 @@ def gauss(
         Specify if the distances have been restricted to k nearest neighbors.
     """
     # init distances
-    if issparse(distances):
-        assert isinstance(distances, csr_matrix)
+    if isinstance(distances, csr_matrix):
         Dsq = distances.power(2)
         indices, distances_sq = _get_indices_distances_from_sparse_matrix(
             Dsq, n_neighbors
