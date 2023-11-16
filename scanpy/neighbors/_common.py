@@ -12,18 +12,25 @@ def _get_sparse_matrix_from_indices_distances(
     n_obs: int,
     n_neighbors: int,
 ) -> csr_matrix:
-    n_nonzero = n_obs * n_neighbors
-    D = csr_matrix(
+    # instead of calling .eliminate_zeros() on our sparse matrix,
+    # we manually handle the case of the nearest neighbor being the cell itself.
+    # This allows us to use _ind_dist_shortcut even when the data has duplicates.
+    if (distances[:, 0] == 0.0).all() and (indices[:, 0] == np.arange(n_obs)).all():
+        distances = distances[:, 1:]
+        indices = indices[:, 1:]
+        n_nonzero = n_obs * (n_neighbors - 1)
+        indptr = np.arange(0, n_nonzero + 1, n_neighbors - 1)
+    else:
+        n_nonzero = n_obs * n_neighbors
+        indptr = np.arange(0, n_nonzero + 1, n_neighbors)
+    return csr_matrix(
         (
             distances.copy().ravel(),  # copy the data, otherwise strange behavior here
             indices.copy().ravel(),
-            np.arange(0, n_nonzero + 1, n_neighbors),  # indptr
+            indptr,
         ),
         shape=(n_obs, n_obs),
     )
-    # Don’t eliminate zeroes so the shortcut can still work
-    # D.eliminate_zeros()
-    return D
 
 
 def _get_indices_distances_from_dense_matrix(

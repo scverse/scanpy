@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import partial
 from collections.abc import Callable
 
 import pytest
@@ -20,14 +19,18 @@ def mk_knn_matrix(
     n_neighbors: int,
     *,
     plus_one: bool = False,
+    includes_self: bool = False,
     duplicates: bool = False,
 ) -> sparse.csr_matrix:
     if plus_one:
         n_neighbors += 1
-    dists = np.random.randn(n_obs * n_neighbors)
+    dists = np.random.randn(n_obs, n_neighbors)
+    if includes_self:
+        dists[:, 0] = 0.0
     if duplicates:
-        dists[n_obs // 4 : n_obs] = 0.0
-    idxs = np.arange(n_obs * n_neighbors)
+        # Don’t use the first column, as that can be the cell itself
+        dists[n_obs // 4 : n_obs, 2] = 0.0
+    idxs = np.arange(n_obs * n_neighbors).reshape((n_obs, n_neighbors))
     mat = _get_sparse_matrix_from_indices_distances(
         idxs, dists, n_obs=n_obs, n_neighbors=n_neighbors
     )
@@ -42,22 +45,42 @@ def mk_knn_matrix(
 
 
 @pytest.mark.parametrize("n_neighbors", [3, pytest.param(None, id="all")])
+@pytest.mark.parametrize("plus_one", [True, False])
+@pytest.mark.parametrize("includes_self", [True, False])
+@pytest.mark.parametrize("duplicates", [True, False])
+def test_ind_dist_shortcut_manual(
+    n_neighbors: int | None, plus_one: bool, includes_self: bool, duplicates: bool
+):
+    n_obs = 500
+    if n_neighbors is None:
+        n_neighbors = n_obs - 1 if plus_one else n_obs
+
+    mat = mk_knn_matrix(
+        n_obs,
+        n_neighbors,
+        plus_one=plus_one,
+        includes_self=includes_self,
+        duplicates=duplicates,
+    )
+
+    assert (mat.nnz / n_obs) in {n_neighbors, n_neighbors + 1}
+    assert _ind_dist_shortcut(mat, n_neighbors) is not None
+
+
+@pytest.mark.parametrize("n_neighbors", [3, pytest.param(None, id="all")])
 @pytest.mark.parametrize(
     "mk_mat",
     [
-        pytest.param(partial(mk_knn_matrix), id="n"),
-        pytest.param(partial(mk_knn_matrix, plus_one=True), id="n+1"),
-        pytest.param(partial(mk_knn_matrix, duplicates=True), id="dupes"),
         pytest.param(
             lambda n_obs, n_neighbors: KNeighborsTransformer(
                 n_neighbors=n_neighbors
             ).fit_transform(np.random.randn(n_obs, n_obs // 4)),
             id="sklearn_auto",
-        ),
+        )
     ],
 )
-def test_ind_dist_shortcut(
-    n_neighbors: int, mk_mat: Callable[[int, int], sparse.csr_matrix]
+def test_ind_dist_shortcut_premade(
+    n_neighbors: int | None, mk_mat: Callable[[int, int], sparse.csr_matrix]
 ):
     n_obs = 500
     if n_neighbors is None:
