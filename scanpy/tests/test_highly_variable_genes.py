@@ -520,8 +520,10 @@ def test_cellranger_n_top_genes_warning():
     "flavor",
     [
         "seurat",
+        # "cell_ranger", TODO
+        # "seurat_v3", TODO
     ],
-)  # TODO: check seurat_v3
+)
 @pytest.mark.parametrize("subset", [True, False])
 @pytest.mark.parametrize("inplace", [True, False])
 def test_highly_variable_genes_subset_inplace_consistency(
