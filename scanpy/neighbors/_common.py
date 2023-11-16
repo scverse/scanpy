@@ -12,12 +12,11 @@ def _get_sparse_matrix_from_indices_distances(
     n_neighbors: int,
 ) -> csr_matrix:
     n_nonzero = n_obs * n_neighbors
-    indptr = np.arange(0, n_nonzero + 1, n_neighbors)
     D = csr_matrix(
         (
             distances.copy().ravel(),  # copy the data, otherwise strange behavior here
             indices.copy().ravel(),
-            indptr,
+            np.arange(0, n_nonzero + 1, n_neighbors),
         ),
         shape=(n_obs, n_obs),
     )
