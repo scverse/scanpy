@@ -77,7 +77,6 @@ def _ind_dist_shortcut(
     elif distances.nnz != n_obs * n_neighbors:
         return None
     # Check if each row has the correct number of entries
-    # TODO: Support duplicates
     if (distances.getnnz(axis=1) != n_neighbors).any():
         return None
     return (
