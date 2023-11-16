@@ -573,14 +573,6 @@ def highly_variable_genes(
             adata._inplace_subset_var(df["highly_variable"].values)
 
     else:
-        ### if not inplace, dont update adata.var, right?
-        # if batch_key is not None:
-        #     adata.var["highly_variable_nbatches"] = df[
-        #         "highly_variable_nbatches"
-        #     ].values
-        #     adata.var["highly_variable_intersection"] = df[
-        #         "highly_variable_intersection"
-        #     ].values
         if subset:
             df = df.iloc[df.highly_variable.values, :]
 
