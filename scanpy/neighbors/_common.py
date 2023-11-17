@@ -22,8 +22,14 @@ def _get_sparse_matrix_from_indices_distances(
     indices: NDArray[np.int32 | np.int64],
     distances: NDArray[np.float32 | np.float64],
 ) -> csr_matrix:
+    """\
+    Create a sparse matrix from a pair of indices and distances.
+
+    Enforces that the first neighbor is the cell itself,
+    as this is necessary for connectivity calculations.
+    """
     # instead of calling .eliminate_zeros() on our sparse matrix,
-    # we manually handle the case of the nearest neighbor being the cell itself.
+    # we manually handle the nearest neighbor being the cell itself.
     # This allows us to use _ind_dist_shortcut even when the data has duplicates.
     _assert_has_self_column(indices, distances)
     indices = indices[:, 1:]
