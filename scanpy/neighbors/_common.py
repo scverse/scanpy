@@ -6,43 +6,28 @@ from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
 
 
-def _get_skip(
+def _assert_has_self_column(
     indices: NDArray[np.int32 | np.int64],
     distances: NDArray[np.float32 | np.float64],
-) -> Literal[1, 0]:
-    return (
-        1
-        if (distances[:, 0] == 0.0).all()
+) -> None:
+    if not (
+        (distances[:, 0] == 0.0).all()
         and (indices[:, 0] == np.arange(indices.shape[0])).all()
-        else 0
-    )
-
-
-def _restrict_indices_distances(
-    indices: NDArray[np.int32 | np.int64],
-    distances: NDArray[np.float32 | np.float64],
-    *,
-    restrict_n: int,
-) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
-    assert indices.shape == distances.shape
-    # instead of calling .eliminate_zeros() on our sparse matrix,
-    # we manually handle the case of the nearest neighbor being the cell itself.
-    # This allows us to use _ind_dist_shortcut even when the data has duplicates.
-    skip = _get_skip(indices, distances)
-    indices = indices[:, : restrict_n + skip - 1]
-    distances = distances[:, : restrict_n + skip - 1]
-    # now we have either restrict_n columns (including an all-0 one for the cell itself)
-    # or restrict_n - 1 columns (excluding the cell itself)
-    return indices, distances
+    ):
+        msg = "The first neighbor should be the cell itself."
+        raise AssertionError(msg)
 
 
 def _get_sparse_matrix_from_indices_distances(
     indices: NDArray[np.int32 | np.int64],
     distances: NDArray[np.float32 | np.float64],
 ) -> csr_matrix:
-    skip = _get_skip(indices, distances)
-    indices = indices[:, skip:]
-    distances = distances[:, skip:]
+    # instead of calling .eliminate_zeros() on our sparse matrix,
+    # we manually handle the case of the nearest neighbor being the cell itself.
+    # This allows us to use _ind_dist_shortcut even when the data has duplicates.
+    _assert_has_self_column(indices, distances)
+    indices = indices[:, 1:]
+    distances = distances[:, 1:]
     indptr = np.arange(0, np.prod(indices.shape) + 1, indices.shape[1])
     return csr_matrix(
         (
@@ -104,8 +89,8 @@ def _ind_dist_shortcut(
     """
     n_obs = distances.shape[0]  # shape is square
     # Check if we have a compatible number of entries
-    if distances.nnz == n_obs * (n_neighbors + 1):
-        n_neighbors += 1
+    if distances.nnz == n_obs * (n_neighbors - 1):
+        n_neighbors -= 1
     elif distances.nnz != n_obs * n_neighbors:
         return None
     # Check if each row has the correct number of entries
