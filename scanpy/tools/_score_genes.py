@@ -85,8 +85,10 @@ def score_genes(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with an additional field
-    `score_name`.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following field:
+
+    `adata.obs[score_name]` : :class:`numpy.ndarray` (dtype `float`)
+        Scores of each cell.
 
     Examples
     --------
@@ -218,13 +220,13 @@ def score_genes_cell_cycle(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    **S_score** : `adata.obs`, dtype `object`
+    `adata.obs['S_score']` : :class:`pandas.Series` (dtype `object`)
         The score for S phase for each cell.
-    **G2M_score** : `adata.obs`, dtype `object`
+    `adata.obs['G2M_score']` : :class:`pandas.Series` (dtype `object`)
         The score for G2M phase for each cell.
-    **phase** : `adata.obs`, dtype `object`
+    `adata.obs['phase']` : :class:`pandas.Series` (dtype `object`)
         The cell cycle phase (`S`, `G2M` or `G1`) for each cell.
 
     See also
