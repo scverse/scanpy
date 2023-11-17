@@ -6,16 +6,17 @@ from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
 
 
-def _assert_has_self_column(
+def _remove_self_column(
     indices: NDArray[np.int32 | np.int64],
     distances: NDArray[np.float32 | np.float64],
-) -> None:
+) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
     if not (
         (distances[:, 0] == 0.0).all()
         and (indices[:, 0] == np.arange(indices.shape[0])).all()
     ):
         msg = "The first neighbor should be the cell itself."
         raise AssertionError(msg)
+    return indices[:, 1:], distances[:, 1:]
 
 
 def _get_sparse_matrix_from_indices_distances(
@@ -31,9 +32,7 @@ def _get_sparse_matrix_from_indices_distances(
     # instead of calling .eliminate_zeros() on our sparse matrix,
     # we manually handle the nearest neighbor being the cell itself.
     # This allows us to use _ind_dist_shortcut even when the data has duplicates.
-    _assert_has_self_column(indices, distances)
-    indices = indices[:, 1:]
-    distances = distances[:, 1:]
+    indices, distances = _remove_self_column(indices, distances)
     indptr = np.arange(0, np.prod(indices.shape) + 1, indices.shape[1])
     return csr_matrix(
         (
