@@ -73,10 +73,12 @@ def paga(
 
     Returns
     -------
-    **connectivities** : :class:`numpy.ndarray` (adata.uns['connectivities'])
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+
+    `adata.uns['connectivities']` : :class:`numpy.ndarray` (dtype `float`)
         The full adjacency matrix of the abstracted graph, weights correspond to
         confidence in the connectivities of partitions.
-    **connectivities_tree** : :class:`scipy.sparse.csr_matrix` (adata.uns['connectivities_tree'])
+    `adata.uns['connectivities_tree']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
 
