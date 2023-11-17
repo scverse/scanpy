@@ -28,8 +28,10 @@ def _get_sparse_matrix_from_indices_distances(
     """\
     Create a sparse matrix from a pair of indices and distances.
 
-    Enforces that the first neighbor is the cell itself,
-    as this is necessary for connectivity calculations.
+    If keep_self=False, it verifies that the first column is the cell itself,
+    then removes it from the explicitly stored zeroes.
+
+    Duplicates in the data are kept as explicitly stored zeroes.
     """
     # instead of calling .eliminate_zeros() on our sparse matrix,
     # we manually handle the nearest neighbor being the cell itself.
