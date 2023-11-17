@@ -1,22 +1,48 @@
 from __future__ import annotations
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
 
 
+def _get_skip(
+    indices: NDArray[np.int32 | np.int64],
+    distances: NDArray[np.float32 | np.float64],
+) -> Literal[1, 0]:
+    return (
+        1
+        if (distances[:, 0] == 0.0).all()
+        and (indices[:, 0] == np.arange(indices.shape[0])).all()
+        else 0
+    )
+
+
+def _restrict_indices_distances(
+    indices: NDArray[np.int32 | np.int64],
+    distances: NDArray[np.float32 | np.float64],
+    *,
+    restrict_n: int,
+) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
+    assert indices.shape == distances.shape
+    # instead of calling .eliminate_zeros() on our sparse matrix,
+    # we manually handle the case of the nearest neighbor being the cell itself.
+    # This allows us to use _ind_dist_shortcut even when the data has duplicates.
+    skip = _get_skip(indices, distances)
+    indices = indices[:, : restrict_n + skip - 1]
+    distances = distances[:, : restrict_n + skip - 1]
+    # now we have either restrict_n columns (including an all-0 one for the cell itself)
+    # or restrict_n - 1 columns (excluding the cell itself)
+    return indices, distances
+
+
 def _get_sparse_matrix_from_indices_distances(
     indices: NDArray[np.int32 | np.int64],
     distances: NDArray[np.float32 | np.float64],
 ) -> csr_matrix:
-    # instead of calling .eliminate_zeros() on our sparse matrix,
-    # we manually handle the case of the nearest neighbor being the cell itself.
-    # This allows us to use _ind_dist_shortcut even when the data has duplicates.
-    if (distances[:, 0] == 0.0).all() and (
-        indices[:, 0] == np.arange(indices.shape[0])
-    ).all():
-        distances = distances[:, 1:]
-        indices = indices[:, 1:]
+    skip = _get_skip(indices, distances)
+    indices = indices[:, skip:]
+    distances = distances[:, skip:]
     indptr = np.arange(0, np.prod(indices.shape) + 1, indices.shape[1])
     return csr_matrix(
         (

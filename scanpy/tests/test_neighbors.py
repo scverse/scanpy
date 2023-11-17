@@ -1,8 +1,10 @@
+from typing import Literal
 import warnings
 
 import numpy as np
 import pytest
 from anndata import AnnData
+from pytest_mock import MockerFixture
 from scipy.sparse import csr_matrix, issparse
 from sklearn.neighbors import KNeighborsTransformer
 
@@ -116,7 +118,9 @@ def neigh() -> Neighbors:
 
 
 @pytest.mark.parametrize("method", ["umap", "gauss"])
-def test_distances_euclidean(mocker, neigh, method):
+def test_distances_euclidean(
+    mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss"]
+):
     """umap and gauss behave the same for distances.
 
     They call pynndescent for large data.
