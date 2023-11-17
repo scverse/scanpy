@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 from . import _connectivity
 from ._types import _Metric, _MetricFn, _Method, _KnownTransformer
 from ._common import (
+    _has_self_column,
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )

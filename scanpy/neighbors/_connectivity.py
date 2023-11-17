@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Union
+from typing import TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -13,9 +13,10 @@ from ._common import (
 )
 
 
-def gauss(
-    distances: Union[NDArray[np.float32], csr_matrix], n_neighbors: int, *, knn: bool
-):
+D = TypeVar("D", NDArray[np.float32], csr_matrix)
+
+
+def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:
     """
     Derive gaussian connectivities between data points from their distances.
 
@@ -99,8 +100,8 @@ def gauss(
 
 
 def umap(
-    knn_indices: NDArray[np.int32],
-    knn_dists: NDArray[np.float32],
+    knn_indices: NDArray[np.int32 | np.int64],
+    knn_dists: NDArray[np.float32 | np.float64],
     *,
     n_obs: int,
     n_neighbors: int,

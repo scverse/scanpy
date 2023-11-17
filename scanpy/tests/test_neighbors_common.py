@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Literal
 
 import pytest
 import numpy as np
@@ -9,6 +10,7 @@ from sklearn.neighbors import KNeighborsTransformer
 
 from scanpy._utils.compute.is_constant import is_constant
 from scanpy.neighbors._common import (
+    _has_self_column,
     _ind_dist_shortcut,
     _get_sparse_matrix_from_indices_distances,
 )
@@ -18,18 +20,22 @@ def mk_knn_matrix(
     n_obs: int,
     n_neighbors: int,
     *,
-    plus_one: bool = False,
+    style: Literal["basic", "rapids", "sklearn"],
     duplicates: bool = False,
 ) -> sparse.csr_matrix:
-    n_col = n_neighbors + (1 if plus_one else 0)
+    n_col = n_neighbors + (1 if style == "sklearn" else 0)
     dists = np.abs(np.random.randn(n_obs, n_col)) + 1e-8
-    dists[:, 0] = 0.0  # has to include cell itself
+    if style != "rapids":
+        dists[:, 0] = 0.0  # includes cell itself
     if duplicates:
-        # Don’t use the first column, as that is the cell itself
+        # Don’t use the first column, as that might be the cell itself
         dists[n_obs // 4 : n_obs, 2] = 0.0
     idxs = np.arange(n_obs * n_col).reshape((n_col, n_obs)).T
     # keep self column to simulate output from kNN transformers
     mat = _get_sparse_matrix_from_indices_distances(idxs, dists, keep_self=True)
+
+    # check if out helper here works as expected
+    assert _has_self_column(idxs, dists) == (style != "rapids")
     if duplicates:
         # Make sure the actual matrix has a regular sparsity pattern
         assert is_constant(mat.getnnz(axis=1))
@@ -37,21 +43,24 @@ def mk_knn_matrix(
         mat_sparsified = mat.copy()
         mat_sparsified.eliminate_zeros()
         assert not is_constant(mat_sparsified.getnnz(axis=1))
+
     return mat
 
 
 @pytest.mark.parametrize("n_neighbors", [3, pytest.param(None, id="all")])
-@pytest.mark.parametrize("plus_one", [True, False], ids=["plus_one", "exact"])
+@pytest.mark.parametrize("style", ["basic", "rapids", "sklearn"])
 @pytest.mark.parametrize("duplicates", [True, False], ids=["duplicates", "unique"])
 def test_ind_dist_shortcut_manual(
-    n_neighbors: int | None, plus_one: bool, duplicates: bool
+    n_neighbors: int | None,
+    style: Literal["basic", "rapids", "sklearn"],
+    duplicates: bool,
 ):
     n_obs = 10
     if n_neighbors is None:
         n_neighbors = n_obs
-    mat = mk_knn_matrix(n_obs, n_neighbors, plus_one=plus_one, duplicates=duplicates)
+    mat = mk_knn_matrix(n_obs, n_neighbors, style=style, duplicates=duplicates)
 
-    assert (mat.nnz / n_obs) == n_neighbors + (1 if plus_one else 0)
+    assert (mat.nnz / n_obs) == n_neighbors + (1 if style == "sklearn" else 0)
     assert _ind_dist_shortcut(mat, n_neighbors) is not None
 
 
