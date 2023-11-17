@@ -21,15 +21,15 @@ def mk_knn_matrix(
     plus_one: bool = False,
     duplicates: bool = False,
 ) -> sparse.csr_matrix:
-    if plus_one:
-        n_neighbors += 1
-    dists = np.random.randn(n_obs, n_neighbors)
+    n_col = n_neighbors + (1 if plus_one else 0)
+    dists = np.abs(np.random.randn(n_obs, n_col)) + 1e-8
     dists[:, 0] = 0.0  # has to include cell itself
     if duplicates:
         # Don’t use the first column, as that is the cell itself
         dists[n_obs // 4 : n_obs, 2] = 0.0
-    idxs = np.arange(n_obs * n_neighbors).reshape((n_neighbors, n_obs)).T
-    mat = _get_sparse_matrix_from_indices_distances(idxs, dists)
+    idxs = np.arange(n_obs * n_col).reshape((n_col, n_obs)).T
+    # keep self column to simulate output from kNN transformers
+    mat = _get_sparse_matrix_from_indices_distances(idxs, dists, keep_self=True)
     if duplicates:
         # Make sure the actual matrix has a regular sparsity pattern
         assert is_constant(mat.getnnz(axis=1))
@@ -41,18 +41,17 @@ def mk_knn_matrix(
 
 
 @pytest.mark.parametrize("n_neighbors", [3, pytest.param(None, id="all")])
-@pytest.mark.parametrize("plus_one", [True, False])
-@pytest.mark.parametrize("duplicates", [True, False])
+@pytest.mark.parametrize("plus_one", [True, False], ids=["plus_one", "exact"])
+@pytest.mark.parametrize("duplicates", [True, False], ids=["duplicates", "unique"])
 def test_ind_dist_shortcut_manual(
     n_neighbors: int | None, plus_one: bool, duplicates: bool
 ):
-    n_obs = 500
+    n_obs = 10
     if n_neighbors is None:
-        n_neighbors = n_obs - 1 if plus_one else n_obs
-
+        n_neighbors = n_obs
     mat = mk_knn_matrix(n_obs, n_neighbors, plus_one=plus_one, duplicates=duplicates)
 
-    assert (mat.nnz / n_obs) in {n_neighbors - 1, n_neighbors}
+    assert (mat.nnz / n_obs) == n_neighbors + (1 if plus_one else 0)
     assert _ind_dist_shortcut(mat, n_neighbors) is not None
 
 
@@ -71,10 +70,12 @@ def test_ind_dist_shortcut_manual(
 def test_ind_dist_shortcut_premade(
     n_neighbors: int | None, mk_mat: Callable[[int, int], sparse.csr_matrix]
 ):
-    n_obs = 500
+    n_obs = 10
     if n_neighbors is None:
-        n_neighbors = n_obs - 1  # KNeighborsTransformer will add 1
+        # KNeighborsTransformer interprets this as “number of neighbors excluding cell itself”
+        # so it can be at most n_obs - 1
+        n_neighbors = n_obs - 1
     mat = mk_mat(n_obs, n_neighbors)
 
-    assert (mat.nnz / n_obs) in {n_neighbors, n_neighbors + 1}
+    assert (mat.nnz / n_obs) == n_neighbors + 1
     assert _ind_dist_shortcut(mat, n_neighbors) is not None

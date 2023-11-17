@@ -22,6 +22,8 @@ def _remove_self_column(
 def _get_sparse_matrix_from_indices_distances(
     indices: NDArray[np.int32 | np.int64],
     distances: NDArray[np.float32 | np.float64],
+    *,
+    keep_self: bool,
 ) -> csr_matrix:
     """\
     Create a sparse matrix from a pair of indices and distances.
@@ -32,7 +34,8 @@ def _get_sparse_matrix_from_indices_distances(
     # instead of calling .eliminate_zeros() on our sparse matrix,
     # we manually handle the nearest neighbor being the cell itself.
     # This allows us to use _ind_dist_shortcut even when the data has duplicates.
-    indices, distances = _remove_self_column(indices, distances)
+    if not keep_self:
+        indices, distances = _remove_self_column(indices, distances)
     indptr = np.arange(0, np.prod(indices.shape) + 1, indices.shape[1])
     return csr_matrix(
         (
@@ -94,8 +97,8 @@ def _ind_dist_shortcut(
     """
     n_obs = distances.shape[0]  # shape is square
     # Check if we have a compatible number of entries
-    if distances.nnz == n_obs * (n_neighbors - 1):
-        n_neighbors -= 1
+    if distances.nnz == n_obs * (n_neighbors + 1):
+        n_neighbors += 1
     elif distances.nnz != n_obs * n_neighbors:
         return None
     # Check if each row has the correct number of entries

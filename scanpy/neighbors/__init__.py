@@ -562,7 +562,7 @@ class Neighbors:
                 knn_indices = knn_indices[:, :n_neighbors]
                 knn_distances = knn_distances[:, :n_neighbors]
                 self._distances = _get_sparse_matrix_from_indices_distances(
-                    knn_indices, knn_distances
+                    knn_indices, knn_distances, keep_self=False
                 )
             else:  # convert to dense
                 self._distances = self._distances.toarray()
