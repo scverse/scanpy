@@ -74,10 +74,13 @@ def tsne(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    **X_tsne** : `np.ndarray` (`adata.obsm`, dtype `float`)
+    `adata.obsm['X_tsne']` : :class:`numpy.ndarray` (dtype `float`)
         tSNE coordinates of data.
+    `adata.uns['tsne']` : :class:`dict`
+        tSNE parameters.
+
     """
     import sklearn
 

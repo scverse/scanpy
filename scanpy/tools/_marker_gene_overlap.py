@@ -132,9 +132,10 @@ def marker_gene_overlap(
 
     Returns
     -------
-    A pandas dataframe with the marker gene overlap scores if `inplace=False`.
-    For `inplace=True` `adata.uns` is updated with an additional field
-    specified by the `key_added` parameter (default = 'marker_gene_overlap').
+    Returns :class:`pandas.DataFrame` if `inplace=True`, else returns an `AnnData` object where it sets the following field:
+
+    `adata.uns[key_added]` : :class:`pandas.DataFrame` (dtype `float`)
+        Marker gene overlap scores. Default for `key_added` is `'marker_gene_overlap'`.
 
     Examples
     --------
