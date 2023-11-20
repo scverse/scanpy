@@ -61,7 +61,7 @@ def test_ind_dist_shortcut_manual(
     mat = mk_knn_matrix(n_obs, n_neighbors, style=style, duplicates=duplicates)
 
     assert (mat.nnz / n_obs) == n_neighbors + (1 if style == "sklearn" else 0)
-    assert _ind_dist_shortcut(mat, n_neighbors) is not None
+    assert _ind_dist_shortcut(mat) is not None
 
 
 @pytest.mark.parametrize("n_neighbors", [3, pytest.param(None, id="all")])
@@ -87,4 +87,4 @@ def test_ind_dist_shortcut_premade(
     mat = mk_mat(n_obs, n_neighbors)
 
     assert (mat.nnz / n_obs) == n_neighbors + 1
-    assert _ind_dist_shortcut(mat, n_neighbors) is not None
+    assert _ind_dist_shortcut(mat) is not None

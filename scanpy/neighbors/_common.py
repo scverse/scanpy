@@ -1,9 +1,12 @@
 from __future__ import annotations
 from math import dist
+from warnings import warn
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
+
+from scanpy._utils.compute.is_constant import is_constant
 
 
 def _has_self_column(
@@ -73,7 +76,7 @@ def _get_indices_distances_from_sparse_matrix(
 
     Makes sure the first column corresponds to the cell itself as nearest neighbor.
     """
-    if (shortcut := _ind_dist_shortcut(D, n_neighbors)) is not None:
+    if (shortcut := _ind_dist_shortcut(D)) is not None:
         indices, distances = shortcut
     else:
         indices, distances = _ind_dist_slow(D, n_neighbors)
@@ -82,6 +85,8 @@ def _get_indices_distances_from_sparse_matrix(
     if not _has_self_column(indices, distances):
         indices = np.hstack([np.arange(indices.shape[0])[:, None], indices])
         distances = np.hstack([np.zeros(distances.shape[0])[:, None], distances])
+    # restrict to n_neighbors if that didn’t happen yet ()
+    indices, distances = indices[:, :n_neighbors], distances[:, :n_neighbors]
 
     return indices, distances
 
@@ -112,24 +117,19 @@ def _ind_dist_slow(
 
 
 def _ind_dist_shortcut(
-    D: csr_matrix, n_neighbors: int
+    D: csr_matrix,
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]] | None:
-    """\
-    Shortcut for scipy or RAPIDS style distance matrices.
-
-    These have `n_neighbors` or `n_neighbors + 1` entries per row.
-    Therefore, this function will return matrices with either
-    `n_neighbors` or `n_neighbors + 1` columns.
-    """
-    n_obs = D.shape[0]  # shape is square
-    # Check if we have a compatible number of entries
-    if D.nnz == n_obs * (n_neighbors + 1):
-        n_neighbors += 1
-    elif D.nnz != n_obs * n_neighbors:
-        return None
+    """Shortcut for scipy or RAPIDS style distance matrices."""
     # Check if each row has the correct number of entries
-    if (D.getnnz(axis=1) != n_neighbors).any():
+    nnzs = D.getnnz(axis=1)
+    if not is_constant(nnzs):
+        msg = (
+            "Sparse matrix has no constant number of neighbors per row. "
+            "Cannot efficiently get indices and distances."
+        )
+        warn(msg, category=RuntimeWarning)
         return None
+    n_obs, n_neighbors = D.shape[0], int(nnzs[0])
     return (
         D.indices.reshape(n_obs, n_neighbors),
         D.data.reshape(n_obs, n_neighbors),
