@@ -10,6 +10,7 @@ from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Liter
 import numba
 import numpy as np
 import scipy as sp
+import time
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs, check_array
 from pandas.api.types import CategoricalDtype
@@ -565,6 +566,44 @@ def normalize_per_cell(
         else:
             sparsefuncs.inplace_row_scale(X, 1 / counts_per_cell)
     return X if copy else None
+
+
+@numba.njit(cache=True, parallel=True)
+def to_dense(shp, indptr, indices, data):
+    X = np.empty(shp, dtype=data.dtype)
+    for r in numba.prange(shp[0]):
+        X[r] = 0
+        for i in range(indptr[r], indptr[r + 1]):
+            X[r, indices[i]] = data[i]
+    return X
+
+
+def get_resid(X, A, coeff):
+    for i in numba.prange(X.shape[0]):
+        X[i] -= A[i] @ coeff
+
+
+def numpy_regress_out(adata: AnnData, regr) -> Optional[AnnData]:
+    start = time.time()
+    if issparse(adata.X):
+        adata.X = to_dense(adata.X.shape, adata.X.indptr, adata.X.indices, adata.X.data)
+    print("convert to dense done at", time.time() - start)
+    A = np.empty((adata.shape[0], len(regr) + 1), dtype=adata.X.dtype)
+    A[:, 0] = 1
+    for i, c in enumerate(regr):
+        A[:, i + 1] = adata.obs[c]
+    print("prep done at", time.time() - start)
+    tmp0 = A.T @ A
+    print(time.time() - start)
+    tmp = np.linalg.inv(tmp0)
+    print(time.time() - start)
+    tmp0 = A.T @ adata.X
+    print(time.time() - start)
+    coeff = tmp @ tmp0
+    # print (coeff)
+    print("regression done at", time.time() - start)
+    get_resid(adata.X, A, coeff)
+    print("residuals done at", time.time() - start)
 
 
 def regress_out(
