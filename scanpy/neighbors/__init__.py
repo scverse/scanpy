@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 from . import _connectivity
 from ._types import _Metric, _MetricFn, _Method, _KnownTransformer
 from ._common import (
+    _has_self_column,
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
@@ -558,9 +559,9 @@ class Neighbors:
         if shortcut:
             # self._distances is a sparse matrix with a diag of 1, fix that
             self._distances[np.diag_indices_from(self.distances)] = 0
-            if knn:  # remove too far away entries and keep as sparse
+            if knn:  # remove too far away entries in self._distances
                 self._distances = _get_sparse_matrix_from_indices_distances(
-                    knn_indices, knn_distances, self._adata.n_obs, n_neighbors
+                    knn_indices, knn_distances, keep_self=False
                 )
             else:  # convert to dense
                 self._distances = self._distances.toarray()
