@@ -559,9 +559,7 @@ class Neighbors:
         if shortcut:
             # self._distances is a sparse matrix with a diag of 1, fix that
             self._distances[np.diag_indices_from(self.distances)] = 0
-            if knn:  # remove too far away entries and keep as sparse
-                knn_indices = knn_indices[:, :n_neighbors]
-                knn_distances = knn_distances[:, :n_neighbors]
+            if knn:  # remove too far away entries in self._distances
                 self._distances = _get_sparse_matrix_from_indices_distances(
                     knn_indices, knn_distances, keep_self=False
                 )

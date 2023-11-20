@@ -74,7 +74,9 @@ def _get_indices_distances_from_sparse_matrix(
     """\
     Get indices and distances from a sparse matrix.
 
-    Makes sure the first column corresponds to the cell itself as nearest neighbor.
+    Makes sure that for both of the returned matrices:
+    1. the first column corresponds to the cell itself as nearest neighbor.
+    2. the number of neighbors (`.shape[1]`) is restricted to `n_neighbors`.
     """
     if (shortcut := _ind_dist_shortcut(D)) is not None:
         indices, distances = shortcut
@@ -85,8 +87,11 @@ def _get_indices_distances_from_sparse_matrix(
     if not _has_self_column(indices, distances):
         indices = np.hstack([np.arange(indices.shape[0])[:, None], indices])
         distances = np.hstack([np.zeros(distances.shape[0])[:, None], distances])
-    # restrict to n_neighbors if that didn’t happen yet ()
-    indices, distances = indices[:, :n_neighbors], distances[:, :n_neighbors]
+
+    # If using the shortcut or adding the self column resulted in too many neighbors,
+    # restrict the output matrices to the correct size
+    if indices.shape[1] > n_neighbors:
+        indices, distances = indices[:, :n_neighbors], distances[:, :n_neighbors]
 
     return indices, distances
 
