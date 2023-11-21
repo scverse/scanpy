@@ -2,14 +2,26 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+from __future__ import annotations
+
 from functools import singledispatch
 from numbers import Number
 import warnings
-from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Literal
+from typing import (
+    Union,
+    Optional,
+    Tuple,
+    Collection,
+    Sequence,
+    Iterable,
+    Literal,
+    NamedTuple,
+)
 
 import numba
 import numpy as np
 import scipy as sp
+import pandas as pd
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs, check_array
 from pandas.api.types import CategoricalDtype
@@ -567,12 +579,20 @@ def normalize_per_cell(
     return X if copy else None
 
 
+class RegressionTask(NamedTuple):
+    data_chunk: np.ndarray
+    regressors: np.ndarray | pd.DataFrame
+    variable_is_categorical: bool
+    add_intercept: bool
+
+
 def regress_out(
     adata: AnnData,
     keys: Union[str, Sequence[str]],
     layer: Optional[str] = None,
     n_jobs: Optional[int] = None,
     copy: bool = False,
+    add_intercept: bool = False,
 ) -> Optional[AnnData]:
     """\
     Regress out (mostly) unwanted sources of variation.
@@ -586,14 +606,16 @@ def regress_out(
     adata
         The annotated data matrix.
     keys
-        Keys for observation annotation on which to regress on.
+        Keys for observation annotation on which to regress.
     layer
-        If provided, which element of layers to regress on.
+        If provided, which element of layers to use in regression.
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
     copy
         Determines whether a copy of `adata` is returned.
+    add_intercept
+        If True, regress_out will add intercept back to residuals in order to transform results back into gene-count space. Defaults to False
 
     Returns
     -------
@@ -665,7 +687,9 @@ def regress_out(
             regres = regressors_chunk[idx]
         else:
             regres = regressors
-        tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
+        tasks.append(
+            RegressionTask(data_chunk, regres, variable_is_categorical, add_intercept)
+        )
 
     from joblib import Parallel, delayed
 
@@ -679,36 +703,43 @@ def regress_out(
     return adata if copy else None
 
 
-def _regress_out_chunk(data):
-    # data is a tuple containing the selected columns from adata.X
-    # and the regressors dataFrame
-    data_chunk = data[0]
-    regressors = data[1]
-    variable_is_categorical = data[2]
-
-    responses_chunk_list = []
+def _regress_out_chunk(task: RegressionTask):
     import statsmodels.api as sm
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
-    for col_index in range(data_chunk.shape[1]):
+    responses_chunk_list = []
+    for col_index in range(task.data_chunk.shape[1]):
         # if all values are identical, the statsmodel.api.GLM throws an error;
         # but then no regression is necessary anyways...
-        if not (data_chunk[:, col_index] != data_chunk[0, col_index]).any():
-            responses_chunk_list.append(data_chunk[:, col_index])
+        if not (task.data_chunk[:, col_index] != task.data_chunk[0, col_index]).any():
+            responses_chunk_list.append(task.data_chunk[:, col_index])
             continue
 
-        if variable_is_categorical:
-            regres = np.c_[np.ones(regressors.shape[0]), regressors[:, col_index]]
+        if task.variable_is_categorical:
+            regres = np.c_[
+                np.ones(task.regressors.shape[0]), task.regressors[:, col_index]
+            ]
         else:
-            regres = regressors
+            regres = task.regressors
         try:
-            result = sm.GLM(
-                data_chunk[:, col_index], regres, family=sm.families.Gaussian()
-            ).fit()
-            new_column = result.resid_response
+            if task.add_intercept:
+                # add constant to regres to get intercept in results
+                result = sm.GLM(
+                    task.data_chunk[:, col_index],
+                    sm.add_constant(regres),
+                    family=sm.families.Gaussian(),
+                ).fit()
+                # calculat result as resid + intercept
+                new_column = result.resid_response + result.params.iloc[0]
+            else:
+                # don't add intercept
+                result = sm.GLM(
+                    task.data_chunk[:, col_index], regres, family=sm.families.Gaussian()
+                ).fit()
+                new_column = result.resid_response
         except PerfectSeparationError:  # this emulates R's behavior
             logg.warning("Encountered PerfectSeparationError, setting to 0 as in R.")
-            new_column = np.zeros(data_chunk.shape[0])
+            new_column = np.zeros(task.data_chunk.shape[0])
 
         responses_chunk_list.append(new_column)
 
