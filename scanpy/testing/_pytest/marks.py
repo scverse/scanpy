@@ -2,8 +2,14 @@ from __future__ import annotations
 
 from enum import Enum, auto
 from importlib.util import find_spec
+import sys
 
 import pytest
+
+
+def _next_val(name: str, start: int, count: int, last_values: list[str]) -> str:
+    """Distribution name for matching modules"""
+    return name.replace("_", "-")
 
 
 class needs(pytest.MarkDecorator, Enum):
@@ -14,13 +20,11 @@ class needs(pytest.MarkDecorator, Enum):
     :func:`pytest.importorskip` skips tests after they started running.
     """
 
-    # _generate_next_value_ needs to come before members
-    @staticmethod
-    def _generate_next_value_(
-        name: str, start: int, count: int, last_values: list[str]
-    ) -> str:
-        """Distribution name for matching modules"""
-        return name.replace("_", "-")
+    # _generate_next_value_ needs to come before members, also it’s finnicky:
+    # https://github.com/python/mypy/issues/7591#issuecomment-652800625
+    _generate_next_value_ = (
+        staticmethod(_next_val) if sys.version_info >= (3, 10) else _next_val
+    )
 
     dask = auto()
     dask_ml = auto()
