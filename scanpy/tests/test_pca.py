@@ -54,7 +54,7 @@ A_svd = np.array(
 # If one uses dask for PCA it will always require dask-ml
 @pytest.fixture(
     params=[
-        param_with(at, marks=[needs("dask_ml")]) if "dask" in at.id else at
+        param_with(at, marks=[needs.dask_ml]) if "dask" in at.id else at
         for at in ARRAY_TYPES_SUPPORTED
     ]
 )

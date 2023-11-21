@@ -13,7 +13,7 @@ from scanpy.testing._helpers.data import paul15, pbmc3k
 from scanpy.testing._pytest.marks import needs
 
 
-pytestmark = [needs("scrublet")]
+pytestmark = [needs.scrublet]
 
 
 def test_scrublet():
