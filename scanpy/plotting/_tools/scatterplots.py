@@ -6,6 +6,7 @@ import collections.abc as cabc
 from copy import copy
 from numbers import Integral
 from itertools import combinations, product
+from functools import partial
 from typing import (
     Collection,
     Union,
@@ -21,15 +22,15 @@ from typing import (
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from numpy.typing import NDArray
+from pandas.api.types import CategoricalDtype
 from cycler import Cycler
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from pandas.api.types import CategoricalDtype
 from matplotlib import pyplot as pl, colors, colormaps
 from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import Colormap, Normalize
-from functools import partial
 
 from .. import _utils
 from .._utils import (
@@ -52,6 +53,7 @@ from .._docs import (
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
+from ...get import _check_mask
 
 
 @_doc_params(
@@ -65,6 +67,7 @@ def embedding(
     basis: str,
     *,
     color: Union[str, Sequence[str], None] = None,
+    mask: NDArray[np.bool_] | str | None = None,
     gene_symbols: Optional[str] = None,
     use_raw: Optional[bool] = None,
     sort_order: bool = True,
@@ -74,8 +77,8 @@ def embedding(
     neighbors_key: Optional[str] = None,
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
-    groups: Optional[str] = None,
-    components: Union[str, Sequence[str]] = None,
+    groups: str | Sequence[str] | None = None,
+    components: str | Sequence[str] | None = None,
     dimensions: Optional[Union[Tuple[int, int], Sequence[Tuple[int, int]]]] = None,
     layer: Optional[str] = None,
     projection: Literal["2d", "3d"] = "2d",
@@ -138,6 +141,12 @@ def embedding(
         components, dimensions, projection=projection, total_dims=basis_values.shape[1]
     )
     args_3d = dict(projection="3d") if projection == "3d" else {}
+
+    # Checking the mask format and if used together with groups
+    if groups is not None and mask is not None:
+        raise ValueError("Groups and mask arguments are incompatible.")
+    if mask is not None:
+        mask = _check_mask(adata, mask, "obs")
 
     # Figure out if we're using raw
     if use_raw is None:
@@ -265,6 +274,7 @@ def embedding(
             adata,
             value_to_plot,
             layer=layer,
+            mask=mask,
             use_raw=use_raw,
             gene_symbols=gene_symbols,
             groups=groups,
@@ -272,7 +282,7 @@ def embedding(
         color_vector, categorical = _color_vector(
             adata,
             value_to_plot,
-            color_source_vector,
+            values=color_source_vector,
             palette=palette,
             na_color=na_color,
         )
@@ -804,12 +814,10 @@ def draw_graph(
     """
     if layout is None:
         layout = str(adata.uns["draw_graph"]["params"]["layout"])
-    basis = "draw_graph_" + layout
-    if "X_" + basis not in adata.obsm_keys():
+    basis = f"draw_graph_{layout}"
+    if f"X_{basis}" not in adata.obsm_keys():
         raise ValueError(
-            "Did not find {} in adata.obs. Did you compute layout {}?".format(
-                "draw_graph_" + layout, layout
-            )
+            f"Did not find {basis} in adata.obs. Did you compute layout {layout}?"
         )
 
     return embedding(adata, basis, **kwargs)
@@ -1159,11 +1167,13 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
 
 def _get_color_source_vector(
     adata: AnnData,
-    value_to_plot,
-    use_raw=False,
-    gene_symbols=None,
-    layer=None,
-    groups=None,
+    value_to_plot: str,
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    use_raw: bool = False,
+    gene_symbols: str | None = None,
+    layer: str | None = None,
+    groups: Sequence[str] | None = None,
 ):
     """
     Get array from adata that colors will be based on.
@@ -1187,6 +1197,8 @@ def _get_color_source_vector(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
+    if mask is not None:
+        values[~mask] = np.nan
     if groups and isinstance(values, pd.Categorical):
         values = values.remove_categories(values.categories.difference(groups))
     return values
@@ -1213,9 +1225,10 @@ def _get_palette(adata, values_key: str, palette=None):
 def _color_vector(
     adata: AnnData,
     values_key: str,
+    *,
     values: np.ndarray | pd.api.extensions.ExtensionArray,
-    palette,
-    na_color="lightgray",
+    palette: str | Sequence[str] | Cycler | None,
+    na_color: ColorLike = "lightgray",
 ) -> Tuple[np.ndarray | pd.api.extensions.ExtensionArray, bool]:
     """
     Map array of values to array of hex (plus alpha) codes.

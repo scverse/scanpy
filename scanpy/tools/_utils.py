@@ -73,8 +73,8 @@ def _choose_representation(
             X = adata.X
         else:
             raise ValueError(
-                "Did not find {} in `.obsm.keys()`. "
-                "You need to compute it first.".format(use_rep)
+                f"Did not find {use_rep} in `.obsm.keys()`. "
+                "You need to compute it first."
             )
     settings.verbosity = verbosity  # resetting verbosity
     return X
