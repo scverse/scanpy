@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 from . import _connectivity
 from ._types import _Metric, _MetricFn, _Method, _KnownTransformer
 from ._common import (
+    _has_self_column,
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
@@ -146,16 +147,15 @@ def neighbors(
 
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following:
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    See `key_added` parameter description for the storage path of
-    connectivities and distances.
-
-    **connectivities** : sparse matrix of dtype `float32`.
+    `adata.obsp['distances' | key_added+'_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+        Distance matrix of the nearest neighbors search. Each row (cell) has `n_neighbors`-1 non-zero entries. These are the distances to their `n_neighbors`-1 nearest neighbors (excluding the cell itself).
+    `adata.obsp['connectivities' | key_added+'_connectivities']` : :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    **distances** : sparse matrix of dtype `float64`.
-        Stores the distance matrix of the nearest neighbors search.
+    `adata.uns['neighbors' | key_added]` : :class:`dict`
+        neighbors parameters.
 
     Examples
     --------
@@ -559,9 +559,9 @@ class Neighbors:
         if shortcut:
             # self._distances is a sparse matrix with a diag of 1, fix that
             self._distances[np.diag_indices_from(self.distances)] = 0
-            if knn:  # remove too far away entries and keep as sparse
+            if knn:  # remove too far away entries in self._distances
                 self._distances = _get_sparse_matrix_from_indices_distances(
-                    knn_indices, knn_distances, self._adata.n_obs, n_neighbors
+                    knn_indices, knn_distances, keep_self=False
                 )
             else:  # convert to dense
                 self._distances = self._distances.toarray()

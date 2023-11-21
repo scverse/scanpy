@@ -48,12 +48,13 @@ def diffmap(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `X_diffmap` : :class:`numpy.ndarray` (`adata.obsm`)
+    `adata.obsm['X_diffmap']` : :class:`numpy.ndarray` (dtype `float`)
         Diffusion map representation of data, which is the right eigen basis of
         the transition matrix with eigenvectors as columns.
-    `diffmap_evals` : :class:`numpy.ndarray` (`adata.uns`)
+
+    `adata.uns['diffmap_evals']` : :class:`numpy.ndarray` (dtype `float`)
         Array of size (number of eigen vectors).
         Eigenvalues of transition matrix.
 

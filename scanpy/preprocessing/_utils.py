@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 from typing import Literal
+
 import numpy as np
 import numba
+from numpy.typing import NDArray
 from scipy import sparse
 
 from .._utils import _SupportedArray, elem_mul
 
 
-def _get_mean_var(X: _SupportedArray, *, axis: Literal[0, 1] = 0) -> _SupportedArray:
+def _get_mean_var(
+    X: _SupportedArray, *, axis: Literal[0, 1] = 0
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     if isinstance(X, sparse.spmatrix):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
