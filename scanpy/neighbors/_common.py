@@ -1,31 +1,66 @@
 from __future__ import annotations
+from math import dist
+from warnings import warn
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
 
+from scanpy._utils.compute.is_constant import is_constant
+
+
+def _has_self_column(
+    indices: NDArray[np.int32 | np.int64],
+    distances: NDArray[np.float32 | np.float64],
+) -> bool:
+    return (distances[:, 0] == 0.0).all() and (
+        indices[:, 0] == np.arange(indices.shape[0])
+    ).all()
+
+
+def _remove_self_column(
+    indices: NDArray[np.int32 | np.int64],
+    distances: NDArray[np.float32 | np.float64],
+) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
+    if not _has_self_column(indices, distances):
+        msg = "The first neighbor should be the cell itself."
+        raise AssertionError(msg)
+    return indices[:, 1:], distances[:, 1:]
+
 
 def _get_sparse_matrix_from_indices_distances(
-    indices: NDArray[np.int32],
-    distances: NDArray[np.float32],
-    n_obs: int,
-    n_neighbors: int,
+    indices: NDArray[np.int32 | np.int64],
+    distances: NDArray[np.float32 | np.float64],
+    *,
+    keep_self: bool,
 ) -> csr_matrix:
-    n_nonzero = n_obs * n_neighbors
-    indptr = np.arange(0, n_nonzero + 1, n_neighbors)
-    D = csr_matrix(
+    """\
+    Create a sparse matrix from a pair of indices and distances.
+
+    If keep_self=False, it verifies that the first column is the cell itself,
+    then removes it from the explicitly stored zeroes.
+
+    Duplicates in the data are kept as explicitly stored zeroes.
+    """
+    # instead of calling .eliminate_zeros() on our sparse matrix,
+    # we manually handle the nearest neighbor being the cell itself.
+    # This allows us to use _ind_dist_shortcut even when the data has duplicates.
+    if not keep_self:
+        indices, distances = _remove_self_column(indices, distances)
+    indptr = np.arange(0, np.prod(indices.shape) + 1, indices.shape[1])
+    return csr_matrix(
         (
             distances.copy().ravel(),  # copy the data, otherwise strange behavior here
             indices.copy().ravel(),
             indptr,
         ),
-        shape=(n_obs, n_obs),
+        shape=(indices.shape[0],) * 2,
     )
-    D.eliminate_zeros()
-    return D
 
 
-def _get_indices_distances_from_dense_matrix(D: NDArray[np.float32], n_neighbors: int):
+def _get_indices_distances_from_dense_matrix(
+    D: NDArray[np.float32 | np.float64], n_neighbors: int
+):
     sample_range = np.arange(D.shape[0])[:, None]
     indices = np.argpartition(D, n_neighbors - 1, axis=1)[:, :n_neighbors]
     indices = indices[sample_range, np.argsort(D[sample_range, indices])]
@@ -35,10 +70,35 @@ def _get_indices_distances_from_dense_matrix(D: NDArray[np.float32], n_neighbors
 
 def _get_indices_distances_from_sparse_matrix(
     D: csr_matrix, n_neighbors: int
-) -> tuple[NDArray[np.int64], NDArray]:
-    if (shortcut := _ind_dist_shortcut(D, n_neighbors)) is not None:
-        return shortcut
+) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
+    """\
+    Get indices and distances from a sparse matrix.
 
+    Makes sure that for both of the returned matrices:
+    1. the first column corresponds to the cell itself as nearest neighbor.
+    2. the number of neighbors (`.shape[1]`) is restricted to `n_neighbors`.
+    """
+    if (shortcut := _ind_dist_shortcut(D)) is not None:
+        indices, distances = shortcut
+    else:
+        indices, distances = _ind_dist_slow(D, n_neighbors)
+
+    # handle RAPIDS style indices_distances lacking the self-column
+    if not _has_self_column(indices, distances):
+        indices = np.hstack([np.arange(indices.shape[0])[:, None], indices])
+        distances = np.hstack([np.zeros(distances.shape[0])[:, None], distances])
+
+    # If using the shortcut or adding the self column resulted in too many neighbors,
+    # restrict the output matrices to the correct size
+    if indices.shape[1] > n_neighbors:
+        indices, distances = indices[:, :n_neighbors], distances[:, :n_neighbors]
+
+    return indices, distances
+
+
+def _ind_dist_slow(
+    D: csr_matrix, n_neighbors: int
+) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
     indices = np.zeros((D.shape[0], n_neighbors), dtype=int)
     distances = np.zeros((D.shape[0], n_neighbors), dtype=D.dtype)
     n_neighbors_m1 = n_neighbors - 1
@@ -62,20 +122,20 @@ def _get_indices_distances_from_sparse_matrix(
 
 
 def _ind_dist_shortcut(
-    distances: csr_matrix, n_neighbors: int
-) -> tuple[NDArray[np.int_], NDArray[np.float_]] | None:
-    """\
-    Shortcut for RAPIDS-style distance matrices.
-
-    These have exactly `n_neighbors` entries per row.
-    """
-    n_obs = distances.shape[0]  # shape is square
-    if (
-        distances.nnz != (n_obs * n_neighbors)
-        or (distances.getnnz(axis=1) != n_neighbors).any()
-    ):
+    D: csr_matrix,
+) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]] | None:
+    """Shortcut for scipy or RAPIDS style distance matrices."""
+    # Check if each row has the correct number of entries
+    nnzs = D.getnnz(axis=1)
+    if not is_constant(nnzs):
+        msg = (
+            "Sparse matrix has no constant number of neighbors per row. "
+            "Cannot efficiently get indices and distances."
+        )
+        warn(msg, category=RuntimeWarning)
         return None
+    n_obs, n_neighbors = D.shape[0], int(nnzs[0])
     return (
-        distances.indices.reshape(n_obs, n_neighbors),
-        distances.data.reshape(n_obs, n_neighbors),
+        D.indices.reshape(n_obs, n_neighbors),
+        D.data.reshape(n_obs, n_neighbors),
     )

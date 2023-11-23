@@ -6,7 +6,7 @@ from scanpy.testing._helpers.data import pbmc3k
 from scanpy.testing._pytest.marks import needs
 
 
-pytestmark = [needs("samalg")]
+pytestmark = [needs.samalg]
 
 
 def test_sam():

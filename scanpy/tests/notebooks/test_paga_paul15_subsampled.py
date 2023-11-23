@@ -20,8 +20,8 @@ HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images_paga_paul15_subsampled"
 
 
-@needs("igraph")
-@needs("louvain")
+@needs.igraph
+@needs.louvain
 def test_paga_paul15_subsampled(image_comparer, plt):
     save_and_compare_images = partial(image_comparer, ROOT, tol=25)
 

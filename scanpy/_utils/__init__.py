@@ -34,6 +34,9 @@ from .compute.is_constant import is_constant  # noqa: F401
 class Empty(Enum):
     token = 0
 
+    def __repr__(self) -> str:
+        return "_empty"
+
 
 _empty = Empty.token
 

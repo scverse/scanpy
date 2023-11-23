@@ -1,8 +1,10 @@
+from typing import Literal
 import warnings
 
 import numpy as np
 import pytest
 from anndata import AnnData
+from pytest_mock import MockerFixture
 from scipy.sparse import csr_matrix, issparse
 from sklearn.neighbors import KNeighborsTransformer
 
@@ -116,7 +118,9 @@ def neigh() -> Neighbors:
 
 
 @pytest.mark.parametrize("method", ["umap", "gauss"])
-def test_distances_euclidean(mocker, neigh, method):
+def test_distances_euclidean(
+    mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss"]
+):
     """umap and gauss behave the same for distances.
 
     They call pynndescent for large data.
@@ -153,26 +157,31 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
     np.testing.assert_allclose(dists, distances_euclidean_all)
 
 
-def test_umap_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(n_neighbors, method="umap")
-    np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_umap)
+@pytest.mark.parametrize(
+    ("method", "conn", "trans", "trans_sym"),
+    [
+        pytest.param(
+            "umap",
+            connectivities_umap,
+            transitions_umap,
+            transitions_sym_umap,
+            id="umap",
+        ),
+        pytest.param(
+            "gauss",
+            connectivities_gauss_knn,
+            transitions_gauss_knn,
+            transitions_sym_gauss_knn,
+            id="gauss",
+        ),
+    ],
+)
+def test_connectivities_euclidean(neigh: Neighbors, method, conn, trans, trans_sym):
+    neigh.compute_neighbors(n_neighbors, method=method)
+    np.testing.assert_allclose(neigh.connectivities.toarray(), conn)
     neigh.compute_transitions()
-    np.testing.assert_allclose(
-        neigh.transitions_sym.toarray(), transitions_sym_umap, rtol=1e-5
-    )
-    np.testing.assert_allclose(neigh.transitions.toarray(), transitions_umap, rtol=1e-5)
-
-
-def test_gauss_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(n_neighbors, method="gauss")
-    np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_gauss_knn)
-    neigh.compute_transitions()
-    np.testing.assert_allclose(
-        neigh.transitions_sym.toarray(), transitions_sym_gauss_knn, rtol=1e-5
-    )
-    np.testing.assert_allclose(
-        neigh.transitions.toarray(), transitions_gauss_knn, rtol=1e-5
-    )
+    np.testing.assert_allclose(neigh.transitions_sym.toarray(), trans_sym, rtol=1e-5)
+    np.testing.assert_allclose(neigh.transitions.toarray(), trans, rtol=1e-5)
 
 
 def test_gauss_noknn_connectivities_euclidean(neigh):

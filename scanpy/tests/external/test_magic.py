@@ -5,7 +5,7 @@ import scanpy as sc
 from scanpy.testing._pytest.marks import needs
 
 
-pytestmark = [needs("magic")]
+pytestmark = [needs.magic]
 
 A_list = [
     [0, 0, 7, 0, 0],

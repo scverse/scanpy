@@ -91,10 +91,12 @@ def ingest(
 
     Returns
     -------
-    * if `inplace=False` returns a copy of `adata`
-      with mapped embeddings and labels in `obsm` and `obs` correspondingly
-    * if `inplace=True` returns `None` and updates `adata.obsm` and `adata.obs`
-      with mapped embeddings and labels
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+
+    `adata.obs[obs]` : :class:`pandas.Series` (dtype ``category``)
+        Mapped labels.
+    `adata.obsm['X_umap' | 'X_pca']` : :class:`numpy.ndarray` (dtype ``float``)
+        Mapped embeddings. `'X_umap'` if `embedding_method` is `'umap'`, `'X_pca'` if `embedding_method` is `'pca'`.
 
     Example
     -------
@@ -379,11 +381,13 @@ class Ingest:
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
         self._pca_use_hvg = adata.uns["pca"]["params"]["use_highly_variable"]
 
-        if self._pca_use_hvg and "highly_variable" not in adata.var.keys():
-            raise ValueError("Did not find adata.var['highly_variable'].")
+        mask = "highly_variable"
+        if self._pca_use_hvg and mask not in adata.var.keys():
+            msg = f"Did not find `adata.var[{mask!r}']`."
+            raise ValueError(msg)
 
         if self._pca_use_hvg:
-            self._pca_basis = adata.varm["PCs"][adata.var["highly_variable"]]
+            self._pca_basis = adata.varm["PCs"][adata.var[mask]]
         else:
             self._pca_basis = adata.varm["PCs"]
 

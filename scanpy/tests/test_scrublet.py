@@ -11,7 +11,7 @@ import scipy.sparse as sparse
 from scanpy.testing._helpers.data import paul15, pbmc3k
 from scanpy.testing._pytest.marks import needs
 
-pytestmark = [needs("skimage")]
+pytestmark = [needs.skimage]
 
 
 def test_scrublet():

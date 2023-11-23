@@ -7,7 +7,7 @@ import scanpy.external as sce
 from scanpy.testing._pytest.marks import needs
 
 
-pytestmark = [needs("phenograph")]
+pytestmark = [needs.phenograph]
 
 
 def test_phenograph():

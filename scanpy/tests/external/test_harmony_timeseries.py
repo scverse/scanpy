@@ -8,7 +8,7 @@ from scanpy.testing._helpers.data import pbmc3k
 from scanpy.testing._pytest.marks import needs
 
 
-pytestmark = [needs("harmony")]
+pytestmark = [needs.harmony]
 
 
 def test_load_timepoints_from_anndata_list():
