@@ -1311,7 +1311,7 @@ def embedding_density(
     norm: Normalize | None = None,
     ncols: int | None = 4,
     hspace: float | None = 0.25,
-    wspace: None | None = None,
+    wspace: None = None,
     title: str | None = None,
     show: bool | None = None,
     save: bool | str | None = None,
