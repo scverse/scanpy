@@ -549,4 +549,4 @@ def test_highly_variable_genes_subset_inplace_consistency(
     )
 
     assert (output_df is None) == inplace
-    assert len(adata.var if inplace else output_df) == 10 if subset else n_genes
+    assert len(adata.var if inplace else output_df) == (10 if subset else n_genes)
