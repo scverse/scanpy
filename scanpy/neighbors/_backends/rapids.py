@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Literal
-from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
-from numpy.typing import ArrayLike
-from scipy.sparse import csr_matrix
 from sklearn.base import BaseEstimator, TransformerMixin, check_is_fitted
 from sklearn.exceptions import NotFittedError
 
 from ..._settings import settings
 from ._common import TransformerChecksMixin
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from numpy.typing import ArrayLike
+    from scipy.sparse import csr_matrix
 
 _Algorithm = Literal["rbc", "brute", "ivfflat", "ivfpq"]
 _Metric = Literal[

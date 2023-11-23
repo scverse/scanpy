@@ -1,25 +1,26 @@
 from __future__ import annotations
 
-from typing import Any
-from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
-import pytest
 import numpy as np
+import pytest
 from anndata import AnnData
-from scipy.sparse import csr_matrix
-from scipy import sparse
 from anndata.tests.helpers import assert_equal
+from scipy import sparse
+from scipy.sparse import csr_matrix
 
 import scanpy as sc
 from scanpy.testing._helpers import (
+    _check_check_values_warnings,
     check_rep_mutation,
     check_rep_results,
-    _check_check_values_warnings,
 )
 
 # TODO: Add support for sparse-in-dask
 from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])

@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from pathlib import Path
 
-import pytest
-import pandas as pd
 import numpy as np
-import scanpy as sc
+import pandas as pd
+import pytest
 
+import scanpy as sc
 from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs

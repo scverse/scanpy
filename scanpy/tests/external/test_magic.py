@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 from anndata import AnnData
 
 import scanpy as sc
 from scanpy.testing._pytest.marks import needs
-
 
 pytestmark = [needs.magic]
 

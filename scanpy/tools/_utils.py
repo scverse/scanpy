@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
-from scipy.sparse import csr_matrix
-from anndata import AnnData
 
 from .. import logging as logg
-from ._pca import pca
 from .._settings import settings
 from .._utils import _choose_graph
+from ._pca import pca
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+    from scipy.sparse import csr_matrix
 
 doc_use_rep = """\
 use_rep
@@ -80,7 +82,7 @@ def _choose_representation(
     return X
 
 
-def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
+def preprocess_with_pca(adata, n_pcs: int | None = None, random_state=0):
     """
     Parameters
     ----------

@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def rename_groups(
     adata, key_added, restrict_key, restrict_categories, restrict_indices, groups
 ):
@@ -16,9 +19,7 @@ def restrict_adjacency(adata, restrict_key, restrict_categories, adjacency):
         )
     for c in restrict_categories:
         if c not in adata.obs[restrict_key].cat.categories:
-            raise ValueError(
-                "'{}' is not a valid category for '{}'".format(c, restrict_key)
-            )
+            raise ValueError(f"'{c}' is not a valid category for '{restrict_key}'")
     restrict_indices = adata.obs[restrict_key].isin(restrict_categories).values
     adjacency = adjacency[restrict_indices, :]
     adjacency = adjacency[:, restrict_indices]

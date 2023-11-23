@@ -1,15 +1,20 @@
-from typing import Optional, Tuple, Sequence, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from natsort import natsorted
-from anndata import AnnData
-from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-
 from ._utils_clustering import rename_groups, restrict_adjacency
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
+    from scipy import sparse
 
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
@@ -25,19 +30,19 @@ def leiden(
     adata: AnnData,
     resolution: float = 1,
     *,
-    restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
+    restrict_to: tuple[str, Sequence[str]] | None = None,
     random_state: _utils.AnyRandom = 0,
     key_added: str = "leiden",
-    adjacency: Optional[sparse.spmatrix] = None,
+    adjacency: sparse.spmatrix | None = None,
     directed: bool = True,
     use_weights: bool = True,
     n_iterations: int = -1,
-    partition_type: Optional[Type[MutableVertexPartition]] = None,
-    neighbors_key: Optional[str] = None,
-    obsp: Optional[str] = None,
+    partition_type: type[MutableVertexPartition] | None = None,
+    neighbors_key: str | None = None,
+    obsp: str | None = None,
     copy: bool = False,
     **partition_kwargs,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Cluster cells into subgroups [Traag18]_.
 

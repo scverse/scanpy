@@ -1,13 +1,20 @@
+from __future__ import annotations
+
+import sys
 from contextlib import redirect_stdout
 from datetime import datetime
 from io import StringIO
-from pathlib import Path
-import sys
+from typing import TYPE_CHECKING
 
 import pytest
 
-from scanpy import Verbosity, settings as s, logging as log
 import scanpy as sc
+from scanpy import Verbosity
+from scanpy import logging as log
+from scanpy import settings as s
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_defaults():

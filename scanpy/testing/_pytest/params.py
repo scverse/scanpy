@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Literal
 
 import pytest
+from anndata.tests.helpers import as_dense_dask_array, as_sparse_dask_array, asarray
 from scipy import sparse
-from anndata.tests.helpers import asarray, as_dense_dask_array, as_sparse_dask_array
 
 from .._pytest.marks import needs
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from _pytest.mark.structures import ParameterSet
 
 

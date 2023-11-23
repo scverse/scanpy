@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 from itertools import product
 
 import numpy as np
 import pandas as pd
-from scipy import sparse as sp
-import scanpy as sc
-from numpy.testing import assert_allclose
 import pytest
 from anndata import AnnData
-from anndata.tests.helpers import assert_equal, asarray
+from anndata.tests.helpers import asarray, assert_equal
+from numpy.testing import assert_allclose
+from scipy import sparse as sp
 
+import scanpy as sc
 from scanpy.testing._helpers import check_rep_mutation, check_rep_results
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
@@ -251,8 +253,8 @@ def test_regress_out_view():
 
 
 def test_regress_out_categorical():
-    from scipy.sparse import random
     import pandas as pd
+    from scipy.sparse import random
 
     adata = AnnData(random(1000, 100, density=0.6, format="csr"))
     # create a categorical column

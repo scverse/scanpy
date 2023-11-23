@@ -4,30 +4,28 @@ Compositions of these functions are found in sc.preprocess.recipes.
 """
 from __future__ import annotations
 
-from functools import singledispatch
-from numbers import Number
 import warnings
-from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Literal
+from functools import singledispatch
+from typing import TYPE_CHECKING, Literal
 
 import numba
 import numpy as np
 import scipy as sp
-from numpy.typing import NDArray
-from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
-from sklearn.utils import sparsefuncs, check_array
-from pandas.api.types import CategoricalDtype
 from anndata import AnnData
+from pandas.api.types import CategoricalDtype
+from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
+from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
 from .._settings import settings as sett
 from .._utils import (
-    sanitize_anndata,
-    deprecated_arg_names,
-    view_to_actual,
     AnyRandom,
     _check_array_function_arguments,
+    deprecated_arg_names,
+    sanitize_anndata,
+    view_to_actual,
 )
-from ..get import _get_obs_rep, _set_obs_rep, _check_mask
+from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 
@@ -40,16 +38,22 @@ except ImportError:
 # backwards compat
 from ._deprecated.highly_variable_genes import filter_genes_dispersion
 
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Sequence
+    from numbers import Number
+
+    from numpy.typing import NDArray
+
 
 def filter_cells(
     data: AnnData,
-    min_counts: Optional[int] = None,
-    min_genes: Optional[int] = None,
-    max_counts: Optional[int] = None,
-    max_genes: Optional[int] = None,
+    min_counts: int | None = None,
+    min_genes: int | None = None,
+    max_counts: int | None = None,
+    max_genes: int | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray] | None:
     """\
     Filter cell outliers based on counts and numbers of genes expressed.
 
@@ -177,13 +181,13 @@ def filter_cells(
 
 def filter_genes(
     data: AnnData,
-    min_counts: Optional[int] = None,
-    min_cells: Optional[int] = None,
-    max_counts: Optional[int] = None,
-    max_cells: Optional[int] = None,
+    min_counts: int | None = None,
+    min_cells: int | None = None,
+    max_counts: int | None = None,
+    max_cells: int | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> Union[AnnData, None, Tuple[np.ndarray, np.ndarray]]:
+) -> AnnData | None | tuple[np.ndarray, np.ndarray]:
     """\
     Filter genes based on number of cells or counts.
 
@@ -285,14 +289,14 @@ def filter_genes(
 
 @singledispatch
 def log1p(
-    X: Union[AnnData, np.ndarray, spmatrix],
+    X: AnnData | np.ndarray | spmatrix,
     *,
-    base: Optional[Number] = None,
+    base: Number | None = None,
     copy: bool = False,
     chunked: bool = None,
-    chunk_size: Optional[int] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
+    chunk_size: int | None = None,
+    layer: str | None = None,
+    obsm: str | None = None,
 ):
     """\
     Logarithmize the data matrix.
@@ -331,7 +335,7 @@ def log1p(
 
 
 @log1p.register(spmatrix)
-def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
+def log1p_sparse(X, *, base: Number | None = None, copy: bool = False):
     X = check_array(
         X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
@@ -340,7 +344,7 @@ def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
 
 
 @log1p.register(np.ndarray)
-def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
+def log1p_array(X, *, base: Number | None = None, copy: bool = False):
     # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
@@ -360,13 +364,13 @@ def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
 def log1p_anndata(
     adata,
     *,
-    base: Optional[Number] = None,
+    base: Number | None = None,
     copy: bool = False,
     chunked: bool = False,
-    chunk_size: Optional[int] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-) -> Optional[AnnData]:
+    chunk_size: int | None = None,
+    layer: str | None = None,
+    obsm: str | None = None,
+) -> AnnData | None:
     if "log1p" in adata.uns_keys():
         logg.warning("adata.X seems to be already log-transformed.")
 
@@ -394,8 +398,8 @@ def sqrt(
     data: AnnData,
     copy: bool = False,
     chunked: bool = False,
-    chunk_size: Optional[int] = None,
-) -> Optional[AnnData]:
+    chunk_size: int | None = None,
+) -> AnnData | None:
     """\
     Square root the data matrix.
 
@@ -435,15 +439,15 @@ def sqrt(
 
 
 def normalize_per_cell(
-    data: Union[AnnData, np.ndarray, spmatrix],
-    counts_per_cell_after: Optional[float] = None,
-    counts_per_cell: Optional[np.ndarray] = None,
+    data: AnnData | np.ndarray | spmatrix,
+    counts_per_cell_after: float | None = None,
+    counts_per_cell: np.ndarray | None = None,
     key_n_counts: str = "n_counts",
     copy: bool = False,
-    layers: Union[Literal["all"], Iterable[str]] = (),
-    use_rep: Optional[Literal["after", "X"]] = None,
+    layers: Literal["all"] | Iterable[str] = (),
+    use_rep: Literal["after", "X"] | None = None,
     min_counts: int = 1,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Normalize total counts per cell.
 
@@ -572,11 +576,11 @@ def normalize_per_cell(
 
 def regress_out(
     adata: AnnData,
-    keys: Union[str, Sequence[str]],
-    layer: Optional[str] = None,
-    n_jobs: Optional[int] = None,
+    keys: str | Sequence[str],
+    layer: str | None = None,
+    n_jobs: int | None = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Regress out (mostly) unwanted sources of variation.
 
@@ -903,12 +907,12 @@ def scale_anndata(
 
 
 def subsample(
-    data: Union[AnnData, np.ndarray, spmatrix],
-    fraction: Optional[float] = None,
-    n_obs: Optional[int] = None,
+    data: AnnData | np.ndarray | spmatrix,
+    fraction: float | None = None,
+    n_obs: int | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Subsample to a fraction of the number of observations.
 
@@ -966,13 +970,13 @@ def subsample(
 @deprecated_arg_names({"target_counts": "counts_per_cell"})
 def downsample_counts(
     adata: AnnData,
-    counts_per_cell: Optional[Union[int, Collection[int]]] = None,
-    total_counts: Optional[int] = None,
+    counts_per_cell: int | Collection[int] | None = None,
+    total_counts: int | None = None,
     *,
     random_state: AnyRandom = 0,
     replace: bool = False,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Downsample counts from count matrix.
 

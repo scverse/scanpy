@@ -1,16 +1,21 @@
-from typing import Optional, Union, Iterable, Dict, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 from warnings import warn
 
 import numpy as np
-from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
-
 from .. import logging as logg
+from .._compat import DaskArray
 from .._utils import view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
-from .._compat import DaskArray
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from anndata import AnnData
 
 
 def _normalize_data(X, counts, after=None, copy=False):
@@ -36,16 +41,16 @@ def _normalize_data(X, counts, after=None, copy=False):
 
 def normalize_total(
     adata: AnnData,
-    target_sum: Optional[float] = None,
+    target_sum: float | None = None,
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
-    key_added: Optional[str] = None,
-    layer: Optional[str] = None,
-    layers: Union[Literal["all"], Iterable[str]] = None,
-    layer_norm: Optional[str] = None,
+    key_added: str | None = None,
+    layer: str | None = None,
+    layers: Literal["all"] | Iterable[str] = None,
+    layer_norm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> Optional[Dict[str, np.ndarray]]:
+) -> dict[str, np.ndarray] | None:
     """\
     Normalize counts per cell.
 

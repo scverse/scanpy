@@ -1,16 +1,18 @@
-from urllib.request import urlopen
-from urllib.error import HTTPError
-from zipfile import ZipFile
+from __future__ import annotations
+
 from typing import BinaryIO
+from urllib.error import HTTPError
+from urllib.request import urlopen
+from zipfile import ZipFile
 
 import anndata
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy import sparse
 
-from ..readwrite import _download
-from .._settings import settings
 from .. import logging as logg
+from .._settings import settings
+from ..readwrite import _download
 from ._utils import check_datasetdir_exists
 
 

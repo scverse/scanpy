@@ -1,22 +1,27 @@
 """\
 Perform clustering using PhenoGraph
 """
-from typing import Union, Tuple, Optional, Type, Any, Literal
+from __future__ import annotations
 
-import numpy as np
+from typing import TYPE_CHECKING, Any, Literal
+
 import pandas as pd
 from anndata import AnnData
-from scipy.sparse import spmatrix
 
 from ... import logging as logg
-from ...tools._leiden import MutableVertexPartition
 from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    import numpy as np
+    from scipy.sparse import spmatrix
+
+    from ...tools._leiden import MutableVertexPartition
 
 
 @doctest_needs("phenograph")
 def phenograph(
-    adata: Union[AnnData, np.ndarray, spmatrix],
-    clustering_algo: Optional[Literal["louvain", "leiden"]] = "louvain",
+    adata: AnnData | np.ndarray | spmatrix,
+    clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
     k: int = 30,
     directed: bool = False,
     prune: bool = False,
@@ -32,14 +37,14 @@ def phenograph(
     q_tol: float = 1e-3,
     louvain_time_limit: int = 2000,
     nn_method: Literal["kdtree", "brute"] = "kdtree",
-    partition_type: Optional[Type[MutableVertexPartition]] = None,
+    partition_type: type[MutableVertexPartition] | None = None,
     resolution_parameter: float = 1,
     n_iterations: int = -1,
     use_weights: bool = True,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     copy: bool = False,
     **kargs: Any,
-) -> Tuple[Optional[np.ndarray], spmatrix, Optional[float]]:
+) -> tuple[np.ndarray | None, spmatrix, float | None]:
     """\
     PhenoGraph clustering [Levine15]_.
 
@@ -211,9 +216,7 @@ def phenograph(
         copy = True
 
     comm_key = (
-        "pheno_{}".format(clustering_algo)
-        if clustering_algo in ["louvain", "leiden"]
-        else ""
+        f"pheno_{clustering_algo}" if clustering_algo in ["louvain", "leiden"] else ""
     )
     ig_key = "pheno_{}_ig".format("jaccard" if jaccard else "gaussian")
     q_key = "pheno_{}_q".format("jaccard" if jaccard else "gaussian")

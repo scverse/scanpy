@@ -1,11 +1,16 @@
 """
 Use harmony to integrate cells from different experiments.
 """
+from __future__ import annotations
 
-from anndata import AnnData
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 @doctest_needs("harmonypy")

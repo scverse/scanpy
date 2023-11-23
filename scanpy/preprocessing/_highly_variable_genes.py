@@ -1,29 +1,31 @@
+from __future__ import annotations
+
 import warnings
-from typing import Optional, Literal
+from typing import Literal, Optional
+
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
 from anndata import AnnData
 
-
 from .. import logging as logg
-from .._settings import settings, Verbosity
-from .._utils import sanitize_anndata, check_nonnegative_integers
-from ._utils import _get_mean_var
+from .._settings import Verbosity, settings
+from .._utils import check_nonnegative_integers, sanitize_anndata
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
+from ._utils import _get_mean_var
 
 
 def _highly_variable_genes_seurat_v3(
     adata: AnnData,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     n_top_genes: int = 2000,
-    batch_key: Optional[str] = None,
+    batch_key: str | None = None,
     check_values: bool = True,
     span: float = 0.3,
     subset: bool = False,
     inplace: bool = True,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """\
     See `highly_variable_genes`.
 
@@ -175,12 +177,12 @@ def _highly_variable_genes_seurat_v3(
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
-    layer: Optional[str] = None,
-    min_disp: Optional[float] = 0.5,
-    max_disp: Optional[float] = np.inf,
-    min_mean: Optional[float] = 0.0125,
-    max_mean: Optional[float] = 3,
-    n_top_genes: Optional[int] = None,
+    layer: str | None = None,
+    min_disp: float | None = 0.5,
+    max_disp: float | None = np.inf,
+    min_mean: float | None = 0.0125,
+    max_mean: float | None = 3,
+    n_top_genes: int | None = None,
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
 ) -> pd.DataFrame:
@@ -298,20 +300,20 @@ def _highly_variable_genes_single_batch(
 
 def highly_variable_genes(
     adata: AnnData,
-    layer: Optional[str] = None,
-    n_top_genes: Optional[int] = None,
-    min_disp: Optional[float] = 0.5,
-    max_disp: Optional[float] = np.inf,
-    min_mean: Optional[float] = 0.0125,
-    max_mean: Optional[float] = 3,
-    span: Optional[float] = 0.3,
+    layer: str | None = None,
+    n_top_genes: int | None = None,
+    min_disp: float | None = 0.5,
+    max_disp: float | None = np.inf,
+    min_mean: float | None = 0.0125,
+    max_mean: float | None = 3,
+    span: float | None = 0.3,
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger", "seurat_v3"] = "seurat",
     subset: bool = False,
     inplace: bool = True,
-    batch_key: Optional[str] = None,
+    batch_key: str | None = None,
     check_values: bool = True,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
 

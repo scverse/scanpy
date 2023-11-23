@@ -3,21 +3,23 @@
 from __future__ import annotations
 
 from math import floor
-from typing import Literal, get_args
-from collections.abc import Generator, Iterable
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 import pandas as pd
-from numpy.typing import NDArray
-from anndata import AnnData
 from scipy.sparse import issparse, vstack
 
 from .. import _utils
 from .. import logging as logg
-from ..preprocessing._simple import _get_mean_var
-from ..get import _check_mask
 from .._utils import check_nonnegative_integers
+from ..get import _check_mask
+from ..preprocessing._simple import _get_mean_var
 
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
+
+    from anndata import AnnData
+    from numpy.typing import NDArray
 
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]

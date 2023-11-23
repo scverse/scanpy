@@ -1,13 +1,15 @@
-import numpy as np
-import scanpy as sc
-from anndata import AnnData
-from scipy.sparse import csr_matrix
-import pytest
+from __future__ import annotations
+
 import pickle
 from pathlib import Path
 
-from scanpy.testing._helpers.data import paul15
+import numpy as np
+import pytest
+from anndata import AnnData
+from scipy.sparse import csr_matrix
 
+import scanpy as sc
+from scanpy.testing._helpers.data import paul15
 
 HERE = Path(__file__).parent / Path("_data/")
 

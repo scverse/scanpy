@@ -14,9 +14,12 @@ except ImportError:  # Python < 3.9
         return lru_cache(maxsize=None)(func)
 
 
-from anndata import AnnData
+from typing import TYPE_CHECKING
+
 import scanpy as sc
 
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 # Functions returning the same objects (easy to misuse)
 

@@ -1,7 +1,12 @@
-import re
+from __future__ import annotations
 
-from sphinx.application import Sphinx
+import re
+from typing import TYPE_CHECKING
+
 from sphinx.ext.napoleon import NumpyDocstring
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 
 def process_return(lines):

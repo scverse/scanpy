@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from anndata import AnnData
@@ -5,7 +7,6 @@ from anndata import AnnData
 import scanpy as sc
 import scanpy.external as sce
 from scanpy.testing._pytest.marks import needs
-
 
 pytestmark = [needs.phenograph]
 

@@ -1,17 +1,24 @@
-from types import MappingProxyType
-from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Literal
+from __future__ import annotations
+
 import warnings
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from natsort import natsorted
-from scipy.sparse import spmatrix
 from packaging import version
 
-from ._utils_clustering import rename_groups, restrict_adjacency
-from .. import _utils, logging as logg
+from .. import _utils
+from .. import logging as logg
 from .._utils import _choose_graph
+from ._utils_clustering import rename_groups, restrict_adjacency
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
+    from anndata import AnnData
+    from scipy.sparse import spmatrix
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -25,20 +32,20 @@ except ImportError:
 
 def louvain(
     adata: AnnData,
-    resolution: Optional[float] = None,
+    resolution: float | None = None,
     random_state: _utils.AnyRandom = 0,
-    restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
+    restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
-    adjacency: Optional[spmatrix] = None,
+    adjacency: spmatrix | None = None,
     flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
-    partition_type: Optional[Type[MutableVertexPartition]] = None,
+    partition_type: type[MutableVertexPartition] | None = None,
     partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
-    neighbors_key: Optional[str] = None,
-    obsp: Optional[str] = None,
+    neighbors_key: str | None = None,
+    obsp: str | None = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
@@ -207,8 +214,8 @@ def louvain(
         )
     elif flavor == "taynaud":
         # this is deprecated
-        import networkx as nx
         import community
+        import networkx as nx
 
         g = nx.Graph(adjacency)
         partition = community.best_partition(g)

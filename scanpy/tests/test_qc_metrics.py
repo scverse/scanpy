@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -6,10 +8,10 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.preprocessing._qc import (
+    describe_obs,
+    describe_var,
     top_proportions,
     top_segment_proportions,
-    describe_var,
-    describe_obs,
 )
 
 

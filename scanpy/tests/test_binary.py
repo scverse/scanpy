@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 import os
 import re
 from pathlib import Path
 from subprocess import PIPE
-from typing import List
+from typing import TYPE_CHECKING
 
 import pytest
-from _pytest.capture import CaptureFixture
-from _pytest.monkeypatch import MonkeyPatch
 
 import scanpy
 from scanpy.cli import main
 
+if TYPE_CHECKING:
+    from _pytest.capture import CaptureFixture
+    from _pytest.monkeypatch import MonkeyPatch
 
 HERE = Path(__file__).parent
 
@@ -27,7 +30,7 @@ def test_builtin_settings(capsys: CaptureFixture):
 
 
 @pytest.mark.parametrize("args", [[], ["-h"]])
-def test_help_displayed(args: List[str], capsys: CaptureFixture):
+def test_help_displayed(args: list[str], capsys: CaptureFixture):
     try:  # -h raises it, no args doesn’t. Maybe not ideal but meh.
         main(args)
     except SystemExit as se:

@@ -2,19 +2,20 @@
 # Hematopoiesis: trace myeloid and erythroid differentiation for data of [Paul *et al.* (2015)](https://doi.org/10.1016/j.cell.2015.11.013).
 #
 # This is the subsampled notebook for testing.
+from __future__ import annotations
+
 from functools import partial
 from pathlib import Path
 
 import numpy as np
-from matplotlib.testing import setup
 import pytest
+from matplotlib.testing import setup
 
 setup()
 
 import scanpy as sc
-from scanpy.testing._pytest.marks import needs
 from scanpy.testing._helpers.data import paul15
-
+from scanpy.testing._pytest.marks import needs
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images_paga_paul15_subsampled"
@@ -140,7 +141,7 @@ def test_paga_paul15_subsampled(image_comparer, plt):
             show_colorbar=False,
             color_map="Greys",
             color_maps_annotations={"distance": "viridis"},
-            title="{} path".format(descr),
+            title=f"{descr} path",
             return_data=True,
             show=False,
         )

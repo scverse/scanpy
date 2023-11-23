@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 class TransformerChecksMixin:
     def _transform_checks(self, X, *fitted_props, **check_params):
         from sklearn.utils.validation import check_is_fitted

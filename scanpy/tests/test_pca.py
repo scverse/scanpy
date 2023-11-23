@@ -1,13 +1,16 @@
+from __future__ import annotations
+
+import warnings
 from typing import Literal
+
 import numpy as np
 import pytest
-import warnings
 from anndata import AnnData
 from anndata.tests.helpers import (
     as_dense_dask_array,
     as_sparse_dask_array,
-    assert_equal,
     asarray,
+    assert_equal,
 )
 from scipy import sparse
 from sklearn.utils import issparse

@@ -1,5 +1,6 @@
 """Shared docstrings for experimental function parameters.
 """
+from __future__ import annotations
 
 doc_adata = """\
 adata
