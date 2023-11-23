@@ -18,7 +18,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from anndata import AnnData
-from matplotlib.axes import Axes
 from matplotlib.testing.compare import compare_images
 
 import scanpy as sc

@@ -8,7 +8,6 @@ from functools import partial
 from pathlib import Path
 
 import numpy as np
-import pytest
 from matplotlib.testing import setup
 
 setup()

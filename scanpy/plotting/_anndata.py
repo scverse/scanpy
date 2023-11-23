@@ -193,7 +193,6 @@ def _scatter_obs(
 ):
     """See docstring of scatter."""
     sanitize_anndata(adata)
-    from scipy.sparse import issparse
 
     use_raw = _check_use_raw(adata, use_raw)
 

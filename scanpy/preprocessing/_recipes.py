@@ -1,7 +1,7 @@
 """Preprocessing recipes from the literature"""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from .. import logging as logg
 from .. import preprocessing as pp

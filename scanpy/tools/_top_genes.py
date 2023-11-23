@@ -5,7 +5,7 @@ This modules provides all non-visualization tools for advanced gene ranking and 
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
 from scipy.sparse import issparse

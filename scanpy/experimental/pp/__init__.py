@@ -6,3 +6,10 @@ from scanpy.experimental.pp._normalization import (
     normalize_pearson_residuals_pca,
 )
 from scanpy.experimental.pp._recipes import recipe_pearson_residuals
+
+__all__ = [
+    "highly_variable_genes",
+    "normalize_pearson_residuals",
+    "normalize_pearson_residuals_pca",
+    "recipe_pearson_residuals",
+]

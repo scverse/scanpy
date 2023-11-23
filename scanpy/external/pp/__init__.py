@@ -8,3 +8,15 @@ from ._magic import magic
 from ._mnn_correct import mnn_correct
 from ._scanorama_integrate import scanorama_integrate
 from ._scrublet import scrublet, scrublet_simulate_doublets
+
+__all__ = [
+    "bbknn",
+    "dca",
+    "harmony_integrate",
+    "hashsolo",
+    "magic",
+    "mnn_correct",
+    "scanorama_integrate",
+    "scrublet",
+    "scrublet_simulate_doublets",
+]

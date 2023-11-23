@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import logging as logg
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 import h5py
 import matplotlib.pyplot as plt

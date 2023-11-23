@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
 from packaging.version import parse as parse_version

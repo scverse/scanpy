@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numba import njit, prange

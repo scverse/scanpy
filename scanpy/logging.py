@@ -8,7 +8,7 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from functools import partial, update_wrapper
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
-from typing import IO, TYPE_CHECKING, Optional
+from typing import IO, TYPE_CHECKING
 
 import anndata.logging
 

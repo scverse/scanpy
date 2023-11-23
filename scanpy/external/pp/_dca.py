@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence

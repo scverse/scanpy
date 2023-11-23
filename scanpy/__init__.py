@@ -52,3 +52,36 @@ from ._utils import annotate_doc_types
 
 annotate_doc_types(sys.modules[__name__], "scanpy")
 del sys, annotate_doc_types
+
+__all__ = [
+    "__version__",
+    "AnnData",
+    "concat",
+    "read_csv",
+    "read_excel",
+    "read_h5ad",
+    "read_hdf",
+    "read_loom",
+    "read_mtx",
+    "read_text",
+    "read_umi_tools",
+    "read",
+    "read_10x_h5",
+    "read_10x_mtx",
+    "read_visium",
+    "write",
+    "datasets",
+    "experimental",
+    "external",
+    "get",
+    "logging",
+    "metrics",
+    "queries",
+    "pl",
+    "pp",
+    "tl",
+    "Verbosity",
+    "settings",
+    "Neighbors",
+    "set_figure_params",
+]

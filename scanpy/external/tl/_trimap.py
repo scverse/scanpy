@@ -3,7 +3,7 @@ Embed high-dimensional data using TriMap
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal
 
 import scipy.sparse as scp
 

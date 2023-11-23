@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import collections.abc as cabc
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd

@@ -1381,7 +1381,6 @@ def _check_na_color(
 
 def _broadcast_args(*args):
     """Broadcasts arguments to a common length."""
-    from itertools import repeat
 
     lens = [len(arg) for arg in args]
     longest = max(lens)

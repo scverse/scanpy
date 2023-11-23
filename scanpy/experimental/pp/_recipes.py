@@ -12,7 +12,6 @@ from scanpy.experimental._docs import (
     doc_dist_params,
     doc_genes_batch_chunk,
     doc_inplace,
-    doc_layer,
     doc_pca_chunk,
 )
 from scanpy.preprocessing import pca

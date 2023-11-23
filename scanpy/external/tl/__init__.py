@@ -8,3 +8,16 @@ from ._pypairs import cyclone, sandbag
 from ._sam import sam
 from ._trimap import trimap
 from ._wishbone import wishbone
+
+__all__ = [
+    "harmony_timeseries",
+    "palantir",
+    "palantir_results",
+    "phate",
+    "phenograph",
+    "cyclone",
+    "sandbag",
+    "sam",
+    "trimap",
+    "wishbone",
+]

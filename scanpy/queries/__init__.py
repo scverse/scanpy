@@ -7,3 +7,10 @@ from ._queries import (
     gene_coordinates,
     mitochondrial_genes,
 )
+
+__all__ = [
+    "biomart_annotations",
+    "enrich",
+    "gene_coordinates",
+    "mitochondrial_genes",
+]

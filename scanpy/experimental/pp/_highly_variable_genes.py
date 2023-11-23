@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from functools import partial
 from math import sqrt
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 import numba as nb
 import numpy as np

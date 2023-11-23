@@ -991,7 +991,7 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 def _download(url: str, path: Path):
     try:
-        import ipywidgets
+        import ipywidgets  # noqa: F401
         from tqdm.auto import tqdm
     except ImportError:
         from tqdm import tqdm

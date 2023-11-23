@@ -3,7 +3,7 @@ Embed high-dimensional data using PHATE
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal
 
 from ... import logging as logg
 from ..._settings import settings

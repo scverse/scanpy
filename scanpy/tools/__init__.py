@@ -30,3 +30,28 @@ def __getattr__(name: str) -> Any:
 
         return pca
     raise AttributeError(name)
+
+
+__all__ = [
+    "dendrogram",
+    "diffmap",
+    "dpt",
+    "draw_graph",
+    "embedding_density",
+    "Ingest",
+    "ingest",
+    "leiden",
+    "louvain",
+    "marker_gene_overlap",
+    "paga",
+    "paga_compare_paths",
+    "paga_degrees",
+    "paga_expression_entropies",
+    "filter_rank_genes_groups",
+    "rank_genes_groups",
+    "score_genes",
+    "score_genes_cell_cycle",
+    "sim",
+    "tsne",
+    "umap",
+]

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 from anndata import AnnData
@@ -154,7 +152,7 @@ def scrublet(
         scores for observed transcriptomes and simulated doublets.
     """
     try:
-        import scrublet as sl
+        import scrublet as sl  # noqa: F401
     except ImportError:
         raise ImportError(
             "Please install scrublet: `pip install scrublet` or `conda install scrublet`."

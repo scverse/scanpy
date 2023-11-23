@@ -3,7 +3,7 @@ Denoise high-dimensional data using MAGIC
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal
 
 from packaging import version
 

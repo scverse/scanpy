@@ -19,3 +19,25 @@ from ._simple import (
     sqrt,
     subsample,
 )
+
+__all__ = [
+    "neighbors",
+    "combat",
+    "filter_genes_dispersion",
+    "highly_variable_genes",
+    "normalize_total",
+    "pca",
+    "calculate_qc_metrics",
+    "recipe_seurat",
+    "recipe_weinreb17",
+    "recipe_zheng17",
+    "downsample_counts",
+    "filter_cells",
+    "filter_genes",
+    "log1p",
+    "normalize_per_cell",
+    "regress_out",
+    "scale",
+    "sqrt",
+    "subsample",
+]
