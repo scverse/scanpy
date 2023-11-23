@@ -3,7 +3,7 @@ Calculate density of cells in embeddings
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -41,7 +41,7 @@ def embedding_density(
     basis: str = "umap",  # was positional before 1.4.5
     groupby: str | None = None,
     key_added: str | None = None,
-    components: str | Sequence[str] = None,
+    components: str | Sequence[str] | None = None,
 ) -> None:
     """\
     Calculate the density of cells in an embedding (per condition).

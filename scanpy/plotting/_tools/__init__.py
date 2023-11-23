@@ -7,8 +7,11 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
+from anndata import AnnData  # noqa: TCH002
 from matplotlib import colormaps, rcParams
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes  # noqa: TCH002
+from matplotlib.figure import Figure  # noqa: TCH002
 
 from scanpy.get import obs_df
 
@@ -34,11 +37,8 @@ from .._utils import (
 from .scatterplots import _panel_grid, embedding, pca
 
 if TYPE_CHECKING:
-    from anndata import AnnData
     from cycler import Cycler
-    from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
-    from matplotlib.figure import Figure
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -1312,7 +1312,7 @@ def embedding_density(
     ncols: int | None = 4,
     hspace: float | None = 0.25,
     wspace: None | None = None,
-    title: str = None,
+    title: str | None = None,
     show: bool | None = None,
     save: bool | str | None = None,
     ax: Axes | None = None,
