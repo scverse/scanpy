@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 from packaging import version
 
 from .. import logging as logg
-from .._doc import doc_n_pcs, doc_use_rep
 from .._settings import settings
 from .._utils import AnyRandom, _doc_params
-from ..tools._utils import _choose_representation
+from ..neighbors._doc import doc_n_pcs, doc_use_rep
+from ._utils import _choose_representation
 
 if TYPE_CHECKING:
     from anndata import AnnData

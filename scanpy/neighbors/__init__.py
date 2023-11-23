@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 from .. import _utils
 from .. import logging as logg
-from .._doc import doc_n_pcs, doc_use_rep
 from .._settings import settings
 from .._utils import AnyRandom, NeighborsView, _doc_params
 from . import _connectivity
@@ -27,6 +26,7 @@ from ._common import (
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
+from ._doc import doc_n_pcs, doc_use_rep
 from ._types import _KnownTransformer, _Method, _Metric, _MetricFn
 
 RPForestDict = Mapping[str, Mapping[str, np.ndarray]]

@@ -10,9 +10,9 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
-from .._doc import doc_n_pcs, doc_use_rep
 from .._utils import _doc_params
-from ..tools._utils import _choose_representation
+from ..neighbors._doc import doc_n_pcs, doc_use_rep
+from ._utils import _choose_representation
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
