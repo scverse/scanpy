@@ -3,6 +3,7 @@ from __future__ import annotations
 import collections.abc as cabc
 import inspect
 import sys
+from collections.abc import Mapping, Sequence  # noqa: TCH003
 from copy import copy
 from functools import partial
 from itertools import combinations, product
@@ -11,9 +12,14 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
+from anndata import AnnData  # noqa: TCH002
+from cycler import Cycler  # noqa: TCH002
 from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes  # noqa: TCH002
 from matplotlib.colors import Colormap, Normalize
+from matplotlib.figure import Figure  # noqa: TCH002
+from numpy.typing import NDArray  # noqa: TCH002
 from pandas.api.types import CategoricalDtype
 
 from ... import logging as logg
@@ -40,13 +46,7 @@ from .._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Mapping, Sequence
-
-    from anndata import AnnData
-    from cycler import Cycler
-    from matplotlib.axes import Axes
-    from matplotlib.figure import Figure
-    from numpy.typing import NDArray
+    from collections.abc import Collection
 
 
 @_doc_params(
@@ -875,7 +875,6 @@ def pca(
 
     See also
     --------
-    tl.pca
     pp.pca
     """
     if not annotate_var_explained:
@@ -933,7 +932,7 @@ def spatial(
     img: np.ndarray | None = None,
     img_key: str | None | Empty = _empty,
     library_id: str | None | Empty = _empty,
-    crop_coord: tuple[int, int, int, int] = None,
+    crop_coord: tuple[int, int, int, int] | None = None,
     alpha_img: float = 1.0,
     bw: bool | None = False,
     size: float = 1.0,

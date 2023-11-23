@@ -83,7 +83,7 @@ def test_silhouette():
     sc.pp.combat(adata, "blobs")
 
     # compute pca
-    sc.tl.pca(adata)
+    sc.pp.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
     # compute silhouette coefficient in pca

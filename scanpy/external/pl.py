@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes  # noqa: TCH002
 
 from .._utils import _doc_params
 from ..plotting import _utils, embedding
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
     from collections.abc import Collection
 
     from anndata import AnnData
-    from matplotlib.axes import Axes
 
 
 @doctest_needs("phate")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from ..preprocessing import pca
+from typing import Any
+
 from ._dendrogram import dendrogram
 from ._diffmap import diffmap
 from ._dpt import dpt
@@ -21,3 +22,11 @@ from ._score_genes import score_genes, score_genes_cell_cycle
 from ._sim import sim
 from ._tsne import tsne
 from ._umap import umap
+
+
+def __getattr__(name: str) -> Any:
+    if name == "pca":
+        from ..preprocessing import pca
+
+        return pca
+    raise AttributeError(name)

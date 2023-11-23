@@ -120,7 +120,7 @@ def palantir(
 
     *Principal component analysis*
 
-    >>> sc.tl.pca(adata, n_comps=300)
+    >>> sc.pp.pca(adata, n_comps=300)
 
     or,
 

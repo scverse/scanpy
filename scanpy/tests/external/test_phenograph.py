@@ -16,6 +16,6 @@ def test_phenograph():
     dframe = pd.DataFrame(df)
     dframe.index, dframe.columns = (map(str, dframe.index), map(str, dframe.columns))
     adata = AnnData(dframe)
-    sc.tl.pca(adata, n_comps=20)
+    sc.pp.pca(adata, n_comps=20)
     sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
     assert adata.obs["pheno_leiden"].shape[0], "phenograph_Community Detection Error!"

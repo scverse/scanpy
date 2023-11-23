@@ -18,7 +18,7 @@ def test_harmony_integrate():
     """
     adata = pbmc3k()
     sc.pp.recipe_zheng17(adata)
-    sc.tl.pca(adata)
+    sc.pp.pca(adata)
     adata.obs["batch"] = 1350 * ["a"] + 1350 * ["b"]
     sce.pp.harmony_integrate(adata, "batch")
     assert adata.obsm["X_pca_harmony"].shape == adata.obsm["X_pca"].shape

@@ -88,7 +88,7 @@ def test_pbmc3k(image_comparer):
 
     # PCA
 
-    sc.tl.pca(adata, svd_solver="arpack")
+    sc.pp.pca(adata, svd_solver="arpack")
     sc.pl.pca(adata, color="CST3", show=False)
     save_and_compare_images("pca")
 

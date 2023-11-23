@@ -17,7 +17,7 @@ def test_scanorama_integrate():
     and makes sure it has the same dimensions as the original PCA table.
     """
     adata = pbmc68k_reduced()
-    sc.tl.pca(adata)
+    sc.pp.pca(adata)
     adata.obs["batch"] = 350 * ["a"] + 350 * ["b"]
     sce.pp.scanorama_integrate(adata, "batch", approx=False)
     assert adata.obsm["X_scanorama"].shape == adata.obsm["X_pca"].shape

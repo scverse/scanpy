@@ -33,7 +33,7 @@ def test_paga_paul15_subsampled(image_comparer, plt):
 
     # Preprocessing and Visualization
     sc.pp.recipe_zheng17(adata)
-    sc.tl.pca(adata, svd_solver="arpack")
+    sc.pp.pca(adata, svd_solver="arpack")
     sc.pp.neighbors(adata, n_neighbors=4, n_pcs=20)
     sc.tl.draw_graph(adata)
     sc.pl.draw_graph(adata, color="paul15_clusters", legend_loc="on data")

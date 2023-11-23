@@ -151,7 +151,7 @@ def phenograph(
 
     Then do PCA:
 
-    >>> sc.tl.pca(adata, n_comps=100)
+    >>> sc.pp.pca(adata, n_comps=100)
 
     Compute phenograph clusters:
 
@@ -186,7 +186,7 @@ def phenograph(
     >>> dframe = pd.DataFrame(df)
     >>> dframe.index, dframe.columns = (map(str, dframe.index), map(str, dframe.columns))
     >>> adata = AnnData(dframe)
-    >>> sc.tl.pca(adata, n_comps=20)
+    >>> sc.pp.pca(adata, n_comps=20)
     >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
     >>> sc.tl.tsne(adata, random_state=1)
     >>> sc.pl.tsne(
@@ -210,7 +210,7 @@ def phenograph(
         try:
             data = adata.obsm["X_pca"]
         except KeyError:
-            raise KeyError("Please run `sc.tl.pca` on `adata` and try again!")
+            raise KeyError("Please run `sc.pp.pca` on `adata` and try again!")
     else:
         data = adata
         copy = True

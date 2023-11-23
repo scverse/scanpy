@@ -82,7 +82,6 @@ def pca_overview(adata: AnnData, **params):
 
     See also
     --------
-    tl.pca
     pp.pca
     """
     show = params["show"] if "show" in params else None
