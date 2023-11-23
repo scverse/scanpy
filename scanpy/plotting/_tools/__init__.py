@@ -7,11 +7,8 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData  # noqa: TCH002
 from matplotlib import colormaps, rcParams
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes  # noqa: TCH002
-from matplotlib.figure import Figure  # noqa: TCH002
 
 from scanpy.get import obs_df
 
@@ -37,8 +34,11 @@ from .._utils import (
 from .scatterplots import _panel_grid, embedding, pca
 
 if TYPE_CHECKING:
+    from anndata import AnnData
     from cycler import Cycler
+    from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
+    from matplotlib.figure import Figure
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -296,7 +296,7 @@ def dpt_groups_pseudotime(
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups(
     adata: AnnData,
-    groups: str | Sequence[str] = None,
+    groups: str | Sequence[str] | None = None,
     n_genes: int = 20,
     gene_symbols: str | None = None,
     key: str | None = "rank_genes_groups",
@@ -463,7 +463,7 @@ def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
 def _rank_genes_groups_plot(
     adata: AnnData,
     plot_type: str = "heatmap",
-    groups: str | Sequence[str] = None,
+    groups: str | Sequence[str] | None = None,
     n_genes: int | None = None,
     groupby: str | None = None,
     values_to_plot: str | None = None,
@@ -629,13 +629,13 @@ def _rank_genes_groups_plot(
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_heatmap(
     adata: AnnData,
-    groups: str | Sequence[str] = None,
+    groups: str | Sequence[str] | None = None,
     n_genes: int | None = None,
     groupby: str | None = None,
     gene_symbols: str | None = None,
     var_names: Sequence[str] | Mapping[str, Sequence[str]] | None = None,
     min_logfoldchange: float | None = None,
-    key: str = None,
+    key: str | None = None,
     show: bool | None = None,
     save: bool | None = None,
     **kwds,
@@ -702,7 +702,7 @@ def rank_genes_groups_heatmap(
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_tracksplot(
     adata: AnnData,
-    groups: str | Sequence[str] = None,
+    groups: str | Sequence[str] | None = None,
     n_genes: int | None = None,
     groupby: str | None = None,
     var_names: Sequence[str] | Mapping[str, Sequence[str]] | None = None,
@@ -759,7 +759,7 @@ def rank_genes_groups_tracksplot(
 )
 def rank_genes_groups_dotplot(
     adata: AnnData,
-    groups: str | Sequence[str] = None,
+    groups: str | Sequence[str] | None = None,
     n_genes: int | None = None,
     groupby: str | None = None,
     values_to_plot: Literal[
@@ -905,7 +905,7 @@ def rank_genes_groups_dotplot(
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_stacked_violin(
     adata: AnnData,
-    groups: str | Sequence[str] = None,
+    groups: str | Sequence[str] | None = None,
     n_genes: int | None = None,
     groupby: str | None = None,
     gene_symbols: str | None = None,
@@ -972,7 +972,7 @@ def rank_genes_groups_stacked_violin(
 )
 def rank_genes_groups_matrixplot(
     adata: AnnData,
-    groups: str | Sequence[str] = None,
+    groups: str | Sequence[str] | None = None,
     n_genes: int | None = None,
     groupby: str | None = None,
     values_to_plot: Literal[
@@ -1301,7 +1301,7 @@ def embedding_density(
     basis: str = "umap",  # was positional before 1.4.5
     key: str | None = None,  # was positional before 1.4.5
     groupby: str | None = None,
-    group: str | list[str] | None | None = "all",
+    group: str | Sequence[str] | None | None = "all",
     color_map: Colormap | str = "YlOrRd",
     bg_dotsize: int | None = 80,
     fg_dotsize: int | None = 180,

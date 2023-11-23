@@ -106,16 +106,16 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=5",
+    "sphinx>=6",
     "sphinx-book-theme>=1.0.1",
     "scanpydoc>=0.9.5",
-    "sphinx-autodoc-typehints",
-    "myst-parser",
-    "myst-nb",
+    "sphinx-autodoc-typehints>=1.23.0",
+    "myst-parser>=2",
+    "myst-nb>=1",
     "sphinx-design",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
-    "nbsphinx",
+    "nbsphinx>=0.9",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
     # TODO: remove necessity for being able to import doc-linked classes

@@ -169,7 +169,7 @@ def annotate_doc_types(mod: ModuleType, root: str):
 
 def _doc_params(**kwds):
     """\
-    Docstrings should start with "\" in the first line for proper formatting.
+    Docstrings should start with ``\\`` in the first line for proper formatting.
     """
 
     def dec(obj):

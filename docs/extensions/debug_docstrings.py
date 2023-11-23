@@ -1,5 +1,5 @@
 # Just do the following to see the rst of a function:
-# rm -f _build/doctrees/api/scanpy.<what_you_want>.doctree; DEBUG=1 make html
+# rm ./_build/doctrees/api/generated/scanpy.<what you want>.doctree; DEBUG=1 make html
 from __future__ import annotations
 
 import os
