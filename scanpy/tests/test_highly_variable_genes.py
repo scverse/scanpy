@@ -516,13 +516,7 @@ def test_cellranger_n_top_genes_warning():
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
 
 
-@pytest.mark.parametrize(
-    "flavor",
-    [
-        "seurat",
-        "cell_ranger",
-    ],
-)
+@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
 @pytest.mark.parametrize("subset", [True, False])
 @pytest.mark.parametrize("inplace", [True, False])
 def test_highly_variable_genes_subset_inplace_consistency(
