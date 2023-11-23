@@ -1,13 +1,14 @@
+from __future__ import annotations
+
 from typing import cast
+
 import numpy as np
 import pytest
-
 from anndata import AnnData
 from matplotlib import colormaps
 from matplotlib.colors import ListedColormap
 
 from scanpy.plotting._utils import _validate_palette
-
 
 viridis = cast(ListedColormap, colormaps["viridis"])
 

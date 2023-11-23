@@ -1,23 +1,25 @@
 """BasePlot for dotplot, matrixplot and stacked_violin
 """
+from __future__ import annotations
+
 import collections.abc as cabc
 from collections import namedtuple
-from typing import Optional, Union, Mapping, Literal  # Special
-from typing import Sequence, Iterable  # ABCs
-from typing import Tuple  # Classes
-
-import numpy as np
-from anndata import AnnData
-from matplotlib.axes import Axes
-from matplotlib import pyplot as pl
-from matplotlib import gridspec
-from matplotlib.colors import Normalize
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Literal, Union
 from warnings import warn
 
+import numpy as np
+from matplotlib import gridspec
+from matplotlib import pyplot as plt
+
 from .. import logging as logg
-from ._utils import make_grid_spec, check_colornorm
-from ._utils import ColorLike, _AxesSubplot
-from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
+from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
+from ._utils import ColorLike, _AxesSubplot, check_colornorm, make_grid_spec
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+    from matplotlib.axes import Axes
+    from matplotlib.colors import Normalize
 
 _VarNames = Union[str, Sequence[str]]
 
@@ -41,7 +43,7 @@ return_fig
 """
 
 
-class BasePlot(object):
+class BasePlot:
     """\
     Generic class for the visualization of AnnData categories and
     selected `var` (features or genes).
@@ -73,24 +75,24 @@ class BasePlot(object):
     def __init__(
         self,
         adata: AnnData,
-        var_names: Union[_VarNames, Mapping[str, _VarNames]],
-        groupby: Union[str, Sequence[str]],
-        use_raw: Optional[bool] = None,
+        var_names: _VarNames | Mapping[str, _VarNames],
+        groupby: str | Sequence[str],
+        use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
-        categories_order: Optional[Sequence[str]] = None,
-        title: Optional["str"] = None,
-        figsize: Optional[Tuple[float, float]] = None,
-        gene_symbols: Optional[str] = None,
-        var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
-        var_group_labels: Optional[Sequence[str]] = None,
-        var_group_rotation: Optional[float] = None,
-        layer: Optional[str] = None,
-        ax: Optional[_AxesSubplot] = None,
-        vmin: Optional[float] = None,
-        vmax: Optional[float] = None,
-        vcenter: Optional[float] = None,
-        norm: Optional[Normalize] = None,
+        categories_order: Sequence[str] | None = None,
+        title: str | None = None,
+        figsize: tuple[float, float] | None = None,
+        gene_symbols: str | None = None,
+        var_group_positions: Sequence[tuple[int, int]] | None = None,
+        var_group_labels: Sequence[str] | None = None,
+        var_group_rotation: float | None = None,
+        layer: str | None = None,
+        ax: _AxesSubplot | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        vcenter: float | None = None,
+        norm: Normalize | None = None,
         **kwds,
     ):
         self.var_names = var_names
@@ -171,7 +173,7 @@ class BasePlot(object):
         self.ax_dict = None
         self.ax = ax
 
-    def swap_axes(self, swap_axes: Optional[bool] = True):
+    def swap_axes(self, swap_axes: bool | None = True):
         """
         Plots a transposed image.
 
@@ -200,9 +202,9 @@ class BasePlot(object):
 
     def add_dendrogram(
         self,
-        show: Optional[bool] = True,
-        dendrogram_key: Optional[str] = None,
-        size: Optional[float] = 0.8,
+        show: bool | None = True,
+        dendrogram_key: str | None = None,
+        size: float | None = 0.8,
     ):
         r"""\
         Show dendrogram based on the hierarchical clustering between the `groupby`
@@ -285,10 +287,10 @@ class BasePlot(object):
 
     def add_totals(
         self,
-        show: Optional[bool] = True,
+        show: bool | None = True,
         sort: Literal["ascending", "descending"] = None,
-        size: Optional[float] = 0.8,
-        color: Optional[Union[ColorLike, Sequence[ColorLike]]] = None,
+        size: float | None = 0.8,
+        color: ColorLike | Sequence[ColorLike] | None = None,
     ):
         r"""\
         Show barplot for the number of cells in in `groupby` category.
@@ -363,7 +365,7 @@ class BasePlot(object):
         }
         return self
 
-    def style(self, cmap: Optional[str] = DEFAULT_COLORMAP):
+    def style(self, cmap: str | None = DEFAULT_COLORMAP):
         """\
         Set visual style parameters
 
@@ -381,9 +383,9 @@ class BasePlot(object):
 
     def legend(
         self,
-        show: Optional[bool] = True,
-        title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
-        width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
+        show: bool | None = True,
+        title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
+        width: float | None = DEFAULT_LEGENDS_WIDTH,
     ):
         r"""\
         Configure legend parameters
@@ -524,7 +526,7 @@ class BasePlot(object):
         -------
         None, updates color_legend_ax
         """
-        cmap = pl.get_cmap(self.cmap)
+        cmap = plt.get_cmap(self.cmap)
 
         import matplotlib.colorbar
         from matplotlib.cm import ScalarMappable
@@ -765,7 +767,7 @@ class BasePlot(object):
 
         self.ax_dict = return_ax_dict
 
-    def show(self, return_axes: Optional[bool] = None):
+    def show(self, return_axes: bool | None = None):
         """
         Show the figure
 
@@ -798,9 +800,9 @@ class BasePlot(object):
         if return_axes:
             return self.ax_dict
         else:
-            pl.show()
+            plt.show()
 
-    def savefig(self, filename: str, bbox_inches: Optional[str] = "tight", **kwargs):
+    def savefig(self, filename: str, bbox_inches: str | None = "tight", **kwargs):
         """
         Save the current figure
 
@@ -827,7 +829,7 @@ class BasePlot(object):
         >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').savefig('plot.pdf')
         """
         self.make_figure()
-        pl.savefig(filename, bbox_inches=bbox_inches, **kwargs)
+        plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
     def _reorder_categories_after_dendrogram(self, dendrogram):
         """\
@@ -924,11 +926,11 @@ class BasePlot(object):
     @staticmethod
     def _plot_var_groups_brackets(
         gene_groups_ax: Axes,
-        group_positions: Iterable[Tuple[int, int]],
+        group_positions: Iterable[tuple[int, int]],
         group_labels: Sequence[str],
         left_adjustment: float = -0.3,
         right_adjustment: float = 0.3,
-        rotation: Optional[float] = None,
+        rotation: float | None = None,
         orientation: Literal["top", "right"] = "top",
     ):
         """\

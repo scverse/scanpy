@@ -5,13 +5,12 @@ from typing import TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.sparse import issparse, csr_matrix, coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix, issparse
 
 from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
 )
-
 
 D = TypeVar("D", NDArray[np.float32], csr_matrix)
 

@@ -1,13 +1,19 @@
-from typing import Collection, Tuple, Optional, Union
+from __future__ import annotations
 
-import pandas as pd
+from typing import TYPE_CHECKING
+
 import numpy as np
+import pandas as pd
 from numpy import linalg as la
 from scipy.sparse import issparse
-from anndata import AnnData
 
 from .. import logging as logg
 from .._utils import sanitize_anndata
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
+
+    from anndata import AnnData
 
 
 def _design_matrix(
@@ -32,7 +38,7 @@ def _design_matrix(
     import patsy
 
     design = patsy.dmatrix(
-        "~ 0 + C(Q('{}'), levels=batch_levels)".format(batch_key),
+        f"~ 0 + C(Q('{batch_key}'), levels=batch_levels)",
         model,
         return_type="dataframe",
     )
@@ -43,9 +49,9 @@ def _design_matrix(
     other_cols = [c for c in model.columns.values if c not in numerical_covariates]
 
     if other_cols:
-        col_repr = " + ".join("Q('{}')".format(x) for x in other_cols)
+        col_repr = " + ".join(f"Q('{x}')" for x in other_cols)
         factor_matrix = patsy.dmatrix(
-            "~ 0 + {}".format(col_repr), model[other_cols], return_type="dataframe"
+            f"~ 0 + {col_repr}", model[other_cols], return_type="dataframe"
         )
 
         design = pd.concat((design, factor_matrix), axis=1)
@@ -64,7 +70,7 @@ def _design_matrix(
 
 def _standardize_data(
     model: pd.DataFrame, data: pd.DataFrame, batch_key: str
-) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
+) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
     """\
     Standardizes the data per gene.
 
@@ -131,9 +137,9 @@ def _standardize_data(
 def combat(
     adata: AnnData,
     key: str = "batch",
-    covariates: Optional[Collection[str]] = None,
+    covariates: Collection[str] | None = None,
     inplace: bool = True,
-) -> Union[np.ndarray, None]:
+) -> np.ndarray | None:
     """\
     ComBat function for batch effect correction [Johnson07]_ [Leek12]_
     [Pedersen12]_.
@@ -171,14 +177,14 @@ def combat(
 
     # check the input
     if key not in adata.obs_keys():
-        raise ValueError("Could not find the key {!r} in adata.obs".format(key))
+        raise ValueError(f"Could not find the key {key!r} in adata.obs")
 
     if covariates is not None:
         cov_exist = np.isin(covariates, adata.obs_keys())
         if np.any(~cov_exist):
             missing_cov = np.array(covariates)[~cov_exist].tolist()
             raise ValueError(
-                "Could not find the covariate(s) {!r} in adata.obs".format(missing_cov)
+                f"Could not find the covariate(s) {missing_cov!r} in adata.obs"
             )
 
         if key in covariates:
@@ -287,7 +293,7 @@ def _it_sol(
     a: float,
     b: float,
     conv: float = 0.0001,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """\
     Iteratively compute the conditional posterior means for gamma and delta.
 

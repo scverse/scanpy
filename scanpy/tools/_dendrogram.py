@@ -4,31 +4,36 @@ Computes a dendrogram based on a given categorical observation.
 
 from __future__ import annotations
 
-from typing import Optional, Sequence, Dict, Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-from anndata import AnnData
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
 from .._utils import _doc_params
-from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
+from ..neighbors._doc import doc_n_pcs, doc_use_rep
+from ._utils import _choose_representation
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def dendrogram(
     adata: AnnData,
     groupby: str | Sequence[str],
-    n_pcs: Optional[int] = None,
-    use_rep: Optional[str] = None,
-    var_names: Optional[Sequence[str]] = None,
-    use_raw: Optional[bool] = None,
+    n_pcs: int | None = None,
+    use_rep: str | None = None,
+    var_names: Sequence[str] | None = None,
+    use_raw: bool | None = None,
     cor_method: str = "pearson",
     linkage_method: str = "complete",
     optimal_ordering: bool = False,
-    key_added: Optional[str] = None,
+    key_added: str | None = None,
     inplace: bool = True,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """\
     Computes a hierarchical clustering for the given `groupby` categories.
 

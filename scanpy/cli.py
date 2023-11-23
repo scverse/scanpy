@@ -1,28 +1,23 @@
+from __future__ import annotations
+
+import collections.abc as cabc
 import os
 import sys
-import collections.abc as cabc
-from argparse import ArgumentParser, Namespace, _SubParsersAction, ArgumentError
+from argparse import ArgumentParser, Namespace, _SubParsersAction
 from functools import lru_cache, partial
 from pathlib import Path
 from shutil import which
-from subprocess import run, CompletedProcess
-from typing import (
-    Optional,
-    Generator,
-    FrozenSet,
-    Sequence,
-    List,
-    Tuple,
-    Dict,
-    Any,
-    Mapping,
-)
+from subprocess import CompletedProcess, run
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Mapping, Sequence
 
 
 class _DelegatingSubparsersAction(_SubParsersAction):
     """Like a normal subcommand action, but uses a delegator for more choices"""
 
-    def __init__(self, *args, _command: str, _runargs: Dict[str, Any], **kwargs):
+    def __init__(self, *args, _command: str, _runargs: dict[str, Any], **kwargs):
         super().__init__(*args, **kwargs)
         self.command = _command
         self._name_parser_map = self.choices = _CommandDelegator(
@@ -86,8 +81,8 @@ class _CommandDelegator(cabc.MutableMapping):
         return self.parser_map == other
 
     @property
-    @lru_cache()
-    def commands(self) -> FrozenSet[str]:
+    @lru_cache
+    def commands(self) -> frozenset[str]:
         return frozenset(
             binary.name[len(self.command) + 1 :]
             for bin_dir in os.environ["PATH"].split(os.pathsep)
@@ -106,9 +101,9 @@ class _DelegatingParser(ArgumentParser):
 
     def parse_known_args(
         self,
-        args: Optional[Sequence[str]] = None,
-        namespace: Optional[Namespace] = None,
-    ) -> Tuple[Namespace, List[str]]:
+        args: Sequence[str] | None = None,
+        namespace: Namespace | None = None,
+    ) -> tuple[Namespace, list[str]]:
         assert (
             args is not None and namespace is None
         ), "Only use DelegatingParser as subparser"
@@ -122,8 +117,8 @@ def _cmd_settings() -> None:
 
 
 def main(
-    argv: Optional[Sequence[str]] = None, *, check: bool = True, **runargs
-) -> Optional[CompletedProcess]:
+    argv: Sequence[str] | None = None, *, check: bool = True, **runargs
+) -> CompletedProcess | None:
     """\
     Run a builtin scanpy command or a scanpy-* subcommand.
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import sys
 from enum import Enum, auto
 from importlib.util import find_spec
-import sys
 
 import pytest
 

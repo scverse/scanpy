@@ -1,12 +1,16 @@
 """
 Use Scanorama to integrate cells from different experiments.
 """
+from __future__ import annotations
 
-from anndata import AnnData
+from typing import TYPE_CHECKING
+
 import numpy as np
 
-
 from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 @doctest_needs("scanorama")
@@ -44,7 +48,7 @@ def scanorama_integrate(
     basis
         The name of the field in ``adata.obsm`` where the PCA table is
         stored. Defaults to ``'X_pca'``, which is the default for
-        ``sc.tl.pca()``.
+        ``sc.pp.pca()``.
     adjusted_basis
         The name of the field in ``adata.obsm`` where the integrated
         embeddings will be stored after running this function. Defaults
@@ -80,7 +84,7 @@ def scanorama_integrate(
     >>> import scanpy.external as sce
     >>> adata = sc.datasets.pbmc3k()
     >>> sc.pp.recipe_zheng17(adata)
-    >>> sc.tl.pca(adata)
+    >>> sc.pp.pca(adata)
 
     We now arbitrarily assign a batch metadata variable to each cell
     for the sake of example, but during real usage there would already

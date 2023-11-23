@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from anndata import AnnData
+
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc68k_reduced
 

@@ -1,18 +1,23 @@
 """
 Metrics which don't quite deserve their own file.
 """
-from typing import Optional, Sequence, Union
+from __future__ import annotations
 
-import pandas as pd
-from pandas.api.types import CategoricalDtype
-from natsort import natsorted
+from typing import TYPE_CHECKING
+
 import numpy as np
+import pandas as pd
+from natsort import natsorted
+from pandas.api.types import CategoricalDtype
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def confusion_matrix(
-    orig: Union[pd.Series, np.ndarray, Sequence],
-    new: Union[pd.Series, np.ndarray, Sequence],
-    data: Optional[pd.DataFrame] = None,
+    orig: pd.Series | np.ndarray | Sequence,
+    new: pd.Series | np.ndarray | Sequence,
+    data: pd.DataFrame | None = None,
     *,
     normalize: bool = True,
 ) -> pd.DataFrame:

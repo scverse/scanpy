@@ -1,16 +1,15 @@
-import email
+from __future__ import annotations
+
 import inspect
 import os
-from importlib.util import find_spec
-from types import FunctionType
 from pathlib import Path
+from types import FunctionType
 
 import pytest
-from scanpy._utils import descend_classes_and_funcs
 
 # CLI is locally not imported by default but on travis it is?
 import scanpy.cli
-
+from scanpy._utils import descend_classes_and_funcs
 
 mod_dir = Path(scanpy.__file__).parent
 proj_dir = mod_dir.parent

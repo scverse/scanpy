@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union, Optional, Callable
-
-from anndata import AnnData
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
+    from anndata import AnnData
     from sklearn.metrics import DistanceMetric
 
 from ...testing._doctests import doctest_needs
@@ -17,12 +16,12 @@ def bbknn(
     use_rep: str = "X_pca",
     approx: bool = True,
     use_annoy: bool = True,
-    metric: Union[str, Callable, DistanceMetric] = "euclidean",
+    metric: str | Callable | DistanceMetric = "euclidean",
     copy: bool = False,
     *,
     neighbors_within_batch: int = 3,
     n_pcs: int = 50,
-    trim: Optional[int] = None,
+    trim: int | None = None,
     annoy_n_trees: int = 10,
     pynndescent_n_neighbors: int = 30,
     pynndescent_random_state: int = 0,

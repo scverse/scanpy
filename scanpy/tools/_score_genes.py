@@ -1,15 +1,23 @@
 """Calculate scores based on the expression of gene lists.
 """
-from typing import Sequence, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from scipy.sparse import issparse
 
-from .. import logging as logg
-from .._utils import AnyRandom
 from scanpy._utils import _check_use_raw
+
+from .. import logging as logg
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
+
+    from .._utils import AnyRandom
 
 
 def _sparse_nanmean(X, axis):
@@ -41,13 +49,13 @@ def score_genes(
     adata: AnnData,
     gene_list: Sequence[str],
     ctrl_size: int = 50,
-    gene_pool: Optional[Sequence[str]] = None,
+    gene_pool: Sequence[str] | None = None,
     n_bins: int = 25,
     score_name: str = "score",
     random_state: AnyRandom = 0,
     copy: bool = False,
-    use_raw: Optional[bool] = None,
-) -> Optional[AnnData]:
+    use_raw: bool | None = None,
+) -> AnnData | None:
     """\
     Score a set of genes [Satija15]_.
 
@@ -196,7 +204,7 @@ def score_genes_cell_cycle(
     g2m_genes: Sequence[str],
     copy: bool = False,
     **kwargs,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Score cell cycle genes [Satija15]_.
 

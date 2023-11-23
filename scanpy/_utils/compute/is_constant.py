@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from typing import Literal, TypeVar, overload
-from functools import partial, wraps, singledispatch
-from numbers import Integral
 from collections.abc import Callable
+from functools import partial, singledispatch, wraps
+from numbers import Integral
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
-from numpy.typing import NDArray
 from numba import njit
 from scipy import sparse
 
 from ..._compat import DaskArray
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 C = TypeVar("C", bound=Callable)
 

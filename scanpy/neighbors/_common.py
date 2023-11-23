@@ -1,12 +1,15 @@
 from __future__ import annotations
-from math import dist
+
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
-from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
 
 from scanpy._utils.compute.is_constant import is_constant
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def _has_self_column(

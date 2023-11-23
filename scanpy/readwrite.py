@@ -1,28 +1,30 @@
 """Reading and Writing
 """
-from pathlib import Path, PurePath
-from typing import Union, Dict, Optional, Tuple, BinaryIO, Literal
+from __future__ import annotations
 
-import h5py
 import json
+from pathlib import Path, PurePath
+from typing import BinaryIO, Literal
+
+import anndata
+import h5py
 import numpy as np
 import pandas as pd
-from matplotlib.image import imread
-import anndata
 from anndata import (
     AnnData,
     read_csv,
-    read_text,
     read_excel,
-    read_mtx,
-    read_loom,
     read_hdf,
+    read_loom,
+    read_mtx,
+    read_text,
 )
 from anndata import read as read_h5ad
+from matplotlib.image import imread
 
+from . import logging as logg
 from ._settings import settings
 from ._utils import Empty, _empty
-from . import logging as logg
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
@@ -51,15 +53,15 @@ avail_exts = {
 
 
 def read(
-    filename: Union[Path, str],
-    backed: Optional[Literal["r", "r+"]] = None,
-    sheet: Optional[str] = None,
-    ext: Optional[str] = None,
-    delimiter: Optional[str] = None,
+    filename: Path | str,
+    backed: Literal["r", "r+"] | None = None,
+    sheet: str | None = None,
+    ext: str | None = None,
+    delimiter: str | None = None,
     first_column_names: bool = False,
-    backup_url: Optional[str] = None,
+    backup_url: str | None = None,
     cache: bool = False,
-    cache_compression: Union[Literal["gzip", "lzf"], None, Empty] = _empty,
+    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
     **kwargs,
 ) -> AnnData:
     """\
@@ -135,10 +137,10 @@ def read(
 
 
 def read_10x_h5(
-    filename: Union[str, Path],
-    genome: Optional[str] = None,
+    filename: str | Path,
+    genome: str | None = None,
     gex_only: bool = True,
-    backup_url: Optional[str] = None,
+    backup_url: str | None = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted hdf5 file.
@@ -334,13 +336,13 @@ def _read_v3_10x_h5(filename, *, start=None):
 
 
 def read_visium(
-    path: Union[str, Path],
-    genome: Optional[str] = None,
+    path: str | Path,
+    genome: str | None = None,
     *,
     count_file: str = "filtered_feature_bc_matrix.h5",
-    library_id: Optional[str] = None,
-    load_images: Optional[bool] = True,
-    source_image_path: Optional[Union[str, Path]] = None,
+    library_id: str | None = None,
+    load_images: bool | None = True,
+    source_image_path: str | Path | None = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted visum dataset.
@@ -493,11 +495,11 @@ def read_visium(
 
 
 def read_10x_mtx(
-    path: Union[Path, str],
+    path: Path | str,
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
-    cache_compression: Union[Literal["gzip", "lzf"], None, Empty] = _empty,
+    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
     gex_only: bool = True,
     *,
     prefix: str = None,
@@ -626,11 +628,11 @@ def _read_v3_10x_mtx(
 
 
 def write(
-    filename: Union[str, Path],
+    filename: str | Path,
     adata: AnnData,
-    ext: Optional[Literal["h5", "csv", "txt", "npz"]] = None,
-    compression: Optional[Literal["gzip", "lzf"]] = "gzip",
-    compression_opts: Optional[int] = None,
+    ext: Literal["h5", "csv", "txt", "npz"] | None = None,
+    compression: Literal["gzip", "lzf"] | None = "gzip",
+    compression_opts: int | None = None,
 ):
     """\
     Write :class:`~anndata.AnnData` objects to file.
@@ -682,8 +684,8 @@ def write(
 
 
 def read_params(
-    filename: Union[Path, str], asheader: bool = False
-) -> Dict[str, Union[int, float, bool, str, None]]:
+    filename: Path | str, asheader: bool = False
+) -> dict[str, int | float | bool | str | None]:
     """\
     Read parameter dictionary from text file.
 
@@ -705,11 +707,11 @@ def read_params(
     -------
     Dictionary that stores parameters.
     """
-    filename = str(filename)  # allow passing pathlib.Path objects
+    filename = Path(filename)  # allow passing str objects
     from collections import OrderedDict
 
     params = OrderedDict([])
-    for line in open(filename):
+    for line in filename.open():
         if "=" in line:
             if not asheader or line.startswith("#"):
                 line = line[1:] if line.startswith("#") else line
@@ -720,7 +722,7 @@ def read_params(
     return params
 
 
-def write_params(path: Union[Path, str], *args, **maps):
+def write_params(path: Path | str, *args, **maps):
     """\
     Write parameters to file, so that it's readable by read_params.
 
@@ -832,7 +834,7 @@ def _read(
     return adata
 
 
-def _slugify(path: Union[str, PurePath]) -> str:
+def _slugify(path: str | PurePath) -> str:
     """Make a path into a filename."""
     if not isinstance(path, PurePath):
         path = PurePath(path)
@@ -847,7 +849,7 @@ def _slugify(path: Union[str, PurePath]) -> str:
     return filename
 
 
-def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
+def _read_softgz(filename: str | bytes | Path | BinaryIO) -> AnnData:
     """\
     Read a SOFT format data file.
 
@@ -933,7 +935,7 @@ def is_int(string: str) -> bool:
         return False
 
 
-def convert_bool(string: str) -> Tuple[bool, bool]:
+def convert_bool(string: str) -> tuple[bool, bool]:
     """Check whether string is boolean."""
     if string == "True":
         return True, True
@@ -943,7 +945,7 @@ def convert_bool(string: str) -> Tuple[bool, bool]:
         return False, False
 
 
-def convert_string(string: str) -> Union[int, float, bool, str, None]:
+def convert_string(string: str) -> int | float | bool | str | None:
     """Convert string to int, float or bool."""
     if is_int(string):
         return int(string)
@@ -989,13 +991,13 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 def _download(url: str, path: Path):
     try:
-        import ipywidgets
+        import ipywidgets  # noqa: F401
         from tqdm.auto import tqdm
     except ImportError:
         from tqdm import tqdm
 
-    from urllib.request import urlopen, Request
     from urllib.error import URLError
+    from urllib.request import Request, urlopen
 
     blocksize = 1024 * 8
     blocknum = 0
@@ -1010,8 +1012,9 @@ def _download(url: str, path: Path):
                 "Failed to open the url with default certificates, trying with certifi."
             )
 
-            from certifi import where
             from ssl import create_default_context
+
+            from certifi import where
 
             open_url = urlopen(req, context=create_default_context(cafile=where()))
 

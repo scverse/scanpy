@@ -1,6 +1,7 @@
-import pytest
-import numpy as np
+from __future__ import annotations
 
+import numpy as np
+import pytest
 from sklearn.neighbors import KDTree
 from umap import UMAP
 
@@ -8,7 +9,6 @@ import scanpy as sc
 from scanpy import settings
 from scanpy._compat import pkg_version
 from scanpy.testing._helpers.data import pbmc68k_reduced
-
 
 X = np.array(
     [

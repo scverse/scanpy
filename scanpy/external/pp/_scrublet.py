@@ -1,9 +1,9 @@
-from anndata import AnnData
-from typing import Optional
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from scipy import sparse
-
 
 from ... import logging as logg
 from ... import preprocessing as pp
@@ -12,7 +12,7 @@ from ...get import _get_obs_rep
 
 def scrublet(
     adata: AnnData,
-    adata_sim: Optional[AnnData] = None,
+    adata_sim: AnnData | None = None,
     batch_key: str = None,
     sim_doublet_ratio: float = 2.0,
     expected_doublet_rate: float = 0.05,
@@ -25,12 +25,12 @@ def scrublet(
     n_prin_comps: int = 30,
     use_approx_neighbors: bool = True,
     get_doublet_neighbor_parents: bool = False,
-    n_neighbors: Optional[int] = None,
-    threshold: Optional[float] = None,
+    n_neighbors: int | None = None,
+    threshold: float | None = None,
     verbose: bool = True,
     copy: bool = False,
     random_state: int = 0,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Predict doublets using Scrublet [Wolock19]_.
 
@@ -152,7 +152,7 @@ def scrublet(
         scores for observed transcriptomes and simulated doublets.
     """
     try:
-        import scrublet as sl
+        import scrublet as sl  # noqa: F401
     except ImportError:
         raise ImportError(
             "Please install scrublet: `pip install scrublet` or `conda install scrublet`."
@@ -279,7 +279,7 @@ def scrublet(
 def _scrublet_call_doublets(
     adata_obs: AnnData,
     adata_sim: AnnData,
-    n_neighbors: Optional[int] = None,
+    n_neighbors: int | None = None,
     expected_doublet_rate: float = 0.05,
     stdev_doublet_rate: float = 0.02,
     mean_center: bool = True,
@@ -288,7 +288,7 @@ def _scrublet_call_doublets(
     use_approx_neighbors: bool = True,
     knn_dist_metric: str = "euclidean",
     get_doublet_neighbor_parents: bool = False,
-    threshold: Optional[float] = None,
+    threshold: float | None = None,
     random_state: int = 0,
     verbose: bool = True,
 ) -> AnnData:

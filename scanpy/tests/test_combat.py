@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
+from anndata.tests.helpers import assert_equal
 from sklearn.metrics import silhouette_score
 
-from anndata.tests.helpers import assert_equal
-
 import scanpy as sc
-from scanpy.preprocessing._combat import _standardize_data, _design_matrix
+from scanpy.preprocessing._combat import _design_matrix, _standardize_data
 
 
 def test_norm():
@@ -82,7 +83,7 @@ def test_silhouette():
     sc.pp.combat(adata, "blobs")
 
     # compute pca
-    sc.tl.pca(adata)
+    sc.pp.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
     # compute silhouette coefficient in pca

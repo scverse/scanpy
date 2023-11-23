@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import pytest
+
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs

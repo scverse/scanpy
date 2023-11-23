@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-import numpy as np
 import numba
-from numpy.typing import NDArray
+import numpy as np
 from scipy import sparse
 
 from .._utils import _SupportedArray, elem_mul
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def _get_mean_var(

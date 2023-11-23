@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -11,6 +10,8 @@ import pytest
 import scanpy as _sc  # noqa: F401
 
 if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
+    import os
+
     from scanpy.testing._pytest.fixtures import *  # noqa: F403
 
 # define this after importing scanpy but before running tests
@@ -71,7 +72,7 @@ def check_same_image(add_nunit_attachment):
 
 @pytest.fixture
 def image_comparer(check_same_image):
-    from matplotlib import pyplot
+    from matplotlib import pyplot as plt
 
     def save_and_compare(*path_parts: Path | os.PathLike, tol: int):
         base_pth = Path(*path_parts)
@@ -80,8 +81,8 @@ def image_comparer(check_same_image):
             base_pth.mkdir()
         expected_pth = base_pth / "expected.png"
         actual_pth = base_pth / "actual.png"
-        pyplot.savefig(actual_pth, dpi=40)
-        pyplot.close()
+        plt.savefig(actual_pth, dpi=40)
+        plt.close()
         if not expected_pth.is_file():
             raise OSError(f"No expected output found at {expected_pth}.")
         check_same_image(expected_pth, actual_pth, tol=tol)
@@ -91,9 +92,9 @@ def image_comparer(check_same_image):
 
 @pytest.fixture
 def plt():
-    from matplotlib import pyplot
+    from matplotlib import pyplot as plt
 
-    return pyplot
+    return plt
 
 
 @pytest.fixture

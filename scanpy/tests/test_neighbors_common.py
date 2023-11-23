@@ -1,19 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-import pytest
 import numpy as np
-from scipy import sparse
+import pytest
 from sklearn.neighbors import KNeighborsTransformer
 
 from scanpy._utils.compute.is_constant import is_constant
 from scanpy.neighbors._common import (
+    _get_sparse_matrix_from_indices_distances,
     _has_self_column,
     _ind_dist_shortcut,
-    _get_sparse_matrix_from_indices_distances,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from scipy import sparse
 
 
 def mk_knn_matrix(

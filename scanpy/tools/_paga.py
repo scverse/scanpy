@@ -1,23 +1,27 @@
-from typing import List, Optional, NamedTuple, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal, NamedTuple
 
 import numpy as np
 import scipy as sp
-from anndata import AnnData
 from scipy.sparse.csgraph import minimum_spanning_tree
 
 from .. import _utils
 from .. import logging as logg
 from ..neighbors import Neighbors
 
+if TYPE_CHECKING:
+    from anndata import AnnData
+
 _AVAIL_MODELS = {"v1.0", "v1.2"}
 
 
 def paga(
     adata: AnnData,
-    groups: Optional[str] = None,
+    groups: str | None = None,
     use_rna_velocity: bool = False,
     model: Literal["v1.2", "v1.0"] = "v1.2",
-    neighbors_key: Optional[str] = None,
+    neighbors_key: str | None = None,
     copy: bool = False,
 ):
     """\
@@ -382,7 +386,7 @@ class PAGA:
         self.transitions_confidence = transitions_confidence.T
 
 
-def paga_degrees(adata: AnnData) -> List[int]:
+def paga_degrees(adata: AnnData) -> list[int]:
     """Compute the degree of each node in the abstracted graph.
 
     Parameters
@@ -401,7 +405,7 @@ def paga_degrees(adata: AnnData) -> List[int]:
     return degrees
 
 
-def paga_expression_entropies(adata) -> List[float]:
+def paga_expression_entropies(adata) -> list[float]:
     """Compute the median expression entropy for each node-group.
 
     Parameters
@@ -440,7 +444,7 @@ def paga_compare_paths(
     adata1: AnnData,
     adata2: AnnData,
     adjacency_key: str = "connectivities",
-    adjacency_key2: Optional[str] = None,
+    adjacency_key2: str | None = None,
 ) -> PAGAComparePathsResult:
     """Compare paths in abstracted graphs in two datasets.
 
@@ -506,8 +510,8 @@ def paga_compare_paths(
     # loop over all pairs of leaf nodes in the reference adata1
     for r, s in itertools.combinations(leaf_nodes1, r=2):
         r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
-        on1_g1, on2_g1 = [orig_names1[int(i)] for i in [r, s]]
-        on1_g2, on2_g2 = [orig_names2[int(i)] for i in [r2, s2]]
+        on1_g1, on2_g1 = (orig_names1[int(i)] for i in [r, s])
+        on1_g2, on2_g2 = (orig_names2[int(i)] for i in [r2, s2])
         logg.debug(
             f"compare shortest paths between leafs ({on1_g1}, {on2_g1}) "
             f"in graph1 and ({on1_g2}, {on2_g2}) in graph2:"

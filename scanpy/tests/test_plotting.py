@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from functools import partial
+from itertools import chain, combinations, repeat
 from pathlib import Path
-from itertools import repeat, chain, combinations
-from collections.abc import Callable
 
 import pytest
 from matplotlib.testing import setup
@@ -11,25 +10,28 @@ from packaging import version
 
 setup()
 
+from typing import TYPE_CHECKING
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
-import seaborn as sns
 import numpy as np
 import pandas as pd
-from matplotlib.testing.compare import compare_images
+import seaborn as sns
 from anndata import AnnData
+from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
 from scanpy._compat import pkg_version
-from scanpy.testing._pytest.marks import needs
 from scanpy.testing._helpers.data import (
+    krumsiek11,
     pbmc3k,
     pbmc3k_processed,
-    krumsiek11,
     pbmc68k_reduced,
 )
+from scanpy.testing._pytest.marks import needs
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
@@ -947,8 +949,8 @@ def test_genes_symbols(image_comparer, id, fn):
     adata = krumsiek11()
 
     # add a 'symbols' column
-    adata.var["symbols"] = adata.var.index.map(lambda x: "symbol_{}".format(x))
-    symbols = ["symbol_{}".format(x) for x in adata.var_names]
+    adata.var["symbols"] = adata.var.index.map(lambda x: f"symbol_{x}")
+    symbols = [f"symbol_{x}" for x in adata.var_names]
 
     fn(adata, symbols, "cell_type", dendrogram=True, gene_symbols="symbols", show=False)
     save_and_compare_images(f"{id}_gene_symbols")
