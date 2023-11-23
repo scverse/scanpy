@@ -1,13 +1,19 @@
 """\
 Calculate density of cells in embeddings
 """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
-from anndata import AnnData
-from typing import Union, Optional, Sequence
 
 from .. import logging as logg
 from .._utils import sanitize_anndata
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
 
 
 def _calc_density(x: np.ndarray, y: np.ndarray):
@@ -33,9 +39,9 @@ def embedding_density(
     adata: AnnData,
     # there is no asterisk here for backward compat (previously, there was)
     basis: str = "umap",  # was positional before 1.4.5
-    groupby: Optional[str] = None,
-    key_added: Optional[str] = None,
-    components: Union[str, Sequence[str]] = None,
+    groupby: str | None = None,
+    key_added: str | None = None,
+    components: str | Sequence[str] | None = None,
 ) -> None:
     """\
     Calculate the density of cells in an embedding (per condition).

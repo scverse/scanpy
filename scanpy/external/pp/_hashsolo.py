@@ -14,16 +14,20 @@ second highest barcode from a noise distribution. A negative two highest
 barcodes should come from noise distributions. We test each of these
 hypotheses in a bayesian fashion, and select the most probable hypothesis.
 """
+from __future__ import annotations
 
 from itertools import product
+from typing import TYPE_CHECKING
 
-import anndata
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
 from ..._utils import check_nonnegative_integers
 from ...testing._doctests import doctest_skip
+
+if TYPE_CHECKING:
+    import anndata
 
 
 def _calculate_log_likelihoods(data, number_of_noise_barcodes):

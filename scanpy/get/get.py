@@ -1,17 +1,19 @@
 """This module contains helper functions for accessing data."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Iterable, Tuple, Union, List, Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
-from numpy.typing import NDArray
-from scipy.sparse import spmatrix
 from anndata import AnnData
+from scipy.sparse import spmatrix
 
 if TYPE_CHECKING:
-    from anndata._core.views import ArrayView
+    from collections.abc import Iterable
+
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
+    from anndata._core.views import ArrayView
+    from numpy.typing import NDArray
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -21,13 +23,13 @@ if TYPE_CHECKING:
 # TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
-    group: Union[str, Iterable[str]],
+    group: str | Iterable[str],
     *,
     key: str = "rank_genes_groups",
-    pval_cutoff: Optional[float] = None,
-    log2fc_min: Optional[float] = None,
-    log2fc_max: Optional[float] = None,
-    gene_symbols: Optional[str] = None,
+    pval_cutoff: float | None = None,
+    log2fc_min: float | None = None,
+    log2fc_max: float | None = None,
+    gene_symbols: str | None = None,
 ) -> pd.DataFrame:
     """\
     :func:`scanpy.tl.rank_genes_groups` results in the form of a
@@ -107,10 +109,10 @@ def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
     dim: Literal["obs", "var"],
-    keys: List[str],
-    alias_index: Optional[pd.Index] = None,
+    keys: list[str],
+    alias_index: pd.Index | None = None,
     use_raw: bool = False,
-) -> Tuple[List[str], List[str], List[str]]:
+) -> tuple[list[str], list[str], list[str]]:
     """Common logic for checking indices for obs_df and var_df."""
     if use_raw:
         alt_repr = "adata.raw"
@@ -185,7 +187,7 @@ def _check_indices(
 def _get_array_values(
     X,
     dim_names: pd.Index,
-    keys: List[str],
+    keys: list[str],
     axis: Literal[0, 1],
     backed: bool,
 ):
@@ -215,7 +217,7 @@ def _get_array_values(
 def obs_df(
     adata: AnnData,
     keys: Iterable[str] = (),
-    obsm_keys: Iterable[Tuple[str, int]] = (),
+    obsm_keys: Iterable[tuple[str, int]] = (),
     *,
     layer: str = None,
     gene_symbols: str = None,
@@ -333,7 +335,7 @@ def obs_df(
 def var_df(
     adata: AnnData,
     keys: Iterable[str] = (),
-    varm_keys: Iterable[Tuple[str, int]] = (),
+    varm_keys: Iterable[tuple[str, int]] = (),
     *,
     layer: str = None,
 ) -> pd.DataFrame:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 from anndata import AnnData
@@ -8,10 +10,12 @@ from scipy import sparse
 from ... import logging as logg
 from ... import preprocessing as pp
 from ...get import _get_obs_rep
-from ..._utils import AnyRandom
 from . import pipeline
 from .core import Scrublet
-from .neighbors import AnnoyDist
+
+if TYPE_CHECKING:
+    from ..._utils import AnyRandom
+    from .neighbors import AnnoyDist
 
 
 def scrublet(

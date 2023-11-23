@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from itertools import product
-from collections.abc import Callable
-import pytest
+from typing import TYPE_CHECKING
+
 import numpy as np
+import pytest
 from scipy import sparse
-from anndata import AnnData
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from anndata import AnnData
 
 
 @pytest.fixture(

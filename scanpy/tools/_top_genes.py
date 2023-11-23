@@ -3,26 +3,32 @@
 """\
 This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
 """
-from typing import Optional, Collection, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
-from anndata import AnnData
-from sklearn import metrics
 from scipy.sparse import issparse
+from sklearn import metrics
 
 from .. import logging as logg
 from .._utils import select_groups
 
+if TYPE_CHECKING:
+    from collections.abc import Collection
+
+    from anndata import AnnData
+
 
 def correlation_matrix(
     adata: AnnData,
-    name_list: Optional[Collection[str]] = None,
-    groupby: Optional[str] = None,
-    group: Optional[int] = None,
+    name_list: Collection[str] | None = None,
+    groupby: str | None = None,
+    group: int | None = None,
     n_genes: int = 20,
     data: Literal["Complete", "Group", "Rest"] = "Complete",
     method: Literal["pearson", "kendall", "spearman"] = "pearson",
-    annotation_key: Optional[str] = None,
+    annotation_key: str | None = None,
 ) -> None:
     """\
     Calculate correlation matrix.
@@ -120,7 +126,7 @@ def correlation_matrix(
 def ROC_AUC_analysis(
     adata: AnnData,
     groupby: str,
-    group: Optional[str] = None,
+    group: str | None = None,
     n_genes: int = 100,
 ):
     """\

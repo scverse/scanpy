@@ -1,5 +1,7 @@
-import pytest
+from __future__ import annotations
+
 import numpy as np
+import pytest
 from anndata import AnnData
 from scipy.sparse import csr_matrix
 

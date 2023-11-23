@@ -1,15 +1,18 @@
-from typing import Union, Optional, Literal
+from __future__ import annotations
+
+import random
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-import random
-from anndata import AnnData
-from scipy.sparse import spmatrix
 
 from .. import _utils
 from .. import logging as logg
-from ._utils import get_init_pos_from_paga
 from .._utils import AnyRandom, _choose_graph
+from ._utils import get_init_pos_from_paga
 
+if TYPE_CHECKING:
+    from anndata import AnnData
+    from scipy.sparse import spmatrix
 
 _LAYOUTS = ("fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa")
 _Layout = Literal[_LAYOUTS]
@@ -18,14 +21,14 @@ _Layout = Literal[_LAYOUTS]
 def draw_graph(
     adata: AnnData,
     layout: _Layout = "fa",
-    init_pos: Union[str, bool, None] = None,
-    root: Optional[int] = None,
+    init_pos: str | bool | None = None,
+    root: int | None = None,
     random_state: AnyRandom = 0,
-    n_jobs: Optional[int] = None,
-    adjacency: Optional[spmatrix] = None,
-    key_added_ext: Optional[str] = None,
-    neighbors_key: Optional[str] = None,
-    obsp: Optional[str] = None,
+    n_jobs: int | None = None,
+    adjacency: spmatrix | None = None,
+    key_added_ext: str | None = None,
+    neighbors_key: str | None = None,
+    obsp: str | None = None,
     copy: bool = False,
     **kwds,
 ):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from functools import partial
 from operator import eq
@@ -5,15 +7,13 @@ from string import ascii_letters
 
 import numpy as np
 import pandas as pd
-import scanpy as sc
+import pytest
 from scipy import sparse
 
-import pytest
-
+import scanpy as sc
 from scanpy._compat import DaskArray
 from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.testing._pytest.params import ARRAY_TYPES
-
 
 mark_flaky = pytest.mark.xfail(
     strict=False,

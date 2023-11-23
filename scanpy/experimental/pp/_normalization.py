@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import Any
-from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 import numpy as np
@@ -10,25 +9,28 @@ from anndata import AnnData
 from scipy.sparse import issparse
 
 from ... import logging as logg
-from ...get import _get_obs_rep, _set_obs_rep
 from ..._utils import (
-    view_to_actual,
-    check_nonnegative_integers,
     Empty,
-    _empty,
     _doc_params,
+    _empty,
+    check_nonnegative_integers,
+    view_to_actual,
 )
-from ...preprocessing._pca import pca, _handle_mask_param
-from ...preprocessing._docs import doc_mask_hvg
 from ...experimental._docs import (
     doc_adata,
-    doc_dist_params,
-    doc_layer,
     doc_check_values,
     doc_copy,
+    doc_dist_params,
     doc_inplace,
+    doc_layer,
     doc_pca_chunk,
 )
+from ...get import _get_obs_rep, _set_obs_rep
+from ...preprocessing._docs import doc_mask_hvg
+from ...preprocessing._pca import _handle_mask_param, pca
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 def _pearson_residuals(X, theta, clip, check_values, copy=False):

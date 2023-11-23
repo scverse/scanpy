@@ -1,14 +1,18 @@
 """\
 Embed high-dimensional data using TriMap
 """
-from typing import Optional, Union, Literal
+from __future__ import annotations
 
-from anndata import AnnData
+from typing import TYPE_CHECKING, Literal
+
 import scipy.sparse as scp
 
 from ... import logging as logg
 from ..._settings import settings
 from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 @doctest_needs("trimap")
@@ -22,9 +26,9 @@ def trimap(
     weight_adj: float = 500.0,
     lr: float = 1000.0,
     n_iters: int = 400,
-    verbose: Union[bool, int, None] = None,
+    verbose: bool | int | None = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     TriMap: Large-scale Dimensionality Reduction Using Triplets [Amid19]_.
 

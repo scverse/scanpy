@@ -1,33 +1,38 @@
 from __future__ import annotations
 
-import warnings
 import collections.abc as cabc
-from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable, Literal
-import anndata
+import warnings
+from collections.abc import Collection, Sequence
+from typing import TYPE_CHECKING, Callable, Literal
+from typing import Union as _U
 
-import numpy as np
 import matplotlib as mpl
-from matplotlib import pyplot as pl
-from matplotlib import rcParams, ticker, gridspec, axes
-from matplotlib.axes import Axes
-from matplotlib.colors import is_color_like
-from matplotlib.figure import SubplotParams as sppars, Figure
-from matplotlib.patches import Circle
-from matplotlib.collections import PatchCollection
+import numpy as np
 from cycler import Cycler, cycler
+from matplotlib import axes, gridspec, rcParams, ticker
+from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.collections import PatchCollection
+from matplotlib.colors import is_color_like
+from matplotlib.figure import Figure
+from matplotlib.figure import SubplotParams as sppars
+from matplotlib.patches import Circle
 
 from .. import logging as logg
 from .._settings import settings
 from .._utils import NeighborsView
 from . import palettes
 
-ColorLike = Union[str, Tuple[float, ...]]
+if TYPE_CHECKING:
+    import anndata
+
+ColorLike = _U[str, tuple[float, ...]]
 _IGraphLayout = Literal["fa", "fr", "rt", "rt_circular", "drl", "eq_tree", ...]
 _FontWeight = Literal["light", "normal", "medium", "semibold", "bold", "heavy", "black"]
 _FontSize = Literal[
     "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"
 ]
-VBound = Union[str, float, Callable[[Sequence[float]], float]]
+VBound = _U[str, float, Callable[[Sequence[float]], float]]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase):
@@ -54,7 +59,7 @@ def matrix(
 ):
     """Plot a matrix."""
     if ax is None:
-        ax = pl.gca()
+        ax = plt.gca()
     img = ax.imshow(matrix, cmap=color_map)
     if xlabel is not None:
         ax.set_xlabel(xlabel)
@@ -66,7 +71,7 @@ def matrix(
         ax.set_xticks(range(len(xticks)), xticks, rotation="vertical")
     if yticks is not None:
         ax.set_yticks(range(len(yticks)), yticks)
-    pl.colorbar(
+    plt.colorbar(
         img, shrink=colorbar_shrink, ax=ax
     )  # need a figure instance for colorbar
     savefig_or_show("matrix", show=show, save=save)
@@ -74,7 +79,7 @@ def matrix(
 
 def timeseries(X, **kwargs):
     """Plot X. See timeseries_subplot."""
-    pl.figure(
+    plt.figure(
         figsize=tuple(2 * s for s in rcParams["figure.figsize"]),
         subplotpars=sppars(left=0.12, right=0.98, bottom=0.13),
     )
@@ -92,10 +97,10 @@ def timeseries_subplot(
     yticks=None,
     xlim=None,
     legend=True,
-    palette: Union[Sequence[str], Cycler, None] = None,
+    palette: Sequence[str] | Cycler | None = None,
     color_map="viridis",
-    ax: Optional[Axes] = None,
-    marker: Union[str, Sequence[str]] = ".",
+    ax: Axes | None = None,
+    marker: str | Sequence[str] = ".",
 ):
     """\
     Plot X.
@@ -132,7 +137,7 @@ def timeseries_subplot(
         marker = [marker[0] for _ in range(len(subsets))]
 
     if ax is None:
-        ax = pl.subplot()
+        ax = plt.subplot()
     for i, (x, y) in enumerate(subsets):
         ax.scatter(
             x,
@@ -199,19 +204,19 @@ def timeseries_as_heatmap(
             hold = h
         x_new[:, _hold:] = X[:, hold:]
 
-    _, ax = pl.subplots(figsize=(1.5 * 4, 2 * 4))
+    _, ax = plt.subplots(figsize=(1.5 * 4, 2 * 4))
     img = ax.imshow(
         np.array(X, dtype=np.float_),
         aspect="auto",
         interpolation="nearest",
         cmap=color_map,
     )
-    pl.colorbar(img, shrink=0.5)
-    pl.yticks(range(X.shape[0]), var_names)
+    plt.colorbar(img, shrink=0.5)
+    plt.yticks(range(X.shape[0]), var_names)
     for h in highlights_x:
-        pl.plot([h, h], [0, X.shape[0]], "--", color="black")
-    pl.xlim([0, X.shape[1] - 1])
-    pl.ylim([0, X.shape[0] - 1])
+        plt.plot([h, h], [0, X.shape[0]], "--", color="black")
+    plt.xlim([0, X.shape[1] - 1])
+    plt.ylim([0, X.shape[0] - 1])
 
 
 # -------------------------------------------------------------------------------
@@ -289,15 +294,15 @@ def savefig(writekey, dpi=None, ext=None):
     filename = settings.figdir / f"{writekey}{settings.plot_suffix}.{ext}"
     # output the following msg at warning level; it's really important for the user
     logg.warning(f"saving figure to file {filename}")
-    pl.savefig(filename, dpi=dpi, bbox_inches="tight")
+    plt.savefig(filename, dpi=dpi, bbox_inches="tight")
 
 
 def savefig_or_show(
     writekey: str,
-    show: Optional[bool] = None,
-    dpi: Optional[int] = None,
+    show: bool | None = None,
+    dpi: int | None = None,
     ext: str = None,
-    save: Union[bool, str, None] = None,
+    save: bool | str | None = None,
 ):
     if isinstance(save, str):
         # check whether `save` contains a figure extension
@@ -315,13 +320,13 @@ def savefig_or_show(
     if save:
         savefig(writekey, dpi=dpi, ext=ext)
     if show:
-        pl.show()
+        plt.show()
     if save:
-        pl.close()  # clear figure
+        plt.close()  # clear figure
 
 
 def default_palette(
-    palette: Union[str, Sequence[str], Cycler, None] = None
+    palette: str | Sequence[str] | Cycler | None = None
 ) -> str | Cycler:
     if palette is None:
         return rcParams["axes.prop_cycle"]
@@ -365,7 +370,7 @@ def _validate_palette(adata: anndata.AnnData, key: str) -> None:
 
 
 def _set_colors_for_categorical_obs(
-    adata, value_to_plot, palette: Union[str, Sequence[str], Cycler]
+    adata, value_to_plot, palette: str | Sequence[str] | Cycler
 ):
     """
     Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
@@ -394,9 +399,9 @@ def _set_colors_for_categorical_obs(
     else:
         categories = adata.obs[value_to_plot].cat.categories
     # check is palette is a valid matplotlib colormap
-    if isinstance(palette, str) and palette in pl.colormaps():
+    if isinstance(palette, str) and palette in plt.colormaps():
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
-        cmap = pl.get_cmap(palette)
+        cmap = plt.get_cmap(palette)
         colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
     elif isinstance(palette, cabc.Mapping):
         colors_list = [to_hex(palette[k], keep_alpha=True) for k in categories]
@@ -573,7 +578,7 @@ def scatter_group(
 
         color = rgb2hex(adata.uns[key + "_colors"][imask])
     if not is_color_like(color):
-        raise ValueError('"{}" is not a valid matplotlib color.'.format(color))
+        raise ValueError(f'"{color}" is not a valid matplotlib color.')
     data = [Y[mask, 0], Y[mask, 1]]
     if projection == "3d":
         data.append(Y[mask, 2])
@@ -591,7 +596,7 @@ def scatter_group(
 
 
 def setup_axes(
-    ax: Union[Axes, Sequence[Axes]] = None,
+    ax: Axes | Sequence[Axes] = None,
     panels="blue",
     colorbars=(False,),
     right_margin=None,
@@ -641,7 +646,7 @@ def setup_axes(
     )
 
     if ax is None:
-        pl.figure(
+        plt.figure(
             figsize=(figure_width, height),
             subplotpars=sppars(left=0, right=1, bottom=bottom_offset),
         )
@@ -662,9 +667,9 @@ def setup_axes(
             width = draw_region_width / figure_width
             height = panel_pos[1][0] - bottom
             if projection == "2d":
-                ax = pl.axes([left, bottom, width, height])
+                ax = plt.axes([left, bottom, width, height])
             elif projection == "3d":
-                ax = pl.axes([left, bottom, width, height], projection="3d")
+                ax = plt.axes([left, bottom, width, height], projection="3d")
             axs.append(ax)
     else:
         axs = ax if isinstance(ax, cabc.Sequence) else [ax]
@@ -691,7 +696,7 @@ def scatter_base(
     color_map="viridis",
     show_ticks=True,
     ax=None,
-) -> Union[Axes, List[Axes]]:
+) -> Axes | list[Axes]:
     """Plot scatter plot of data.
 
     Parameters
@@ -763,9 +768,9 @@ def scatter_base(
                 + (1.2 if projection == "3d" else 0.2) * width
             )
             rectangle = [left, bottom, width, height]
-            fig = pl.gcf()
+            fig = plt.gcf()
             ax_cb = fig.add_axes(rectangle)
-            _ = pl.colorbar(
+            _ = plt.colorbar(
                 sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
             )
         # set the title
@@ -1147,14 +1152,14 @@ def circles(
 
 
 def make_grid_spec(
-    ax_or_figsize: Union[Tuple[int, int], _AxesSubplot],
+    ax_or_figsize: tuple[int, int] | _AxesSubplot,
     nrows: int,
     ncols: int,
-    wspace: Optional[float] = None,
-    hspace: Optional[float] = None,
-    width_ratios: Optional[Sequence[float]] = None,
-    height_ratios: Optional[Sequence[float]] = None,
-) -> Tuple[Figure, gridspec.GridSpecBase]:
+    wspace: float | None = None,
+    hspace: float | None = None,
+    width_ratios: Sequence[float] | None = None,
+    height_ratios: Sequence[float] | None = None,
+) -> tuple[Figure, gridspec.GridSpecBase]:
     kw = dict(
         wspace=wspace,
         hspace=hspace,
@@ -1162,7 +1167,7 @@ def make_grid_spec(
         height_ratios=height_ratios,
     )
     if isinstance(ax_or_figsize, tuple):
-        fig = pl.figure(figsize=ax_or_figsize)
+        fig = plt.figure(figsize=ax_or_figsize)
         return fig, gridspec.GridSpec(nrows, ncols, **kw)
     else:
         ax = ax_or_figsize

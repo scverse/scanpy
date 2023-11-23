@@ -1,31 +1,37 @@
 """\
 Exporting to formats for other software.
 """
+from __future__ import annotations
+
 import json
 import logging as logg
 from pathlib import Path
-from typing import Union, Optional, Iterable, Mapping
+from typing import TYPE_CHECKING
 
-import numpy as np
-import scipy.sparse
 import h5py
 import matplotlib.pyplot as plt
-from anndata import AnnData
+import numpy as np
+import scipy.sparse
 from pandas.api.types import CategoricalDtype
 
-from ..preprocessing._utils import _get_mean_var
 from .._utils import NeighborsView
+from ..preprocessing._utils import _get_mean_var
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+
+    from anndata import AnnData
 
 
 def spring_project(
     adata: AnnData,
-    project_dir: Union[Path, str],
+    project_dir: Path | str,
     embedding_method: str,
-    subplot_name: Optional[str] = None,
-    cell_groupings: Union[str, Iterable[str], None] = None,
-    custom_color_tracks: Union[str, Iterable[str], None] = None,
+    subplot_name: str | None = None,
+    cell_groupings: str | Iterable[str] | None = None,
+    custom_color_tracks: str | Iterable[str] | None = None,
     total_counts_key: str = "n_counts",
-    neighbors_key: Optional[str] = None,
+    neighbors_key: str | None = None,
     overwrite: bool = False,
 ):
     """\
@@ -307,11 +313,11 @@ def _write_graph(filename, n_nodes, edges):
     nodes = [{"name": int(i), "number": int(i)} for i in range(n_nodes)]
     edges = [{"source": int(i), "target": int(j), "distance": 0} for i, j in edges]
     out = {"nodes": nodes, "links": edges}
-    open(filename, "w").write(json.dumps(out, indent=4, separators=(",", ": ")))
+    Path(filename).write_text(json.dumps(out, indent=4, separators=(",", ": ")))
 
 
 def _write_edges(filename, edges):
-    with open(filename, "w") as f:
+    with Path(filename).open("w") as f:
         for e in edges:
             f.write("%i;%i\n" % (e[0], e[1]))
 
@@ -322,12 +328,12 @@ def _write_color_tracks(ctracks, fname):
         line = name + "," + ",".join(["%.3f" % x for x in score])
         out += [line]
     out = sorted(out, key=lambda x: x.split(",")[0])
-    open(fname, "w").write("\n".join(out))
+    Path(fname).write_text("\n".join(out))
 
 
 def _frac_to_hex(frac):
     rgb = tuple(np.array(np.array(plt.cm.jet(frac)[:3]) * 255, dtype=int))
-    return "#%02x%02x%02x" % rgb
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
 
 
 def _get_color_stats_genes(color_stats, E, gene_list):
@@ -366,8 +372,7 @@ def _get_color_stats_custom(color_stats, custom_colors):
 
 
 def _write_color_stats(filename, color_stats):
-    with open(filename, "w") as f:
-        f.write(json.dumps(color_stats, indent=4, sort_keys=True))  # .decode('utf-8'))
+    Path(filename).write_text(json.dumps(color_stats, indent=4, sort_keys=True))
 
 
 def _build_categ_colors(categorical_coloring_data, cell_groupings):
@@ -384,10 +389,9 @@ def _build_categ_colors(categorical_coloring_data, cell_groupings):
 
 
 def _write_cell_groupings(filename, categorical_coloring_data):
-    with open(filename, "w") as f:
-        f.write(
-            json.dumps(categorical_coloring_data, indent=4, sort_keys=True)
-        )  # .decode('utf-8'))
+    Path(filename).write_text(
+        json.dumps(categorical_coloring_data, indent=4, sort_keys=True)
+    )
 
 
 def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
@@ -463,17 +467,17 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
     import json
 
-    json.dump(PAGA_data, open(outpath, "w"), indent=4)
+    Path(outpath).write_text(json.dumps(PAGA_data, indent=4))
 
     return None
 
 
 def cellbrowser(
     adata: AnnData,
-    data_dir: Union[Path, str],
+    data_dir: Path | str,
     data_name: str,
-    embedding_keys: Union[Iterable[str], Mapping[str, str], str, None] = None,
-    annot_keys: Union[Iterable[str], Mapping[str, str], None] = (
+    embedding_keys: Iterable[str] | Mapping[str, str] | str | None = None,
+    annot_keys: Iterable[str] | Mapping[str, str] | None = (
         "louvain",
         "percent_mito",
         "n_genes",
@@ -482,8 +486,8 @@ def cellbrowser(
     cluster_field: str = "louvain",
     nb_marker: int = 50,
     skip_matrix: bool = False,
-    html_dir: Union[Path, str, None] = None,
-    port: Optional[int] = None,
+    html_dir: Path | str | None = None,
+    port: int | None = None,
     do_debug: bool = False,
 ):
     """\

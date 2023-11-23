@@ -1,4 +1,5 @@
-from unittest.mock import patch
+from __future__ import annotations
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises

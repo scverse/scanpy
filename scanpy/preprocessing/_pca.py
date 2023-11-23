@@ -1,37 +1,35 @@
 from __future__ import annotations
 
 import warnings
-from typing import Optional, Union
 from warnings import warn
 
 import numpy as np
+from anndata import AnnData
 from packaging import version
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
-from anndata import AnnData
-
 from .. import logging as logg
-from .._settings import settings
 from .._compat import DaskArray, pkg_version
-from .._utils import AnyRandom, Empty, _empty, _doc_params
+from .._settings import settings
+from .._utils import AnyRandom, Empty, _doc_params, _empty
 from ..get import _check_mask, _get_obs_rep
-from ._utils import _get_mean_var
 from ._docs import doc_mask_hvg
+from ._utils import _get_mean_var
 
 
 @_doc_params(
     mask_hvg=doc_mask_hvg,
 )
 def pca(
-    data: Union[AnnData, np.ndarray, spmatrix],
-    n_comps: Optional[int] = None,
+    data: AnnData | np.ndarray | spmatrix,
+    n_comps: int | None = None,
     *,
-    layer: Optional[str] = None,
-    zero_center: Optional[bool] = True,
-    svd_solver: Optional[str] = None,
+    layer: str | None = None,
+    zero_center: bool | None = True,
+    svd_solver: str | None = None,
     random_state: AnyRandom = 0,
     return_info: bool = False,
     mask: np.ndarray | str | None | Empty = _empty,
@@ -39,8 +37,8 @@ def pca(
     dtype: str = "float32",
     copy: bool = False,
     chunked: bool = False,
-    chunk_size: Optional[int] = None,
-) -> Union[AnnData, np.ndarray, spmatrix]:
+    chunk_size: int | None = None,
+) -> AnnData | np.ndarray | spmatrix:
     """\
     Principal component analysis [Pedregosa11]_.
 
@@ -210,15 +208,15 @@ def pca(
 
         incremental_pca_kwargs = dict()
         if is_dask:
-            from dask_ml.decomposition import IncrementalPCA
             from dask.array import zeros
+            from dask_ml.decomposition import IncrementalPCA
 
             incremental_pca_kwargs["svd_solver"] = _handle_dask_ml_args(
                 svd_solver, "IncrementalPCA"
             )
         else:
-            from sklearn.decomposition import IncrementalPCA
             from numpy import zeros
+            from sklearn.decomposition import IncrementalPCA
 
         X_pca = zeros((X.shape[0], n_comps), X.dtype)
 

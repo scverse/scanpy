@@ -1,11 +1,11 @@
-import os
+from __future__ import annotations
+
 import sys
-from pathlib import Path
 from datetime import datetime
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
-from sphinx.application import Sphinx
 from packaging.version import parse as parse_version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -14,6 +14,9 @@ matplotlib.use("agg")
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
 import scanpy  # noqa
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 
 # -- General configuration ------------------------------------------------

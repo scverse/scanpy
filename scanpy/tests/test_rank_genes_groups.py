@@ -1,28 +1,31 @@
 from __future__ import annotations
 
 import pickle
-from pathlib import Path
-from collections.abc import Callable
-from typing import Any
 from functools import partial
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 import scipy
-from numpy.typing import NDArray
 from anndata import AnnData
+from numpy.random import binomial, negative_binomial, seed
 from packaging import version
 from scipy.stats import mannwhitneyu
-from numpy.random import negative_binomial, binomial, seed
 
 import scanpy as sc
+from scanpy._utils import elem_mul, select_groups
+from scanpy.get import rank_genes_groups_df
 from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
-from scanpy.get import rank_genes_groups_df
-from scanpy._utils import select_groups, elem_mul
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from numpy.typing import NDArray
 
 HERE = Path(__file__).parent
 DATA_PATH = HERE / "_data"

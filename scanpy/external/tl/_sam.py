@@ -2,16 +2,14 @@
 Run the Self-Assembling Manifold algorithm
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Union, Tuple, Any, Literal
 
-from anndata import AnnData
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
+    from anndata import AnnData
     from samalg import SAM
 
 from ... import logging as logg
-
-
 from ...testing._doctests import doctest_needs
 
 
@@ -25,12 +23,12 @@ def sam(
     standardization: Literal["Normalizer", "StandardScaler", "None"] = "StandardScaler",
     weight_pcs: bool = False,
     sparse_pca: bool = False,
-    n_pcs: Optional[int] = 150,
-    n_genes: Optional[int] = 3000,
+    n_pcs: int | None = 150,
+    n_genes: int | None = 3000,
     projection: Literal["umap", "tsne", "None"] = "umap",
     inplace: bool = True,
     verbose: bool = True,
-) -> Union[SAM, Tuple[SAM, AnnData]]:
+) -> SAM | tuple[SAM, AnnData]:
     """\
     Self-Assembling Manifolds single-cell RNA sequencing analysis tool [Tarashansky19]_.
 

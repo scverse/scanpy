@@ -1,29 +1,31 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Optional, Union
+from typing import TYPE_CHECKING
 
-from anndata import AnnData
 import numba
 import numpy as np
 from scipy import sparse
 
-from ..get import _get_obs_rep
 from .._compat import fullname
-from ._common import _resolve_vals, _check_vals
+from ..get import _get_obs_rep
+from ._common import _check_vals, _resolve_vals
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 @singledispatch
 def gearys_c(
     adata: AnnData,
     *,
-    vals: Optional[Union[np.ndarray, sparse.spmatrix]] = None,
-    use_graph: Optional[str] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-    obsp: Optional[str] = None,
+    vals: np.ndarray | sparse.spmatrix | None = None,
+    use_graph: str | None = None,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
     use_raw: bool = False,
-) -> Union[np.ndarray, float]:
+) -> np.ndarray | float:
     r"""
     Calculate `Geary's C <https://en.wikipedia.org/wiki/Geary's_C>`_, as used
     by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.

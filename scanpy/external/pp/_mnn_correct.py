@@ -1,36 +1,41 @@
-from typing import Union, Collection, Optional, Any, Sequence, Tuple, List, Literal
+from __future__ import annotations
 
-import numpy as np
-import pandas as pd
-from anndata import AnnData
+from typing import TYPE_CHECKING, Any, Literal
 
 from ..._settings import settings
 
+if TYPE_CHECKING:
+    from collections.abc import Collection, Sequence
+
+    import numpy as np
+    import pandas as pd
+    from anndata import AnnData
+
 
 def mnn_correct(
-    *datas: Union[AnnData, np.ndarray],
-    var_index: Optional[Collection[str]] = None,
-    var_subset: Optional[Collection[str]] = None,
+    *datas: AnnData | np.ndarray,
+    var_index: Collection[str] | None = None,
+    var_subset: Collection[str] | None = None,
     batch_key: str = "batch",
     index_unique: str = "-",
-    batch_categories: Optional[Collection[Any]] = None,
+    batch_categories: Collection[Any] | None = None,
     k: int = 20,
     sigma: float = 1.0,
     cos_norm_in: bool = True,
     cos_norm_out: bool = True,
-    svd_dim: Optional[int] = None,
+    svd_dim: int | None = None,
     var_adj: bool = True,
     compute_angle: bool = False,
-    mnn_order: Optional[Sequence[int]] = None,
+    mnn_order: Sequence[int] | None = None,
     svd_mode: Literal["svd", "rsvd", "irlb"] = "rsvd",
     do_concatenate: bool = True,
     save_raw: bool = False,
-    n_jobs: Optional[int] = None,
+    n_jobs: int | None = None,
     **kwargs,
-) -> Tuple[
-    Union[np.ndarray, AnnData],
-    List[pd.DataFrame],
-    Optional[List[Tuple[Optional[float], int]]],
+) -> tuple[
+    np.ndarray | AnnData,
+    list[pd.DataFrame],
+    list[tuple[float | None, int]] | None,
 ]:
     """\
     Correct batch effects by matching mutual nearest neighbors [Haghverdi18]_ [Kang18]_.
@@ -123,8 +128,8 @@ def mnn_correct(
         return datas, [], []
 
     try:
-        from mnnpy import mnn_correct
         import mnnpy
+        from mnnpy import mnn_correct
     except ImportError:
         raise ImportError(
             "Please install the package mnnpy "

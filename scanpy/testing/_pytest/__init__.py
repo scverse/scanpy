@@ -1,14 +1,15 @@
 """A private pytest plugin"""
 from __future__ import annotations
 
-from collections.abc import Iterable, Generator
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from .fixtures import *  # noqa: F403
 
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
 
 doctest_env_marker = pytest.mark.usefixtures("doctest_env")
 
@@ -17,17 +18,18 @@ doctest_env_marker = pytest.mark.usefixtures("doctest_env")
 @pytest.fixture(autouse=True)
 def global_test_context() -> Generator[None, None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
-    from matplotlib import pyplot
+    from matplotlib import pyplot as plt
+
     from scanpy import settings
 
-    pyplot.switch_backend("agg")
+    plt.switch_backend("agg")
     settings.logfile = sys.stderr
     settings.verbosity = "hint"
     settings.autoshow = True
 
     yield
 
-    pyplot.close("all")
+    plt.close("all")
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

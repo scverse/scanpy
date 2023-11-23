@@ -106,16 +106,16 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=5",
+    "sphinx>=6",
     "sphinx-book-theme>=1.0.1",
     "scanpydoc>=0.9.5",
-    "sphinx-autodoc-typehints",
-    "myst-parser",
-    "myst-nb",
+    "sphinx-autodoc-typehints>=1.23.0",
+    "myst-parser>=2",
+    "myst-nb>=1",
     "sphinx-design",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
-    "nbsphinx",
+    "nbsphinx>=0.9",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
     # TODO: remove necessity for being able to import doc-linked classes
@@ -177,14 +177,17 @@ source = [".", "**/site-packages"]
 
 [tool.ruff]
 select = [
-    "F",  # Pyflakes
-    "E",  # Pycodestyle errors
-    "W",  # Pycodestyle warnings
+    "E",       # Error detected by Pycodestyle
+    "F",       # Errors detected by Pyflakes
+    "W",       # Warning detected by Pycodestyle
+    "UP",      # pyupgrade
+    "I",       # isort
+    "TCH",     # manage type checking blocks
     "TID251",  # Banned imports
+    "ICN",     # Follow import conventions
+    "PTH",     # Pathlib instead of os.path
 ]
 ignore = [
-    # module imported but unused -> required for Scanpys API
-    "F401",
     # line too long -> we accept long comment lines; black gets rid of long code lines
     "E501",
     # module level import not at top of file -> required to circumvent circular imports for Scanpys API
@@ -197,6 +200,9 @@ ignore = [
 [tool.ruff.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
+[tool.ruff.isort]
+known-first-party = ["scanpy"]
+required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"

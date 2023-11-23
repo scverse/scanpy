@@ -1,15 +1,19 @@
-from typing import Literal
+from __future__ import annotations
+
 import warnings
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pytest
 from anndata import AnnData
-from pytest_mock import MockerFixture
 from scipy.sparse import csr_matrix, issparse
 from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
 from scanpy import Neighbors
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]

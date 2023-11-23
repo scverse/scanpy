@@ -1,13 +1,17 @@
 """\
 Run Diffusion maps using the adaptive anisotropic kernel
 """
-from typing import Optional, List
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pandas as pd
-from anndata import AnnData
 
 from ... import logging as logg
 from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 @doctest_needs("palantir")
@@ -17,12 +21,12 @@ def palantir(
     knn: int = 30,
     alpha: float = 0,
     use_adjacency_matrix: bool = False,
-    distances_key: Optional[str] = None,
+    distances_key: str | None = None,
     n_eigs: int = None,
     impute_data: bool = True,
     n_steps: int = 3,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Run Diffusion maps using the adaptive anisotropic kernel [Setty18]_.
 
@@ -116,7 +120,7 @@ def palantir(
 
     *Principal component analysis*
 
-    >>> sc.tl.pca(adata, n_comps=300)
+    >>> sc.pp.pca(adata, n_comps=300)
 
     or,
 
@@ -193,8 +197,8 @@ def palantir(
 
     _check_import()
     from palantir.utils import (
-        run_diffusion_maps,
         determine_multiscale_space,
+        run_diffusion_maps,
         run_magic_imputation,
     )
 
@@ -243,14 +247,14 @@ def palantir_results(
     adata: AnnData,
     early_cell: str,
     ms_data: str = "X_palantir_multiscale",
-    terminal_states: List = None,
+    terminal_states: list = None,
     knn: int = 30,
     num_waypoints: int = 1200,
     n_jobs: int = -1,
     scale_components: bool = True,
     use_early_cell_as_start: bool = False,
     max_iterations: int = 25,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     **Running Palantir**
 
@@ -309,6 +313,6 @@ def palantir_results(
 
 def _check_import():
     try:
-        import palantir
+        import palantir  # noqa: F401
     except ImportError:
         raise ImportError("\nplease install palantir:\n\tpip install palantir")

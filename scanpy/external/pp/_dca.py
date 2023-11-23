@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 from types import MappingProxyType
-from typing import Optional, Sequence, Union, Mapping, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
-from anndata import AnnData
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
 
-from ..._utils import AnyRandom
+    from anndata import AnnData
 
+    from ..._utils import AnyRandom
 
 _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 
@@ -18,7 +22,7 @@ def dca(
     log1p: bool = True,
     # network args
     hidden_size: Sequence[int] = (64, 32, 64),
-    hidden_dropout: Union[float, Sequence[float]] = 0.0,
+    hidden_dropout: float | Sequence[float] = 0.0,
     batchnorm: bool = True,
     activation: str = "relu",
     init: str = "glorot_uniform",
@@ -30,14 +34,14 @@ def dca(
     batch_size: int = 32,
     optimizer: str = "RMSprop",
     random_state: AnyRandom = 0,
-    threads: Optional[int] = None,
-    learning_rate: Optional[float] = None,
+    threads: int | None = None,
+    learning_rate: float | None = None,
     verbose: bool = False,
     training_kwds: Mapping[str, Any] = MappingProxyType({}),
     return_model: bool = False,
     return_info: bool = False,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Deep count autoencoder [Eraslan18]_.
 

@@ -1,7 +1,9 @@
-import numpy as np
-from scanpy.testing._helpers.data import pbmc68k_reduced
-from scanpy.tools import rank_genes_groups, filter_rank_genes_groups
+from __future__ import annotations
 
+import numpy as np
+
+from scanpy.testing._helpers.data import pbmc68k_reduced
+from scanpy.tools import filter_rank_genes_groups, rank_genes_groups
 
 names_no_reference = np.array(
     [
