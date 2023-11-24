@@ -134,10 +134,17 @@ def dendrogram(
         rep_df.set_index(categorical, inplace=True)
         categories = rep_df.index.categories
     else:
-        gene_names = adata.raw.var_names if use_raw else adata.var_names
         from ..plotting._anndata import _prepare_dataframe
 
-        categories, rep_df = _prepare_dataframe(adata, gene_names, groupby, use_raw)
+        categories, rep_df = _prepare_dataframe(
+            adata if not use_raw else adata.raw,
+            var_names, groupby, use_raw
+        )
+
+        # Correlation is not defined for rows where are values are equal
+        if rep_df.eq(rep_df.iloc[:, 0], axis=0).all(True).sum() > 0:
+            # Make sure correlation is defined
+            rep_df["dummy"] = -1
 
     # aggregate values within categories using 'mean'
     mean_df = rep_df.groupby(level=0).mean()
