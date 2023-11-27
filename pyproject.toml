@@ -1,17 +1,12 @@
 [build-system]
-build-backend = "flit_core.buildapi"
-requires = [
-    "flit_core >=3.4,<4",
-    "setuptools_scm",
-    "tomli",
-    "importlib_metadata>=0.7; python_version < '3.8'",
-]
+build-backend = "hatchling.build"
+requires = ["hatchling", "hatch-vcs"]
 
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-requires-python = ">=3.8"
-license = {file = "LICENSE"}
+requires-python = ">=3.9"
+license = "BSD-3-clause"
 authors = [
     {name = "Alex Wolf"},
     {name = "Philipp Angerer"},
@@ -31,7 +26,7 @@ maintainers = [
     {name = "Philipp Angerer", email = "phil.angerer@gmail.com"},
     {name = "Alex Wolf", email = "f.alex.wolf@gmx.de"},
 ]
-readme = {file = "README.md", content-type="text/markdown"}
+readme = "README.md"
 classifiers = [
     "License :: OSI Approved :: BSD License",
     "Development Status :: 5 - Production/Stable",
@@ -44,7 +39,6 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -55,10 +49,11 @@ dependencies = [
     "anndata>=0.7.4",
     # numpy needs a version due to #1320
     "numpy>=1.17.0",
-    "matplotlib>=3.4",
-    "pandas>=1.0",
+    "matplotlib>=3.6",
+    # pandas 2.1.2 has pandas/issues/52927
+    "pandas >=1.1.1, !=2.1.2",
     "scipy>=1.4",
-    "seaborn",
+    "seaborn>=0.13.0",
     "h5py>=3",
     "tqdm",
     "scikit-learn>=0.24",
@@ -71,7 +66,7 @@ dependencies = [
     "umap-learn>=0.3.10",
     "packaging",
     "session-info",
-    # for getting the stable version
+    "get-annotations; python_version < '3.10'",
 ]
 dynamic = ["version"]
 
@@ -87,8 +82,9 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=4.4",
+    "pytest>=7.4.2",
     "pytest-nunit",
+    "pytest-mock",
     "profimp",
 ]
 test = [
@@ -110,26 +106,27 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
-    "scanpydoc>=0.7.11",
-    "sphinx-autodoc-typehints",
-    "myst-parser",
-    "myst-nb",
-    "sphinx-book-theme",
+    "sphinx>=6",
+    "sphinx-book-theme>=1.0.1",
+    "scanpydoc>=0.9.5",
+    "sphinx-autodoc-typehints>=1.23.0",
+    "myst-parser>=2",
+    "myst-nb>=1",
     "sphinx-design",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
-    "nbsphinx",
+    "nbsphinx>=0.9",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
+    # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga]",
+    "sam-algorithm",
 ]
 dev = [
     # getting the dev version
     "setuptools_scm",
     # static checking
-    "black>=20.8b1",
-    "docutils",
+    "pre-commit",
 ]
 # Algorithms
 paga = ["igraph"]
@@ -146,16 +143,18 @@ rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculati
 dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
 dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
-[tool.flit.sdist]
-exclude = [
-    "scanpy/tests",
-    "setup.py",
-]
+[tool.hatch.build]
+exclude = ["scanpy/tests"]
+[tool.hatch.version]
+source = "vcs"
+[tool.hatch.build.hooks.vcs]
+version-file = "scanpy/_version.py"
 
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
+    "--doctest-modules",
     "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]
@@ -164,27 +163,31 @@ xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
+    "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
 ]
 
 [tool.coverage.run]
+data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
 omit = ["*/tests/*"]
+[tool.coverage.xml]
+output = "test-data/coverage.xml"
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
 
-[tool.black]
-skip-string-normalization = true
-
 [tool.ruff]
 select = [
-    "F",  # Pyflakes
-    "E",  # Pycodestyle errors
-    "W",  # Pycodestyle warnings
+    "E",       # Error detected by Pycodestyle
+    "F",       # Errors detected by Pyflakes
+    "W",       # Warning detected by Pycodestyle
+    "UP",      # pyupgrade
+    "I",       # isort
+    "TCH",     # manage type checking blocks
     "TID251",  # Banned imports
+    "ICN",     # Follow import conventions
+    "PTH",     # Pathlib instead of os.path
 ]
 ignore = [
-    # module imported but unused -> required for Scanpys API
-    "F401",
     # line too long -> we accept long comment lines; black gets rid of long code lines
     "E501",
     # module level import not at top of file -> required to circumvent circular imports for Scanpys API
@@ -197,5 +200,10 @@ ignore = [
 [tool.ruff.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
+[tool.ruff.isort]
+known-first-party = ["scanpy"]
+required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
+"pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
+"pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"

@@ -1,14 +1,19 @@
-from anndata import AnnData
-from typing import Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from ._dpt import _diffmap
-from .._utils import AnyRandom
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+
+    from .._utils import AnyRandom
 
 
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
-    neighbors_key: Optional[str] = None,
+    neighbors_key: str | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
 ):
@@ -48,12 +53,13 @@ def diffmap(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `X_diffmap` : :class:`numpy.ndarray` (`adata.obsm`)
+    `adata.obsm['X_diffmap']` : :class:`numpy.ndarray` (dtype `float`)
         Diffusion map representation of data, which is the right eigen basis of
         the transition matrix with eigenvectors as columns.
-    `diffmap_evals` : :class:`numpy.ndarray` (`adata.uns`)
+
+    `adata.uns['diffmap_evals']` : :class:`numpy.ndarray` (dtype `float`)
         Array of size (number of eigen vectors).
         Eigenvalues of transition matrix.
 
@@ -65,14 +71,14 @@ def diffmap(
     e.g. `adata.obsm["X_diffmap"][:,1]`
     """
     if neighbors_key is None:
-        neighbors_key = 'neighbors'
+        neighbors_key = "neighbors"
 
     if neighbors_key not in adata.uns:
         raise ValueError(
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
+            "You need to run `pp.neighbors` first to compute a neighborhood graph."
         )
     if n_comps <= 2:
-        raise ValueError('Provide any value greater than 2 for `n_comps`. ')
+        raise ValueError("Provide any value greater than 2 for `n_comps`. ")
     adata = adata.copy() if copy else adata
     _diffmap(
         adata, n_comps=n_comps, neighbors_key=neighbors_key, random_state=random_state

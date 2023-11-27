@@ -1,18 +1,23 @@
 """
 Metrics which don't quite deserve their own file.
 """
-from typing import Optional, Sequence, Union
+from __future__ import annotations
 
-import pandas as pd
-from pandas.api.types import is_categorical_dtype
-from natsort import natsorted
+from typing import TYPE_CHECKING
+
 import numpy as np
+import pandas as pd
+from natsort import natsorted
+from pandas.api.types import CategoricalDtype
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def confusion_matrix(
-    orig: Union[pd.Series, np.ndarray, Sequence],
-    new: Union[pd.Series, np.ndarray, Sequence],
-    data: Optional[pd.DataFrame] = None,
+    orig: pd.Series | np.ndarray | Sequence,
+    new: pd.Series | np.ndarray | Sequence,
+    data: pd.DataFrame | None = None,
     *,
     normalize: bool = True,
 ) -> pd.DataFrame:
@@ -75,11 +80,11 @@ def confusion_matrix(
     )
 
     # Filter
-    if is_categorical_dtype(orig):
+    if isinstance(orig.dtype, CategoricalDtype):
         orig_idx = pd.Series(orig).cat.categories
     else:
         orig_idx = natsorted(pd.unique(orig))
-    if is_categorical_dtype(new):
+    if isinstance(new.dtype, CategoricalDtype):
         new_idx = pd.Series(new).cat.categories
     else:
         new_idx = natsorted(pd.unique(new))

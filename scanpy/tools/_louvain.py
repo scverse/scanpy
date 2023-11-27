@@ -1,16 +1,24 @@
+from __future__ import annotations
+
+import warnings
 from types import MappingProxyType
-from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from natsort import natsorted
-from scipy.sparse import spmatrix
 from packaging import version
 
-from ._utils_clustering import rename_groups, restrict_adjacency
-from .. import _utils, logging as logg
+from .. import _utils
+from .. import logging as logg
 from .._utils import _choose_graph
+from ._utils_clustering import rename_groups, restrict_adjacency
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
+    from anndata import AnnData
+    from scipy.sparse import spmatrix
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -19,25 +27,25 @@ except ImportError:
     class MutableVertexPartition:
         pass
 
-    MutableVertexPartition.__module__ = 'louvain.VertexPartition'
+    MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
 def louvain(
     adata: AnnData,
-    resolution: Optional[float] = None,
+    resolution: float | None = None,
     random_state: _utils.AnyRandom = 0,
-    restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
-    key_added: str = 'louvain',
-    adjacency: Optional[spmatrix] = None,
-    flavor: Literal['vtraag', 'igraph', 'rapids'] = 'vtraag',
+    restrict_to: tuple[str, Sequence[str]] | None = None,
+    key_added: str = "louvain",
+    adjacency: spmatrix | None = None,
+    flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
-    partition_type: Optional[Type[MutableVertexPartition]] = None,
+    partition_type: type[MutableVertexPartition] | None = None,
     partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
-    neighbors_key: Optional[str] = None,
-    obsp: Optional[str] = None,
+    neighbors_key: str | None = None,
+    obsp: str | None = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
@@ -69,7 +77,16 @@ def louvain(
         Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     flavor
         Choose between to packages for computing the clustering.
-        ``'vtraag'`` is much more powerful, and the default.
+
+        ``'vtraag'``
+            Much more powerful than ``'igraph'``, and the default.
+        ``'igraph'``
+            Built in ``igraph`` method.
+        ``'rapids'``
+            GPU accelerated implementation.
+
+            .. deprecated:: 1.10.0
+                Use :func:`rapids_singlecell.tl.louvain` instead.
     directed
         Interpret the ``adjacency`` matrix as directed graph?
     use_weights
@@ -94,21 +111,21 @@ def louvain(
 
     Returns
     -------
-    :obj:`None`
-        By default (``copy=False``), updates ``adata`` with the following fields:
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-        ``adata.obs['louvain']`` (:class:`pandas.Series`, dtype ``category``)
-            Array of dim (number of samples) that stores the subgroup id
-            (``'0'``, ``'1'``, ...) for each cell.
+    `adata.obs['louvain' | key_added]` : :class:`pandas.Series` (dtype ``category``)
+        Array of dim (number of samples) that stores the subgroup id
+        (``'0'``, ``'1'``, ...) for each cell.
 
-    :class:`~anndata.AnnData`
-        When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
+    `adata.uns['louvain']['params']` : :class:`dict`
+        A dict with the values for the parameters `resolution`, `random_state`,
+        and `n_iterations`.
     """
     partition_kwargs = dict(partition_kwargs)
-    start = logg.info('running Louvain clustering')
-    if (flavor != 'vtraag') and (partition_type is not None):
+    start = logg.info("running Louvain clustering")
+    if (flavor != "vtraag") and (partition_type is not None):
         raise ValueError(
-            '`partition_type` is only a valid argument ' 'when `flavour` is "vtraag"'
+            "`partition_type` is only a valid argument " 'when `flavour` is "vtraag"'
         )
     adata = adata.copy() if copy else adata
     if adjacency is None:
@@ -121,19 +138,19 @@ def louvain(
             restrict_categories,
             adjacency,
         )
-    if flavor in {'vtraag', 'igraph'}:
-        if flavor == 'igraph' and resolution is not None:
+    if flavor in {"vtraag", "igraph"}:
+        if flavor == "igraph" and resolution is not None:
             logg.warning('`resolution` parameter has no effect for flavor "igraph"')
-        if directed and flavor == 'igraph':
+        if directed and flavor == "igraph":
             directed = False
         if not directed:
-            logg.debug('    using the undirected graph')
+            logg.debug("    using the undirected graph")
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if use_weights:
             weights = np.array(g.es["weight"]).astype(np.float64)
         else:
             weights = None
-        if flavor == 'vtraag':
+        if flavor == "vtraag":
             import louvain
 
             if partition_type is None:
@@ -156,7 +173,12 @@ def louvain(
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
-    elif flavor == 'rapids':
+    elif flavor == "rapids":
+        msg = (
+            "`flavor='rapids'` is deprecated. "
+            "Use `rapids_singlecell.tl.louvain` instead."
+        )
+        warnings.warn(msg, FutureWarning)
         # nvLouvain only works with undirected graphs,
         # and `adjacency` must have a directed edge in both directions
         import cudf
@@ -174,7 +196,7 @@ def louvain(
             weights = None
         g = cugraph.Graph()
 
-        if hasattr(g, 'add_adj_list'):
+        if hasattr(g, "add_adj_list"):
             g.add_adj_list(offsets, indices, weights)
         else:
             g.from_cudf_adjlist(offsets, indices, weights)
@@ -186,14 +208,14 @@ def louvain(
             louvain_parts, _ = cugraph.louvain(g)
         groups = (
             louvain_parts.to_pandas()
-            .sort_values('vertex')[['partition']]
+            .sort_values("vertex")[["partition"]]
             .to_numpy()
             .ravel()
         )
-    elif flavor == 'taynaud':
+    elif flavor == "taynaud":
         # this is deprecated
-        import networkx as nx
         import community
+        import networkx as nx
 
         g = nx.Graph(adjacency)
         partition = community.best_partition(g)
@@ -203,8 +225,8 @@ def louvain(
     else:
         raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
     if restrict_to is not None:
-        if key_added == 'louvain':
-            key_added += '_R'
+        if key_added == "louvain":
+            key_added += "_R"
         groups = rename_groups(
             adata,
             key_added,
@@ -214,20 +236,20 @@ def louvain(
             groups,
         )
     adata.obs[key_added] = pd.Categorical(
-        values=groups.astype('U'),
+        values=groups.astype("U"),
         categories=natsorted(map(str, np.unique(groups))),
     )
-    adata.uns['louvain'] = {}
-    adata.uns['louvain']['params'] = dict(
+    adata.uns["louvain"] = {}
+    adata.uns["louvain"]["params"] = dict(
         resolution=resolution,
         random_state=random_state,
     )
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
         deep=(
-            f'found {len(np.unique(groups))} clusters and added\n'
-            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+            f"found {len(np.unique(groups))} clusters and added\n"
+            f"    {key_added!r}, the cluster labels (adata.obs, categorical)"
         ),
     )
     return adata if copy else None

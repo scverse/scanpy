@@ -2,24 +2,29 @@
 Harmony time series for data visualization with augmented affinity matrix at
 discrete time points
 """
+from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 
 from ... import logging as logg
+from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
+@doctest_needs("harmony")
 def harmony_timeseries(
     adata: AnnData,
     tp: str,
     n_neighbors: int = 30,
-    n_components: Optional[int] = 1000,
+    n_components: int | None = 1000,
     n_jobs: int = -2,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Harmony time series for data visualization with augmented affinity matrix
     at discrete time points [Nowotschin18i]_.
@@ -103,7 +108,7 @@ def harmony_timeseries(
     ... )
     >>> time_points = adata.obs["sample"].str.split("_", expand=True)[0]
     >>> adata.obs["time_points"] = pd.Categorical(
-    ....    time_points, categories=['sa1', 'sa2', 'sa3']
+    ...     time_points, categories=['sa1', 'sa2', 'sa3']
     ... )
 
     Normalize and filter for highly expressed genes
@@ -136,8 +141,8 @@ def harmony_timeseries(
     adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")
 
-    if adata.obs[tp].dtype.name != 'category':
-        raise ValueError(f'{tp!r} column does not contain Categorical data')
+    if adata.obs[tp].dtype.name != "category":
+        raise ValueError(f"{tp!r} column does not contain Categorical data")
     timepoints = adata.obs[tp].cat.categories.tolist()
     timepoint_connections = pd.DataFrame(np.array([timepoints[:-1], timepoints[1:]]).T)
 

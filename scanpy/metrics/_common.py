@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from functools import singledispatch
 import warnings
+from functools import singledispatch
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -9,9 +10,12 @@ from scipy import sparse
 
 from .._compat import DaskArray
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
 
 @singledispatch
-def _resolve_vals(val):
+def _resolve_vals(val: NDArray | sparse.spmatrix) -> NDArray | sparse.csr_matrix:
     return np.asarray(val)
 
 
@@ -33,7 +37,12 @@ def _(val):
     return val.to_numpy()
 
 
-def _check_vals(vals):
+V = TypeVar("V", np.ndarray, sparse.csr_matrix)
+
+
+def _check_vals(
+    vals: V,
+) -> tuple[V, NDArray[np.bool_] | slice, NDArray[np.float64]]:
     """\
     Checks that values wont cause issues in computation.
 

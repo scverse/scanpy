@@ -1,33 +1,50 @@
 from __future__ import annotations
 
-from functools import partial, wraps, singledispatch
-from numbers import Integral
 from collections.abc import Callable
+from functools import partial, singledispatch, wraps
+from numbers import Integral
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
-from numpy.typing import NDArray
 from numba import njit
 from scipy import sparse
 
 from ..._compat import DaskArray
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
-def _check_axis_supported(wrapped: Callable) -> Callable:
+C = TypeVar("C", bound=Callable)
+
+
+def _check_axis_supported(wrapped: C) -> C:
     @wraps(wrapped)
     def func(a, axis=None):
         if axis is not None:
             if not isinstance(axis, Integral):
-                raise TypeError('axis must be integer or None.')
+                raise TypeError("axis must be integer or None.")
             if axis not in (0, 1):
-                raise NotImplementedError('We only support axis 0 and 1 at the moment')
+                raise NotImplementedError("We only support axis 0 and 1 at the moment")
         return wrapped(a, axis)
 
     return func
 
 
+@overload
+def is_constant(a: NDArray, axis: None = None) -> bool:
+    ...
+
+
+@overload
+def is_constant(a: NDArray, axis: Literal[0, 1]) -> NDArray[np.bool_]:
+    ...
+
+
 @_check_axis_supported
 @singledispatch
-def is_constant(a, axis: int | None = None) -> bool | NDArray[np.bool_]:
+def is_constant(
+    a: NDArray, axis: Literal[0, 1] | None = None
+) -> bool | NDArray[np.bool_]:
     """
     Check whether values in array are constant.
 
@@ -61,10 +78,10 @@ def is_constant(a, axis: int | None = None) -> bool | NDArray[np.bool_]:
 
 
 @is_constant.register(np.ndarray)
-def _(a: NDArray, axis: int | None = None) -> bool | NDArray[np.bool_]:
+def _(a: NDArray, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool_]:
     # Should eventually support nd, not now.
     if axis is None:
-        return np.array_equal(a, a.flat[0])
+        return (a == a.flat[0]).all()
     if axis == 0:
         return _is_constant_rows(a.T)
     elif axis == 1:
@@ -77,7 +94,9 @@ def _is_constant_rows(a: NDArray) -> NDArray[np.bool_]:
 
 
 @is_constant.register(sparse.csr_matrix)
-def _(a: sparse.csr_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]:
+def _(
+    a: sparse.csr_matrix, axis: Literal[0, 1] | None = None
+) -> bool | NDArray[np.bool_]:
     if axis is None:
         if len(a.data) == np.multiply(*a.shape):
             return is_constant(a.data)
@@ -114,7 +133,9 @@ def _is_constant_csr_rows(
 
 
 @is_constant.register(sparse.csc_matrix)
-def _(a: sparse.csc_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]:
+def _(
+    a: sparse.csc_matrix, axis: Literal[0, 1] | None = None
+) -> bool | NDArray[np.bool_]:
     if axis is None:
         if len(a.data) == np.multiply(*a.shape):
             return is_constant(a.data)
@@ -128,7 +149,7 @@ def _(a: sparse.csc_matrix, axis: int | None = None) -> bool | NDArray[np.bool_]
 
 
 @is_constant.register(DaskArray)
-def _(a: DaskArray, axis: int | None = None) -> bool | NDArray[np.bool_]:
+def _(a: DaskArray, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
         v = a[tuple(0 for _ in range(a.ndim))].compute()
         return (a == v).all()

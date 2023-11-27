@@ -32,7 +32,7 @@ Two large toolkits extending our ecosystem to new modalities have had their manu
 
 ### scVelo on the cover of Nature Biotechnology {small}`2020-12-01`
 
-Scanpy's counterpart for RNA velocity, [scVelo](http://scvelo.org/), made it on the cover of [Nature Biotechnology](https://www.nature.com/nbt/volumes/38/issues/12) \[[tweet](https://twitter.com/NatureBiotech/status/1334647540030070792)\].
+Scanpy's counterpart for RNA velocity, [scVelo](https://scvelo.org/), made it on the cover of [Nature Biotechnology](https://www.nature.com/nbt/volumes/38/issues/12) \[[tweet](https://twitter.com/NatureBiotech/status/1334647540030070792)\].
 
 ### Scanpy selected among 20 papers for 20 years of Genome Biology {small}`2020-08-01`
 
@@ -59,7 +59,7 @@ Bioconda, Seurat, Bioconductor, and others.
 
 ### Science “Breakthrough of the Year 2018” {small}`2018-12-01`
 
-The Science “Breakthrough of the Year 2018”, [Development cell by cell](https://vis.sciencemag.org/breakthrough2018/finalists/#cell-development), mentions the first application of PAGA [^cite_plass18] among 5 papers.
+The Science “Breakthrough of the Year 2018”, [Development cell by cell](https://vis.sciencemag.org/breakthrough2018/finalists/#cell-development), mentions the first application of PAGA {cite}`Plass18` among 5 papers.
 
 [32 projects]: https://chanzuckerberg.com/eoss/proposals/
 [essential open source software for science]: https://chanzuckerberg.com/newsroom/chan-zuckerberg-initiative-awards-5-million-for-open-source-software-projects-essential-to-science/

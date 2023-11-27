@@ -1,14 +1,15 @@
 """
 This file contains helper functions for the scanpy test suite.
 """
+from __future__ import annotations
 
+import warnings
 from itertools import permutations
 
-import scanpy as sc
 import numpy as np
-import warnings
 from anndata.tests.helpers import asarray, assert_equal
 
+import scanpy as sc
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
@@ -21,7 +22,7 @@ from anndata.tests.helpers import asarray, assert_equal
 
 def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
     """Check that only the array meant to be modified is modified."""
-    adata = sc.AnnData(X=X.copy(), dtype=X.dtype)
+    adata = sc.AnnData(X=X.copy())
     for field in fields:
         sc.get._set_obs_rep(adata, X, **{field: field})
     X_array = asarray(X)

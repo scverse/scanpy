@@ -1,19 +1,24 @@
-from typing import Optional, Tuple
-from anndata import AnnData
-import pandas as pd
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
+
 from scanpy import experimental
-from scanpy.preprocessing import pca
+from scanpy._utils import _doc_params
 from scanpy.experimental._docs import (
     doc_adata,
+    doc_check_values,
     doc_dist_params,
     doc_genes_batch_chunk,
-    doc_pca_chunk,
-    doc_layer,
-    doc_check_values,
     doc_inplace,
+    doc_pca_chunk,
 )
-from scanpy._utils import _doc_params
+from scanpy.preprocessing import pca
+
+if TYPE_CHECKING:
+    import pandas as pd
+    from anndata import AnnData
 
 
 @_doc_params(
@@ -28,16 +33,16 @@ def recipe_pearson_residuals(
     adata: AnnData,
     *,
     theta: float = 100,
-    clip: Optional[float] = None,
+    clip: float | None = None,
     n_top_genes: int = 1000,
-    batch_key: Optional[str] = None,
+    batch_key: str | None = None,
     chunksize: int = 1000,
-    n_comps: Optional[int] = 50,
-    random_state: Optional[float] = 0,
+    n_comps: int | None = 50,
+    random_state: float | None = 0,
     kwargs_pca: dict = {},
     check_values: bool = True,
     inplace: bool = True,
-) -> Optional[Tuple[AnnData, pd.DataFrame]]:
+) -> tuple[AnnData, pd.DataFrame] | None:
     """\
     Full pipeline for HVG selection and normalization by analytic Pearson residuals ([Lause21]_).
 
@@ -104,7 +109,7 @@ def recipe_pearson_residuals(
     """
 
     hvg_args = dict(
-        flavor='pearson_residuals',
+        flavor="pearson_residuals",
         n_top_genes=n_top_genes,
         batch_key=batch_key,
         theta=theta,
@@ -116,11 +121,11 @@ def recipe_pearson_residuals(
     if inplace:
         experimental.pp.highly_variable_genes(adata, **hvg_args, inplace=True)
         # TODO: are these copies needed?
-        adata_pca = adata[:, adata.var['highly_variable']].copy()
+        adata_pca = adata[:, adata.var["highly_variable"]].copy()
     else:
         hvg = experimental.pp.highly_variable_genes(adata, **hvg_args, inplace=False)
         # TODO: are these copies needed?
-        adata_pca = adata[:, hvg['highly_variable']].copy()
+        adata_pca = adata[:, hvg["highly_variable"]].copy()
 
     experimental.pp.normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
@@ -128,16 +133,16 @@ def recipe_pearson_residuals(
     pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
 
     if inplace:
-        normalization_param = adata_pca.uns['pearson_residuals_normalization']
+        normalization_param = adata_pca.uns["pearson_residuals_normalization"]
         normalization_dict = dict(
             **normalization_param, pearson_residuals_df=adata_pca.to_df()
         )
 
-        adata.uns['pca'] = adata_pca.uns['pca']
-        adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
-        adata.varm['PCs'][adata.var['highly_variable']] = adata_pca.varm['PCs']
-        adata.uns['pearson_residuals_normalization'] = normalization_dict
-        adata.obsm['X_pca'] = adata_pca.obsm['X_pca']
+        adata.uns["pca"] = adata_pca.uns["pca"]
+        adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
+        adata.varm["PCs"][adata.var["highly_variable"]] = adata_pca.varm["PCs"]
+        adata.uns["pearson_residuals_normalization"] = normalization_dict
+        adata.obsm["X_pca"] = adata_pca.obsm["X_pca"]
         return None
     else:
         return adata_pca, hvg

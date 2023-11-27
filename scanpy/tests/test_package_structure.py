@@ -1,16 +1,15 @@
-import email
+from __future__ import annotations
+
 import inspect
 import os
-from importlib.util import find_spec
-from types import FunctionType
 from pathlib import Path
+from types import FunctionType
 
 import pytest
-from scanpy._utils import descend_classes_and_funcs
 
 # CLI is locally not imported by default but on travis it is?
 import scanpy.cli
-
+from scanpy._utils import descend_classes_and_funcs
 
 mod_dir = Path(scanpy.__file__).parent
 proj_dir = mod_dir.parent
@@ -35,10 +34,18 @@ def in_project_dir():
 @pytest.mark.parametrize("f", scanpy_functions)
 def test_function_headers(f):
     name = f"{f.__module__}.{f.__qualname__}"
-    assert f.__doc__ is not None, f"{name} has no docstring"
-    lines = getattr(f, "__orig_doc__", f.__doc__).split("\n")
-    broken = [i for i, l in enumerate(lines) if l.strip() and not l.startswith("    ")]
-    if any(broken):
+    filename = inspect.getsourcefile(f)
+    lines, lineno = inspect.getsourcelines(f)
+    if f.__doc__ is None:
+        msg = f"Function `{name}` has no docstring"
+        text = lines[0]
+    else:
+        lines = getattr(f, "__orig_doc__", f.__doc__).split("\n")
+        broken = [
+            i for i, l in enumerate(lines) if l.strip() and not l.startswith("    ")
+        ]
+        if not any(broken):
+            return
         msg = f'''\
 Header of function `{name}`’s docstring should start with one-line description
 and be consistently indented like this:
@@ -51,7 +58,5 @@ and be consistently indented like this:
 
 The displayed line is under-indented.
 '''
-        filename = inspect.getsourcefile(f)
-        _, lineno = inspect.getsourcelines(f)
         text = f">{lines[broken[0]]}<"
-        raise SyntaxError(msg, (filename, lineno, 2, text))
+    raise SyntaxError(msg, (filename, lineno, 2, text))

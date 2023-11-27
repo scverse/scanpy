@@ -1,21 +1,26 @@
-from typing import Optional, Union, Mapping, Literal  # Special
-from typing import Sequence  # ABCs
-from typing import Tuple  # Classes
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
-from matplotlib import pyplot as pl
-from matplotlib.colors import is_color_like, Normalize
-from .. import logging as logg
-from .._utils import _doc_params
-from ._utils import make_grid_spec, check_colornorm
-from ._utils import _AxesSubplot
-from ._utils import savefig_or_show
-from .._settings import settings
+from matplotlib import pyplot as plt
+from matplotlib.colors import Normalize, is_color_like
 
+from .. import logging as logg
+from .._settings import settings
+from .._utils import _doc_params
+from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
-from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
+from ._utils import _AxesSubplot, check_colornorm, make_grid_spec, savefig_or_show
+
+if TYPE_CHECKING:
+    from collections.abc import (
+        Mapping,  # Special
+        Sequence,  # ABCs
+    )
+
+    from anndata import AnnData
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -83,24 +88,26 @@ class StackedViolin(BasePlot):
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)
+    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)  # doctest: +ELLIPSIS
+    <scanpy.plotting._stacked_violin.StackedViolin object at 0x...>
 
     Using var_names as dict:
 
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)
+    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)  # doctest: +ELLIPSIS
+    <scanpy.plotting._stacked_violin.StackedViolin object at 0x...>
     """
 
-    DEFAULT_SAVE_PREFIX = 'stacked_violin_'
-    DEFAULT_COLOR_LEGEND_TITLE = 'Median expression\nin group'
+    DEFAULT_SAVE_PREFIX = "stacked_violin_"
+    DEFAULT_COLOR_LEGEND_TITLE = "Median expression\nin group"
 
-    DEFAULT_COLORMAP = 'Blues'
+    DEFAULT_COLORMAP = "Blues"
     DEFAULT_STRIPPLOT = False
     DEFAULT_JITTER = False
     DEFAULT_JITTER_SIZE = 1
     DEFAULT_LINE_WIDTH = 0.2
     DEFAULT_ROW_PALETTE = None
-    DEFAULT_SCALE = 'width'
+    DEFAULT_SCALE = "width"
     DEFAULT_PLOT_YTICKLABELS = False
     DEFAULT_YLIM = None
     DEFAULT_PLOT_X_PADDING = 0.5  # a unit is the distance between two x-axis ticks
@@ -126,25 +133,25 @@ class StackedViolin(BasePlot):
     def __init__(
         self,
         adata: AnnData,
-        var_names: Union[_VarNames, Mapping[str, _VarNames]],
-        groupby: Union[str, Sequence[str]],
-        use_raw: Optional[bool] = None,
+        var_names: _VarNames | Mapping[str, _VarNames],
+        groupby: str | Sequence[str],
+        use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
-        categories_order: Optional[Sequence[str]] = None,
-        title: Optional[str] = None,
-        figsize: Optional[Tuple[float, float]] = None,
-        gene_symbols: Optional[str] = None,
-        var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
-        var_group_labels: Optional[Sequence[str]] = None,
-        var_group_rotation: Optional[float] = None,
-        layer: Optional[str] = None,
-        standard_scale: Literal['var', 'group'] = None,
-        ax: Optional[_AxesSubplot] = None,
-        vmin: Optional[float] = None,
-        vmax: Optional[float] = None,
-        vcenter: Optional[float] = None,
-        norm: Optional[Normalize] = None,
+        categories_order: Sequence[str] | None = None,
+        title: str | None = None,
+        figsize: tuple[float, float] | None = None,
+        gene_symbols: str | None = None,
+        var_group_positions: Sequence[tuple[int, int]] | None = None,
+        var_group_labels: Sequence[str] | None = None,
+        var_group_rotation: float | None = None,
+        layer: str | None = None,
+        standard_scale: Literal["var", "group"] = None,
+        ax: _AxesSubplot | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        vcenter: float | None = None,
+        norm: Normalize | None = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -171,16 +178,16 @@ class StackedViolin(BasePlot):
             **kwds,
         )
 
-        if standard_scale == 'obs':
+        if standard_scale == "obs":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
-        elif standard_scale == 'var':
+        elif standard_scale == "var":
             self.obs_tidy -= self.obs_tidy.min(0)
             self.obs_tidy = (self.obs_tidy / self.obs_tidy.max(0)).fillna(0)
         elif standard_scale is None:
             pass
         else:
-            logg.warning('Unknown type for standard_scale, ignored')
+            logg.warning("Unknown type for standard_scale, ignored")
 
         # Set default style parameters
         self.cmap = self.DEFAULT_COLORMAP
@@ -193,26 +200,26 @@ class StackedViolin(BasePlot):
         self.plot_x_padding = self.DEFAULT_PLOT_X_PADDING
         self.plot_y_padding = self.DEFAULT_PLOT_Y_PADDING
 
-        self.kwds.setdefault('cut', self.DEFAULT_CUT)
-        self.kwds.setdefault('inner', self.DEFAULT_INNER)
-        self.kwds.setdefault('linewidth', self.DEFAULT_LINE_WIDTH)
-        self.kwds.setdefault('scale', self.DEFAULT_SCALE)
+        self.kwds.setdefault("cut", self.DEFAULT_CUT)
+        self.kwds.setdefault("inner", self.DEFAULT_INNER)
+        self.kwds.setdefault("linewidth", self.DEFAULT_LINE_WIDTH)
+        self.kwds.setdefault("scale", self.DEFAULT_SCALE)
 
     def style(
         self,
-        cmap: Optional[str] = DEFAULT_COLORMAP,
-        stripplot: Optional[bool] = DEFAULT_STRIPPLOT,
-        jitter: Optional[Union[float, bool]] = DEFAULT_JITTER,
-        jitter_size: Optional[int] = DEFAULT_JITTER_SIZE,
-        linewidth: Optional[float] = DEFAULT_LINE_WIDTH,
-        row_palette: Optional[str] = DEFAULT_ROW_PALETTE,
-        scale: Optional[Literal['area', 'count', 'width']] = DEFAULT_SCALE,
-        yticklabels: Optional[bool] = DEFAULT_PLOT_YTICKLABELS,
-        ylim: Optional[Tuple[float, float]] = DEFAULT_YLIM,
-        x_padding: Optional[float] = DEFAULT_PLOT_X_PADDING,
-        y_padding: Optional[float] = DEFAULT_PLOT_Y_PADDING,
+        cmap: str | None = DEFAULT_COLORMAP,
+        stripplot: bool | None = DEFAULT_STRIPPLOT,
+        jitter: float | bool | None = DEFAULT_JITTER,
+        jitter_size: int | None = DEFAULT_JITTER_SIZE,
+        linewidth: float | None = DEFAULT_LINE_WIDTH,
+        row_palette: str | None = DEFAULT_ROW_PALETTE,
+        scale: Literal["area", "count", "width"] | None = DEFAULT_SCALE,
+        yticklabels: bool | None = DEFAULT_PLOT_YTICKLABELS,
+        ylim: tuple[float, float] | None = DEFAULT_YLIM,
+        x_padding: float | None = DEFAULT_PLOT_X_PADDING,
+        y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
     ):
-        """\
+        r"""\
         Modifies plot visual parameters
 
         Parameters
@@ -258,14 +265,14 @@ class StackedViolin(BasePlot):
 
         Examples
         -------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
 
         Change color map and turn off edges
 
-        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')\
-        ...               .style(row_palette='Blues', linewidth=0).show()
-
+        >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels') \
+        ...     .style(row_palette='Blues', linewidth=0).show()
         """
 
         # modify only values that had changed
@@ -273,7 +280,7 @@ class StackedViolin(BasePlot):
             self.cmap = cmap
         if row_palette != self.row_palette:
             self.row_palette = row_palette
-            self.kwds['color'] = self.row_palette
+            self.kwds["color"] = self.row_palette
         if stripplot != self.stripplot:
             self.stripplot = stripplot
         if jitter != self.jitter:
@@ -294,10 +301,10 @@ class StackedViolin(BasePlot):
             self.plot_x_padding = x_padding
         if y_padding != self.plot_y_padding:
             self.plot_y_padding = y_padding
-        if linewidth != self.kwds['linewidth'] and linewidth != self.DEFAULT_LINE_WIDTH:
-            self.kwds['linewidth'] = linewidth
-        if scale != self.kwds['scale'] and scale != self.DEFAULT_SCALE:
-            self.kwds['scale'] = scale
+        if linewidth != self.kwds["linewidth"] and linewidth != self.DEFAULT_LINE_WIDTH:
+            self.kwds["linewidth"] = linewidth
+        if scale != self.kwds["scale"] and scale != self.DEFAULT_SCALE:
+            self.kwds["scale"] = scale
 
         return self
 
@@ -325,9 +332,9 @@ class StackedViolin(BasePlot):
         if self.are_axes_swapped:
             _color_df = _color_df.T
 
-        cmap = pl.get_cmap(self.kwds.get('cmap', self.cmap))
-        if 'cmap' in self.kwds:
-            del self.kwds['cmap']
+        cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
+        if "cmap" in self.kwds:
+            del self.kwds["cmap"]
         normalize = check_colornorm(
             self.vboundnorm.vmin,
             self.vboundnorm.vmax,
@@ -344,7 +351,7 @@ class StackedViolin(BasePlot):
         # turn on axis for `ax` as this is turned off
         # by make_grid_spec when the axis is subdivided earlier.
         ax.set_frame_on(True)
-        ax.axis('on')
+        ax.axis("on")
         ax.patch.set_alpha(0.0)
 
         # add tick labels
@@ -362,11 +369,11 @@ class StackedViolin(BasePlot):
         x_ticks = np.arange(_color_df.shape[1]) + 0.5
         ax.set_xticks(x_ticks)
         labels = _color_df.columns
-        ax.set_xticklabels(labels, minor=False, ha='center')
+        ax.set_xticklabels(labels, minor=False, ha="center")
         # rotate x tick labels if they are longer than 2 characters
         if max([len(x) for x in labels]) > 2:
-            ax.tick_params(axis='x', labelrotation=90)
-        ax.tick_params(axis='both', labelsize='small')
+            ax.tick_params(axis="x", labelrotation=90)
+        ax.tick_params(axis="both", labelsize="small")
         ax.grid(False)
 
         return normalize
@@ -376,9 +383,9 @@ class StackedViolin(BasePlot):
     ):
         import seaborn as sns  # Slow import, only import if called
 
-        row_palette = self.kwds.get('color', self.row_palette)
-        if 'color' in self.kwds:
-            del self.kwds['color']
+        row_palette = self.kwds.get("color", self.row_palette)
+        if "color" in self.kwds:
+            del self.kwds["color"]
         if row_palette is not None:
             if is_color_like(row_palette):
                 row_colors = [row_palette] * _color_df.shape[0]
@@ -406,18 +413,18 @@ class StackedViolin(BasePlot):
             .reset_index()
             .rename(
                 columns={
-                    'level_1': 'genes',
-                    _matrix.index.name: 'categories',
-                    0: 'values',
+                    "level_1": "genes",
+                    _matrix.index.name: "categories",
+                    0: "values",
                 }
             )
         )
-        df['genes'] = (
-            df['genes'].astype('category').cat.reorder_categories(_matrix.columns)
+        df["genes"] = (
+            df["genes"].astype("category").cat.reorder_categories(_matrix.columns)
         )
-        df['categories'] = (
-            df['categories']
-            .astype('category')
+        df["categories"] = (
+            df["categories"]
+            .astype("category")
             .cat.reorder_categories(_matrix.index.categories)
         )
 
@@ -448,10 +455,10 @@ class StackedViolin(BasePlot):
                 palette_colors = None
 
             if not self.are_axes_swapped:
-                x = 'genes'
+                x = "genes"
                 _df = df[df.categories == row_label]
             else:
-                x = 'categories'
+                x = "categories"
                 # because of the renamed matrix columns here
                 # we need to use this instead of the 'row_label'
                 # (in _color_df the values are not renamed as those
@@ -460,9 +467,9 @@ class StackedViolin(BasePlot):
 
             row_ax = sns.violinplot(
                 x=x,
-                y='values',
+                y="values",
                 data=_df,
-                orient='vertical',
+                orient="vertical",
                 ax=row_ax,
                 palette=palette_colors,
                 color=row_colors[idx],
@@ -472,10 +479,10 @@ class StackedViolin(BasePlot):
             if self.stripplot:
                 row_ax = sns.stripplot(
                     x=x,
-                    y='values',
+                    y="values",
                     data=_df,
                     jitter=self.jitter,
-                    color='black',
+                    color="black",
                     size=self.jitter_size,
                     ax=row_ax,
                 )
@@ -494,24 +501,24 @@ class StackedViolin(BasePlot):
         if self.ylim is not None:
             row_ax.set_ylim(self.ylim)
         if self.log:
-            row_ax.set_yscale('log')
+            row_ax.set_yscale("log")
 
         if self.plot_yticklabels:
-            for spine in ['top', 'bottom', 'left']:
+            for spine in ["top", "bottom", "left"]:
                 row_ax.spines[spine].set_visible(False)
 
             # make line a bit ticker to see the extend of the yaxis in the
             # final plot
-            row_ax.spines['right'].set_linewidth(1.5)
-            row_ax.spines['right'].set_position(('data', num_cols))
+            row_ax.spines["right"].set_linewidth(1.5)
+            row_ax.spines["right"].set_position(("data", num_cols))
 
             row_ax.tick_params(
-                axis='y',
+                axis="y",
                 left=False,
                 right=True,
                 labelright=True,
                 labelleft=False,
-                labelsize='x-small',
+                labelsize="x-small",
             )
             # use only the smallest and the largest y ticks
             # and align the firts label on top of the tick and
@@ -529,18 +536,18 @@ class StackedViolin(BasePlot):
             ticklabels[0].set_va("bottom")
             ticklabels[-1].set_va("top")
         else:
-            row_ax.axis('off')
+            row_ax.axis("off")
             # remove labels
             row_ax.set_yticklabels([])
-            row_ax.tick_params(axis='y', left=False, right=False)
+            row_ax.tick_params(axis="y", left=False, right=False)
 
-        row_ax.set_ylabel('')
+        row_ax.set_ylabel("")
 
-        row_ax.set_xlabel('')
+        row_ax.set_xlabel("")
 
         row_ax.set_xticklabels([])
         row_ax.tick_params(
-            axis='x', bottom=False, top=False, labeltop=False, labelbottom=False
+            axis="x", bottom=False, top=False, labeltop=False, labelbottom=False
         )
 
 
@@ -552,40 +559,40 @@ class StackedViolin(BasePlot):
 )
 def stacked_violin(
     adata: AnnData,
-    var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: Union[str, Sequence[str]],
+    var_names: _VarNames | Mapping[str, _VarNames],
+    groupby: str | Sequence[str],
     log: bool = False,
-    use_raw: Optional[bool] = None,
+    use_raw: bool | None = None,
     num_categories: int = 7,
-    title: Optional[str] = None,
-    colorbar_title: Optional[str] = StackedViolin.DEFAULT_COLOR_LEGEND_TITLE,
-    figsize: Optional[Tuple[float, float]] = None,
-    dendrogram: Union[bool, str] = False,
-    gene_symbols: Optional[str] = None,
-    var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
-    var_group_labels: Optional[Sequence[str]] = None,
-    standard_scale: Optional[Literal['var', 'obs']] = None,
-    var_group_rotation: Optional[float] = None,
-    layer: Optional[str] = None,
+    title: str | None = None,
+    colorbar_title: str | None = StackedViolin.DEFAULT_COLOR_LEGEND_TITLE,
+    figsize: tuple[float, float] | None = None,
+    dendrogram: bool | str = False,
+    gene_symbols: str | None = None,
+    var_group_positions: Sequence[tuple[int, int]] | None = None,
+    var_group_labels: Sequence[str] | None = None,
+    standard_scale: Literal["var", "obs"] | None = None,
+    var_group_rotation: float | None = None,
+    layer: str | None = None,
     stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
-    jitter: Union[float, bool] = StackedViolin.DEFAULT_JITTER,
+    jitter: float | bool = StackedViolin.DEFAULT_JITTER,
     size: int = StackedViolin.DEFAULT_JITTER_SIZE,
-    scale: Literal['area', 'count', 'width'] = StackedViolin.DEFAULT_SCALE,
-    yticklabels: Optional[bool] = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
-    order: Optional[Sequence[str]] = None,
+    scale: Literal["area", "count", "width"] = StackedViolin.DEFAULT_SCALE,
+    yticklabels: bool | None = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
+    order: Sequence[str] | None = None,
     swap_axes: bool = False,
-    show: Optional[bool] = None,
-    save: Union[bool, str, None] = None,
-    return_fig: Optional[bool] = False,
-    row_palette: Optional[str] = StackedViolin.DEFAULT_ROW_PALETTE,
-    cmap: Optional[str] = StackedViolin.DEFAULT_COLORMAP,
-    ax: Optional[_AxesSubplot] = None,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    vcenter: Optional[float] = None,
-    norm: Optional[Normalize] = None,
+    show: bool | None = None,
+    save: bool | str | None = None,
+    return_fig: bool | None = False,
+    row_palette: str | None = StackedViolin.DEFAULT_ROW_PALETTE,
+    cmap: str | None = StackedViolin.DEFAULT_COLORMAP,
+    ax: _AxesSubplot | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    vcenter: float | None = None,
+    norm: Normalize | None = None,
     **kwds,
-) -> Union[StackedViolin, dict, None]:
+) -> StackedViolin | dict | None:
     """\
     Stacked violin plots.
 
@@ -719,9 +726,9 @@ def stacked_violin(
         jitter=jitter,
         jitter_size=size,
         row_palette=row_palette,
-        scale=kwds.get('scale', scale),
+        scale=kwds.get("scale", scale),
         yticklabels=yticklabels,
-        linewidth=kwds.get('linewidth', StackedViolin.DEFAULT_LINE_WIDTH),
+        linewidth=kwds.get("linewidth", StackedViolin.DEFAULT_LINE_WIDTH),
     ).legend(title=colorbar_title)
     if return_fig:
         return vp

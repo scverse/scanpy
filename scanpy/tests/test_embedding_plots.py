@@ -1,25 +1,24 @@
+from __future__ import annotations
+
 from functools import partial
 from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
-from matplotlib.testing.compare import compare_images
 import numpy as np
 import pandas as pd
 import pytest
 import seaborn as sns
+from matplotlib.colors import Normalize
+from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc3k_processed
 
-
 HERE: Path = Path(__file__).parent
-ROOT = HERE / '_images'
-FIGS = HERE / 'figures'
+ROOT = HERE / "_images"
 
 MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
-MISSING_VALUES_FIGS = FIGS / "embedding-missing-values"
 
 
 def check_images(pth1, pth2, *, tol):
@@ -31,8 +30,8 @@ def check_images(pth1, pth2, *, tol):
 def adata():
     """A bit cute."""
     from matplotlib.image import imread
-    from sklearn.datasets import make_blobs
     from sklearn.cluster import DBSCAN
+    from sklearn.datasets import make_blobs
 
     empty_pixel = np.array([1.0, 1.0, 1.0, 0]).reshape(1, 1, -1)
     image = imread(HERE.parent.parent / "docs/_static/img/Scanpy_Logo_RGB.png")
@@ -48,7 +47,7 @@ def adata():
     order = np.argsort(labels)
     adata = sc.AnnData(
         make_blobs(
-            pd.value_counts(labels[order]).values,
+            pd.Series(labels[order]).value_counts().values,
             n_features=20,
             shuffle=False,
             random_state=42,
@@ -164,9 +163,8 @@ def test_missing_values_categorical(
     legend_loc,
     groupsfunc,
 ):
-    save_and_compare_images = image_comparer(
-        MISSING_VALUES_ROOT, MISSING_VALUES_FIGS, tol=15
-    )
+    save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
+
     base_name = fixture_request.node.name
 
     # Passing through a dict so it's easier to use default values
@@ -185,9 +183,8 @@ def test_missing_values_categorical(
 def test_missing_values_continuous(
     fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds
 ):
-    save_and_compare_images = image_comparer(
-        MISSING_VALUES_ROOT, MISSING_VALUES_FIGS, tol=15
-    )
+    save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
+
     base_name = fixture_request.node.name
 
     # Passing through a dict so it's easier to use default values
@@ -295,21 +292,23 @@ def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
 
 
 def test_embedding_colorbar_location(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
     adata = pbmc3k_processed().raw.to_adata()
 
     sc.pl.pca(adata, color="LDHB", colorbar_loc=None)
 
-    save_and_compare_images("master_no_colorbar")
+    save_and_compare_images("no_colorbar")
 
 
 # Spatial specific
 
 
 def test_visium_circles(image_comparer):  # standard visium data
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
-    adata.obs = adata.obs.astype({'array_row': 'str'})
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata.obs = adata.obs.astype({"array_row": "str"})
 
     sc.pl.spatial(
         adata,
@@ -321,7 +320,7 @@ def test_visium_circles(image_comparer):  # standard visium data
         show=False,
     )
 
-    save_and_compare_images('master_spatial_visium')
+    save_and_compare_images("spatial_visium")
 
 
 def test_visium_default(image_comparer):  # default values
@@ -330,33 +329,36 @@ def test_visium_default(image_comparer):  # default values
     if parse_version(mpl.__version__) < parse_version("3.7.0"):
         pytest.xfail("Matplotlib 3.7.0+ required for this test")
 
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=5)
-    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
-    adata.obs = adata.obs.astype({'array_row': 'str'})
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
+
+    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata.obs = adata.obs.astype({"array_row": "str"})
 
     # Points default to transparent if an image is included
     sc.pl.spatial(adata, show=False)
 
-    save_and_compare_images('master_spatial_visium_default')
+    save_and_compare_images("spatial_visium_default")
 
 
 def test_visium_empty_img_key(image_comparer):  # visium coordinates but image empty
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
-    adata.obs = adata.obs.astype({'array_row': 'str'})
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata.obs = adata.obs.astype({"array_row": "str"})
 
     sc.pl.spatial(adata, img_key=None, color="array_row", show=False)
 
-    save_and_compare_images('master_spatial_visium_empty_image')
+    save_and_compare_images("spatial_visium_empty_image")
 
     sc.pl.embedding(adata, basis="spatial", color="array_row", show=False)
-    save_and_compare_images('master_spatial_visium_embedding')
+    save_and_compare_images("spatial_visium_embedding")
 
 
 def test_spatial_general(image_comparer):  # general coordinates
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
-    adata.obs = adata.obs.astype({'array_row': 'str'})
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata.obs = adata.obs.astype({"array_row": "str"})
     spatial_metadata = adata.uns.pop(
         "spatial"
     )  # spatial data don't have imgs, so remove entry from uns
@@ -366,21 +368,22 @@ def test_spatial_general(image_comparer):  # general coordinates
     ]
 
     sc.pl.spatial(adata, show=False, spot_size=spot_size)
-    save_and_compare_images('master_spatial_general_nocol')
+    save_and_compare_images("spatial_general_nocol")
 
     # category
     sc.pl.spatial(adata, show=False, spot_size=spot_size, color="array_row")
-    save_and_compare_images('master_spatial_general_cat')
+    save_and_compare_images("spatial_general_cat")
 
     # continuous
     sc.pl.spatial(adata, show=False, spot_size=spot_size, color="array_col")
-    save_and_compare_images('master_spatial_general_cont')
+    save_and_compare_images("spatial_general_cont")
 
 
 def test_spatial_external_img(image_comparer):  # external image
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
-    adata = sc.read_visium(HERE / '_data' / 'visium_data' / '1.0.0')
-    adata.obs = adata.obs.astype({'array_row': 'str'})
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata.obs = adata.obs.astype({"array_row": "str"})
 
     img = adata.uns["spatial"]["custom"]["images"]["hires"]
     scalef = adata.uns["spatial"]["custom"]["scalefactors"]["tissue_hires_scalef"]
@@ -392,7 +395,7 @@ def test_spatial_external_img(image_comparer):  # external image
         basis="spatial",
         show=False,
     )
-    save_and_compare_images('master_spatial_external_img')
+    save_and_compare_images("spatial_external_img")
 
 
 @pytest.fixture(scope="module")

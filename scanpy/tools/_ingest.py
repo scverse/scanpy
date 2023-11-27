@@ -1,29 +1,35 @@
-from collections.abc import MutableMapping
-from typing import Iterable, Union, Optional
+from __future__ import annotations
 
-import pandas as pd
+from collections.abc import Generator, Iterable, MutableMapping
+from typing import TYPE_CHECKING
+
 import numpy as np
+import pandas as pd
 from packaging import version
-from sklearn.utils import check_random_state
 from scipy.sparse import issparse
-from anndata import AnnData
+from sklearn.utils import check_random_state
 
-from .. import settings
 from .. import logging as logg
-from ..neighbors import _rp_forest_generate
-from .._utils import NeighborsView
 from .._compat import pkg_version
+from .._settings import settings
+from .._utils import NeighborsView
+from ..neighbors import FlatTree, RPForestDict
+from ..testing._doctests import doctest_skip
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
+@doctest_skip("illustrative short example but not runnable")
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
-    obs: Optional[Union[str, Iterable[str]]] = None,
-    embedding_method: Union[str, Iterable[str]] = ('umap', 'pca'),
-    labeling_method: str = 'knn',
-    neighbors_key: Optional[str] = None,
+    obs: str | Iterable[str] | None = None,
+    embedding_method: str | Iterable[str] = ("umap", "pca"),
+    labeling_method: str = "knn",
+    neighbors_key: str | None = None,
     inplace: bool = True,
     **kwargs,
 ):
@@ -85,10 +91,12 @@ def ingest(
 
     Returns
     -------
-    * if `inplace=False` returns a copy of `adata`
-      with mapped embeddings and labels in `obsm` and `obs` correspondingly
-    * if `inplace=True` returns `None` and updates `adata.obsm` and `adata.obs`
-      with mapped embeddings and labels
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+
+    `adata.obs[obs]` : :class:`pandas.Series` (dtype ``category``)
+        Mapped labels.
+    `adata.obsm['X_umap' | 'X_pca']` : :class:`numpy.ndarray` (dtype ``float``)
+        Mapped embeddings. `'X_umap'` if `embedding_method` is `'umap'`, `'X_pca'` if `embedding_method` is `'pca'`.
 
     Example
     -------
@@ -103,12 +111,12 @@ def ingest(
     anndata_version = pkg_version("anndata")
     if anndata_version < ANNDATA_MIN_VERSION:
         raise ValueError(
-            f'ingest only works correctly with anndata>={ANNDATA_MIN_VERSION} '
-            f'(you have {anndata_version}) as prior to {ANNDATA_MIN_VERSION}, '
-            '`AnnData.concatenate` did not concatenate `.obsm`.'
+            f"ingest only works correctly with anndata>={ANNDATA_MIN_VERSION} "
+            f"(you have {anndata_version}) as prior to {ANNDATA_MIN_VERSION}, "
+            "`AnnData.concatenate` did not concatenate `.obsm`."
         )
 
-    start = logg.info('running ingest')
+    start = logg.info("running ingest")
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
         [embedding_method] if isinstance(embedding_method, str) else embedding_method
@@ -131,8 +139,29 @@ def ingest(
         for i, col in enumerate(obs):
             ing.map_labels(col, labeling_method[i])
 
-    logg.info('    finished', time=start)
+    logg.info("    finished", time=start)
     return ing.to_adata(inplace)
+
+
+def _rp_forest_generate(
+    rp_forest_dict: RPForestDict,
+) -> Generator[FlatTree, None, None]:
+    props = FlatTree._fields
+    num_trees = len(rp_forest_dict[props[0]]["start"]) - 1
+
+    for i in range(num_trees):
+        tree = []
+        for prop in props:
+            start = rp_forest_dict[prop]["start"][i]
+            end = rp_forest_dict[prop]["start"][i + 1]
+            tree.append(rp_forest_dict[prop]["data"][start:end])
+        yield FlatTree(*tree)
+
+    tree = []
+    for prop in props:
+        start = rp_forest_dict[prop]["start"][num_trees]
+        tree.append(rp_forest_dict[prop]["data"][start:])
+    yield FlatTree(*tree)
 
 
 class _DimDict(MutableMapping):
@@ -191,7 +220,7 @@ class Ingest:
 
         self._umap = u.UMAP(
             metric=self._metric,
-            random_state=adata.uns['umap']['params'].get('random_state', 0),
+            random_state=adata.uns["umap"]["params"].get("random_state", 0),
         )
 
         self._umap._initial_alpha = self._umap.learning_rate
@@ -200,7 +229,7 @@ class Ingest:
 
         self._umap._validate_parameters()
 
-        self._umap.embedding_ = adata.obsm['X_umap']
+        self._umap.embedding_ = adata.obsm["X_umap"]
         self._umap._sparse_data = issparse(self._rep)
         self._umap._small_data = self._rep.shape[0] < 4096
         self._umap._metric_kwds = self._metric_kwds
@@ -223,15 +252,16 @@ class Ingest:
         else:
             self._umap._knn_search_index = self._nnd_idx
 
-        self._umap._a = adata.uns['umap']['params']['a']
-        self._umap._b = adata.uns['umap']['params']['b']
+        self._umap._a = adata.uns["umap"]["params"]["a"]
+        self._umap._b = adata.uns["umap"]["params"]["b"]
 
         self._umap._input_hash = None
 
     def _init_dist_search(self, dist_args):
         from functools import partial
-        from umap.nndescent import initialise_search
+
         from umap.distances import named_distances
+        from umap.nndescent import initialise_search
 
         self._random_init = None
         self._tree_init = None
@@ -243,7 +273,7 @@ class Ingest:
 
         dist_func = named_distances[self._metric]
 
-        if pkg_version('umap-learn') < version.parse("0.4.0"):
+        if pkg_version("umap-learn") < version.parse("0.4.0"):
             from umap.nndescent import (
                 make_initialisations,
                 make_initialized_nnd_search,
@@ -310,60 +340,62 @@ class Ingest:
     def _init_neighbors(self, adata, neighbors_key):
         neighbors = NeighborsView(adata, neighbors_key)
 
-        self._n_neighbors = neighbors['params']['n_neighbors']
+        self._n_neighbors = neighbors["params"]["n_neighbors"]
 
-        if 'use_rep' in neighbors['params']:
-            self._use_rep = neighbors['params']['use_rep']
-            self._rep = adata.X if self._use_rep == 'X' else adata.obsm[self._use_rep]
-        elif 'n_pcs' in neighbors['params']:
-            self._use_rep = 'X_pca'
-            self._n_pcs = neighbors['params']['n_pcs']
-            self._rep = adata.obsm['X_pca'][:, : self._n_pcs]
-        elif adata.n_vars > settings.N_PCS and 'X_pca' in adata.obsm.keys():
-            self._use_rep = 'X_pca'
-            self._rep = adata.obsm['X_pca'][:, : settings.N_PCS]
+        if "use_rep" in neighbors["params"]:
+            self._use_rep = neighbors["params"]["use_rep"]
+            self._rep = adata.X if self._use_rep == "X" else adata.obsm[self._use_rep]
+        elif "n_pcs" in neighbors["params"]:
+            self._use_rep = "X_pca"
+            self._n_pcs = neighbors["params"]["n_pcs"]
+            self._rep = adata.obsm["X_pca"][:, : self._n_pcs]
+        elif adata.n_vars > settings.N_PCS and "X_pca" in adata.obsm.keys():
+            self._use_rep = "X_pca"
+            self._rep = adata.obsm["X_pca"][:, : settings.N_PCS]
             self._n_pcs = self._rep.shape[1]
 
-        if 'metric_kwds' in neighbors['params']:
-            self._metric_kwds = neighbors['params']['metric_kwds']
+        if "metric_kwds" in neighbors["params"]:
+            self._metric_kwds = neighbors["params"]["metric_kwds"]
             dist_args = tuple(self._metric_kwds.values())
         else:
             self._metric_kwds = {}
             dist_args = ()
 
-        self._metric = neighbors['params']['metric']
+        self._metric = neighbors["params"]["metric"]
 
-        if pkg_version('umap-learn') < version.parse("0.5.0"):
+        if pkg_version("umap-learn") < version.parse("0.5.0"):
             self._init_dist_search(dist_args)
 
-            search_graph = neighbors['distances'].copy()
+            search_graph = neighbors["distances"].copy()
             search_graph.data = (search_graph.data > 0).astype(np.int8)
             self._search_graph = search_graph.maximum(search_graph.transpose())
 
-            if 'rp_forest' in neighbors:
-                self._rp_forest = _rp_forest_generate(neighbors['rp_forest'])
+            if "rp_forest" in neighbors:
+                self._rp_forest = _rp_forest_generate(neighbors["rp_forest"])
             else:
                 self._rp_forest = None
         else:
-            self._neigh_random_state = neighbors['params'].get('random_state', 0)
-            self._init_pynndescent(neighbors['distances'])
+            self._neigh_random_state = neighbors["params"].get("random_state", 0)
+            self._init_pynndescent(neighbors["distances"])
 
     def _init_pca(self, adata):
-        self._pca_centered = adata.uns['pca']['params']['zero_center']
-        self._pca_use_hvg = adata.uns['pca']['params']['use_highly_variable']
+        self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
+        self._pca_use_hvg = adata.uns["pca"]["params"]["use_highly_variable"]
 
-        if self._pca_use_hvg and 'highly_variable' not in adata.var.keys():
-            raise ValueError('Did not find adata.var[\'highly_variable\'].')
+        mask = "highly_variable"
+        if self._pca_use_hvg and mask not in adata.var.keys():
+            msg = f"Did not find `adata.var[{mask!r}']`."
+            raise ValueError(msg)
 
         if self._pca_use_hvg:
-            self._pca_basis = adata.varm['PCs'][adata.var['highly_variable']]
+            self._pca_basis = adata.varm["PCs"][adata.var[mask]]
         else:
-            self._pca_basis = adata.varm['PCs']
+            self._pca_basis = adata.varm["PCs"]
 
     def __init__(self, adata, neighbors_key=None):
         # assume rep is X if all initializations fail to identify it
         self._rep = adata.X
-        self._use_rep = 'X'
+        self._use_rep = "X"
 
         self._n_pcs = None
 
@@ -373,21 +405,21 @@ class Ingest:
         # only use with umap > 0.5.0
         self._use_pynndescent = False
 
-        if 'pca' in adata.uns:
+        if "pca" in adata.uns:
             self._init_pca(adata)
 
         if neighbors_key is None:
-            neighbors_key = 'neighbors'
+            neighbors_key = "neighbors"
 
         if neighbors_key in adata.uns:
             self._init_neighbors(adata, neighbors_key)
         else:
             raise ValueError(
                 f'There is no neighbors data in `adata.uns["{neighbors_key}"]`.\n'
-                'Please run pp.neighbors.'
+                "Please run pp.neighbors."
             )
 
-        if 'X_umap' in adata.obsm:
+        if "X_umap" in adata.obsm:
             self._init_umap(adata)
 
         self._obsm = None
@@ -401,7 +433,7 @@ class Ingest:
         X = self._adata_new.X
         X = X.toarray() if issparse(X) else X.copy()
         if self._pca_use_hvg:
-            X = X[:, self._adata_ref.var['highly_variable']]
+            X = X[:, self._adata_ref.var["highly_variable"]]
         if self._pca_centered:
             X -= X.mean(axis=0)
         X_pca = np.dot(X, self._pca_basis[:, :n_pcs])
@@ -411,7 +443,7 @@ class Ingest:
         adata = self._adata_new
         if self._n_pcs is not None:
             return self._pca(self._n_pcs)
-        if self._use_rep == 'X':
+        if self._use_rep == "X":
             return adata.X
         if self._use_rep in adata.obsm.keys():
             return adata.obsm[self._use_rep]
@@ -435,15 +467,15 @@ class Ingest:
 
         if not ref_var_names.equals(new_var_names):
             raise ValueError(
-                'Variables in the new adata are different '
-                'from variables in the reference adata'
+                "Variables in the new adata are different "
+                "from variables in the reference adata"
             )
 
         self._obs = pd.DataFrame(index=adata_new.obs.index)
         self._obsm = _DimDict(adata_new.n_obs, axis=0)
 
         self._adata_new = adata_new
-        self._obsm['rep'] = self._same_rep()
+        self._obsm["rep"] = self._same_rep()
 
     def neighbors(self, k=None, queue_size=5, epsilon=0.1, random_state=0):
         """\
@@ -458,7 +490,7 @@ class Ingest:
         rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
 
         train = self._rep
-        test = self._obsm['rep']
+        test = self._obsm["rep"]
 
         if k is None:
             k = self._n_neighbors
@@ -482,7 +514,7 @@ class Ingest:
             self._indices, self._distances = indices[:, :k], dists[:, :k]
 
     def _umap_transform(self):
-        return self._umap.transform(self._obsm['rep'])
+        return self._umap.transform(self._obsm["rep"])
 
     def map_embedding(self, method):
         """\
@@ -492,18 +524,18 @@ class Ingest:
         for `adata_new` from existing embeddings in `adata`.
         `method` can be 'umap' or 'pca'.
         """
-        if method == 'umap':
-            self._obsm['X_umap'] = self._umap_transform()
-        elif method == 'pca':
-            self._obsm['X_pca'] = self._pca()
+        if method == "umap":
+            self._obsm["X_umap"] = self._umap_transform()
+        elif method == "pca":
+            self._obsm["X_pca"] = self._pca()
         else:
             raise NotImplementedError(
-                'Ingest supports only umap and pca embeddings for now.'
+                "Ingest supports only umap and pca embeddings for now."
             )
 
     def _knn_classify(self, labels):
         cat_array = self._adata_ref.obs[labels].astype(
-            'category'
+            "category"
         )  # ensure it's categorical
         values = [cat_array[inds].mode()[0] for inds in self._indices]
         return pd.Categorical(values=values, categories=cat_array.cat.categories)
@@ -516,10 +548,10 @@ class Ingest:
         from existing labels in `adata.obs`.
         `method` can be only 'knn'.
         """
-        if method == 'knn':
+        if method == "knn":
             self._obs[labels] = self._knn_classify(labels)
         else:
-            raise NotImplementedError('Ingest supports knn labeling for now.')
+            raise NotImplementedError("Ingest supports knn labeling for now.")
 
     def to_adata(self, inplace=False):
         """\
@@ -541,7 +573,7 @@ class Ingest:
             return adata
 
     def to_adata_joint(
-        self, batch_key='batch', batch_categories=None, index_unique='-'
+        self, batch_key="batch", batch_categories=None, index_unique="-"
     ):
         """\
         Returns concatenated object.
@@ -558,7 +590,7 @@ class Ingest:
         )
 
         obs_update = self._obs.copy()
-        obs_update.index = adata[adata.obs[batch_key] == '1'].obs_names
+        obs_update.index = adata[adata.obs[batch_key] == "1"].obs_names
         adata.obs.update(obs_update)
 
         for key in self._obsm:
@@ -567,15 +599,15 @@ class Ingest:
                     (self._adata_ref.obsm[key], self._obsm[key])
                 )
 
-        if self._use_rep not in ('X_pca', 'X'):
+        if self._use_rep not in ("X_pca", "X"):
             adata.obsm[self._use_rep] = np.vstack(
-                (self._adata_ref.obsm[self._use_rep], self._obsm['rep'])
+                (self._adata_ref.obsm[self._use_rep], self._obsm["rep"])
             )
 
-        if 'X_umap' in self._obsm:
-            adata.uns['umap'] = self._adata_ref.uns['umap']
-        if 'X_pca' in self._obsm:
-            adata.uns['pca'] = self._adata_ref.uns['pca']
-            adata.varm['PCs'] = self._adata_ref.varm['PCs']
+        if "X_umap" in self._obsm:
+            adata.uns["umap"] = self._adata_ref.uns["umap"]
+        if "X_pca" in self._obsm:
+            adata.uns["pca"] = self._adata_ref.uns["pca"]
+            adata.varm["PCs"] = self._adata_ref.varm["PCs"]
 
         return adata

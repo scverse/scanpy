@@ -1,5 +1,4 @@
 # Scanpy outfiles
-/cache/
 /data/
 /write/
 
@@ -12,13 +11,11 @@
 /docs/jupyter_execute
 
 # tests
-/*coverage*
-/nunit/
-/.cache/
-/.pytest_cache/
+/*cache/
+/test-data/
 /scanpy/tests/test*.h5ad
-/scanpy/tests/figures/
-/scanpy/tests/notebooks/figures/
+/scanpy/tests/**/*actual.png
+/scanpy/tests/**/*failed-diff.png
 
 # Environment management
 /hatch.toml
@@ -31,9 +28,8 @@
 
 # Python build files
 __pycache__/
+/scanpy/_version.py
 /dist/
-/build/
-/scanpy.egg-info/
 /*-env/
 /env-*/
 /environment.yml

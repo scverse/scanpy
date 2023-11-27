@@ -1,18 +1,23 @@
 """Logging and Profiling
 """
+from __future__ import annotations
+
 import logging
 import sys
-from functools import update_wrapper, partial
-from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG
-from datetime import datetime, timedelta, timezone
-from typing import Optional, IO
 import warnings
+from datetime import datetime, timedelta, timezone
+from functools import partial, update_wrapper
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
+from typing import IO, TYPE_CHECKING
 
 import anndata.logging
 
+if TYPE_CHECKING:
+    from ._settings import ScanpyConfig
+
 
 HINT = (INFO + DEBUG) // 2
-logging.addLevelName(HINT, 'HINT')
+logging.addLevelName(HINT, "HINT")
 
 
 class _RootLogger(logging.RootLogger):
@@ -26,18 +31,18 @@ class _RootLogger(logging.RootLogger):
         level: int,
         msg: str,
         *,
-        extra: Optional[dict] = None,
+        extra: dict | None = None,
         time: datetime = None,
-        deep: Optional[str] = None,
+        deep: str | None = None,
     ) -> datetime:
-        from . import settings
+        from ._settings import settings
 
         now = datetime.now(timezone.utc)
         time_passed: timedelta = None if time is None else now - time
         extra = {
             **(extra or {}),
-            'deep': deep if settings.verbosity.level < level else None,
-            'time_passed': time_passed,
+            "deep": deep if settings.verbosity.level < level else None,
+            "time_passed": time_passed,
         }
         super().log(level, msg, extra=extra)
         return now
@@ -61,7 +66,7 @@ class _RootLogger(logging.RootLogger):
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
-def _set_log_file(settings):
+def _set_log_file(settings: ScanpyConfig):
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
@@ -71,11 +76,11 @@ def _set_log_file(settings):
     if len(root.handlers) == 1:
         root.removeHandler(root.handlers[0])
     elif len(root.handlers) > 1:
-        raise RuntimeError('Scanpy’s root logger somehow got more than one handler')
+        raise RuntimeError("Scanpy’s root logger somehow got more than one handler")
     root.addHandler(h)
 
 
-def _set_log_level(settings, level: int):
+def _set_log_level(settings: ScanpyConfig, level: int):
     root = settings._root_logger
     root.setLevel(level)
     (h,) = root.handlers  # may only be 1
@@ -84,32 +89,32 @@ def _set_log_level(settings, level: int):
 
 class _LogFormatter(logging.Formatter):
     def __init__(
-        self, fmt='{levelname}: {message}', datefmt='%Y-%m-%d %H:%M', style='{'
+        self, fmt="{levelname}: {message}", datefmt="%Y-%m-%d %H:%M", style="{"
     ):
         super().__init__(fmt, datefmt, style)
 
     def format(self, record: logging.LogRecord):
         format_orig = self._style._fmt
         if record.levelno == INFO:
-            self._style._fmt = '{message}'
+            self._style._fmt = "{message}"
         elif record.levelno == HINT:
-            self._style._fmt = '--> {message}'
+            self._style._fmt = "--> {message}"
         elif record.levelno == DEBUG:
-            self._style._fmt = '    {message}'
+            self._style._fmt = "    {message}"
         if record.time_passed:
             # strip microseconds
             if record.time_passed.microseconds:
                 record.time_passed = timedelta(
                     seconds=int(record.time_passed.total_seconds())
                 )
-            if '{time_passed}' in record.msg:
+            if "{time_passed}" in record.msg:
                 record.msg = record.msg.replace(
-                    '{time_passed}', str(record.time_passed)
+                    "{time_passed}", str(record.time_passed)
                 )
             else:
-                self._style._fmt += ' ({time_passed})'
+                self._style._fmt += " ({time_passed})"
         if record.deep:
-            record.msg = f'{record.msg}: {record.deep}'
+            record.msg = f"{record.msg}: {record.deep}"
         result = logging.Formatter.format(self, record)
         self._style._fmt = format_orig
         return result
@@ -120,17 +125,17 @@ get_memory_usage = anndata.logging.get_memory_usage
 
 
 _DEPENDENCIES_NUMERICS = [
-    'anndata',  # anndata actually shouldn't, but as long as it's in development
-    'umap',
-    'numpy',
-    'scipy',
-    'pandas',
-    ('sklearn', 'scikit-learn'),
-    'statsmodels',
-    'igraph',
-    'louvain',
-    'leidenalg',
-    'pynndescent',
+    "anndata",  # anndata actually shouldn't, but as long as it's in development
+    "umap",
+    "numpy",
+    "scipy",
+    "pandas",
+    ("sklearn", "scikit-learn"),
+    "statsmodels",
+    "igraph",
+    "louvain",
+    "leidenalg",
+    "pynndescent",
 ]
 
 
@@ -151,14 +156,14 @@ def print_header(*, file=None):
     Matplotlib and Seaborn are excluded from this.
     """
 
-    modules = ['scanpy'] + _DEPENDENCIES_NUMERICS
+    modules = ["scanpy"] + _DEPENDENCIES_NUMERICS
     print(
-        ' '.join(f'{mod}=={ver}' for mod, ver in _versions_dependencies(modules)),
+        " ".join(f"{mod}=={ver}" for mod, ver in _versions_dependencies(modules)),
         file=file or sys.stdout,
     )
 
 
-def print_versions(*, file: Optional[IO[str]] = None):
+def print_versions(*, file: IO[str] | None = None):
     """\
     Print versions of imported packages, OS, and jupyter environment.
 
@@ -181,9 +186,9 @@ def print_versions(*, file: Optional[IO[str]] = None):
             dependencies=True,
             html=False,
             excludes=[
-                'builtins',
-                'stdlib_list',
-                'importlib_metadata',
+                "builtins",
+                "stdlib_list",
+                "importlib_metadata",
                 # Special module present if test coverage being calculated
                 # https://gitlab.com/joelostblom/session_info/-/issues/10
                 "$coverage",
@@ -200,21 +205,21 @@ def print_version_and_date(*, file=None):
     if file is None:
         file = sys.stdout
     print(
-        f'Running Scanpy {__version__}, ' f'on {datetime.now():%Y-%m-%d %H:%M}.',
+        f"Running Scanpy {__version__}, " f"on {datetime.now():%Y-%m-%d %H:%M}.",
         file=file,
     )
 
 
 def _copy_docs_and_signature(fn):
-    return partial(update_wrapper, wrapped=fn, assigned=['__doc__', '__annotations__'])
+    return partial(update_wrapper, wrapped=fn, assigned=["__doc__", "__annotations__"])
 
 
 def error(
     msg: str,
     *,
     time: datetime = None,
-    deep: Optional[str] = None,
-    extra: Optional[dict] = None,
+    deep: str | None = None,
+    extra: dict | None = None,
 ) -> datetime:
     """\
     Log message with specific level and return current time.

@@ -1,30 +1,21 @@
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import matplotlib as mpl
-
-mpl.use('agg')
-from matplotlib import pyplot
-from matplotlib.testing.compare import compare_images, make_test_filename
 import pytest
 
-import scanpy
+# just import for the IMPORTED check
+import scanpy as _sc  # noqa: F401
 
 if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
+    import os
+
     from scanpy.testing._pytest.fixtures import *  # noqa: F403
-
-
-scanpy.settings.verbosity = "hint"
 
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())
-
-
-@pytest.fixture(autouse=True)
-def close_figures_on_teardown():
-    yield
-    pyplot.close("all")
 
 
 def clear_loggers():
@@ -38,7 +29,7 @@ def clear_loggers():
 
     loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
     for logger in loggers:
-        handlers = getattr(logger, 'handlers', [])
+        handlers = getattr(logger, "handlers", [])
         for handler in handlers:
             logger.removeHandler(handler)
 
@@ -55,6 +46,8 @@ def imported_modules():
 
 @pytest.fixture
 def check_same_image(add_nunit_attachment):
+    from matplotlib.testing.compare import compare_images, make_test_filename
+
     def _(pth1, pth2, *, tol: int, basename: str = ""):
         def fmt_descr(descr):
             if basename != "":
@@ -67,7 +60,7 @@ def check_same_image(add_nunit_attachment):
             result = compare_images(str(pth1), str(pth2), tol=tol)
             assert result is None, result
         except Exception as e:
-            diff_pth = make_test_filename(pth2, 'failed-diff')
+            diff_pth = make_test_filename(pth2, "failed-diff")
             add_nunit_attachment(str(pth1), fmt_descr("Expected"))
             add_nunit_attachment(str(pth2), fmt_descr("Result"))
             if Path(diff_pth).is_file():
@@ -79,19 +72,48 @@ def check_same_image(add_nunit_attachment):
 
 @pytest.fixture
 def image_comparer(check_same_image):
-    def make_comparer(path_expected: Path, path_actual: Path, *, tol: int):
-        def save_and_compare(basename, tol=tol):
-            path_actual.mkdir(parents=True, exist_ok=True)
-            out_path = path_actual / f'{basename}.png'
-            pyplot.savefig(out_path, dpi=40)
-            pyplot.close()
-            check_same_image(path_expected / f'{basename}.png', out_path, tol=tol)
+    from matplotlib import pyplot as plt
 
-        return save_and_compare
+    def save_and_compare(*path_parts: Path | os.PathLike, tol: int):
+        base_pth = Path(*path_parts)
 
-    return make_comparer
+        if not base_pth.is_dir():
+            base_pth.mkdir()
+        expected_pth = base_pth / "expected.png"
+        actual_pth = base_pth / "actual.png"
+        plt.savefig(actual_pth, dpi=40)
+        plt.close()
+        if not expected_pth.is_file():
+            raise OSError(f"No expected output found at {expected_pth}.")
+        check_same_image(expected_pth, actual_pth, tol=tol)
+
+    return save_and_compare
 
 
 @pytest.fixture
 def plt():
-    return pyplot
+    from matplotlib import pyplot as plt
+
+    return plt
+
+
+@pytest.fixture
+def tmp_dataset_dir(tmp_path_factory):
+    import scanpy
+
+    new_dir = tmp_path_factory.mktemp("scanpy_data")
+    old_dir = scanpy.settings.datasetdir
+    scanpy.settings.datasetdir = new_dir  # Set up
+    yield scanpy.settings.datasetdir
+    scanpy.settings.datasetdir = old_dir  # Tear down
+
+
+@pytest.fixture
+def tmp_write_dir(tmp_path_factory):
+    import scanpy
+
+    new_dir = tmp_path_factory.mktemp("scanpy_write")
+    old_dir = scanpy.settings.writedir
+    scanpy.settings.writedir = new_dir  # Set up
+    yield scanpy.settings.writedir
+    scanpy.settings.writedir = old_dir  # Tear down

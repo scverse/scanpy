@@ -1,23 +1,28 @@
-from typing import Optional, Tuple, Collection, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse, isspmatrix_csr, isspmatrix_coo
-from scipy.sparse import spmatrix, csr_matrix
+from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr, spmatrix
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
-from anndata import AnnData
+from .._utils import _doc_params
 from ._docs import (
+    doc_adata_basic,
     doc_expr_reps,
     doc_obs_qc_args,
-    doc_qc_metric_naming,
     doc_obs_qc_returns,
+    doc_qc_metric_naming,
     doc_var_qc_returns,
-    doc_adata_basic,
 )
-from .._utils import _doc_params
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
+
+    from anndata import AnnData
 
 
 def _choose_mtx_rep(adata, use_raw=False, layer=None):
@@ -48,14 +53,14 @@ def describe_obs(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
-    layer: Optional[str] = None,
+    percent_top: Collection[int] | None = (50, 100, 200, 500),
+    layer: str | None = None,
     use_raw: bool = False,
-    log1p: Optional[str] = True,
+    log1p: str | None = True,
     inplace: bool = False,
     X=None,
     parallel=None,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """\
     Describe observations of anndata.
 
@@ -148,12 +153,12 @@ def describe_var(
     *,
     expr_type: str = "counts",
     var_type: str = "genes",
-    layer: Optional[str] = None,
+    layer: str | None = None,
     use_raw: bool = False,
     inplace=False,
     log1p=True,
     X=None,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """\
     Describe variables of anndata.
 
@@ -229,13 +234,13 @@ def calculate_qc_metrics(
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
-    percent_top: Optional[Collection[int]] = (50, 100, 200, 500),
-    layer: Optional[str] = None,
+    percent_top: Collection[int] | None = (50, 100, 200, 500),
+    layer: str | None = None,
     use_raw: bool = False,
     inplace: bool = False,
     log1p: bool = True,
-    parallel: Optional[bool] = None,
-) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
+    parallel: bool | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame] | None:
     """\
     Calculate quality control metrics.
 
@@ -326,7 +331,7 @@ def calculate_qc_metrics(
         return obs_metrics, var_metrics
 
 
-def top_proportions(mtx: Union[np.array, spmatrix], n: int):
+def top_proportions(mtx: np.array | spmatrix, n: int):
     """\
     Calculates cumulative proportions of top expressed genes
 
@@ -378,7 +383,7 @@ def top_proportions_sparse_csr(data, indptr, n):
 
 
 def top_segment_proportions(
-    mtx: Union[np.array, spmatrix], ns: Collection[int]
+    mtx: np.array | spmatrix, ns: Collection[int]
 ) -> np.ndarray:
     """
     Calculates total percentage of counts in top ns genes.
@@ -404,7 +409,7 @@ def top_segment_proportions(
 
 
 def top_segment_proportions_dense(
-    mtx: Union[np.array, spmatrix], ns: Collection[int]
+    mtx: np.array | spmatrix, ns: Collection[int]
 ) -> np.ndarray:
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)
