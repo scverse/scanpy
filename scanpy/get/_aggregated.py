@@ -1,18 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence, Set
 from dataclasses import dataclass
 from functools import singledispatch
-from typing import NamedTuple, Literal, Union as _U, get_args
-from collections.abc import Iterable, Set, Sequence
+from typing import TYPE_CHECKING, Literal, NamedTuple, get_args
+from typing import Union as _U
 
-from anndata import AnnData, utils
 import numpy as np
 import pandas as pd
-from numpy.typing import NDArray
+from anndata import AnnData, utils
 from scipy.sparse import coo_matrix, dia_matrix, spmatrix
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
 Array = _U[np.ndarray, spmatrix]
-AggType = Literal['count', 'mean', 'sum', 'var']
+AggType = Literal["count", "mean", "sum", "var"]
 
 
 class CMV(NamedTuple):
@@ -183,7 +186,7 @@ class Aggregate:
         if df_index is None:
             df_index = np.arange(len(key_index))
         if self.weight is None:
-            weight_value = np.ones(len(key_index))
+            weight_value = np.broadcast_to(1.0, len(key_index))
         # TODO: why a coo matrix here and a dia matrix below? (unchanged from original code: https://github.com/scverse/anndata/pull/564)
         A = coo_matrix(
             (weight_value, (key_index, df_index)),
@@ -276,7 +279,7 @@ def _power(X: Array, power: float | int) -> Array:
     -------
     Matrix whose power has been raised.
     """
-    return X ** power if isinstance(X, np.ndarray) else X.power(power)
+    return X**power if isinstance(X, np.ndarray) else X.power(power)
 
 
 def _ndarray_from_seq(lst: Sequence):
@@ -306,10 +309,10 @@ def _superset_columns(df: pd.DataFrame, groupby_key: str) -> list[str]:
     Superset columns.
     """
     columns = []
-    groupy_key_codes = df[groupby_key].astype('category')
+    groupy_key_codes = df[groupby_key].astype("category")
     for key in df:
         if key != groupby_key:
-            key_codes = df[key].astype('category')
+            key_codes = df[key].astype("category")
             if all(
                 key_codes[groupy_key_codes == group_key_code].nunique() == 1
                 for group_key_code in groupy_key_codes
@@ -339,7 +342,7 @@ def _df_grouped(df: pd.DataFrame, key: str, key_set: list[str]) -> pd.DataFrame:
     df = df.copy()
     if key_set is not None:
         df = df[df[key].isin(key_set)]
-    if pd.api.types.is_categorical_dtype(df[key]):
+    if isinstance(df[key].dtype, pd.CategoricalDtype):
         df[key] = df[key].cat.remove_unused_categories()
     return df.groupby(key).first()[_superset_columns(df, key)]
 
@@ -350,7 +353,7 @@ def aggregated(
     by: str,
     func: AggType | Iterable[AggType],
     *,
-    dim: Literal['obs', 'var'] = 'obs',
+    dim: Literal["obs", "var"] = "obs",
     weight_key: str | None = None,
     key_set: Iterable[str] | None = None,
     dof: int = 1,
@@ -403,9 +406,9 @@ def aggregated(
         write_to_xxxm = True
     elif layer is not None:
         data = adata.layers[layer]
-        if dim == 'var':
+        if dim == "var":
             data = data.T
-    elif dim == 'var':
+    elif dim == "var":
         # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
         data = data.T
     return aggregated(
@@ -414,7 +417,7 @@ def aggregated(
         dim=dim,
         by=by,
         write_to_xxxm=write_to_xxxm,
-        no_groupby_df=getattr(adata, 'var' if dim == 'obs' else 'obs'),
+        no_groupby_df=getattr(adata, "var" if dim == "obs" else "obs"),
         weight_key=weight_key,
         key_set=key_set,
         func=func,
@@ -451,37 +454,62 @@ def aggregated_from_array(
         var=no_groupby_df,
         obsm={},
     )
-    write_key = 'obsm' if write_to_xxxm else 'layers'
+    write_key = "obsm" if write_to_xxxm else "layers"
     funcs = set([func] if isinstance(func, str) else func)
     if unknown := funcs - set(get_args(AggType)):
-        raise ValueError(f'func {unknown} is not one of {get_args(AggType)}')
-    if 'sum' in funcs:  # sum is calculated separately from the rest
+        raise ValueError(f"func {unknown} is not one of {get_args(AggType)}")
+    if "sum" in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
         # put aggregation in X if it is the only one and the aggregation data is not coming from `xxxm`
         if len(funcs) == 1 and not write_to_xxxm:
-            adata_kw['X'] = agg
+            adata_kw["X"] = agg
         else:
-            adata_kw[write_key]['sum'] = agg
+            adata_kw[write_key]["sum"] = agg
     # here and below for count, if var is present, these can be calculate alongside var
-    if 'mean' in funcs and 'var' not in funcs:
+    if "mean" in funcs and "var" not in funcs:
         agg = groupby.mean()
         if len(funcs) == 1 and not write_to_xxxm:
-            adata_kw['X'] = agg
+            adata_kw["X"] = agg
         else:
-            adata_kw[write_key]['mean'] = agg
-    if 'count' in funcs and 'var' not in funcs:
-        adata_kw['obs']['count'] = groupby.count()  # count goes in dim df
-    if 'var' in funcs:
+            adata_kw[write_key]["mean"] = agg
+    if "count" in funcs and "var" not in funcs:
+        adata_kw["obs"]["count"] = groupby.count()  # count goes in dim df
+    if "var" in funcs:
         aggs = groupby.count_mean_var(dof)
         if len(funcs) == 1 and not write_to_xxxm:
-            adata_kw['X'] = aggs.var
+            adata_kw["X"] = aggs.var
         else:
-            adata_kw[write_key]['var'] = aggs.var
-            if 'mean' in funcs:
-                adata_kw[write_key]['mean'] = aggs.mean
-            if 'count' in funcs:
-                adata_kw['obs']['count'] = aggs.count
+            adata_kw[write_key]["var"] = aggs.var
+            if "mean" in funcs:
+                adata_kw[write_key]["mean"] = aggs.mean
+            if "count" in funcs:
+                adata_kw["obs"]["count"] = aggs.count
     adata_agg = AnnData(**adata_kw)
-    if dim == 'var':
+    if dim == "var":
         return adata_agg.T
     return adata_agg
+
+
+def _combine_categories(label_df: pd.DataFrame, cols: list[str]) -> pd.Categorical:
+    from itertools import product
+
+    df = pd.DataFrame(
+        {c: pd.Categorical(label_df[c]).remove_unused_categories() for c in cols},
+    )
+    result_categories = [
+        "_".join(x) for x in product(*[df[c].cat.categories for c in cols])
+    ]
+    n_categories = [len(df[c].cat.categories) for c in cols]
+
+    factors = np.ones(len(cols) + 1, dtype=np.int32)  # First factor needs to be 1
+    np.cumsum(n_categories[::-1], out=factors[1:])
+    factors = factors[:-1][::-1]
+
+    # TODO: pick a more optimal bit width
+    final_codes = np.zeros(df.shape[0], dtype=np.int32)
+    for factor, c in zip(factors, cols):
+        final_codes += df[c].cat.codes * factor
+
+    return pd.Categorical.from_codes(
+        final_codes, categories=result_categories
+    ).remove_unused_categories()
