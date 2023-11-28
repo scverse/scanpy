@@ -116,6 +116,7 @@ class DotPlot(BasePlot):
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        groupby_cols: str | Sequence[str] = [],
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -144,6 +145,7 @@ class DotPlot(BasePlot):
             adata,
             var_names,
             groupby,
+            groupby_cols,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
@@ -178,6 +180,13 @@ class DotPlot(BasePlot):
             dot_size_df = (
                 obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
             )
+            if len(groupby_cols) > 0:
+                dot_size_df_stacked = self._convert_tidy_to_stacked(dot_size_df)
+
+                values_df = dot_size_df_stacked.reset_index(drop=True)
+                values_df.index = dot_size_df_stacked.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                values_df.columns = dot_size_df_stacked.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                dot_size_df = values_df
 
         if dot_color_df is None:
             # 2. compute mean expression value value
@@ -198,6 +207,13 @@ class DotPlot(BasePlot):
                 pass
             else:
                 logg.warning("Unknown type for standard_scale, ignored")
+            if len(groupby_cols) > 0:
+                dot_color_df_stacked = self._convert_tidy_to_stacked(dot_color_df)
+
+                values_df = dot_color_df_stacked.reset_index(drop=True)
+                values_df.index = dot_color_df_stacked.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                values_df.columns = dot_color_df_stacked.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                dot_color_df = values_df
         else:
             # check that both matrices have the same shape
             if dot_color_df.shape != dot_size_df.shape:
@@ -708,6 +724,7 @@ class DotPlot(BasePlot):
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
         normalize = check_colornorm(vmin, vmax, vcenter, norm)
+        normalize(mean_flat[~np.isnan(mean_flat)])  # circumvent unexpected behavior with nan in matplotlib
 
         if color_on == "square":
             if edge_color is None:

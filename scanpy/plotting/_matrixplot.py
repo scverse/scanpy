@@ -162,11 +162,6 @@ class MatrixPlot(BasePlot):
 
             if len(groupby_cols) > 0:
                 stacked_df = self._convert_tidy_to_stacked(values_df)
-                # label = values_df.index.name
-                # stacked_df = values_df.reset_index()
-                # stacked_df.index = pd.MultiIndex.from_tuples(
-                #     stacked_df[label].str.split('_').tolist(), names=self.groupby)
-                # stacked_df = stacked_df.drop(label, axis=1).unstack(level=self.groupby_cols)
 
                 # recreate the original formatting of values_df
                 values_df = stacked_df.reset_index(drop=True)
