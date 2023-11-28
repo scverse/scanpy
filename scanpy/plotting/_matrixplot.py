@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
@@ -99,6 +100,7 @@ class MatrixPlot(BasePlot):
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        groupby_cols: str | Sequence[str] = [],
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -124,6 +126,7 @@ class MatrixPlot(BasePlot):
             adata,
             var_names,
             groupby,
+            groupby_cols,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
@@ -142,7 +145,6 @@ class MatrixPlot(BasePlot):
             norm=norm,
             **kwds,
         )
-
         if values_df is None:
             # compute mean value
             values_df = self.obs_tidy.groupby(level=0).mean()
@@ -157,6 +159,18 @@ class MatrixPlot(BasePlot):
                 pass
             else:
                 logg.warning("Unknown type for standard_scale, ignored")
+
+            if len(groupby_cols) > 0:
+                label = values_df.index.name
+                dirty_df = values_df.reset_index()
+                dirty_df.index = pd.MultiIndex.from_tuples(
+                    dirty_df[label].str.split('_').tolist(), names=self.groupby)
+                dirty_df = dirty_df.drop(label, axis=1).unstack(level=self.groupby_cols)
+
+                temp_df = dirty_df.reset_index(drop=True)
+                temp_df.index = dirty_df.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                temp_df.columns = dirty_df.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                values_df = temp_df
 
         self.values_df = values_df
 
@@ -290,6 +304,7 @@ def matrixplot(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    groupby_cols: str | Sequence[str] = [],
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
@@ -383,6 +398,7 @@ def matrixplot(
         adata,
         var_names,
         groupby=groupby,
+        groupby_cols=groupby_cols,
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,

@@ -77,6 +77,7 @@ class BasePlot:
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        groupby_cols: str | Sequence[str] = [],
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -109,10 +110,14 @@ class BasePlot:
 
         self._update_var_groups()
 
+        self.groupby = [groupby] if isinstance(groupby, str) else groupby
+        self.groupby_cols = [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
+        self.groupby += groupby_cols
+
         self.categories, self.obs_tidy = _prepare_dataframe(
             adata,
             self.var_names,
-            groupby,
+            self.groupby,
             use_raw,
             log,
             num_categories,
@@ -139,7 +144,6 @@ class BasePlot:
                 return
 
         self.adata = adata
-        self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.log = log
         self.kwds = kwds
 
