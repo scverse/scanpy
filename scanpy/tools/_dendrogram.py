@@ -4,12 +4,11 @@ Computes a dendrogram based on a given categorical observation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
-from pandas.api.types import CategoricalDtype
-
 from anndata._core.merge import _resolve_dim
+from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
 from .._utils import _doc_params
@@ -116,16 +115,8 @@ def dendrogram(
     if dim is None and axis is None:
         dim = "obs"
     axis, dim = _resolve_dim(axis=axis, dim=dim)
-    alt_axis, alt_dim = _resolve_dim(axis=1-axis)
-    
-    if dim == "obs":
-        dim_names = adata.obs_names
-        metadata = adata.obs
-        metadata_keys = adata.obs_keys()
-    else:
-        metadata = adata.var
-        metadata_keys = adata.var_keys()
-    
+    alt_axis, alt_dim = _resolve_dim(axis=1 - axis)
+
     if groupby is not None:
         if isinstance(groupby, str):
             # if not a list, turn into a list
@@ -141,7 +132,7 @@ def dendrogram(
                     "groupby has to be a categorical observation. "
                     f"Given value: {group}, Column type: {adata.obs[group].dtype}"
                 )
-    
+
         if var_names is None:
             rep_df = pd.DataFrame(
                 _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
@@ -154,14 +145,14 @@ def dendrogram(
                         categorical.astype(str) + "_" + adata.obs[group].astype(str)
                     ).astype("category")
             categorical.name = "_".join(groupby)
-    
+
             rep_df.set_index(categorical, inplace=True)
             categories = rep_df.index.categories
         else:
             from scanpy.plotting._anndata import _prepare_dataframe
-    
+
             categories, rep_df = _prepare_dataframe(adata, var_names, groupby, use_raw)
-    
+
         # aggregate values within categories using 'mean'
         rep_df = rep_df.groupby(level=0).mean()
     else:
@@ -169,16 +160,17 @@ def dendrogram(
             rep_df = pd.DataFrame(
                 _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
             )
-            
+
         else:
             rep_df = pd.DataFrame(
-                _choose_representation(adata[:, var_names], use_rep=use_rep, n_pcs=n_pcs)
+                _choose_representation(
+                    adata[:, var_names], use_rep=use_rep, n_pcs=n_pcs
+                )
             )
         categories = rep_df.axes[axis]
-        
+
     import scipy.cluster.hierarchy as sch
     from scipy.spatial import distance
-
 
     if axis == 0:
         corr_matrix = rep_df.T.corr(method=cor_method)
