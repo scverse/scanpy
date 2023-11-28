@@ -135,6 +135,7 @@ class StackedViolin(BasePlot):
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        groupby_cols: str | Sequence[str] = [],
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -159,6 +160,7 @@ class StackedViolin(BasePlot):
             adata,
             var_names,
             groupby,
+            groupby_cols,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
@@ -331,6 +333,8 @@ class StackedViolin(BasePlot):
         _color_df = _matrix.groupby(level=0).median()
         if self.are_axes_swapped:
             _color_df = _color_df.T
+        if len(self.groupby_cols) > 0:
+            _color_df = self._convert_tidy_to_stacked(_color_df)
 
         cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
         if "cmap" in self.kwds:
@@ -341,6 +345,7 @@ class StackedViolin(BasePlot):
             self.vboundnorm.vcenter,
             self.vboundnorm.norm,
         )
+        normalize(_color_df.values[~np.isnan(_color_df.values)])  # circumvent unexpected behavior with nan in matplotlib
         colormap_array = cmap(normalize(_color_df.values))
         x_spacer_size = self.plot_x_padding
         y_spacer_size = self.plot_y_padding
@@ -408,25 +413,37 @@ class StackedViolin(BasePlot):
         # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
 
-        df = (
-            pd.DataFrame(_matrix.stack(dropna=False))
-            .reset_index()
-            .rename(
-                columns={
-                    "level_1": "genes",
-                    _matrix.index.name: "categories",
-                    0: "values",
-                }
+        if len(self.groupby_cols) < 1:
+            df = (
+                pd.DataFrame(_matrix.stack(dropna=False))
+                .reset_index()
+                .rename(
+                    columns={
+                        "level_1": "genes",
+                        _matrix.index.name: "categories",
+                        0: "values",
+                    }
+                )
             )
-        )
-        df["genes"] = (
-            df["genes"].astype("category").cat.reorder_categories(_matrix.columns)
-        )
-        df["categories"] = (
-            df["categories"]
-            .astype("category")
-            .cat.reorder_categories(_matrix.index.categories)
-        )
+            df["genes"] = (
+                df["genes"].astype("category").cat.reorder_categories(_matrix.columns)
+            )
+            df["categories"] = (
+                df["categories"]
+                .astype("category")
+                .cat.reorder_categories(_matrix.index.categories)
+            )
+        else:
+            # partially taken from self._convert_tidy_to_stacked
+            label = _matrix.index.name
+            stacked_df = _matrix.reset_index()
+            stacked_df.index = pd.MultiIndex.from_tuples(
+                stacked_df[label].str.split('_').tolist(), names=self.groupby)
+            stacked_df = stacked_df.drop(label, axis=1).reset_index().melt(id_vars=self.groupby)
+            stacked_df['genes'] = stacked_df[self.groupby_cols + ['variable']].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
+            stacked_df = stacked_df.drop(self.groupby_cols + ['variable'], axis=1)
+            stacked_df.columns = ['categories', 'values', 'genes']
+            df = stacked_df
 
         # the ax need to be subdivided
         # define a layout of nrows = len(categories) rows
