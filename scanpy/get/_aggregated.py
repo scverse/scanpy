@@ -132,7 +132,10 @@ class Aggregate:
         group_counts = np.bincount(self.groupby.codes)
         mean_ = self.mean()
         # sparse matrices do not support ** for elementwise power.
-        mean_sq = utils.asarray(self.indicator_matrix @ _power(self.data, 2))
+        mean_sq = (
+            utils.asarray(self.indicator_matrix @ _power(self.data, 2))
+            / group_counts[:, None]
+        )
         if self.weight is None:
             sq_mean = mean_**2
         else:
