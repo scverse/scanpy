@@ -1,4 +1,4 @@
-"""BasePlot for dotplot, matrixplot and stacked_violin
+"""BasePlot for dotplot, matrixplot and stacked_violinA
 """
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal, Union
 from warnings import warn
 
 import numpy as np
+import pandas as pd
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
@@ -834,6 +835,16 @@ class BasePlot:
         """
         self.make_figure()
         plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
+
+    def _convert_tidy_to_stacked(self, values_df):
+        """\
+        Utility function used to convert obs_tidy into the correct format when using a groupby_col.
+        """
+        label = values_df.index.name
+        stacked_df = values_df.reset_index()
+        stacked_df.index = pd.MultiIndex.from_tuples(
+            stacked_df[label].str.split('_').tolist(), names=self.groupby)
+        return stacked_df.drop(label, axis=1).unstack(level=self.groupby_cols)
 
     def _reorder_categories_after_dendrogram(self, dendrogram):
         """\

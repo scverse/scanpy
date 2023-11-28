@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
@@ -161,16 +160,17 @@ class MatrixPlot(BasePlot):
                 logg.warning("Unknown type for standard_scale, ignored")
 
             if len(groupby_cols) > 0:
-                label = values_df.index.name
-                dirty_df = values_df.reset_index()
-                dirty_df.index = pd.MultiIndex.from_tuples(
-                    dirty_df[label].str.split('_').tolist(), names=self.groupby)
-                dirty_df = dirty_df.drop(label, axis=1).unstack(level=self.groupby_cols)
+                stacked_df = self._convert_tidy_to_stacked(values_df)
+                # label = values_df.index.name
+                # stacked_df = values_df.reset_index()
+                # stacked_df.index = pd.MultiIndex.from_tuples(
+                #     stacked_df[label].str.split('_').tolist(), names=self.groupby)
+                # stacked_df = stacked_df.drop(label, axis=1).unstack(level=self.groupby_cols)
 
-                temp_df = dirty_df.reset_index(drop=True)
-                temp_df.index = dirty_df.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
-                temp_df.columns = dirty_df.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
-                values_df = temp_df
+                # recreate the original formatting of values_df
+                values_df = stacked_df.reset_index(drop=True)
+                values_df.index = stacked_df.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                values_df.columns = stacked_df.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
 
         self.values_df = values_df
 
