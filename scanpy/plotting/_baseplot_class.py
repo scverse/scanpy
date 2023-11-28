@@ -1,4 +1,4 @@
-"""BasePlot for dotplot, matrixplot and stacked_violinA
+"""BasePlot for dotplot, matrixplot and stacked_violin
 """
 from __future__ import annotations
 
@@ -844,7 +844,17 @@ class BasePlot:
         stacked_df = values_df.reset_index()
         stacked_df.index = pd.MultiIndex.from_tuples(
             stacked_df[label].str.split('_').tolist(), names=self.groupby)
-        return stacked_df.drop(label, axis=1).unstack(level=self.groupby_cols)
+        stacked_df = stacked_df.drop(label, axis=1).unstack(level=self.groupby_cols)
+
+        # recreate the original formatting of values_df
+        values_df = stacked_df.reset_index(drop=True)
+        if isinstance(stacked_df.index, pd.MultiIndex):
+            values_df.index = stacked_df.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
+        else:
+            values_df.index = stacked_df.index.to_series().apply(lambda x: ''.join(map(str, x))).values
+        values_df.columns = stacked_df.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
+
+        return values_df
 
     def _reorder_categories_after_dendrogram(self, dendrogram):
         """\

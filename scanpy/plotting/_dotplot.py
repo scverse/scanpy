@@ -181,13 +181,7 @@ class DotPlot(BasePlot):
                 obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
             )
             if len(groupby_cols) > 0:
-                dot_size_df_stacked = self._convert_tidy_to_stacked(dot_size_df)
-
-                values_df = dot_size_df_stacked.reset_index(drop=True)
-                values_df.index = dot_size_df_stacked.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
-                values_df.columns = dot_size_df_stacked.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
-                dot_size_df = values_df
-
+                dot_size_df = self._convert_tidy_to_stacked(dot_size_df)
         if dot_color_df is None:
             # 2. compute mean expression value value
             if mean_only_expressed:
@@ -208,12 +202,7 @@ class DotPlot(BasePlot):
             else:
                 logg.warning("Unknown type for standard_scale, ignored")
             if len(groupby_cols) > 0:
-                dot_color_df_stacked = self._convert_tidy_to_stacked(dot_color_df)
-
-                values_df = dot_color_df_stacked.reset_index(drop=True)
-                values_df.index = dot_color_df_stacked.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
-                values_df.columns = dot_color_df_stacked.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
-                dot_color_df = values_df
+                dot_color_df = self._convert_tidy_to_stacked(dot_color_df)
         else:
             # check that both matrices have the same shape
             if dot_color_df.shape != dot_size_df.shape:

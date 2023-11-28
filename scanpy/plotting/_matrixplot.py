@@ -161,15 +161,7 @@ class MatrixPlot(BasePlot):
                 logg.warning("Unknown type for standard_scale, ignored")
 
             if len(groupby_cols) > 0:
-                stacked_df = self._convert_tidy_to_stacked(values_df)
-
-                # recreate the original formatting of values_df
-                values_df = stacked_df.reset_index(drop=True)
-                if isinstance(stacked_df.index, pd.MultiIndex):
-                    values_df.index = stacked_df.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
-                else:
-                    values_df.index = stacked_df.index.to_series().apply(lambda x: ''.join(map(str, x))).values
-                values_df.columns = stacked_df.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                values_df = self._convert_tidy_to_stacked(values_df)
 
         self.values_df = values_df
 
