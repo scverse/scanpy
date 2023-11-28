@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
@@ -169,7 +170,10 @@ class MatrixPlot(BasePlot):
 
                 # recreate the original formatting of values_df
                 values_df = stacked_df.reset_index(drop=True)
-                values_df.index = stacked_df.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                if isinstance(stacked_df.index, pd.MultiIndex):
+                    values_df.index = stacked_df.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
+                else:
+                    values_df.index = stacked_df.index.to_series().apply(lambda x: ''.join(map(str, x))).values
                 values_df.columns = stacked_df.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
 
         self.values_df = values_df
