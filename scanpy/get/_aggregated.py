@@ -59,7 +59,7 @@ class Aggregate:
     data
         Data matrix for aggregation.
     weight
-        Weights to be used for aggergation.
+        Weights to be used for aggregation.
     """
 
     def __init__(self, groupby, data, weight=None):
