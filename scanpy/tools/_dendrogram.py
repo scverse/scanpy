@@ -9,10 +9,13 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 
+from anndata._core.merge import _resolve_dim
+
 from .. import logging as logg
 from .._utils import _doc_params
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
+
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -23,7 +26,9 @@ if TYPE_CHECKING:
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def dendrogram(
     adata: AnnData,
-    groupby: str | Sequence[str],
+    groupby: str | Sequence[str] | None = None,
+    dim: Literal["obs", "var"] | None = None,
+    axis: Literal[0, 1] | None = None,
     n_pcs: int | None = None,
     use_rep: str | None = None,
     var_names: Sequence[str] | None = None,
@@ -60,6 +65,12 @@ def dendrogram(
     ----------
     adata
         Annotated data matrix
+    groupby
+        Optional, the obs column(s) to use to group observations. Default is None.
+    dim
+        Dimension (obs or var) along which to calculate the dedrogram. Pass either `dim` or `axis` but not both.
+    axis
+        Axis (0 or 1) along which to calculate the dendrogram. Pass either `dim` or `axis` but not both.
     {n_pcs}
     {use_rep}
     var_names
@@ -103,49 +114,77 @@ def dendrogram(
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
-    if isinstance(groupby, str):
-        # if not a list, turn into a list
-        groupby = [groupby]
-    for group in groupby:
-        if group not in adata.obs_keys():
-            raise ValueError(
-                "groupby has to be a valid observation. "
-                f"Given value: {group}, valid observations: {adata.obs_keys()}"
-            )
-        if not isinstance(adata.obs[group].dtype, CategoricalDtype):
-            raise ValueError(
-                "groupby has to be a categorical observation. "
-                f"Given value: {group}, Column type: {adata.obs[group].dtype}"
-            )
-
-    if var_names is None:
-        rep_df = pd.DataFrame(
-            _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
-        )
-        categorical = adata.obs[groupby[0]]
-        if len(groupby) > 1:
-            for group in groupby[1:]:
-                # create new category by merging the given groupby categories
-                categorical = (
-                    categorical.astype(str) + "_" + adata.obs[group].astype(str)
-                ).astype("category")
-        categorical.name = "_".join(groupby)
-
-        rep_df.set_index(categorical, inplace=True)
-        categories = rep_df.index.categories
+    if dim is None and axis is None:
+        dim = "obs"
+    axis, dim = _resolve_dim(axis=axis, dim=dim)
+    alt_axis, alt_dim = _resolve_dim(axis=1-axis)
+    
+    if dim == "obs":
+        dim_names = adata.obs_names
+        metadata = adata.obs
+        metadata_keys = adata.obs_keys()
     else:
-        gene_names = adata.raw.var_names if use_raw else adata.var_names
-        from ..plotting._anndata import _prepare_dataframe
-
-        categories, rep_df = _prepare_dataframe(adata, gene_names, groupby, use_raw)
-
-    # aggregate values within categories using 'mean'
-    mean_df = rep_df.groupby(level=0).mean()
-
+        metadata = adata.var
+        metadata_keys = adata.var_keys()
+    
+    if groupby is not None:
+        if isinstance(groupby, str):
+            # if not a list, turn into a list
+            groupby = [groupby]
+        for group in groupby:
+            if group not in adata.obs_keys():
+                raise ValueError(
+                    "groupby has to be a valid observation. "
+                    f"Given value: {group}, valid observations: {adata.obs_keys()}"
+                )
+            if not isinstance(adata.obs[group].dtype, CategoricalDtype):
+                raise ValueError(
+                    "groupby has to be a categorical observation. "
+                    f"Given value: {group}, Column type: {adata.obs[group].dtype}"
+                )
+    
+        if var_names is None:
+            rep_df = pd.DataFrame(
+                _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+            )
+            categorical = adata.obs[groupby[0]]
+            if len(groupby) > 1:
+                for group in groupby[1:]:
+                    # create new category by merging the given groupby categories
+                    categorical = (
+                        categorical.astype(str) + "_" + adata.obs[group].astype(str)
+                    ).astype("category")
+            categorical.name = "_".join(groupby)
+    
+            rep_df.set_index(categorical, inplace=True)
+            categories = rep_df.index.categories
+        else:
+            from scanpy.plotting._anndata import _prepare_dataframe
+    
+            categories, rep_df = _prepare_dataframe(adata, var_names, groupby, use_raw)
+    
+        # aggregate values within categories using 'mean'
+        rep_df = rep_df.groupby(level=0).mean()
+    else:
+        if var_names is None:
+            rep_df = pd.DataFrame(
+                _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+            )
+            
+        else:
+            rep_df = pd.DataFrame(
+                _choose_representation(adata[:, var_names], use_rep=use_rep, n_pcs=n_pcs)
+            )
+        categories = rep_df.axes[axis]
+        
     import scipy.cluster.hierarchy as sch
     from scipy.spatial import distance
 
-    corr_matrix = mean_df.T.corr(method=cor_method)
+
+    if axis == 0:
+        corr_matrix = rep_df.T.corr(method=cor_method)
+    else:
+        corr_matrix = rep_df.corr(method=cor_method)
     corr_condensed = distance.squareform(1 - corr_matrix)
     z_var = sch.linkage(
         corr_condensed, method=linkage_method, optimal_ordering=optimal_ordering
@@ -166,7 +205,10 @@ def dendrogram(
 
     if inplace:
         if key_added is None:
-            key_added = f'dendrogram_{"_".join(groupby)}'
+            if groupby is None:
+                key_added = f"dendrogram_{dim}"
+            else:
+                key_added = f'dendrogram_{"_".join(groupby)}'
         logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
         adata.uns[key_added] = dat
     else:

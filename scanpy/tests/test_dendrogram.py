@@ -22,3 +22,8 @@ def test_dendrogram_key_added(groupby, key_added):
     if key_added is None:
         key_added = dendrogram_key
     assert key_added in adata.uns
+
+def test_dendrogram_var_names():
+    adata = pbmc68k_reduced()
+    sc.tl.dendrogram(adata, var_names=adata.var_names[:10], axis=1)
+    assert len(adata.uns["dendrogram_var"]["categories_ordered"]) == 10
