@@ -9,6 +9,7 @@ from scipy.sparse import csr_matrix
 import scanpy as sc
 from scanpy.testing._helpers import assert_equal
 from scanpy.testing._helpers.data import pbmc3k_processed
+from scanpy.testing._pytest.params import ARRAY_TYPES_MEM
 
 
 @pytest.fixture
@@ -70,9 +71,11 @@ def gen_adata(data_key, dim, df_base, df_groupby, X):
 
 
 # TODO: There isn't an exact equivalent for our count operation in pandas I think (i.e. count non-zero values)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize("metric", ["sum", "mean", "var"])
-def test_aggregated_vs_pandas(metric):
+def test_aggregated_vs_pandas(metric, array_type):
     adata = pbmc3k_processed().raw.to_adata()
+    adata.X = array_type(adata.X)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=10)
     result = sc.get.aggregated(adata, ["louvain", "percent_mito_binned"], metric)
 
