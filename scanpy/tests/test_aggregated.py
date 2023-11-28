@@ -7,6 +7,8 @@ import pytest
 from scipy.sparse import csr_matrix
 
 import scanpy as sc
+from scanpy.testing._helpers import assert_equal
+from scanpy.testing._helpers.data import pbmc3k_processed
 
 
 @pytest.fixture
@@ -65,6 +67,35 @@ def gen_adata(data_key, dim, df_base, df_groupby, X):
     adata_sparse = ad.AnnData(obs=obs_df, var=var_df, **data_dict_sparse)
     adata_dense = ad.AnnData(obs=obs_df, var=var_df, **data_dict_dense)
     return adata_sparse, adata_dense
+
+
+# TODO: There isn't an exact equivalent for our count operation in pandas I think (i.e. count non-zero values)
+@pytest.mark.parametrize("metric", ["sum", "mean", "var"])
+def test_aggregated_vs_pandas(metric):
+    adata = pbmc3k_processed().raw.to_adata()
+    adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=10)
+    result = sc.get.aggregated(adata, ["louvain", "percent_mito_binned"], metric)
+
+    expected = (
+        adata.to_df()
+        .astype(np.float64)
+        .join(adata.obs[["louvain", "percent_mito_binned"]])
+        .groupby(["louvain", "percent_mito_binned"], observed=True)
+        .agg(metric)
+    )
+    # TODO: figure out the axis names
+    expected.index = expected.index.to_frame().apply(
+        lambda x: "_".join(map(str, x)), axis=1
+    )
+    expected.index.name = None
+    expected.columns.name = None
+
+    result_df = result.to_df(layer=metric)
+    result_df.index.name = None
+    result_df.columns.name = None
+    # expected = adata.to_df().groupby(adata.obs[["louvain", "percent_mito_binned"]]).agg(metric)
+
+    assert_equal(result_df, expected)
 
 
 @pytest.mark.parametrize("data_key", ["layers", "obsm", "varm", "X"])
@@ -193,6 +224,103 @@ def test_groupby(data_key, dim, df_base, df_groupby, X):
 
 
 @pytest.mark.parametrize(
+    "matrix,df,keys,metrics,expected",
+    [
+        (
+            np.block(
+                [
+                    [np.ones((2, 2)), np.zeros((2, 2))],
+                    [np.zeros((2, 2)), np.ones((2, 2))],
+                ]
+            ),
+            pd.DataFrame(
+                {
+                    "a": ["a", "a", "b", "b"],
+                    "b": ["c", "d", "d", "d"],
+                }
+            ),
+            ["a", "b"],
+            ["count"],  # , "sum", "mean"],
+            ad.AnnData(
+                obs=pd.DataFrame(index=["a_c", "a_d", "b_d"]),
+                var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
+                layers={
+                    "count": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
+                    # "sum": np.array([[2, 0], [0, 2]]),
+                    # "mean": np.array([[1, 0], [0, 1]]),
+                },
+            ),
+        ),
+        (
+            np.block(
+                [
+                    [np.ones((2, 2)), np.zeros((2, 2))],
+                    [np.zeros((2, 2)), np.ones((2, 2))],
+                ]
+            ),
+            pd.DataFrame(
+                {
+                    "a": ["a", "a", "b", "b"],
+                    "b": ["c", "d", "d", "d"],
+                }
+            ),
+            ["a", "b"],
+            ["sum", "mean", "count"],
+            ad.AnnData(
+                obs=pd.DataFrame(index=["a_c", "a_d", "b_d"]),
+                var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
+                layers={
+                    "sum": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
+                    "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
+                    "count": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
+                },
+            ),
+        ),
+        (
+            np.block(
+                [
+                    [np.ones((2, 2)), np.zeros((2, 2))],
+                    [np.zeros((2, 2)), np.ones((2, 2))],
+                ]
+            ),
+            pd.DataFrame(
+                {
+                    "a": ["a", "a", "b", "b"],
+                    "b": ["c", "d", "d", "d"],
+                }
+            ),
+            ["a", "b"],
+            ["mean"],  # , "sum", "mean"],
+            ad.AnnData(
+                obs=pd.DataFrame(index=["a_c", "a_d", "b_d"]),
+                var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
+                layers={
+                    "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
+                    # "sum": np.array([[2, 0], [0, 2]]),
+                    # "mean": np.array([[1, 0], [0, 1]]),
+                },
+            ),
+        ),
+    ],
+)
+def test_aggregated_parameterized(matrix, df, keys, metrics, expected):
+    adata = ad.AnnData(
+        X=matrix,
+        obs=df,
+        var=pd.DataFrame(index=[f"gene_{i}" for i in range(matrix.shape[1])]),
+    )
+    result = sc.get.aggregated(adata, by=keys, func=metrics)
+
+    print(result)
+    print(expected)
+
+    for k in metrics:
+        assert_equal(result.layers[k], expected.layers[k])
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.parametrize(
     "label_df,cols,expected",
     [
         (
@@ -247,9 +375,5 @@ def test_combine_categories(label_df, cols, expected):
 
     assert isinstance(result, pd.Categorical)
 
-    # assert set(result.cat.categories) == {"a_d", "b_d", "c_f"}
-    # assert set(result.codes) == {0, 1, 2}
-
-    # expected = pd.Series(["a_d", "b_d", "c_f"], dtype="category")
     # TODO: is there a better function here?
     pd.testing.assert_series_equal(pd.Series(result), pd.Series(expected))

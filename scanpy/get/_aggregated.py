@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence, Set
-from dataclasses import dataclass
 from functools import singledispatch
 from typing import TYPE_CHECKING, Literal, NamedTuple, get_args
 from typing import Union as _U
@@ -9,12 +8,12 @@ from typing import Union as _U
 import numpy as np
 import pandas as pd
 from anndata import AnnData, utils
-from scipy.sparse import coo_matrix, dia_matrix, spmatrix
+from scipy import sparse
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-Array = _U[np.ndarray, spmatrix]
+Array = _U[np.ndarray, sparse.spmatrix]
 AggType = Literal["count", "mean", "sum", "var"]
 
 
@@ -31,7 +30,6 @@ class Indices(NamedTuple):
     weight_value: pd.Series | Array | None
 
 
-@dataclass
 class Aggregate:
     """\
     Functionality for generic grouping and aggregating.
@@ -62,20 +60,20 @@ class Aggregate:
         Data matrix for aggregation.
     weight
         Weights to be used for aggergation.
-    key_set
-        Subset of keys to which to filter.
     """
+
+    def __init__(self, groupby, data, weight=None):
+        self.groupby = groupby
+        self.indicator_matrix = sparse_indicator(groupby)
+        self.data = data
+        self.weight = weight
 
     groupby: pd.Series
     data: Array
     weight: pd.Series | Array
     key_set: Set[str] | None
 
-    def __post_init__(self):
-        if self.key_set is not None and not isinstance(self.key_set, Set):
-            self.key_set = dict.fromkeys(self.key_set).keys()
-
-    def count(self, *, _indices: Indices | None = None) -> np.ndarray:
+    def count(self) -> np.ndarray:
         """\
         Count the number of observations in each group.
 
@@ -83,9 +81,9 @@ class Aggregate:
         -------
         Array of counts.
         """
-        if _indices is None:
-            _indices = self._extract_indices()
-        return np.bincount(_indices.key_index)
+        # pattern = self.data._with_data(np.broadcast_to(1, len(self.data.data)))
+        # return self.indicator_matrix @ pattern
+        return self.indicator_matrix @ (self.data != 0)
 
     def sum(self) -> Array:
         """\
@@ -95,10 +93,9 @@ class Aggregate:
         -------
         Array of sum.
         """
-        A, _ = self._sparse_aggregator(normalize=False)
-        return utils.asarray(A * self.data)
+        return utils.asarray(self.indicator_matrix @ self.data)
 
-    def mean(self, *, _A: spmatrix | None = None) -> Array:
+    def mean(self) -> Array:
         """\
         Compute the mean per feature per group of observations.
 
@@ -106,9 +103,10 @@ class Aggregate:
         -------
         Array of mean.
         """
-        if _A is None:
-            _A, _ = self._sparse_aggregator(normalize=True)
-        return utils.asarray(_A @ self.data)
+        return (
+            utils.asarray(self.indicator_matrix @ self.data)
+            / np.bincount(self.groupby.codes)[:, None]
+        )
 
     def count_mean_var(self, dof: int = 1, *, _indices: Indices | None = None) -> CMV:
         """\
@@ -130,23 +128,22 @@ class Aggregate:
         Object with `count`, `mean`, and `var` attributes.
         """
         assert dof >= 0
-        if _indices is None:
-            _indices = self._extract_indices()
-        A, _ = self._sparse_aggregator(normalize=True, _indices=_indices)
-        count_ = self.count(_indices=_indices)
-        mean_ = self.mean(_A=A)
+        count_ = self.count()
+        group_counts = np.bincount(self.groupby.codes)
+        mean_ = self.mean()
         # sparse matrices do not support ** for elementwise power.
-        mean_sq = utils.asarray(A @ _power(self.data, 2))
+        mean_sq = utils.asarray(self.indicator_matrix @ _power(self.data, 2))
         if self.weight is None:
             sq_mean = mean_**2
         else:
-            A_unweighted, _ = Aggregate(
-                groupby=self.groupby,
-                data=self.data,
-                weight=self.weight,  # TODO: why pass weights when creating unweighted A?
-                key_set=self.key_set,
-            )._sparse_aggregator()
-            mean_unweighted = utils.asarray(A_unweighted * self.data)
+            A_unweighted = sparse_indicator(self.groupby)
+            # , _ = Aggregate(
+            #     groupby=self.groupby,
+            #     data=self.data,
+            #     weight=self.weight,  # TODO: why pass weights when creating unweighted A?
+            #     key_set=self.key_set,
+            # )._sparse_aggregator()
+            mean_unweighted = utils.asarray(A_unweighted @ self.data)
             sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted**2
         var_ = mean_sq - sq_mean
         # TODO: Why these values exactly? Because they are high relative to the datatype?
@@ -155,111 +152,21 @@ class Aggregate:
         # detects loss of precision in mean_sq - sq_mean, which suggests variance is 0
         var_[precision * var_ < sq_mean] = 0
         if dof != 0:
-            var_ *= (count_ / (count_ - dof))[:, np.newaxis]
+            var_ *= (group_counts / (group_counts - dof))[:, np.newaxis]
         return CMV(count=count_, mean=mean_, var=var_)
 
-    def _sparse_aggregator(
-        self, normalize: bool = False, *, _indices: Indices | None = None
-    ) -> tuple[coo_matrix, NDArray[np.floating]]:
-        """\
-        Form a coordinate-sparse matrix A such that rows of A * X
-        are weighted sums of groups of rows of X.
 
-        A[i, j] = w includes X[j,:] in group i with weight w.
-
-        Params
-        ------
-        normalize
-            If true, weights for each group are normalized to sum to 1.0,
-            corresponding to (weighted) mean.
-
-        Returns
-        -------
-        A
-            weighted sums of groups of rows of X.
-        keys
-            An ndarray with keys[i] the group key corresponding to row i of A.
-        """
-        if _indices is None:
-            _indices = self._extract_indices()
-        keys, key_index, df_index, weight_value = _indices
-        if df_index is None:
-            df_index = np.arange(len(key_index))
-        if self.weight is None:
-            weight_value = np.broadcast_to(1.0, len(key_index))
-        # TODO: why a coo matrix here and a dia matrix below? (unchanged from original code: https://github.com/scverse/anndata/pull/564)
-        A = coo_matrix(
-            (weight_value, (key_index, df_index)),
-            shape=(len(keys), self.data.shape[0]),
-        )
-        if normalize:
-            n_row = A.shape[0]
-            row_sums = np.asarray(A.sum(axis=1))
-            D = dia_matrix(((row_sums.T**-1), [0]), shape=(n_row, n_row))
-            A = D * A
-        return A, keys
-
-    def _filter_indices(self, indices: Indices) -> Indices:
-        """\
-        Filter the values of keys, key_index, df_index, and optionally weight_value based on :attr:`key_set`.
-
-        Params
-        ------
-        keys
-            Unique key values to be filtered.
-        key_index
-            Non-unique integer indices mapping keys to the df_index to be filtered.
-        df_index
-            An Index that the keys + key_index constitute to be filtered.
-        weight_value, optional
-            Weight values to be filtered., by default None
-
-        Returns
-        -------
-        Filtered versions of all arguments.
-
-        Raises
-        ------
-        ValueError
-            If no keys in key_set found in keys.
-        """
-        keys, key_index, df_index, weight_value = indices
-        keep = [i for i, k in enumerate(keys) if k in set(self.key_set)]
-        if len(keep) == 0:
-            raise ValueError("No keys in key_set found in keys.")
-        elif len(keep) < len(keys):
-            mask = np.in1d(key_index, keep)
-            remap = np.zeros(len(keys), dtype=np.int64)
-            for i, j in enumerate(keep):
-                remap[j] = i
-            keys = [keys[j] for j in keep]
-            key_index = np.array([remap[i] for i in key_index[mask]], dtype=np.int64)
-            df_index = df_index[mask]
-            if weight_value is not None:
-                weight_value = weight_value[mask]
-        return Indices(keys, key_index, df_index, weight_value)
-
-    def _extract_indices(self) -> Indices:
-        """\
-        Extract indices from attr:`groupby` with the goal of building a matrix
-        that can be multiplied with the data to produce an aggregation statistics e.g., mean or variance.
-        These are filtered if a :attr:`key_set` is present.
-
-        Returns
-        -------
-        Unique keys, an array mapping those unique keys to an index, said index, and a weight if present.
-        """
-        key_value = self.groupby
-        keys, key_index = np.unique(_ndarray_from_seq(key_value), return_inverse=True)
-        df_index = np.arange(len(key_index))
-        if self.weight is None:
-            weight_value = None
-        else:
-            weight_value = self.weight.values[df_index]
-        indices = Indices(keys, key_index, df_index, weight_value)
-        if self.key_set is None:
-            return indices
-        return self._filter_indices(indices)
+# def count_mean_var_spd(by, data):
+#     sums = np.zeros((by.shape[0],data.shape[1]))
+#     counts = np.zeros((by.shape[0],data.shape[1]))
+#     sums = by.toarray() @ data
+#     counts = by.toarray() @ data._with_data(np.ones(len(data.data),dtype=data.data.dtype))
+#     n_cells = np.array(by.sum(axis= 1).astype(data.dtype))
+#     means = sums/n_cells
+#     sq_mean = by.toarray() @ data.multiply(data)/n_cells
+#     var = sq_mean - np.power(means, 2)
+#     var *= n_cells / (n_cells - 1)
+#     return sums, counts, means, var
 
 
 def _power(X: Array, power: float | int) -> Array:
@@ -293,60 +200,6 @@ def _ndarray_from_seq(lst: Sequence):
     return arr
 
 
-def _superset_columns(df: pd.DataFrame, groupby_key: str) -> list[str]:
-    """\
-    Find all columns which are a superset of the key column.
-
-    Params
-    ------
-    df
-        DataFrame which contains candidate columns.
-    groupby_key
-        Key for column of which to find superset of columns.
-
-    Returns
-    -------
-    Superset columns.
-    """
-    columns = []
-    groupy_key_codes = df[groupby_key].astype("category")
-    for key in df:
-        if key != groupby_key:
-            key_codes = df[key].astype("category")
-            if all(
-                key_codes[groupy_key_codes == group_key_code].nunique() == 1
-                for group_key_code in groupy_key_codes
-            ):
-                columns += [key]
-    return columns
-
-
-def _df_grouped(df: pd.DataFrame, key: str, key_set: list[str]) -> pd.DataFrame:
-    """\
-    Generate a grouped-by dataframe (no aggregation) by
-    a key with columns that are supersets of the key column.
-
-    Params
-    ------
-    df
-        DataFrame to be grouped.
-    key
-        Column to be grouped on.
-    key_set
-        Values in the `key` column to keep before groupby.
-
-    Returns
-    -------
-    pd.DataFrame: Grouped-by Dataframe.
-    """
-    df = df.copy()
-    if key_set is not None:
-        df = df[df[key].isin(key_set)]
-    if isinstance(df[key].dtype, pd.CategoricalDtype):
-        df[key] = df[key].cat.remove_unused_categories()
-    return df.groupby(key).first()[_superset_columns(df, key)]
-
-
 @singledispatch
 def aggregated(
     adata: AnnData,
@@ -355,7 +208,6 @@ def aggregated(
     *,
     dim: Literal["obs", "var"] = "obs",
     weight_key: str | None = None,
-    key_set: Iterable[str] | None = None,
     dof: int = 1,
     layer: str | None = None,
     obsm: str | None = None,
@@ -395,15 +247,13 @@ def aggregated(
     Aggregated :class:`~anndata.AnnData`.
     """
     data = adata.X
-    write_to_xxxm = None
+    # TODO replace with get helper
     if sum(p is not None for p in [varm, obsm, layer]) > 1:
         raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
     if varm is not None:
         data = adata.varm[varm]
-        write_to_xxxm = True  # the data will have to be transposed so this is accurate
     elif obsm is not None:
         data = adata.obsm[obsm]
-        write_to_xxxm = True
     elif layer is not None:
         data = adata.layers[layer]
         if dim == "var":
@@ -416,74 +266,62 @@ def aggregated(
         groupby_df=getattr(adata, dim),
         dim=dim,
         by=by,
-        write_to_xxxm=write_to_xxxm,
+        # write_to_xxxm=write_to_xxxm,
         no_groupby_df=getattr(adata, "var" if dim == "obs" else "obs"),
         weight_key=weight_key,
-        key_set=key_set,
+        # key_set=key_set,
         func=func,
         dof=dof,
     )
 
 
 @aggregated.register(np.ndarray)
-@aggregated.register(spmatrix)
+@aggregated.register(sparse.spmatrix)
 def aggregated_from_array(
     data,
     groupby_df: pd.DataFrame,
     func: AggType | Iterable[AggType],
     dim: str,
     by: str,
-    write_to_xxxm: bool,
     no_groupby_df: pd.DataFrame,
     weight_key: str | None = None,
-    key_set: Iterable[str] | None = None,
     dof: int = 1,
 ) -> AnnData:
     """Aggregate data based on one of the columns of one of a `~pd.DataFrame`."""
+    categorical = _combine_categories(groupby_df, by)
     groupby = Aggregate(
-        groupby=groupby_df[by],
+        groupby=categorical,
         data=data,
         weight=groupby_df[weight_key] if weight_key is not None else None,
-        key_set=key_set,
     )
     # groupby df is put in `obs`, nongroupby in `var` to be transposed later as appropriate
     adata_kw = dict(
         X=None,
         layers={},
-        obs=_df_grouped(groupby_df, by, key_set),
+        obs=pd.DataFrame(index=categorical.categories),
         var=no_groupby_df,
         obsm={},
     )
-    write_key = "obsm" if write_to_xxxm else "layers"
     funcs = set([func] if isinstance(func, str) else func)
     if unknown := funcs - set(get_args(AggType)):
         raise ValueError(f"func {unknown} is not one of {get_args(AggType)}")
     if "sum" in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
-        # put aggregation in X if it is the only one and the aggregation data is not coming from `xxxm`
-        if len(funcs) == 1 and not write_to_xxxm:
-            adata_kw["X"] = agg
-        else:
-            adata_kw[write_key]["sum"] = agg
+        adata_kw["layers"]["sum"] = agg
     # here and below for count, if var is present, these can be calculate alongside var
     if "mean" in funcs and "var" not in funcs:
         agg = groupby.mean()
-        if len(funcs) == 1 and not write_to_xxxm:
-            adata_kw["X"] = agg
-        else:
-            adata_kw[write_key]["mean"] = agg
+        adata_kw["layers"]["mean"] = agg
     if "count" in funcs and "var" not in funcs:
-        adata_kw["obs"]["count"] = groupby.count()  # count goes in dim df
+        adata_kw["layers"]["count"] = groupby.count()  # count goes in dim df
     if "var" in funcs:
         aggs = groupby.count_mean_var(dof)
-        if len(funcs) == 1 and not write_to_xxxm:
-            adata_kw["X"] = aggs.var
-        else:
-            adata_kw[write_key]["var"] = aggs.var
-            if "mean" in funcs:
-                adata_kw[write_key]["mean"] = aggs.mean
-            if "count" in funcs:
-                adata_kw["obs"]["count"] = aggs.count
+        adata_kw["layers"]["var"] = aggs.var
+        if "mean" in funcs:
+            adata_kw["layers"]["mean"] = aggs.mean
+        if "count" in funcs:
+            adata_kw["layers"]["count"] = aggs.count
+
     adata_agg = AnnData(**adata_kw)
     if dim == "var":
         return adata_agg.T
@@ -493,11 +331,14 @@ def aggregated_from_array(
 def _combine_categories(label_df: pd.DataFrame, cols: list[str]) -> pd.Categorical:
     from itertools import product
 
+    if isinstance(cols, str):
+        cols = [cols]
+
     df = pd.DataFrame(
         {c: pd.Categorical(label_df[c]).remove_unused_categories() for c in cols},
     )
     result_categories = [
-        "_".join(x) for x in product(*[df[c].cat.categories for c in cols])
+        "_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])
     ]
     n_categories = [len(df[c].cat.categories) for c in cols]
 
@@ -513,3 +354,15 @@ def _combine_categories(label_df: pd.DataFrame, cols: list[str]) -> pd.Categoric
     return pd.Categorical.from_codes(
         final_codes, categories=result_categories
     ).remove_unused_categories()
+
+
+def sparse_indicator(
+    categorical, weights: None | np.ndarray = None
+) -> sparse.coo_matrix:
+    if weights is None:
+        weights = np.broadcast_to(1.0, len(categorical))
+    A = sparse.coo_matrix(
+        (weights, (categorical.codes, np.arange(len(categorical)))),
+        shape=(len(categorical.categories), len(categorical)),
+    )
+    return A
