@@ -122,7 +122,7 @@ class BasePlot:
             gene_symbols=gene_symbols,
         )
         # reset obs_tidy if using groupby_cols
-        if len(self.groupby_cols) > 0:
+        if len(groupby_cols) > 0:
             _, self.obs_tidy = _prepare_dataframe(
                 adata,
                 self.var_names,
@@ -288,7 +288,7 @@ class BasePlot:
         # to correctly plot the dendrogram the categories need to be ordered
         # according to the dendrogram ordering.
         self._reorder_categories_after_dendrogram(dendrogram_key)
-
+        print(self.categories)
         dendro_ticks = np.arange(len(self.categories)) + 0.5
 
         self.group_extra_size = size
