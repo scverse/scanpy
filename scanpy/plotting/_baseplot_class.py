@@ -648,7 +648,7 @@ class BasePlot:
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
             mainplot_width = (
-                len(self.var_names) * category_width + self.group_extra_size
+                len(self.var_names) * category_width  * (1+len(self.groupby_cols)) + self.group_extra_size
             )
             if self.are_axes_swapped:
                 mainplot_height, mainplot_width = mainplot_width, mainplot_height
