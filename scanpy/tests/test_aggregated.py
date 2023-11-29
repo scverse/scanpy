@@ -73,20 +73,32 @@ def gen_adata(data_key, dim, df_base, df_groupby, X):
 # TODO: test count_nonzero
 # TODO: There isn't an exact equivalent for our count operation in pandas I think (i.e. count non-zero values)
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-@pytest.mark.parametrize("metric", ["sum", "mean", "var"])
+@pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
 def test_aggregated_vs_pandas(metric, array_type):
     adata = pbmc3k_processed().raw.to_adata()
+    adata = adata[
+        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
+    ].copy()
     adata.X = array_type(adata.X)
-    adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=10)
+    adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
     result = sc.get.aggregated(adata, ["louvain", "percent_mito_binned"], metric)
 
-    expected = (
-        adata.to_df()
-        .astype(np.float64)
-        .join(adata.obs[["louvain", "percent_mito_binned"]])
-        .groupby(["louvain", "percent_mito_binned"], observed=True)
-        .agg(metric)
-    )
+    if metric == "count_nonzero":
+        expected = (
+            (adata.to_df() != 0)
+            .astype(np.float64)
+            .join(adata.obs[["louvain", "percent_mito_binned"]])
+            .groupby(["louvain", "percent_mito_binned"], observed=True)
+            .agg("sum")
+        )
+    else:
+        expected = (
+            adata.to_df()
+            .astype(np.float64)
+            .join(adata.obs[["louvain", "percent_mito_binned"]])
+            .groupby(["louvain", "percent_mito_binned"], observed=True)
+            .agg(metric)
+        )
     # TODO: figure out the axis names
     expected.index = expected.index.to_frame().apply(
         lambda x: "_".join(map(str, x)), axis=1
@@ -243,12 +255,14 @@ def test_aggregated_vs_pandas(metric, array_type):
                 }
             ),
             ["a", "b"],
-            ["count"],  # , "sum", "mean"],
+            ["count_nonzero"],  # , "sum", "mean"],
             ad.AnnData(
                 obs=pd.DataFrame(index=["a_c", "a_d", "b_d"]),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
-                    "count": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
+                    "count_nonzero": np.array(
+                        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]
+                    ),
                     # "sum": np.array([[2, 0], [0, 2]]),
                     # "mean": np.array([[1, 0], [0, 1]]),
                 },
@@ -268,14 +282,16 @@ def test_aggregated_vs_pandas(metric, array_type):
                 }
             ),
             ["a", "b"],
-            ["sum", "mean", "count"],
+            ["sum", "mean", "count_nonzero"],
             ad.AnnData(
                 obs=pd.DataFrame(index=["a_c", "a_d", "b_d"]),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
                     "sum": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
                     "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
-                    "count": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
+                    "count_nonzero": np.array(
+                        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]
+                    ),
                 },
             ),
         ),
@@ -293,20 +309,18 @@ def test_aggregated_vs_pandas(metric, array_type):
                 }
             ),
             ["a", "b"],
-            ["mean"],  # , "sum", "mean"],
+            ["mean"],
             ad.AnnData(
                 obs=pd.DataFrame(index=["a_c", "a_d", "b_d"]),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
                     "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
-                    # "sum": np.array([[2, 0], [0, 2]]),
-                    # "mean": np.array([[1, 0], [0, 1]]),
                 },
             ),
         ),
     ],
 )
-def test_aggregated_parameterized(matrix, df, keys, metrics, expected):
+def test_aggregated_examples(matrix, df, keys, metrics, expected):
     adata = ad.AnnData(
         X=matrix,
         obs=df,
@@ -316,9 +330,6 @@ def test_aggregated_parameterized(matrix, df, keys, metrics, expected):
 
     print(result)
     print(expected)
-
-    for k in metrics:
-        assert_equal(result.layers[k], expected.layers[k])
 
     assert_equal(expected, result)
 

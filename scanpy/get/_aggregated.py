@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 Array = _U[np.ndarray, sparse.spmatrix]
-AggType = Literal["count", "mean", "sum", "var"]
+AggType = Literal["count_nonzero", "mean", "sum", "var"]
 
 
 class CMV(NamedTuple):
@@ -73,7 +73,7 @@ class Aggregate:
     weight: pd.Series | Array
     key_set: Set[str] | None
 
-    def count(self) -> np.ndarray:
+    def count_nonzero(self) -> np.ndarray:
         """\
         Count the number of observations in each group.
 
@@ -128,7 +128,7 @@ class Aggregate:
         Object with `count`, `mean`, and `var` attributes.
         """
         assert dof >= 0
-        count_ = self.count()
+        count_ = self.count_nonzero()
         group_counts = np.bincount(self.groupby.codes)
         mean_ = self.mean()
         # sparse matrices do not support ** for elementwise power.
@@ -315,15 +315,15 @@ def aggregated_from_array(
     if "mean" in funcs and "var" not in funcs:
         agg = groupby.mean()
         adata_kw["layers"]["mean"] = agg
-    if "count" in funcs and "var" not in funcs:
-        adata_kw["layers"]["count"] = groupby.count()  # count goes in dim df
+    if "count_nonzero" in funcs and "var" not in funcs:
+        adata_kw["layers"]["count_nonzero"] = groupby.count_nonzero()
     if "var" in funcs:
         aggs = groupby.count_mean_var(dof)
         adata_kw["layers"]["var"] = aggs.var
         if "mean" in funcs:
             adata_kw["layers"]["mean"] = aggs.mean
-        if "count" in funcs:
-            adata_kw["layers"]["count"] = aggs.count
+        if "count_nonzero" in funcs:
+            adata_kw["layers"]["count_nonzero"] = aggs.count
 
     adata_agg = AnnData(**adata_kw)
     if dim == "var":
