@@ -102,6 +102,8 @@ class BasePlot:
         self.var_group_positions = var_group_positions
         self.var_group_rotation = var_group_rotation
         self.width, self.height = figsize if figsize is not None else (None, None)
+        self.groupby = [groupby] if isinstance(groupby, str) else groupby
+        self.groupby_cols = [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
 
         self.has_var_groups = (
             True
@@ -114,7 +116,7 @@ class BasePlot:
         self.categories, self.obs_tidy = _prepare_dataframe(
             adata,
             self.var_names,
-            groupby,
+            self.groupby,
             use_raw,
             log,
             num_categories,
@@ -122,11 +124,11 @@ class BasePlot:
             gene_symbols=gene_symbols,
         )
         # reset obs_tidy if using groupby_cols
-        if len(groupby_cols) > 0:
+        if len(self.groupby_cols) > 0:
             _, self.obs_tidy = _prepare_dataframe(
                 adata,
                 self.var_names,
-                groupby + groupby_cols,
+                self.groupby + self.groupby_cols,
                 use_raw,
                 log,
                 num_categories,
@@ -153,8 +155,6 @@ class BasePlot:
                 return
 
         self.adata = adata
-        self.groupby = [groupby] if isinstance(groupby, str) else groupby
-        self.groupby_cols = [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
         self.log = log
         self.kwds = kwds
 
@@ -288,7 +288,7 @@ class BasePlot:
         # to correctly plot the dendrogram the categories need to be ordered
         # according to the dendrogram ordering.
         self._reorder_categories_after_dendrogram(dendrogram_key)
-        print(self.categories)
+
         dendro_ticks = np.arange(len(self.categories)) + 0.5
 
         self.group_extra_size = size
