@@ -113,7 +113,7 @@ class BasePlot:
 
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.groupby_cols = [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
-        self.groupby += groupby_cols
+#        self.groupby += groupby_cols
 
         self.categories, self.obs_tidy = _prepare_dataframe(
             adata,
@@ -125,12 +125,12 @@ class BasePlot:
             layer=layer,
             gene_symbols=gene_symbols,
         )
-        # reset categories if using groupby_cols
+        # reset obs_tidy if using groupby_cols
         if len(self.groupby_cols) > 0:
-            self.categories, _ = _prepare_dataframe(
+            _, self.obs_tidy = _prepare_dataframe(
                 adata,
                 self.var_names,
-                self.groupby[:-len(self.groupby_cols)],
+                self.groupby + self.groupby_cols,
                 use_raw,
                 log,
                 num_categories,
@@ -369,6 +369,8 @@ class BasePlot:
         _sort = True if sort is not None else False
         _ascending = True if sort == "ascending" else False
         counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
+        if len(self.groupby_cols) > 0:  # could remove the previous line and only use this but this is slower
+            counts_df = self.adata.obs[self.groupby].value_counts(sort=_sort, ascending=_ascending)
 
         if _sort:
             self.categories_order = counts_df.index
@@ -855,7 +857,7 @@ class BasePlot:
         label = values_df.index.name
         stacked_df = values_df.reset_index()
         stacked_df.index = pd.MultiIndex.from_tuples(
-            stacked_df[label].str.split('_').tolist(), names=self.groupby)
+            stacked_df[label].str.split('_').tolist(), names=self.groupby + self.groupby_cols)
         stacked_df = stacked_df.drop(label, axis=1).unstack(level=self.groupby_cols)
 
         # recreate the original formatting of values_df

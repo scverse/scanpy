@@ -759,7 +759,6 @@ class DotPlot(BasePlot):
                 edgecolor=edge_color,
                 norm=normalize,
             )
-
             dot_ax.scatter(x, y, **kwds)
 
         y_ticks = np.arange(dot_color.shape[0]) + 0.5

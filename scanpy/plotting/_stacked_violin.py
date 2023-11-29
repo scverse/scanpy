@@ -438,11 +438,11 @@ class StackedViolin(BasePlot):
             label = _matrix.index.name
             stacked_df = _matrix.reset_index()
             stacked_df.index = pd.MultiIndex.from_tuples(
-                stacked_df[label].str.split('_').tolist(), names=self.groupby)
-            stacked_df = stacked_df.drop(label, axis=1).reset_index().melt(id_vars=self.groupby)
+                stacked_df[label].str.split('_').tolist(), names=self.groupby + self.groupby_cols)
+            stacked_df = stacked_df.drop(label, axis=1).reset_index().melt(id_vars=self.groupby + self.groupby_cols)
             stacked_df['genes'] = stacked_df[['variable'] + self.groupby_cols].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-            stacked_df['categories'] = stacked_df[self.groupby[:-len(self.groupby_cols)]].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-            stacked_df = stacked_df.drop(self.groupby + ['variable'], axis=1).rename(columns={'value':'values'})
+            stacked_df['categories'] = stacked_df[self.groupby].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
+            stacked_df = stacked_df.drop(self.groupby + self.groupby_cols + ['variable'], axis=1).rename(columns={'value':'values'})
             df = stacked_df
 
         # the ax need to be subdivided
