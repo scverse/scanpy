@@ -125,6 +125,18 @@ class BasePlot:
             layer=layer,
             gene_symbols=gene_symbols,
         )
+        # reset categories if using groupby_cols
+        if len(self.groupby_cols) > 0:
+            self.categories, _ = _prepare_dataframe(
+                adata,
+                self.var_names,
+                self.groupby[:-len(self.groupby_cols)],
+                use_raw,
+                log,
+                num_categories,
+                layer=layer,
+                gene_symbols=gene_symbols,
+            )
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
             warn(
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
@@ -853,7 +865,6 @@ class BasePlot:
         else:
             values_df.index = stacked_df.index.to_series().apply(lambda x: ''.join(map(str, x))).values
         values_df.columns = stacked_df.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
-
         return values_df
 
     def _reorder_categories_after_dendrogram(self, dendrogram):
@@ -882,13 +893,16 @@ class BasePlot:
                 _categories = _categories[:3] + ["etc."]
             return ", ".join(_categories)
 
-        key = _get_dendrogram_key(self.adata, dendrogram, self.groupby)
-
+        if len(self.groupby_cols) > 0:
+            dendro_groupby = self.groupby[:-len(self.groupby_cols)]
+        else:
+            dendro_groupby = self.groupby
+        key = _get_dendrogram_key(self.adata, dendrogram, dendro_groupby)
         dendro_info = self.adata.uns[key]
-        if self.groupby != dendro_info["groupby"]:
+        if dendro_groupby != dendro_info["groupby"]:
             raise ValueError(
                 "Incompatible observations. The precomputed dendrogram contains "
-                f"information for the observation: '{self.groupby}' while the plot is "
+                f"information for the observation: '{dendro_groupby}' while the plot is "
                 f"made for the observation: '{dendro_info['groupby']}. "
                 "Please run `sc.tl.dendrogram` using the right observation.'"
             )
@@ -901,7 +915,7 @@ class BasePlot:
             raise ValueError(
                 "Incompatible observations. Dendrogram data has "
                 f"{len(categories_idx_ordered)} categories but current groupby "
-                f"observation {self.groupby!r} contains {len(self.categories)} categories. "
+                f"observation {dendro_groupby!r} contains {len(self.categories)} categories. "
                 "Most likely the underlying groupby observation changed after the "
                 "initial computation of `sc.tl.dendrogram`. "
                 "Please run `sc.tl.dendrogram` again.'"
