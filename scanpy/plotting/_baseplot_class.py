@@ -111,14 +111,10 @@ class BasePlot:
 
         self._update_var_groups()
 
-        self.groupby = [groupby] if isinstance(groupby, str) else groupby
-        self.groupby_cols = [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
-#        self.groupby += groupby_cols
-
         self.categories, self.obs_tidy = _prepare_dataframe(
             adata,
             self.var_names,
-            self.groupby,
+            groupby,
             use_raw,
             log,
             num_categories,
@@ -130,7 +126,7 @@ class BasePlot:
             _, self.obs_tidy = _prepare_dataframe(
                 adata,
                 self.var_names,
-                self.groupby + self.groupby_cols,
+                groupby + groupby_cols,
                 use_raw,
                 log,
                 num_categories,
@@ -157,6 +153,8 @@ class BasePlot:
                 return
 
         self.adata = adata
+        self.groupby = [groupby] if isinstance(groupby, str) else groupby
+        self.groupby_cols = [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
         self.log = log
         self.kwds = kwds
 
@@ -895,16 +893,12 @@ class BasePlot:
                 _categories = _categories[:3] + ["etc."]
             return ", ".join(_categories)
 
-        if len(self.groupby_cols) > 0:
-            dendro_groupby = self.groupby[:-len(self.groupby_cols)]
-        else:
-            dendro_groupby = self.groupby
-        key = _get_dendrogram_key(self.adata, dendrogram, dendro_groupby)
+        key = _get_dendrogram_key(self.adata, dendrogram, self.groupby)
         dendro_info = self.adata.uns[key]
-        if dendro_groupby != dendro_info["groupby"]:
+        if self.groupby != dendro_info["groupby"]:
             raise ValueError(
                 "Incompatible observations. The precomputed dendrogram contains "
-                f"information for the observation: '{dendro_groupby}' while the plot is "
+                f"information for the observation: '{self.groupby}' while the plot is "
                 f"made for the observation: '{dendro_info['groupby']}. "
                 "Please run `sc.tl.dendrogram` using the right observation.'"
             )
@@ -917,7 +911,7 @@ class BasePlot:
             raise ValueError(
                 "Incompatible observations. Dendrogram data has "
                 f"{len(categories_idx_ordered)} categories but current groupby "
-                f"observation {dendro_groupby!r} contains {len(self.categories)} categories. "
+                f"observation {self.groupby!r} contains {len(self.categories)} categories. "
                 "Most likely the underlying groupby observation changed after the "
                 "initial computation of `sc.tl.dendrogram`. "
                 "Please run `sc.tl.dendrogram` again.'"
