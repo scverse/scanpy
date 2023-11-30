@@ -13,7 +13,7 @@ from matplotlib import axes, gridspec, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import PatchCollection
-from matplotlib.colors import is_color_like
+from matplotlib.colors import Colormap, is_color_like
 from matplotlib.figure import Figure
 from matplotlib.figure import SubplotParams as sppars
 from matplotlib.patches import Circle
@@ -24,7 +24,9 @@ from .._utils import NeighborsView
 from . import palettes
 
 if TYPE_CHECKING:
-    import anndata
+    from anndata import AnnData
+    from numpy.typing import ArrayLike
+    from PIL.Image import Image
 
 ColorLike = _U[str, tuple[float, ...]]
 _IGraphLayout = Literal["fa", "fr", "rt", "rt_circular", "drl", "eq_tree", ...]
@@ -45,17 +47,17 @@ class _AxesSubplot(Axes, axes.SubplotBase):
 
 
 def matrix(
-    matrix,
-    xlabel=None,
-    ylabel=None,
-    xticks=None,
-    yticks=None,
-    title=None,
-    colorbar_shrink=0.5,
-    color_map=None,
-    show=None,
-    save=None,
-    ax=None,
+    matrix: ArrayLike | Image,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    xticks: Collection[str] | None = None,
+    yticks: Collection[str] | None = None,
+    title: str | None = None,
+    colorbar_shrink: float = 0.5,
+    color_map: str | Colormap | None = None,
+    show: bool | None = None,
+    save: bool | str | None = None,
+    ax: Axes | None = None,
 ):
     """Plot a matrix."""
     if ax is None:
@@ -336,7 +338,7 @@ def default_palette(
         return palette
 
 
-def _validate_palette(adata: anndata.AnnData, key: str) -> None:
+def _validate_palette(adata: AnnData, key: str) -> None:
     """
     checks if the list of colors in adata.uns[f'{key}_colors'] is valid
     and updates the color list in adata.uns[f'{key}_colors'] if needed.
@@ -1209,7 +1211,7 @@ def fix_kwds(kwds_dict, **kwargs):
     return kwargs
 
 
-def _get_basis(adata: anndata.AnnData, basis: str):
+def _get_basis(adata: AnnData, basis: str):
     if basis in adata.obsm.keys():
         basis_key = basis
 

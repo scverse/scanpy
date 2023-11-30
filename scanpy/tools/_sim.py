@@ -40,7 +40,7 @@ def sim(
     noiseDyn: float | None = None,
     step: int | None = None,
     seed: int | None = None,
-    writedir: str | Path | None = None,
+    writedir: Path | str | None = None,
 ) -> AnnData:
     """\
     Simulate dynamic gene expression data [Wittmann09]_ [Wolf18]_.

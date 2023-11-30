@@ -308,7 +308,7 @@ def paga(
     title: str | None = None,
     left_margin: float = 0.01,
     random_state: int | None = 0,
-    pos: np.ndarray | str | Path | None = None,
+    pos: np.ndarray | Path | str | None = None,
     normalize_to_color: bool = False,
     cmap: str | Colormap = None,
     cax: Axes | None = None,
@@ -1307,13 +1307,13 @@ def paga_path(
 
 
 def paga_adjacency(
-    adata,
-    adjacency="connectivities",
-    adjacency_tree="connectivities_tree",
-    as_heatmap=True,
-    color_map=None,
-    show=None,
-    save=None,
+    adata: AnnData,
+    adjacency: str = "connectivities",
+    adjacency_tree: str = "connectivities_tree",
+    as_heatmap: bool = True,
+    color_map: str | Colormap | None = None,
+    show: bool | None = None,
+    save: bool | str | None = None,
 ):
     """Connectivity of paga groups."""
     connectivity = adata.uns[adjacency].toarray()

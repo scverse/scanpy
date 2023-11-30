@@ -46,11 +46,11 @@ def normalize_total(
     max_fraction: float = 0.05,
     key_added: str | None = None,
     layer: str | None = None,
-    layers: Literal["all"] | Iterable[str] = None,
+    layers: Literal["all"] | Iterable[str] | None = None,
     layer_norm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> dict[str, np.ndarray] | None:
+) -> AnnData | dict[str, np.ndarray] | None:
     """\
     Normalize counts per cell.
 

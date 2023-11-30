@@ -392,7 +392,7 @@ class Ingest:
         else:
             self._pca_basis = adata.varm["PCs"]
 
-    def __init__(self, adata, neighbors_key=None):
+    def __init__(self, adata: AnnData, neighbors_key: str | None = None):
         # assume rep is X if all initializations fail to identify it
         self._rep = adata.X
         self._use_rep = "X"

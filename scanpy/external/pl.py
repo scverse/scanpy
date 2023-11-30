@@ -344,7 +344,7 @@ def wishbone_marker_trajectory(
 
 
 def scrublet_score_distribution(
-    adata,
+    adata: AnnData,
     scale_hist_obs: str = "log",
     scale_hist_sim: str = "linear",
     figsize: tuple[float, float] | None = (8, 3),

@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 @doctest_needs("phenograph")
 def phenograph(
-    adata: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | spmatrix,
     clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
     k: int = 30,
     directed: bool = False,
@@ -63,7 +63,7 @@ def phenograph(
 
     Parameters
     ----------
-    adata
+    data
         AnnData, or Array of data to cluster, or sparse matrix of k-nearest neighbor
         graph. If ndarray, n-by-d array of n cells in d dimensions. if sparse matrix,
         n-by-n adjacency matrix.
@@ -206,13 +206,12 @@ def phenograph(
             "pip install -U PhenoGraph"
         )
 
-    if isinstance(adata, AnnData):
+    if isinstance(data, AnnData):
         try:
-            data = adata.obsm["X_pca"]
+            data = data.obsm["X_pca"]
         except KeyError:
             raise KeyError("Please run `sc.pp.pca` on `adata` and try again!")
     else:
-        data = adata
         copy = True
 
     comm_key = (
@@ -246,9 +245,10 @@ def phenograph(
 
     if copy:
         return communities, graph, Q
-    else:
-        adata.obsp[ig_key] = graph.tocsr()
-        if comm_key:
-            adata.obs[comm_key] = pd.Categorical(communities)
-        if Q:
-            adata.uns[q_key] = Q
+
+    assert isinstance(data, AnnData)
+    data.obsp[ig_key] = graph.tocsr()
+    if comm_key:
+        data.obs[comm_key] = pd.Categorical(communities)
+    if Q:
+        data.uns[q_key] = Q

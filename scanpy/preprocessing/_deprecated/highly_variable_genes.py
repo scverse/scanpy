@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -12,9 +12,12 @@ from ... import logging as logg
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
+if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
 
 def filter_genes_dispersion(
-    data: AnnData,
+    data: AnnData | ArrayLike,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
     min_disp: float | None = None,
     max_disp: float | None = None,
@@ -25,7 +28,7 @@ def filter_genes_dispersion(
     log: bool = True,
     subset: bool = True,
     copy: bool = False,
-):
+) -> AnnData | np.recarray | None:
     """\
     Extract highly variable genes [Satija15]_ [Zheng17]_.
 

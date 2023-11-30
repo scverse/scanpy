@@ -1,7 +1,7 @@
 """This module contains helper functions for accessing data."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -395,7 +395,14 @@ def var_df(
     return df
 
 
-def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
+def _get_obs_rep(
+    adata: AnnData,
+    *,
+    use_raw: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
+):
     """
     Choose array aligned with obs annotation.
     """
@@ -426,7 +433,15 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
         )
 
 
-def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None):
+def _set_obs_rep(
+    adata: AnnData,
+    val: Any,
+    *,
+    use_raw: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
+):
     """
     Set value for observation rep.
     """

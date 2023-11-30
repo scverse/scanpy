@@ -42,11 +42,11 @@ if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
     from numbers import Number
 
-    from numpy.typing import NDArray
+    from numpy.typing import ArrayLike, NDArray
 
 
 def filter_cells(
-    data: AnnData,
+    data: AnnData | ArrayLike,
     min_counts: int | None = None,
     min_genes: int | None = None,
     max_counts: int | None = None,
@@ -180,7 +180,7 @@ def filter_cells(
 
 
 def filter_genes(
-    data: AnnData,
+    data: AnnData | ArrayLike,
     min_counts: int | None = None,
     min_cells: int | None = None,
     max_counts: int | None = None,
@@ -289,15 +289,15 @@ def filter_genes(
 
 @singledispatch
 def log1p(
-    X: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | spmatrix,
     *,
     base: Number | None = None,
     copy: bool = False,
-    chunked: bool = None,
+    chunked: bool | None = None,
     chunk_size: int | None = None,
     layer: str | None = None,
     obsm: str | None = None,
-):
+) -> AnnData | np.ndarray | spmatrix | None:
     """\
     Logarithmize the data matrix.
 
@@ -306,7 +306,7 @@ def log1p(
 
     Parameters
     ----------
-    X
+    data
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     base
@@ -331,7 +331,7 @@ def log1p(
     _check_array_function_arguments(
         chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
     )
-    return log1p_array(X, copy=copy, base=base)
+    return log1p_array(data, copy=copy, base=base)
 
 
 @log1p.register(spmatrix)
@@ -395,7 +395,7 @@ def log1p_anndata(
 
 
 def sqrt(
-    data: AnnData,
+    data: AnnData | ArrayLike,
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
@@ -724,7 +724,7 @@ def _regress_out_chunk(data):
 
 @singledispatch
 def scale(
-    X: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray,
     zero_center: bool = True,
     max_value: float | None = None,
     copy: bool = False,
@@ -742,7 +742,7 @@ def scale(
 
     Parameters
     ----------
-    X
+    data
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     zero_center
@@ -773,11 +773,15 @@ def scale(
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:
-        raise ValueError(f"`layer` argument inappropriate for value of type {type(X)}")
+        raise ValueError(
+            f"`layer` argument inappropriate for value of type {type(data)}"
+        )
     if obsm is not None:
-        raise ValueError(f"`obsm` argument inappropriate for value of type {type(X)}")
+        raise ValueError(
+            f"`obsm` argument inappropriate for value of type {type(data)}"
+        )
     return scale_array(
-        X, zero_center=zero_center, max_value=max_value, copy=copy, mask=mask
+        data, zero_center=zero_center, max_value=max_value, copy=copy, mask=mask
     )
 
 

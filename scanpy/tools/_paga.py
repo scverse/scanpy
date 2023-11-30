@@ -405,7 +405,7 @@ def paga_degrees(adata: AnnData) -> list[int]:
     return degrees
 
 
-def paga_expression_entropies(adata) -> list[float]:
+def paga_expression_entropies(adata: AnnData) -> list[float]:
     """Compute the median expression entropy for each node-group.
 
     Parameters

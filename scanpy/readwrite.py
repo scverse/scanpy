@@ -137,7 +137,7 @@ def read(
 
 
 def read_10x_h5(
-    filename: str | Path,
+    filename: Path | str,
     genome: str | None = None,
     gex_only: bool = True,
     backup_url: str | None = None,
@@ -336,13 +336,13 @@ def _read_v3_10x_h5(filename, *, start=None):
 
 
 def read_visium(
-    path: str | Path,
+    path: Path | str,
     genome: str | None = None,
     *,
     count_file: str = "filtered_feature_bc_matrix.h5",
     library_id: str | None = None,
     load_images: bool | None = True,
-    source_image_path: str | Path | None = None,
+    source_image_path: Path | str | None = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted visum dataset.
@@ -628,7 +628,7 @@ def _read_v3_10x_mtx(
 
 
 def write(
-    filename: str | Path,
+    filename: Path | str,
     adata: AnnData,
     ext: Literal["h5", "csv", "txt", "npz"] | None = None,
     compression: Literal["gzip", "lzf"] | None = "gzip",

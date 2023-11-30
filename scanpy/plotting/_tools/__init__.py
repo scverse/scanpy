@@ -1221,7 +1221,7 @@ def rank_genes_groups_violin(
 
 
 def sim(
-    adata,
+    adata: AnnData,
     tmax_realization: int | None = None,
     as_heatmap: bool = False,
     shuffle: bool = False,

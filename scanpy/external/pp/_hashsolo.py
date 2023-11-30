@@ -27,7 +27,7 @@ from ..._utils import check_nonnegative_integers
 from ...testing._doctests import doctest_skip
 
 if TYPE_CHECKING:
-    import anndata
+    from anndata import AnnData
 
 
 def _calculate_log_likelihoods(data, number_of_noise_barcodes):
@@ -263,11 +263,11 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
 
 @doctest_skip("Illustrative but not runnable doctest code")
 def hashsolo(
-    adata: anndata.AnnData,
+    adata: AnnData,
     cell_hashing_columns: list,
     priors: list = [0.01, 0.8, 0.19],
-    pre_existing_clusters: str = None,
-    number_of_noise_barcodes: int = None,
+    pre_existing_clusters: str | None = None,
+    number_of_noise_barcodes: int | None = None,
     inplace: bool = True,
 ):
     """Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
