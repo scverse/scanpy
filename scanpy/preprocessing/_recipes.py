@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from legacy_api_wrap import legacy_api
+
 from .. import logging as logg
 from .. import preprocessing as pp
 from ._deprecated.highly_variable_genes import (
@@ -17,8 +19,18 @@ if TYPE_CHECKING:
     from .._utils import AnyRandom
 
 
+@legacy_api(
+    "log",
+    "mean_threshold",
+    "cv_threshold",
+    "n_pcs",
+    "svd_solver",
+    "random_state",
+    "copy",
+)
 def recipe_weinreb17(
     adata: AnnData,
+    *,
     log: bool = True,
     mean_threshold: float = 0.01,
     cv_threshold: int = 2,
@@ -68,8 +80,9 @@ def recipe_weinreb17(
     return adata if copy else None
 
 
+@legacy_api("log", "plot", "copy")
 def recipe_seurat(
-    adata: AnnData, log: bool = True, plot: bool = False, copy: bool = False
+    adata: AnnData, *, log: bool = True, plot: bool = False, copy: bool = False
 ) -> AnnData | None:
     """\
     Normalization and filtering as of Seurat [Satija15]_.
@@ -100,8 +113,10 @@ def recipe_seurat(
     return adata if copy else None
 
 
+@legacy_api("n_top_genes", "log", "plot", "copy")
 def recipe_zheng17(
     adata: AnnData,
+    *,
     n_top_genes: int = 1000,
     log: bool = True,
     plot: bool = False,

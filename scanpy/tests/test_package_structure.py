@@ -4,7 +4,7 @@ import os
 from collections import defaultdict
 from inspect import Parameter, signature
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import pytest
 from anndata import AnnData
@@ -12,6 +12,9 @@ from anndata import AnnData
 # CLI is locally not imported by default but on travis it is?
 import scanpy.cli
 from scanpy._utils import _import_name, descend_classes_and_funcs
+
+if TYPE_CHECKING:
+    from types import FunctionType
 
 mod_dir = Path(scanpy.__file__).parent
 proj_dir = mod_dir.parent
@@ -125,26 +128,34 @@ class ExpectedSig(TypedDict):
     return_ann: str | None
 
 
-expected_sigs: defaultdict[str, ExpectedSig | None] = defaultdict(
+copy_sigs: defaultdict[str, ExpectedSig | None] = defaultdict(
     lambda: ExpectedSig(first_name="adata", copy_default=False, return_ann=None)
 )
 # full exceptions
-expected_sigs["sc.external.tl.phenograph"] = None  # external
-expected_sigs["sc.pp.filter_genes_dispersion"] = None  # deprecated
-expected_sigs["sc.pp.filter_cells"] = None  # unclear `inplace` situation
-expected_sigs["sc.pp.filter_genes"] = None  # unclear `inplace` situation
-expected_sigs["sc.pp.subsample"] = None  # returns indices along matrix
+copy_sigs["sc.external.tl.phenograph"] = None  # external
+copy_sigs["sc.pp.filter_genes_dispersion"] = None  # deprecated
+copy_sigs["sc.pp.filter_cells"] = None  # unclear `inplace` situation
+copy_sigs["sc.pp.filter_genes"] = None  # unclear `inplace` situation
+copy_sigs["sc.pp.subsample"] = None  # returns indices along matrix
 # partial exceptions: “data” instead of “adata”
-expected_sigs["sc.pp.log1p"]["first_name"] = "data"
-expected_sigs["sc.pp.normalize_per_cell"]["first_name"] = "data"
-expected_sigs["sc.pp.pca"]["first_name"] = "data"
-expected_sigs["sc.pp.scale"]["first_name"] = "data"
-expected_sigs["sc.pp.sqrt"]["first_name"] = "data"
+copy_sigs["sc.pp.log1p"]["first_name"] = "data"
+copy_sigs["sc.pp.normalize_per_cell"]["first_name"] = "data"
+copy_sigs["sc.pp.pca"]["first_name"] = "data"
+copy_sigs["sc.pp.scale"]["first_name"] = "data"
+copy_sigs["sc.pp.sqrt"]["first_name"] = "data"
 # other partial exceptions
-expected_sigs["sc.pp.normalize_total"]["return_ann"] = expected_sigs[
+copy_sigs["sc.pp.normalize_total"]["return_ann"] = copy_sigs[
     "sc.experimental.pp.normalize_pearson_residuals"
 ]["return_ann"] = "AnnData | dict[str, np.ndarray] | None"
-expected_sigs["sc.external.pp.magic"]["copy_default"] = None
+copy_sigs["sc.external.pp.magic"]["copy_default"] = None
+
+
+def is_deprecated(f: FunctionType) -> bool:
+    # TODO: use deprecated decorator instead
+    # https://github.com/scverse/scanpy/issues/2505
+    return f.__name__ in {
+        "normalize_per_cell",
+    }
 
 
 @pytest.mark.parametrize(
@@ -167,7 +178,7 @@ def test_sig_conventions(f, qualname):
 
     # Test if functions with `copy` follow conventions
     if (copy_param := sig.parameters.get("copy")) is not None and (
-        expected_sig := expected_sigs[qualname]
+        expected_sig := copy_sigs[qualname]
     ) is not None:
         s = ExpectedSig(
             first_name=first_param.name,
@@ -178,6 +189,8 @@ def test_sig_conventions(f, qualname):
         if expected_sig["return_ann"] is None:
             expected_sig["return_ann"] = f"{first_param.annotation} | None"
         assert s == expected_sig
+        if not is_deprecated(f):
+            assert not param_is_pos(copy_param)
 
 
 def getsourcefile(obj):

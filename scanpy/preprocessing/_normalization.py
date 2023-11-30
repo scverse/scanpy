@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Literal
 from warnings import warn
 
 import numpy as np
+from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
@@ -39,8 +40,20 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
     return X
 
 
+@legacy_api(
+    "target_sum",
+    "exclude_highly_expressed",
+    "max_fraction",
+    "key_added",
+    "layer",
+    "layers",
+    "layer_norm",
+    "inplace",
+    "copy",
+)
 def normalize_total(
     adata: AnnData,
+    *,
     target_sum: float | None = None,
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
