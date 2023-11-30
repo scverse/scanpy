@@ -104,7 +104,6 @@ class BasePlot:
         self.width, self.height = figsize if figsize is not None else (None, None)
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.groupby_cols = [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
-
         self.has_var_groups = (
             True
             if var_group_positions is not None and len(var_group_positions) > 0
@@ -123,8 +122,11 @@ class BasePlot:
             layer=layer,
             gene_symbols=gene_symbols,
         )
+        
         # reset obs_tidy if using groupby_cols
         if len(self.groupby_cols) > 0:
+            # TODO : Check if we rather need the product of categories ?
+            self.categories_cols = adata.obs.loc[:,self.groupby_cols].nunique().sum()
             _, self.obs_tidy = _prepare_dataframe(
                 adata,
                 self.var_names,
@@ -135,6 +137,8 @@ class BasePlot:
                 layer=layer,
                 gene_symbols=gene_symbols,
             )
+        else:
+            self.categories_cols = 0
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
             warn(
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
@@ -648,7 +652,7 @@ class BasePlot:
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
             mainplot_width = (
-                len(self.var_names) * category_width  * (1+len(self.groupby_cols)) + self.group_extra_size
+                len(self.var_names) * category_width  * (1+self.categories_cols) + self.group_extra_size
             )
             if self.are_axes_swapped:
                 mainplot_height, mainplot_width = mainplot_width, mainplot_height
