@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pandas as pd
+from legacy_api_wrap import legacy_api
 
 from ... import logging as logg
 from ...testing._doctests import doctest_needs
@@ -14,15 +15,27 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@legacy_api(
+    "n_components",
+    "knn",
+    "alpha",
+    "use_adjacency_matrix",
+    "distances_key",
+    "n_eigs",
+    "impute_data",
+    "n_steps",
+    "copy",
+)
 @doctest_needs("palantir")
 def palantir(
     adata: AnnData,
+    *,
     n_components: int = 10,
     knn: int = 30,
     alpha: float = 0,
     use_adjacency_matrix: bool = False,
     distances_key: str | None = None,
-    n_eigs: int = None,
+    n_eigs: int | None = None,
     impute_data: bool = True,
     n_steps: int = 3,
     copy: bool = False,

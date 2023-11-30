@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
+from legacy_api_wrap import legacy_api
+
 from ... import logging as logg
 from ..._settings import settings
 from ...testing._doctests import doctest_needs
@@ -15,9 +17,26 @@ if TYPE_CHECKING:
     from ..._utils import AnyRandom
 
 
+@legacy_api(
+    "n_components",
+    "k",
+    "a",
+    "n_landmark",
+    "t",
+    "gamma",
+    "n_pca",
+    "knn_dist",
+    "mds_dist",
+    "mds",
+    "n_jobs",
+    "random_state",
+    "verbose",
+    "copy",
+)
 @doctest_needs("phate")
 def phate(
     adata: AnnData,
+    *,
     n_components: int = 2,
     k: int = 5,
     a: int = 15,

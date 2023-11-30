@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
+from legacy_api_wrap import legacy_api
+
 if TYPE_CHECKING:
     from anndata import AnnData
     from sklearn.metrics import DistanceMetric
@@ -9,16 +11,17 @@ if TYPE_CHECKING:
 from ...testing._doctests import doctest_needs
 
 
+@legacy_api("batch_key", "use_rep", "approx", "use_annoy", "metric", "copy")
 @doctest_needs("bbknn")
 def bbknn(
     adata: AnnData,
+    *,
     batch_key: str = "batch",
     use_rep: str = "X_pca",
     approx: bool = True,
     use_annoy: bool = True,
     metric: str | Callable | DistanceMetric = "euclidean",
     copy: bool = False,
-    *,
     neighbors_within_batch: int = 3,
     n_pcs: int = 50,
     trim: int | None = None,

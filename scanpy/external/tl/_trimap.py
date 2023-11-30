@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import scipy.sparse as scp
+from legacy_api_wrap import legacy_api
 
 from ... import logging as logg
 from ..._settings import settings
@@ -15,9 +16,22 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@legacy_api(
+    "n_components",
+    "n_inliers",
+    "n_outliers",
+    "n_random",
+    "metric",
+    "weight_adj",
+    "lr",
+    "n_iters",
+    "verbose",
+    "copy",
+)
 @doctest_needs("trimap")
 def trimap(
     adata: AnnData,
+    *,
     n_components: int = 2,
     n_inliers: int = 10,
     n_outliers: int = 5,
