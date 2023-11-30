@@ -3,6 +3,8 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal
 
+from legacy_api_wrap import legacy_api
+
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
@@ -10,11 +12,39 @@ if TYPE_CHECKING:
 
     from ..._utils import AnyRandom
 
+
 _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 
 
+@legacy_api(
+    "mode",
+    "ae_type",
+    "normalize_per_cell",
+    "scale",
+    "log1p",
+    "hidden_size",
+    "hidden_dropout",
+    "batchnorm",
+    "activation",
+    "init",
+    "network_kwds",
+    "epochs",
+    "reduce_lr",
+    "early_stop",
+    "batch_size",
+    "optimizer",
+    "random_state",
+    "threads",
+    "learning_rate",
+    "verbose",
+    "training_kwds",
+    "return_model",
+    "return_info",
+    "copy",
+)
 def dca(
     adata: AnnData,
+    *,
     mode: Literal["denoise", "latent"] = "denoise",
     ae_type: _AEType = "nb-conddisp",
     normalize_per_cell: bool = True,

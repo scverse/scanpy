@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-def _pearson_residuals(X, theta, clip, check_values, copy=False):
+def _pearson_residuals(X, theta, clip, check_values, copy: bool = False):
     X = X.copy() if copy else X
 
     # check theta
