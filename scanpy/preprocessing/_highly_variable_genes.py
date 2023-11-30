@@ -316,6 +316,7 @@ def _highly_variable_genes_single_batch(
 )
 def highly_variable_genes(
     adata: AnnData,
+    *,
     layer: str | None = None,
     n_top_genes: int | None = None,
     min_disp: float | None = 0.5,

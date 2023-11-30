@@ -9,6 +9,8 @@ from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, Any, Literal, TextIO, Union
 
+from legacy_api_wrap import legacy_api
+
 from . import logging
 from .logging import _RootLogger, _set_log_file, _set_log_level
 
@@ -415,8 +417,23 @@ class ScanpyConfig:
     # Functions
     # --------------------------------------------------------------------------------
 
+    @legacy_api(
+        "scanpy",
+        "dpi",
+        "dpi_save",
+        "frameon",
+        "vector_friendly",
+        "fontsize",
+        "figsize",
+        "color_map",
+        "format",
+        "facecolor",
+        "transparent",
+        "ipython_format",
+    )
     def set_figure_params(
         self,
+        *,
         scanpy: bool = True,
         dpi: int = 80,
         dpi_save: int = 150,
@@ -429,7 +446,7 @@ class ScanpyConfig:
         facecolor: str | None = None,
         transparent: bool = False,
         ipython_format: str = "png2x",
-    ):
+    ) -> None:
         """\
         Set resolution/size, styling and format of figures.
 

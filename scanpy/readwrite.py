@@ -20,6 +20,7 @@ from anndata import (
     read_text,
 )
 from anndata import read as read_h5ad
+from legacy_api_wrap import legacy_api
 from matplotlib.image import imread
 
 from . import logging as logg
@@ -52,9 +53,19 @@ avail_exts = {
 # --------------------------------------------------------------------------------
 
 
+@legacy_api(
+    "sheet",
+    "ext",
+    "delimiter",
+    "first_column_names",
+    "backup_url",
+    "cache",
+    "cache_compression",
+)
 def read(
     filename: Path | str,
     backed: Literal["r", "r+"] | None = None,
+    *,
     sheet: str | None = None,
     ext: str | None = None,
     delimiter: str | None = None,
@@ -494,15 +505,16 @@ def read_visium(
     return adata
 
 
+@legacy_api("var_names", "make_unique", "cache", "cache_compression", "gex_only")
 def read_10x_mtx(
     path: Path | str,
+    *,
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
     cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
     gex_only: bool = True,
-    *,
-    prefix: str = None,
+    prefix: str | None = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted mtx directory.

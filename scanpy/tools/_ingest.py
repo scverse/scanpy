@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from packaging import version
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
@@ -22,10 +23,19 @@ if TYPE_CHECKING:
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
+@legacy_api(
+    "obs",
+    "embedding_method",
+    "labeling_method",
+    "neighbors_key",
+    "neighbors_key",
+    "inplace",
+)
 @doctest_skip("illustrative short example but not runnable")
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
+    *,
     obs: str | Iterable[str] | None = None,
     embedding_method: str | Iterable[str] = ("umap", "pca"),
     labeling_method: str = "knn",

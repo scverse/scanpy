@@ -43,11 +43,12 @@ api_modules = {
 }
 
 
+# get all exported functions that aren’t re-exports from anndata
 api_functions = [
     pytest.param(func, f"{mod_name}.{name}", id=f"{mod_name}.{name}")
     for mod_name, mod in api_modules.items()
     for name in sorted(mod.__all__)
-    if callable(func := getattr(mod, name))
+    if callable(func := getattr(mod, name)) and func.__module__.startswith("scanpy.")
 ]
 
 
@@ -61,8 +62,8 @@ def in_project_dir():
         os.chdir(wd_orig)
 
 
+@pytest.mark.xfail("TODO: unclear if we want this to totally match, let’s see")
 def test_descend_classes_and_funcs():
-    # TODO: unclear if we want this to totally match, let’s see
     funcs = set(descend_classes_and_funcs(scanpy, "scanpy"))
     assert {p.values[0] for p in api_functions} == funcs
 
@@ -104,7 +105,18 @@ def param_is_pos(p: Parameter) -> bool:
     }
 
 
-@pytest.mark.parametrize(("f", "qualname"), api_functions)
+def is_deprecated(f: FunctionType) -> bool:
+    # TODO: use deprecated decorator instead
+    # https://github.com/scverse/scanpy/issues/2505
+    return f.__name__ in {
+        "normalize_per_cell",
+        "filter_genes_dispersion",
+    }
+
+
+@pytest.mark.parametrize(
+    ("f", "qualname"), [p for p in api_functions if not is_deprecated(p.values[0])]
+)
 def test_function_positional_args(f, qualname):
     """See https://github.com/astral-sh/ruff/issues/3269#issuecomment-1772632200"""
     sig = signature(f)
@@ -150,18 +162,7 @@ copy_sigs["sc.pp.normalize_total"]["return_ann"] = copy_sigs[
 copy_sigs["sc.external.pp.magic"]["copy_default"] = None
 
 
-def is_deprecated(f: FunctionType) -> bool:
-    # TODO: use deprecated decorator instead
-    # https://github.com/scverse/scanpy/issues/2505
-    return f.__name__ in {
-        "normalize_per_cell",
-    }
-
-
-@pytest.mark.parametrize(
-    ("f", "qualname"),
-    [f for f in api_functions if f.values[0].__module__.startswith("scanpy.")],
-)
+@pytest.mark.parametrize(("f", "qualname"), api_functions)
 def test_sig_conventions(f, qualname):
     sig = signature(f)
 

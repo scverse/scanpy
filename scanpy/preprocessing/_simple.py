@@ -46,8 +46,10 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
 
+@legacy_api("min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy")
 def filter_cells(
     data: AnnData | ArrayLike,
+    *,
     min_counts: int | None = None,
     min_genes: int | None = None,
     max_counts: int | None = None,
@@ -180,8 +182,10 @@ def filter_cells(
     return cell_subset, number_per_cell
 
 
+@legacy_api("min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy")
 def filter_genes(
     data: AnnData | ArrayLike,
+    *,
     min_counts: int | None = None,
     min_cells: int | None = None,
     max_counts: int | None = None,

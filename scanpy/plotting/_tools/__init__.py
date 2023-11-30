@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from matplotlib import colormaps, rcParams
 from matplotlib import pyplot as plt
 
@@ -1220,8 +1221,10 @@ def rank_genes_groups_violin(
         return axs
 
 
+@legacy_api("tmax_realization", "as_heatmap", "shuffle", "show", "save", "marker")
 def sim(
     adata: AnnData,
+    *,
     tmax_realization: int | None = None,
     as_heatmap: bool = False,
     shuffle: bool = False,

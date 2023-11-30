@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
@@ -20,10 +21,22 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@legacy_api(
+    "n_pcs",
+    "use_rep",
+    "var_names",
+    "use_raw",
+    "cor_method",
+    "linkage_method",
+    "optimal_ordering",
+    "key_added",
+    "inplace",
+)
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def dendrogram(
     adata: AnnData,
     groupby: str | Sequence[str],
+    *,
     n_pcs: int | None = None,
     use_rep: str | None = None,
     var_names: Sequence[str] | None = None,
