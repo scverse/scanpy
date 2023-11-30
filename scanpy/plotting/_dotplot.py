@@ -813,6 +813,7 @@ def dotplot(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    groupby_cols: str | Sequence[str] = [],
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
@@ -955,7 +956,8 @@ def dotplot(
     dp = DotPlot(
         adata,
         var_names,
-        groupby,
+        groupby=groupby,
+        groupby_cols=groupby_cols,
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,
