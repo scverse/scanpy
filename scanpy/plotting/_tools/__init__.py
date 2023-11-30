@@ -211,9 +211,11 @@ def pca_variance_ratio(
 # ------------------------------------------------------------------------------
 
 
+@legacy_api("color_map", "show", "save", "as_heatmap", "marker")
 def dpt_timeseries(
     adata: AnnData,
-    color_map: str | Colormap = None,
+    *,
+    color_map: str | Colormap | None = None,
     show: bool | None = None,
     save: bool | None = None,
     as_heatmap: bool = True,
@@ -254,8 +256,10 @@ def dpt_timeseries(
     savefig_or_show("dpt_timeseries", save=save, show=show)
 
 
+@legacy_api("color_map", "palette", "show", "save", "marker")
 def dpt_groups_pseudotime(
     adata: AnnData,
+    *,
     color_map: str | Colormap | None = None,
     palette: Sequence[str] | Cycler | None = None,
     show: bool | None = None,
@@ -1295,12 +1299,33 @@ def sim(
         savefig_or_show("sim_shuffled", save=save, show=show)
 
 
+@legacy_api(
+    "basis",
+    "key",
+    "groupby",
+    "group",
+    "color_map",
+    "bg_dotsize",
+    "fg_dotsize",
+    "vmax",
+    "vmin",
+    "vcenter",
+    "norm",
+    "ncols",
+    "hspace",
+    "wspace",
+    "title",
+    "show",
+    "save",
+    "ax",
+    "return_fig",
+)
 @_doc_params(
     vminmax=doc_vbound_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
 )
 def embedding_density(
     adata: AnnData,
-    # on purpose, there is no asterisk here (for backward compat)
+    *,
     basis: str = "umap",  # was positional before 1.4.5
     key: str | None = None,  # was positional before 1.4.5
     groupby: str | None = None,

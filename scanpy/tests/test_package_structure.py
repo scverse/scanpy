@@ -62,7 +62,7 @@ def in_project_dir():
         os.chdir(wd_orig)
 
 
-@pytest.mark.xfail("TODO: unclear if we want this to totally match, let’s see")
+@pytest.mark.xfail(reason="TODO: unclear if we want this to totally match, let’s see")
 def test_descend_classes_and_funcs():
     funcs = set(descend_classes_and_funcs(scanpy, "scanpy"))
     assert {p.values[0] for p in api_functions} == funcs

@@ -824,6 +824,22 @@ class DotPlot(BasePlot):
         return normalize, dot_min, dot_max
 
 
+@legacy_api(
+    "use_raw",
+    "log",
+    "num_categories",
+    "expression_cutoff",
+    "mean_only_expressed",
+    "cmap",
+    "dot_max",
+    "dot_min",
+    "standard_scale",
+    "smallest_dot",
+    "title",
+    "colorbar_title",
+    "size_title",
+    # No need to have backwards compat for > 16 positional parameters
+)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
@@ -834,6 +850,7 @@ def dotplot(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    *,
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,

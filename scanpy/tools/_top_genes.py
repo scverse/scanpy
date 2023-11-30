@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse
 from sklearn import metrics
 
@@ -20,9 +21,11 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@legacy_api("groupby", "group", "n_genes", "data", "method", "annotation_key")
 def correlation_matrix(
     adata: AnnData,
     name_list: Collection[str] | None = None,
+    *,
     groupby: str | None = None,
     group: int | None = None,
     n_genes: int = 20,

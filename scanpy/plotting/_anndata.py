@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal, Union
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from matplotlib import gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap, ListedColormap, Normalize, is_color_like
@@ -1705,10 +1706,23 @@ def dendrogram(
     return ax
 
 
+@legacy_api(
+    "show_correlation_numbers",
+    "dendrogram",
+    "figsize",
+    "show",
+    "save",
+    "ax",
+    "vmin",
+    "vmax",
+    "vcenter",
+    "norm",
+)
 @_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vboundnorm)
 def correlation_matrix(
     adata: AnnData,
     groupby: str,
+    *,
     show_correlation_numbers: bool = False,
     dendrogram: bool | str | None = None,
     figsize: tuple[float, float] | None = None,
@@ -1871,6 +1885,7 @@ def correlation_matrix(
     _utils.savefig_or_show("correlation_matrix", show=show, save=save)
     if ax is None and not show:
         return axs
+    return None
 
 
 def _prepare_dataframe(
