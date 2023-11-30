@@ -51,9 +51,9 @@ def filter_cells(
     min_genes: int | None = None,
     max_counts: int | None = None,
     max_genes: int | None = None,
-    inplace: bool = True,
+    inplace: bool | None = None,
     copy: bool = False,
-) -> tuple[np.ndarray, np.ndarray] | None:
+) -> AnnData | tuple[np.ndarray, np.ndarray] | None:
     """\
     Filter cell outliers based on counts and numbers of genes expressed.
 
@@ -187,7 +187,7 @@ def filter_genes(
     max_cells: int | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> AnnData | None | tuple[np.ndarray, np.ndarray]:
+) -> AnnData | tuple[np.ndarray, np.ndarray] | None:
     """\
     Filter genes based on number of cells or counts.
 
@@ -399,7 +399,7 @@ def sqrt(
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
-) -> AnnData | None:
+) -> AnnData | ArrayLike | None:
     """\
     Square root the data matrix.
 
@@ -447,7 +447,7 @@ def normalize_per_cell(
     layers: Literal["all"] | Iterable[str] = (),
     use_rep: Literal["after", "X"] | None = None,
     min_counts: int = 1,
-) -> AnnData | None:
+) -> AnnData | np.ndarray | spmatrix | None:
     """\
     Normalize total counts per cell.
 
@@ -731,7 +731,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask: NDArray[np.bool_] | str | None = None,
-):
+) -> AnnData | spmatrix | np.ndarray | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -906,8 +906,7 @@ def scale_anndata(
         mask=mask,
     )
     _set_obs_rep(adata, X, layer=layer, obsm=obsm)
-    if copy:
-        return adata
+    return adata if copy else None
 
 
 def subsample(
@@ -916,7 +915,7 @@ def subsample(
     n_obs: int | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
-) -> AnnData | None:
+) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int_]] | None:
     """\
     Subsample to a fraction of the number of observations.
 

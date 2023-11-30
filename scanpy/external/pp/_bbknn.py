@@ -29,7 +29,7 @@ def bbknn(
     set_op_mix_ratio: float = 1.0,
     local_connectivity: int = 1,
     **kwargs,
-) -> AnnData:
+) -> AnnData | None:
     """\
     Batch balanced kNN [Polanski19]_.
 

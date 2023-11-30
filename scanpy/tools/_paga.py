@@ -23,7 +23,7 @@ def paga(
     model: Literal["v1.2", "v1.0"] = "v1.2",
     neighbors_key: str | None = None,
     copy: bool = False,
-):
+) -> AnnData | None:
     """\
     Mapping out the coarse-grained connectivity structures of complex manifolds [Wolf19]_.
 

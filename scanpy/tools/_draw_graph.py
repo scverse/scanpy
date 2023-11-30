@@ -31,7 +31,7 @@ def draw_graph(
     obsp: str | None = None,
     copy: bool = False,
     **kwds,
-):
+) -> AnnData | None:
     """\
     Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.
 

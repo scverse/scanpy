@@ -16,7 +16,7 @@ def diffmap(
     neighbors_key: str | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
-):
+) -> AnnData | None:
     """\
     Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf18]_.
 

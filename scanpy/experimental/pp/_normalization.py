@@ -90,7 +90,7 @@ def normalize_pearson_residuals(
     layer: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> dict[str, np.ndarray] | None:
+) -> AnnData | dict[str, np.ndarray] | None:
     """\
     Applies analytic Pearson residual normalization, based on [Lause21]_.
 

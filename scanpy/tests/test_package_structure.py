@@ -131,12 +131,20 @@ expected_sigs: defaultdict[str, ExpectedSig | None] = defaultdict(
 # full exceptions
 expected_sigs["sc.external.tl.phenograph"] = None  # external
 expected_sigs["sc.pp.filter_genes_dispersion"] = None  # deprecated
-# partial exceptions
-expected_sigs["sc.external.pp.magic"]["copy_default"] = None
+expected_sigs["sc.pp.filter_cells"] = None  # unclear `inplace` situation
+expected_sigs["sc.pp.filter_genes"] = None  # unclear `inplace` situation
+expected_sigs["sc.pp.subsample"] = None  # returns indices along matrix
+# partial exceptions: “data” instead of “adata”
 expected_sigs["sc.pp.log1p"]["first_name"] = "data"
-expected_sigs["sc.pp.normalize_total"][
-    "return_ann"
-] = "AnnData | dict[str, np.ndarray] | None"
+expected_sigs["sc.pp.normalize_per_cell"]["first_name"] = "data"
+expected_sigs["sc.pp.pca"]["first_name"] = "data"
+expected_sigs["sc.pp.scale"]["first_name"] = "data"
+expected_sigs["sc.pp.sqrt"]["first_name"] = "data"
+# other partial exceptions
+expected_sigs["sc.pp.normalize_total"]["return_ann"] = expected_sigs[
+    "sc.experimental.pp.normalize_pearson_residuals"
+]["return_ann"] = "AnnData | dict[str, np.ndarray] | None"
+expected_sigs["sc.external.pp.magic"]["copy_default"] = None
 
 
 @pytest.mark.parametrize(
