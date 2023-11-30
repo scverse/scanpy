@@ -1231,7 +1231,7 @@ def sim(
     show: bool | None = None,
     save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
-):
+) -> None:
     """\
     Plot results of simulation.
 

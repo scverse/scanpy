@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+from legacy_api_wrap import legacy_api
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
@@ -111,10 +112,35 @@ class DotPlot(BasePlot):
     DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
 
+    @legacy_api(
+        "groupby",
+        "use_raw",
+        "log",
+        "num_categories",
+        "categories_order",
+        "title",
+        "figsize",
+        "gene_symbols",
+        "var_group_positions",
+        "var_group_labels",
+        "var_group_rotation",
+        "layer",
+        "expression_cutoff",
+        "mean_only_expressed",
+        "standard_scale",
+        "dot_color_df",
+        "dot_size_df",
+        "ax",
+        "vmin",
+        "vmax",
+        "vcenter",
+        "norm",
+    )
     def __init__(
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
+        *,
         groupby: str | Sequence[str],
         use_raw: bool | None = None,
         log: bool = False,

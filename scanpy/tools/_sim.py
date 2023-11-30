@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import scipy as sp
+from legacy_api_wrap import legacy_api
 
 from .. import _utils, readwrite
 from .. import logging as logg
@@ -30,8 +31,20 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@legacy_api(
+    "params_file",
+    "tmax",
+    "branching",
+    "nrRealizations",
+    "noiseObs",
+    "noiseDyn",
+    "step",
+    "seed",
+    "writedir",
+)
 def sim(
     model: Literal["krumsiek11", "toggleswitch"],
+    *,
     params_file: bool = True,
     tmax: int | None = None,
     branching: bool | None = None,
