@@ -36,6 +36,8 @@ _Format = Union[
 
 
 class Verbosity(IntEnum):
+    """Logging verbosity levels."""
+
     error = 0
     warning = 1
     info = 2

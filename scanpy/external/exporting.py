@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
+__all__ = ["spring_project", "cellbrowser"]
+
 
 def spring_project(
     adata: AnnData,
@@ -96,8 +98,8 @@ def spring_project(
 
     # Make project directory and subplot directory (subplot has same name as project)
     # For now, the subplot is just all cells in adata
-    project_dir: Path = Path(project_dir)
-    subplot_dir: Path = (
+    project_dir = Path(project_dir)
+    subplot_dir = (
         project_dir.parent if subplot_name is None else project_dir / subplot_name
     )
     subplot_dir.mkdir(parents=True, exist_ok=True)

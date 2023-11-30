@@ -25,6 +25,16 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+__all__ = [
+    "phate",
+    "trimap",
+    "harmony_timeseries",
+    "sam",
+    "wishbone_marker_trajectory",
+    "scrublet_score_distribution",
+]
+
+
 @doctest_needs("phate")
 @_wraps_plot_scatter
 @_doc_params(

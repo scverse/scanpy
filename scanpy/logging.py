@@ -16,6 +16,9 @@ if TYPE_CHECKING:
     from ._settings import ScanpyConfig
 
 
+# This is currently the only documented API
+__all__ = ["print_versions"]
+
 HINT = (INFO + DEBUG) // 2
 logging.addLevelName(HINT, "HINT")
 

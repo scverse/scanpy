@@ -132,6 +132,26 @@ def deprecated_arg_names(arg_mapping: Mapping[str, str]):
     return decorator
 
 
+def _import_name(name: str) -> Any:
+    from importlib import import_module
+
+    parts = name.split(".")
+    obj = import_module(parts[0])
+    for i, name in enumerate(parts[1:]):
+        try:
+            obj = import_module(f"{obj.__name__}.{name}")
+        except ModuleNotFoundError:
+            break
+    else:
+        i = len(parts)
+    for name in parts[i + 1 :]:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError:
+            raise RuntimeError(f"{parts[:i]}, {parts[i+1:]}, {obj} {name}")
+    return obj
+
+
 def _one_of_ours(obj, root: str):
     return (
         hasattr(obj, "__name__")
