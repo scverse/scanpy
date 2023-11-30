@@ -1,11 +1,15 @@
-from anndata import AnnData
+from __future__ import annotations
+
 import numpy as np
+from anndata import AnnData
+
 import scanpy.external as sce
 
 
 def test_cell_demultiplexing():
-    from scipy import stats
     import random
+
+    from scipy import stats
 
     random.seed(52)
     signal = stats.poisson.rvs(1000, 1, 990)

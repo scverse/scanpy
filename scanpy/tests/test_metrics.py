@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from functools import partial
 from operator import eq
@@ -5,18 +7,17 @@ from string import ascii_letters
 
 import numpy as np
 import pandas as pd
-import scanpy as sc
+import pytest
 from scipy import sparse
 
-import pytest
-
+import scanpy as sc
 from scanpy._compat import DaskArray
 from scanpy.testing._helpers.data import pbmc68k_reduced
-
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 mark_flaky = pytest.mark.xfail(
     strict=False,
-    reason='This used to work reliably, but doesn’t anymore',
+    reason="This used to work reliably, but doesn’t anymore",
 )
 
 
@@ -29,7 +30,7 @@ def metric(request: pytest.FixtureRequest):
     scope="session",
     params=[
         pytest.param(eq, marks=[mark_flaky]),
-        pytest.param(partial(np.testing.assert_allclose, rtol=1e-15), id='allclose'),
+        pytest.param(partial(np.testing.assert_allclose, rtol=1e-15), id="allclose"),
     ],
 )
 def assert_equal(request: pytest.FixtureRequest):
@@ -69,10 +70,10 @@ def test_consistency(metric, assert_equal):
 
 
 @pytest.mark.parametrize(
-    ('metric', 'size', 'expected'),
+    ("metric", "size", "expected"),
     [
-        pytest.param(sc.metrics.gearys_c, 30, 0.0, id='gearys_c'),
-        pytest.param(sc.metrics.morans_i, 50, 1.0, id='morans_i'),
+        pytest.param(sc.metrics.gearys_c, 30, 0.0, id="gearys_c"),
+        pytest.param(sc.metrics.morans_i, 50, 1.0, id="morans_i"),
     ],
 )
 def test_correctness(metric, size, expected, assert_equal):
@@ -94,6 +95,7 @@ def test_correctness(metric, size, expected, assert_equal):
     assert metric(adata, vals=connected) == expected
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_graph_metrics_w_constant_values(metric, array_type, assert_equal):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()

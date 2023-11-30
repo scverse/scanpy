@@ -1,38 +1,44 @@
+from __future__ import annotations
+
 import warnings
-from typing import Optional, Union
+from warnings import warn
 
 import numpy as np
+from anndata import AnnData
 from packaging import version
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
-from anndata import AnnData
-
 from .. import logging as logg
-from .. import settings
 from .._compat import DaskArray, pkg_version
-from .._utils import AnyRandom
-from ..get import _get_obs_rep
+from .._settings import settings
+from .._utils import AnyRandom, Empty, _doc_params, _empty
+from ..get import _check_mask, _get_obs_rep
+from ._docs import doc_mask_hvg
 from ._utils import _get_mean_var
 
 
+@_doc_params(
+    mask_hvg=doc_mask_hvg,
+)
 def pca(
-    data: Union[AnnData, np.ndarray, spmatrix],
-    n_comps: Optional[int] = None,
+    data: AnnData | np.ndarray | spmatrix,
+    n_comps: int | None = None,
     *,
-    layer: Optional[str] = None,
-    zero_center: Optional[bool] = True,
-    svd_solver: Optional[str] = None,
+    layer: str | None = None,
+    zero_center: bool | None = True,
+    svd_solver: str | None = None,
     random_state: AnyRandom = 0,
     return_info: bool = False,
-    use_highly_variable: Optional[bool] = None,
-    dtype: str = 'float32',
+    mask: np.ndarray | str | None | Empty = _empty,
+    use_highly_variable: bool | None = None,
+    dtype: str = "float32",
     copy: bool = False,
     chunked: bool = False,
-    chunk_size: Optional[int] = None,
-) -> Union[AnnData, np.ndarray, spmatrix]:
+    chunk_size: int | None = None,
+) -> AnnData | np.ndarray | spmatrix:
     """\
     Principal component analysis [Pedregosa11]_.
 
@@ -96,20 +102,20 @@ def pca(
         Efficient computation of the principal components of a sparse matrix
         currently only works with the `'arpack`' or `'lobpcg'` solvers.
 
-        If X is a *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`, :class:`~dask_ml.decomposition.IncrementalPCA`,
-        or :class:`~dask_ml.decomposition.TruncatedSVD` will be used. Otherwise their *scikit-learn* counterparts :class:`~sklearn.decomposition.PCA`, :class:`~sklearn.decomposition.IncrementalPCA`, or :class:`~sklearn.decomposition.TruncatedSVD`
-        will be used.
-
-
+        If X is a *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`,
+        :class:`~dask_ml.decomposition.IncrementalPCA`, or
+        :class:`~dask_ml.decomposition.TruncatedSVD` will be used.
+        Otherwise their *scikit-learn* counterparts :class:`~sklearn.decomposition.PCA`,
+        :class:`~sklearn.decomposition.IncrementalPCA`, or
+        :class:`~sklearn.decomposition.TruncatedSVD` will be used.
     random_state
         Change to use different initial states for the optimization.
     return_info
         Only relevant when not passing an :class:`~anndata.AnnData`:
-        see “**Returns**”.
-    use_highly_variable
-        Whether to use highly variable genes only, stored in
-        `.var['highly_variable']`.
-        By default uses them if they have been determined beforehand.
+        see “Returns”.
+    {mask_hvg}
+    layer
+        Layer of `adata` to use as expression values.
     dtype
         Numpy data type string to which to convert the result.
     copy
@@ -128,53 +134,48 @@ def pca(
 
     Returns
     -------
-    X_pca : :class:`~scipy.sparse.spmatrix`, :class:`~numpy.ndarray`
-        If `data` is array-like and `return_info=False` was passed,
-        this function only returns `X_pca`…
-    adata : anndata.AnnData
-        …otherwise if `copy=True` it returns or else adds fields to `adata`:
+    If `data` is array-like and `return_info=False` was passed,
+    this function returns the PCA representation of `data` as an
+    array of the same type as the input array.
 
-        `.obsm['X_pca']`
-             PCA representation of data.
-        `.varm['PCs']`
-             The principal components containing the loadings.
-        `.uns['pca']['variance_ratio']`
-             Ratio of explained variance.
-        `.uns['pca']['variance']`
-             Explained variance, equivalent to the eigenvalues of the
-             covariance matrix.
+    Otherwise, it returns `None` if `copy=False`, else an updated `AnnData` object.
+    Sets the following fields:
+
+    `.obsm['X_pca']` : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
+        PCA representation of data.
+    `.varm['PCs']` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
+        The principal components containing the loadings.
+    `.uns['pca']['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+        Ratio of explained variance.
+    `.uns['pca']['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+        Explained variance, equivalent to the eigenvalues of the
+        covariance matrix.
     """
-    logg_start = logg.info('computing PCA')
+    logg_start = logg.info("computing PCA")
+    if layer is not None and chunked:
+        # Current chunking implementation relies on pca being called on X
+        raise NotImplementedError("Cannot use `layer` and `chunked` at the same time.")
 
     # chunked calculation is not randomized, anyways
-    if svd_solver in {'auto', 'randomized'} and not chunked:
+    if svd_solver in {"auto", "randomized"} and not chunked:
         logg.info(
-            'Note that scikit-learn\'s randomized PCA might not be exactly '
-            'reproducible across different computational platforms. For exact '
-            'reproducibility, choose `svd_solver=\'arpack\'.`'
+            "Note that scikit-learn's randomized PCA might not be exactly "
+            "reproducible across different computational platforms. For exact "
+            "reproducibility, choose `svd_solver='arpack'.`"
         )
     data_is_AnnData = isinstance(data, AnnData)
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
-        if pkg_version('anndata') < version.parse('0.8.0rc1'):
+        if pkg_version("anndata") < version.parse("0.8.0rc1"):
             adata = AnnData(data, dtype=data.dtype)
         else:
             adata = AnnData(data)
 
-    if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
-        raise ValueError(
-            'Did not find adata.var[\'highly_variable\']. '
-            'Either your data already only consists of highly-variable genes '
-            'or consider running `pp.highly_variable_genes` first.'
-        )
-    if use_highly_variable is None:
-        use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
-    if use_highly_variable:
-        logg.info('    on highly variable genes')
-    adata_comp = (
-        adata[:, adata.var['highly_variable']] if use_highly_variable else adata
-    )
+    # Unify new mask argument and deprecated use_highly_varible argument
+    mask_param, mask = _handle_mask_param(adata, mask, use_highly_variable)
+    del use_highly_variable
+    adata_comp = adata[:, mask] if mask is not None else adata
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
@@ -183,7 +184,7 @@ def pca(
         else:
             n_comps = settings.N_PCS
 
-    logg.info(f'    with n_comps={n_comps}')
+    logg.info(f"    with n_comps={n_comps}")
 
     X = _get_obs_rep(adata_comp, layer=layer)
 
@@ -194,28 +195,28 @@ def pca(
     if not is_dask:
         random_state = check_random_state(random_state)
     elif not isinstance(random_state, int):
-        msg = f'random_state needs to be an int, not a {type(random_state).__name__} when passing a dask array'
+        msg = f"random_state needs to be an int, not a {type(random_state).__name__} when passing a dask array"
         raise TypeError(msg)
 
     if chunked:
         if (
             not zero_center
             or random_state
-            or (svd_solver is not None and svd_solver != 'arpack')
+            or (svd_solver is not None and svd_solver != "arpack")
         ):
-            logg.debug('Ignoring zero_center, random_state, svd_solver')
+            logg.debug("Ignoring zero_center, random_state, svd_solver")
 
         incremental_pca_kwargs = dict()
         if is_dask:
-            from dask_ml.decomposition import IncrementalPCA
             from dask.array import zeros
+            from dask_ml.decomposition import IncrementalPCA
 
-            incremental_pca_kwargs['svd_solver'] = _handle_dask_ml_args(
-                svd_solver, 'IncrementalPCA'
+            incremental_pca_kwargs["svd_solver"] = _handle_dask_ml_args(
+                svd_solver, "IncrementalPCA"
             )
         else:
-            from sklearn.decomposition import IncrementalPCA
             from numpy import zeros
+            from sklearn.decomposition import IncrementalPCA
 
         X_pca = zeros((X.shape[0], n_comps), X.dtype)
 
@@ -232,11 +233,11 @@ def pca(
         if is_dask:
             from dask_ml.decomposition import PCA
 
-            svd_solver = _handle_dask_ml_args(svd_solver, 'PCA')
+            svd_solver = _handle_dask_ml_args(svd_solver, "PCA")
         else:
             from sklearn.decomposition import PCA
 
-            svd_solver = _handle_sklearn_args(svd_solver, 'PCA')
+            svd_solver = _handle_sklearn_args(svd_solver, "PCA")
 
         if issparse(X) and svd_solver == "randomized":
             # This  is for backwards compat. Better behaviour would be to either error or use arpack.
@@ -252,34 +253,34 @@ def pca(
     elif issparse(X) and zero_center:
         from sklearn.decomposition import PCA
 
-        svd_solver = _handle_sklearn_args(svd_solver, 'PCA (with sparse input)')
+        svd_solver = _handle_sklearn_args(svd_solver, "PCA (with sparse input)")
 
         output = _pca_with_sparse(
             X, n_comps, solver=svd_solver, random_state=random_state
         )
         # this is just a wrapper for the results
-        X_pca = output['X_pca']
+        X_pca = output["X_pca"]
         pca_ = PCA(
             n_components=n_comps, svd_solver=svd_solver, random_state=random_state
         )
-        pca_.components_ = output['components']
-        pca_.explained_variance_ = output['variance']
-        pca_.explained_variance_ratio_ = output['variance_ratio']
+        pca_.components_ = output["components"]
+        pca_.explained_variance_ = output["variance"]
+        pca_.explained_variance_ratio_ = output["variance_ratio"]
     elif not zero_center:
         if is_dask:
             from dask_ml.decomposition import TruncatedSVD
 
-            svd_solver = _handle_dask_ml_args(svd_solver, 'TruncatedSVD')
+            svd_solver = _handle_dask_ml_args(svd_solver, "TruncatedSVD")
         else:
             from sklearn.decomposition import TruncatedSVD
 
-            svd_solver = _handle_sklearn_args(svd_solver, 'TruncatedSVD')
+            svd_solver = _handle_sklearn_args(svd_solver, "TruncatedSVD")
 
         logg.debug(
-            '    without zero-centering: \n'
-            '    the explained variance does not correspond to the exact statistical defintion\n'
-            '    the first component, e.g., might be heavily influenced by different means\n'
-            '    the following components often resemble the exact PCA very closely'
+            "    without zero-centering: \n"
+            "    the explained variance does not correspond to the exact statistical defintion\n"
+            "    the first component, e.g., might be heavily influenced by different means\n"
+            "    the following components often resemble the exact PCA very closely"
         )
         pca_ = TruncatedSVD(
             n_components=n_comps, random_state=random_state, algorithm=svd_solver
@@ -292,36 +293,38 @@ def pca(
         X_pca = X_pca.astype(dtype)
 
     if data_is_AnnData:
-        adata.obsm['X_pca'] = X_pca
-        if use_highly_variable:
-            adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm['PCs'][adata.var['highly_variable']] = pca_.components_.T
+        adata.obsm["X_pca"] = X_pca
+
+        if mask is not None:
+            adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
+            adata.varm["PCs"][mask] = pca_.components_.T
         else:
-            adata.varm['PCs'] = pca_.components_.T
+            adata.varm["PCs"] = pca_.components_.T
 
         uns_entry = {
-            'params': {
-                'zero_center': zero_center,
-                'use_highly_variable': use_highly_variable,
+            "params": {
+                "zero_center": zero_center,
+                "use_highly_variable": mask_param == "highly_variable",
+                "mask": mask_param,
             },
-            'variance': pca_.explained_variance_,
-            'variance_ratio': pca_.explained_variance_ratio_,
+            "variance": pca_.explained_variance_,
+            "variance_ratio": pca_.explained_variance_ratio_,
         }
         if layer is not None:
-            uns_entry['params']['layer'] = layer
-        adata.uns['pca'] = uns_entry
+            uns_entry["params"]["layer"] = layer
+        adata.uns["pca"] = uns_entry
 
-        logg.info('    finished', time=logg_start)
+        logg.info("    finished", time=logg_start)
         logg.debug(
-            'and added\n'
-            '    \'X_pca\', the PCA coordinates (adata.obs)\n'
-            '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
-            '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
-            '    \'pca_variance_ratio\', the variance ratio (adata.uns)'
+            "and added\n"
+            "    'X_pca', the PCA coordinates (adata.obs)\n"
+            "    'PC1', 'PC2', ..., the loadings (adata.var)\n"
+            "    'pca_variance', the variance / eigenvalues (adata.uns)\n"
+            "    'pca_variance_ratio', the variance ratio (adata.uns)"
         )
         return adata if copy else None
     else:
-        logg.info('    finished', time=logg_start)
+        logg.info("    finished", time=logg_start)
         if return_info:
             return (
                 X_pca,
@@ -333,11 +336,47 @@ def pca(
             return X_pca
 
 
-def _pca_with_sparse(X, npcs, solver='arpack', mu=None, random_state=None):
+def _handle_mask_param(
+    adata: AnnData,
+    mask: np.ndarray | str | Empty | None,
+    use_highly_variable: bool | None,
+) -> tuple[np.ndarray | str | None, np.ndarray | None]:
+    """\
+    Unify new mask argument and deprecated use_highly_varible argument.
+
+    Returns both the normalized mask parameter and the validated mask array.
+    """
+    # First, verify and possibly warn
+    if use_highly_variable is not None:
+        hint = (
+            'Use_highly_variable=True can be called through mask="highly_variable". '
+            "Use_highly_variable=False can be called through mask=None"
+        )
+        msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
+        warn(msg, FutureWarning)
+        if mask is not _empty:
+            msg = f"These arguments are incompatible. {hint}"
+            raise ValueError(msg)
+
+    # Handle default case and explicit use_highly_variable=True
+    if use_highly_variable or (
+        use_highly_variable is None
+        and mask is _empty
+        and "highly_variable" in adata.var.keys()
+    ):
+        mask = "highly_variable"
+
+    # Without highly variable genes, we don’t use a mask by default
+    if mask is _empty or mask is None:
+        return None, None
+    return mask, _check_mask(adata, mask, "var")
+
+
+def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(X.shape))
-    X = check_array(X, accept_sparse=['csr', 'csc'])
+    X = check_array(X, accept_sparse=["csr", "csc"])
 
     if mu is None:
         mu = X.mean(0).A.flatten()[None, :]
@@ -384,49 +423,49 @@ def _pca_with_sparse(X, npcs, solver='arpack', mu=None, random_state=None):
     ev_ratio = ev / total_var
 
     output = {
-        'X_pca': X_pca,
-        'variance': ev,
-        'variance_ratio': ev_ratio,
-        'components': v,
+        "X_pca": X_pca,
+        "variance": ev,
+        "variance_ratio": ev_ratio,
+        "components": v,
     }
     return output
 
 
 def _handle_dask_ml_args(svd_solver: str, method: str) -> str:
     method2args = {
-        'PCA': {'auto', 'full', 'tsqr', 'randomized'},
-        'IncrementalPCA': {'auto', 'full', 'tsqr', 'randomized'},
-        'TruncatedSVD': {'tsqr', 'randomized'},
+        "PCA": {"auto", "full", "tsqr", "randomized"},
+        "IncrementalPCA": {"auto", "full", "tsqr", "randomized"},
+        "TruncatedSVD": {"tsqr", "randomized"},
     }
     method2default = {
-        'PCA': 'auto',
-        'IncrementalPCA': 'auto',
-        'TruncatedSVD': 'tsqr',
+        "PCA": "auto",
+        "IncrementalPCA": "auto",
+        "TruncatedSVD": "tsqr",
     }
 
-    return _handle_x_args('dask_ml', svd_solver, method, method2args, method2default)
+    return _handle_x_args("dask_ml", svd_solver, method, method2args, method2default)
 
 
 def _handle_sklearn_args(svd_solver: str, method: str) -> str:
     method2args = {
-        'PCA': {'auto', 'full', 'arpack', 'randomized'},
-        'TruncatedSVD': {'arpack', 'randomized'},
-        'PCA (with sparse input)': {'lobpcg', 'arpack'},
+        "PCA": {"auto", "full", "arpack", "randomized"},
+        "TruncatedSVD": {"arpack", "randomized"},
+        "PCA (with sparse input)": {"lobpcg", "arpack"},
     }
     method2default = {
-        'PCA': 'arpack',
-        'TruncatedSVD': 'randomized',
-        'PCA (with sparse input)': 'arpack',
+        "PCA": "arpack",
+        "TruncatedSVD": "randomized",
+        "PCA (with sparse input)": "arpack",
     }
 
-    return _handle_x_args('sklearn', svd_solver, method, method2args, method2default)
+    return _handle_x_args("sklearn", svd_solver, method, method2args, method2default)
 
 
 def _handle_x_args(lib, svd_solver, method, method2args, method2default):
     if svd_solver not in method2args[method]:
         if svd_solver is not None:
             warnings.warn(
-                f'Ignoring {svd_solver} and using {method2default[method]}, {lib}.decomposition.{method} only supports {method2args[method]}'
+                f"Ignoring {svd_solver} and using {method2default[method]}, {lib}.decomposition.{method} only supports {method2args[method]}"
             )
         svd_solver = method2default[method]
     return svd_solver

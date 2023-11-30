@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
-
 import re
 import subprocess
-from sphinx.application import Sphinx
-from sphinx.config import Config
+from functools import lru_cache
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
+    from sphinx.config import Config
 
 
 def git(*args: str) -> str:
@@ -35,7 +37,7 @@ def get() -> str | None:
 
 
 def set_ref(app: Sphinx, config: Config):
-    app.config['html_theme_options']['repository_branch'] = get() or 'main'
+    app.config["html_theme_options"]["repository_branch"] = get() or "main"
 
 
 def setup(app: Sphinx) -> None:

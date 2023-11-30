@@ -1,15 +1,20 @@
-from typing import Optional, Tuple, Sequence, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from natsort import natsorted
-from anndata import AnnData
-from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-
 from ._utils_clustering import rename_groups, restrict_adjacency
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
+    from scipy import sparse
 
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
@@ -18,26 +23,26 @@ except ImportError:
     class MutableVertexPartition:
         pass
 
-    MutableVertexPartition.__module__ = 'leidenalg.VertexPartition'
+    MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
 def leiden(
     adata: AnnData,
     resolution: float = 1,
     *,
-    restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
+    restrict_to: tuple[str, Sequence[str]] | None = None,
     random_state: _utils.AnyRandom = 0,
-    key_added: str = 'leiden',
-    adjacency: Optional[sparse.spmatrix] = None,
+    key_added: str = "leiden",
+    adjacency: sparse.spmatrix | None = None,
     directed: bool = True,
     use_weights: bool = True,
     n_iterations: int = -1,
-    partition_type: Optional[Type[MutableVertexPartition]] = None,
-    neighbors_key: Optional[str] = None,
-    obsp: Optional[str] = None,
+    partition_type: type[MutableVertexPartition] | None = None,
+    neighbors_key: str | None = None,
+    obsp: str | None = None,
     copy: bool = False,
     **partition_kwargs,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Cluster cells into subgroups [Traag18]_.
 
@@ -97,10 +102,13 @@ def leiden(
 
     Returns
     -------
-    `adata.obs[key_added]`
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+
+    `adata.obs['leiden' | key_added]` : :class:`pandas.Series` (dtype ``category``)
         Array of dim (number of samples) that stores the subgroup id
-        (`'0'`, `'1'`, ...) for each cell.
-    `adata.uns['leiden']['params']`
+        (``'0'``, ``'1'``, ...) for each cell.
+
+    `adata.uns['leiden']['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
@@ -108,11 +116,11 @@ def leiden(
         import leidenalg
     except ImportError:
         raise ImportError(
-            'Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`.'
+            "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
         )
     partition_kwargs = dict(partition_kwargs)
 
-    start = logg.info('running Leiden clustering')
+    start = logg.info("running Leiden clustering")
     adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
     if adjacency is None:
@@ -135,18 +143,18 @@ def leiden(
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
     if use_weights:
-        partition_kwargs['weights'] = np.array(g.es['weight']).astype(np.float64)
-    partition_kwargs['n_iterations'] = n_iterations
-    partition_kwargs['seed'] = random_state
+        partition_kwargs["weights"] = np.array(g.es["weight"]).astype(np.float64)
+    partition_kwargs["n_iterations"] = n_iterations
+    partition_kwargs["seed"] = random_state
     if resolution is not None:
-        partition_kwargs['resolution_parameter'] = resolution
+        partition_kwargs["resolution_parameter"] = resolution
     # clustering proper
     part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:
-        if key_added == 'leiden':
-            key_added += '_R'
+        if key_added == "leiden":
+            key_added += "_R"
         groups = rename_groups(
             adata,
             key_added,
@@ -156,22 +164,22 @@ def leiden(
             groups,
         )
     adata.obs[key_added] = pd.Categorical(
-        values=groups.astype('U'),
+        values=groups.astype("U"),
         categories=natsorted(map(str, np.unique(groups))),
     )
     # store information on the clustering parameters
-    adata.uns['leiden'] = {}
-    adata.uns['leiden']['params'] = dict(
+    adata.uns["leiden"] = {}
+    adata.uns["leiden"]["params"] = dict(
         resolution=resolution,
         random_state=random_state,
         n_iterations=n_iterations,
     )
     logg.info(
-        '    finished',
+        "    finished",
         time=start,
         deep=(
-            f'found {len(np.unique(groups))} clusters and added\n'
-            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+            f"found {len(np.unique(groups))} clusters and added\n"
+            f"    {key_added!r}, the cluster labels (adata.obs, categorical)"
         ),
     )
     return adata if copy else None

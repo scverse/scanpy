@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from functools import singledispatch
-from typing import TypeVar
 import warnings
+from functools import singledispatch
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 import pandas as pd
-from numpy.typing import NDArray
 from scipy import sparse
 
 from .._compat import DaskArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 @singledispatch

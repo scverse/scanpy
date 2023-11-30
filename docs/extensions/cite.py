@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 from docutils import nodes, utils
 
 if TYPE_CHECKING:
-    from typing import Any
     from collections.abc import Mapping, Sequence
+    from typing import Any
 
-    from sphinx.application import Sphinx
     from docutils.parsers.rst.states import Inliner
+    from sphinx.application import Sphinx
 
 
 def cite_role(
@@ -25,9 +25,9 @@ def cite_role(
     content: Sequence[str] = (),
 ) -> tuple[list[nodes.Node], list[nodes.system_message]]:
     key = utils.unescape(text)
-    node = nodes.citation_reference(f'[{key}]_', key)
+    node = nodes.citation_reference(f"[{key}]_", key)
     return [node], []
 
 
 def setup(app: Sphinx):
-    app.add_role('cite', cite_role, override=True)
+    app.add_role("cite", cite_role, override=True)

@@ -1,30 +1,33 @@
-from functools import partial
-import warnings
-from typing import Optional, Literal
+from __future__ import annotations
 
-import numpy as np
+import warnings
+from functools import partial
+from math import sqrt
+from typing import TYPE_CHECKING, Literal
+
 import numba as nb
+import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
 from anndata import AnnData
-from math import sqrt
-from numpy.typing import NDArray
 
 from scanpy import logging as logg
-from scanpy._settings import settings, Verbosity
-from scanpy._utils import check_nonnegative_integers, view_to_actual
-from scanpy.get import _get_obs_rep
-from scanpy._utils import _doc_params
-from scanpy.preprocessing._utils import _get_mean_var
-from scanpy.preprocessing._distributed import materialize_as_ndarray
+from scanpy._settings import Verbosity, settings
+from scanpy._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from scanpy.experimental._docs import (
     doc_adata,
+    doc_check_values,
     doc_dist_params,
     doc_genes_batch_chunk,
-    doc_check_values,
-    doc_layer,
     doc_inplace,
+    doc_layer,
 )
+from scanpy.get import _get_obs_rep
+from scanpy.preprocessing._distributed import materialize_as_ndarray
+from scanpy.preprocessing._utils import _get_mean_var
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 @nb.njit(parallel=True)
@@ -129,21 +132,21 @@ def _calculate_res_dense(
 def _highly_variable_pearson_residuals(
     adata: AnnData,
     theta: float = 100,
-    clip: Optional[float] = None,
+    clip: float | None = None,
     n_top_genes: int = 1000,
-    batch_key: Optional[str] = None,
+    batch_key: str | None = None,
     chunksize: int = 1000,
     check_values: bool = True,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     subset: bool = False,
     inplace: bool = True,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer)
-    computed_on = layer if layer else 'adata.X'
+    computed_on = layer if layer else "adata.X"
 
     # Check for raw counts
-    if check_values and (check_nonnegative_integers(X) is False):
+    if check_values and not check_nonnegative_integers(X):
         warnings.warn(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,
@@ -152,7 +155,7 @@ def _highly_variable_pearson_residuals(
     if theta <= 0:
         # TODO: would "underdispersion" with negative theta make sense?
         # then only theta=0 were undefined..
-        raise ValueError('Pearson residuals require theta > 0')
+        raise ValueError("Pearson residuals require theta > 0")
     # prepare clipping
 
     if batch_key is None:
@@ -190,7 +193,7 @@ def _highly_variable_pearson_residuals(
                 X_batch.data.astype(np.float64),
             )
         else:
-            X_batch = np.array(X_batch, dtype=np.float64, order='F')
+            X_batch = np.array(X_batch, dtype=np.float64, order="F")
             calculate_res = partial(_calculate_res_dense, X_batch)
 
         sums_genes = np.array(X_batch.sum(axis=0)).ravel()
@@ -244,49 +247,49 @@ def _highly_variable_pearson_residuals(
     # Sort genes by how often they selected as hvg within each batch and
     # break ties with median rank of residual variance across batches
     df.sort_values(
-        ['highly_variable_nbatches', 'highly_variable_rank'],
+        ["highly_variable_nbatches", "highly_variable_rank"],
         ascending=[False, True],
-        na_position='last',
+        na_position="last",
         inplace=True,
     )
 
     high_var = np.zeros(df.shape[0], dtype=bool)
     high_var[:n_top_genes] = True
-    df['highly_variable'] = high_var
+    df["highly_variable"] = high_var
     df = df.loc[adata.var_names, :]
 
     if inplace:
-        adata.uns['hvg'] = {'flavor': 'pearson_residuals', 'computed_on': computed_on}
+        adata.uns["hvg"] = {"flavor": "pearson_residuals", "computed_on": computed_on}
         logg.hint(
-            'added\n'
-            '    \'highly_variable\', boolean vector (adata.var)\n'
-            '    \'highly_variable_rank\', float vector (adata.var)\n'
-            '    \'highly_variable_nbatches\', int vector (adata.var)\n'
-            '    \'highly_variable_intersection\', boolean vector (adata.var)\n'
-            '    \'means\', float vector (adata.var)\n'
-            '    \'variances\', float vector (adata.var)\n'
-            '    \'residual_variances\', float vector (adata.var)'
+            "added\n"
+            "    'highly_variable', boolean vector (adata.var)\n"
+            "    'highly_variable_rank', float vector (adata.var)\n"
+            "    'highly_variable_nbatches', int vector (adata.var)\n"
+            "    'highly_variable_intersection', boolean vector (adata.var)\n"
+            "    'means', float vector (adata.var)\n"
+            "    'variances', float vector (adata.var)\n"
+            "    'residual_variances', float vector (adata.var)"
         )
-        adata.var['means'] = df['means'].values
-        adata.var['variances'] = df['variances'].values
-        adata.var['residual_variances'] = df['residual_variances']
-        adata.var['highly_variable_rank'] = df['highly_variable_rank'].values
+        adata.var["means"] = df["means"].values
+        adata.var["variances"] = df["variances"].values
+        adata.var["residual_variances"] = df["residual_variances"]
+        adata.var["highly_variable_rank"] = df["highly_variable_rank"].values
         if batch_key is not None:
-            adata.var['highly_variable_nbatches'] = df[
-                'highly_variable_nbatches'
+            adata.var["highly_variable_nbatches"] = df[
+                "highly_variable_nbatches"
             ].values
-            adata.var['highly_variable_intersection'] = df[
-                'highly_variable_intersection'
+            adata.var["highly_variable_intersection"] = df[
+                "highly_variable_intersection"
             ].values
-        adata.var['highly_variable'] = df['highly_variable'].values
+        adata.var["highly_variable"] = df["highly_variable"].values
 
         if subset:
-            adata._inplace_subset_var(df['highly_variable'].values)
+            adata._inplace_subset_var(df["highly_variable"].values)
 
     else:
         if batch_key is None:
             df = df.drop(
-                ['highly_variable_nbatches', 'highly_variable_intersection'], axis=1
+                ["highly_variable_nbatches", "highly_variable_intersection"], axis=1
             )
         if subset:
             df = df.iloc[df.highly_variable.values, :]
@@ -306,16 +309,16 @@ def highly_variable_genes(
     adata: AnnData,
     *,
     theta: float = 100,
-    clip: Optional[float] = None,
-    n_top_genes: Optional[int] = None,
-    batch_key: Optional[str] = None,
+    clip: float | None = None,
+    n_top_genes: int | None = None,
+    batch_key: str | None = None,
     chunksize: int = 1000,
-    flavor: Literal['pearson_residuals'] = 'pearson_residuals',
+    flavor: Literal["pearson_residuals"] = "pearson_residuals",
     check_values: bool = True,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     subset: bool = False,
     inplace: bool = True,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """\
     Select highly variable genes using analytic Pearson residuals [Lause21]_.
 
@@ -368,15 +371,15 @@ def highly_variable_genes(
     Experimental version of `sc.pp.highly_variable_genes()`
     """
 
-    logg.info('extracting highly variable genes')
+    logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):
         raise ValueError(
-            '`pp.highly_variable_genes` expects an `AnnData` argument, '
-            'pass `inplace=False` if you want to return a `pd.DataFrame`.'
+            "`pp.highly_variable_genes` expects an `AnnData` argument, "
+            "pass `inplace=False` if you want to return a `pd.DataFrame`."
         )
 
-    if flavor == 'pearson_residuals':
+    if flavor == "pearson_residuals":
         if n_top_genes is None:
             raise ValueError(
                 "`pp.highly_variable_genes` requires the argument `n_top_genes`"

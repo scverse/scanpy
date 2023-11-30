@@ -1,41 +1,44 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Union as _U, Callable as _C
+from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import Callable as _C
+from typing import Union as _U
 
 import numpy as np
-from scipy.sparse import spmatrix
 
 if TYPE_CHECKING:
     from typing import Self
 
+    from scipy.sparse import spmatrix
 
-_Method = Literal['umap', 'gauss']
 
-_KnownTransformer = Literal['pynndescent', 'rapids']
+_Method = Literal["umap", "gauss"]
+
+_KnownTransformer = Literal["pynndescent", "rapids"]
 
 _MetricFn = _C[[np.ndarray, np.ndarray], float]
 # from sklearn.metrics.pairwise_distances.__doc__:
 _MetricSparseCapable = Literal[
-    'cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan'
+    "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan"
 ]
 _MetricScipySpatial = Literal[
-    'braycurtis',
-    'canberra',
-    'chebyshev',
-    'correlation',
-    'dice',
-    'hamming',
-    'jaccard',
-    'kulsinski',
-    'mahalanobis',
-    'minkowski',
-    'rogerstanimoto',
-    'russellrao',
-    'seuclidean',
-    'sokalmichener',
-    'sokalsneath',
-    'sqeuclidean',
-    'yule',
+    "braycurtis",
+    "canberra",
+    "chebyshev",
+    "correlation",
+    "dice",
+    "hamming",
+    "jaccard",
+    "kulsinski",
+    "mahalanobis",
+    "minkowski",
+    "rogerstanimoto",
+    "russellrao",
+    "seuclidean",
+    "sokalmichener",
+    "sokalsneath",
+    "sqeuclidean",
+    "yule",
 ]
 _Metric = _U[_MetricSparseCapable, _MetricScipySpatial]
 

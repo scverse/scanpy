@@ -1,42 +1,65 @@
+from __future__ import annotations
+
 import inspect
 import sys
 from contextlib import contextmanager
 from enum import IntEnum
+from logging import getLevelName
 from pathlib import Path
 from time import time
-from logging import getLevelName
-from typing import Any, Union, Optional, Iterable, TextIO, Literal
-from typing import Tuple, List, ContextManager
+from typing import TYPE_CHECKING, Any, Literal, TextIO, Union
 
 from . import logging
-from .logging import _set_log_level, _set_log_file, _RootLogger
+from .logging import _RootLogger, _set_log_file, _set_log_level
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
 
 _VERBOSITY_TO_LOGLEVEL = {
-    'error': 'ERROR',
-    'warning': 'WARNING',
-    'info': 'INFO',
-    'hint': 'HINT',
-    'debug': 'DEBUG',
+    "error": "ERROR",
+    "warning": "WARNING",
+    "info": "INFO",
+    "hint": "HINT",
+    "debug": "DEBUG",
 }
-# Python 3.7 ensures iteration order
+# Python 3.7+ ensures iteration order
 for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
     _VERBOSITY_TO_LOGLEVEL[v] = level
 
 
+# Collected from the print_* functions in matplotlib.backends
+_Format = Union[
+    Literal["png", "jpg", "tif", "tiff"],
+    Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"],
+    Literal["raw", "rgba"],
+]
+
+
 class Verbosity(IntEnum):
     error = 0
-    warn = 1
+    warning = 1
     info = 2
     hint = 3
     debug = 4
 
+    def __eq__(self, other: Verbosity | int | str) -> bool:
+        if isinstance(other, Verbosity):
+            return self is other
+        if isinstance(other, int):
+            return self.value == other
+        if isinstance(other, str):
+            return self.name == other
+        return NotImplemented
+
     @property
     def level(self) -> int:
         # getLevelName(str) returns the int level…
-        return getLevelName(_VERBOSITY_TO_LOGLEVEL[self])
+        return getLevelName(_VERBOSITY_TO_LOGLEVEL[self.name])
 
     @contextmanager
-    def override(self, verbosity: "Verbosity") -> ContextManager["Verbosity"]:
+    def override(
+        self, verbosity: Verbosity | str | int
+    ) -> Generator[Verbosity, None, None]:
         """\
         Temporarily override verbosity
         """
@@ -45,7 +68,11 @@ class Verbosity(IntEnum):
         settings.verbosity = self
 
 
-def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
+# backwards compat
+Verbosity.warn = Verbosity.warning
+
+
+def _type_check(var: Any, varname: str, types: type | tuple[type, ...]):
     if isinstance(var, types):
         return
     if isinstance(types, type):
@@ -69,20 +96,20 @@ class ScanpyConfig:
     def __init__(
         self,
         *,
-        verbosity: str = "warning",
+        verbosity: Verbosity | int | str = Verbosity.warning,
         plot_suffix: str = "",
         file_format_data: str = "h5ad",
         file_format_figs: str = "pdf",
         autosave: bool = False,
         autoshow: bool = True,
-        writedir: Union[str, Path] = "./write/",
-        cachedir: Union[str, Path] = "./cache/",
-        datasetdir: Union[str, Path] = "./data/",
-        figdir: Union[str, Path] = "./figures/",
-        cache_compression: Union[str, None] = 'lzf',
+        writedir: str | Path = "./write/",
+        cachedir: str | Path = "./cache/",
+        datasetdir: str | Path = "./data/",
+        figdir: str | Path = "./figures/",
+        cache_compression: str | None = "lzf",
         max_memory=15,
         n_jobs=1,
-        logfile: Union[str, Path, None] = None,
+        logfile: str | Path | None = None,
         categories_to_ignore: Iterable[str] = ("N/A", "dontknow", "no_gate", "?"),
         _frameon: bool = True,
         _vector_friendly: bool = False,
@@ -141,7 +168,7 @@ class ScanpyConfig:
         return self._verbosity
 
     @verbosity.setter
-    def verbosity(self, verbosity: Union[Verbosity, int, str]):
+    def verbosity(self, verbosity: Verbosity | int | str):
         verbosity_str_options = [
             v for v in _VERBOSITY_TO_LOGLEVEL if isinstance(v, str)
         ]
@@ -160,7 +187,7 @@ class ScanpyConfig:
                 self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
             _type_check(verbosity, "verbosity", (str, int))
-        _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity])
+        _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity.name])
 
     @property
     def plot_suffix(self) -> str:
@@ -242,7 +269,7 @@ class ScanpyConfig:
         return self._writedir
 
     @writedir.setter
-    def writedir(self, writedir: Union[str, Path]):
+    def writedir(self, writedir: str | Path):
         _type_check(writedir, "writedir", (str, Path))
         self._writedir = Path(writedir)
 
@@ -254,7 +281,7 @@ class ScanpyConfig:
         return self._cachedir
 
     @cachedir.setter
-    def cachedir(self, cachedir: Union[str, Path]):
+    def cachedir(self, cachedir: str | Path):
         _type_check(cachedir, "cachedir", (str, Path))
         self._cachedir = Path(cachedir)
 
@@ -266,7 +293,7 @@ class ScanpyConfig:
         return self._datasetdir
 
     @datasetdir.setter
-    def datasetdir(self, datasetdir: Union[str, Path]):
+    def datasetdir(self, datasetdir: str | Path):
         _type_check(datasetdir, "datasetdir", (str, Path))
         self._datasetdir = Path(datasetdir).resolve()
 
@@ -278,12 +305,12 @@ class ScanpyConfig:
         return self._figdir
 
     @figdir.setter
-    def figdir(self, figdir: Union[str, Path]):
+    def figdir(self, figdir: str | Path):
         _type_check(figdir, "figdir", (str, Path))
         self._figdir = Path(figdir)
 
     @property
-    def cache_compression(self) -> Optional[str]:
+    def cache_compression(self) -> str | None:
         """\
         Compression for `sc.read(..., cache=True)` (default `'lzf'`).
 
@@ -292,8 +319,8 @@ class ScanpyConfig:
         return self._cache_compression
 
     @cache_compression.setter
-    def cache_compression(self, cache_compression: Optional[str]):
-        if cache_compression not in {'lzf', 'gzip', None}:
+    def cache_compression(self, cache_compression: str | None):
+        if cache_compression not in {"lzf", "gzip", None}:
             raise ValueError(
                 f"`cache_compression` ({cache_compression}) "
                 "must be in {'lzf', 'gzip', None}"
@@ -301,7 +328,7 @@ class ScanpyConfig:
         self._cache_compression = cache_compression
 
     @property
-    def max_memory(self) -> Union[int, float]:
+    def max_memory(self) -> int | float:
         """\
         Maximum memory usage in Gigabyte.
 
@@ -310,7 +337,7 @@ class ScanpyConfig:
         return self._max_memory
 
     @max_memory.setter
-    def max_memory(self, max_memory: Union[int, float]):
+    def max_memory(self, max_memory: int | float):
         _type_check(max_memory, "max_memory", (int, float))
         self._max_memory = max_memory
 
@@ -331,17 +358,17 @@ class ScanpyConfig:
         self._n_jobs = n_jobs
 
     @property
-    def logpath(self) -> Optional[Path]:
+    def logpath(self) -> Path | None:
         """\
         The file path `logfile` was set to.
         """
         return self._logpath
 
     @logpath.setter
-    def logpath(self, logpath: Union[str, Path, None]):
+    def logpath(self, logpath: str | Path | None):
         _type_check(logpath, "logfile", (str, Path))
         # set via “file object” branch of logfile.setter
-        self.logfile = Path(logpath).open('a')
+        self.logfile = Path(logpath).open("a")
         self._logpath = Path(logpath)
 
     @property
@@ -358,8 +385,8 @@ class ScanpyConfig:
         return self._logfile
 
     @logfile.setter
-    def logfile(self, logfile: Union[str, Path, TextIO, None]):
-        if not hasattr(logfile, 'write') and logfile:
+    def logfile(self, logfile: str | Path | TextIO | None):
+        if not hasattr(logfile, "write") and logfile:
             self.logpath = logfile
         else:  # file object
             if not logfile:  # None or ''
@@ -369,7 +396,7 @@ class ScanpyConfig:
             _set_log_file(self)
 
     @property
-    def categories_to_ignore(self) -> List[str]:
+    def categories_to_ignore(self) -> list[str]:
         """\
         Categories that are omitted in plotting etc.
         """
@@ -386,15 +413,6 @@ class ScanpyConfig:
     # Functions
     # --------------------------------------------------------------------------------
 
-    # Collected from the print_* functions in matplotlib.backends
-    # fmt: off
-    _Format = Literal[
-        'png', 'jpg', 'tif', 'tiff',
-        'pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf',
-        'raw', 'rgba',
-    ]
-    # fmt: on
-
     def set_figure_params(
         self,
         scanpy: bool = True,
@@ -403,10 +421,10 @@ class ScanpyConfig:
         frameon: bool = True,
         vector_friendly: bool = True,
         fontsize: int = 14,
-        figsize: Optional[int] = None,
-        color_map: Optional[str] = None,
+        figsize: int | None = None,
+        color_map: str | None = None,
         format: _Format = "pdf",
-        facecolor: Optional[str] = None,
+        facecolor: str | None = None,
         transparent: bool = False,
         ipython_format: str = "png2x",
     ):
@@ -462,14 +480,14 @@ class ScanpyConfig:
         if transparent is not None:
             rcParams["savefig.transparent"] = transparent
         if facecolor is not None:
-            rcParams['figure.facecolor'] = facecolor
-            rcParams['axes.facecolor'] = facecolor
+            rcParams["figure.facecolor"] = facecolor
+            rcParams["axes.facecolor"] = facecolor
         if scanpy:
             from .plotting._rcmod import set_rcParams_scanpy
 
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
         if figsize is not None:
-            rcParams['figure.figsize'] = figsize
+            rcParams["figure.figsize"] = figsize
         self._frameon = frameon
 
     @staticmethod
@@ -480,10 +498,10 @@ class ScanpyConfig:
         return getattr(builtins, "__IPYTHON__", False)
 
     def __str__(self) -> str:
-        return '\n'.join(
-            f'{k} = {v!r}'
+        return "\n".join(
+            f"{k} = {v!r}"
             for k, v in inspect.getmembers(self)
-            if not k.startswith("_") and not k == 'getdoc'
+            if not k.startswith("_") and not k == "getdoc"
         )
 
 

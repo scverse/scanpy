@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import warnings
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pytest
@@ -8,6 +11,9 @@ from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
 from scanpy import Neighbors
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
@@ -115,8 +121,10 @@ def neigh() -> Neighbors:
     return get_neighbors()
 
 
-@pytest.mark.parametrize('method', ['umap', 'gauss'])
-def test_distances_euclidean(mocker, neigh, method):
+@pytest.mark.parametrize("method", ["umap", "gauss"])
+def test_distances_euclidean(
+    mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss"]
+):
     """umap and gauss behave the same for distances.
 
     They call pynndescent for large data.
@@ -124,59 +132,64 @@ def test_distances_euclidean(mocker, neigh, method):
     from pynndescent import NNDescent
 
     # When trying to compress a too-small index, pynndescent complains
-    mocker.patch.object(NNDescent, 'compress_index', return_val=None)
+    mocker.patch.object(NNDescent, "compress_index", return_val=None)
 
     neigh.compute_neighbors(n_neighbors, method=method)
     np.testing.assert_allclose(neigh.distances.toarray(), distances_euclidean)
 
 
 @pytest.mark.parametrize(
-    ('transformer', 'knn'),
+    ("transformer", "knn"),
     [
         # knn=False trivially returns all distances
-        pytest.param(None, False, id='knn=False'),
+        pytest.param(None, False, id="knn=False"),
         # pynndescent returns all distances when data is so small
-        pytest.param('pynndescent', True, id='pynndescent'),
+        pytest.param("pynndescent", True, id="pynndescent"),
         # Explicit brute force also returns all distances
         pytest.param(
-            KNeighborsTransformer(n_neighbors=n_neighbors, algorithm='brute'),
+            KNeighborsTransformer(n_neighbors=n_neighbors, algorithm="brute"),
             True,
-            id='sklearn',
+            id="sklearn",
         ),
     ],
 )
 def test_distances_all(neigh: Neighbors, transformer, knn):
     neigh.compute_neighbors(
-        n_neighbors, transformer=transformer, method='gauss', knn=knn
+        n_neighbors, transformer=transformer, method="gauss", knn=knn
     )
     dists = neigh.distances.toarray() if issparse(neigh.distances) else neigh.distances
     np.testing.assert_allclose(dists, distances_euclidean_all)
 
 
-def test_umap_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(n_neighbors, method='umap')
-    np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_umap)
+@pytest.mark.parametrize(
+    ("method", "conn", "trans", "trans_sym"),
+    [
+        pytest.param(
+            "umap",
+            connectivities_umap,
+            transitions_umap,
+            transitions_sym_umap,
+            id="umap",
+        ),
+        pytest.param(
+            "gauss",
+            connectivities_gauss_knn,
+            transitions_gauss_knn,
+            transitions_sym_gauss_knn,
+            id="gauss",
+        ),
+    ],
+)
+def test_connectivities_euclidean(neigh: Neighbors, method, conn, trans, trans_sym):
+    neigh.compute_neighbors(n_neighbors, method=method)
+    np.testing.assert_allclose(neigh.connectivities.toarray(), conn)
     neigh.compute_transitions()
-    np.testing.assert_allclose(
-        neigh.transitions_sym.toarray(), transitions_sym_umap, rtol=1e-5
-    )
-    np.testing.assert_allclose(neigh.transitions.toarray(), transitions_umap, rtol=1e-5)
-
-
-def test_gauss_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(n_neighbors, method='gauss')
-    np.testing.assert_allclose(neigh.connectivities.toarray(), connectivities_gauss_knn)
-    neigh.compute_transitions()
-    np.testing.assert_allclose(
-        neigh.transitions_sym.toarray(), transitions_sym_gauss_knn, rtol=1e-5
-    )
-    np.testing.assert_allclose(
-        neigh.transitions.toarray(), transitions_gauss_knn, rtol=1e-5
-    )
+    np.testing.assert_allclose(neigh.transitions_sym.toarray(), trans_sym, rtol=1e-5)
+    np.testing.assert_allclose(neigh.transitions.toarray(), trans, rtol=1e-5)
 
 
 def test_gauss_noknn_connectivities_euclidean(neigh):
-    neigh.compute_neighbors(n_neighbors, method='gauss', knn=False)
+    neigh.compute_neighbors(n_neighbors, method="gauss", knn=False)
     np.testing.assert_allclose(neigh.connectivities, connectivities_gauss_noknn)
     neigh.compute_transitions()
     np.testing.assert_allclose(
@@ -201,7 +214,7 @@ def test_use_rep_argument():
     adata = AnnData(np.random.randn(30, 300))
     sc.pp.pca(adata)
     neigh_pca = Neighbors(adata)
-    neigh_pca.compute_neighbors(n_pcs=5, use_rep='X_pca')
+    neigh_pca.compute_neighbors(n_pcs=5, use_rep="X_pca")
     neigh_none = Neighbors(adata)
     neigh_none.compute_neighbors(n_pcs=5, use_rep=None)
     np.testing.assert_allclose(
@@ -209,14 +222,14 @@ def test_use_rep_argument():
     )
 
 
-@pytest.mark.parametrize('conv', [csr_matrix.toarray, csr_matrix])
+@pytest.mark.parametrize("conv", [csr_matrix.toarray, csr_matrix])
 def test_restore_n_neighbors(neigh, conv):
-    neigh.compute_neighbors(n_neighbors, method='gauss')
+    neigh.compute_neighbors(n_neighbors, method="gauss")
 
     ad = AnnData(np.array(X))
     # Allow deprecated usage for now
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        ad.uns['neighbors'] = dict(connectivities=conv(neigh.connectivities))
+        ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1

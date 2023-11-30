@@ -1,17 +1,20 @@
 """Preprocessing recipes from the literature"""
-from typing import Optional
+from __future__ import annotations
 
-from anndata import AnnData
+from typing import TYPE_CHECKING
 
-
+from .. import logging as logg
 from .. import preprocessing as pp
 from ._deprecated.highly_variable_genes import (
-    filter_genes_dispersion,
     filter_genes_cv_deprecated,
+    filter_genes_dispersion,
 )
 from ._normalization import normalize_total
-from .. import logging as logg
-from .._utils import AnyRandom
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+
+    from .._utils import AnyRandom
 
 
 def recipe_weinreb17(
@@ -20,10 +23,10 @@ def recipe_weinreb17(
     mean_threshold: float = 0.01,
     cv_threshold: int = 2,
     n_pcs: int = 50,
-    svd_solver='randomized',
+    svd_solver="randomized",
     random_state: AnyRandom = 0,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Normalization and filtering as of [Weinreb17]_.
 
@@ -39,11 +42,12 @@ def recipe_weinreb17(
     copy
         Return a copy if true.
     """
-    from ._deprecated import normalize_per_cell_weinreb16_deprecated, zscore_deprecated
     from scipy.sparse import issparse
 
+    from ._deprecated import normalize_per_cell_weinreb16_deprecated, zscore_deprecated
+
     if issparse(adata.X):
-        raise ValueError('`recipe_weinreb16 does not support sparse matrices.')
+        raise ValueError("`recipe_weinreb16 does not support sparse matrices.")
     if copy:
         adata = adata.copy()
     if log:
@@ -60,13 +64,13 @@ def recipe_weinreb17(
         random_state=random_state,
     )
     # update adata
-    adata.obsm['X_pca'] = X_pca
+    adata.obsm["X_pca"] = X_pca
     return adata if copy else None
 
 
 def recipe_seurat(
     adata: AnnData, log: bool = True, plot: bool = False, copy: bool = False
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Normalization and filtering as of Seurat [Satija15]_.
 
@@ -86,7 +90,7 @@ def recipe_seurat(
     if plot:
         from ..plotting import (
             _preprocessing as ppp,
-        )  # should not import at the top of the file
+        )
 
         ppp.filter_genes_dispersion(filter_result, log=not log)
     adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
@@ -102,7 +106,7 @@ def recipe_zheng17(
     log: bool = True,
     plot: bool = False,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Normalization and filtering as of [Zheng17]_.
 
@@ -146,15 +150,15 @@ def recipe_zheng17(
     -------
     Returns or updates `adata` depending on `copy`.
     """
-    start = logg.info('running recipe zheng17')
+    start = logg.info("running recipe zheng17")
     if copy:
         adata = adata.copy()
     # only consider genes with more than 1 count
     pp.filter_genes(adata, min_counts=1)
     # normalize with total UMI count per cell
-    normalize_total(adata, key_added='n_counts_all')
+    normalize_total(adata, key_added="n_counts_all")
     filter_result = filter_genes_dispersion(
-        adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False
+        adata.X, flavor="cell_ranger", n_top_genes=n_top_genes, log=False
     )
     if plot:  # should not import at the top of the file
         from ..plotting import _preprocessing as ppp
@@ -167,5 +171,5 @@ def recipe_zheng17(
     if log:
         pp.log1p(adata)  # log transform: X = log(X + 1)
     pp.scale(adata)
-    logg.info('    finished', time=start)
+    logg.info("    finished", time=start)
     return adata if copy else None
