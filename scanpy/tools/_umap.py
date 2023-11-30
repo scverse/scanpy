@@ -4,6 +4,7 @@ import warnings
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+from legacy_api_wrap import legacy_api
 from packaging import version
 from sklearn.utils import check_array, check_random_state
 
@@ -18,8 +19,25 @@ if TYPE_CHECKING:
 _InitPos = Literal["paga", "spectral", "random"]
 
 
+@legacy_api(
+    "min_dist",
+    "spread",
+    "n_components",
+    "maxiter",
+    "alpha",
+    "gamma",
+    "negative_sample_rate",
+    "init_pos",
+    "random_state",
+    "a",
+    "b",
+    "copy",
+    "method",
+    "neighbors_key",
+)
 def umap(
     adata: AnnData,
+    *,
     min_dist: float = 0.5,
     spread: float = 1.0,
     n_components: int = 2,

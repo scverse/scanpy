@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
+from legacy_api_wrap import legacy_api
 from packaging import version
 
 from .. import logging as logg
@@ -15,10 +16,21 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@legacy_api(
+    "use_rep",
+    "perplexity",
+    "early_exaggeration",
+    "learning_rate",
+    "random_state",
+    "use_fast_tsne",
+    "n_jobs",
+    "copy",
+)
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(
     adata: AnnData,
     n_pcs: int | None = None,
+    *,
     use_rep: str | None = None,
     perplexity: float | int = 30,
     early_exaggeration: float | int = 12,
@@ -27,7 +39,6 @@ def tsne(
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
     copy: bool = False,
-    *,
     metric: str = "euclidean",
 ) -> AnnData | None:
     """\

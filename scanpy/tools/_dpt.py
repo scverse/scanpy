@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import scipy as sp
+from legacy_api_wrap import legacy_api
 from natsort import natsorted
 
 from .. import logging as logg
@@ -34,9 +35,13 @@ def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
     )
 
 
+@legacy_api(
+    "n_branchings", "min_group_size", "allow_kendall_tau_shift", "neighbors_key", "copy"
+)
 def dpt(
     adata: AnnData,
     n_dcs: int = 10,
+    *,
     n_branchings: int = 0,
     min_group_size: float = 0.01,
     allow_kendall_tau_shift: bool = True,

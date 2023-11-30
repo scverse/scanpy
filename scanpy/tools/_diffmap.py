@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from legacy_api_wrap import legacy_api
+
 from ._dpt import _diffmap
 
 if TYPE_CHECKING:
@@ -10,9 +12,11 @@ if TYPE_CHECKING:
     from .._utils import AnyRandom
 
 
+@legacy_api("neighbors_key", "random_state", "copy")
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
+    *,
     neighbors_key: str | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,

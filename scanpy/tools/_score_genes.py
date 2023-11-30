@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse
 
 from scanpy._utils import _check_use_raw
@@ -45,9 +46,13 @@ def _sparse_nanmean(X, axis):
     return m
 
 
+@legacy_api(
+    "ctrl_size", "gene_pool", "n_bins", "score_name", "random_state", "copy", "use_raw"
+)
 def score_genes(
     adata: AnnData,
     gene_list: Sequence[str],
+    *,
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | None = None,
     n_bins: int = 25,
@@ -198,8 +203,10 @@ def score_genes(
     return adata if copy else None
 
 
+@legacy_api("s_genes", "g2m_genes", "copy")
 def score_genes_cell_cycle(
     adata: AnnData,
+    *,
     s_genes: Sequence[str],
     g2m_genes: Sequence[str],
     copy: bool = False,

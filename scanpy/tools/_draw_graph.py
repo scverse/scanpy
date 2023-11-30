@@ -4,6 +4,7 @@ import random
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+from legacy_api_wrap import legacy_api
 
 from .. import _utils
 from .. import logging as logg
@@ -18,9 +19,21 @@ _LAYOUTS = ("fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa")
 _Layout = Literal[_LAYOUTS]
 
 
+@legacy_api(
+    "init_pos",
+    "root",
+    "random_state",
+    "n_jobs",
+    "adjacency",
+    "key_added_ext",
+    "neighbors_key",
+    "obsp",
+    "copy",
+)
 def draw_graph(
     adata: AnnData,
     layout: _Layout = "fa",
+    *,
     init_pos: str | bool | None = None,
     root: int | None = None,
     random_state: AnyRandom = 0,

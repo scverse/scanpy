@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from natsort import natsorted
 from packaging import version
 
@@ -30,9 +31,24 @@ except ImportError:
     MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
+@legacy_api(
+    "random_state",
+    "restrict_to",
+    "key_added",
+    "adjacency",
+    "flavor",
+    "directed",
+    "use_weights",
+    "partition_type",
+    "partition_kwargs",
+    "neighbors_key",
+    "obsp",
+    "copy",
+)
 def louvain(
     adata: AnnData,
     resolution: float | None = None,
+    *,
     random_state: _utils.AnyRandom = 0,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",

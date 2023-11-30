@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse, vstack
 
 from .. import _utils
@@ -449,10 +450,25 @@ class _RankGenes:
             self.stats.index = self.var_names
 
 
-# TODO: Make arguments after groupby keyword only
+@legacy_api(
+    "mask",
+    "use_raw",
+    "groups",
+    "reference",
+    "n_genes",
+    "rankby_abs",
+    "pts",
+    "key_added",
+    "copy",
+    "method",
+    "corr_method",
+    "tie_correct",
+    "layer",
+)
 def rank_genes_groups(
     adata: AnnData,
     groupby: str,
+    *,
     mask: NDArray[np.bool_] | str | None = None,
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
