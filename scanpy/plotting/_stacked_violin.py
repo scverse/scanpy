@@ -333,7 +333,7 @@ class StackedViolin(BasePlot):
         _color_df = _matrix.groupby(level=0).median()
         if len(self.groupby_cols) > 0:
             _color_df = self._convert_tidy_to_stacked(_color_df)
-            self.stacked_violin_col_order = _color_df.columns
+        self.stacked_violin_col_order = _color_df.columns
         if self.are_axes_swapped:
             _color_df = _color_df.T
             self.stacked_violin_col_order = _color_df.columns
