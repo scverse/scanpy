@@ -692,7 +692,7 @@ class DotPlot(BasePlot):
         if "cmap" in kwds:
             del kwds["cmap"]
         if dot_max is None:
-            dot_max = np.ceil(max(frac) * 10) / 10
+            dot_max = np.ceil(np.nanmax(frac) * 10) / 10
         else:
             if dot_max < 0 or dot_max > 1:
                 raise ValueError("`dot_max` value has to be between 0 and 1")
