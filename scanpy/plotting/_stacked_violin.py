@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -327,14 +328,14 @@ class StackedViolin(BasePlot):
             _matrix.index = _matrix.index.reorder_categories(
                 self.categories_order, ordered=True
             )
-
         # get mean values for color and transform to color values
         # using colormap
         _color_df = _matrix.groupby(level=0).median()
-        if self.are_axes_swapped:
-            _color_df = _color_df.T
         if len(self.groupby_cols) > 0:
             _color_df = self._convert_tidy_to_stacked(_color_df)
+            self.stacked_violin_col_order = _color_df.columns
+        if self.are_axes_swapped:
+            _color_df = _color_df.T
 
         cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
         if "cmap" in self.kwds:
@@ -404,8 +405,12 @@ class StackedViolin(BasePlot):
         # All columns should have a unique name, yet, frequently
         # gene names are repeated in self.var_names,  otherwise the
         # violin plot will not distinguish those genes
-        _matrix.columns = [f"{x}_{idx}" for idx, x in enumerate(_matrix.columns)]
-
+        # _matrix.columns = [f"{x}_{idx}" for idx, x in enumerate(_matrix.columns)] # added warning as this row was commented out
+        if _matrix.columns.value_counts().max()>1:
+            warn(
+                f"Duplicate gene or condition labels present."
+                "Results might be unexpected."
+            )
         # transform the  dataframe into a dataframe having three columns:
         # the categories name (from groupby),
         # the gene name
@@ -470,7 +475,6 @@ class StackedViolin(BasePlot):
                 palette_colors = colormap_array[idx, :]
             else:
                 palette_colors = None
-
             if not self.are_axes_swapped:
                 x = "genes"
                 _df = df[df.categories == row_label]
@@ -485,6 +489,7 @@ class StackedViolin(BasePlot):
                 x=x,
                 y="values",
                 data=_df,
+                order=self.stacked_violin_col_order,
                 orient="vertical",
                 ax=row_ax,
                 palette=palette_colors,

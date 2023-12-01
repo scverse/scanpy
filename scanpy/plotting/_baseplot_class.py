@@ -122,7 +122,6 @@ class BasePlot:
             layer=layer,
             gene_symbols=gene_symbols,
         )
-        
         # reset obs_tidy if using groupby_cols
         if len(self.groupby_cols) > 0:
             # TODO : Check if we rather need the product of categories ?
@@ -586,7 +585,6 @@ class BasePlot:
     def _mainplot(self, ax):
         y_labels = self.categories
         x_labels = self.var_names
-
         if self.var_names_idx_order is not None:
             x_labels = [x_labels[x] for x in self.var_names_idx_order]
 
