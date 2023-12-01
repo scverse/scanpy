@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from functools import partial
-from itertools import repeat, chain
+from itertools import chain, repeat
 
 import numpy as np
 import pandas as pd
@@ -10,7 +12,6 @@ from scipy import sparse
 import scanpy as sc
 from scanpy.datasets._utils import filter_oldformatwarning
 from scanpy.testing._helpers.data import pbmc68k_reduced
-
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
     "dim,transform,func",

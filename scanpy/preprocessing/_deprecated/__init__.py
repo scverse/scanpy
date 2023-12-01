@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import csr_matrix, issparse
 
 
 def normalize_per_cell_weinreb16_deprecated(

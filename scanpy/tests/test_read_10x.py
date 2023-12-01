@@ -1,12 +1,14 @@
-from unittest.mock import patch
+from __future__ import annotations
+
+import shutil
 from pathlib import Path
+from unittest.mock import patch
 
 import h5py
 import numpy as np
 import pytest
-import scanpy as sc
-import shutil
 
+import scanpy as sc
 
 ROOT = Path(__file__).parent
 ROOT = ROOT / "_data" / "10x_data"

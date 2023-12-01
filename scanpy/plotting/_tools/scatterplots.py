@@ -1,47 +1,32 @@
 from __future__ import annotations
 
-import sys
-import inspect
 import collections.abc as cabc
+import inspect
+import sys
+from collections.abc import Mapping, Sequence  # noqa: TCH003
 from copy import copy
-from numbers import Integral
+from functools import partial
 from itertools import combinations, product
-from typing import (
-    Collection,
-    Union,
-    Optional,
-    Sequence,
-    Any,
-    Mapping,
-    List,
-    Tuple,
-    Literal,
-)
+from numbers import Integral
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
-from cycler import Cycler
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
-from pandas.api.types import CategoricalDtype
-from matplotlib import pyplot as pl, colors, colormaps
-from matplotlib import rcParams
-from matplotlib import patheffects
+from anndata import AnnData  # noqa: TCH002
+from cycler import Cycler  # noqa: TCH002
+from matplotlib import colormaps, colors, patheffects, rcParams
+from matplotlib import pyplot as plt
+from matplotlib.axes import Axes  # noqa: TCH002
 from matplotlib.colors import Colormap, Normalize
-from functools import partial
+from matplotlib.figure import Figure  # noqa: TCH002
+from numpy.typing import NDArray  # noqa: TCH002
+from pandas.api.types import CategoricalDtype
 
+from ... import logging as logg
+from ..._settings import settings
+from ..._utils import Empty, _doc_params, _empty, sanitize_anndata
+from ...get import _check_mask
 from .. import _utils
-from .._utils import (
-    _IGraphLayout,
-    _FontWeight,
-    _FontSize,
-    ColorLike,
-    VBound,
-    circles,
-    check_projection,
-    check_colornorm,
-)
 from .._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
@@ -49,9 +34,19 @@ from .._docs import (
     doc_scatter_spatial,
     doc_show_save_ax,
 )
-from ... import logging as logg
-from ..._settings import settings
-from ..._utils import sanitize_anndata, _doc_params, Empty, _empty
+from .._utils import (
+    ColorLike,
+    VBound,
+    _FontSize,
+    _FontWeight,
+    _IGraphLayout,
+    check_colornorm,
+    check_projection,
+    circles,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 
 @_doc_params(
@@ -64,52 +59,53 @@ def embedding(
     adata: AnnData,
     basis: str,
     *,
-    color: Union[str, Sequence[str], None] = None,
-    gene_symbols: Optional[str] = None,
-    use_raw: Optional[bool] = None,
+    color: str | Sequence[str] | None = None,
+    mask: NDArray[np.bool_] | str | None = None,
+    gene_symbols: str | None = None,
+    use_raw: bool | None = None,
     sort_order: bool = True,
     edges: bool = False,
     edges_width: float = 0.1,
-    edges_color: Union[str, Sequence[float], Sequence[str]] = "grey",
-    neighbors_key: Optional[str] = None,
+    edges_color: str | Sequence[float] | Sequence[str] = "grey",
+    neighbors_key: str | None = None,
     arrows: bool = False,
-    arrows_kwds: Optional[Mapping[str, Any]] = None,
-    groups: Optional[str] = None,
-    components: Union[str, Sequence[str]] = None,
-    dimensions: Optional[Union[Tuple[int, int], Sequence[Tuple[int, int]]]] = None,
-    layer: Optional[str] = None,
+    arrows_kwds: Mapping[str, Any] | None = None,
+    groups: str | Sequence[str] | None = None,
+    components: str | Sequence[str] | None = None,
+    dimensions: tuple[int, int] | Sequence[tuple[int, int]] | None = None,
+    layer: str | None = None,
     projection: Literal["2d", "3d"] = "2d",
-    scale_factor: Optional[float] = None,
-    color_map: Union[Colormap, str, None] = None,
-    cmap: Union[Colormap, str, None] = None,
-    palette: Union[str, Sequence[str], Cycler, None] = None,
+    scale_factor: float | None = None,
+    color_map: Colormap | str | None = None,
+    cmap: Colormap | str | None = None,
+    palette: str | Sequence[str] | Cycler | None = None,
     na_color: ColorLike = "lightgray",
     na_in_legend: bool = True,
-    size: Union[float, Sequence[float], None] = None,
-    frameon: Optional[bool] = None,
-    legend_fontsize: Union[int, float, _FontSize, None] = None,
-    legend_fontweight: Union[int, _FontWeight] = "bold",
+    size: float | Sequence[float] | None = None,
+    frameon: bool | None = None,
+    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontweight: int | _FontWeight = "bold",
     legend_loc: str = "right margin",
-    legend_fontoutline: Optional[int] = None,
-    colorbar_loc: Optional[str] = "right",
-    vmax: Union[VBound, Sequence[VBound], None] = None,
-    vmin: Union[VBound, Sequence[VBound], None] = None,
-    vcenter: Union[VBound, Sequence[VBound], None] = None,
-    norm: Union[Normalize, Sequence[Normalize], None] = None,
-    add_outline: Optional[bool] = False,
-    outline_width: Tuple[float, float] = (0.3, 0.05),
-    outline_color: Tuple[str, str] = ("black", "white"),
+    legend_fontoutline: int | None = None,
+    colorbar_loc: str | None = "right",
+    vmax: VBound | Sequence[VBound] | None = None,
+    vmin: VBound | Sequence[VBound] | None = None,
+    vcenter: VBound | Sequence[VBound] | None = None,
+    norm: Normalize | Sequence[Normalize] | None = None,
+    add_outline: bool | None = False,
+    outline_width: tuple[float, float] = (0.3, 0.05),
+    outline_color: tuple[str, str] = ("black", "white"),
     ncols: int = 4,
     hspace: float = 0.25,
-    wspace: Optional[float] = None,
-    title: Union[str, Sequence[str], None] = None,
-    show: Optional[bool] = None,
-    save: Union[bool, str, None] = None,
-    ax: Optional[Axes] = None,
-    return_fig: Optional[bool] = None,
-    marker: Union[str, Sequence[str]] = ".",
+    wspace: float | None = None,
+    title: str | Sequence[str] | None = None,
+    show: bool | None = None,
+    save: bool | str | None = None,
+    ax: Axes | None = None,
+    return_fig: bool | None = None,
+    marker: str | Sequence[str] = ".",
     **kwargs,
-) -> Union[Figure, Axes, None]:
+) -> Figure | Axes | None:
     """\
     Scatter plot for user specified embedding basis (e.g. umap, pca, etc)
 
@@ -138,6 +134,12 @@ def embedding(
         components, dimensions, projection=projection, total_dims=basis_values.shape[1]
     )
     args_3d = dict(projection="3d") if projection == "3d" else {}
+
+    # Checking the mask format and if used together with groups
+    if groups is not None and mask is not None:
+        raise ValueError("Groups and mask arguments are incompatible.")
+    if mask is not None:
+        mask = _check_mask(adata, mask, "obs")
 
     # Figure out if we're using raw
     if use_raw is None:
@@ -246,7 +248,7 @@ def embedding(
     else:
         grid = None
         if ax is None:
-            fig = pl.figure()
+            fig = plt.figure()
             ax = fig.add_subplot(111, **args_3d)
 
     ############
@@ -265,6 +267,7 @@ def embedding(
             adata,
             value_to_plot,
             layer=layer,
+            mask=mask,
             use_raw=use_raw,
             gene_symbols=gene_symbols,
             groups=groups,
@@ -272,7 +275,7 @@ def embedding(
         color_vector, categorical = _color_vector(
             adata,
             value_to_plot,
-            color_source_vector,
+            values=color_source_vector,
             palette=palette,
             na_color=na_color,
         )
@@ -295,7 +298,7 @@ def embedding(
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
         if grid:
-            ax = pl.subplot(grid[count], **args_3d)
+            ax = plt.subplot(grid[count], **args_3d)
             axs.append(ax)
         if not (settings._frameon if frameon is None else frameon):
             ax.axis("off")
@@ -456,7 +459,7 @@ def embedding(
                 multi_panel=bool(grid),
             )
         elif colorbar_loc is not None:
-            pl.colorbar(
+            plt.colorbar(
                 cax, ax=ax, pad=0.01, fraction=0.08, aspect=30, location=colorbar_loc
             )
 
@@ -474,7 +477,7 @@ def _panel_grid(hspace, wspace, ncols, num_panels):
     n_panels_x = min(ncols, num_panels)
     n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
     # each panel will have the size of rcParams['figure.figsize']
-    fig = pl.figure(
+    fig = plt.figure(
         figsize=(
             n_panels_x * rcParams["figure.figsize"][0] * (1 + wspace),
             n_panels_y * rcParams["figure.figsize"][1],
@@ -502,7 +505,7 @@ def _get_vboundnorm(
     norm: Sequence[Normalize],
     index: int,
     color_vector: Sequence[float],
-) -> Tuple[Union[float, None], Union[float, None]]:
+) -> tuple[float | None, float | None]:
     """
     Evaluates the value of vmin, vmax and vcenter, which could be a
     str in which case is interpreted as a percentile and should
@@ -624,7 +627,7 @@ def _wraps_plot_scatter(wrapper):
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
+def umap(adata, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in UMAP basis.
 
@@ -686,7 +689,7 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
+def tsne(adata, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in tSNE basis.
 
@@ -726,7 +729,7 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
+def diffmap(adata, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in Diffusion Map basis.
 
@@ -767,8 +770,8 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     show_save_ax=doc_show_save_ax,
 )
 def draw_graph(
-    adata: AnnData, *, layout: Optional[_IGraphLayout] = None, **kwargs
-) -> Union[Axes, List[Axes], None]:
+    adata: AnnData, *, layout: _IGraphLayout | None = None, **kwargs
+) -> Axes | list[Axes] | None:
     """\
     Scatter plot in graph-drawing basis.
 
@@ -804,12 +807,10 @@ def draw_graph(
     """
     if layout is None:
         layout = str(adata.uns["draw_graph"]["params"]["layout"])
-    basis = "draw_graph_" + layout
-    if "X_" + basis not in adata.obsm_keys():
+    basis = f"draw_graph_{layout}"
+    if f"X_{basis}" not in adata.obsm_keys():
         raise ValueError(
-            "Did not find {} in adata.obs. Did you compute layout {}?".format(
-                "draw_graph_" + layout, layout
-            )
+            f"Did not find {basis} in adata.obs. Did you compute layout {layout}?"
         )
 
     return embedding(adata, basis, **kwargs)
@@ -825,11 +826,11 @@ def pca(
     adata,
     *,
     annotate_var_explained: bool = False,
-    show: Optional[bool] = None,
-    return_fig: Optional[bool] = None,
-    save: Union[bool, str, None] = None,
+    show: bool | None = None,
+    return_fig: bool | None = None,
+    save: bool | str | None = None,
     **kwargs,
-) -> Union[Axes, List[Axes], None]:
+) -> Axes | list[Axes] | None:
     """\
     Scatter plot in PCA coordinates.
 
@@ -874,7 +875,6 @@ def pca(
 
     See also
     --------
-    tl.pca
     pp.pca
     """
     if not annotate_var_explained:
@@ -889,7 +889,7 @@ def pca(
             )
 
         label_dict = {
-            "PC{}".format(i + 1): "PC{} ({}%)".format(i + 1, round(v * 100, 2))
+            f"PC{i + 1}": f"PC{i + 1} ({round(v * 100, 2)}%)"
             for i, v in enumerate(adata.uns["pca"]["variance_ratio"])
         }
 
@@ -929,21 +929,21 @@ def spatial(
     adata,
     *,
     basis: str = "spatial",
-    img: Union[np.ndarray, None] = None,
-    img_key: Union[str, None, Empty] = _empty,
-    library_id: Union[str, None, Empty] = _empty,
-    crop_coord: Tuple[int, int, int, int] = None,
+    img: np.ndarray | None = None,
+    img_key: str | None | Empty = _empty,
+    library_id: str | None | Empty = _empty,
+    crop_coord: tuple[int, int, int, int] | None = None,
     alpha_img: float = 1.0,
-    bw: Optional[bool] = False,
+    bw: bool | None = False,
     size: float = 1.0,
-    scale_factor: Optional[float] = None,
-    spot_size: Optional[float] = None,
-    na_color: Optional[ColorLike] = None,
-    show: Optional[bool] = None,
-    return_fig: Optional[bool] = None,
-    save: Union[bool, str, None] = None,
+    scale_factor: float | None = None,
+    spot_size: float | None = None,
+    na_color: ColorLike | None = None,
+    show: bool | None = None,
+    return_fig: bool | None = None,
+    save: bool | str | None = None,
     **kwargs,
-) -> Union[Axes, List[Axes], None]:
+) -> Axes | list[Axes] | None:
     """\
     Scatter plot in spatial coordinates.
 
@@ -1044,12 +1044,12 @@ def spatial(
 
 # Helpers
 def _components_to_dimensions(
-    components: Optional[Union[str, Collection[str]]],
-    dimensions: Optional[Union[Collection[int], Collection[Collection[int]]]],
+    components: str | Collection[str] | None,
+    dimensions: Collection[int] | Collection[Collection[int]] | None,
     *,
     projection: Literal["2d", "3d"] = "2d",
     total_dims: int,
-) -> List[Collection[int]]:
+) -> list[Collection[int]]:
     """Normalize components/ dimensions args for embedding plots."""
     # TODO: Deprecate components kwarg
     ndims = {"2d": 2, "3d": 3}[projection]
@@ -1159,11 +1159,13 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
 
 def _get_color_source_vector(
     adata: AnnData,
-    value_to_plot,
-    use_raw=False,
-    gene_symbols=None,
-    layer=None,
-    groups=None,
+    value_to_plot: str,
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    use_raw: bool = False,
+    gene_symbols: str | None = None,
+    layer: str | None = None,
+    groups: Sequence[str] | None = None,
 ):
     """
     Get array from adata that colors will be based on.
@@ -1187,6 +1189,8 @@ def _get_color_source_vector(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
+    if mask is not None:
+        values[~mask] = np.nan
     if groups and isinstance(values, pd.Categorical):
         values = values.remove_categories(values.categories.difference(groups))
     return values
@@ -1213,10 +1217,11 @@ def _get_palette(adata, values_key: str, palette=None):
 def _color_vector(
     adata: AnnData,
     values_key: str,
+    *,
     values: np.ndarray | pd.api.extensions.ExtensionArray,
-    palette,
-    na_color="lightgray",
-) -> Tuple[np.ndarray | pd.api.extensions.ExtensionArray, bool]:
+    palette: str | Sequence[str] | Cycler | None,
+    na_color: ColorLike = "lightgray",
+) -> tuple[np.ndarray | pd.api.extensions.ExtensionArray, bool]:
     """
     Map array of values to array of hex (plus alpha) codes.
 
@@ -1273,9 +1278,7 @@ def _basis2name(basis):
     return component_name
 
 
-def _check_spot_size(
-    spatial_data: Optional[Mapping], spot_size: Optional[float]
-) -> float:
+def _check_spot_size(spatial_data: Mapping | None, spot_size: float | None) -> float:
     """
     Resolve spot_size value.
 
@@ -1293,9 +1296,9 @@ def _check_spot_size(
 
 
 def _check_scale_factor(
-    spatial_data: Optional[Mapping],
-    img_key: Optional[str],
-    scale_factor: Optional[float],
+    spatial_data: Mapping | None,
+    img_key: str | None,
+    scale_factor: float | None,
 ) -> float:
     """Resolve scale_factor, defaults to 1."""
     if scale_factor is not None:
@@ -1307,8 +1310,8 @@ def _check_scale_factor(
 
 
 def _check_spatial_data(
-    uns: Mapping, library_id: Union[str, None, Empty]
-) -> Tuple[Optional[str], Optional[Mapping]]:
+    uns: Mapping, library_id: str | None | Empty
+) -> tuple[str | None, Mapping | None]:
     """
     Given a mapping, try and extract a library id/ mapping with spatial data.
 
@@ -1333,11 +1336,11 @@ def _check_spatial_data(
 
 
 def _check_img(
-    spatial_data: Optional[Mapping],
-    img: Optional[np.ndarray],
-    img_key: Union[None, str, Empty],
+    spatial_data: Mapping | None,
+    img: np.ndarray | None,
+    img_key: None | str | Empty,
     bw: bool = False,
-) -> Tuple[Optional[np.ndarray], Optional[str]]:
+) -> tuple[np.ndarray | None, str | None]:
     """
     Resolve image for spatial plots.
     """
@@ -1353,9 +1356,9 @@ def _check_img(
 
 
 def _check_crop_coord(
-    crop_coord: Optional[tuple],
+    crop_coord: tuple | None,
     scale_factor: float,
-) -> Tuple[float, float, float, float]:
+) -> tuple[float, float, float, float]:
     """Handle cropping with image or basis."""
     if crop_coord is None:
         return None
@@ -1366,7 +1369,7 @@ def _check_crop_coord(
 
 
 def _check_na_color(
-    na_color: Optional[ColorLike], *, img: Optional[np.ndarray] = None
+    na_color: ColorLike | None, *, img: np.ndarray | None = None
 ) -> ColorLike:
     if na_color is None:
         if img is not None:
@@ -1378,7 +1381,6 @@ def _check_na_color(
 
 def _broadcast_args(*args):
     """Broadcasts arguments to a common length."""
-    from itertools import repeat
 
     lens = [len(arg) for arg in args]
     longest = max(lens)

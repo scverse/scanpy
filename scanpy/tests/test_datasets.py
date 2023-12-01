@@ -1,13 +1,16 @@
 """
 Tests to make sure the example datasets load.
 """
+from __future__ import annotations
 
-import scanpy as sc
+import subprocess
+from pathlib import Path
+
 import numpy as np
 import pytest
-from pathlib import Path
 from anndata.tests.helpers import assert_adata_equal
-import subprocess
+
+import scanpy as sc
 
 
 @pytest.fixture(scope="module")

@@ -1,8 +1,12 @@
-import warnings
+from __future__ import annotations
 
-from sphinx.application import Sphinx
+import warnings
+from typing import TYPE_CHECKING
+
 from sphinx.ext.napoleon import NumpyDocstring
 
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 _format_docutils_params_orig = NumpyDocstring._format_docutils_params
 param_warnings = {}

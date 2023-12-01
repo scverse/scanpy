@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import logging
 import sys
-from functools import update_wrapper, partial
-from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Optional, IO
 import warnings
+from datetime import datetime, timedelta, timezone
+from functools import partial, update_wrapper
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
+from typing import IO, TYPE_CHECKING
 
 import anndata.logging
 
@@ -31,9 +31,9 @@ class _RootLogger(logging.RootLogger):
         level: int,
         msg: str,
         *,
-        extra: Optional[dict] = None,
+        extra: dict | None = None,
         time: datetime = None,
-        deep: Optional[str] = None,
+        deep: str | None = None,
     ) -> datetime:
         from ._settings import settings
 
@@ -163,7 +163,7 @@ def print_header(*, file=None):
     )
 
 
-def print_versions(*, file: Optional[IO[str]] = None):
+def print_versions(*, file: IO[str] | None = None):
     """\
     Print versions of imported packages, OS, and jupyter environment.
 
@@ -218,8 +218,8 @@ def error(
     msg: str,
     *,
     time: datetime = None,
-    deep: Optional[str] = None,
-    extra: Optional[dict] = None,
+    deep: str | None = None,
+    extra: dict | None = None,
 ) -> datetime:
     """\
     Log message with specific level and return current time.

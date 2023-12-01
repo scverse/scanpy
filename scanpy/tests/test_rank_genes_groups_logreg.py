@@ -1,8 +1,10 @@
-import pytest
+from __future__ import annotations
 
 import numpy as np
-import scanpy as sc
 import pandas as pd
+import pytest
+
+import scanpy as sc
 
 
 @pytest.mark.parametrize("method", ["t-test", "logreg"])

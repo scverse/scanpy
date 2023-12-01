@@ -1,9 +1,11 @@
-import scanpy as sc
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
-from scanpy.testing._pytest.marks import needs
+import scanpy as sc
 from scanpy.testing._helpers.data import pbmc68k_reduced
+from scanpy.testing._pytest.marks import needs
 
 n_neighbors = 5
 key = "test"
@@ -31,8 +33,8 @@ def test_neighbors_key_added(adata):
 
 
 # test functions with neighbors_key and obsp
-@needs("igraph")
-@needs("leidenalg")
+@needs.igraph
+@needs.leidenalg
 @pytest.mark.parametrize("field", ["neighbors_key", "obsp"])
 def test_neighbors_key_obsp(adata, field):
     adata1 = adata.copy()
@@ -78,7 +80,7 @@ def test_neighbors_key_obsp(adata, field):
         )
 
 
-@needs("louvain")
+@needs.louvain
 @pytest.mark.parametrize("field", ["neighbors_key", "obsp"])
 def test_neighbors_key_obsp_louvain(adata, field):
     adata1 = adata.copy()

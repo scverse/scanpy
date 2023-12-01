@@ -1,26 +1,31 @@
-from typing import Optional, Union, Mapping, Literal  # Special
-from typing import Sequence  # ABCs
-from typing import Tuple  # Classes
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-import pandas as pd
-from anndata import AnnData
-from matplotlib import pyplot as pl
+from matplotlib import pyplot as plt
 from matplotlib import rcParams
-from matplotlib.colors import Normalize
 
 from .. import logging as logg
-from .._utils import _doc_params
-from ._utils import fix_kwds, check_colornorm
-from ._utils import ColorLike, _AxesSubplot
-from ._utils import savefig_or_show
 from .._settings import settings
+from .._utils import _doc_params
+from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
 from ._docs import (
     doc_common_plot_args,
     doc_show_save_ax,
     doc_vboundnorm,
 )
-from ._baseplot_class import BasePlot, doc_common_groupby_plot_args, _VarNames
+from ._utils import ColorLike, _AxesSubplot, check_colornorm, fix_kwds, savefig_or_show
+
+if TYPE_CHECKING:
+    from collections.abc import (
+        Mapping,  # Special
+        Sequence,  # ABCs
+    )
+
+    import pandas as pd
+    from anndata import AnnData
+    from matplotlib.colors import Normalize
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -92,26 +97,26 @@ class MatrixPlot(BasePlot):
     def __init__(
         self,
         adata: AnnData,
-        var_names: Union[_VarNames, Mapping[str, _VarNames]],
-        groupby: Union[str, Sequence[str]],
-        use_raw: Optional[bool] = None,
+        var_names: _VarNames | Mapping[str, _VarNames],
+        groupby: str | Sequence[str],
+        use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
-        categories_order: Optional[Sequence[str]] = None,
-        title: Optional[str] = None,
-        figsize: Optional[Tuple[float, float]] = None,
-        gene_symbols: Optional[str] = None,
-        var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
-        var_group_labels: Optional[Sequence[str]] = None,
-        var_group_rotation: Optional[float] = None,
-        layer: Optional[str] = None,
+        categories_order: Sequence[str] | None = None,
+        title: str | None = None,
+        figsize: tuple[float, float] | None = None,
+        gene_symbols: str | None = None,
+        var_group_positions: Sequence[tuple[int, int]] | None = None,
+        var_group_labels: Sequence[str] | None = None,
+        var_group_rotation: float | None = None,
+        layer: str | None = None,
         standard_scale: Literal["var", "group"] = None,
-        ax: Optional[_AxesSubplot] = None,
-        values_df: Optional[pd.DataFrame] = None,
-        vmin: Optional[float] = None,
-        vmax: Optional[float] = None,
-        vcenter: Optional[float] = None,
-        norm: Optional[Normalize] = None,
+        ax: _AxesSubplot | None = None,
+        values_df: pd.DataFrame | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        vcenter: float | None = None,
+        norm: Normalize | None = None,
         **kwds,
     ):
         BasePlot.__init__(
@@ -162,8 +167,8 @@ class MatrixPlot(BasePlot):
     def style(
         self,
         cmap: str = DEFAULT_COLORMAP,
-        edge_color: Optional[ColorLike] = DEFAULT_EDGE_COLOR,
-        edge_lw: Optional[float] = DEFAULT_EDGE_LW,
+        edge_color: ColorLike | None = DEFAULT_EDGE_COLOR,
+        edge_lw: float | None = DEFAULT_EDGE_LW,
     ):
         """\
         Modifies plot visual parameters.
@@ -230,7 +235,7 @@ class MatrixPlot(BasePlot):
 
         if self.are_axes_swapped:
             _color_df = _color_df.T
-        cmap = pl.get_cmap(self.kwds.get("cmap", self.cmap))
+        cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
         if "cmap" in self.kwds:
             del self.kwds["cmap"]
         normalize = check_colornorm(
@@ -283,34 +288,34 @@ class MatrixPlot(BasePlot):
 )
 def matrixplot(
     adata: AnnData,
-    var_names: Union[_VarNames, Mapping[str, _VarNames]],
-    groupby: Union[str, Sequence[str]],
-    use_raw: Optional[bool] = None,
+    var_names: _VarNames | Mapping[str, _VarNames],
+    groupby: str | Sequence[str],
+    use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
-    figsize: Optional[Tuple[float, float]] = None,
-    dendrogram: Union[bool, str] = False,
-    title: Optional[str] = None,
-    cmap: Optional[str] = MatrixPlot.DEFAULT_COLORMAP,
-    colorbar_title: Optional[str] = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
-    gene_symbols: Optional[str] = None,
-    var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
-    var_group_labels: Optional[Sequence[str]] = None,
-    var_group_rotation: Optional[float] = None,
-    layer: Optional[str] = None,
+    figsize: tuple[float, float] | None = None,
+    dendrogram: bool | str = False,
+    title: str | None = None,
+    cmap: str | None = MatrixPlot.DEFAULT_COLORMAP,
+    colorbar_title: str | None = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
+    gene_symbols: str | None = None,
+    var_group_positions: Sequence[tuple[int, int]] | None = None,
+    var_group_labels: Sequence[str] | None = None,
+    var_group_rotation: float | None = None,
+    layer: str | None = None,
     standard_scale: Literal["var", "group"] = None,
-    values_df: Optional[pd.DataFrame] = None,
+    values_df: pd.DataFrame | None = None,
     swap_axes: bool = False,
-    show: Optional[bool] = None,
-    save: Union[str, bool, None] = None,
-    ax: Optional[_AxesSubplot] = None,
-    return_fig: Optional[bool] = False,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    vcenter: Optional[float] = None,
-    norm: Optional[Normalize] = None,
+    show: bool | None = None,
+    save: str | bool | None = None,
+    ax: _AxesSubplot | None = None,
+    return_fig: bool | None = False,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    vcenter: float | None = None,
+    norm: Normalize | None = None,
     **kwds,
-) -> Union[MatrixPlot, dict, None]:
+) -> MatrixPlot | dict | None:
     """\
     Creates a heatmap of the mean expression values per group of each var_names.
 

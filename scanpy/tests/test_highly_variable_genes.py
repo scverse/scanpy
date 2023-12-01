@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from pathlib import Path
 
-import pytest
-import pandas as pd
 import numpy as np
-import scanpy as sc
+import pandas as pd
+import pytest
 
+import scanpy as sc
 from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
@@ -327,7 +329,7 @@ def test_higly_variable_genes_compare_to_seurat():
     )
 
 
-@needs("skmisc")
+@needs.skmisc
 def test_higly_variable_genes_compare_to_seurat_v3():
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=" ", dtype={"variances_norm": np.float64}
@@ -483,7 +485,7 @@ def test_highly_variable_genes_batches():
     assert np.all(np.isin(colnames, hvg1.columns))
 
 
-@needs("skmisc")
+@needs.skmisc
 def test_seurat_v3_mean_var_output_with_batchkey():
     pbmc = pbmc3k()
     pbmc.var_names_make_unique()

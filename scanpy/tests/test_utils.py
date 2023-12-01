@@ -1,18 +1,20 @@
+from __future__ import annotations
+
 from types import ModuleType
 
-import pytest
 import numpy as np
-from scipy.sparse import csr_matrix
+import pytest
 from anndata.tests.helpers import asarray
+from scipy.sparse import csr_matrix
 
+from scanpy._compat import DaskArray
 from scanpy._utils import (
-    descend_classes_and_funcs,
     check_nonnegative_integers,
+    descend_classes_and_funcs,
     elem_mul,
     is_constant,
 )
 from scanpy.testing._pytest.marks import needs
-from scanpy._compat import DaskArray
 from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SUPPORTED
 
 
@@ -98,7 +100,7 @@ def test_is_constant(array_type):
     )
 
 
-@needs("dask")
+@needs.dask
 @pytest.mark.parametrize(
     ("axis", "expected"),
     [

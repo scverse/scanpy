@@ -5,34 +5,41 @@ should be moved of this file.
 """
 from __future__ import annotations
 
-import sys
-import inspect
-import warnings
 import importlib.util
-from enum import Enum
-from pathlib import Path
-from weakref import WeakSet
+import inspect
+import sys
+import warnings
 from collections import namedtuple
+from enum import Enum
 from functools import partial, singledispatch, wraps
-from types import ModuleType, MethodType
-from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
+from textwrap import dedent
+from types import MethodType, ModuleType
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union
+from weakref import WeakSet
 
 import numpy as np
+from anndata import AnnData
+from anndata import __version__ as anndata_version
 from numpy import random
 from numpy.typing import NDArray
-from scipy import sparse
-from anndata import AnnData, __version__ as anndata_version
-from textwrap import dedent
 from packaging import version
+from scipy import sparse
 
-from .._settings import settings
 from .. import logging as logg
 from .._compat import DaskArray
+from .._settings import settings
 from .compute.is_constant import is_constant  # noqa: F401
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from pathlib import Path
 
 
 class Empty(Enum):
     token = 0
+
+    def __repr__(self) -> str:
+        return "_empty"
 
 
 _empty = Empty.token
@@ -66,7 +73,7 @@ def check_versions():
         )
 
 
-def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
+def getdoc(c_or_f: Callable | type) -> str | None:
     if getattr(c_or_f, "__doc__", None) is None:
         return None
     doc = inspect.getdoc(c_or_f)
@@ -162,7 +169,7 @@ def annotate_doc_types(mod: ModuleType, root: str):
 
 def _doc_params(**kwds):
     """\
-    Docstrings should start with "\" in the first line for proper formatting.
+    Docstrings should start with ``\\`` in the first line for proper formatting.
     """
 
     def dec(obj):
@@ -186,7 +193,7 @@ def _check_array_function_arguments(**kwargs):
         )
 
 
-def _check_use_raw(adata: AnnData, use_raw: Union[None, bool]) -> bool:
+def _check_use_raw(adata: AnnData, use_raw: None | bool) -> bool:
     """
     Normalize checking `use_raw`.
 
@@ -259,7 +266,7 @@ def compute_association_matrix_of_groups(
     reference: str,
     normalization: Literal["prediction", "reference"] = "prediction",
     threshold: float = 0.01,
-    max_n_names: Optional[int] = 2,
+    max_n_names: int | None = 2,
 ):
     """Compute overlaps between groups.
 
@@ -446,7 +453,7 @@ def update_params(
     old_params: Mapping[str, Any],
     new_params: Mapping[str, Any],
     check=False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """\
     Update old_params with new_params.
 
@@ -610,7 +617,7 @@ def subsample(
     X: np.ndarray,
     subsample: int = 1,
     seed: int = 0,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """\
     Subsample a fraction of 1/subsample samples from the rows of X.
 
@@ -650,7 +657,7 @@ def subsample(
 
 def subsample_n(
     X: np.ndarray, n: int = 0, seed: int = 0
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Subsample n samples from rows of array.
 
     Parameters

@@ -1,15 +1,19 @@
 """\
 Calculate scores based on relative expression change of maker pairs
 """
-from typing import Mapping, Optional, Collection, Union, Tuple, List, Dict
+from __future__ import annotations
 
-import pandas as pd
-from anndata import AnnData
+from collections.abc import Collection, Mapping
+from typing import TYPE_CHECKING, Union
+
 from packaging import version
 
 from ..._settings import settings
 from ...testing._doctests import doctest_needs
 
+if TYPE_CHECKING:
+    import pandas as pd
+    from anndata import AnnData
 
 Genes = Collection[Union[str, int, bool]]
 
@@ -17,12 +21,12 @@ Genes = Collection[Union[str, int, bool]]
 @doctest_needs("pypairs")
 def sandbag(
     adata: AnnData,
-    annotation: Optional[Mapping[str, Genes]] = None,
+    annotation: Mapping[str, Genes] | None = None,
     *,
     fraction: float = 0.65,
-    filter_genes: Optional[Genes] = None,
-    filter_samples: Optional[Genes] = None,
-) -> Dict[str, List[Tuple[str, str]]]:
+    filter_genes: Genes | None = None,
+    filter_samples: Genes | None = None,
+) -> dict[str, list[tuple[str, str]]]:
     """\
     Calculate marker pairs of genes. [Scialdone15]_ [Fechtner18]_.
 
@@ -62,8 +66,8 @@ def sandbag(
     >>> marker_pairs = sandbag(adata, fraction=0.5)
     """
     _check_import()
-    from pypairs.pairs import sandbag
     from pypairs import settings as pp_settings
+    from pypairs.pairs import sandbag
 
     pp_settings.verbosity = settings.verbosity
     pp_settings.n_jobs = settings.n_jobs
@@ -82,7 +86,7 @@ def sandbag(
 
 def cyclone(
     adata: AnnData,
-    marker_pairs: Optional[Mapping[str, Collection[Tuple[str, str]]]] = None,
+    marker_pairs: Mapping[str, Collection[tuple[str, str]]] | None = None,
     *,
     iterations: int = 1000,
     min_iter: int = 100,
@@ -125,8 +129,8 @@ def cyclone(
     Where category S is assigned to samples where G1 and G2M score are < 0.5.
     """
     _check_import()
-    from pypairs.pairs import cyclone
     from pypairs import settings as pp_settings
+    from pypairs.pairs import cyclone
 
     pp_settings.verbosity = settings.verbosity
     pp_settings.n_jobs = settings.n_jobs

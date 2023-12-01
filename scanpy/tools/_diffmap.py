@@ -1,14 +1,19 @@
-from anndata import AnnData
-from typing import Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from ._dpt import _diffmap
-from .._utils import AnyRandom
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+
+    from .._utils import AnyRandom
 
 
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
-    neighbors_key: Optional[str] = None,
+    neighbors_key: str | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
 ):

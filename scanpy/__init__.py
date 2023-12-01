@@ -1,4 +1,5 @@
 """Single-Cell Analysis in Python."""
+from __future__ import annotations
 
 try:  # See https://github.com/maresb/hatch-vcs-footgun-example
     from setuptools_scm import get_version
@@ -20,25 +21,26 @@ del check_versions
 
 # the actual API
 # (start with settings as several tools are using it)
-from ._settings import settings, Verbosity
-from . import tools as tl
-from . import preprocessing as pp
-from . import plotting as pl
-from . import datasets, logging, queries, external, get, metrics, experimental
-
-from anndata import AnnData, concat
 from anndata import (
-    read_h5ad,
+    AnnData,
+    concat,
     read_csv,
     read_excel,
+    read_h5ad,
     read_hdf,
     read_loom,
     read_mtx,
     read_text,
     read_umi_tools,
 )
-from .readwrite import read, read_10x_h5, read_10x_mtx, write, read_visium
+
+from . import datasets, experimental, external, get, logging, metrics, queries
+from . import plotting as pl
+from . import preprocessing as pp
+from . import tools as tl
+from ._settings import Verbosity, settings
 from .neighbors import Neighbors
+from .readwrite import read, read_10x_h5, read_10x_mtx, read_visium, write
 
 set_figure_params = settings.set_figure_params
 
@@ -50,3 +52,36 @@ from ._utils import annotate_doc_types
 
 annotate_doc_types(sys.modules[__name__], "scanpy")
 del sys, annotate_doc_types
+
+__all__ = [
+    "__version__",
+    "AnnData",
+    "concat",
+    "read_csv",
+    "read_excel",
+    "read_h5ad",
+    "read_hdf",
+    "read_loom",
+    "read_mtx",
+    "read_text",
+    "read_umi_tools",
+    "read",
+    "read_10x_h5",
+    "read_10x_mtx",
+    "read_visium",
+    "write",
+    "datasets",
+    "experimental",
+    "external",
+    "get",
+    "logging",
+    "metrics",
+    "queries",
+    "pl",
+    "pp",
+    "tl",
+    "Verbosity",
+    "settings",
+    "Neighbors",
+    "set_figure_params",
+]

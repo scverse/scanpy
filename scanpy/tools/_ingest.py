@@ -1,23 +1,23 @@
 from __future__ import annotations
 
-import doctest
-from collections.abc import Iterable, MutableMapping, Generator
-from typing import Union, Optional
+from collections.abc import Generator, Iterable, MutableMapping
+from typing import TYPE_CHECKING
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from packaging import version
-from sklearn.utils import check_random_state
 from scipy.sparse import issparse
-from anndata import AnnData
+from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._settings import settings
-from ..neighbors import FlatTree, RPForestDict
-from .._utils import NeighborsView
 from .._compat import pkg_version
+from .._settings import settings
+from .._utils import NeighborsView
+from ..neighbors import FlatTree, RPForestDict
 from ..testing._doctests import doctest_skip
 
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
@@ -26,10 +26,10 @@ ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
-    obs: Optional[Union[str, Iterable[str]]] = None,
-    embedding_method: Union[str, Iterable[str]] = ("umap", "pca"),
+    obs: str | Iterable[str] | None = None,
+    embedding_method: str | Iterable[str] = ("umap", "pca"),
     labeling_method: str = "knn",
-    neighbors_key: Optional[str] = None,
+    neighbors_key: str | None = None,
     inplace: bool = True,
     **kwargs,
 ):
@@ -259,8 +259,9 @@ class Ingest:
 
     def _init_dist_search(self, dist_args):
         from functools import partial
-        from umap.nndescent import initialise_search
+
         from umap.distances import named_distances
+        from umap.nndescent import initialise_search
 
         self._random_init = None
         self._tree_init = None
@@ -381,11 +382,13 @@ class Ingest:
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
         self._pca_use_hvg = adata.uns["pca"]["params"]["use_highly_variable"]
 
-        if self._pca_use_hvg and "highly_variable" not in adata.var.keys():
-            raise ValueError("Did not find adata.var['highly_variable'].")
+        mask = "highly_variable"
+        if self._pca_use_hvg and mask not in adata.var.keys():
+            msg = f"Did not find `adata.var[{mask!r}']`."
+            raise ValueError(msg)
 
         if self._pca_use_hvg:
-            self._pca_basis = adata.varm["PCs"][adata.var["highly_variable"]]
+            self._pca_basis = adata.varm["PCs"][adata.var[mask]]
         else:
             self._pca_basis = adata.varm["PCs"]
 

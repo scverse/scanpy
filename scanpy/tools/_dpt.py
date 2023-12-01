@@ -1,13 +1,19 @@
-from typing import Tuple, Optional, Sequence, List
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import scipy as sp
-from anndata import AnnData
 from natsort import natsorted
 
 from .. import logging as logg
 from ..neighbors import Neighbors, OnFlySymMatrix
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
 
 
 def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
@@ -34,9 +40,9 @@ def dpt(
     n_branchings: int = 0,
     min_group_size: float = 0.01,
     allow_kendall_tau_shift: bool = True,
-    neighbors_key: Optional[str] = None,
+    neighbors_key: str | None = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Infer progression of cells through geodesic distance along the graph
     [Haghverdi16]_ [Wolf19]_.
@@ -368,7 +374,7 @@ class DPT(Neighbors):
                     # print(self.segs_adjacency)
         # self.segs_adjacency.eliminate_zeros()
 
-    def select_segment(self, segs, segs_tips, segs_undecided) -> Tuple[int, int]:
+    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:
         """\
         Out of a list of line segments, choose segment that has the most
         distant second data point.
@@ -743,11 +749,11 @@ class DPT(Neighbors):
         Dseg: np.ndarray,
         tips: np.ndarray,
         seg_reference=None,
-    ) -> Tuple[
-        List[np.ndarray],
-        List[np.ndarray],
-        List[List[int]],
-        List[List[int]],
+    ) -> tuple[
+        list[np.ndarray],
+        list[np.ndarray],
+        list[list[int]],
+        list[list[int]],
         int,
     ]:
         """\
@@ -1099,7 +1105,7 @@ class DPT(Neighbors):
         """
         return 2.0 / (len_old - 2) * (-float(diff_neg) / (len_old - 1) + tau_old)
 
-    def _kendall_tau_diff(self, a: np.ndarray, b: np.ndarray, i) -> Tuple[int, int]:
+    def _kendall_tau_diff(self, a: np.ndarray, b: np.ndarray, i) -> tuple[int, int]:
         """Compute difference in concordance of pairs in split sequences.
 
         Consider splitting a and b at index i.

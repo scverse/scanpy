@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 from docutils import nodes, utils
 
 if TYPE_CHECKING:
-    from typing import Any
     from collections.abc import Mapping, Sequence
+    from typing import Any
 
-    from sphinx.application import Sphinx
     from docutils.parsers.rst.states import Inliner
+    from sphinx.application import Sphinx
 
 
 def cite_role(

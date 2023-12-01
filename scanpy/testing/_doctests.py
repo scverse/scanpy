@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from types import FunctionType
-from typing import TypeVar
-from collections.abc import Callable
+from typing import TYPE_CHECKING, TypeVar
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 F = TypeVar("F", bound=FunctionType)
 
@@ -11,12 +12,22 @@ F = TypeVar("F", bound=FunctionType)
 def doctest_needs(mod: str) -> Callable[[F], F]:
     """Mark function with doctest dependency."""
 
-    def decorator(func: F) -> F:
+    try:
+        from ._pytest.marks import needs
+    except ImportError:
+        mark = None
+    else:
         try:
-            from ._pytest.marks import needs
-        except ImportError:
-            return func
-        func._doctest_mark = needs(mod)
+            mark = needs[mod]
+        except KeyError:
+            raise KeyError(
+                f"Unknown dependency {mod}. If it isn’t a typo, "
+                "please add it to `needs` enum in `scanpy.testing._pytests.marks`."
+            ) from None
+
+    def decorator(func: F) -> F:
+        if mark is not None:
+            func._doctest_mark = mark
         return func
 
     return decorator

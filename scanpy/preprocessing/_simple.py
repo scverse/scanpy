@@ -2,29 +2,30 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
-from functools import singledispatch
-from numbers import Number
+from __future__ import annotations
+
 import warnings
-from typing import Union, Optional, Tuple, Collection, Sequence, Iterable, Literal
+from functools import singledispatch
+from typing import TYPE_CHECKING, Literal
 
 import numba
 import numpy as np
 import scipy as sp
-from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
-from sklearn.utils import sparsefuncs, check_array
-from pandas.api.types import CategoricalDtype
 from anndata import AnnData
+from pandas.api.types import CategoricalDtype
+from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
+from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
 from .._settings import settings as sett
 from .._utils import (
-    sanitize_anndata,
-    deprecated_arg_names,
-    view_to_actual,
     AnyRandom,
     _check_array_function_arguments,
+    deprecated_arg_names,
+    sanitize_anndata,
+    view_to_actual,
 )
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 
@@ -35,18 +36,24 @@ except ImportError:
     da = None
 
 # backwards compat
-from ._deprecated.highly_variable_genes import filter_genes_dispersion
+from ._deprecated.highly_variable_genes import filter_genes_dispersion  # noqa: F401
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Sequence
+    from numbers import Number
+
+    from numpy.typing import NDArray
 
 
 def filter_cells(
     data: AnnData,
-    min_counts: Optional[int] = None,
-    min_genes: Optional[int] = None,
-    max_counts: Optional[int] = None,
-    max_genes: Optional[int] = None,
+    min_counts: int | None = None,
+    min_genes: int | None = None,
+    max_counts: int | None = None,
+    max_genes: int | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray] | None:
     """\
     Filter cell outliers based on counts and numbers of genes expressed.
 
@@ -174,13 +181,13 @@ def filter_cells(
 
 def filter_genes(
     data: AnnData,
-    min_counts: Optional[int] = None,
-    min_cells: Optional[int] = None,
-    max_counts: Optional[int] = None,
-    max_cells: Optional[int] = None,
+    min_counts: int | None = None,
+    min_cells: int | None = None,
+    max_counts: int | None = None,
+    max_cells: int | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> Union[AnnData, None, Tuple[np.ndarray, np.ndarray]]:
+) -> AnnData | None | tuple[np.ndarray, np.ndarray]:
     """\
     Filter genes based on number of cells or counts.
 
@@ -282,14 +289,14 @@ def filter_genes(
 
 @singledispatch
 def log1p(
-    X: Union[AnnData, np.ndarray, spmatrix],
+    X: AnnData | np.ndarray | spmatrix,
     *,
-    base: Optional[Number] = None,
+    base: Number | None = None,
     copy: bool = False,
     chunked: bool = None,
-    chunk_size: Optional[int] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
+    chunk_size: int | None = None,
+    layer: str | None = None,
+    obsm: str | None = None,
 ):
     """\
     Logarithmize the data matrix.
@@ -328,7 +335,7 @@ def log1p(
 
 
 @log1p.register(spmatrix)
-def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
+def log1p_sparse(X, *, base: Number | None = None, copy: bool = False):
     X = check_array(
         X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
@@ -337,7 +344,7 @@ def log1p_sparse(X, *, base: Optional[Number] = None, copy: bool = False):
 
 
 @log1p.register(np.ndarray)
-def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
+def log1p_array(X, *, base: Number | None = None, copy: bool = False):
     # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
@@ -357,13 +364,13 @@ def log1p_array(X, *, base: Optional[Number] = None, copy: bool = False):
 def log1p_anndata(
     adata,
     *,
-    base: Optional[Number] = None,
+    base: Number | None = None,
     copy: bool = False,
     chunked: bool = False,
-    chunk_size: Optional[int] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-) -> Optional[AnnData]:
+    chunk_size: int | None = None,
+    layer: str | None = None,
+    obsm: str | None = None,
+) -> AnnData | None:
     if "log1p" in adata.uns_keys():
         logg.warning("adata.X seems to be already log-transformed.")
 
@@ -391,8 +398,8 @@ def sqrt(
     data: AnnData,
     copy: bool = False,
     chunked: bool = False,
-    chunk_size: Optional[int] = None,
-) -> Optional[AnnData]:
+    chunk_size: int | None = None,
+) -> AnnData | None:
     """\
     Square root the data matrix.
 
@@ -432,15 +439,15 @@ def sqrt(
 
 
 def normalize_per_cell(
-    data: Union[AnnData, np.ndarray, spmatrix],
-    counts_per_cell_after: Optional[float] = None,
-    counts_per_cell: Optional[np.ndarray] = None,
+    data: AnnData | np.ndarray | spmatrix,
+    counts_per_cell_after: float | None = None,
+    counts_per_cell: np.ndarray | None = None,
     key_n_counts: str = "n_counts",
     copy: bool = False,
-    layers: Union[Literal["all"], Iterable[str]] = (),
-    use_rep: Optional[Literal["after", "X"]] = None,
+    layers: Literal["all"] | Iterable[str] = (),
+    use_rep: Literal["after", "X"] | None = None,
     min_counts: int = 1,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Normalize total counts per cell.
 
@@ -569,11 +576,11 @@ def normalize_per_cell(
 
 def regress_out(
     adata: AnnData,
-    keys: Union[str, Sequence[str]],
-    layer: Optional[str] = None,
-    n_jobs: Optional[int] = None,
+    keys: str | Sequence[str],
+    layer: str | None = None,
+    n_jobs: int | None = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Regress out (mostly) unwanted sources of variation.
 
@@ -717,12 +724,13 @@ def _regress_out_chunk(data):
 
 @singledispatch
 def scale(
-    X: Union[AnnData, spmatrix, np.ndarray],
+    X: AnnData | spmatrix | np.ndarray,
     zero_center: bool = True,
-    max_value: Optional[float] = None,
+    max_value: float | None = None,
     copy: bool = False,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
+    layer: str | None = None,
+    obsm: str | None = None,
+    mask: NDArray[np.bool_] | str | None = None,
 ):
     """\
     Scale data to unit variance and zero mean.
@@ -768,20 +776,40 @@ def scale(
         raise ValueError(f"`layer` argument inappropriate for value of type {type(X)}")
     if obsm is not None:
         raise ValueError(f"`obsm` argument inappropriate for value of type {type(X)}")
-    return scale_array(X, zero_center=zero_center, max_value=max_value, copy=copy)
+    return scale_array(
+        X, zero_center=zero_center, max_value=max_value, copy=copy, mask=mask
+    )
 
 
 @scale.register(np.ndarray)
 def scale_array(
-    X,
+    X: np.ndarray,
     *,
     zero_center: bool = True,
-    max_value: Optional[float] = None,
+    max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-):
+    mask: NDArray[np.bool_] | None = None,
+) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
     if copy:
         X = X.copy()
+    if mask is not None:
+        mask = _check_mask(X, mask, "obs")
+        scale_rv = scale_array(
+            X[mask, :],
+            zero_center=zero_center,
+            max_value=max_value,
+            copy=False,
+            return_mean_std=return_mean_std,
+            mask=None,
+        )
+        if return_mean_std:
+            X[mask, :], mean, std = scale_rv
+            return X, mean, std
+        else:
+            X[mask, :] = scale_rv
+            return X
+
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` " "without `zero_center`."
@@ -810,7 +838,6 @@ def scale_array(
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
         X[X > max_value] = max_value
-
     if return_mean_std:
         return X, mean, std
     else:
@@ -819,13 +846,14 @@ def scale_array(
 
 @scale.register(spmatrix)
 def scale_sparse(
-    X,
+    X: spmatrix,
     *,
     zero_center: bool = True,
-    max_value: Optional[float] = None,
+    max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-):
+    mask: NDArray[np.bool_] | None = None,
+) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
     # need to add the following here to make inplace logic work
     if zero_center:
         logg.info(
@@ -840,6 +868,7 @@ def scale_sparse(
         copy=copy,
         max_value=max_value,
         return_mean_std=return_mean_std,
+        mask=mask,
     )
 
 
@@ -848,20 +877,29 @@ def scale_anndata(
     adata: AnnData,
     *,
     zero_center: bool = True,
-    max_value: Optional[float] = None,
+    max_value: float | None = None,
     copy: bool = False,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-) -> Optional[AnnData]:
+    layer: str | None = None,
+    obsm: str | None = None,
+    mask: NDArray[np.bool_] | str | None = None,
+) -> AnnData | None:
     adata = adata.copy() if copy else adata
+    str_mean_std = ("mean", "std")
+    if mask is not None:
+        if isinstance(mask, str):
+            str_mean_std = (f"mean of {mask}", f"std of {mask}")
+        else:
+            str_mean_std = ("mean with mask", "std with mask")
+        mask = _check_mask(adata, mask, "obs")
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer, obsm=obsm)
-    X, adata.var["mean"], adata.var["std"] = scale(
+    X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
         X,
         zero_center=zero_center,
         max_value=max_value,
         copy=False,  # because a copy has already been made, if it were to be made
         return_mean_std=True,
+        mask=mask,
     )
     _set_obs_rep(adata, X, layer=layer, obsm=obsm)
     if copy:
@@ -869,12 +907,12 @@ def scale_anndata(
 
 
 def subsample(
-    data: Union[AnnData, np.ndarray, spmatrix],
-    fraction: Optional[float] = None,
-    n_obs: Optional[int] = None,
+    data: AnnData | np.ndarray | spmatrix,
+    fraction: float | None = None,
+    n_obs: int | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Subsample to a fraction of the number of observations.
 
@@ -932,13 +970,13 @@ def subsample(
 @deprecated_arg_names({"target_counts": "counts_per_cell"})
 def downsample_counts(
     adata: AnnData,
-    counts_per_cell: Optional[Union[int, Collection[int]]] = None,
-    total_counts: Optional[int] = None,
+    counts_per_cell: int | Collection[int] | None = None,
+    total_counts: int | None = None,
     *,
     random_state: AnyRandom = 0,
     replace: bool = False,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Downsample counts from count matrix.
 

@@ -1,26 +1,36 @@
-from typing import Optional, Dict
+from __future__ import annotations
+
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 import numpy as np
-import pandas as pd
 from anndata import AnnData
 from scipy.sparse import issparse
 
-from scanpy import logging as logg
-
-from scanpy._utils import view_to_actual, check_nonnegative_integers
-from scanpy.get import _get_obs_rep, _set_obs_rep
-from scanpy._utils import _doc_params
-from scanpy.preprocessing._pca import pca
-from scanpy.experimental._docs import (
+from ... import logging as logg
+from ..._utils import (
+    Empty,
+    _doc_params,
+    _empty,
+    check_nonnegative_integers,
+    view_to_actual,
+)
+from ...experimental._docs import (
     doc_adata,
-    doc_dist_params,
-    doc_layer,
     doc_check_values,
     doc_copy,
+    doc_dist_params,
     doc_inplace,
+    doc_layer,
     doc_pca_chunk,
 )
+from ...get import _get_obs_rep, _set_obs_rep
+from ...preprocessing._docs import doc_mask_hvg
+from ...preprocessing._pca import _handle_mask_param, pca
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 def _pearson_residuals(X, theta, clip, check_values, copy=False):
@@ -75,12 +85,12 @@ def normalize_pearson_residuals(
     adata: AnnData,
     *,
     theta: float = 100,
-    clip: Optional[float] = None,
+    clip: float | None = None,
     check_values: bool = True,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> Optional[Dict[str, np.ndarray]]:
+) -> dict[str, np.ndarray] | None:
     """\
     Applies analytic Pearson residual normalization, based on [Lause21]_.
 
@@ -147,6 +157,7 @@ def normalize_pearson_residuals(
     adata=doc_adata,
     dist_params=doc_dist_params,
     pca_chunk=doc_pca_chunk,
+    mask_hvg=doc_mask_hvg,
     check_values=doc_check_values,
     inplace=doc_inplace,
 )
@@ -154,14 +165,15 @@ def normalize_pearson_residuals_pca(
     adata: AnnData,
     *,
     theta: float = 100,
-    clip: Optional[float] = None,
-    n_comps: Optional[int] = 50,
-    random_state: Optional[float] = 0,
-    kwargs_pca: Optional[dict] = {},
-    use_highly_variable: Optional[bool] = None,
+    clip: float | None = None,
+    n_comps: int | None = 50,
+    random_state: float = 0,
+    kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
+    mask: np.ndarray | str | None | Empty = _empty,
+    use_highly_variable: bool | None = None,
     check_values: bool = True,
     inplace: bool = True,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Applies analytic Pearson residual normalization and PCA, based on [Lause21]_.
 
@@ -177,10 +189,7 @@ def normalize_pearson_residuals_pca(
     {adata}
     {dist_params}
     {pca_chunk}
-    use_highly_variable
-        If `True`, uses gene selection present in `adata.var['highly_variable']` to
-        subset the data before normalizing (default). Otherwise, proceed on the full
-        dataset.
+    {mask_hvg}
     {check_values}
     {inplace}
 
@@ -190,38 +199,31 @@ def normalize_pearson_residuals_pca(
     object). If `inplace=True`, updates `adata` with the following fields:
 
     `.uns['pearson_residuals_normalization']['pearson_residuals_df']`
-         The subset of highly variable genes, normalized by Pearson residuals.
+        The subset of highly variable genes, normalized by Pearson residuals.
     `.uns['pearson_residuals_normalization']['theta']`
-         The used value of the overdisperion parameter theta.
+        The used value of the overdisperion parameter theta.
     `.uns['pearson_residuals_normalization']['clip']`
-         The used value of the clipping parameter.
+        The used value of the clipping parameter.
 
     `.obsm['X_pca']`
         PCA representation of data after gene selection (if applicable) and Pearson
         residual normalization.
     `.varm['PCs']`
-         The principal components containing the loadings. When `inplace=True` and
-         `use_highly_variable=True`, this will contain empty rows for the genes not
-         selected.
+        The principal components containing the loadings. When `inplace=True` and
+        `use_highly_variable=True`, this will contain empty rows for the genes not
+        selected.
     `.uns['pca']['variance_ratio']`
-         Ratio of explained variance.
+        Ratio of explained variance.
     `.uns['pca']['variance']`
-         Explained variance, equivalent to the eigenvalues of the covariance matrix.
+        Explained variance, equivalent to the eigenvalues of the covariance matrix.
     """
 
-    # check if HVG selection is there if user wants to use it
-    if use_highly_variable and "highly_variable" not in adata.var_keys():
-        raise ValueError(
-            "You passed `use_highly_variable=True`, but no HVG selection was found "
-            "(e.g., there was no 'highly_variable' column in adata.var).'"
-        )
+    # Unify new mask argument and deprecated use_highly_varible argument
+    _, mask = _handle_mask_param(adata, mask, use_highly_variable)
+    del use_highly_variable
 
-    # default behavior: if there is a HVG selection, we will use it
-    if use_highly_variable is None and "highly_variable" in adata.var_keys():
-        use_highly_variable = True
-
-    if use_highly_variable:
-        adata_sub = adata[:, adata.var["highly_variable"]].copy()
+    if mask is not None:
+        adata_sub = adata[:, mask].copy()
         adata_pca = AnnData(
             adata_sub.X.copy(), obs=adata_sub.obs[[]], var=adata_sub.var[[]]
         )
@@ -232,13 +234,14 @@ def normalize_pearson_residuals_pca(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
     pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
+    n_comps = adata_pca.obsm["X_pca"].shape[1]  # might be None
 
     if inplace:
         norm_settings = adata_pca.uns["pearson_residuals_normalization"]
         norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
-        if use_highly_variable:
+        if mask is not None:
             adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm["PCs"][adata.var["highly_variable"]] = adata_pca.varm["PCs"]
+            adata.varm["PCs"][mask] = adata_pca.varm["PCs"]
         else:
             adata.varm["PCs"] = adata_pca.varm["PCs"]
         adata.uns["pca"] = adata_pca.uns["pca"]

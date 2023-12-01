@@ -9,11 +9,12 @@
 # The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics
 # ([here](https://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
+from __future__ import annotations
+
 from functools import partial
 from pathlib import Path
 
 import numpy as np
-
 from matplotlib.testing import setup
 
 setup()
@@ -21,12 +22,11 @@ setup()
 import scanpy as sc
 from scanpy.testing._pytest.marks import needs
 
-
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images_pbmc3k"
 
 
-@needs("leidenalg")
+@needs.leidenalg
 def test_pbmc3k(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
 
@@ -88,7 +88,7 @@ def test_pbmc3k(image_comparer):
 
     # PCA
 
-    sc.tl.pca(adata, svd_solver="arpack")
+    sc.pp.pca(adata, svd_solver="arpack")
     sc.pl.pca(adata, color="CST3", show=False)
     save_and_compare_images("pca")
 

@@ -3,19 +3,23 @@
 from __future__ import annotations
 
 from math import floor
-from typing import Generator, Iterable, Union, Optional, Literal, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 import pandas as pd
-from numpy.typing import NDArray
-from anndata import AnnData
 from scipy.sparse import issparse, vstack
 
 from .. import _utils
 from .. import logging as logg
-from ..preprocessing._simple import _get_mean_var
 from .._utils import check_nonnegative_integers
+from ..get import _check_mask
+from ..preprocessing._simple import _get_mean_var
 
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
+
+    from anndata import AnnData
+    from numpy.typing import NDArray
 
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
@@ -86,11 +90,13 @@ class _RankGenes:
         groups: list[str] | Literal["all"],
         groupby: str,
         *,
-        reference="rest",
+        gene_mask: NDArray[np.bool_] | None = None,
+        reference: Literal["rest"] | str = "rest",
         use_raw: bool = True,
         layer: str | None = None,
         comp_pts: bool = False,
     ) -> None:
+        self.gene_mask = gene_mask
         if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns["log1p"]["base"]))
         else:
@@ -125,8 +131,13 @@ class _RankGenes:
         if issparse(X):
             X.eliminate_zeros()
 
-        self.X = X
-        self.var_names = adata_comp.var_names
+        if self.gene_mask is not None:
+            self.X = X[:, self.gene_mask]
+            self.var_names = adata_comp.var_names[self.gene_mask]
+
+        else:
+            self.X = X
+            self.var_names = adata_comp.var_names
 
         self.ireference = None
         if reference != "rest":
@@ -442,20 +453,21 @@ class _RankGenes:
 def rank_genes_groups(
     adata: AnnData,
     groupby: str,
-    use_raw: Optional[bool] = None,
-    groups: Union[Literal["all"], Iterable[str]] = "all",
+    mask: NDArray[np.bool_] | str | None = None,
+    use_raw: bool | None = None,
+    groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
-    n_genes: Optional[int] = None,
+    n_genes: int | None = None,
     rankby_abs: bool = False,
     pts: bool = False,
-    key_added: Optional[str] = None,
+    key_added: str | None = None,
     copy: bool = False,
     method: _Method | None = None,
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     **kwds,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Rank genes for characterizing groups.
 
@@ -467,6 +479,8 @@ def rank_genes_groups(
         Annotated data matrix.
     groupby
         The key of the observations grouping to consider.
+    mask
+        Select subset of genes to use in statistical tests.
     use_raw
         Use `raw` attribute of `adata` if present.
     layer
@@ -552,6 +566,10 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
+
+    if mask is not None:
+        mask = _check_mask(adata, mask, "var")
+
     if use_raw is None:
         use_raw = adata.raw is not None
     elif use_raw is True and adata.raw is None:
@@ -610,6 +628,7 @@ def rank_genes_groups(
         adata,
         groups_order,
         groupby,
+        gene_mask=mask,
         reference=reference,
         use_raw=use_raw,
         layer=layer,

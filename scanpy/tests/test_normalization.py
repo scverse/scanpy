@@ -1,22 +1,26 @@
 from __future__ import annotations
 
-import pytest
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
+import pytest
 from anndata import AnnData
-from scipy.sparse import csr_matrix
-from scipy import sparse
 from anndata.tests.helpers import assert_equal
+from scipy import sparse
+from scipy.sparse import csr_matrix
 
 import scanpy as sc
 from scanpy.testing._helpers import (
+    _check_check_values_warnings,
     check_rep_mutation,
     check_rep_results,
-    _check_check_values_warnings,
 )
 
 # TODO: Add support for sparse-in-dask
 from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
@@ -68,30 +72,41 @@ def test_normalize_total_view(array_type, dtype):
     assert_equal(adata, v)
 
 
-def test_normalize_pearson_residuals_inputchecks(pbmc3k_parametrized):
+def test_normalize_pearson_residuals_warnings(pbmc3k_parametrized):
     adata = pbmc3k_parametrized()
 
+    if np.issubdtype(adata.X.dtype, np.integer):
+        pytest.skip("Can’t store non-integral data with int dtype")
+
     # depending on check_values, warnings should be raised for non-integer data
-    if adata.X.dtype == "float32":
-        adata_noninteger = adata.copy()
-        x, y = np.nonzero(adata_noninteger.X)
-        adata_noninteger.X[x[0], y[0]] = 0.5
+    adata_noninteger = adata.copy()
+    x, y = np.nonzero(adata_noninteger.X)
+    adata_noninteger.X[x[0], y[0]] = 0.5
 
-        _check_check_values_warnings(
-            function=sc.experimental.pp.normalize_pearson_residuals,
-            adata=adata_noninteger,
-            expected_warning="`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
-        )
+    _check_check_values_warnings(
+        function=sc.experimental.pp.normalize_pearson_residuals,
+        adata=adata_noninteger,
+        expected_warning="`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
+    )
 
-    # errors should be raised for invalid theta values
-    for theta in [0, -1]:
-        with pytest.raises(ValueError, match="Pearson residuals require theta > 0"):
-            sc.experimental.pp.normalize_pearson_residuals(adata.copy(), theta=theta)
 
-    with pytest.raises(
-        ValueError, match="Pearson residuals require `clip>=0` or `clip=None`."
-    ):
-        sc.experimental.pp.normalize_pearson_residuals(adata.copy(), clip=-1)
+@pytest.mark.parametrize(
+    ("params", "match"),
+    [
+        pytest.param(dict(theta=0), r"Pearson residuals require theta > 0", id="theta"),
+        pytest.param(
+            dict(theta=-1), r"Pearson residuals require theta > 0", id="theta"
+        ),
+        pytest.param(
+            dict(clip=-1), r"Pearson residuals require `clip>=0` or `clip=None`."
+        ),
+    ],
+)
+def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
+    adata = pbmc3k_parametrized()
+
+    with pytest.raises(ValueError, match=match):
+        sc.experimental.pp.normalize_pearson_residuals(adata, **params)
 
 
 @pytest.mark.parametrize(
@@ -126,13 +141,10 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
     )
 
     # check for correct new `adata.uns` keys
-    assert np.all(np.isin(["pearson_residuals_normalization"], list(adata.uns.keys())))
-    assert np.all(
-        np.isin(
-            ["theta", "clip", "computed_on"],
-            list(adata.uns["pearson_residuals_normalization"].keys()),
-        )
-    )
+    assert {"pearson_residuals_normalization"} <= adata.uns.keys()
+    assert {"theta", "clip", "computed_on"} <= adata.uns[
+        "pearson_residuals_normalization"
+    ].keys()
     # test against inplace
     np.testing.assert_array_equal(adata.X, output_X)
 
@@ -151,20 +163,15 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
 
 
 def _check_pearson_pca_fields(ad, n_cells, n_comps):
-    assert np.all(
-        np.isin(
-            ["pearson_residuals_normalization", "pca"],
-            list(ad.uns.keys()),
-        )
-    ), (
+    assert {"pearson_residuals_normalization", "pca"} <= ad.uns.keys(), (
         "Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, "
         f"but only {list(ad.uns.keys())} were found"
     )
-    assert "X_pca" in list(
-        ad.obsm.keys()
+    assert (
+        "X_pca" in ad.obsm
     ), f"Missing `obsm` key `'X_pca'`, only {list(ad.obsm.keys())} were found"
-    assert "PCs" in list(
-        ad.varm.keys()
+    assert (
+        "PCs" in ad.varm
     ), f"Missing `varm` key `'PCs'`, only {list(ad.varm.keys())} were found"
     assert ad.obsm["X_pca"].shape == (
         n_cells,
@@ -174,98 +181,68 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
 
 @pytest.mark.parametrize("n_hvgs", [100, 200])
 @pytest.mark.parametrize("n_comps", [30, 50])
-def test_normalize_pearson_residuals_pca(pbmc3k_parametrized_small, n_hvgs, n_comps):
+@pytest.mark.parametrize(
+    ("do_hvg", "params", "n_var_copy_name"),
+    [
+        pytest.param(False, dict(), "n_genes", id="no_hvg"),
+        pytest.param(True, dict(), "n_hvgs", id="hvg_default"),
+        pytest.param(
+            True, dict(use_highly_variable=False), "n_genes", id="hvg_opt_out"
+        ),
+        pytest.param(False, dict(mask="test_mask"), "n_unmasked", id="mask"),
+    ],
+)
+def test_normalize_pearson_residuals_pca(
+    pbmc3k_parametrized_small: Callable[[], AnnData],
+    n_hvgs: int,
+    n_comps: int,
+    do_hvg: bool,
+    params: dict[str, Any],
+    n_var_copy_name: str,  # number of variables in output if inplace=False
+):
     adata = pbmc3k_parametrized_small()
     n_cells, n_genes = adata.shape
+    n_unmasked = n_genes - 5
+    adata.var["test_mask"] = np.r_[
+        np.repeat(True, n_unmasked), np.repeat(False, n_genes - n_unmasked)
+    ]
+    n_var_copy = locals()[n_var_copy_name]
+    assert isinstance(n_var_copy, (int, np.integer))
 
-    adata_with_hvgs = adata.copy()
-    sc.experimental.pp.highly_variable_genes(
-        adata_with_hvgs, flavor="pearson_residuals", n_top_genes=n_hvgs
-    )
-    adata_not_using_hvgs = adata_with_hvgs.copy()
+    if do_hvg:
+        sc.experimental.pp.highly_variable_genes(
+            adata, flavor="pearson_residuals", n_top_genes=n_hvgs
+        )
 
-    ### inplace = False ###
-    # outputs the (potentially hvg-restricted) adata_pca object
-    # PCA on all genes (no HVGs present)
+    # inplace=False
     adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata.copy(), inplace=False, n_comps=n_comps
+        adata.copy(), inplace=False, n_comps=n_comps, **params
     )
-    # PCA on hvgs only (HVGs present, and by default, `use_highly_variable=True`)
-    adata_pca_with_hvgs = sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata_with_hvgs.copy(), inplace=False, n_comps=n_comps
-    )
-    # PCA again on all genes (HVGs present, but hvg use supressed by `use_highly_variable=False`)
-    adata_pca_not_using_hvgs = sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata_not_using_hvgs.copy(),
-        inplace=False,
-        n_comps=n_comps,
-        use_highly_variable=False,
+    # inplace=True modifies the input adata object
+    sc.experimental.pp.normalize_pearson_residuals_pca(
+        adata, inplace=True, n_comps=n_comps, **params
     )
 
-    # for all cases, check adata_pca keys are complete
-    for ad in [adata_pca, adata_pca_with_hvgs, adata_pca_not_using_hvgs]:
+    for ad, n_var_ret in (
+        (adata_pca, n_var_copy),
+        # inplace adatas should always retains original shape
+        (adata, n_genes),
+    ):
         _check_pearson_pca_fields(ad, n_cells, n_comps)
 
-    # check adata shape to see if all genes or only HVGs are in the returned adata
-    assert adata_pca.shape == (n_cells, n_genes)
-    assert adata_pca_with_hvgs.shape == (n_cells, n_hvgs)  # only HVGs retained
-    assert adata_pca_not_using_hvgs.shape == (n_cells, n_genes)
+        # check adata shape to see if all genes or only HVGs are in the returned adata
+        assert ad.shape == (n_cells, n_var_ret)
 
-    # check PC shapes to see whether or not HVGs were used for PCA
-    assert adata_pca.varm["PCs"].shape == (n_genes, n_comps)
-    assert adata_pca_with_hvgs.varm["PCs"].shape == (
-        n_hvgs,
-        n_comps,
-    )
-    assert adata_pca_not_using_hvgs.varm["PCs"].shape == (n_genes, n_comps)
-
-    ### inplace = True ###
-    # modifies the input adata object
-    # PCA on all genes (no HVGs present)
-    sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata, inplace=True, n_comps=n_comps
-    )
-    # PCA on hvgs only (HVGs present, and by default, `use_highly_variable=True`)
-    sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata_with_hvgs, inplace=True, n_comps=n_comps
-    )
-    # PCA again on all genes (HVGs present, but hvg use supressed by `use_highly_variable=False`)
-    sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata_not_using_hvgs,
-        inplace=True,
-        n_comps=n_comps,
-        use_highly_variable=False,
-    )
-
-    # for all cases, check adata_pca keys are complete
-    for ad in [adata, adata_with_hvgs, adata_not_using_hvgs]:
-        _check_pearson_pca_fields(ad, n_cells, n_comps)
-
-        # check shapes: inplace adata's should always retains original shape
-        assert ad.shape == (n_cells, n_genes)
-        assert ad.varm["PCs"].shape == (n_genes, n_comps)
+        # check PC shapes to see whether or not HVGs were used for PCA
+        assert ad.varm["PCs"].shape == (n_var_ret, n_comps)
 
     # check if there are columns of all-zeros in the PCs shapes
     # to see whether or not HVGs were used for PCA
-    # no all-zero-colums should exist
-    assert sum(np.sum(np.abs(adata.varm["PCs"]), axis=1) == 0) == 0
-    # number of all-zero-colums should be number of non-hvgs
-    assert (
-        sum(np.sum(np.abs(adata_with_hvgs.varm["PCs"]), axis=1) == 0)
-        == n_genes - n_hvgs
-    )
-    # no all-zero-colums should exist
-    assert sum(np.sum(np.abs(adata_not_using_hvgs.varm["PCs"]), axis=1) == 0) == 0
+    # either no all-zero-colums or all number corresponding to non-hvgs should exist
+    assert sum(np.sum(np.abs(adata.varm["PCs"]), axis=1) == 0) == (n_genes - n_var_copy)
 
-    # compare PCA results beteen inplace/outplace
-    for ad_inplace, ad_outplace in zip(
-        [adata_pca, adata_pca_with_hvgs, adata_pca_not_using_hvgs],
-        [adata, adata_with_hvgs, adata_not_using_hvgs],
-    ):
-        np.testing.assert_array_equal(
-            ad_inplace.obsm["X_pca"],
-            ad_outplace.obsm["X_pca"],
-        )
+    # compare PCA results beteen inplace / copied
+    np.testing.assert_array_equal(adata.obsm["X_pca"], adata_pca.obsm["X_pca"])
 
 
 @pytest.mark.parametrize("n_hvgs", [100, 200])
@@ -289,18 +266,13 @@ def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n
     assert adata_pca.varm["PCs"].shape == (n_hvgs, n_comps)
 
     # check hvg df
-    assert np.all(
-        np.isin(
-            [
-                "means",
-                "variances",
-                "residual_variances",
-                "highly_variable_rank",
-                "highly_variable",
-            ],
-            list(hvg.columns),
-        )
-    )
+    assert {
+        "means",
+        "variances",
+        "residual_variances",
+        "highly_variable_rank",
+        "highly_variable",
+    } <= set(hvg.columns)
     assert np.sum(hvg["highly_variable"]) == n_hvgs
     assert hvg.shape[0] == n_genes
 

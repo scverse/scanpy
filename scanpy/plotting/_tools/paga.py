@@ -1,25 +1,32 @@
-import warnings
+from __future__ import annotations
+
 import collections.abc as cabc
+import warnings
 from pathlib import Path
 from types import MappingProxyType
-from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
 import scipy
-from anndata import AnnData
+from matplotlib import patheffects, rcParams, ticker
+from matplotlib import pyplot as plt
+from matplotlib.colors import Colormap, is_color_like
 from pandas.api.types import CategoricalDtype
-from matplotlib import pyplot as pl, rcParams, ticker
-from matplotlib import patheffects
-from matplotlib.axes import Axes
-from matplotlib.colors import is_color_like, Colormap
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
-from .. import _utils
-from .._utils import matrix, _IGraphLayout, _FontWeight, _FontSize
-from ... import _utils as _sc_utils, logging as logg
+from ... import _utils as _sc_utils
+from ... import logging as logg
 from ..._settings import settings
+from .. import _utils
+from .._utils import _FontSize, _FontWeight, _IGraphLayout, matrix
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
+    from anndata import AnnData
+    from matplotlib.axes import Axes
 
 
 def paga_compare(
@@ -32,8 +39,8 @@ def paga_compare(
     components=None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc="on data",
-    legend_fontsize: Union[int, float, _FontSize, None] = None,
-    legend_fontweight: Union[int, _FontWeight] = "bold",
+    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontweight: int | _FontWeight = "bold",
     legend_fontoutline=None,
     color_map=None,
     palette=None,
@@ -96,7 +103,7 @@ def paga_compare(
         else:
             basis = "umap"
 
-    from .scatterplots import embedding, _get_basis, _components_to_dimensions
+    from .scatterplots import _components_to_dimensions, _get_basis, embedding
 
     embedding(
         adata,
@@ -162,7 +169,7 @@ def paga_compare(
         **paga_graph_params,
     )
     if suptitle is not None:
-        pl.suptitle(suptitle)
+        plt.suptitle(suptitle)
     _utils.savefig_or_show("paga_compare", show=show, save=save)
     if show is False:
         return axs
@@ -178,6 +185,7 @@ def _compute_pos(
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
 ):
     import random
+
     import networkx as nx
 
     random_state = check_random_state(random_state)
@@ -276,47 +284,47 @@ def _compute_pos(
 
 def paga(
     adata: AnnData,
-    threshold: Optional[float] = None,
-    color: Optional[Union[str, Mapping[Union[str, int], Mapping[Any, float]]]] = None,
-    layout: Optional[_IGraphLayout] = None,
+    threshold: float | None = None,
+    color: str | Mapping[str | int, Mapping[Any, float]] | None = None,
+    layout: _IGraphLayout | None = None,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
-    init_pos: Optional[np.ndarray] = None,
-    root: Union[int, str, Sequence[int], None] = 0,
-    labels: Union[str, Sequence[str], Mapping[str, str], None] = None,
+    init_pos: np.ndarray | None = None,
+    root: int | str | Sequence[int] | None = 0,
+    labels: str | Sequence[str] | Mapping[str, str] | None = None,
     single_component: bool = False,
     solid_edges: str = "connectivities",
-    dashed_edges: Optional[str] = None,
-    transitions: Optional[str] = None,
-    fontsize: Optional[int] = None,
+    dashed_edges: str | None = None,
+    transitions: str | None = None,
+    fontsize: int | None = None,
     fontweight: str = "bold",
-    fontoutline: Optional[int] = None,
+    fontoutline: int | None = None,
     text_kwds: Mapping[str, Any] = MappingProxyType({}),
     node_size_scale: float = 1.0,
     node_size_power: float = 0.5,
     edge_width_scale: float = 1.0,
-    min_edge_width: Optional[float] = None,
-    max_edge_width: Optional[float] = None,
+    min_edge_width: float | None = None,
+    max_edge_width: float | None = None,
     arrowsize: int = 30,
-    title: Optional[str] = None,
+    title: str | None = None,
     left_margin: float = 0.01,
-    random_state: Optional[int] = 0,
-    pos: Union[np.ndarray, str, Path, None] = None,
+    random_state: int | None = 0,
+    pos: np.ndarray | str | Path | None = None,
     normalize_to_color: bool = False,
-    cmap: Union[str, Colormap] = None,
-    cax: Optional[Axes] = None,
+    cmap: str | Colormap = None,
+    cax: Axes | None = None,
     colorbar=None,  # TODO: this seems to be unused
     cb_kwds: Mapping[str, Any] = MappingProxyType({}),
-    frameon: Optional[bool] = None,
+    frameon: bool | None = None,
     add_pos: bool = True,
     export_to_gexf: bool = False,
     use_raw: bool = True,
     colors=None,  # backwards compat
     groups=None,  # backwards compat
     plot: bool = True,
-    show: Optional[bool] = None,
-    save: Union[bool, str, None] = None,
-    ax: Optional[Axes] = None,
-) -> Union[Axes, List[Axes], None]:
+    show: bool | None = None,
+    save: bool | str | None = None,
+    ax: Axes | None = None,
+) -> Axes | list[Axes] | None:
     """\
     Plot the PAGA graph through thresholding low-connectivity edges.
 
@@ -613,12 +621,12 @@ def paga(
                     width = 0.006 * draw_region_width / len(colors)
                     left = panel_pos[2][2 * icolor + 1] + 0.2 * width
                     rectangle = [left, bottom, width, height]
-                    fig = pl.gcf()
+                    fig = plt.gcf()
                     ax_cb = fig.add_axes(rectangle)
                 else:
                     ax_cb = cax[icolor]
 
-                _ = pl.colorbar(
+                _ = plt.colorbar(
                     sct,
                     format=ticker.FuncFormatter(_utils.ticks_formatter),
                     cax=ax_cb,
@@ -982,34 +990,34 @@ def _paga_graph(
 
 def paga_path(
     adata: AnnData,
-    nodes: Sequence[Union[str, int]],
+    nodes: Sequence[str | int],
     keys: Sequence[str],
     use_raw: bool = True,
     annotations: Sequence[str] = ("dpt_pseudotime",),
-    color_map: Union[str, Colormap, None] = None,
-    color_maps_annotations: Mapping[str, Union[str, Colormap]] = MappingProxyType(
+    color_map: str | Colormap | None = None,
+    color_maps_annotations: Mapping[str, str | Colormap] = MappingProxyType(
         dict(dpt_pseudotime="Greys")
     ),
-    palette_groups: Optional[Sequence[str]] = None,
+    palette_groups: Sequence[str] | None = None,
     n_avg: int = 1,
-    groups_key: Optional[str] = None,
-    xlim: Tuple[Optional[int], Optional[int]] = (None, None),
-    title: Optional[str] = None,
+    groups_key: str | None = None,
+    xlim: tuple[int | None, int | None] = (None, None),
+    title: str | None = None,
     left_margin=None,
-    ytick_fontsize: Optional[int] = None,
-    title_fontsize: Optional[int] = None,
+    ytick_fontsize: int | None = None,
+    title_fontsize: int | None = None,
     show_node_names: bool = True,
     show_yticks: bool = True,
     show_colorbar: bool = True,
-    legend_fontsize: Union[int, float, _FontSize, None] = None,
-    legend_fontweight: Union[int, _FontWeight, None] = None,
+    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontweight: int | _FontWeight | None = None,
     normalize_to_zero_one: bool = False,
     as_heatmap: bool = True,
     return_data: bool = False,
-    show: Optional[bool] = None,
-    save: Union[bool, str, None] = None,
-    ax: Optional[Axes] = None,
-) -> Optional[Axes]:
+    show: bool | None = None,
+    save: bool | str | None = None,
+    ax: Axes | None = None,
+) -> Axes | None:
     """\
     Gene expression and annotation changes along paths in the abstracted graph.
 
@@ -1092,7 +1100,7 @@ def paga_path(
     def moving_average(a):
         return _sc_utils.moving_average(a, n_avg)
 
-    ax = pl.gca() if ax is None else ax
+    ax = plt.gca() if ax is None else ax
 
     X = []
     x_tick_locs = [0]
@@ -1181,13 +1189,13 @@ def paga_path(
         ax.tick_params(axis="both", which="both", length=0)
         ax.grid(False)
         if show_colorbar:
-            pl.colorbar(img, ax=ax)
+            plt.colorbar(img, ax=ax)
         left_margin = 0.2 if left_margin is None else left_margin
-        pl.subplots_adjust(left=left_margin)
+        plt.subplots_adjust(left=left_margin)
     else:
         left_margin = 0.4 if left_margin is None else left_margin
         if len(keys) > 1:
-            pl.legend(
+            plt.legend(
                 frameon=False,
                 loc="center left",
                 bbox_to_anchor=(-left_margin, 0.5),
@@ -1196,15 +1204,15 @@ def paga_path(
     xlabel = groups_key
     if not as_heatmap:
         ax.set_xlabel(xlabel)
-        pl.yticks([])
+        plt.yticks([])
         if len(keys) == 1:
-            pl.ylabel(keys[0] + " (a.u.)")
+            plt.ylabel(keys[0] + " (a.u.)")
     else:
         import matplotlib.colors
 
         # groups bar
         ax_bounds = ax.get_position().bounds
-        groups_axis = pl.axes(
+        groups_axis = plt.axes(
             (
                 ax_bounds[0],
                 ax_bounds[1] - ax_bounds[3] / len(keys),
@@ -1250,7 +1258,7 @@ def paga_path(
         for ianno, anno in enumerate(annotations):
             if ianno > 0:
                 y_shift = ax_bounds[3] / len(keys) / 2
-            anno_axis = pl.axes(
+            anno_axis = plt.axes(
                 (
                     ax_bounds[0],
                     ax_bounds[1] - (ianno + 2) * y_shift,
@@ -1314,14 +1322,14 @@ def paga_adjacency(
         matrix(connectivity, color_map=color_map, show=False)
         for i in range(connectivity_select.shape[0]):
             neighbors = connectivity_select[i].nonzero()[1]
-            pl.scatter([i for j in neighbors], neighbors, color="black", s=1)
+            plt.scatter([i for j in neighbors], neighbors, color="black", s=1)
     # as a stripplot
     else:
-        pl.figure()
+        plt.figure()
         for i, cs in enumerate(connectivity):
             x = [i for j, d in enumerate(cs) if i != j]
             y = [c for j, c in enumerate(cs) if i != j]
-            pl.scatter(x, y, color="gray", s=1)
+            plt.scatter(x, y, color="gray", s=1)
             neighbors = connectivity_select[i].nonzero()[1]
-            pl.scatter([i for j in neighbors], cs[neighbors], color="black", s=1)
+            plt.scatter([i for j in neighbors], cs[neighbors], color="black", s=1)
     _utils.savefig_or_show("paga_connectivity", show=show, save=save)

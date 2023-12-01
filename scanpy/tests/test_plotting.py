@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from functools import partial
+from itertools import chain, combinations, repeat
 from pathlib import Path
-from itertools import repeat, chain, combinations
-from collections.abc import Callable
 
 import pytest
 from matplotlib.testing import setup
@@ -11,24 +10,28 @@ from packaging import version
 
 setup()
 
+from typing import TYPE_CHECKING
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 import pandas as pd
-from matplotlib.testing.compare import compare_images
+import seaborn as sns
 from anndata import AnnData
+from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
 from scanpy._compat import pkg_version
-from scanpy.testing._pytest.marks import needs
 from scanpy.testing._helpers.data import (
+    krumsiek11,
     pbmc3k,
     pbmc3k_processed,
-    krumsiek11,
     pbmc68k_reduced,
 )
+from scanpy.testing._pytest.marks import needs
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
@@ -41,7 +44,7 @@ sc.set_figure_params(dpi=40, color_map="viridis")
 # If test images need to be updated, simply copy actual.png to expected.png.
 
 
-@needs("leidenalg")
+@needs.leidenalg
 def test_heatmap(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
@@ -946,8 +949,8 @@ def test_genes_symbols(image_comparer, id, fn):
     adata = krumsiek11()
 
     # add a 'symbols' column
-    adata.var["symbols"] = adata.var.index.map(lambda x: "symbol_{}".format(x))
-    symbols = ["symbol_{}".format(x) for x in adata.var_names]
+    adata.var["symbols"] = adata.var.index.map(lambda x: f"symbol_{x}")
+    symbols = [f"symbol_{x}" for x in adata.var_names]
 
     fn(adata, symbols, "cell_type", dendrogram=True, gene_symbols="symbols", show=False)
     save_and_compare_images(f"{id}_gene_symbols")
@@ -957,6 +960,7 @@ def test_genes_symbols(image_comparer, id, fn):
 def _pbmc_scatterplots_session():
     # Wrapped in another fixture to avoid mutation
     pbmc = pbmc68k_reduced()
+    pbmc.obs["mask"] = pbmc.obs["louvain"].isin(["0", "1", "3"])
     pbmc.layers["sparse"] = pbmc.raw.X / 2
     pbmc.layers["test"] = pbmc.X.copy() + 100
     pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
@@ -1105,18 +1109,21 @@ def pbmc_scatterplots(_pbmc_scatterplots_session):
             "umap_symbols",
             partial(sc.pl.umap, color=["1", "2", "3"], gene_symbols="numbers"),
         ),
+        (
+            "pca_mask",
+            partial(
+                sc.pl.pca,
+                color=["LYZ", "CD79A", "louvain"],
+                mask="mask",
+            ),
+        ),
     ],
 )
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
-    # https://github.com/scverse/scanpy/issues/849
-    if id == "3dprojection" and version.parse(mpl.__version__) < version.parse("3.3.3"):
-        with pytest.raises(ValueError, match=r"known error with matplotlib 3d"):
-            fn(pbmc_scatterplots, show=False)
-    else:
-        fn(pbmc_scatterplots, show=False)
-        save_and_compare_images(id)
+    fn(pbmc_scatterplots, show=False)
+    save_and_compare_images(id)
 
 
 def test_scatter_embedding_groups_and_size(image_comparer):
@@ -1612,7 +1619,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs("scrublet")
+@needs.scrublet
 def test_scrublet_plots(image_comparer, plt):
     save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
@@ -1633,3 +1640,46 @@ def test_scrublet_plots(image_comparer, plt):
 
     sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
     save_and_compare_images("scrublet_with_batches")
+
+
+def test_umap_mask_equal(tmp_path, check_same_image):
+    """Check that all desired cells are coloured and masked cells gray"""
+    pbmc = sc.datasets.pbmc3k_processed()
+    mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+
+    ax = sc.pl.umap(pbmc, size=8.0, show=False)
+    sc.pl.umap(pbmc[mask], size=8.0, color="LDHB", ax=ax)
+    plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
+    plt.close()
+
+    sc.pl.umap(pbmc, size=8.0, color="LDHB", mask=mask)
+    plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
+    plt.close()
+
+    check_same_image(p1, p2, tol=1)
+
+
+def test_umap_mask_mult_plots():
+    """Check that multiple images are plotted when color is a list."""
+    pbmc = sc.datasets.pbmc3k_processed()
+    color = ["LDHB", "LYZ", "CD79A"]
+    mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+    axes = sc.pl.umap(pbmc, color=color, mask=mask, show=False)
+    assert isinstance(axes, list)
+    assert len(axes) == len(color)
+
+
+def test_string_mask(tmp_path, check_same_image):
+    """Check that the same mask given as string or bool array provides the same result"""
+    pbmc = sc.datasets.pbmc3k_processed()
+    pbmc.obs["mask"] = mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+
+    sc.pl.umap(pbmc, mask=mask, color="LDHB")
+    plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
+    plt.close()
+
+    sc.pl.umap(pbmc, color="LDHB", mask="mask")
+    plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
+    plt.close()
+
+    check_same_image(p1, p2, tol=1)

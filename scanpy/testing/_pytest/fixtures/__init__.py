@@ -4,16 +4,19 @@ This is kept seperate from the helpers file because it relies on pytest.
 """
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-import pytest
 import numpy as np
+import pytest
+
 from .data import (
     _pbmc3ks_parametrized_session,
     pbmc3k_parametrized,
     pbmc3k_parametrized_small,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 __all__ = [
     "float_dtype",

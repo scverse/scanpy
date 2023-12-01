@@ -1,29 +1,31 @@
 from __future__ import annotations
 
 import pickle
+from functools import partial
 from pathlib import Path
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 import scipy
-from numpy.typing import NDArray
 from anndata import AnnData
+from numpy.random import binomial, negative_binomial, seed
 from packaging import version
-from scipy import sparse
 from scipy.stats import mannwhitneyu
-from anndata.tests.helpers import asarray
-from numpy.random import negative_binomial, binomial, seed
 
 import scanpy as sc
+from scanpy._utils import elem_mul, select_groups
+from scanpy.get import rank_genes_groups_df
 from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
-from scanpy.get import rank_genes_groups_df
-from scanpy._utils import select_groups, elem_mul
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from numpy.typing import NDArray
 
 HERE = Path(__file__).parent
 DATA_PATH = HERE / "_data"
@@ -302,3 +304,60 @@ def test_wilcoxon_tie_correction(reference):
     test_obj.compute_statistics("wilcoxon", tie_correct=True)
 
     np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals)
+
+
+@pytest.mark.parametrize(
+    ("n_genes_add", "n_genes_out_add"),
+    [pytest.param(0, 0, id="equal"), pytest.param(2, 1, id="more")],
+)
+def test_mask_n_genes(n_genes_add, n_genes_out_add):
+    """\
+    Check that no. genes in output is
+    1. =n_genes when n_genes<sum(mask)
+    2. =sum(mask) when n_genes>sum(mask)
+    """
+
+    pbmc = pbmc68k_reduced()
+    mask = np.zeros(pbmc.shape[1]).astype(bool)
+    mask[:6].fill(True)
+    no_genes = sum(mask) - 1
+
+    rank_genes_groups(
+        pbmc,
+        mask=mask,
+        groupby="bulk_labels",
+        groups=["CD14+ Monocyte", "Dendritic"],
+        reference="CD14+ Monocyte",
+        n_genes=no_genes + n_genes_add,
+        method="wilcoxon",
+    )
+
+    assert len(pbmc.uns["rank_genes_groups"]["scores"]) == no_genes + n_genes_out_add
+
+
+def test_mask_not_equal():
+    """\
+    Check that mask is applied successfully to data set \
+    where test statistics are already available (test stats overwritten).
+    """
+
+    pbmc = pbmc68k_reduced()
+    mask = np.random.choice([True, False], pbmc.shape[1])
+    n_genes = sum(mask)
+
+    run = partial(
+        rank_genes_groups,
+        pbmc,
+        groupby="bulk_labels",
+        groups=["CD14+ Monocyte", "Dendritic"],
+        reference="CD14+ Monocyte",
+        method="wilcoxon",
+    )
+
+    run(n_genes=n_genes)
+    no_mask = pbmc.uns["rank_genes_groups"]["names"]
+
+    run(mask=mask)
+    with_mask = pbmc.uns["rank_genes_groups"]["names"]
+
+    assert not np.array_equal(no_mask, with_mask)

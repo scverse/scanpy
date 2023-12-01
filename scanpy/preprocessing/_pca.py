@@ -1,38 +1,44 @@
+from __future__ import annotations
+
 import warnings
-from typing import Optional, Union
+from warnings import warn
 
 import numpy as np
+from anndata import AnnData
 from packaging import version
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
-from anndata import AnnData
-
 from .. import logging as logg
-from .._settings import settings
 from .._compat import DaskArray, pkg_version
-from .._utils import AnyRandom
-from ..get import _get_obs_rep
+from .._settings import settings
+from .._utils import AnyRandom, Empty, _doc_params, _empty
+from ..get import _check_mask, _get_obs_rep
+from ._docs import doc_mask_hvg
 from ._utils import _get_mean_var
 
 
+@_doc_params(
+    mask_hvg=doc_mask_hvg,
+)
 def pca(
-    data: Union[AnnData, np.ndarray, spmatrix],
-    n_comps: Optional[int] = None,
+    data: AnnData | np.ndarray | spmatrix,
+    n_comps: int | None = None,
     *,
-    layer: Optional[str] = None,
-    zero_center: Optional[bool] = True,
-    svd_solver: Optional[str] = None,
+    layer: str | None = None,
+    zero_center: bool | None = True,
+    svd_solver: str | None = None,
     random_state: AnyRandom = 0,
     return_info: bool = False,
-    use_highly_variable: Optional[bool] = None,
+    mask: np.ndarray | str | None | Empty = _empty,
+    use_highly_variable: bool | None = None,
     dtype: str = "float32",
     copy: bool = False,
     chunked: bool = False,
-    chunk_size: Optional[int] = None,
-) -> Union[AnnData, np.ndarray, spmatrix]:
+    chunk_size: int | None = None,
+) -> AnnData | np.ndarray | spmatrix:
     """\
     Principal component analysis [Pedregosa11]_.
 
@@ -96,20 +102,20 @@ def pca(
         Efficient computation of the principal components of a sparse matrix
         currently only works with the `'arpack`' or `'lobpcg'` solvers.
 
-        If X is a *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`, :class:`~dask_ml.decomposition.IncrementalPCA`,
-        or :class:`~dask_ml.decomposition.TruncatedSVD` will be used. Otherwise their *scikit-learn* counterparts :class:`~sklearn.decomposition.PCA`, :class:`~sklearn.decomposition.IncrementalPCA`, or :class:`~sklearn.decomposition.TruncatedSVD`
-        will be used.
-
-
+        If X is a *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`,
+        :class:`~dask_ml.decomposition.IncrementalPCA`, or
+        :class:`~dask_ml.decomposition.TruncatedSVD` will be used.
+        Otherwise their *scikit-learn* counterparts :class:`~sklearn.decomposition.PCA`,
+        :class:`~sklearn.decomposition.IncrementalPCA`, or
+        :class:`~sklearn.decomposition.TruncatedSVD` will be used.
     random_state
         Change to use different initial states for the optimization.
     return_info
         Only relevant when not passing an :class:`~anndata.AnnData`:
-        see “**Returns**”.
-    use_highly_variable
-        Whether to use highly variable genes only, stored in
-        `.var['highly_variable']`.
-        By default uses them if they have been determined beforehand.
+        see “Returns”.
+    {mask_hvg}
+    layer
+        Layer of `adata` to use as expression values.
     dtype
         Numpy data type string to which to convert the result.
     copy
@@ -128,23 +134,27 @@ def pca(
 
     Returns
     -------
-    X_pca : :class:`~scipy.sparse.spmatrix`, :class:`~numpy.ndarray`
-        If `data` is array-like and `return_info=False` was passed,
-        this function only returns `X_pca`…
-    adata : anndata.AnnData
-        …otherwise if `copy=True` it returns or else adds fields to `adata`:
+    If `data` is array-like and `return_info=False` was passed,
+    this function returns the PCA representation of `data` as an
+    array of the same type as the input array.
 
-        `.obsm['X_pca']`
-             PCA representation of data.
-        `.varm['PCs']`
-             The principal components containing the loadings.
-        `.uns['pca']['variance_ratio']`
-             Ratio of explained variance.
-        `.uns['pca']['variance']`
-             Explained variance, equivalent to the eigenvalues of the
-             covariance matrix.
+    Otherwise, it returns `None` if `copy=False`, else an updated `AnnData` object.
+    Sets the following fields:
+
+    `.obsm['X_pca']` : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
+        PCA representation of data.
+    `.varm['PCs']` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
+        The principal components containing the loadings.
+    `.uns['pca']['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+        Ratio of explained variance.
+    `.uns['pca']['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+        Explained variance, equivalent to the eigenvalues of the
+        covariance matrix.
     """
     logg_start = logg.info("computing PCA")
+    if layer is not None and chunked:
+        # Current chunking implementation relies on pca being called on X
+        raise NotImplementedError("Cannot use `layer` and `chunked` at the same time.")
 
     # chunked calculation is not randomized, anyways
     if svd_solver in {"auto", "randomized"} and not chunked:
@@ -162,19 +172,10 @@ def pca(
         else:
             adata = AnnData(data)
 
-    if use_highly_variable is True and "highly_variable" not in adata.var.keys():
-        raise ValueError(
-            "Did not find adata.var['highly_variable']. "
-            "Either your data already only consists of highly-variable genes "
-            "or consider running `pp.highly_variable_genes` first."
-        )
-    if use_highly_variable is None:
-        use_highly_variable = True if "highly_variable" in adata.var.keys() else False
-    if use_highly_variable:
-        logg.info("    on highly variable genes")
-    adata_comp = (
-        adata[:, adata.var["highly_variable"]] if use_highly_variable else adata
-    )
+    # Unify new mask argument and deprecated use_highly_varible argument
+    mask_param, mask = _handle_mask_param(adata, mask, use_highly_variable)
+    del use_highly_variable
+    adata_comp = adata[:, mask] if mask is not None else adata
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
@@ -207,15 +208,15 @@ def pca(
 
         incremental_pca_kwargs = dict()
         if is_dask:
-            from dask_ml.decomposition import IncrementalPCA
             from dask.array import zeros
+            from dask_ml.decomposition import IncrementalPCA
 
             incremental_pca_kwargs["svd_solver"] = _handle_dask_ml_args(
                 svd_solver, "IncrementalPCA"
             )
         else:
-            from sklearn.decomposition import IncrementalPCA
             from numpy import zeros
+            from sklearn.decomposition import IncrementalPCA
 
         X_pca = zeros((X.shape[0], n_comps), X.dtype)
 
@@ -293,16 +294,18 @@ def pca(
 
     if data_is_AnnData:
         adata.obsm["X_pca"] = X_pca
-        if use_highly_variable:
+
+        if mask is not None:
             adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm["PCs"][adata.var["highly_variable"]] = pca_.components_.T
+            adata.varm["PCs"][mask] = pca_.components_.T
         else:
             adata.varm["PCs"] = pca_.components_.T
 
         uns_entry = {
             "params": {
                 "zero_center": zero_center,
-                "use_highly_variable": use_highly_variable,
+                "use_highly_variable": mask_param == "highly_variable",
+                "mask": mask_param,
             },
             "variance": pca_.explained_variance_,
             "variance_ratio": pca_.explained_variance_ratio_,
@@ -331,6 +334,42 @@ def pca(
             )
         else:
             return X_pca
+
+
+def _handle_mask_param(
+    adata: AnnData,
+    mask: np.ndarray | str | Empty | None,
+    use_highly_variable: bool | None,
+) -> tuple[np.ndarray | str | None, np.ndarray | None]:
+    """\
+    Unify new mask argument and deprecated use_highly_varible argument.
+
+    Returns both the normalized mask parameter and the validated mask array.
+    """
+    # First, verify and possibly warn
+    if use_highly_variable is not None:
+        hint = (
+            'Use_highly_variable=True can be called through mask="highly_variable". '
+            "Use_highly_variable=False can be called through mask=None"
+        )
+        msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
+        warn(msg, FutureWarning)
+        if mask is not _empty:
+            msg = f"These arguments are incompatible. {hint}"
+            raise ValueError(msg)
+
+    # Handle default case and explicit use_highly_variable=True
+    if use_highly_variable or (
+        use_highly_variable is None
+        and mask is _empty
+        and "highly_variable" in adata.var.keys()
+    ):
+        mask = "highly_variable"
+
+    # Without highly variable genes, we don’t use a mask by default
+    if mask is _empty or mask is None:
+        return None, None
+    return mask, _check_mask(adata, mask, "var")
 
 
 def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):

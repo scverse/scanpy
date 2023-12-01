@@ -8,33 +8,39 @@ TODO
 ----
 Beta Version. The code will be reorganized soon.
 """
+from __future__ import annotations
 
 import itertools
 import shutil
 import sys
 from pathlib import Path
 from types import MappingProxyType
-from typing import Optional, Union, List, Tuple, Mapping, Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import scipy as sp
-from anndata import AnnData
 
-from .. import _utils, readwrite, logging as logg
+from .. import _utils, readwrite
+from .. import logging as logg
 from .._settings import settings
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from anndata import AnnData
 
 
 def sim(
     model: Literal["krumsiek11", "toggleswitch"],
     params_file: bool = True,
-    tmax: Optional[int] = None,
-    branching: Optional[bool] = None,
-    nrRealizations: Optional[int] = None,
-    noiseObs: Optional[float] = None,
-    noiseDyn: Optional[float] = None,
-    step: Optional[int] = None,
-    seed: Optional[int] = None,
-    writedir: Optional[Union[str, Path]] = None,
+    tmax: int | None = None,
+    branching: bool | None = None,
+    nrRealizations: int | None = None,
+    noiseObs: float | None = None,
+    noiseDyn: float | None = None,
+    step: int | None = None,
+    seed: int | None = None,
+    writedir: str | Path | None = None,
 ) -> AnnData:
     """\
     Simulate dynamic gene expression data [Wittmann09]_ [Wolf18]_.
@@ -294,7 +300,7 @@ def write_data(
     else:
         id = 0
     with filename.open("w") as f:
-        id = "{:0>6}".format(id)
+        id = f"{id:0>6}"
         f.write(str(id))
     # dimension
     dim = X.shape[1]
@@ -896,7 +902,7 @@ class GRNsim:
 
 def _check_branching(
     X: np.ndarray, Xsamples: np.ndarray, restart: int, threshold: float = 0.25
-) -> Tuple[bool, List[np.ndarray]]:
+) -> tuple[bool, list[np.ndarray]]:
     """\
     Check whether time series branches.
 
@@ -975,7 +981,7 @@ def check_nocycles(Adj: np.ndarray, verbosity: int = 2) -> bool:
 
 def sample_coupling_matrix(
     dim: int = 3, connectivity: float = 0.5
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
     """\
     Sample coupling matrix.
 

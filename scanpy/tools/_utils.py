@@ -1,28 +1,16 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
-from scipy.sparse import csr_matrix
-from anndata import AnnData
 
 from .. import logging as logg
-from ._pca import pca
 from .._settings import settings
 from .._utils import _choose_graph
 
-doc_use_rep = """\
-use_rep
-    Use the indicated representation. `'X'` or any key for `.obsm` is valid.
-    If `None`, the representation is chosen automatically:
-    For `.n_vars` < :attr:`~scanpy._settings.ScanpyConfig.N_PCS` (default: 50), `.X` is used, otherwise 'X_pca' is used.
-    If 'X_pca' is not present, it’s computed with default parameters or `n_pcs` if present.\
-"""
-
-doc_n_pcs = """\
-n_pcs
-    Use this many PCs. If `n_pcs==0` use `.X` if `use_rep is None`.\
-"""
+if TYPE_CHECKING:
+    from anndata import AnnData
+    from scipy.sparse import csr_matrix
 
 
 def _choose_representation(
@@ -32,6 +20,8 @@ def _choose_representation(
     n_pcs: int | None = None,
     silent: bool = False,
 ) -> np.ndarray | csr_matrix:  # TODO: what else?
+    from ..preprocessing import pca
+
     verbosity = settings.verbosity
     if silent and settings.verbosity > 1:
         settings.verbosity = 1
@@ -73,14 +63,14 @@ def _choose_representation(
             X = adata.X
         else:
             raise ValueError(
-                "Did not find {} in `.obsm.keys()`. "
-                "You need to compute it first.".format(use_rep)
+                f"Did not find {use_rep} in `.obsm.keys()`. "
+                "You need to compute it first."
             )
     settings.verbosity = verbosity  # resetting verbosity
     return X
 
 
-def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
+def preprocess_with_pca(adata, n_pcs: int | None = None, random_state=0):
     """
     Parameters
     ----------
@@ -89,6 +79,8 @@ def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
         If `None` and there is a PCA version of the data, use this.
         If an integer, compute the PCA.
     """
+    from ..preprocessing import pca
+
     if n_pcs == 0:
         logg.info("    using data matrix X directly (no PCA)")
         return adata.X

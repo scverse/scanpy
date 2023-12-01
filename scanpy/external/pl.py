@@ -1,14 +1,14 @@
-from typing import Union, List, Optional, Any, Tuple, Collection
+from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from anndata import AnnData
-from matplotlib.axes import Axes
+from matplotlib.axes import Axes  # noqa: TCH002
 
-from ..testing._doctests import doctest_needs
 from .._utils import _doc_params
-from ..plotting import embedding
+from ..plotting import _utils, embedding
 from ..plotting._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
@@ -16,8 +16,13 @@ from ..plotting._docs import (
     doc_show_save_ax,
 )
 from ..plotting._tools.scatterplots import _wraps_plot_scatter
-from ..plotting import _utils
+from ..testing._doctests import doctest_needs
 from .tl._wishbone import _anndata_to_wishbone
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
+
+    from anndata import AnnData
 
 
 @doctest_needs("phate")
@@ -28,7 +33,7 @@ from .tl._wishbone import _anndata_to_wishbone
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def phate(adata, **kwargs) -> Union[List[Axes], None]:
+def phate(adata, **kwargs) -> list[Axes] | None:
     """\
     Scatter plot in PHATE basis.
 
@@ -78,7 +83,7 @@ def phate(adata, **kwargs) -> Union[List[Axes], None]:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def trimap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
+def trimap(adata, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in TriMap basis.
 
@@ -105,7 +110,7 @@ def trimap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 )
 def harmony_timeseries(
     adata, *, show: bool = True, return_fig: bool = False, **kwargs
-) -> Union[Axes, List[Axes], None]:
+) -> Axes | list[Axes] | None:
     """\
     Scatter plot in Harmony force-directed layout basis.
 
@@ -146,12 +151,12 @@ def harmony_timeseries(
 
 def sam(
     adata: AnnData,
-    projection: Union[str, np.ndarray] = "X_umap",
-    c: Optional[Union[str, np.ndarray]] = None,
+    projection: str | np.ndarray = "X_umap",
+    c: str | np.ndarray | None = None,
     cmap: str = "Spectral_r",
     linewidth: float = 0.0,
     edgecolor: str = "k",
-    axes: Optional[Axes] = None,
+    axes: Axes | None = None,
     colorbar: bool = True,
     s: float = 10.0,
     **kwargs: Any,
@@ -249,11 +254,11 @@ def wishbone_marker_trajectory(
     smoothing_factor: int = 1,
     min_delta: float = 0.1,
     show_variance: bool = False,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     return_fig: bool = False,
     show: bool = True,
-    save: Optional[Union[str, bool]] = None,
-    ax: Optional[Axes] = None,
+    save: str | bool | None = None,
+    ax: Axes | None = None,
 ):
     """\
     Plot marker trends along trajectory, and return trajectory branches for further
@@ -332,10 +337,10 @@ def scrublet_score_distribution(
     adata,
     scale_hist_obs: str = "log",
     scale_hist_sim: str = "linear",
-    figsize: Optional[Tuple[float, float]] = (8, 3),
+    figsize: tuple[float, float] | None = (8, 3),
     return_fig: bool = False,
     show: bool = True,
-    save: Optional[Union[str, bool]] = None,
+    save: str | bool | None = None,
 ):
     """\
     Plot histogram of doublet scores for observed transcriptomes and simulated doublets.

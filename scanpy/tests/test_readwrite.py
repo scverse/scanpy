@@ -1,4 +1,6 @@
-from pathlib import PureWindowsPath, PurePosixPath
+from __future__ import annotations
+
+from pathlib import PurePosixPath, PureWindowsPath
 
 import pytest
 

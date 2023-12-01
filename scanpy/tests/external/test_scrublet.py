@@ -1,19 +1,19 @@
+from __future__ import annotations
+
+import anndata as ad
+import numpy as np
+import pandas as pd
 import pytest
+import scipy.sparse as sparse
+from anndata.tests.helpers import assert_equal
 
 import scanpy as sc
 import scanpy.external as sce
-from anndata.tests.helpers import assert_equal
-import pandas as pd
-import anndata as ad
-import numpy as np
 import scanpy.preprocessing as pp
-import scipy.sparse as sparse
-
 from scanpy.testing._helpers.data import paul15, pbmc3k
 from scanpy.testing._pytest.marks import needs
 
-
-pytestmark = [needs("scrublet")]
+pytestmark = [needs.scrublet]
 
 
 def test_scrublet():

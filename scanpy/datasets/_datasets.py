@@ -1,16 +1,21 @@
-from pathlib import Path
-from typing import Optional, Literal
-import warnings
+from __future__ import annotations
 
+import warnings
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal
+
+import anndata as ad
 import numpy as np
 import pandas as pd
-import anndata as ad
 
-from .. import logging as logg, _utils
+from .. import _utils
+from .. import logging as logg
 from .._settings import settings
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
-from .._utils import AnyRandom
+
+if TYPE_CHECKING:
+    from .._utils import AnyRandom
 
 HERE = Path(__file__).parent
 
@@ -314,7 +319,7 @@ def pbmc3k_processed() -> ad.AnnData:
 def _download_visium_dataset(
     sample_id: str,
     spaceranger_version: str,
-    base_dir: Optional[Path] = None,
+    base_dir: Path | None = None,
     download_image: bool = False,
 ):
     """

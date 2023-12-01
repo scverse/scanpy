@@ -1,11 +1,17 @@
 """This module contains helper functions for accessing data."""
-from typing import Optional, Iterable, Tuple, Union, List, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from scipy.sparse import spmatrix
 
-from anndata import AnnData
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from numpy.typing import NDArray
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -15,13 +21,13 @@ from anndata import AnnData
 # TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
-    group: Union[str, Iterable[str]],
+    group: str | Iterable[str],
     *,
     key: str = "rank_genes_groups",
-    pval_cutoff: Optional[float] = None,
-    log2fc_min: Optional[float] = None,
-    log2fc_max: Optional[float] = None,
-    gene_symbols: Optional[str] = None,
+    pval_cutoff: float | None = None,
+    log2fc_min: float | None = None,
+    log2fc_max: float | None = None,
+    gene_symbols: str | None = None,
 ) -> pd.DataFrame:
     """\
     :func:`scanpy.tl.rank_genes_groups` results in the form of a
@@ -101,10 +107,10 @@ def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
     dim: Literal["obs", "var"],
-    keys: List[str],
-    alias_index: Optional[pd.Index] = None,
+    keys: list[str],
+    alias_index: pd.Index | None = None,
     use_raw: bool = False,
-) -> Tuple[List[str], List[str], List[str]]:
+) -> tuple[list[str], list[str], list[str]]:
     """Common logic for checking indices for obs_df and var_df."""
     if use_raw:
         alt_repr = "adata.raw"
@@ -179,7 +185,7 @@ def _check_indices(
 def _get_array_values(
     X,
     dim_names: pd.Index,
-    keys: List[str],
+    keys: list[str],
     axis: Literal[0, 1],
     backed: bool,
 ):
@@ -209,7 +215,7 @@ def _get_array_values(
 def obs_df(
     adata: AnnData,
     keys: Iterable[str] = (),
-    obsm_keys: Iterable[Tuple[str, int]] = (),
+    obsm_keys: Iterable[tuple[str, int]] = (),
     *,
     layer: str = None,
     gene_symbols: str = None,
@@ -327,7 +333,7 @@ def obs_df(
 def var_df(
     adata: AnnData,
     keys: Iterable[str] = (),
-    varm_keys: Iterable[Tuple[str, int]] = (),
+    varm_keys: Iterable[tuple[str, int]] = (),
     *,
     layer: str = None,
 ) -> pd.DataFrame:
@@ -445,3 +451,44 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
             "That was unexpected. Please report this bug at:\n\n\t"
             " https://github.com/scverse/scanpy/issues"
         )
+
+
+def _check_mask(
+    data: AnnData | np.ndarray,
+    mask: str | NDArray[np.bool_],
+    dim: Literal["obs", "var"],
+) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
+    """
+    Validate mask argument
+    Params
+    ------
+    data
+        Annotated data matrix or numpy array.
+    mask
+        The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
+    dim
+        The dimension being masked.
+    """
+    if isinstance(mask, str):
+        if not isinstance(data, AnnData):
+            msg = "Cannot refer to mask with string without providing anndata object as argument"
+            raise ValueError(msg)
+
+        annot: pd.DataFrame = getattr(data, dim)
+        if mask not in annot.columns:
+            msg = (
+                f"Did not find `adata.{dim}[{mask!r}]`. "
+                f"Either add the mask first to `adata.{dim}`"
+                "or consider using the mask argument with a boolean array."
+            )
+            raise ValueError(msg)
+        mask_array = annot[mask].to_numpy()
+    else:
+        if len(mask) != data.shape[0 if dim == "obs" else 1]:
+            raise ValueError("The shape of the mask do not match the data.")
+        mask_array = mask
+
+    if not pd.api.types.is_bool_dtype(mask_array.dtype):
+        raise ValueError("Mask array must be boolean.")
+
+    return mask_array
