@@ -524,26 +524,25 @@ def test_highly_variable_genes_subset_inplace_consistency(
     subset,
     inplace,
 ):
+    adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
+    adata.X = np.abs(adata.X).astype(int)
+
     if flavor == "seurat" or flavor == "cell_ranger":
-        adata = pbmc3k()
-        sc.pp.filter_genes(adata, min_cells=10)
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 
     elif flavor == "seurat_v3":
-        adata = pbmc3k()
-        sc.pp.filter_genes(adata, min_cells=10)
+        pass
+
     else:
         raise ValueError(f"Unknown flavor {flavor}")
 
-    # cleanup var
-    del adata.var
     n_genes = adata.shape[1]
 
     output_df = sc.pp.highly_variable_genes(
         adata,
         flavor=flavor,
-        n_top_genes=10,
+        n_top_genes=15,
         subset=subset,
         inplace=inplace,
     )
@@ -552,7 +551,7 @@ def test_highly_variable_genes_subset_inplace_consistency(
         assert output_df is None
 
         if subset:
-            assert len(adata.var) == 10
+            assert len(adata.var) == 15
         else:
             assert len(adata.var) == n_genes
 
@@ -560,6 +559,6 @@ def test_highly_variable_genes_subset_inplace_consistency(
         assert output_df is not None
 
         if subset:
-            assert len(output_df) == 10
+            assert len(output_df) == 15
         else:
             assert len(output_df) == n_genes
