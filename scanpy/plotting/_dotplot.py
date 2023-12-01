@@ -850,6 +850,7 @@ def dotplot(
     Makes a *dot plot* of the expression values of `var_names`.
 
     For each var_name and each `groupby` category a dot is plotted.
+    Columns can optionally be grouped by specifying `groupby_cols`.
     Each dot represents two values: mean expression within each category
     (visualized by color) and fraction of cells expressing the `var_name` in the
     category (visualized by the size of the dot). If `groupby` is not given,

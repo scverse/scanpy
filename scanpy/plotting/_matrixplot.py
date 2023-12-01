@@ -323,6 +323,7 @@ def matrixplot(
 ) -> MatrixPlot | dict | None:
     """\
     Creates a heatmap of the mean expression values per group of each var_names.
+    Columns can optionally be grouped by specifying `groupby_cols`.
 
     This function provides a convenient interface to the :class:`~scanpy.pl.MatrixPlot`
     class. If you need more flexibility, you should use :class:`~scanpy.pl.MatrixPlot`

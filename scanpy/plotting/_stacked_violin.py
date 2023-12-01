@@ -616,6 +616,7 @@ def stacked_violin(
     Makes a compact image composed of individual violin plots
     (from :func:`~seaborn.violinplot`) stacked on top of each other.
     Useful to visualize gene expression per cluster.
+    Columns can optionally be grouped by specifying `groupby_cols`.
 
     Wraps :func:`seaborn.violinplot` for :class:`~anndata.AnnData`.
 
