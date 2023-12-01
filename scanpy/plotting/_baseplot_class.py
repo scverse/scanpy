@@ -124,6 +124,10 @@ class BasePlot:
         )
         # reset obs_tidy if using groupby_cols
         if len(self.groupby_cols) > 0:
+            if len(set(self.groupby).intersection(set(self.groupby_cols)))>0:
+                raise ValueError(
+                    f"`groupby` and `groupby_cols` have overlapping elements: {set(self.groupby).intersection(set(self.groupby_cols))}."
+                )
             # TODO : Check if we rather need the product of categories ?
             self.categories_cols = adata.obs.loc[:,self.groupby_cols].nunique().sum()
             _, self.obs_tidy = _prepare_dataframe(
