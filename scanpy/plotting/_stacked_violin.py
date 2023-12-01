@@ -336,6 +336,7 @@ class StackedViolin(BasePlot):
             self.stacked_violin_col_order = _color_df.columns
         if self.are_axes_swapped:
             _color_df = _color_df.T
+            self.stacked_violin_col_order = _color_df.columns
 
         cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
         if "cmap" in self.kwds:
@@ -484,7 +485,7 @@ class StackedViolin(BasePlot):
                 # we need to use this instead of the 'row_label'
                 # (in _color_df the values are not renamed as those
                 # values will be used to label the ticks)
-                _df = df[df.genes == _matrix.columns[idx]]
+                _df = df[df.genes == row_label]
             row_ax = sns.violinplot(
                 x=x,
                 y="values",
