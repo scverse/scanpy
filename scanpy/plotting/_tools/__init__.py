@@ -97,9 +97,11 @@ def pca_overview(adata: AnnData, **params):
 pca_scatter = pca
 
 
+@legacy_api("include_lowest", "n_points", "show", "save")
 def pca_loadings(
     adata: AnnData,
     components: str | Sequence[int] | None = None,
+    *,
     include_lowest: bool = True,
     n_points: int | None = None,
     show: bool | None = None,
@@ -298,10 +300,22 @@ def dpt_groups_pseudotime(
     savefig_or_show("dpt_groups_pseudotime", save=save, show=show)
 
 
+@legacy_api(
+    "n_genes",
+    "gene_symbols",
+    "key",
+    "fontsize",
+    "ncols",
+    "sharey",
+    "show",
+    "save",
+    "ax",
+)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int = 20,
     gene_symbols: str | None = None,
     key: str | None = "rank_genes_groups",
@@ -631,10 +645,21 @@ def _rank_genes_groups_plot(
         )
 
 
+@legacy_api(
+    "n_genes",
+    "groupby",
+    "gene_symbols",
+    "var_names",
+    "min_logfoldchange",
+    "key",
+    "show",
+    "save",
+)
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_heatmap(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     gene_symbols: str | None = None,
@@ -704,10 +729,21 @@ def rank_genes_groups_heatmap(
     )
 
 
+@legacy_api(
+    "n_genes",
+    "groupby",
+    "var_names",
+    "gene_symbols",
+    "min_logfoldchange",
+    "key",
+    "show",
+    "save",
+)
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_tracksplot(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     var_names: Sequence[str] | Mapping[str, Sequence[str]] | None = None,
@@ -757,6 +793,18 @@ def rank_genes_groups_tracksplot(
     )
 
 
+@legacy_api(
+    "n_genes",
+    "groupby",
+    "values_to_plot",
+    "var_names",
+    "gene_symbols",
+    "min_logfoldchange",
+    "key",
+    "show",
+    "save",
+    "return_fig",
+)
 @_doc_params(
     params=doc_rank_genes_groups_plot_args,
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
@@ -765,6 +813,7 @@ def rank_genes_groups_tracksplot(
 def rank_genes_groups_dotplot(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     values_to_plot: Literal[
@@ -970,6 +1019,18 @@ def rank_genes_groups_stacked_violin(
     )
 
 
+@legacy_api(
+    "n_genes",
+    "groupby",
+    "values_to_plot",
+    "var_names",
+    "gene_symbols",
+    "min_logfoldchange",
+    "key",
+    "show",
+    "save",
+    "return_fig",
+)
 @_doc_params(
     params=doc_rank_genes_groups_plot_args,
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
@@ -978,6 +1039,7 @@ def rank_genes_groups_stacked_violin(
 def rank_genes_groups_matrixplot(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     values_to_plot: Literal[
@@ -1103,10 +1165,26 @@ def rank_genes_groups_matrixplot(
     )
 
 
+@legacy_api(
+    "n_genes",
+    "gene_names",
+    "gene_symbols",
+    "use_raw",
+    "key",
+    "split",
+    "scale",
+    "strip",
+    "jitter",
+    "size",
+    "ax",
+    "show",
+    "save",
+)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_violin(
     adata: AnnData,
     groups: Sequence[str] | None = None,
+    *,
     n_genes: int = 20,
     gene_names: Iterable[str] | None = None,
     gene_symbols: str | None = None,
