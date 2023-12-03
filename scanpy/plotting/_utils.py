@@ -9,6 +9,7 @@ from typing import Union as _U
 import matplotlib as mpl
 import numpy as np
 from cycler import Cycler, cycler
+from legacy_api_wrap import legacy_api
 from matplotlib import axes, gridspec, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
@@ -46,8 +47,21 @@ class _AxesSubplot(Axes, axes.SubplotBase):
 # -------------------------------------------------------------------------------
 
 
+@legacy_api(
+    "xlabel",
+    "ylabel",
+    "xticks",
+    "yticks",
+    "title",
+    "colorbar_shrink",
+    "color_map",
+    "show",
+    "save",
+    "ax",
+)
 def matrix(
     matrix: ArrayLike | Image,
+    *,
     xlabel: str | None = None,
     ylabel: str | None = None,
     xticks: Collection[str] | None = None,
@@ -58,7 +72,7 @@ def matrix(
     show: bool | None = None,
     save: bool | str | None = None,
     ax: Axes | None = None,
-):
+) -> None:
     """Plot a matrix."""
     if ax is None:
         ax = plt.gca()
@@ -90,6 +104,7 @@ def timeseries(X, **kwargs):
 
 def timeseries_subplot(
     X: np.ndarray,
+    *,
     time=None,
     color=None,
     var_names=(),
@@ -167,7 +182,7 @@ def timeseries_subplot(
 
 
 def timeseries_as_heatmap(
-    X: np.ndarray, var_names: Collection[str] = (), highlights_x=(), color_map=None
+    X: np.ndarray, *, var_names: Collection[str] = (), highlights_x=(), color_map=None
 ):
     """\
     Plot timeseries as heatmap.

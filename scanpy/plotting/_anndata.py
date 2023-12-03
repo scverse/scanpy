@@ -68,11 +68,29 @@ _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
 _VarNames = Union[str, Sequence[str]]
 
 
+@legacy_api(
+    "color",
+    "use_raw",
+    "layers",
+    "sort_order",
+    "alpha",
+    "basis",
+    "groups",
+    "components",
+    "projection",
+    "legend_loc",
+    "legend_fontsize",
+    "legend_fontweight",
+    "legend_fontoutline",
+    "color_map",
+    # 17 positionals are enough for backwards compatibility
+)
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
 def scatter(
     adata: AnnData,
     x: str | None = None,
     y: str | None = None,
+    *,
     color: str | Collection[str] | None = None,
     use_raw: bool | None = None,
     layers: str | Collection[str] | None = None,

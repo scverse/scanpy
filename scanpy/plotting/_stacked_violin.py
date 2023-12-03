@@ -572,6 +572,23 @@ class StackedViolin(BasePlot):
         )
 
 
+@legacy_api(
+    "log",
+    "use_raw",
+    "num_categories",
+    "title",
+    "colorbar_title",
+    "figsize",
+    "dendrogram",
+    "gene_symbols",
+    "var_group_positions",
+    "var_group_labels",
+    "standard_scale",
+    "var_group_rotation",
+    "layer",
+    "stripplot",
+    # 17 positionals are enough for backwards compatibility
+)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
@@ -582,6 +599,7 @@ def stacked_violin(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    *,
     log: bool = False,
     use_raw: bool | None = None,
     num_categories: int = 7,

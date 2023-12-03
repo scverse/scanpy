@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 import pandas as pd
 import scipy
+from legacy_api_wrap import legacy_api
 from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap, is_color_like
@@ -29,9 +30,33 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
 
 
+@legacy_api(
+    "edges",
+    "color",
+    "alpha",
+    "groups",
+    "components",
+    "projection",
+    "legend_loc",
+    "legend_fontsize",
+    "legend_fontweight",
+    "legend_fontoutline",
+    "color_map",
+    "palette",
+    "frameon",
+    "size",
+    "title",
+    "right_margin",
+    "left_margin",
+    "show",
+    "save",
+    "title_graph",
+    "groups_graph",
+)
 def paga_compare(
     adata: AnnData,
     basis=None,
+    *,
     edges=False,
     color=None,
     alpha=None,
@@ -53,7 +78,6 @@ def paga_compare(
     save=None,
     title_graph=None,
     groups_graph=None,
-    *,
     pos=None,
     **paga_graph_params,
 ):
@@ -282,8 +306,28 @@ def _compute_pos(
     return pos_array
 
 
+@legacy_api(
+    "threshold",
+    "color",
+    "layout",
+    "layout_kwds",
+    "init_pos",
+    "root",
+    "labels",
+    "single_component",
+    "solid_edges",
+    "dashed_edges",
+    "transitions",
+    "fontsize",
+    "fontweight",
+    "fontoutline",
+    "text_kwds",
+    "node_size_scale",
+    # 17 positionals are enough for backwards compat
+)
 def paga(
     adata: AnnData,
+    *,
     threshold: float | None = None,
     color: str | Mapping[str | int, Mapping[Any, float]] | None = None,
     layout: _IGraphLayout | None = None,
@@ -310,7 +354,7 @@ def paga(
     random_state: int | None = 0,
     pos: np.ndarray | Path | str | None = None,
     normalize_to_color: bool = False,
-    cmap: str | Colormap = None,
+    cmap: str | Colormap | None = None,
     cax: Axes | None = None,
     colorbar=None,  # TODO: this seems to be unused
     cb_kwds: Mapping[str, Any] = MappingProxyType({}),
@@ -645,6 +689,7 @@ def paga(
 def _paga_graph(
     adata,
     ax,
+    *,
     solid_edges=None,
     dashed_edges=None,
     adjacency_solid=None,
@@ -988,10 +1033,36 @@ def _paga_graph(
     return sct
 
 
+@legacy_api(
+    "use_raw",
+    "annotations",
+    "color_map",
+    "color_maps_annotations",
+    "palette_groups",
+    "n_avg",
+    "groups_key",
+    "xlim",
+    "title",
+    "left_margin",
+    "ytick_fontsize",
+    "title_fontsize",
+    "show_node_names",
+    "show_yticks",
+    "show_colorbar",
+    "legend_fontsize",
+    "legend_fontweight",
+    "normalize_to_zero_one",
+    "as_heatmap",
+    "return_data",
+    "show",
+    "save",
+    "ax",
+)
 def paga_path(
     adata: AnnData,
     nodes: Sequence[str | int],
     keys: Sequence[str],
+    *,
     use_raw: bool = True,
     annotations: Sequence[str] = ("dpt_pseudotime",),
     color_map: str | Colormap | None = None,
@@ -1308,13 +1379,14 @@ def paga_path(
 
 def paga_adjacency(
     adata: AnnData,
+    *,
     adjacency: str = "connectivities",
     adjacency_tree: str = "connectivities_tree",
     as_heatmap: bool = True,
     color_map: str | Colormap | None = None,
     show: bool | None = None,
     save: bool | str | None = None,
-):
+) -> None:
     """Connectivity of paga groups."""
     connectivity = adata.uns[adjacency].toarray()
     connectivity_select = adata.uns[adjacency_tree]

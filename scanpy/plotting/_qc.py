@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from matplotlib import pyplot as plt
 
 from .._utils import _doc_params
@@ -16,10 +17,12 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
 
 
+@legacy_api("show", "save", "ax", "gene_symbols", "log")
 @_doc_params(show_save_ax=doc_show_save_ax)
 def highest_expr_genes(
     adata: AnnData,
     n_top: int = 30,
+    *,
     show: bool | None = None,
     save: str | bool | None = None,
     ax: Axes | None = None,

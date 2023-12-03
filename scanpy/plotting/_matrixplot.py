@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from anndata import AnnData
+    from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
 
 
@@ -303,6 +304,23 @@ class MatrixPlot(BasePlot):
         return normalize
 
 
+@legacy_api(
+    "use_raw",
+    "log",
+    "num_categories",
+    "figsize",
+    "dendrogram",
+    "title",
+    "cmap",
+    "colorbar_title",
+    "gene_symbols",
+    "var_group_positions",
+    "var_group_labels",
+    "var_group_rotation",
+    "layer",
+    "standard_scale",
+    # 17 positionals are enough for backwards compatibility
+)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
@@ -313,6 +331,7 @@ def matrixplot(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    *,
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
@@ -326,7 +345,7 @@ def matrixplot(
     var_group_labels: Sequence[str] | None = None,
     var_group_rotation: float | None = None,
     layer: str | None = None,
-    standard_scale: Literal["var", "group"] = None,
+    standard_scale: Literal["var", "group"] | None = None,
     values_df: pd.DataFrame | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
@@ -338,7 +357,7 @@ def matrixplot(
     vcenter: float | None = None,
     norm: Normalize | None = None,
     **kwds,
-) -> MatrixPlot | dict | None:
+) -> MatrixPlot | dict[str, Axes] | None:
     """\
     Creates a heatmap of the mean expression values per group of each var_names.
 
@@ -434,9 +453,9 @@ def matrixplot(
     mp = mp.style(cmap=cmap).legend(title=colorbar_title)
     if return_fig:
         return mp
-    else:
-        mp.make_figure()
-        savefig_or_show(MatrixPlot.DEFAULT_SAVE_PREFIX, show=show, save=save)
-        show = settings.autoshow if show is None else show
-        if not show:
-            return mp.get_axes()
+    mp.make_figure()
+    savefig_or_show(MatrixPlot.DEFAULT_SAVE_PREFIX, show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return mp.get_axes()

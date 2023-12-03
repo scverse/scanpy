@@ -428,7 +428,7 @@ class BasePlot:
 
         return self
 
-    def get_axes(self):
+    def get_axes(self) -> dict[str, Axes]:
         if self.ax_dict is None:
             self.make_figure()
         return self.ax_dict
