@@ -256,11 +256,22 @@ def palantir(
     return adata if copy else None
 
 
+@legacy_api(
+    "ms_data",
+    "terminal_states",
+    "knn",
+    "num_waypoints",
+    "n_jobs",
+    "scale_components",
+    "use_early_cell_as_start",
+    "max_iterations",
+)
 def palantir_results(
     adata: AnnData,
     early_cell: str,
+    *,
     ms_data: str = "X_palantir_multiscale",
-    terminal_states: list = None,
+    terminal_states: list | None = None,
     knn: int = 30,
     num_waypoints: int = 1200,
     n_jobs: int = -1,

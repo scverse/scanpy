@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from legacy_api_wrap import legacy_api
 
 from ...testing._doctests import doctest_needs
 
@@ -13,10 +14,12 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@legacy_api("basis", "adjusted_basis", "knn", "sigma", "approx", "alpha", "batch_size")
 @doctest_needs("scanorama")
 def scanorama_integrate(
     adata: AnnData,
     key: str,
+    *,
     basis: str = "X_pca",
     adjusted_basis: str = "X_scanorama",
     knn: int = 20,
@@ -25,7 +28,7 @@ def scanorama_integrate(
     alpha: float = 0.10,
     batch_size: int = 5000,
     **kwargs,
-):
+) -> None:
     """\
     Use Scanorama [Hie19]_ to integrate different experiments.
 

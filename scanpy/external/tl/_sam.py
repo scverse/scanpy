@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
+from legacy_api_wrap import legacy_api
+
 if TYPE_CHECKING:
     from anndata import AnnData
     from samalg import SAM
@@ -13,9 +15,24 @@ from ... import logging as logg
 from ...testing._doctests import doctest_needs
 
 
+@legacy_api(
+    "max_iter",
+    "num_norm_avg",
+    "k",
+    "distance",
+    "standardization",
+    "weight_pcs",
+    "sparse_pca",
+    "n_pcs",
+    "n_genes",
+    "projection",
+    "inplace",
+    "verbose",
+)
 @doctest_needs("samalg")
 def sam(
     adata: AnnData,
+    *,
     max_iter: int = 10,
     num_norm_avg: int = 50,
     k: int = 20,

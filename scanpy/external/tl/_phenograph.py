@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 from anndata import AnnData
+from legacy_api_wrap import legacy_api
 
 from ... import logging as logg
 from ...testing._doctests import doctest_needs
@@ -18,10 +19,29 @@ if TYPE_CHECKING:
     from ...tools._leiden import MutableVertexPartition
 
 
+@legacy_api(
+    "k",
+    "directed",
+    "prune",
+    "min_cluster_size",
+    "jaccard",
+    "primary_metric",
+    "n_jobs",
+    "q_tol",
+    "louvain_time_limit",
+    "nn_method",
+    "partition_type",
+    "resolution_parameter",
+    "n_iterations",
+    "use_weights",
+    "seed",
+    "copy",
+)
 @doctest_needs("phenograph")
 def phenograph(
     data: AnnData | np.ndarray | spmatrix,
     clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
+    *,
     k: int = 30,
     directed: bool = False,
     prune: bool = False,
@@ -44,7 +64,7 @@ def phenograph(
     seed: int | None = None,
     copy: bool = False,
     **kargs: Any,
-) -> tuple[np.ndarray | None, spmatrix, float | None]:
+) -> tuple[np.ndarray | None, spmatrix, float | None] | None:
     """\
     PhenoGraph clustering [Levine15]_.
 

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 
 from ... import logging
 from ...testing._doctests import doctest_needs
@@ -15,10 +16,12 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@legacy_api("branch", "k", "components", "num_waypoints")
 @doctest_needs("wishbone")
 def wishbone(
     adata: AnnData,
     start_cell: str,
+    *,
     branch: bool = True,
     k: int = 15,
     components: Iterable[int] = (1, 2, 3),

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from matplotlib.axes import Axes  # noqa: TCH002
 
 from .._utils import _doc_params
@@ -159,9 +160,11 @@ def harmony_timeseries(
         return axes
 
 
+@legacy_api("c", "cmap", "linewidth", "edgecolor", "axes", "colorbar", "s")
 def sam(
     adata: AnnData,
     projection: str | np.ndarray = "X_umap",
+    *,
     c: str | np.ndarray | None = None,
     cmap: str = "Spectral_r",
     linewidth: float = 0.0,
@@ -256,10 +259,22 @@ def sam(
     return axes
 
 
+@legacy_api(
+    "no_bins",
+    "smoothing_factor",
+    "min_delta",
+    "show_variance",
+    "figsize",
+    "return_fig",
+    "show",
+    "save",
+    "ax",
+)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def wishbone_marker_trajectory(
     adata: AnnData,
     markers: Collection[str],
+    *,
     no_bins: int = 150,
     smoothing_factor: int = 1,
     min_delta: float = 0.1,
@@ -343,8 +358,10 @@ def wishbone_marker_trajectory(
         return ax
 
 
+@legacy_api("scale_hist_obs", "scale_hist_sim", "figsize", "return_fig", "show", "save")
 def scrublet_score_distribution(
     adata: AnnData,
+    *,
     scale_hist_obs: str = "log",
     scale_hist_sim: str = "linear",
     figsize: tuple[float, float] | None = (8, 3),

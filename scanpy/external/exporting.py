@@ -12,6 +12,7 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse
+from legacy_api_wrap import legacy_api
 from pandas.api.types import CategoricalDtype
 
 from .._utils import NeighborsView
@@ -25,17 +26,26 @@ if TYPE_CHECKING:
 __all__ = ["spring_project", "cellbrowser"]
 
 
+@legacy_api(
+    "subplot_name",
+    "cell_groupings",
+    "custom_color_tracks",
+    "total_counts_key",
+    "neighbors_key",
+    "overwrite",
+)
 def spring_project(
     adata: AnnData,
     project_dir: Path | str,
     embedding_method: str,
+    *,
     subplot_name: str | None = None,
     cell_groupings: str | Iterable[str] | None = None,
     custom_color_tracks: str | Iterable[str] | None = None,
     total_counts_key: str = "n_counts",
     neighbors_key: str | None = None,
     overwrite: bool = False,
-):
+) -> None:
     """\
     Exports to a SPRING project directory [Weinreb17]_.
 
@@ -474,10 +484,21 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     return None
 
 
+@legacy_api(
+    "embedding_keys",
+    "annot_keys",
+    "cluster_field",
+    "nb_marker",
+    "skip_matrix",
+    "html_dir",
+    "port",
+    "do_debug",
+)
 def cellbrowser(
     adata: AnnData,
     data_dir: Path | str,
     data_name: str,
+    *,
     embedding_keys: Iterable[str] | Mapping[str, str] | str | None = None,
     annot_keys: Iterable[str] | Mapping[str, str] | None = (
         "louvain",
