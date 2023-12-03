@@ -54,7 +54,7 @@ def filter_cells(
     min_genes: int | None = None,
     max_counts: int | None = None,
     max_genes: int | None = None,
-    inplace: bool | None = None,
+    inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | tuple[np.ndarray, np.ndarray] | None:
     """\
