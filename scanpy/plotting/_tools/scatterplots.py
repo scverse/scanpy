@@ -627,7 +627,7 @@ def _wraps_plot_scatter(wrapper):
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def umap(adata, **kwargs) -> Axes | list[Axes] | None:
+def umap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in UMAP basis.
 
@@ -689,7 +689,7 @@ def umap(adata, **kwargs) -> Axes | list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def tsne(adata, **kwargs) -> Axes | list[Axes] | None:
+def tsne(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in tSNE basis.
 
@@ -729,7 +729,7 @@ def tsne(adata, **kwargs) -> Axes | list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def diffmap(adata, **kwargs) -> Axes | list[Axes] | None:
+def diffmap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in Diffusion Map basis.
 
@@ -823,7 +823,7 @@ def draw_graph(
     show_save_ax=doc_show_save_ax,
 )
 def pca(
-    adata,
+    adata: AnnData,
     *,
     annotate_var_explained: bool = False,
     show: bool | None = None,
@@ -926,7 +926,7 @@ def pca(
     show_save_ax=doc_show_save_ax,
 )
 def spatial(
-    adata,
+    adata: AnnData,
     *,
     basis: str = "spatial",
     img: np.ndarray | None = None,

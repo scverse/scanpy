@@ -44,7 +44,7 @@ __all__ = [
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def phate(adata, **kwargs) -> list[Axes] | None:
+def phate(adata: AnnData, **kwargs) -> list[Axes] | None:
     """\
     Scatter plot in PHATE basis.
 
@@ -94,7 +94,7 @@ def phate(adata, **kwargs) -> list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def trimap(adata, **kwargs) -> Axes | list[Axes] | None:
+def trimap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in TriMap basis.
 
@@ -120,7 +120,7 @@ def trimap(adata, **kwargs) -> Axes | list[Axes] | None:
     show_save_ax=doc_show_save_ax,
 )
 def harmony_timeseries(
-    adata, *, show: bool = True, return_fig: bool = False, **kwargs
+    adata: AnnData, *, show: bool = True, return_fig: bool = False, **kwargs
 ) -> Axes | list[Axes] | None:
     """\
     Scatter plot in Harmony force-directed layout basis.
