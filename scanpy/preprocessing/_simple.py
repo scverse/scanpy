@@ -138,7 +138,13 @@ def filter_cells(
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         cell_subset, number = materialize_as_ndarray(
-            filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes)
+            filter_cells(
+                adata.X,
+                min_counts=min_counts,
+                min_genes=min_genes,
+                max_counts=max_counts,
+                max_genes=max_genes,
+            ),
         )
         if not inplace:
             return cell_subset, number

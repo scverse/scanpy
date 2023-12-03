@@ -940,12 +940,12 @@ def violin(
     return axs[0] if len(axs) == 1 else axs
 
 
-@legacy_api("obs_keys", "use_raw", "show", "save")
+@legacy_api("use_raw", "show", "save")
 @_doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
     adata: AnnData,
-    *,
     obs_keys: str | None = None,
+    *,
     use_raw: bool | None = None,
     show: bool | None = None,
     save: bool | str | None = None,

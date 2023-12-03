@@ -113,7 +113,6 @@ class DotPlot(BasePlot):
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
 
     @legacy_api(
-        "groupby",
         "use_raw",
         "log",
         "num_categories",
@@ -140,8 +139,8 @@ class DotPlot(BasePlot):
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
-        *,
         groupby: str | Sequence[str],
+        *,
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -155,7 +154,7 @@ class DotPlot(BasePlot):
         layer: str | None = None,
         expression_cutoff: float = 0.0,
         mean_only_expressed: bool = False,
-        standard_scale: Literal["var", "group"] = None,
+        standard_scale: Literal["var", "group"] | None = None,
         dot_color_df: pd.DataFrame | None = None,
         dot_size_df: pd.DataFrame | None = None,
         ax: _AxesSubplot | None = None,
