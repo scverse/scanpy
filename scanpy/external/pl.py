@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from anndata import AnnData  # noqa: TCH002
 from legacy_api_wrap import legacy_api
 from matplotlib.axes import Axes  # noqa: TCH002
 
@@ -22,8 +23,6 @@ from .tl._wishbone import _anndata_to_wishbone
 
 if TYPE_CHECKING:
     from collections.abc import Collection
-
-    from anndata import AnnData
 
 
 __all__ = [
