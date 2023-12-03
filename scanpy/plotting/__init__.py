@@ -34,7 +34,12 @@ from ._tools import (
     rank_genes_groups_violin,
     sim,
 )
-from ._tools.paga import paga, paga_adjacency, paga_compare, paga_path
+from ._tools.paga import (
+    paga,
+    paga_adjacency,  # noqa: F401
+    paga_compare,
+    paga_path,
+)
 from ._tools.scatterplots import (
     diffmap,
     draw_graph,
@@ -83,7 +88,6 @@ __all__ = [
     "rank_genes_groups_violin",
     "sim",
     "paga",
-    "paga_adjacency",
     "paga_compare",
     "paga_path",
     "diffmap",
