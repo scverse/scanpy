@@ -105,7 +105,7 @@ def embedding(
     return_fig: bool | None = None,
     marker: str | Sequence[str] = ".",
     **kwargs,
-) -> Figure | Axes | None:
+) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot for user specified embedding basis (e.g. umap, pca, etc)
 
@@ -469,6 +469,7 @@ def embedding(
     _utils.savefig_or_show(basis, show=show, save=save)
     if show is False:
         return axs
+    return None
 
 
 def _panel_grid(hspace, wspace, ncols, num_panels):
@@ -627,7 +628,7 @@ def _wraps_plot_scatter(wrapper):
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def umap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
+def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in UMAP basis.
 
@@ -689,7 +690,7 @@ def umap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def tsne(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
+def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in tSNE basis.
 
@@ -729,7 +730,7 @@ def tsne(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def diffmap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
+def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in Diffusion Map basis.
 
@@ -771,7 +772,7 @@ def diffmap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
 )
 def draw_graph(
     adata: AnnData, *, layout: _IGraphLayout | None = None, **kwargs
-) -> Axes | list[Axes] | None:
+) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in graph-drawing basis.
 
@@ -830,7 +831,7 @@ def pca(
     return_fig: bool | None = None,
     save: bool | str | None = None,
     **kwargs,
-) -> Axes | list[Axes] | None:
+) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in PCA coordinates.
 
@@ -881,41 +882,40 @@ def pca(
         return embedding(
             adata, "pca", show=show, return_fig=return_fig, save=save, **kwargs
         )
+    if "pca" not in adata.obsm.keys() and "X_pca" not in adata.obsm.keys():
+        raise KeyError(
+            f"Could not find entry in `obsm` for 'pca'.\n"
+            f"Available keys are: {list(adata.obsm.keys())}."
+        )
+
+    label_dict = {
+        f"PC{i + 1}": f"PC{i + 1} ({round(v * 100, 2)}%)"
+        for i, v in enumerate(adata.uns["pca"]["variance_ratio"])
+    }
+
+    if return_fig is True:
+        # edit axis labels in returned figure
+        fig = embedding(adata, "pca", return_fig=return_fig, **kwargs)
+        for ax in fig.axes:
+            if xlabel := label_dict.get(ax.xaxis.get_label().get_text()):
+                ax.set_xlabel(xlabel)
+            if ylabel := label_dict.get(ax.yaxis.get_label().get_text()):
+                ax.set_ylabel(ylabel)
+        return fig
+
+    # get the axs, edit the labels and apply show and save from user
+    axs = embedding(adata, "pca", show=False, save=False, **kwargs)
+    if isinstance(axs, list):
+        for ax in axs:
+            ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
+            ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
     else:
-        if "pca" not in adata.obsm.keys() and "X_pca" not in adata.obsm.keys():
-            raise KeyError(
-                f"Could not find entry in `obsm` for 'pca'.\n"
-                f"Available keys are: {list(adata.obsm.keys())}."
-            )
-
-        label_dict = {
-            f"PC{i + 1}": f"PC{i + 1} ({round(v * 100, 2)}%)"
-            for i, v in enumerate(adata.uns["pca"]["variance_ratio"])
-        }
-
-        if return_fig is True:
-            # edit axis labels in returned figure
-            fig = embedding(adata, "pca", return_fig=return_fig, **kwargs)
-            for ax in fig.axes:
-                if xlabel := label_dict.get(ax.xaxis.get_label().get_text()):
-                    ax.set_xlabel(xlabel)
-                if ylabel := label_dict.get(ax.yaxis.get_label().get_text()):
-                    ax.set_ylabel(ylabel)
-            return fig
-
-        else:
-            # get the axs, edit the labels and apply show and save from user
-            axs = embedding(adata, "pca", show=False, save=False, **kwargs)
-            if isinstance(axs, list):
-                for ax in axs:
-                    ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
-                    ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
-            else:
-                axs.set_xlabel(label_dict[axs.xaxis.get_label().get_text()])
-                axs.set_ylabel(label_dict[axs.yaxis.get_label().get_text()])
-            _utils.savefig_or_show("pca", show=show, save=save)
-            if show is False:
-                return axs
+        axs.set_xlabel(label_dict[axs.xaxis.get_label().get_text()])
+        axs.set_ylabel(label_dict[axs.yaxis.get_label().get_text()])
+    _utils.savefig_or_show("pca", show=show, save=save)
+    if show is False:
+        return axs
+    return None
 
 
 @_wraps_plot_scatter
@@ -943,7 +943,7 @@ def spatial(
     return_fig: bool | None = None,
     save: bool | str | None = None,
     **kwargs,
-) -> Axes | list[Axes] | None:
+) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in spatial coordinates.
 
@@ -1040,6 +1040,7 @@ def spatial(
     _utils.savefig_or_show("show", show=show, save=save)
     if show is False or return_fig is True:
         return axs
+    return None
 
 
 # Helpers
