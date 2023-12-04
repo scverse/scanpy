@@ -971,7 +971,7 @@ def clustermap(
 
     Returns
     -------
-    If `show` is `False`, a :class:`~seaborn.ClusterGrid` object
+    If `show` is `False`, a :class:`~seaborn.matrix.ClusterGrid` object
     (see :func:`~seaborn.clustermap`).
 
     Examples

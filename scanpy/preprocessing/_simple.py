@@ -43,12 +43,12 @@ if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
     from numbers import Number
 
-    from numpy.typing import ArrayLike, NDArray
+    from numpy.typing import NDArray
 
 
 @legacy_api("min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy")
 def filter_cells(
-    data: AnnData | ArrayLike,
+    data: AnnData | spmatrix | np.ndarray,
     *,
     min_counts: int | None = None,
     min_genes: int | None = None,
@@ -190,7 +190,7 @@ def filter_cells(
 
 @legacy_api("min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy")
 def filter_genes(
-    data: AnnData | ArrayLike,
+    data: AnnData | spmatrix | np.ndarray,
     *,
     min_counts: int | None = None,
     min_cells: int | None = None,
@@ -407,12 +407,12 @@ def log1p_anndata(
 
 @legacy_api("copy", "chunked", "chunk_size")
 def sqrt(
-    data: AnnData | ArrayLike,
+    data: AnnData | spmatrix | np.ndarray,
     *,
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
-) -> AnnData | ArrayLike | None:
+) -> AnnData | spmatrix | np.ndarray | None:
     """\
     Square root the data matrix.
 
@@ -932,7 +932,7 @@ def subsample(
     n_obs: int | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
-) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int_]] | None:
+) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int64]] | None:
     """\
     Subsample to a fraction of the number of observations.
 

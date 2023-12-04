@@ -183,8 +183,6 @@ texinfo_documents = [
 
 qualname_overrides = {
     "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.metrics.DistanceMetric",
-    # If the docs are built with an old version of numpy, this will make it work:
-    "numpy.random.RandomState": "numpy.random.mtrand.RandomState",
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
@@ -192,12 +190,14 @@ qualname_overrides = {
 }
 
 nitpick_ignore = [
+    # Technical issues
+    ("py:class", "numpy.int64"),  # documented as “attribute”
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
     # Currently undocumented
     # https://github.com/mwaskom/seaborn/issues/1810
-    ("py:class", "seaborn.ClusterGrid"),
+    ("py:class", "seaborn.matrix.ClusterGrid"),
     ("py:class", "samalg.SAM"),
     # Won’t be documented
     ("py:class", "scanpy.plotting._utils._AxesSubplot"),
