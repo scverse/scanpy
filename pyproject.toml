@@ -107,10 +107,10 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=6",
-    "sphinx-book-theme>=1.0.1",
-    "scanpydoc>=0.9.5",
-    "sphinx-autodoc-typehints>=1.23.0",
+    "sphinx>=7",
+    "sphinx-book-theme>=1.1.0rc0",
+    "scanpydoc>=0.10.0",
+    "sphinx-autodoc-typehints>=1.25.2",
     "myst-parser>=2",
     "myst-nb>=1",
     "sphinx-design",
