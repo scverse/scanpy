@@ -151,8 +151,8 @@ def louvain(
         adjacency, restrict_indices = restrict_adjacency(
             adata,
             restrict_key,
-            restrict_categories,
-            adjacency,
+            restrict_categories=restrict_categories,
+            adjacency=adjacency,
         )
     if flavor in {"vtraag", "igraph"}:
         if flavor == "igraph" and resolution is not None:
@@ -245,11 +245,11 @@ def louvain(
             key_added += "_R"
         groups = rename_groups(
             adata,
-            key_added,
-            restrict_key,
-            restrict_categories,
-            restrict_indices,
-            groups,
+            key_added=key_added,
+            restrict_key=restrict_key,
+            restrict_categories=restrict_categories,
+            restrict_indices=restrict_indices,
+            groups=groups,
         )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype("U"),

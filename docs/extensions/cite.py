@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
 
-def cite_role(
+def cite_role(  # noqa: PLR0917
     name: str,
     rawsource: str,
     text: str,

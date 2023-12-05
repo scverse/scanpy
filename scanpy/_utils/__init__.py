@@ -148,7 +148,7 @@ def _import_name(name: str) -> Any:
         try:
             obj = getattr(obj, name)
         except AttributeError:
-            raise RuntimeError(f"{parts[:i]}, {parts[i+1:]}, {obj} {name}")
+            raise RuntimeError(f"{parts[:i]}, {parts[i + 1:]}, {obj} {name}")
     return obj
 
 

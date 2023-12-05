@@ -214,7 +214,7 @@ def sample_dynamic_data(**params):
                     break
         logg.debug(
             f"mean nr of offdiagonal edges {nrOffEdges_list.mean()} "
-            f"compared to total nr {grnsim.dim*(grnsim.dim-1)/2.}"
+            f"compared to total nr {grnsim.dim * (grnsim.dim - 1) / 2.}"
         )
 
     # more complex models
@@ -288,6 +288,7 @@ def sample_dynamic_data(**params):
 
 def write_data(
     X,
+    *,
     dir=Path("sim/test"),
     append=False,
     header="",
@@ -398,6 +399,7 @@ class GRNsim:
 
     def __init__(
         self,
+        *,
         dim=3,
         model="ex0",
         modelType="var",
@@ -414,9 +416,8 @@ class GRNsim:
             either string for predefined model,
             or directory with a model file and a couple matrix files
         """
-        self.dim = (
-            dim if Coupl is None else Coupl.shape[0]
-        )  # number of nodes / dimension of system
+        # number of nodes / dimension of system
+        self.dim = dim if Coupl is None else Coupl.shape[0]
         self.maxnpar = 1  # maximal number of parents
         self.p_indep = 0.4  # fraction of independent genes
         self.model = model
@@ -880,6 +881,7 @@ class GRNsim:
     def write_data(
         self,
         X,
+        *,
         dir=Path("sim/test"),
         noiseObs=0.0,
         append=False,
@@ -900,9 +902,9 @@ class GRNsim:
         # call helper function
         write_data(
             X,
-            dir,
-            append,
-            header,
+            dir=dir,
+            append=append,
+            header=header,
             varNames=self.varNames,
             Adj=self.Adj,
             Coupl=self.Coupl,

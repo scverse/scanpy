@@ -343,7 +343,7 @@ def savefig_or_show(
 
 
 def default_palette(
-    palette: str | Sequence[str] | Cycler | None = None
+    palette: str | Sequence[str] | Cycler | None = None,
 ) -> str | Cycler:
     if palette is None:
         return rcParams["axes.prop_cycle"]

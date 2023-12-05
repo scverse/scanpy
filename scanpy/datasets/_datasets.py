@@ -192,7 +192,7 @@ def paul15() -> ad.AnnData:
     # names reflecting the cell type identifications from the paper
     cell_type = 6 * ["Ery"]
     cell_type += "MEP Mk GMP GMP DC Baso Baso Mo Mo Neu Neu Eos Lymph".split()
-    adata.obs["paul15_clusters"] = [f"{i}{cell_type[i-1]}" for i in clusters]
+    adata.obs["paul15_clusters"] = [f"{i}{cell_type[i - 1]}" for i in clusters]
     # make string annotations categorical (optional)
     _utils.sanitize_anndata(adata)
     # just keep the first of the two equivalent names per gene

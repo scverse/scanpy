@@ -67,7 +67,7 @@ X_centered_for_mask = [
         ),
     ],
 )
-def test_scale(typ, dtype, mask, X, X_centered, X_scaled):
+def test_scale(*, typ, dtype, mask, X, X_centered, X_scaled):
     # test AnnData arguments
     # test scaling with default zero_center == True
     adata0 = AnnData(typ(X).astype(dtype))

@@ -206,12 +206,13 @@ class DPT(Neighbors):
 
     def __init__(
         self,
-        adata,
-        n_dcs=None,
-        min_group_size=0.01,
-        n_branchings=0,
-        allow_kendall_tau_shift=False,
-        neighbors_key=None,
+        adata: AnnData,
+        *,
+        n_dcs: int | None = None,
+        min_group_size: float = 0.01,
+        n_branchings: int = 0,
+        allow_kendall_tau_shift: bool = False,
+        neighbors_key: str | None = None,
     ):
         super().__init__(adata, n_dcs=n_dcs, neighbors_key=neighbors_key)
         self.flavor = "haghverdi16"
@@ -321,13 +322,13 @@ class DPT(Neighbors):
             )  # [third start end]
             # detect branching and update segs and segs_tips
             self.detect_branching(
-                segs,
-                segs_tips,
-                segs_connects,
-                segs_undecided,
-                segs_adjacency,
-                iseg,
-                tips3,
+                segs=segs,
+                segs_tips=segs_tips,
+                segs_connects=segs_connects,
+                segs_undecided=segs_undecided,
+                segs_adjacency=segs_adjacency,
+                iseg=iseg,
+                tips3=tips3,
             )
         # store as class members
         self.segs = segs
@@ -536,6 +537,7 @@ class DPT(Neighbors):
 
     def detect_branching(
         self,
+        *,
         segs: Sequence[np.ndarray],
         segs_tips: Sequence[np.ndarray],
         segs_connects,

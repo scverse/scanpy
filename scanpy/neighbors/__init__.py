@@ -345,6 +345,7 @@ class Neighbors:
     def __init__(
         self,
         adata: AnnData,
+        *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
     ):

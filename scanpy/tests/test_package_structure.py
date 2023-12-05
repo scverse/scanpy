@@ -114,26 +114,6 @@ def is_deprecated(f: FunctionType) -> bool:
     }
 
 
-@pytest.mark.parametrize(
-    ("f", "qualname"), [p for p in api_functions if not is_deprecated(p.values[0])]
-)
-def test_function_positional_args(f, qualname):
-    """See https://github.com/astral-sh/ruff/issues/3269#issuecomment-1772632200"""
-    sig = signature(f)
-    n_pos = sum(1 for p in sig.parameters.values() if param_is_pos(p))
-    n_pos_max = 5
-    if n_pos <= n_pos_max:
-        return
-
-    msg = (
-        f"Function `{qualname}` has too many positional arguments ({n_pos}>{n_pos_max})"
-    )
-    filename = getsourcefile(f)
-    lines, lineno = getsourcelines(f)
-    text = lines[0]
-    raise SyntaxError(msg, (filename, lineno, 1, text))
-
-
 class ExpectedSig(TypedDict):
     first_name: str
     copy_default: Any

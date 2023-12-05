@@ -466,7 +466,7 @@ class BasePlot:
             for p in total_barplot_ax.patches:
                 p.set_x(p.get_x() + 0.5)
                 if p.get_height() >= 1000:
-                    display_number = f"{np.round(p.get_height()/1000, decimals=1)}k"
+                    display_number = f"{np.round(p.get_height() / 1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_height(), decimals=1)
                 total_barplot_ax.annotate(
@@ -496,7 +496,7 @@ class BasePlot:
             max_x = max([p.get_width() for p in total_barplot_ax.patches])
             for p in total_barplot_ax.patches:
                 if p.get_width() >= 1000:
-                    display_number = f"{np.round(p.get_width()/1000, decimals=1)}k"
+                    display_number = f"{np.round(p.get_width() / 1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_width(), decimals=1)
                 total_barplot_ax.annotate(
