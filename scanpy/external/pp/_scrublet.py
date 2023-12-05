@@ -519,7 +519,7 @@ def _scrublet_call_doublets(
 
 def scrublet_simulate_doublets(
     adata: AnnData,
-    layer=None,
+    layer: str | None = None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
     random_seed: int = 0,

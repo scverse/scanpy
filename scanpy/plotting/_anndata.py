@@ -1984,7 +1984,7 @@ def _prepare_dataframe(
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
-    layer=None,
+    layer: str | None = None,
     gene_symbols: str | None = None,
 ) -> tuple[Sequence[str], pd.DataFrame]:
     """

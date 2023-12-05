@@ -217,8 +217,8 @@ def obs_df(
     keys: Iterable[str] = (),
     obsm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str = None,
-    gene_symbols: str = None,
+    layer: str | None = None,
+    gene_symbols: str | None = None,
     use_raw: bool = False,
 ) -> pd.DataFrame:
     """\
@@ -335,7 +335,7 @@ def var_df(
     keys: Iterable[str] = (),
     varm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str = None,
+    layer: str | None = None,
 ) -> pd.DataFrame:
     """\
     Return values for observations in adata.
