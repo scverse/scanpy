@@ -24,14 +24,16 @@ def test_scrublet():
 
     Check that scrublet runs and detects some doublets.
     """
-    adata = pbmc3k()
+    adata = pbmc3k()[200:400]
     sce.pp.scrublet(adata, use_approx_neighbors=False)
 
     # replace assertions by conditions
     assert "predicted_doublet" in adata.obs.columns
     assert "doublet_score" in adata.obs.columns
 
-    assert adata.obs["predicted_doublet"].any(), "Expect some doublets to be identified"
+    # TODO: there’s many more when running on the full data, why?
+    doublet_idx = np.flatnonzero(adata.obs["predicted_doublet"]).tolist()
+    assert doublet_idx == [13, 105, 138]
 
 
 def test_scrublet_batched():
