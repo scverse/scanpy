@@ -13,11 +13,11 @@ from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
-    from numpy.typing import ArrayLike
+    from scipy.sparse import spmatrix
 
 
 def filter_genes_dispersion(
-    data: AnnData | ArrayLike,
+    data: AnnData | spmatrix | np.ndarray,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
     min_disp: float | None = None,
     max_disp: float | None = None,
