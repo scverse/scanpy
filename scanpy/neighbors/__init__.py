@@ -276,6 +276,7 @@ class OnFlySymMatrix:
         self,
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
+        *,
         DC_start: int = 0,
         DC_end: int = -1,
         rows: MutableMapping[Any, np.ndarray] | None = None,

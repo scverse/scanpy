@@ -523,7 +523,7 @@ def add_colors_for_categorical_sample_annotation(
         _set_default_colors_for_categorical_obs(adata, key)
 
 
-def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
+def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=None):
     import networkx as nx
 
     if not isinstance(axs, cabc.Sequence):
@@ -585,7 +585,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
 
 
 def scatter_group(
-    ax, key, imask, adata, Y, projection="2d", size=3, alpha=None, marker="."
+    ax, key, imask, adata, Y, *, projection="2d", size=3, alpha=None, marker="."
 ):
     """Scatter of group using representation of data Y."""
     mask = adata.obs[key].cat.categories[imask] == adata.obs[key].values
@@ -613,7 +613,8 @@ def scatter_group(
 
 
 def setup_axes(
-    ax: Axes | Sequence[Axes] = None,
+    ax: Axes | Sequence[Axes] | None = None,
+    *,
     panels="blue",
     colorbars=(False,),
     right_margin=None,
@@ -696,6 +697,7 @@ def setup_axes(
 
 def scatter_base(
     Y: np.ndarray,
+    *,
     colors="blue",
     sort_order=True,
     alpha=None,
@@ -743,7 +745,7 @@ def scatter_base(
     if len(markers) != len(colors) and len(markers) == 1:
         markers = [markers[0] for _ in range(len(colors))]
     axs, panel_pos, draw_region_width, figure_width = setup_axes(
-        ax=ax,
+        ax,
         panels=colors,
         colorbars=colorbars,
         projection=projection,
@@ -1108,7 +1110,7 @@ def check_projection(projection):
 
 
 def circles(
-    x, y, s, ax, marker=None, c="b", vmin=None, vmax=None, scale_factor=1.0, **kwargs
+    x, y, *, s, ax, marker=None, c="b", vmin=None, vmax=None, scale_factor=1.0, **kwargs
 ):
     """
     Taken from here: https://gist.github.com/syrte/592a062c562cd2a98a83
@@ -1170,6 +1172,7 @@ def circles(
 
 def make_grid_spec(
     ax_or_figsize: tuple[int, int] | _AxesSubplot,
+    *,
     nrows: int,
     ncols: int,
     wspace: float | None = None,

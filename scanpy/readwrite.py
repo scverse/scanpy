@@ -760,6 +760,7 @@ def write_params(path: Path | str, *args, **maps):
 
 def _read(
     filename: Path,
+    *,
     backed=None,
     sheet=None,
     ext=None,

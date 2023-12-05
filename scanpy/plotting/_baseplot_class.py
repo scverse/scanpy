@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal, Union
 from warnings import warn
 
 import numpy as np
+from legacy_api_wrap import legacy_api
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
@@ -72,11 +73,30 @@ class BasePlot:
 
     MAX_NUM_CATEGORIES = 500  # maximum number of categories allowed to be plotted
 
+    @legacy_api(
+        "use_raw",
+        "log",
+        "num_categories",
+        "categories_order",
+        "title",
+        "figsize",
+        "gene_symbols",
+        "var_group_positions",
+        "var_group_labels",
+        "var_group_rotation",
+        "layer",
+        "ax",
+        "vmin",
+        "vmax",
+        "vcenter",
+        "norm",
+    )
     def __init__(
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        *,
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -113,9 +133,9 @@ class BasePlot:
             adata,
             self.var_names,
             groupby,
-            use_raw,
-            log,
-            num_categories,
+            use_raw=use_raw,
+            log=log,
+            num_categories=num_categories,
             layer=layer,
             gene_symbols=gene_symbols,
         )
@@ -365,7 +385,8 @@ class BasePlot:
         }
         return self
 
-    def style(self, cmap: str | None = DEFAULT_COLORMAP):
+    @legacy_api("cmap")
+    def style(self, *, cmap: str | None = DEFAULT_COLORMAP):
         """\
         Set visual style parameters
 
@@ -381,8 +402,10 @@ class BasePlot:
 
         self.cmap = cmap
 
+    @legacy_api("show", "title", "width")
     def legend(
         self,
+        *,
         show: bool | None = True,
         title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
         width: float | None = DEFAULT_LEGENDS_WIDTH,
@@ -926,6 +949,7 @@ class BasePlot:
     @staticmethod
     def _plot_var_groups_brackets(
         gene_groups_ax: Axes,
+        *,
         group_positions: Iterable[tuple[int, int]],
         group_labels: Sequence[str],
         left_adjustment: float = -0.3,

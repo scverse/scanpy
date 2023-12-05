@@ -105,10 +105,7 @@ def paga_compare(
     -------
     A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
     """
-    axs, _, _, _ = _utils.setup_axes(
-        panels=[0, 1],
-        right_margin=right_margin,
-    )
+    axs, _, _, _ = _utils.setup_axes(panels=[0, 1], right_margin=right_margin)
     if color is None:
         color = adata.uns["paga"]["groups"]
     suptitle = None  # common title for entire figure
@@ -201,6 +198,7 @@ def paga_compare(
 
 def _compute_pos(
     adjacency_solid,
+    *,
     layout=None,
     random_state=0,
     init_pos=None,
@@ -614,9 +612,7 @@ def paga(
 
     if plot:
         axs, panel_pos, draw_region_width, figure_width = _utils.setup_axes(
-            ax=ax,
-            panels=colors,
-            colorbars=colorbars,
+            ax, panels=colors, colorbars=colorbars
         )
 
         if len(colors) == 1 and not isinstance(axs, list):

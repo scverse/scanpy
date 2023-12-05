@@ -420,7 +420,7 @@ def _scatter_obs(
                         iname,
                         adata,
                         Y,
-                        projection,
+                        projection=projection,
                         size=size,
                         alpha=alpha,
                         marker=marker,
@@ -446,7 +446,7 @@ def _scatter_obs(
                         iname,
                         adata,
                         Y,
-                        projection,
+                        projection=projection,
                         size=size,
                         alpha=alpha,
                         marker=marker,
@@ -892,7 +892,7 @@ def violin(
 
         if ax is None:
             axs, _, _, _ = setup_axes(
-                ax=ax,
+                ax,
                 panels=["x"] if groupby is None else keys,
                 show_ticks=True,
                 right_margin=0.3,
@@ -1122,9 +1122,9 @@ def heatmap(
         adata,
         var_names,
         groupby,
-        use_raw,
-        log,
-        num_categories,
+        use_raw=use_raw,
+        log=log,
+        num_categories=num_categories,
         gene_symbols=gene_symbols,
         layer=layer,
     )
@@ -1548,9 +1548,9 @@ def tracksplot(
         adata,
         var_names,
         groupby,
-        use_raw,
-        log,
-        None,
+        use_raw=use_raw,
+        log=log,
+        num_categories=None,  # TODO: fix this line
         gene_symbols=gene_symbols,
         layer=layer,
     )
@@ -1981,6 +1981,7 @@ def _prepare_dataframe(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str] | None = None,
+    *,
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,

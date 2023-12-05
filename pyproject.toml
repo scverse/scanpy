@@ -205,6 +205,7 @@ ignore = [
     # TODO: Those ones are behind --preview and should probably be activated:
     "F841",
     "E266",
+    "E721",
 ]
 [tool.ruff.per-file-ignores]
 # Do not assign a lambda expression, use a def

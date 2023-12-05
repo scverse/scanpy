@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from scipy.sparse import spmatrix
 
 
-def filter_genes_dispersion(
+def filter_genes_dispersion(  # noqa: PLR0917
     data: AnnData | spmatrix | np.ndarray,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
     min_disp: float | None = None,

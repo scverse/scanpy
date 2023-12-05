@@ -19,6 +19,7 @@ from ._utils import _get_mean_var
 
 def _highly_variable_genes_seurat_v3(
     adata: AnnData,
+    *,
     layer: str | None = None,
     n_top_genes: int = 2000,
     batch_key: str | None = None,
@@ -181,6 +182,7 @@ def _highly_variable_genes_seurat_v3(
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
+    *,
     layer: str | None = None,
     min_disp: float | None = 0.5,
     max_disp: float | None = np.inf,

@@ -106,6 +106,7 @@ def rank_genes_groups_df(
 def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
+    *,
     dim: Literal["obs", "var"],
     keys: list[str],
     alias_index: pd.Index | None = None,
@@ -286,8 +287,8 @@ def obs_df(
     obs_cols, var_idx_keys, var_symbols = _check_indices(
         adata.obs,
         var.index,
-        "obs",
-        keys,
+        dim="obs",
+        keys=keys,
         alias_index=alias_index,
         use_raw=use_raw,
     )
@@ -357,7 +358,9 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
-    var_cols, obs_idx_keys, _ = _check_indices(adata.var, adata.obs_names, "var", keys)
+    var_cols, obs_idx_keys, _ = _check_indices(
+        adata.var, adata.obs_names, dim="var", keys=keys
+    )
 
     # initialize df
     df = pd.DataFrame(index=adata.var.index)

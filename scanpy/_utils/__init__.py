@@ -284,6 +284,7 @@ def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
     reference: str,
+    *,
     normalization: Literal["prediction", "reference"] = "prediction",
     threshold: float = 0.01,
     max_n_names: int | None = 2,
@@ -615,7 +616,7 @@ def select_groups(
     return groups_order_subset, groups_masks
 
 
-def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
+def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
     """Get full tracebacks when warning is raised by setting
 
     warnings.showwarning = warn_with_traceback

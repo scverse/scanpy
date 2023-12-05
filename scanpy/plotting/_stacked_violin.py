@@ -226,8 +226,22 @@ class StackedViolin(BasePlot):
         self.kwds.setdefault("linewidth", self.DEFAULT_LINE_WIDTH)
         self.kwds.setdefault("scale", self.DEFAULT_SCALE)
 
+    @legacy_api(
+        "cmap",
+        "stripplot",
+        "jitter",
+        "jitter_size",
+        "linewidth",
+        "row_palette",
+        "scale",
+        "yticklabels",
+        "ylim",
+        "x_padding",
+        "y_padding",
+    )
     def style(
         self,
+        *,
         cmap: str | None = DEFAULT_COLORMAP,
         stripplot: bool | None = DEFAULT_STRIPPLOT,
         jitter: float | bool | None = DEFAULT_JITTER,

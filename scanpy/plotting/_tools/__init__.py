@@ -482,6 +482,7 @@ def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
 def _rank_genes_groups_plot(
     adata: AnnData,
     plot_type: str = "heatmap",
+    *,
     groups: str | Sequence[str] | None = None,
     n_genes: int | None = None,
     groupby: str | None = None,
@@ -1688,6 +1689,7 @@ def _get_values_to_plot(
         "log10_pvals_adj",
     ],
     gene_names: Sequence[str],
+    *,
     groups: Sequence[str] | None = None,
     key: str | None = "rank_genes_groups",
     gene_symbols: str | None = None,

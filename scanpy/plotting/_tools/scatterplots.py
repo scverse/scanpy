@@ -319,7 +319,7 @@ def embedding(
 
         if not categorical:
             vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
-                vmin, vmax, vcenter, norm, count, color_vector
+                vmin, vmax, vcenter, norm=norm, index=count, colors=color_vector
             )
             normalize = check_colornorm(
                 vmin_float,
@@ -427,7 +427,9 @@ def embedding(
         ax.autoscale_view()
 
         if edges:
-            _utils.plot_edges(ax, adata, basis, edges_width, edges_color, neighbors_key)
+            _utils.plot_edges(
+                ax, adata, basis, edges_width, edges_color, neighbors_key=neighbors_key
+            )
         if arrows:
             _utils.plot_arrows(ax, adata, basis, arrows_kwds)
 
@@ -503,9 +505,10 @@ def _get_vboundnorm(
     vmin: Sequence[VBound],
     vmax: Sequence[VBound],
     vcenter: Sequence[VBound],
+    *,
     norm: Sequence[Normalize],
     index: int,
-    color_vector: Sequence[float],
+    colors: Sequence[float],
 ) -> tuple[float | None, float | None]:
     """
     Evaluates the value of vmin, vmax and vcenter, which could be a
@@ -515,17 +518,17 @@ def _get_vboundnorm(
     Floats are accepted as p99.9
 
     Alternatively, vmin/vmax could be a function that is applied to
-    the list of color values (`color_vector`).  E.g.
+    the list of color values (`colors`).  E.g.
 
-    def my_vmax(color_vector): np.percentile(color_vector, p=80)
+    def my_vmax(colors): np.percentile(colors, p=80)
 
 
     Parameters
     ----------
     index
         This index of the plot
-    color_vector
-        List or values for the plot
+    colors
+        Values for the plot
 
     Returns
     -------
@@ -562,10 +565,10 @@ def _get_vboundnorm(
                         f"Please check the correct format for percentiles."
                     )
                 # interpret value of vmin/vmax as quantile with the following syntax 'p99.9'
-                v_value = np.nanpercentile(color_vector, q=float(v_value[1:]))
+                v_value = np.nanpercentile(colors, q=float(v_value[1:]))
             elif callable(v_value):
                 # interpret vmin/vmax as function
-                v_value = v_value(color_vector)
+                v_value = v_value(colors)
                 if not isinstance(v_value, float):
                     logg.error(
                         f"The return of the function given for {v_name} is not valid. "
@@ -1082,6 +1085,7 @@ def _components_to_dimensions(
 def _add_categorical_legend(
     ax,
     color_source_vector,
+    *,
     palette: dict,
     legend_loc: str,
     legend_fontweight,

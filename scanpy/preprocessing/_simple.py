@@ -451,7 +451,7 @@ def sqrt(
         return X.sqrt()
 
 
-def normalize_per_cell(
+def normalize_per_cell(  # noqa: PLR0917
     data: AnnData | np.ndarray | spmatrix,
     counts_per_cell_after: float | None = None,
     counts_per_cell: np.ndarray | None = None,

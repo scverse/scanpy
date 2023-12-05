@@ -299,6 +299,7 @@ def scrublet(
 
 
 def _scrublet_call_doublets(
+    *,
     adata_obs: AnnData,
     adata_sim: AnnData,
     n_neighbors: int | None = None,

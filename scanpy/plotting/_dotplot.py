@@ -276,8 +276,23 @@ class DotPlot(BasePlot):
         self.show_size_legend = True
         self.show_colorbar = True
 
+    @legacy_api(
+        "cmap",
+        "color_on",
+        "dot_max",
+        "dot_min",
+        "smallest_dot",
+        "largest_dot",
+        "dot_edge_color",
+        "dot_edge_lw",
+        "size_exponent",
+        "grid",
+        "x_padding",
+        "y_padding",
+    )
     def style(
         self,
+        *,
         cmap: str = DEFAULT_COLORMAP,
         color_on: Literal["dot", "square"] | None = DEFAULT_COLOR_ON,
         dot_max: float | None = DEFAULT_DOT_MAX,
@@ -392,8 +407,17 @@ class DotPlot(BasePlot):
 
         return self
 
+    @legacy_api(
+        "show",
+        "show_size_legend",
+        "show_colorbar",
+        "size_title",
+        "colorbar_title",
+        "width",
+    )
     def legend(
         self,
+        *,
         show: bool | None = True,
         show_size_legend: bool | None = True,
         show_colorbar: bool | None = True,
@@ -593,6 +617,7 @@ class DotPlot(BasePlot):
         dot_size,
         dot_color,
         dot_ax,
+        *,
         cmap: str = "Reds",
         color_on: str | None = "dot",
         y_label: str | None = None,
