@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence, Set
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal, NamedTuple, get_args
+from typing import Literal, NamedTuple, get_args
 from typing import Union as _U
 
 import numpy as np
@@ -10,17 +10,8 @@ import pandas as pd
 from anndata import AnnData, utils
 from scipy import sparse
 
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
-
 Array = _U[np.ndarray, sparse.spmatrix]
 AggType = Literal["count_nonzero", "mean", "sum", "var"]
-
-
-class CMV(NamedTuple):
-    count: NDArray[np.integer]
-    mean: NDArray[np.floating]
-    var: NDArray[np.floating]
 
 
 class Indices(NamedTuple):
@@ -108,7 +99,7 @@ class Aggregate:
             / np.bincount(self.groupby.codes)[:, None]
         )
 
-    def count_mean_var(self, dof: int = 1, *, _indices: Indices | None = None) -> CMV:
+    def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
         """\
         Compute the count, as well as mean and variance per feature, per group of observations.
 
@@ -128,7 +119,7 @@ class Aggregate:
         Object with `count`, `mean`, and `var` attributes.
         """
         assert dof >= 0
-        count_ = self.count_nonzero()
+
         group_counts = np.bincount(self.groupby.codes)
         mean_ = self.mean()
         # sparse matrices do not support ** for elementwise power.
@@ -156,7 +147,7 @@ class Aggregate:
         var_[precision * var_ < sq_mean] = 0
         if dof != 0:
             var_ *= (group_counts / (group_counts - dof))[:, np.newaxis]
-        return CMV(count=count_, mean=mean_, var=var_)
+        return mean_, var_
 
 
 # def count_mean_var_spd(by, data):
@@ -315,15 +306,13 @@ def aggregated_from_array(
     if "mean" in funcs and "var" not in funcs:
         agg = groupby.mean()
         adata_kw["layers"]["mean"] = agg
-    if "count_nonzero" in funcs and "var" not in funcs:
+    if "count_nonzero" in funcs:
         adata_kw["layers"]["count_nonzero"] = groupby.count_nonzero()
     if "var" in funcs:
-        aggs = groupby.count_mean_var(dof)
-        adata_kw["layers"]["var"] = aggs.var
+        mean_, var_ = groupby.mean_var(dof)
+        adata_kw["layers"]["var"] = var_
         if "mean" in funcs:
-            adata_kw["layers"]["mean"] = aggs.mean
-        if "count_nonzero" in funcs:
-            adata_kw["layers"]["count_nonzero"] = aggs.count
+            adata_kw["layers"]["mean"] = mean_
 
     adata_agg = AnnData(**adata_kw)
     if dim == "var":
