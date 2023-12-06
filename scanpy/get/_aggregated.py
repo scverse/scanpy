@@ -184,7 +184,7 @@ def _ndarray_from_seq(lst: Sequence):
 @singledispatch
 def aggregated(
     adata: AnnData,
-    by: str,
+    by: str | list[str],
     func: AggType | Iterable[AggType],
     *,
     dim: Literal["obs", "var"] = "obs",
@@ -195,7 +195,14 @@ def aggregated(
     varm: str | None = None,
 ) -> AnnData:
     """\
-    Aggregate data based on one of the columns of one of the axes (`obs` or `var`).
+    Aggregate data matrix based on some categorical grouping.
+
+    This function is useful for pseudobulking as well as plotting.
+
+    Aggregation to perform is specified by `func`, which can be a single metric or a
+    list of metrics. Each metric is computed over the group and results in a new layer
+    in the output `AnnData` object.
+
     If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
     If `func` only has length 1 or is just an `AggType`, then aggregation data is written to `X`.
     Otherwise, it is written to `layers` or `xxxm` as appropriate for the dimensions of the aggregation data.
@@ -224,6 +231,33 @@ def aggregated(
     Returns
     -------
     Aggregated :class:`~anndata.AnnData`.
+
+    Examples
+    --------
+
+    Calculating mean expression and number of nonzero entries per cluster:
+
+    >>> import scanpy as sc, pandas as pd
+    >>> pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
+    >>> pbmc.shape
+    (2638, 13714)
+    >>> aggregated = sc.get.aggregated(pbmc, by="louvain", func=["mean", "count_nonzero"])
+    >>> aggregated
+    AnnData object with n_obs × n_vars = 8 × 13714
+        obs: 'louvain'
+        var: 'n_cells'
+        layers: 'mean', 'count_nonzero'
+
+    We can group over multiple columns:
+
+    >>> pbmc.obs["percent_mito_binned"] = pd.cut(pbmc.obs["percent_mito"], bins=5)
+    >>> sc.get.aggregated(pbmc, by=["louvain", "percent_mito_binned"], func=["mean", "count_nonzero"])
+    AnnData object with n_obs × n_vars = 40 × 13714
+        obs: 'louvain', 'percent_mito_binned'
+        var: 'n_cells'
+        layers: 'mean', 'count_nonzero'
+
+    Note that this filters out any combination of groups that wasn't present in the original data.
     """
     if dim not in ["obs", "var"]:
         raise ValueError(f"dim must be one of 'obs' or 'var', was '{dim}'")
@@ -232,8 +266,12 @@ def aggregated(
     if sum(p is not None for p in [varm, obsm, layer]) > 1:
         raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
     if varm is not None:
+        if dim != "var":
+            raise ValueError("varm can only be used when dim is 'var'")
         data = adata.varm[varm]
     elif obsm is not None:
+        if dim != "obs":
+            raise ValueError("obsm can only be used when dim is 'obs'")
         data = adata.obsm[obsm]
     elif layer is not None:
         data = adata.layers[layer]
