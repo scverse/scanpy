@@ -212,8 +212,6 @@ def aggregated(
         Axis on which to find group by column.
     weight_key
         Key of the `dim` containing weights for a weighted sum aggregation.
-    key_set
-        Subset of dim on which to filter.
     dof
         Degrees of freedom for variance. Defaults to 1.
     layer
@@ -244,6 +242,8 @@ def aggregated(
     elif dim == "var":
         # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
         data = data.T
+
+    # Actual computation
     result = aggregated(
         data,
         groupby_df=getattr(adata, dim),
@@ -274,7 +274,7 @@ def aggregated_from_array(
     dof: int = 1,
 ) -> AnnData:
     """Aggregate data based on one of the columns of one of a `~pd.DataFrame`."""
-    categorical = _combine_categories(groupby_df, by)
+    categorical, new_label_df = _combine_categories(groupby_df, by)
     groupby = Aggregate(
         groupby=categorical,
         data=data,
@@ -284,7 +284,7 @@ def aggregated_from_array(
     adata_kw = dict(
         X=None,
         layers={},
-        obs=pd.DataFrame(index=categorical.categories),
+        obs=new_label_df,
         var=no_groupby_df,
         obsm={},
     )
@@ -310,7 +310,12 @@ def aggregated_from_array(
     return adata_agg
 
 
-def _combine_categories(label_df: pd.DataFrame, cols: list[str]) -> pd.Categorical:
+def _combine_categories(
+    label_df: pd.DataFrame, cols: list[str]
+) -> tuple[pd.Categorical, pd.DataFrame]:
+    """
+    Returns both the result categories and a dataframe labelling each row
+    """
     from itertools import product
 
     if isinstance(cols, str):
@@ -319,23 +324,42 @@ def _combine_categories(label_df: pd.DataFrame, cols: list[str]) -> pd.Categoric
     df = pd.DataFrame(
         {c: pd.Categorical(label_df[c]).remove_unused_categories() for c in cols},
     )
+    n_categories = [len(df[c].cat.categories) for c in cols]
+
+    # It's like np.concatenate([x for x in product(*[range(n) for n in n_categories])])
+    code_combinations = np.indices(n_categories).reshape(len(n_categories), -1)
     result_categories = [
         "_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])
     ]
-    n_categories = [len(df[c].cat.categories) for c in cols]
 
+    # Dataframe with unique combination of categories for each row
+    new_label_df = pd.DataFrame(
+        {
+            c: pd.Categorical.from_codes(code_combinations[i], df[c].cat.categories)
+            for i, c in enumerate(cols)
+        },
+        index=result_categories,
+    )
+
+    # Calculating result codes
     factors = np.ones(len(cols) + 1, dtype=np.int32)  # First factor needs to be 1
     np.cumsum(n_categories[::-1], out=factors[1:])
     factors = factors[:-1][::-1]
 
-    # TODO: pick a more optimal bit width
-    final_codes = np.zeros(df.shape[0], dtype=np.int32)
-    for factor, c in zip(factors, cols):
-        final_codes += df[c].cat.codes * factor
+    code_array = np.zeros((len(cols), df.shape[0]), dtype=np.int32)
+    for i, c in enumerate(cols):
+        code_array[i] = df[c].cat.codes
+    code_array *= factors[:, None]
 
-    return pd.Categorical.from_codes(
-        final_codes, categories=result_categories
-    ).remove_unused_categories()
+    result_categorical = pd.Categorical.from_codes(
+        code_array.sum(axis=0), categories=result_categories
+    )
+
+    # Filter unused categories
+    result_categorical = result_categorical.remove_unused_categories()
+    new_label_df = new_label_df.loc[result_categorical.categories]
+
+    return result_categorical, new_label_df
 
 
 def sparse_indicator(

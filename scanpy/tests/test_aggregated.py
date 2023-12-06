@@ -151,7 +151,10 @@ def test_aggregated_incorrect_dim():
             ["a", "b"],
             ["count_nonzero"],  # , "sum", "mean"],
             ad.AnnData(
-                obs=pd.DataFrame(index=["a_c", "a_d", "b_d"]),
+                obs=pd.DataFrame(
+                    {"a": ["a", "a", "b"], "b": ["c", "d", "d"]},
+                    index=["a_c", "a_d", "b_d"],
+                ).astype("category"),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
                     "count_nonzero": np.array(
@@ -178,7 +181,10 @@ def test_aggregated_incorrect_dim():
             ["a", "b"],
             ["sum", "mean", "count_nonzero"],
             ad.AnnData(
-                obs=pd.DataFrame(index=["a_c", "a_d", "b_d"]),
+                obs=pd.DataFrame(
+                    {"a": ["a", "a", "b"], "b": ["c", "d", "d"]},
+                    index=["a_c", "a_d", "b_d"],
+                ).astype("category"),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
                     "sum": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
@@ -205,7 +211,10 @@ def test_aggregated_incorrect_dim():
             ["a", "b"],
             ["mean"],
             ad.AnnData(
-                obs=pd.DataFrame(index=["a_c", "a_d", "b_d"]),
+                obs=pd.DataFrame(
+                    {"a": ["a", "a", "b"], "b": ["c", "d", "d"]},
+                    index=["a_c", "a_d", "b_d"],
+                ).astype("category"),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
                     "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
@@ -279,9 +288,18 @@ def test_aggregated_examples(matrix, df, keys, metrics, expected):
 def test_combine_categories(label_df, cols, expected):
     from scanpy.get._aggregated import _combine_categories
 
-    result = _combine_categories(label_df, cols)
+    result, result_label_df = _combine_categories(label_df, cols)
 
     assert isinstance(result, pd.Categorical)
 
     # TODO: is there a better function here?
     pd.testing.assert_series_equal(pd.Series(result), pd.Series(expected))
+
+    pd.testing.assert_series_equal(
+        pd.Series(result), pd.Series(result_label_df.index.astype("category"))
+    )
+
+    reconstructed_df = pd.DataFrame(
+        [x.split("_") for x in result], columns=cols, index=result.astype(str)
+    ).astype("category")
+    pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
