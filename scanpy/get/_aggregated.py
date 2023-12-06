@@ -150,19 +150,6 @@ class Aggregate:
         return mean_, var_
 
 
-# def count_mean_var_spd(by, data):
-#     sums = np.zeros((by.shape[0],data.shape[1]))
-#     counts = np.zeros((by.shape[0],data.shape[1]))
-#     sums = by.toarray() @ data
-#     counts = by.toarray() @ data._with_data(np.ones(len(data.data),dtype=data.data.dtype))
-#     n_cells = np.array(by.sum(axis= 1).astype(data.dtype))
-#     means = sums/n_cells
-#     sq_mean = by.toarray() @ data.multiply(data)/n_cells
-#     var = sq_mean - np.power(means, 2)
-#     var *= n_cells / (n_cells - 1)
-#     return sums, counts, means, var
-
-
 def _power(X: Array, power: float | int) -> Array:
     """\
     Generate elementwise power of a matrix.
@@ -240,8 +227,10 @@ def aggregated(
     -------
     Aggregated :class:`~anndata.AnnData`.
     """
-    data = adata.X
+    if dim not in ["obs", "var"]:
+        raise ValueError(f"dim must be one of 'obs' or 'var', was '{dim}'")
     # TODO replace with get helper
+    data = adata.X
     if sum(p is not None for p in [varm, obsm, layer]) > 1:
         raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
     if varm is not None:
@@ -255,10 +244,9 @@ def aggregated(
     elif dim == "var":
         # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
         data = data.T
-    return aggregated(
+    result = aggregated(
         data,
         groupby_df=getattr(adata, dim),
-        dim=dim,
         by=by,
         # write_to_xxxm=write_to_xxxm,
         no_groupby_df=getattr(adata, "var" if dim == "obs" else "obs"),
@@ -268,6 +256,11 @@ def aggregated(
         dof=dof,
     )
 
+    if dim == "var":
+        return result.T
+    else:
+        return result
+
 
 @aggregated.register(np.ndarray)
 @aggregated.register(sparse.spmatrix)
@@ -275,7 +268,6 @@ def aggregated_from_array(
     data,
     groupby_df: pd.DataFrame,
     func: AggType | Iterable[AggType],
-    dim: str,
     by: str,
     no_groupby_df: pd.DataFrame,
     weight_key: str | None = None,
@@ -315,8 +307,6 @@ def aggregated_from_array(
             adata_kw["layers"]["mean"] = mean_
 
     adata_agg = AnnData(**adata_kw)
-    if dim == "var":
-        return adata_agg.T
     return adata_agg
 
 
@@ -352,7 +342,7 @@ def sparse_indicator(
     categorical, weights: None | np.ndarray = None
 ) -> sparse.coo_matrix:
     if weights is None:
-        weights = np.broadcast_to(1.0, len(categorical))
+        weights = np.broadcast_to(1, len(categorical))
     A = sparse.coo_matrix(
         (weights, (categorical.codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),

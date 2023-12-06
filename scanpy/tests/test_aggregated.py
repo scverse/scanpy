@@ -125,6 +125,13 @@ def test_aggregated_axis(array_type, metric):
     assert_equal(expected, actual)
 
 
+def test_aggregated_incorrect_dim():
+    adata = pbmc3k_processed().raw.to_adata()
+
+    with pytest.raises(ValueError, match="was 'foo'"):
+        sc.get.aggregated(adata, ["louvain"], "sum", dim="foo")
+
+
 @pytest.mark.parametrize(
     "matrix,df,keys,metrics,expected",
     [
