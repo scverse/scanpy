@@ -55,7 +55,7 @@ class Aggregate:
 
     def __init__(self, groupby, data, weight=None):
         self.groupby = groupby
-        self.indicator_matrix = sparse_indicator(groupby)
+        self.indicator_matrix = sparse_indicator(groupby, weight=weight)
         self.data = data
         self.weight = weight
 
@@ -188,7 +188,7 @@ def aggregate(
     func: AggType | Iterable[AggType],
     *,
     dim: Literal["obs", "var"] = "obs",
-    weight_key: str | None = None,
+    weight: str | None = None,
     dof: int = 1,
     layer: str | None = None,
     obsm: str | None = None,
@@ -217,7 +217,7 @@ def aggregate(
         How to aggregate.
     dim
         Axis on which to find group by column.
-    weight_key
+    weight
         Key of the `dim` containing weights for a weighted sum aggregation.
     dof
         Degrees of freedom for variance. Defaults to 1.
@@ -281,18 +281,35 @@ def aggregate(
         # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
         data = data.T
 
+    dim_df = getattr(adata, dim)
+    categorical, new_label_df = _combine_categories(dim_df, by)
+    if isinstance(weight, str):
+        weight = dim_df[weight]
     # Actual computation
-    result = aggregate(
+    layers = aggregate(
         data,
-        groupby_df=getattr(adata, dim),
-        by=by,
-        # write_to_xxxm=write_to_xxxm,
-        no_groupby_df=getattr(adata, "var" if dim == "obs" else "obs"),
-        weight_key=weight_key,
-        # key_set=key_set,
+        by=categorical,
         func=func,
         dof=dof,
+        weight=weight,
     )
+    result = AnnData(
+        layers=layers,
+        obs=new_label_df,
+        var=getattr(adata, "var" if dim == "obs" else "obs"),
+    )
+
+    # result = aggregate(
+    #     data,
+    #     groupby_df=getattr(adata, dim),
+    #     by=by,
+    #     # write_to_xxxm=write_to_xxxm,
+    #     no_groupby_df=getattr(adata, "var" if dim == "obs" else "obs"),
+    #     weight_key=weight_key,
+    #     # key_set=key_set,
+    #     func=func,
+    #     dof=dof,
+    # )
 
     if dim == "var":
         return result.T
@@ -302,50 +319,85 @@ def aggregate(
 
 @aggregate.register(np.ndarray)
 @aggregate.register(sparse.spmatrix)
-def aggregate_from_array(
+def aggregate_array(
     data,
-    groupby_df: pd.DataFrame,
+    by: pd.Categorical,
     func: AggType | Iterable[AggType],
-    by: str,
-    no_groupby_df: pd.DataFrame,
-    weight_key: str | None = None,
+    *,
     dof: int = 1,
-) -> AnnData:
-    """Aggregate data based on one of the columns of one of a `~pd.DataFrame`."""
-    categorical, new_label_df = _combine_categories(groupby_df, by)
-    groupby = Aggregate(
-        groupby=categorical,
-        data=data,
-        weight=groupby_df[weight_key] if weight_key is not None else None,
-    )
-    # groupby df is put in `obs`, nongroupby in `var` to be transposed later as appropriate
-    adata_kw = dict(
-        X=None,
-        layers={},
-        obs=new_label_df,
-        var=no_groupby_df,
-        obsm={},
-    )
+    weight: np.ndarray | None = None,
+) -> dict[str, np.ndarray]:
+    groupby = Aggregate(groupby=by, data=data, weight=weight)
+    result = {}
+
     funcs = set([func] if isinstance(func, str) else func)
     if unknown := funcs - set(get_args(AggType)):
         raise ValueError(f"func {unknown} is not one of {get_args(AggType)}")
+
     if "sum" in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
-        adata_kw["layers"]["sum"] = agg
+        result["sum"] = agg
     # here and below for count, if var is present, these can be calculate alongside var
     if "mean" in funcs and "var" not in funcs:
         agg = groupby.mean()
-        adata_kw["layers"]["mean"] = agg
+        result["mean"] = agg
     if "count_nonzero" in funcs:
-        adata_kw["layers"]["count_nonzero"] = groupby.count_nonzero()
+        result["count_nonzero"] = groupby.count_nonzero()
     if "var" in funcs:
         mean_, var_ = groupby.mean_var(dof)
-        adata_kw["layers"]["var"] = var_
+        result["var"] = var_
         if "mean" in funcs:
-            adata_kw["layers"]["mean"] = mean_
+            result["mean"] = mean_
 
-    adata_agg = AnnData(**adata_kw)
-    return adata_agg
+    return result
+
+
+# @aggregate.register(np.ndarray)
+# @aggregate.register(sparse.spmatrix)
+# def aggregate_from_array(
+#     data,
+#     groupby_df: pd.DataFrame,
+#     func: AggType | Iterable[AggType],
+#     by: str,
+#     no_groupby_df: pd.DataFrame,
+#     weight_key: str | None = None,
+#     dof: int = 1,
+# ) -> AnnData:
+#     """Aggregate data based on one of the columns of one of a `~pd.DataFrame`."""
+#     categorical, new_label_df = _combine_categories(groupby_df, by)
+#     groupby = Aggregate(
+#         groupby=categorical,
+#         data=data,
+#         weight=groupby_df[weight_key] if weight_key is not None else None,
+#     )
+#     # groupby df is put in `obs`, nongroupby in `var` to be transposed later as appropriate
+#     adata_kw = dict(
+#         X=None,
+#         layers={},
+#         obs=new_label_df,
+#         var=no_groupby_df,
+#         obsm={},
+#     )
+#     funcs = set([func] if isinstance(func, str) else func)
+#     if unknown := funcs - set(get_args(AggType)):
+#         raise ValueError(f"func {unknown} is not one of {get_args(AggType)}")
+#     if "sum" in funcs:  # sum is calculated separately from the rest
+#         agg = groupby.sum()
+#         adata_kw["layers"]["sum"] = agg
+#     # here and below for count, if var is present, these can be calculate alongside var
+#     if "mean" in funcs and "var" not in funcs:
+#         agg = groupby.mean()
+#         adata_kw["layers"]["mean"] = agg
+#     if "count_nonzero" in funcs:
+#         adata_kw["layers"]["count_nonzero"] = groupby.count_nonzero()
+#     if "var" in funcs:
+#         mean_, var_ = groupby.mean_var(dof)
+#         adata_kw["layers"]["var"] = var_
+#         if "mean" in funcs:
+#             adata_kw["layers"]["mean"] = mean_
+
+#     adata_agg = AnnData(**adata_kw)
+#     return adata_agg
 
 
 def _combine_categories(
@@ -401,12 +453,12 @@ def _combine_categories(
 
 
 def sparse_indicator(
-    categorical, weights: None | np.ndarray = None
+    categorical, weight: None | np.ndarray = None
 ) -> sparse.coo_matrix:
-    if weights is None:
-        weights = np.broadcast_to(1, len(categorical))
+    if weight is None:
+        weight = np.broadcast_to(1, len(categorical))
     A = sparse.coo_matrix(
-        (weights, (categorical.codes, np.arange(len(categorical)))),
+        (weight, (categorical.codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
     )
     return A
