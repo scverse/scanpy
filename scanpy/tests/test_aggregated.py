@@ -70,8 +70,6 @@ def gen_adata(data_key, dim, df_base, df_groupby, X):
     return adata_sparse, adata_dense
 
 
-# TODO: test count_nonzero
-# TODO: There isn't an exact equivalent for our count operation in pandas I think (i.e. count non-zero values)
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
 def test_aggregated_vs_pandas(metric, array_type):
@@ -111,6 +109,20 @@ def test_aggregated_vs_pandas(metric, array_type):
     result_df.columns.name = None
 
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
+def test_aggregated_axis(array_type, metric):
+    adata = pbmc3k_processed().raw.to_adata()
+    adata = adata[
+        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
+    ].copy()
+    adata.X = array_type(adata.X)
+    expected = sc.get.aggregated(adata, ["louvain"], metric)
+    actual = sc.get.aggregated(adata.T, ["louvain"], metric, dim="var").T
+
+    assert_equal(expected, actual)
 
 
 # @pytest.mark.parametrize("data_key", ["layers", "obsm", "varm", "X"])
