@@ -182,7 +182,7 @@ def _ndarray_from_seq(lst: Sequence):
 
 
 @singledispatch
-def aggregated(
+def aggregate(
     adata: AnnData,
     by: str | list[str],
     func: AggType | Iterable[AggType],
@@ -241,7 +241,7 @@ def aggregated(
     >>> pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
     >>> pbmc.shape
     (2638, 13714)
-    >>> aggregated = sc.get.aggregated(pbmc, by="louvain", func=["mean", "count_nonzero"])
+    >>> aggregated = sc.get.aggregate(pbmc, by="louvain", func=["mean", "count_nonzero"])
     >>> aggregated
     AnnData object with n_obs × n_vars = 8 × 13714
         obs: 'louvain'
@@ -251,7 +251,7 @@ def aggregated(
     We can group over multiple columns:
 
     >>> pbmc.obs["percent_mito_binned"] = pd.cut(pbmc.obs["percent_mito"], bins=5)
-    >>> sc.get.aggregated(pbmc, by=["louvain", "percent_mito_binned"], func=["mean", "count_nonzero"])
+    >>> sc.get.aggregate(pbmc, by=["louvain", "percent_mito_binned"], func=["mean", "count_nonzero"])
     AnnData object with n_obs × n_vars = 40 × 13714
         obs: 'louvain', 'percent_mito_binned'
         var: 'n_cells'
@@ -282,7 +282,7 @@ def aggregated(
         data = data.T
 
     # Actual computation
-    result = aggregated(
+    result = aggregate(
         data,
         groupby_df=getattr(adata, dim),
         by=by,
@@ -300,9 +300,9 @@ def aggregated(
         return result
 
 
-@aggregated.register(np.ndarray)
-@aggregated.register(sparse.spmatrix)
-def aggregated_from_array(
+@aggregate.register(np.ndarray)
+@aggregate.register(sparse.spmatrix)
+def aggregate_from_array(
     data,
     groupby_df: pd.DataFrame,
     func: AggType | Iterable[AggType],

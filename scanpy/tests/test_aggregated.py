@@ -72,14 +72,14 @@ def gen_adata(data_key, dim, df_base, df_groupby, X):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
-def test_aggregated_vs_pandas(metric, array_type):
+def test_aggregate_vs_pandas(metric, array_type):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
-    result = sc.get.aggregated(adata, ["louvain", "percent_mito_binned"], metric)
+    result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
 
     if metric == "count_nonzero":
         expected = (
@@ -113,23 +113,23 @@ def test_aggregated_vs_pandas(metric, array_type):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
-def test_aggregated_axis(array_type, metric):
+def test_aggregate_axis(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
-    expected = sc.get.aggregated(adata, ["louvain"], metric)
-    actual = sc.get.aggregated(adata.T, ["louvain"], metric, dim="var").T
+    expected = sc.get.aggregate(adata, ["louvain"], metric)
+    actual = sc.get.aggregate(adata.T, ["louvain"], metric, dim="var").T
 
     assert_equal(expected, actual)
 
 
-def test_aggregated_incorrect_dim():
+def test_aggregate_incorrect_dim():
     adata = pbmc3k_processed().raw.to_adata()
 
     with pytest.raises(ValueError, match="was 'foo'"):
-        sc.get.aggregated(adata, ["louvain"], "sum", dim="foo")
+        sc.get.aggregate(adata, ["louvain"], "sum", dim="foo")
 
 
 @pytest.mark.parametrize(
@@ -223,13 +223,13 @@ def test_aggregated_incorrect_dim():
         ),
     ],
 )
-def test_aggregated_examples(matrix, df, keys, metrics, expected):
+def test_aggregate_examples(matrix, df, keys, metrics, expected):
     adata = ad.AnnData(
         X=matrix,
         obs=df,
         var=pd.DataFrame(index=[f"gene_{i}" for i in range(matrix.shape[1])]),
     )
-    result = sc.get.aggregated(adata, by=keys, func=metrics)
+    result = sc.get.aggregate(adata, by=keys, func=metrics)
 
     print(result)
     print(expected)
