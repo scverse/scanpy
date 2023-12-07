@@ -550,7 +550,7 @@ def scrublet_simulate_doublets(
         )
 
     X = _get_obs_rep(adata, layer=layer)
-    scrub = sl.Scrublet(X)
+    scrub = sl.Scrublet(X, random_state=random_seed)
 
     scrub.simulate_doublets(
         sim_doublet_ratio=sim_doublet_ratio,
