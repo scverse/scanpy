@@ -10,6 +10,7 @@ from anndata import AnnData
 from legacy_api_wrap import legacy_api
 
 from ... import logging as logg
+from ..._utils import renamed_arg
 from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     from ...tools._leiden import MutableVertexPartition
 
 
+@renamed_arg("adata", "data", pos_0=True)
 @legacy_api(
     "k",
     "directed",

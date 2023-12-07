@@ -96,38 +96,32 @@ def getdoc(c_or_f: Callable | type) -> str | None:
     )
 
 
-def deprecated_arg_names(arg_mapping: Mapping[str, str]):
-    """
-    Decorator which marks a functions keyword arguments as deprecated. It will
-    result in a warning being emitted when the deprecated keyword argument is
-    used, and the function being called with the new argument.
-
-    Parameters
-    ----------
-    arg_mapping
-        Mapping from deprecated argument name to current argument name.
-    """
-
+def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     def decorator(func):
         @wraps(func)
-        def func_wrapper(*args, **kwargs):
-            warnings.simplefilter("always", DeprecationWarning)  # turn off filter
-            for old, new in arg_mapping.items():
-                if old in kwargs:
-                    warnings.warn(
-                        f"Keyword argument '{old}' has been "
-                        f"deprecated in favour of '{new}'. "
-                        f"'{old}' will be removed in a future version.",
-                        category=DeprecationWarning,
-                        stacklevel=2,
+        def wrapper(*args, **kwargs):
+            if old_name in kwargs:
+                f_name = func.__name__
+                pos_str = (
+                    (
+                        f" at first position. Call it as `{f_name}(val, ...)` "
+                        f"instead of `{f_name}({old_name}=val, ...)`"
                     )
-                    val = kwargs.pop(old)
-                    kwargs[new] = val
-            # reset filter
-            warnings.simplefilter("default", DeprecationWarning)
+                    if pos_0
+                    else ""
+                )
+                msg = (
+                    f"In function `{f_name}`, argument `{old_name}` "
+                    f"was renamed to `{new_name}`{pos_str}."
+                )
+                warnings.warn(msg, FutureWarning, stacklevel=3)
+                if pos_0:
+                    args = (kwargs.pop(old_name), *args)
+                else:
+                    kwargs[new_name] = kwargs.pop(old_name)
             return func(*args, **kwargs)
 
-        return func_wrapper
+        return wrapper
 
     return decorator
 

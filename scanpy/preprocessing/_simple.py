@@ -22,7 +22,7 @@ from .._settings import settings as sett
 from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
-    deprecated_arg_names,
+    renamed_arg,
     sanitize_anndata,
     view_to_actual,
 )
@@ -298,6 +298,7 @@ def filter_genes(
     return gene_subset, number_per_gene
 
 
+@renamed_arg("X", "data", pos_0=True)
 @singledispatch
 def log1p(
     data: AnnData | np.ndarray | spmatrix,
@@ -737,6 +738,7 @@ def _regress_out_chunk(data):
     return np.vstack(responses_chunk_list)
 
 
+@renamed_arg("X", "data", pos_0=True)
 @legacy_api("zero_center", "max_value", "copy", "layer", "obsm", "mask")
 @singledispatch
 def scale(
@@ -987,7 +989,7 @@ def subsample(
         return X[obs_indices], obs_indices
 
 
-@deprecated_arg_names({"target_counts": "counts_per_cell"})
+@renamed_arg("target_counts", "counts_per_cell")
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: int | Collection[int] | None = None,
