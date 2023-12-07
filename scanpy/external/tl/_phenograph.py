@@ -227,11 +227,13 @@ def phenograph(
         )
 
     if isinstance(data, AnnData):
+        adata = data
         try:
             data = data.obsm["X_pca"]
         except KeyError:
-            raise KeyError("Please run `sc.pp.pca` on `adata` and try again!")
+            raise KeyError("Please run `sc.pp.pca` on `data` and try again!")
     else:
+        adata = None
         copy = True
 
     comm_key = (
@@ -266,9 +268,9 @@ def phenograph(
     if copy:
         return communities, graph, Q
 
-    assert isinstance(data, AnnData)
-    data.obsp[ig_key] = graph.tocsr()
-    if comm_key:
-        data.obs[comm_key] = pd.Categorical(communities)
-    if Q:
-        data.uns[q_key] = Q
+    if adata is not None:
+        adata.obsp[ig_key] = graph.tocsr()
+        if comm_key:
+            adata.obs[comm_key] = pd.Categorical(communities)
+        if Q:
+            adata.uns[q_key] = Q
