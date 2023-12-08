@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse as sparse
-from anndata import AnnData
+from anndata import AnnData, concat
 from anndata.tests.helpers import assert_equal
 from numpy.testing import assert_allclose, assert_array_equal
 
@@ -49,7 +49,6 @@ def test_scrublet(
     adata = mk_data()
     sce.pp.scrublet(adata, use_approx_neighbors=False)
 
-    # TODO: there’s many more when running on the full data, why?
     doublet_idx = np.flatnonzero(adata.obs["predicted_doublet"]).tolist()
     assert doublet_idx == expected_idx
     assert_allclose(
@@ -66,11 +65,8 @@ def test_scrublet_batched():
     sce.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
 
     doublet_idx = np.flatnonzero(adata.obs["predicted_doublet"]).tolist()
+    # only one in the first batch (<100)
     assert doublet_idx == [35, 132, 135, 136, 139, 153, 157, 168, 170, 171, 175, 180]
-    # TODO: why are the scores not constant within a batch?
-    # scores_expected = np.where(
-    #    adata.obs["batch"][doublet_idx] == "a", 0.164835, 0.109375
-    # )
     assert_allclose(
         adata.obs["doublet_score"][doublet_idx],
         np.array([0.164835, 0.109375])[([0] * 3 + [1] * 7 + [0, 1])],
@@ -82,7 +78,7 @@ def test_scrublet_batched():
     # Check that results are independent
     for s in split:
         sce.pp.scrublet(s, use_approx_neighbors=False)
-    merged = sc.concat(split)
+    merged = concat(split)
 
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
 
