@@ -165,6 +165,10 @@ markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
 ]
+filterwarnings = [
+    "error:`anndata.read` is deprecated:FutureWarning",
+    "error:Observation names are not unique:UserWarning",
+]
 
 [tool.coverage.run]
 data_file = "test-data/coverage"

@@ -123,7 +123,7 @@ def ebi_expression_atlas(
     experiment_dir = settings.datasetdir / accession
     dataset_path = experiment_dir / f"{accession}.h5ad"
     try:
-        adata = anndata.read(dataset_path)
+        adata = anndata.read_h5ad(dataset_path)
         if filter_boring:
             adata.obs = _filter_boring(adata.obs)
         return adata

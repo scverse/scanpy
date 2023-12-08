@@ -14,12 +14,12 @@ from anndata import (
     AnnData,
     read_csv,
     read_excel,
+    read_h5ad,
     read_hdf,
     read_loom,
     read_mtx,
     read_text,
 )
-from anndata import read as read_h5ad
 from matplotlib.image import imread
 
 from . import logging as logg
