@@ -125,6 +125,41 @@ def test_aggregate_axis(array_type, metric):
     assert_equal(expected, actual)
 
 
+def test_aggregate_entry():
+    args = ("blobs", ["mean", "var", "count_nonzero"])
+
+    adata = sc.datasets.blobs()
+    X_result = sc.get.aggregate(adata, *args)
+    # layer adata
+    layer_adata = ad.AnnData(
+        obs=adata.obs,
+        var=adata.var,
+        layers={"test": adata.X.copy()},
+    )
+    layer_result = sc.get.aggregate(layer_adata, *args, layer="test")
+    obsm_adata = ad.AnnData(
+        obs=adata.obs,
+        var=adata.var,
+        obsm={"test": adata.X.copy()},
+    )
+    obsm_result = sc.get.aggregate(obsm_adata, *args, obsm="test")
+    varm_adata = ad.AnnData(
+        obs=adata.var,
+        var=adata.obs,
+        varm={"test": adata.X.copy()},
+    )
+    varm_result = sc.get.aggregate(varm_adata, *args, varm="test")
+
+    X_result_min = X_result.copy()
+    del X_result_min.var
+    X_result_min.var_names = [str(x) for x in np.arange(X_result_min.n_vars)]
+
+    assert_equal(X_result, layer_result)
+    assert_equal(X_result_min, obsm_result)
+    assert_equal(X_result.layers, obsm_result.layers)
+    assert_equal(X_result.layers, varm_result.T.layers)
+
+
 def test_aggregate_incorrect_dim():
     adata = pbmc3k_processed().raw.to_adata()
 

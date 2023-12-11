@@ -152,7 +152,7 @@ def aggregate(
     by: str | list[str],
     func: AggType | Iterable[AggType],
     *,
-    dim: Literal["obs", "var"] = "obs",
+    dim: Literal["obs", "var"] | None = None,
     dof: int = 1,
     layer: str | None = None,
     obsm: str | None = None,
@@ -221,12 +221,19 @@ def aggregate(
 
     Note that this filters out any combination of groups that wasn't present in the original data.
     """
-    if dim not in ["obs", "var"]:
+    if dim not in ["obs", "var", None]:
         raise ValueError(f"dim must be one of 'obs' or 'var', was '{dim}'")
     # TODO replace with get helper
     data = adata.X
     if sum(p is not None for p in [varm, obsm, layer]) > 1:
         raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
+
+    if dim is None:
+        if varm:
+            dim = "var"
+        else:
+            dim = "obs"
+
     if varm is not None:
         if dim != "var":
             raise ValueError("varm can only be used when dim is 'var'")
