@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence, Set
 from functools import singledispatch
-from typing import Literal, NamedTuple, get_args
+from typing import Literal, get_args
 from typing import Union as _U
 
 import numpy as np
@@ -12,13 +12,6 @@ from scipy import sparse
 
 Array = _U[np.ndarray, sparse.spmatrix]
 AggType = Literal["count_nonzero", "mean", "sum", "var"]
-
-
-class Indices(NamedTuple):
-    keys: np.ndarray
-    key_index: np.ndarray
-    df_index: np.ndarray
-    weight_value: pd.Series | Array | None
 
 
 class Aggregate:
@@ -299,18 +292,6 @@ def aggregate(
         var=getattr(adata, "var" if dim == "obs" else "obs"),
     )
 
-    # result = aggregate(
-    #     data,
-    #     groupby_df=getattr(adata, dim),
-    #     by=by,
-    #     # write_to_xxxm=write_to_xxxm,
-    #     no_groupby_df=getattr(adata, "var" if dim == "obs" else "obs"),
-    #     weight_key=weight_key,
-    #     # key_set=key_set,
-    #     func=func,
-    #     dof=dof,
-    # )
-
     if dim == "var":
         return result.T
     else:
@@ -350,54 +331,6 @@ def aggregate_array(
             result["mean"] = mean_
 
     return result
-
-
-# @aggregate.register(np.ndarray)
-# @aggregate.register(sparse.spmatrix)
-# def aggregate_from_array(
-#     data,
-#     groupby_df: pd.DataFrame,
-#     func: AggType | Iterable[AggType],
-#     by: str,
-#     no_groupby_df: pd.DataFrame,
-#     weight_key: str | None = None,
-#     dof: int = 1,
-# ) -> AnnData:
-#     """Aggregate data based on one of the columns of one of a `~pd.DataFrame`."""
-#     categorical, new_label_df = _combine_categories(groupby_df, by)
-#     groupby = Aggregate(
-#         groupby=categorical,
-#         data=data,
-#         weight=groupby_df[weight_key] if weight_key is not None else None,
-#     )
-#     # groupby df is put in `obs`, nongroupby in `var` to be transposed later as appropriate
-#     adata_kw = dict(
-#         X=None,
-#         layers={},
-#         obs=new_label_df,
-#         var=no_groupby_df,
-#         obsm={},
-#     )
-#     funcs = set([func] if isinstance(func, str) else func)
-#     if unknown := funcs - set(get_args(AggType)):
-#         raise ValueError(f"func {unknown} is not one of {get_args(AggType)}")
-#     if "sum" in funcs:  # sum is calculated separately from the rest
-#         agg = groupby.sum()
-#         adata_kw["layers"]["sum"] = agg
-#     # here and below for count, if var is present, these can be calculate alongside var
-#     if "mean" in funcs and "var" not in funcs:
-#         agg = groupby.mean()
-#         adata_kw["layers"]["mean"] = agg
-#     if "count_nonzero" in funcs:
-#         adata_kw["layers"]["count_nonzero"] = groupby.count_nonzero()
-#     if "var" in funcs:
-#         mean_, var_ = groupby.mean_var(dof)
-#         adata_kw["layers"]["var"] = var_
-#         if "mean" in funcs:
-#             adata_kw["layers"]["mean"] = mean_
-
-#     adata_agg = AnnData(**adata_kw)
-#     return adata_agg
 
 
 def _combine_categories(
