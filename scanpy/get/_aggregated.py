@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence, Set
 from functools import singledispatch
-from typing import Literal, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 from typing import Union as _U
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData, utils
 from scipy import sparse
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Set
 
 Array = _U[np.ndarray, sparse.spmatrix]
 AggType = Literal["count_nonzero", "mean", "sum", "var"]
@@ -18,20 +20,14 @@ class Aggregate:
     """\
     Functionality for generic grouping and aggregating.
 
-    There is currently support for count, sum, mean, and variance.
-
-    Set `weight` for weighted sum, mean, and variance.
-
-    Set `key_set` to a list of keys to most efficiently compute results for a subset of groups.
+    There is currently support for count_nonzero, sum, mean, and variance.
 
     **Implementation**
 
     Moments are computed using weighted sum aggregation of data by some feature
-    via multiplication by a sparse coordinate matrix A, exposed by
-    `_sparse_aggregator`. The approach works with data in ndarray or scipy sparse formats, with
-    no view or copy overhead on runtime or memory, even when filtering keys.
+    via multiplication by a sparse coordinate matrix A.
 
-    Runtime is effectively computation of the product A * X, i.e. the count of (non-zero)
+    Runtime is effectively computation of the product A @ X, i.e. the count of (non-zero)
     entries in X with multiplicity the number of group memberships for that entry. This is
     O(data) for partitions (each observation belonging to exactly one group), independent of
     the number of groups.
@@ -46,15 +42,13 @@ class Aggregate:
         Weights to be used for aggregation.
     """
 
-    def __init__(self, groupby, data, weight=None):
+    def __init__(self, groupby, data):
         self.groupby = groupby
-        self.indicator_matrix = sparse_indicator(groupby, weight=weight)
+        self.indicator_matrix = sparse_indicator(groupby)
         self.data = data
-        self.weight = weight
 
     groupby: pd.Series
     data: Array
-    weight: pd.Series | Array
     key_set: Set[str] | None
 
     def count_nonzero(self) -> np.ndarray:
@@ -120,18 +114,7 @@ class Aggregate:
             utils.asarray(self.indicator_matrix @ _power(self.data, 2))
             / group_counts[:, None]
         )
-        if self.weight is None:
-            sq_mean = mean_**2
-        else:
-            A_unweighted = sparse_indicator(self.groupby)
-            # , _ = Aggregate(
-            #     groupby=self.groupby,
-            #     data=self.data,
-            #     weight=self.weight,  # TODO: why pass weights when creating unweighted A?
-            #     key_set=self.key_set,
-            # )._sparse_aggregator()
-            mean_unweighted = utils.asarray(A_unweighted @ self.data)
-            sq_mean = 2 * mean_ * mean_unweighted + mean_unweighted**2
+        sq_mean = mean_**2
         var_ = mean_sq - sq_mean
         # TODO: Why these values exactly? Because they are high relative to the datatype?
         # (unchanged from original code: https://github.com/scverse/anndata/pull/564)
@@ -163,17 +146,6 @@ def _power(X: Array, power: float | int) -> Array:
     return X**power if isinstance(X, np.ndarray) else X.power(power)
 
 
-def _ndarray_from_seq(lst: Sequence):
-    # prevents expansion of iterables as axis
-    n = len(lst)
-    if n > 0 and isinstance(lst[0], Iterable):
-        arr = np.empty(n, dtype=object)
-        arr[:] = lst
-    else:
-        arr = np.array(lst)
-    return arr
-
-
 @singledispatch
 def aggregate(
     adata: AnnData,
@@ -181,7 +153,6 @@ def aggregate(
     func: AggType | Iterable[AggType],
     *,
     dim: Literal["obs", "var"] = "obs",
-    weight: str | None = None,
     dof: int = 1,
     layer: str | None = None,
     obsm: str | None = None,
@@ -210,8 +181,6 @@ def aggregate(
         How to aggregate.
     dim
         Axis on which to find group by column.
-    weight
-        Key of the `dim` containing weights for a weighted sum aggregation.
     dof
         Degrees of freedom for variance. Defaults to 1.
     layer
@@ -276,15 +245,12 @@ def aggregate(
 
     dim_df = getattr(adata, dim)
     categorical, new_label_df = _combine_categories(dim_df, by)
-    if isinstance(weight, str):
-        weight = dim_df[weight]
     # Actual computation
     layers = aggregate(
         data,
         by=categorical,
         func=func,
         dof=dof,
-        weight=weight,
     )
     result = AnnData(
         layers=layers,
@@ -306,9 +272,8 @@ def aggregate_array(
     func: AggType | Iterable[AggType],
     *,
     dof: int = 1,
-    weight: np.ndarray | None = None,
 ) -> dict[str, np.ndarray]:
-    groupby = Aggregate(groupby=by, data=data, weight=weight)
+    groupby = Aggregate(groupby=by, data=data)
     result = {}
 
     funcs = set([func] if isinstance(func, str) else func)
