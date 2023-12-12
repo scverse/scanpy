@@ -120,7 +120,7 @@ def test_aggregate_axis(array_type, metric):
     ].copy()
     adata.X = array_type(adata.X)
     expected = sc.get.aggregate(adata, ["louvain"], metric)
-    actual = sc.get.aggregate(adata.T, ["louvain"], metric, dim="var").T
+    actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1).T
 
     assert_equal(expected, actual)
 
@@ -164,7 +164,7 @@ def test_aggregate_incorrect_dim():
     adata = pbmc3k_processed().raw.to_adata()
 
     with pytest.raises(ValueError, match="was 'foo'"):
-        sc.get.aggregate(adata, ["louvain"], "sum", dim="foo")
+        sc.get.aggregate(adata, ["louvain"], "sum", axis="foo")
 
 
 @pytest.mark.parametrize(
