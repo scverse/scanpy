@@ -9,6 +9,8 @@ import pandas as pd
 from anndata import AnnData, utils
 from scipy import sparse
 
+from scanpy.get.get import _check_mask
+
 if TYPE_CHECKING:
     from collections.abc import Iterable, Set
 
@@ -42,9 +44,9 @@ class Aggregate:
         Weights to be used for aggregation.
     """
 
-    def __init__(self, groupby, data):
+    def __init__(self, groupby, data, *, mask: np.ndarray | None = None):
         self.groupby = groupby
-        self.indicator_matrix = sparse_indicator(groupby)
+        self.indicator_matrix = sparse_indicator(groupby, mask=mask)
         self.data = data
 
     groupby: pd.Series
@@ -153,6 +155,7 @@ def aggregate(
     func: AggType | Iterable[AggType],
     *,
     axis: Literal[0, 1] | None = None,
+    mask: np.ndarray | str | None = None,
     dof: int = 1,
     layer: str | None = None,
     obsm: str | None = None,
@@ -181,6 +184,8 @@ def aggregate(
         How to aggregate.
     axis
         Axis on which to find group by column.
+    mask
+        Boolean mask (or key to column containing mask) to apply along the axis.
     dof
         Degrees of freedom for variance. Defaults to 1.
     layer
@@ -224,6 +229,8 @@ def aggregate(
     if axis not in [0, 1, None]:
         raise ValueError(f"axis must be one of 0 or 1, was '{axis}'")
     # TODO replace with get helper
+    if mask is not None:
+        mask = _check_mask(adata, mask, ["obs", "var"][axis])
     data = adata.X
     if sum(p is not None for p in [varm, obsm, layer]) > 1:
         raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
@@ -257,6 +264,7 @@ def aggregate(
         data,
         by=categorical,
         func=func,
+        mask=mask,
         dof=dof,
     )
     result = AnnData(
@@ -278,9 +286,10 @@ def aggregate_array(
     by: pd.Categorical,
     func: AggType | Iterable[AggType],
     *,
+    mask: np.ndarray | None = None,
     dof: int = 1,
 ) -> dict[str, np.ndarray]:
-    groupby = Aggregate(groupby=by, data=data)
+    groupby = Aggregate(groupby=by, data=data, mask=mask)
     result = {}
 
     funcs = set([func] if isinstance(func, str) else func)
@@ -358,9 +367,13 @@ def _combine_categories(
 
 
 def sparse_indicator(
-    categorical, weight: None | np.ndarray = None
+    categorical, *, mask: np.ndarray | None = None, weight: np.ndarray | None = None
 ) -> sparse.coo_matrix:
-    if weight is None:
+    if mask is not None and weight is None:
+        weight = mask
+    elif mask is not None and weight is not None:
+        weight = mask * weight
+    elif mask is None and weight is None:
         weight = np.broadcast_to(1, len(categorical))
     A = sparse.coo_matrix(
         (weight, (categorical.codes, np.arange(len(categorical)))),

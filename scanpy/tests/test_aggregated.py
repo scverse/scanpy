@@ -70,6 +70,21 @@ def gen_adata(data_key, dim, df_base, df_groupby, X):
     return adata_sparse, adata_dense
 
 
+@pytest.mark.parametrize("axis", [0, 1])
+def test_mask(axis):
+    blobs = sc.datasets.blobs()
+    mask = blobs.obs["blobs"] == 0
+    blobs.obs["mask_col"] = mask
+    if axis == 1:
+        blobs = blobs.T
+    by_name = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask="mask_col")
+    by_value = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask=mask)
+
+    assert_equal(by_name, by_value)
+
+    assert np.all(by_name["0"].layers["sum"] == 0)
+
+
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
 def test_aggregate_vs_pandas(metric, array_type):
