@@ -928,9 +928,11 @@ def scale_anndata(
     return adata if copy else None
 
 
+@legacy_api("n_obs", "random_state", "copy")
 def subsample(
     data: AnnData | np.ndarray | spmatrix,
     fraction: float | None = None,
+    *,
     n_obs: int | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
