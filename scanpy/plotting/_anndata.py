@@ -533,7 +533,9 @@ def _scatter_obs(
     _utils.savefig_or_show("scatter" if basis is None else basis, show=show, save=save)
     if show:
         return None
-    return axs if len(keys) > 1 else axs[0]
+    if len(keys) > 1:
+        return axs
+    return axs[0]
 
 
 @legacy_api(
@@ -937,7 +939,9 @@ def violin(
         return None
     if multi_panel and groupby is None and len(ys) == 1:
         return g
-    return axs[0] if len(axs) == 1 else axs
+    if len(axs) == 1:
+        return axs[0]
+    return axs
 
 
 @legacy_api("use_raw", "show", "save")
@@ -1972,9 +1976,9 @@ def correlation_matrix(
 
     show = settings.autoshow if show is None else show
     _utils.savefig_or_show("correlation_matrix", show=show, save=save)
-    if ax is None and not show:
-        return axs
-    return None
+    if ax is not None or show:
+        return None
+    return axs
 
 
 def _prepare_dataframe(

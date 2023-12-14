@@ -155,8 +155,9 @@ def harmony_timeseries(
         p.set_axis_off()
     if return_fig:
         return fig
-    elif not show:
-        return axes
+    if show:
+        return None
+    return axes
 
 
 @legacy_api("c", "cmap", "linewidth", "edgecolor", "axes", "colorbar", "s")
@@ -353,8 +354,9 @@ def wishbone_marker_trajectory(
 
     if return_fig:
         return fig
-    elif not show:
-        return ax
+    if show:
+        return None
+    return ax
 
 
 @legacy_api("scale_hist_obs", "scale_hist_sim", "figsize", "return_fig", "show", "save")
@@ -490,5 +492,6 @@ def scrublet_score_distribution(
     _utils.savefig_or_show("scrublet_score_distribution", show=show, save=save)
     if return_fig:
         return fig
-    elif not show:
-        return axs
+    if show:
+        return None
+    return axs

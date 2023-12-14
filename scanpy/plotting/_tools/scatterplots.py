@@ -469,9 +469,9 @@ def embedding(
         return fig
     axs = axs if grid else ax
     _utils.savefig_or_show(basis, show=show, save=save)
-    if show is False:
-        return axs
-    return None
+    if show:
+        return None
+    return axs
 
 
 def _panel_grid(hspace, wspace, ncols, num_panels):
@@ -916,9 +916,9 @@ def pca(
         axs.set_xlabel(label_dict[axs.xaxis.get_label().get_text()])
         axs.set_ylabel(label_dict[axs.yaxis.get_label().get_text()])
     _utils.savefig_or_show("pca", show=show, save=save)
-    if show is False:
-        return axs
-    return None
+    if show:
+        return None
+    return axs
 
 
 @_wraps_plot_scatter
@@ -1041,9 +1041,11 @@ def spatial(
             ax.set_xlim(cur_coords[0], cur_coords[1])
             ax.set_ylim(cur_coords[3], cur_coords[2])
     _utils.savefig_or_show("show", show=show, save=save)
-    if show is False or return_fig is True:
-        return axs
-    return None
+    if return_fig:
+        return axs[0].figure
+    if show:
+        return None
+    return axs
 
 
 # Helpers

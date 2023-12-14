@@ -101,5 +101,6 @@ def highest_expr_genes(
     if log:
         ax.set_xscale("log")
     _utils.savefig_or_show("highest_expr_genes", show=show, save=save)
-    if show is False:
-        return ax
+    if show:
+        return None
+    return ax

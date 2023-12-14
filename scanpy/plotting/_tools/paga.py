@@ -192,8 +192,9 @@ def paga_compare(
     if suptitle is not None:
         plt.suptitle(suptitle)
     _utils.savefig_or_show("paga_compare", show=show, save=save)
-    if show is False:
-        return axs
+    if show:
+        return None
+    return axs
 
 
 def _compute_pos(
@@ -674,12 +675,15 @@ def paga(
     if add_pos:
         adata.uns["paga"]["pos"] = pos
         logg.hint("added 'pos', the PAGA positions (adata.uns['paga'])")
-    if plot:
-        _utils.savefig_or_show("paga", show=show, save=save)
-        if len(colors) == 1 and isinstance(axs, list):
-            axs = axs[0]
-        if show is False:
-            return axs
+
+    if not plot:
+        return None
+    _utils.savefig_or_show("paga", show=show, save=save)
+    if len(colors) == 1 and isinstance(axs, list):
+        axs = axs[0]
+    if show:
+        return None
+    return axs
 
 
 def _paga_graph(
@@ -1084,7 +1088,7 @@ def paga_path(
     show: bool | None = None,
     save: bool | str | None = None,
     ax: Axes | None = None,
-) -> Axes | None:
+) -> tuple[Axes, pd.DataFrame] | Axes | pd.DataFrame | None:
     """\
     Gene expression and annotation changes along paths in the abstracted graph.
 
@@ -1368,9 +1372,9 @@ def paga_path(
         df["groups"] = moving_average(groups)  # groups is without moving average, yet
         if "dpt_pseudotime" in anno_dict:
             df["distance"] = anno_dict["dpt_pseudotime"].T
-        return ax, df if ax_was_none and not show else df
-    else:
-        return ax if ax_was_none and not show else None
+    if not ax_was_none or show:
+        return df if return_data else None
+    return (ax, df) if return_data else ax
 
 
 def paga_adjacency(

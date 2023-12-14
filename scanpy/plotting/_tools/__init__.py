@@ -1300,8 +1300,9 @@ def rank_genes_groups_violin(
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
-    if show is False:
-        return axs
+    if show:
+        return None
+    return axs
 
 
 @legacy_api("tmax_realization", "as_heatmap", "shuffle", "show", "save", "marker")
@@ -1674,8 +1675,9 @@ def embedding_density(
     if return_fig:
         return fig
     savefig_or_show(f"{key}_", show=show, save=save)
-    if show is False:
-        return ax
+    if show:
+        return None
+    return ax
 
 
 def _get_values_to_plot(
