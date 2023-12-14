@@ -785,9 +785,9 @@ def stacked_violin(
     ).legend(title=colorbar_title)
     if return_fig:
         return vp
-    else:
-        vp.make_figure()
-        savefig_or_show(StackedViolin.DEFAULT_SAVE_PREFIX, show=show, save=save)
-        show = settings.autoshow if show is None else show
-        if not show:
-            return vp.get_axes()
+    vp.make_figure()
+    savefig_or_show(StackedViolin.DEFAULT_SAVE_PREFIX, show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return vp.get_axes()

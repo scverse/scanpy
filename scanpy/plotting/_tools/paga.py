@@ -681,6 +681,7 @@ def paga(
     _utils.savefig_or_show("paga", show=show, save=save)
     if len(colors) == 1 and isinstance(axs, list):
         axs = axs[0]
+    show = settings.autoshow if show is None else show
     if show:
         return None
     return axs

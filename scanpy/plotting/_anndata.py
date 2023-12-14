@@ -661,8 +661,9 @@ def ranking(
             (1.05 if score_max > 0 else 0.95) * score_max,
         )
     show = settings.autoshow if show is None else show
-    if not show:
-        return gs
+    if show:
+        return None
+    return gs
 
 
 @legacy_api(

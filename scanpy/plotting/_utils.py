@@ -318,7 +318,7 @@ def savefig_or_show(
     writekey: str,
     show: bool | None = None,
     dpi: int | None = None,
-    ext: str = None,
+    ext: str | None = None,
     save: bool | str | None = None,
 ):
     if isinstance(save, str):

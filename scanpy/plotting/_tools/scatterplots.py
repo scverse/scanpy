@@ -469,6 +469,7 @@ def embedding(
         return fig
     axs = axs if grid else ax
     _utils.savefig_or_show(basis, show=show, save=save)
+    show = settings.autoshow if show is None else show
     if show:
         return None
     return axs
@@ -916,6 +917,7 @@ def pca(
         axs.set_xlabel(label_dict[axs.xaxis.get_label().get_text()])
         axs.set_ylabel(label_dict[axs.yaxis.get_label().get_text()])
     _utils.savefig_or_show("pca", show=show, save=save)
+    show = settings.autoshow if show is None else show
     if show:
         return None
     return axs
@@ -1043,6 +1045,7 @@ def spatial(
     _utils.savefig_or_show("show", show=show, save=save)
     if return_fig:
         return axs[0].figure
+    show = settings.autoshow if show is None else show
     if show:
         return None
     return axs

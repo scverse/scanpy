@@ -6,6 +6,7 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
+from .._settings import settings
 from . import _utils
 
 # --------------------------------------------------------------------------------
@@ -91,9 +92,11 @@ def highly_variable_genes(
             + (" (normalized)" if idx == 0 else " (not normalized)")
         )
 
+    show = settings.autoshow if show is None else show
     _utils.savefig_or_show("filter_genes_dispersion", show=show, save=save)
-    if show is False:
-        return plt.gca()
+    if show:
+        return None
+    return plt.gca()
 
 
 # backwards compat

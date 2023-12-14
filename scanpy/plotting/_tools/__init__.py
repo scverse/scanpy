@@ -471,12 +471,12 @@ def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
     """
     if return_fig:
         return plot_obj
-    else:
-        plot_obj.make_figure()
-        savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
-        show = settings.autoshow if show is None else show
-        if show is False:
-            return plot_obj.get_axes()
+    plot_obj.make_figure()
+    savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return plot_obj.get_axes()
 
 
 def _rank_genes_groups_plot(
@@ -1300,6 +1300,7 @@ def rank_genes_groups_violin(
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
+    show = settings.autoshow if show is None else show
     if show:
         return None
     return axs
@@ -1675,6 +1676,7 @@ def embedding_density(
     if return_fig:
         return fig
     savefig_or_show(f"{key}_", show=show, save=save)
+    show = settings.autoshow if show is None else show
     if show:
         return None
     return ax
