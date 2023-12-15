@@ -904,7 +904,7 @@ def _read_softgz(filename: str | bytes | Path | BinaryIO) -> AnnData:
     X = np.array(X).T
     obs = pd.DataFrame({"groups": groups}, index=sample_names)
     var = pd.DataFrame(index=gene_names)
-    return AnnData(X=X, obs=obs, var=var, dtype=X.dtype)
+    return AnnData(X=X, obs=obs, var=var)
 
 
 # -------------------------------------------------------------------------------
