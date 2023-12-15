@@ -184,6 +184,11 @@ omit = ["*/tests/*"]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
+[tool.coverage.report]
+exclude_lines = [
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
 
 [tool.ruff]
 select = [
