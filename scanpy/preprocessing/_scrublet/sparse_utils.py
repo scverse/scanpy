@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from scipy import sparse
-from numpy.typing import NDArray
 
 from ..._utils import AnyRandom, get_random_state
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def sparse_var(

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from numpy.typing import NDArray
 
 from ... import logging as logg
-from ..._utils import AnyRandom
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from ..._utils import AnyRandom
 
 AnnoyDist = Literal["angular", "euclidean", "manhattan", "hamming", "dot"]
 
