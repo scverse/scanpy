@@ -6,12 +6,11 @@ import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse as sparse
-from anndata import AnnData
+from anndata import AnnData, concat
 from anndata.tests.helpers import assert_equal
 from numpy.testing import assert_allclose, assert_array_equal
 
 import scanpy as sc
-import scanpy.preprocessing as pp
 from scanpy.testing._pytest.marks import needs
 
 if TYPE_CHECKING:
@@ -77,19 +76,19 @@ def test_scrublet_batched():
     # Check that results are independent
     for s in split:
         sc.pp.scrublet(s, use_approx_neighbors=False)
-    merged = sc.concat(split)
+    merged = concat(split)
 
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
 
 
 def _preprocess_for_scrublet(adata: AnnData) -> AnnData:
     adata_pp = adata.copy()
-    pp.filter_genes(adata_pp, min_cells=3)
-    pp.filter_cells(adata_pp, min_genes=3)
+    sc.pp.filter_genes(adata_pp, min_cells=3)
+    sc.pp.filter_cells(adata_pp, min_genes=3)
     adata_pp.layers["raw"] = adata_pp.X.copy()
-    pp.normalize_total(adata_pp)
-    logged = pp.log1p(adata_pp, copy=True)
-    pp.highly_variable_genes(logged)
+    sc.pp.normalize_total(adata_pp)
+    logged = sc.pp.log1p(adata_pp, copy=True)
+    sc.pp.highly_variable_genes(logged)
     return adata_pp[:, logged.var["highly_variable"]].copy()
 
 
@@ -140,8 +139,8 @@ def test_scrublet_data():
     )
 
     # Apply the same post-normalisation the Scrublet function would
-    pp.normalize_total(adata_obs, target_sum=1e6)
-    pp.normalize_total(adata_sim, target_sum=1e6)
+    sc.pp.normalize_total(adata_obs, target_sum=1e6)
+    sc.pp.normalize_total(adata_sim, target_sum=1e6)
 
     adata_scrublet_manual_sim = sc.pp.scrublet(
         adata_obs,
