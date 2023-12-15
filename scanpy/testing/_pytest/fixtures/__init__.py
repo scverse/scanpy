@@ -53,9 +53,9 @@ def doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, No
             showwarning_orig(message, category, filename, lineno, file, line)
 
     # make errors visible and the rest ignored
-    warnings.filters = [("ignore", None, Warning, None, 0)] + [
+    warnings.filters = [
         ("default", *rest) for action, *rest in warnings.filters if action == "error"
-    ]
+    ] + [("ignore", None, Warning, None, 0)]
 
     warnings.showwarning = showwarning
     old_dd, settings.datasetdir = settings.datasetdir, cache.mkdir("scanpy-data")
