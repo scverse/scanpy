@@ -14,12 +14,12 @@ from anndata import (
     AnnData,
     read_csv,
     read_excel,
+    read_h5ad,
     read_hdf,
     read_loom,
     read_mtx,
     read_text,
 )
-from anndata import read as read_h5ad
 from matplotlib.image import imread
 
 from . import logging as logg
@@ -904,7 +904,7 @@ def _read_softgz(filename: str | bytes | Path | BinaryIO) -> AnnData:
     X = np.array(X).T
     obs = pd.DataFrame({"groups": groups}, index=sample_names)
     var = pd.DataFrame(index=gene_names)
-    return AnnData(X=X, obs=obs, var=var, dtype=X.dtype)
+    return AnnData(X=X, obs=obs, var=var)
 
 
 # -------------------------------------------------------------------------------
