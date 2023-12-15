@@ -197,6 +197,7 @@ def scrublet(
                 layer="raw",
                 sim_doublet_ratio=sim_doublet_ratio,
                 synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
+                random_seed=random_state,
             )
 
             if log_transform:
