@@ -186,7 +186,7 @@ output = "test-data/coverage.xml"
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
 [tool.coverage.report]
-exclude_lines = [
+exclude_also = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
