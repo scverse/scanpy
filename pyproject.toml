@@ -93,6 +93,8 @@ test = [
     "scanpy[leiden]",
     "zarr",
     "scanpy[dask]",
+    # Temp. before moving into scanpy
+    "scrublet==0.2.3",
 ]
 test-full = [
     "scanpy[test]",
