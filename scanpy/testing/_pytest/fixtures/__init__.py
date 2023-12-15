@@ -4,7 +4,6 @@ This is kept seperate from the helpers file because it relies on pytest.
 """
 from __future__ import annotations
 
-import sys
 import warnings
 from typing import TYPE_CHECKING
 
@@ -44,8 +43,14 @@ def doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, No
 
     def showwarning(message, category, filename, lineno, file=None, line=None):
         if file is None:
-            file = sys.stdout
-        showwarning_orig(message, category, filename, lineno, file, line)
+            if line is None:
+                import linecache
+
+                line = linecache.getline(filename, lineno)
+            line = line.strip()
+            print(f"{category.__name__}: {message}\n    {line}")
+        else:
+            showwarning_orig(message, category, filename, lineno, file, line)
 
     warnings.filterwarnings("default", category=UserWarning)
 
