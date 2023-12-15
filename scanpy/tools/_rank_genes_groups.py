@@ -322,7 +322,7 @@ class _RankGenes:
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
                 for imask, mask in enumerate(self.groups_masks):
-                    scores[imask, left:right] = np.sum(ranks.iloc[mask, :])
+                    scores[imask, left:right] = ranks.iloc[mask, :].sum(axis=0)
                     if tie_correct:
                         T[imask, left:right] = _tiecorrect(ranks)
 
