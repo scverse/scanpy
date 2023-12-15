@@ -294,7 +294,7 @@ class _RankGenes:
 
                 # Calculate rank sums for each chunk for the current mask
                 for ranks, left, right in _ranks(self.X, mask, mask_rest):
-                    scores[left:right] = np.sum(ranks.iloc[0:n_active, :])
+                    scores[left:right] = ranks.iloc[0:n_active, :].sum(axis=0)
                     if tie_correct:
                         T[left:right] = _tiecorrect(ranks)
 
