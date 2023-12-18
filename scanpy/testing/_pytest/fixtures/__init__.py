@@ -41,7 +41,7 @@ def doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, No
 
     showwarning_orig = warnings.showwarning
 
-    def showwarning(message, category, filename, lineno, file=None, line=None):
+    def showwarning(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
         if file is None:
             if line is None:
                 import linecache
