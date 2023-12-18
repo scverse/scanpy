@@ -21,12 +21,12 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@legacy_api("groupby", "group", "n_genes", "data", "method", "annotation_key")
+@legacy_api("group", "n_genes", "data", "method", "annotation_key")
 def correlation_matrix(
     adata: AnnData,
     name_list: Collection[str] | None = None,
-    *,
     groupby: str | None = None,
+    *,
     group: int | None = None,
     n_genes: int = 20,
     data: Literal["Complete", "Group", "Rest"] = "Complete",

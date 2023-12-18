@@ -97,7 +97,6 @@ class MatrixPlot(BasePlot):
     DEFAULT_EDGE_LW = 0.1
 
     @legacy_api(
-        "groupby",
         "use_raw",
         "log",
         "num_categories",
@@ -121,8 +120,8 @@ class MatrixPlot(BasePlot):
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
-        *,
         groupby: str | Sequence[str],
+        *,
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
