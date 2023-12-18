@@ -7,6 +7,7 @@ import numpy as np
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import AnyRandom, _choose_graph
 from ._utils import get_init_pos_from_paga
 
@@ -18,9 +19,21 @@ _LAYOUTS = ("fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa")
 _Layout = Literal[_LAYOUTS]
 
 
+@old_positionals(
+    "init_pos",
+    "root",
+    "random_state",
+    "n_jobs",
+    "adjacency",
+    "key_added_ext",
+    "neighbors_key",
+    "obsp",
+    "copy",
+)
 def draw_graph(
     adata: AnnData,
     layout: _Layout = "fa",
+    *,
     init_pos: str | bool | None = None,
     root: int | None = None,
     random_state: AnyRandom = 0,
@@ -31,7 +44,7 @@ def draw_graph(
     obsp: str | None = None,
     copy: bool = False,
     **kwds,
-):
+) -> AnnData | None:
     """\
     Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.
 

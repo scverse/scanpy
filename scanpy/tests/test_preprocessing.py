@@ -36,6 +36,12 @@ def test_log1p(tmp_path):
     assert np.allclose(ad4.X, A_l / np.log(2))
 
 
+def test_log1p_deprecated_arg():
+    A = np.random.rand(200, 10).astype(np.float32)
+    with pytest.warns(FutureWarning, match=r".*`X` was renamed to `data`"):
+        sc.pp.log1p(X=A)
+
+
 @pytest.fixture(params=[None, 2])
 def base(request):
     return request.param

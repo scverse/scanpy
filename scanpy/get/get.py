@@ -1,7 +1,7 @@
 """This module contains helper functions for accessing data."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -106,6 +106,7 @@ def rank_genes_groups_df(
 def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
+    *,
     dim: Literal["obs", "var"],
     keys: list[str],
     alias_index: pd.Index | None = None,
@@ -217,8 +218,8 @@ def obs_df(
     keys: Iterable[str] = (),
     obsm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str = None,
-    gene_symbols: str = None,
+    layer: str | None = None,
+    gene_symbols: str | None = None,
     use_raw: bool = False,
 ) -> pd.DataFrame:
     """\
@@ -286,8 +287,8 @@ def obs_df(
     obs_cols, var_idx_keys, var_symbols = _check_indices(
         adata.obs,
         var.index,
-        "obs",
-        keys,
+        dim="obs",
+        keys=keys,
         alias_index=alias_index,
         use_raw=use_raw,
     )
@@ -335,7 +336,7 @@ def var_df(
     keys: Iterable[str] = (),
     varm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str = None,
+    layer: str | None = None,
 ) -> pd.DataFrame:
     """\
     Return values for observations in adata.
@@ -357,7 +358,9 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
-    var_cols, obs_idx_keys, _ = _check_indices(adata.var, adata.obs_names, "var", keys)
+    var_cols, obs_idx_keys, _ = _check_indices(
+        adata.var, adata.obs_names, dim="var", keys=keys
+    )
 
     # initialize df
     df = pd.DataFrame(index=adata.var.index)
@@ -395,7 +398,14 @@ def var_df(
     return df
 
 
-def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
+def _get_obs_rep(
+    adata: AnnData,
+    *,
+    use_raw: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
+):
     """
     Choose array aligned with obs annotation.
     """
@@ -426,7 +436,15 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
         )
 
 
-def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None):
+def _set_obs_rep(
+    adata: AnnData,
+    val: Any,
+    *,
+    use_raw: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
+):
     """
     Set value for observation rep.
     """

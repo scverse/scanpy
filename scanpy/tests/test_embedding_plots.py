@@ -154,6 +154,7 @@ def vbounds(request):
 
 
 def test_missing_values_categorical(
+    *,
     fixture_request,
     image_comparer,
     adata,
@@ -181,7 +182,7 @@ def test_missing_values_categorical(
 
 
 def test_missing_values_continuous(
-    fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds
+    *, fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds
 ):
     save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
 

@@ -7,13 +7,35 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
+from ..._compat import old_positionals
 from ...get import _get_obs_rep
 
 
+@old_positionals(
+    "adata_sim",
+    "batch_key",
+    "sim_doublet_ratio",
+    "expected_doublet_rate",
+    "stdev_doublet_rate",
+    "synthetic_doublet_umi_subsampling",
+    "knn_dist_metric",
+    "normalize_variance",
+    "log_transform",
+    "mean_center",
+    "n_prin_comps",
+    "use_approx_neighbors",
+    "get_doublet_neighbor_parents",
+    "n_neighbors",
+    "threshold",
+    "verbose",
+    "copy",
+    "random_state",
+)
 def scrublet(
     adata: AnnData,
+    *,
     adata_sim: AnnData | None = None,
-    batch_key: str = None,
+    batch_key: str | None = None,
     sim_doublet_ratio: float = 2.0,
     expected_doublet_rate: float = 0.05,
     stdev_doublet_rate: float = 0.02,
@@ -278,6 +300,7 @@ def scrublet(
 
 
 def _scrublet_call_doublets(
+    *,
     adata_obs: AnnData,
     adata_sim: AnnData,
     n_neighbors: int | None = None,
@@ -496,9 +519,13 @@ def _scrublet_call_doublets(
     return adata_obs
 
 
+@old_positionals(
+    "layer", "sim_doublet_ratio", "synthetic_doublet_umi_subsampling", "random_seed"
+)
 def scrublet_simulate_doublets(
     adata: AnnData,
-    layer=None,
+    *,
+    layer: str | None = None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
     random_seed: int = 0,

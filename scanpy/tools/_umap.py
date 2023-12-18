@@ -8,6 +8,7 @@ from packaging import version
 from sklearn.utils import check_array, check_random_state
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import AnyRandom, NeighborsView
 from ._utils import _choose_representation, get_init_pos_from_paga
@@ -18,8 +19,25 @@ if TYPE_CHECKING:
 _InitPos = Literal["paga", "spectral", "random"]
 
 
+@old_positionals(
+    "min_dist",
+    "spread",
+    "n_components",
+    "maxiter",
+    "alpha",
+    "gamma",
+    "negative_sample_rate",
+    "init_pos",
+    "random_state",
+    "a",
+    "b",
+    "copy",
+    "method",
+    "neighbors_key",
+)
 def umap(
     adata: AnnData,
+    *,
     min_dist: float = 0.5,
     spread: float = 1.0,
     n_components: int = 2,

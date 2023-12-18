@@ -66,6 +66,7 @@ dependencies = [
     "umap-learn>=0.3.10",
     "packaging",
     "session-info",
+    "legacy-api-wrap>=1.4",  # for positional API deprecations
     "get-annotations; python_version < '3.10'",
 ]
 dynamic = ["version"]
@@ -168,6 +169,8 @@ markers = [
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
 ]
 filterwarnings = [
+    # legacy-api-wrap: internal use of positional API
+    "error:The specified parameters:FutureWarning",
     # When calling `.show()` in tests, this is raised
     "ignore:FigureCanvasAgg is non-interactive:UserWarning",
     # We explicitly handle these errors in tests
@@ -202,6 +205,7 @@ select = [
     "TID251",  # Banned imports
     "ICN",     # Follow import conventions
     "PTH",     # Pathlib instead of os.path
+    "PLR0917", # Ban APIs with too many positional parameters
 ]
 ignore = [
     # line too long -> we accept long comment lines; black gets rid of long code lines

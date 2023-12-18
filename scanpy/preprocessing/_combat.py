@@ -8,6 +8,7 @@ from numpy import linalg as la
 from scipy.sparse import issparse
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import sanitize_anndata
 
 if TYPE_CHECKING:
@@ -134,9 +135,11 @@ def _standardize_data(
     return s_data, design, var_pooled, stand_mean
 
 
+@old_positionals("covariates", "inplace")
 def combat(
     adata: AnnData,
     key: str = "batch",
+    *,
     covariates: Collection[str] | None = None,
     inplace: bool = True,
 ) -> np.ndarray | None:
@@ -245,10 +248,10 @@ def combat(
             s_data.iloc[:, batch_idxs].values,
             gamma_hat[i],
             delta_hat[i].values,
-            gamma_bar[i],
-            t2[i],
-            a_prior[i],
-            b_prior[i],
+            g_bar=gamma_bar[i],
+            t2=t2[i],
+            a=a_prior[i],
+            b=b_prior[i],
         )
 
         gamma_star.append(gamma)
@@ -288,6 +291,7 @@ def _it_sol(
     s_data: np.ndarray,
     g_hat: np.ndarray,
     d_hat: np.ndarray,
+    *,
     g_bar: float,
     t2: float,
     a: float,
@@ -310,7 +314,7 @@ def _it_sol(
         Initial guess for gamma
     d_hat
         Initial guess for delta
-    g_bar, t_2, a, b
+    g_bar, t2, a, b
         Hyperparameters
     conv: float, optional (default: `0.0001`)
         convergence criterium

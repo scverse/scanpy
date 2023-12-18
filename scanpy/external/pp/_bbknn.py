@@ -2,23 +2,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
+from ..._compat import old_positionals
+from ...testing._doctests import doctest_needs
+
 if TYPE_CHECKING:
     from anndata import AnnData
     from sklearn.metrics import DistanceMetric
 
-from ...testing._doctests import doctest_needs
 
-
+@old_positionals("batch_key", "use_rep", "approx", "use_annoy", "metric", "copy")
 @doctest_needs("bbknn")
 def bbknn(
     adata: AnnData,
+    *,
     batch_key: str = "batch",
     use_rep: str = "X_pca",
     approx: bool = True,
     use_annoy: bool = True,
     metric: str | Callable | DistanceMetric = "euclidean",
     copy: bool = False,
-    *,
     neighbors_within_batch: int = 3,
     n_pcs: int = 50,
     trim: int | None = None,
@@ -29,7 +31,7 @@ def bbknn(
     set_op_mix_ratio: float = 1.0,
     local_connectivity: int = 1,
     **kwargs,
-) -> AnnData:
+) -> AnnData | None:
     """\
     Batch balanced kNN [Polanski19]_.
 
