@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from inspect import signature
 from typing import Literal, Optional, cast
