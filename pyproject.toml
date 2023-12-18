@@ -94,6 +94,8 @@ test = [
     "scanpy[leiden]",
     "zarr",
     "scanpy[dask]",
+    # Temp. before moving into scanpy
+    "scrublet==0.2.3",
 ]
 test-full = [
     "scanpy[test]",
@@ -168,7 +170,14 @@ markers = [
 ]
 filterwarnings = [
     # legacy-api-wrap: internal use of positional API
-    "error:The specified parameters:DeprecationWarning",
+    "error:The specified parameters:FutureWarning",
+    # When calling `.show()` in tests, this is raised
+    "ignore:FigureCanvasAgg is non-interactive:UserWarning",
+    # We explicitly handle these errors in tests
+    "error:`anndata.read` is deprecated:FutureWarning",
+    "error:Observation names are not unique:UserWarning",
+    "error:The dtype argument is deprecated and will be removed:FutureWarning",
+    "error:The behavior of DataFrame\\.sum with axis=None is deprecated:FutureWarning",
 ]
 
 [tool.coverage.run]
@@ -179,6 +188,11 @@ omit = ["*/tests/*"]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
 
 [tool.ruff]
 select = [

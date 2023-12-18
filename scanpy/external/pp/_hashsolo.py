@@ -331,7 +331,7 @@ def hashsolo(
     -------
     >>> import anndata
     >>> import scanpy.external as sce
-    >>> adata = anndata.read("data.h5ad")
+    >>> adata = anndata.read_h5ad("data.h5ad")
     >>> sce.pp.hashsolo(adata, ['Hash1', 'Hash2', 'Hash3'])
     >>> adata.obs.head()
     """
