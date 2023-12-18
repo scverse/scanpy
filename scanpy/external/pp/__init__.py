@@ -24,6 +24,4 @@ __all__ = [
     "magic",
     "mnn_correct",
     "scanorama_integrate",
-    "scrublet",
-    "scrublet_simulate_doublets",
 ]

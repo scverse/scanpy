@@ -31,7 +31,6 @@ __all__ = [
     "harmony_timeseries",
     "sam",
     "wishbone_marker_trajectory",
-    "scrublet_score_distribution",
 ]
 
 
