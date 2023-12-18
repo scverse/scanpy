@@ -1384,7 +1384,6 @@ def sim(
 
 
 @legacy_api(
-    "basis",
     "key",
     "groupby",
     "group",
@@ -1409,9 +1408,9 @@ def sim(
 )
 def embedding_density(
     adata: AnnData,
+    basis: str = "umap",
     *,
-    basis: str = "umap",  # was positional before 1.4.5
-    key: str | None = None,  # was positional before 1.4.5
+    key: str | None = None,
     groupby: str | None = None,
     group: str | Sequence[str] | None | None = "all",
     color_map: Colormap | str = "YlOrRd",

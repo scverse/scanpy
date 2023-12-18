@@ -36,11 +36,11 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     return scaled_z
 
 
-@legacy_api("basis", "groupby", "key_added", "components")
+@legacy_api("groupby", "key_added", "components")
 def embedding_density(
     adata: AnnData,
-    *,
     basis: str = "umap",
+    *,
     groupby: str | None = None,
     key_added: str | None = None,
     components: str | Sequence[str] | None = None,
