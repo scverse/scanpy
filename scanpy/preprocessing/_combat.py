@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from numpy import linalg as la
 from scipy.sparse import issparse
 
@@ -134,9 +135,11 @@ def _standardize_data(
     return s_data, design, var_pooled, stand_mean
 
 
+@legacy_api("covariates", "inplace")
 def combat(
     adata: AnnData,
     key: str = "batch",
+    *,
     covariates: Collection[str] | None = None,
     inplace: bool = True,
 ) -> np.ndarray | None:

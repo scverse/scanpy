@@ -146,6 +146,11 @@ copy_sigs["sc.external.pp.magic"]["copy_default"] = None
 def test_sig_conventions(f, qualname):
     sig = signature(f)
 
+    # TODO: replace the following check with lint rule for all funtions eventually
+    if not is_deprecated(f):
+        n_pos = sum(1 for p in sig.parameters.values() if param_is_pos(p))
+        assert n_pos <= 3, "Public functions should have <= 3 positional parameters"
+
     first_param = next(iter(sig.parameters.values()), None)
     if first_param is None:
         return

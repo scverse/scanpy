@@ -147,8 +147,10 @@ def read(
     return read_h5ad(filename, backed=backed)
 
 
+@legacy_api("genome", "gex_only", "backup_url")
 def read_10x_h5(
     filename: Path | str,
+    *,
     genome: str | None = None,
     gex_only: bool = True,
     backup_url: str | None = None,
@@ -639,9 +641,11 @@ def _read_v3_10x_mtx(
     return adata
 
 
+@legacy_api("ext", "compression", "compression_opts")
 def write(
     filename: Path | str,
     adata: AnnData,
+    *,
     ext: Literal["h5", "csv", "txt", "npz"] | None = None,
     compression: Literal["gzip", "lzf"] | None = "gzip",
     compression_opts: int | None = None,

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal
 import anndata as ad
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 
 from .. import _utils
 from .. import logging as logg
@@ -20,7 +21,9 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
+@legacy_api("n_variables", "n_centers", "cluster_std", "n_observations", "random_state")
 def blobs(
+    *,
     n_variables: int = 11,
     n_centers: int = 5,
     cluster_std: float = 1.0,

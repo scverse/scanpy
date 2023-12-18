@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from legacy_api_wrap import legacy_api
 
 from .. import logging as logg
 from .._utils import sanitize_anndata
@@ -35,10 +36,11 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     return scaled_z
 
 
+@legacy_api("basis", "groupby", "key_added", "components")
 def embedding_density(
     adata: AnnData,
-    # there is no asterisk here for backward compat (previously, there was)
-    basis: str = "umap",  # was positional before 1.4.5
+    *,
+    basis: str = "umap",
     groupby: str | None = None,
     key_added: str | None = None,
     components: str | Sequence[str] | None = None,

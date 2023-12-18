@@ -172,9 +172,11 @@ def pca_loadings(
     savefig_or_show("pca_loadings", show=show, save=save)
 
 
+@legacy_api("log", "show", "save")
 def pca_variance_ratio(
     adata: AnnData,
     n_pcs: int = 30,
+    *,
     log: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
@@ -957,14 +959,15 @@ def rank_genes_groups_dotplot(
     )
 
 
+@legacy_api("n_genes", "groupby", "gene_symbols")
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_stacked_violin(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     gene_symbols: str | None = None,
-    *,
     var_names: Sequence[str] | Mapping[str, Sequence[str]] | None = None,
     min_logfoldchange: float | None = None,
     key: str | None = None,

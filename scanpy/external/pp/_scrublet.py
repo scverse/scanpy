@@ -518,8 +518,12 @@ def _scrublet_call_doublets(
     return adata_obs
 
 
+@legacy_api(
+    "layer", "sim_doublet_ratio", "synthetic_doublet_umi_subsampling", "random_seed"
+)
 def scrublet_simulate_doublets(
     adata: AnnData,
+    *,
     layer: str | None = None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
@@ -573,7 +577,7 @@ def scrublet_simulate_doublets(
         )
 
     X = _get_obs_rep(adata, layer=layer)
-    scrub = sl.Scrublet(X)
+    scrub = sl.Scrublet(X, random_state=random_seed)
 
     scrub.simulate_doublets(
         sim_doublet_ratio=sim_doublet_ratio,
