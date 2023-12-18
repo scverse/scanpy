@@ -71,11 +71,7 @@ def scrublet(
     and directly call functions of Scrublet(). You may also undertake your own
     preprocessing, simulate doublets with
     :func:`~scanpy.pp.scrublet_simulate_doublets`, and run the core scrublet
-    function :func:`~scanpy.pp.scrublet`.
-
-    .. note::
-        More information and bug reports `here
-        <https://github.com/swolock/scrublet>`__.
+    function :func:`~scanpy.pp.scrublet` with ``adata_sim`` set.
 
     Parameters
     ----------
@@ -318,14 +314,7 @@ def _scrublet_call_doublets(
     Core function for predicting doublets using Scrublet [Wolock19]_.
 
     Predict cell doublets using a nearest-neighbor classifier of observed
-    transcriptomes and simulated doublets. This is a wrapper around the core
-    functions of `Scrublet <https://github.com/swolock/scrublet>`__ to allow
-    for flexibility in applying Scanpy filtering operations upstream. Unless
-    you know what you're doing you should use the main scrublet() function.
-
-    .. note::
-        More information and bug reports `here
-        <https://github.com/swolock/scrublet>`__.
+    transcriptomes and simulated doublets.
 
     Parameters
     ----------
