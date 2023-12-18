@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 
 
 @legacy_api(
-    "n_components",
     "k",
     "a",
     "n_landmark",
@@ -36,8 +35,8 @@ if TYPE_CHECKING:
 @doctest_needs("phate")
 def phate(
     adata: AnnData,
-    *,
     n_components: int = 2,
+    *,
     k: int = 5,
     a: int = 15,
     n_landmark: int = 2000,

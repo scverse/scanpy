@@ -45,7 +45,7 @@ class Empty(Enum):
 _empty = Empty.token
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-AnyRandom = Union[None, int, random.RandomState]  # maybe in the future random.Generator
+AnyRandom = Union[int, random.RandomState, None]  # maybe in the future random.Generator
 
 EPS = 1e-15
 
