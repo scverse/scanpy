@@ -105,7 +105,7 @@ def embedding(
     return_fig: bool | None = None,
     marker: str | Sequence[str] = ".",
     **kwargs,
-) -> Figure | Axes | None:
+) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot for user specified embedding basis (e.g. umap, pca, etc)
 
@@ -319,7 +319,7 @@ def embedding(
 
         if not categorical:
             vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
-                vmin, vmax, vcenter, norm, count, color_vector
+                vmin, vmax, vcenter, norm=norm, index=count, colors=color_vector
             )
             normalize = check_colornorm(
                 vmin_float,
@@ -427,7 +427,9 @@ def embedding(
         ax.autoscale_view()
 
         if edges:
-            _utils.plot_edges(ax, adata, basis, edges_width, edges_color, neighbors_key)
+            _utils.plot_edges(
+                ax, adata, basis, edges_width, edges_color, neighbors_key=neighbors_key
+            )
         if arrows:
             _utils.plot_arrows(ax, adata, basis, arrows_kwds)
 
@@ -467,8 +469,10 @@ def embedding(
         return fig
     axs = axs if grid else ax
     _utils.savefig_or_show(basis, show=show, save=save)
-    if show is False:
-        return axs
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return axs
 
 
 def _panel_grid(hspace, wspace, ncols, num_panels):
@@ -502,9 +506,10 @@ def _get_vboundnorm(
     vmin: Sequence[VBound],
     vmax: Sequence[VBound],
     vcenter: Sequence[VBound],
+    *,
     norm: Sequence[Normalize],
     index: int,
-    color_vector: Sequence[float],
+    colors: Sequence[float],
 ) -> tuple[float | None, float | None]:
     """
     Evaluates the value of vmin, vmax and vcenter, which could be a
@@ -514,17 +519,17 @@ def _get_vboundnorm(
     Floats are accepted as p99.9
 
     Alternatively, vmin/vmax could be a function that is applied to
-    the list of color values (`color_vector`).  E.g.
+    the list of color values (`colors`).  E.g.
 
-    def my_vmax(color_vector): np.percentile(color_vector, p=80)
+    def my_vmax(colors): np.percentile(colors, p=80)
 
 
     Parameters
     ----------
     index
         This index of the plot
-    color_vector
-        List or values for the plot
+    colors
+        Values for the plot
 
     Returns
     -------
@@ -561,10 +566,10 @@ def _get_vboundnorm(
                         f"Please check the correct format for percentiles."
                     )
                 # interpret value of vmin/vmax as quantile with the following syntax 'p99.9'
-                v_value = np.nanpercentile(color_vector, q=float(v_value[1:]))
+                v_value = np.nanpercentile(colors, q=float(v_value[1:]))
             elif callable(v_value):
                 # interpret vmin/vmax as function
-                v_value = v_value(color_vector)
+                v_value = v_value(colors)
                 if not isinstance(v_value, float):
                     logg.error(
                         f"The return of the function given for {v_name} is not valid. "
@@ -627,7 +632,7 @@ def _wraps_plot_scatter(wrapper):
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def umap(adata, **kwargs) -> Axes | list[Axes] | None:
+def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in UMAP basis.
 
@@ -689,7 +694,7 @@ def umap(adata, **kwargs) -> Axes | list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def tsne(adata, **kwargs) -> Axes | list[Axes] | None:
+def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in tSNE basis.
 
@@ -729,7 +734,7 @@ def tsne(adata, **kwargs) -> Axes | list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def diffmap(adata, **kwargs) -> Axes | list[Axes] | None:
+def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in Diffusion Map basis.
 
@@ -771,7 +776,7 @@ def diffmap(adata, **kwargs) -> Axes | list[Axes] | None:
 )
 def draw_graph(
     adata: AnnData, *, layout: _IGraphLayout | None = None, **kwargs
-) -> Axes | list[Axes] | None:
+) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in graph-drawing basis.
 
@@ -823,14 +828,14 @@ def draw_graph(
     show_save_ax=doc_show_save_ax,
 )
 def pca(
-    adata,
+    adata: AnnData,
     *,
     annotate_var_explained: bool = False,
     show: bool | None = None,
     return_fig: bool | None = None,
     save: bool | str | None = None,
     **kwargs,
-) -> Axes | list[Axes] | None:
+) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in PCA coordinates.
 
@@ -881,41 +886,41 @@ def pca(
         return embedding(
             adata, "pca", show=show, return_fig=return_fig, save=save, **kwargs
         )
+    if "pca" not in adata.obsm.keys() and "X_pca" not in adata.obsm.keys():
+        raise KeyError(
+            f"Could not find entry in `obsm` for 'pca'.\n"
+            f"Available keys are: {list(adata.obsm.keys())}."
+        )
+
+    label_dict = {
+        f"PC{i + 1}": f"PC{i + 1} ({round(v * 100, 2)}%)"
+        for i, v in enumerate(adata.uns["pca"]["variance_ratio"])
+    }
+
+    if return_fig is True:
+        # edit axis labels in returned figure
+        fig = embedding(adata, "pca", return_fig=return_fig, **kwargs)
+        for ax in fig.axes:
+            if xlabel := label_dict.get(ax.xaxis.get_label().get_text()):
+                ax.set_xlabel(xlabel)
+            if ylabel := label_dict.get(ax.yaxis.get_label().get_text()):
+                ax.set_ylabel(ylabel)
+        return fig
+
+    # get the axs, edit the labels and apply show and save from user
+    axs = embedding(adata, "pca", show=False, save=False, **kwargs)
+    if isinstance(axs, list):
+        for ax in axs:
+            ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
+            ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
     else:
-        if "pca" not in adata.obsm.keys() and "X_pca" not in adata.obsm.keys():
-            raise KeyError(
-                f"Could not find entry in `obsm` for 'pca'.\n"
-                f"Available keys are: {list(adata.obsm.keys())}."
-            )
-
-        label_dict = {
-            f"PC{i + 1}": f"PC{i + 1} ({round(v * 100, 2)}%)"
-            for i, v in enumerate(adata.uns["pca"]["variance_ratio"])
-        }
-
-        if return_fig is True:
-            # edit axis labels in returned figure
-            fig = embedding(adata, "pca", return_fig=return_fig, **kwargs)
-            for ax in fig.axes:
-                if xlabel := label_dict.get(ax.xaxis.get_label().get_text()):
-                    ax.set_xlabel(xlabel)
-                if ylabel := label_dict.get(ax.yaxis.get_label().get_text()):
-                    ax.set_ylabel(ylabel)
-            return fig
-
-        else:
-            # get the axs, edit the labels and apply show and save from user
-            axs = embedding(adata, "pca", show=False, save=False, **kwargs)
-            if isinstance(axs, list):
-                for ax in axs:
-                    ax.set_xlabel(label_dict[ax.xaxis.get_label().get_text()])
-                    ax.set_ylabel(label_dict[ax.yaxis.get_label().get_text()])
-            else:
-                axs.set_xlabel(label_dict[axs.xaxis.get_label().get_text()])
-                axs.set_ylabel(label_dict[axs.yaxis.get_label().get_text()])
-            _utils.savefig_or_show("pca", show=show, save=save)
-            if show is False:
-                return axs
+        axs.set_xlabel(label_dict[axs.xaxis.get_label().get_text()])
+        axs.set_ylabel(label_dict[axs.yaxis.get_label().get_text()])
+    _utils.savefig_or_show("pca", show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return axs
 
 
 @_wraps_plot_scatter
@@ -926,7 +931,7 @@ def pca(
     show_save_ax=doc_show_save_ax,
 )
 def spatial(
-    adata,
+    adata: AnnData,
     *,
     basis: str = "spatial",
     img: np.ndarray | None = None,
@@ -943,7 +948,7 @@ def spatial(
     return_fig: bool | None = None,
     save: bool | str | None = None,
     **kwargs,
-) -> Axes | list[Axes] | None:
+) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in spatial coordinates.
 
@@ -1038,8 +1043,12 @@ def spatial(
             ax.set_xlim(cur_coords[0], cur_coords[1])
             ax.set_ylim(cur_coords[3], cur_coords[2])
     _utils.savefig_or_show("show", show=show, save=save)
-    if show is False or return_fig is True:
-        return axs
+    if return_fig:
+        return axs[0].figure
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return axs
 
 
 # Helpers
@@ -1081,6 +1090,7 @@ def _components_to_dimensions(
 def _add_categorical_legend(
     ax,
     color_source_vector,
+    *,
     palette: dict,
     legend_loc: str,
     legend_fontweight,

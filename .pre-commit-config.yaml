@@ -5,6 +5,10 @@ repos:
     -   id: ruff
         args: ["--fix"]
     -   id: ruff-format
+    # The following can be removed once PLR0917 is out of preview
+    -   name: ruff preview rules
+        id: ruff
+        args: ["--preview", "--select=PLR0917"]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:

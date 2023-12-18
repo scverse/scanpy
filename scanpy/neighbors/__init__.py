@@ -11,6 +11,8 @@ import scipy
 from scipy.sparse import csr_matrix, issparse
 from sklearn.utils import check_random_state
 
+from .._compat import old_positionals
+
 if TYPE_CHECKING:
     from anndata import AnnData
     from igraph import Graph
@@ -276,6 +278,7 @@ class OnFlySymMatrix:
         self,
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
+        *,
         DC_start: int = 0,
         DC_end: int = -1,
         rows: MutableMapping[Any, np.ndarray] | None = None,
@@ -342,9 +345,11 @@ class Neighbors:
         Where to look in `.uns` and `.obsp` for neighbors data
     """
 
+    @old_positionals("n_dcs", "neighbors_key")
     def __init__(
         self,
         adata: AnnData,
+        *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
     ):

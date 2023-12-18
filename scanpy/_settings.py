@@ -10,6 +10,7 @@ from time import time
 from typing import TYPE_CHECKING, Any, Literal, TextIO, Union
 
 from . import logging
+from ._compat import old_positionals
 from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
@@ -36,6 +37,8 @@ _Format = Union[
 
 
 class Verbosity(IntEnum):
+    """Logging verbosity levels."""
+
     error = 0
     warning = 1
     info = 2
@@ -102,14 +105,14 @@ class ScanpyConfig:
         file_format_figs: str = "pdf",
         autosave: bool = False,
         autoshow: bool = True,
-        writedir: str | Path = "./write/",
-        cachedir: str | Path = "./cache/",
-        datasetdir: str | Path = "./data/",
-        figdir: str | Path = "./figures/",
+        writedir: Path | str = "./write/",
+        cachedir: Path | str = "./cache/",
+        datasetdir: Path | str = "./data/",
+        figdir: Path | str = "./figures/",
         cache_compression: str | None = "lzf",
         max_memory=15,
         n_jobs=1,
-        logfile: str | Path | None = None,
+        logfile: Path | str | None = None,
         categories_to_ignore: Iterable[str] = ("N/A", "dontknow", "no_gate", "?"),
         _frameon: bool = True,
         _vector_friendly: bool = False,
@@ -269,7 +272,7 @@ class ScanpyConfig:
         return self._writedir
 
     @writedir.setter
-    def writedir(self, writedir: str | Path):
+    def writedir(self, writedir: Path | str):
         _type_check(writedir, "writedir", (str, Path))
         self._writedir = Path(writedir)
 
@@ -281,7 +284,7 @@ class ScanpyConfig:
         return self._cachedir
 
     @cachedir.setter
-    def cachedir(self, cachedir: str | Path):
+    def cachedir(self, cachedir: Path | str):
         _type_check(cachedir, "cachedir", (str, Path))
         self._cachedir = Path(cachedir)
 
@@ -293,7 +296,7 @@ class ScanpyConfig:
         return self._datasetdir
 
     @datasetdir.setter
-    def datasetdir(self, datasetdir: str | Path):
+    def datasetdir(self, datasetdir: Path | str):
         _type_check(datasetdir, "datasetdir", (str, Path))
         self._datasetdir = Path(datasetdir).resolve()
 
@@ -305,7 +308,7 @@ class ScanpyConfig:
         return self._figdir
 
     @figdir.setter
-    def figdir(self, figdir: str | Path):
+    def figdir(self, figdir: Path | str):
         _type_check(figdir, "figdir", (str, Path))
         self._figdir = Path(figdir)
 
@@ -365,7 +368,7 @@ class ScanpyConfig:
         return self._logpath
 
     @logpath.setter
-    def logpath(self, logpath: str | Path | None):
+    def logpath(self, logpath: Path | str | None):
         _type_check(logpath, "logfile", (str, Path))
         # set via “file object” branch of logfile.setter
         self.logfile = Path(logpath).open("a")
@@ -385,7 +388,7 @@ class ScanpyConfig:
         return self._logfile
 
     @logfile.setter
-    def logfile(self, logfile: str | Path | TextIO | None):
+    def logfile(self, logfile: Path | str | TextIO | None):
         if not hasattr(logfile, "write") and logfile:
             self.logpath = logfile
         else:  # file object
@@ -413,8 +416,23 @@ class ScanpyConfig:
     # Functions
     # --------------------------------------------------------------------------------
 
+    @old_positionals(
+        "scanpy",
+        "dpi",
+        "dpi_save",
+        "frameon",
+        "vector_friendly",
+        "fontsize",
+        "figsize",
+        "color_map",
+        "format",
+        "facecolor",
+        "transparent",
+        "ipython_format",
+    )
     def set_figure_params(
         self,
+        *,
         scanpy: bool = True,
         dpi: int = 80,
         dpi_save: int = 150,
@@ -427,7 +445,7 @@ class ScanpyConfig:
         facecolor: str | None = None,
         transparent: bool = False,
         ipython_format: str = "png2x",
-    ):
+    ) -> None:
         """\
         Set resolution/size, styling and format of figures.
 

@@ -9,6 +9,7 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ._distributed import materialize_as_ndarray
@@ -18,6 +19,7 @@ from ._utils import _get_mean_var
 
 def _highly_variable_genes_seurat_v3(
     adata: AnnData,
+    *,
     layer: str | None = None,
     n_top_genes: int = 2000,
     batch_key: str | None = None,
@@ -180,6 +182,7 @@ def _highly_variable_genes_seurat_v3(
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
+    *,
     layer: str | None = None,
     min_disp: float | None = 0.5,
     max_disp: float | None = np.inf,
@@ -301,8 +304,24 @@ def _highly_variable_genes_single_batch(
     return df
 
 
+@old_positionals(
+    "layer",
+    "n_top_genes",
+    "min_disp",
+    "max_disp",
+    "min_mean",
+    "max_mean",
+    "span",
+    "n_bins",
+    "flavor",
+    "subset",
+    "inplace",
+    "batch_key",
+    "check_values",
+)
 def highly_variable_genes(
     adata: AnnData,
+    *,
     layer: str | None = None,
     n_top_genes: int | None = None,
     min_disp: float | None = 0.5,

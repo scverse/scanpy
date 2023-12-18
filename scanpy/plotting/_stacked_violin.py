@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize, is_color_like
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
 from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
@@ -130,11 +131,31 @@ class StackedViolin(BasePlot):
     # None will draw unadorned violins.
     DEFAULT_INNER = None
 
+    @old_positionals(
+        "use_raw",
+        "log",
+        "num_categories",
+        "categories_order",
+        "title",
+        "figsize",
+        "gene_symbols",
+        "var_group_positions",
+        "var_group_labels",
+        "var_group_rotation",
+        "layer",
+        "standard_scale",
+        "ax",
+        "vmin",
+        "vmax",
+        "vcenter",
+        "norm",
+    )
     def __init__(
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        *,
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -146,7 +167,7 @@ class StackedViolin(BasePlot):
         var_group_labels: Sequence[str] | None = None,
         var_group_rotation: float | None = None,
         layer: str | None = None,
-        standard_scale: Literal["var", "group"] = None,
+        standard_scale: Literal["var", "group"] | None = None,
         ax: _AxesSubplot | None = None,
         vmin: float | None = None,
         vmax: float | None = None,
@@ -205,8 +226,22 @@ class StackedViolin(BasePlot):
         self.kwds.setdefault("linewidth", self.DEFAULT_LINE_WIDTH)
         self.kwds.setdefault("scale", self.DEFAULT_SCALE)
 
+    @old_positionals(
+        "cmap",
+        "stripplot",
+        "jitter",
+        "jitter_size",
+        "linewidth",
+        "row_palette",
+        "scale",
+        "yticklabels",
+        "ylim",
+        "x_padding",
+        "y_padding",
+    )
     def style(
         self,
+        *,
         cmap: str | None = DEFAULT_COLORMAP,
         stripplot: bool | None = DEFAULT_STRIPPLOT,
         jitter: float | bool | None = DEFAULT_JITTER,
@@ -551,6 +586,23 @@ class StackedViolin(BasePlot):
         )
 
 
+@old_positionals(
+    "log",
+    "use_raw",
+    "num_categories",
+    "title",
+    "colorbar_title",
+    "figsize",
+    "dendrogram",
+    "gene_symbols",
+    "var_group_positions",
+    "var_group_labels",
+    "standard_scale",
+    "var_group_rotation",
+    "layer",
+    "stripplot",
+    # 17 positionals are enough for backwards compatibility
+)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
@@ -561,6 +613,7 @@ def stacked_violin(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    *,
     log: bool = False,
     use_raw: bool | None = None,
     num_categories: int = 7,
@@ -732,9 +785,9 @@ def stacked_violin(
     ).legend(title=colorbar_title)
     if return_fig:
         return vp
-    else:
-        vp.make_figure()
-        savefig_or_show(StackedViolin.DEFAULT_SAVE_PREFIX, show=show, save=save)
-        show = settings.autoshow if show is None else show
-        if not show:
-            return vp.get_axes()
+    vp.make_figure()
+    savefig_or_show(StackedViolin.DEFAULT_SAVE_PREFIX, show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return vp.get_axes()

@@ -4,9 +4,11 @@ from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+from anndata import AnnData  # noqa: TCH002
 from matplotlib.axes import Axes  # noqa: TCH002
 from sklearn.utils import deprecated
 
+from .._compat import old_positionals
 from .._utils import _doc_params
 from ..plotting import _scrublet, _utils, embedding
 from ..plotting._docs import (
@@ -22,7 +24,15 @@ from .tl._wishbone import _anndata_to_wishbone
 if TYPE_CHECKING:
     from collections.abc import Collection
 
-    from anndata import AnnData
+
+__all__ = [
+    "phate",
+    "trimap",
+    "harmony_timeseries",
+    "sam",
+    "wishbone_marker_trajectory",
+    "scrublet_score_distribution",
+]
 
 
 @doctest_needs("phate")
@@ -33,7 +43,7 @@ if TYPE_CHECKING:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def phate(adata, **kwargs) -> list[Axes] | None:
+def phate(adata: AnnData, **kwargs) -> list[Axes] | None:
     """\
     Scatter plot in PHATE basis.
 
@@ -83,7 +93,7 @@ def phate(adata, **kwargs) -> list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def trimap(adata, **kwargs) -> Axes | list[Axes] | None:
+def trimap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in TriMap basis.
 
@@ -109,7 +119,7 @@ def trimap(adata, **kwargs) -> Axes | list[Axes] | None:
     show_save_ax=doc_show_save_ax,
 )
 def harmony_timeseries(
-    adata, *, show: bool = True, return_fig: bool = False, **kwargs
+    adata: AnnData, *, show: bool = True, return_fig: bool = False, **kwargs
 ) -> Axes | list[Axes] | None:
     """\
     Scatter plot in Harmony force-directed layout basis.
@@ -145,13 +155,16 @@ def harmony_timeseries(
         p.set_axis_off()
     if return_fig:
         return fig
-    elif not show:
-        return axes
+    if show:
+        return None
+    return axes
 
 
+@old_positionals("c", "cmap", "linewidth", "edgecolor", "axes", "colorbar", "s")
 def sam(
     adata: AnnData,
     projection: str | np.ndarray = "X_umap",
+    *,
     c: str | np.ndarray | None = None,
     cmap: str = "Spectral_r",
     linewidth: float = 0.0,
@@ -246,10 +259,22 @@ def sam(
     return axes
 
 
+@old_positionals(
+    "no_bins",
+    "smoothing_factor",
+    "min_delta",
+    "show_variance",
+    "figsize",
+    "return_fig",
+    "show",
+    "save",
+    "ax",
+)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def wishbone_marker_trajectory(
     adata: AnnData,
     markers: Collection[str],
+    *,
     no_bins: int = 150,
     smoothing_factor: int = 1,
     min_delta: float = 0.1,
@@ -329,8 +354,9 @@ def wishbone_marker_trajectory(
 
     if return_fig:
         return fig
-    elif not show:
-        return ax
+    if show:
+        return None
+    return ax
 
 
 scrublet_score_distribution = deprecated("Import from sc.pl instead")(

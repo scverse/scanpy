@@ -131,6 +131,7 @@ def _calculate_res_dense(
 
 def _highly_variable_pearson_residuals(
     adata: AnnData,
+    *,
     theta: float = 100,
     clip: float | None = None,
     n_top_genes: int = 1000,

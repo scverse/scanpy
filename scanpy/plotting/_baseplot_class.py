@@ -13,6 +13,7 @@ from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
+from .._compat import old_positionals
 from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
 from ._utils import ColorLike, _AxesSubplot, check_colornorm, make_grid_spec
 
@@ -72,11 +73,30 @@ class BasePlot:
 
     MAX_NUM_CATEGORIES = 500  # maximum number of categories allowed to be plotted
 
+    @old_positionals(
+        "use_raw",
+        "log",
+        "num_categories",
+        "categories_order",
+        "title",
+        "figsize",
+        "gene_symbols",
+        "var_group_positions",
+        "var_group_labels",
+        "var_group_rotation",
+        "layer",
+        "ax",
+        "vmin",
+        "vmax",
+        "vcenter",
+        "norm",
+    )
     def __init__(
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        *,
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -113,9 +133,9 @@ class BasePlot:
             adata,
             self.var_names,
             groupby,
-            use_raw,
-            log,
-            num_categories,
+            use_raw=use_raw,
+            log=log,
+            num_categories=num_categories,
             layer=layer,
             gene_symbols=gene_symbols,
         )
@@ -365,7 +385,8 @@ class BasePlot:
         }
         return self
 
-    def style(self, cmap: str | None = DEFAULT_COLORMAP):
+    @old_positionals("cmap")
+    def style(self, *, cmap: str | None = DEFAULT_COLORMAP):
         """\
         Set visual style parameters
 
@@ -381,8 +402,10 @@ class BasePlot:
 
         self.cmap = cmap
 
+    @old_positionals("show", "title", "width")
     def legend(
         self,
+        *,
         show: bool | None = True,
         title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
         width: float | None = DEFAULT_LEGENDS_WIDTH,
@@ -428,7 +451,7 @@ class BasePlot:
 
         return self
 
-    def get_axes(self):
+    def get_axes(self) -> dict[str, Axes]:
         if self.ax_dict is None:
             self.make_figure()
         return self.ax_dict
@@ -466,7 +489,7 @@ class BasePlot:
             for p in total_barplot_ax.patches:
                 p.set_x(p.get_x() + 0.5)
                 if p.get_height() >= 1000:
-                    display_number = f"{np.round(p.get_height()/1000, decimals=1)}k"
+                    display_number = f"{np.round(p.get_height() / 1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_height(), decimals=1)
                 total_barplot_ax.annotate(
@@ -496,7 +519,7 @@ class BasePlot:
             max_x = max([p.get_width() for p in total_barplot_ax.patches])
             for p in total_barplot_ax.patches:
                 if p.get_width() >= 1000:
-                    display_number = f"{np.round(p.get_width()/1000, decimals=1)}k"
+                    display_number = f"{np.round(p.get_width() / 1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_width(), decimals=1)
                 total_barplot_ax.annotate(
@@ -926,6 +949,7 @@ class BasePlot:
     @staticmethod
     def _plot_var_groups_brackets(
         gene_groups_ax: Axes,
+        *,
         group_positions: Iterable[tuple[int, int]],
         group_labels: Sequence[str],
         left_adjustment: float = -0.3,

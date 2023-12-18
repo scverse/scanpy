@@ -23,6 +23,7 @@ from anndata import (
 from matplotlib.image import imread
 
 from . import logging as logg
+from ._compat import old_positionals
 from ._settings import settings
 from ._utils import Empty, _empty
 
@@ -52,9 +53,19 @@ avail_exts = {
 # --------------------------------------------------------------------------------
 
 
+@old_positionals(
+    "sheet",
+    "ext",
+    "delimiter",
+    "first_column_names",
+    "backup_url",
+    "cache",
+    "cache_compression",
+)
 def read(
     filename: Path | str,
     backed: Literal["r", "r+"] | None = None,
+    *,
     sheet: str | None = None,
     ext: str | None = None,
     delimiter: str | None = None,
@@ -136,8 +147,10 @@ def read(
     return read_h5ad(filename, backed=backed)
 
 
+@old_positionals("genome", "gex_only", "backup_url")
 def read_10x_h5(
-    filename: str | Path,
+    filename: Path | str,
+    *,
     genome: str | None = None,
     gex_only: bool = True,
     backup_url: str | None = None,
@@ -336,13 +349,13 @@ def _read_v3_10x_h5(filename, *, start=None):
 
 
 def read_visium(
-    path: str | Path,
+    path: Path | str,
     genome: str | None = None,
     *,
     count_file: str = "filtered_feature_bc_matrix.h5",
     library_id: str | None = None,
     load_images: bool | None = True,
-    source_image_path: str | Path | None = None,
+    source_image_path: Path | str | None = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted visum dataset.
@@ -494,15 +507,16 @@ def read_visium(
     return adata
 
 
+@old_positionals("var_names", "make_unique", "cache", "cache_compression", "gex_only")
 def read_10x_mtx(
     path: Path | str,
+    *,
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
     cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
     gex_only: bool = True,
-    *,
-    prefix: str = None,
+    prefix: str | None = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted mtx directory.
@@ -627,9 +641,11 @@ def _read_v3_10x_mtx(
     return adata
 
 
+@old_positionals("ext", "compression", "compression_opts")
 def write(
-    filename: str | Path,
+    filename: Path | str,
     adata: AnnData,
+    *,
     ext: Literal["h5", "csv", "txt", "npz"] | None = None,
     compression: Literal["gzip", "lzf"] | None = "gzip",
     compression_opts: int | None = None,
@@ -748,6 +764,7 @@ def write_params(path: Path | str, *args, **maps):
 
 def _read(
     filename: Path,
+    *,
     backed=None,
     sheet=None,
     ext=None,
@@ -904,7 +921,7 @@ def _read_softgz(filename: str | bytes | Path | BinaryIO) -> AnnData:
     X = np.array(X).T
     obs = pd.DataFrame({"groups": groups}, index=sample_names)
     var = pd.DataFrame(index=gene_names)
-    return AnnData(X=X, obs=obs, var=var, dtype=X.dtype)
+    return AnnData(X=X, obs=obs, var=var)
 
 
 # -------------------------------------------------------------------------------

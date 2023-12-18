@@ -9,6 +9,7 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
+from ..._compat import old_positionals
 from ...get import _get_obs_rep
 from . import pipeline
 from .core import Scrublet
@@ -18,6 +19,25 @@ if TYPE_CHECKING:
     from .neighbors import AnnoyDist
 
 
+@old_positionals(
+    "batch_key",
+    "sim_doublet_ratio",
+    "expected_doublet_rate",
+    "stdev_doublet_rate",
+    "synthetic_doublet_umi_subsampling",
+    "knn_dist_metric",
+    "normalize_variance",
+    "log_transform",
+    "mean_center",
+    "n_prin_comps",
+    "use_approx_neighbors",
+    "get_doublet_neighbor_parents",
+    "n_neighbors",
+    "threshold",
+    "verbose",
+    "copy",
+    "random_state",
+)
 def scrublet(
     adata: AnnData,
     adata_sim: AnnData | None = None,
@@ -484,6 +504,9 @@ def _scrublet_call_doublets(
     return adata_obs
 
 
+@old_positionals(
+    "layer", "sim_doublet_ratio", "synthetic_doublet_umi_subsampling", "random_seed"
+)
 def scrublet_simulate_doublets(
     adata: AnnData,
     *,

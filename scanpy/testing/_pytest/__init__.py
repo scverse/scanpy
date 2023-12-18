@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
+from ..._utils import _import_name
 from .fixtures import *  # noqa: F403
 
 if TYPE_CHECKING:
@@ -71,21 +72,3 @@ def pytest_itemcollected(item: pytest.Item) -> None:
         item.add_marker(marker)
     if skip_reason := getattr(func, "_doctest_skip_reason", False):
         item.add_marker(pytest.mark.skip(reason=skip_reason))
-
-
-def _import_name(name: str) -> Any:
-    from importlib import import_module
-
-    parts = name.split(".")
-    obj = import_module(parts[0])
-    for i, name in enumerate(parts[1:]):
-        try:
-            obj = import_module(f"{obj.__name__}.{name}")
-        except ModuleNotFoundError:
-            break
-    for name in parts[i + 1 :]:
-        try:
-            obj = getattr(obj, name)
-        except AttributeError:
-            raise RuntimeError(f"{parts[:i]}, {parts[i+1:]}, {obj} {name}")
-    return obj

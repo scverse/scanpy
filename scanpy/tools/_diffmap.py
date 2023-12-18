@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .._compat import old_positionals
 from ._dpt import _diffmap
 
 if TYPE_CHECKING:
@@ -10,13 +11,15 @@ if TYPE_CHECKING:
     from .._utils import AnyRandom
 
 
+@old_positionals("neighbors_key", "random_state", "copy")
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
+    *,
     neighbors_key: str | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
-):
+) -> AnnData | None:
     """\
     Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf18]_.
 
