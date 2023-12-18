@@ -19,10 +19,10 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import scipy as sp
-from legacy_api_wrap import legacy_api
 
 from .. import _utils, readwrite
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@legacy_api(
+@old_positionals(
     "params_file",
     "tmax",
     "branching",

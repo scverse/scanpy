@@ -21,9 +21,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from scipy.stats import norm
 
+from ..._compat import old_positionals
 from ..._utils import check_nonnegative_integers
 from ...testing._doctests import doctest_skip
 
@@ -264,7 +264,9 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
     }
 
 
-@legacy_api("priors", "pre_existing_clusters", "number_of_noise_barcodes", "inplace")
+@old_positionals(
+    "priors", "pre_existing_clusters", "number_of_noise_barcodes", "inplace"
+)
 @doctest_skip("Illustrative but not runnable doctest code")
 def hashsolo(
     adata: AnnData,

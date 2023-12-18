@@ -66,7 +66,7 @@ dependencies = [
     "umap-learn>=0.3.10",
     "packaging",
     "session-info",
-    "legacy-api-wrap",  # for positional API deprecations
+    "legacy-api-wrap>=1.4",  # for positional API deprecations
     "get-annotations; python_version < '3.10'",
 ]
 dynamic = ["version"]

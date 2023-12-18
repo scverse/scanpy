@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from matplotlib import colormaps, rcParams
 from matplotlib import pyplot as plt
 
 from scanpy.get import obs_df
 
 from ... import logging as logg
+from ..._compat import old_positionals
 from ..._settings import settings
 from ..._utils import _doc_params, sanitize_anndata, subsample
 from ...get import rank_genes_groups_df
@@ -97,7 +97,7 @@ def pca_overview(adata: AnnData, **params):
 pca_scatter = pca
 
 
-@legacy_api("include_lowest", "n_points", "show", "save")
+@old_positionals("include_lowest", "n_points", "show", "save")
 def pca_loadings(
     adata: AnnData,
     components: str | Sequence[int] | None = None,
@@ -172,7 +172,7 @@ def pca_loadings(
     savefig_or_show("pca_loadings", show=show, save=save)
 
 
-@legacy_api("log", "show", "save")
+@old_positionals("log", "show", "save")
 def pca_variance_ratio(
     adata: AnnData,
     n_pcs: int = 30,
@@ -215,7 +215,7 @@ def pca_variance_ratio(
 # ------------------------------------------------------------------------------
 
 
-@legacy_api("color_map", "show", "save", "as_heatmap", "marker")
+@old_positionals("color_map", "show", "save", "as_heatmap", "marker")
 def dpt_timeseries(
     adata: AnnData,
     *,
@@ -260,7 +260,7 @@ def dpt_timeseries(
     savefig_or_show("dpt_timeseries", save=save, show=show)
 
 
-@legacy_api("color_map", "palette", "show", "save", "marker")
+@old_positionals("color_map", "palette", "show", "save", "marker")
 def dpt_groups_pseudotime(
     adata: AnnData,
     *,
@@ -302,7 +302,7 @@ def dpt_groups_pseudotime(
     savefig_or_show("dpt_groups_pseudotime", save=save, show=show)
 
 
-@legacy_api(
+@old_positionals(
     "n_genes",
     "gene_symbols",
     "key",
@@ -648,7 +648,7 @@ def _rank_genes_groups_plot(
         )
 
 
-@legacy_api(
+@old_positionals(
     "n_genes",
     "groupby",
     "gene_symbols",
@@ -732,7 +732,7 @@ def rank_genes_groups_heatmap(
     )
 
 
-@legacy_api(
+@old_positionals(
     "n_genes",
     "groupby",
     "var_names",
@@ -796,7 +796,7 @@ def rank_genes_groups_tracksplot(
     )
 
 
-@legacy_api(
+@old_positionals(
     "n_genes",
     "groupby",
     "values_to_plot",
@@ -959,7 +959,7 @@ def rank_genes_groups_dotplot(
     )
 
 
-@legacy_api("n_genes", "groupby", "gene_symbols")
+@old_positionals("n_genes", "groupby", "gene_symbols")
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_stacked_violin(
     adata: AnnData,
@@ -1023,7 +1023,7 @@ def rank_genes_groups_stacked_violin(
     )
 
 
-@legacy_api(
+@old_positionals(
     "n_genes",
     "groupby",
     "values_to_plot",
@@ -1169,7 +1169,7 @@ def rank_genes_groups_matrixplot(
     )
 
 
-@legacy_api(
+@old_positionals(
     "n_genes",
     "gene_names",
     "gene_symbols",
@@ -1309,7 +1309,7 @@ def rank_genes_groups_violin(
     return axs
 
 
-@legacy_api("tmax_realization", "as_heatmap", "shuffle", "show", "save", "marker")
+@old_positionals("tmax_realization", "as_heatmap", "shuffle", "show", "save", "marker")
 def sim(
     adata: AnnData,
     *,
@@ -1383,7 +1383,7 @@ def sim(
         savefig_or_show("sim_shuffled", save=save, show=show)
 
 
-@legacy_api(
+@old_positionals(
     "key",
     "groupby",
     "group",

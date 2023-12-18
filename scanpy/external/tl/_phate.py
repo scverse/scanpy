@@ -5,9 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
-from legacy_api_wrap import legacy_api
-
 from ... import logging as logg
+from ..._compat import old_positionals
 from ..._settings import settings
 from ...testing._doctests import doctest_needs
 
@@ -17,7 +16,7 @@ if TYPE_CHECKING:
     from ..._utils import AnyRandom
 
 
-@legacy_api(
+@old_positionals(
     "k",
     "a",
     "n_landmark",

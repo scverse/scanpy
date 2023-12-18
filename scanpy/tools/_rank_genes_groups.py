@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse, vstack
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import check_nonnegative_integers
 from ..get import _check_mask
 from ..preprocessing._simple import _get_mean_var
@@ -450,7 +450,7 @@ class _RankGenes:
             self.stats.index = self.var_names
 
 
-@legacy_api(
+@old_positionals(
     "mask",
     "use_raw",
     "groups",
@@ -728,7 +728,7 @@ def _calc_frac(X):
     return n_nonzero / X.shape[0]
 
 
-@legacy_api(
+@old_positionals(
     "key",
     "groupby",
     "use_raw",

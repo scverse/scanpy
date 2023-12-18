@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from legacy_api_wrap import legacy_api
-
+from .._compat import old_positionals
 from ._dpt import _diffmap
 
 if TYPE_CHECKING:
@@ -12,7 +11,7 @@ if TYPE_CHECKING:
     from .._utils import AnyRandom
 
 
-@legacy_api("neighbors_key", "random_state", "copy")
+@old_positionals("neighbors_key", "random_state", "copy")
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,

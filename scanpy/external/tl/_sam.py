@@ -5,17 +5,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
-from legacy_api_wrap import legacy_api
+from ... import logging as logg
+from ..._compat import old_positionals
+from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from samalg import SAM
 
-from ... import logging as logg
-from ...testing._doctests import doctest_needs
 
-
-@legacy_api(
+@old_positionals(
     "max_iter",
     "num_norm_avg",
     "k",

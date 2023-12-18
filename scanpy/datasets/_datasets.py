@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING, Literal
 import anndata as ad
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
@@ -21,7 +21,9 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
-@legacy_api("n_variables", "n_centers", "cluster_std", "n_observations", "random_state")
+@old_positionals(
+    "n_variables", "n_centers", "cluster_std", "n_observations", "random_state"
+)
 def blobs(
     *,
     n_variables: int = 11,

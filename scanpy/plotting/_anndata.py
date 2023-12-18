@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Literal, Union
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from matplotlib import gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap, ListedColormap, Normalize, is_color_like
@@ -19,6 +18,7 @@ from scipy.sparse import issparse
 
 from .. import get
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _check_use_raw, _doc_params, sanitize_anndata
 from . import _utils
@@ -68,7 +68,7 @@ _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
 _VarNames = Union[str, Sequence[str]]
 
 
-@legacy_api(
+@old_positionals(
     "color",
     "use_raw",
     "layers",
@@ -538,7 +538,7 @@ def _scatter_obs(
     return axs[0]
 
 
-@legacy_api(
+@old_positionals(
     "dictionary",
     "indices",
     "labels",
@@ -666,7 +666,7 @@ def ranking(
     return gs
 
 
-@legacy_api(
+@old_positionals(
     "log",
     "use_raw",
     "stripplot",
@@ -945,7 +945,7 @@ def violin(
     return axs
 
 
-@legacy_api("use_raw", "show", "save")
+@old_positionals("use_raw", "show", "save")
 @_doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
     adata: AnnData,
@@ -1021,7 +1021,7 @@ def clustermap(
     return g
 
 
-@legacy_api(
+@old_positionals(
     "use_raw",
     "log",
     "num_categories",
@@ -1461,7 +1461,7 @@ def heatmap(
     return return_ax_dict
 
 
-@legacy_api(
+@old_positionals(
     "use_raw",
     "log",
     "dendrogram",
@@ -1799,7 +1799,7 @@ def dendrogram(
     return ax
 
 
-@legacy_api(
+@old_positionals(
     "show_correlation_numbers",
     "dendrogram",
     "figsize",

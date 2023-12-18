@@ -6,9 +6,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from legacy_api_wrap import legacy_api
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import sanitize_anndata
 
 if TYPE_CHECKING:
@@ -36,7 +36,7 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     return scaled_z
 
 
-@legacy_api("groupby", "key_added", "components")
+@old_positionals("groupby", "key_added", "components")
 def embedding_density(
     adata: AnnData,
     basis: str = "umap",

@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize, is_color_like
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
 from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
@@ -131,7 +131,7 @@ class StackedViolin(BasePlot):
     # None will draw unadorned violins.
     DEFAULT_INNER = None
 
-    @legacy_api(
+    @old_positionals(
         "use_raw",
         "log",
         "num_categories",
@@ -226,7 +226,7 @@ class StackedViolin(BasePlot):
         self.kwds.setdefault("linewidth", self.DEFAULT_LINE_WIDTH)
         self.kwds.setdefault("scale", self.DEFAULT_SCALE)
 
-    @legacy_api(
+    @old_positionals(
         "cmap",
         "stripplot",
         "jitter",
@@ -586,7 +586,7 @@ class StackedViolin(BasePlot):
         )
 
 
-@legacy_api(
+@old_positionals(
     "log",
     "use_raw",
     "num_categories",

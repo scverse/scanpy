@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING, Literal, NamedTuple
 
 import numpy as np
 import scipy as sp
-from legacy_api_wrap import legacy_api
 from scipy.sparse.csgraph import minimum_spanning_tree
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from ..neighbors import Neighbors
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 _AVAIL_MODELS = {"v1.0", "v1.2"}
 
 
-@legacy_api("use_rna_velocity", "model", "neighbors_key", "copy")
+@old_positionals("use_rna_velocity", "model", "neighbors_key", "copy")
 def paga(
     adata: AnnData,
     groups: str | None = None,

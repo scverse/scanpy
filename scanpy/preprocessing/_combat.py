@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from numpy import linalg as la
 from scipy.sparse import issparse
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import sanitize_anndata
 
 if TYPE_CHECKING:
@@ -135,7 +135,7 @@ def _standardize_data(
     return s_data, design, var_pooled, stand_mean
 
 
-@legacy_api("covariates", "inplace")
+@old_positionals("covariates", "inplace")
 def combat(
     adata: AnnData,
     key: str = "batch",

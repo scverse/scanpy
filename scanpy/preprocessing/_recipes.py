@@ -3,10 +3,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from legacy_api_wrap import legacy_api
-
 from .. import logging as logg
 from .. import preprocessing as pp
+from .._compat import old_positionals
 from ._deprecated.highly_variable_genes import (
     filter_genes_cv_deprecated,
     filter_genes_dispersion,
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
     from .._utils import AnyRandom
 
 
-@legacy_api(
+@old_positionals(
     "log",
     "mean_threshold",
     "cv_threshold",
@@ -80,7 +79,7 @@ def recipe_weinreb17(
     return adata if copy else None
 
 
-@legacy_api("log", "plot", "copy")
+@old_positionals("log", "plot", "copy")
 def recipe_seurat(
     adata: AnnData, *, log: bool = True, plot: bool = False, copy: bool = False
 ) -> AnnData | None:
@@ -113,7 +112,7 @@ def recipe_seurat(
     return adata if copy else None
 
 
-@legacy_api("n_top_genes", "log", "plot", "copy")
+@old_positionals("n_top_genes", "log", "plot", "copy")
 def recipe_zheng17(
     adata: AnnData,
     *,

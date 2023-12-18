@@ -5,13 +5,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from packaging import version
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import pkg_version
+from .._compat import old_positionals, pkg_version
 from .._settings import settings
 from .._utils import NeighborsView
 from ..neighbors import FlatTree, RPForestDict
@@ -23,7 +22,7 @@ if TYPE_CHECKING:
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
-@legacy_api(
+@old_positionals(
     "obs",
     "embedding_method",
     "labeling_method",

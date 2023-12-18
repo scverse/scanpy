@@ -9,7 +9,6 @@ from typing import Union as _U
 import matplotlib as mpl
 import numpy as np
 from cycler import Cycler, cycler
-from legacy_api_wrap import legacy_api
 from matplotlib import axes, gridspec, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
@@ -20,6 +19,7 @@ from matplotlib.figure import SubplotParams as sppars
 from matplotlib.patches import Circle
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import NeighborsView
 from . import palettes
@@ -47,7 +47,7 @@ class _AxesSubplot(Axes, axes.SubplotBase):
 # -------------------------------------------------------------------------------
 
 
-@legacy_api(
+@old_positionals(
     "xlabel",
     "ylabel",
     "xticks",

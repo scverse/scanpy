@@ -3,15 +3,15 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from legacy_api_wrap import legacy_api
 from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
+from ..._compat import old_positionals
 from ...get import _get_obs_rep
 
 
-@legacy_api(
+@old_positionals(
     "adata_sim",
     "batch_key",
     "sim_doublet_ratio",
@@ -518,7 +518,7 @@ def _scrublet_call_doublets(
     return adata_obs
 
 
-@legacy_api(
+@old_positionals(
     "layer", "sim_doublet_ratio", "synthetic_doublet_umi_subsampling", "random_seed"
 )
 def scrublet_simulate_doublets(

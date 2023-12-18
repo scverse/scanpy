@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal
 
-from legacy_api_wrap import legacy_api
+from ..._compat import old_positionals
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -12,11 +12,10 @@ if TYPE_CHECKING:
 
     from ..._utils import AnyRandom
 
-
 _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 
 
-@legacy_api(
+@old_positionals(
     "ae_type",
     "normalize_per_cell",
     "scale",

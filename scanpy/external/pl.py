@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from anndata import AnnData  # noqa: TCH002
-from legacy_api_wrap import legacy_api
 from matplotlib.axes import Axes  # noqa: TCH002
 
+from .._compat import old_positionals
 from .._utils import _doc_params
 from ..plotting import _utils, embedding
 from ..plotting._docs import (
@@ -160,7 +160,7 @@ def harmony_timeseries(
     return axes
 
 
-@legacy_api("c", "cmap", "linewidth", "edgecolor", "axes", "colorbar", "s")
+@old_positionals("c", "cmap", "linewidth", "edgecolor", "axes", "colorbar", "s")
 def sam(
     adata: AnnData,
     projection: str | np.ndarray = "X_umap",
@@ -259,7 +259,7 @@ def sam(
     return axes
 
 
-@legacy_api(
+@old_positionals(
     "no_bins",
     "smoothing_factor",
     "min_delta",
@@ -359,7 +359,9 @@ def wishbone_marker_trajectory(
     return ax
 
 
-@legacy_api("scale_hist_obs", "scale_hist_sim", "figsize", "return_fig", "show", "save")
+@old_positionals(
+    "scale_hist_obs", "scale_hist_sim", "figsize", "return_fig", "show", "save"
+)
 def scrublet_score_distribution(
     adata: AnnData,
     *,

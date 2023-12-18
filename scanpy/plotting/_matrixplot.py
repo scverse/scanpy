@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from legacy_api_wrap import legacy_api
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
 from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
@@ -96,7 +96,7 @@ class MatrixPlot(BasePlot):
     DEFAULT_EDGE_COLOR = "gray"
     DEFAULT_EDGE_LW = 0.1
 
-    @legacy_api(
+    @old_positionals(
         "use_raw",
         "log",
         "num_categories",
@@ -303,7 +303,7 @@ class MatrixPlot(BasePlot):
         return normalize
 
 
-@legacy_api(
+@old_positionals(
     "use_raw",
     "log",
     "num_categories",

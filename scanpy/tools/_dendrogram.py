@@ -7,10 +7,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import _doc_params
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@legacy_api(
+@old_positionals(
     "n_pcs",
     "use_rep",
     "var_names",

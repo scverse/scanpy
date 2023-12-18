@@ -3,10 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from legacy_api_wrap import legacy_api
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
+from .._compat import old_positionals
 from .._settings import settings
 from . import _utils
 
@@ -15,7 +15,7 @@ from . import _utils
 # --------------------------------------------------------------------------------
 
 
-@legacy_api("log", "show", "save", "highly_variable_genes")
+@old_positionals("log", "show", "save", "highly_variable_genes")
 def highly_variable_genes(
     adata_or_result: AnnData | pd.DataFrame | np.recarray,
     *,

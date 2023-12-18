@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from legacy_api_wrap import legacy_api
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
 from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
@@ -112,7 +112,7 @@ class DotPlot(BasePlot):
     DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
 
-    @legacy_api(
+    @old_positionals(
         "use_raw",
         "log",
         "num_categories",
@@ -276,7 +276,7 @@ class DotPlot(BasePlot):
         self.show_size_legend = True
         self.show_colorbar = True
 
-    @legacy_api(
+    @old_positionals(
         "cmap",
         "color_on",
         "dot_max",
@@ -407,7 +407,7 @@ class DotPlot(BasePlot):
 
         return self
 
-    @legacy_api(
+    @old_positionals(
         "show",
         "show_size_legend",
         "show_colorbar",
@@ -848,7 +848,7 @@ class DotPlot(BasePlot):
         return normalize, dot_min, dot_max
 
 
-@legacy_api(
+@old_positionals(
     "use_raw",
     "log",
     "num_categories",

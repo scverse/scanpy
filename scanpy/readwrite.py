@@ -20,10 +20,10 @@ from anndata import (
     read_text,
 )
 from anndata import read as read_h5ad
-from legacy_api_wrap import legacy_api
 from matplotlib.image import imread
 
 from . import logging as logg
+from ._compat import old_positionals
 from ._settings import settings
 from ._utils import Empty, _empty
 
@@ -53,7 +53,7 @@ avail_exts = {
 # --------------------------------------------------------------------------------
 
 
-@legacy_api(
+@old_positionals(
     "sheet",
     "ext",
     "delimiter",
@@ -147,7 +147,7 @@ def read(
     return read_h5ad(filename, backed=backed)
 
 
-@legacy_api("genome", "gex_only", "backup_url")
+@old_positionals("genome", "gex_only", "backup_url")
 def read_10x_h5(
     filename: Path | str,
     *,
@@ -507,7 +507,7 @@ def read_visium(
     return adata
 
 
-@legacy_api("var_names", "make_unique", "cache", "cache_compression", "gex_only")
+@old_positionals("var_names", "make_unique", "cache", "cache_compression", "gex_only")
 def read_10x_mtx(
     path: Path | str,
     *,
@@ -641,7 +641,7 @@ def _read_v3_10x_mtx(
     return adata
 
 
-@legacy_api("ext", "compression", "compression_opts")
+@old_positionals("ext", "compression", "compression_opts")
 def write(
     filename: Path | str,
     adata: AnnData,

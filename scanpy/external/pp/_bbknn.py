@@ -2,16 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
-from legacy_api_wrap import legacy_api
+from ..._compat import old_positionals
+from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from sklearn.metrics import DistanceMetric
 
-from ...testing._doctests import doctest_needs
 
-
-@legacy_api("batch_key", "use_rep", "approx", "use_annoy", "metric", "copy")
+@old_positionals("batch_key", "use_rep", "approx", "use_annoy", "metric", "copy")
 @doctest_needs("bbknn")
 def bbknn(
     adata: AnnData,

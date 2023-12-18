@@ -6,9 +6,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import scipy.sparse as scp
-from legacy_api_wrap import legacy_api
 
 from ... import logging as logg
+from ..._compat import old_positionals
 from ..._settings import settings
 from ...testing._doctests import doctest_needs
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@legacy_api(
+@old_positionals(
     "n_inliers",
     "n_outliers",
     "n_random",

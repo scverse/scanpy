@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Literal, Union
 from warnings import warn
 
 import numpy as np
-from legacy_api_wrap import legacy_api
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
+from .._compat import old_positionals
 from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
 from ._utils import ColorLike, _AxesSubplot, check_colornorm, make_grid_spec
 
@@ -73,7 +73,7 @@ class BasePlot:
 
     MAX_NUM_CATEGORIES = 500  # maximum number of categories allowed to be plotted
 
-    @legacy_api(
+    @old_positionals(
         "use_raw",
         "log",
         "num_categories",
@@ -385,7 +385,7 @@ class BasePlot:
         }
         return self
 
-    @legacy_api("cmap")
+    @old_positionals("cmap")
     def style(self, *, cmap: str | None = DEFAULT_COLORMAP):
         """\
         Set visual style parameters
@@ -402,7 +402,7 @@ class BasePlot:
 
         self.cmap = cmap
 
-    @legacy_api("show", "title", "width")
+    @old_positionals("show", "title", "width")
     def legend(
         self,
         *,

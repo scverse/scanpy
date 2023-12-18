@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import scipy as sp
-from legacy_api_wrap import legacy_api
 from natsort import natsorted
 
 from .. import logging as logg
+from .._compat import old_positionals
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
     )
 
 
-@legacy_api(
+@old_positionals(
     "n_branchings", "min_group_size", "allow_kendall_tau_shift", "neighbors_key", "copy"
 )
 def dpt(

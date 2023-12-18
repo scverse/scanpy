@@ -8,9 +8,10 @@ from warnings import warn
 
 import numpy as np
 import scipy
-from legacy_api_wrap import legacy_api
 from scipy.sparse import csr_matrix, issparse
 from sklearn.utils import check_random_state
+
+from .._compat import old_positionals
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -344,7 +345,7 @@ class Neighbors:
         Where to look in `.uns` and `.obsp` for neighbors data
     """
 
-    @legacy_api("n_dcs", "neighbors_key")
+    @old_positionals("n_dcs", "neighbors_key")
     def __init__(
         self,
         adata: AnnData,

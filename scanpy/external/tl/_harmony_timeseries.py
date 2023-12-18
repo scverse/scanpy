@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 
 from ... import logging as logg
+from ..._compat import old_positionals
 from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@legacy_api("n_neighbors", "n_components", "n_jobs", "copy")
+@old_positionals("n_neighbors", "n_components", "n_jobs", "copy")
 @doctest_needs("harmony")
 def harmony_timeseries(
     adata: AnnData,

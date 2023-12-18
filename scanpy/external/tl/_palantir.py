@@ -6,16 +6,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pandas as pd
-from legacy_api_wrap import legacy_api
 
 from ... import logging as logg
+from ..._compat import old_positionals
 from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@legacy_api(
+@old_positionals(
     "n_components",
     "knn",
     "alpha",
@@ -256,7 +256,7 @@ def palantir(
     return adata if copy else None
 
 
-@legacy_api(
+@old_positionals(
     "ms_data",
     "terminal_states",
     "knn",

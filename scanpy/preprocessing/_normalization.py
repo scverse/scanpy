@@ -4,12 +4,11 @@ from typing import TYPE_CHECKING, Literal
 from warnings import warn
 
 import numpy as np
-from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
 from .. import logging as logg
-from .._compat import DaskArray
+from .._compat import DaskArray, old_positionals
 from .._utils import view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
@@ -40,7 +39,7 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
     return X
 
 
-@legacy_api(
+@old_positionals(
     "target_sum",
     "exclude_highly_expressed",
     "max_fraction",

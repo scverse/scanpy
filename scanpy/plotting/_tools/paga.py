@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 import pandas as pd
 import scipy
-from legacy_api_wrap import legacy_api
 from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap, is_color_like
@@ -19,6 +18,7 @@ from sklearn.utils import check_random_state
 
 from ... import _utils as _sc_utils
 from ... import logging as logg
+from ..._compat import old_positionals
 from ..._settings import settings
 from .. import _utils
 from .._utils import _FontSize, _FontWeight, _IGraphLayout, matrix
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
 
 
-@legacy_api(
+@old_positionals(
     "edges",
     "color",
     "alpha",
@@ -305,7 +305,7 @@ def _compute_pos(
     return pos_array
 
 
-@legacy_api(
+@old_positionals(
     "threshold",
     "color",
     "layout",
@@ -1034,7 +1034,7 @@ def _paga_graph(
     return sct
 
 
-@legacy_api(
+@old_positionals(
     "use_raw",
     "annotations",
     "color_map",

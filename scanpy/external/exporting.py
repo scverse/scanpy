@@ -12,9 +12,9 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse
-from legacy_api_wrap import legacy_api
 from pandas.api.types import CategoricalDtype
 
+from .._compat import old_positionals
 from .._utils import NeighborsView
 from ..preprocessing._utils import _get_mean_var
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 __all__ = ["spring_project", "cellbrowser"]
 
 
-@legacy_api(
+@old_positionals(
     "subplot_name",
     "cell_groupings",
     "custom_color_tracks",
@@ -484,7 +484,7 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     return None
 
 
-@legacy_api(
+@old_positionals(
     "embedding_keys",
     "annot_keys",
     "cluster_field",

@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse
 
 from scanpy._utils import _check_use_raw
 
 from .. import logging as logg
+from .._compat import old_positionals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -46,7 +46,7 @@ def _sparse_nanmean(X, axis):
     return m
 
 
-@legacy_api(
+@old_positionals(
     "ctrl_size", "gene_pool", "n_bins", "score_name", "random_state", "copy", "use_raw"
 )
 def score_genes(
@@ -203,7 +203,7 @@ def score_genes(
     return adata if copy else None
 
 
-@legacy_api("s_genes", "g2m_genes", "copy")
+@old_positionals("s_genes", "g2m_genes", "copy")
 def score_genes_cell_cycle(
     adata: AnnData,
     *,

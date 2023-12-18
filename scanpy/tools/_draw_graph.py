@@ -4,10 +4,10 @@ import random
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from legacy_api_wrap import legacy_api
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import AnyRandom, _choose_graph
 from ._utils import get_init_pos_from_paga
 
@@ -19,7 +19,7 @@ _LAYOUTS = ("fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa")
 _Layout = Literal[_LAYOUTS]
 
 
-@legacy_api(
+@old_positionals(
     "init_pos",
     "root",
     "random_state",

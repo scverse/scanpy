@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
 from anndata import AnnData
-from legacy_api_wrap import legacy_api
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ._distributed import materialize_as_ndarray
@@ -304,7 +304,7 @@ def _highly_variable_genes_single_batch(
     return df
 
 
-@legacy_api(
+@old_positionals(
     "layer",
     "n_top_genes",
     "min_disp",

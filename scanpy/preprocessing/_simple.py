@@ -12,12 +12,12 @@ import numba
 import numpy as np
 import scipy as sp
 from anndata import AnnData
-from legacy_api_wrap import legacy_api
 from pandas.api.types import CategoricalDtype
 from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings as sett
 from .._utils import (
     AnyRandom,
@@ -46,7 +46,9 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-@legacy_api("min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy")
+@old_positionals(
+    "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
+)
 def filter_cells(
     data: AnnData | spmatrix | np.ndarray,
     *,
@@ -188,7 +190,9 @@ def filter_cells(
     return cell_subset, number_per_cell
 
 
-@legacy_api("min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy")
+@old_positionals(
+    "min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy"
+)
 def filter_genes(
     data: AnnData | spmatrix | np.ndarray,
     *,
@@ -406,7 +410,7 @@ def log1p_anndata(
         return adata
 
 
-@legacy_api("copy", "chunked", "chunk_size")
+@old_positionals("copy", "chunked", "chunk_size")
 def sqrt(
     data: AnnData | spmatrix | np.ndarray,
     *,
@@ -588,7 +592,7 @@ def normalize_per_cell(  # noqa: PLR0917
     return X if copy else None
 
 
-@legacy_api("layer", "n_jobs", "copy")
+@old_positionals("layer", "n_jobs", "copy")
 def regress_out(
     adata: AnnData,
     keys: str | Sequence[str],
@@ -739,7 +743,7 @@ def _regress_out_chunk(data):
 
 
 @renamed_arg("X", "data", pos_0=True)
-@legacy_api("zero_center", "max_value", "copy", "layer", "obsm", "mask")
+@old_positionals("zero_center", "max_value", "copy", "layer", "obsm", "mask")
 @singledispatch
 def scale(
     data: AnnData | spmatrix | np.ndarray,
@@ -928,7 +932,7 @@ def scale_anndata(
     return adata if copy else None
 
 
-@legacy_api("n_obs", "random_state", "copy")
+@old_positionals("n_obs", "random_state", "copy")
 def subsample(
     data: AnnData | np.ndarray | spmatrix,
     fraction: float | None = None,

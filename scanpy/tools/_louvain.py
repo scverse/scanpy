@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from natsort import natsorted
 from packaging import version
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import _choose_graph
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -31,7 +31,7 @@ except ImportError:
     MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
-@legacy_api(
+@old_positionals(
     "random_state",
     "restrict_to",
     "key_added",

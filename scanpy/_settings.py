@@ -9,9 +9,8 @@ from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, Any, Literal, TextIO, Union
 
-from legacy_api_wrap import legacy_api
-
 from . import logging
+from ._compat import old_positionals
 from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
@@ -417,7 +416,7 @@ class ScanpyConfig:
     # Functions
     # --------------------------------------------------------------------------------
 
-    @legacy_api(
+    @old_positionals(
         "scanpy",
         "dpi",
         "dpi_save",
