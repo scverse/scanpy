@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 
 @legacy_api(
-    "n_components",
     "n_inliers",
     "n_outliers",
     "n_random",
@@ -31,8 +30,8 @@ if TYPE_CHECKING:
 @doctest_needs("trimap")
 def trimap(
     adata: AnnData,
-    *,
     n_components: int = 2,
+    *,
     n_inliers: int = 10,
     n_outliers: int = 5,
     n_random: int = 5,
