@@ -17,7 +17,6 @@ _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 
 
 @legacy_api(
-    "mode",
     "ae_type",
     "normalize_per_cell",
     "scale",
@@ -44,8 +43,8 @@ _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 )
 def dca(
     adata: AnnData,
-    *,
     mode: Literal["denoise", "latent"] = "denoise",
+    *,
     ae_type: _AEType = "nb-conddisp",
     normalize_per_cell: bool = True,
     scale: bool = True,
