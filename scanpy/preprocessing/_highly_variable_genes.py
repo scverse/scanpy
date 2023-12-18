@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from typing import Literal
+from inspect import signature
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -328,7 +329,7 @@ def highly_variable_genes(
     max_disp: float | None = np.inf,
     min_mean: float | None = 0.0125,
     max_mean: float | None = 3,
-    span: float | None = 0.3,
+    span: float = 0.3,
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger", "seurat_v3"] = "seurat",
     subset: bool = False,
@@ -455,6 +456,9 @@ def highly_variable_genes(
         )
 
     if flavor == "seurat_v3":
+        if n_top_genes is None:
+            sig = signature(_highly_variable_genes_seurat_v3)
+            n_top_genes = cast(int, sig.parameters["n_top_genes"].default)
         return _highly_variable_genes_seurat_v3(
             adata,
             layer=layer,
