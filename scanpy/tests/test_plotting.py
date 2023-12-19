@@ -1619,7 +1619,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs.scrublet
+@needs.skmisc
 @pytest.mark.parametrize(
     ("id", "params"),
     [
