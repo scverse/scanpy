@@ -386,7 +386,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     assert len(seu.intersection(df.index)) / 4000 > 0.95
 
 
-@needs.skmisc
+@needs("skmisc")
 def test_higly_variable_genes_seurat_v3_warning():
     pbmc = pbmc3k()[:200].copy()
     sc.pp.log1p(pbmc)
