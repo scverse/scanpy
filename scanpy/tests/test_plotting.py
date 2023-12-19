@@ -1620,31 +1620,36 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
 
 
 @needs.scrublet
-def test_scrublet_plots(image_comparer, plt):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=30)
+@pytest.mark.parametrize(
+    ("id", "params"),
+    [
+        pytest.param("scrublet", {}, id="scrublet"),
+        pytest.param("scrublet_no_threshold", {}, id="scrublet_no_threshold"),
+        pytest.param(
+            "scrublet_with_batches", dict(batch_key="batch"), id="scrublet_with_batches"
+        ),
+    ],
+)
+def test_scrublet_plots(monkeypatch, image_comparer, id, params):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=10)
 
-    adata = pbmc3k()
-    sc.external.pp.scrublet(adata, use_approx_neighbors=False)
+    adata = pbmc3k()[:200].copy()
+    adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
+
+    with monkeypatch.context() as m:
+        if id == "scrublet_no_threshold":
+            m.setattr("skimage.filters.threshold_minimum", None)
+        sc.external.pp.scrublet(adata, use_approx_neighbors=False, **params)
+    if id == "scrublet_no_threshold":
+        assert "threshold" not in adata.uns["scrublet"]
 
     sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
-    save_and_compare_images("scrublet")
-
-    del adata.uns["scrublet"]["threshold"]
-    adata.obs["predicted_doublet"] = False
-
-    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
-    save_and_compare_images("scrublet_no_threshold")
-
-    adata.obs["batch"] = 1350 * ["a"] + 1350 * ["b"]
-    sc.external.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
-
-    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
-    save_and_compare_images("scrublet_with_batches")
+    save_and_compare_images(id)
 
 
 def test_umap_mask_equal(tmp_path, check_same_image):
     """Check that all desired cells are coloured and masked cells gray"""
-    pbmc = sc.datasets.pbmc3k_processed()
+    pbmc = pbmc3k_processed()
     mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
     ax = sc.pl.umap(pbmc, size=8.0, show=False)
@@ -1661,7 +1666,7 @@ def test_umap_mask_equal(tmp_path, check_same_image):
 
 def test_umap_mask_mult_plots():
     """Check that multiple images are plotted when color is a list."""
-    pbmc = sc.datasets.pbmc3k_processed()
+    pbmc = pbmc3k_processed()
     color = ["LDHB", "LYZ", "CD79A"]
     mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
     axes = sc.pl.umap(pbmc, color=color, mask=mask, show=False)
@@ -1671,7 +1676,7 @@ def test_umap_mask_mult_plots():
 
 def test_string_mask(tmp_path, check_same_image):
     """Check that the same mask given as string or bool array provides the same result"""
-    pbmc = sc.datasets.pbmc3k_processed()
+    pbmc = pbmc3k_processed()
     pbmc.obs["mask"] = mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
     sc.pl.umap(pbmc, mask=mask, color="LDHB")
