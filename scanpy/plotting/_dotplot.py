@@ -201,17 +201,21 @@ class DotPlot(BasePlot):
         # values in the group (given by `count()`)
         if dot_size_df is None:
             dot_size_df = (
-                obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+                obs_bool.groupby(level=0, observed=True).sum()
+                / obs_bool.groupby(level=0, observed=True).count()
             )
 
         if dot_color_df is None:
             # 2. compute mean expression value value
             if mean_only_expressed:
                 dot_color_df = (
-                    self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+                    self.obs_tidy.mask(~obs_bool)
+                    .groupby(level=0, observed=True)
+                    .mean()
+                    .fillna(0)
                 )
             else:
-                dot_color_df = self.obs_tidy.groupby(level=0).mean()
+                dot_color_df = self.obs_tidy.groupby(level=0, observed=True).mean()
 
             if standard_scale == "group":
                 dot_color_df = dot_color_df.sub(dot_color_df.min(1), axis=0)

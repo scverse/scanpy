@@ -226,7 +226,7 @@ def _highly_variable_genes_single_batch(
     df["dispersions"] = dispersion
     if flavor == "seurat":
         df["mean_bin"] = pd.cut(df["means"], bins=n_bins)
-        disp_grouped = df.groupby("mean_bin")["dispersions"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
         # retrieve those genes that have nan std, these are the ones where
@@ -258,7 +258,7 @@ def _highly_variable_genes_single_batch(
             df["means"],
             np.r_[-np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf],
         )
-        disp_grouped = df.groupby("mean_bin")["dispersions"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_median_bin = disp_grouped.median()
         # the next line raises the warning: "Mean of empty slice"
         with warnings.catch_warnings():
@@ -526,7 +526,7 @@ def highly_variable_genes(
 
         df = pd.concat(df, axis=0)
         df["highly_variable"] = df["highly_variable"].astype(int)
-        df = df.groupby("gene").agg(
+        df = df.groupby("gene", observed=True).agg(
             dict(
                 means=np.nanmean,
                 dispersions=np.nanmean,
