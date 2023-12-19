@@ -1,15 +1,23 @@
 """Logging and Profiling
 """
+from __future__ import annotations
+
 import logging
 import sys
-from functools import update_wrapper, partial
-from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG
-from datetime import datetime, timedelta, timezone
-from typing import Optional, IO
 import warnings
+from datetime import datetime, timedelta, timezone
+from functools import partial, update_wrapper
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
+from typing import IO, TYPE_CHECKING
 
 import anndata.logging
 
+if TYPE_CHECKING:
+    from ._settings import ScanpyConfig
+
+
+# This is currently the only documented API
+__all__ = ["print_versions"]
 
 HINT = (INFO + DEBUG) // 2
 logging.addLevelName(HINT, "HINT")
@@ -26,11 +34,11 @@ class _RootLogger(logging.RootLogger):
         level: int,
         msg: str,
         *,
-        extra: Optional[dict] = None,
-        time: Optional[datetime] = None,
-        deep: Optional[str] = None,
+        extra: dict | None = None,
+        time: datetime | None = None,
+        deep: str | None = None,
     ) -> datetime:
-        from . import settings
+        from ._settings import settings
 
         now = datetime.now(timezone.utc)
         time_passed: timedelta = None if time is None else now - time
@@ -61,7 +69,7 @@ class _RootLogger(logging.RootLogger):
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
-def _set_log_file(settings):
+def _set_log_file(settings: ScanpyConfig):
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
@@ -75,7 +83,7 @@ def _set_log_file(settings):
     root.addHandler(h)
 
 
-def _set_log_level(settings, level: int):
+def _set_log_level(settings: ScanpyConfig, level: int):
     root = settings._root_logger
     root.setLevel(level)
     (h,) = root.handlers  # may only be 1
@@ -158,7 +166,7 @@ def print_header(*, file=None):
     )
 
 
-def print_versions(*, file: Optional[IO[str]] = None):
+def print_versions(*, file: IO[str] | None = None):
     """\
     Print versions of imported packages, OS, and jupyter environment.
 
@@ -213,8 +221,8 @@ def error(
     msg: str,
     *,
     time: datetime = None,
-    deep: Optional[str] = None,
-    extra: Optional[dict] = None,
+    deep: str | None = None,
+    extra: dict | None = None,
 ) -> datetime:
     """\
     Log message with specific level and return current time.

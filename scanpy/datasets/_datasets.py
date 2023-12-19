@@ -1,21 +1,31 @@
-from pathlib import Path
-from typing import Optional, Literal
-import warnings
+from __future__ import annotations
 
+import warnings
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal
+
+import anndata as ad
 import numpy as np
 import pandas as pd
-import anndata as ad
 
-from .. import logging as logg, _utils
+from .. import _utils
+from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
-from .._utils import AnyRandom
+
+if TYPE_CHECKING:
+    from .._utils import AnyRandom
 
 HERE = Path(__file__).parent
 
 
+@old_positionals(
+    "n_variables", "n_centers", "cluster_std", "n_observations", "random_state"
+)
 def blobs(
+    *,
     n_variables: int = 11,
     n_centers: int = 5,
     cluster_std: float = 1.0,
@@ -95,10 +105,8 @@ def krumsiek11() -> ad.AnnData:
     Annotated data matrix.
     """
     filename = HERE / "krumsiek11.txt"
-    verbosity_save = settings.verbosity
-    settings.verbosity = "error"  # suppress output...
-    adata = read(filename, first_column_names=True)
-    settings.verbosity = verbosity_save
+    with settings.verbosity.override("error"):  # suppress output...
+        adata = read(filename, first_column_names=True)
     adata.uns["iroot"] = 0
     fate_labels = {0: "Stem", 159: "Mo", 319: "Ery", 459: "Mk", 619: "Neu"}
     adata.uns["highlights"] = fate_labels
@@ -173,7 +181,7 @@ def paul15() -> ad.AnnData:
 
     filename = settings.datasetdir / "paul15/paul15.h5"
     filename.parent.mkdir(exist_ok=True)
-    backup_url = "http://falexwolf.de/data/paul15.h5"
+    backup_url = "https://falexwolf.de/data/paul15.h5"
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, "r") as f:
         # Coercing to float32 for backwards compatibility
@@ -189,7 +197,7 @@ def paul15() -> ad.AnnData:
     # names reflecting the cell type identifications from the paper
     cell_type = 6 * ["Ery"]
     cell_type += "MEP Mk GMP GMP DC Baso Baso Mo Mo Neu Neu Eos Lymph".split()
-    adata.obs["paul15_clusters"] = [f"{i}{cell_type[i-1]}" for i in clusters]
+    adata.obs["paul15_clusters"] = [f"{i}{cell_type[i - 1]}" for i in clusters]
     # make string annotations categorical (optional)
     _utils.sanitize_anndata(adata)
     # just keep the first of the two equivalent names per gene
@@ -258,12 +266,12 @@ def pbmc3k() -> ad.AnnData:
 
     The data consists in 3k PBMCs from a Healthy Donor and is freely available
     from 10x Genomics (`here
-    <http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz>`__
+    <https://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz>`__
     from this `webpage
     <https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k>`__).
 
     The exact same data is also used in Seurat's
-    `basic clustering tutorial <https://satijalab.org/seurat/pbmc3k_tutorial.html>`__.
+    `basic clustering tutorial <https://satijalab.org/seurat/articles/pbmc3k_tutorial.html>`__.
 
     .. note::
 
@@ -289,7 +297,7 @@ def pbmc3k() -> ad.AnnData:
     -------
     Annotated data matrix.
     """
-    url = "http://falexwolf.de/data/pbmc3k_raw.h5ad"
+    url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
     adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 
@@ -316,7 +324,7 @@ def pbmc3k_processed() -> ad.AnnData:
 def _download_visium_dataset(
     sample_id: str,
     spaceranger_version: str,
-    base_dir: Optional[Path] = None,
+    base_dir: Path | None = None,
     download_image: bool = False,
 ):
     """

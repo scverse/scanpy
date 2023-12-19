@@ -17,7 +17,7 @@ Any transformation of the data matrix that is not *preprocessing*. In contrast t
    :nosignatures:
    :toctree: ../generated/
 
-   tl.pca
+   pp.pca
    tl.tsne
    tl.umap
    tl.draw_graph

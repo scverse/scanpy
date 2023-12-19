@@ -1,11 +1,11 @@
-import os
+from __future__ import annotations
+
 import sys
-from pathlib import Path
 from datetime import datetime
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
-from sphinx.application import Sphinx
 from packaging.version import parse as parse_version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -14,6 +14,9 @@ matplotlib.use("agg")
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
 import scanpy  # noqa
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 
 # -- General configuration ------------------------------------------------
@@ -179,9 +182,7 @@ texinfo_documents = [
 # -- Suppress link warnings ----------------------------------------------------
 
 qualname_overrides = {
-    "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
-    # If the docs are built with an old version of numpy, this will make it work:
-    "numpy.random.RandomState": "numpy.random.mtrand.RandomState",
+    "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.metrics.DistanceMetric",
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
@@ -189,11 +190,15 @@ qualname_overrides = {
 }
 
 nitpick_ignore = [
+    # Technical issues
+    ("py:class", "numpy.int64"),  # documented as “attribute”
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
-    # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
-    ("py:class", "seaborn.ClusterGrid"),
+    # Currently undocumented
+    # https://github.com/mwaskom/seaborn/issues/1810
+    ("py:class", "seaborn.matrix.ClusterGrid"),
+    ("py:class", "samalg.SAM"),
     # Won’t be documented
     ("py:class", "scanpy.plotting._utils._AxesSubplot"),
     ("py:class", "scanpy._utils.Empty"),

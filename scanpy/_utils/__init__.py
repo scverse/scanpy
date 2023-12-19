@@ -3,39 +3,49 @@
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
 """
-import sys
-import inspect
-import warnings
+from __future__ import annotations
+
 import importlib.util
-from enum import Enum
-from pathlib import Path
-from weakref import WeakSet
+import inspect
+import sys
+import warnings
 from collections import namedtuple
-from functools import partial, wraps
-from types import ModuleType, MethodType
-from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
+from enum import Enum
+from functools import partial, singledispatch, wraps
+from textwrap import dedent
+from types import MethodType, ModuleType
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union
+from weakref import WeakSet
 
 import numpy as np
+from anndata import AnnData
+from anndata import __version__ as anndata_version
 from numpy import random
-from scipy import sparse
-from anndata import AnnData, __version__ as anndata_version
-from textwrap import dedent
+from numpy.typing import NDArray
 from packaging import version
+from scipy import sparse
 
-from .._settings import settings
 from .. import logging as logg
+from .._compat import DaskArray
+from .._settings import settings
+from .compute.is_constant import is_constant  # noqa: F401
 
-from .compute.is_constant import is_constant
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from pathlib import Path
 
 
 class Empty(Enum):
     token = 0
 
+    def __repr__(self) -> str:
+        return "_empty"
+
 
 _empty = Empty.token
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-AnyRandom = Union[None, int, random.RandomState]  # maybe in the future random.Generator
+AnyRandom = Union[int, random.RandomState, None]  # maybe in the future random.Generator
 
 EPS = 1e-15
 
@@ -63,7 +73,7 @@ def check_versions():
         )
 
 
-def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
+def getdoc(c_or_f: Callable | type) -> str | None:
     if getattr(c_or_f, "__doc__", None) is None:
         return None
     doc = inspect.getdoc(c_or_f)
@@ -86,40 +96,54 @@ def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
     )
 
 
-def deprecated_arg_names(arg_mapping: Mapping[str, str]):
-    """
-    Decorator which marks a functions keyword arguments as deprecated. It will
-    result in a warning being emitted when the deprecated keyword argument is
-    used, and the function being called with the new argument.
-
-    Parameters
-    ----------
-    arg_mapping
-        Mapping from deprecated argument name to current argument name.
-    """
-
+def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     def decorator(func):
         @wraps(func)
-        def func_wrapper(*args, **kwargs):
-            warnings.simplefilter("always", DeprecationWarning)  # turn off filter
-            for old, new in arg_mapping.items():
-                if old in kwargs:
-                    warnings.warn(
-                        f"Keyword argument '{old}' has been "
-                        f"deprecated in favour of '{new}'. "
-                        f"'{old}' will be removed in a future version.",
-                        category=DeprecationWarning,
-                        stacklevel=2,
+        def wrapper(*args, **kwargs):
+            if old_name in kwargs:
+                f_name = func.__name__
+                pos_str = (
+                    (
+                        f" at first position. Call it as `{f_name}(val, ...)` "
+                        f"instead of `{f_name}({old_name}=val, ...)`"
                     )
-                    val = kwargs.pop(old)
-                    kwargs[new] = val
-            # reset filter
-            warnings.simplefilter("default", DeprecationWarning)
+                    if pos_0
+                    else ""
+                )
+                msg = (
+                    f"In function `{f_name}`, argument `{old_name}` "
+                    f"was renamed to `{new_name}`{pos_str}."
+                )
+                warnings.warn(msg, FutureWarning, stacklevel=3)
+                if pos_0:
+                    args = (kwargs.pop(old_name), *args)
+                else:
+                    kwargs[new_name] = kwargs.pop(old_name)
             return func(*args, **kwargs)
 
-        return func_wrapper
+        return wrapper
 
     return decorator
+
+
+def _import_name(name: str) -> Any:
+    from importlib import import_module
+
+    parts = name.split(".")
+    obj = import_module(parts[0])
+    for i, name in enumerate(parts[1:]):
+        try:
+            obj = import_module(f"{obj.__name__}.{name}")
+        except ModuleNotFoundError:
+            break
+    else:
+        i = len(parts)
+    for name in parts[i + 1 :]:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError:
+            raise RuntimeError(f"{parts[:i]}, {parts[i + 1:]}, {obj} {name}")
+    return obj
 
 
 def _one_of_ours(obj, root: str):
@@ -136,19 +160,19 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
     if encountered is None:
         encountered = WeakSet()
     for obj in vars(mod).values():
-        if not _one_of_ours(obj, root):
+        if not _one_of_ours(obj, root) or obj in encountered:
             continue
+        encountered.add(obj)
         if callable(obj) and not isinstance(obj, MethodType):
             yield obj
             if isinstance(obj, type):
                 for m in vars(obj).values():
                     if callable(m) and _one_of_ours(m, root):
                         yield m
-        elif isinstance(obj, ModuleType) and obj not in encountered:
+        elif isinstance(obj, ModuleType):
             if obj.__name__.startswith("scanpy.tests"):
                 # Python’s import mechanism seems to add this to `scanpy`’s attributes
                 continue
-            encountered.add(obj)
             yield from descend_classes_and_funcs(obj, root, encountered)
 
 
@@ -159,7 +183,7 @@ def annotate_doc_types(mod: ModuleType, root: str):
 
 def _doc_params(**kwds):
     """\
-    Docstrings should start with "\" in the first line for proper formatting.
+    Docstrings should start with ``\\`` in the first line for proper formatting.
     """
 
     def dec(obj):
@@ -183,7 +207,7 @@ def _check_array_function_arguments(**kwargs):
         )
 
 
-def _check_use_raw(adata: AnnData, use_raw: Union[None, bool]) -> bool:
+def _check_use_raw(adata: AnnData, use_raw: None | bool) -> bool:
     """
     Normalize checking `use_raw`.
 
@@ -254,9 +278,10 @@ def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
     reference: str,
+    *,
     normalization: Literal["prediction", "reference"] = "prediction",
     threshold: float = 0.01,
-    max_n_names: Optional[int] = 2,
+    max_n_names: int | None = 2,
 ):
     """Compute overlaps between groups.
 
@@ -400,12 +425,12 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
 
 
 # backwards compat... remove this in the future
-def sanitize_anndata(adata):
+def sanitize_anndata(adata: AnnData) -> None:
     """Transform string annotations to categoricals."""
     adata._sanitize()
 
 
-def view_to_actual(adata):
+def view_to_actual(adata: AnnData) -> None:
     if adata.is_view:
         warnings.warn(
             "Received a view of an AnnData. Making a copy.",
@@ -449,7 +474,7 @@ def update_params(
     old_params: Mapping[str, Any],
     new_params: Mapping[str, Any],
     check=False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """\
     Update old_params with new_params.
 
@@ -489,8 +514,41 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
+_SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
+_MemoryArray = Union[NDArray, _SparseMatrix]
+_SupportedArray = Union[_MemoryArray, DaskArray]
+
+
+@singledispatch
+def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
+    raise NotImplementedError
+
+
+@elem_mul.register(np.ndarray)
+@elem_mul.register(sparse.spmatrix)
+def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
+    if isinstance(x, sparse.spmatrix):
+        # returns coo_matrix, so cast back to input type
+        return type(x)(x.multiply(y))
+    return x * y
+
+
+@elem_mul.register(DaskArray)
+def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
+    import dask.array as da
+
+    return da.map_blocks(elem_mul, x, y)
+
+
+@singledispatch
+def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
     """Checks values of X to ensure it is count data"""
+    raise NotImplementedError
+
+
+@check_nonnegative_integers.register(np.ndarray)
+@check_nonnegative_integers.register(sparse.spmatrix)
+def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
     data = X if isinstance(X, np.ndarray) else X.data
@@ -500,13 +558,19 @@ def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
     # Check all are integers
     elif issubclass(data.dtype.type, Integral):
         return True
-    elif np.any(~np.equal(np.mod(data, 1), 0)):
-        return False
-    else:
-        return True
+    return not np.any((data % 1) != 0)
 
 
-def select_groups(adata, groups_order_subset="all", key="groups"):
+@check_nonnegative_integers.register(DaskArray)
+def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
+    return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
+
+
+def select_groups(
+    adata: AnnData,
+    groups_order_subset: list[str] | Literal["all"] = "all",
+    key: str = "groups",
+) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if key + "_masks" in adata.uns:
@@ -552,14 +616,14 @@ def select_groups(adata, groups_order_subset="all", key="groups"):
     return groups_order_subset, groups_masks
 
 
-def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
+def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
     """Get full tracebacks when warning is raised by setting
 
     warnings.showwarning = warn_with_traceback
 
     See also
     --------
-    http://stackoverflow.com/questions/22373927/get-traceback-of-warnings
+    https://stackoverflow.com/questions/22373927/get-traceback-of-warnings
     """
     import traceback
 
@@ -574,7 +638,7 @@ def subsample(
     X: np.ndarray,
     subsample: int = 1,
     seed: int = 0,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """\
     Subsample a fraction of 1/subsample samples from the rows of X.
 
@@ -614,7 +678,7 @@ def subsample(
 
 def subsample_n(
     X: np.ndarray, n: int = 0, seed: int = 0
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Subsample n samples from rows of array.
 
     Parameters

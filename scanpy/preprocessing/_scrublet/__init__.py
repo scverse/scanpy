@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 from anndata import AnnData
@@ -7,13 +9,35 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
+from ..._compat import old_positionals
 from ...get import _get_obs_rep
-from ..._utils import AnyRandom
-from ...neighbors import Neighbors, _Metric, _MetricFn
 from . import pipeline
 from .core import Scrublet
 
+if TYPE_CHECKING:
+    from ..._utils import AnyRandom
+    from ...neighbors import _Metric, _MetricFn
 
+
+@old_positionals(
+    "batch_key",
+    "sim_doublet_ratio",
+    "expected_doublet_rate",
+    "stdev_doublet_rate",
+    "synthetic_doublet_umi_subsampling",
+    "knn_dist_metric",
+    "normalize_variance",
+    "log_transform",
+    "mean_center",
+    "n_prin_comps",
+    "use_approx_neighbors",
+    "get_doublet_neighbor_parents",
+    "n_neighbors",
+    "threshold",
+    "verbose",
+    "copy",
+    "random_state",
+)
 def scrublet(
     adata: AnnData,
     adata_sim: AnnData | None = None,
@@ -47,11 +71,7 @@ def scrublet(
     and directly call functions of Scrublet(). You may also undertake your own
     preprocessing, simulate doublets with
     :func:`~scanpy.pp.scrublet_simulate_doublets`, and run the core scrublet
-    function :func:`~scanpy.pp.scrublet`.
-
-    .. note::
-        More information and bug reports `here
-        <https://github.com/swolock/scrublet>`__.
+    function :func:`~scanpy.pp.scrublet` with ``adata_sim`` set.
 
     Parameters
     ----------
@@ -193,6 +213,7 @@ def scrublet(
                 layer="raw",
                 sim_doublet_ratio=sim_doublet_ratio,
                 synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
+                random_seed=random_state,
             )
 
             if log_transform:
@@ -293,14 +314,7 @@ def _scrublet_call_doublets(
     Core function for predicting doublets using Scrublet [Wolock19]_.
 
     Predict cell doublets using a nearest-neighbor classifier of observed
-    transcriptomes and simulated doublets. This is a wrapper around the core
-    functions of `Scrublet <https://github.com/swolock/scrublet>`__ to allow
-    for flexibility in applying Scanpy filtering operations upstream. Unless
-    you know what you're doing you should use the main scrublet() function.
-
-    .. note::
-        More information and bug reports `here
-        <https://github.com/swolock/scrublet>`__.
+    transcriptomes and simulated doublets.
 
     Parameters
     ----------
@@ -479,6 +493,9 @@ def _scrublet_call_doublets(
     return adata_obs
 
 
+@old_positionals(
+    "layer", "sim_doublet_ratio", "synthetic_doublet_umi_subsampling", "random_seed"
+)
 def scrublet_simulate_doublets(
     adata: AnnData,
     *,

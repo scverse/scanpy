@@ -1,18 +1,19 @@
+from __future__ import annotations
+
 from functools import partial
 from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
-from matplotlib.testing.compare import compare_images
 import numpy as np
 import pandas as pd
 import pytest
 import seaborn as sns
+from matplotlib.colors import Normalize
+from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc3k_processed
-
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
@@ -29,8 +30,8 @@ def check_images(pth1, pth2, *, tol):
 def adata():
     """A bit cute."""
     from matplotlib.image import imread
-    from sklearn.datasets import make_blobs
     from sklearn.cluster import DBSCAN
+    from sklearn.datasets import make_blobs
 
     empty_pixel = np.array([1.0, 1.0, 1.0, 0]).reshape(1, 1, -1)
     image = imread(HERE.parent.parent / "docs/_static/img/Scanpy_Logo_RGB.png")
@@ -153,6 +154,7 @@ def vbounds(request):
 
 
 def test_missing_values_categorical(
+    *,
     fixture_request,
     image_comparer,
     adata,
@@ -180,7 +182,7 @@ def test_missing_values_categorical(
 
 
 def test_missing_values_continuous(
-    fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds
+    *, fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds
 ):
     save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
 

@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 from itertools import product
 
 import numpy as np
 import pandas as pd
-from scipy import sparse as sp
-import scanpy as sc
-from numpy.testing import assert_allclose
 import pytest
 from anndata import AnnData
-from anndata.tests.helpers import assert_equal, asarray
+from anndata.tests.helpers import asarray, assert_equal
+from numpy.testing import assert_allclose
+from scipy import sparse as sp
 
+import scanpy as sc
 from scanpy.testing._helpers import check_rep_mutation, check_rep_results
-from scanpy.testing._helpers.data import pbmc68k_reduced
+from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
+from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
 
 
 def test_log1p(tmp_path):
@@ -33,6 +36,12 @@ def test_log1p(tmp_path):
     assert np.allclose(ad4.X, A_l / np.log(2))
 
 
+def test_log1p_deprecated_arg():
+    A = np.random.rand(200, 10).astype(np.float32)
+    with pytest.warns(FutureWarning, match=r".*`X` was renamed to `data`"):
+        sc.pp.log1p(X=A)
+
+
 @pytest.fixture(params=[None, 2])
 def base(request):
     return request.param
@@ -44,6 +53,21 @@ def test_log1p_rep(count_matrix_format, base, dtype):
     )
     check_rep_mutation(sc.pp.log1p, X, base=base)
     check_rep_results(sc.pp.log1p, X, base=base)
+
+
+# TODO: Add support for sparse-in-dask
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+def test_mean_var(array_type):
+    pbmc = pbmc3k()
+    pbmc.X = array_type(pbmc.X)
+
+    true_mean = np.mean(asarray(pbmc.X), axis=0)
+    true_var = np.var(asarray(pbmc.X), axis=0, dtype=np.float64, ddof=1)
+
+    means, variances = sc.pp._utils._get_mean_var(pbmc.X)
+
+    np.testing.assert_allclose(true_mean, means)
+    np.testing.assert_allclose(true_var, variances)
 
 
 def test_mean_var_sparse():
@@ -235,8 +259,8 @@ def test_regress_out_view():
 
 
 def test_regress_out_categorical():
-    from scipy.sparse import random
     import pandas as pd
+    from scipy.sparse import random
 
     adata = AnnData(random(1000, 100, density=0.6, format="csr"))
     # create a categorical column

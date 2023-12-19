@@ -1,7 +1,12 @@
-import re
+from __future__ import annotations
 
-from sphinx.application import Sphinx
+import re
+from typing import TYPE_CHECKING
+
 from sphinx.ext.napoleon import NumpyDocstring
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 
 def process_return(lines):
@@ -16,6 +21,10 @@ def process_return(lines):
 
 def scanpy_parse_returns_section(self, section):
     lines_raw = list(process_return(self._dedent(self._consume_to_next_section())))
+    if lines_raw[0] == ":":
+        # Remove the “:” inserted by sphinx-autodoc-typehints
+        # https://github.com/tox-dev/sphinx-autodoc-typehints/blob/a5c091f725da8374347802d54c16c3d38833d41c/src/sphinx_autodoc_typehints/patches.py#L66
+        lines_raw.pop(0)
     lines = self._format_block(":returns: ", lines_raw)
     if lines and lines[-1]:
         lines.append("")

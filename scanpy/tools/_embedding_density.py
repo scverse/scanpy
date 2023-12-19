@@ -1,13 +1,20 @@
 """\
 Calculate density of cells in embeddings
 """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
-from anndata import AnnData
-from typing import Union, Optional, Sequence
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import sanitize_anndata
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
 
 
 def _calc_density(x: np.ndarray, y: np.ndarray):
@@ -29,13 +36,14 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     return scaled_z
 
 
+@old_positionals("groupby", "key_added", "components")
 def embedding_density(
     adata: AnnData,
-    # there is no asterisk here for backward compat (previously, there was)
-    basis: str = "umap",  # was positional before 1.4.5
-    groupby: Optional[str] = None,
-    key_added: Optional[str] = None,
-    components: Union[str, Sequence[str]] = None,
+    basis: str = "umap",
+    *,
+    groupby: str | None = None,
+    key_added: str | None = None,
+    components: str | Sequence[str] | None = None,
 ) -> None:
     """\
     Calculate the density of cells in an embedding (per condition).
@@ -74,11 +82,12 @@ def embedding_density(
 
     Returns
     -------
-    Updates `adata.obs` with an additional field specified by the `key_added`
-    parameter. This parameter defaults to `[basis]_density_[groupby]`, where
-    `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa`
-    and `[groupby]` denotes the parameter input.
-    Updates `adata.uns` with an additional field `[key_added]_params`.
+    Sets the following fields (`key_added` defaults to `[basis]_density_[groupby]`, where `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa` and `[groupby]` denotes the parameter input):
+
+    `adata.obs[key_added]` : :class:`numpy.ndarray` (dtype `float`)
+        Embedding density values for each cell.
+    `adata.uns['[key_added]_params']` : :class:`dict`
+        A dict with the values for the parameters `covariate` (for the `groupby` parameter) and `components`.
 
     Examples
     --------

@@ -49,10 +49,11 @@ dependencies = [
     "anndata>=0.7.4",
     # numpy needs a version due to #1320
     "numpy>=1.17.0",
-    "matplotlib>=3.4",
-    "pandas>=1.0",
+    "matplotlib>=3.6",
+    # pandas 2.1.2 has pandas/issues/52927
+    "pandas >=1.1.1, !=2.1.2",
     "scipy>=1.4",
-    "seaborn!=0.13.0",
+    "seaborn>=0.13.0",
     "h5py>=3",
     "tqdm",
     "scikit-learn>=0.24",
@@ -65,6 +66,7 @@ dependencies = [
     "umap-learn>=0.3.10",
     "packaging",
     "session-info",
+    "legacy-api-wrap>=1.4",  # for positional API deprecations
     "get-annotations; python_version < '3.10'",
 ]
 dynamic = ["version"]
@@ -81,7 +83,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=4.4",
+    "pytest>=7.4.2",
     "pytest-nunit",
     "pytest-mock",
     "profimp",
@@ -92,7 +94,7 @@ test = [
     "scanpy[leiden]",
     "zarr",
     "scanpy[dask]",
-    "scanpy[scrublet-threshold]",
+    "scanpy[scrublet]",
 ]
 test-full = [
     "scanpy[test]",
@@ -105,19 +107,21 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
-    "sphinx-book-theme",
-    "scanpydoc>=0.9.5",
-    "sphinx-autodoc-typehints",
-    "myst-parser",
-    "myst-nb",
+    "sphinx>=7",
+    "sphinx-book-theme>=1.1.0rc0",
+    "scanpydoc>=0.10.0",
+    "sphinx-autodoc-typehints>=1.25.2",
+    "myst-parser>=2",
+    "myst-nb>=1",
     "sphinx-design",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
-    "nbsphinx",
+    "nbsphinx>=0.9",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
+    # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga]",
+    "sam-algorithm",
 ]
 dev = [
     # getting the dev version
@@ -134,7 +138,7 @@ magic = ["magic-impute>=2.0"]  # MAGIC imputation method
 skmisc = ["scikit-misc>=0.1.3"]  # highly_variable_genes method 'seurat_v3'
 harmony = ["harmonypy"]  # Harmony dataset integration
 scanorama = ["scanorama"]  # Scanorama dataset integration
-scrublet-threshold = ["scikit-image"]  # Doublet detection with automatic thresholds
+scrublet = ["scikit-image"]  # Doublet detection with automatic thresholds
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
 dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
@@ -151,6 +155,7 @@ version-file = "scanpy/_version.py"
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
+    "--doctest-modules",
     "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]
@@ -159,24 +164,48 @@ xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
+    "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
+]
+filterwarnings = [
+    # legacy-api-wrap: internal use of positional API
+    "error:The specified parameters:FutureWarning",
+    # When calling `.show()` in tests, this is raised
+    "ignore:FigureCanvasAgg is non-interactive:UserWarning",
+    # We explicitly handle these errors in tests
+    "error:`anndata.read` is deprecated:FutureWarning",
+    "error:Observation names are not unique:UserWarning",
+    "error:The dtype argument is deprecated and will be removed:FutureWarning",
+    "error:The behavior of DataFrame\\.sum with axis=None is deprecated:FutureWarning",
 ]
 
 [tool.coverage.run]
+data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
 omit = ["*/tests/*"]
+[tool.coverage.xml]
+output = "test-data/coverage.xml"
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
 
 [tool.ruff]
 select = [
-    "F",  # Pyflakes
-    "E",  # Pycodestyle errors
-    "W",  # Pycodestyle warnings
+    "E",       # Error detected by Pycodestyle
+    "F",       # Errors detected by Pyflakes
+    "W",       # Warning detected by Pycodestyle
+    "UP",      # pyupgrade
+    "I",       # isort
+    "TCH",     # manage type checking blocks
     "TID251",  # Banned imports
+    "ICN",     # Follow import conventions
+    "PTH",     # Pathlib instead of os.path
+    "PLR0917", # Ban APIs with too many positional parameters
 ]
 ignore = [
-    # module imported but unused -> required for Scanpys API
-    "F401",
     # line too long -> we accept long comment lines; black gets rid of long code lines
     "E501",
     # module level import not at top of file -> required to circumvent circular imports for Scanpys API
@@ -189,6 +218,9 @@ ignore = [
 [tool.ruff.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
+[tool.ruff.isort]
+known-first-party = ["scanpy"]
+required-imports = ["from __future__ import annotations"]
 [tool.ruff.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"

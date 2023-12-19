@@ -1,28 +1,29 @@
-from typing import Union, Optional, Callable
+from __future__ import annotations
 
-from anndata import AnnData
-import sklearn
+from typing import TYPE_CHECKING, Callable
 
-from ..._utils import lazy_import
+from ..._compat import old_positionals
+from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+    from sklearn.metrics import DistanceMetric
 
 
-# Import this lazily so we don’t slowly import sklearn.stats just for annotation
-lazy_import("sklearn.neighbors")
-del lazy_import
-
-
+@old_positionals("batch_key", "use_rep", "approx", "use_annoy", "metric", "copy")
+@doctest_needs("bbknn")
 def bbknn(
     adata: AnnData,
+    *,
     batch_key: str = "batch",
     use_rep: str = "X_pca",
     approx: bool = True,
     use_annoy: bool = True,
-    metric: Union[str, Callable, "sklearn.neighbors.DistanceMetric"] = "euclidean",
+    metric: str | Callable | DistanceMetric = "euclidean",
     copy: bool = False,
-    *,
     neighbors_within_batch: int = 3,
     n_pcs: int = 50,
-    trim: Optional[int] = None,
+    trim: int | None = None,
     annoy_n_trees: int = 10,
     pynndescent_n_neighbors: int = 30,
     pynndescent_random_state: int = 0,
@@ -30,7 +31,7 @@ def bbknn(
     set_op_mix_ratio: float = 1.0,
     local_connectivity: int = 1,
     **kwargs,
-) -> AnnData:
+) -> AnnData | None:
     """\
     Batch balanced kNN [Polanski19]_.
 
@@ -55,7 +56,7 @@ def bbknn(
     use_rep
         The dimensionality reduction in `.obsm` to use for neighbour detection. Defaults to PCA.
     approx
-        If `True`, use approximate neighbour finding - annoy or pyNNDescent. This results
+        If `True`, use approximate neighbour finding - annoy or PyNNDescent. This results
         in a quicker run time for large datasets while also potentially increasing the degree of
         batch correction.
     use_annoy
@@ -71,19 +72,19 @@ def bbknn(
         PyNNDescent supports metrics listed in `pynndescent.distances.named_distances`
         and custom functions, including compiled Numba code.
 
-        >>> pynndescent.distances.named_distances.keys()
+        >>> import pynndescent
+        >>> pynndescent.distances.named_distances.keys()  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         dict_keys(['euclidean', 'l2', 'sqeuclidean', 'manhattan', 'taxicab', 'l1', 'chebyshev', 'linfinity',
-        'linfty', 'linf', 'minkowski', 'seuclidean', 'standardised_euclidean', 'wminkowski', 'weighted_minkowski',
-        'mahalanobis', 'canberra', 'cosine', 'dot', 'correlation', 'hellinger', 'haversine', 'braycurtis', 'spearmanr',
-        'kantorovich', 'wasserstein', 'tsss', 'true_angular', 'hamming', 'jaccard', 'dice', 'matching', 'kulsinski',
-        'rogerstanimoto', 'russellrao', 'sokalsneath', 'sokalmichener', 'yule'])
+        'linfty', 'linf', 'minkowski', 'seuclidean', 'standardised_euclidean', 'wminkowski', ...])
 
-        KDTree supports members of the `sklearn.neighbors.KDTree.valid_metrics` list, or parameterised
-        `sklearn.neighbors.DistanceMetric` `objects
-        <https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.DistanceMetric.html>`_:
+        KDTree supports members of :class:`sklearn.neighbors.KDTree`’s ``valid_metrics`` list, or parameterised
+        :class:`~sklearn.metrics.DistanceMetric` objects:
 
+        >>> import sklearn.neighbors
         >>> sklearn.neighbors.KDTree.valid_metrics
-        ['p', 'chebyshev', 'cityblock', 'minkowski', 'infinity', 'l2', 'euclidean', 'manhattan', 'l1']
+        ['euclidean', 'l2', 'minkowski', 'p', 'manhattan', 'cityblock', 'l1', 'chebyshev', 'infinity']
+
+        .. note:: check the relevant documentation for up-to-date lists.
     copy
         If `True`, return a copy instead of writing to the supplied adata.
     neighbors_within_batch

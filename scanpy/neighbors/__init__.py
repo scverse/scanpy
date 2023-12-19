@@ -1,40 +1,35 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping, MutableMapping
+from textwrap import indent
 from types import MappingProxyType
-from typing import (
-    TYPE_CHECKING,
-    TypedDict,
-    Union,
-    Optional,
-    Any,
-    NamedTuple,
-    Literal,
-    get_args,
-)
-from collections.abc import Mapping, MutableMapping, Callable
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypedDict, get_args
 from warnings import warn
-from networkx import non_neighbors
 
 import numpy as np
 import scipy
-from anndata import AnnData
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import csr_matrix, issparse
 from sklearn.utils import check_random_state
 
+from .._compat import old_positionals
+
 if TYPE_CHECKING:
+    from anndata import AnnData
     from igraph import Graph
+
     from ._types import KnnTransformerLike
 
+from .. import _utils
+from .. import logging as logg
+from .._settings import settings
+from .._utils import AnyRandom, NeighborsView, _doc_params
 from . import _connectivity
-from ._types import _Metric, _MetricFn, _Method, _KnownTransformer
 from ._common import (
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
-from .. import logging as logg
-from .. import _utils, settings
-from .._utils import _doc_params, AnyRandom, NeighborsView
-from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
+from ._doc import doc_n_pcs, doc_use_rep
+from ._types import _KnownTransformer, _Method, _Metric, _MetricFn
 
 RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
@@ -52,7 +47,7 @@ class KwdsForTransformer(TypedDict):
     """
 
     n_neighbors: int
-    metric: Union[_Metric, _MetricFn]
+    metric: _Metric | _MetricFn
     metric_params: Mapping[str, Any]
     random_state: AnyRandom
 
@@ -61,18 +56,18 @@ class KwdsForTransformer(TypedDict):
 def neighbors(
     adata: AnnData,
     n_neighbors: int = 15,
-    n_pcs: Optional[int] = None,
+    n_pcs: int | None = None,
     *,
-    use_rep: Optional[str] = None,
+    use_rep: str | None = None,
     knn: bool = True,
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
-    metric: Union[_Metric, _MetricFn] = "euclidean",
+    metric: _Metric | _MetricFn = "euclidean",
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     random_state: AnyRandom = 0,
-    key_added: Optional[str] = None,
+    key_added: str | None = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Computes the nearest neighbors distance matrix and a neighborhood graph of observations [McInnes18]_.
 
@@ -146,16 +141,15 @@ def neighbors(
 
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following:
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    See `key_added` parameter description for the storage path of
-    connectivities and distances.
-
-    **connectivities** : sparse matrix of dtype `float32`.
+    `adata.obsp['distances' | key_added+'_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+        Distance matrix of the nearest neighbors search. Each row (cell) has `n_neighbors`-1 non-zero entries. These are the distances to their `n_neighbors`-1 nearest neighbors (excluding the cell itself).
+    `adata.obsp['connectivities' | key_added+'_connectivities']` : :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    **distances** : sparse matrix of dtype `float64`.
-        Stores the distance matrix of the nearest neighbors search.
+    `adata.uns['neighbors' | key_added]` : :class:`dict`
+        neighbors parameters.
 
     Examples
     --------
@@ -165,7 +159,7 @@ def neighbors(
     >>> sc.pp.neighbors(adata, 20, metric='cosine')
     >>> # Provide your own transformer for more control and flexibility
     >>> from sklearn.neighbors import KNeighborsTransformer
-    >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='cosine', algorithm='ball_tree')
+    >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='manhattan', algorithm='kd_tree')
     >>> sc.pp.neighbors(adata, transformer=transformer)
     >>> # now you can e.g. access the index: `transformer._tree`
     """
@@ -284,10 +278,11 @@ class OnFlySymMatrix:
         self,
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
+        *,
         DC_start: int = 0,
         DC_end: int = -1,
-        rows: Optional[MutableMapping[Any, np.ndarray]] = None,
-        restrict_array: Optional[np.ndarray] = None,
+        rows: MutableMapping[Any, np.ndarray] | None = None,
+        restrict_array: np.ndarray | None = None,
     ):
         self.get_row = get_row
         self.shape = shape
@@ -350,22 +345,24 @@ class Neighbors:
         Where to look in `.uns` and `.obsp` for neighbors data
     """
 
+    @old_positionals("n_dcs", "neighbors_key")
     def __init__(
         self,
         adata: AnnData,
-        n_dcs: Optional[int] = None,
-        neighbors_key: Optional[str] = None,
+        *,
+        n_dcs: int | None = None,
+        neighbors_key: str | None = None,
     ):
         self._adata = adata
         self._init_iroot()
         # use the graph in adata
         info_str = ""
-        self.knn: Optional[bool] = None
-        self._distances: Union[np.ndarray, csr_matrix, None] = None
-        self._connectivities: Union[np.ndarray, csr_matrix, None] = None
-        self._transitions_sym: Union[np.ndarray, csr_matrix, None] = None
-        self._number_connected_components: Optional[int] = None
-        self._rp_forest: Optional[RPForestDict] = None
+        self.knn: bool | None = None
+        self._distances: np.ndarray | csr_matrix | None = None
+        self._connectivities: np.ndarray | csr_matrix | None = None
+        self._transitions_sym: np.ndarray | csr_matrix | None = None
+        self._number_connected_components: int | None = None
+        self._rp_forest: RPForestDict | None = None
         if neighbors_key is None:
             neighbors_key = "neighbors"
         if neighbors_key in adata.uns:
@@ -382,7 +379,7 @@ class Neighbors:
                 self.n_neighbors = neighbors["params"]["n_neighbors"]
             else:
 
-                def count_nonzero(a: Union[np.ndarray, csr_matrix]) -> int:
+                def count_nonzero(a: np.ndarray | csr_matrix) -> int:
                     return a.count_nonzero() if issparse(a) else np.count_nonzero(a)
 
                 # estimating n_neighbors
@@ -409,10 +406,8 @@ class Neighbors:
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
                     raise ValueError(
-                        "Cannot instantiate using `n_dcs`={}. "
-                        "Compute diffmap/spectrum with more components first.".format(
-                            n_dcs
-                        )
+                        f"Cannot instantiate using `n_dcs`={n_dcs}. "
+                        "Compute diffmap/spectrum with more components first."
                     )
                 self._eigen_values = self._eigen_values[:n_dcs]
                 self._eigen_basis = self._eigen_basis[:, :n_dcs]
@@ -426,21 +421,21 @@ class Neighbors:
             logg.debug(f"    initialized {info_str}")
 
     @property
-    def rp_forest(self) -> Optional[RPForestDict]:
+    def rp_forest(self) -> RPForestDict | None:
         return self._rp_forest
 
     @property
-    def distances(self) -> Union[np.ndarray, csr_matrix, None]:
+    def distances(self) -> np.ndarray | csr_matrix | None:
         """Distances between data points (sparse matrix)."""
         return self._distances
 
     @property
-    def connectivities(self) -> Union[np.ndarray, csr_matrix, None]:
+    def connectivities(self) -> np.ndarray | csr_matrix | None:
         """Connectivities between data points (sparse matrix)."""
         return self._connectivities
 
     @property
-    def transitions(self) -> Union[np.ndarray, csr_matrix]:
+    def transitions(self) -> np.ndarray | csr_matrix:
         """Transition matrix (sparse matrix).
 
         Is conjugate to the symmetrized transition matrix via::
@@ -461,7 +456,7 @@ class Neighbors:
         return self.Z @ self.transitions_sym @ Zinv
 
     @property
-    def transitions_sym(self) -> Union[np.ndarray, csr_matrix, None]:
+    def transitions_sym(self) -> np.ndarray | csr_matrix | None:
         """Symmetrized transition matrix (sparse matrix).
 
         Is conjugate to the transition matrix via::
@@ -501,13 +496,13 @@ class Neighbors:
     def compute_neighbors(
         self,
         n_neighbors: int = 30,
-        n_pcs: Optional[int] = None,
+        n_pcs: int | None = None,
         *,
-        use_rep: Optional[str] = None,
+        use_rep: str | None = None,
         knn: bool = True,
         method: _Method | None = "umap",
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
-        metric: Union[_Metric, _MetricFn] = "euclidean",
+        metric: _Metric | _MetricFn = "euclidean",
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
         random_state: AnyRandom = 0,
     ) -> None:
@@ -531,8 +526,12 @@ class Neighbors:
         Writes sparse graph attributes `.distances` and,
         if `method` is not `None`, `.connectivities`.
         """
+        from ..tools._utils import _choose_representation
+
         start_neighbors = logg.debug("computing neighbors")
-        if n_neighbors > self._adata.shape[0]:  # very small datasets
+        if transformer is not None and not isinstance(transformer, str):
+            n_neighbors = transformer.get_params()["n_neighbors"]
+        elif n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5 * self._adata.shape[0])
             logg.warning(f"n_obs too small: adjusting to `n_neighbors = {n_neighbors}`")
 
@@ -561,9 +560,9 @@ class Neighbors:
         if shortcut:
             # self._distances is a sparse matrix with a diag of 1, fix that
             self._distances[np.diag_indices_from(self.distances)] = 0
-            if knn:  # remove too far away entries and keep as sparse
+            if knn:  # remove too far away entries in self._distances
                 self._distances = _get_sparse_matrix_from_indices_distances(
-                    knn_indices, knn_distances, self._adata.n_obs, n_neighbors
+                    knn_indices, knn_distances, keep_self=False
                 )
             else:  # convert to dense
                 self._distances = self._distances.toarray()
@@ -736,7 +735,7 @@ class Neighbors:
     def compute_eigen(
         self,
         n_comps: int = 15,
-        sym: Optional[bool] = None,
+        sym: bool | None = None,
         sort: Literal["decrease", "increase"] = "decrease",
         random_state: AnyRandom = 0,
     ):
@@ -794,8 +793,7 @@ class Neighbors:
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
         logg.info(
-            "    eigenvalues of transition matrix\n"
-            "    {}".format(str(evals).replace("\n", "\n    "))
+            f"    eigenvalues of transition matrix\n" f"{indent(str(evals), '    ')}"
         )
         if self._number_connected_components > len(evals) / 2:
             logg.warning("Transition matrix has many disconnected components!")

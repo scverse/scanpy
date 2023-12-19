@@ -1,17 +1,25 @@
-from types import MappingProxyType
-from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Literal
+from __future__ import annotations
+
 import warnings
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from natsort import natsorted
-from scipy.sparse import spmatrix
 from packaging import version
 
-from ._utils_clustering import rename_groups, restrict_adjacency
-from .. import _utils, logging as logg
+from .. import _utils
+from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import _choose_graph
+from ._utils_clustering import rename_groups, restrict_adjacency
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
+    from anndata import AnnData
+    from scipy.sparse import spmatrix
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -23,22 +31,37 @@ except ImportError:
     MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
+@old_positionals(
+    "random_state",
+    "restrict_to",
+    "key_added",
+    "adjacency",
+    "flavor",
+    "directed",
+    "use_weights",
+    "partition_type",
+    "partition_kwargs",
+    "neighbors_key",
+    "obsp",
+    "copy",
+)
 def louvain(
     adata: AnnData,
-    resolution: Optional[float] = None,
+    resolution: float | None = None,
+    *,
     random_state: _utils.AnyRandom = 0,
-    restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
+    restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
-    adjacency: Optional[spmatrix] = None,
+    adjacency: spmatrix | None = None,
     flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
-    partition_type: Optional[Type[MutableVertexPartition]] = None,
+    partition_type: type[MutableVertexPartition] | None = None,
     partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
-    neighbors_key: Optional[str] = None,
-    obsp: Optional[str] = None,
+    neighbors_key: str | None = None,
+    obsp: str | None = None,
     copy: bool = False,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
@@ -104,15 +127,15 @@ def louvain(
 
     Returns
     -------
-    :obj:`None`
-        By default (``copy=False``), updates ``adata`` with the following fields:
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-        ``adata.obs['louvain']`` (:class:`pandas.Series`, dtype ``category``)
-            Array of dim (number of samples) that stores the subgroup id
-            (``'0'``, ``'1'``, ...) for each cell.
+    `adata.obs['louvain' | key_added]` : :class:`pandas.Series` (dtype ``category``)
+        Array of dim (number of samples) that stores the subgroup id
+        (``'0'``, ``'1'``, ...) for each cell.
 
-    :class:`~anndata.AnnData`
-        When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
+    `adata.uns['louvain']['params']` : :class:`dict`
+        A dict with the values for the parameters `resolution`, `random_state`,
+        and `n_iterations`.
     """
     partition_kwargs = dict(partition_kwargs)
     start = logg.info("running Louvain clustering")
@@ -128,8 +151,8 @@ def louvain(
         adjacency, restrict_indices = restrict_adjacency(
             adata,
             restrict_key,
-            restrict_categories,
-            adjacency,
+            restrict_categories=restrict_categories,
+            adjacency=adjacency,
         )
     if flavor in {"vtraag", "igraph"}:
         if flavor == "igraph" and resolution is not None:
@@ -207,8 +230,8 @@ def louvain(
         )
     elif flavor == "taynaud":
         # this is deprecated
-        import networkx as nx
         import community
+        import networkx as nx
 
         g = nx.Graph(adjacency)
         partition = community.best_partition(g)
@@ -222,11 +245,11 @@ def louvain(
             key_added += "_R"
         groups = rename_groups(
             adata,
-            key_added,
-            restrict_key,
-            restrict_categories,
-            restrict_indices,
-            groups,
+            key_added=key_added,
+            restrict_key=restrict_key,
+            restrict_categories=restrict_categories,
+            restrict_indices=restrict_indices,
+            groups=groups,
         )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype("U"),

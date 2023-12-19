@@ -1,11 +1,3 @@
-#!/usr/bin/env python
-from scipy.stats import norm
-from scanpy._utils import check_nonnegative_integers
-from itertools import product
-import anndata
-import numpy as np
-import pandas as pd
-
 """
 HashSolo script provides a probabilistic cell hashing demultiplexing method
 which generates a noise distribution and signal distribution for
@@ -22,6 +14,23 @@ second highest barcode from a noise distribution. A negative two highest
 barcodes should come from noise distributions. We test each of these
 hypotheses in a bayesian fashion, and select the most probable hypothesis.
 """
+from __future__ import annotations
+
+from itertools import product
+from typing import TYPE_CHECKING
+
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
+
+from ..._compat import old_positionals
+from ..._utils import check_nonnegative_integers
+from ...testing._doctests import doctest_skip
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
 
 
 def _calculate_log_likelihoods(data, number_of_noise_barcodes):
@@ -255,14 +264,19 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
     }
 
 
+@old_positionals(
+    "priors", "pre_existing_clusters", "number_of_noise_barcodes", "inplace"
+)
+@doctest_skip("Illustrative but not runnable doctest code")
 def hashsolo(
-    adata: anndata.AnnData,
-    cell_hashing_columns: list,
-    priors: list = [0.01, 0.8, 0.19],
-    pre_existing_clusters: str = None,
-    number_of_noise_barcodes: int = None,
+    adata: AnnData,
+    cell_hashing_columns: Sequence[str],
+    *,
+    priors: tuple[float, float, float] = (0.01, 0.8, 0.19),
+    pre_existing_clusters: str | None = None,
+    number_of_noise_barcodes: int | None = None,
     inplace: bool = True,
-):
+) -> AnnData | None:
     """Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
 
     .. note::
@@ -274,9 +288,9 @@ def hashsolo(
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     cell_hashing_columns
-        A list specifying `.obs` columns that contain cell hashing counts.
+        `.obs` columns that contain cell hashing counts.
     priors
-        A list specifying the prior probability of each hypothesis, in
+        Prior probabilities of each hypothesis, in
         the order `[negative, singlet, doublet]`. The default is set to
         `[0.01, 0.8, 0.19]` assuming barcode counts are from cells that
         have passed QC in the transcriptome space, e.g. UMI counts, pct
@@ -317,7 +331,7 @@ def hashsolo(
     -------
     >>> import anndata
     >>> import scanpy.external as sce
-    >>> adata = anndata.read("data.h5ad")
+    >>> adata = anndata.read_h5ad("data.h5ad")
     >>> sce.pp.hashsolo(adata, ['Hash1', 'Hash2', 'Hash3'])
     >>> adata.obs.head()
     """

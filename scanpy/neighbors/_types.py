@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Union as _U, Callable as _C
+from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import Callable as _C
+from typing import Union as _U
 
 import numpy as np
-from scipy.sparse import spmatrix
 
 if TYPE_CHECKING:
     from typing import Self
+
+    from scipy.sparse import spmatrix
 
 
 _Method = Literal["umap", "gauss"]

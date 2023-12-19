@@ -1,7 +1,9 @@
+from __future__ import annotations
+
+import numpy as np
 from anndata import AnnData
 
 import scanpy as sc
-import numpy as np
 
 
 def generate_test_data():

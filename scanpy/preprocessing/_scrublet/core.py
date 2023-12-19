@@ -1,25 +1,26 @@
 from __future__ import annotations
-import sys
 
-from typing import cast
+import sys
 from dataclasses import InitVar, dataclass, field
-from anndata import AnnData
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
+from anndata import AnnData
 from scipy import sparse
-from numpy.random import RandomState
-from numpy.typing import NDArray
 
 from ... import logging as logg
 from ..._utils import AnyRandom, get_random_state
 from ...neighbors import (
     Neighbors,
+    _get_indices_distances_from_sparse_matrix,
     _Metric,
     _MetricFn,
-    _get_indices_distances_from_sparse_matrix,
 )
 from .sparse_utils import subsample_counts
 
+if TYPE_CHECKING:
+    from numpy.random import RandomState
+    from numpy.typing import NDArray
 
 __all__ = ["Scrublet"]
 

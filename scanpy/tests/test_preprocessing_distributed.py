@@ -1,20 +1,26 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import anndata as ad
 import numpy.testing as npt
 import pytest
 
-from scanpy.preprocessing import normalize_total, filter_genes
-from scanpy.preprocessing import log1p, normalize_per_cell, filter_cells
+from scanpy.preprocessing import (
+    filter_cells,
+    filter_genes,
+    log1p,
+    normalize_per_cell,
+    normalize_total,
+)
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.testing._pytest.marks import needs
-
 
 HERE = Path(__file__).parent / Path("_data/")
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
 
 
-pytestmark = [needs("zarr")]
+pytestmark = [needs.zarr]
 
 
 @pytest.fixture()
@@ -26,8 +32,8 @@ def adata():
 
 @pytest.fixture(
     params=[
-        pytest.param("direct", marks=[needs("zappy")]),
-        pytest.param("dask", marks=[needs("dask")]),
+        pytest.param("direct", marks=[needs.zappy]),
+        pytest.param("dask", marks=[needs.dask]),
     ]
 )
 def adata_dist(request):

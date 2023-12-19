@@ -1,29 +1,34 @@
+from __future__ import annotations
+
 import warnings
-from typing import Optional, Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse
 from anndata import AnnData
+from scipy.sparse import issparse
 
 from ... import logging as logg
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
+if TYPE_CHECKING:
+    from scipy.sparse import spmatrix
 
-def filter_genes_dispersion(
-    data: AnnData,
+
+def filter_genes_dispersion(  # noqa: PLR0917
+    data: AnnData | spmatrix | np.ndarray,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
-    min_disp: Optional[float] = None,
-    max_disp: Optional[float] = None,
-    min_mean: Optional[float] = None,
-    max_mean: Optional[float] = None,
+    min_disp: float | None = None,
+    max_disp: float | None = None,
+    min_mean: float | None = None,
+    max_mean: float | None = None,
     n_bins: int = 20,
-    n_top_genes: Optional[int] = None,
+    n_top_genes: int | None = None,
     log: bool = True,
     subset: bool = True,
     copy: bool = False,
-):
+) -> AnnData | np.recarray | None:
     """\
     Extract highly variable genes [Satija15]_ [Zheng17]_.
 
@@ -170,8 +175,7 @@ def filter_genes_dispersion(
         # actually do the normalization
         df["dispersion_norm"] = (
             # use values here as index differs
-            df["dispersion"].values
-            - disp_mean_bin[df["mean_bin"].values].values
+            df["dispersion"].values - disp_mean_bin[df["mean_bin"].values].values
         ) / disp_std_bin[df["mean_bin"].values].values
     elif flavor == "cell_ranger":
         from statsmodels import robust

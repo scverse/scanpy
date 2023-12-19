@@ -1,23 +1,26 @@
 """BasePlot for dotplot, matrixplot and stacked_violin
 """
+from __future__ import annotations
+
 import collections.abc as cabc
 from collections import namedtuple
-from typing import Optional, Union, Mapping, Literal  # Special
-from typing import Sequence, Iterable  # ABCs
-from typing import Tuple  # Classes
-
-import numpy as np
-from anndata import AnnData
-from matplotlib.axes import Axes
-from matplotlib import pyplot as pl
-from matplotlib import gridspec
-from matplotlib.colors import Normalize
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Literal, Union
 from warnings import warn
 
+import numpy as np
+from matplotlib import gridspec
+from matplotlib import pyplot as plt
+
 from .. import logging as logg
-from ._utils import make_grid_spec, check_colornorm
-from ._utils import ColorLike, _AxesSubplot
-from ._anndata import _plot_dendrogram, _get_dendrogram_key, _prepare_dataframe
+from .._compat import old_positionals
+from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
+from ._utils import ColorLike, _AxesSubplot, check_colornorm, make_grid_spec
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+    from matplotlib.axes import Axes
+    from matplotlib.colors import Normalize
 
 _VarNames = Union[str, Sequence[str]]
 
@@ -41,7 +44,7 @@ return_fig
 """
 
 
-class BasePlot(object):
+class BasePlot:
     """\
     Generic class for the visualization of AnnData categories and
     selected `var` (features or genes).
@@ -70,27 +73,46 @@ class BasePlot(object):
 
     MAX_NUM_CATEGORIES = 500  # maximum number of categories allowed to be plotted
 
+    @old_positionals(
+        "use_raw",
+        "log",
+        "num_categories",
+        "categories_order",
+        "title",
+        "figsize",
+        "gene_symbols",
+        "var_group_positions",
+        "var_group_labels",
+        "var_group_rotation",
+        "layer",
+        "ax",
+        "vmin",
+        "vmax",
+        "vcenter",
+        "norm",
+    )
     def __init__(
         self,
         adata: AnnData,
-        var_names: Union[_VarNames, Mapping[str, _VarNames]],
-        groupby: Union[str, Sequence[str]],
-        use_raw: Optional[bool] = None,
+        var_names: _VarNames | Mapping[str, _VarNames],
+        groupby: str | Sequence[str],
+        *,
+        use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
-        categories_order: Optional[Sequence[str]] = None,
-        title: Optional["str"] = None,
-        figsize: Optional[Tuple[float, float]] = None,
-        gene_symbols: Optional[str] = None,
-        var_group_positions: Optional[Sequence[Tuple[int, int]]] = None,
-        var_group_labels: Optional[Sequence[str]] = None,
-        var_group_rotation: Optional[float] = None,
-        layer: Optional[str] = None,
-        ax: Optional[_AxesSubplot] = None,
-        vmin: Optional[float] = None,
-        vmax: Optional[float] = None,
-        vcenter: Optional[float] = None,
-        norm: Optional[Normalize] = None,
+        categories_order: Sequence[str] | None = None,
+        title: str | None = None,
+        figsize: tuple[float, float] | None = None,
+        gene_symbols: str | None = None,
+        var_group_positions: Sequence[tuple[int, int]] | None = None,
+        var_group_labels: Sequence[str] | None = None,
+        var_group_rotation: float | None = None,
+        layer: str | None = None,
+        ax: _AxesSubplot | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        vcenter: float | None = None,
+        norm: Normalize | None = None,
         **kwds,
     ):
         self.var_names = var_names
@@ -111,9 +133,9 @@ class BasePlot(object):
             adata,
             self.var_names,
             groupby,
-            use_raw,
-            log,
-            num_categories,
+            use_raw=use_raw,
+            log=log,
+            num_categories=num_categories,
             layer=layer,
             gene_symbols=gene_symbols,
         )
@@ -171,7 +193,7 @@ class BasePlot(object):
         self.ax_dict = None
         self.ax = ax
 
-    def swap_axes(self, swap_axes: Optional[bool] = True):
+    def swap_axes(self, swap_axes: bool | None = True):
         """
         Plots a transposed image.
 
@@ -200,11 +222,11 @@ class BasePlot(object):
 
     def add_dendrogram(
         self,
-        show: Optional[bool] = True,
-        dendrogram_key: Optional[str] = None,
-        size: Optional[float] = 0.8,
+        show: bool | None = True,
+        dendrogram_key: str | None = None,
+        size: float | None = 0.8,
     ):
-        """\
+        r"""\
         Show dendrogram based on the hierarchical clustering between the `groupby`
         categories. Categories are reordered to match the dendrogram order.
 
@@ -243,10 +265,15 @@ class BasePlot(object):
 
         Examples
         --------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_dendrogram().show()
-
+        >>> plot = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').add_dendrogram()
+        >>> plot.plot_group_extra  # doctest: +NORMALIZE_WHITESPACE
+        {'kind': 'dendrogram',
+         'width': 0.8,
+         'dendrogram_key': None,
+         'dendrogram_ticks': array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5])}
         """
 
         if not show:
@@ -280,12 +307,12 @@ class BasePlot(object):
 
     def add_totals(
         self,
-        show: Optional[bool] = True,
+        show: bool | None = True,
         sort: Literal["ascending", "descending"] = None,
-        size: Optional[float] = 0.8,
-        color: Optional[Union[ColorLike, Sequence[ColorLike]]] = None,
+        size: float | None = 0.8,
+        color: ColorLike | Sequence[ColorLike] | None = None,
     ):
-        """\
+        r"""\
         Show barplot for the number of cells in in `groupby` category.
 
         The barplot is by default shown on the right side of the plot or on top
@@ -316,9 +343,23 @@ class BasePlot(object):
 
         Examples
         --------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').add_totals().show()
+        >>> plot = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').add_totals()
+        >>> plot.plot_group_extra['counts_df']
+        bulk_labels
+        CD4+/CD25 T Reg                  68
+        CD4+/CD45RA+/CD25- Naive T        8
+        CD4+/CD45RO+ Memory              19
+        CD8+ Cytotoxic T                 54
+        CD8+/CD45RA+ Naive Cytotoxic     43
+        CD14+ Monocyte                  129
+        CD19+ B                          95
+        CD34+                            13
+        CD56+ NK                         31
+        Dendritic                       240
+        Name: count, dtype: int64
         """
         self.group_extra_size = size
 
@@ -344,7 +385,8 @@ class BasePlot(object):
         }
         return self
 
-    def style(self, cmap: Optional[str] = DEFAULT_COLORMAP):
+    @old_positionals("cmap")
+    def style(self, *, cmap: str | None = DEFAULT_COLORMAP):
         """\
         Set visual style parameters
 
@@ -360,13 +402,15 @@ class BasePlot(object):
 
         self.cmap = cmap
 
+    @old_positionals("show", "title", "width")
     def legend(
         self,
-        show: Optional[bool] = True,
-        title: Optional[str] = DEFAULT_COLOR_LEGEND_TITLE,
-        width: Optional[float] = DEFAULT_LEGENDS_WIDTH,
+        *,
+        show: bool | None = True,
+        title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
+        width: float | None = DEFAULT_LEGENDS_WIDTH,
     ):
-        """\
+        r"""\
         Configure legend parameters
 
         Parameters
@@ -389,10 +433,13 @@ class BasePlot(object):
 
         Set legend title:
 
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-        >>> dp = sc.pl.BasePlot(adata, markers, groupby='bulk_labels')
-        >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
+        >>> dp = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels') \
+        ...     .legend(title='log(UMI counts + 1)')
+        >>> dp.color_legend_title
+        'log(UMI counts + 1)'
         """
 
         if not show:
@@ -404,7 +451,7 @@ class BasePlot(object):
 
         return self
 
-    def get_axes(self):
+    def get_axes(self) -> dict[str, Axes]:
         if self.ax_dict is None:
             self.make_figure()
         return self.ax_dict
@@ -442,7 +489,7 @@ class BasePlot(object):
             for p in total_barplot_ax.patches:
                 p.set_x(p.get_x() + 0.5)
                 if p.get_height() >= 1000:
-                    display_number = f"{np.round(p.get_height()/1000, decimals=1)}k"
+                    display_number = f"{np.round(p.get_height() / 1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_height(), decimals=1)
                 total_barplot_ax.annotate(
@@ -472,7 +519,7 @@ class BasePlot(object):
             max_x = max([p.get_width() for p in total_barplot_ax.patches])
             for p in total_barplot_ax.patches:
                 if p.get_width() >= 1000:
-                    display_number = f"{np.round(p.get_width()/1000, decimals=1)}k"
+                    display_number = f"{np.round(p.get_width() / 1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_width(), decimals=1)
                 total_barplot_ax.annotate(
@@ -501,9 +548,8 @@ class BasePlot(object):
         Returns
         -------
         None, updates color_legend_ax
-
         """
-        cmap = pl.get_cmap(self.cmap)
+        cmap = plt.get_cmap(self.cmap)
 
         import matplotlib.colorbar
         from matplotlib.cm import ScalarMappable
@@ -580,7 +626,7 @@ class BasePlot(object):
         )
 
     def make_figure(self):
-        """
+        r"""
         Renders the image but does not call :func:`matplotlib.pyplot.show`. Useful
         when several plots are put together into one figure.
 
@@ -592,12 +638,13 @@ class BasePlot(object):
         Examples
         --------
 
+        >>> import scanpy as sc
         >>> import matplotlib.pyplot as plt
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         >>> fig, (ax0, ax1) = plt.subplots(1, 2)
-        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels', ax=ax0)\
-        ...               .style(cmap='Blues', edge_color='none').make_figure()
+        >>> sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels', ax=ax0) \
+        ...     .style(cmap='Blues', edge_color='none').make_figure()
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels', ax=ax1).make_figure()
         """
 
@@ -743,7 +790,7 @@ class BasePlot(object):
 
         self.ax_dict = return_ax_dict
 
-    def show(self, return_axes: Optional[bool] = None):
+    def show(self, return_axes: bool | None = None):
         """
         Show the figure
 
@@ -765,10 +812,10 @@ class BasePlot(object):
 
         Examples
         -------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl.Plot(adata, markers, groupby='bulk_labels').show()
-
+        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').show()
         """
 
         self.make_figure()
@@ -776,9 +823,9 @@ class BasePlot(object):
         if return_axes:
             return self.ax_dict
         else:
-            pl.show()
+            plt.show()
 
-    def savefig(self, filename: str, bbox_inches: Optional[str] = "tight", **kwargs):
+    def savefig(self, filename: str, bbox_inches: str | None = "tight", **kwargs):
         """
         Save the current figure
 
@@ -799,13 +846,13 @@ class BasePlot(object):
 
         Examples
         -------
+        >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl.BasePlot(adata, markers, groupby='bulk_labels').savefig('plot.pdf')
-
+        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').savefig('plot.pdf')
         """
         self.make_figure()
-        pl.savefig(filename, bbox_inches=bbox_inches, **kwargs)
+        plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
     def _reorder_categories_after_dendrogram(self, dendrogram):
         """\
@@ -902,11 +949,12 @@ class BasePlot(object):
     @staticmethod
     def _plot_var_groups_brackets(
         gene_groups_ax: Axes,
-        group_positions: Iterable[Tuple[int, int]],
+        *,
+        group_positions: Iterable[tuple[int, int]],
         group_labels: Sequence[str],
         left_adjustment: float = -0.3,
         right_adjustment: float = 0.3,
-        rotation: Optional[float] = None,
+        rotation: float | None = None,
         orientation: Literal["top", "right"] = "top",
     ):
         """\

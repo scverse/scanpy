@@ -1,33 +1,56 @@
 """\
 Embed high-dimensional data using PHATE
 """
-from typing import Optional, Union, Literal
+from __future__ import annotations
 
-from anndata import AnnData
+from typing import TYPE_CHECKING, Literal
 
-from ..._settings import settings
 from ... import logging as logg
-from ..._utils import AnyRandom
+from ..._compat import old_positionals
+from ..._settings import settings
+from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+
+    from ..._utils import AnyRandom
 
 
+@old_positionals(
+    "k",
+    "a",
+    "n_landmark",
+    "t",
+    "gamma",
+    "n_pca",
+    "knn_dist",
+    "mds_dist",
+    "mds",
+    "n_jobs",
+    "random_state",
+    "verbose",
+    "copy",
+)
+@doctest_needs("phate")
 def phate(
     adata: AnnData,
     n_components: int = 2,
+    *,
     k: int = 5,
     a: int = 15,
     n_landmark: int = 2000,
-    t: Union[int, str] = "auto",
+    t: int | str = "auto",
     gamma: float = 1.0,
     n_pca: int = 100,
     knn_dist: str = "euclidean",
     mds_dist: str = "euclidean",
     mds: Literal["classic", "metric", "nonmetric"] = "metric",
-    n_jobs: Optional[int] = None,
+    n_jobs: int | None = None,
     random_state: AnyRandom = None,
-    verbose: Union[bool, int, None] = None,
+    verbose: bool | int | None = None,
     copy: bool = False,
     **kwargs,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     PHATE [Moon17]_.
 

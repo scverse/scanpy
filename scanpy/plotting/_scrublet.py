@@ -1,21 +1,28 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Literal, Union as _U
+from typing import TYPE_CHECKING, Literal
+from typing import Union as _U
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 
+from .._compat import old_positionals
 from . import _utils
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
 
 Scale = _U[Literal["linear", "log", "symlog", "logit"], str]
 
 
+@old_positionals(
+    "scale_hist_obs", "scale_hist_sim", "figsize", "return_fig", "show", "save"
+)
 def scrublet_score_distribution(
     adata: AnnData,
     *,

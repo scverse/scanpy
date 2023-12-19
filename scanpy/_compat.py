@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from functools import partial
+from pathlib import Path
+
+from legacy_api_wrap import legacy_api
 from packaging import version
 
 try:
@@ -26,6 +33,25 @@ def fullname(typ: type) -> str:
     return f"{module}.{name}"
 
 
+try:
+    from contextlib import chdir
+except ImportError:  # Python < 3.11
+    import os
+    from contextlib import AbstractContextManager
+
+    @dataclass
+    class chdir(AbstractContextManager):
+        path: Path
+        _old_cwd: list[Path] = field(default_factory=list)
+
+        def __enter__(self) -> None:
+            self._old_cwd.append(Path.cwd())
+            os.chdir(self.path)
+
+        def __exit__(self, *_excinfo) -> None:
+            os.chdir(self._old_cwd.pop())
+
+
 def pkg_metadata(package):
     from importlib.metadata import metadata as m
 
@@ -37,3 +63,6 @@ def pkg_version(package):
     from importlib.metadata import version as v
 
     return version.parse(v(package))
+
+
+old_positionals = partial(legacy_api, category=FutureWarning)

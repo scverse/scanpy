@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import scanpy.external as sce
 from scanpy.testing._helpers.data import pbmc3k_processed
 from scanpy.testing._pytest.marks import needs
 
-
-pytestmark = [needs("palantir")]
+pytestmark = [needs.palantir]
 
 
 def test_palantir_core():

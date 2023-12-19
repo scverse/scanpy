@@ -1,15 +1,24 @@
 """Calculate scores based on the expression of gene lists.
 """
-from typing import Sequence, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from scipy.sparse import issparse
 
-from .. import logging as logg
-from .._utils import AnyRandom
 from scanpy._utils import _check_use_raw
+
+from .. import logging as logg
+from .._compat import old_positionals
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from anndata import AnnData
+
+    from .._utils import AnyRandom
 
 
 def _sparse_nanmean(X, axis):
@@ -37,17 +46,21 @@ def _sparse_nanmean(X, axis):
     return m
 
 
+@old_positionals(
+    "ctrl_size", "gene_pool", "n_bins", "score_name", "random_state", "copy", "use_raw"
+)
 def score_genes(
     adata: AnnData,
     gene_list: Sequence[str],
+    *,
     ctrl_size: int = 50,
-    gene_pool: Optional[Sequence[str]] = None,
+    gene_pool: Sequence[str] | None = None,
     n_bins: int = 25,
     score_name: str = "score",
     random_state: AnyRandom = 0,
     copy: bool = False,
-    use_raw: Optional[bool] = None,
-) -> Optional[AnnData]:
+    use_raw: bool | None = None,
+) -> AnnData | None:
     """\
     Score a set of genes [Satija15]_.
 
@@ -85,8 +98,10 @@ def score_genes(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with an additional field
-    `score_name`.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following field:
+
+    `adata.obs[score_name]` : :class:`numpy.ndarray` (dtype `float`)
+        Scores of each cell.
 
     Examples
     --------
@@ -188,13 +203,15 @@ def score_genes(
     return adata if copy else None
 
 
+@old_positionals("s_genes", "g2m_genes", "copy")
 def score_genes_cell_cycle(
     adata: AnnData,
+    *,
     s_genes: Sequence[str],
     g2m_genes: Sequence[str],
     copy: bool = False,
     **kwargs,
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     Score cell cycle genes [Satija15]_.
 
@@ -218,13 +235,13 @@ def score_genes_cell_cycle(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    **S_score** : `adata.obs`, dtype `object`
+    `adata.obs['S_score']` : :class:`pandas.Series` (dtype `object`)
         The score for S phase for each cell.
-    **G2M_score** : `adata.obs`, dtype `object`
+    `adata.obs['G2M_score']` : :class:`pandas.Series` (dtype `object`)
         The score for G2M phase for each cell.
-    **phase** : `adata.obs`, dtype `object`
+    `adata.obs['phase']` : :class:`pandas.Series` (dtype `object`)
         The cell cycle phase (`S`, `G2M` or `G1`) for each cell.
 
     See also

@@ -1,37 +1,58 @@
-from typing import Optional, Union, Literal
+from __future__ import annotations
+
 import warnings
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from packaging import version
-from anndata import AnnData
-from sklearn.utils import check_random_state, check_array
+from sklearn.utils import check_array, check_random_state
 
-from ._utils import get_init_pos_from_paga, _choose_representation
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import AnyRandom, NeighborsView
+from ._utils import _choose_representation, get_init_pos_from_paga
 
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 _InitPos = Literal["paga", "spectral", "random"]
 
 
+@old_positionals(
+    "min_dist",
+    "spread",
+    "n_components",
+    "maxiter",
+    "alpha",
+    "gamma",
+    "negative_sample_rate",
+    "init_pos",
+    "random_state",
+    "a",
+    "b",
+    "copy",
+    "method",
+    "neighbors_key",
+)
 def umap(
     adata: AnnData,
+    *,
     min_dist: float = 0.5,
     spread: float = 1.0,
     n_components: int = 2,
-    maxiter: Optional[int] = None,
+    maxiter: int | None = None,
     alpha: float = 1.0,
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
-    init_pos: Union[_InitPos, np.ndarray, None] = "spectral",
+    init_pos: _InitPos | np.ndarray | None = "spectral",
     random_state: AnyRandom = 0,
-    a: Optional[float] = None,
-    b: Optional[float] = None,
+    a: float | None = None,
+    b: float | None = None,
     copy: bool = False,
     method: Literal["umap", "rapids"] = "umap",
-    neighbors_key: Optional[str] = None,
-) -> Optional[AnnData]:
+    neighbors_key: str | None = None,
+) -> AnnData | None:
     """\
     Embed the neighborhood graph using UMAP [McInnes18]_.
 
@@ -118,10 +139,13 @@ def umap(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    **X_umap** : `adata.obsm` field
+    `adata.obsm['X_umap']` : :class:`numpy.ndarray` (dtype `float`)
         UMAP coordinates of data.
+    `adata.uns['umap']` : :class:`dict`
+        UMAP parameters.
+
     """
     adata = adata.copy() if copy else adata
 
@@ -130,7 +154,7 @@ def umap(
 
     if neighbors_key not in adata.uns:
         raise ValueError(
-            f'Did not find .uns["{neighbors_key}"]. Run `sc.pp.neighbors` first.'
+            f"Did not find .uns[{neighbors_key!r}]. Run `sc.pp.neighbors` first."
         )
     start = logg.info("computing UMAP")
 
