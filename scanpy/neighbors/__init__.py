@@ -440,7 +440,7 @@ class Neighbors:
 
         Is conjugate to the symmetrized transition matrix via::
 
-            self.transitions = self.Z *  self.transitions_sym / self.Z
+            self.transitions = self.Z * self.transitions_sym / self.Z
 
         where ``self.Z`` is the diagonal matrix storing the normalization of the
         underlying kernel matrix.
@@ -461,7 +461,7 @@ class Neighbors:
 
         Is conjugate to the transition matrix via::
 
-            self.transitions_sym = self.Z /  self.transitions * self.Z
+            self.transitions_sym = self.Z / self.transitions * self.Z
 
         where ``self.Z`` is the diagonal matrix storing the normalization of the
         underlying kernel matrix.
