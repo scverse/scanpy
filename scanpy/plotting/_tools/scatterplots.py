@@ -20,7 +20,6 @@ from matplotlib.axes import Axes  # noqa: TCH002
 from matplotlib.colors import Colormap, Normalize
 from matplotlib.figure import Figure  # noqa: TCH002
 from numpy.typing import NDArray  # noqa: TCH002
-from pandas.api.types import CategoricalDtype
 
 from ... import logging as logg
 from ..._settings import settings
@@ -1176,7 +1175,7 @@ def _get_color_source_vector(
     gene_symbols: str | None = None,
     layer: str | None = None,
     groups: Sequence[str] | None = None,
-):
+) -> np.ndarray | pd.api.extensions.ExtensionArray:
     """
     Get array from adata that colors will be based on.
     """
@@ -1192,9 +1191,8 @@ def _get_color_source_vector(
         and value_to_plot not in adata.var_names
     ):
         # We should probably just make an index for this, and share it over runs
-        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][
-            0
-        ]  # TODO: Throw helpful error if this doesn't work
+        # TODO: Throw helpful error if this doesn't work
+        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0]
     if use_raw and value_to_plot not in adata.obs.columns:
         values = adata.raw.obs_vector(value_to_plot)
     else:
@@ -1247,18 +1245,18 @@ def _color_vector(
     to_hex = partial(colors.to_hex, keep_alpha=True)
     if values_key is None:
         return np.broadcast_to(to_hex(na_color), adata.n_obs), False
-    if not isinstance(values.dtype, CategoricalDtype) and values.dtype != bool:
-        return values, False
-
     if values.dtype == bool:
         values = pd.Categorical(values.astype(str))
+    elif not isinstance(values, pd.Categorical):
+        return values, False
+
     color_map = {
         k: to_hex(v)
         for k, v in _get_palette(adata, values_key, palette=palette).items()
     }
     # If color_map does not have unique values, this can be slow as the
     # result is not categorical
-    color_vector = pd.Categorical(values.map(color_map))
+    color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
 
     # Set color to 'missing color' for all missing values
     if color_vector.isna().any():
