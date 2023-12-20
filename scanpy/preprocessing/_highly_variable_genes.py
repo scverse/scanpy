@@ -508,15 +508,18 @@ def highly_variable_genes(
                 flavor=flavor,
             )
 
-            # Add 0 values for genes that were filtered out
-            missing_hvg = pd.DataFrame(
-                np.zeros((np.sum(~filt), len(hvg.columns))),
-                columns=hvg.columns,
-            )
-            missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
-            missing_hvg["gene"] = gene_list[~filt]
             hvg["gene"] = adata_subset.var_names.values
-            hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
+            if (n_removed := np.sum(~filt)) > 0:
+                # Add 0 values for genes that were filtered out
+                missing_hvg = pd.DataFrame(
+                    np.zeros((n_removed, len(hvg.columns))),
+                    columns=hvg.columns,
+                )
+                missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(
+                    bool
+                )
+                missing_hvg["gene"] = gene_list[~filt]
+                hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
 
             # Order as before filtering
             idxs = np.concatenate((np.where(filt)[0], np.where(~filt)[0]))
@@ -528,10 +531,10 @@ def highly_variable_genes(
         df["highly_variable"] = df["highly_variable"].astype(int)
         df = df.groupby("gene", observed=True).agg(
             dict(
-                means=np.nanmean,
-                dispersions=np.nanmean,
-                dispersions_norm=np.nanmean,
-                highly_variable=np.nansum,
+                means="mean",
+                dispersions="mean",
+                dispersions_norm="mean",
+                highly_variable="sum",
             )
         )
         df.rename(
