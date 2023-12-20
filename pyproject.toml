@@ -199,7 +199,10 @@ exclude_also = [
     "if TYPE_CHECKING:",
 ]
 
-[tool.ruff]
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
 select = [
     "E",       # Error detected by Pycodestyle
     "F",       # Errors detected by Pyflakes
@@ -222,13 +225,13 @@ ignore = [
     # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
     "E741",
 ]
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["scanpy"]
 required-imports = ["from __future__ import annotations"]
-[tool.ruff.flake8-tidy-imports.banned-api]
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
