@@ -183,6 +183,7 @@ filterwarnings = [
     "error:The default value of 'ignore' for the `na_action` parameter in pandas\\.Categorical\\.map:FutureWarning",
     "error:The provided callable.* is currently using:FutureWarning",
     "error:The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
+    "error:A value is trying to be set on a copy of a slice from a DataFrame",
 ]
 
 [tool.coverage.run]
