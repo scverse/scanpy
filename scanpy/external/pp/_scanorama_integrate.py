@@ -116,7 +116,7 @@ def scanorama_integrate(
     batch_names = []
     name2idx = {}
     for idx in range(adata.X.shape[0]):
-        batch_name = adata.obs[key][idx]
+        batch_name = adata.obs[key].iloc[idx]
         if batch_name != curr_batch:
             curr_batch = batch_name
             if batch_name in batch_names:
