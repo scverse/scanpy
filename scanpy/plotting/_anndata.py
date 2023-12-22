@@ -333,7 +333,7 @@ def _scatter_obs(
     show_ticks = True if component_name is None else False
 
     # generate the colors
-    color_ids = []
+    color_ids: list[np.ndarray | ColorLike] = []
     categoricals = []
     colorbars = []
     for ikey, key in enumerate(keys):
@@ -345,7 +345,7 @@ def _scatter_obs(
             if isinstance(adata.obs[key].dtype, CategoricalDtype):
                 categorical = True
             else:
-                c = adata.obs[key]
+                c = adata.obs[key].to_numpy()
         # coloring according to gene expression
         elif use_raw and adata.raw is not None and key in adata.raw.var_names:
             c = adata.raw.obs_vector(key)
@@ -871,7 +871,7 @@ def violin(
         )
 
         if stripplot:
-            grouped_df = obs_tidy.groupby(x)
+            grouped_df = obs_tidy.groupby(x, observed=True)
             for ax_id, key in zip(range(g.axes.shape[1]), keys):
                 sns.stripplot(
                     y=y,

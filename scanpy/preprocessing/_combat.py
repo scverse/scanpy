@@ -99,7 +99,7 @@ def _standardize_data(
     """
 
     # compute the design matrix
-    batch_items = model.groupby(batch_key).groups.items()
+    batch_items = model.groupby(batch_key, observed=True).groups.items()
     batch_levels, batch_info = zip(*batch_items)
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
@@ -206,8 +206,8 @@ def combat(
     sanitize_anndata(adata)
 
     # construct a pandas series of the batch annotation
-    model = adata.obs[[key] + (covariates if covariates else [])]
-    batch_info = model.groupby(key).indices.values()
+    model = adata.obs[[key, *(covariates if covariates else [])]]
+    batch_info = model.groupby(key, observed=True).indices.values()
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
     n_array = float(sum(n_batches))
