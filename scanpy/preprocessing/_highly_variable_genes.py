@@ -21,6 +21,7 @@ from ._utils import _get_mean_var
 def _highly_variable_genes_seurat_v3(
     adata: AnnData,
     *,
+    flavor: str = "seurat_v3",
     layer: str | None = None,
     n_top_genes: int = 2000,
     batch_key: str | None = None,
@@ -80,6 +81,7 @@ def _highly_variable_genes_seurat_v3(
         X_batch = X[batch_info == b]
 
         mean, var = _get_mean_var(X_batch)
+
         not_const = var > 0
         estimat_var = np.zeros(X.shape[1], dtype=np.float64)
 
@@ -133,19 +135,82 @@ def _highly_variable_genes_seurat_v3(
     ma_ranked = np.ma.masked_invalid(ranked_norm_gene_vars)
     median_ranked = np.ma.median(ma_ranked, axis=0).filled(np.nan)
 
+    df["gene_name"] = df.index
     df["highly_variable_nbatches"] = num_batches_high_var
     df["highly_variable_rank"] = median_ranked
     df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
-
-    sorted_index = (
-        df[["highly_variable_rank", "highly_variable_nbatches"]]
-        .sort_values(
-            ["highly_variable_rank", "highly_variable_nbatches"],
-            ascending=[True, False],
-            na_position="last",
+    if flavor == "seurat_v3":
+        print("sort rank, then batch")
+        sorted_index = (
+            df[["highly_variable_rank", "highly_variable_nbatches"]]
+            .sort_values(
+                ["highly_variable_rank", "highly_variable_nbatches"],
+                ascending=[True, False],
+                na_position="last",
+            )
+            .index
         )
-        .index
-    )
+    elif flavor == "seurat_v3_paper":
+        print("sort batch, then rank")
+        sorted_index = (
+            df[["highly_variable_nbatches", "highly_variable_rank"]]
+            .sort_values(
+                ["highly_variable_nbatches", "highly_variable_rank"],
+                ascending=[False, True],
+                na_position="last",
+            )
+            .index
+        )
+    elif flavor == "seurat_v3_implementation":
+        print("sort batch, then rank")
+        sorted_index = (
+            df[
+                [
+                    "highly_variable_nbatches",
+                    "highly_variable_rank",
+                ]
+            ]
+            .sort_values(
+                ["highly_variable_nbatches", "highly_variable_rank"],
+                ascending=[False, True],
+                na_position="last",
+            )
+            .index
+        )
+        nbatch_threshold = df.loc[sorted_index]["highly_variable_nbatches"].iloc[2000]
+        above_threshold_index = df.loc[
+            df["highly_variable_nbatches"] > nbatch_threshold, :
+        ].index
+        df_above = df.loc[above_threshold_index, :]
+        df_at_threshold = df.loc[
+            df["highly_variable_nbatches"] == nbatch_threshold, :
+        ].copy()
+
+        df_above_sorted_index = (
+            df_above[["highly_variable_rank"]]  # bonus: sort by alphabet if tie
+            .sort_values(
+                ["highly_variable_rank"],
+                ascending=[True],
+                na_position="last",
+            )
+            .index
+        )
+        df_at_threshold_sorted_index = (
+            df_at_threshold[["highly_variable_rank"]]  # bonus: sort by alphabet if tie
+            .sort_values(
+                ["highly_variable_rank"],
+                ascending=[True],
+                na_position="last",
+            )
+            .index
+        )
+        sorted_index = np.concatenate(
+            [df_above_sorted_index, df_at_threshold_sorted_index]
+        )[:n_top_genes]
+
+    else:
+        raise ValueError(f"Did not recognize flavor {flavor}")
+
     df["highly_variable"] = False
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
 
@@ -331,7 +396,13 @@ def highly_variable_genes(
     max_mean: float | None = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: Literal["seurat", "cell_ranger", "seurat_v3"] = "seurat",
+    flavor: Literal[
+        "seurat",
+        "cell_ranger",
+        "seurat_v3",
+        "seurat_v3_paper",
+        "seurat_v3_implementation",
+    ] = "seurat",
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
@@ -455,12 +526,17 @@ def highly_variable_genes(
             "pass `inplace=False` if you want to return a `pd.DataFrame`."
         )
 
-    if flavor == "seurat_v3":
+    if (
+        flavor == "seurat_v3"
+        or flavor == "seurat_v3_paper"
+        or flavor == "seurat_v3_implementation"
+    ):
         if n_top_genes is None:
             sig = signature(_highly_variable_genes_seurat_v3)
             n_top_genes = cast(int, sig.parameters["n_top_genes"].default)
         return _highly_variable_genes_seurat_v3(
             adata,
+            flavor=flavor,
             layer=layer,
             n_top_genes=n_top_genes,
             batch_key=batch_key,
