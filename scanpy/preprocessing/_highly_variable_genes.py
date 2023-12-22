@@ -215,7 +215,7 @@ def _highly_variable_genes_seurat_v3(
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
 
     if inplace:
-        adata.uns["hvg"] = {"flavor": "seurat_v3"}
+        adata.uns["hvg"] = {"flavor": flavor}
         logg.hint(
             "added\n"
             "    'highly_variable', boolean vector (adata.var)\n"

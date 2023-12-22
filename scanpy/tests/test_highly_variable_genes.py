@@ -379,10 +379,10 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         inplace=False,
     )
 
-    seurat_v3_original_hvg = sc.pp.highly_variable_genes(
+    seurat_v3_paper_hvg = sc.pp.highly_variable_genes(
         pbmc,
         n_top_genes=2000,
-        flavor="seurat_v3_original",
+        flavor="seurat_v3_paper",
         batch_key="dummy_tech",
         inplace=False,
     )
@@ -405,7 +405,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     assert (
         len(
             seu.intersection(
-                seurat_v3_original_hvg[seurat_v3_original_hvg.highly_variable].index
+                seurat_v3_paper_hvg[seurat_v3_paper_hvg.highly_variable].index
             )
         )
         / 2000
