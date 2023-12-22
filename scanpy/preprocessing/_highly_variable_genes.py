@@ -140,7 +140,6 @@ def _highly_variable_genes_seurat_v3(
     df["highly_variable_rank"] = median_ranked
     df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
     if flavor == "seurat_v3":
-        print("sort rank, then batch")
         sorted_index = (
             df[["highly_variable_rank", "highly_variable_nbatches"]]
             .sort_values(
@@ -151,7 +150,6 @@ def _highly_variable_genes_seurat_v3(
             .index
         )
     elif flavor == "seurat_v3_paper":
-        print("sort batch, then rank")
         sorted_index = (
             df[["highly_variable_nbatches", "highly_variable_rank"]]
             .sort_values(
@@ -162,7 +160,6 @@ def _highly_variable_genes_seurat_v3(
             .index
         )
     elif flavor == "seurat_v3_implementation":
-        print("sort batch, then rank")
         sorted_index = (
             df[
                 [
