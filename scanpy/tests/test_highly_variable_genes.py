@@ -423,10 +423,6 @@ def test_higly_variable_genes_compare_to_seurat_v3():
         > 0.95
     )
 
-    ########################################
-    # redo above
-    ########################################
-
 
 @needs.skmisc
 def test_higly_variable_genes_seurat_v3_warning():
