@@ -155,7 +155,7 @@ def dendrogram(
         )
 
     # aggregate values within categories using 'mean'
-    mean_df = rep_df.groupby(level=0).mean()
+    mean_df = rep_df.groupby(level=0, observed=True).mean()
 
     import scipy.cluster.hierarchy as sch
     from scipy.spatial import distance

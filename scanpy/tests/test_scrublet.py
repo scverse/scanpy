@@ -50,7 +50,10 @@ def test_scrublet(
     doublet_idx = np.flatnonzero(adata.obs["predicted_doublet"]).tolist()
     assert doublet_idx == expected_idx
     assert_allclose(
-        adata.obs["doublet_score"][doublet_idx], expected_scores, atol=1e-5, rtol=1e-5
+        adata.obs["doublet_score"].iloc[doublet_idx],
+        expected_scores,
+        atol=1e-5,
+        rtol=1e-5,
     )
 
 
@@ -66,7 +69,7 @@ def test_scrublet_batched():
     # only one in the first batch (<100)
     assert doublet_idx == [35, 132, 135, 136, 139, 153, 157, 168, 170, 171, 175, 180]
     assert_allclose(
-        adata.obs["doublet_score"][doublet_idx],
+        adata.obs["doublet_score"].iloc[doublet_idx],
         np.array([0.164835, 0.109375])[([0] * 3 + [1] * 7 + [0, 1])],
         atol=1e-5,
         rtol=1e-5,

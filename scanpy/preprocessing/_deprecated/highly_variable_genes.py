@@ -154,7 +154,7 @@ def filter_genes_dispersion(  # noqa: PLR0917
     df["dispersion"] = dispersion
     if flavor == "seurat":
         df["mean_bin"] = pd.cut(df["mean"], bins=n_bins)
-        disp_grouped = df.groupby("mean_bin")["dispersion"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersion"]
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
         # retrieve those genes that have nan std, these are the ones where
@@ -184,7 +184,7 @@ def filter_genes_dispersion(  # noqa: PLR0917
             df["mean"],
             np.r_[-np.inf, np.percentile(df["mean"], np.arange(10, 105, 5)), np.inf],
         )
-        disp_grouped = df.groupby("mean_bin")["dispersion"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersion"]
         disp_median_bin = disp_grouped.median()
         # the next line raises the warning: "Mean of empty slice"
         with warnings.catch_warnings():

@@ -902,7 +902,9 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
 
     top_genes = {}
     bottom_genes = {}
-    for g, subdf in sc.get.rank_genes_groups_df(pbmc, group=groups).groupby("group"):
+    for g, subdf in sc.get.rank_genes_groups_df(pbmc, group=groups).groupby(
+        "group", observed=True
+    ):
         top_genes[g] = list(subdf["names"].head(N))
         bottom_genes[g] = list(subdf["names"].tail(N))
 
@@ -1603,7 +1605,10 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     df = sc.get.rank_genes_groups_df(adata, group=None, key="rank_genes_groups")
     df = df.query(conditions)[["group", "names"]]
 
-    var_names = {k: v.head(N_GENES).tolist() for k, v in df.groupby("group")["names"]}
+    var_names = {
+        k: v.head(N_GENES).tolist()
+        for k, v in df.groupby("group", observed=True)["names"]
+    }
 
     pth_a = tmp_path / f"{plot.__name__}_filter_a.png"
     pth_b = tmp_path / f"{plot.__name__}_filter_b.png"

@@ -271,7 +271,7 @@ def obs_df(
     ...     pbmc,
     ...     keys=["louvain", *marker_genes]
     ... )
-    >>> grouped = genedf.groupby("louvain")
+    >>> grouped = genedf.groupby("louvain", observed=True)
     >>> mean, var = grouped.mean(), grouped.var()
     """
     if use_raw:

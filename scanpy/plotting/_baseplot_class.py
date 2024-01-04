@@ -814,8 +814,8 @@ class BasePlot:
         -------
         >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').show()
+        >>> markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
+        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby="bulk_labels").show()
         """
 
         self.make_figure()
@@ -848,8 +848,10 @@ class BasePlot:
         -------
         >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').savefig('plot.pdf')
+        >>> markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
+        >>> sc.pl._baseplot_class.BasePlot(
+        ...     adata, markers, groupby="bulk_labels"
+        ... ).savefig("plot.pdf")
         """
         self.make_figure()
         plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
