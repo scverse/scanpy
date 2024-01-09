@@ -6,7 +6,7 @@ import json
 from pathlib import Path, PurePath
 from typing import BinaryIO, Literal
 
-import anndata
+import anndata.utils
 import h5py
 import numpy as np
 import pandas as pd
@@ -551,93 +551,61 @@ def read_10x_mtx(
     """
     path = Path(path)
     prefix = "" if prefix is None else prefix
-    genefile_exists = (path / f"{prefix}genes.tsv").is_file()
-    read = _read_legacy_10x_mtx if genefile_exists else _read_v3_10x_mtx
-    adata = read(
-        str(path),
+    is_legacy = (path / f"{prefix}genes.tsv").is_file()
+    adata = _read_10x_mtx(
+        path,
         var_names=var_names,
         make_unique=make_unique,
         cache=cache,
         cache_compression=cache_compression,
         prefix=prefix,
+        is_legacy=is_legacy,
     )
-    if genefile_exists or not gex_only:
+    if is_legacy or not gex_only:
         return adata
-    else:
-        gex_rows = list(
-            map(lambda x: x == "Gene Expression", adata.var["feature_types"])
-        )
-        return adata[:, gex_rows].copy()
+    gex_rows = adata.var["feature_types"] == "Gene Expression"
+    return adata[:, gex_rows].copy()
 
 
-def _read_legacy_10x_mtx(
-    path,
-    var_names="gene_symbols",
-    make_unique=True,
-    cache=False,
-    cache_compression=_empty,
+def _read_10x_mtx(
+    path: Path,
     *,
-    prefix="",
-):
+    var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
+    make_unique: bool = True,
+    cache: bool = False,
+    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
+    prefix: str = "",
+    is_legacy: bool,
+) -> AnnData:
     """
-    Read mex from output from Cell Ranger v2 or earlier versions
+    Read mex from output from Cell Ranger v2- or v3+
     """
-    path = Path(path)
+    suffix = "" if is_legacy else ".gz"
     adata = read(
-        path / f"{prefix}matrix.mtx",
+        path / f"{prefix}matrix.mtx{suffix}",
         cache=cache,
         cache_compression=cache_compression,
     ).T  # transpose the data
-    genes = pd.read_csv(path / f"{prefix}genes.tsv", header=None, sep="\t")
+    genes = pd.read_csv(
+        path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
+        header=None,
+        sep="\t",
+    )
     if var_names == "gene_symbols":
-        var_names = genes[1].values
+        var_names_idx = pd.Index(genes[1].values)
         if make_unique:
-            var_names = anndata.utils.make_index_unique(pd.Index(var_names))
-        adata.var_names = var_names
+            var_names_idx = anndata.utils.make_index_unique(var_names_idx)
+        adata.var_names = var_names_idx
         adata.var["gene_ids"] = genes[0].values
     elif var_names == "gene_ids":
         adata.var_names = genes[0].values
         adata.var["gene_symbols"] = genes[1].values
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
-    adata.obs_names = pd.read_csv(path / f"{prefix}barcodes.tsv", header=None)[0].values
-    return adata
-
-
-def _read_v3_10x_mtx(
-    path,
-    var_names="gene_symbols",
-    make_unique=True,
-    cache=False,
-    cache_compression=_empty,
-    *,
-    prefix="",
-):
-    """
-    Read mtx from output from Cell Ranger v3 or later versions
-    """
-    path = Path(path)
-    adata = read(
-        path / f"{prefix}matrix.mtx.gz",
-        cache=cache,
-        cache_compression=cache_compression,
-    ).T  # transpose the data
-    genes = pd.read_csv(path / f"{prefix}features.tsv.gz", header=None, sep="\t")
-    if var_names == "gene_symbols":
-        var_names = genes[1].values
-        if make_unique:
-            var_names = anndata.utils.make_index_unique(pd.Index(var_names))
-        adata.var_names = var_names
-        adata.var["gene_ids"] = genes[0].values
-    elif var_names == "gene_ids":
-        adata.var_names = genes[0].values
-        adata.var["gene_symbols"] = genes[1].values
-    else:
-        raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
-    adata.var["feature_types"] = genes[2].values
-    adata.obs_names = pd.read_csv(path / f"{prefix}barcodes.tsv.gz", header=None)[
-        0
-    ].values
+    if not is_legacy:
+        adata.var["feature_types"] = genes[2].values
+    barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
+    adata.obs_names = barcodes[0].values
     return adata
 
 
