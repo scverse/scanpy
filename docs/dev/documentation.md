@@ -91,16 +91,22 @@ or updates `adata` with normalized versions of the original
 `adata.X` and `adata.layers`, depending on `inplace`.
 ```
 
-You can use the standard numpydoc way of populating it, e.g. as in
+For tuple return values can use the standard numpydoc way of populating it, e.g. as in
 {func}`~scanpy.pp.calculate_qc_metrics`.
+Do not add types there, only specify them in the function signature:
 
-```rst
-Returns
--------
-one_identifier
-    Description.
-second_identifier
-    Description 2.
+```python
+def myfunc(...) -> tuple[int, str]:
+    """
+    ...
+    Returns
+    -------
+    one_identifier
+        Description.
+    second_identifier
+        Description 2.
+    """
+    ...
 ```
 
 Many functions also just modify parts of the passed AnnData object, like e.g. {func}`~scanpy.tl.dpt`.
