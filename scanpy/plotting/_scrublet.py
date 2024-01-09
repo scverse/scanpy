@@ -91,7 +91,9 @@ def scrublet_score_distribution(
 
     fig, axs = plt.subplots(n_batches, 2, figsize=figsize)
 
-    for idx, (batch_key, sub_obs) in enumerate(adata.obs.groupby(batches)):
+    for idx, (batch_key, sub_obs) in enumerate(
+        adata.obs.groupby(batches, observed=True)
+    ):
         obs_ax: Axes
         sim_ax: Axes
         # We'll need multiple rows if Scrublet was run in multiple batches

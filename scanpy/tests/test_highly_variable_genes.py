@@ -59,8 +59,7 @@ def test_highly_variable_genes_basic():
     assert np.all(no_batch_hvg == adata.var.highly_variable)
     assert np.all(adata.var.highly_variable_intersection == adata.var.highly_variable)
 
-    adata.obs["batch"] = "a"
-    adata.obs.batch.loc[::2] = "b"
+    adata.obs["batch"] = np.tile(["a", "b"], adata.shape[0] // 2)
     sc.pp.highly_variable_genes(adata, batch_key="batch")
     assert adata.var["highly_variable"].any()
 
@@ -467,16 +466,23 @@ def test_highly_variable_genes_batches():
         adata_2, flavor="cell_ranger", n_top_genes=200, inplace=False
     )
 
-    assert np.isclose(
-        adata.var["dispersions_norm"][100],
-        0.5 * hvg1["dispersions_norm"][0] + 0.5 * hvg2["dispersions_norm"][100],
+    np.testing.assert_allclose(
+        adata.var["dispersions_norm"].iat[100],
+        0.5 * hvg1["dispersions_norm"].iat[0] + 0.5 * hvg2["dispersions_norm"].iat[100],
+        rtol=1.0e-7,
+        atol=1.0e-7,
     )
-    assert np.isclose(
-        adata.var["dispersions_norm"][101],
-        0.5 * hvg1["dispersions_norm"][1] + 0.5 * hvg2["dispersions_norm"][101],
+    np.testing.assert_allclose(
+        adata.var["dispersions_norm"].iat[101],
+        0.5 * hvg1["dispersions_norm"].iat[1] + 0.5 * hvg2["dispersions_norm"].iat[101],
+        rtol=1.0e-7,
+        atol=1.0e-7,
     )
-    assert np.isclose(
-        adata.var["dispersions_norm"][0], 0.5 * hvg2["dispersions_norm"][0]
+    np.testing.assert_allclose(
+        adata.var["dispersions_norm"].iat[0],
+        0.5 * hvg2["dispersions_norm"].iat[0],
+        rtol=1.0e-7,
+        atol=1.0e-7,
     )
 
     colnames = [

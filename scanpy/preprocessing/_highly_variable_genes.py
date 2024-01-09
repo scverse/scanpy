@@ -39,7 +39,7 @@ def _highly_variable_genes_seurat_v3(
     Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`) or
     updates `.var` with the following fields:
 
-    highly_variable : bool
+    highly_variable : :class:`bool`
         boolean indicator of highly-variable genes.
     **means**
         means per gene.
@@ -47,9 +47,9 @@ def _highly_variable_genes_seurat_v3(
         variance per gene.
     **variances_norm**
         normalized variance per gene, averaged in the case of multiple batches.
-    highly_variable_rank : float
+    highly_variable_rank : :class:`float`
         Rank of the gene according to normalized variance, median rank in the case of multiple batches.
-    highly_variable_nbatches : int
+    highly_variable_nbatches : :class:`int`
         If batch_key is given, this denotes in how many batches genes are detected as HVG.
     """
 
@@ -226,7 +226,7 @@ def _highly_variable_genes_single_batch(
     df["dispersions"] = dispersion
     if flavor == "seurat":
         df["mean_bin"] = pd.cut(df["means"], bins=n_bins)
-        disp_grouped = df.groupby("mean_bin")["dispersions"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
         # retrieve those genes that have nan std, these are the ones where
@@ -258,7 +258,7 @@ def _highly_variable_genes_single_batch(
             df["means"],
             np.r_[-np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf],
         )
-        disp_grouped = df.groupby("mean_bin")["dispersions"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_median_bin = disp_grouped.median()
         # the next line raises the warning: "Mean of empty slice"
         with warnings.catch_warnings():
@@ -508,15 +508,18 @@ def highly_variable_genes(
                 flavor=flavor,
             )
 
-            # Add 0 values for genes that were filtered out
-            missing_hvg = pd.DataFrame(
-                np.zeros((np.sum(~filt), len(hvg.columns))),
-                columns=hvg.columns,
-            )
-            missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
-            missing_hvg["gene"] = gene_list[~filt]
             hvg["gene"] = adata_subset.var_names.values
-            hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
+            if (n_removed := np.sum(~filt)) > 0:
+                # Add 0 values for genes that were filtered out
+                missing_hvg = pd.DataFrame(
+                    np.zeros((n_removed, len(hvg.columns))),
+                    columns=hvg.columns,
+                )
+                missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(
+                    bool
+                )
+                missing_hvg["gene"] = gene_list[~filt]
+                hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
 
             # Order as before filtering
             idxs = np.concatenate((np.where(filt)[0], np.where(~filt)[0]))
@@ -526,12 +529,12 @@ def highly_variable_genes(
 
         df = pd.concat(df, axis=0)
         df["highly_variable"] = df["highly_variable"].astype(int)
-        df = df.groupby("gene").agg(
+        df = df.groupby("gene", observed=True).agg(
             dict(
-                means=np.nanmean,
-                dispersions=np.nanmean,
-                dispersions_norm=np.nanmean,
-                highly_variable=np.nansum,
+                means="mean",
+                dispersions="mean",
+                dispersions_norm="mean",
+                highly_variable="sum",
             )
         )
         df.rename(

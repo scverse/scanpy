@@ -698,7 +698,7 @@ def setup_axes(
 def scatter_base(
     Y: np.ndarray,
     *,
-    colors="blue",
+    colors: str | Sequence[ColorLike | np.ndarray] = "blue",
     sort_order=True,
     alpha=None,
     highlights=(),
