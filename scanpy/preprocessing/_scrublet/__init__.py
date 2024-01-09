@@ -150,24 +150,23 @@ def scrublet(
 
     Returns
     -------
-    adata : anndata.AnnData
-        if ``copy=True`` it returns or else adds fields to ``adata``. Those fields:
+    if ``copy=True`` it returns or else adds fields to ``adata``. Those fields:
 
-        ``.obs['doublet_score']``
-            Doublet scores for each observed transcriptome
+    ``.obs['doublet_score']``
+        Doublet scores for each observed transcriptome
 
-        ``.obs['predicted_doublet']``
-            Boolean indicating predicted doublet status
+    ``.obs['predicted_doublet']``
+        Boolean indicating predicted doublet status
 
-        ``.uns['scrublet']['doublet_scores_sim']``
-            Doublet scores for each simulated doublet transcriptome
+    ``.uns['scrublet']['doublet_scores_sim']``
+        Doublet scores for each simulated doublet transcriptome
 
-        ``.uns['scrublet']['doublet_parents']``
-            Pairs of ``.obs_names`` used to generate each simulated doublet
-            transcriptome
+    ``.uns['scrublet']['doublet_parents']``
+        Pairs of ``.obs_names`` used to generate each simulated doublet
+        transcriptome
 
-        ``.uns['scrublet']['parameters']``
-            Dictionary of Scrublet parameters
+    ``.uns['scrublet']['parameters']``
+        Dictionary of Scrublet parameters
 
     See also
     --------
@@ -374,23 +373,22 @@ def _scrublet_call_doublets(
 
     Returns
     -------
-    adata : anndata.AnnData
-        if ``copy=True`` it returns or else adds fields to ``adata``:
+    if ``copy=True`` it returns or else adds fields to ``adata``:
 
-        ``.obs['doublet_score']``
-            Doublet scores for each observed transcriptome
+    ``.obs['doublet_score']``
+        Doublet scores for each observed transcriptome
 
-        ``.obs['predicted_doublets']``
-            Boolean indicating predicted doublet status
+    ``.obs['predicted_doublets']``
+        Boolean indicating predicted doublet status
 
-        ``.uns['scrublet']['doublet_scores_sim']``
-            Doublet scores for each simulated doublet transcriptome
+    ``.uns['scrublet']['doublet_scores_sim']``
+        Doublet scores for each simulated doublet transcriptome
 
-        ``.uns['scrublet']['doublet_parents']``
-            Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
+    ``.uns['scrublet']['doublet_parents']``
+        Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
-        ``.uns['scrublet']['parameters']``
-            Dictionary of Scrublet parameters
+    ``.uns['scrublet']['parameters']``
+        Dictionary of Scrublet parameters
     """
 
     # Estimate n_neighbors if not provided, and create scrublet object.
