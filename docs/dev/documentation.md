@@ -93,14 +93,13 @@ or updates `adata` with normalized versions of the original
 
 You can use the standard numpydoc way of populating it, e.g. as in
 {func}`~scanpy.pp.calculate_qc_metrics`.
-If you use a plain type name here, a link will be created.
 
 ```rst
 Returns
 -------
-one_identifier : some_module.some_type
+one_identifier
     Description.
-second_identifier : another.module.and_type
+second_identifier
     Description 2.
 ```
 

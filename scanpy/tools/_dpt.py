@@ -234,13 +234,13 @@ class DPT(Neighbors):
 
         Writes
         ------
-        segs : np.ndarray
+        segs : :class:`~numpy.ndarray`
             Array of dimension (number of segments) × (number of data
             points). Each row stores a mask array that defines a segment.
-        segs_tips : np.ndarray
+        segs_tips : :class:`~numpy.ndarray`
             Array of dimension (number of segments) × 2. Each row stores the
             indices of the two tip points of each segment.
-        segs_names : np.ndarray
+        segs_names : :class:`~numpy.ndarray`
             Array of dimension (number of data points). Stores an integer label
             for each segment.
         """
@@ -255,9 +255,9 @@ class DPT(Neighbors):
 
         Writes Attributes
         -----------------
-        segs : np.ndarray
+        segs : :class:`~numpy.ndarray`
             List of integer index arrays.
-        segs_tips : np.ndarray
+        segs_tips : :class:`~numpy.ndarray`
             List of indices of the tips of segments.
         """
         logg.debug(
@@ -501,10 +501,10 @@ class DPT(Neighbors):
 
         Writes
         ------
-        indices : np.ndarray
+        indices : :class:`~numpy.ndarray`
             Index array of shape n, which stores an ordering of the data points
             with respect to increasing segment index and increasing pseudotime.
-        changepoints : np.ndarray
+        changepoints : :class:`~numpy.ndarray`
             Index array of shape len(ssegs)-1, which stores the indices of
             points where the segment index changes, with respect to the ordering
             of indices.
@@ -1016,7 +1016,7 @@ class DPT(Neighbors):
             ibranch = imax + 1
         return idcs[:ibranch]
 
-    def kendall_tau_split(self, a, b) -> int:
+    def kendall_tau_split(self, a: np.ndarray, b: np.ndarray) -> int:
         """Return splitting index that maximizes correlation in the sequences.
 
         Compute difference in Kendall tau for all splitted sequences.
@@ -1030,7 +1030,8 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        a, b : np.ndarray
+        a
+        b
             One dimensional sequences.
 
         Returns
