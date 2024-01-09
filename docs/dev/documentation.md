@@ -91,9 +91,9 @@ or updates `adata` with normalized versions of the original
 `adata.X` and `adata.layers`, depending on `inplace`.
 ```
 
-For tuple return values can use the standard numpydoc way of populating it, e.g. as in
-{func}`~scanpy.pp.calculate_qc_metrics`.
-Do not add types there, only specify them in the function signature:
+For tuple return values, you can use the standard numpydoc way of populating it,
+e.g. as in {func}`~scanpy.pp.calculate_qc_metrics`.
+Do not add types in the docstring, but specify them in the function signature:
 
 ```python
 def myfunc(...) -> tuple[int, str]:
