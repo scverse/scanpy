@@ -751,14 +751,14 @@ class Neighbors:
         -------
         Writes the following attributes.
 
-        eigen_values : numpy.ndarray
+        eigen_values : :class:`~numpy.ndarray`
             Eigenvalues of transition matrix.
-        eigen_basis : numpy.ndarray
-             Matrix of eigenvectors (stored in columns).  `.eigen_basis` is
-             projection of data matrix on right eigenvectors, that is, the
-             projection on the diffusion components.  these are simply the
-             components of the right eigenvectors and can directly be used for
-             plotting.
+        eigen_basis : :class:`~numpy.ndarray`
+            Matrix of eigenvectors (stored in columns).  `.eigen_basis` is
+            projection of data matrix on right eigenvectors, that is, the
+            projection on the diffusion components.  these are simply the
+            components of the right eigenvectors and can directly be used for
+            plotting.
         """
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
@@ -850,7 +850,7 @@ class Neighbors:
         self.pseudotime = self.distances_dpt[self.iroot].copy()
         self.pseudotime /= np.max(self.pseudotime[self.pseudotime < np.inf])
 
-    def _set_iroot_via_xroot(self, xroot):
+    def _set_iroot_via_xroot(self, xroot: np.ndarray):
         """Determine the index of the root cell.
 
         Given an expression vector, find the observation index that is closest
@@ -858,7 +858,7 @@ class Neighbors:
 
         Parameters
         ----------
-        xroot : np.ndarray
+        xroot
             Vector that marks the root cell, the vector storing the initial
             condition, only relevant for computing pseudotime.
         """
