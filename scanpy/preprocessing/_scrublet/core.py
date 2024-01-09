@@ -5,7 +5,7 @@ from dataclasses import InitVar, dataclass, field
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
-from anndata import AnnData
+from anndata import AnnData, concat
 from scipy import sparse
 
 from ... import logging as logg
@@ -329,22 +329,22 @@ class Scrublet:
         stdev_doub_rate: float = 0.03,
         get_neighbor_parents: bool = False,
     ) -> None:
-        manifold = np.vstack((self.manifold_obs_, self.manifold_sim_))
-        doub_labels = np.concatenate(
-            (
-                np.zeros(self.manifold_obs_.shape[0], dtype=np.int64),
-                np.ones(self.manifold_sim_.shape[0], dtype=np.int64),
-            )
+        manifold = concat(
+            dict(obs=AnnData(self.manifold_obs_), sim=AnnData(self.manifold_sim_)),
+            label="doub_labels",
         )
 
-        n_obs: int = (doub_labels == 0).sum()
-        n_sim: int = (doub_labels == 1).sum()
+        n_obs: int = (manifold.obs["doub_labels"] == "obs").sum()
+        n_sim: int = (manifold.obs["doub_labels"] == "sim").sum()
 
         # Adjust k (number of nearest neighbors) based on the ratio of simulated to observed cells
         k_adj = int(round(k * (1 + n_sim / float(n_obs))))
 
+        _, uniq, rev = np.unique(
+            cast(np.ndarray, manifold.X), axis=0, return_index=True, return_inverse=True
+        )
         # Find k_adj nearest neighbors
-        knn = Neighbors(AnnData(manifold))
+        knn = Neighbors(manifold[uniq])
         knn.compute_neighbors(
             k_adj,
             metric=distance_metric,
@@ -353,11 +353,14 @@ class Scrublet:
             method=None,
             random_state=self._random_state,
         )
-        neighbors, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
+        neigh_uniq, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
+        neighbors = np.c_[np.arange(len(rev))[:, None], neigh_uniq[rev, 1:]]
 
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
-        doub_neigh_mask: NDArray[np.bool_] = doub_labels[neighbors] == 1
-        n_sim_neigh: NDArray[np.int64] = doub_neigh_mask.sum(1)
+        doub_neigh_mask: NDArray[np.bool_] = (
+            manifold.obs["doub_labels"].to_numpy()[neighbors] == 1
+        )
+        n_sim_neigh: NDArray[np.int64] = doub_neigh_mask.sum(axis=1)
 
         rho = exp_doub_rate
         r = n_sim / float(n_obs)
@@ -379,10 +382,10 @@ class Scrublet:
             * np.sqrt((se_q / q * (1 - rho)) ** 2 + (se_rho / rho * (1 - q)) ** 2)
         )
 
-        self.doublet_scores_obs_ = Ld[doub_labels == 0]
-        self.doublet_scores_sim_ = Ld[doub_labels == 1]
-        self.doublet_errors_obs_ = se_Ld[doub_labels == 0]
-        self.doublet_errors_sim_ = se_Ld[doub_labels == 1]
+        self.doublet_scores_obs_ = Ld[manifold.obs["doub_labels"] == "obs"]
+        self.doublet_scores_sim_ = Ld[manifold.obs["doub_labels"] == "sim"]
+        self.doublet_errors_obs_ = se_Ld[manifold.obs["doub_labels"] == "obs"]
+        self.doublet_errors_sim_ = se_Ld[manifold.obs["doub_labels"] == "sim"]
 
         # get parents of doublet neighbors, if requested
         neighbor_parents = None
