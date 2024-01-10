@@ -413,7 +413,7 @@ def paga_expression_entropies(adata: AnnData) -> list[float]:
 
     Parameters
     ----------
-    adata : AnnData
+    adata
         Annotated data matrix.
 
     Returns

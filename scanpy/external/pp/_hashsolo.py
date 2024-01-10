@@ -31,45 +31,50 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from anndata import AnnData
+    from numpy.typing import ArrayLike, NDArray
 
 
-def _calculate_log_likelihoods(data, number_of_noise_barcodes):
+def _calculate_log_likelihoods(
+    data: np.ndarray, number_of_noise_barcodes: int
+) -> tuple[NDArray[np.float64], NDArray[np.float64], dict[int, str]]:
     """Calculate log likelihoods for each hypothesis, negative, singlet, doublet
 
     Parameters
     ----------
-    data : np.ndarray
+    data
         cells by hashing counts matrix
-    number_of_noise_barcodes : int,
+    number_of_noise_barcodes
         number of barcodes to used to calculated noise distribution
 
     Returns
     -------
-    log_likelihoods_for_each_hypothesis : np.ndarray
+    log_likelihoods_for_each_hypothesis
         a 2d np.array log likelihood of each hypothesis
     all_indices
     counter_to_barcode_combo
     """
 
-    def gaussian_updates(data, mu_o, std_o):
+    def gaussian_updates(
+        data: np.ndarray, mu_o: float, std_o: float
+    ) -> tuple[float, float]:
         """Update parameters of your gaussian
         https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
 
         Parameters
         ----------
-        data : np.array
+        data
             1-d array of counts
-        mu_o : float,
+        mu_o
             global mean for hashing count distribution
-        std_o : float,
+        std_o
             global std for hashing count distribution
 
         Returns
         -------
-        float
-            mean of gaussian
-        float
-            std of gaussian
+        mean
+            of gaussian
+        std
+            of gaussian
         """
         lam_o = 1 / (std_o**2)
         n = len(data)
@@ -138,7 +143,7 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
         noise_params_dict[x] = noise_param
         signal_params_dict[x] = signal_param
 
-    counter_to_barcode_combo = {}
+    counter_to_barcode_combo: dict[int, str] = {}
     counter = 0
 
     # for each combination of noise and signal barcode calculate probiltiy of in silico and real cell hypotheses
@@ -218,15 +223,17 @@ def _calculate_log_likelihoods(data, number_of_noise_barcodes):
     )
 
 
-def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
+def _calculate_bayes_rule(
+    data: np.ndarray, priors: ArrayLike, number_of_noise_barcodes: int
+) -> dict[str, np.ndarray]:
     """
     Calculate bayes rule from log likelihoods
 
     Parameters
     ----------
-    data : np.array
+    data
         Anndata object filled only with hashing counts
-    priors : list,
+    priors
         a list of your prior for each hypothesis
         first element is your prior for the negative hypothesis
         second element is your prior for the singlet hypothesis
@@ -234,15 +241,19 @@ def _calculate_bayes_rule(data, priors, number_of_noise_barcodes):
         We use [0.01, 0.8, 0.19] by default because we assume the barcodes
         in your cell hashing matrix are those cells which have passed QC
         in the transcriptome space, e.g. UMI counts, pct mito reads, etc.
-    number_of_noise_barcodes : int
+    number_of_noise_barcodes
         number of barcodes to used to calculated noise distribution
 
     Returns
     -------
-    bayes_dict_results : dict
-        "most_likely_hypothesis" key is a 1d np.array of the most likely hypothesis
-        "probs_hypotheses" key is a 2d np.array probability of each hypothesis
-        "log_likelihoods_for_each_hypothesis" key is a 2d np.array log likelihood of each hypothesis
+    A dict of bayes key results with the following entries:
+
+    `"most_likely_hypothesis"`
+        A 1d np.array of the most likely hypothesis
+    `"probs_hypotheses"`
+        A 2d np.array probability of each hypothesis
+    `"log_likelihoods_for_each_hypothesis"`
+        A 2d np.array log likelihood of each hypothesis
     """
     priors = np.array(priors)
     log_likelihoods_for_each_hypothesis, _, _ = _calculate_log_likelihoods(
@@ -308,24 +319,23 @@ def hashsolo(
 
     Returns
     -------
-    adata : anndata.AnnData
-        A copy of the input `adata` if `inplace=False`, otherwise the input
-        `adata`. The following fields are added:
+    A copy of the input `adata` if `inplace=False`, otherwise the input
+    `adata`. The following fields are added:
 
-        `.obs["most_likely_hypothesis"]`
-            Index of the most likely hypothesis, where `0` corresponds to negative,
-            `1` to singlet, and `2` to doublet.
-        `.obs["cluster_feature"]`
-            The cluster assignments used for demultiplexing.
-        `.obs["negative_hypothesis_probability"]`
-            Probability of the negative hypothesis.
-        `.obs["singlet_hypothesis_probability"]`
-            Probability of the singlet hypothesis.
-        `.obs["doublet_hypothesis_probability"]`
-            Probability of the doublet hypothesis.
-        `.obs["Classification"]`:
-            Classification of the cell, one of the barcodes in `cell_hashing_columns`,
-            `"Negative"`, or `"Doublet"`.
+    `.obs["most_likely_hypothesis"]`
+        Index of the most likely hypothesis, where `0` corresponds to negative,
+        `1` to singlet, and `2` to doublet.
+    `.obs["cluster_feature"]`
+        The cluster assignments used for demultiplexing.
+    `.obs["negative_hypothesis_probability"]`
+        Probability of the negative hypothesis.
+    `.obs["singlet_hypothesis_probability"]`
+        Probability of the singlet hypothesis.
+    `.obs["doublet_hypothesis_probability"]`
+        Probability of the doublet hypothesis.
+    `.obs["Classification"]`:
+        Classification of the cell, one of the barcodes in `cell_hashing_columns`,
+        `"Negative"`, or `"Doublet"`.
 
     Examples
     -------

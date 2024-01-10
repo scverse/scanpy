@@ -39,7 +39,7 @@ def _highly_variable_genes_seurat_v3(
     Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`) or
     updates `.var` with the following fields:
 
-    highly_variable : bool
+    highly_variable : :class:`bool`
         boolean indicator of highly-variable genes.
     **means**
         means per gene.
@@ -47,9 +47,9 @@ def _highly_variable_genes_seurat_v3(
         variance per gene.
     **variances_norm**
         normalized variance per gene, averaged in the case of multiple batches.
-    highly_variable_rank : float
+    highly_variable_rank : :class:`float`
         Rank of the gene according to normalized variance, median rank in the case of multiple batches.
-    highly_variable_nbatches : int
+    highly_variable_nbatches : :class:`int`
         If batch_key is given, this denotes in how many batches genes are detected as HVG.
     """
 
