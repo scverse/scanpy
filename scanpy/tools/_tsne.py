@@ -116,7 +116,7 @@ def tsne(
         learning_rate=learning_rate,
         n_jobs=n_jobs,
         metric=metric,
-        n_components=n_components
+        n_components=n_components,
     )
     if metric != "euclidean" and (
         version.parse(sklearn.__version__) < version.parse("1.3.0rc1")
