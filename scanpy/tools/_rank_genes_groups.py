@@ -11,6 +11,7 @@ from scipy.sparse import issparse, vstack
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import check_nonnegative_integers
 from ..get import _check_mask
 from ..preprocessing._simple import _get_mean_var
@@ -294,7 +295,7 @@ class _RankGenes:
 
                 # Calculate rank sums for each chunk for the current mask
                 for ranks, left, right in _ranks(self.X, mask, mask_rest):
-                    scores[left:right] = np.sum(ranks.iloc[0:n_active, :])
+                    scores[left:right] = ranks.iloc[0:n_active, :].sum(axis=0)
                     if tie_correct:
                         T[left:right] = _tiecorrect(ranks)
 
@@ -322,7 +323,7 @@ class _RankGenes:
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
                 for imask, mask in enumerate(self.groups_masks):
-                    scores[imask, left:right] = np.sum(ranks.iloc[mask, :])
+                    scores[imask, left:right] = ranks.iloc[mask, :].sum(axis=0)
                     if tie_correct:
                         T[imask, left:right] = _tiecorrect(ranks)
 
@@ -449,10 +450,25 @@ class _RankGenes:
             self.stats.index = self.var_names
 
 
-# TODO: Make arguments after groupby keyword only
+@old_positionals(
+    "mask",
+    "use_raw",
+    "groups",
+    "reference",
+    "n_genes",
+    "rankby_abs",
+    "pts",
+    "key_added",
+    "copy",
+    "method",
+    "corr_method",
+    "tie_correct",
+    "layer",
+)
 def rank_genes_groups(
     adata: AnnData,
     groupby: str,
+    *,
     mask: NDArray[np.bool_] | str | None = None,
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
@@ -712,16 +728,27 @@ def _calc_frac(X):
     return n_nonzero / X.shape[0]
 
 
+@old_positionals(
+    "key",
+    "groupby",
+    "use_raw",
+    "key_added",
+    "min_in_group_fraction",
+    "min_fold_change",
+    "max_out_group_fraction",
+    "compare_abs",
+)
 def filter_rank_genes_groups(
     adata: AnnData,
-    key=None,
-    groupby=None,
-    use_raw=None,
-    key_added="rank_genes_groups_filtered",
-    min_in_group_fraction=0.25,
-    min_fold_change=1,
-    max_out_group_fraction=0.5,
-    compare_abs=False,
+    *,
+    key: str | None = None,
+    groupby: str | None = None,
+    use_raw: bool | None = None,
+    key_added: str = "rank_genes_groups_filtered",
+    min_in_group_fraction: float = 0.25,
+    min_fold_change: int | float = 1,
+    max_out_group_fraction: float = 0.5,
+    compare_abs: bool = False,
 ) -> None:
     """\
     Filters out genes based on log fold change and fraction of genes expressing the

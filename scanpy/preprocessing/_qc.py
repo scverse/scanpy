@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def _choose_mtx_rep(adata, use_raw=False, layer=None):
+def _choose_mtx_rep(adata, use_raw: bool = False, layer: str | None = None):
     is_layer = layer is not None
     if use_raw and is_layer:
         raise ValueError(
@@ -56,7 +56,7 @@ def describe_obs(
     percent_top: Collection[int] | None = (50, 100, 200, 500),
     layer: str | None = None,
     use_raw: bool = False,
-    log1p: str | None = True,
+    log1p: bool | None = True,
     inplace: bool = False,
     X=None,
     parallel=None,
@@ -155,9 +155,9 @@ def describe_var(
     var_type: str = "genes",
     layer: str | None = None,
     use_raw: bool = False,
-    inplace=False,
-    log1p=True,
-    X=None,
+    inplace: bool = False,
+    log1p: bool = True,
+    X: spmatrix | np.ndarray | None = None,
 ) -> pd.DataFrame | None:
     """\
     Describe variables of anndata.
@@ -331,7 +331,7 @@ def calculate_qc_metrics(
         return obs_metrics, var_metrics
 
 
-def top_proportions(mtx: np.array | spmatrix, n: int):
+def top_proportions(mtx: np.ndarray | spmatrix, n: int):
     """\
     Calculates cumulative proportions of top expressed genes
 
@@ -383,7 +383,7 @@ def top_proportions_sparse_csr(data, indptr, n):
 
 
 def top_segment_proportions(
-    mtx: np.array | spmatrix, ns: Collection[int]
+    mtx: np.ndarray | spmatrix, ns: Collection[int]
 ) -> np.ndarray:
     """
     Calculates total percentage of counts in top ns genes.
@@ -409,7 +409,7 @@ def top_segment_proportions(
 
 
 def top_segment_proportions_dense(
-    mtx: np.array | spmatrix, ns: Collection[int]
+    mtx: np.ndarray | spmatrix, ns: Collection[int]
 ) -> np.ndarray:
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)

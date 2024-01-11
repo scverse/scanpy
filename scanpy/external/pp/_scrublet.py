@@ -7,13 +7,35 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
+from ..._compat import old_positionals
 from ...get import _get_obs_rep
 
 
+@old_positionals(
+    "adata_sim",
+    "batch_key",
+    "sim_doublet_ratio",
+    "expected_doublet_rate",
+    "stdev_doublet_rate",
+    "synthetic_doublet_umi_subsampling",
+    "knn_dist_metric",
+    "normalize_variance",
+    "log_transform",
+    "mean_center",
+    "n_prin_comps",
+    "use_approx_neighbors",
+    "get_doublet_neighbor_parents",
+    "n_neighbors",
+    "threshold",
+    "verbose",
+    "copy",
+    "random_state",
+)
 def scrublet(
     adata: AnnData,
+    *,
     adata_sim: AnnData | None = None,
-    batch_key: str = None,
+    batch_key: str | None = None,
     sim_doublet_ratio: float = 2.0,
     expected_doublet_rate: float = 0.05,
     stdev_doublet_rate: float = 0.02,
@@ -125,24 +147,23 @@ def scrublet(
 
     Returns
     -------
-    adata : anndata.AnnData
-        if ``copy=True`` it returns or else adds fields to ``adata``. Those fields:
+    if ``copy=True`` it returns or else adds fields to ``adata``. Those fields:
 
-        ``.obs['doublet_score']``
-            Doublet scores for each observed transcriptome
+    ``.obs['doublet_score']``
+        Doublet scores for each observed transcriptome
 
-        ``.obs['predicted_doublet']``
-            Boolean indicating predicted doublet status
+    ``.obs['predicted_doublet']``
+        Boolean indicating predicted doublet status
 
-        ``.uns['scrublet']['doublet_scores_sim']``
-            Doublet scores for each simulated doublet transcriptome
+    ``.uns['scrublet']['doublet_scores_sim']``
+        Doublet scores for each simulated doublet transcriptome
 
-        ``.uns['scrublet']['doublet_parents']``
-            Pairs of ``.obs_names`` used to generate each simulated doublet
-            transcriptome
+    ``.uns['scrublet']['doublet_parents']``
+        Pairs of ``.obs_names`` used to generate each simulated doublet
+        transcriptome
 
-        ``.uns['scrublet']['parameters']``
-            Dictionary of Scrublet parameters
+    ``.uns['scrublet']['parameters']``
+        Dictionary of Scrublet parameters
 
     See also
     --------
@@ -194,6 +215,7 @@ def scrublet(
                 layer="raw",
                 sim_doublet_ratio=sim_doublet_ratio,
                 synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
+                random_seed=random_state,
             )
 
             if log_transform:
@@ -277,6 +299,7 @@ def scrublet(
 
 
 def _scrublet_call_doublets(
+    *,
     adata_obs: AnnData,
     adata_sim: AnnData,
     n_neighbors: int | None = None,
@@ -363,23 +386,22 @@ def _scrublet_call_doublets(
 
     Returns
     -------
-    adata : anndata.AnnData
-        if ``copy=True`` it returns or else adds fields to ``adata``:
+    if ``copy=True`` it returns or else adds fields to ``adata``:
 
-        ``.obs['doublet_score']``
-            Doublet scores for each observed transcriptome
+    ``.obs['doublet_score']``
+        Doublet scores for each observed transcriptome
 
-        ``.obs['predicted_doublets']``
-            Boolean indicating predicted doublet status
+    ``.obs['predicted_doublets']``
+        Boolean indicating predicted doublet status
 
-        ``.uns['scrublet']['doublet_scores_sim']``
-            Doublet scores for each simulated doublet transcriptome
+    ``.uns['scrublet']['doublet_scores_sim']``
+        Doublet scores for each simulated doublet transcriptome
 
-        ``.uns['scrublet']['doublet_parents']``
-            Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
+    ``.uns['scrublet']['doublet_parents']``
+        Pairs of ``.obs_names`` used to generate each simulated doublet transcriptome
 
-        ``.uns['scrublet']['parameters']``
-            Dictionary of Scrublet parameters
+    ``.uns['scrublet']['parameters']``
+        Dictionary of Scrublet parameters
     """
     try:
         import scrublet as sl
@@ -495,9 +517,13 @@ def _scrublet_call_doublets(
     return adata_obs
 
 
+@old_positionals(
+    "layer", "sim_doublet_ratio", "synthetic_doublet_umi_subsampling", "random_seed"
+)
 def scrublet_simulate_doublets(
     adata: AnnData,
-    layer=None,
+    *,
+    layer: str | None = None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
     random_seed: int = 0,
@@ -550,7 +576,7 @@ def scrublet_simulate_doublets(
         )
 
     X = _get_obs_rep(adata, layer=layer)
-    scrub = sl.Scrublet(X)
+    scrub = sl.Scrublet(X, random_state=random_seed)
 
     scrub.simulate_doublets(
         sim_doublet_ratio=sim_doublet_ratio,

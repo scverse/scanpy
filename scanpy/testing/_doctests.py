@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from types import FunctionType
-from typing import TYPE_CHECKING, TypeVar
+from collections.abc import Callable
+from typing import TypeVar
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-F = TypeVar("F", bound=FunctionType)
+F = TypeVar("F", bound=Callable)
 
 
 def doctest_needs(mod: str) -> Callable[[F], F]:

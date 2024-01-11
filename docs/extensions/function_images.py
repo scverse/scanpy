@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from sphinx.ext.autodoc import Options
 
 
-def insert_function_images(
+def insert_function_images(  # noqa: PLR0917
     app: Sphinx, what: str, name: str, obj: Any, options: Options, lines: list[str]
 ):
     path = app.config.api_dir / f"{name}.png"

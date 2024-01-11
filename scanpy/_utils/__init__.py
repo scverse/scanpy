@@ -45,7 +45,7 @@ class Empty(Enum):
 _empty = Empty.token
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-AnyRandom = Union[None, int, random.RandomState]  # maybe in the future random.Generator
+AnyRandom = Union[int, random.RandomState, None]  # maybe in the future random.Generator
 
 EPS = 1e-15
 
@@ -96,40 +96,54 @@ def getdoc(c_or_f: Callable | type) -> str | None:
     )
 
 
-def deprecated_arg_names(arg_mapping: Mapping[str, str]):
-    """
-    Decorator which marks a functions keyword arguments as deprecated. It will
-    result in a warning being emitted when the deprecated keyword argument is
-    used, and the function being called with the new argument.
-
-    Parameters
-    ----------
-    arg_mapping
-        Mapping from deprecated argument name to current argument name.
-    """
-
+def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     def decorator(func):
         @wraps(func)
-        def func_wrapper(*args, **kwargs):
-            warnings.simplefilter("always", DeprecationWarning)  # turn off filter
-            for old, new in arg_mapping.items():
-                if old in kwargs:
-                    warnings.warn(
-                        f"Keyword argument '{old}' has been "
-                        f"deprecated in favour of '{new}'. "
-                        f"'{old}' will be removed in a future version.",
-                        category=DeprecationWarning,
-                        stacklevel=2,
+        def wrapper(*args, **kwargs):
+            if old_name in kwargs:
+                f_name = func.__name__
+                pos_str = (
+                    (
+                        f" at first position. Call it as `{f_name}(val, ...)` "
+                        f"instead of `{f_name}({old_name}=val, ...)`"
                     )
-                    val = kwargs.pop(old)
-                    kwargs[new] = val
-            # reset filter
-            warnings.simplefilter("default", DeprecationWarning)
+                    if pos_0
+                    else ""
+                )
+                msg = (
+                    f"In function `{f_name}`, argument `{old_name}` "
+                    f"was renamed to `{new_name}`{pos_str}."
+                )
+                warnings.warn(msg, FutureWarning, stacklevel=3)
+                if pos_0:
+                    args = (kwargs.pop(old_name), *args)
+                else:
+                    kwargs[new_name] = kwargs.pop(old_name)
             return func(*args, **kwargs)
 
-        return func_wrapper
+        return wrapper
 
     return decorator
+
+
+def _import_name(name: str) -> Any:
+    from importlib import import_module
+
+    parts = name.split(".")
+    obj = import_module(parts[0])
+    for i, name in enumerate(parts[1:]):
+        try:
+            obj = import_module(f"{obj.__name__}.{name}")
+        except ModuleNotFoundError:
+            break
+    else:
+        i = len(parts)
+    for name in parts[i + 1 :]:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError:
+            raise RuntimeError(f"{parts[:i]}, {parts[i + 1:]}, {obj} {name}")
+    return obj
 
 
 def _one_of_ours(obj, root: str):
@@ -146,19 +160,19 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
     if encountered is None:
         encountered = WeakSet()
     for obj in vars(mod).values():
-        if not _one_of_ours(obj, root):
+        if not _one_of_ours(obj, root) or obj in encountered:
             continue
+        encountered.add(obj)
         if callable(obj) and not isinstance(obj, MethodType):
             yield obj
             if isinstance(obj, type):
                 for m in vars(obj).values():
                     if callable(m) and _one_of_ours(m, root):
                         yield m
-        elif isinstance(obj, ModuleType) and obj not in encountered:
+        elif isinstance(obj, ModuleType):
             if obj.__name__.startswith("scanpy.tests"):
                 # Python’s import mechanism seems to add this to `scanpy`’s attributes
                 continue
-            encountered.add(obj)
             yield from descend_classes_and_funcs(obj, root, encountered)
 
 
@@ -264,6 +278,7 @@ def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
     reference: str,
+    *,
     normalization: Literal["prediction", "reference"] = "prediction",
     threshold: float = 0.01,
     max_n_names: int | None = 2,
@@ -595,7 +610,7 @@ def select_groups(
     return groups_order_subset, groups_masks
 
 
-def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
+def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
     """Get full tracebacks when warning is raised by setting
 
     warnings.showwarning = warn_with_traceback

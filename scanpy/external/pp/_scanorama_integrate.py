@@ -7,16 +7,21 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from ..._compat import old_positionals
 from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@old_positionals(
+    "basis", "adjusted_basis", "knn", "sigma", "approx", "alpha", "batch_size"
+)
 @doctest_needs("scanorama")
 def scanorama_integrate(
     adata: AnnData,
     key: str,
+    *,
     basis: str = "X_pca",
     adjusted_basis: str = "X_scanorama",
     knn: int = 20,
@@ -25,7 +30,7 @@ def scanorama_integrate(
     alpha: float = 0.10,
     batch_size: int = 5000,
     **kwargs,
-):
+) -> None:
     """\
     Use Scanorama [Hie19]_ to integrate different experiments.
 
@@ -111,7 +116,7 @@ def scanorama_integrate(
     batch_names = []
     name2idx = {}
     for idx in range(adata.X.shape[0]):
-        batch_name = adata.obs[key][idx]
+        batch_name = adata.obs[key].iat[idx]
         if batch_name != curr_batch:
             curr_batch = batch_name
             if batch_name in batch_names:

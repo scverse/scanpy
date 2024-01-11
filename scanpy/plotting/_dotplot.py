@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
 from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
@@ -111,11 +112,35 @@ class DotPlot(BasePlot):
     DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
 
+    @old_positionals(
+        "use_raw",
+        "log",
+        "num_categories",
+        "categories_order",
+        "title",
+        "figsize",
+        "gene_symbols",
+        "var_group_positions",
+        "var_group_labels",
+        "var_group_rotation",
+        "layer",
+        "expression_cutoff",
+        "mean_only_expressed",
+        "standard_scale",
+        "dot_color_df",
+        "dot_size_df",
+        "ax",
+        "vmin",
+        "vmax",
+        "vcenter",
+        "norm",
+    )
     def __init__(
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        *,
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -129,7 +154,7 @@ class DotPlot(BasePlot):
         layer: str | None = None,
         expression_cutoff: float = 0.0,
         mean_only_expressed: bool = False,
-        standard_scale: Literal["var", "group"] = None,
+        standard_scale: Literal["var", "group"] | None = None,
         dot_color_df: pd.DataFrame | None = None,
         dot_size_df: pd.DataFrame | None = None,
         ax: _AxesSubplot | None = None,
@@ -176,17 +201,21 @@ class DotPlot(BasePlot):
         # values in the group (given by `count()`)
         if dot_size_df is None:
             dot_size_df = (
-                obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+                obs_bool.groupby(level=0, observed=True).sum()
+                / obs_bool.groupby(level=0, observed=True).count()
             )
 
         if dot_color_df is None:
             # 2. compute mean expression value value
             if mean_only_expressed:
                 dot_color_df = (
-                    self.obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+                    self.obs_tidy.mask(~obs_bool)
+                    .groupby(level=0, observed=True)
+                    .mean()
+                    .fillna(0)
                 )
             else:
-                dot_color_df = self.obs_tidy.groupby(level=0).mean()
+                dot_color_df = self.obs_tidy.groupby(level=0, observed=True).mean()
 
             if standard_scale == "group":
                 dot_color_df = dot_color_df.sub(dot_color_df.min(1), axis=0)
@@ -251,8 +280,23 @@ class DotPlot(BasePlot):
         self.show_size_legend = True
         self.show_colorbar = True
 
+    @old_positionals(
+        "cmap",
+        "color_on",
+        "dot_max",
+        "dot_min",
+        "smallest_dot",
+        "largest_dot",
+        "dot_edge_color",
+        "dot_edge_lw",
+        "size_exponent",
+        "grid",
+        "x_padding",
+        "y_padding",
+    )
     def style(
         self,
+        *,
         cmap: str = DEFAULT_COLORMAP,
         color_on: Literal["dot", "square"] | None = DEFAULT_COLOR_ON,
         dot_max: float | None = DEFAULT_DOT_MAX,
@@ -367,8 +411,17 @@ class DotPlot(BasePlot):
 
         return self
 
+    @old_positionals(
+        "show",
+        "show_size_legend",
+        "show_colorbar",
+        "size_title",
+        "colorbar_title",
+        "width",
+    )
     def legend(
         self,
+        *,
         show: bool | None = True,
         show_size_legend: bool | None = True,
         show_colorbar: bool | None = True,
@@ -568,6 +621,7 @@ class DotPlot(BasePlot):
         dot_size,
         dot_color,
         dot_ax,
+        *,
         cmap: str = "Reds",
         color_on: str | None = "dot",
         y_label: str | None = None,
@@ -798,6 +852,22 @@ class DotPlot(BasePlot):
         return normalize, dot_min, dot_max
 
 
+@old_positionals(
+    "use_raw",
+    "log",
+    "num_categories",
+    "expression_cutoff",
+    "mean_only_expressed",
+    "cmap",
+    "dot_max",
+    "dot_min",
+    "standard_scale",
+    "smallest_dot",
+    "title",
+    "colorbar_title",
+    "size_title",
+    # No need to have backwards compat for > 16 positional parameters
+)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
@@ -808,6 +878,7 @@ def dotplot(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    *,
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,

@@ -11,6 +11,8 @@ import scipy
 from scipy.sparse import csr_matrix, issparse
 from sklearn.utils import check_random_state
 
+from .._compat import old_positionals
+
 if TYPE_CHECKING:
     from anndata import AnnData
     from igraph import Graph
@@ -276,6 +278,7 @@ class OnFlySymMatrix:
         self,
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
+        *,
         DC_start: int = 0,
         DC_end: int = -1,
         rows: MutableMapping[Any, np.ndarray] | None = None,
@@ -342,9 +345,11 @@ class Neighbors:
         Where to look in `.uns` and `.obsp` for neighbors data
     """
 
+    @old_positionals("n_dcs", "neighbors_key")
     def __init__(
         self,
         adata: AnnData,
+        *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
     ):
@@ -435,7 +440,7 @@ class Neighbors:
 
         Is conjugate to the symmetrized transition matrix via::
 
-            self.transitions = self.Z *  self.transitions_sym / self.Z
+            self.transitions = self.Z * self.transitions_sym / self.Z
 
         where ``self.Z`` is the diagonal matrix storing the normalization of the
         underlying kernel matrix.
@@ -456,7 +461,7 @@ class Neighbors:
 
         Is conjugate to the transition matrix via::
 
-            self.transitions_sym = self.Z /  self.transitions * self.Z
+            self.transitions_sym = self.Z / self.transitions * self.Z
 
         where ``self.Z`` is the diagonal matrix storing the normalization of the
         underlying kernel matrix.
@@ -746,14 +751,14 @@ class Neighbors:
         -------
         Writes the following attributes.
 
-        eigen_values : numpy.ndarray
+        eigen_values : :class:`~numpy.ndarray`
             Eigenvalues of transition matrix.
-        eigen_basis : numpy.ndarray
-             Matrix of eigenvectors (stored in columns).  `.eigen_basis` is
-             projection of data matrix on right eigenvectors, that is, the
-             projection on the diffusion components.  these are simply the
-             components of the right eigenvectors and can directly be used for
-             plotting.
+        eigen_basis : :class:`~numpy.ndarray`
+            Matrix of eigenvectors (stored in columns).  `.eigen_basis` is
+            projection of data matrix on right eigenvectors, that is, the
+            projection on the diffusion components.  these are simply the
+            components of the right eigenvectors and can directly be used for
+            plotting.
         """
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
@@ -845,7 +850,7 @@ class Neighbors:
         self.pseudotime = self.distances_dpt[self.iroot].copy()
         self.pseudotime /= np.max(self.pseudotime[self.pseudotime < np.inf])
 
-    def _set_iroot_via_xroot(self, xroot):
+    def _set_iroot_via_xroot(self, xroot: np.ndarray):
         """Determine the index of the root cell.
 
         Given an expression vector, find the observation index that is closest
@@ -853,7 +858,7 @@ class Neighbors:
 
         Parameters
         ----------
-        xroot : np.ndarray
+        xroot
             Vector that marks the root cell, the vector storing the initial
             condition, only relevant for computing pseudotime.
         """
