@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     "random_state",
     "use_fast_tsne",
     "n_jobs",
-    "copy"
+    "copy",
 )
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(
