@@ -134,7 +134,8 @@ intersphinx_mapping = dict(
 
 # -- Options for HTML output ----------------------------------------------
 
-html_theme = "sphinx_book_theme"
+# The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
+html_theme = "scanpydoc"
 html_theme_options = {
     "repository_url": repository_url,
     "use_repository_button": True,
