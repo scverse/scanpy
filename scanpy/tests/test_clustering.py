@@ -13,8 +13,12 @@ def adata_neighbors():
 
 
 @needs.leidenalg
-def test_leiden_basic(adata_neighbors):
-    sc.tl.leiden(adata_neighbors)
+@pytest.mark.parametrize("use_igraph,directed", [pytest.param(True, False), pytest.param(False, True), pytest.param(False, False)])
+@pytest.mark.parametrize("use_weights", [True, False])
+@pytest.mark.parametrize("resolution", [1, 2])
+@pytest.mark.parametrize("n_iterations", [-1, 3])
+def test_leiden_basic(adata_neighbors, use_igraph, directed, use_weights, resolution, n_iterations):
+    sc.tl.leiden(adata_neighbors, use_igraph=use_igraph, use_weights=use_weights, resolution=resolution, n_iterations=n_iterations, directed=directed)
 
 
 @pytest.mark.parametrize(

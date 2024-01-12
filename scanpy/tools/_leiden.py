@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import random
 import numpy as np
 import pandas as pd
 from natsort import natsorted
@@ -41,6 +42,7 @@ def leiden(
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
+    use_igraph: bool = False,
     **partition_kwargs,
 ) -> AnnData | None:
     """\
@@ -134,7 +136,9 @@ def leiden(
             adjacency=adjacency,
         )
     # convert it to igraph
-    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
+    if use_igraph and directed:
+        raise ValueError("Cannot use igraph and a directed graph")
+    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed if not use_igraph else False)
     # flip to the default partition type if not overriden by the user
     if partition_type is None:
         partition_type = leidenalg.RBConfigurationVertexPartition
@@ -145,11 +149,17 @@ def leiden(
     if use_weights:
         partition_kwargs["weights"] = np.array(g.es["weight"]).astype(np.float64)
     partition_kwargs["n_iterations"] = n_iterations
-    partition_kwargs["seed"] = random_state
+    if not use_igraph:
+        partition_kwargs["seed"] = random_state
+    else:
+        random.seed(random_state)
     if resolution is not None:
-        partition_kwargs["resolution_parameter"] = resolution
+        partition_kwargs[f"resolution{'_parameter' if not use_igraph else ''}"] = resolution
     # clustering proper
-    part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
+    if use_igraph:
+        part = g.community_leiden(objective_function="modularity", **partition_kwargs)
+    else:
+        part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:
