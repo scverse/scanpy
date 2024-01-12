@@ -141,7 +141,6 @@ html_theme_options = {
     "use_repository_button": True,
 }
 html_static_path = ["_static"]
-html_css_files = ["css/override.css"]
 html_show_sphinx = False
 html_logo = "_static/img/Scanpy_Logo_BrightFG.svg"
 html_title = "scanpy"
