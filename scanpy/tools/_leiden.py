@@ -43,7 +43,7 @@ def leiden(
     obsp: str | None = None,
     copy: bool = False,
     use_igraph: bool = False,
-    **partition_kwargs,
+    **clustering_args,
 ) -> AnnData | None:
     """\
     Cluster cells into subgroups [Traag18]_.
@@ -98,9 +98,9 @@ def leiden(
         `obsp` and `neighbors_key` at the same time.
     copy
         Whether to copy `adata` or modify it inplace.
-    **partition_kwargs
-        Any further arguments to pass to `~leidenalg.find_partition`
-        (which in turn passes arguments to the `partition_type`).
+    **clustering_args
+        Any further arguments to pass to `~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
+        or `community_detection` from `igraph`.
 
     Returns
     -------
@@ -120,7 +120,7 @@ def leiden(
         raise ImportError(
             "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
         )
-    partition_kwargs = dict(partition_kwargs)
+    clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
     adata = adata.copy() if copy else adata
@@ -137,7 +137,8 @@ def leiden(
         )
     # convert it to igraph
     if use_igraph and directed:
-        raise ValueError("Cannot use igraph and a directed graph")
+        logg.warning("Cannot use igraph and a directed graph.  Seting directed to False")
+        directed = False
     g = _utils.get_igraph_from_adjacency(adjacency, directed=directed if not use_igraph else False)
     # flip to the default partition type if not overriden by the user
     if partition_type is None:
@@ -147,19 +148,22 @@ def leiden(
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
     if use_weights:
-        partition_kwargs["weights"] = np.array(g.es["weight"]).astype(np.float64)
-    partition_kwargs["n_iterations"] = n_iterations
+        if use_igraph:
+            clustering_args["weights"] = 'weight'
+        else:
+            clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
+    clustering_args["n_iterations"] = n_iterations
     if not use_igraph:
-        partition_kwargs["seed"] = random_state
+        clustering_args["seed"] = random_state
     else:
         random.seed(random_state)
     if resolution is not None:
-        partition_kwargs[f"resolution{'_parameter' if not use_igraph else ''}"] = resolution
+        clustering_args[f"resolution{'_parameter' if not use_igraph else ''}"] = resolution
     # clustering proper
     if use_igraph:
-        part = g.community_leiden(objective_function="modularity", **partition_kwargs)
+        part = g.community_leiden(objective_function="modularity", **clustering_args)
     else:
-        part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
+        part = leidenalg.find_partition(g, partition_type, **clustering_args)
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:

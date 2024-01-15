@@ -5,7 +5,7 @@ import pytest
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
-
+from sklearn.metrics.cluster import normalized_mutual_info_score
 
 @pytest.fixture
 def adata_neighbors():
@@ -20,6 +20,12 @@ def adata_neighbors():
 def test_leiden_basic(adata_neighbors, use_igraph, directed, use_weights, resolution, n_iterations):
     sc.tl.leiden(adata_neighbors, use_igraph=use_igraph, use_weights=use_weights, resolution=resolution, n_iterations=n_iterations, directed=directed)
 
+
+@needs.leidenalg
+def test_leiden_equal_defaults(adata_neighbors):
+    leiden_alg_clustered = sc.tl.leiden(adata_neighbors, use_igraph=False, copy=True)
+    igraph_clustered = sc.tl.leiden(adata_neighbors, use_igraph=True, copy=True)
+    assert normalized_mutual_info_score(leiden_alg_clustered.obs['leiden'],igraph_clustered.obs['leiden']) > .9
 
 @pytest.mark.parametrize(
     "clustering,key",
