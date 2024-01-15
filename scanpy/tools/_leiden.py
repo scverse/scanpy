@@ -35,14 +35,14 @@ def leiden(
     random_state: _utils.AnyRandom = 0,
     key_added: str = "leiden",
     adjacency: sparse.spmatrix | None = None,
-    directed: bool = True,
+    directed: bool = False,
     use_weights: bool = True,
-    n_iterations: int = -1,
+    n_iterations: int = 2,
     partition_type: type[MutableVertexPartition] | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    use_igraph: bool = False,
+    use_igraph: bool = True,
     **clustering_args,
 ) -> AnnData | None:
     """\
@@ -137,9 +137,8 @@ def leiden(
         )
     # convert it to igraph
     if use_igraph and directed:
-        logg.warning("Cannot use igraph and a directed graph.  Seting directed to False")
-        directed = False
-    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed if not use_igraph else False)
+        raise ValueError("Cannot use igraph's leiden implementaiton with a directed graph.")
+    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
     if partition_type is None:
         partition_type = leidenalg.RBConfigurationVertexPartition
@@ -149,9 +148,7 @@ def leiden(
     # (in the case of a partition variant that doesn't take it on input)
     if use_weights:
         if use_igraph:
-            clustering_args["weights"] = 'weight'
-        else:
-            clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
+            clustering_args["weights"] = "weight" if use_igraph else np.array(g.es["weight"]).astype(np.float64)
     clustering_args["n_iterations"] = n_iterations
     if not use_igraph:
         clustering_args["seed"] = random_state
