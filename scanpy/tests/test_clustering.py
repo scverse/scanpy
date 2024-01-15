@@ -20,6 +20,9 @@ def adata_neighbors():
 def test_leiden_basic(adata_neighbors, use_igraph, directed, use_weights, resolution, n_iterations):
     sc.tl.leiden(adata_neighbors, use_igraph=use_igraph, use_weights=use_weights, resolution=resolution, n_iterations=n_iterations, directed=directed)
 
+def test_leiden_igraph_directed(adata_neighbors):
+    with pytest.raises(ValueError):
+        sc.tl.leiden(adata_neighbors, directed=True)
 
 @needs.leidenalg
 def test_leiden_equal_defaults(adata_neighbors):
