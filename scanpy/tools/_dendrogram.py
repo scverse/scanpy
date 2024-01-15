@@ -128,7 +128,6 @@ def dendrogram(
     if dim is None and axis is None:
         dim = "obs"
     axis, dim = _resolve_dim(axis=axis, dim=dim)
-    alt_axis, alt_dim = _resolve_dim(axis=1 - axis)
 
     if groupby is not None:
         if isinstance(groupby, str):
