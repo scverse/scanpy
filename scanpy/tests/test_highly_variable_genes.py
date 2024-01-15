@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+from scipy import sparse
 
 import scanpy as sc
 from scanpy.testing._helpers import _check_check_values_warnings
@@ -38,6 +39,7 @@ def test_highly_variable_genes_basic():
     highly_var_first_layer = adata.var["highly_variable"]
 
     adata = sc.datasets.blobs()
+    assert isinstance(adata.X, np.ndarray)
     new_layer = adata.X.copy()
     np.random.shuffle(new_layer)
     adata.layers["test_layer"] = new_layer
@@ -51,13 +53,15 @@ def test_highly_variable_genes_basic():
     assert (highly_var_first_layer != adata.var["highly_variable"]).any()
 
     sc.pp.highly_variable_genes(adata)
-    no_batch_hvg = adata.var.highly_variable.copy()
+    no_batch_hvg = adata.var["highly_variable"].copy()
     assert no_batch_hvg.any()
     adata.obs["batch"] = "batch"
     adata.obs["batch"] = adata.obs["batch"].astype("category")
     sc.pp.highly_variable_genes(adata, batch_key="batch")
-    assert np.all(no_batch_hvg == adata.var.highly_variable)
-    assert np.all(adata.var.highly_variable_intersection == adata.var.highly_variable)
+    assert np.all(no_batch_hvg == adata.var["highly_variable"])
+    assert np.all(
+        adata.var["highly_variable_intersection"] == adata.var["highly_variable"]
+    )
 
     adata.obs["batch"] = np.tile(["a", "b"], adata.shape[0] // 2)
     sc.pp.highly_variable_genes(adata, batch_key="batch")
@@ -72,6 +76,7 @@ def test_highly_variable_genes_basic():
         "highly_variable",
     ]
     hvg_df = sc.pp.highly_variable_genes(adata, batch_key="batch", inplace=False)
+    assert hvg_df is not None
     assert np.all(np.isin(colnames, hvg_df.columns))
 
 
@@ -83,6 +88,7 @@ def test_highly_variable_genes_keep_layer(base, flavor):
     sc.pp.filter_genes(adata, min_counts=1)
 
     sc.pp.log1p(adata, base=base)
+    assert isinstance(adata.X, sparse.csr_matrix)
     X_orig = adata.X.copy()
 
     if flavor == "seurat":
@@ -95,13 +101,13 @@ def test_highly_variable_genes_keep_layer(base, flavor):
     assert np.allclose(X_orig.A, adata.X.A)
 
 
-def _check_pearson_hvg_columns(output_df, n_top_genes):
+def _check_pearson_hvg_columns(output_df: pd.DataFrame, n_top_genes: int):
     assert pd.api.types.is_float_dtype(output_df["residual_variances"].dtype)
 
-    assert output_df["highly_variable"].values.dtype is np.dtype("bool")
+    assert output_df["highly_variable"].to_numpy().dtype is np.dtype("bool")
     assert np.sum(output_df["highly_variable"]) == n_top_genes
 
-    assert np.nanmax(output_df["highly_variable_rank"].values) <= n_top_genes - 1
+    assert np.nanmax(output_df["highly_variable_rank"].to_numpy()) <= n_top_genes - 1
 
 
 def test_highly_variable_genes_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
@@ -138,10 +144,12 @@ def test_highly_variable_genes_pearson_residuals_inputchecks(pbmc3k_parametrized
         )
 
 
-@pytest.mark.parametrize("subset", [True, False])
-@pytest.mark.parametrize("clip", [None, np.Inf, 30])
-@pytest.mark.parametrize("theta", [100, np.Inf])
-@pytest.mark.parametrize("n_top_genes", [100, 200])
+@pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
+@pytest.mark.parametrize(
+    "clip", [None, np.Inf, 30], ids=["noclip", "infclip", "30clip"]
+)
+@pytest.mark.parametrize("theta", [100, np.Inf], ids=["100theta", "inftheta"])
+@pytest.mark.parametrize("n_top_genes", [100, 200], ids=["100n", "200n"])
 def test_highly_variable_genes_pearson_residuals_general(
     pbmc3k_parametrized_small, subset, clip, theta, n_top_genes
 ):
@@ -150,10 +158,11 @@ def test_highly_variable_genes_pearson_residuals_general(
     del adata.var
 
     # compute reference output
-    residuals_reference = sc.experimental.pp.normalize_pearson_residuals(
+    residuals_res = sc.experimental.pp.normalize_pearson_residuals(
         adata, clip=clip, theta=theta, inplace=False
-    )["X"]
-    residual_variances_reference = np.var(residuals_reference, axis=0)
+    )
+    assert isinstance(residuals_res, dict)
+    residual_variances_reference = np.var(residuals_res["X"], axis=0)
 
     if subset:
         # lazyly sort by residual variance and take top N
@@ -171,6 +180,7 @@ def test_highly_variable_genes_pearson_residuals_general(
         clip=clip,
         theta=theta,
     )
+    assert output_df is not None
 
     sc.experimental.pp.highly_variable_genes(
         adata,
@@ -198,32 +208,32 @@ def test_highly_variable_genes_pearson_residuals_general(
     # check consistency with normalization method
     if subset:
         # sort values before comparing as reference is sorted as well for subset case
-        sort_output_idx = np.argsort(-output_df["residual_variances"].values)
+        sort_output_idx = np.argsort(-output_df["residual_variances"].to_numpy())
         assert np.allclose(
-            output_df["residual_variances"].values[sort_output_idx],
+            output_df["residual_variances"].to_numpy()[sort_output_idx],
             residual_variances_reference,
         )
     else:
         assert np.allclose(
-            output_df["residual_variances"].values, residual_variances_reference
+            output_df["residual_variances"].to_numpy(), residual_variances_reference
         )
 
     # check hvg flag
     hvg_idx = np.where(output_df["highly_variable"])[0]
     topn_idx = np.sort(
-        np.argsort(-output_df["residual_variances"].values)[:n_top_genes]
+        np.argsort(-output_df["residual_variances"].to_numpy())[:n_top_genes]
     )
     assert np.all(hvg_idx == topn_idx)
 
     # check ranks
-    assert np.nanmin(output_df["highly_variable_rank"].values) == 0
+    assert np.nanmin(output_df["highly_variable_rank"].to_numpy()) == 0
 
     # more general checks on ranks, hvg flag and residual variance
     _check_pearson_hvg_columns(output_df, n_top_genes)
 
 
-@pytest.mark.parametrize("subset", [True, False])
-@pytest.mark.parametrize("n_top_genes", [100, 200])
+@pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
+@pytest.mark.parametrize("n_top_genes", [100, 200], ids=["100n", "200n"])
 def test_highly_variable_genes_pearson_residuals_batch(
     pbmc3k_parametrized_small, subset, n_top_genes
 ):
@@ -240,6 +250,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
         subset=subset,
         inplace=False,
     )
+    assert output_df is not None
 
     sc.experimental.pp.highly_variable_genes(
         adata,
@@ -270,7 +281,9 @@ def test_highly_variable_genes_pearson_residuals_batch(
 
     # check intersection flag
     nbatches = len(np.unique(adata.obs["batch"]))
-    assert output_df["highly_variable_intersection"].values.dtype is np.dtype("bool")
+    assert output_df["highly_variable_intersection"].to_numpy().dtype is np.dtype(
+        "bool"
+    )
     assert np.sum(output_df["highly_variable_intersection"]) <= n_top_genes * nbatches
     assert np.all(output_df["highly_variable"][output_df.highly_variable_intersection])
 
@@ -278,9 +291,9 @@ def test_highly_variable_genes_pearson_residuals_batch(
     assert pd.api.types.is_float_dtype(output_df["highly_variable_rank"].dtype)
 
     # check nbatches
-    assert output_df["highly_variable_nbatches"].values.dtype is np.dtype("int")
-    assert np.min(output_df["highly_variable_nbatches"].values) >= 0
-    assert np.max(output_df["highly_variable_nbatches"].values) <= nbatches
+    assert output_df["highly_variable_nbatches"].to_numpy().dtype is np.dtype("int")
+    assert np.min(output_df["highly_variable_nbatches"].to_numpy()) >= 0
+    assert np.max(output_df["highly_variable_nbatches"].to_numpy()) <= nbatches
 
     # check subsetting
     if subset:
@@ -289,7 +302,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
         assert len(output_df) == n_genes
 
 
-def test_higly_variable_genes_compare_to_seurat():
+def test_highly_variable_genes_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=" ")
 
     pbmc = pbmc68k_reduced()
@@ -329,7 +342,7 @@ def test_higly_variable_genes_compare_to_seurat():
 
 
 @needs.skmisc
-def test_higly_variable_genes_compare_to_seurat_v3():
+def test_highly_variable_genes_compare_to_seurat_v3():
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=" ", dtype={"variances_norm": np.float64}
     )
@@ -371,6 +384,7 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     df = sc.pp.highly_variable_genes(
         pbmc, n_top_genes=4000, flavor="seurat_v3", batch_key="batch", inplace=False
     )
+    assert df is not None
     df.sort_values(
         ["highly_variable_nbatches", "highly_variable_rank"],
         ascending=[False, True],
@@ -383,12 +397,12 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     )
 
     # ranks might be slightly different due to many genes having same normalized var
-    seu = pd.Index(seurat_hvg_info_batch["x"].values)
+    seu = pd.Index(seurat_hvg_info_batch["x"].to_numpy())
     assert len(seu.intersection(df.index)) / 4000 > 0.95
 
 
 @needs.skmisc
-def test_higly_variable_genes_seurat_v3_warning():
+def test_highly_variable_genes_seurat_v3_warning():
     pbmc = pbmc3k()[:200].copy()
     sc.pp.log1p(pbmc)
     with pytest.warns(
@@ -462,9 +476,11 @@ def test_highly_variable_genes_batches():
     hvg1 = sc.pp.highly_variable_genes(
         adata_1, flavor="cell_ranger", n_top_genes=200, inplace=False
     )
+    assert hvg1 is not None
     hvg2 = sc.pp.highly_variable_genes(
         adata_2, flavor="cell_ranger", n_top_genes=200, inplace=False
     )
+    assert hvg2 is not None
 
     np.testing.assert_allclose(
         adata.var["dispersions_norm"].iat[100],
@@ -529,13 +545,9 @@ def test_cellranger_n_top_genes_warning():
 
 
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
-@pytest.mark.parametrize("subset", [True, False])
-@pytest.mark.parametrize("inplace", [True, False])
-def test_highly_variable_genes_subset_inplace_consistency(
-    flavor,
-    subset,
-    inplace,
-):
+@pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
+@pytest.mark.parametrize("inplace", [True, False], ids=["inplace", "copy"])
+def test_highly_variable_genes_subset_inplace_consistency(flavor, subset, inplace):
     adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
     adata.X = np.abs(adata.X).astype(int)
 
