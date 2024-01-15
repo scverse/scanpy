@@ -153,7 +153,9 @@ def dendrogram(
             if len(groupby) == 1:
                 categorical = adata.obs[groupby[0]]
             else:
-                categorical = adata.obs[groupby].apply("_".join, axis=1).astype("category")
+                categorical = (
+                    adata.obs[groupby].apply("_".join, axis=1).astype("category")
+                )
             categorical.name = "_".join(groupby)
 
             rep_df.set_index(categorical, inplace=True)
