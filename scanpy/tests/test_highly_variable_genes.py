@@ -59,34 +59,20 @@ def test_highly_variable_genes_supports_batch(array_type):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
 def test_highly_variable_genes_supports_layers(array_type):
-    gen = np.random.default_rng(0)
-
-    def ad1() -> AnnData:
-        adata = sc.datasets.blobs()
-        adata.X = array_type(adata.X)
-        adata.obs["batch"] = pd.array(
-            gen.binomial(4, 0.5, size=adata.n_obs), dtype="category"
-        )
-        sc.pp.highly_variable_genes(adata, batch_key="batch", n_top_genes=3)
-        assert "highly_variable_nbatches" in adata.var.columns
-        validate_array_type(adata.var["highly_variable_nbatches"], array_type)
-        validate_array_type(adata.var["highly_variable"], array_type)
-        assert adata.var["highly_variable"].sum() == 3
-        return adata
-
-    adata1 = ad1()
-
-    def ad2() -> AnnData:
+    def execute(layer: str | None) -> AnnData:
+        gen = np.random.default_rng(0)
         adata = sc.datasets.blobs()
         assert isinstance(adata.X, np.ndarray)
-        new_layer = adata.X.copy()
-        gen.shuffle(new_layer)
-        adata.layers["test_layer"] = array_type(new_layer)
-        del new_layer
-        adata.obs["batch"] = gen.binomial(4, 0.5, size=(adata.n_obs))
-        adata.obs["batch"] = adata.obs["batch"].astype("category")
+        if layer:
+            new_layer = adata.X.copy()
+            gen.shuffle(new_layer)
+            adata.layers[layer] = array_type(new_layer)
+            del new_layer, adata.X
+        adata.obs["batch"] = pd.array(
+            gen.binomial(4, 0.5, size=(adata.n_obs)), dtype="category"
+        )
         sc.pp.highly_variable_genes(
-            adata, batch_key="batch", n_top_genes=3, layer="test_layer"
+            adata, batch_key="batch", n_top_genes=3, layer=layer
         )
         assert "highly_variable_nbatches" in adata.var.columns
         validate_array_type(adata.var["highly_variable_nbatches"], array_type)
@@ -94,7 +80,7 @@ def test_highly_variable_genes_supports_layers(array_type):
         assert adata.var["highly_variable"].sum() == 3
         return adata
 
-    adata2 = ad2()
+    adata1, adata2 = map(execute, [None, "test_layer"])
     assert (adata1.var["highly_variable"] != adata2.var["highly_variable"]).any()
 
 
@@ -103,8 +89,7 @@ def test_highly_variable_genes_no_batch_matches_batch():
     sc.pp.highly_variable_genes(adata)
     no_batch_hvg = adata.var["highly_variable"].copy()
     assert no_batch_hvg.any()
-    adata.obs["batch"] = "batch"
-    adata.obs["batch"] = adata.obs["batch"].astype("category")
+    adata.obs["batch"] = pd.array(["batch"], dtype="category").repeat(len(adata))
     sc.pp.highly_variable_genes(adata, batch_key="batch")
     assert np.all(no_batch_hvg == adata.var["highly_variable"])
     assert np.all(
