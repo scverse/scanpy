@@ -137,13 +137,10 @@ def dendrogram(
             rep_df = pd.DataFrame(
                 _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
             )
-            categorical = adata.obs[groupby[0]]
-            if len(groupby) > 1:
-                for group in groupby[1:]:
-                    # create new category by merging the given groupby categories
-                    categorical = (
-                        categorical.astype(str) + "_" + adata.obs[group].astype(str)
-                    ).astype("category")
+            if len(groupby) == 1:
+                categorical = adata.obs[groupby[0]]
+            else:
+                categorical = adata.obs[groupby].apply("_".join, axis=1).astype("category")
             categorical.name = "_".join(groupby)
 
             rep_df.set_index(categorical, inplace=True)
