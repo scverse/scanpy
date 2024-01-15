@@ -1,29 +1,51 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import pytest
+from anndata import AnnData
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import DaskArray
 from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
+from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
 FILE_V3_BATCH = Path(__file__).parent / Path("_scripts/seurat_hvg_v3_batch.csv")
 
 
-def test_highly_variable_genes_runs():
+def validate_array_type(obj: object, at: Callable[[np.ndarray], object]) -> None:
+    if isinstance(at, type):
+        assert isinstance(obj, at)
+    elif at.__name__ == "asarray":
+        assert isinstance(obj, np.ndarray)
+    elif "dask" in at.__name__:
+        assert isinstance(obj, DaskArray)
+    else:
+        raise AssertionError(f"Unsupported array type {at}")
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+def test_highly_variable_genes_runs(array_type):
     adata = sc.datasets.blobs()
+    adata.X = array_type(adata.X)
     sc.pp.highly_variable_genes(adata)
 
 
-def test_highly_variable_genes_supports_batch():
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+def test_highly_variable_genes_supports_batch(array_type):
     adata = sc.datasets.blobs()
+    adata.X = array_type(adata.X)
     gen = np.random.default_rng(0)
     adata.obs["batch"] = pd.array(
         gen.binomial(3, 0.5, size=adata.n_obs), dtype="category"
@@ -31,32 +53,49 @@ def test_highly_variable_genes_supports_batch():
     sc.pp.highly_variable_genes(adata, batch_key="batch")
     assert "highly_variable_nbatches" in adata.var.columns
     assert "highly_variable_intersection" in adata.var.columns
+    validate_array_type(adata.var["highly_variable_nbatches"], array_type)
+    validate_array_type(adata.var["highly_variable_intersection"], array_type)
 
 
-def test_highly_variable_genes_supports_layers():
-    adata = sc.datasets.blobs()
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+def test_highly_variable_genes_supports_layers(array_type):
     gen = np.random.default_rng(0)
-    adata.obs["batch"] = pd.array(
-        gen.binomial(4, 0.5, size=adata.n_obs), dtype="category"
-    )
-    sc.pp.highly_variable_genes(adata, batch_key="batch", n_top_genes=3)
-    assert "highly_variable_nbatches" in adata.var.columns
-    assert adata.var["highly_variable"].sum() == 3
-    highly_var_first_layer = adata.var["highly_variable"]
 
-    adata = sc.datasets.blobs()
-    assert isinstance(adata.X, np.ndarray)
-    new_layer = adata.X.copy()
-    gen.shuffle(new_layer)
-    adata.layers["test_layer"] = new_layer
-    adata.obs["batch"] = gen.binomial(4, 0.5, size=(adata.n_obs))
-    adata.obs["batch"] = adata.obs["batch"].astype("category")
-    sc.pp.highly_variable_genes(
-        adata, batch_key="batch", n_top_genes=3, layer="test_layer"
-    )
-    assert "highly_variable_nbatches" in adata.var.columns
-    assert adata.var["highly_variable"].sum() == 3
-    assert (highly_var_first_layer != adata.var["highly_variable"]).any()
+    def ad1() -> AnnData:
+        adata = sc.datasets.blobs()
+        adata.X = array_type(adata.X)
+        adata.obs["batch"] = pd.array(
+            gen.binomial(4, 0.5, size=adata.n_obs), dtype="category"
+        )
+        sc.pp.highly_variable_genes(adata, batch_key="batch", n_top_genes=3)
+        assert "highly_variable_nbatches" in adata.var.columns
+        validate_array_type(adata.var["highly_variable_nbatches"], array_type)
+        validate_array_type(adata.var["highly_variable"], array_type)
+        assert adata.var["highly_variable"].sum() == 3
+        return adata
+
+    adata1 = ad1()
+
+    def ad2() -> AnnData:
+        adata = sc.datasets.blobs()
+        assert isinstance(adata.X, np.ndarray)
+        new_layer = adata.X.copy()
+        gen.shuffle(new_layer)
+        adata.layers["test_layer"] = array_type(new_layer)
+        del new_layer
+        adata.obs["batch"] = gen.binomial(4, 0.5, size=(adata.n_obs))
+        adata.obs["batch"] = adata.obs["batch"].astype("category")
+        sc.pp.highly_variable_genes(
+            adata, batch_key="batch", n_top_genes=3, layer="test_layer"
+        )
+        assert "highly_variable_nbatches" in adata.var.columns
+        validate_array_type(adata.var["highly_variable_nbatches"], array_type)
+        validate_array_type(adata.var["highly_variable"], array_type)
+        assert adata.var["highly_variable"].sum() == 3
+        return adata
+
+    adata2 = ad2()
+    assert (adata1.var["highly_variable"] != adata2.var["highly_variable"]).any()
 
 
 def test_highly_variable_genes_no_batch_matches_batch():
@@ -73,7 +112,7 @@ def test_highly_variable_genes_no_batch_matches_batch():
     )
 
 
-def test_highly_variable_genes_():
+def test_highly_variable_genes_no_inplace():
     adata = sc.datasets.blobs()
     adata.obs["batch"] = np.tile(["a", "b"], adata.shape[0] // 2)
     sc.pp.highly_variable_genes(adata, batch_key="batch")
@@ -473,8 +512,8 @@ def test_highly_variable_genes_batches():
     adata[:100, :100].X = np.zeros((100, 100))
 
     adata.obs["batch"] = ["0" if i < 100 else "1" for i in range(adata.n_obs)]
-    adata_1 = adata[adata.obs.batch.isin(["0"]), :]
-    adata_2 = adata[adata.obs.batch.isin(["1"]), :]
+    adata_1 = adata[adata.obs["batch"] == "0"].copy()
+    adata_2 = adata[adata.obs["batch"] == "1"].copy()
 
     sc.pp.highly_variable_genes(
         adata,
@@ -545,7 +584,7 @@ def test_seurat_v3_mean_var_output_with_batchkey():
 
 def test_cellranger_n_top_genes_warning():
     X = np.random.poisson(2, (100, 30))
-    adata = sc.AnnData(X)
+    adata = AnnData(X)
     sc.pp.normalize_total(adata)
     sc.pp.log1p(adata)
 
