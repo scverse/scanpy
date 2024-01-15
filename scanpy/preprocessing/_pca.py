@@ -38,7 +38,7 @@ def pca(
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
-) -> AnnData | np.ndarray | spmatrix:
+) -> AnnData | np.ndarray | spmatrix | None:
     """\
     Principal component analysis [Pedregosa11]_.
 

@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-def _pearson_residuals(X, theta, clip, check_values, copy=False):
+def _pearson_residuals(X, theta, clip, check_values, copy: bool = False):
     X = X.copy() if copy else X
 
     # check theta
@@ -90,7 +90,7 @@ def normalize_pearson_residuals(
     layer: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> dict[str, np.ndarray] | None:
+) -> AnnData | dict[str, np.ndarray] | None:
     """\
     Applies analytic Pearson residual normalization, based on [Lause21]_.
 

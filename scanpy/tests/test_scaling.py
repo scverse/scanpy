@@ -67,7 +67,7 @@ X_centered_for_mask = [
         ),
     ],
 )
-def test_scale(typ, dtype, mask, X, X_centered, X_scaled):
+def test_scale(*, typ, dtype, mask, X, X_centered, X_scaled):
     # test AnnData arguments
     # test scaling with default zero_center == True
     adata0 = AnnData(typ(X).astype(dtype))
@@ -99,7 +99,7 @@ def test_scale(typ, dtype, mask, X, X_centered, X_scaled):
 def test_mask_string():
     with pytest.raises(ValueError):
         sc.pp.scale(np.array(X_original), mask="mask")
-    adata = AnnData(np.array(X_for_mask), dtype="float32")
+    adata = AnnData(np.array(X_for_mask, dtype="float32"))
     adata.obs["some cells"] = np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool)
     sc.pp.scale(adata, mask="some cells")
     assert np.array_equal(adata.X, X_centered_for_mask)

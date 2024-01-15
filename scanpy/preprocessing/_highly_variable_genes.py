@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from typing import Literal
+from inspect import signature
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -9,6 +10,7 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ._distributed import materialize_as_ndarray
@@ -18,6 +20,7 @@ from ._utils import _get_mean_var
 
 def _highly_variable_genes_seurat_v3(
     adata: AnnData,
+    *,
     layer: str | None = None,
     n_top_genes: int = 2000,
     batch_key: str | None = None,
@@ -36,7 +39,7 @@ def _highly_variable_genes_seurat_v3(
     Depending on `inplace` returns calculated metrics (:class:`~pd.DataFrame`) or
     updates `.var` with the following fields:
 
-    highly_variable : bool
+    highly_variable : :class:`bool`
         boolean indicator of highly-variable genes.
     **means**
         means per gene.
@@ -44,9 +47,9 @@ def _highly_variable_genes_seurat_v3(
         variance per gene.
     **variances_norm**
         normalized variance per gene, averaged in the case of multiple batches.
-    highly_variable_rank : float
+    highly_variable_rank : :class:`float`
         Rank of the gene according to normalized variance, median rank in the case of multiple batches.
-    highly_variable_nbatches : int
+    highly_variable_nbatches : :class:`int`
         If batch_key is given, this denotes in how many batches genes are detected as HVG.
     """
 
@@ -146,7 +149,7 @@ def _highly_variable_genes_seurat_v3(
     df["highly_variable"] = False
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
 
-    if inplace or subset:
+    if inplace:
         adata.uns["hvg"] = {"flavor": "seurat_v3"}
         logg.hint(
             "added\n"
@@ -172,11 +175,15 @@ def _highly_variable_genes_seurat_v3(
     else:
         if batch_key is None:
             df = df.drop(["highly_variable_nbatches"], axis=1)
+        if subset:
+            df = df.iloc[df.highly_variable.values, :]
+
         return df
 
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
+    *,
     layer: str | None = None,
     min_disp: float | None = 0.5,
     max_disp: float | None = np.inf,
@@ -219,7 +226,7 @@ def _highly_variable_genes_single_batch(
     df["dispersions"] = dispersion
     if flavor == "seurat":
         df["mean_bin"] = pd.cut(df["means"], bins=n_bins)
-        disp_grouped = df.groupby("mean_bin")["dispersions"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
         # retrieve those genes that have nan std, these are the ones where
@@ -251,7 +258,7 @@ def _highly_variable_genes_single_batch(
             df["means"],
             np.r_[-np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf],
         )
-        disp_grouped = df.groupby("mean_bin")["dispersions"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_median_bin = disp_grouped.median()
         # the next line raises the warning: "Mean of empty slice"
         with warnings.catch_warnings():
@@ -298,15 +305,31 @@ def _highly_variable_genes_single_batch(
     return df
 
 
+@old_positionals(
+    "layer",
+    "n_top_genes",
+    "min_disp",
+    "max_disp",
+    "min_mean",
+    "max_mean",
+    "span",
+    "n_bins",
+    "flavor",
+    "subset",
+    "inplace",
+    "batch_key",
+    "check_values",
+)
 def highly_variable_genes(
     adata: AnnData,
+    *,
     layer: str | None = None,
     n_top_genes: int | None = None,
     min_disp: float | None = 0.5,
     max_disp: float | None = np.inf,
     min_mean: float | None = 0.0125,
     max_mean: float | None = 3,
-    span: float | None = 0.3,
+    span: float = 0.3,
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger", "seurat_v3"] = "seurat",
     subset: bool = False,
@@ -433,6 +456,9 @@ def highly_variable_genes(
         )
 
     if flavor == "seurat_v3":
+        if n_top_genes is None:
+            sig = signature(_highly_variable_genes_seurat_v3)
+            n_top_genes = cast(int, sig.parameters["n_top_genes"].default)
         return _highly_variable_genes_seurat_v3(
             adata,
             layer=layer,
@@ -482,15 +508,18 @@ def highly_variable_genes(
                 flavor=flavor,
             )
 
-            # Add 0 values for genes that were filtered out
-            missing_hvg = pd.DataFrame(
-                np.zeros((np.sum(~filt), len(hvg.columns))),
-                columns=hvg.columns,
-            )
-            missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
-            missing_hvg["gene"] = gene_list[~filt]
             hvg["gene"] = adata_subset.var_names.values
-            hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
+            if (n_removed := np.sum(~filt)) > 0:
+                # Add 0 values for genes that were filtered out
+                missing_hvg = pd.DataFrame(
+                    np.zeros((n_removed, len(hvg.columns))),
+                    columns=hvg.columns,
+                )
+                missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(
+                    bool
+                )
+                missing_hvg["gene"] = gene_list[~filt]
+                hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
 
             # Order as before filtering
             idxs = np.concatenate((np.where(filt)[0], np.where(~filt)[0]))
@@ -500,12 +529,12 @@ def highly_variable_genes(
 
         df = pd.concat(df, axis=0)
         df["highly_variable"] = df["highly_variable"].astype(int)
-        df = df.groupby("gene").agg(
+        df = df.groupby("gene", observed=True).agg(
             dict(
-                means=np.nanmean,
-                dispersions=np.nanmean,
-                dispersions_norm=np.nanmean,
-                highly_variable=np.nansum,
+                means="mean",
+                dispersions="mean",
+                dispersions_norm="mean",
+                highly_variable="sum",
             )
         )
         df.rename(
@@ -544,7 +573,7 @@ def highly_variable_genes(
 
     logg.info("    finished", time=start)
 
-    if inplace or subset:
+    if inplace:
         adata.uns["hvg"] = {"flavor": flavor}
         logg.hint(
             "added\n"
@@ -559,6 +588,7 @@ def highly_variable_genes(
         adata.var["dispersions_norm"] = df["dispersions_norm"].values.astype(
             "float32", copy=False
         )
+
         if batch_key is not None:
             adata.var["highly_variable_nbatches"] = df[
                 "highly_variable_nbatches"
@@ -568,5 +598,9 @@ def highly_variable_genes(
             ].values
         if subset:
             adata._inplace_subset_var(df["highly_variable"].values)
+
     else:
+        if subset:
+            df = df.iloc[df.highly_variable.values, :]
+
         return df

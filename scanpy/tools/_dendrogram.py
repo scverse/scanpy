@@ -11,6 +11,7 @@ from anndata._core.merge import _resolve_dim
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import _doc_params
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
@@ -21,10 +22,22 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@old_positionals(
+    "n_pcs",
+    "use_rep",
+    "var_names",
+    "use_raw",
+    "cor_method",
+    "linkage_method",
+    "optimal_ordering",
+    "key_added",
+    "inplace",
+)
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def dendrogram(
     adata: AnnData,
     groupby: str | Sequence[str] | None = None,
+    *,
     dim: Literal["obs", "var"] | None = None,
     axis: Literal[0, 1] | None = None,
     n_pcs: int | None = None,
@@ -151,7 +164,7 @@ def dendrogram(
             categories, rep_df = _prepare_dataframe(adata, var_names, groupby, use_raw)
 
         # aggregate values within categories using 'mean'
-        rep_df = rep_df.groupby(level=0).mean()
+        rep_df = rep_df.groupby(level=0, observed=True).mean()
     else:
         if var_names is None:
             rep_df = pd.DataFrame(

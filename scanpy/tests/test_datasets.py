@@ -64,7 +64,8 @@ def test_ebi_expression_atlas(tmp_dataset_dir):
 
 
 def test_krumsiek11(tmp_dataset_dir):
-    adata = sc.datasets.krumsiek11()
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        adata = sc.datasets.krumsiek11()
     assert adata.shape == (640, 11)
     assert all(
         np.unique(adata.obs["cell_type"])
@@ -80,7 +81,8 @@ def test_blobs():
 
 
 def test_toggleswitch():
-    sc.datasets.toggleswitch()
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        sc.datasets.toggleswitch()
 
 
 def test_pbmc68k_reduced():

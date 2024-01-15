@@ -215,7 +215,7 @@ def test_emptycat():
 
 def test_log1p_save_restore(tmp_path):
     """tests the sequence log1p→save→load→rank_genes_groups"""
-    from anndata import read
+    from anndata import read_h5ad
 
     pbmc = pbmc68k_reduced()
     sc.pp.log1p(pbmc)
@@ -223,7 +223,7 @@ def test_log1p_save_restore(tmp_path):
     path = tmp_path / "test.h5ad"
     pbmc.write(path)
 
-    pbmc = read(path)
+    pbmc = read_h5ad(path)
 
     sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
 

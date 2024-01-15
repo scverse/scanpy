@@ -59,8 +59,7 @@ def test_highly_variable_genes_basic():
     assert np.all(no_batch_hvg == adata.var.highly_variable)
     assert np.all(adata.var.highly_variable_intersection == adata.var.highly_variable)
 
-    adata.obs["batch"] = "a"
-    adata.obs.batch.loc[::2] = "b"
+    adata.obs["batch"] = np.tile(["a", "b"], adata.shape[0] // 2)
     sc.pp.highly_variable_genes(adata, batch_key="batch")
     assert adata.var["highly_variable"].any()
 
@@ -387,12 +386,16 @@ def test_higly_variable_genes_compare_to_seurat_v3():
     seu = pd.Index(seurat_hvg_info_batch["x"].values)
     assert len(seu.intersection(df.index)) / 4000 > 0.95
 
+
+@needs.skmisc
+def test_higly_variable_genes_seurat_v3_warning():
+    pbmc = pbmc3k()[:200].copy()
     sc.pp.log1p(pbmc)
     with pytest.warns(
         UserWarning,
         match="`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
     ):
-        sc.pp.highly_variable_genes(pbmc, n_top_genes=1000, flavor="seurat_v3")
+        sc.pp.highly_variable_genes(pbmc, flavor="seurat_v3")
 
 
 def test_filter_genes_dispersion_compare_to_seurat():
@@ -463,16 +466,23 @@ def test_highly_variable_genes_batches():
         adata_2, flavor="cell_ranger", n_top_genes=200, inplace=False
     )
 
-    assert np.isclose(
-        adata.var["dispersions_norm"][100],
-        0.5 * hvg1["dispersions_norm"][0] + 0.5 * hvg2["dispersions_norm"][100],
+    np.testing.assert_allclose(
+        adata.var["dispersions_norm"].iat[100],
+        0.5 * hvg1["dispersions_norm"].iat[0] + 0.5 * hvg2["dispersions_norm"].iat[100],
+        rtol=1.0e-7,
+        atol=1.0e-7,
     )
-    assert np.isclose(
-        adata.var["dispersions_norm"][101],
-        0.5 * hvg1["dispersions_norm"][1] + 0.5 * hvg2["dispersions_norm"][101],
+    np.testing.assert_allclose(
+        adata.var["dispersions_norm"].iat[101],
+        0.5 * hvg1["dispersions_norm"].iat[1] + 0.5 * hvg2["dispersions_norm"].iat[101],
+        rtol=1.0e-7,
+        atol=1.0e-7,
     )
-    assert np.isclose(
-        adata.var["dispersions_norm"][0], 0.5 * hvg2["dispersions_norm"][0]
+    np.testing.assert_allclose(
+        adata.var["dispersions_norm"].iat[0],
+        0.5 * hvg2["dispersions_norm"].iat[0],
+        rtol=1.0e-7,
+        atol=1.0e-7,
     )
 
     colnames = [
@@ -516,3 +526,38 @@ def test_cellranger_n_top_genes_warning():
         match="`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
     ):
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
+
+
+@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
+@pytest.mark.parametrize("subset", [True, False])
+@pytest.mark.parametrize("inplace", [True, False])
+def test_highly_variable_genes_subset_inplace_consistency(
+    flavor,
+    subset,
+    inplace,
+):
+    adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
+    adata.X = np.abs(adata.X).astype(int)
+
+    if flavor == "seurat" or flavor == "cell_ranger":
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+
+    elif flavor == "seurat_v3":
+        pass
+
+    else:
+        raise ValueError(f"Unknown flavor {flavor}")
+
+    n_genes = adata.shape[1]
+
+    output_df = sc.pp.highly_variable_genes(
+        adata,
+        flavor=flavor,
+        n_top_genes=15,
+        subset=subset,
+        inplace=inplace,
+    )
+
+    assert (output_df is None) == inplace
+    assert len(adata.var if inplace else output_df) == (15 if subset else n_genes)

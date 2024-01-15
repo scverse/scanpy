@@ -8,7 +8,7 @@ from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
 from .. import logging as logg
-from .._compat import DaskArray
+from .._compat import DaskArray, old_positionals
 from .._utils import view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def _normalize_data(X, counts, after=None, copy=False):
+def _normalize_data(X, counts, after=None, copy: bool = False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
@@ -39,18 +39,30 @@ def _normalize_data(X, counts, after=None, copy=False):
     return X
 
 
+@old_positionals(
+    "target_sum",
+    "exclude_highly_expressed",
+    "max_fraction",
+    "key_added",
+    "layer",
+    "layers",
+    "layer_norm",
+    "inplace",
+    "copy",
+)
 def normalize_total(
     adata: AnnData,
+    *,
     target_sum: float | None = None,
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
     key_added: str | None = None,
     layer: str | None = None,
-    layers: Literal["all"] | Iterable[str] = None,
+    layers: Literal["all"] | Iterable[str] | None = None,
     layer_norm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> dict[str, np.ndarray] | None:
+) -> AnnData | dict[str, np.ndarray] | None:
     """\
     Normalize counts per cell.
 

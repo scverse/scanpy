@@ -2,23 +2,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
+from ..._compat import old_positionals
+from ...testing._doctests import doctest_needs
+
 if TYPE_CHECKING:
     from anndata import AnnData
     from sklearn.metrics import DistanceMetric
 
-from ...testing._doctests import doctest_needs
 
-
+@old_positionals("batch_key", "use_rep", "approx", "use_annoy", "metric", "copy")
 @doctest_needs("bbknn")
 def bbknn(
     adata: AnnData,
+    *,
     batch_key: str = "batch",
     use_rep: str = "X_pca",
     approx: bool = True,
     use_annoy: bool = True,
     metric: str | Callable | DistanceMetric = "euclidean",
     copy: bool = False,
-    *,
     neighbors_within_batch: int = 3,
     n_pcs: int = 50,
     trim: int | None = None,
@@ -29,7 +31,7 @@ def bbknn(
     set_op_mix_ratio: float = 1.0,
     local_connectivity: int = 1,
     **kwargs,
-) -> AnnData:
+) -> AnnData | None:
     """\
     Batch balanced kNN [Polanski19]_.
 
@@ -70,18 +72,17 @@ def bbknn(
         PyNNDescent supports metrics listed in `pynndescent.distances.named_distances`
         and custom functions, including compiled Numba code.
 
-        >>> pynndescent.distances.named_distances.keys()
+        >>> import pynndescent
+        >>> pynndescent.distances.named_distances.keys()  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         dict_keys(['euclidean', 'l2', 'sqeuclidean', 'manhattan', 'taxicab', 'l1', 'chebyshev', 'linfinity',
-        'linfty', 'linf', 'minkowski', 'seuclidean', 'standardised_euclidean', 'wminkowski', 'weighted_minkowski',
-        'mahalanobis', 'canberra', 'cosine', 'dot', 'correlation', 'hellinger', 'haversine', 'braycurtis', 'spearmanr',
-        'kantorovich', 'wasserstein', 'tsss', 'true_angular', 'hamming', 'jaccard', 'dice', 'matching', 'kulsinski',
-        'rogerstanimoto', 'russellrao', 'sokalsneath', 'sokalmichener', 'yule'])
+        'linfty', 'linf', 'minkowski', 'seuclidean', 'standardised_euclidean', 'wminkowski', ...])
 
         KDTree supports members of :class:`sklearn.neighbors.KDTree`’s ``valid_metrics`` list, or parameterised
         :class:`~sklearn.metrics.DistanceMetric` objects:
 
+        >>> import sklearn.neighbors
         >>> sklearn.neighbors.KDTree.valid_metrics
-        ['p', 'chebyshev', 'cityblock', 'minkowski', 'infinity', 'l2', 'euclidean', 'manhattan', 'l1']
+        ['euclidean', 'l2', 'minkowski', 'p', 'manhattan', 'cityblock', 'l1', 'chebyshev', 'infinity']
 
         .. note:: check the relevant documentation for up-to-date lists.
     copy

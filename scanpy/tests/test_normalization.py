@@ -193,6 +193,7 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
     ],
 )
 def test_normalize_pearson_residuals_pca(
+    *,
     pbmc3k_parametrized_small: Callable[[], AnnData],
     n_hvgs: int,
     n_comps: int,

@@ -10,7 +10,7 @@ from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import pkg_version
+from .._compat import old_positionals, pkg_version
 from .._settings import settings
 from .._utils import NeighborsView
 from ..neighbors import FlatTree, RPForestDict
@@ -22,10 +22,19 @@ if TYPE_CHECKING:
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
+@old_positionals(
+    "obs",
+    "embedding_method",
+    "labeling_method",
+    "neighbors_key",
+    "neighbors_key",
+    "inplace",
+)
 @doctest_skip("illustrative short example but not runnable")
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
+    *,
     obs: str | Iterable[str] | None = None,
     embedding_method: str | Iterable[str] = ("umap", "pca"),
     labeling_method: str = "knn",
@@ -392,7 +401,7 @@ class Ingest:
         else:
             self._pca_basis = adata.varm["PCs"]
 
-    def __init__(self, adata, neighbors_key=None):
+    def __init__(self, adata: AnnData, neighbors_key: str | None = None):
         # assume rep is X if all initializations fail to identify it
         self._rep = adata.X
         self._use_rep = "X"
@@ -534,10 +543,9 @@ class Ingest:
             )
 
     def _knn_classify(self, labels):
-        cat_array = self._adata_ref.obs[labels].astype(
-            "category"
-        )  # ensure it's categorical
-        values = [cat_array[inds].mode()[0] for inds in self._indices]
+        # ensure it's categorical
+        cat_array: pd.Series = self._adata_ref.obs[labels].astype("category")
+        values = [cat_array.iloc[inds].mode()[0] for inds in self._indices]
         return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):

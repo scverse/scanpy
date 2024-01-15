@@ -1,10 +1,27 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    import numpy as np
+    import pandas as pd
+    from anndata import AnnData
+    from numpy.typing import NDArray
+    from scipy.sparse import spmatrix
+
 
 def rename_groups(
-    adata, key_added, restrict_key, restrict_categories, restrict_indices, groups
-):
-    key_added = restrict_key + "_R" if key_added is None else key_added
+    adata: AnnData,
+    restrict_key: str,
+    *,
+    key_added: str | None,
+    restrict_categories: Iterable[str],
+    restrict_indices: NDArray[np.bool_],
+    groups: NDArray,
+) -> pd.Series[str]:
+    key_added = f"{restrict_key}_R" if key_added is None else key_added
     all_groups = adata.obs[restrict_key].astype("U")
     prefix = "-".join(restrict_categories) + ","
     new_groups = [prefix + g for g in groups.astype("U")]
@@ -12,7 +29,13 @@ def rename_groups(
     return all_groups
 
 
-def restrict_adjacency(adata, restrict_key, restrict_categories, adjacency):
+def restrict_adjacency(
+    adata: AnnData,
+    restrict_key: str,
+    *,
+    restrict_categories: Iterable[str],
+    adjacency: spmatrix,
+) -> tuple[spmatrix, NDArray[np.bool_]]:
     if not isinstance(restrict_categories[0], str):
         raise ValueError(
             "You need to use strings to label categories, " "e.g. '1' instead of 1."

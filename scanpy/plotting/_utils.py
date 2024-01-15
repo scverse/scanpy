@@ -13,18 +13,21 @@ from matplotlib import axes, gridspec, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import PatchCollection
-from matplotlib.colors import is_color_like
+from matplotlib.colors import Colormap, is_color_like
 from matplotlib.figure import Figure
 from matplotlib.figure import SubplotParams as sppars
 from matplotlib.patches import Circle
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import NeighborsView
 from . import palettes
 
 if TYPE_CHECKING:
-    import anndata
+    from anndata import AnnData
+    from numpy.typing import ArrayLike
+    from PIL.Image import Image
 
 ColorLike = _U[str, tuple[float, ...]]
 _IGraphLayout = Literal["fa", "fr", "rt", "rt_circular", "drl", "eq_tree", ...]
@@ -44,19 +47,32 @@ class _AxesSubplot(Axes, axes.SubplotBase):
 # -------------------------------------------------------------------------------
 
 
+@old_positionals(
+    "xlabel",
+    "ylabel",
+    "xticks",
+    "yticks",
+    "title",
+    "colorbar_shrink",
+    "color_map",
+    "show",
+    "save",
+    "ax",
+)
 def matrix(
-    matrix,
-    xlabel=None,
-    ylabel=None,
-    xticks=None,
-    yticks=None,
-    title=None,
-    colorbar_shrink=0.5,
-    color_map=None,
-    show=None,
-    save=None,
-    ax=None,
-):
+    matrix: ArrayLike | Image,
+    *,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    xticks: Collection[str] | None = None,
+    yticks: Collection[str] | None = None,
+    title: str | None = None,
+    colorbar_shrink: float = 0.5,
+    color_map: str | Colormap | None = None,
+    show: bool | None = None,
+    save: bool | str | None = None,
+    ax: Axes | None = None,
+) -> None:
     """Plot a matrix."""
     if ax is None:
         ax = plt.gca()
@@ -88,6 +104,7 @@ def timeseries(X, **kwargs):
 
 def timeseries_subplot(
     X: np.ndarray,
+    *,
     time=None,
     color=None,
     var_names=(),
@@ -165,7 +182,7 @@ def timeseries_subplot(
 
 
 def timeseries_as_heatmap(
-    X: np.ndarray, var_names: Collection[str] = (), highlights_x=(), color_map=None
+    X: np.ndarray, *, var_names: Collection[str] = (), highlights_x=(), color_map=None
 ):
     """\
     Plot timeseries as heatmap.
@@ -301,7 +318,7 @@ def savefig_or_show(
     writekey: str,
     show: bool | None = None,
     dpi: int | None = None,
-    ext: str = None,
+    ext: str | None = None,
     save: bool | str | None = None,
 ):
     if isinstance(save, str):
@@ -326,7 +343,7 @@ def savefig_or_show(
 
 
 def default_palette(
-    palette: str | Sequence[str] | Cycler | None = None
+    palette: str | Sequence[str] | Cycler | None = None,
 ) -> str | Cycler:
     if palette is None:
         return rcParams["axes.prop_cycle"]
@@ -336,7 +353,7 @@ def default_palette(
         return palette
 
 
-def _validate_palette(adata: anndata.AnnData, key: str) -> None:
+def _validate_palette(adata: AnnData, key: str) -> None:
     """
     checks if the list of colors in adata.uns[f'{key}_colors'] is valid
     and updates the color list in adata.uns[f'{key}_colors'] if needed.
@@ -506,7 +523,7 @@ def add_colors_for_categorical_sample_annotation(
         _set_default_colors_for_categorical_obs(adata, key)
 
 
-def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
+def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=None):
     import networkx as nx
 
     if not isinstance(axs, cabc.Sequence):
@@ -568,7 +585,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
 
 
 def scatter_group(
-    ax, key, imask, adata, Y, projection="2d", size=3, alpha=None, marker="."
+    ax, key, imask, adata, Y, *, projection="2d", size=3, alpha=None, marker="."
 ):
     """Scatter of group using representation of data Y."""
     mask = adata.obs[key].cat.categories[imask] == adata.obs[key].values
@@ -596,7 +613,8 @@ def scatter_group(
 
 
 def setup_axes(
-    ax: Axes | Sequence[Axes] = None,
+    ax: Axes | Sequence[Axes] | None = None,
+    *,
     panels="blue",
     colorbars=(False,),
     right_margin=None,
@@ -679,7 +697,8 @@ def setup_axes(
 
 def scatter_base(
     Y: np.ndarray,
-    colors="blue",
+    *,
+    colors: str | Sequence[ColorLike | np.ndarray] = "blue",
     sort_order=True,
     alpha=None,
     highlights=(),
@@ -726,7 +745,7 @@ def scatter_base(
     if len(markers) != len(colors) and len(markers) == 1:
         markers = [markers[0] for _ in range(len(colors))]
     axs, panel_pos, draw_region_width, figure_width = setup_axes(
-        ax=ax,
+        ax,
         panels=colors,
         colorbars=colorbars,
         projection=projection,
@@ -1091,7 +1110,7 @@ def check_projection(projection):
 
 
 def circles(
-    x, y, s, ax, marker=None, c="b", vmin=None, vmax=None, scale_factor=1.0, **kwargs
+    x, y, *, s, ax, marker=None, c="b", vmin=None, vmax=None, scale_factor=1.0, **kwargs
 ):
     """
     Taken from here: https://gist.github.com/syrte/592a062c562cd2a98a83
@@ -1153,6 +1172,7 @@ def circles(
 
 def make_grid_spec(
     ax_or_figsize: tuple[int, int] | _AxesSubplot,
+    *,
     nrows: int,
     ncols: int,
     wspace: float | None = None,
@@ -1209,7 +1229,7 @@ def fix_kwds(kwds_dict, **kwargs):
     return kwargs
 
 
-def _get_basis(adata: anndata.AnnData, basis: str):
+def _get_basis(adata: AnnData, basis: str):
     if basis in adata.obsm.keys():
         basis_key = basis
 
