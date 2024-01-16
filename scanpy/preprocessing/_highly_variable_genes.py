@@ -13,6 +13,7 @@ from .. import logging as logg
 from .._compat import DaskDataFrame, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
+from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 from ._utils import _get_mean_var
@@ -493,7 +494,9 @@ def highly_variable_genes(
 
             # Filter to genes that are in the dataset
             with settings.verbosity.override(Verbosity.error):
-                filt = filter_genes(adata_subset, min_cells=1, inplace=False)[0]
+                filt, _ = filter_genes(
+                    _get_obs_rep(adata_subset, layer=layer), min_cells=1, inplace=False
+                )
 
             adata_subset = adata_subset[:, filt]
 

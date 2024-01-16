@@ -42,11 +42,10 @@ def test_highly_variable_genes_supports_layers():
         adata = sc.datasets.blobs()
         assert isinstance(adata.X, np.ndarray)
         if layer:
-            new_layer = adata.X.copy()
-            gen.shuffle(new_layer)
-            del new_layer, adata.X
+            adata.X, adata.layers[layer] = None, adata.X.copy()
+            gen.shuffle(adata.layers[layer])
         adata.obs["batch"] = pd.array(
-            gen.binomial(4, 0.5, size=(adata.n_obs)), dtype="category"
+            gen.binomial(4, 0.5, size=adata.n_obs), dtype="category"
         )
         sc.pp.highly_variable_genes(
             adata, batch_key="batch", n_top_genes=3, layer=layer
