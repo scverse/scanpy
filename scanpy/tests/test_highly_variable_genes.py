@@ -9,6 +9,7 @@ from anndata import AnnData
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import DaskDataFrame
 from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
@@ -91,9 +92,7 @@ def test_highly_variable_genes_no_inplace(array_type):
     assert hvg_df is not None
     assert colnames == set(hvg_df.columns)
     if "dask" in array_type.__name__:
-        import dask.dataframe as dd
-
-        assert isinstance(hvg_df, dd.DataFrame)
+        assert isinstance(hvg_df, DaskDataFrame)
     else:
         assert isinstance(hvg_df, pd.DataFrame)
 
