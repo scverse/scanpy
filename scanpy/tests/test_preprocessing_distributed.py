@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import anndata as ad
 import numpy.testing as npt
 import pytest
+from anndata import AnnData, OldFormatWarning, read_zarr
 
+from scanpy._compat import DaskArray, ZappyArray
 from scanpy.preprocessing import (
     filter_cells,
     filter_genes,
@@ -17,15 +18,19 @@ from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.testing._pytest.marks import needs
 
 HERE = Path(__file__).parent / Path("_data/")
-input_file = str(Path(HERE, "10x-10k-subset.zarr"))
+input_file = Path(HERE, "10x-10k-subset.zarr")
+
+DIST_TYPES = (DaskArray, ZappyArray)
 
 
 pytestmark = [needs.zarr]
 
 
 @pytest.fixture()
-def adata():
-    a = ad.read_zarr(input_file)  # regular anndata
+def adata() -> AnnData:
+    with pytest.warns(OldFormatWarning):
+        a = read_zarr(input_file)  # regular anndata
+    a.var_names_make_unique()
     a.X = a.X[:]  # convert to numpy array
     return a
 
@@ -36,25 +41,29 @@ def adata():
         pytest.param("dask", marks=[needs.dask]),
     ]
 )
-def adata_dist(request):
+def adata_dist(request: pytest.FixtureRequest) -> AnnData:
     # regular anndata except for X, which we replace on the next line
-    a = ad.read_zarr(input_file)
+    with pytest.warns(OldFormatWarning):
+        a = read_zarr(input_file)
+    a.var_names_make_unique()
     a.uns["dist-mode"] = request.param
     input_file_X = f"{input_file}/X"
     if request.param == "direct":
         import zappy.direct
 
         a.X = zappy.direct.from_zarr(input_file_X)
-        yield a
-    elif request.param == "dask":
-        import dask.array as da
+        return a
 
-        a.X = da.from_zarr(input_file_X)
-        yield a
+    assert request.param == "dask"
+    import dask.array as da
+
+    a.X = da.from_zarr(input_file_X)
+    return a
 
 
-def test_log1p(adata, adata_dist):
+def test_log1p(adata: AnnData, adata_dist: AnnData):
     log1p(adata_dist)
+    assert isinstance(adata_dist.X, DIST_TYPES)
     result = materialize_as_ndarray(adata_dist.X)
     log1p(adata)
     assert result.shape == adata.shape
@@ -62,10 +71,9 @@ def test_log1p(adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_normalize_per_cell(adata, adata_dist):
-    if adata_dist.uns["dist-mode"] == "dask":
-        pytest.xfail("TODO: Test broken for dask")
+def test_normalize_per_cell(adata: AnnData, adata_dist: AnnData):
     normalize_per_cell(adata_dist)
+    assert isinstance(adata_dist.X, DIST_TYPES)
     result = materialize_as_ndarray(adata_dist.X)
     normalize_per_cell(adata)
     assert result.shape == adata.shape
@@ -73,8 +81,9 @@ def test_normalize_per_cell(adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_normalize_total(adata, adata_dist):
+def test_normalize_total(adata: AnnData, adata_dist: AnnData):
     normalize_total(adata_dist)
+    assert isinstance(adata_dist.X, DIST_TYPES)
     result = materialize_as_ndarray(adata_dist.X)
     normalize_total(adata)
     assert result.shape == adata.shape
@@ -82,8 +91,9 @@ def test_normalize_total(adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_filter_cells(adata, adata_dist):
+def test_filter_cells(adata: AnnData, adata_dist: AnnData):
     filter_cells(adata_dist, min_genes=3)
+    assert isinstance(adata_dist.X, DIST_TYPES)
     result = materialize_as_ndarray(adata_dist.X)
     filter_cells(adata, min_genes=3)
     assert result.shape == adata.shape
@@ -91,8 +101,9 @@ def test_filter_cells(adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_filter_genes(adata, adata_dist):
+def test_filter_genes(adata: AnnData, adata_dist: AnnData):
     filter_genes(adata_dist, min_cells=2)
+    assert isinstance(adata_dist.X, DIST_TYPES)
     result = materialize_as_ndarray(adata_dist.X)
     filter_genes(adata, min_cells=2)
     assert result.shape == adata.shape
@@ -100,14 +111,16 @@ def test_filter_genes(adata, adata_dist):
     npt.assert_allclose(result, adata.X)
 
 
-def test_write_zarr(adata, adata_dist):
+def test_write_zarr(adata: AnnData, adata_dist: AnnData):
     import zarr
 
     log1p(adata_dist)
+    assert isinstance(adata_dist.X, DIST_TYPES)
     temp_store = zarr.TempStore()
     chunks = adata_dist.X.chunks
     if isinstance(chunks[0], tuple):
         chunks = (chunks[0][0],) + chunks[1]
+
     # write metadata using regular anndata
     adata.write_zarr(temp_store, chunks)
     if adata_dist.uns["dist-mode"] == "dask":
@@ -116,7 +129,9 @@ def test_write_zarr(adata, adata_dist):
         adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks)
     else:
         assert False, "add branch for new dist-mode"
+
     # read back as zarr directly and check it is the same as adata.X
-    adata_log1p = ad.read_zarr(temp_store)
+    with pytest.warns(OldFormatWarning, match="without encoding metadata"):
+        adata_log1p = read_zarr(temp_store)
     log1p(adata)
     npt.assert_allclose(adata_log1p.X, adata.X)
