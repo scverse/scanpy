@@ -29,6 +29,7 @@ ROOT = HERE / "_images_pbmc3k"
 @needs.leidenalg
 def test_pbmc3k(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
+    save_and_compare_images_rank_genes = partial(image_comparer, ROOT, tol=10) # 20 is too high for such sparse plots
 
     adata = sc.read(
         "./data/pbmc3k_raw.h5ad", backup_url="https://falexwolf.de/data/pbmc3k_raw.h5ad"
@@ -115,15 +116,15 @@ def test_pbmc3k(image_comparer):
 
     sc.tl.rank_genes_groups(adata, "leiden")
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
-    save_and_compare_images("rank_genes_groups_1")
+    save_and_compare_images_rank_genes("rank_genes_groups_1")
 
     sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
-    save_and_compare_images("rank_genes_groups_2")
+    save_and_compare_images_rank_genes("rank_genes_groups_2")
 
     sc.tl.rank_genes_groups(adata, "leiden", groups=["0"], reference="1")
     sc.pl.rank_genes_groups(adata, groups="0", n_genes=20, show=False)
-    save_and_compare_images("rank_genes_groups_3")
+    save_and_compare_images_rank_genes("rank_genes_groups_3")
 
     # gives a strange error, probably due to jitter or something
     # sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=8)
