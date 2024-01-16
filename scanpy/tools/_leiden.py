@@ -147,8 +147,7 @@ def leiden(
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
     if use_weights:
-        if use_igraph:
-            clustering_args["weights"] = "weight" if use_igraph else np.array(g.es["weight"]).astype(np.float64)
+        clustering_args["weights"] = "weight" if use_igraph else np.array(g.es["weight"]).astype(np.float64)
     clustering_args["n_iterations"] = n_iterations
     if not use_igraph:
         clustering_args["seed"] = random_state
