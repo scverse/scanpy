@@ -1,5 +1,7 @@
 """Reading and Writing
 """
+from __future__ import annotations
+
 import json
 from pathlib import Path, PurePath
 from typing import BinaryIO, Dict, Literal, Optional, Tuple, Union
