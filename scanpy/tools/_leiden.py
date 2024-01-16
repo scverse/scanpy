@@ -114,12 +114,13 @@ def leiden(
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
-    try:
-        import leidenalg
-    except ImportError:
-        raise ImportError(
-            "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
-        )
+    if not use_igraph:
+        try:
+            import leidenalg
+        except ImportError:
+            raise ImportError(
+                "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
+            )
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
