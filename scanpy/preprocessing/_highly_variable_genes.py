@@ -10,7 +10,7 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import DaskDataFrame, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ._distributed import materialize_as_ndarray
@@ -192,7 +192,7 @@ def _highly_variable_genes_single_batch(
     n_top_genes: int | None = None,
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
-) -> pd.DataFrame:
+) -> pd.DataFrame | DaskDataFrame:
     """\
     See `highly_variable_genes`.
 
@@ -337,7 +337,7 @@ def highly_variable_genes(
     inplace: bool = True,
     batch_key: str | None = None,
     check_values: bool = True,
-) -> pd.DataFrame | None:
+) -> pd.DataFrame | DaskDataFrame | None:
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
 
@@ -486,7 +486,7 @@ def highly_variable_genes(
     else:
         sanitize_anndata(adata)
         batches = adata.obs[batch_key].cat.categories
-        df = []
+        dfs = []
         gene_list = adata.var_names
         for batch in batches:
             adata_subset = adata[adata.obs[batch_key] == batch]
@@ -526,9 +526,16 @@ def highly_variable_genes(
             idxs = np.concatenate((np.where(filt)[0], np.where(~filt)[0]))
             hvg = hvg.loc[np.argsort(idxs)]
 
-            df.append(hvg)
+            dfs.append(hvg)
 
-        df = pd.concat(df, axis=0)
+        df: DaskDataFrame | pd.DataFrame
+        if isinstance(dfs[0], DaskDataFrame):
+            import dask.dataframe as dd
+
+            df = dd.concat(dfs, axis=0)
+        else:
+            df = pd.concat(dfs, axis=0)
+
         df["highly_variable"] = df["highly_variable"].astype(int)
         df = df.groupby("gene", observed=True).agg(
             dict(

@@ -16,13 +16,24 @@ except ImportError:  # Python < 3.9
 
 try:
     from dask.array import Array as DaskArray
+    from dask.dataframe import DataFrame as DaskDataFrame
 except ImportError:
 
     class DaskArray:
         pass
 
+    class DaskDataFrame:
+        pass
 
-__all__ = ["cache", "DaskArray", "fullname", "pkg_metadata", "pkg_version"]
+
+__all__ = [
+    "cache",
+    "DaskArray",
+    "DaskDataFrame",
+    "fullname",
+    "pkg_metadata",
+    "pkg_version",
+]
 
 
 def fullname(typ: type) -> str:
