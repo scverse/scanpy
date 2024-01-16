@@ -17,12 +17,16 @@ except ImportError:  # Python < 3.9
 try:
     from dask.array import Array as DaskArray
     from dask.dataframe import DataFrame as DaskDataFrame
+    from dask.dataframe import Series as DaskSeries
 except ImportError:
 
     class DaskArray:
         pass
 
     class DaskDataFrame:
+        pass
+
+    class DaskSeries:
         pass
 
 

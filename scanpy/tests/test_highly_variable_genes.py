@@ -71,23 +71,24 @@ def test_highly_variable_genes_no_batch_matches_batch():
     )
 
 
+@pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
-def test_highly_variable_genes_no_inplace(array_type):
+def test_highly_variable_genes_no_inplace(array_type, batch_key):
     adata = sc.datasets.blobs()
     adata.X = array_type(adata.X)
-    adata.obs["batch"] = np.tile(["a", "b"], adata.shape[0] // 2)
-    sc.pp.highly_variable_genes(adata, batch_key="batch")
+    if batch_key:
+        adata.obs[batch_key] = np.tile(["a", "b"], adata.shape[0] // 2)
+    sc.pp.highly_variable_genes(adata, batch_key=batch_key, n_bins=3)
     assert adata.var["highly_variable"].any()
 
-    colnames = {
-        "means",
-        "dispersions",
-        "dispersions_norm",
-        "highly_variable_nbatches",
-        "highly_variable_intersection",
-        "highly_variable",
-    }
-    hvg_df = sc.pp.highly_variable_genes(adata, batch_key="batch", inplace=False)
+    colnames = {"means", "dispersions", "dispersions_norm", "highly_variable"} | (
+        {"mean_bin"}
+        if batch_key is None
+        else {"highly_variable_nbatches", "highly_variable_intersection"}
+    )
+    hvg_df = sc.pp.highly_variable_genes(
+        adata, batch_key=batch_key, n_bins=3, inplace=False
+    )
     assert hvg_df is not None
     assert colnames == set(hvg_df.columns)
     if "dask" in array_type.__name__:

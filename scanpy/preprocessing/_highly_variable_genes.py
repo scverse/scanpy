@@ -10,7 +10,7 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 from .. import logging as logg
-from .._compat import DaskDataFrame, old_positionals
+from .._compat import DaskArray, DaskDataFrame, DaskSeries, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
@@ -213,7 +213,7 @@ def _highly_variable_genes_single_batch(
         else:
             X = np.expm1(X)
 
-    mean, var = materialize_as_ndarray(_get_mean_var(X))
+    mean, var = _get_mean_var(X)
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -222,11 +222,17 @@ def _highly_variable_genes_single_batch(
         dispersion = np.log(dispersion)
         mean = np.log1p(mean)
     # all of the following quantities are "per-gene" here
-    df = pd.DataFrame()
-    df["means"] = mean
-    df["dispersions"] = dispersion
+    if isinstance(X, DaskArray):
+        import dask.array as da
+        import dask.dataframe as dd
+
+        df = dd.from_dask_array(
+            da.vstack((mean, dispersion)).T, columns=["means", "dispersions"]
+        )
+    else:
+        df = pd.DataFrame(dict(means=mean, dispersions=dispersion))
     if flavor == "seurat":
-        df["mean_bin"] = pd.cut(df["means"], bins=n_bins)
+        df["mean_bin"] = _ser_cut(df["means"], bins=n_bins)
         disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
@@ -234,7 +240,7 @@ def _highly_variable_genes_single_batch(
         # only a single gene fell in the bin and implicitly set them to have
         # a normalized disperion of 1
         one_gene_per_bin = disp_std_bin.isnull()
-        gen_indices = np.where(one_gene_per_bin[df["mean_bin"].to_numpy()])[0].tolist()
+        gen_indices = np.flatnonzero(one_gene_per_bin.loc[df["mean_bin"]])
         if len(gen_indices) > 0:
             logg.debug(
                 f"Gene indices {gen_indices} fell into a single bin: their "
@@ -255,9 +261,11 @@ def _highly_variable_genes_single_batch(
     elif flavor == "cell_ranger":
         from statsmodels import robust
 
-        df["mean_bin"] = pd.cut(
+        df["mean_bin"] = _ser_cut(
             df["means"],
-            np.r_[-np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf],
+            bins=np.r_[
+                -np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf
+            ],
         )
         disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_median_bin = disp_grouped.median()
@@ -305,6 +313,13 @@ def _highly_variable_genes_single_batch(
 
     df["highly_variable"] = gene_subset
     return df
+
+
+def _ser_cut(df: pd.Series | DaskSeries, *, bins: int) -> pd.Series | DaskSeries:
+    if isinstance(df, DaskSeries):
+        # TODO: does this make sense?
+        return df.map_partitions(pd.cut, bins=bins)
+    return pd.cut(df, bins=bins)
 
 
 @old_positionals(
@@ -435,9 +450,9 @@ def highly_variable_genes(
         For `flavor='seurat_v3'`, rank of the gene according to normalized
         variance, median rank in the case of multiple batches
     `adata.var['highly_variable_nbatches']` : :class:`pandas.Series` (dtype `int`)
-        If batch_key is given, this denotes in how many batches genes are detected as HVG
+        If `batch_key` is given, this denotes in how many batches genes are detected as HVG
     `adata.var['highly_variable_intersection']` : :class:`pandas.Series` (dtype `bool`)
-        If batch_key is given, this denotes the genes that are highly variable in all batches
+        If `batch_key` is given, this denotes the genes that are highly variable in all batches
 
     Notes
     -----
@@ -494,8 +509,13 @@ def highly_variable_genes(
 
             # Filter to genes that are in the dataset
             with settings.verbosity.override(Verbosity.error):
-                filt, _ = filter_genes(
-                    _get_obs_rep(adata_subset, layer=layer), min_cells=1, inplace=False
+                # TODO use groupby or so instead of materialize_as_ndarray
+                filt, _ = materialize_as_ndarray(
+                    filter_genes(
+                        _get_obs_rep(adata_subset, layer=layer),
+                        min_cells=1,
+                        inplace=False,
+                    )
                 )
 
             adata_subset = adata_subset[:, filt]
