@@ -26,10 +26,19 @@ except ImportError:
         pass
 
 
+try:
+    from zappy.base import ZappyArray
+except ImportError:
+
+    class ZappyArray:
+        pass
+
+
 __all__ = [
     "cache",
     "DaskArray",
     "DaskDataFrame",
+    "ZappyArray",
     "fullname",
     "pkg_metadata",
     "pkg_version",
