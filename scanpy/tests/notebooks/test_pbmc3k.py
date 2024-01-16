@@ -29,7 +29,9 @@ ROOT = HERE / "_images_pbmc3k"
 @needs.leidenalg
 def test_pbmc3k(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
-    save_and_compare_images_rank_genes = partial(image_comparer, ROOT, tol=10) # 20 is too high for such sparse plots
+    save_and_compare_images_rank_genes = partial(
+        image_comparer, ROOT, tol=10
+    )  # 20 is too high for such sparse plots
 
     adata = sc.read(
         "./data/pbmc3k_raw.h5ad", backup_url="https://falexwolf.de/data/pbmc3k_raw.h5ad"

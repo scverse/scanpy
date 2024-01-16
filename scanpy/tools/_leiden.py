@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
-import random
 import numpy as np
 import pandas as pd
 from natsort import natsorted
@@ -138,7 +138,9 @@ def leiden(
         )
     # convert it to igraph
     if use_igraph and directed:
-        raise ValueError("Cannot use igraph's leiden implementaiton with a directed graph.")
+        raise ValueError(
+            "Cannot use igraph's leiden implementaiton with a directed graph."
+        )
     g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
     if partition_type is None and not use_igraph:
@@ -150,14 +152,18 @@ def leiden(
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
     if use_weights:
-        clustering_args["weights"] = "weight" if use_igraph else np.array(g.es["weight"]).astype(np.float64)
+        clustering_args["weights"] = (
+            "weight" if use_igraph else np.array(g.es["weight"]).astype(np.float64)
+        )
     clustering_args["n_iterations"] = n_iterations
     if not use_igraph:
         clustering_args["seed"] = random_state
     else:
         random.seed(random_state)
     if resolution is not None:
-        clustering_args[f"resolution{'_parameter' if not use_igraph else ''}"] = resolution
+        clustering_args[
+            f"resolution{'_parameter' if not use_igraph else ''}"
+        ] = resolution
     # clustering proper
     if use_igraph:
         part = g.community_leiden(objective_function="modularity", **clustering_args)
