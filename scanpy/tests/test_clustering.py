@@ -19,6 +19,8 @@ def adata_neighbors():
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(adata_neighbors, use_igraph, directed, use_weights, resolution, n_iterations):
     sc.tl.leiden(adata_neighbors, use_igraph=use_igraph, use_weights=use_weights, resolution=resolution, n_iterations=n_iterations, directed=directed)
+    assert adata_neighbors.uns['leiden']['params']['resolution'] == resolution
+    assert adata_neighbors.uns['leiden']['params']['n_iterations'] == n_iterations
 
 def test_leiden_igraph_directed(adata_neighbors):
     with pytest.raises(ValueError):
