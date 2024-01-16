@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import pytest
+from sklearn.metrics.cluster import normalized_mutual_info_score
 
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
-from sklearn.metrics.cluster import normalized_mutual_info_score
+
 
 @pytest.fixture
 def adata_neighbors():
@@ -17,9 +18,15 @@ def adata_neighbors():
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(adata_neighbors, use_igraph, resolution, n_iterations):
-    sc.tl.leiden(adata_neighbors, use_igraph=use_igraph, resolution=resolution, n_iterations=n_iterations)
-    assert adata_neighbors.uns['leiden']['params']['resolution'] == resolution
-    assert adata_neighbors.uns['leiden']['params']['n_iterations'] == n_iterations
+    sc.tl.leiden(
+        adata_neighbors,
+        use_igraph=use_igraph,
+        resolution=resolution,
+        n_iterations=n_iterations,
+    )
+    assert adata_neighbors.uns["leiden"]["params"]["resolution"] == resolution
+    assert adata_neighbors.uns["leiden"]["params"]["n_iterations"] == n_iterations
+
 
 def test_leiden_igraph_directed(adata_neighbors):
     with pytest.raises(ValueError):
