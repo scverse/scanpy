@@ -141,8 +141,10 @@ def leiden(
         raise ValueError("Cannot use igraph's leiden implementaiton with a directed graph.")
     g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
-    if partition_type is None:
+    if partition_type is None and not use_igraph:
         partition_type = leidenalg.RBConfigurationVertexPartition
+    elif use_igraph and partition_type is not None:
+        raise ValueError("Do not pass in partition_type argument when using igraph.")
     # Prepare find_partition arguments as a dictionary,
     # appending to whatever the user provided. It needs to be this way
     # as this allows for the accounting of a None resolution
