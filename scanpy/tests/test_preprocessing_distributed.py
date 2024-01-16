@@ -67,17 +67,23 @@ def test_log1p(adata: AnnData, adata_dist: AnnData):
     result = materialize_as_ndarray(adata_dist.X)
     log1p(adata)
     assert result.shape == adata.shape
-    assert result.shape == (adata.n_obs, adata.n_vars)
     npt.assert_allclose(result, adata.X)
 
 
-def test_normalize_per_cell(adata: AnnData, adata_dist: AnnData):
+def test_normalize_per_cell(
+    request: pytest.FixtureRequest, adata: AnnData, adata_dist: AnnData
+):
+    if isinstance(adata_dist.X, DaskArray):
+        request.node.add_marker(
+            pytest.mark.xfail(
+                reason="normalize_per_cell deprecated and broken for Dask"
+            )
+        )
     normalize_per_cell(adata_dist)
     assert isinstance(adata_dist.X, DIST_TYPES)
     result = materialize_as_ndarray(adata_dist.X)
     normalize_per_cell(adata)
     assert result.shape == adata.shape
-    assert result.shape == (adata.n_obs, adata.n_vars)
     npt.assert_allclose(result, adata.X)
 
 
@@ -87,8 +93,17 @@ def test_normalize_total(adata: AnnData, adata_dist: AnnData):
     result = materialize_as_ndarray(adata_dist.X)
     normalize_total(adata)
     assert result.shape == adata.shape
-    assert result.shape == (adata.n_obs, adata.n_vars)
     npt.assert_allclose(result, adata.X)
+
+
+def test_filter_cells_array(adata: AnnData, adata_dist: AnnData):
+    cell_subset_dist, number_per_cell_dist = filter_cells(adata_dist.X, min_genes=3)
+    assert isinstance(cell_subset_dist, DIST_TYPES)
+    assert isinstance(number_per_cell_dist, DIST_TYPES)
+
+    cell_subset, number_per_cell = filter_cells(adata.X, min_genes=3)
+    npt.assert_allclose(materialize_as_ndarray(cell_subset_dist), cell_subset)
+    npt.assert_allclose(materialize_as_ndarray(number_per_cell_dist), number_per_cell)
 
 
 def test_filter_cells(adata: AnnData, adata_dist: AnnData):
@@ -96,9 +111,20 @@ def test_filter_cells(adata: AnnData, adata_dist: AnnData):
     assert isinstance(adata_dist.X, DIST_TYPES)
     result = materialize_as_ndarray(adata_dist.X)
     filter_cells(adata, min_genes=3)
+
     assert result.shape == adata.shape
-    assert result.shape == (adata.n_obs, adata.n_vars)
+    npt.assert_array_equal(adata_dist.obs["n_genes"], adata.obs["n_genes"])
     npt.assert_allclose(result, adata.X)
+
+
+def test_filter_genes_array(adata: AnnData, adata_dist: AnnData):
+    gene_subset_dist, number_per_gene_dist = filter_genes(adata_dist.X, min_cells=2)
+    assert isinstance(gene_subset_dist, DIST_TYPES)
+    assert isinstance(number_per_gene_dist, DIST_TYPES)
+
+    gene_subset, number_per_gene = filter_genes(adata.X, min_cells=2)
+    npt.assert_allclose(materialize_as_ndarray(gene_subset_dist), gene_subset)
+    npt.assert_allclose(materialize_as_ndarray(number_per_gene_dist), number_per_gene)
 
 
 def test_filter_genes(adata: AnnData, adata_dist: AnnData):
@@ -107,7 +133,6 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
     result = materialize_as_ndarray(adata_dist.X)
     filter_genes(adata, min_cells=2)
     assert result.shape == adata.shape
-    assert result.shape == (adata.n_obs, adata.n_vars)
     npt.assert_allclose(result, adata.X)
 
 

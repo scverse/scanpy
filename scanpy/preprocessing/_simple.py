@@ -172,7 +172,7 @@ def filter_cells(
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
 
-    s = np.sum(~cell_subset)
+    s = materialize_as_ndarray(np.sum(~cell_subset))
     if s > 0:
         msg = f"filtered out {s} cells that have "
         if min_genes is not None or min_counts is not None:
@@ -589,7 +589,7 @@ def normalize_per_cell(  # noqa: PLR0917
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
         if not issparse(X):
-            X /= materialize_as_ndarray(counts_per_cell[:, np.newaxis])
+            X /= counts_per_cell[:, np.newaxis]
         else:
             sparsefuncs.inplace_row_scale(X, 1 / counts_per_cell)
     return X if copy else None
