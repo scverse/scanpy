@@ -1,3 +1,5 @@
+set -e
+
 mamba env remove -yn scanpy-min-deps-test
 mamba create -yn scanpy-min-deps-test "python=3.9"
 
