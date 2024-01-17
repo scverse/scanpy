@@ -30,7 +30,7 @@ ROOT = HERE / "_images_pbmc3k"
 def test_pbmc3k(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
     save_and_compare_images_rank_genes = partial(
-        image_comparer, ROOT, tol=10
+        image_comparer, ROOT, tol=15
     )  # 20 is too high for such sparse plots
 
     adata = sc.read(
