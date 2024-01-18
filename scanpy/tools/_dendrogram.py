@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
-from anndata._core.merge import _resolve_dim
+from anndata._core.merge import _resolve_axis
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
@@ -38,8 +38,7 @@ def dendrogram(
     adata: AnnData,
     groupby: str | Sequence[str] | None = None,
     *,
-    dim: Literal["obs", "var"] | None = None,
-    axis: Literal[0, 1] | None = None,
+    axis: Literal["obs", 0, "var", 1] = "obs",
     n_pcs: int | None = None,
     use_rep: str | None = None,
     var_names: Sequence[str] | None = None,
@@ -78,10 +77,8 @@ def dendrogram(
         Annotated data matrix
     groupby
         Optional, the obs column(s) to use to group observations. Default is None.
-    dim
-        Dimension (obs or var) along which to calculate the dedrogram. Pass either `dim` or `axis` but not both.
     axis
-        Axis (0 or 1) along which to calculate the dendrogram. Pass either `dim` or `axis` but not both.
+        Axis along which to calculate the dendrogram.
     {n_pcs}
     {use_rep}
     var_names
@@ -125,9 +122,7 @@ def dendrogram(
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
-    if dim is None and axis is None:
-        dim = "obs"
-    axis, dim = _resolve_dim(axis=axis, dim=dim)
+    axis, axis_name = _resolve_axis(axis)
 
     if groupby is not None:
         if isinstance(groupby, str):
@@ -208,7 +203,7 @@ def dendrogram(
     if inplace:
         if key_added is None:
             if groupby is None:
-                key_added = f"dendrogram_{dim}"
+                key_added = f"dendrogram_{axis_name}"
             else:
                 key_added = f'dendrogram_{"_".join(groupby)}'
         logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
