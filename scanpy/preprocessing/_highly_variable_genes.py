@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from functools import partial
 from inspect import signature
 from typing import Literal, cast
 
@@ -14,7 +15,7 @@ from .._compat import DaskArray, DaskDataFrame, DaskSeries, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
-from ._distributed import materialize_as_ndarray
+from ._distributed import dask_compute, materialize_as_ndarray, suppress_pandas_warning
 from ._simple import filter_genes
 from ._utils import _get_mean_var
 
@@ -222,6 +223,7 @@ def _highly_variable_genes_single_batch(
         dispersion = np.log(dispersion)
         mean = np.log1p(mean)
     # all of the following quantities are "per-gene" here
+    df: pd.DataFrame | DaskDataFrame
     if isinstance(X, DaskArray):
         import dask.array as da
         import dask.dataframe as dd
@@ -234,12 +236,14 @@ def _highly_variable_genes_single_batch(
     if flavor == "seurat":
         df["mean_bin"] = _ser_cut(df["means"], bins=n_bins)
         disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
-        disp_mean_bin = disp_grouped.mean()
-        disp_std_bin = disp_grouped.std(ddof=1)
+        with suppress_pandas_warning():
+            disp_bin_stats: pd.DataFrame = dask_compute(
+                disp_grouped.agg(mean="mean", std=partial(np.std, ddof=1))
+            )
         # retrieve those genes that have nan std, these are the ones where
         # only a single gene fell in the bin and implicitly set them to have
         # a normalized disperion of 1
-        one_gene_per_bin = disp_std_bin.isnull()
+        one_gene_per_bin = disp_bin_stats["std"].isnull()
         gen_indices = np.flatnonzero(one_gene_per_bin.loc[df["mean_bin"]])
         if len(gen_indices) > 0:
             logg.debug(
@@ -247,17 +251,15 @@ def _highly_variable_genes_single_batch(
                 "normalized dispersion was set to 1.\n    "
                 "Decreasing `n_bins` will likely avoid this effect."
             )
-        # Circumvent pandas 0.23 bug. Both sides of the assignment have dtype==float32,
-        # but there’s still a dtype error without “.value”.
-        disp_std_bin[one_gene_per_bin.to_numpy()] = disp_mean_bin[
-            one_gene_per_bin.to_numpy()
-        ].to_numpy()
-        disp_mean_bin[one_gene_per_bin.to_numpy()] = 0
+            disp_bin_stats["std"].loc[one_gene_per_bin] = disp_bin_stats["mean"].loc[
+                one_gene_per_bin
+            ]
+            disp_bin_stats["mean"].loc[one_gene_per_bin] = 0
+        # (use values here as index differs)
+        disp_mean = disp_bin_stats["mean"].loc[df["mean_bin"]].to_numpy()
+        disp_std = disp_bin_stats["std"].loc[df["mean_bin"]].to_numpy()
         # actually do the normalization
-        df["dispersions_norm"] = (
-            df["dispersions"].to_numpy()  # use values here as index differs
-            - disp_mean_bin[df["mean_bin"].to_numpy()].to_numpy()
-        ) / disp_std_bin[df["mean_bin"].to_numpy()].to_numpy()
+        df["dispersions_norm"] = (df["dispersions"] - disp_mean) / disp_std
     elif flavor == "cell_ranger":
         from statsmodels import robust
 
@@ -315,9 +317,9 @@ def _highly_variable_genes_single_batch(
     return df
 
 
-def _ser_cut(df: pd.Series | DaskSeries, *, bins: int) -> pd.Series | DaskSeries:
+def _ser_cut(df: pd.Series | DaskSeries, *, bins: int) -> pd.Series:
     if isinstance(df, DaskSeries):
-        # TODO: does this make sense?
+        # TODO: does map_partitions make sense for bin?
         return df.map_partitions(pd.cut, bins=bins)
     return pd.cut(df, bins=bins)
 

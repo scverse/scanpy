@@ -1,13 +1,25 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, overload
 
 import numpy as np
 
-from scanpy._compat import DaskArray, ZappyArray
+from scanpy._compat import (
+    DaskArray,
+    DaskDataFrame,
+    DaskDataFrameGroupBy,
+    DaskSeries,
+    DaskSeriesGroupBy,
+    ZappyArray,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    import pandas as pd
     from numpy.typing import ArrayLike
+    from pandas.core.groupby.generic import DataFrameGroupBy, SeriesGroupBy
 
 
 @overload
@@ -47,3 +59,46 @@ def materialize_as_ndarray(
     import dask.array as da
 
     return da.compute(*a, sync=True)
+
+
+@overload
+def dask_compute(value: DaskDataFrame) -> pd.DataFrame:
+    ...
+
+
+@overload
+def dask_compute(value: DaskSeries) -> pd.Series:
+    ...
+
+
+@overload
+def dask_compute(value: DaskDataFrameGroupBy) -> DataFrameGroupBy:
+    ...
+
+
+@overload
+def dask_compute(value: DaskSeriesGroupBy) -> SeriesGroupBy:
+    ...
+
+
+def dask_compute(
+    value: DaskDataFrame | DaskSeries | DaskDataFrameGroupBy | DaskSeriesGroupBy,
+) -> pd.DataFrame | pd.Series | DataFrameGroupBy | SeriesGroupBy:
+    """Compute a dask array or series."""
+    if isinstance(
+        value, (DaskDataFrame, DaskSeries, DaskDataFrameGroupBy, DaskSeriesGroupBy)
+    ):
+        with suppress_pandas_warning():
+            return value.compute(sync=True)
+    return value
+
+
+@contextmanager
+def suppress_pandas_warning() -> Generator[None, None, None]:
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"The default of observed=False", category=FutureWarning
+        )
+        yield
