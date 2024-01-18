@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pandas as pd
 import pytest
+import scipy
 from anndata import AnnData
 from numpy.random import binomial, negative_binomial, seed
 from packaging import version
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
-from scanpy._compat import pkg_version
 from scanpy._utils import elem_mul, select_groups
 from scanpy.get import rank_genes_groups_df
 from scanpy.testing._helpers.data import pbmc68k_reduced
@@ -278,7 +278,7 @@ def test_wilcoxon_tie_correction(reference):
     Y = pbmc.raw.X[mask_rest].toarray()
 
     # Handle scipy versions
-    if pkg_version("scipy") >= version.parse("1.7.0"):
+    if version.parse(scipy.__version__) >= version.parse("1.7.0"):
         pvals = mannwhitneyu(X, Y, use_continuity=False, alternative="two-sided").pvalue
         pvals[np.isnan(pvals)] = 1.0
     else:
