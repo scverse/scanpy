@@ -381,7 +381,7 @@ def _validate_palette(adata: AnnData, key: str) -> None:
                 break
         _palette.append(color)
     # Don't modify if nothing changed
-    if _palette is None or _palette == list(adata.uns[color_key]):
+    if _palette is None or np.array_equal(_palette, adata.uns[color_key]):
         return
     adata.uns[color_key] = _palette
 
