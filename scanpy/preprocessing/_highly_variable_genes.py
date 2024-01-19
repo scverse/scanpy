@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from functools import partial
 from inspect import signature
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -18,6 +18,9 @@ from ..get import _get_obs_rep
 from ._distributed import dask_compute, materialize_as_ndarray, suppress_pandas_warning
 from ._simple import filter_genes
 from ._utils import _get_mean_var
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def _highly_variable_genes_seurat_v3(
@@ -187,10 +190,10 @@ def _highly_variable_genes_single_batch(
     adata: AnnData,
     *,
     layer: str | None = None,
-    min_disp: float | None = 0.5,
-    max_disp: float | None = np.inf,
-    min_mean: float | None = 0.0125,
-    max_mean: float | None = 3,
+    min_disp: float = 0.5,
+    max_disp: float = np.inf,
+    min_mean: float = 0.0125,
+    max_mean: float = 3,
     n_top_genes: int | None = None,
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
@@ -243,40 +246,17 @@ def _highly_variable_genes_single_batch(
 
     # actually do the normalization
     df["dispersions_norm"] = (df["dispersions"] - disp_avg) / disp_dev
+    df["highly_variable"] = _subset_genes(
+        adata,
+        mean=mean,
+        dispersion_norm=df["dispersions_norm"],
+        min_disp=min_disp,
+        max_disp=max_disp,
+        min_mean=min_mean,
+        max_mean=max_mean,
+        n_top_genes=n_top_genes,
+    )
 
-    dispersion_norm = df["dispersions_norm"].to_numpy()
-    if n_top_genes is not None:
-        dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
-        dispersion_norm[
-            ::-1
-        ].sort()  # interestingly, np.argpartition is slightly slower
-        if n_top_genes > adata.n_vars:
-            logg.info("`n_top_genes` > `adata.n_var`, returning all genes.")
-            n_top_genes = adata.n_vars
-        if n_top_genes > dispersion_norm.size:
-            warnings.warn(
-                "`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
-                UserWarning,
-            )
-            n_top_genes = dispersion_norm.size
-        disp_cut_off = dispersion_norm[n_top_genes - 1]
-        gene_subset = np.nan_to_num(df["dispersions_norm"].to_numpy()) >= disp_cut_off
-        logg.debug(
-            f"the {n_top_genes} top genes correspond to a "
-            f"normalized dispersion cutoff of {disp_cut_off}"
-        )
-    else:
-        dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        gene_subset = np.logical_and.reduce(
-            (
-                mean > min_mean,
-                mean < max_mean,
-                dispersion_norm > min_disp,
-                dispersion_norm < max_disp,
-            )
-        )
-
-    df["highly_variable"] = gene_subset
     return df
 
 
@@ -333,6 +313,47 @@ def _ser_cut(df: pd.Series | DaskSeries, *, bins: int) -> pd.Series:
     return pd.cut(df, bins=bins)
 
 
+def _subset_genes(
+    adata,
+    *,
+    mean: NDArray[np.float64] | DaskArray,
+    dispersion_norm: pd.Series[float] | DaskSeries,
+    min_disp: float,
+    max_disp: float,
+    min_mean: float,
+    max_mean: float,
+    n_top_genes: int | None,
+) -> NDArray[np.float64] | DaskArray:
+    if n_top_genes is None:
+        dispersion_norm.loc[np.isnan(dispersion_norm)] = 0  # similar to Seurat
+        return np.logical_and.reduce(
+            (
+                mean > min_mean,
+                mean < max_mean,
+                dispersion_norm > min_disp,
+                dispersion_norm < max_disp,
+            )
+        )
+    dispersion_norm = dispersion_norm.loc[~np.isnan(dispersion_norm)]
+    # interestingly, np.argpartition is slightly slower
+    dispersion_norm[::-1].sort()
+    if n_top_genes > adata.n_vars:
+        logg.info("`n_top_genes` > `adata.n_var`, returning all genes.")
+        n_top_genes = adata.n_vars
+    if n_top_genes > dispersion_norm.size:
+        warnings.warn(
+            "`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
+            UserWarning,
+        )
+        n_top_genes = dispersion_norm.size
+    disp_cut_off = dispersion_norm[n_top_genes - 1]
+    logg.debug(
+        f"the {n_top_genes} top genes correspond to a "
+        f"normalized dispersion cutoff of {disp_cut_off}"
+    )
+    return np.nan_to_num(dispersion_norm.to_numpy()) >= disp_cut_off
+
+
 @old_positionals(
     "layer",
     "n_top_genes",
@@ -353,10 +374,10 @@ def highly_variable_genes(
     *,
     layer: str | None = None,
     n_top_genes: int | None = None,
-    min_disp: float | None = 0.5,
-    max_disp: float | None = np.inf,
-    min_mean: float | None = 0.0125,
-    max_mean: float | None = 3,
+    min_disp: float = 0.5,
+    max_disp: float = np.inf,
+    min_mean: float = 0.0125,
+    max_mean: float = 3,
     span: float = 0.3,
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger", "seurat_v3"] = "seurat",
@@ -470,8 +491,12 @@ def highly_variable_genes(
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
     """
 
+    defaults = {
+        p.name: p.default for p in signature(highly_variable_genes).parameters.values()
+    }
     if n_top_genes is not None and not all(
-        m is None for m in [min_disp, max_disp, min_mean, max_mean]
+        locals()[m] == defaults[m]
+        for m in ["min_disp", "max_disp", "min_mean", "max_mean"]
     ):
         logg.info("If you pass `n_top_genes`, all cutoffs are ignored.")
 
