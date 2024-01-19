@@ -367,11 +367,14 @@ def _subset_genes(
     dispersion_norm: NDArray[np.float64] | DaskArray,
     cutoff: _Cutoffs | int,
 ) -> NDArray[np.bool_] | DaskArray:
+    """Get boolean mask of genes with normalized dispersion in bounds."""
     if isinstance(cutoff, _Cutoffs):
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
         return cutoff.in_bounds(mean, dispersion_norm)
     n_top_genes = cutoff
     del cutoff
+
+    dispersion_norm_orig = dispersion_norm  # original length
     dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
     # interestingly, np.argpartition is slightly slower
     dispersion_norm[::-1].sort()
@@ -389,7 +392,7 @@ def _subset_genes(
         f"the {n_top_genes} top genes correspond to a "
         f"normalized dispersion cutoff of {disp_cut_off}"
     )
-    return np.nan_to_num(dispersion_norm) >= disp_cut_off
+    return np.nan_to_num(dispersion_norm_orig) >= disp_cut_off
 
 
 @old_positionals(
