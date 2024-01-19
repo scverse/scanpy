@@ -1,32 +1,56 @@
-from typing import Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import scipy as sp
-import networkx as nx
 from natsort import natsorted
 
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
+from .._compat import old_positionals
 from ..neighbors import Neighbors, OnFlySymMatrix
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
-def _diffmap(adata, n_comps=15):
-    logg.info('computing Diffusion Maps using n_comps={}(=n_dcs)'.format(n_comps), r=True)
-    dpt = DPT(adata)
+    from anndata import AnnData
+
+
+def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
+    start = logg.info(f"computing Diffusion Maps using n_comps={n_comps}(=n_dcs)")
+    dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
-    dpt.compute_eigen(n_comps=n_comps)
-    adata.obsm['X_diffmap'] = dpt.eigen_basis
-    adata.uns['diffmap_evals'] = dpt.eigen_values
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('added\n'
-              '    \'X_diffmap\', diffmap coordinates (adata.obsm)\n'
-              '    \'diffmap_evals\', eigenvalues of transition matrix (adata.uns)')
+    dpt.compute_eigen(n_comps=n_comps, random_state=random_state)
+    adata.obsm["X_diffmap"] = dpt.eigen_basis
+    adata.uns["diffmap_evals"] = dpt.eigen_values
+    logg.info(
+        "    finished",
+        time=start,
+        deep=(
+            "added\n"
+            "    'X_diffmap', diffmap coordinates (adata.obsm)\n"
+            "    'diffmap_evals', eigenvalues of transition matrix (adata.uns)"
+        ),
+    )
 
 
-def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
-        allow_kendall_tau_shift=True, copy=False):
-    """Infer progression of cells through geodesic distance along the graph [Haghverdi16]_ [Wolf19]_.
+@old_positionals(
+    "n_branchings", "min_group_size", "allow_kendall_tau_shift", "neighbors_key", "copy"
+)
+def dpt(
+    adata: AnnData,
+    n_dcs: int = 10,
+    *,
+    n_branchings: int = 0,
+    min_group_size: float = 0.01,
+    allow_kendall_tau_shift: bool = True,
+    neighbors_key: str | None = None,
+    copy: bool = False,
+) -> AnnData | None:
+    """\
+    Infer progression of cells through geodesic distance along the graph
+    [Haghverdi16]_ [Wolf19]_.
 
     Reconstruct the progression of a biological process from snapshot
     data. `Diffusion Pseudotime` has been introduced by [Haghverdi16]_ and
@@ -34,57 +58,63 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
     version, which is able to deal with disconnected graphs [Wolf19]_ and can
     be run in a `hierarchical` mode by setting the parameter
     `n_branchings>1`. We recommend, however, to only use
-    :func:`~scanpy.api.tl.dpt` for computing pseudotime (`n_branchings=0`) and
-    to detect branchings via :func:`~scanpy.api.paga`. For pseudotime, you need
+    :func:`~scanpy.tl.dpt` for computing pseudotime (`n_branchings=0`) and
+    to detect branchings via :func:`~scanpy.tl.paga`. For pseudotime, you need
     to annotate your data with a root cell. For instance::
 
         adata.uns['iroot'] = np.flatnonzero(adata.obs['cell_types'] == 'Stem')[0]
 
-    This requires to run :func:`~scanpy.api.pp.neighbors`, first. In order to
+    This requires to run :func:`~scanpy.pp.neighbors`, first. In order to
     reproduce the original implementation of DPT, use `method=='gauss'` in
     this. Using the default `method=='umap'` only leads to minor quantitative
     differences, though.
 
     .. versionadded:: 1.1
 
-    :func:`~scanpy.api.tl.dpt` also requires to run
-    :func:`~scanpy.api.tl.diffmap` first. As previously,
-    :func:`~scanpy.api.tl.dpt` came with a default parameter of ``n_dcs=10`` but
-    :func:`~scanpy.api.tl.diffmap` has a default parameter of ``n_comps=15``,
-    you need to pass ``n_comps=10`` in :func:`~scanpy.api.tl.diffmap` in order
-    to exactly reproduce previous :func:`~scanpy.api.tl.dpt` results.
+    :func:`~scanpy.tl.dpt` also requires to run
+    :func:`~scanpy.tl.diffmap` first. As previously,
+    :func:`~scanpy.tl.dpt` came with a default parameter of ``n_dcs=10`` but
+    :func:`~scanpy.tl.diffmap` has a default parameter of ``n_comps=15``,
+    you need to pass ``n_comps=10`` in :func:`~scanpy.tl.diffmap` in order
+    to exactly reproduce previous :func:`~scanpy.tl.dpt` results.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    n_dcs : `int`, optional (default: 10)
+    n_dcs
         The number of diffusion components to use.
-    n_branchings : `int`, optional (default: 0)
+    n_branchings
         Number of branchings to detect.
-    min_group_size : [0, 1] or `float`, optional (default: 0.01)
+    min_group_size
         During recursive splitting of branches ('dpt groups') for `n_branchings`
         > 1, do not consider groups that contain less than `min_group_size` data
         points. If a float, `min_group_size` refers to a fraction of the total
         number of data points.
-    allow_kendall_tau_shift : `bool`, optional (default: `True`)
+    allow_kendall_tau_shift
         If a very small branch is detected upon splitting, shift away from
         maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
         stabilize the splitting.
-    copy : `bool`, optional (default: `False`)
-        Copy instance before computation and return a copy. Otherwise, perform
-        computation inplace and return None.
+    neighbors_key
+        If not specified, dpt looks .uns['neighbors'] for neighbors settings
+        and .obsp['connectivities'], .obsp['distances'] for connectivities and
+        distances respectively (default storage places for pp.neighbors).
+        If specified, dpt looks .uns[neighbors_key] for neighbors settings and
+        .obsp[.uns[neighbors_key]['connectivities_key']],
+        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
+        respectively.
+    copy
+        Copy instance before computation and return a copy.
+        Otherwise, perform computation inplace and return `None`.
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields (If `n_branchings==0`, no field `adata.obs['dpt_groups']` will be written):
 
-    If `n_branchings==0`, no field `dpt_groups` will be written.
-
-    **dpt_pseudotime** : :class:`pandas.Series` (`adata.obs`, dtype `float`)
+    `adata.obs['dpt_pseudotime']` : :class:`pandas.Series` (dtype `float`)
         Array of dim (number of samples) that stores the pseudotime of each
         cell, that is, the DPT distance with respect to the root cell.
-    **dpt_groups** : :class:`pandas.Series` (`adata.obs`, dtype `category`)
+    `adata.obs['dpt_groups']` : :class:`pandas.Series` (dtype `category`)
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell. The groups  typically correspond to
         'progenitor cells', 'undecided cells' or 'branches' of a process.
@@ -95,82 +125,122 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
     """
     # standard errors, warnings etc.
     adata = adata.copy() if copy else adata
-    if 'neighbors' not in adata.uns:
-        raise ValueError(
-            'You need to run `pp.neighbors` and `tl.diffmap` first.')
-    if 'iroot' not in adata.uns and 'xroot' not in adata.var:
-        logg.warn(
-            'No root cell found. To compute pseudotime, pass the index or '
-            'expression vector of a root cell, one of:\n'
-            '    adata.uns[\'iroot\'] = root_cell_index\n'
-            '    adata.var[\'xroot\'] = adata[root_cell_name, :].X')
-    if 'X_diffmap' not in adata.obsm.keys():
-        logg.warn('Trying to run `tl.dpt` without prior call of `tl.diffmap`. '
-                  'Falling back to `tl.diffmap` with default parameters.')
-        _diffmap(adata)
+
+    if neighbors_key is None:
+        neighbors_key = "neighbors"
+    if neighbors_key not in adata.uns:
+        raise ValueError("You need to run `pp.neighbors` and `tl.diffmap` first.")
+    if "iroot" not in adata.uns and "xroot" not in adata.var:
+        logg.warning(
+            "No root cell found. To compute pseudotime, pass the index or "
+            "expression vector of a root cell, one of:\n"
+            "    adata.uns['iroot'] = root_cell_index\n"
+            "    adata.var['xroot'] = adata[root_cell_name, :].X"
+        )
+    if "X_diffmap" not in adata.obsm.keys():
+        logg.warning(
+            "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
+            "Falling back to `tl.diffmap` with default parameters."
+        )
+        _diffmap(adata, neighbors_key=neighbors_key)
     # start with the actual computation
-    dpt = DPT(adata, n_dcs=n_dcs, min_group_size=min_group_size,
-              n_branchings=n_branchings,
-              allow_kendall_tau_shift=allow_kendall_tau_shift)
-    logg.info('computing Diffusion Pseudotime using n_dcs={}'.format(n_dcs), r=True)
-    if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
+    dpt = DPT(
+        adata,
+        n_dcs=n_dcs,
+        min_group_size=min_group_size,
+        n_branchings=n_branchings,
+        allow_kendall_tau_shift=allow_kendall_tau_shift,
+        neighbors_key=neighbors_key,
+    )
+    start = logg.info(f"computing Diffusion Pseudotime using n_dcs={n_dcs}")
+    if n_branchings > 1:
+        logg.info("    this uses a hierarchical implementation")
     if dpt.iroot is not None:
         dpt._set_pseudotime()  # pseudotimes are distances from root point
-        adata.uns['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
-        adata.obs['dpt_pseudotime'] = dpt.pseudotime
+        adata.uns[
+            "iroot"
+        ] = dpt.iroot  # update iroot, might have changed when subsampling, for example
+        adata.obs["dpt_pseudotime"] = dpt.pseudotime
     # detect branchings and partition the data into segments
     if n_branchings > 0:
         dpt.branchings_segments()
-        adata.obs['dpt_groups'] = pd.Categorical(
-            values=dpt.segs_names.astype('U'),
-            categories=natsorted(np.array(dpt.segs_names_unique).astype('U')))
+        adata.obs["dpt_groups"] = pd.Categorical(
+            values=dpt.segs_names.astype("U"),
+            categories=natsorted(np.array(dpt.segs_names_unique).astype("U")),
+        )
         # the "change points" separate segments in the ordering above
-        adata.uns['dpt_changepoints'] = dpt.changepoints
+        adata.uns["dpt_changepoints"] = dpt.changepoints
         # the tip points of segments
-        adata.uns['dpt_grouptips'] = dpt.segs_tips
+        adata.uns["dpt_grouptips"] = dpt.segs_tips
         # the ordering according to segments and pseudotime
         ordering_id = np.zeros(adata.n_obs, dtype=int)
-        for count, idx in enumerate(dpt.indices): ordering_id[idx] = count
-        adata.obs['dpt_order'] = ordering_id
-        adata.obs['dpt_order_indices'] = dpt.indices
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('added\n'
-           + ('    \'dpt_pseudotime\', the pseudotime (adata.obs)'
-              if dpt.iroot is not None else '')
-           + ('\n    \'dpt_groups\', the branching subgroups of dpt (adata.obs)\n'
-              + '    \'dpt_order\', cell order (adata.obs)'
-              if n_branchings > 0 else ''))
+        for count, idx in enumerate(dpt.indices):
+            ordering_id[idx] = count
+        adata.obs["dpt_order"] = ordering_id
+        adata.obs["dpt_order_indices"] = dpt.indices
+    logg.info(
+        "    finished",
+        time=start,
+        deep=(
+            "added\n"
+            + (
+                "    'dpt_pseudotime', the pseudotime (adata.obs)"
+                if dpt.iroot is not None
+                else ""
+            )
+            + (
+                "\n    'dpt_groups', the branching subgroups of dpt (adata.obs)"
+                "\n    'dpt_order', cell order (adata.obs)"
+                if n_branchings > 0
+                else ""
+            )
+        ),
+    )
     return adata if copy else None
 
 
 class DPT(Neighbors):
-    """Hierarchical Diffusion Pseudotime.
+    """\
+    Hierarchical Diffusion Pseudotime.
     """
 
-    def __init__(self, adata, n_dcs=None, min_group_size=0.01,
-                 n_branchings=0, allow_kendall_tau_shift=False):
-        super(DPT, self).__init__(adata, n_dcs=n_dcs)
-        self.flavor = 'haghverdi16'
+    def __init__(
+        self,
+        adata: AnnData,
+        *,
+        n_dcs: int | None = None,
+        min_group_size: float = 0.01,
+        n_branchings: int = 0,
+        allow_kendall_tau_shift: bool = False,
+        neighbors_key: str | None = None,
+    ):
+        super().__init__(adata, n_dcs=n_dcs, neighbors_key=neighbors_key)
+        self.flavor = "haghverdi16"
         self.n_branchings = n_branchings
-        self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self._adata.shape[0])
+        self.min_group_size = (
+            min_group_size
+            if min_group_size >= 1
+            else int(min_group_size * self._adata.shape[0])
+        )
         self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = False
         self.allow_kendall_tau_shift = allow_kendall_tau_shift
 
     def branchings_segments(self):
-        """Detect branchings and partition the data into corresponding segments.
+        """\
+        Detect branchings and partition the data into corresponding segments.
 
         Detect all branchings up to `n_branchings`.
 
         Writes
         ------
-        segs : np.ndarray
+        segs : :class:`~numpy.ndarray`
             Array of dimension (number of segments) × (number of data
             points). Each row stores a mask array that defines a segment.
-        segs_tips : np.ndarray
+        segs_tips : :class:`~numpy.ndarray`
             Array of dimension (number of segments) × 2. Each row stores the
             indices of the two tip points of each segment.
-        segs_names : np.ndarray
+        segs_names : :class:`~numpy.ndarray`
             Array of dimension (number of data points). Stores an integer label
             for each segment.
         """
@@ -180,17 +250,20 @@ class DPT(Neighbors):
         self.order_pseudotime()
 
     def detect_branchings(self):
-        """Detect all branchings up to `n_branchings`.
+        """\
+        Detect all branchings up to `n_branchings`.
 
         Writes Attributes
         -----------------
-        segs : np.ndarray
+        segs : :class:`~numpy.ndarray`
             List of integer index arrays.
-        segs_tips : np.ndarray
+        segs_tips : :class:`~numpy.ndarray`
             List of indices of the tips of segments.
         """
-        logg.m('    detect', self.n_branchings,
-               'branching' + ('' if self.n_branchings == 1 else 's'))
+        logg.debug(
+            f"    detect {self.n_branchings} "
+            f'branching{"" if self.n_branchings == 1 else "s"}',
+        )
         # a segment is a subset of points of the data set (defined by the
         # indices of the points in the segment)
         # initialize the search for branchings with a single segment,
@@ -219,7 +292,11 @@ class DPT(Neighbors):
         #
         # let us define the tips of the whole data set
         if False:  # this is safe, but not compatible with on-the-fly computation
-            tips_all = np.array(np.unravel_index(np.argmax(self.distances_dpt), self.distances_dpt.shape))
+            tips_all = np.array(
+                np.unravel_index(
+                    np.argmax(self.distances_dpt), self.distances_dpt.shape
+                )
+            )
         else:
             if self.iroot is not None:
                 tip_0 = np.argmax(self.distances_dpt[self.iroot])
@@ -231,20 +308,28 @@ class DPT(Neighbors):
         segs_connects = [[]]
         segs_undecided = [True]
         segs_adjacency = [[]]
-        logg.m('    do not consider groups with less than {} points for splitting'
-               .format(self.min_group_size))
+        logg.debug(
+            "    do not consider groups with less than "
+            f"{self.min_group_size} points for splitting"
+        )
         for ibranch in range(self.n_branchings):
             iseg, tips3 = self.select_segment(segs, segs_tips, segs_undecided)
             if iseg == -1:
-                logg.m('    partitioning converged')
+                logg.debug("    partitioning converged")
                 break
-            logg.m('    branching {}:'.format(ibranch + 1),
-                   'split group', iseg)  # [third start end]
+            logg.debug(
+                f"    branching {ibranch + 1}: split group {iseg}",
+            )  # [third start end]
             # detect branching and update segs and segs_tips
-            self.detect_branching(segs, segs_tips,
-                                  segs_connects,
-                                  segs_undecided,
-                                  segs_adjacency, iseg, tips3)
+            self.detect_branching(
+                segs=segs,
+                segs_tips=segs_tips,
+                segs_connects=segs_connects,
+                segs_undecided=segs_undecided,
+                segs_adjacency=segs_adjacency,
+                iseg=iseg,
+                tips3=tips3,
+            )
         # store as class members
         self.segs = segs
         self.segs_tips = segs_tips
@@ -256,8 +341,9 @@ class DPT(Neighbors):
             self.segs_connects[i, seg_adjacency] = segs_connects[i]
         for i in range(len(segs)):
             for j in range(len(segs)):
-                self.segs_adjacency[i, j] = self.distances_dpt[self.segs_connects[i, j],
-                                                         self.segs_connects[j, i]]
+                self.segs_adjacency[i, j] = self.distances_dpt[
+                    self.segs_connects[i, j], self.segs_connects[j, i]
+                ]
         self.segs_adjacency = self.segs_adjacency.tocsr()
         self.segs_connects = self.segs_connects.tocsr()
 
@@ -266,16 +352,24 @@ class DPT(Neighbors):
         for n_edges in range(1, np.max(n_edges_per_seg) + 1):
             for iseg in range(self.segs_adjacency.shape[0]):
                 if n_edges_per_seg[iseg] == n_edges:
-                    neighbor_segs = self.segs_adjacency[iseg].todense().A1
-                    closest_points_other_segs = [seg[np.argmin(self.distances_dpt[self.segs_tips[iseg][0], seg])]
-                                                 for seg in self.segs]
+                    neighbor_segs = (  # noqa: F841  TODO Evaluate whether to assign the variable or not
+                        self.segs_adjacency[iseg].todense().A1
+                    )
+                    closest_points_other_segs = [
+                        seg[np.argmin(self.distances_dpt[self.segs_tips[iseg][0], seg])]
+                        for seg in self.segs
+                    ]
                     seg = self.segs[iseg]
-                    closest_points_in_segs = [seg[np.argmin(self.distances_dpt[tips[0], seg])]
-                                              for tips in self.segs_tips]
-                    distance_segs = [self.distances_dpt[closest_points_other_segs[ipoint], point]
-                                     for ipoint, point in enumerate(closest_points_in_segs)]
+                    closest_points_in_segs = [
+                        seg[np.argmin(self.distances_dpt[tips[0], seg])]
+                        for tips in self.segs_tips
+                    ]
+                    distance_segs = [
+                        self.distances_dpt[closest_points_other_segs[ipoint], point]
+                        for ipoint, point in enumerate(closest_points_in_segs)
+                    ]
                     # exclude the first point, the segment itself
-                    closest_segs = np.argsort(distance_segs)[1:n_edges+1]
+                    closest_segs = np.argsort(distance_segs)[1 : n_edges + 1]
                     # update adjacency matrix within the loop!
                     # self.segs_adjacency[iseg, neighbor_segs > 0] = 0
                     # self.segs_adjacency[iseg, closest_segs] = np.array(distance_segs)[closest_segs]
@@ -286,8 +380,9 @@ class DPT(Neighbors):
                     # print(self.segs_adjacency)
         # self.segs_adjacency.eliminate_zeros()
 
-    def select_segment(self, segs, segs_tips, segs_undecided) -> Tuple[int, int]:
-        """Out of a list of line segments, choose segment that has the most
+    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:
+        """\
+        Out of a list of line segments, choose segment that has the most
         distant second data point.
 
         Assume the distance matrix Ddiff is sorted according to seg_idcs.
@@ -295,16 +390,17 @@ class DPT(Neighbors):
 
         Returns
         -------
-        iseg : int
+        iseg
             Index identifying the position within the list of line segments.
-        tips3 : int
+        tips3
             Positions of tips within chosen segment.
         """
         scores_tips = np.zeros((len(segs), 4))
         allindices = np.arange(self._adata.shape[0], dtype=int)
         for iseg, seg in enumerate(segs):
             # do not consider too small segments
-            if segs_tips[iseg][0] == -1: continue
+            if segs_tips[iseg][0] == -1:
+                continue
             # restrict distance matrix to points in segment
             if not isinstance(self.distances_dpt, OnFlySymMatrix):
                 Dseg = self.distances_dpt[np.ix_(seg, seg)]
@@ -318,15 +414,23 @@ class DPT(Neighbors):
                     if jseg != iseg:
                         # take the inner tip, the "second tip" of the segment
                         for itip in range(2):
-                            if (self.distances_dpt[segs_tips[jseg][1], segs_tips[iseg][itip]]
-                                < 0.5 * self.distances_dpt[segs_tips[iseg][~itip], segs_tips[iseg][itip]]):
-                                # logg.m('    group', iseg, 'with tip', segs_tips[iseg][itip],
-                                #        'connects with', jseg, 'with tip', segs_tips[jseg][1], v=4)
-                                # logg.m('    do not use the tip for "triangulation"', v=4)
+                            if (
+                                self.distances_dpt[
+                                    segs_tips[jseg][1], segs_tips[iseg][itip]
+                                ]
+                                < 0.5
+                                * self.distances_dpt[
+                                    segs_tips[iseg][~itip], segs_tips[iseg][itip]
+                                ]
+                            ):
+                                # logg.debug(
+                                #     '    group', iseg, 'with tip', segs_tips[iseg][itip],
+                                #     'connects with', jseg, 'with tip', segs_tips[jseg][1],
+                                # )
+                                # logg.debug('    do not use the tip for "triangulation"')
                                 third_maximizer = itip
             # map the global position to the position within the segment
-            tips = [np.where(allindices[seg] == tip)[0][0]
-                    for tip in segs_tips[iseg]]
+            tips = [np.where(allindices[seg] == tip)[0][0] for tip in segs_tips[iseg]]
             # find the third point on the segment that has maximal
             # added distance from the two tip points
             dseg = Dseg[tips[0]] + Dseg[tips[1]]
@@ -351,15 +455,22 @@ class DPT(Neighbors):
             # if we did not normalize, there would be a danger of simply
             # assigning the highest score to the longest segment
             score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
-            score = len(seg) if self.choose_largest_segment else score  # simply the number of points
-            logg.m('    group', iseg, 'score', score, 'n_points', len(seg),
-                   '(too small)' if len(seg) < self.min_group_size else '', v=4)
-            if len(seg) <= self.min_group_size: score = 0
+            score = (
+                len(seg) if self.choose_largest_segment else score
+            )  # simply the number of points
+            logg.debug(
+                f"    group {iseg} score {score} n_points {len(seg)} " + "(too small)"
+                if len(seg) < self.min_group_size
+                else "",
+            )
+            if len(seg) <= self.min_group_size:
+                score = 0
             # write result
             scores_tips[iseg, 0] = score
             scores_tips[iseg, 1:] = tips3
         iseg = np.argmax(scores_tips[:, 0])
-        if scores_tips[iseg, 0] == 0: return -1, None
+        if scores_tips[iseg, 0] == 0:
+            return -1, None
         tips3 = scores_tips[iseg, 1:].astype(int)
         return iseg, tips3
 
@@ -385,14 +496,15 @@ class DPT(Neighbors):
         self.segs_names = segs_names
 
     def order_pseudotime(self):
-        """Define indices that reflect segment and pseudotime order.
+        """\
+        Define indices that reflect segment and pseudotime order.
 
         Writes
         ------
-        indices : np.ndarray
+        indices : :class:`~numpy.ndarray`
             Index array of shape n, which stores an ordering of the data points
             with respect to increasing segment index and increasing pseudotime.
-        changepoints : np.ndarray
+        changepoints : :class:`~numpy.ndarray`
             Index array of shape len(ssegs)-1, which stores the indices of
             points where the segment index changes, with respect to the ordering
             of indices.
@@ -404,12 +516,12 @@ class DPT(Neighbors):
                     indices = np.argsort(self.pseudotime[tips])
                     self.segs_tips[itips] = self.segs_tips[itips][indices]
                 else:
-                    logg.m('    group', itips, 'is very small', v=4)
+                    logg.debug(f"    group {itips} is very small")
         # sort indices according to segments
         indices = np.argsort(self.segs_names)
         segs_names = self.segs_names[indices]
         # find changepoints of segments
-        changepoints = np.arange(indices.size-1)[np.diff(segs_names) == 1] + 1
+        changepoints = np.arange(indices.size - 1)[np.diff(segs_names) == 1] + 1
         if self.iroot is not None:
             pseudotime = self.pseudotime[indices]
             for iseg, seg in enumerate(self.segs):
@@ -423,9 +535,19 @@ class DPT(Neighbors):
         self.indices = indices
         self.changepoints = changepoints
 
-    def detect_branching(self, segs, segs_tips, segs_connects, segs_undecided, segs_adjacency,
-                         iseg, tips3):
-        """Detect branching on given segment.
+    def detect_branching(
+        self,
+        *,
+        segs: Sequence[np.ndarray],
+        segs_tips: Sequence[np.ndarray],
+        segs_connects,
+        segs_undecided,
+        segs_adjacency,
+        iseg: int,
+        tips3: np.ndarray,
+    ):
+        """\
+        Detect branching on given segment.
 
         Updates all list parameters inplace.
 
@@ -434,13 +556,13 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        segs : list of np.ndarray
+        segs
             Dchosen distance matrix restricted to segment.
-        segs_tips : list of np.ndarray
+        segs_tips
             Stores all tip points for the segments in segs.
-        iseg : int
+        iseg
             Position of segment under study in segs.
-        tips3 : np.ndarray
+        tips3
             The three tip points. They form a 'triangle' that contains the data.
         """
         seg = segs[iseg]
@@ -467,7 +589,9 @@ class DPT(Neighbors):
         segs_tips.insert(iseg, ssegs_tips[trunk])
         # append other segments
         segs += [seg for iseg, seg in enumerate(ssegs) if iseg != trunk]
-        segs_tips += [seg_tips for iseg, seg_tips in enumerate(ssegs_tips) if iseg != trunk]
+        segs_tips += [
+            seg_tips for iseg, seg_tips in enumerate(ssegs_tips) if iseg != trunk
+        ]
         if len(ssegs) == 4:
             # insert undecided cells at same position
             segs_undecided.pop(iseg)
@@ -475,10 +599,15 @@ class DPT(Neighbors):
         # correct edges in adjacency matrix
         n_add = len(ssegs) - 1
         prev_connecting_segments = segs_adjacency[iseg].copy()
-        if self.flavor == 'haghverdi16':
+        if self.flavor == "haghverdi16":
             segs_adjacency += [[iseg] for i in range(n_add)]
-            segs_connects += [seg_connects for iseg, seg_connects in enumerate(ssegs_connects) if iseg != trunk]
-            prev_connecting_points = segs_connects[iseg]
+            segs_connects += [
+                seg_connects
+                for iseg, seg_connects in enumerate(ssegs_connects)
+                if iseg != trunk
+            ]
+            # TODO Evaluate whether to assign the variable or not
+            prev_connecting_points = segs_connects[iseg]  # noqa: F841
             for jseg_cnt, jseg in enumerate(prev_connecting_segments):
                 iseg_cnt = 0
                 for iseg_new, seg_new in enumerate(ssegs):
@@ -495,9 +624,13 @@ class DPT(Neighbors):
                             segs_connects[kseg].append(idx)
                             break
                         iseg_cnt += 1
-            segs_adjacency[iseg] += list(range(len(segs_adjacency) - n_add, len(segs_adjacency)))
+            segs_adjacency[iseg] += list(
+                range(len(segs_adjacency) - n_add, len(segs_adjacency))
+            )
             segs_connects[iseg] += ssegs_connects[trunk]
         else:
+            import networkx as nx
+
             segs_adjacency += [[] for i in range(n_add)]
             segs_connects += [[] for i in range(n_add)]
             kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))
@@ -508,11 +641,29 @@ class DPT(Neighbors):
                 closest_points_in_kseg = []
                 for kseg in kseg_list:
                     reference_point_in_k = segs_tips[kseg][0]
-                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.distances_dpt[reference_point_in_k, segs[jseg]])])
+                    closest_points_in_jseg.append(
+                        segs[jseg][
+                            np.argmin(
+                                self.distances_dpt[reference_point_in_k, segs[jseg]]
+                            )
+                        ]
+                    )
                     # do not use the tip in the large segment j, instead, use the closest point
-                    reference_point_in_j = closest_points_in_jseg[-1]  # segs_tips[jseg][0]
-                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.distances_dpt[reference_point_in_j, segs[kseg]])])
-                    distances.append(self.distances_dpt[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
+                    reference_point_in_j = closest_points_in_jseg[
+                        -1
+                    ]  # segs_tips[jseg][0]
+                    closest_points_in_kseg.append(
+                        segs[kseg][
+                            np.argmin(
+                                self.distances_dpt[reference_point_in_j, segs[kseg]]
+                            )
+                        ]
+                    )
+                    distances.append(
+                        self.distances_dpt[
+                            closest_points_in_jseg[-1], closest_points_in_kseg[-1]
+                        ]
+                    )
                     # print(jseg, '(', segs_tips[jseg][0], closest_points_in_jseg[-1], ')',
                     #       kseg, '(', segs_tips[kseg][0], closest_points_in_kseg[-1], ') :', distances[-1])
                 idx = np.argmin(distances)
@@ -533,19 +684,42 @@ class DPT(Neighbors):
                 distances = []
                 closest_points_in_jseg = []
                 closest_points_in_kseg = []
-                jseg_list = [jseg for jseg in range(len(segs))
-                             if jseg != kseg and jseg not in prev_connecting_segments]
+                jseg_list = [
+                    jseg
+                    for jseg in range(len(segs))
+                    if jseg != kseg and jseg not in prev_connecting_segments
+                ]
                 for jseg in jseg_list:
                     reference_point_in_k = segs_tips[kseg][0]
-                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.distances_dpt[reference_point_in_k, segs[jseg]])])
+                    closest_points_in_jseg.append(
+                        segs[jseg][
+                            np.argmin(
+                                self.distances_dpt[reference_point_in_k, segs[jseg]]
+                            )
+                        ]
+                    )
                     # do not use the tip in the large segment j, instead, use the closest point
-                    reference_point_in_j = closest_points_in_jseg[-1]  # segs_tips[jseg][0]
-                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.distances_dpt[reference_point_in_j, segs[kseg]])])
-                    distances.append(self.distances_dpt[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
+                    reference_point_in_j = closest_points_in_jseg[
+                        -1
+                    ]  # segs_tips[jseg][0]
+                    closest_points_in_kseg.append(
+                        segs[kseg][
+                            np.argmin(
+                                self.distances_dpt[reference_point_in_j, segs[kseg]]
+                            )
+                        ]
+                    )
+                    distances.append(
+                        self.distances_dpt[
+                            closest_points_in_jseg[-1], closest_points_in_kseg[-1]
+                        ]
+                    )
                 idx = np.argmin(distances)
                 jseg_min = jseg_list[idx]
                 if jseg_min not in kseg_list:
-                    segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
+                    segs_adjacency_sparse = sp.sparse.lil_matrix(
+                        (len(segs), len(segs)), dtype=float
+                    )
                     for i, seg_adjacency in enumerate(segs_adjacency):
                         segs_adjacency_sparse[i, seg_adjacency] = 1
                     G = nx.Graph(segs_adjacency_sparse)
@@ -555,17 +729,19 @@ class DPT(Neighbors):
                         segs_connects[jseg_min].append(closest_points_in_kseg[idx])
                         segs_adjacency[kseg].append(jseg_min)
                         segs_connects[kseg].append(closest_points_in_jseg[idx])
-                        logg.m('    attaching new segment', kseg, 'at', jseg_min)
+                        logg.debug(f"    attaching new segment {kseg} at {jseg_min}")
                         # if we split the cluster, we should not attach kseg
                         do_not_attach_kseg = True
                     else:
-                        logg.m('    cannot attach new segment', kseg, 'at', jseg_min,
-                               '(would produce cycle)')
+                        logg.debug(
+                            f"    cannot attach new segment {kseg} at {jseg_min} "
+                            "(would produce cycle)"
+                        )
                         if kseg != kseg_list[-1]:
-                            logg.m('        continue')
+                            logg.debug("        continue")
                             continue
                         else:
-                            logg.m('        do not add another link')
+                            logg.debug("        do not add another link")
                             break
                 if jseg_min in kseg_list and not do_not_attach_kseg:
                     segs_adjacency[jseg_min].append(kseg)
@@ -575,8 +751,20 @@ class DPT(Neighbors):
                     break
         segs_undecided += [False for i in range(n_add)]
 
-    def _detect_branching(self, Dseg: np.ndarray, tips: np.ndarray, seg_reference=None):
-        """Detect branching on given segment.
+    def _detect_branching(
+        self,
+        Dseg: np.ndarray,
+        tips: np.ndarray,
+        seg_reference=None,
+    ) -> tuple[
+        list[np.ndarray],
+        list[np.ndarray],
+        list[list[int]],
+        list[list[int]],
+        int,
+    ]:
+        """\
+        Detect branching on given segment.
 
         Call function __detect_branching three times for all three orderings of
         tips. Points that do not belong to the same segment in all three
@@ -592,20 +780,28 @@ class DPT(Neighbors):
 
         Returns
         -------
-        ssegs : list of np.ndarray
+        ssegs
             List of segments obtained from splitting the single segment defined
             via the first two tip cells.
-        ssegs_tips : list of np.ndarray
+        ssegs_tips
             List of tips of segments in ssegs.
+        ssegs_adjacency
+            ?
+        ssegs_connects
+            ?
+        trunk
+            ?
         """
-        if self.flavor == 'haghverdi16':
+        if self.flavor == "haghverdi16":
             ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
-        elif self.flavor == 'wolf17_tri':
+        elif self.flavor == "wolf17_tri":
             ssegs = self._detect_branching_single_wolf17_tri(Dseg, tips)
-        elif self.flavor == 'wolf17_bi' or self.flavor == 'wolf17_bi_un':
+        elif self.flavor == "wolf17_bi" or self.flavor == "wolf17_bi_un":
             ssegs = self._detect_branching_single_wolf17_bi(Dseg, tips)
         else:
-            raise ValueError('`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.')
+            raise ValueError(
+                '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'
+            )
         # make sure that each data point has a unique association with a segment
         masks = np.zeros((len(ssegs), Dseg.shape[0]), dtype=bool)
         for iseg, seg in enumerate(ssegs):
@@ -619,7 +815,7 @@ class DPT(Neighbors):
         ssegs_tips = []
         for inewseg, newseg in enumerate(ssegs):
             if len(np.flatnonzero(newseg)) <= 1:
-                logg.warn('detected group with only {} cells'.format(np.flatnonzero(newseg)))
+                logg.warning(f"detected group with only {np.flatnonzero(newseg)} cells")
             secondtip = newseg[np.argmax(Dseg[tips[inewseg]][newseg])]
             ssegs_tips.append([tips[inewseg], secondtip])
         undecided_cells = np.arange(Dseg.shape[0], dtype=int)[nonunique]
@@ -630,13 +826,19 @@ class DPT(Neighbors):
             for inewseg, newseg_tips in enumerate(ssegs_tips):
                 reference_point = newseg_tips[0]
                 # closest cell to the new segment within undecided cells
-                closest_cell = undecided_cells[np.argmin(Dseg[reference_point][undecided_cells])]
+                closest_cell = undecided_cells[
+                    np.argmin(Dseg[reference_point][undecided_cells])
+                ]
                 ssegs_connects[inewseg].append(closest_cell)
                 # closest cell to the undecided cells within new segment
-                closest_cell = ssegs[inewseg][np.argmin(Dseg[closest_cell][ssegs[inewseg]])]
+                closest_cell = ssegs[inewseg][
+                    np.argmin(Dseg[closest_cell][ssegs[inewseg]])
+                ]
                 ssegs_connects[-1].append(closest_cell)
             # also compute tips for the undecided cells
-            tip_0 = undecided_cells[np.argmax(Dseg[undecided_cells[0]][undecided_cells])]
+            tip_0 = undecided_cells[
+                np.argmax(Dseg[undecided_cells[0]][undecided_cells])
+            ]
             tip_1 = undecided_cells[np.argmax(Dseg[tip_0][undecided_cells])]
             ssegs_tips.append([tip_0, tip_1])
             ssegs_adjacency = [[3], [3], [3], [0, 1, 2]]
@@ -650,44 +852,74 @@ class DPT(Neighbors):
             # this is another strategy than for the undecided_cells
             # here it's possible to use the more symmetric procedure
             # shouldn't make much of a difference
-            closest_points[0, 1] = ssegs[1][np.argmin(Dseg[reference_point[0]][ssegs[1]])]
-            closest_points[1, 0] = ssegs[0][np.argmin(Dseg[reference_point[1]][ssegs[0]])]
-            closest_points[0, 2] = ssegs[2][np.argmin(Dseg[reference_point[0]][ssegs[2]])]
-            closest_points[2, 0] = ssegs[0][np.argmin(Dseg[reference_point[2]][ssegs[0]])]
-            closest_points[1, 2] = ssegs[2][np.argmin(Dseg[reference_point[1]][ssegs[2]])]
-            closest_points[2, 1] = ssegs[1][np.argmin(Dseg[reference_point[2]][ssegs[1]])]
+            closest_points[0, 1] = ssegs[1][
+                np.argmin(Dseg[reference_point[0]][ssegs[1]])
+            ]
+            closest_points[1, 0] = ssegs[0][
+                np.argmin(Dseg[reference_point[1]][ssegs[0]])
+            ]
+            closest_points[0, 2] = ssegs[2][
+                np.argmin(Dseg[reference_point[0]][ssegs[2]])
+            ]
+            closest_points[2, 0] = ssegs[0][
+                np.argmin(Dseg[reference_point[2]][ssegs[0]])
+            ]
+            closest_points[1, 2] = ssegs[2][
+                np.argmin(Dseg[reference_point[1]][ssegs[2]])
+            ]
+            closest_points[2, 1] = ssegs[1][
+                np.argmin(Dseg[reference_point[2]][ssegs[1]])
+            ]
             added_dist = np.zeros(3)
-            added_dist[0] = Dseg[closest_points[1, 0], closest_points[0, 1]] + Dseg[closest_points[2, 0], closest_points[0, 2]]
-            added_dist[1] = Dseg[closest_points[0, 1], closest_points[1, 0]] + Dseg[closest_points[2, 1], closest_points[1, 2]]
-            added_dist[2] = Dseg[closest_points[1, 2], closest_points[2, 1]] + Dseg[closest_points[0, 2], closest_points[2, 0]]
+            added_dist[0] = (
+                Dseg[closest_points[1, 0], closest_points[0, 1]]
+                + Dseg[closest_points[2, 0], closest_points[0, 2]]
+            )
+            added_dist[1] = (
+                Dseg[closest_points[0, 1], closest_points[1, 0]]
+                + Dseg[closest_points[2, 1], closest_points[1, 2]]
+            )
+            added_dist[2] = (
+                Dseg[closest_points[1, 2], closest_points[2, 1]]
+                + Dseg[closest_points[0, 2], closest_points[2, 0]]
+            )
             trunk = np.argmin(added_dist)
-            ssegs_adjacency = [[trunk] if i != trunk else
-                               [j for j in range(3) if j != trunk]
-                               for i in range(3)]
-            ssegs_connects = [[closest_points[i, trunk]] if i != trunk else
-                              [closest_points[trunk, j] for j in range(3) if j != trunk]
-                              for i in range(3)]
+            ssegs_adjacency = [
+                [trunk] if i != trunk else [j for j in range(3) if j != trunk]
+                for i in range(3)
+            ]
+            ssegs_connects = [
+                [closest_points[i, trunk]]
+                if i != trunk
+                else [closest_points[trunk, j] for j in range(3) if j != trunk]
+                for i in range(3)
+            ]
         else:
             trunk = 0
             ssegs_adjacency = [[1], [0]]
             reference_point_in_0 = ssegs_tips[0][0]
-            closest_point_in_1 = ssegs[1][np.argmin(Dseg[reference_point_in_0][ssegs[1]])]
+            closest_point_in_1 = ssegs[1][
+                np.argmin(Dseg[reference_point_in_0][ssegs[1]])
+            ]
             reference_point_in_1 = closest_point_in_1  # ssegs_tips[1][0]
-            closest_point_in_0 = ssegs[0][np.argmin(Dseg[reference_point_in_1][ssegs[0]])]
+            closest_point_in_0 = ssegs[0][
+                np.argmin(Dseg[reference_point_in_1][ssegs[0]])
+            ]
             ssegs_connects = [[closest_point_in_1], [closest_point_in_0]]
         return ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk
 
     def _detect_branching_single_haghverdi16(self, Dseg, tips):
-        """Detect branching on given segment.
-        """
+        """Detect branching on given segment."""
         # compute branchings using different starting points the first index of
         # tips is the starting point for the other two, the order does not
         # matter
         ssegs = []
         # permutations of tip cells
-        ps = [[0, 1, 2],  # start by computing distances from the first tip
-              [1, 2, 0],  #             -"-                       second tip
-              [2, 0, 1]]  #             -"-                       third tip
+        ps = [
+            [0, 1, 2],  # start by computing distances from the first tip
+            [1, 2, 0],  #             -"-                       second tip
+            [2, 0, 1],  #             -"-                       third tip
+        ]
         for i, p in enumerate(ps):
             ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
         return ssegs
@@ -722,8 +954,11 @@ class DPT(Neighbors):
         ssegs = [closer_to_0_than_to_1, ~closer_to_0_than_to_1]
         return ssegs
 
-    def __detect_branching_haghverdi16(self, Dseg, tips):
-        """Detect branching on given segment.
+    def __detect_branching_haghverdi16(
+        self, Dseg: np.ndarray, tips: np.ndarray
+    ) -> np.ndarray:
+        """\
+        Detect branching on given segment.
 
         Compute point that maximizes kendall tau correlation of the sequences of
         distances to the second and the third tip, respectively, when 'moving
@@ -732,15 +967,14 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        Dseg : np.ndarray
+        Dseg
             Dchosen distance matrix restricted to segment.
-        tips : np.ndarray
+        tips
             The three tip points. They form a 'triangle' that contains the data.
 
         Returns
         -------
-        ssegs : list of np.ndarray
-            List of segments obtained from "splitting away the first tip cell".
+        Segments obtained from "splitting away the first tip cell".
         """
         # sort distance from first tip point
         # then the sequence of distances Dseg[tips[0]][idcs] increases
@@ -750,19 +984,21 @@ class DPT(Neighbors):
         # where they become correlated
         # at the point where this happens, we define a branching point
         if True:
-            imax = self.kendall_tau_split(Dseg[tips[1]][idcs],
-                                          Dseg[tips[2]][idcs])
+            imax = self.kendall_tau_split(
+                Dseg[tips[1]][idcs],
+                Dseg[tips[2]][idcs],
+            )
         if False:
             # if we were in euclidian space, the following should work
             # as well, but here, it doesn't because the scales in Dseg are
             # highly different, one would need to write the following equation
             # in terms of an ordering, such as exploited by the kendall
             # correlation method above
-            imax = np.argmin(Dseg[tips[0]][idcs]
-                             + Dseg[tips[1]][idcs]
-                             + Dseg[tips[2]][idcs])
+            imax = np.argmin(
+                Dseg[tips[0]][idcs] + Dseg[tips[1]][idcs] + Dseg[tips[2]][idcs]
+            )
         # init list to store new segments
-        ssegs = []
+        ssegs = []  # noqa: F841  # TODO Look into this
         # first new segment: all points until, but excluding the branching point
         # increasing the following slightly from imax is a more conservative choice
         # as the criterion based on normalized distances, which follows below,
@@ -770,14 +1006,17 @@ class DPT(Neighbors):
         if imax > 0.95 * len(idcs) and self.allow_kendall_tau_shift:
             # if "everything" is correlated (very large value of imax), a more
             # conservative choice amounts to reducing this
-            logg.warn('shifting branching point away from maximal kendall-tau correlation (suppress this with `allow_kendall_tau_shift=False`)')
+            logg.warning(
+                "shifting branching point away from maximal kendall-tau "
+                "correlation (suppress this with `allow_kendall_tau_shift=False`)"
+            )
             ibranch = int(0.95 * imax)
         else:
             # otherwise, a more conservative choice is the following
             ibranch = imax + 1
         return idcs[:ibranch]
 
-    def kendall_tau_split(self, a, b) -> int:
+    def kendall_tau_split(self, a: np.ndarray, b: np.ndarray) -> int:
         """Return splitting index that maximizes correlation in the sequences.
 
         Compute difference in Kendall tau for all splitted sequences.
@@ -791,7 +1030,8 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        a, b : np.ndarray
+        a
+        b
             One dimensional sequences.
 
         Returns
@@ -799,13 +1039,14 @@ class DPT(Neighbors):
         Splitting index according to above description.
         """
         if a.size != b.size:
-            raise ValueError('a and b need to have the same size')
+            raise ValueError("a and b need to have the same size")
         if a.ndim != b.ndim != 1:
-            raise ValueError('a and b need to be one-dimensional arrays')
+            raise ValueError("a and b need to be one-dimensional arrays")
         import scipy as sp
+
         min_length = 5
         n = a.size
-        idx_range = np.arange(min_length, a.size-min_length-1, dtype=int)
+        idx_range = np.arange(min_length, a.size - min_length - 1, dtype=int)
         corr_coeff = np.zeros(idx_range.size)
         pos_old = sp.stats.kendalltau(a[:min_length], b[:min_length])[0]
         neg_old = sp.stats.kendalltau(a[min_length:], b[min_length:])[0]
@@ -816,14 +1057,14 @@ class DPT(Neighbors):
                 # the second subsequence
                 diff_pos, diff_neg = self._kendall_tau_diff(a, b, i)
                 pos = pos_old + self._kendall_tau_add(i, diff_pos, pos_old)
-                neg = neg_old + self._kendall_tau_subtract(n-i, diff_neg, neg_old)
+                neg = neg_old + self._kendall_tau_subtract(n - i, diff_neg, neg_old)
                 pos_old = pos
                 neg_old = neg
             if False:
                 # computation using sp.stats.kendalltau, takes much longer!
                 # just for debugging purposes
-                pos = sp.stats.kendalltau(a[:i+1], b[:i+1])[0]
-                neg = sp.stats.kendalltau(a[i+1:], b[i+1:])[0]
+                pos = sp.stats.kendalltau(a[: i + 1], b[: i + 1])[0]
+                neg = sp.stats.kendalltau(a[i + 1 :], b[i + 1 :])[0]
             if False:
                 # the following is much slower than using sp.stats.kendalltau,
                 # it is only good for debugging because it allows to compute the
@@ -837,42 +1078,42 @@ class DPT(Neighbors):
         imax = min_length + iimax
         corr_coeff_max = corr_coeff[iimax]
         if corr_coeff_max < 0.3:
-            logg.m('    is root itself, never obtain significant correlation', v=4)
+            logg.debug("    is root itself, never obtain significant correlation")
         return imax
 
-    def _kendall_tau_add(self, len_old, diff_pos, tau_old):
+    def _kendall_tau_add(self, len_old: int, diff_pos: int, tau_old: float):
         """Compute Kendall tau delta.
 
         The new sequence has length len_old + 1.
 
         Parameters
         ----------
-        len_old : int
+        len_old
             The length of the old sequence, used to compute tau_old.
-        diff_pos : int
+        diff_pos
             Difference between concordant and non-concordant pairs.
-        tau_old : float
+        tau_old
             Kendall rank correlation of the old sequence.
         """
-        return 2./(len_old+1)*(float(diff_pos)/len_old-tau_old)
+        return 2.0 / (len_old + 1) * (float(diff_pos) / len_old - tau_old)
 
-    def _kendall_tau_subtract(self, len_old, diff_neg, tau_old):
+    def _kendall_tau_subtract(self, len_old: int, diff_neg: int, tau_old: float):
         """Compute Kendall tau delta.
 
         The new sequence has length len_old - 1.
 
         Parameters
         ----------
-        len_old : int
+        len_old
             The length of the old sequence, used to compute tau_old.
-        diff_neg : int
+        diff_neg
             Difference between concordant and non-concordant pairs.
-        tau_old : float
+        tau_old
             Kendall rank correlation of the old sequence.
         """
-        return 2./(len_old-2)*(-float(diff_neg)/(len_old-1)+tau_old)
+        return 2.0 / (len_old - 2) * (-float(diff_neg) / (len_old - 1) + tau_old)
 
-    def _kendall_tau_diff(self, a: np.ndarray, b: np.ndarray, i) -> Tuple[int, int]:
+    def _kendall_tau_diff(self, a: np.ndarray, b: np.ndarray, i) -> tuple[int, int]:
         """Compute difference in concordance of pairs in split sequences.
 
         Consider splitting a and b at index i.

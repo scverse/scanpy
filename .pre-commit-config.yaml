@@ -1,0 +1,32 @@
+repos:
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.13
+    hooks:
+    -   id: ruff
+        types_or: [python, pyi, jupyter]
+        args: ["--fix"]
+    -   id: ruff-format
+        types_or: [python, pyi, jupyter]
+    # The following can be removed once PLR0917 is out of preview
+    -   name: ruff preview rules
+        id: ruff
+        types_or: [python, pyi, jupyter]
+        args: ["--preview", "--select=PLR0917"]
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    -   id: trailing-whitespace
+        exclude: scanpy/tests/_data
+    -   id: end-of-file-fixer
+        exclude: scanpy/tests/_data
+    -   id: check-added-large-files
+    -   id: check-case-conflict
+    -   id: check-toml
+    -   id: check-yaml
+    -   id: check-merge-conflict
+    -   id: detect-private-key
+    -   id: no-commit-to-branch
+        args: ["--branch=master", "--branch=main"]
+
+ci:
+    autofix_prs: false

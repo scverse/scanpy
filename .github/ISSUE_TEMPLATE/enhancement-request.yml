@@ -1,0 +1,23 @@
+name: Enhancement request
+description: Anything you’d like to see in scanpy?
+#title: ...
+labels: ['Enhancement ✨']
+#assignees: []
+body:
+- type: dropdown
+  id: kind
+  attributes:
+    label: What kind of feature would you like to request?
+    options:
+    - 'Additional function parameters / changed functionality / changed defaults?'
+    - 'New analysis tool: A simple analysis tool you have been using and are missing in `sc.tools`?'
+    - 'New plotting function: A kind of plot you would like to seein `sc.pl`?'
+    - 'Other?'
+  validations:
+    required: true
+- type: textarea
+  id: description
+  attributes:
+    label: Please describe your wishes
+  validations:
+    required: true

@@ -1,95 +1,11 @@
-from . import tl
-from . import pl
-from . import pp
-
-from .. import _exporting as exporting
+from __future__ import annotations
 
 import sys
-from .. import utils
-utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
-del sys, utils
 
+from .. import _utils
+from . import exporting, pl, pp, tl
 
-__doc__ = """\
-External API
-============
+_utils.annotate_doc_types(sys.modules[__name__], "scanpy")
+del sys, _utils
 
-
-Import Scanpy's wrappers to external tools as::
-
-   import scanpy.external as sce
-
-Preprocessing: PP
-------------------
-
-Batch effect correction
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-   :toctree: .
-
-   pp.bbknn
-   pp.mnn_correct
-
-Imputation
-~~~~~~~~~~
-
-Note that the fundamental limitations of imputation are still under `debate
-<https://github.com/theislab/scanpy/issues/189>`__.
-
-.. autosummary::
-   :toctree: .
-
-   pp.dca
-   pp.magic
-
-
-Tools: TL
-----------
-
-Embeddings
-~~~~~~~~~~
-
-.. autosummary::
-   :toctree: .
-
-   tl.phate
-   tl.palantir
-
-Clustering and trajectory inference
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-   :toctree: .
-
-   tl.phenograph
-
-Gene scores, Cell cycle
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-   :toctree: .
-
-   tl.sandbag
-   tl.cyclone
-
-
-Plotting: PL
-------------
-
-.. autosummary::
-   :toctree: .
-
-   pl.phate
-   tl.palantir
-
-
-Exporting
----------
-
-.. autosummary::
-   :toctree: .
-
-   exporting.spring_project
-   exporting.cellbrowser
-"""
+__all__ = ["exporting", "pl", "pp", "tl"]

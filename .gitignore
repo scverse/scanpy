@@ -1,69 +1,45 @@
-# Scanpy
-.pytest_cache/
-.scanpy
-.coverage
-figures/
-cache/
-coverage.xml
-test.h5ad
-test_compr.h5ad
-test_no_compr.h5ad
-docs/_build
-docs/api/scanpy.api.*.rst
-docs/api/scanpy.*.rst
-!docs/api/scanpy.api.rst
-!docs/api/scanpy.api.AnnData.rst
-!docs/api/scanpy.plotting.rst
-archive/
-data/
-figs/
-*/figs*/
-write/
-/examples/
-scanpy.egg-info/
-scanpy_user/
-scanpy_save/
-scanpy_later/
-scripts_test/
-thirdp/
-test.py
-README.html
-scripts/
-test_notebooks.txt
-upload_to_pypi.sh
+# Scanpy outfiles
+/data/
+/write/
 
-# private files
-scanpy/examples/builtin_private.py
-scanpy/tools/paths.py
-scanpy/tools/tgdyn.py
-scanpy/tools/tgdyn_simple.py
-scripts/paths.py
-scripts/test_private.sh
-scripts/tgdyn.py
-scripts/tgdyn_simple.py
-.spyproject/
-scanpy/.spyproject/
+# Docs
+/docs/_build/
+/docs/generated/
+/docs/data/
+/docs/api/generated
+/docs/external/generated
+/docs/jupyter_execute
+
+# tests
+/*cache/
+/test-data/
+/scanpy/tests/test*.h5ad
+/scanpy/tests/**/*actual.png
+/scanpy/tests/**/*failed-diff.png
 
 # Environment management
-Pipfile
-Pipfile.lock
+/hatch.toml
+/Pipfile
+/Pipfile.lock
+/requirements*.lock
 
 # always-ignore extensions
 *~
 
-# Python / Byte-compiled / optimized / DLL
+# Python build files
 __pycache__/
-*.py[cod]
-*.so
-.cache
+/scanpy/_version.py
+/dist/
+/*-env/
+/env-*/
+/environment.yml
 
-# OS or Editor files and folders
+# OS stuff
 .DS_Store
 Thumbs.db
 .ipynb_checkpoints/
 .directory
-/.idea/
 
-# always-ignore directories
-/dist/
-/build/
+# IDEs and editors
+/.idea/
+/.vscode/
