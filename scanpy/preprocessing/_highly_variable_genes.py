@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from dataclasses import dataclass
 from functools import partial
 from inspect import signature
 from typing import TYPE_CHECKING, Literal, cast
@@ -191,15 +192,54 @@ def _highly_variable_genes_seurat_v3(
         return df
 
 
+@dataclass
+class _Cutoffs:
+    min_disp: float
+    max_disp: float
+    min_mean: float
+    max_mean: float
+
+    @classmethod
+    def validate(
+        cls,
+        *,
+        min_disp: float,
+        max_disp: float,
+        min_mean: float,
+        max_mean: float,
+        n_top_genes: int | None,
+    ) -> _Cutoffs | int:
+        if n_top_genes is None:
+            return cls(min_disp, max_disp, min_mean, max_mean)
+
+        cutoffs = {"min_disp", "max_disp", "min_mean", "max_mean"}
+        defaults = {
+            p.name: p.default
+            for p in signature(highly_variable_genes).parameters.values()
+            if p.name in cutoffs
+        }
+        if {k: v for k, v in locals().items() if k in cutoffs} != defaults:
+            logg.info("If you pass `n_top_genes`, all cutoffs are ignored.")
+        return n_top_genes
+
+    def in_bounds(
+        self,
+        mean: NDArray[np.float64] | DaskArray,
+        dispersion_norm: NDArray[np.float64] | DaskArray,
+    ) -> NDArray[np.bool_] | DaskArray:
+        return (
+            (mean > self.min_mean)
+            & (mean < self.max_mean)
+            & (dispersion_norm > self.min_disp)
+            & (dispersion_norm < self.max_disp)
+        )
+
+
 def _highly_variable_genes_single_batch(
     adata: AnnData,
     *,
     layer: str | None = None,
-    min_disp: float = 0.5,
-    max_disp: float = np.inf,
-    min_mean: float = 0.0125,
-    max_mean: float = 3,
-    n_top_genes: int | None = None,
+    cutoff: _Cutoffs | int,
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
 ) -> pd.DataFrame | DaskDataFrame:
@@ -255,17 +295,16 @@ def _highly_variable_genes_single_batch(
         adata,
         mean=mean,
         dispersion_norm=series_to_array(df["dispersions_norm"]),
-        min_disp=min_disp,
-        max_disp=max_disp,
-        min_mean=min_mean,
-        max_mean=max_mean,
-        n_top_genes=n_top_genes,
+        cutoff=cutoff,
     )
 
     return df
 
 
-def _stats_seurat(df: pd.DataFrame | DaskDataFrame, *, n_bins: int):
+def _stats_seurat(
+    df: pd.DataFrame | DaskDataFrame, *, n_bins: int
+) -> tuple[pd.Series | DaskSeries, pd.Series | DaskSeries]:
+    """Assign "mean_bin" column and compute mean and std dev per bin."""
     df["mean_bin"] = _ser_cut(df["means"], bins=n_bins)
     disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
     with suppress_pandas_warning():
@@ -293,7 +332,10 @@ def _stats_seurat(df: pd.DataFrame | DaskDataFrame, *, n_bins: int):
     return disp_avg, disp_dev
 
 
-def _stats_cell_ranger(df: pd.DataFrame | DaskDataFrame):
+def _stats_cell_ranger(
+    df: pd.DataFrame | DaskDataFrame,
+) -> tuple[pd.Series | DaskSeries, pd.Series | DaskSeries]:
+    """Assign "mean_bin" column and compute median and median absolute dev per bin."""
     from statsmodels import robust
 
     df["mean_bin"] = _ser_cut(
@@ -311,9 +353,9 @@ def _stats_cell_ranger(df: pd.DataFrame | DaskDataFrame):
     return disp_avg, disp_dev
 
 
-def _ser_cut(df: pd.Series | DaskSeries, *, bins: int) -> pd.Series:
+def _ser_cut(df: pd.Series | DaskSeries, *, bins: int) -> pd.Series | DaskSeries:
     if isinstance(df, DaskSeries):
-        # TODO: does map_partitions make sense for bin?
+        # TODO: does map_partitions make sense for bin? It would bin per chunk, not globally
         return df.map_partitions(pd.cut, bins=bins)
     return pd.cut(df, bins=bins)
 
@@ -323,20 +365,13 @@ def _subset_genes(
     *,
     mean: NDArray[np.float64] | DaskArray,
     dispersion_norm: NDArray[np.float64] | DaskArray,
-    min_disp: float,
-    max_disp: float,
-    min_mean: float,
-    max_mean: float,
-    n_top_genes: int | None,
-) -> NDArray[np.float64] | DaskArray:
-    if n_top_genes is None:
+    cutoff: _Cutoffs | int,
+) -> NDArray[np.bool_] | DaskArray:
+    if isinstance(cutoff, _Cutoffs):
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        return (
-            (mean > min_mean)
-            & (mean < max_mean)
-            & (dispersion_norm > min_disp)
-            & (dispersion_norm < max_disp)
-        )
+        return cutoff.in_bounds(mean, dispersion_norm)
+    n_top_genes = cutoff
+    del cutoff
     dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
     # interestingly, np.argpartition is slightly slower
     dispersion_norm[::-1].sort()
@@ -494,15 +529,6 @@ def highly_variable_genes(
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
     """
 
-    defaults = {
-        p.name: p.default for p in signature(highly_variable_genes).parameters.values()
-    }
-    if n_top_genes is not None and not all(
-        locals()[m] == defaults[m]
-        for m in ["min_disp", "max_disp", "min_mean", "max_mean"]
-    ):
-        logg.info("If you pass `n_top_genes`, all cutoffs are ignored.")
-
     start = logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):
@@ -526,17 +552,18 @@ def highly_variable_genes(
             inplace=inplace,
         )
 
+    cutoff = _Cutoffs.validate(
+        min_disp=min_disp,
+        max_disp=max_disp,
+        min_mean=min_mean,
+        max_mean=max_mean,
+        n_top_genes=n_top_genes,
+    )
+    del min_disp, max_disp, min_mean, max_mean, n_top_genes
+
     if batch_key is None:
         df = _highly_variable_genes_single_batch(
-            adata,
-            layer=layer,
-            min_disp=min_disp,
-            max_disp=max_disp,
-            min_mean=min_mean,
-            max_mean=max_mean,
-            n_top_genes=n_top_genes,
-            n_bins=n_bins,
-            flavor=flavor,
+            adata, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
         )
     else:
         sanitize_anndata(adata)
@@ -560,15 +587,7 @@ def highly_variable_genes(
             adata_subset = adata_subset[:, filt]
 
             hvg = _highly_variable_genes_single_batch(
-                adata_subset,
-                layer=layer,
-                min_disp=min_disp,
-                max_disp=max_disp,
-                min_mean=min_mean,
-                max_mean=max_mean,
-                n_top_genes=n_top_genes,
-                n_bins=n_bins,
-                flavor=flavor,
+                adata_subset, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
             )
 
             hvg["gene"] = adata_subset.var_names.to_numpy()
@@ -614,7 +633,7 @@ def highly_variable_genes(
             batches
         )
 
-        if n_top_genes is not None:
+        if isinstance(cutoff, int):
             # sort genes by how often they selected as hvg within each batch and
             # break ties with normalized dispersion across batches
             df.sort_values(
@@ -623,21 +642,15 @@ def highly_variable_genes(
                 na_position="last",
                 inplace=True,
             )
-            high_var = np.zeros(df.shape[0])
-            high_var[:n_top_genes] = True
-            df["highly_variable"] = high_var.astype(bool)
+            df["highly_variable"] = np.arange(df.shape[0]) < cutoff
             df = df.loc[adata.var_names, :]
         else:
             df = df.loc[adata.var_names]
             dispersion_norm = series_to_array(df["dispersions_norm"])
             dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-            gene_subset = (
-                (df["means"] > min_mean)
-                & (df["means"] < max_mean)
-                & (df["dispersions_norm"] > min_disp)
-                & (df["dispersions_norm"] < max_disp)
+            df["highly_variable"] = cutoff.in_bounds(
+                df["means"], df["dispersions_norm"]
             )
-            df["highly_variable"] = gene_subset
 
     logg.info("    finished", time=start)
 
@@ -653,8 +666,8 @@ def highly_variable_genes(
         adata.var["highly_variable"] = series_to_array(df["highly_variable"])
         adata.var["means"] = series_to_array(df["means"])
         adata.var["dispersions"] = series_to_array(df["dispersions"])
-        adata.var["dispersions_norm"] = series_to_array(df["dispersions_norm"]).astype(
-            "float32"
+        adata.var["dispersions_norm"] = series_to_array(
+            df["dispersions_norm"], dtype=np.float32
         )
 
         if batch_key is not None:
