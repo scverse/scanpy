@@ -233,54 +233,17 @@ def _highly_variable_genes_single_batch(
         )
     else:
         df = pd.DataFrame(dict(means=mean, dispersions=dispersion))
+    # assign "mean_bin" column and compute dispersions_norm
     if flavor == "seurat":
-        df["mean_bin"] = _ser_cut(df["means"], bins=n_bins)
-        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
-        with suppress_pandas_warning():
-            disp_bin_stats: pd.DataFrame = dask_compute(
-                disp_grouped.agg(mean="mean", std=partial(np.std, ddof=1))
-            )
-        # retrieve those genes that have nan std, these are the ones where
-        # only a single gene fell in the bin and implicitly set them to have
-        # a normalized disperion of 1
-        one_gene_per_bin = disp_bin_stats["std"].isnull()
-        gen_indices = np.flatnonzero(one_gene_per_bin.loc[df["mean_bin"]])
-        if len(gen_indices) > 0:
-            logg.debug(
-                f"Gene indices {gen_indices} fell into a single bin: their "
-                "normalized dispersion was set to 1.\n    "
-                "Decreasing `n_bins` will likely avoid this effect."
-            )
-            disp_bin_stats["std"].loc[one_gene_per_bin] = disp_bin_stats["mean"].loc[
-                one_gene_per_bin
-            ]
-            disp_bin_stats["mean"].loc[one_gene_per_bin] = 0
-        # (use values here as index differs)
-        disp_mean = disp_bin_stats["mean"].loc[df["mean_bin"]].to_numpy()
-        disp_std = disp_bin_stats["std"].loc[df["mean_bin"]].to_numpy()
-        # actually do the normalization
-        df["dispersions_norm"] = (df["dispersions"] - disp_mean) / disp_std
+        disp_avg, disp_dev = _stats_seurat(df, n_bins=n_bins)
     elif flavor == "cell_ranger":
-        from statsmodels import robust
-
-        df["mean_bin"] = _ser_cut(
-            df["means"],
-            bins=np.r_[
-                -np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf
-            ],
-        )
-        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
-        disp_median_bin = disp_grouped.median()
-        # the next line raises the warning: "Mean of empty slice"
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            disp_mad_bin = disp_grouped.apply(robust.mad)
-            df["dispersions_norm"] = (
-                df["dispersions"].to_numpy()
-                - disp_median_bin[df["mean_bin"].to_numpy()].to_numpy()
-            ) / disp_mad_bin[df["mean_bin"].to_numpy()].to_numpy()
+        disp_avg, disp_dev = _stats_cell_ranger(df)
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
+
+    # actually do the normalization
+    df["dispersions_norm"] = (df["dispersions"] - disp_avg) / disp_dev
+
     dispersion_norm = df["dispersions_norm"].to_numpy()
     if n_top_genes is not None:
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
@@ -315,6 +278,52 @@ def _highly_variable_genes_single_batch(
 
     df["highly_variable"] = gene_subset
     return df
+
+
+def _stats_seurat(df: pd.DataFrame | DaskDataFrame, *, n_bins: int):
+    df["mean_bin"] = _ser_cut(df["means"], bins=n_bins)
+    disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
+    with suppress_pandas_warning():
+        disp_bin_stats: pd.DataFrame = dask_compute(
+            disp_grouped.agg(mean="mean", std=partial(np.std, ddof=1))
+        )
+    # retrieve those genes that have nan std, these are the ones where
+    # only a single gene fell in the bin and implicitly set them to have
+    # a normalized disperion of 1
+    one_gene_per_bin = disp_bin_stats["std"].isnull()
+    gen_indices = np.flatnonzero(one_gene_per_bin.loc[df["mean_bin"]])
+    if len(gen_indices) > 0:
+        logg.debug(
+            f"Gene indices {gen_indices} fell into a single bin: their "
+            "normalized dispersion was set to 1.\n    "
+            "Decreasing `n_bins` will likely avoid this effect."
+        )
+        disp_bin_stats["std"].loc[one_gene_per_bin] = disp_bin_stats["mean"].loc[
+            one_gene_per_bin
+        ]
+        disp_bin_stats["mean"].loc[one_gene_per_bin] = 0
+    # (use values here as index differs)
+    disp_avg = disp_bin_stats["mean"].loc[df["mean_bin"]].reset_index(drop=True)
+    disp_dev = disp_bin_stats["std"].loc[df["mean_bin"]].reset_index(drop=True)
+    return disp_avg, disp_dev
+
+
+def _stats_cell_ranger(df: pd.DataFrame | DaskDataFrame):
+    from statsmodels import robust
+
+    df["mean_bin"] = _ser_cut(
+        df["means"],
+        bins=np.r_[-np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf],
+    )
+    disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
+    disp_median_bin = disp_grouped.median()
+    # the next line raises the warning: "Mean of empty slice"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        disp_mad_bin = disp_grouped.apply(robust.mad)
+    disp_avg = disp_median_bin.loc[df["mean_bin"]].reset_index(drop=True)
+    disp_dev = disp_mad_bin.loc[df["mean_bin"]].reset_index(drop=True)
+    return disp_avg, disp_dev
 
 
 def _ser_cut(df: pd.Series | DaskSeries, *, bins: int) -> pd.Series:
