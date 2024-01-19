@@ -629,15 +629,13 @@ def highly_variable_genes(
             df = df.loc[adata.var_names, :]
         else:
             df = df.loc[adata.var_names]
-            dispersion_norm = df["dispersions_norm"].to_numpy()
+            dispersion_norm = series_to_array(df["dispersions_norm"])
             dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-            gene_subset = np.logical_and.reduce(
-                (
-                    df["means"] > min_mean,
-                    df["means"] < max_mean,
-                    df["dispersions_norm"] > min_disp,
-                    df["dispersions_norm"] < max_disp,
-                )
+            gene_subset = (
+                (df["means"] > min_mean)
+                & (df["means"] < max_mean)
+                & (df["dispersions_norm"] > min_disp)
+                & (df["dispersions_norm"] < max_disp)
             )
             df["highly_variable"] = gene_subset
 
@@ -652,22 +650,22 @@ def highly_variable_genes(
             "    'dispersions', float vector (adata.var)\n"
             "    'dispersions_norm', float vector (adata.var)"
         )
-        adata.var["highly_variable"] = df["highly_variable"].to_numpy()
-        adata.var["means"] = df["means"].to_numpy()
-        adata.var["dispersions"] = df["dispersions"].to_numpy()
-        adata.var["dispersions_norm"] = (
-            df["dispersions_norm"].to_numpy().astype("float32", copy=False)
+        adata.var["highly_variable"] = series_to_array(df["highly_variable"])
+        adata.var["means"] = series_to_array(df["means"])
+        adata.var["dispersions"] = series_to_array(df["dispersions"])
+        adata.var["dispersions_norm"] = series_to_array(df["dispersions_norm"]).astype(
+            "float32"
         )
 
         if batch_key is not None:
-            adata.var["highly_variable_nbatches"] = df[
-                "highly_variable_nbatches"
-            ].to_numpy()
-            adata.var["highly_variable_intersection"] = df[
-                "highly_variable_intersection"
-            ].to_numpy()
+            adata.var["highly_variable_nbatches"] = series_to_array(
+                df["highly_variable_nbatches"]
+            )
+            adata.var["highly_variable_intersection"] = series_to_array(
+                df["highly_variable_intersection"]
+            )
         if subset:
-            adata._inplace_subset_var(df["highly_variable"].to_numpy())
+            adata._inplace_subset_var(series_to_array(df["highly_variable"]))
 
     else:
         if subset:

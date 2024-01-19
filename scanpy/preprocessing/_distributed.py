@@ -23,17 +23,25 @@ if TYPE_CHECKING:
 
 
 @overload
-def series_to_array(s: pd.Series) -> np.ndarray:
+def series_to_array(s: pd.Series, *, dtype: np.dtype | None = None) -> np.ndarray:
     ...
 
 
 @overload
-def series_to_array(s: DaskSeries) -> DaskArray:
+def series_to_array(s: DaskSeries, *, dtype: np.dtype | None = None) -> DaskArray:
     ...
 
 
-def series_to_array(s: pd.Series | DaskSeries) -> np.ndarray | DaskArray:
-    return s.to_dask_array() if isinstance(s, DaskSeries) else s.to_numpy()
+def series_to_array(
+    s: pd.Series | DaskSeries, *, dtype: np.dtype | None = None
+) -> np.ndarray | DaskArray:
+    if isinstance(s, DaskSeries):
+        return (
+            s.to_dask_array(True)
+            if dtype is None
+            else s.astype(dtype).to_dask_array(True)
+        )
+    return s.to_numpy() if dtype is None else s.to_numpy().astype(dtype, copy=False)
 
 
 @overload
