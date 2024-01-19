@@ -374,25 +374,28 @@ def _subset_genes(
     n_top_genes = cutoff
     del cutoff
 
-    dispersion_norm_orig = dispersion_norm  # original length
-    dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
-    # interestingly, np.argpartition is slightly slower
-    dispersion_norm[::-1].sort()
     if n_top_genes > adata.n_vars:
         logg.info("`n_top_genes` > `adata.n_var`, returning all genes.")
         n_top_genes = adata.n_vars
-    if n_top_genes > dispersion_norm.size:
-        warnings.warn(
-            "`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
-            UserWarning,
-        )
-        n_top_genes = dispersion_norm.size
-    disp_cut_off = dispersion_norm[n_top_genes - 1]
+    disp_cut_off = _nth_highest(dispersion_norm, n_top_genes)
     logg.debug(
         f"the {n_top_genes} top genes correspond to a "
         f"normalized dispersion cutoff of {disp_cut_off}"
     )
-    return np.nan_to_num(dispersion_norm_orig) >= disp_cut_off
+    return np.nan_to_num(dispersion_norm) >= disp_cut_off
+
+
+def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArray:
+    x = x[~np.isnan(x)]
+    if n > x.size:
+        msg = "`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions."
+        warnings.warn(msg, UserWarning)
+        n = x.size
+    if isinstance(x, DaskArray):
+        return x.topk(n)[-1]
+    # interestingly, np.argpartition is slightly slower
+    x[::-1].sort()
+    return x[n - 1]
 
 
 def _highly_variable_genes_batched(
@@ -689,7 +692,7 @@ def highly_variable_genes(
                 df["highly_variable_intersection"]
             )
         if subset:
-            adata._inplace_subset_var(series_to_array(df["highly_variable"]))
+            adata._inplace_subset_var(materialize_as_ndarray(df["highly_variable"]))
 
     else:
         if subset:

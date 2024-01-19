@@ -84,6 +84,7 @@ def test_highly_variable_genes_no_batch_matches_batch(adata):
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
 def test_highly_variable_genes_no_inplace(adata, array_type, batch_key):
+    """Tests that, with `n_top_genes=None` the returned dataframe has the expected columns."""
     adata.X = array_type(adata.X)
     if batch_key:
         adata.obs[batch_key] = np.tile(["a", "b"], adata.shape[0] // 2)
@@ -577,6 +578,11 @@ def test_cellranger_n_top_genes_warning():
 def test_highly_variable_genes_subset_inplace_consistency(
     flavor, array_type, subset, inplace
 ):
+    """Tests that, with `n_top_genes=n`
+    - `inplace` and `subset` interact correctly
+    - for both the `seurat` and `cell_ranger` flavors
+    - for dask arrays and non-dask arrays
+    """
     adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
     adata.X = array_type(np.abs(adata.X).astype(int))
 
