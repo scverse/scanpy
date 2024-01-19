@@ -23,6 +23,20 @@ if TYPE_CHECKING:
 
 
 @overload
+def series_to_array(s: pd.Series) -> np.ndarray:
+    ...
+
+
+@overload
+def series_to_array(s: DaskSeries) -> DaskArray:
+    ...
+
+
+def series_to_array(s: pd.Series | DaskSeries) -> np.ndarray | DaskArray:
+    return s.to_dask_array() if isinstance(s, DaskSeries) else s.to_numpy()
+
+
+@overload
 def materialize_as_ndarray(a: ArrayLike) -> np.ndarray:
     ...
 

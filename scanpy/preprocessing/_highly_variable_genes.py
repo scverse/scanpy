@@ -15,7 +15,12 @@ from .._compat import DaskArray, DaskDataFrame, DaskSeries, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
-from ._distributed import dask_compute, materialize_as_ndarray, suppress_pandas_warning
+from ._distributed import (
+    dask_compute,
+    materialize_as_ndarray,
+    series_to_array,
+    suppress_pandas_warning,
+)
 from ._simple import filter_genes
 from ._utils import _get_mean_var
 
@@ -249,7 +254,7 @@ def _highly_variable_genes_single_batch(
     df["highly_variable"] = _subset_genes(
         adata,
         mean=mean,
-        dispersion_norm=df["dispersions_norm"],
+        dispersion_norm=series_to_array(df["dispersions_norm"]),
         min_disp=min_disp,
         max_disp=max_disp,
         min_mean=min_mean,
@@ -314,10 +319,10 @@ def _ser_cut(df: pd.Series | DaskSeries, *, bins: int) -> pd.Series:
 
 
 def _subset_genes(
-    adata,
+    adata: AnnData,
     *,
     mean: NDArray[np.float64] | DaskArray,
-    dispersion_norm: pd.Series[float] | DaskSeries,
+    dispersion_norm: NDArray[np.float64] | DaskArray,
     min_disp: float,
     max_disp: float,
     min_mean: float,
@@ -325,16 +330,14 @@ def _subset_genes(
     n_top_genes: int | None,
 ) -> NDArray[np.float64] | DaskArray:
     if n_top_genes is None:
-        dispersion_norm.loc[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        return np.logical_and.reduce(
-            (
-                mean > min_mean,
-                mean < max_mean,
-                dispersion_norm > min_disp,
-                dispersion_norm < max_disp,
-            )
+        dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
+        return (
+            (mean > min_mean)
+            & (mean < max_mean)
+            & (dispersion_norm > min_disp)
+            & (dispersion_norm < max_disp)
         )
-    dispersion_norm = dispersion_norm.loc[~np.isnan(dispersion_norm)]
+    dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
     # interestingly, np.argpartition is slightly slower
     dispersion_norm[::-1].sort()
     if n_top_genes > adata.n_vars:
@@ -351,7 +354,7 @@ def _subset_genes(
         f"the {n_top_genes} top genes correspond to a "
         f"normalized dispersion cutoff of {disp_cut_off}"
     )
-    return np.nan_to_num(dispersion_norm.to_numpy()) >= disp_cut_off
+    return np.nan_to_num(dispersion_norm) >= disp_cut_off
 
 
 @old_positionals(
