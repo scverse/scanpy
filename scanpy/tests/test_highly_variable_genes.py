@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from string import ascii_letters
 
 import numpy as np
 import pandas as pd
@@ -20,13 +21,23 @@ FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
 FILE_V3_BATCH = Path(__file__).parent / Path("_scripts/seurat_hvg_v3_batch.csv")
 
 
-def test_highly_variable_genes_runs():
+@pytest.fixture(scope="session")
+def adata_sess() -> AnnData:
     adata = sc.datasets.blobs()
+    adata.var_names = list(ascii_letters[: adata.n_vars])
+    return adata
+
+
+@pytest.fixture
+def adata(adata_sess: AnnData) -> AnnData:
+    return adata_sess.copy()
+
+
+def test_highly_variable_genes_runs(adata):
     sc.pp.highly_variable_genes(adata)
 
 
-def test_highly_variable_genes_supports_batch():
-    adata = sc.datasets.blobs()
+def test_highly_variable_genes_supports_batch(adata):
     gen = np.random.default_rng(0)
     adata.obs["batch"] = pd.array(
         gen.binomial(3, 0.5, size=adata.n_obs), dtype="category"
@@ -36,10 +47,10 @@ def test_highly_variable_genes_supports_batch():
     assert "highly_variable_intersection" in adata.var.columns
 
 
-def test_highly_variable_genes_supports_layers():
+def test_highly_variable_genes_supports_layers(adata_sess):
     def execute(layer: str | None) -> AnnData:
         gen = np.random.default_rng(0)
-        adata = sc.datasets.blobs()
+        adata = adata_sess.copy()
         assert isinstance(adata.X, np.ndarray)
         if layer:
             adata.X, adata.layers[layer] = None, adata.X.copy()
@@ -58,8 +69,7 @@ def test_highly_variable_genes_supports_layers():
     assert (adata1.var["highly_variable"] != adata2.var["highly_variable"]).any()
 
 
-def test_highly_variable_genes_no_batch_matches_batch():
-    adata = sc.datasets.blobs()
+def test_highly_variable_genes_no_batch_matches_batch(adata):
     sc.pp.highly_variable_genes(adata)
     no_batch_hvg = adata.var["highly_variable"].copy()
     assert no_batch_hvg.any()
@@ -73,8 +83,7 @@ def test_highly_variable_genes_no_batch_matches_batch():
 
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
-def test_highly_variable_genes_no_inplace(array_type, batch_key):
-    adata = sc.datasets.blobs()
+def test_highly_variable_genes_no_inplace(adata, array_type, batch_key):
     adata.X = array_type(adata.X)
     if batch_key:
         adata.obs[batch_key] = np.tile(["a", "b"], adata.shape[0] // 2)

@@ -203,11 +203,11 @@ class _Cutoffs:
     def validate(
         cls,
         *,
+        n_top_genes: int | None,
         min_disp: float,
         max_disp: float,
         min_mean: float,
         max_mean: float,
-        n_top_genes: int | None,
     ) -> _Cutoffs | int:
         if n_top_genes is None:
             return cls(min_disp, max_disp, min_mean, max_mean)
@@ -428,7 +428,7 @@ def _highly_variable_genes_batched(
             adata_subset, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
         )
 
-        hvg["gene"] = adata_subset.var_names.to_numpy()
+        hvg["gene"] = adata_subset.var_names
         if (n_removed := np.sum(~filt)) > 0:
             # Add 0 values for genes that were filtered out
             missing_hvg = pd.DataFrame(
@@ -439,8 +439,8 @@ def _highly_variable_genes_batched(
             missing_hvg["gene"] = gene_list[~filt]
             hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
 
-            # Order as before filtering
-        idxs = np.concatenate((np.where(filt)[0], np.where(~filt)[0]))
+        # Order as before filtering
+        idxs = np.concatenate((np.flatnonzero(filt), np.flatnonzero(~filt)))
         hvg = hvg.loc[np.argsort(idxs)]
 
         dfs.append(hvg)
@@ -646,11 +646,11 @@ def highly_variable_genes(
         )
 
     cutoff = _Cutoffs.validate(
+        n_top_genes=n_top_genes,
         min_disp=min_disp,
         max_disp=max_disp,
         min_mean=min_mean,
         max_mean=max_mean,
-        n_top_genes=n_top_genes,
     )
     del min_disp, max_disp, min_mean, max_mean, n_top_genes
 
