@@ -571,11 +571,14 @@ def test_cellranger_n_top_genes_warning():
 
 
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize("inplace", [True, False], ids=["inplace", "copy"])
-def test_highly_variable_genes_subset_inplace_consistency(flavor, subset, inplace):
+def test_highly_variable_genes_subset_inplace_consistency(
+    flavor, array_type, subset, inplace
+):
     adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
-    adata.X = np.abs(adata.X).astype(int)
+    adata.X = array_type(np.abs(adata.X).astype(int))
 
     if flavor == "seurat" or flavor == "cell_ranger":
         sc.pp.normalize_total(adata, target_sum=1e4)
@@ -599,3 +602,8 @@ def test_highly_variable_genes_subset_inplace_consistency(flavor, subset, inplac
 
     assert (output_df is None) == inplace
     assert len(adata.var if inplace else output_df) == (15 if subset else n_genes)
+    if output_df is not None:
+        if "dask" in array_type.__name__:
+            assert isinstance(output_df, DaskDataFrame)
+        else:
+            assert isinstance(output_df, pd.DataFrame)
