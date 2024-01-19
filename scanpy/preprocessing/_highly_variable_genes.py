@@ -258,7 +258,7 @@ def _highly_variable_genes_single_batch(
             df["means"],
             np.r_[
                 -np.inf,
-                np.percentile(df["mean"], [k * 100 / n_bins for k in range(1, n_bins)]),
+                np.percentile(df["means"], [k * 100 / n_bins for k in range(1, n_bins)]),
                 np.inf,
             ],
         )
