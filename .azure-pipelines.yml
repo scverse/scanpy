@@ -81,7 +81,7 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: '$(Pipeline.Workspace)/scanpy/tests/notebooks/_images_pbmc3k'
+      pathToPublish: '$(Pipeline.Workspace)/s/scanpy/tests/notebooks/_images_pbmc3k'
       artifactName: drop
 
   - task: PublishCodeCoverageResults@1
