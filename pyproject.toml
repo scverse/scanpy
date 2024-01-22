@@ -50,7 +50,7 @@ dependencies = [
     # numpy needs a version due to #1320
     "numpy>=1.23",
     "matplotlib>=3.6",
-    "pandas >=1.5",
+    "pandas >=2.0",
     "scipy>=1.8",
     "seaborn>=0.13",
     "h5py>=3.1",
