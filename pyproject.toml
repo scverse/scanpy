@@ -63,7 +63,8 @@ dependencies = [
     "joblib",
     "numba>=0.56",
     "umap-learn>=0.3.10",
-    "packaging>=20.0",
+    "pynndescent>=0.5",
+    "packaging>=21.3",
     "session-info",
     "legacy-api-wrap>=1.4",  # for positional API deprecations
     "get-annotations; python_version < '3.10'",
