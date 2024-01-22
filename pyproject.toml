@@ -58,7 +58,7 @@ dependencies = [
     "scikit-learn>=0.24",
     "statsmodels>=0.13",
     "patsy",
-    "networkx>=2.6",
+    "networkx>=2.7",
     "natsort",
     "joblib",
     "numba>=0.56",
