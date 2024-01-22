@@ -592,9 +592,6 @@ def rank_genes_groups(
         raise ValueError("Received `use_raw=True`, but `adata.raw` is empty.")
 
     if method is None:
-        logg.warning(
-            "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
-        )
         method = "t-test"
 
     if "only_positive" in kwds:
