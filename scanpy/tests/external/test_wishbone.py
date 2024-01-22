@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import scanpy as sc
 import scanpy.external as sce
 from scanpy.testing._helpers.data import pbmc3k
 from scanpy.testing._pytest.marks import needs
 
-
-pytestmark = [needs("wishbone")]
+pytestmark = [needs.wishbone]
 
 
 def test_run_wishbone():

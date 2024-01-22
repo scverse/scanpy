@@ -1,14 +1,19 @@
 """\
 Calculate overlaps of rank_genes_groups marker genes with marker gene dictionaries
 """
+from __future__ import annotations
+
 import collections.abc as cabc
-from typing import Union, Optional, Dict, Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 
 from .. import logging as logg
+from ..testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 def _calc_overlap_count(markers1: dict, markers2: dict):
@@ -70,15 +75,16 @@ def _calc_jaccard(markers1: dict, markers2: dict):
 _Method = Literal["overlap_count", "overlap_coef", "jaccard"]
 
 
+@doctest_needs("leidenalg")
 def marker_gene_overlap(
     adata: AnnData,
-    reference_markers: Union[Dict[str, set], Dict[str, list]],
+    reference_markers: dict[str, set] | dict[str, list],
     *,
     key: str = "rank_genes_groups",
     method: _Method = "overlap_count",
-    normalize: Optional[Literal["reference", "data"]] = None,
-    top_n_markers: Optional[int] = None,
-    adj_pval_threshold: Optional[float] = None,
+    normalize: Literal["reference", "data"] | None = None,
+    top_n_markers: int | None = None,
+    adj_pval_threshold: float | None = None,
     key_added: str = "marker_gene_overlap",
     inplace: bool = False,
 ):
@@ -130,9 +136,10 @@ def marker_gene_overlap(
 
     Returns
     -------
-    A pandas dataframe with the marker gene overlap scores if `inplace=False`.
-    For `inplace=True` `adata.uns` is updated with an additional field
-    specified by the `key_added` parameter (default = 'marker_gene_overlap').
+    Returns :class:`pandas.DataFrame` if `inplace=True`, else returns an `AnnData` object where it sets the following field:
+
+    `adata.uns[key_added]` : :class:`pandas.DataFrame` (dtype `float`)
+        Marker gene overlap scores. Default for `key_added` is `'marker_gene_overlap'`.
 
     Examples
     --------
@@ -140,8 +147,8 @@ def marker_gene_overlap(
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.pp.pca(adata, svd_solver='arpack')
     >>> sc.pp.neighbors(adata)
-    >>> sc.tl.louvain(adata)
-    >>> sc.tl.rank_genes_groups(adata, groupby='louvain')
+    >>> sc.tl.leiden(adata)
+    >>> sc.tl.rank_genes_groups(adata, groupby='leiden')
     >>> marker_genes = {
     ...     'CD4 T cells': {'IL7R'},
     ...     'CD14+ Monocytes': {'CD14', 'LYZ'},

@@ -1,4 +1,5 @@
-from unittest.mock import patch
+from __future__ import annotations
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
@@ -43,8 +44,8 @@ def test_umap_init_dtype():
 @pytest.mark.parametrize(
     "layout",
     [
-        pytest.param("fa", marks=needs("fa2")),
-        pytest.param("fr", marks=needs("igraph")),
+        pytest.param("fa", marks=needs.fa2),
+        pytest.param("fr", marks=needs.igraph),
     ],
 )
 def test_umap_init_paga(layout):

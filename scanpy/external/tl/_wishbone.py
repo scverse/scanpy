@@ -1,20 +1,31 @@
+from __future__ import annotations
+
 import collections.abc as cabc
-from typing import Iterable, Collection, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 
 from ... import logging
+from ..._compat import old_positionals
+from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable
+
+    from anndata import AnnData
 
 
+@old_positionals("branch", "k", "components", "num_waypoints")
+@doctest_needs("wishbone")
 def wishbone(
     adata: AnnData,
     start_cell: str,
+    *,
     branch: bool = True,
     k: int = 15,
     components: Iterable[int] = (1, 2, 3),
-    num_waypoints: Union[int, Collection] = 250,
+    num_waypoints: int | Collection = 250,
 ):
     """\
     Wishbone identifies bifurcating developmental trajectories from single-cell data

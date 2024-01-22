@@ -49,10 +49,10 @@ dependencies = [
     "anndata>=0.7.4",
     # numpy needs a version due to #1320
     "numpy>=1.17.0",
-    "matplotlib>=3.4",
-    "pandas>=1.0",
+    "matplotlib>=3.6",
+    "pandas >=2.1.3",
     "scipy>=1.4",
-    "seaborn!=0.13.0",
+    "seaborn>=0.13.0",
     "h5py>=3",
     "tqdm",
     "scikit-learn>=0.24",
@@ -65,6 +65,7 @@ dependencies = [
     "umap-learn>=0.3.10",
     "packaging",
     "session-info",
+    "legacy-api-wrap>=1.4",  # for positional API deprecations
     "get-annotations; python_version < '3.10'",
 ]
 dynamic = ["version"]
@@ -81,7 +82,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=4.4",
+    "pytest>=7.4.2",
     "pytest-nunit",
     "pytest-mock",
     "profimp",
@@ -92,6 +93,8 @@ test = [
     "scanpy[leiden]",
     "zarr",
     "scanpy[dask]",
+    # Temp. before moving into scanpy
+    "scrublet==0.2.3",
 ]
 test-full = [
     "scanpy[test]",
@@ -105,19 +108,22 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=4.4,<5", # remove upper bound when theme supports dark mode
-    "sphinx-book-theme",
-    "scanpydoc>=0.9.5",
-    "sphinx-autodoc-typehints",
-    "myst-parser",
-    "myst-nb",
+    "sphinx>=7",
+    "sphinx-book-theme>=1.1.0",
+    "scanpydoc>=0.13.4",
+    "sphinx-autodoc-typehints>=1.25.2",
+    "myst-parser>=2",
+    "myst-nb>=1",
     "sphinx-design",
+    "readthedocs-sphinx-search",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
-    "nbsphinx",
+    "nbsphinx>=0.9",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
+    # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga]",
+    "sam-algorithm",
 ]
 dev = [
     # getting the dev version
@@ -151,6 +157,7 @@ version-file = "scanpy/_version.py"
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
+    "--doctest-modules",
     "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]
@@ -159,24 +166,57 @@ xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
+    "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
+]
+filterwarnings = [
+    # legacy-api-wrap: internal use of positional API
+    "error:The specified parameters:FutureWarning",
+    # When calling `.show()` in tests, this is raised
+    "ignore:FigureCanvasAgg is non-interactive:UserWarning",
+    # We explicitly handle these errors in tests
+    "error:`anndata.read` is deprecated:FutureWarning",
+    "error:Observation names are not unique:UserWarning",
+    "error:The dtype argument is deprecated and will be removed:FutureWarning",
+    "error:The behavior of DataFrame\\.sum with axis=None is deprecated:FutureWarning",
+    "error:The default of observed=False is deprecated:FutureWarning",
+    "error:Series\\.__getitem__ treating keys as positions is deprecated:FutureWarning",
+    "error:The default value of 'ignore' for the `na_action` parameter in pandas\\.Categorical\\.map:FutureWarning",
+    "error:The provided callable.* is currently using:FutureWarning",
+    "error:The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
+    "error:A value is trying to be set on a copy of a slice from a DataFrame",
 ]
 
 [tool.coverage.run]
+data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
 omit = ["*/tests/*"]
+[tool.coverage.xml]
+output = "test-data/coverage.xml"
 [tool.coverage.paths]
 source = [".", "**/site-packages"]
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
 
-[tool.ruff]
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
 select = [
-    "F",  # Pyflakes
-    "E",  # Pycodestyle errors
-    "W",  # Pycodestyle warnings
+    "E",       # Error detected by Pycodestyle
+    "F",       # Errors detected by Pyflakes
+    "W",       # Warning detected by Pycodestyle
+    "UP",      # pyupgrade
+    "I",       # isort
+    "TCH",     # manage type checking blocks
     "TID251",  # Banned imports
+    "ICN",     # Follow import conventions
+    "PTH",     # Pathlib instead of os.path
+    "PLR0917", # Ban APIs with too many positional parameters
 ]
 ignore = [
-    # module imported but unused -> required for Scanpys API
-    "F401",
     # line too long -> we accept long comment lines; black gets rid of long code lines
     "E501",
     # module level import not at top of file -> required to circumvent circular imports for Scanpys API
@@ -186,10 +226,13 @@ ignore = [
     # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
     "E741",
 ]
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
-[tool.ruff.flake8-tidy-imports.banned-api]
+[tool.ruff.lint.isort]
+known-first-party = ["scanpy"]
+required-imports = ["from __future__ import annotations"]
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"

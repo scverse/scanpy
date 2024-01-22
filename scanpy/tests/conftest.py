@@ -1,33 +1,21 @@
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import matplotlib as mpl
-
-mpl.use("agg")
-from matplotlib import pyplot
-from matplotlib.testing.compare import compare_images, make_test_filename
 import pytest
 
-import scanpy
+# just import for the IMPORTED check
+import scanpy as _sc  # noqa: F401
 
 if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
+    import os
+
     from scanpy.testing._pytest.fixtures import *  # noqa: F403
-
-
-scanpy.settings.verbosity = "hint"
 
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())
-
-
-@pytest.fixture(autouse=True)
-def close_figures_on_teardown():
-    yield
-    pyplot.close("all")
 
 
 def clear_loggers():
@@ -58,6 +46,8 @@ def imported_modules():
 
 @pytest.fixture
 def check_same_image(add_nunit_attachment):
+    from matplotlib.testing.compare import compare_images, make_test_filename
+
     def _(pth1, pth2, *, tol: int, basename: str = ""):
         def fmt_descr(descr):
             if basename != "":
@@ -82,6 +72,8 @@ def check_same_image(add_nunit_attachment):
 
 @pytest.fixture
 def image_comparer(check_same_image):
+    from matplotlib import pyplot as plt
+
     def save_and_compare(*path_parts: Path | os.PathLike, tol: int):
         base_pth = Path(*path_parts)
 
@@ -89,8 +81,8 @@ def image_comparer(check_same_image):
             base_pth.mkdir()
         expected_pth = base_pth / "expected.png"
         actual_pth = base_pth / "actual.png"
-        pyplot.savefig(actual_pth, dpi=40)
-        pyplot.close()
+        plt.savefig(actual_pth, dpi=40)
+        plt.close()
         if not expected_pth.is_file():
             raise OSError(f"No expected output found at {expected_pth}.")
         check_same_image(expected_pth, actual_pth, tol=tol)
@@ -100,4 +92,28 @@ def image_comparer(check_same_image):
 
 @pytest.fixture
 def plt():
-    return pyplot
+    from matplotlib import pyplot as plt
+
+    return plt
+
+
+@pytest.fixture
+def tmp_dataset_dir(tmp_path_factory):
+    import scanpy
+
+    new_dir = tmp_path_factory.mktemp("scanpy_data")
+    old_dir = scanpy.settings.datasetdir
+    scanpy.settings.datasetdir = new_dir  # Set up
+    yield scanpy.settings.datasetdir
+    scanpy.settings.datasetdir = old_dir  # Tear down
+
+
+@pytest.fixture
+def tmp_write_dir(tmp_path_factory):
+    import scanpy
+
+    new_dir = tmp_path_factory.mktemp("scanpy_write")
+    old_dir = scanpy.settings.writedir
+    scanpy.settings.writedir = new_dir  # Set up
+    yield scanpy.settings.writedir
+    scanpy.settings.writedir = old_dir  # Tear down

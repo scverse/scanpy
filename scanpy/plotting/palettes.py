@@ -1,7 +1,12 @@
 """Color palettes in addition to matplotlib's palettes."""
+from __future__ import annotations
 
-from typing import Mapping, Sequence
+from typing import TYPE_CHECKING
+
 from matplotlib import cm, colors
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
 
 # Colorblindness adjusted vega_10
 # See https://github.com/scverse/scanpy/issues/387
@@ -36,7 +41,7 @@ default_20 = vega_20_scanpy
 
 # https://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
 # update 1
-# orig reference http://epub.wu.ac.at/1692/1/document.pdf
+# orig reference https://research.wu.ac.at/en/publications/escaping-rgbland-selecting-colors-for-statistical-graphics-26
 zeileis_28 = [
     "#023fa5",
     "#7d87b9",
@@ -71,7 +76,7 @@ zeileis_28 = [
 
 default_28 = zeileis_28
 
-# from http://godsnotwheregodsnot.blogspot.de/2012/09/color-distribution-methodology.html
+# from https://godsnotwheregodsnot.blogspot.com/2012/09/color-distribution-methodology.html
 godsnot_102 = [
     # "#000000",  # remove the black, as often, we have black colored annotation
     "#FFFF00",
@@ -182,9 +187,9 @@ default_102 = godsnot_102
 
 
 def _plot_color_cycle(clists: Mapping[str, Sequence[str]]):
-    import numpy as np
     import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap, BoundaryNorm
+    import numpy as np
+    from matplotlib.colors import BoundaryNorm, ListedColormap
 
     fig, axes = plt.subplots(nrows=len(clists))  # type: plt.Figure, plt.Axes
     fig.subplots_adjust(top=0.95, bottom=0.01, left=0.3, right=0.99)

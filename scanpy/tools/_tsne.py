@@ -1,30 +1,46 @@
-from packaging import version
-from typing import Optional, Union
+from __future__ import annotations
+
 import warnings
+from typing import TYPE_CHECKING
 
-from anndata import AnnData
+from packaging import version
 
-from .._utils import _doc_params, AnyRandom
-from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
-from .._settings import settings
 from .. import logging as logg
+from .._compat import old_positionals
+from .._settings import settings
+from .._utils import AnyRandom, _doc_params
+from ..neighbors._doc import doc_n_pcs, doc_use_rep
+from ._utils import _choose_representation
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
+@old_positionals(
+    "use_rep",
+    "perplexity",
+    "early_exaggeration",
+    "learning_rate",
+    "random_state",
+    "use_fast_tsne",
+    "n_jobs",
+    "copy",
+)
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(
     adata: AnnData,
-    n_pcs: Optional[int] = None,
-    use_rep: Optional[str] = None,
-    perplexity: Union[float, int] = 30,
-    early_exaggeration: Union[float, int] = 12,
-    learning_rate: Union[float, int] = 1000,
+    n_pcs: int | None = None,
+    *,
+    use_rep: str | None = None,
+    perplexity: float | int = 30,
+    early_exaggeration: float | int = 12,
+    learning_rate: float | int = 1000,
     random_state: AnyRandom = 0,
     use_fast_tsne: bool = False,
-    n_jobs: Optional[int] = None,
+    n_jobs: int | None = None,
     copy: bool = False,
-    *,
     metric: str = "euclidean",
-) -> Optional[AnnData]:
+) -> AnnData | None:
     """\
     t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
 
@@ -74,10 +90,13 @@ def tsne(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    **X_tsne** : `np.ndarray` (`adata.obsm`, dtype `float`)
+    `adata.obsm['X_tsne']` : :class:`numpy.ndarray` (dtype `float`)
         tSNE coordinates of data.
+    `adata.uns['tsne']` : :class:`dict`
+        tSNE parameters.
+
     """
     import sklearn
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from functools import partial
 from operator import eq
@@ -5,15 +7,14 @@ from string import ascii_letters
 
 import numpy as np
 import pandas as pd
-import scanpy as sc
-from scipy import sparse
-import threadpoolctl
-
 import pytest
+import threadpoolctl
+from scipy import sparse
 
+import scanpy as sc
 from scanpy._compat import DaskArray
 from scanpy.testing._helpers.data import pbmc68k_reduced
-
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 mark_flaky = pytest.mark.xfail(
     strict=False,
@@ -110,7 +111,8 @@ def test_correctness(metric, size, expected):
     np.testing.assert_equal(metric(adata, vals=connected), expected)
 
 
-def test_graph_metrics_w_constant_values(metric, array_type, equality_check):
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_graph_metrics_w_constant_values(metric, array_type, assert_equal):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())

@@ -5,6 +5,8 @@ i.e. without having to hit the disk or (in case of ``_pbmc3k_normalized``) recom
 
 from __future__ import annotations
 
+import warnings
+
 try:
     from functools import cache
 except ImportError:  # Python < 3.9
@@ -14,9 +16,12 @@ except ImportError:  # Python < 3.9
         return lru_cache(maxsize=None)(func)
 
 
-from anndata import AnnData
+from typing import TYPE_CHECKING
+
 import scanpy as sc
 
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 # Functions returning the same objects (easy to misuse)
 
@@ -44,7 +49,11 @@ def pbmc68k_reduced() -> AnnData:
 
 
 def krumsiek11() -> AnnData:
-    return _krumsiek11().copy()
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", "Observation names are not unique", module="anndata"
+        )
+        return _krumsiek11().copy()
 
 
 def paul15() -> AnnData:

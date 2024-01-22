@@ -1,30 +1,33 @@
-from functools import partial
-import warnings
-from typing import Optional, Literal
+from __future__ import annotations
 
-import numpy as np
+import warnings
+from functools import partial
+from math import sqrt
+from typing import TYPE_CHECKING, Literal
+
 import numba as nb
+import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
 from anndata import AnnData
-from math import sqrt
-from numpy.typing import NDArray
 
 from scanpy import logging as logg
-from scanpy._settings import settings, Verbosity
-from scanpy._utils import check_nonnegative_integers, view_to_actual
-from scanpy.get import _get_obs_rep
-from scanpy._utils import _doc_params
-from scanpy.preprocessing._utils import _get_mean_var
-from scanpy.preprocessing._distributed import materialize_as_ndarray
+from scanpy._settings import Verbosity, settings
+from scanpy._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from scanpy.experimental._docs import (
     doc_adata,
+    doc_check_values,
     doc_dist_params,
     doc_genes_batch_chunk,
-    doc_check_values,
-    doc_layer,
     doc_inplace,
+    doc_layer,
 )
+from scanpy.get import _get_obs_rep
+from scanpy.preprocessing._distributed import materialize_as_ndarray
+from scanpy.preprocessing._utils import _get_mean_var
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 @nb.njit(parallel=True)
@@ -128,22 +131,23 @@ def _calculate_res_dense(
 
 def _highly_variable_pearson_residuals(
     adata: AnnData,
+    *,
     theta: float = 100,
-    clip: Optional[float] = None,
+    clip: float | None = None,
     n_top_genes: int = 1000,
-    batch_key: Optional[str] = None,
+    batch_key: str | None = None,
     chunksize: int = 1000,
     check_values: bool = True,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     subset: bool = False,
     inplace: bool = True,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer)
     computed_on = layer if layer else "adata.X"
 
     # Check for raw counts
-    if check_values and (check_nonnegative_integers(X) is False):
+    if check_values and not check_nonnegative_integers(X):
         warnings.warn(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,
@@ -195,7 +199,7 @@ def _highly_variable_pearson_residuals(
 
         sums_genes = np.array(X_batch.sum(axis=0)).ravel()
         sums_cells = np.array(X_batch.sum(axis=1)).ravel()
-        sum_total = np.sum(sums_genes).ravel()
+        sum_total = np.sum(sums_genes)
 
         residual_gene_var = calculate_res(
             sums_genes=sums_genes,
@@ -306,16 +310,16 @@ def highly_variable_genes(
     adata: AnnData,
     *,
     theta: float = 100,
-    clip: Optional[float] = None,
-    n_top_genes: Optional[int] = None,
-    batch_key: Optional[str] = None,
+    clip: float | None = None,
+    n_top_genes: int | None = None,
+    batch_key: str | None = None,
     chunksize: int = 1000,
     flavor: Literal["pearson_residuals"] = "pearson_residuals",
     check_values: bool = True,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     subset: bool = False,
     inplace: bool = True,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """\
     Select highly variable genes using analytic Pearson residuals [Lause21]_.
 
@@ -346,21 +350,21 @@ def highly_variable_genes(
     If `inplace=True`, `adata.var` is updated with the following fields. Otherwise,
     returns the same fields as :class:`~pandas.DataFrame`.
 
-    highly_variable : bool
+    highly_variable : :class:`bool`
         boolean indicator of highly-variable genes.
-    means : float
+    means : :class:`float`
         means per gene.
-    variances : float
+    variances : :class:`float`
         variance per gene.
-    residual_variances : float
+    residual_variances : :class:`float`
         For `flavor='pearson_residuals'`, residual variance per gene. Averaged in the
         case of multiple batches.
-    highly_variable_rank : float
+    highly_variable_rank : :class:`float`
         For `flavor='pearson_residuals'`, rank of the gene according to residual.
         variance, median rank in the case of multiple batches.
-    highly_variable_nbatches : int
+    highly_variable_nbatches : :class:`int`
         If `batch_key` given, denotes in how many batches genes are detected as HVG.
-    highly_variable_intersection : bool
+    highly_variable_intersection : :class:`bool`
         If `batch_key` given, denotes the genes that are highly variable in all batches.
 
     Notes

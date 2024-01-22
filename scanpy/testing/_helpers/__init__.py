@@ -1,14 +1,15 @@
 """
 This file contains helper functions for the scanpy test suite.
 """
+from __future__ import annotations
 
+import warnings
 from itertools import permutations
 
-import scanpy as sc
 import numpy as np
-import warnings
 from anndata.tests.helpers import asarray, assert_equal
 
+import scanpy as sc
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison

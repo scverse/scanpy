@@ -31,7 +31,7 @@ References
 
 .. [Csardi06] Csardi *et al.* (2006),
    *The igraph software package for complex network research*,
-   `InterJournal Complex Systems <http://igraph.org>`__.
+   `InterJournal Complex Systems <https://igraph.org/>`__.
 
 .. [Eraslan18] Eraslan and Simon *et al.* (2018),
    *Single cell RNA-seq denoising using a deep count autoencoder*,
@@ -40,7 +40,7 @@ References
 .. [Ester96] Ester *et al.* (1996),
    *A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*,
    `Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
-   Portland, OR <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220>`__.
+   Portland, OR <https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220>`__.
 
 .. [Eulenberg17] Eulenberg *et al.* (2017),
    *Reconstructing cell cycle and disease progression using deep learning*
@@ -52,7 +52,7 @@ References
 
 .. [Fruchterman91] Fruchterman & Reingold (1991),
    *Graph drawing by force-directed placement*,
-   `Software: Practice & Experience <http://doi.org:10.1002/spe.4380211102>`__.
+   `Software: Practice & Experience <https://doi.org/10.1002/spe.4380211102>`__.
 
 .. [Gardner00] Gardner *et al.*, (2000)
    *Construction of a genetic toggle switch in Escherichia coli*,
@@ -60,7 +60,7 @@ References
 
 .. [Hagberg08] Hagberg *et al.* (2008),
    *Exploring Network Structure, Dynamics, and Function using NetworkX*,
-   `Scipy Conference <http://conference.scipy.org/proceedings/SciPy2008/paper_2/>`__.
+   `Scipy Conference <https://conference.scipy.org/proceedings/SciPy2008/paper_2/>`__.
 
 .. [Hastie09]
    Hastie *et al.* (2009),
@@ -137,15 +137,15 @@ References
 
 .. [Maaten08] Maaten & Hinton (2008),
    *Visualizing data using t-SNE*,
-   `JMLR <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
+   `JMLR <https://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
 
 .. [McCarthy17] McCarthy *et al.* (2017),
    *scater: Single-cell analysis toolkit for gene expression data in R*,
    `Bioinformatics <https://doi.org/10.1093/bioinformatics/btw777>`__.
 
-.. [Moon17] Moon *et al.* (2017),
+.. [Moon17] Moon *et al.* (2019),
    *PHATE: A Dimensionality Reduction Method for Visualizing Trajectory Structures in High-Dimensional Biological Data*,
-   `BioRxiv <http://biorxiv.org/content/early/2017/03/24/120378>`__.
+   `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0336-3>`__.
 
 .. [Satija15] Satija *et al.* (2015),
    *Spatial reconstruction of single-cell gene expression data*,
@@ -182,7 +182,7 @@ References
 
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
-   `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
+   `JMLR <https://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
 
 .. [Polanski19] Polanski *et al.* (2019),
    *BBKNN: fast batch alignment of single cell transcriptomes*

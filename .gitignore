@@ -1,5 +1,4 @@
 # Scanpy outfiles
-/cache/
 /data/
 /write/
 
@@ -12,10 +11,8 @@
 /docs/jupyter_execute
 
 # tests
-/*coverage*
-/nunit/
-/.cache/
-/.pytest_cache/
+/*cache/
+/test-data/
 /scanpy/tests/test*.h5ad
 /scanpy/tests/**/*actual.png
 /scanpy/tests/**/*failed-diff.png
@@ -33,8 +30,6 @@
 __pycache__/
 /scanpy/_version.py
 /dist/
-/build/
-/scanpy.egg-info/
 /*-env/
 /env-*/
 /environment.yml

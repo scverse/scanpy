@@ -1,29 +1,44 @@
-from typing import Union, Iterable, Optional, MutableMapping, Generator
+from __future__ import annotations
 
-import pandas as pd
+from collections.abc import Generator, Iterable, MutableMapping
+from typing import TYPE_CHECKING
+
 import numpy as np
+import pandas as pd
 from packaging import version
-from sklearn.utils import check_random_state
 from scipy.sparse import issparse
-from anndata import AnnData
+from sklearn.utils import check_random_state
 
-from .. import settings
 from .. import logging as logg
-from ..neighbors import FlatTree, RPForestDict
+from .._compat import old_positionals, pkg_version
+from .._settings import settings
 from .._utils import NeighborsView
-from .._compat import pkg_version
+from ..neighbors import FlatTree, RPForestDict
+from ..testing._doctests import doctest_skip
 
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 ANNDATA_MIN_VERSION = version.parse("0.7rc1")
 
 
+@old_positionals(
+    "obs",
+    "embedding_method",
+    "labeling_method",
+    "neighbors_key",
+    "neighbors_key",
+    "inplace",
+)
+@doctest_skip("illustrative short example but not runnable")
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
-    obs: Optional[Union[str, Iterable[str]]] = None,
-    embedding_method: Union[str, Iterable[str]] = ("umap", "pca"),
+    *,
+    obs: str | Iterable[str] | None = None,
+    embedding_method: str | Iterable[str] = ("umap", "pca"),
     labeling_method: str = "knn",
-    neighbors_key: Optional[str] = None,
+    neighbors_key: str | None = None,
     inplace: bool = True,
     **kwargs,
 ):
@@ -85,10 +100,12 @@ def ingest(
 
     Returns
     -------
-    * if `inplace=False` returns a copy of `adata`
-      with mapped embeddings and labels in `obsm` and `obs` correspondingly
-    * if `inplace=True` returns `None` and updates `adata.obsm` and `adata.obs`
-      with mapped embeddings and labels
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+
+    `adata.obs[obs]` : :class:`pandas.Series` (dtype ``category``)
+        Mapped labels.
+    `adata.obsm['X_umap' | 'X_pca']` : :class:`numpy.ndarray` (dtype ``float``)
+        Mapped embeddings. `'X_umap'` if `embedding_method` is `'umap'`, `'X_pca'` if `embedding_method` is `'pca'`.
 
     Example
     -------
@@ -251,8 +268,9 @@ class Ingest:
 
     def _init_dist_search(self, dist_args):
         from functools import partial
-        from umap.nndescent import initialise_search
+
         from umap.distances import named_distances
+        from umap.nndescent import initialise_search
 
         self._random_init = None
         self._tree_init = None
@@ -373,15 +391,17 @@ class Ingest:
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
         self._pca_use_hvg = adata.uns["pca"]["params"]["use_highly_variable"]
 
-        if self._pca_use_hvg and "highly_variable" not in adata.var.keys():
-            raise ValueError("Did not find adata.var['highly_variable'].")
+        mask = "highly_variable"
+        if self._pca_use_hvg and mask not in adata.var.keys():
+            msg = f"Did not find `adata.var[{mask!r}']`."
+            raise ValueError(msg)
 
         if self._pca_use_hvg:
-            self._pca_basis = adata.varm["PCs"][adata.var["highly_variable"]]
+            self._pca_basis = adata.varm["PCs"][adata.var[mask]]
         else:
             self._pca_basis = adata.varm["PCs"]
 
-    def __init__(self, adata, neighbors_key=None):
+    def __init__(self, adata: AnnData, neighbors_key: str | None = None):
         # assume rep is X if all initializations fail to identify it
         self._rep = adata.X
         self._use_rep = "X"
@@ -523,10 +543,9 @@ class Ingest:
             )
 
     def _knn_classify(self, labels):
-        cat_array = self._adata_ref.obs[labels].astype(
-            "category"
-        )  # ensure it's categorical
-        values = [cat_array[inds].mode()[0] for inds in self._indices]
+        # ensure it's categorical
+        cat_array: pd.Series = self._adata_ref.obs[labels].astype("category")
+        values = [cat_array.iloc[inds].mode()[0] for inds in self._indices]
         return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):

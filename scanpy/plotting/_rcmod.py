@@ -1,9 +1,10 @@
 """Set the default matplotlib.rcParams.
 """
+from __future__ import annotations
 
-import matplotlib
-from matplotlib import rcParams
+import matplotlib as mpl
 from cycler import cycler
+from matplotlib import rcParams
 
 from . import palettes
 
@@ -69,4 +70,4 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
 
 def set_rcParams_defaults():
     """Reset `matplotlib.rcParams` to defaults."""
-    rcParams.update(matplotlib.rcParamsDefault)
+    rcParams.update(mpl.rcParamsDefault)

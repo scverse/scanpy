@@ -1,5 +1,11 @@
 """Shared docstrings for preprocessing function parameters.
 """
+from __future__ import annotations
+
+doc_adata_basic = """\
+adata
+    Annotated data matrix.\
+"""
 
 doc_expr_reps = """\
 layer
@@ -7,6 +13,20 @@ layer
     of `adata.X`.
 use_raw
     If True, use `adata.raw.X` for expression values instead of `adata.X`.\
+"""
+
+doc_mask_hvg = """\
+mask
+    To run only on a certain set of genes given by a boolean array
+    or a string referring to an array in :attr:`~anndata.AnnData.var`.
+    By default, uses `.var['highly_variable']` if available, else everything.
+use_highly_variable
+    Whether to use highly variable genes only, stored in
+    `.var['highly_variable']`.
+    By default uses them if they have been determined beforehand.
+
+    .. deprecated:: 1.10.0
+       Use `mask` instead
 """
 
 doc_obs_qc_args = """\
@@ -37,7 +57,7 @@ Observation level metrics include:
     E.g. "pct_counts_in_top_50_genes". Cumulative percentage of counts
     for 50 most expressed genes in a cell.
 `total_{expr_type}_{qc_var}` – for `qc_var` in `qc_vars`
-    E.g. "total_counts_mito". Total number of counts for variabes in
+    E.g. "total_counts_mito". Total number of counts for variables in
     `qc_vars`.
 `pct_{expr_type}_{qc_var}` – for `qc_var` in `qc_vars`
     E.g. "pct_counts_mito". Proportion of total counts for a cell which
@@ -59,9 +79,4 @@ Variable level metrics include:
 `pct_dropout_by_{expr_type}`
     E.g. "pct_dropout_by_counts". Percentage of cells this feature does
     not appear in.\
-"""
-
-doc_adata_basic = """\
-adata
-    Annotated data matrix.\
 """

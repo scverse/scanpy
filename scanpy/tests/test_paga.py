@@ -1,20 +1,21 @@
+from __future__ import annotations
+
 from functools import partial
 from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 from matplotlib import cm
 
 import scanpy as sc
 from scanpy.testing._helpers.data import pbmc3k_processed, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
 
-
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
 
 
-pytestmark = [needs("igraph")]
+pytestmark = [needs.igraph]
 
 
 @pytest.fixture(scope="module")

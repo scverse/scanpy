@@ -3,17 +3,18 @@
 #
 # This started out with a demonstration that Scanpy would allow to reproduce most of Seurat's
 # ([Satija *et al.*, 2015](https://doi.org/10.1038/nbt.3192)) clustering tutorial as described on
-# http://satijalab.org/seurat/pbmc3k_tutorial.html (July 26, 2017), which we gratefully acknowledge.
+# https://satijalab.org/seurat/articles/pbmc3k_tutorial.html (July 26, 2017), which we gratefully acknowledge.
 # In the meanwhile, we have added and removed several pieces.
 #
 # The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics
-# ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
+# ([here](https://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
+from __future__ import annotations
+
 from functools import partial
 from pathlib import Path
 
 import numpy as np
-
 from matplotlib.testing import setup
 
 setup()
@@ -21,17 +22,16 @@ setup()
 import scanpy as sc
 from scanpy.testing._pytest.marks import needs
 
-
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images_pbmc3k"
 
 
-@needs("leidenalg")
+@needs.leidenalg
 def test_pbmc3k(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
 
     adata = sc.read(
-        "./data/pbmc3k_raw.h5ad", backup_url="http://falexwolf.de/data/pbmc3k_raw.h5ad"
+        "./data/pbmc3k_raw.h5ad", backup_url="https://falexwolf.de/data/pbmc3k_raw.h5ad"
     )
 
     # Preprocessing
@@ -88,7 +88,7 @@ def test_pbmc3k(image_comparer):
 
     # PCA
 
-    sc.tl.pca(adata, svd_solver="arpack")
+    sc.pp.pca(adata, svd_solver="arpack")
     sc.pl.pca(adata, color="CST3", show=False)
     save_and_compare_images("pca")
 

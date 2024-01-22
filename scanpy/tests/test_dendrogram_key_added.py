@@ -1,8 +1,9 @@
-import scanpy as sc
+from __future__ import annotations
+
 import pytest
 
+import scanpy as sc
 from scanpy.testing._helpers.data import pbmc68k_reduced
-
 
 n_neighbors = 5
 key = "test"

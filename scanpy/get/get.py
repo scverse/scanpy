@@ -1,11 +1,17 @@
 """This module contains helper functions for accessing data."""
-from typing import Optional, Iterable, Tuple, Union, List, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from scipy.sparse import spmatrix
 
-from anndata import AnnData
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from numpy.typing import NDArray
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -15,13 +21,13 @@ from anndata import AnnData
 # TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
-    group: Union[str, Iterable[str]],
+    group: str | Iterable[str],
     *,
     key: str = "rank_genes_groups",
-    pval_cutoff: Optional[float] = None,
-    log2fc_min: Optional[float] = None,
-    log2fc_max: Optional[float] = None,
-    gene_symbols: Optional[str] = None,
+    pval_cutoff: float | None = None,
+    log2fc_min: float | None = None,
+    log2fc_max: float | None = None,
+    gene_symbols: str | None = None,
 ) -> pd.DataFrame:
     """\
     :func:`scanpy.tl.rank_genes_groups` results in the form of a
@@ -100,11 +106,12 @@ def rank_genes_groups_df(
 def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
+    *,
     dim: Literal["obs", "var"],
-    keys: List[str],
-    alias_index: Optional[pd.Index] = None,
+    keys: list[str],
+    alias_index: pd.Index | None = None,
     use_raw: bool = False,
-) -> Tuple[List[str], List[str], List[str]]:
+) -> tuple[list[str], list[str], list[str]]:
     """Common logic for checking indices for obs_df and var_df."""
     if use_raw:
         alt_repr = "adata.raw"
@@ -179,7 +186,7 @@ def _check_indices(
 def _get_array_values(
     X,
     dim_names: pd.Index,
-    keys: List[str],
+    keys: list[str],
     axis: Literal[0, 1],
     backed: bool,
 ):
@@ -209,10 +216,10 @@ def _get_array_values(
 def obs_df(
     adata: AnnData,
     keys: Iterable[str] = (),
-    obsm_keys: Iterable[Tuple[str, int]] = (),
+    obsm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str = None,
-    gene_symbols: str = None,
+    layer: str | None = None,
+    gene_symbols: str | None = None,
     use_raw: bool = False,
 ) -> pd.DataFrame:
     """\
@@ -242,23 +249,27 @@ def obs_df(
     --------
     Getting value for plotting:
 
+    >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> plotdf = sc.get.obs_df(
-            pbmc,
-            keys=["CD8B", "n_genes"],
-            obsm_keys=[("X_umap", 0), ("X_umap", 1)]
-        )
-    >>> plotdf.plot.scatter("X_umap0", "X_umap1", c="CD8B")
+    ...     pbmc,
+    ...     keys=["CD8B", "n_genes"],
+    ...     obsm_keys=[("X_umap", 0), ("X_umap", 1)]
+    ... )
+    >>> plotdf.columns
+    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
+    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")
+    <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 
     Calculating mean expression for marker genes by cluster:
 
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> marker_genes = ['CD79A', 'MS4A1', 'CD8A', 'CD8B', 'LYZ']
     >>> genedf = sc.get.obs_df(
-            pbmc,
-            keys=["louvain", *marker_genes]
-        )
-    >>> grouped = genedf.groupby("louvain")
+    ...     pbmc,
+    ...     keys=["louvain", *marker_genes]
+    ... )
+    >>> grouped = genedf.groupby("louvain", observed=True)
     >>> mean, var = grouped.mean(), grouped.var()
     """
     if use_raw:
@@ -276,8 +287,8 @@ def obs_df(
     obs_cols, var_idx_keys, var_symbols = _check_indices(
         adata.obs,
         var.index,
-        "obs",
-        keys,
+        dim="obs",
+        keys=keys,
         alias_index=alias_index,
         use_raw=use_raw,
     )
@@ -323,9 +334,9 @@ def obs_df(
 def var_df(
     adata: AnnData,
     keys: Iterable[str] = (),
-    varm_keys: Iterable[Tuple[str, int]] = (),
+    varm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str = None,
+    layer: str | None = None,
 ) -> pd.DataFrame:
     """\
     Return values for observations in adata.
@@ -347,7 +358,9 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
-    var_cols, obs_idx_keys, _ = _check_indices(adata.var, adata.obs_names, "var", keys)
+    var_cols, obs_idx_keys, _ = _check_indices(
+        adata.var, adata.obs_names, dim="var", keys=keys
+    )
 
     # initialize df
     df = pd.DataFrame(index=adata.var.index)
@@ -385,7 +398,14 @@ def var_df(
     return df
 
 
-def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
+def _get_obs_rep(
+    adata: AnnData,
+    *,
+    use_raw: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
+):
     """
     Choose array aligned with obs annotation.
     """
@@ -416,7 +436,15 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
         )
 
 
-def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None):
+def _set_obs_rep(
+    adata: AnnData,
+    val: Any,
+    *,
+    use_raw: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
+):
     """
     Set value for observation rep.
     """
@@ -441,3 +469,44 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
             "That was unexpected. Please report this bug at:\n\n\t"
             " https://github.com/scverse/scanpy/issues"
         )
+
+
+def _check_mask(
+    data: AnnData | np.ndarray,
+    mask: str | NDArray[np.bool_],
+    dim: Literal["obs", "var"],
+) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
+    """
+    Validate mask argument
+    Params
+    ------
+    data
+        Annotated data matrix or numpy array.
+    mask
+        The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
+    dim
+        The dimension being masked.
+    """
+    if isinstance(mask, str):
+        if not isinstance(data, AnnData):
+            msg = "Cannot refer to mask with string without providing anndata object as argument"
+            raise ValueError(msg)
+
+        annot: pd.DataFrame = getattr(data, dim)
+        if mask not in annot.columns:
+            msg = (
+                f"Did not find `adata.{dim}[{mask!r}]`. "
+                f"Either add the mask first to `adata.{dim}`"
+                "or consider using the mask argument with a boolean array."
+            )
+            raise ValueError(msg)
+        mask_array = annot[mask].to_numpy()
+    else:
+        if len(mask) != data.shape[0 if dim == "obs" else 1]:
+            raise ValueError("The shape of the mask do not match the data.")
+        mask_array = mask
+
+    if not pd.api.types.is_bool_dtype(mask_array.dtype):
+        raise ValueError("Mask array must be boolean.")
+
+    return mask_array
