@@ -112,7 +112,7 @@ def test_correctness(metric, size, expected):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_graph_metrics_w_constant_values(metric, array_type, assert_equal):
+def test_graph_metrics_w_constant_values(metric, array_type, equality_check):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())
