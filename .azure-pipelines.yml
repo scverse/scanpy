@@ -101,7 +101,7 @@ jobs:
     inputs:
       testResultsFiles: 'test-data/test-results.xml'
       testResultsFormat: NUnit
-      testRunTitle: 'Publish test results for Python $(python.version)'
+      testRunTitle: 'Publish test results for $(Agent.JobName)'
 
   - script: bash <(curl -s https://codecov.io/bash)
     displayName: 'Upload to codecov.io'
