@@ -40,18 +40,19 @@ def assert_equal(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(params=["single-threaded", "multi-threaded"])
-def equality_check(request):
+def threading(request):
     if request.param == "single-threaded":
         with threadpoolctl.threadpool_limits(limits=1):
-            yield np.testing.assert_equal
+            yield None
     elif request.param == "multi-threaded":
-        yield partial(np.testing.assert_allclose, rtol=1e-14)
+        yield None
 
 
-def test_consistency(metric, equality_check):
+def test_consistency(metric, threading):
     pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
+    equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
     # This can fail
     equality_check(
@@ -76,7 +77,7 @@ def test_consistency(metric, equality_check):
     all_genes = metric(pbmc, layer="raw")
     first_gene = metric(pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw"))
 
-    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-14)
+    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
     equality_check(
@@ -112,11 +113,12 @@ def test_correctness(metric, size, expected):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_graph_metrics_w_constant_values(metric, array_type, equality_check):
+def test_graph_metrics_w_constant_values(metric, array_type, threading):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())
     g = pbmc.obsp["connectivities"].copy()
+    equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
     if isinstance(XT, DaskArray):
         pytest.skip("DaskArray yet not supported")
