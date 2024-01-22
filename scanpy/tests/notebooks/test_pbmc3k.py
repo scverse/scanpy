@@ -28,6 +28,9 @@ ROOT = HERE / "_images_pbmc3k"
 
 @needs.leidenalg
 def test_pbmc3k(image_comparer):
+    np.random.seed(
+        0
+    )  # ensure violin plots and other non-determinstic plots have deterministic behavior
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
     adata = sc.read(
         "./data/pbmc3k_raw.h5ad", backup_url="https://falexwolf.de/data/pbmc3k_raw.h5ad"
@@ -147,7 +150,6 @@ def test_pbmc3k(image_comparer):
 
     # sc.pl.umap(adata, color='leiden', legend_loc='on data', title='', frameon=False, show=False)
     # save_and_compare_images('umap_3')
-
     sc.pl.violin(
         adata, ["CST3", "NKG7", "PPBP"], groupby="leiden", rotation=90, show=False
     )
