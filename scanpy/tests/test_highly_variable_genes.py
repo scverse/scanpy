@@ -24,7 +24,8 @@ FILE_V3_BATCH = Path(__file__).parent / Path("_scripts/seurat_hvg_v3_batch.csv")
 @pytest.fixture(scope="session")
 def adata_sess() -> AnnData:
     adata = sc.datasets.blobs()
-    adata.var_names = list(ascii_letters[: adata.n_vars])
+    rng = np.random.default_rng(0)
+    adata.var_names = rng.choice(list(ascii_letters), adata.n_vars, replace=False)
     return adata
 
 

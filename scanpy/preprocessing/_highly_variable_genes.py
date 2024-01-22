@@ -285,21 +285,27 @@ def _highly_variable_genes_single_batch(
         import dask.dataframe as dd
 
         df = dd.from_dask_array(
-            da.vstack((mean, dispersion)).T, columns=["means", "dispersions"]
+            da.vstack((mean, dispersion)).T,
+            columns=["means", "dispersions"],
         )
+        df["gene"] = adata.var_names.to_series(index=df.index, name="gene")
+        df = df.set_index("gene")
     else:
-        df = pd.DataFrame(dict(means=mean, dispersions=dispersion))
+        df = pd.DataFrame(
+            dict(means=mean, dispersions=dispersion), index=adata.var_names
+        )
+    df.index.name = "gene"
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
     disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
     if flavor == "seurat":
-        disp_avg, disp_dev = _stats_seurat(df["mean_bin"], disp_grouped)
+        disp_stats = _stats_seurat(df["mean_bin"], disp_grouped)
     elif flavor == "cell_ranger":
-        disp_avg, disp_dev = _stats_cell_ranger(df["mean_bin"], disp_grouped)
+        disp_stats = _stats_cell_ranger(df["mean_bin"], disp_grouped)
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
 
     # actually do the normalization
-    df["dispersions_norm"] = (df["dispersions"] - disp_avg) / disp_dev
+    df["dispersions_norm"] = (df["dispersions"] - disp_stats["avg"]) / disp_stats["dev"]
     df["highly_variable"] = _subset_genes(
         adata,
         mean=mean,
@@ -329,16 +335,16 @@ def _get_mean_bins(
 def _stats_seurat(
     mean_bins: pd.Series | DaskSeries,
     disp_grouped: SeriesGroupBy | DaskSeriesGroupBy,
-) -> tuple[pd.Series | DaskSeries, pd.Series | DaskSeries]:
+) -> pd.DataFrame | DaskDataFrame:
     """Compute mean and std dev per bin."""
     with suppress_pandas_warning():
         disp_bin_stats: pd.DataFrame = dask_compute(
-            disp_grouped.agg(mean="mean", std=partial(np.std, ddof=1))
+            disp_grouped.agg(avg="mean", dev=partial(np.std, ddof=1))
         )
     # retrieve those genes that have nan std, these are the ones where
     # only a single gene fell in the bin and implicitly set them to have
     # a normalized disperion of 1
-    one_gene_per_bin = disp_bin_stats["std"].isnull()
+    one_gene_per_bin = disp_bin_stats["dev"].isnull()
     gen_indices = np.flatnonzero(one_gene_per_bin.loc[mean_bins])
     if len(gen_indices) > 0:
         logg.debug(
@@ -346,31 +352,31 @@ def _stats_seurat(
             "normalized dispersion was set to 1.\n    "
             "Decreasing `n_bins` will likely avoid this effect."
         )
-        disp_bin_stats["std"].loc[one_gene_per_bin] = disp_bin_stats["mean"].loc[
+        disp_bin_stats["dev"].loc[one_gene_per_bin] = disp_bin_stats["avg"].loc[
             one_gene_per_bin
         ]
-        disp_bin_stats["mean"].loc[one_gene_per_bin] = 0
+        disp_bin_stats["avg"].loc[one_gene_per_bin] = 0
     # (use values here as index differs)
-    disp_avg = disp_bin_stats["mean"].loc[mean_bins].reset_index(drop=True)
-    disp_dev = disp_bin_stats["std"].loc[mean_bins].reset_index(drop=True)
-    return disp_avg, disp_dev
+    return disp_bin_stats.loc[mean_bins].set_index(mean_bins.index)
 
 
 def _stats_cell_ranger(
     mean_bins: pd.Series | DaskSeries,
     disp_grouped: SeriesGroupBy | DaskSeriesGroupBy,
-) -> tuple[pd.Series | DaskSeries, pd.Series | DaskSeries]:
+) -> pd.DataFrame | DaskDataFrame:
     """Compute median and median absolute dev per bin."""
     from statsmodels import robust
 
+    raise RuntimeError("TODO")
     # using .agg here doesn’t work: https://github.com/dask/dask/issues/10836
     disp_median_bin = dask_compute(disp_grouped.median())
     # the next line raises the warning: "Mean of empty slice"
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         disp_mad_bin = dask_compute(disp_grouped.apply(robust.mad))
-    disp_avg = disp_median_bin.loc[mean_bins].reset_index(drop=True)
-    disp_dev = disp_mad_bin.loc[mean_bins].reset_index(drop=True)
+    # TODO: df
+    disp_avg = disp_median_bin.loc[mean_bins].reindex(mean_bins.index)
+    disp_dev = disp_mad_bin.loc[mean_bins].reindex(mean_bins.index)
     return disp_avg, disp_dev
 
 
@@ -444,8 +450,12 @@ def _highly_variable_genes_batched(
         hvg = _highly_variable_genes_single_batch(
             adata_subset, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
         )
+        assert hvg.index.name == "gene"
+        if isinstance(hvg, DaskDataFrame):
+            hvg = hvg.reset_index(drop=False)
+        else:
+            hvg.reset_index(drop=False, inplace=True)
 
-        hvg["gene"] = adata_subset.var_names
         if (n_removed := np.sum(~filt)) > 0:
             # Add 0 values for genes that were filtered out
             missing_hvg = pd.DataFrame(
@@ -458,7 +468,7 @@ def _highly_variable_genes_batched(
 
         # Order as before filtering
         idxs = np.concatenate((np.flatnonzero(filt), np.flatnonzero(~filt)))
-        hvg = hvg.loc[np.argsort(idxs)]
+        hvg = hvg.iloc[np.argsort(idxs)]
 
         dfs.append(hvg)
 
@@ -479,7 +489,9 @@ def _highly_variable_genes_batched(
             highly_variable="sum",
         )
     )
-    df.rename(columns=dict(highly_variable="highly_variable_nbatches"), inplace=True)
+    if isinstance(df, DaskDataFrame):
+        df = df.set_index("gene")  # happens automatically for pandas df
+    df["highly_variable_nbatches"] = df["highly_variable"]
     df["highly_variable_intersection"] = df["highly_variable_nbatches"] == len(batches)
 
     if isinstance(cutoff, int):
@@ -492,9 +504,7 @@ def _highly_variable_genes_batched(
             inplace=True,
         )
         df["highly_variable"] = np.arange(df.shape[0]) < cutoff
-        df = df.loc[adata.var_names, :]
     else:
-        df = df.loc[adata.var_names]
         dispersion_norm = series_to_array(df["dispersions_norm"])
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
         df["highly_variable"] = cutoff.in_bounds(df["means"], df["dispersions_norm"])
@@ -691,18 +701,18 @@ def highly_variable_genes(
             "    'dispersions', float vector (adata.var)\n"
             "    'dispersions_norm', float vector (adata.var)"
         )
-        adata.var["highly_variable"] = series_to_array(df["highly_variable"])
-        adata.var["means"] = series_to_array(df["means"])
-        adata.var["dispersions"] = series_to_array(df["dispersions"])
-        adata.var["dispersions_norm"] = series_to_array(
-            df["dispersions_norm"], dtype=np.float32
+        adata.var["highly_variable"] = dask_compute(df["highly_variable"])
+        adata.var["means"] = dask_compute(df["means"])
+        adata.var["dispersions"] = dask_compute(df["dispersions"])
+        adata.var["dispersions_norm"] = dask_compute(df["dispersions_norm"]).astype(
+            np.float32, copy=False
         )
 
         if batch_key is not None:
-            adata.var["highly_variable_nbatches"] = series_to_array(
+            adata.var["highly_variable_nbatches"] = dask_compute(
                 df["highly_variable_nbatches"]
             )
-            adata.var["highly_variable_intersection"] = series_to_array(
+            adata.var["highly_variable_intersection"] = dask_compute(
                 df["highly_variable_intersection"]
             )
         if subset:
