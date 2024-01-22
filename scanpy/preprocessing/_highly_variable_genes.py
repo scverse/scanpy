@@ -12,7 +12,13 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 from .. import logging as logg
-from .._compat import DaskArray, DaskDataFrame, DaskSeries, old_positionals
+from .._compat import (
+    DaskArray,
+    DaskDataFrame,
+    DaskSeries,
+    DaskSeriesGroupBy,
+    old_positionals,
+)
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
@@ -27,6 +33,7 @@ from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+    from pandas.core.groupby.generic import SeriesGroupBy
 
 
 def _highly_variable_genes_seurat_v3(
@@ -270,6 +277,7 @@ def _highly_variable_genes_single_batch(
         dispersion[dispersion == 0] = np.nan
         dispersion = np.log(dispersion)
         mean = np.log1p(mean)
+
     # all of the following quantities are "per-gene" here
     df: pd.DataFrame | DaskDataFrame
     if isinstance(X, DaskArray):
@@ -281,11 +289,12 @@ def _highly_variable_genes_single_batch(
         )
     else:
         df = pd.DataFrame(dict(means=mean, dispersions=dispersion))
-    # assign "mean_bin" column and compute dispersions_norm
+    df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
+    disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
     if flavor == "seurat":
-        disp_avg, disp_dev = _stats_seurat(df, n_bins=n_bins)
+        disp_avg, disp_dev = _stats_seurat(df["mean_bin"], disp_grouped)
     elif flavor == "cell_ranger":
-        disp_avg, disp_dev = _stats_cell_ranger(df)
+        disp_avg, disp_dev = _stats_cell_ranger(df["mean_bin"], disp_grouped)
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
 
@@ -301,12 +310,27 @@ def _highly_variable_genes_single_batch(
     return df
 
 
+def _get_mean_bins(
+    means: pd.Series | DaskSeries, flavor: Literal["seurat", "cell_ranger"], n_bins: int
+) -> pd.Series | DaskSeries:
+    if flavor == "seurat":
+        bins = n_bins
+    elif flavor == "cell_ranger":
+        bins = np.r_[-np.inf, np.percentile(means, np.arange(10, 105, 5)), np.inf]
+    else:
+        raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
+
+    if isinstance(means, DaskSeries):
+        # TODO: does map_partitions make sense for bin? It would bin per chunk, not globally
+        return means.map_partitions(pd.cut, bins=bins)
+    return pd.cut(means, bins=bins)
+
+
 def _stats_seurat(
-    df: pd.DataFrame | DaskDataFrame, *, n_bins: int
+    mean_bins: pd.Series | DaskSeries,
+    disp_grouped: SeriesGroupBy | DaskSeriesGroupBy,
 ) -> tuple[pd.Series | DaskSeries, pd.Series | DaskSeries]:
-    """Assign "mean_bin" column and compute mean and std dev per bin."""
-    df["mean_bin"] = _ser_cut(df["means"], bins=n_bins)
-    disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
+    """Compute mean and std dev per bin."""
     with suppress_pandas_warning():
         disp_bin_stats: pd.DataFrame = dask_compute(
             disp_grouped.agg(mean="mean", std=partial(np.std, ddof=1))
@@ -315,7 +339,7 @@ def _stats_seurat(
     # only a single gene fell in the bin and implicitly set them to have
     # a normalized disperion of 1
     one_gene_per_bin = disp_bin_stats["std"].isnull()
-    gen_indices = np.flatnonzero(one_gene_per_bin.loc[df["mean_bin"]])
+    gen_indices = np.flatnonzero(one_gene_per_bin.loc[mean_bins])
     if len(gen_indices) > 0:
         logg.debug(
             f"Gene indices {gen_indices} fell into a single bin: their "
@@ -327,38 +351,27 @@ def _stats_seurat(
         ]
         disp_bin_stats["mean"].loc[one_gene_per_bin] = 0
     # (use values here as index differs)
-    disp_avg = disp_bin_stats["mean"].loc[df["mean_bin"]].reset_index(drop=True)
-    disp_dev = disp_bin_stats["std"].loc[df["mean_bin"]].reset_index(drop=True)
+    disp_avg = disp_bin_stats["mean"].loc[mean_bins].reset_index(drop=True)
+    disp_dev = disp_bin_stats["std"].loc[mean_bins].reset_index(drop=True)
     return disp_avg, disp_dev
 
 
 def _stats_cell_ranger(
-    df: pd.DataFrame | DaskDataFrame,
+    mean_bins: pd.Series | DaskSeries,
+    disp_grouped: SeriesGroupBy | DaskSeriesGroupBy,
 ) -> tuple[pd.Series | DaskSeries, pd.Series | DaskSeries]:
-    """Assign "mean_bin" column and compute median and median absolute dev per bin."""
+    """Compute median and median absolute dev per bin."""
     from statsmodels import robust
 
-    df["mean_bin"] = _ser_cut(
-        df["means"],
-        bins=np.r_[-np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf],
-    )
-    disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
     # using .agg here doesn’t work: https://github.com/dask/dask/issues/10836
     disp_median_bin = dask_compute(disp_grouped.median())
     # the next line raises the warning: "Mean of empty slice"
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         disp_mad_bin = dask_compute(disp_grouped.apply(robust.mad))
-    disp_avg = disp_median_bin.loc[df["mean_bin"]].reset_index(drop=True)
-    disp_dev = disp_mad_bin.loc[df["mean_bin"]].reset_index(drop=True)
+    disp_avg = disp_median_bin.loc[mean_bins].reset_index(drop=True)
+    disp_dev = disp_mad_bin.loc[mean_bins].reset_index(drop=True)
     return disp_avg, disp_dev
-
-
-def _ser_cut(df: pd.Series | DaskSeries, *, bins: int) -> pd.Series | DaskSeries:
-    if isinstance(df, DaskSeries):
-        # TODO: does map_partitions make sense for bin? It would bin per chunk, not globally
-        return df.map_partitions(pd.cut, bins=bins)
-    return pd.cut(df, bins=bins)
 
 
 def _subset_genes(
