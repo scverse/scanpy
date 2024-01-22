@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 from anndata import AnnData  # noqa: TCH002
 from cycler import Cycler  # noqa: TCH002
 from matplotlib import colormaps, colors, patheffects, rcParams
@@ -21,6 +20,7 @@ from matplotlib.axes import Axes  # noqa: TCH002
 from matplotlib.colors import Colormap, Normalize
 from matplotlib.figure import Figure  # noqa: TCH002
 from numpy.typing import NDArray  # noqa: TCH002
+from packaging.version import Version
 
 from ... import logging as logg
 from ..._settings import settings

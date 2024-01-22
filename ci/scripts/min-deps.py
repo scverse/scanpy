@@ -42,11 +42,7 @@ def min_dep(req: Requirement) -> str:
     return f"{req_name}=={min_version}.*"
 
 
-def extract_min_deps(
-        dependencies: list[str], 
-        *, 
-        pyproject
-    ) -> list[str]:
+def extract_min_deps(dependencies: list[str], *, pyproject) -> list[str]:
     dependencies = dependencies.copy()  # We'll be mutating this
     requirements: list[Requirement] = []
     project_name = pyproject["project"]["name"]
@@ -58,7 +54,9 @@ def extract_min_deps(
         if req.name == project_name:
             assert req.extras, f"Project included itself as dependency, without specifying extras: {req}"
             for extra in req.extras:
-                dependencies.extend(pyproject["project"]["optional-dependencies"][extra])
+                dependencies.extend(
+                    pyproject["project"]["optional-dependencies"][extra]
+                )
         else:
             requirements.append(min_dep(req))
 
