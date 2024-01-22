@@ -343,11 +343,12 @@ def _stats_cell_ranger(
         bins=np.r_[-np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf],
     )
     disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
-    disp_median_bin = disp_grouped.median()
+    # using .agg here doesn’t work: https://github.com/dask/dask/issues/10836
+    disp_median_bin = dask_compute(disp_grouped.median())
     # the next line raises the warning: "Mean of empty slice"
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        disp_mad_bin = disp_grouped.apply(robust.mad)
+        disp_mad_bin = dask_compute(disp_grouped.apply(robust.mad))
     disp_avg = disp_median_bin.loc[df["mean_bin"]].reset_index(drop=True)
     disp_dev = disp_mad_bin.loc[df["mean_bin"]].reset_index(drop=True)
     return disp_avg, disp_dev
