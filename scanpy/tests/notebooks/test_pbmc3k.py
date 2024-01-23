@@ -100,7 +100,7 @@ def test_pbmc3k(image_comparer):
     # UMAP
 
     sc.pp.neighbors(adata, n_neighbors=10, n_pcs=40)
-    # sc.tl.umap(adata)  # umaps lead to slight variations
+    sc.tl.umap(adata)  # umaps lead to slight variations
 
     # sc.pl.umap(adata, color=['CST3', 'NKG7', 'PPBP'], use_raw=False, show=False)
     # save_and_compare_images('umap_1')
@@ -108,8 +108,8 @@ def test_pbmc3k(image_comparer):
     # Clustering the graph
 
     sc.tl.leiden(adata, resolution=0.9)
-    # sc.pl.umap(adata, color=['leiden', 'CST3', 'NKG7'], show=False)
-    # save_and_compare_images('umap_2')
+    sc.pl.umap(adata, color=["leiden", "CST3", "NKG7"], show=False)
+    save_and_compare_images("umap_2")
     sc.pl.scatter(adata, "CST3", "NKG7", color="leiden", show=False)
     save_and_compare_images("scatter_3")
 
