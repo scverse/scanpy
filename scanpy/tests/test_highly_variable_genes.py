@@ -577,13 +577,18 @@ def test_cellranger_n_top_genes_warning():
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize("inplace", [True, False], ids=["inplace", "copy"])
 def test_highly_variable_genes_subset_inplace_consistency(
-    flavor, array_type, subset, inplace
+    request: pytest.FixtureRequest, flavor, array_type, subset, inplace
 ):
     """Tests that, with `n_top_genes=n`
     - `inplace` and `subset` interact correctly
     - for both the `seurat` and `cell_ranger` flavors
     - for dask arrays and non-dask arrays
     """
+    if flavor == "cell_ranger" and "dask" in array_type.__name__:
+        request.applymarker(
+            pytest.mark.xfail(reason="See https://github.com/dask/dask/issues/10853")
+        )
+
     adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
     adata.X = array_type(np.abs(adata.X).astype(int))
 
