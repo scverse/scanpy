@@ -166,8 +166,8 @@ def leiden(
     if not use_igraph:
         clustering_args["seed"] = random_state
     else:
-        igraph.set_random_number_generator(random)
         random.seed(random_state)
+        igraph.set_random_number_generator(random)
     if resolution is not None:
         clustering_args[
             f"resolution{'_parameter' if not use_igraph else ''}"
