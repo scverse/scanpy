@@ -75,7 +75,7 @@ def dendrogram(
     adata
         Annotated data matrix
     groupby
-        Optional, the obs column(s) to use to group observations. Default is None.
+        The obs column(s) to use to group observations. Default is None.
     axis
         Axis along which to calculate the dendrogram.
     {n_pcs}
@@ -127,60 +127,28 @@ def dendrogram(
         if isinstance(groupby, str):
             # if not a list, turn into a list
             groupby = [groupby]
-        for group in groupby:
-            if group not in adata.obs_keys():
-                raise ValueError(
-                    "groupby has to be a valid observation. "
-                    f"Given value: {group}, valid observations: {adata.obs_keys()}"
-                )
-            if not isinstance(adata.obs[group].dtype, CategoricalDtype):
-                raise ValueError(
-                    "groupby has to be a categorical observation. "
-                    f"Given value: {group}, Column type: {adata.obs[group].dtype}"
-                )
-
-        if var_names is None:
-            rep_df = pd.DataFrame(
-                _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
-            )
-            if len(groupby) == 1:
-                categorical = adata.obs[groupby[0]]
-            else:
-                categorical = (
-                    adata.obs[groupby].apply("_".join, axis=1).astype("category")
-                )
-            categorical.name = "_".join(groupby)
-
-            rep_df.set_index(categorical, inplace=True)
-            categories = rep_df.index.categories
-        else:
-            from scanpy.plotting._anndata import _prepare_dataframe
-
-            categories, rep_df = _prepare_dataframe(adata, var_names, groupby, use_raw)
-
-        # aggregate values within categories using 'mean'
-        rep_df = rep_df.groupby(level=0, observed=True).mean()
+        rep_df, categories = _dendrogram_grouped(
+            adata,
+            groupby,
+            n_pcs=n_pcs,
+            use_rep=use_rep,
+            var_names=var_names,
+            use_raw=use_raw,
+        )
     else:
-        if var_names is None:
-            rep_df = pd.DataFrame(
-                _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+        rep_df = pd.DataFrame(
+            _choose_representation(
+                adata if var_names is None else adata[:, var_names],
+                use_rep=use_rep,
+                n_pcs=n_pcs,
             )
-
-        else:
-            rep_df = pd.DataFrame(
-                _choose_representation(
-                    adata[:, var_names], use_rep=use_rep, n_pcs=n_pcs
-                )
-            )
+        )
         categories = rep_df.axes[axis]
 
     import scipy.cluster.hierarchy as sch
     from scipy.spatial import distance
 
-    if axis == 0:
-        corr_matrix = rep_df.T.corr(method=cor_method)
-    else:
-        corr_matrix = rep_df.corr(method=cor_method)
+    corr_matrix = (rep_df.T if axis == 0 else rep_df).corr(method=cor_method)
     corr_condensed = distance.squareform(1 - corr_matrix)
     z_var = sch.linkage(
         corr_condensed, method=linkage_method, optimal_ordering=optimal_ordering
@@ -199,13 +167,58 @@ def dendrogram(
         correlation_matrix=corr_matrix.values,
     )
 
-    if inplace:
-        if key_added is None:
-            if groupby is None:
-                key_added = f"dendrogram_{axis_name}"
-            else:
-                key_added = f'dendrogram_{"_".join(groupby)}'
-        logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
-        adata.uns[key_added] = dat
-    else:
+    if not inplace:
         return dat
+    if key_added is None:
+        if groupby is None:
+            key_added = f"dendrogram_{axis_name}"
+        else:
+            key_added = f'dendrogram_{"_".join(groupby)}'
+    logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
+    adata.uns[key_added] = dat
+    return None
+
+
+def _dendrogram_grouped(
+    adata: AnnData,
+    groupby: Sequence[str],
+    *,
+    n_pcs: int | None,
+    use_rep: str | None,
+    var_names: Sequence[str] | None,
+    use_raw: bool | None,
+) -> tuple[pd.DataFrame, pd.Index[str]]:
+    for group in groupby:
+        if group not in adata.obs_keys():
+            raise ValueError(
+                "groupby has to be a valid observation. "
+                f"Given value: {group}, valid observations: {adata.obs_keys()}"
+            )
+        if not isinstance(adata.obs[group].dtype, CategoricalDtype):
+            raise ValueError(
+                "groupby has to be a categorical observation. "
+                f"Given value: {group}, Column type: {adata.obs[group].dtype}"
+            )
+
+    if var_names is None:
+        rep_df = pd.DataFrame(
+            _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+        )
+        if len(groupby) == 1:
+            categorical = adata.obs[groupby[0]]
+        else:
+            categorical = adata.obs[groupby].apply("_".join, axis=1).astype("category")
+        categorical.name = "_".join(groupby)
+
+        rep_df.set_index(categorical, inplace=True)
+        categories = rep_df.index.categories
+    else:
+        from scanpy.plotting._anndata import _prepare_dataframe
+
+        categories, rep_df = _prepare_dataframe(
+            adata, var_names, groupby, use_raw=use_raw
+        )
+
+        # aggregate values within categories using 'mean'
+    rep_df = rep_df.groupby(level=0, observed=True).mean()
+    return rep_df, categories
