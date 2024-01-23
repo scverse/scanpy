@@ -66,6 +66,7 @@ extensions = [
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
     "sphinx.ext.linkcode",
     "sphinx_design",
+    "sphinx_search.extension",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
 ]
@@ -133,13 +134,13 @@ intersphinx_mapping = dict(
 
 # -- Options for HTML output ----------------------------------------------
 
-html_theme = "sphinx_book_theme"
+# The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
+html_theme = "scanpydoc"
 html_theme_options = {
     "repository_url": repository_url,
     "use_repository_button": True,
 }
 html_static_path = ["_static"]
-html_css_files = ["css/override.css"]
 html_show_sphinx = False
 html_logo = "_static/img/Scanpy_Logo_BrightFG.svg"
 html_title = "scanpy"

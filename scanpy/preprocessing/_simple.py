@@ -172,7 +172,7 @@ def filter_cells(
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
 
-    s = np.sum(~cell_subset)
+    s = materialize_as_ndarray(np.sum(~cell_subset))
     if s > 0:
         msg = f"filtered out {s} cells that have "
         if min_genes is not None or min_counts is not None:
@@ -354,7 +354,7 @@ def log1p(
 
 
 @log1p.register(spmatrix)
-def log1p_sparse(X, *, base: Number | None = None, copy: bool = False):
+def log1p_sparse(X: spmatrix, *, base: Number | None = None, copy: bool = False):
     X = check_array(
         X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
@@ -363,7 +363,7 @@ def log1p_sparse(X, *, base: Number | None = None, copy: bool = False):
 
 
 @log1p.register(np.ndarray)
-def log1p_array(X, *, base: Number | None = None, copy: bool = False):
+def log1p_array(X: np.ndarray, *, base: Number | None = None, copy: bool = False):
     # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
@@ -381,7 +381,7 @@ def log1p_array(X, *, base: Number | None = None, copy: bool = False):
 
 @log1p.register(AnnData)
 def log1p_anndata(
-    adata,
+    adata: AnnData,
     *,
     base: Number | None = None,
     copy: bool = False,
@@ -564,7 +564,7 @@ def normalize_per_cell(  # noqa: PLR0917
         else:
             raise ValueError('use_rep should be "after", "X" or None')
         for layer in layers:
-            subset, counts = filter_cells(adata.layers[layer], min_counts=min_counts)
+            _subset, counts = filter_cells(adata.layers[layer], min_counts=min_counts)
             temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
             adata.layers[layer] = temp
 
@@ -589,7 +589,7 @@ def normalize_per_cell(  # noqa: PLR0917
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
         if not issparse(X):
-            X /= materialize_as_ndarray(counts_per_cell[:, np.newaxis])
+            X /= counts_per_cell[:, np.newaxis]
         else:
             sparsefuncs.inplace_row_scale(X, 1 / counts_per_cell)
     return X if copy else None
