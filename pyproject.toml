@@ -122,6 +122,7 @@ doc = [
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
     # TODO: remove necessity for being able to import doc-linked classes
+    "dask",
     "scanpy[paga]",
     "sam-algorithm",
 ]

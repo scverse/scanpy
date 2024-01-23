@@ -37,6 +37,7 @@ def series_to_array(s: DaskSeries, *, dtype: np.dtype | None = None) -> DaskArra
 def series_to_array(
     s: pd.Series | DaskSeries, *, dtype: np.dtype | None = None
 ) -> np.ndarray | DaskArray:
+    """Convert Series to Array, keeping them in-memory or distributed."""
     if isinstance(s, DaskSeries):
         return (
             s.to_dask_array(True)
@@ -73,7 +74,7 @@ def materialize_as_ndarray(
 def materialize_as_ndarray(
     a: ArrayLike | tuple[ArrayLike | ZappyArray | DaskArray, ...],
 ) -> tuple[np.ndarray] | np.ndarray:
-    """Convert distributed arrays to ndarrays."""
+    """Compute distributed arrays and convert them to numpy ndarrays."""
     if not isinstance(a, tuple):
         return np.asarray(a)
 
