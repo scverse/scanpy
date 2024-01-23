@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from igraph import set_random_number_generator
 from natsort import natsorted
 
 from .. import _utils
@@ -122,6 +121,13 @@ def leiden(
             raise ImportError(
                 "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
             )
+    else:
+        try:
+            import igraph
+        except ImportError:
+            raise ImportError(
+                "Please install igraph: `conda install -c conda-forge igraph` or `pip3 install igraph`."
+            )
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
@@ -160,7 +166,7 @@ def leiden(
     if not use_igraph:
         clustering_args["seed"] = random_state
     else:
-        set_random_number_generator(random)
+        igraph.set_random_number_generator(random)
         random.seed(random_state)
     if resolution is not None:
         clustering_args[
