@@ -32,9 +32,7 @@ def test_pbmc3k(image_comparer):
         0
     )  # ensure violin plots and other non-determinstic plots have deterministic behavior
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
-    adata = sc.read(
-        "./data/pbmc3k_raw.h5ad", backup_url="https://falexwolf.de/data/pbmc3k_raw.h5ad"
-    )
+    adata = sc.datasets.pbmc3k()
 
     # Preprocessing
 
