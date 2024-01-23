@@ -15,6 +15,7 @@ from .. import logging as logg
 from .._compat import (
     DaskArray,
     DaskDataFrame,
+    DaskDataFrameGroupBy,
     DaskSeries,
     DaskSeriesGroupBy,
     old_positionals,
@@ -24,6 +25,7 @@ from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
 from ._distributed import (
     dask_compute,
+    get_mad,
     materialize_as_ndarray,
     series_to_array,
     suppress_pandas_warning,
@@ -33,7 +35,7 @@ from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
-    from pandas.core.groupby.generic import SeriesGroupBy
+    from pandas.core.groupby.generic import DataFrameGroupBy, SeriesGroupBy
 
 
 def _highly_variable_genes_seurat_v3(
@@ -365,19 +367,31 @@ def _stats_cell_ranger(
     disp_grouped: SeriesGroupBy | DaskSeriesGroupBy,
 ) -> pd.DataFrame | DaskDataFrame:
     """Compute median and median absolute dev per bin."""
-    from statsmodels import robust
 
-    raise RuntimeError("TODO")
-    # using .agg here doesn’t work: https://github.com/dask/dask/issues/10836
-    disp_median_bin = dask_compute(disp_grouped.median())
-    # the next line raises the warning: "Mean of empty slice"
+    is_dask = isinstance(disp_grouped, DaskSeriesGroupBy)
     with warnings.catch_warnings():
+        # MAD calculation raises the warning: "Mean of empty slice"
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        disp_mad_bin = dask_compute(disp_grouped.apply(robust.mad))
-    # TODO: df
-    disp_avg = disp_median_bin.loc[mean_bins].reindex(mean_bins.index)
-    disp_dev = disp_mad_bin.loc[mean_bins].reindex(mean_bins.index)
-    return disp_avg, disp_dev
+        disp_bin_stats = _aggregate(disp_grouped, ["median", get_mad(dask=is_dask)])
+    # Can’t use kwargs in `aggregate`: https://github.com/dask/dask/issues/10836
+    disp_bin_stats = disp_bin_stats.rename(columns=dict(median="avg", mad="dev"))
+    return disp_bin_stats.loc[mean_bins].set_index(mean_bins.index)
+
+
+def _aggregate(
+    grouped: (
+        DataFrameGroupBy | DaskDataFrameGroupBy | SeriesGroupBy | DaskSeriesGroupBy
+    ),
+    arg=None,
+    **kw,
+) -> pd.DataFrame | DaskDataFrame | pd.Series | DaskSeries:
+    # ValueError: In order to aggregate with 'median',
+    # you must use shuffling-based aggregation (e.g., shuffle='tasks')
+    if ((arg and "median" in arg) or "median" in kw) and isinstance(
+        grouped, (DaskSeriesGroupBy, DaskDataFrameGroupBy)
+    ):
+        kw["shuffle"] = True
+    return grouped.agg(arg, **kw)
 
 
 def _subset_genes(

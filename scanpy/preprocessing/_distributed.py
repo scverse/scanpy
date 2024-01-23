@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, overload
+from itertools import chain
+from typing import TYPE_CHECKING, Literal, overload
 
 import numpy as np
 
@@ -15,9 +16,10 @@ from scanpy._compat import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     import pandas as pd
+    from dask.dataframe import Aggregation
     from numpy.typing import ArrayLike
     from pandas.core.groupby.generic import DataFrameGroupBy, SeriesGroupBy
 
@@ -124,3 +126,39 @@ def suppress_pandas_warning() -> Generator[None, None, None]:
             "ignore", r"The default of observed=False", category=FutureWarning
         )
         yield
+
+
+try:
+    import dask.dataframe as dd
+except ImportError:
+
+    def get_mad(dask: Literal[False]) -> Callable[[np.ndarray], np.ndarray]:
+        from statsmodels.robust import mad
+
+        return mad
+else:
+
+    def _mad1(chunks: DaskSeriesGroupBy):
+        return chunks.apply(list)
+
+    def _mad2(grouped: DaskSeriesGroupBy):
+        def internal(c):
+            if (c != c).all():
+                return [np.nan]
+            f = [_ for _ in c if _ == _]
+            f = [_ if isinstance(_, list) else [_] for _ in f]
+            return list(chain.from_iterable(f))
+
+        return grouped.apply(internal)
+
+    def _mad3(grouped: DaskSeriesGroupBy):
+        from statsmodels.robust import mad
+
+        return grouped.apply(lambda s: np.nan if len(s) == 0 else mad(s))
+
+    mad_dask = dd.Aggregation("mad", chunk=_mad1, agg=_mad2, finalize=_mad3)
+
+    def get_mad(dask: bool) -> Callable[[np.ndarray], np.ndarray] | Aggregation:
+        from statsmodels.robust import mad
+
+        return mad_dask if dask else mad
