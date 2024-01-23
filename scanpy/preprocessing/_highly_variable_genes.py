@@ -358,8 +358,7 @@ def _stats_seurat(
             one_gene_per_bin
         ]
         disp_bin_stats["avg"].loc[one_gene_per_bin] = 0
-    # (use values here as index differs)
-    return disp_bin_stats.loc[mean_bins].set_index(mean_bins.index)
+    return _unbin(disp_bin_stats, mean_bins)
 
 
 def _stats_cell_ranger(
@@ -375,7 +374,15 @@ def _stats_cell_ranger(
         disp_bin_stats = _aggregate(disp_grouped, ["median", get_mad(dask=is_dask)])
     # Can’t use kwargs in `aggregate`: https://github.com/dask/dask/issues/10836
     disp_bin_stats = disp_bin_stats.rename(columns=dict(median="avg", mad="dev"))
-    return disp_bin_stats.loc[mean_bins].set_index(mean_bins.index)
+    return _unbin(disp_bin_stats, mean_bins)
+
+
+def _unbin(
+    df: pd.DataFrame | DaskDataFrame, mean_bins: pd.Series | DaskSeries
+) -> pd.DataFrame | DaskDataFrame:
+    df = df.loc[mean_bins]
+    df["gene"] = mean_bins.index
+    return df.set_index("gene")
 
 
 def _aggregate(
@@ -479,10 +486,6 @@ def _highly_variable_genes_batched(
             missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
             missing_hvg["gene"] = gene_list[~filt]
             hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
-
-        # Order as before filtering
-        idxs = np.concatenate((np.flatnonzero(filt), np.flatnonzero(~filt)))
-        hvg = hvg.iloc[np.argsort(idxs)]
 
         dfs.append(hvg)
 
