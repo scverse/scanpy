@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from igraph import set_random_number_generator
 from natsort import natsorted
 
 from .. import _utils
@@ -159,6 +160,7 @@ def leiden(
     if not use_igraph:
         clustering_args["seed"] = random_state
     else:
+        set_random_number_generator(random)
         random.seed(random_state)
     if resolution is not None:
         clustering_args[
