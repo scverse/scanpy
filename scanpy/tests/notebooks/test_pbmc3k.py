@@ -108,7 +108,7 @@ def test_pbmc3k(image_comparer):
     # Clustering the graph
 
     sc.tl.leiden(adata, resolution=0.9, random_state=0)
-    adata.write_h5ad(ROOT / "pbmc3k_clustered.h5ad")
+
     # sc.pl.umap(adata, color=["leiden", "CST3", "NKG7"], show=False)
     # save_and_compare_images("umap_2")
     sc.pl.scatter(adata, "CST3", "NKG7", color="leiden", show=False)
@@ -134,10 +134,11 @@ def test_pbmc3k(image_comparer):
     leiden_relabel = {}
     for marker_gene, new_label in zip(marker_genes, new_labels):
         leiden_relabel[max_idxs[marker_gene]] = new_label
-    leiden_relabel
+    adata.obs["leiden_old"] = adata.obs["leiden"].copy()
     adata.rename_categories(
         "leiden", [leiden_relabel[key] for key in sorted(leiden_relabel.keys())]
     )
+    adata.write_h5ad(ROOT / "pbmc3k_clustered.h5ad")
 
     sc.tl.rank_genes_groups(adata, "leiden")
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
