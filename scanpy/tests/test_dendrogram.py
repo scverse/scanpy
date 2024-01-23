@@ -9,17 +9,24 @@ n_neighbors = 5
 key = "test"
 
 
-@pytest.mark.parametrize("groupby", [None, "bulk_labels", ["bulk_labels", "phase"]])
-@pytest.mark.parametrize("key_added", [None, "custom_key"])
-def test_dendrogram_key_added(groupby, key_added):
+@pytest.mark.parametrize(
+    ("groupby", "dendrogram_key"),
+    [
+        pytest.param(None, "dendrogram_obs", id="obs"),
+        pytest.param("bulk_labels", "dendrogram_bulk_labels", id="bulk_labels"),
+        pytest.param(
+            ["bulk_labels", "phase"],
+            "dendrogram_bulk_labels_phase",
+            id="bulk_labels+phase",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "key_added", [None, "custom_key"], ids=["derived", "custom_key"]
+)
+def test_dendrogram_key_added(groupby, dendrogram_key, key_added):
     adata = pbmc68k_reduced()
     sc.tl.dendrogram(adata, groupby=groupby, key_added=key_added, use_rep="X_pca")
-    if isinstance(groupby, list):
-        dendrogram_key = f'dendrogram_{"_".join(groupby)}'
-    elif groupby is None:
-        dendrogram_key = "dendrogram_obs"
-    else:
-        dendrogram_key = f"dendrogram_{groupby}"
 
     if key_added is None:
         key_added = dendrogram_key

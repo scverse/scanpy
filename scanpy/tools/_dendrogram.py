@@ -7,14 +7,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
-from anndata._core.merge import _resolve_axis
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import _doc_params
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
-from ._utils import _choose_representation
+from ._utils import _choose_representation, _resolve_axis
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
