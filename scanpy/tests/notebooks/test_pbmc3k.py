@@ -108,12 +108,36 @@ def test_pbmc3k(image_comparer):
     # Clustering the graph
 
     sc.tl.leiden(adata, resolution=0.9, random_state=0)
+    adata.write_h5ad(ROOT / "pbmc3k_clustered.h5ad")
     # sc.pl.umap(adata, color=["leiden", "CST3", "NKG7"], show=False)
     # save_and_compare_images("umap_2")
     sc.pl.scatter(adata, "CST3", "NKG7", color="leiden", show=False)
     save_and_compare_images("scatter_3")
 
     # Finding marker genes
+    # Due to incosistency with our test runner vs local, these clusters need to
+    # be pre-annotated as the numbers for each cluster are not consistent.
+    marker_genes = [
+        "RP11-18H21.1",
+        "GZMK",
+        "CD79A",
+        "FCGR3A",
+        "GNLY",
+        "S100A8",
+        "FCER1A",
+        "PPBP",
+    ]
+    new_labels = ["0", "1", "2", "3", "4", "5", "6", "7"]
+    data_df = adata[:, marker_genes].to_df()
+    data_df["leiden"] = adata.obs["leiden"]
+    max_idxs = data_df.groupby("leiden", observed=True).mean().idxmax()
+    leiden_relabel = {}
+    for marker_gene, new_label in zip(marker_genes, new_labels):
+        leiden_relabel[max_idxs[marker_gene]] = new_label
+    leiden_relabel
+    adata.rename_categories(
+        "leiden", [leiden_relabel[key] for key in sorted(leiden_relabel.keys())]
+    )
 
     sc.tl.rank_genes_groups(adata, "leiden")
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
@@ -140,8 +164,8 @@ def test_pbmc3k(image_comparer):
         "CD4 T cells",
         "CD8 T cells",
         "B cells",
-        "NK cells",
         "FCGR3A+ Monocytes",
+        "NK cells",
         "CD14+ Monocytes",
         "Dendritic cells",
         "Megakaryocytes",
