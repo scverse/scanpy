@@ -14,6 +14,7 @@ def adata_neighbors():
 
 
 @needs.leidenalg
+@needs.igraph
 @pytest.mark.parametrize("use_igraph", [True, False, False])
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
@@ -28,12 +29,14 @@ def test_leiden_basic(adata_neighbors, use_igraph, resolution, n_iterations):
     assert adata_neighbors.uns["leiden"]["params"]["n_iterations"] == n_iterations
 
 
+@needs.igraph
 def test_leiden_igraph_directed(adata_neighbors):
     with pytest.raises(ValueError):
         sc.tl.leiden(adata_neighbors, directed=True)
 
 
 @needs.leidenalg
+@needs.igraph
 def test_leiden_equal_defaults(adata_neighbors):
     """Ensure the two implementations are the same for the same args."""
     leiden_alg_clustered = sc.tl.leiden(adata_neighbors, use_igraph=False, copy=True)
@@ -47,6 +50,7 @@ def test_leiden_equal_defaults(adata_neighbors):
 
 
 @needs.leidenalg
+@needs.igraph
 def test_leiden_equal_old_defaults(adata_neighbors):
     """Ensure that the old leidenalg defaults are close enough to the current default outputs."""
     leiden_alg_clustered = sc.tl.leiden(
@@ -61,6 +65,7 @@ def test_leiden_equal_old_defaults(adata_neighbors):
     )
 
 
+@needs.igraph
 @pytest.mark.parametrize(
     "clustering,key",
     [
@@ -96,6 +101,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
 
 
 @needs.louvain
+@needs.igraph
 def test_louvain_basic(adata_neighbors):
     sc.tl.louvain(adata_neighbors)
     sc.tl.louvain(adata_neighbors, use_weights=True)
@@ -104,6 +110,7 @@ def test_louvain_basic(adata_neighbors):
 
 
 @needs.louvain
+@needs.igraph
 def test_partition_type(adata_neighbors):
     import louvain
 
