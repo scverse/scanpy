@@ -15,13 +15,13 @@ def adata_neighbors():
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("use_igraph", [True, False, False])
+@pytest.mark.parametrize("use_leidenalg", [False, True, True])
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
-def test_leiden_basic(adata_neighbors, use_igraph, resolution, n_iterations):
+def test_leiden_basic(adata_neighbors, use_leidenalg, resolution, n_iterations):
     sc.tl.leiden(
         adata_neighbors,
-        use_igraph=use_igraph,
+        use_leidenalg=use_leidenalg,
         resolution=resolution,
         n_iterations=n_iterations,
     )
@@ -39,7 +39,7 @@ def test_leiden_igraph_directed(adata_neighbors):
 @needs.igraph
 def test_leiden_equal_defaults(adata_neighbors):
     """Ensure the two implementations are the same for the same args."""
-    leiden_alg_clustered = sc.tl.leiden(adata_neighbors, use_igraph=False, copy=True)
+    leiden_alg_clustered = sc.tl.leiden(adata_neighbors, use_leidenalg=True, copy=True)
     igraph_clustered = sc.tl.leiden(adata_neighbors, copy=True)
     assert (
         normalized_mutual_info_score(
@@ -54,7 +54,7 @@ def test_leiden_equal_defaults(adata_neighbors):
 def test_leiden_equal_old_defaults(adata_neighbors):
     """Ensure that the old leidenalg defaults are close enough to the current default outputs."""
     leiden_alg_clustered = sc.tl.leiden(
-        adata_neighbors, use_igraph=False, directed=True, n_iterations=-1, copy=True
+        adata_neighbors, use_leidenalg=True, directed=True, n_iterations=-1, copy=True
     )
     igraph_clustered = sc.tl.leiden(adata_neighbors, copy=True)
     assert (
