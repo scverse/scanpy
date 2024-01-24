@@ -146,7 +146,7 @@ def leiden(
     # convert it to igraph
     if use_igraph and directed:
         raise ValueError(
-            "Cannot use igraph's leiden implementaiton with a directed graph."
+            "Cannot use igraph's leiden implemntation with a directed graph."
         )
     g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
