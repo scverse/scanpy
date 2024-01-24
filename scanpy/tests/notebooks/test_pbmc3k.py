@@ -33,7 +33,6 @@ def test_pbmc3k(image_comparer):
     )  # ensure violin plots and other non-determinstic plots have deterministic behavior
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
     adata = sc.datasets.pbmc3k()
-    adata.write_h5ad(ROOT / "initial_dataset.h5ad")
 
     # Preprocessing
 
@@ -42,7 +41,6 @@ def test_pbmc3k(image_comparer):
 
     sc.pp.filter_cells(adata, min_genes=200)
     sc.pp.filter_genes(adata, min_cells=3)
-    adata.write_h5ad(ROOT / "filtered_dataset.h5ad")
 
     mito_genes = [name for name in adata.var_names if name.startswith("MT-")]
     # for each cell compute fraction of counts in mito genes vs. all genes
@@ -87,7 +85,6 @@ def test_pbmc3k(image_comparer):
     sc.pp.log1p(adata)
     sc.pp.regress_out(adata, ["n_counts", "percent_mito"])
     sc.pp.scale(adata, max_value=10)
-    adata.write_h5ad(ROOT / "preprocessed_dataset.h5ad")
 
     # PCA
 
@@ -139,7 +136,10 @@ def test_pbmc3k(image_comparer):
     adata.rename_categories(
         "leiden", [leiden_relabel[key] for key in sorted(leiden_relabel.keys())]
     )
-    adata.write_h5ad(ROOT / "pbmc3k_clustered.h5ad")
+    # ensure that the column can be sorted for consistent plotting since it is by default unordered
+    adata.obs["leiden"] = adata.obs["leiden"].cat.reorder_categories(
+        list(map(str, range(len(adata.obs["leiden"].cat.categories)))), ordered=True
+    )
 
     sc.tl.rank_genes_groups(adata, "leiden")
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
