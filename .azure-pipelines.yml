@@ -79,11 +79,6 @@ jobs:
     displayName: 'PyTest (coverage)'
     condition: eq(variables['RUN_COVERAGE'], 'yes')
 
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathToPublish: '$(Pipeline.Workspace)/s/scanpy/tests/notebooks/_images_pbmc3k'
-      artifactName: drop
-
   - task: PublishCodeCoverageResults@1
     inputs:
       codeCoverageTool: Cobertura
