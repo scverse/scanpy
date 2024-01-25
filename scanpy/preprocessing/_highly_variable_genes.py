@@ -80,15 +80,15 @@ def _highly_variable_genes_seurat_v3(
             "Please install skmisc package via `pip install --user scikit-misc"
         )
     df = pd.DataFrame(index=adata.var_names)
-    X = adata.layers[layer] if layer is not None else adata.X
+    data = _get_obs_rep(layer=layer)
 
-    if check_values and not check_nonnegative_integers(X):
+    if check_values and not check_nonnegative_integers(data):
         warnings.warn(
             "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
             UserWarning,
         )
 
-    df["means"], df["variances"] = _get_mean_var(X)
+    df["means"], df["variances"] = _get_mean_var(data)
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -97,11 +97,11 @@ def _highly_variable_genes_seurat_v3(
 
     norm_gene_vars = []
     for b in np.unique(batch_info):
-        X_batch = X[batch_info == b]
+        data_batch = data[batch_info == b]
 
-        mean, var = _get_mean_var(X_batch)
+        mean, var = _get_mean_var(data_batch)
         not_const = var > 0
-        estimat_var = np.zeros(X.shape[1], dtype=np.float64)
+        estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
         y = np.log10(var[not_const])
         x = np.log10(mean[not_const])
@@ -110,9 +110,9 @@ def _highly_variable_genes_seurat_v3(
         estimat_var[not_const] = model.outputs.fitted_values
         reg_std = np.sqrt(10**estimat_var)
 
-        batch_counts = X_batch.astype(np.float64).copy()
+        batch_counts = data_batch.astype(np.float64).copy()
         # clip large values as in Seurat
-        N = X_batch.shape[0]
+        N = data_batch.shape[0]
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
         if sp_sparse.issparse(batch_counts):
@@ -260,18 +260,18 @@ def _highly_variable_genes_single_batch(
     A DataFrame that contains the columns
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
-    X = adata.layers[layer] if layer is not None else adata.X
+    data = _get_obs_rep(layer=layer)
     if flavor == "seurat":
-        X = X.copy()
+        data = data.copy()
         if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            X *= np.log(adata.uns["log1p"]["base"])
-        # use out if possible. only possible since we copy X
-        if isinstance(X, np.ndarray):
-            np.expm1(X, out=X)
+            data *= np.log(adata.uns["log1p"]["base"])
+        # use out if possible. only possible since we copy the data matrix
+        if isinstance(data, np.ndarray):
+            np.expm1(data, out=data)
         else:
-            X = np.expm1(X)
+            data = np.expm1(data)
 
-    mean, var = _get_mean_var(X)
+    mean, var = _get_mean_var(data)
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -282,7 +282,7 @@ def _highly_variable_genes_single_batch(
 
     # all of the following quantities are "per-gene" here
     df: pd.DataFrame | DaskDataFrame
-    if isinstance(X, DaskArray):
+    if isinstance(data, DaskArray):
         import dask.array as da
         import dask.dataframe as dd
 
