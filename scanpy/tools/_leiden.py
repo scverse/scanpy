@@ -37,9 +37,7 @@ class RNGIgraph:
         self._rng = check_random_state(random_state)
 
     def __getattr__(self, attr: str):
-        if attr == "gauss":
-            return self._rng.normal
-        return getattr(self._rng, attr)
+        return getattr(self._rng, "normal" if attr == "gauss" else attr)
 
 
 def leiden(
