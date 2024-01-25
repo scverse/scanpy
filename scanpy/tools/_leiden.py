@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
 from natsort import natsorted
+from sklearn.dummy import check_random_state
 
 from .. import _utils
 from .. import logging as logg
@@ -25,6 +25,21 @@ except ImportError:
         pass
 
     MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
+
+
+class RNGIgraph:
+    """
+    Random number generator for ipgraph so global seed is not changed.
+    See :func:`igraph.set_random_number_generator` for the requirements.
+    """
+
+    def __init__(self, random_state: int) -> None:
+        self._rng = check_random_state(random_state)
+
+    def __getattr__(self, attr: str):
+        if attr == "gauss":
+            return self._rng.normal
+        return getattr(self._rng, attr)
 
 
 def leiden(
@@ -170,8 +185,8 @@ def leiden(
     if backend == "leidenalg":
         clustering_args["seed"] = random_state
     else:
-        random.seed(random_state)
-        igraph.set_random_number_generator(random)
+        rng = RNGIgraph(random_state)
+        igraph.set_random_number_generator(rng)
     if resolution is not None:
         clustering_args["resolution_parameter"] = resolution
     # clustering proper
