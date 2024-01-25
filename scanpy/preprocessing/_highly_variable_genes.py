@@ -80,7 +80,7 @@ def _highly_variable_genes_seurat_v3(
             "Please install skmisc package via `pip install --user scikit-misc"
         )
     df = pd.DataFrame(index=adata.var_names)
-    data = _get_obs_rep(layer=layer)
+    data = _get_obs_rep(adata, layer=layer)
 
     if check_values and not check_nonnegative_integers(data):
         warnings.warn(
@@ -260,7 +260,7 @@ def _highly_variable_genes_single_batch(
     A DataFrame that contains the columns
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
-    data = _get_obs_rep(layer=layer)
+    data = _get_obs_rep(adata, layer=layer)
     if flavor == "seurat":
         data = data.copy()
         if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
