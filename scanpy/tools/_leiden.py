@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ def leiden(
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    use_leidenalg: bool = False,
+    backend: Literal["leidenalg", "ipgraph"] = "igraph",
     **clustering_args,
 ) -> AnnData | None:
     """\
@@ -98,8 +98,8 @@ def leiden(
         `obsp` and `neighbors_key` at the same time.
     copy
         Whether to copy `adata` or modify it inplace.
-    use_leidenalg
-        Whether or not to use the `leidenalg` leiden implementation.
+    backend
+        Which package's implementation to use.
     **clustering_args
         Any further arguments to pass to `~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
         or `community_detection` from `igraph`.
@@ -116,7 +116,7 @@ def leiden(
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
-    if use_leidenalg:
+    if backend == "leidenalg":
         try:
             import leidenalg
         except ImportError:
@@ -146,15 +146,15 @@ def leiden(
             adjacency=adjacency,
         )
     # convert it to igraph
-    if not use_leidenalg and directed:
+    if not backend == "leidenalg" and directed:
         raise ValueError(
             "Cannot use igraph's leiden implemntation with a directed graph."
         )
     g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
-    if partition_type is None and use_leidenalg:
+    if partition_type is None and backend == "leidenalg":
         partition_type = leidenalg.RBConfigurationVertexPartition
-    elif not use_leidenalg and partition_type is not None:
+    elif not backend == "leidenalg" and partition_type is not None:
         raise ValueError("Do not pass in partition_type argument when using igraph.")
     # Prepare find_partition arguments as a dictionary,
     # appending to whatever the user provided. It needs to be this way
@@ -163,21 +163,19 @@ def leiden(
     if use_weights:
         clustering_args["weights"] = (
             "weight"
-            if not use_leidenalg
+            if not backend == "leidenalg"
             else np.array(g.es["weight"]).astype(np.float64)
         )
     clustering_args["n_iterations"] = n_iterations
-    if use_leidenalg:
+    if backend == "leidenalg":
         clustering_args["seed"] = random_state
     else:
         random.seed(random_state)
         igraph.set_random_number_generator(random)
     if resolution is not None:
-        clustering_args[
-            f"resolution{'_parameter' if use_leidenalg else ''}"
-        ] = resolution
+        clustering_args["resolution_parameter"] = resolution
     # clustering proper
-    if not use_leidenalg:
+    if not backend == "leidenalg":
         part = g.community_leiden(objective_function="modularity", **clustering_args)
     else:
         part = leidenalg.find_partition(g, partition_type, **clustering_args)
