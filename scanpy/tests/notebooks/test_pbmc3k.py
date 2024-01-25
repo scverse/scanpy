@@ -28,9 +28,8 @@ ROOT = HERE / "_images_pbmc3k"
 
 @needs.leidenalg
 def test_pbmc3k(image_comparer):
-    np.random.seed(
-        0
-    )  # ensure violin plots and other non-determinstic plots have deterministic behavior
+    # ensure violin plots and other non-determinstic plots have deterministic behavior
+    np.random.seed(0)
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
     adata = sc.datasets.pbmc3k()
 
