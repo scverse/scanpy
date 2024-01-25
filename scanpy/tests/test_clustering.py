@@ -66,6 +66,12 @@ def test_leiden_equal_old_defaults(adata_neighbors):
 
 
 @needs.igraph
+def test_leiden_objective_function(adata_neighbors):
+    """Ensure that popping this as a `clustering_kwargs` and using it does not error out."""
+    sc.tl.leiden(adata_neighbors, objective_function="modularity")
+
+
+@needs.igraph
 @pytest.mark.parametrize(
     "clustering,key",
     [

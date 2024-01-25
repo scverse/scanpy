@@ -176,7 +176,10 @@ def leiden(
         clustering_args["resolution_parameter"] = resolution
     # clustering proper
     if not backend == "leidenalg":
-        part = g.community_leiden(objective_function="modularity", **clustering_args)
+        objective_function = clustering_args.pop("objective_function", "modularity")
+        part = g.community_leiden(
+            objective_function=objective_function, **clustering_args
+        )
     else:
         part = leidenalg.find_partition(g, partition_type, **clustering_args)
     # store output into adata.obs
