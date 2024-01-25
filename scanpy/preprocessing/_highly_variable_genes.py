@@ -287,16 +287,10 @@ def _highly_variable_genes_single_batch(
         import dask.dataframe as dd
 
         df = dd.from_dask_array(
-            da.vstack((mean, dispersion)).T,
-            columns=["means", "dispersions"],
+            da.vstack((mean, dispersion)).T, columns=["means", "dispersions"]
         )
-        df["gene"] = adata.var_names.to_series(index=df.index, name="gene")
-        df = df.set_index("gene")
     else:
-        df = pd.DataFrame(
-            dict(means=mean, dispersions=dispersion), index=adata.var_names
-        )
-    df.index.name = "gene"
+        df = pd.DataFrame(dict(means=mean, dispersions=dispersion))
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
     disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
     if flavor == "seurat":
@@ -315,6 +309,12 @@ def _highly_variable_genes_single_batch(
         cutoff=cutoff,
     )
 
+    if isinstance(df, DaskDataFrame):
+        df["gene"] = adata.var_names.to_series(index=df.index, name="gene")
+        df = df.set_index("gene", sort=False)
+    else:
+        df.set_index(adata.var_names, inplace=True)
+        df.index.name = "gene"
     return df
 
 
@@ -382,7 +382,10 @@ def _unbin(
 ) -> pd.DataFrame | DaskDataFrame:
     df = df.loc[mean_bins]
     df["gene"] = mean_bins.index
-    return df.set_index("gene")
+    if isinstance(df, DaskDataFrame):
+        return df.set_index("gene", sort=False)
+    df.set_index("gene", inplace=True)
+    return df
 
 
 def _aggregate(
@@ -507,7 +510,7 @@ def _highly_variable_genes_batched(
         )
     )
     if isinstance(df, DaskDataFrame):
-        df = df.set_index("gene")  # happens automatically for pandas df
+        df = df.set_index("gene", sort=False)  # happens automatically for pandas df
     df["highly_variable_nbatches"] = df["highly_variable"]
     df["highly_variable_intersection"] = df["highly_variable_nbatches"] == len(batches)
 
@@ -709,34 +712,30 @@ def highly_variable_genes(
 
     logg.info("    finished", time=start)
 
-    if inplace:
-        adata.uns["hvg"] = {"flavor": flavor}
-        logg.hint(
-            "added\n"
-            "    'highly_variable', boolean vector (adata.var)\n"
-            "    'means', float vector (adata.var)\n"
-            "    'dispersions', float vector (adata.var)\n"
-            "    'dispersions_norm', float vector (adata.var)"
-        )
-        adata.var["highly_variable"] = dask_compute(df["highly_variable"])
-        adata.var["means"] = dask_compute(df["means"])
-        adata.var["dispersions"] = dask_compute(df["dispersions"])
-        adata.var["dispersions_norm"] = dask_compute(df["dispersions_norm"]).astype(
-            np.float32, copy=False
-        )
-
-        if batch_key is not None:
-            adata.var["highly_variable_nbatches"] = dask_compute(
-                df["highly_variable_nbatches"]
-            )
-            adata.var["highly_variable_intersection"] = dask_compute(
-                df["highly_variable_intersection"]
-            )
-        if subset:
-            adata._inplace_subset_var(materialize_as_ndarray(df["highly_variable"]))
-
-    else:
+    if not inplace:
         if subset:
             df = df.loc[df["highly_variable"]]
 
         return df
+
+    df = dask_compute(df)
+    adata.uns["hvg"] = {"flavor": flavor}
+    logg.hint(
+        "added\n"
+        "    'highly_variable', boolean vector (adata.var)\n"
+        "    'means', float vector (adata.var)\n"
+        "    'dispersions', float vector (adata.var)\n"
+        "    'dispersions_norm', float vector (adata.var)"
+    )
+    adata.var["highly_variable"] = df["highly_variable"]
+    adata.var["means"] = df["means"]
+    adata.var["dispersions"] = df["dispersions"]
+    adata.var["dispersions_norm"] = df["dispersions_norm"].astype(
+        np.float32, copy=False
+    )
+
+    if batch_key is not None:
+        adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"]
+        adata.var["highly_variable_intersection"] = df["highly_variable_intersection"]
+    if subset:
+        adata._inplace_subset_var(df["highly_variable"])
