@@ -165,11 +165,9 @@ def leiden(
         clustering_args["resolution_parameter"] = resolution
     # clustering proper
     if not flavor == "leidenalg":
-        objective_function = clustering_args.pop("objective_function", "modularity")
+        clustering_args.setdefault("objective_function", "modularity")
         with _utils.set_igraph_random_state(random_state):
-            part = g.community_leiden(
-                objective_function=objective_function, **clustering_args
-            )
+            part = g.community_leiden(**clustering_args)
     else:
         part = leidenalg.find_partition(g, partition_type, **clustering_args)
     # store output into adata.obs
