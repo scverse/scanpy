@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import pandas as pd
 from natsort import natsorted
-from sklearn.dummy import check_random_state
 
 from .. import _utils
 from .. import logging as logg
@@ -27,19 +26,6 @@ except ImportError:
     MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
-class RNGIgraph:
-    """
-    Random number generator for ipgraph so global seed is not changed.
-    See :func:`igraph.set_random_number_generator` for the requirements.
-    """
-
-    def __init__(self, random_state: int) -> None:
-        self._rng = check_random_state(random_state)
-
-    def __getattr__(self, attr: str):
-        return getattr(self._rng, "normal" if attr == "gauss" else attr)
-
-
 def leiden(
     adata: AnnData,
     resolution: float = 1,
@@ -55,7 +41,7 @@ def leiden(
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    backend: Literal["leidenalg", "ipgraph"] = "igraph",
+    flavor: Literal["leidenalg", "ipgraph"] = "igraph",
     **clustering_args,
 ) -> AnnData | None:
     """\
@@ -111,7 +97,7 @@ def leiden(
         `obsp` and `neighbors_key` at the same time.
     copy
         Whether to copy `adata` or modify it inplace.
-    backend
+    flavor
         Which package's implementation to use.
     **clustering_args
         Any further arguments to pass to :func:`~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
@@ -129,19 +115,12 @@ def leiden(
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
-    if backend == "leidenalg":
+    if flavor == "leidenalg":
         try:
             import leidenalg
         except ImportError:
             raise ImportError(
                 "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
-            )
-    else:
-        try:
-            import igraph
-        except ImportError:
-            raise ImportError(
-                "Please install igraph: `conda install -c conda-forge igraph` or `pip3 install igraph`."
             )
     clustering_args = dict(clustering_args)
 
@@ -159,15 +138,15 @@ def leiden(
             adjacency=adjacency,
         )
     # convert it to igraph
-    if not backend == "leidenalg" and directed:
+    if not flavor == "leidenalg" and directed:
         raise ValueError(
             "Cannot use igraph's leiden implemntation with a directed graph."
         )
     g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
-    if partition_type is None and backend == "leidenalg":
+    if partition_type is None and flavor == "leidenalg":
         partition_type = leidenalg.RBConfigurationVertexPartition
-    elif not backend == "leidenalg" and partition_type is not None:
+    elif not flavor == "leidenalg" and partition_type is not None:
         raise ValueError("Do not pass in partition_type argument when using igraph.")
     # Prepare find_partition arguments as a dictionary,
     # appending to whatever the user provided. It needs to be this way
@@ -176,23 +155,21 @@ def leiden(
     if use_weights:
         clustering_args["weights"] = (
             "weight"
-            if not backend == "leidenalg"
+            if not flavor == "leidenalg"
             else np.array(g.es["weight"]).astype(np.float64)
         )
     clustering_args["n_iterations"] = n_iterations
-    if backend == "leidenalg":
+    if flavor == "leidenalg":
         clustering_args["seed"] = random_state
-    else:
-        rng = RNGIgraph(random_state)
-        igraph.set_random_number_generator(rng)
     if resolution is not None:
         clustering_args["resolution_parameter"] = resolution
     # clustering proper
-    if not backend == "leidenalg":
+    if not flavor == "leidenalg":
         objective_function = clustering_args.pop("objective_function", "modularity")
-        part = g.community_leiden(
-            objective_function=objective_function, **clustering_args
-        )
+        with _utils.set_igraph_random_state(random_state):
+            part = g.community_leiden(
+                objective_function=objective_function, **clustering_args
+            )
     else:
         part = leidenalg.find_partition(g, partition_type, **clustering_args)
     # store output into adata.obs
