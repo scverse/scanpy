@@ -15,13 +15,13 @@ def adata_neighbors():
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("backend", ["igraph", "leidenalg", "leidenalg"])
+@pytest.mark.parametrize("flavor", ["igraph", "leidenalg", "leidenalg"])
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
-def test_leiden_basic(adata_neighbors, backend, resolution, n_iterations):
+def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
     sc.tl.leiden(
         adata_neighbors,
-        backend=backend,
+        flavor=flavor,
         resolution=resolution,
         n_iterations=n_iterations,
     )
@@ -29,13 +29,13 @@ def test_leiden_basic(adata_neighbors, backend, resolution, n_iterations):
     assert adata_neighbors.uns["leiden"]["params"]["n_iterations"] == n_iterations
 
 
-@pytest.mark.parametrize("backend", ["igraph", "leidenalg", "leidenalg"])
-def test_leiden_random_state(adata_neighbors, backend):
-    adata_1 = sc.tl.leiden(adata_neighbors, backend=backend, random_state=1, copy=True)
+@pytest.mark.parametrize("flavor", ["igraph", "leidenalg", "leidenalg"])
+def test_leiden_random_state(adata_neighbors, flavor):
+    adata_1 = sc.tl.leiden(adata_neighbors, flavor=flavor, random_state=1, copy=True)
     adata_1_again = sc.tl.leiden(
-        adata_neighbors, backend=backend, random_state=1, copy=True
+        adata_neighbors, flavor=flavor, random_state=1, copy=True
     )
-    adata_2 = sc.tl.leiden(adata_neighbors, backend=backend, random_state=50, copy=True)
+    adata_2 = sc.tl.leiden(adata_neighbors, flavor=flavor, random_state=50, copy=True)
     assert (adata_1.obs["leiden"] == adata_1_again.obs["leiden"]).all()
     assert (adata_2.obs["leiden"] != adata_1_again.obs["leiden"]).any()
 
@@ -50,7 +50,7 @@ def test_leiden_igraph_directed(adata_neighbors):
 @needs.igraph
 def test_leiden_equal_defaults(adata_neighbors):
     """Ensure the two implementations are the same for the same args."""
-    leiden_alg_clustered = sc.tl.leiden(adata_neighbors, backend="leidenalg", copy=True)
+    leiden_alg_clustered = sc.tl.leiden(adata_neighbors, flavor="leidenalg", copy=True)
     igraph_clustered = sc.tl.leiden(adata_neighbors, copy=True)
     assert (
         normalized_mutual_info_score(
@@ -65,7 +65,7 @@ def test_leiden_equal_defaults(adata_neighbors):
 def test_leiden_equal_old_defaults(adata_neighbors):
     """Ensure that the old leidenalg defaults are close enough to the current default outputs."""
     leiden_alg_clustered = sc.tl.leiden(
-        adata_neighbors, backend="leidenalg", directed=True, n_iterations=-1, copy=True
+        adata_neighbors, flavor="leidenalg", directed=True, n_iterations=-1, copy=True
     )
     igraph_clustered = sc.tl.leiden(adata_neighbors, copy=True)
     assert (
