@@ -47,9 +47,8 @@ class Empty(Enum):
 _empty = Empty.token
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-AnyRandom = Union[
-    int, np.random.RandomState, None
-]  # maybe in the future random.Generator
+# maybe in the future random.Generator
+AnyRandom = Union[int, np.random.RandomState, None]
 
 
 class RNGIgraph:
