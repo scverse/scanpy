@@ -25,7 +25,7 @@ from anndata import __version__ as anndata_version
 from numpy.typing import NDArray
 from packaging import version
 from scipy import sparse
-from sklearn.dummy import check_random_state
+from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .._compat import DaskArray
@@ -47,9 +47,8 @@ class Empty(Enum):
 _empty = Empty.token
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-AnyRandom = Union[
-    int, np.random.RandomState, None
-]  # maybe in the future random.Generator
+# maybe in the future random.Generator
+AnyRandom = Union[int, np.random.RandomState, None]
 
 
 class RNGIgraph:
