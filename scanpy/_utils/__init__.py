@@ -20,10 +20,10 @@ from weakref import WeakSet
 import numpy as np
 from anndata import AnnData
 from anndata import __version__ as anndata_version
-from numpy import random
 from numpy.typing import NDArray
 from packaging import version
 from scipy import sparse
+from sklearn.dummy import check_random_state
 
 from .. import logging as logg
 from .._compat import DaskArray
@@ -45,9 +45,9 @@ class Empty(Enum):
 _empty = Empty.token
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-AnyRandom = Union[int, random.RandomState, None]  # maybe in the future random.Generator
-
-from sklearn.dummy import check_random_state
+AnyRandom = Union[
+    int, np.random.RandomState, None
+]  # maybe in the future random.Generator
 
 
 class RNGIgraph:
@@ -63,16 +63,14 @@ class RNGIgraph:
         return getattr(self._rng, "normal" if attr == "gauss" else attr)
 
 
-def set_igraph_random_state(
-    random_state: int | None = None, generator: object = RNGIgraph
-):
+def set_igraph_random_state(random_state: int):
     try:
         import igraph
     except ImportError:
         raise ImportError(
             "Please install igraph: `conda install -c conda-forge igraph` or `pip3 install igraph`."
         )
-    rng = generator(random_state)
+    rng = RNGIgraph(random_state)
     igraph.set_random_number_generator(rng)
 
 
