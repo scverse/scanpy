@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
-from packaging.version import parse as parse_version
+from packaging.version import Version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
 matplotlib.use("agg")
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = "4.0"  # Nicer param docs
 suppress_warnings = [
-    "ref.citation",
     "myst.header",  # https://github.com/executablebooks/MyST-Parser/issues/262
 ]
 
@@ -37,8 +36,8 @@ copyright = f"{datetime.now():%Y}, the Scanpy development team."
 version = scanpy.__version__.replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that
-if parse_version(version).is_devrelease:
-    parsed = parse_version(version)
+if Version(version).is_devrelease:
+    parsed = Version(version)
     version = f"{parsed.major}.{parsed.minor}.{parsed.micro}.dev"
 
 release = version
