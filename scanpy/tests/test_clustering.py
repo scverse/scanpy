@@ -29,6 +29,17 @@ def test_leiden_basic(adata_neighbors, backend, resolution, n_iterations):
     assert adata_neighbors.uns["leiden"]["params"]["n_iterations"] == n_iterations
 
 
+@pytest.mark.parametrize("backend", ["igraph", "leidenalg", "leidenalg"])
+def test_leiden_random_state(adata_neighbors, backend):
+    adata_1 = sc.tl.leiden(adata_neighbors, backend=backend, random_state=1, copy=True)
+    adata_1_again = sc.tl.leiden(
+        adata_neighbors, backend=backend, random_state=1, copy=True
+    )
+    adata_2 = sc.tl.leiden(adata_neighbors, backend=backend, random_state=50, copy=True)
+    assert (adata_1.obs["leiden"] == adata_1_again.obs["leiden"]).all()
+    assert (adata_2.obs["leiden"] != adata_1_again.obs["leiden"]).any()
+
+
 @needs.igraph
 def test_leiden_igraph_directed(adata_neighbors):
     with pytest.raises(ValueError):
