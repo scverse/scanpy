@@ -207,8 +207,6 @@ def _compute_pos(
     root=0,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
 ):
-    import random
-
     import networkx as nx
 
     random_state = check_random_state(random_state)
@@ -270,7 +268,7 @@ def _compute_pos(
             )
     else:
         # igraph layouts
-        random.seed(random_state.bytes(8))
+        _sc_utils.set_igraph_random_state(random_state)
         g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
         if "rt" in layout:
             g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)

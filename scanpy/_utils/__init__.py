@@ -47,6 +47,35 @@ _empty = Empty.token
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
 AnyRandom = Union[int, random.RandomState, None]  # maybe in the future random.Generator
 
+from sklearn.dummy import check_random_state
+
+
+class RNGIgraph:
+    """
+    Random number generator for ipgraph so global seed is not changed.
+    See :func:`igraph.set_random_number_generator` for the requirements.
+    """
+
+    def __init__(self, random_state: int) -> None:
+        self._rng = check_random_state(random_state)
+
+    def __getattr__(self, attr: str):
+        return getattr(self._rng, "normal" if attr == "gauss" else attr)
+
+
+def set_igraph_random_state(
+    random_state: int | None = None, generator: object = RNGIgraph
+):
+    try:
+        import igraph
+    except ImportError:
+        raise ImportError(
+            "Please install igraph: `conda install -c conda-forge igraph` or `pip3 install igraph`."
+        )
+    rng = generator(random_state)
+    igraph.set_random_number_generator(rng)
+
+
 EPS = 1e-15
 
 

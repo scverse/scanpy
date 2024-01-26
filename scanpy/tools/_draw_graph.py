@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -178,7 +177,7 @@ def draw_graph(
         positions = np.array(positions)
     else:
         # igraph doesn't use numpy seed
-        random.seed(random_state)
+        _utils.set_igraph_random_state(random_state)
 
         g = _utils.get_igraph_from_adjacency(adjacency)
         if layout in {"fr", "drl", "kk", "grid_fr"}:

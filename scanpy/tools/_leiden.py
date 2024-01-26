@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import random
-from contextlib import contextmanager
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -26,15 +24,6 @@ except ImportError:
         pass
 
     MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
-
-
-@contextmanager
-def set_igraph_random_state(random_state: int):
-    try:
-        _utils.set_igraph_random_state(random_state=random_state)
-        yield None
-    finally:
-        _utils.set_igraph_random_state(generator=random)
 
 
 def leiden(
@@ -172,15 +161,16 @@ def leiden(
     clustering_args["n_iterations"] = n_iterations
     if flavor == "leidenalg":
         clustering_args["seed"] = random_state
+    else:
+        _utils.set_igraph_random_state(random_state=random_state)
     if resolution is not None:
         clustering_args["resolution_parameter"] = resolution
     # clustering proper
     if not flavor == "leidenalg":
         objective_function = clustering_args.pop("objective_function", "modularity")
-        with set_igraph_random_state(random_state):
-            part = g.community_leiden(
-                objective_function=objective_function, **clustering_args
-            )
+        part = g.community_leiden(
+            objective_function=objective_function, **clustering_args
+        )
     else:
         part = leidenalg.find_partition(g, partition_type, **clustering_args)
     # store output into adata.obs
