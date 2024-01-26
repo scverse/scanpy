@@ -13,9 +13,13 @@ def adata_neighbors():
     return pbmc68k_reduced()
 
 
-@needs.leidenalg
-@needs.igraph
-@pytest.mark.parametrize("flavor", ["igraph", "leidenalg", "leidenalg"])
+FLAVORS = [
+    pytest.param("igraph", marks=needs.igraph),
+    pytest.param("leidenalg", marks=needs.leidenalg),
+]
+
+
+@pytest.mark.parametrize("flavor", FLAVORS)
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
@@ -29,7 +33,7 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
     assert adata_neighbors.uns["leiden"]["params"]["n_iterations"] == n_iterations
 
 
-@pytest.mark.parametrize("flavor", ["igraph", "leidenalg", "leidenalg"])
+@pytest.mark.parametrize("flavor", FLAVORS)
 def test_leiden_random_state(adata_neighbors, flavor):
     adata_1 = sc.tl.leiden(adata_neighbors, flavor=flavor, random_state=1, copy=True)
     adata_1_again = sc.tl.leiden(
