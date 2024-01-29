@@ -1,5 +1,6 @@
 trigger:
 - master
+- "*.*.x"
 
 variables:
   python.version: '3.11'
