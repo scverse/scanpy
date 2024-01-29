@@ -4,6 +4,7 @@ Tests to make sure the example datasets load.
 from __future__ import annotations
 
 import subprocess
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -86,9 +87,9 @@ def test_toggleswitch():
 
 
 def test_pbmc68k_reduced():
-    with pytest.warns(None) as records:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         sc.datasets.pbmc68k_reduced()
-    assert len(records) == 0  # Test that loading a dataset does not warn
 
 
 @pytest.mark.internet
