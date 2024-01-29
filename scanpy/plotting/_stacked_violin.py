@@ -363,7 +363,11 @@ class StackedViolin(BasePlot):
 
         # get mean values for color and transform to color values
         # using colormap
-        _color_df = _matrix.groupby(level=0, observed=True).median()
+        _color_df = (
+            _matrix.groupby(level=0, observed=True)
+            .median()
+            .loc[self.categories]  # Fixed ordering for pandas < 2
+        )
         if self.are_axes_swapped:
             _color_df = _color_df.T
 
