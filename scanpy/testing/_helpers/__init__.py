@@ -20,9 +20,24 @@ import scanpy as sc
 # These functions can be used to check that functions are correctly using arugments like `layers`, `obsm`, etc.
 
 
+def anndata_v0_8_constructor_compat(X, *args, **kwargs):
+    """Constructor for anndata that uses dtype of X for test compatibility with older versions of AnnData.
+
+    Once the minimum version of AnnData is 0.9, this function can be replaced with the default constructor.
+    """
+    import anndata as ad
+    from packaging.version import Version
+
+    if Version(ad.__version__) < Version("0.9"):
+        return ad.AnnData(X=X, *args, **kwargs, dtype=X.dtype)
+    else:
+        return ad.AnnData(X=X, *args, **kwargs)
+
+
 def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
     """Check that only the array meant to be modified is modified."""
-    adata = sc.AnnData(X=X.copy())
+    adata = anndata_v0_8_constructor_compat(X.copy())
+
     for field in fields:
         sc.get._set_obs_rep(adata, X, **{field: field})
     X_array = asarray(X)
