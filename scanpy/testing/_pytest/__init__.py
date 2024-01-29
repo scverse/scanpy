@@ -12,7 +12,7 @@ from .fixtures import *  # noqa: F403
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
-doctest_env_marker = pytest.mark.usefixtures("doctest_env")
+    from .marks import needs
 
 
 # Defining it here because it’s autouse.
@@ -59,16 +59,19 @@ def pytest_collection_modifyitems(
             item.add_marker(skip_internet)
 
 
-def pytest_itemcollected(item: pytest.Item) -> None:
-    import pytest
-
-    if not isinstance(item, pytest.DoctestItem):
+@pytest.fixture(autouse=True)
+def _modify_doctests(request: pytest.FixtureRequest) -> None:
+    if not isinstance(request.node, pytest.DoctestItem):
         return
 
-    item.add_marker(doctest_env_marker)
+    request.getfixturevalue("doctest_env")
 
-    func = _import_name(item.name)
-    if marker := getattr(func, "_doctest_mark", None):
-        item.add_marker(marker)
-    if skip_reason := getattr(func, "_doctest_skip_reason", False):
-        item.add_marker(pytest.mark.skip(reason=skip_reason))
+    func = _import_name(request.node.name)
+    needs_marker: needs | None
+    if needs_marker := getattr(func, "_doctest_needs", None):
+        assert needs_marker.mark.name == "skipif"
+        if needs_marker.mark.args[0]:
+            pytest.skip(reason=needs_marker.mark.kwargs["reason"])
+    skip_reason: str | None
+    if skip_reason := getattr(func, "_doctest_skip_reason", None):
+        pytest.skip(reason=skip_reason)
