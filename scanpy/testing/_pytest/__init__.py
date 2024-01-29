@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 # Defining it here because it’s autouse.
 @pytest.fixture(autouse=True)
-def global_test_context() -> Generator[None, None, None]:
+def _global_test_context(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
     from matplotlib import pyplot as plt
 
@@ -27,6 +27,9 @@ def global_test_context() -> Generator[None, None, None]:
     settings.logfile = sys.stderr
     settings.verbosity = "hint"
     settings.autoshow = True
+
+    if isinstance(request.node, pytest.DoctestItem):
+        _modify_doctests(request)
 
     yield
 
@@ -59,10 +62,8 @@ def pytest_collection_modifyitems(
             item.add_marker(skip_internet)
 
 
-@pytest.fixture(autouse=True)
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
-    if not isinstance(request.node, pytest.DoctestItem):
-        return
+    assert isinstance(request.node, pytest.DoctestItem)
 
     request.getfixturevalue("doctest_env")
 

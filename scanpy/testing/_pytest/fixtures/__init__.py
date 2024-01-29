@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "float_dtype",
-    "doctest_env",
+    "_doctest_env",
     "_pbmc3ks_parametrized_session",
     "pbmc3k_parametrized",
     "pbmc3k_parametrized_small",
@@ -35,7 +35,7 @@ def float_dtype(request):
 
 
 @pytest.fixture()
-def doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, None]:
+def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, None]:
     from scanpy import settings
     from scanpy._compat import chdir
 
