@@ -62,16 +62,14 @@ def pytest_collection_modifyitems(
 def pytest_itemcollected(item: pytest.Item) -> None:
     import pytest
 
-    if not isinstance(item, pytest.DoctestItem):
-        return
+    if isinstance(item, pytest.DoctestItem):
+        item.add_marker(doctest_env_marker)
 
-    item.add_marker(doctest_env_marker)
-
-    func = _import_name(item.name)
-    if marker := getattr(func, "_doctest_mark", None):
-        item.add_marker(marker)
-    if skip_reason := getattr(func, "_doctest_skip_reason", False):
-        item.add_marker(pytest.mark.skip(reason=skip_reason))
+        func = _import_name(item.name)
+        if marker := getattr(func, "_doctest_mark", None):
+            item.add_marker(marker)
+        if skip_reason := getattr(func, "_doctest_skip_reason", False):
+            item.add_marker(pytest.mark.skip(reason=skip_reason))
 
     # Dask AnnData tests require anndata > 0.10
     import anndata
@@ -80,6 +78,7 @@ def pytest_itemcollected(item: pytest.Item) -> None:
     requires_anndata_dask_support = (
         len([mark for mark in item.iter_markers(name="anndata_dask_support")]) > 0
     )
+
     if requires_anndata_dask_support and parse(anndata.__version__) < parse("0.10"):
         item.add_marker(
             pytest.mark.skip(reason="dask support requires anndata version > 0.10")
