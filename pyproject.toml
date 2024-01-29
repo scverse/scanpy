@@ -46,11 +46,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 dependencies = [
-    "anndata>=0.10",
+    "anndata>=0.7.4",
     # numpy needs a version due to #1320
     "numpy>=1.23",
     "matplotlib>=3.6",
-    "pandas >=2.0",
+    "pandas >=1.5",
     "scipy>=1.8",
     "seaborn>=0.13",
     "h5py>=3.1",
@@ -168,6 +168,7 @@ nunit_attach_on = "fail"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
+    "anndata_dask_support: tests that require dask support in anndata",
 ]
 filterwarnings = [
     # legacy-api-wrap: internal use of positional API

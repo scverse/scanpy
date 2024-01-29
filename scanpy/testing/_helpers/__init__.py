@@ -105,3 +105,16 @@ def _check_check_values_warnings(function, adata, expected_warning, kwargs={}):
         function(adata.copy(), **kwargs, check_values=True)
     warning_msgs = [w.message.args[0] for w in record]
     assert expected_warning in warning_msgs
+
+
+# Delayed imports for case where we aren't using dask
+def as_dense_dask_array(*args, **kwargs):
+    from anndata.tests.helpers import as_dense_dask_array
+
+    return as_dense_dask_array(*args, **kwargs)
+
+
+def as_sparse_dask_array(*args, **kwargs):
+    from anndata.tests.helpers import as_sparse_dask_array
+
+    return as_sparse_dask_array(*args, **kwargs)

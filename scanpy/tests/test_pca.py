@@ -7,8 +7,6 @@ import numpy as np
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import (
-    as_dense_dask_array,
-    as_sparse_dask_array,
     asarray,
     assert_equal,
 )
@@ -16,6 +14,7 @@ from scipy import sparse
 from sklearn.utils import issparse
 
 import scanpy as sc
+from scanpy.testing._helpers import as_dense_dask_array, as_sparse_dask_array
 from scanpy.testing._helpers.data import pbmc3k_normalized
 from scanpy.testing._pytest.marks import needs
 from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SUPPORTED, param_with

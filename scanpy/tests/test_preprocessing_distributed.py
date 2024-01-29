@@ -4,9 +4,10 @@ from pathlib import Path
 
 import numpy.testing as npt
 import pytest
-from anndata import AnnData, OldFormatWarning, read_zarr
+from anndata import AnnData, read_zarr
 
 from scanpy._compat import DaskArray, ZappyArray
+from scanpy.datasets._utils import filter_oldformatwarning
 from scanpy.preprocessing import (
     filter_cells,
     filter_genes,
@@ -27,14 +28,15 @@ pytestmark = [needs.zarr]
 
 
 @pytest.fixture()
+@filter_oldformatwarning
 def adata() -> AnnData:
-    with pytest.warns(OldFormatWarning):
-        a = read_zarr(input_file)  # regular anndata
+    a = read_zarr(input_file)
     a.var_names_make_unique()
     a.X = a.X[:]  # convert to numpy array
     return a
 
 
+@filter_oldformatwarning
 @pytest.fixture(
     params=[
         pytest.param("direct", marks=[needs.zappy]),
@@ -43,8 +45,7 @@ def adata() -> AnnData:
 )
 def adata_dist(request: pytest.FixtureRequest) -> AnnData:
     # regular anndata except for X, which we replace on the next line
-    with pytest.warns(OldFormatWarning):
-        a = read_zarr(input_file)
+    a = read_zarr(input_file)
     a.var_names_make_unique()
     a.uns["dist-mode"] = request.param
     input_file_X = f"{input_file}/X"
@@ -136,6 +137,7 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
     npt.assert_allclose(result, adata.X)
 
 
+@filter_oldformatwarning
 def test_write_zarr(adata: AnnData, adata_dist: AnnData):
     import zarr
 
@@ -156,7 +158,7 @@ def test_write_zarr(adata: AnnData, adata_dist: AnnData):
         assert False, "add branch for new dist-mode"
 
     # read back as zarr directly and check it is the same as adata.X
-    with pytest.warns(OldFormatWarning, match="without encoding metadata"):
-        adata_log1p = read_zarr(temp_store)
+    adata_log1p = read_zarr(temp_store)
+
     log1p(adata)
     npt.assert_allclose(adata_log1p.X, adata.X)
