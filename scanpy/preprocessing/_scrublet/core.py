@@ -17,6 +17,8 @@ from ...neighbors import (
     _Metric,
     _MetricFn,
 )
+from .._utils import sample_comb
+from .neighbors import AnnoyDist, get_knn_graph
 from .sparse_utils import subsample_counts
 
 if TYPE_CHECKING:
@@ -228,7 +230,7 @@ class Scrublet:
         n_obs = self._counts_obs.shape[0]
         n_sim = int(n_obs * sim_doublet_ratio)
 
-        pair_ix = self._random_state.randint(0, n_obs, size=(n_sim, 2))
+        pair_ix = sample_comb((n_obs, n_obs), n_sim, random_state=self._random_state)
 
         E1 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 0], :])
         E2 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 1], :])
