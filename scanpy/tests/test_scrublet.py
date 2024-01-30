@@ -34,8 +34,8 @@ def paul500() -> AnnData:
 @pytest.mark.parametrize(
     ("mk_data", "expected_idx", "expected_scores"),
     [
-        pytest.param(pbmc200, [13, 138], [0.216495] * 2, id="sparse"),
-        pytest.param(paul500, [180], [0.30275229], id="dense"),
+        pytest.param(pbmc200, [13, 138], [0.149254] * 2, id="sparse"),
+        pytest.param(paul500, [180], [0.219178], id="dense"),
     ],
 )
 def test_scrublet(
@@ -67,10 +67,10 @@ def test_scrublet_batched():
 
     doublet_idx = np.flatnonzero(adata.obs["predicted_doublet"]).tolist()
     # only one in the first batch (<100)
-    assert doublet_idx == [2, 8, 15, 43, 115, 132, 175]
+    assert doublet_idx == [0, 2, 8, 15, 43, 88, 108, 113, 115, 132, 135, 175]
     assert_allclose(
         adata.obs["doublet_score"].iloc[doublet_idx],
-        np.array([0.164835, 0.296296])[([0] * 3 + [1] + [0] * 3)],
+        np.array([0.109375, 0.164835])[([0] * 4 + [1] + [0] * 3 + [1] + [0] * 3)],
         atol=1e-5,
         rtol=1e-5,
     )

@@ -18,7 +18,6 @@ from ...neighbors import (
     _MetricFn,
 )
 from .._utils import sample_comb
-from .neighbors import AnnoyDist, get_knn_graph
 from .sparse_utils import subsample_counts
 
 if TYPE_CHECKING:
@@ -348,17 +347,7 @@ class Scrublet:
         n_sim: int = (manifold.obs["doub_labels"] == "sim").sum()
 
         # Adjust k (number of nearest neighbors) based on the ratio of simulated to observed cells
-        k_adj = int(round(k * (1 + n_sim / float(n_obs)))) + 2
-
-        # add a small amount of random noise to the duplicates
-        _, dupe_counts = np.unique(
-            cast(np.ndarray, manifold.X), axis=0, return_counts=True
-        )
-        dupes = np.flatnonzero(dupe_counts == 2)
-        eps = np.finfo(np.float64).eps
-        manifold.X[dupes, 0] += np.random.default_rng().uniform(
-            -eps, eps, size=len(dupes)
-        )
+        k_adj = int(round(k * (1 + n_sim / float(n_obs))))
 
         # Find k_adj nearest neighbors
         knn = Neighbors(manifold)
@@ -371,7 +360,6 @@ class Scrublet:
             random_state=self._random_state,
         )
         neighbors, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
-        neighbors = neighbors[:, 1:]
 
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
         doub_neigh_mask: NDArray[np.bool_] = (
