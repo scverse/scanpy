@@ -82,7 +82,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=7.4.2",
+    "pytest>=7.4.2,<8",
     "pytest-nunit",
     "pytest-mock",
     "profimp",
@@ -107,12 +107,13 @@ test-full = [
 ]
 doc = [
     "sphinx>=7",
-    "sphinx-book-theme>=1.1.0rc0",
-    "scanpydoc>=0.12.1",
+    "sphinx-book-theme>=1.1.0",
+    "scanpydoc>=0.13.4",
     "sphinx-autodoc-typehints>=1.25.2",
     "myst-parser>=2",
     "myst-nb>=1",
     "sphinx-design",
+    "readthedocs-sphinx-search",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
     "nbsphinx>=0.9",

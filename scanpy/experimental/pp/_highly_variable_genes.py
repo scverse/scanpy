@@ -199,7 +199,7 @@ def _highly_variable_pearson_residuals(
 
         sums_genes = np.array(X_batch.sum(axis=0)).ravel()
         sums_cells = np.array(X_batch.sum(axis=1)).ravel()
-        sum_total = np.sum(sums_genes).ravel()
+        sum_total = np.sum(sums_genes)
 
         residual_gene_var = calculate_res(
             sums_genes=sums_genes,
