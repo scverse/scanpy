@@ -346,13 +346,20 @@ class Scrublet:
         n_sim: int = (manifold.obs["doub_labels"] == "sim").sum()
 
         # Adjust k (number of nearest neighbors) based on the ratio of simulated to observed cells
-        k_adj = int(round(k * (1 + n_sim / float(n_obs))))
+        k_adj = int(round(k * (1 + n_sim / float(n_obs)))) + 2
 
-        _, uniq, rev = np.unique(
-            cast(np.ndarray, manifold.X), axis=0, return_index=True, return_inverse=True
+        # add a small amount of random noise to the duplicates
+        _, dupe_counts = np.unique(
+            cast(np.ndarray, manifold.X), axis=0, return_counts=True
         )
+        dupes = np.flatnonzero(dupe_counts == 2)
+        eps = np.finfo(np.float64).eps
+        manifold.X[dupes, 0] += np.random.default_rng().uniform(
+            -eps, eps, size=len(dupes)
+        )
+
         # Find k_adj nearest neighbors
-        knn = Neighbors(manifold[uniq])
+        knn = Neighbors(manifold)
         knn.compute_neighbors(
             k_adj,
             metric=distance_metric,
@@ -361,8 +368,8 @@ class Scrublet:
             method=None,
             random_state=self._random_state,
         )
-        neigh_uniq, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
-        neighbors = np.c_[np.arange(len(rev))[:, None], neigh_uniq[rev, 1:]]
+        neighbors, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
+        neighbors = neighbors[:, 1:]
 
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
         doub_neigh_mask: NDArray[np.bool_] = (
