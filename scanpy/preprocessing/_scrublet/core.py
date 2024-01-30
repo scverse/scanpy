@@ -5,6 +5,7 @@ from dataclasses import InitVar, dataclass, field
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
+import pandas as pd
 from anndata import AnnData, concat
 from scipy import sparse
 
@@ -329,10 +330,17 @@ class Scrublet:
         stdev_doub_rate: float = 0.03,
         get_neighbor_parents: bool = False,
     ) -> None:
-        manifold = concat(
-            dict(obs=AnnData(self.manifold_obs_), sim=AnnData(self.manifold_sim_)),
-            label="doub_labels",
-        )
+        adatas = [
+            AnnData(
+                (arr := getattr(self, f"manifold_{n}_")),
+                obs=dict(
+                    obs_names=pd.RangeIndex(arr.shape[0]).astype("string") + n,
+                    doub_labels=n,
+                ),
+            )
+            for n in ["obs", "sim"]
+        ]
+        manifold = concat(adatas)
 
         n_obs: int = (manifold.obs["doub_labels"] == "obs").sum()
         n_sim: int = (manifold.obs["doub_labels"] == "sim").sum()
@@ -358,7 +366,7 @@ class Scrublet:
 
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
         doub_neigh_mask: NDArray[np.bool_] = (
-            manifold.obs["doub_labels"].to_numpy()[neighbors] == 1
+            manifold.obs["doub_labels"].to_numpy()[neighbors] == "sim"
         )
         n_sim_neigh: NDArray[np.int64] = doub_neigh_mask.sum(axis=1)
 
