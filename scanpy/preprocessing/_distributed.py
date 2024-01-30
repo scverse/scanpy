@@ -113,8 +113,8 @@ def dask_compute(
     if isinstance(
         value, (DaskDataFrame, DaskSeries, DaskDataFrameGroupBy, DaskSeriesGroupBy)
     ):
-        with suppress_pandas_warning():
-            return value.compute(sync=True)
+        # with suppress_pandas_warning():
+        return value.compute(sync=True)
     return value
 
 

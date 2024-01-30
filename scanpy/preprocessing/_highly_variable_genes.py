@@ -283,12 +283,17 @@ def _highly_variable_genes_single_batch(
     # all of the following quantities are "per-gene" here
     df: pd.DataFrame | DaskDataFrame
     if isinstance(data, DaskArray):
-        import dask.array as da
-        import dask.dataframe as dd
+        import dask
 
-        df = dd.from_dask_array(
-            da.vstack((mean, dispersion)).T, columns=["means", "dispersions"]
+        df = pd.DataFrame(
+            dict(zip(["means", "dispersions"], dask.compute(mean, dispersion)))
         )
+        # import dask.array as da
+        # import dask.dataframe as dd
+
+        # df = dd.from_dask_array(
+        #     da.vstack((mean, dispersion)).T, columns=["means", "dispersions"]
+        # )
     else:
         df = pd.DataFrame(dict(means=mean, dispersions=dispersion))
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
