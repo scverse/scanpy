@@ -101,7 +101,7 @@ def leiden(
         Which package's implementation to use.
     **clustering_args
         Any further arguments to pass to :func:`~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
-        or :method:`igraph.Graph.community_leiden` from `igraph`.
+        or :meth:`igraph.Graph.community_leiden` from `igraph`.
 
     Returns
     -------
