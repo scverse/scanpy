@@ -1,12 +1,13 @@
-import pytest
+from __future__ import annotations
 
 import scanpy as sc
 import scanpy.external as sce
 from scanpy.testing._helpers.data import pbmc3k
 from scanpy.testing._pytest.marks import needs
 
+pytestmark = [needs.wishbone]
 
-@needs("wishbone")
+
 def test_run_wishbone():
     adata = pbmc3k()
     sc.pp.normalize_per_cell(adata)
@@ -17,10 +18,10 @@ def test_run_wishbone():
 
     sce.tl.wishbone(
         adata=adata,
-        start_cell='ACAAGAGACTTATC-1',
+        start_cell="ACAAGAGACTTATC-1",
         components=[2, 3],
         num_waypoints=150,
     )
     assert all(
-        [k in adata.obs for k in ['trajectory_wishbone', 'branch_wishbone']]
+        [k in adata.obs for k in ["trajectory_wishbone", "branch_wishbone"]]
     ), "Run Wishbone Error!"

@@ -1,14 +1,20 @@
+from __future__ import annotations
+
 import collections.abc as cabc
 from functools import singledispatch
 from types import MappingProxyType
-from typing import Any, Union, Optional, Iterable, Dict, Mapping
+from typing import TYPE_CHECKING, Any
 
-import pandas as pd
 from anndata import AnnData
 
-from ..get import rank_genes_groups_df
 from .._utils import _doc_params
+from ..get import rank_genes_groups_df
+from ..testing._doctests import doctest_needs
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+
+    import pandas as pd
 
 _doc_org = """\
 org
@@ -32,9 +38,9 @@ use_cache
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def simple_query(
     org: str,
-    attrs: Union[Iterable[str], str],
+    attrs: Iterable[str] | str,
     *,
-    filters: Optional[Dict[str, Any]] = None,
+    filters: dict[str, Any] | None = None,
     host: str = "www.ensembl.org",
     use_cache: bool = False,
 ) -> pd.DataFrame:
@@ -64,13 +70,12 @@ def simple_query(
             "This method requires the `pybiomart` module to be installed."
         )
     server = Server(host, use_cache=use_cache)
-    dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets[
-        "{}_gene_ensembl".format(org)
-    ]
+    dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets[f"{org}_gene_ensembl"]
     res = dataset.query(attributes=attrs, filters=filters, use_attr_names=True)
     return res
 
 
+@doctest_needs("pybiomart")
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def biomart_annotations(
     org: str,
@@ -100,14 +105,15 @@ def biomart_annotations(
 
     >>> import scanpy as sc
     >>> annot = sc.queries.biomart_annotations(
-            "hsapiens",
-            ["ensembl_gene_id", "start_position", "end_position", "chromosome_name"],
-        ).set_index("ensembl_gene_id")
+    ...     "hsapiens",
+    ...     ["ensembl_gene_id", "start_position", "end_position", "chromosome_name"],
+    ... ).set_index("ensembl_gene_id")
     >>> adata.var[annot.columns] = annot
     """
     return simple_query(org=org, attrs=attrs, host=host, use_cache=use_cache)
 
 
+@doctest_needs("pybiomart")
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def gene_coordinates(
     org: str,
@@ -153,6 +159,7 @@ def gene_coordinates(
     return res[~res["chromosome_name"].isin(chr_exclude)]
 
 
+@doctest_needs("pybiomart")
 @_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def mitochondrial_genes(
     org: str,
@@ -197,10 +204,11 @@ def mitochondrial_genes(
     )
 
 
+@doctest_needs("gprofiler")
 @singledispatch
 @_doc_params(doc_org=_doc_org)
 def enrich(
-    container: Union[Iterable[str], Mapping[str, Iterable[str]]],
+    container: Iterable[str] | Mapping[str, Iterable[str]],
     *,
     org: str = "hsapiens",
     gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
@@ -283,12 +291,12 @@ def _enrich_anndata(
     adata: AnnData,
     group: str,
     *,
-    org: Optional[str] = "hsapiens",
+    org: str | None = "hsapiens",
     key: str = "rank_genes_groups",
     pval_cutoff: float = 0.05,
-    log2fc_min: Optional[float] = None,
-    log2fc_max: Optional[float] = None,
-    gene_symbols: Optional[str] = None,
+    log2fc_min: float | None = None,
+    log2fc_max: float | None = None,
+    gene_symbols: str | None = None,
     gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
 ) -> pd.DataFrame:
     de = rank_genes_groups_df(

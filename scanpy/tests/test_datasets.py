@@ -1,18 +1,22 @@
 """
 Tests to make sure the example datasets load.
 """
+from __future__ import annotations
 
-import scanpy as sc
+import subprocess
+import warnings
+from pathlib import Path
+
 import numpy as np
 import pytest
-from pathlib import Path
 from anndata.tests.helpers import assert_adata_equal
-import subprocess
+
+import scanpy as sc
 
 
 @pytest.fixture(scope="module")
-def tmp_dataset_dir(tmpdir_factory):
-    new_dir = Path(tmpdir_factory.mktemp("scanpy_data"))
+def tmp_dataset_dir(tmp_path_factory):
+    new_dir = tmp_path_factory.mktemp("scanpy_data")
     old_dir = sc.settings.datasetdir
     sc.settings.datasetdir = new_dir  # Set up
     yield sc.settings.datasetdir
@@ -61,7 +65,8 @@ def test_ebi_expression_atlas(tmp_dataset_dir):
 
 
 def test_krumsiek11(tmp_dataset_dir):
-    adata = sc.datasets.krumsiek11()
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        adata = sc.datasets.krumsiek11()
     assert adata.shape == (640, 11)
     assert all(
         np.unique(adata.obs["cell_type"])
@@ -77,13 +82,14 @@ def test_blobs():
 
 
 def test_toggleswitch():
-    sc.datasets.toggleswitch()
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        sc.datasets.toggleswitch()
 
 
 def test_pbmc68k_reduced():
-    with pytest.warns(None) as records:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         sc.datasets.pbmc68k_reduced()
-    assert len(records) == 0  # Test that loading a dataset does not warn
 
 
 @pytest.mark.internet
@@ -112,10 +118,10 @@ def test_visium_datasets(tmp_dataset_dir, tmpdir):
 
     # Test that tissue image is a tif image file (using `file`)
     process = subprocess.run(
-        ['file', '--mime-type', image_path], stdout=subprocess.PIPE
+        ["file", "--mime-type", image_path], stdout=subprocess.PIPE
     )
     output = process.stdout.strip().decode()  # make process output string
-    assert output == str(image_path) + ': image/tiff'
+    assert output == str(image_path) + ": image/tiff"
 
 
 def test_download_failure():

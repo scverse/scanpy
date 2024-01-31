@@ -1,143 +1,127 @@
+from __future__ import annotations
+
+import warnings
+from functools import partial
 from operator import eq
 from string import ascii_letters
-import warnings
 
 import numpy as np
 import pandas as pd
-import scanpy as sc
+import pytest
+import threadpoolctl
 from scipy import sparse
 
-from anndata.tests.helpers import asarray
-import pytest
-
+import scanpy as sc
+from scanpy._compat import DaskArray
 from scanpy.testing._helpers.data import pbmc68k_reduced
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
-
-def test_gearys_c_consistency():
-    pbmc = pbmc68k_reduced()
-    pbmc.layers["raw"] = pbmc.raw.X.copy()
-    g = pbmc.obsp["connectivities"]
-
-    assert eq(
-        sc.metrics.gearys_c(g, pbmc.obs["percent_mito"]),
-        sc.metrics.gearys_c(pbmc, vals=pbmc.obs["percent_mito"]),
-    )
-
-    assert eq(  # Test that series and vectors return same value
-        sc.metrics.gearys_c(g, pbmc.obs["percent_mito"]),
-        sc.metrics.gearys_c(g, pbmc.obs["percent_mito"].values),
-    )
-
-    np.testing.assert_array_equal(
-        sc.metrics.gearys_c(pbmc, obsm="X_pca"),
-        sc.metrics.gearys_c(g, pbmc.obsm["X_pca"].T),
-    )
-
-    all_genes = sc.metrics.gearys_c(pbmc, layer="raw")
-    first_gene = sc.metrics.gearys_c(
-        pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
-    )
-
-    np.testing.assert_allclose(all_genes[0], first_gene)
-
-    # Test that results are similar for sparse and dense reps of same data
-    np.testing.assert_allclose(
-        sc.metrics.gearys_c(pbmc, layer="raw"),
-        sc.metrics.gearys_c(pbmc, vals=pbmc.layers["raw"].T.toarray()),
-    )
-
-
-def test_gearys_c_correctness():
-    # Test case with perfectly seperated groups
-    connected = np.zeros(100)
-    connected[np.random.choice(100, size=30, replace=False)] = 1
-    graph = np.zeros((100, 100))
-    graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
-    graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
-    graph = sparse.csr_matrix(graph)
-
-    assert sc.metrics.gearys_c(graph, connected) == 0.0
-    assert eq(
-        sc.metrics.gearys_c(graph, connected),
-        sc.metrics.gearys_c(graph, sparse.csr_matrix(connected)),
-    )
-    # Check for anndata > 0.7
-    if hasattr(sc.AnnData, "obsp"):
-        # Checking that obsp works
-        adata = sc.AnnData(
-            sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
-        )
-        assert sc.metrics.gearys_c(adata, vals=connected) == 0.0
-
-
-def test_morans_i_consistency():
-    pbmc = pbmc68k_reduced()
-    pbmc.layers["raw"] = pbmc.raw.X.copy()
-    g = pbmc.obsp["connectivities"]
-
-    assert eq(
-        sc.metrics.morans_i(g, pbmc.obs["percent_mito"]),
-        sc.metrics.morans_i(pbmc, vals=pbmc.obs["percent_mito"]),
-    )
-
-    assert eq(  # Test that series and vectors return same value
-        sc.metrics.morans_i(g, pbmc.obs["percent_mito"]),
-        sc.metrics.morans_i(g, pbmc.obs["percent_mito"].values),
-    )
-
-    np.testing.assert_array_equal(
-        sc.metrics.morans_i(pbmc, obsm="X_pca"),
-        sc.metrics.morans_i(g, pbmc.obsm["X_pca"].T),
-    )
-
-    all_genes = sc.metrics.morans_i(pbmc, layer="raw")
-    first_gene = sc.metrics.morans_i(
-        pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
-    )
-
-    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-5)
-
-    # Test that results are similar for sparse and dense reps of same data
-    np.testing.assert_allclose(
-        sc.metrics.morans_i(pbmc, layer="raw"),
-        sc.metrics.morans_i(pbmc, vals=pbmc.layers["raw"].T.toarray()),
-    )
-
-
-def test_morans_i_correctness():
-    # Test case with perfectly seperated groups
-    connected = np.zeros(100)
-    connected[np.random.choice(100, size=50, replace=False)] = 1
-    graph = np.zeros((100, 100))
-    graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
-    graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
-    graph = sparse.csr_matrix(graph)
-
-    assert sc.metrics.morans_i(graph, connected) == 1.0
-    assert eq(
-        sc.metrics.morans_i(graph, connected),
-        sc.metrics.morans_i(graph, sparse.csr_matrix(connected)),
-    )
-    # Check for anndata > 0.7
-    if hasattr(sc.AnnData, "obsp"):
-        # Checking that obsp works
-        adata = sc.AnnData(
-            sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
-        )
-        assert sc.metrics.morans_i(adata, vals=connected) == 1.0
-
-
-@pytest.mark.parametrize("metric", [sc.metrics.gearys_c, sc.metrics.morans_i])
-@pytest.mark.parametrize(
-    'array_type',
-    [asarray, sparse.csr_matrix, sparse.csc_matrix],
-    ids=lambda x: x.__name__,
+mark_flaky = pytest.mark.xfail(
+    strict=False,
+    reason="This used to work reliably, but doesn’t anymore",
 )
-def test_graph_metrics_w_constant_values(metric, array_type):
+
+
+@pytest.fixture(scope="session", params=[sc.metrics.gearys_c, sc.metrics.morans_i])
+def metric(request: pytest.FixtureRequest):
+    return request.param
+
+
+@pytest.fixture(
+    scope="session",
+    params=[
+        # pytest.param(eq, marks=[mark_flaky]),
+        pytest.param(eq),
+        pytest.param(partial(np.testing.assert_allclose, rtol=1e-14), id="allclose"),
+    ],
+)
+def assert_equal(request: pytest.FixtureRequest):
+    return request.param
+
+
+@pytest.fixture(params=["single-threaded", "multi-threaded"])
+def threading(request):
+    if request.param == "single-threaded":
+        with threadpoolctl.threadpool_limits(limits=1):
+            yield None
+    elif request.param == "multi-threaded":
+        yield None
+
+
+def test_consistency(metric, threading):
+    pbmc = pbmc68k_reduced()
+    pbmc.layers["raw"] = pbmc.raw.X.copy()
+    g = pbmc.obsp["connectivities"]
+    equality_check = partial(np.testing.assert_allclose, atol=1e-11)
+
+    # This can fail
+    equality_check(
+        metric(g, pbmc.obs["percent_mito"]),
+        metric(g, pbmc.obs["percent_mito"]),
+    )
+    equality_check(
+        metric(g, pbmc.obs["percent_mito"]),
+        metric(pbmc, vals=pbmc.obs["percent_mito"]),
+    )
+
+    equality_check(  # Test that series and vectors return same value
+        metric(g, pbmc.obs["percent_mito"]),
+        metric(g, pbmc.obs["percent_mito"].values),
+    )
+
+    equality_check(
+        metric(pbmc, obsm="X_pca"),
+        metric(g, pbmc.obsm["X_pca"].T),
+    )
+
+    all_genes = metric(pbmc, layer="raw")
+    first_gene = metric(pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw"))
+
+    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
+
+    # Test that results are similar for sparse and dense reps of same data
+    equality_check(
+        metric(pbmc, layer="raw"),
+        metric(pbmc, vals=pbmc.layers["raw"].T.toarray()),
+    )
+
+
+@pytest.mark.parametrize(
+    ("metric", "size", "expected"),
+    [
+        pytest.param(sc.metrics.gearys_c, 30, 0.0, id="gearys_c"),
+        pytest.param(sc.metrics.morans_i, 50, 1.0, id="morans_i"),
+    ],
+)
+def test_correctness(metric, size, expected):
+    # Test case with perfectly seperated groups
+    connected = np.zeros(100)
+    connected[np.random.choice(100, size=size, replace=False)] = 1
+    graph = np.zeros((100, 100))
+    graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
+    graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
+    graph = sparse.csr_matrix(graph)
+
+    np.testing.assert_equal(metric(graph, connected), expected)
+    np.testing.assert_equal(
+        metric(graph, connected),
+        metric(graph, sparse.csr_matrix(connected)),
+    )
+    # Checking that obsp works
+    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})
+    np.testing.assert_equal(metric(adata, vals=connected), expected)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_graph_metrics_w_constant_values(metric, array_type, threading):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())
     g = pbmc.obsp["connectivities"].copy()
+    equality_check = partial(np.testing.assert_allclose, atol=1e-11)
+
+    if isinstance(XT, DaskArray):
+        pytest.skip("DaskArray yet not supported")
 
     const_inds = np.random.choice(XT.shape[0], 10, replace=False)
     with warnings.catch_warnings():
@@ -159,14 +143,12 @@ def test_graph_metrics_w_constant_values(metric, array_type):
         results_const_vals = metric(g, XT_const_vals)
 
     assert not np.isnan(results_full).any()
-    np.testing.assert_array_equal(results_const_zeros, results_const_vals)
+    equality_check(results_const_zeros, results_const_vals)
     np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
     np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
 
     non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
-    np.testing.assert_array_equal(
-        results_full[non_const_mask], results_const_zeros[non_const_mask]
-    )
+    equality_check(results_full[non_const_mask], results_const_zeros[non_const_mask])
 
 
 def test_confusion_matrix():

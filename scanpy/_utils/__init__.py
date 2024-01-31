@@ -3,39 +3,49 @@
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
 """
-import sys
-import inspect
-import warnings
+from __future__ import annotations
+
 import importlib.util
-from enum import Enum
-from pathlib import Path
-from weakref import WeakSet
+import inspect
+import sys
+import warnings
 from collections import namedtuple
-from functools import partial, wraps
-from types import ModuleType, MethodType
-from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple, Literal
+from enum import Enum
+from functools import partial, singledispatch, wraps
+from textwrap import dedent
+from types import MethodType, ModuleType
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union
+from weakref import WeakSet
 
 import numpy as np
+from anndata import AnnData
+from anndata import __version__ as anndata_version
 from numpy import random
-from scipy import sparse
-from anndata import AnnData, __version__ as anndata_version
-from textwrap import dedent
+from numpy.typing import NDArray
 from packaging import version
+from scipy import sparse
 
-from .._settings import settings
 from .. import logging as logg
+from .._compat import DaskArray
+from .._settings import settings
+from .compute.is_constant import is_constant  # noqa: F401
 
-from .compute.is_constant import is_constant
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from pathlib import Path
 
 
 class Empty(Enum):
     token = 0
 
+    def __repr__(self) -> str:
+        return "_empty"
+
 
 _empty = Empty.token
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-AnyRandom = Union[None, int, random.RandomState]  # maybe in the future random.Generator
+AnyRandom = Union[int, random.RandomState, None]  # maybe in the future random.Generator
 
 EPS = 1e-15
 
@@ -45,81 +55,95 @@ def check_versions():
 
     umap_version = pkg_version("umap-learn")
 
-    if version.parse(anndata_version) < version.parse('0.6.10'):
+    if version.parse(anndata_version) < version.parse("0.6.10"):
         from .. import __version__
 
         raise ImportError(
-            f'Scanpy {__version__} needs anndata version >=0.6.10, '
-            f'not {anndata_version}.\nRun `pip install anndata -U --no-deps`.'
+            f"Scanpy {__version__} needs anndata version >=0.6.10, "
+            f"not {anndata_version}.\nRun `pip install anndata -U --no-deps`."
         )
 
-    if umap_version < version.parse('0.3.0'):
+    if umap_version < version.parse("0.3.0"):
         from . import __version__
 
         # make this a warning, not an error
         # it might be useful for people to still be able to run it
         logg.warning(
-            f'Scanpy {__version__} needs umap ' f'version >=0.3.0, not {umap_version}.'
+            f"Scanpy {__version__} needs umap " f"version >=0.3.0, not {umap_version}."
         )
 
 
-def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
-    if getattr(c_or_f, '__doc__', None) is None:
+def getdoc(c_or_f: Callable | type) -> str | None:
+    if getattr(c_or_f, "__doc__", None) is None:
         return None
     doc = inspect.getdoc(c_or_f)
-    if isinstance(c_or_f, type) and hasattr(c_or_f, '__init__'):
+    if isinstance(c_or_f, type) and hasattr(c_or_f, "__init__"):
         sig = inspect.signature(c_or_f.__init__)
     else:
         sig = inspect.signature(c_or_f)
 
     def type_doc(name: str):
         param: inspect.Parameter = sig.parameters[name]
-        cls = getattr(param.annotation, '__qualname__', repr(param.annotation))
+        cls = getattr(param.annotation, "__qualname__", repr(param.annotation))
         if param.default is not param.empty:
-            return f'{cls}, optional (default: {param.default!r})'
+            return f"{cls}, optional (default: {param.default!r})"
         else:
             return cls
 
-    return '\n'.join(
-        f'{line} : {type_doc(line)}' if line.strip() in sig.parameters else line
-        for line in doc.split('\n')
+    return "\n".join(
+        f"{line} : {type_doc(line)}" if line.strip() in sig.parameters else line
+        for line in doc.split("\n")
     )
 
 
-def deprecated_arg_names(arg_mapping: Mapping[str, str]):
-    """
-    Decorator which marks a functions keyword arguments as deprecated. It will
-    result in a warning being emitted when the deprecated keyword argument is
-    used, and the function being called with the new argument.
-
-    Parameters
-    ----------
-    arg_mapping
-        Mapping from deprecated argument name to current argument name.
-    """
-
+def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     def decorator(func):
         @wraps(func)
-        def func_wrapper(*args, **kwargs):
-            warnings.simplefilter('always', DeprecationWarning)  # turn off filter
-            for old, new in arg_mapping.items():
-                if old in kwargs:
-                    warnings.warn(
-                        f"Keyword argument '{old}' has been "
-                        f"deprecated in favour of '{new}'. "
-                        f"'{old}' will be removed in a future version.",
-                        category=DeprecationWarning,
-                        stacklevel=2,
+        def wrapper(*args, **kwargs):
+            if old_name in kwargs:
+                f_name = func.__name__
+                pos_str = (
+                    (
+                        f" at first position. Call it as `{f_name}(val, ...)` "
+                        f"instead of `{f_name}({old_name}=val, ...)`"
                     )
-                    val = kwargs.pop(old)
-                    kwargs[new] = val
-            # reset filter
-            warnings.simplefilter('default', DeprecationWarning)
+                    if pos_0
+                    else ""
+                )
+                msg = (
+                    f"In function `{f_name}`, argument `{old_name}` "
+                    f"was renamed to `{new_name}`{pos_str}."
+                )
+                warnings.warn(msg, FutureWarning, stacklevel=3)
+                if pos_0:
+                    args = (kwargs.pop(old_name), *args)
+                else:
+                    kwargs[new_name] = kwargs.pop(old_name)
             return func(*args, **kwargs)
 
-        return func_wrapper
+        return wrapper
 
     return decorator
+
+
+def _import_name(name: str) -> Any:
+    from importlib import import_module
+
+    parts = name.split(".")
+    obj = import_module(parts[0])
+    for i, name in enumerate(parts[1:]):
+        try:
+            obj = import_module(f"{obj.__name__}.{name}")
+        except ModuleNotFoundError:
+            break
+    else:
+        i = len(parts)
+    for name in parts[i + 1 :]:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError:
+            raise RuntimeError(f"{parts[:i]}, {parts[i + 1:]}, {obj} {name}")
+    return obj
 
 
 def _one_of_ours(obj, root: str):
@@ -127,7 +151,7 @@ def _one_of_ours(obj, root: str):
         hasattr(obj, "__name__")
         and not obj.__name__.split(".")[-1].startswith("_")
         and getattr(
-            obj, '__module__', getattr(obj, '__qualname__', obj.__name__)
+            obj, "__module__", getattr(obj, "__qualname__", obj.__name__)
         ).startswith(root)
     )
 
@@ -136,19 +160,19 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
     if encountered is None:
         encountered = WeakSet()
     for obj in vars(mod).values():
-        if not _one_of_ours(obj, root):
+        if not _one_of_ours(obj, root) or obj in encountered:
             continue
+        encountered.add(obj)
         if callable(obj) and not isinstance(obj, MethodType):
             yield obj
             if isinstance(obj, type):
                 for m in vars(obj).values():
                     if callable(m) and _one_of_ours(m, root):
                         yield m
-        elif isinstance(obj, ModuleType) and obj not in encountered:
-            if obj.__name__.startswith('scanpy.tests'):
+        elif isinstance(obj, ModuleType):
+            if obj.__name__.startswith("scanpy.tests"):
                 # Python’s import mechanism seems to add this to `scanpy`’s attributes
                 continue
-            encountered.add(obj)
             yield from descend_classes_and_funcs(obj, root, encountered)
 
 
@@ -159,7 +183,7 @@ def annotate_doc_types(mod: ModuleType, root: str):
 
 def _doc_params(**kwds):
     """\
-    Docstrings should start with "\" in the first line for proper formatting.
+    Docstrings should start with ``\\`` in the first line for proper formatting.
     """
 
     def dec(obj):
@@ -183,7 +207,7 @@ def _check_array_function_arguments(**kwargs):
         )
 
 
-def _check_use_raw(adata: AnnData, use_raw: Union[None, bool]) -> bool:
+def _check_use_raw(adata: AnnData, use_raw: None | bool) -> bool:
     """
     Normalize checking `use_raw`.
 
@@ -215,13 +239,13 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
     g.add_edges(list(zip(sources, targets)))
     try:
-        g.es['weight'] = weights
+        g.es["weight"] = weights
     except KeyError:
         pass
     if g.vcount() != adjacency.shape[0]:
         logg.warning(
-            f'The constructed graph has only {g.vcount()} nodes. '
-            'Your adjacency matrix contained redundant nodes.'
+            f"The constructed graph has only {g.vcount()} nodes. "
+            "Your adjacency matrix contained redundant nodes."
         )
     return g
 
@@ -254,9 +278,10 @@ def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
     reference: str,
-    normalization: Literal['prediction', 'reference'] = 'prediction',
+    *,
+    normalization: Literal["prediction", "reference"] = "prediction",
     threshold: float = 0.01,
-    max_n_names: Optional[int] = 2,
+    max_n_names: int | None = 2,
 ):
     """Compute overlaps between groups.
 
@@ -287,7 +312,7 @@ def compute_association_matrix_of_groups(
         Matrix where rows correspond to the predicted labels and columns to the
         reference labels, entries are proportional to degree of association.
     """
-    if normalization not in {'prediction', 'reference'}:
+    if normalization not in {"prediction", "reference"}:
         raise ValueError(
             '`normalization` needs to be either "prediction" or "reference".'
         )
@@ -296,13 +321,13 @@ def compute_association_matrix_of_groups(
     for cat in cats:
         if cat in settings.categories_to_ignore:
             logg.info(
-                f'Ignoring category {cat!r} '
-                'as it’s in `settings.categories_to_ignore`.'
+                f"Ignoring category {cat!r} "
+                "as it’s in `settings.categories_to_ignore`."
             )
     asso_names = []
     asso_matrix = []
     for ipred_group, pred_group in enumerate(adata.obs[prediction].cat.categories):
-        if '?' in pred_group:
+        if "?" in pred_group:
             pred_group = str(ipred_group)
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.obs[prediction].values == pred_group
@@ -314,7 +339,7 @@ def compute_association_matrix_of_groups(
             mask_ref_or_pred[mask_pred] = 1
             # e.g. if the pred group is contained in mask_ref, mask_ref and
             # mask_ref_or_pred are the same
-            if normalization == 'prediction':
+            if normalization == "prediction":
                 # compute which fraction of the predicted group is contained in
                 # the ref group
                 ratio_contained = (
@@ -328,13 +353,13 @@ def compute_association_matrix_of_groups(
                 ) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
         name_list_pred = [
-            cats[i] if cats[i] not in settings.categories_to_ignore else ''
+            cats[i] if cats[i] not in settings.categories_to_ignore else ""
             for i in np.argsort(asso_matrix[-1])[::-1]
             if asso_matrix[-1][i] > threshold
         ]
-        asso_names += ['\n'.join(name_list_pred[:max_n_names])]
+        asso_names += ["\n".join(name_list_pred[:max_n_names])]
     Result = namedtuple(
-        'compute_association_matrix_of_groups', ['asso_names', 'asso_matrix']
+        "compute_association_matrix_of_groups", ["asso_names", "asso_matrix"]
     )
     return Result(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
 
@@ -400,12 +425,12 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
 
 
 # backwards compat... remove this in the future
-def sanitize_anndata(adata):
+def sanitize_anndata(adata: AnnData) -> None:
     """Transform string annotations to categoricals."""
     adata._sanitize()
 
 
-def view_to_actual(adata):
+def view_to_actual(adata: AnnData) -> None:
     if adata.is_view:
         warnings.warn(
             "Received a view of an AnnData. Making a copy.",
@@ -443,7 +468,7 @@ def update_params(
     old_params: Mapping[str, Any],
     new_params: Mapping[str, Any],
     check=False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """\
     Update old_params with new_params.
 
@@ -467,10 +492,10 @@ def update_params(
         for key, val in new_params.items():
             if key not in old_params and check:
                 raise ValueError(
-                    '\''
+                    "'"
                     + key
-                    + '\' is not a valid parameter key, '
-                    + 'consider one of \n'
+                    + "' is not a valid parameter key, "
+                    + "consider one of \n"
                     + str(list(old_params.keys()))
                 )
             if val is not None:
@@ -483,8 +508,41 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
+_SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
+_MemoryArray = Union[NDArray, _SparseMatrix]
+_SupportedArray = Union[_MemoryArray, DaskArray]
+
+
+@singledispatch
+def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
+    raise NotImplementedError
+
+
+@elem_mul.register(np.ndarray)
+@elem_mul.register(sparse.spmatrix)
+def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
+    if isinstance(x, sparse.spmatrix):
+        # returns coo_matrix, so cast back to input type
+        return type(x)(x.multiply(y))
+    return x * y
+
+
+@elem_mul.register(DaskArray)
+def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
+    import dask.array as da
+
+    return da.map_blocks(elem_mul, x, y)
+
+
+@singledispatch
+def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
     """Checks values of X to ensure it is count data"""
+    raise NotImplementedError
+
+
+@check_nonnegative_integers.register(np.ndarray)
+@check_nonnegative_integers.register(sparse.spmatrix)
+def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
     data = X if isinstance(X, np.ndarray) else X.data
@@ -494,17 +552,23 @@ def check_nonnegative_integers(X: Union[np.ndarray, sparse.spmatrix]):
     # Check all are integers
     elif issubclass(data.dtype.type, Integral):
         return True
-    elif np.any(~np.equal(np.mod(data, 1), 0)):
-        return False
-    else:
-        return True
+    return not np.any((data % 1) != 0)
 
 
-def select_groups(adata, groups_order_subset='all', key='groups'):
+@check_nonnegative_integers.register(DaskArray)
+def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
+    return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
+
+
+def select_groups(
+    adata: AnnData,
+    groups_order_subset: list[str] | Literal["all"] = "all",
+    key: str = "groups",
+) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
-    if key + '_masks' in adata.uns:
-        groups_masks = adata.uns[key + '_masks']
+    if key + "_masks" in adata.uns:
+        groups_masks = adata.uns[key + "_masks"]
     else:
         groups_masks = np.zeros(
             (len(adata.obs[key].cat.categories), adata.obs[key].values.size), dtype=bool
@@ -517,7 +581,7 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
                 mask = str(iname) == adata.obs[key].values
             groups_masks[iname] = mask
     groups_ids = list(range(len(groups_order)))
-    if groups_order_subset != 'all':
+    if groups_order_subset != "all":
         groups_ids = []
         for name in groups_order_subset:
             groups_ids.append(
@@ -533,8 +597,8 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
             )[0]
         if len(groups_ids) == 0:
             logg.debug(
-                f'{np.array(groups_order_subset)} invalid! specify valid '
-                f'groups_order (or indices) from {adata.obs[key].cat.categories}',
+                f"{np.array(groups_order_subset)} invalid! specify valid "
+                f"groups_order (or indices) from {adata.obs[key].cat.categories}",
             )
             from sys import exit
 
@@ -546,20 +610,20 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
     return groups_order_subset, groups_masks
 
 
-def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
+def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
     """Get full tracebacks when warning is raised by setting
 
     warnings.showwarning = warn_with_traceback
 
     See also
     --------
-    http://stackoverflow.com/questions/22373927/get-traceback-of-warnings
+    https://stackoverflow.com/questions/22373927/get-traceback-of-warnings
     """
     import traceback
 
     traceback.print_stack()
     log = (  # noqa: F841  # TODO Does this need fixing?
-        file if hasattr(file, 'write') else sys.stderr
+        file if hasattr(file, "write") else sys.stderr
     )
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
 
@@ -568,7 +632,7 @@ def subsample(
     X: np.ndarray,
     subsample: int = 1,
     seed: int = 0,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """\
     Subsample a fraction of 1/subsample samples from the rows of X.
 
@@ -598,17 +662,17 @@ def subsample(
         Xsampled = np.array(X[rows])
     else:
         if seed < 0:
-            raise ValueError(f'Invalid seed value < 0: {seed}')
+            raise ValueError(f"Invalid seed value < 0: {seed}")
         n = int(X.shape[0] / subsample)
         np.random.seed(seed)
         Xsampled, rows = subsample_n(X, n=n)
-    logg.debug(f'... subsampled to {n} of {X.shape[0]} data points')
+    logg.debug(f"... subsampled to {n} of {X.shape[0]} data points")
     return Xsampled, rows
 
 
 def subsample_n(
     X: np.ndarray, n: int = 0, seed: int = 0
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Subsample n samples from rows of array.
 
     Parameters
@@ -628,7 +692,7 @@ def subsample_n(
         Indices of rows that are stored in Xsampled.
     """
     if n < 0:
-        raise ValueError('n must be greater 0')
+        raise ValueError("n must be greater 0")
     np.random.seed(seed)
     n = X.shape[0] if (n == 0 or n > X.shape[0]) else n
     rows = np.random.choice(X.shape[0], size=n, replace=False)
@@ -706,18 +770,18 @@ class NeighborsView:
         self._connectivities = None
         self._distances = None
 
-        if key is None or key == 'neighbors':
-            if 'neighbors' not in adata.uns:
+        if key is None or key == "neighbors":
+            if "neighbors" not in adata.uns:
                 raise KeyError('No "neighbors" in .uns')
-            self._neighbors_dict = adata.uns['neighbors']
-            self._conns_key = 'connectivities'
-            self._dists_key = 'distances'
+            self._neighbors_dict = adata.uns["neighbors"]
+            self._conns_key = "connectivities"
+            self._dists_key = "distances"
         else:
             if key not in adata.uns:
                 raise KeyError(f'No "{key}" in .uns')
             self._neighbors_dict = adata.uns[key]
-            self._conns_key = self._neighbors_dict['connectivities_key']
-            self._dists_key = self._neighbors_dict['distances_key']
+            self._conns_key = self._neighbors_dict["connectivities_key"]
+            self._dists_key = self._neighbors_dict["distances_key"]
 
         if self._conns_key in adata.obsp:
             self._connectivities = adata.obsp[self._conns_key]
@@ -734,21 +798,21 @@ class NeighborsView:
         )
 
     def __getitem__(self, key):
-        if key == 'distances':
-            if 'distances' not in self:
+        if key == "distances":
+            if "distances" not in self:
                 raise KeyError(f'No "{self._dists_key}" in .obsp')
             return self._distances
-        elif key == 'connectivities':
-            if 'connectivities' not in self:
+        elif key == "connectivities":
+            if "connectivities" not in self:
                 raise KeyError(f'No "{self._conns_key}" in .obsp')
             return self._connectivities
         else:
             return self._neighbors_dict[key]
 
     def __contains__(self, key):
-        if key == 'distances':
+        if key == "distances":
             return self._distances is not None
-        elif key == 'connectivities':
+        elif key == "connectivities":
             return self._connectivities is not None
         else:
             return key in self._neighbors_dict
@@ -758,16 +822,16 @@ def _choose_graph(adata, obsp, neighbors_key):
     """Choose connectivities from neighbbors or another obsp column"""
     if obsp is not None and neighbors_key is not None:
         raise ValueError(
-            'You can\'t specify both obsp, neighbors_key. ' 'Please select only one.'
+            "You can't specify both obsp, neighbors_key. " "Please select only one."
         )
 
     if obsp is not None:
         return adata.obsp[obsp]
     else:
         neighbors = NeighborsView(adata, neighbors_key)
-        if 'connectivities' not in neighbors:
+        if "connectivities" not in neighbors:
             raise ValueError(
-                'You need to run `pp.neighbors` first '
-                'to compute a neighborhood graph.'
+                "You need to run `pp.neighbors` first "
+                "to compute a neighborhood graph."
             )
-        return neighbors['connectivities']
+        return neighbors["connectivities"]

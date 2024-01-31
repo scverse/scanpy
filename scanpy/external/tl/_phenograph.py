@@ -1,44 +1,72 @@
 """\
 Perform clustering using PhenoGraph
 """
-from typing import Union, Tuple, Optional, Type, Any, Literal
+from __future__ import annotations
 
-import numpy as np
+from typing import TYPE_CHECKING, Any, Literal
+
 import pandas as pd
 from anndata import AnnData
-import scipy as sp
-from scipy.sparse import spmatrix
 
-from ...tools._leiden import MutableVertexPartition
 from ... import logging as logg
+from ..._compat import old_positionals
+from ..._utils import renamed_arg
+from ...testing._doctests import doctest_needs
+
+if TYPE_CHECKING:
+    import numpy as np
+    from scipy.sparse import spmatrix
+
+    from ...tools._leiden import MutableVertexPartition
 
 
+@renamed_arg("adata", "data", pos_0=True)
+@old_positionals(
+    "k",
+    "directed",
+    "prune",
+    "min_cluster_size",
+    "jaccard",
+    "primary_metric",
+    "n_jobs",
+    "q_tol",
+    "louvain_time_limit",
+    "nn_method",
+    "partition_type",
+    "resolution_parameter",
+    "n_iterations",
+    "use_weights",
+    "seed",
+    "copy",
+)
+@doctest_needs("phenograph")
 def phenograph(
-    adata: Union[AnnData, np.ndarray, spmatrix],
-    clustering_algo: Optional[Literal['louvain', 'leiden']] = 'louvain',
+    data: AnnData | np.ndarray | spmatrix,
+    clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
+    *,
     k: int = 30,
     directed: bool = False,
     prune: bool = False,
     min_cluster_size: int = 10,
     jaccard: bool = True,
     primary_metric: Literal[
-        'euclidean',
-        'manhattan',
-        'correlation',
-        'cosine',
+        "euclidean",
+        "manhattan",
+        "correlation",
+        "cosine",
     ] = "euclidean",
     n_jobs: int = -1,
     q_tol: float = 1e-3,
     louvain_time_limit: int = 2000,
-    nn_method: Literal['kdtree', 'brute'] = 'kdtree',
-    partition_type: Optional[Type[MutableVertexPartition]] = None,
+    nn_method: Literal["kdtree", "brute"] = "kdtree",
+    partition_type: type[MutableVertexPartition] | None = None,
     resolution_parameter: float = 1,
     n_iterations: int = -1,
     use_weights: bool = True,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     copy: bool = False,
     **kargs: Any,
-) -> Tuple[Optional[np.ndarray], spmatrix, Optional[float]]:
+) -> tuple[np.ndarray | None, spmatrix, float | None] | None:
     """\
     PhenoGraph clustering [Levine15]_.
 
@@ -57,7 +85,7 @@ def phenograph(
 
     Parameters
     ----------
-    adata
+    data
         AnnData, or Array of data to cluster, or sparse matrix of k-nearest neighbor
         graph. If ndarray, n-by-d array of n cells in d dimensions. if sparse matrix,
         n-by-n adjacency matrix.
@@ -145,7 +173,7 @@ def phenograph(
 
     Then do PCA:
 
-    >>> sc.tl.pca(adata, n_comps=100)
+    >>> sc.pp.pca(adata, n_comps=100)
 
     Compute phenograph clusters:
 
@@ -180,7 +208,7 @@ def phenograph(
     >>> dframe = pd.DataFrame(df)
     >>> dframe.index, dframe.columns = (map(str, dframe.index), map(str, dframe.columns))
     >>> adata = AnnData(dframe)
-    >>> sc.tl.pca(adata, n_comps=20)
+    >>> sc.pp.pca(adata, n_comps=20)
     >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
     >>> sc.tl.tsne(adata, random_state=1)
     >>> sc.pl.tsne(
@@ -200,19 +228,18 @@ def phenograph(
             "pip install -U PhenoGraph"
         )
 
-    if isinstance(adata, AnnData):
+    if isinstance(data, AnnData):
+        adata = data
         try:
-            data = adata.obsm["X_pca"]
+            data = data.obsm["X_pca"]
         except KeyError:
-            raise KeyError("Please run `sc.tl.pca` on `adata` and try again!")
+            raise KeyError("Please run `sc.pp.pca` on `data` and try again!")
     else:
-        data = adata
+        adata = None
         copy = True
 
     comm_key = (
-        "pheno_{}".format(clustering_algo)
-        if clustering_algo in ["louvain", "leiden"]
-        else ''
+        f"pheno_{clustering_algo}" if clustering_algo in ["louvain", "leiden"] else ""
     )
     ig_key = "pheno_{}_ig".format("jaccard" if jaccard else "gaussian")
     q_key = "pheno_{}_q".format("jaccard" if jaccard else "gaussian")
@@ -242,7 +269,8 @@ def phenograph(
 
     if copy:
         return communities, graph, Q
-    else:
+
+    if adata is not None:
         adata.obsp[ig_key] = graph.tocsr()
         if comm_key:
             adata.obs[comm_key] = pd.Categorical(communities)

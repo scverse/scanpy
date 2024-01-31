@@ -1,4 +1,5 @@
-from unittest.mock import patch
+from __future__ import annotations
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
@@ -43,8 +44,8 @@ def test_umap_init_dtype():
 @pytest.mark.parametrize(
     "layout",
     [
-        pytest.param("fa", marks=needs("fa2")),
-        pytest.param("fr", marks=needs("igraph")),
+        pytest.param("fa", marks=needs.fa2),
+        pytest.param("fr", marks=needs.igraph),
     ],
 )
 def test_umap_init_paga(layout):
@@ -58,12 +59,12 @@ def test_diffmap():
     pbmc = pbmc68k_reduced()
 
     sc.tl.diffmap(pbmc)
-    d1 = pbmc.obsm['X_diffmap'].copy()
+    d1 = pbmc.obsm["X_diffmap"].copy()
     sc.tl.diffmap(pbmc)
-    d2 = pbmc.obsm['X_diffmap'].copy()
+    d2 = pbmc.obsm["X_diffmap"].copy()
     assert_array_equal(d1, d2)
 
     # Checking if specifying random_state  works, arrays shouldn't be equal
     sc.tl.diffmap(pbmc, random_state=1234)
-    d3 = pbmc.obsm['X_diffmap'].copy()
+    d3 = pbmc.obsm["X_diffmap"].copy()
     assert_raises(AssertionError, assert_array_equal, d1, d3)

@@ -31,16 +31,11 @@ References
 
 .. [Csardi06] Csardi *et al.* (2006),
    *The igraph software package for complex network research*,
-   `InterJournal Complex Systems <http://igraph.org>`__.
+   `InterJournal Complex Systems <https://igraph.org/>`__.
 
 .. [Eraslan18] Eraslan and Simon *et al.* (2018),
    *Single cell RNA-seq denoising using a deep count autoencoder*,
    `bioRxiv <https://doi.org/10.1101/300681>`__.
-
-.. [Ester96] Ester *et al.* (1996),
-   *A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*,
-   `Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
-   Portland, OR <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220>`__.
 
 .. [Eulenberg17] Eulenberg *et al.* (2017),
    *Reconstructing cell cycle and disease progression using deep learning*
@@ -52,20 +47,11 @@ References
 
 .. [Fruchterman91] Fruchterman & Reingold (1991),
    *Graph drawing by force-directed placement*,
-   `Software: Practice & Experience <http://doi.org:10.1002/spe.4380211102>`__.
+   `Software: Practice & Experience <https://doi.org/10.1002/spe.4380211102>`__.
 
 .. [Gardner00] Gardner *et al.*, (2000)
    *Construction of a genetic toggle switch in Escherichia coli*,
    `Nature <https://doi.org/10.1038/35002131>`__.
-
-.. [Hagberg08] Hagberg *et al.* (2008),
-   *Exploring Network Structure, Dynamics, and Function using NetworkX*,
-   `Scipy Conference <http://conference.scipy.org/proceedings/SciPy2008/paper_2/>`__.
-
-.. [Hastie09]
-   Hastie *et al.* (2009),
-   *The Elements of Statistical Learning*,
-   `Springer <https://web.stanford.edu/~hastie/ElemStatLearn/>`__.
 
 .. [Haghverdi15] Haghverdi *et al.* (2015),
    *Diffusion maps for high-dimensional single-cell analysis of differentiation data*,
@@ -82,10 +68,6 @@ References
 .. [Hie19] Hie *et al.* (2019),
    *Efficient integration of heterogeneous single-cell transcriptomes using Scanorama*,
    `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0113-3>`__.
-
-.. [Huber15] Huber *et al.* (2015),
-   *Orchestrating high-throughput genomic analysis with Bioconductor*,
-   `Nature Methods <https://doi.org/10.1038/nmeth.3252>`__.
 
 .. [Islam11] Islam *et al.* (2011),
    *Characterization of the single-cell transcriptional landscape by highly multiplex RNA-seq*,
@@ -107,10 +89,6 @@ References
    *Fast, sensitive and accurate integration of single-cell data with Harmony*,
    `Nature Methods <https://doi.org/10.1038/s41592-019-0619-0>` __.
 
-.. [Krumsiek10] Krumsiek *et al.* (2010),
-   *Odefy – From discrete to continuous models*,
-   `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-233>`__.
-
 .. [Krumsiek11] Krumsiek *et al.* (2011),
    *Hierarchical Differentiation of Myeloid Progenitors Is Encoded in the Transcription Factor Network*,
    `PLoS ONE <https://doi.org/10.1371/journal.pone.0022649>`__.
@@ -131,21 +109,17 @@ References
    *Data-Driven Phenotypic Dissection of AML Reveals Progenitor--like Cells that Correlate with Prognosis*,
    `Cell <https://doi.org/10.1016/j.cell.2015.05.047>`__.
 
-.. [Lopez18] Lopez *et al.* (2018),
-   *Deep generative modeling for single-cell transcriptomics*
-   `Nature Methods <https://doi.org/10.1038/s41592-018-0229-2>`__.
-
 .. [Maaten08] Maaten & Hinton (2008),
    *Visualizing data using t-SNE*,
-   `JMLR <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
+   `JMLR <https://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
 
 .. [McCarthy17] McCarthy *et al.* (2017),
    *scater: Single-cell analysis toolkit for gene expression data in R*,
    `Bioinformatics <https://doi.org/10.1093/bioinformatics/btw777>`__.
 
-.. [Moon17] Moon *et al.* (2017),
+.. [Moon17] Moon *et al.* (2019),
    *PHATE: A Dimensionality Reduction Method for Visualizing Trajectory Structures in High-Dimensional Biological Data*,
-   `BioRxiv <http://biorxiv.org/content/early/2017/03/24/120378>`__.
+   `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0336-3>`__.
 
 .. [Satija15] Satija *et al.* (2015),
    *Spatial reconstruction of single-cell gene expression data*,
@@ -163,11 +137,6 @@ References
    *Decoding the regulatory network of early blood development from single-cell gene expression measurements*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.3154>`__.
 
-.. [Murphy12]
-   Murphy (2012,
-   *Machine Learning: A Probabilisitc Perspective*,
-   `MIT Press <https://mitpress.mit.edu/books/machine-learning-0>`__.
-
 .. [Ntranos18] Ntranos *et al.* (2018),
    *Identification of transcriptional signatures for cell types from single-cell RNA-Seq*,
    `bioRxiv <https://doi.org/10.1101/258566>`__.
@@ -182,7 +151,7 @@ References
 
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
-   `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
+   `JMLR <https://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
 
 .. [Polanski19] Polanski *et al.* (2019),
    *BBKNN: fast batch alignment of single cell transcriptomes*
@@ -207,10 +176,6 @@ References
 .. [Stuart19] Stuart *et al.* (2019),
    *Comprehensive integration of single-cell data*
    `Cell <https://www.sciencedirect.com/science/article/pii/S0092867419305598>`__.
-
-.. [Svensson20] Svensson *et al.* (2020),
-   *Interpretable factor models of single-cell RNA-seq via variational autoencoders*
-   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btaa169>`__.
 
 .. [Nowotschin18i] Nowotschin *et al.* (2018),
    *The emergent landscape of the mouse gut endoderm at single-cell resolution*

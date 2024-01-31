@@ -1,9 +1,10 @@
-from functools import wraps
-import warnings
+from __future__ import annotations
 
-from packaging import version
+import warnings
+from functools import wraps
 
 import anndata as ad
+from packaging import version
 
 from .._settings import settings
 

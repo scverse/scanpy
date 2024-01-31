@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 import scanpy as sc
@@ -17,3 +19,12 @@ def test_deprecate_multicore_tsne():
 
     with pytest.warns(UserWarning, match="Falling back to scikit-learn"):
         sc.tl.tsne(pbmc, use_fast_tsne=True)
+
+
+def test_deprecate_use_highly_variable_genes():
+    pbmc = pbmc68k_reduced()
+
+    with pytest.warns(
+        FutureWarning, match="Argument `use_highly_variable` is deprecated"
+    ):
+        sc.pp.pca(pbmc, use_highly_variable=True)

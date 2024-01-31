@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import sys
 from subprocess import run
@@ -25,10 +27,11 @@ def get_import_paths(modules):
 
 def test_deferred_imports(imported_modules):
     slow_to_import = {
-        'umap',  # neighbors, tl.umap
-        'seaborn',  # plotting
-        'sklearn.metrics',  # neighbors
-        'networkx',  # diffmap, paga, plotting._utils
+        "umap",  # neighbors, tl.umap
+        "seaborn",  # plotting
+        "sklearn.metrics",  # neighbors
+        "pynndescent",  # neighbors
+        "networkx",  # diffmap, paga, plotting._utils
         # TODO: 'matplotlib.pyplot',
         # TODO (maybe): 'numba',
     }

@@ -1,27 +1,32 @@
 """Moran's I global spatial autocorrelation."""
-from typing import Union, Optional
+from __future__ import annotations
+
 from functools import singledispatch
-from anndata import AnnData
+from typing import TYPE_CHECKING
 
 import numpy as np
-from scipy import sparse
 from numba import njit, prange
+from scipy import sparse
 
-from scanpy.get import _get_obs_rep
-from scanpy.metrics._gearys_c import _resolve_vals, _check_vals
+from .._compat import fullname
+from ..get import _get_obs_rep
+from ._common import _check_vals, _resolve_vals
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 @singledispatch
 def morans_i(
     adata: AnnData,
     *,
-    vals: Optional[Union[np.ndarray, sparse.spmatrix]] = None,
-    use_graph: Optional[str] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-    obsp: Optional[str] = None,
+    vals: np.ndarray | sparse.spmatrix | None = None,
+    use_graph: str | None = None,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
     use_raw: bool = False,
-) -> Union[np.ndarray, float]:
+) -> np.ndarray | float:
     r"""
     Calculate Moran’s I Global Autocorrelation Statistic.
 
@@ -121,7 +126,7 @@ def morans_i(
 
 
 @njit(cache=True)
-def _morans_i_vec_W_sparse(
+def _morans_i_vec_W_sparse(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,
     g_indptr: np.ndarray,
@@ -185,11 +190,8 @@ def _morans_i_mtx(
     return out
 
 
-@njit(
-    cache=True,
-    parallel=True,
-)
-def _morans_i_mtx_csr(
+@njit(cache=True, parallel=True)
+def _morans_i_mtx_csr(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,
     g_indptr: np.ndarray,
@@ -222,7 +224,7 @@ def _morans_i_mtx_csr(
 
 
 @morans_i.register(sparse.csr_matrix)
-def _morans_i(g, vals) -> np.ndarray:
+def _morans_i(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
@@ -255,4 +257,8 @@ def _morans_i(g, vals) -> np.ndarray:
         full_result[idxer] = result
         return full_result
     else:
-        raise NotImplementedError()
+        msg = (
+            "Moran’s I metric not implemented for vals of type "
+            f"{fullname(type(vals))} and ndim {vals.ndim}."
+        )
+        raise NotImplementedError(msg)
