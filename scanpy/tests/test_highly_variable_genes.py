@@ -395,7 +395,6 @@ def test_highly_variable_genes_compare_to_seurat_v3():
     pbmc.obs.loc[pbmc.obs.index[1500:2000], "dummy_tech"] = "source_4"
     pbmc.obs.loc[pbmc.obs.index[2000:], "dummy_tech"] = "source_5"
 
-    # this is the scanpy implementation up until now
     seurat_v3_hvg = sc.pp.highly_variable_genes(
         pbmc,
         n_top_genes=2000,
@@ -404,18 +403,11 @@ def test_highly_variable_genes_compare_to_seurat_v3():
         inplace=False,
     )
 
-    seurat_v3_paper_hvg = sc.pp.highly_variable_genes(
+    # this is the scanpy implementation up until now
+    seurat_v3_scanpy_legacy_hvg = sc.pp.highly_variable_genes(
         pbmc,
         n_top_genes=2000,
-        flavor="seurat_v3_paper",
-        batch_key="dummy_tech",
-        inplace=False,
-    )
-
-    seurat_v3_implementation_hvg = sc.pp.highly_variable_genes(
-        pbmc,
-        n_top_genes=2000,
-        flavor="seurat_v3_implementation",
+        flavor="seurat_v3_scanpy_legacy",
         batch_key="dummy_tech",
         inplace=False,
     )
@@ -423,24 +415,15 @@ def test_highly_variable_genes_compare_to_seurat_v3():
     seurat_hvg_info_batch = pd.read_csv(FILE_V3_BATCH)
     seu = pd.Index(seurat_hvg_info_batch["x"].to_numpy())
 
-    assert not (
+    assert (
         len(seu.intersection(seurat_v3_hvg[seurat_v3_hvg.highly_variable].index)) / 2000
         > 0.95
     )
-    assert (
+    assert not (
         len(
             seu.intersection(
-                seurat_v3_paper_hvg[seurat_v3_paper_hvg.highly_variable].index
-            )
-        )
-        / 2000
-        > 0.95
-    )
-    assert (
-        len(
-            seu.intersection(
-                seurat_v3_implementation_hvg[
-                    seurat_v3_implementation_hvg.highly_variable
+                seurat_v3_scanpy_legacy_hvg[
+                    seurat_v3_scanpy_legacy_hvg.highly_variable
                 ].index
             )
         )

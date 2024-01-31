@@ -65,7 +65,7 @@ def _highly_variable_genes_seurat_v3(
 
     if check_values and not check_nonnegative_integers(X):
         warnings.warn(
-            "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
+            f"`flavor='{flavor}'` expects raw count data, but non-integers were found.",
             UserWarning,
         )
 
@@ -139,7 +139,7 @@ def _highly_variable_genes_seurat_v3(
     df["highly_variable_nbatches"] = num_batches_high_var
     df["highly_variable_rank"] = median_ranked
     df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
-    if flavor == "seurat_v3":
+    if flavor == "seurat_v3_scanpy_legacy":
         sorted_index = (
             df[["highly_variable_rank", "highly_variable_nbatches"]]
             .sort_values(
@@ -149,7 +149,7 @@ def _highly_variable_genes_seurat_v3(
             )
             .index
         )
-    elif flavor == "seurat_v3_paper":
+    elif flavor == "seurat_v3":
         sorted_index = (
             df[["highly_variable_nbatches", "highly_variable_rank"]]
             .sort_values(
@@ -159,51 +159,6 @@ def _highly_variable_genes_seurat_v3(
             )
             .index
         )
-    elif flavor == "seurat_v3_implementation":
-        sorted_index = (
-            df[
-                [
-                    "highly_variable_nbatches",
-                    "highly_variable_rank",
-                ]
-            ]
-            .sort_values(
-                ["highly_variable_nbatches", "highly_variable_rank"],
-                ascending=[False, True],
-                na_position="last",
-            )
-            .index
-        )
-        nbatch_threshold = df.loc[sorted_index]["highly_variable_nbatches"].iloc[2000]
-        above_threshold_index = df.loc[
-            df["highly_variable_nbatches"] > nbatch_threshold, :
-        ].index
-        df_above = df.loc[above_threshold_index, :]
-        df_at_threshold = df.loc[
-            df["highly_variable_nbatches"] == nbatch_threshold, :
-        ].copy()
-
-        df_above_sorted_index = (
-            df_above[["highly_variable_rank"]]  # bonus: sort by alphabet if tie
-            .sort_values(
-                ["highly_variable_rank"],
-                ascending=[True],
-                na_position="last",
-            )
-            .index
-        )
-        df_at_threshold_sorted_index = (
-            df_at_threshold[["highly_variable_rank"]]  # bonus: sort by alphabet if tie
-            .sort_values(
-                ["highly_variable_rank"],
-                ascending=[True],
-                na_position="last",
-            )
-            .index
-        )
-        sorted_index = np.concatenate(
-            [df_above_sorted_index, df_at_threshold_sorted_index]
-        )[:n_top_genes]
 
     else:
         raise ValueError(f"Did not recognize flavor {flavor}")
@@ -398,8 +353,7 @@ def highly_variable_genes(
         "seurat",
         "cell_ranger",
         "seurat_v3",
-        "seurat_v3_paper",
-        "seurat_v3_implementation",
+        "seurat_v3_scanpy_legacy",
     ] = "seurat",
     subset: bool = False,
     inplace: bool = True,
@@ -413,8 +367,9 @@ def highly_variable_genes(
     data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_. Seurat v3 flavor
-    requires `scikit-misc` package. If you plan to use this flavor, consider
+    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
+
+    `'seurat_v3'` requires `scikit-misc` package. If you plan to use this flavor, consider
     installing `scanpy` with this optional dependency: `scanpy[skmisc]`.
 
     For the dispersion-based methods (`flavor='seurat'` [Satija15]_ and
@@ -429,7 +384,15 @@ def highly_variable_genes(
     is computed as the variance of each gene after the transformation. Genes are ranked
     by the normalized variance.
 
-    See also `scanpy.experimental.pp._highly_variable_genes` for additional flavours
+    The following may help when comparing to Seurat's naming:
+    If `batch_key=None` and `flavor='seurat'` mimics Seurat's `FindVariableFeatures(…, method='mean.var.plot')`.
+    If `batch_key=None` and `flavor='seurat_v3'` mimics Seurat's `FindVariableFeatures(..., method='vst')`.
+    If `batch_key` is not `None` and `flavor='seurat_v3'` mimics Seurat's `SelectIntegrationFeatures`.
+
+    Flavor `'seurat_v3'` has been updated in `scanpy 1.9.8` to match the Seurat implementation closer when using `batch_key`.
+    The previous implementation is still available as `'seurat_v3_scanpy_legacy'`.
+
+    See also `scanpy.experimental.pp._highly_variable_genes` for additional flavors
     (e.g. Pearson residuals).
 
     Parameters
@@ -473,11 +436,11 @@ def highly_variable_genes(
     batch_key
         If specified, highly-variable genes are selected within each batch separately and merged.
         This simple process avoids the selection of batch-specific genes and acts as a
-        lightweight batch correction method. For all flavors, except 'seurat_v3', genes are first sorted
+        lightweight batch correction method. For all flavors, except `seurat_v3_scanpy_legacy`, genes are first sorted
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
-        by normalized dispersion. If `flavor = 'seurat_v3_paper'`, ties are broken by the median
+        by normalized dispersion. For `flavor = 'seurat_v3'`, ties are broken by the median
         (across batches) rank based on within-batch normalized variance.
-        If `flavor = 'seurat_v3'`, genes are first sorted by the median (across batches) rank,
+        If `flavor = 'seurat_scanpy_legacy'`, genes are first sorted by the median (across batches) rank,
         and ties are broken by how many batches they are a HVG.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
@@ -512,6 +475,10 @@ def highly_variable_genes(
     -----
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
     """
+    if flavor not in ["seurat", "cell_ranger", "seurat_v3", "seurat_v3_scanpy_legacy"]:
+        raise ValueError(
+            f"Invalid value '{flavor}' for `flavor`. Valid options are 'seurat', 'cell_ranger', 'seurat_v3' and 'seurat_v3_scanpy_legacy'."
+        )
 
     if n_top_genes is not None and not all(
         m is None for m in [min_disp, max_disp, min_mean, max_mean]
@@ -526,7 +493,7 @@ def highly_variable_genes(
             "pass `inplace=False` if you want to return a `pd.DataFrame`."
         )
 
-    if flavor in {"seurat_v3", "seurat_v3_paper", "seurat_v3_implementation"}:
+    if flavor in ["seurat_v3", "seurat_v3_scanpy_legacy"]:
         if n_top_genes is None:
             sig = signature(_highly_variable_genes_seurat_v3)
             n_top_genes = cast(int, sig.parameters["n_top_genes"].default)
