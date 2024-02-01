@@ -16,25 +16,9 @@ except ImportError:  # Python < 3.9
 
 try:
     from dask.array import Array as DaskArray
-    from dask.dataframe import DataFrame as DaskDataFrame
-    from dask.dataframe import Series as DaskSeries
-    from dask.dataframe.groupby import DataFrameGroupBy as DaskDataFrameGroupBy
-    from dask.dataframe.groupby import SeriesGroupBy as DaskSeriesGroupBy
 except ImportError:
 
     class DaskArray:
-        pass
-
-    class DaskDataFrame:
-        pass
-
-    class DaskSeries:
-        pass
-
-    class DaskDataFrameGroupBy:
-        pass
-
-    class DaskSeriesGroupBy:
         pass
 
 
@@ -50,10 +34,6 @@ __all__ = [
     "cache",
     "DaskArray",
     "ZappyArray",
-    "DaskDataFrame",
-    "DaskSeries",
-    "DaskDataFrameGroupBy",
-    "DaskSeriesGroupBy",
     "fullname",
     "pkg_metadata",
     "pkg_version",
