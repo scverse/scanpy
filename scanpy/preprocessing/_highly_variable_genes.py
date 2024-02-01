@@ -23,13 +23,7 @@ from .._compat import (
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
-from ._distributed import (
-    dask_compute,
-    get_mad,
-    materialize_as_ndarray,
-    series_to_array,
-    suppress_pandas_warning,
-)
+from ._distributed import get_mad, materialize_as_ndarray, series_to_array
 from ._simple import filter_genes
 from ._utils import _get_mean_var
 
@@ -339,10 +333,9 @@ def _stats_seurat(
     disp_grouped: SeriesGroupBy | DaskSeriesGroupBy,
 ) -> pd.DataFrame | DaskDataFrame:
     """Compute mean and std dev per bin."""
-    with suppress_pandas_warning():
-        disp_bin_stats: pd.DataFrame = dask_compute(
-            disp_grouped.agg(avg="mean", dev=partial(np.std, ddof=1))
-        )
+    disp_bin_stats = disp_grouped.agg(avg="mean", dev=partial(np.std, ddof=1))
+    if isinstance(disp_bin_stats, DaskDataFrame):
+        disp_bin_stats = disp_bin_stats.compute(sync=True)
     # retrieve those genes that have nan std, these are the ones where
     # only a single gene fell in the bin and implicitly set them to have
     # a normalized disperion of 1
@@ -718,7 +711,8 @@ def highly_variable_genes(
 
         return df
 
-    df = dask_compute(df)
+    if isinstance(df, DaskDataFrame):
+        df = df.compute(sync=True)
     adata.uns["hvg"] = {"flavor": flavor}
     logg.hint(
         "added\n"
