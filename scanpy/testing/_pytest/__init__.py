@@ -19,14 +19,17 @@ if TYPE_CHECKING:
 @pytest.fixture(autouse=True)
 def _global_test_context(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
+    # make sure seaborn is imported and did its thing
+    import seaborn as sns  # noqa: F401
     from matplotlib import pyplot as plt
+    from matplotlib.testing import setup
 
-    from scanpy import settings
+    import scanpy as sc
 
-    plt.switch_backend("agg")
-    settings.logfile = sys.stderr
-    settings.verbosity = "hint"
-    settings.autoshow = True
+    setup()
+    sc.settings.logfile = sys.stderr
+    sc.settings.verbosity = "hint"
+    sc.settings.autoshow = True
 
     if isinstance(request.node, pytest.DoctestItem):
         _modify_doctests(request)

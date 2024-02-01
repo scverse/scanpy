@@ -3,22 +3,17 @@ from __future__ import annotations
 from functools import partial
 from itertools import chain, combinations, repeat
 from pathlib import Path
-
-import pytest
-from matplotlib.testing import setup
-from packaging import version
-
-setup()
-
 from typing import TYPE_CHECKING
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pytest
 import seaborn as sns
 from anndata import AnnData
 from matplotlib.testing.compare import compare_images
+from packaging import version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
@@ -35,9 +30,6 @@ if TYPE_CHECKING:
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
-
-sc.pl.set_rcParams_defaults()
-sc.set_figure_params(dpi=40, color_map="viridis")
 
 
 # Test images are saved in the directory ./_images/<test-name>/
