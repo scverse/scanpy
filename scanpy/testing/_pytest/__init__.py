@@ -65,7 +65,7 @@ def pytest_collection_modifyitems(
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
     assert isinstance(request.node, pytest.DoctestItem)
 
-    request.getfixturevalue("doctest_env")
+    request.getfixturevalue("_doctest_env")
 
     func = _import_name(request.node.name)
     needs_marker: needs | None
