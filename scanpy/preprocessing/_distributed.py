@@ -4,34 +4,10 @@ from typing import TYPE_CHECKING, overload
 
 import numpy as np
 
-from scanpy._compat import DaskArray, DaskSeries, ZappyArray
+from scanpy._compat import DaskArray, ZappyArray
 
 if TYPE_CHECKING:
-    import pandas as pd
     from numpy.typing import ArrayLike
-
-
-@overload
-def series_to_array(s: pd.Series, *, dtype: np.dtype | None = None) -> np.ndarray:
-    ...
-
-
-@overload
-def series_to_array(s: DaskSeries, *, dtype: np.dtype | None = None) -> DaskArray:
-    ...
-
-
-def series_to_array(
-    s: pd.Series | DaskSeries, *, dtype: np.dtype | None = None
-) -> np.ndarray | DaskArray:
-    """Convert Series to Array, keeping them in-memory or distributed."""
-    if isinstance(s, DaskSeries):
-        return (
-            s.to_dask_array(True)
-            if dtype is None
-            else s.astype(dtype).to_dask_array(True)
-        )
-    return s.to_numpy() if dtype is None else s.to_numpy().astype(dtype, copy=False)
 
 
 @overload

@@ -16,7 +16,7 @@ from .._compat import DaskArray, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
-from ._distributed import materialize_as_ndarray, series_to_array
+from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 from ._utils import _get_mean_var
 
@@ -285,7 +285,7 @@ def _highly_variable_genes_single_batch(
     df["highly_variable"] = _subset_genes(
         adata,
         mean=mean,
-        dispersion_norm=series_to_array(df["dispersions_norm"]),
+        dispersion_norm=df["dispersions_norm"].to_numpy(),
         cutoff=cutoff,
     )
 
@@ -329,8 +329,7 @@ def _stats_seurat(mean_bins: pd.Series, disp_grouped: SeriesGroupBy) -> pd.DataF
 
 
 def _stats_cell_ranger(
-    mean_bins: pd.Series,
-    disp_grouped: SeriesGroupBy,
+    mean_bins: pd.Series, disp_grouped: SeriesGroupBy
 ) -> pd.DataFrame:
     """Compute median and median absolute dev per bin."""
     from statsmodels.robust import mad
@@ -459,7 +458,7 @@ def _highly_variable_genes_batched(
         )
         df["highly_variable"] = np.arange(df.shape[0]) < cutoff
     else:
-        dispersion_norm = series_to_array(df["dispersions_norm"])
+        dispersion_norm = df["dispersions_norm"].to_numpy()
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
         df["highly_variable"] = cutoff.in_bounds(df["means"], df["dispersions_norm"])
 
