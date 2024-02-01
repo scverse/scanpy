@@ -11,7 +11,6 @@ from pandas.testing import assert_frame_equal, assert_index_equal
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskDataFrame
 from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
@@ -101,12 +100,8 @@ def test_no_inplace(adata, array_type, batch_key):
     hvg_df = sc.pp.highly_variable_genes(
         adata, batch_key=batch_key, n_bins=3, inplace=False
     )
-    assert hvg_df is not None
+    assert isinstance(hvg_df, pd.DataFrame)
     assert colnames == set(hvg_df.columns)
-    if "dask" in array_type.__name__:
-        assert isinstance(hvg_df, DaskDataFrame)
-    else:
-        assert isinstance(hvg_df, pd.DataFrame)
 
 
 @pytest.mark.parametrize("base", [None, 10])
@@ -580,17 +575,12 @@ mark_no_cell_ranger = pytest.mark.xfail(
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize("inplace", [True, False], ids=["inplace", "copy"])
-def test_subset_inplace_consistency(
-    request: pytest.FixtureRequest, flavor, array_type, subset, inplace
-):
+def test_subset_inplace_consistency(flavor, array_type, subset, inplace):
     """Tests that, with `n_top_genes=n`
     - `inplace` and `subset` interact correctly
     - for both the `seurat` and `cell_ranger` flavors
     - for dask arrays and non-dask arrays
     """
-    if flavor == "cell_ranger" and "dask" in array_type.__name__:
-        request.applymarker(mark_no_cell_ranger)
-
     adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
     adata.X = array_type(np.abs(adata.X).astype(int))
 
@@ -617,15 +607,10 @@ def test_subset_inplace_consistency(
     assert (output_df is None) == inplace
     assert len(adata.var if inplace else output_df) == (15 if subset else n_genes)
     if output_df is not None:
-        if "dask" in array_type.__name__:
-            assert isinstance(output_df, DaskDataFrame)
-        else:
-            assert isinstance(output_df, pd.DataFrame)
+        assert isinstance(output_df, pd.DataFrame)
 
 
-@pytest.mark.parametrize(
-    "flavor", ["seurat", pytest.param("cell_ranger", marks=mark_no_cell_ranger)]
-)
+@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
 @pytest.mark.parametrize(
     "to_dask", [p for p in ARRAY_TYPES_SUPPORTED if "dask" in p.values[0].__name__]
@@ -646,9 +631,9 @@ def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     )
 
     assert isinstance(output_mem, pd.DataFrame)
-    assert isinstance(output_dask, DaskDataFrame)
+    assert isinstance(output_dask, pd.DataFrame)
 
     assert_index_equal(adata.var_names, output_mem.index, check_names=False)
-    assert_index_equal(adata.var_names, output_dask.index.compute(), check_names=False)
+    assert_index_equal(adata.var_names, output_dask.index, check_names=False)
 
-    assert_frame_equal(output_mem, output_dask.compute())
+    assert_frame_equal(output_mem, output_dask)

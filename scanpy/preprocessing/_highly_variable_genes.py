@@ -12,24 +12,17 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 from .. import logging as logg
-from .._compat import (
-    DaskArray,
-    DaskDataFrame,
-    DaskDataFrameGroupBy,
-    DaskSeries,
-    DaskSeriesGroupBy,
-    old_positionals,
-)
+from .._compat import DaskArray, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
-from ._distributed import get_mad, materialize_as_ndarray, series_to_array
+from ._distributed import materialize_as_ndarray, series_to_array
 from ._simple import filter_genes
 from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
-    from pandas.core.groupby.generic import DataFrameGroupBy, SeriesGroupBy
+    from pandas.core.groupby.generic import SeriesGroupBy
 
 
 def _highly_variable_genes_seurat_v3(
@@ -245,7 +238,7 @@ def _highly_variable_genes_single_batch(
     cutoff: _Cutoffs | int,
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
-) -> pd.DataFrame | DaskDataFrame:
+) -> pd.DataFrame:
     """\
     See `highly_variable_genes`.
 
@@ -275,16 +268,9 @@ def _highly_variable_genes_single_batch(
         mean = np.log1p(mean)
 
     # all of the following quantities are "per-gene" here
-    df: pd.DataFrame | DaskDataFrame
-    if isinstance(data, DaskArray):
-        import dask.array as da
-        import dask.dataframe as dd
-
-        df = dd.from_dask_array(
-            da.vstack((mean, dispersion)).T, columns=["means", "dispersions"]
-        )
-    else:
-        df = pd.DataFrame(dict(means=mean, dispersions=dispersion))
+    df = pd.DataFrame(
+        dict(zip(["means", "dispersions"], materialize_as_ndarray((mean, dispersion))))
+    )
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
     disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
     if flavor == "seurat":
@@ -303,18 +289,14 @@ def _highly_variable_genes_single_batch(
         cutoff=cutoff,
     )
 
-    if isinstance(df, DaskDataFrame):
-        df["gene"] = adata.var_names.to_series(index=df.index, name="gene")
-        df = df.set_index("gene", sort=False)
-    else:
-        df.set_index(adata.var_names, inplace=True)
-        df.index.name = "gene"
+    df.set_index(adata.var_names, inplace=True)
+    df.index.name = "gene"
     return df
 
 
 def _get_mean_bins(
-    means: pd.Series | DaskSeries, flavor: Literal["seurat", "cell_ranger"], n_bins: int
-) -> pd.Series | DaskSeries:
+    means: pd.Series, flavor: Literal["seurat", "cell_ranger"], n_bins: int
+) -> pd.Series:
     if flavor == "seurat":
         bins = n_bins
     elif flavor == "cell_ranger":
@@ -322,20 +304,12 @@ def _get_mean_bins(
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
 
-    if isinstance(means, DaskSeries):
-        # TODO: does map_partitions make sense for bin? It would bin per chunk, not globally
-        return means.map_partitions(pd.cut, bins=bins)
     return pd.cut(means, bins=bins)
 
 
-def _stats_seurat(
-    mean_bins: pd.Series | DaskSeries,
-    disp_grouped: SeriesGroupBy | DaskSeriesGroupBy,
-) -> pd.DataFrame | DaskDataFrame:
+def _stats_seurat(mean_bins: pd.Series, disp_grouped: SeriesGroupBy) -> pd.DataFrame:
     """Compute mean and std dev per bin."""
     disp_bin_stats = disp_grouped.agg(avg="mean", dev=partial(np.std, ddof=1))
-    if isinstance(disp_bin_stats, DaskDataFrame):
-        disp_bin_stats = disp_bin_stats.compute(sync=True)
     # retrieve those genes that have nan std, these are the ones where
     # only a single gene fell in the bin and implicitly set them to have
     # a normalized disperion of 1
@@ -355,46 +329,24 @@ def _stats_seurat(
 
 
 def _stats_cell_ranger(
-    mean_bins: pd.Series | DaskSeries,
-    disp_grouped: SeriesGroupBy | DaskSeriesGroupBy,
-) -> pd.DataFrame | DaskDataFrame:
+    mean_bins: pd.Series,
+    disp_grouped: SeriesGroupBy,
+) -> pd.DataFrame:
     """Compute median and median absolute dev per bin."""
+    from statsmodels.robust import mad
 
-    is_dask = isinstance(disp_grouped, DaskSeriesGroupBy)
     with warnings.catch_warnings():
         # MAD calculation raises the warning: "Mean of empty slice"
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        disp_bin_stats = _aggregate(disp_grouped, ["median", get_mad(dask=is_dask)])
-    # Can’t use kwargs in `aggregate`: https://github.com/dask/dask/issues/10836
-    disp_bin_stats = disp_bin_stats.rename(columns=dict(median="avg", mad="dev"))
+        disp_bin_stats = disp_grouped.agg(avg="median", dev=mad)
     return _unbin(disp_bin_stats, mean_bins)
 
 
-def _unbin(
-    df: pd.DataFrame | DaskDataFrame, mean_bins: pd.Series | DaskSeries
-) -> pd.DataFrame | DaskDataFrame:
+def _unbin(df: pd.DataFrame, mean_bins: pd.Series) -> pd.DataFrame:
     df = df.loc[mean_bins]
     df["gene"] = mean_bins.index
-    if isinstance(df, DaskDataFrame):
-        return df.set_index("gene", sort=False)
     df.set_index("gene", inplace=True)
     return df
-
-
-def _aggregate(
-    grouped: (
-        DataFrameGroupBy | DaskDataFrameGroupBy | SeriesGroupBy | DaskSeriesGroupBy
-    ),
-    arg=None,
-    **kw,
-) -> pd.DataFrame | DaskDataFrame | pd.Series | DaskSeries:
-    # ValueError: In order to aggregate with 'median',
-    # you must use shuffling-based aggregation (e.g., shuffle='tasks')
-    if ((arg and "median" in arg) or "median" in kw) and isinstance(
-        grouped, (DaskSeriesGroupBy, DaskDataFrameGroupBy)
-    ):
-        kw["shuffle"] = True
-    return grouped.agg(arg, **kw)
 
 
 def _subset_genes(
@@ -443,7 +395,7 @@ def _highly_variable_genes_batched(
     n_bins: int,
     flavor: Literal["seurat", "cell_ranger"],
     cutoff: _Cutoffs | int,
-) -> pd.DataFrame | DaskDataFrame:
+) -> pd.DataFrame:
     sanitize_anndata(adata)
     batches = adata.obs[batch_key].cat.categories
     dfs = []
@@ -468,10 +420,7 @@ def _highly_variable_genes_batched(
             adata_subset, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
         )
         assert hvg.index.name == "gene"
-        if isinstance(hvg, DaskDataFrame):
-            hvg = hvg.reset_index(drop=False)
-        else:
-            hvg.reset_index(drop=False, inplace=True)
+        hvg.reset_index(drop=False, inplace=True)
 
         if (n_removed := np.sum(~filt)) > 0:
             # Add 0 values for genes that were filtered out
@@ -485,13 +434,7 @@ def _highly_variable_genes_batched(
 
         dfs.append(hvg)
 
-    df: DaskDataFrame | pd.DataFrame
-    if isinstance(dfs[0], DaskDataFrame):
-        import dask.dataframe as dd
-
-        df = dd.concat(dfs, axis=0)
-    else:
-        df = pd.concat(dfs, axis=0)
+    df = pd.concat(dfs, axis=0)
 
     df["highly_variable"] = df["highly_variable"].astype(int)
     df = df.groupby("gene", observed=True).agg(
@@ -502,8 +445,6 @@ def _highly_variable_genes_batched(
             highly_variable="sum",
         )
     )
-    if isinstance(df, DaskDataFrame):
-        df = df.set_index("gene", sort=False)  # happens automatically for pandas df
     df["highly_variable_nbatches"] = df["highly_variable"]
     df["highly_variable_intersection"] = df["highly_variable_nbatches"] == len(batches)
 
@@ -556,7 +497,7 @@ def highly_variable_genes(
     inplace: bool = True,
     batch_key: str | None = None,
     check_values: bool = True,
-) -> pd.DataFrame | DaskDataFrame | None:
+) -> pd.DataFrame | None:
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
 
@@ -711,8 +652,6 @@ def highly_variable_genes(
 
         return df
 
-    if isinstance(df, DaskDataFrame):
-        df = df.compute(sync=True)
     adata.uns["hvg"] = {"flavor": flavor}
     logg.hint(
         "added\n"
