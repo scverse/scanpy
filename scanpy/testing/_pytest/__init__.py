@@ -12,21 +12,27 @@ from .fixtures import *  # noqa: F403
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
-doctest_env_marker = pytest.mark.usefixtures("doctest_env")
+    from .marks import needs
 
 
 # Defining it here because it’s autouse.
 @pytest.fixture(autouse=True)
-def global_test_context() -> Generator[None, None, None]:
+def _global_test_context(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
+    # make sure seaborn is imported and did its thing
+    import seaborn as sns  # noqa: F401
     from matplotlib import pyplot as plt
+    from matplotlib.testing import setup
 
-    from scanpy import settings
+    import scanpy as sc
 
-    plt.switch_backend("agg")
-    settings.logfile = sys.stderr
-    settings.verbosity = "hint"
-    settings.autoshow = True
+    setup()
+    sc.settings.logfile = sys.stderr
+    sc.settings.verbosity = "hint"
+    sc.settings.autoshow = True
+
+    if isinstance(request.node, pytest.DoctestItem):
+        _modify_doctests(request)
 
     yield
 
@@ -59,16 +65,17 @@ def pytest_collection_modifyitems(
             item.add_marker(skip_internet)
 
 
-def pytest_itemcollected(item: pytest.Item) -> None:
-    import pytest
+def _modify_doctests(request: pytest.FixtureRequest) -> None:
+    assert isinstance(request.node, pytest.DoctestItem)
 
-    if not isinstance(item, pytest.DoctestItem):
-        return
+    request.getfixturevalue("_doctest_env")
 
-    item.add_marker(doctest_env_marker)
-
-    func = _import_name(item.name)
-    if marker := getattr(func, "_doctest_mark", None):
-        item.add_marker(marker)
-    if skip_reason := getattr(func, "_doctest_skip_reason", False):
-        item.add_marker(pytest.mark.skip(reason=skip_reason))
+    func = _import_name(request.node.name)
+    needs_marker: needs | None
+    if needs_marker := getattr(func, "_doctest_needs", None):
+        assert needs_marker.mark.name == "skipif"
+        if needs_marker.mark.args[0]:
+            pytest.skip(reason=needs_marker.mark.kwargs["reason"])
+    skip_reason: str | None
+    if skip_reason := getattr(func, "_doctest_skip_reason", None):
+        pytest.skip(reason=skip_reason)
