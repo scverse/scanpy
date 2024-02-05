@@ -575,8 +575,8 @@ class Neighbors:
                     self._rp_forest = _make_forest_dict(index)
                 except Exception:  # TODO catch the correct exception
                     pass
-
         start_connect = logg.debug("computed neighbors", time=start_neighbors)
+
         if method == "umap":
             self._connectivities = _connectivity.umap(
                 knn_indices,
@@ -591,13 +591,14 @@ class Neighbors:
         elif method is not None:
             msg = f"{method!r} should have been coerced in _handle_transform_args"
             raise AssertionError(msg)
-        logg.debug("computed connectivities", time=start_connect)
         self._number_connected_components = 1
         if issparse(self._connectivities):
             from scipy.sparse.csgraph import connected_components
 
             self._connected_components = connected_components(self._connectivities)
             self._number_connected_components = self._connected_components[0]
+        if method is not None:
+            logg.debug("computed connectivities", time=start_connect)
 
     def _handle_transformer(
         self,
