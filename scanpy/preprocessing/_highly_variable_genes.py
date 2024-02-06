@@ -220,8 +220,8 @@ class _Cutoffs:
 
     def in_bounds(
         self,
-        mean: NDArray[np.float64] | DaskArray,
-        dispersion_norm: NDArray[np.float64] | DaskArray,
+        mean: NDArray[np.floating] | DaskArray,
+        dispersion_norm: NDArray[np.floating] | DaskArray,
     ) -> NDArray[np.bool_] | DaskArray:
         return (
             (mean > self.min_mean)
