@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from functools import partial
 from inspect import signature
 from typing import TYPE_CHECKING, Literal, cast
 
@@ -321,10 +320,10 @@ def _stats_seurat(mean_bins: pd.Series, disp_grouped: SeriesGroupBy) -> pd.DataF
             "normalized dispersion was set to 1.\n    "
             "Decreasing `n_bins` will likely avoid this effect."
         )
-        disp_bin_stats["dev"].loc[one_gene_per_bin] = disp_bin_stats["avg"].loc[
-            one_gene_per_bin
+        disp_bin_stats.loc[one_gene_per_bin, "dev"] = disp_bin_stats.loc[
+            one_gene_per_bin, "avg"
         ]
-        disp_bin_stats["avg"].loc[one_gene_per_bin] = 0
+        disp_bin_stats.loc[one_gene_per_bin, "avg"] = 0
     return _unbin(disp_bin_stats, mean_bins)
 
 
