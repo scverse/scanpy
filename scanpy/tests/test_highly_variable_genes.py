@@ -566,9 +566,6 @@ def test_cellranger_n_top_genes_warning():
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
 
 
-mark_no_cell_ranger = pytest.mark.xfail(
-    reason="See https://github.com/dask/dask/issues/10853"
-)
 
 
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
