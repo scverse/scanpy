@@ -309,7 +309,7 @@ def _get_mean_bins(
 
 def _stats_seurat(mean_bins: pd.Series, disp_grouped: SeriesGroupBy) -> pd.DataFrame:
     """Compute mean and std dev per bin."""
-    disp_bin_stats = disp_grouped.agg(avg="mean", dev=partial(np.std, ddof=1))
+    disp_bin_stats = disp_grouped.agg(avg="mean", dev="std")
     # retrieve those genes that have nan std, these are the ones where
     # only a single gene fell in the bin and implicitly set them to have
     # a normalized disperion of 1
