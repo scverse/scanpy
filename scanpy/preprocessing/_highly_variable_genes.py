@@ -289,7 +289,6 @@ def _highly_variable_genes_single_batch(
     )
 
     df.set_index(adata.var_names, inplace=True)
-    df.index.name = "gene"
     return df
 
 
@@ -410,8 +409,7 @@ def _highly_variable_genes_batched(
         hvg = _highly_variable_genes_single_batch(
             adata_subset, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
         )
-        assert hvg.index.name == "gene"
-        hvg.reset_index(drop=False, inplace=True)
+        hvg.reset_index(drop=False, inplace=True, names=["gene"])
 
         if (n_removed := np.sum(~filt)) > 0:
             # Add 0 values for genes that were filtered out
