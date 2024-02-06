@@ -21,7 +21,6 @@ from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
-    from pandas.core.groupby.generic import SeriesGroupBy
 
 
 def _highly_variable_genes_seurat_v3(
@@ -271,13 +270,7 @@ def _highly_variable_genes_single_batch(
         dict(zip(["means", "dispersions"], materialize_as_ndarray((mean, dispersion))))
     )
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
-    disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
-    if flavor == "seurat":
-        disp_stats = _stats_seurat(df["mean_bin"], disp_grouped)
-    elif flavor == "cell_ranger":
-        disp_stats = _stats_cell_ranger(df["mean_bin"], disp_grouped)
-    else:
-        raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
+    disp_stats = _get_disp_stats(df, flavor)
 
     # actually do the normalization
     df["dispersions_norm"] = (df["dispersions"] - disp_stats["avg"]) / disp_stats["dev"]
@@ -305,38 +298,46 @@ def _get_mean_bins(
     return pd.cut(means, bins=bins)
 
 
-def _stats_seurat(mean_bins: pd.Series, disp_grouped: SeriesGroupBy) -> pd.DataFrame:
-    """Compute mean and std dev per bin."""
-    disp_bin_stats = disp_grouped.agg(avg="mean", dev="std")
+def _get_disp_stats(
+    df: pd.DataFrame, flavor: Literal["seurat", "cell_ranger"]
+) -> pd.DataFrame:
+    disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
+    if flavor == "seurat":
+        disp_bin_stats = disp_grouped.agg(avg="mean", dev="std")
+        _postprocess_seurat(disp_bin_stats, df["mean_bin"])
+    elif flavor == "cell_ranger":
+        disp_bin_stats = disp_grouped.agg(avg="median", dev=_mad)
+    else:
+        raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
+    return disp_bin_stats.loc[df["mean_bin"]].set_index(df.index)
+
+
+def _postprocess_seurat(disp_bin_stats: pd.DataFrame, mean_bin: pd.Series) -> None:
     # retrieve those genes that have nan std, these are the ones where
     # only a single gene fell in the bin and implicitly set them to have
     # a normalized disperion of 1
     one_gene_per_bin = disp_bin_stats["dev"].isnull()
-    gen_indices = np.flatnonzero(one_gene_per_bin.loc[mean_bins])
-    if len(gen_indices) > 0:
-        logg.debug(
-            f"Gene indices {gen_indices} fell into a single bin: their "
-            "normalized dispersion was set to 1.\n    "
-            "Decreasing `n_bins` will likely avoid this effect."
-        )
-        disp_bin_stats.loc[one_gene_per_bin, "dev"] = disp_bin_stats.loc[
-            one_gene_per_bin, "avg"
-        ]
-        disp_bin_stats.loc[one_gene_per_bin, "avg"] = 0
-    return disp_bin_stats.loc[mean_bins].set_index(mean_bins.index)
+    gen_indices = np.flatnonzero(one_gene_per_bin.loc[mean_bin])
+    if len(gen_indices) == 0:
+        return
+    logg.debug(
+        f"Gene indices {gen_indices} fell into a single bin: their "
+        "normalized dispersion was set to 1.\n    "
+        "Decreasing `n_bins` will likely avoid this effect."
+    )
+    disp_bin_stats.loc[one_gene_per_bin, "dev"] = disp_bin_stats.loc[
+        one_gene_per_bin, "avg"
+    ]
+    disp_bin_stats.loc[one_gene_per_bin, "avg"] = 0
 
 
-def _stats_cell_ranger(
-    mean_bins: pd.Series, disp_grouped: SeriesGroupBy
-) -> pd.DataFrame:
-    """Compute median and median absolute dev per bin."""
+def _mad(a):
     from statsmodels.robust import mad
 
     with warnings.catch_warnings():
         # MAD calculation raises the warning: "Mean of empty slice"
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        disp_bin_stats = disp_grouped.agg(avg="median", dev=mad)
-    return disp_bin_stats.loc[mean_bins].set_index(mean_bins.index)
+        return mad(a)
 
 
 def _subset_genes(
