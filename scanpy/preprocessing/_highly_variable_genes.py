@@ -324,7 +324,7 @@ def _stats_seurat(mean_bins: pd.Series, disp_grouped: SeriesGroupBy) -> pd.DataF
             one_gene_per_bin, "avg"
         ]
         disp_bin_stats.loc[one_gene_per_bin, "avg"] = 0
-    return _unbin(disp_bin_stats, mean_bins)
+    return disp_bin_stats.loc[mean_bins].set_index(mean_bins.index)
 
 
 def _stats_cell_ranger(
@@ -337,14 +337,7 @@ def _stats_cell_ranger(
         # MAD calculation raises the warning: "Mean of empty slice"
         warnings.simplefilter("ignore", category=RuntimeWarning)
         disp_bin_stats = disp_grouped.agg(avg="median", dev=mad)
-    return _unbin(disp_bin_stats, mean_bins)
-
-
-def _unbin(df: pd.DataFrame, mean_bins: pd.Series) -> pd.DataFrame:
-    df = df.loc[mean_bins]
-    df["gene"] = mean_bins.index
-    df.set_index("gene", inplace=True)
-    return df
+    return disp_bin_stats.loc[mean_bins].set_index(mean_bins.index)
 
 
 def _subset_genes(
