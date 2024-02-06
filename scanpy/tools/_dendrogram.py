@@ -4,6 +4,7 @@ Computes a dendrogram based on a given categorical observation.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
@@ -16,8 +17,6 @@ from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation, _resolve_axis
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from anndata import AnnData
 
 
@@ -169,11 +168,7 @@ def dendrogram(
 
     if not inplace:
         return dat
-    if key_added is None:
-        if groupby is None:
-            key_added = f"dendrogram_{axis_name}"
-        else:
-            key_added = f'dendrogram_{"_".join(groupby)}'
+    key_added = _get_dendrogram_key(key_added, groupby, axis_name=axis_name)
     logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
     adata.uns[key_added] = dat
     return None
@@ -222,3 +217,43 @@ def _dendrogram_grouped(
         # aggregate values within categories using 'mean'
     rep_df = rep_df.groupby(level=0, observed=True).mean()
     return rep_df, categories
+
+
+def _get_dendrogram_key(
+    dendrogram_key: bool | str | None,
+    groupby: str | Sequence[str] | None,
+    *,
+    axis_name: Literal["obs", "var"],
+    adata: AnnData | None = None,
+) -> str:
+    # the `dendrogram_key` can be a bool an NoneType or the name of the
+    # dendrogram key. By default the name of the dendrogram key is 'dendrogram'
+    if not isinstance(dendrogram_key, str):
+        if groupby is None:
+            dendrogram_key = f"dendrogram_{axis_name}"
+        elif isinstance(groupby, str):
+            dendrogram_key = f"dendrogram_{groupby}"
+        elif isinstance(groupby, Sequence):
+            dendrogram_key = f'dendrogram_{"_".join(groupby)}'
+        else:
+            msg = "Either `groupby` or `dendrogram_key` must be specified."
+            raise TypeError(msg)
+
+    if adata is None:
+        return dendrogram_key
+
+    if dendrogram_key not in adata.uns:
+        logg.warning(
+            f"dendrogram data not found (using key={dendrogram_key}). "
+            "Running `sc.tl.dendrogram` with default parameters. For fine "
+            "tuning it is recommended to run `sc.tl.dendrogram` independently."
+        )
+        dendrogram(adata, groupby, key_added=dendrogram_key)
+
+    if "dendrogram_info" not in adata.uns[dendrogram_key]:
+        raise ValueError(
+            f"The given dendrogram key ({dendrogram_key!r}) does not contain "
+            "valid dendrogram information."
+        )
+
+    return dendrogram_key

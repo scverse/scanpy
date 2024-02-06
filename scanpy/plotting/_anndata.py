@@ -21,6 +21,8 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _check_use_raw, _doc_params, sanitize_anndata
+from ..tools._dendrogram import _get_dendrogram_key
+from ..tools._utils import _resolve_axis
 from . import _utils
 from ._docs import (
     doc_common_plot_args,
@@ -1737,8 +1739,9 @@ def tracksplot(
 @_doc_params(show_save_ax=doc_show_save_ax)
 def dendrogram(
     adata: AnnData,
-    groupby: str,
+    groupby: str | Sequence[str] | None = None,
     *,
+    axis: Literal["obs", 0, "var", 1] = "obs",
     dendrogram_key: str | None = None,
     orientation: Literal["top", "bottom", "left", "right"] = "top",
     remove_labels: bool = False,
@@ -1757,6 +1760,8 @@ def dendrogram(
         Annotated data matrix.
     groupby
         Categorical data column used to create the dendrogram
+    axis
+        Axis for which to plot the dendrogram.
     dendrogram_key
         Key under with the dendrogram information was stored.
         By default the dendrogram information is stored under
@@ -1787,10 +1792,12 @@ def dendrogram(
     """
     if ax is None:
         _, ax = plt.subplots()
+    axis, axis_name = _resolve_axis(axis)
     _plot_dendrogram(
         ax,
         adata,
         groupby,
+        axis_name=axis_name,
         dendrogram_key=dendrogram_key,
         remove_labels=remove_labels,
         orientation=orientation,
@@ -1866,7 +1873,9 @@ def correlation_matrix(
     >>> sc.pl.correlation_matrix(adata, 'bulk_labels')
     """
 
-    dendrogram_key = _get_dendrogram_key(adata, dendrogram, groupby)
+    dendrogram_key = _get_dendrogram_key(
+        dendrogram, groupby, axis_name="obs", adata=adata
+    )
 
     index = adata.uns[dendrogram_key]["categories_idx_ordered"]
     corr_matrix = adata.uns[dendrogram_key]["correlation_matrix"]
@@ -2243,8 +2252,8 @@ def _plot_gene_groups_brackets(
 
 def _reorder_categories_after_dendrogram(
     adata: AnnData,
-    groupby,
-    dendrogram,
+    groupby: str | Sequence[str],
+    dendrogram: bool | str | None,
     *,
     var_names=None,
     var_group_labels=None,
@@ -2269,12 +2278,14 @@ def _reorder_categories_after_dendrogram(
     'var_group_labels', and 'var_group_positions'
     """
 
-    key = _get_dendrogram_key(adata, dendrogram, groupby)
+    dendrogram_key = _get_dendrogram_key(
+        dendrogram, groupby, axis_name="obs", adata=adata
+    )
 
     if isinstance(groupby, str):
         groupby = [groupby]
 
-    dendro_info = adata.uns[key]
+    dendro_info = adata.uns[dendrogram_key]
     if groupby != dendro_info["groupby"]:
         raise ValueError(
             "Incompatible observations. The precomputed dendrogram contains "
@@ -2354,50 +2365,25 @@ def _format_first_three_categories(categories):
     return ", ".join(categories)
 
 
-def _get_dendrogram_key(adata, dendrogram_key, groupby):
-    # the `dendrogram_key` can be a bool an NoneType or the name of the
-    # dendrogram key. By default the name of the dendrogram key is 'dendrogram'
-    if not isinstance(dendrogram_key, str):
-        if isinstance(groupby, str):
-            dendrogram_key = f"dendrogram_{groupby}"
-        elif isinstance(groupby, list):
-            dendrogram_key = f'dendrogram_{"_".join(groupby)}'
-
-    if dendrogram_key not in adata.uns:
-        from ..tools._dendrogram import dendrogram
-
-        logg.warning(
-            f"dendrogram data not found (using key={dendrogram_key}). "
-            "Running `sc.tl.dendrogram` with default parameters. For fine "
-            "tuning it is recommended to run `sc.tl.dendrogram` independently."
-        )
-        dendrogram(adata, groupby, key_added=dendrogram_key)
-
-    if "dendrogram_info" not in adata.uns[dendrogram_key]:
-        raise ValueError(
-            f"The given dendrogram key ({dendrogram_key!r}) does not contain "
-            "valid dendrogram information."
-        )
-
-    return dendrogram_key
-
-
 def _plot_dendrogram(
     dendro_ax: Axes,
     adata: AnnData,
-    groupby: str,
+    groupby: str | Sequence[str] | None,
     *,
+    axis_name: Literal["obs", "var"] = "obs",
     dendrogram_key: str | None = None,
     orientation: Literal["top", "bottom", "left", "right"] = "right",
     remove_labels: bool = True,
     ticks: Collection[float] | None = None,
-):
+) -> None:
     """\
     Plots a dendrogram on the given ax using the precomputed dendrogram
     information stored in `.uns[dendrogram_key]`
     """
 
-    dendrogram_key = _get_dendrogram_key(adata, dendrogram_key, groupby)
+    dendrogram_key = _get_dendrogram_key(
+        dendrogram_key, groupby, axis_name=axis_name, adata=adata
+    )
 
     def translate_pos(pos_list, new_ticks, old_ticks):
         """\
