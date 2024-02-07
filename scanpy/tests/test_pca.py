@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import Literal
 
+import anndata as ad
 import numpy as np
 import pytest
 from anndata import AnnData
@@ -10,6 +11,7 @@ from anndata.tests.helpers import (
     asarray,
     assert_equal,
 )
+from packaging.version import Version
 from scipy import sparse
 from sklearn.utils import issparse
 
@@ -341,6 +343,12 @@ def test_mask(array_type):
         pytest.xfail("TODO: Dask arrays are not supported")
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
+
+    if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
+        pytest.xfail(
+            "TODO: Previous version of anndata would return an F ordered array for one"
+            " case here, which suprisingly considerably changes the results of PCA. "
+        )
 
     mask = np.random.choice([True, False], adata.shape[1])
 
