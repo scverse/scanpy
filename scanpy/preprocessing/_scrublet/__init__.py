@@ -141,7 +141,7 @@ def scrublet(
         `doublet_scores_sim_` histogram and/or based on co-localization of
         predicted doublets in a 2-D embedding.
     verbose
-        If True, log progress updates.
+        If :data:`True`, log progress updates.
     copy
         If :data:`True`, return a copy of the input ``adata`` with Scrublet results
         added. Otherwise, Scrublet results are added in place.
@@ -369,7 +369,7 @@ def _scrublet_call_doublets(
     random_state
         Initial state for doublet simulation and nearest neighbors.
     verbose
-        If True, log progress updates.
+        If :data:`True`, log progress updates.
 
     Returns
     -------
