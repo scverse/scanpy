@@ -33,7 +33,6 @@ def min_dep(req: Requirement) -> Requirement:
     if req.extras:
         req_name = f"{req_name}[{','.join(req.extras)}]"
 
-    # TODO: Should this be allowed?
     if not req.specifier:
         return Requirement(req_name)
 
@@ -44,7 +43,6 @@ def min_dep(req: Requirement) -> Requirement:
         elif spec.operator == "==":
             min_version = Version(spec.version)
 
-    # TODO: should this return `~=` or `==`?
     return Requirement(f"{req_name}=={min_version}.*")
 
 
@@ -68,7 +66,6 @@ def extract_min_deps(
 
 
 def main():
-    # TODO: Allow optional dependencies
     parser = argparse.ArgumentParser(
         prog="min-deps",
         description="""Parse a pyproject.toml file and output a list of minimum dependencies.
