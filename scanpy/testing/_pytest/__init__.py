@@ -55,6 +55,8 @@ def limit_multithreading():
 
         with threadpoolctl.threadpool_limits(limits=max_threads):
             yield
+    else:
+        yield
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
