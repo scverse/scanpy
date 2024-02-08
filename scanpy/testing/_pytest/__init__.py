@@ -1,6 +1,7 @@
 """A private pytest plugin"""
 from __future__ import annotations
 
+import os
 import sys
 from typing import TYPE_CHECKING
 
@@ -37,6 +38,24 @@ def _global_test_context(request: pytest.FixtureRequest) -> Generator[None, None
     yield
 
     plt.close("all")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def limit_multithreading():
+    """Limit number of threads used per worker when using pytest-xdist.
+
+    Prevents oversubscription of the CPU when multiple tests with parallel code are
+    running at once.
+    """
+    if (n_workers := os.environ.get("PYTEST_XDIST_WORKER_COUNT")) is not None:
+        import threadpoolctl
+
+        max_threads = max(os.cpu_count() // n_workers, 1)
+
+        with threadpoolctl.threadpool_limits(limits=max_threads):
+            yield
+    else:
+        yield
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
