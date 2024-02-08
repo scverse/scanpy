@@ -47,10 +47,9 @@ def limit_multithreading():
     Prevents oversubscription of the CPU when multiple tests with parallel code are
     running at once.
     """
-    if "PYTEST_XDIST_WORKER_COUNT" in os.environ:
+    if (n_workers := os.environ.get("PYTEST_XDIST_WORKER_COUNT")) is not None:
         import threadpoolctl
 
-        n_workers = int(os.environ["PYTEST_XDIST_WORKER_COUNT"])
         max_threads = os.cpu_count() // n_workers
 
         with threadpoolctl.threadpool_limits(limits=max_threads):
