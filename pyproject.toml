@@ -184,6 +184,7 @@ filterwarnings = [
     "error:The provided callable.* is currently using:FutureWarning",
     "error:The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
     "error:A value is trying to be set on a copy of a slice from a DataFrame",
+    "error:No data for colormapping provided via 'c'",
 ]
 
 [tool.coverage.run]

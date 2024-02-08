@@ -164,9 +164,10 @@ def embedding(
             raise ValueError("Cannot specify both `color_map` and `cmap`.")
         else:
             cmap = color_map
-    cmap = copy(colormaps.get_cmap(cmap))
-    cmap.set_bad(na_color)
-    kwargs["cmap"] = cmap
+    if cmap is not None:
+        cmap = copy(colormaps.get_cmap(cmap))
+        cmap.set_bad(na_color)
+        kwargs["cmap"] = cmap
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
@@ -254,6 +255,7 @@ def embedding(
     # Plotting #
     ############
     axs = []
+    kwargs_global = kwargs
 
     # use itertools.product to make a plot for each color and for each component
     # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
@@ -262,6 +264,7 @@ def embedding(
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
     for count, (value_to_plot, dims) in enumerate(zip(color, dimensions)):
+        kwargs = kwargs_global.copy()  # is potentially mutated for each plot
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
@@ -281,7 +284,7 @@ def embedding(
 
         # Order points
         order = slice(None)
-        if sort_order is True and value_to_plot is not None and categorical is False:
+        if sort_order and value_to_plot is not None and not categorical:
             # Higher values plotted on top, null values on bottom
             order = np.argsort(-color_vector, kind="stable")[::-1]
         elif sort_order and categorical:
@@ -320,14 +323,12 @@ def embedding(
             vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
                 vmin, vmax, vcenter, norm=norm, index=count, colors=color_vector
             )
-            normalize = check_colornorm(
+            kwargs["norm"] = check_colornorm(
                 vmin_float,
                 vmax_float,
                 vcenter_float,
                 norm_obj,
             )
-        else:
-            normalize = None
 
         # make the scatter plot
         if projection == "3d":
@@ -337,7 +338,6 @@ def embedding(
                 coords[:, 2],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
-                norm=normalize,
                 marker=marker[count],
                 **kwargs,
             )
@@ -381,7 +381,6 @@ def embedding(
                     s=bg_size,
                     c=bg_color,
                     rasterized=settings._vector_friendly,
-                    norm=normalize,
                     marker=marker[count],
                     **kwargs,
                 )
@@ -391,7 +390,6 @@ def embedding(
                     s=gap_size,
                     c=gap_color,
                     rasterized=settings._vector_friendly,
-                    norm=normalize,
                     marker=marker[count],
                     **kwargs,
                 )
@@ -403,7 +401,6 @@ def embedding(
                 coords[:, 1],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
-                norm=normalize,
                 marker=marker[count],
                 **kwargs,
             )
@@ -1224,7 +1221,7 @@ def _get_palette(adata, values_key: str, palette=None):
 
 def _color_vector(
     adata: AnnData,
-    values_key: str,
+    values_key: str | None,
     *,
     values: np.ndarray | pd.api.extensions.ExtensionArray,
     palette: str | Sequence[str] | Cycler | None,
@@ -1244,7 +1241,7 @@ def _color_vector(
     # 'obs' or in 'var'
     to_hex = partial(colors.to_hex, keep_alpha=True)
     if values_key is None:
-        return np.broadcast_to(to_hex(na_color), adata.n_obs), False
+        return np.broadcast_to(to_hex(na_color), adata.n_obs), True
     if values.dtype == bool:
         values = pd.Categorical(values.astype(str))
     elif not isinstance(values, pd.Categorical):
