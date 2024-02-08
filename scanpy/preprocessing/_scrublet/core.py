@@ -5,12 +5,19 @@ from dataclasses import InitVar, dataclass, field
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
+import pandas as pd
+from anndata import AnnData, concat
 from scipy import sparse
 
 from ... import logging as logg
 from ..._utils import AnyRandom, get_random_state
+from ...neighbors import (
+    Neighbors,
+    _get_indices_distances_from_sparse_matrix,
+    _Metric,
+    _MetricFn,
+)
 from .._utils import sample_comb
-from .neighbors import AnnoyDist, get_knn_graph
 from .sparse_utils import subsample_counts
 
 if TYPE_CHECKING:
@@ -271,7 +278,7 @@ class Scrublet:
     def calculate_doublet_scores(
         self,
         use_approx_neighbors: bool = True,
-        distance_metric: AnnoyDist = "euclidean",
+        distance_metric: _Metric | _MetricFn = "euclidean",
         get_doublet_neighbor_parents: bool = False,
     ) -> NDArray[np.float64]:
         """\
@@ -319,37 +326,46 @@ class Scrublet:
         k: int = 40,
         *,
         use_approx_nn: bool = True,
-        distance_metric: AnnoyDist = "euclidean",
+        distance_metric: _Metric | _MetricFn = "euclidean",
         exp_doub_rate: float = 0.1,
         stdev_doub_rate: float = 0.03,
         get_neighbor_parents: bool = False,
     ) -> None:
-        manifold = np.vstack((self.manifold_obs_, self.manifold_sim_))
-        doub_labels = np.concatenate(
-            (
-                np.zeros(self.manifold_obs_.shape[0], dtype=np.int64),
-                np.ones(self.manifold_sim_.shape[0], dtype=np.int64),
+        adatas = [
+            AnnData(
+                (arr := getattr(self, f"manifold_{n}_")),
+                obs=dict(
+                    obs_names=pd.RangeIndex(arr.shape[0]).astype("string") + n,
+                    doub_labels=n,
+                ),
             )
-        )
+            for n in ["obs", "sim"]
+        ]
+        manifold = concat(adatas)
 
-        n_obs: int = (doub_labels == 0).sum()
-        n_sim: int = (doub_labels == 1).sum()
+        n_obs: int = (manifold.obs["doub_labels"] == "obs").sum()
+        n_sim: int = (manifold.obs["doub_labels"] == "sim").sum()
 
         # Adjust k (number of nearest neighbors) based on the ratio of simulated to observed cells
         k_adj = int(round(k * (1 + n_sim / float(n_obs))))
 
         # Find k_adj nearest neighbors
-        neighbors = get_knn_graph(
-            manifold,
-            k=k_adj,
-            dist_metric=distance_metric,
-            approx=use_approx_nn,
-            random_seed=self._random_state,
+        knn = Neighbors(manifold)
+        knn.compute_neighbors(
+            k_adj,
+            metric=distance_metric,
+            knn=True,
+            transformer="pynndescent" if use_approx_nn else "sklearn",
+            method=None,
+            random_state=self._random_state,
         )
+        neighbors, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
 
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
-        doub_neigh_mask: NDArray[np.bool_] = doub_labels[neighbors] == 1
-        n_sim_neigh: NDArray[np.int64] = doub_neigh_mask.sum(1)
+        doub_neigh_mask: NDArray[np.bool_] = (
+            manifold.obs["doub_labels"].to_numpy()[neighbors] == "sim"
+        )
+        n_sim_neigh: NDArray[np.int64] = doub_neigh_mask.sum(axis=1)
 
         rho = exp_doub_rate
         r = n_sim / float(n_obs)
@@ -371,10 +387,10 @@ class Scrublet:
             * np.sqrt((se_q / q * (1 - rho)) ** 2 + (se_rho / rho * (1 - q)) ** 2)
         )
 
-        self.doublet_scores_obs_ = Ld[doub_labels == 0]
-        self.doublet_scores_sim_ = Ld[doub_labels == 1]
-        self.doublet_errors_obs_ = se_Ld[doub_labels == 0]
-        self.doublet_errors_sim_ = se_Ld[doub_labels == 1]
+        self.doublet_scores_obs_ = Ld[manifold.obs["doub_labels"] == "obs"]
+        self.doublet_scores_sim_ = Ld[manifold.obs["doub_labels"] == "sim"]
+        self.doublet_errors_obs_ = se_Ld[manifold.obs["doub_labels"] == "obs"]
+        self.doublet_errors_sim_ = se_Ld[manifold.obs["doub_labels"] == "sim"]
 
         # get parents of doublet neighbors, if requested
         neighbor_parents = None
