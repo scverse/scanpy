@@ -164,10 +164,8 @@ def embedding(
             raise ValueError("Cannot specify both `color_map` and `cmap`.")
         else:
             cmap = color_map
-    if cmap is not None:
-        cmap = copy(colormaps.get_cmap(cmap))
-        cmap.set_bad(na_color)
-        kwargs["cmap"] = cmap
+    cmap = copy(colormaps.get_cmap(cmap))
+    cmap.set_bad(na_color)
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
@@ -274,7 +272,7 @@ def embedding(
             gene_symbols=gene_symbols,
             groups=groups,
         )
-        color_vector, categorical = _color_vector(
+        color_vector, color_type = _color_vector(
             adata,
             value_to_plot,
             values=color_source_vector,
@@ -284,10 +282,10 @@ def embedding(
 
         # Order points
         order = slice(None)
-        if sort_order and value_to_plot is not None and not categorical:
+        if sort_order and value_to_plot is not None and color_type == "cont":
             # Higher values plotted on top, null values on bottom
             order = np.argsort(-color_vector, kind="stable")[::-1]
-        elif sort_order and categorical:
+        elif sort_order and color_type == "cat":
             # Null points go on bottom
             order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
         # Set orders
@@ -319,7 +317,7 @@ def embedding(
                 )
                 ax.set_title(value_to_plot)
 
-        if not categorical:
+        if color_type == "cont":
             vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
                 vmin, vmax, vcenter, norm=norm, index=count, colors=color_vector
             )
@@ -329,6 +327,7 @@ def embedding(
                 vcenter_float,
                 norm_obj,
             )
+            kwargs["cmap"] = cmap
 
         # make the scatter plot
         if projection == "3d":
@@ -442,7 +441,7 @@ def embedding(
             path_effect = None
 
         # Adding legends
-        if categorical or color_vector.dtype == bool:
+        if color_type == "cat":
             _add_categorical_legend(
                 ax,
                 color_source_vector,
@@ -1226,7 +1225,7 @@ def _color_vector(
     values: np.ndarray | pd.api.extensions.ExtensionArray,
     palette: str | Sequence[str] | Cycler | None,
     na_color: ColorLike = "lightgray",
-) -> tuple[np.ndarray | pd.api.extensions.ExtensionArray, bool]:
+) -> tuple[np.ndarray | pd.api.extensions.ExtensionArray, Literal["cat", "na", "cont"]]:
     """
     Map array of values to array of hex (plus alpha) codes.
 
@@ -1241,11 +1240,11 @@ def _color_vector(
     # 'obs' or in 'var'
     to_hex = partial(colors.to_hex, keep_alpha=True)
     if values_key is None:
-        return np.broadcast_to(to_hex(na_color), adata.n_obs), True
+        return np.broadcast_to(to_hex(na_color), adata.n_obs), "na"
     if values.dtype == bool:
         values = pd.Categorical(values.astype(str))
     elif not isinstance(values, pd.Categorical):
-        return values, False
+        return values, "cont"
 
     color_map = {
         k: to_hex(v)
@@ -1259,7 +1258,7 @@ def _color_vector(
     if color_vector.isna().any():
         color_vector = color_vector.add_categories([to_hex(na_color)])
         color_vector = color_vector.fillna(to_hex(na_color))
-    return color_vector, True
+    return color_vector, "cat"
 
 
 def _basis2name(basis):
