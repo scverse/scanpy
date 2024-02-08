@@ -586,9 +586,7 @@ class DotPlot(BasePlot):
         if self.are_axes_swapped:
             _size_df = _size_df.T
             _color_df = _color_df.T
-        self.cmap = self.kwds.get("cmap", self.cmap)
-        if "cmap" in self.kwds:
-            del self.kwds["cmap"]
+        self.cmap = self.kwds.pop("cmap", self.cmap)
 
         normalize, dot_min, dot_max = self._dotplot(
             _size_df,
@@ -784,11 +782,9 @@ class DotPlot(BasePlot):
             kwds = fix_kwds(
                 kwds,
                 s=size,
-                cmap=cmap,
                 linewidth=edge_lw,
                 facecolor="none",
                 edgecolor=edge_color,
-                norm=normalize,
             )
             dot_ax.scatter(x, y, **kwds)
         else:
