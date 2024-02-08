@@ -171,7 +171,11 @@ class MatrixPlot(BasePlot):
             values_df = (
                 self.obs_tidy.groupby(level=0, observed=True)
                 .mean()
-                .loc[self.categories]  # Fix order for pandas < 2
+                .loc[
+                    self.categories_order
+                    if self.categories_order is not None
+                    else self.categories
+                ]
             )
 
             if standard_scale == "group":

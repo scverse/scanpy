@@ -356,17 +356,16 @@ class StackedViolin(BasePlot):
         if self.var_names_idx_order is not None:
             _matrix = _matrix.iloc[:, self.var_names_idx_order]
 
-        if self.categories_order is not None:
-            _matrix.index = _matrix.index.reorder_categories(
-                self.categories_order, ordered=True
-            )
-
         # get mean values for color and transform to color values
         # using colormap
         _color_df = (
             _matrix.groupby(level=0, observed=True)
             .median()
-            .loc[self.categories]  # Fixed ordering for pandas < 2
+            .loc[
+                self.categories_order
+                if self.categories_order is not None
+                else self.categories
+            ]
         )
         if self.are_axes_swapped:
             _color_df = _color_df.T
