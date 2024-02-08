@@ -50,7 +50,7 @@ def limit_multithreading():
     if (n_workers := os.environ.get("PYTEST_XDIST_WORKER_COUNT")) is not None:
         import threadpoolctl
 
-        max_threads = os.cpu_count() // n_workers
+        max_threads = max(os.cpu_count() // n_workers, 1)
 
         with threadpoolctl.threadpool_limits(limits=max_threads):
             yield
