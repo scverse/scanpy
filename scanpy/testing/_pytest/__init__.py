@@ -39,6 +39,20 @@ def _global_test_context(request: pytest.FixtureRequest) -> Generator[None, None
     plt.close("all")
 
 
+@pytest.fixture(autouse=True, scope="session")
+def limit_cpus():
+    import os
+
+    import threadpoolctl
+
+    if "PYTEST_XDIST_WORKER_COUNT" in os.environ:
+        n_workers = int(os.environ["PYTEST_XDIST_WORKER_COUNT"])
+        max_threads = os.cpu_count() // n_workers
+
+        with threadpoolctl.threadpool_limits(limits=max_threads):
+            yield
+
+
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--internet-tests",
