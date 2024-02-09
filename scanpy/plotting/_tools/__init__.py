@@ -27,6 +27,7 @@ from .._docs import (
     doc_vbound_percentile,
 )
 from .._utils import (
+    _deprecated_scale,
     savefig_or_show,
     timeseries,
     timeseries_as_heatmap,
@@ -1176,7 +1177,7 @@ def rank_genes_groups_matrixplot(
     "use_raw",
     "key",
     "split",
-    "scale",
+    "density_norm",
     "strip",
     "jitter",
     "size",
@@ -1195,13 +1196,15 @@ def rank_genes_groups_violin(
     use_raw: bool | None = None,
     key: str | None = None,
     split: bool = True,
-    scale: str = "width",
+    density_norm: Literal["area", "count", "width"] = "width",
     strip: bool = True,
     jitter: int | float | bool = True,
     size: int = 1,
     ax: Axes | None = None,
     show: bool | None = None,
     save: bool | None = None,
+    # deprecated
+    scale: Literal["area", "count", "width"] | None = None,
 ):
     """\
     Plot ranking of genes for all tested comparisons.
@@ -1225,7 +1228,7 @@ def rank_genes_groups_violin(
         was used in :func:`~scanpy.tl.rank_genes_groups`.
     split
         Whether to split the violins or not.
-    scale
+    density_norm
         See :func:`~seaborn.violinplot`.
     strip
         Show a strip plot on top of the violin plot.
@@ -1244,6 +1247,8 @@ def rank_genes_groups_violin(
     groups_names = adata.uns[key]["names"].dtype.names if groups is None else groups
     if isinstance(groups_names, str):
         groups_names = [groups_names]
+    density_norm = _deprecated_scale(density_norm, scale, default="width")
+    del scale
     axs = []
     for group_name in groups_names:
         if gene_names is None:
@@ -1274,7 +1279,7 @@ def rank_genes_groups_violin(
             hue_order=hue_order,
             hue="hue",
             split=split,
-            scale=scale,
+            density_norm=density_norm,
             orient="vertical",
             ax=ax,
         )
@@ -1287,7 +1292,7 @@ def rank_genes_groups_violin(
                 dodge=True,
                 hue_order=hue_order,
                 jitter=jitter,
-                color="black",
+                palette="dark:black",
                 size=size,
                 ax=_ax,
             )

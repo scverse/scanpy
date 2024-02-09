@@ -184,6 +184,10 @@ filterwarnings = [
     "error:The provided callable.* is currently using:FutureWarning",
     "error:The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
     "error:A value is trying to be set on a copy of a slice from a DataFrame",
+    "error:No data for colormapping provided via 'c'",
+    "error:\\n*The `scale` parameter has been renamed and will be removed",
+    "error:\\n*Passing `palette` without assigning `hue` is deprecated",
+    "error:\\n*Setting a gradient palette using color= is deprecated",
 ]
 
 [tool.coverage.run]
