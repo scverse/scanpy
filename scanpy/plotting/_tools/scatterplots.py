@@ -380,24 +380,16 @@ def embedding(
                     if k not in {"alpha", "cmap", "norm"}
                 }
 
-                ax.scatter(
-                    coords[:, 0],
-                    coords[:, 1],
-                    s=bg_size,
-                    c=bg_color,
-                    rasterized=settings._vector_friendly,
-                    marker=marker[count],
-                    **kwargs_outline,
-                )
-                ax.scatter(
-                    coords[:, 0],
-                    coords[:, 1],
-                    s=gap_size,
-                    c=gap_color,
-                    rasterized=settings._vector_friendly,
-                    marker=marker[count],
-                    **kwargs_outline,
-                )
+                for s, c in [(bg_size, bg_color), (gap_size, gap_color)]:
+                    ax.scatter(
+                        coords[:, 0],
+                        coords[:, 1],
+                        s=s,
+                        c=c,
+                        rasterized=settings._vector_friendly,
+                        marker=marker[count],
+                        **kwargs_outline,
+                    )
 
             cax = scatter(
                 coords[:, 0],
