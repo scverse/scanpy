@@ -140,6 +140,10 @@ class StackedViolin(BasePlot):
 
     def __getattribute__(self, name: str) -> object:
         """Called unconditionally when accessing an instance attribute"""
+        # If the user has set the deprecated version on the class,
+        # and our code accesses the new version from the instance,
+        # return the user-specified version instead and warn.
+        # This is done because class properties are hard to do.
         if name == "DEFAULT_DENSITY_NORM" and hasattr(self, "DEFAULT_SCALE"):
             msg = "Don’t set DEFAULT_SCALE, use DEFAULT_DENSITY_NORM instead"
             warnings.warn(msg, FutureWarning)
