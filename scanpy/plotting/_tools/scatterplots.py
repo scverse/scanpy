@@ -370,9 +370,15 @@ def embedding(
                 # remove edge from kwargs if present
                 # because edge needs to be set to None
                 kwargs["edgecolor"] = "none"
+                # For points, if user did not set alpha, set alpha to 0.7
+                kwargs.setdefault("alpha", 0.7)
 
-                # remove alpha for outline
-                alpha = kwargs.pop("alpha") if "alpha" in kwargs else None
+                # remove alpha and color mapping for outline
+                kwargs_outline = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if k not in {"alpha", "cmap", "norm"}
+                }
 
                 ax.scatter(
                     coords[:, 0],
@@ -381,7 +387,7 @@ def embedding(
                     c=bg_color,
                     rasterized=settings._vector_friendly,
                     marker=marker[count],
-                    **kwargs,
+                    **kwargs_outline,
                 )
                 ax.scatter(
                     coords[:, 0],
@@ -390,10 +396,8 @@ def embedding(
                     c=gap_color,
                     rasterized=settings._vector_friendly,
                     marker=marker[count],
-                    **kwargs,
+                    **kwargs_outline,
                 )
-                # if user did not set alpha, set alpha to 0.7
-                kwargs["alpha"] = 0.7 if alpha is None else alpha
 
             cax = scatter(
                 coords[:, 0],
