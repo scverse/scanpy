@@ -253,7 +253,7 @@ def embedding(
     # Plotting #
     ############
     axs = []
-    kwargs_global = kwargs
+    kwargs_scatter = kwargs
 
     # use itertools.product to make a plot for each color and for each component
     # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
@@ -262,7 +262,7 @@ def embedding(
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
     for count, (value_to_plot, dims) in enumerate(zip(color, dimensions)):
-        kwargs = kwargs_global.copy()  # is potentially mutated for each plot
+        kwargs = kwargs_scatter.copy()  # is potentially mutated for each plot
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
