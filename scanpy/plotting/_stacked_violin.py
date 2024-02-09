@@ -507,10 +507,9 @@ class StackedViolin(BasePlot):
             row_ax = fig.add_subplot(gs[idx + 1, 1:-1])
             axs_list.append(row_ax)
 
-            if row_colors[idx] is None:
-                palette_colors = colormap_array[idx, :]
-            else:
-                palette_colors = None
+            palette_colors = (
+                list(colormap_array[idx, :]) if row_colors[idx] is None else None
+            )
 
             if not self.are_axes_swapped:
                 x = "genes"
@@ -526,6 +525,7 @@ class StackedViolin(BasePlot):
             row_ax = sns.violinplot(
                 x=x,
                 y="values",
+                hue=x,
                 data=_df,
                 orient="vertical",
                 ax=row_ax,
