@@ -909,7 +909,7 @@ def violin(
                 data=obs_tidy,
                 order=order,
                 orient="vertical",
-                scale=scale,
+                density_norm=scale,
                 ax=ax,
                 **kwds,
             )
