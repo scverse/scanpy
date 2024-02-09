@@ -253,7 +253,6 @@ def embedding(
     # Plotting #
     ############
     axs = []
-    kwargs_scatter = kwargs
 
     # use itertools.product to make a plot for each color and for each component
     # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
@@ -262,7 +261,7 @@ def embedding(
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
     for count, (value_to_plot, dims) in enumerate(zip(color, dimensions)):
-        kwargs = kwargs_scatter.copy()  # is potentially mutated for each plot
+        kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
@@ -321,13 +320,13 @@ def embedding(
             vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
                 vmin, vmax, vcenter, norm=norm, index=count, colors=color_vector
             )
-            kwargs["norm"] = check_colornorm(
+            kwargs_scatter["norm"] = check_colornorm(
                 vmin_float,
                 vmax_float,
                 vcenter_float,
                 norm_obj,
             )
-            kwargs["cmap"] = cmap
+            kwargs_scatter["cmap"] = cmap
 
         # make the scatter plot
         if projection == "3d":
@@ -338,7 +337,7 @@ def embedding(
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 marker=marker[count],
-                **kwargs,
+                **kwargs_scatter,
             )
         else:
             scatter = (
@@ -369,9 +368,9 @@ def embedding(
 
                 # remove edge from kwargs if present
                 # because edge needs to be set to None
-                kwargs["edgecolor"] = "none"
+                kwargs_scatter["edgecolor"] = "none"
                 # For points, if user did not set alpha, set alpha to 0.7
-                kwargs.setdefault("alpha", 0.7)
+                kwargs_scatter.setdefault("alpha", 0.7)
 
                 # remove alpha and color mapping for outline
                 kwargs_outline = {
@@ -397,7 +396,7 @@ def embedding(
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 marker=marker[count],
-                **kwargs,
+                **kwargs_scatter,
             )
 
         # remove y and x ticks
