@@ -1292,7 +1292,7 @@ def rank_genes_groups_violin(
                 dodge=True,
                 hue_order=hue_order,
                 jitter=jitter,
-                color="black",
+                palette="dark:black",
                 size=size,
                 ax=_ax,
             )
