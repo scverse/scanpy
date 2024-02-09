@@ -390,9 +390,7 @@ class StackedViolin(BasePlot):
         if self.are_axes_swapped:
             _color_df = _color_df.T
 
-        cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
-        if "cmap" in self.kwds:
-            del self.kwds["cmap"]
+        cmap = plt.get_cmap(self.kwds.pop("cmap", self.cmap))
         normalize = check_colornorm(
             self.vboundnorm.vmin,
             self.vboundnorm.vmax,
@@ -441,9 +439,7 @@ class StackedViolin(BasePlot):
     ):
         import seaborn as sns  # Slow import, only import if called
 
-        row_palette = self.kwds.get("color", self.row_palette)
-        if "color" in self.kwds:
-            del self.kwds["color"]
+        row_palette = self.kwds.pop("color", self.row_palette)
         if row_palette is not None:
             if is_color_like(row_palette):
                 row_colors = [row_palette] * _color_df.shape[0]
@@ -525,10 +521,12 @@ class StackedViolin(BasePlot):
             row_ax = sns.violinplot(
                 x=x,
                 y="values",
-                hue=x,
                 data=_df,
                 orient="vertical",
                 ax=row_ax,
+                # use a single `color`` if row_colors[idx] is defined
+                # else use the palette
+                hue=None if palette_colors is None else x,
                 palette=palette_colors,
                 color=row_colors[idx],
                 **self.kwds,
