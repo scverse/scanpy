@@ -298,7 +298,7 @@ class StackedViolin(BasePlot):
             (see :func:`~seaborn.color_palette`).
             Alternatively, a single color name or hex value can be passed,
             e.g. `'red'` or `'#cc33ff'`.
-        scale
+        density_norm
             The method used to scale the width of each violin.
             If 'width' (the default), each violin will have the same width.
             If 'area', each violin will have the same area.
