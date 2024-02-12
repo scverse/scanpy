@@ -245,18 +245,18 @@ def _highly_variable_genes_single_batch(
     A DataFrame that contains the columns
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
-    data = _get_obs_rep(adata, layer=layer)
+    X = _get_obs_rep(adata, layer=layer)
     if flavor == "seurat":
-        data = data.copy()
+        X = X.copy()
         if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            data *= np.log(adata.uns["log1p"]["base"])
+            X *= np.log(adata.uns["log1p"]["base"])
         # use out if possible. only possible since we copy the data matrix
-        if isinstance(data, np.ndarray):
-            np.expm1(data, out=data)
+        if isinstance(X, np.ndarray):
+            np.expm1(X, out=X)
         else:
-            data = np.expm1(data)
+            X = np.expm1(X)
 
-    mean, var = _get_mean_var(data)
+    mean, var = _get_mean_var(X)
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
