@@ -16,6 +16,7 @@ from ._matrixplot import MatrixPlot, matrixplot
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
 from ._qc import highest_expr_genes
 from ._rcmod import set_rcParams_defaults, set_rcParams_scanpy
+from ._scrublet import scrublet_score_distribution
 from ._stacked_violin import StackedViolin, stacked_violin
 from ._tools import (
     dpt_groups_pseudotime,
@@ -72,6 +73,7 @@ __all__ = [
     "set_rcParams_scanpy",
     "StackedViolin",
     "stacked_violin",
+    "scrublet_score_distribution",
     "dpt_groups_pseudotime",
     "dpt_timeseries",
     "embedding_density",
