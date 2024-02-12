@@ -86,8 +86,8 @@ def _set_log_file(settings: ScanpyConfig):
 def _set_log_level(settings: ScanpyConfig, level: int):
     root = settings._root_logger
     root.setLevel(level)
-    (h,) = root.handlers  # may only be 1
-    h.setLevel(level)
+    for h in root.handlers:
+        h.setLevel(level)
 
 
 class _LogFormatter(logging.Formatter):

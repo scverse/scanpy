@@ -566,6 +566,16 @@ def test_cellranger_n_top_genes_warning():
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
 
 
+def test_cutoff_info(caplog: pytest.LogCaptureFixture):
+    adata = pbmc3k()[:200].copy()
+    sc.pp.normalize_total(adata)
+    sc.pp.log1p(adata)
+    caplog.clear()
+    with sc.settings.verbosity.override(sc.Verbosity.info):
+        sc.pp.highly_variable_genes(adata, n_top_genes=10, max_mean=3.1)
+    assert "If you pass `n_top_genes`, all cutoffs are ignored." in caplog.messages
+
+
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
