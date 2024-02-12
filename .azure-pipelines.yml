@@ -71,11 +71,6 @@ jobs:
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
-  # - script: |
-  #     pip install -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
-  #   displayName: 'Install development anndata'
-  #   condition: eq(variables['ANNDATA_DEV'], 'yes')
-
   - script: |
       pip list
     displayName: 'Display installed versions'
