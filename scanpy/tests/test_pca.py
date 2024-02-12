@@ -347,7 +347,7 @@ def test_mask(array_type, request):
     if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
         request.node.add_marker(
             pytest.mark.xfail(
-                "TODO: Previous version of anndata would return an F ordered array for one"
+                reason="TODO: Previous version of anndata would return an F ordered array for one"
                 " case here, which suprisingly considerably changes the results of PCA. "
             )
         )
@@ -371,7 +371,9 @@ def test_mask(array_type, request):
 def test_mask_order_warning(request):
     if Version(ad.__version__) >= Version("0.9"):
         request.node.add_marker(
-            pytest.mark.xfail("Not expected to warn in later versions of anndata")
+            pytest.mark.xfail(
+                reason="Not expected to warn in later versions of anndata"
+            )
         )
 
     adata = ad.AnnData(X=np.random.randn(50, 5))
