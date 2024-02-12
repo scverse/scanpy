@@ -3,8 +3,8 @@ from __future__ import annotations
 import warnings
 from warnings import warn
 
+import anndata as ad
 import numpy as np
-from anndata import AnnData
 from packaging import version
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
@@ -24,7 +24,7 @@ from ._utils import _get_mean_var
     mask_hvg=doc_mask_hvg,
 )
 def pca(
-    data: AnnData | np.ndarray | spmatrix,
+    data: ad.AnnData | np.ndarray | spmatrix,
     n_comps: int | None = None,
     *,
     layer: str | None = None,
@@ -38,7 +38,7 @@ def pca(
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
-) -> AnnData | np.ndarray | spmatrix | None:
+) -> ad.AnnData | np.ndarray | spmatrix | None:
     """\
     Principal component analysis [Pedregosa11]_.
 
@@ -163,14 +163,14 @@ def pca(
             "reproducible across different computational platforms. For exact "
             "reproducibility, choose `svd_solver='arpack'.`"
         )
-    data_is_AnnData = isinstance(data, AnnData)
+    data_is_AnnData = isinstance(data, ad.AnnData)
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
         if pkg_version("anndata") < version.parse("0.8.0rc1"):
-            adata = AnnData(data, dtype=data.dtype)
+            adata = ad.AnnData(data, dtype=data.dtype)
         else:
-            adata = AnnData(data)
+            adata = ad.AnnData(data)
 
     # Unify new mask argument and deprecated use_highly_varible argument
     mask_param, mask = _handle_mask_param(adata, mask, use_highly_variable)
@@ -187,6 +187,19 @@ def pca(
     logg.info(f"    with n_comps={n_comps}")
 
     X = _get_obs_rep(adata_comp, layer=layer)
+
+    # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
+    if (
+        version.parse(ad.__version__) < version.parse("0.9")
+        and mask is not None
+        and isinstance(X, np.ndarray)
+    ):
+        warnings.warn(
+            "When using a mask parameter with anndata<0.9 on a dense array, the PCA"
+            "can have slightly different results due the array being column major "
+            "instead of row major.",
+            UserWarning,
+        )
 
     is_dask = isinstance(X, DaskArray)
 
@@ -337,7 +350,7 @@ def pca(
 
 
 def _handle_mask_param(
-    adata: AnnData,
+    adata: ad.AnnData,
     mask: np.ndarray | str | Empty | None,
     use_highly_variable: bool | None,
 ) -> tuple[np.ndarray | str | None, np.ndarray | None]:

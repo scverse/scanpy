@@ -368,6 +368,22 @@ def test_mask(array_type, request):
     )
 
 
+def test_mask_order_warning(request):
+    if Version(ad.__version__) >= Version("0.9"):
+        request.node.add_marker(
+            pytest.mark.xfail("Not expected to warn in later versions of anndata")
+        )
+
+    adata = ad.AnnData(X=np.random.randn(50, 5))
+    mask = np.array([True, False, True, False, True])
+
+    with pytest.warns(
+        UserWarning,
+        match="When using a mask parameter with anndata<0.9 on a dense array",
+    ):
+        sc.pp.pca(adata, mask=mask)
+
+
 def test_mask_defaults(array_type, float_dtype):
     """
     Test if pca result is equal without highly variable and with-but mask is None
