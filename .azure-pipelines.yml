@@ -19,12 +19,12 @@ jobs:
       Python3.9:
         python.version: '3.9'
       Python3.11: {}
-      minimal_tests:
+      minimal_dependencies:
         TEST_EXTRA: 'test-min'
       anndata_dev:
         DEPENDENCIES_VERSION: "pre-release"
         TEST_TYPE: "coverage"
-      MinDeps:
+      minimum_versions:
         python.version: '3.9'
         DEPENDENCIES_VERSION: "minimum-version"
 
