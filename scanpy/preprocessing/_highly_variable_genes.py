@@ -281,7 +281,7 @@ def _highly_variable_genes_single_batch(
         cutoff=cutoff,
     )
 
-    df.set_index(adata.var_names, inplace=True)
+    df.index = adata.var_names
     return df
 
 
