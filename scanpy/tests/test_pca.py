@@ -338,16 +338,18 @@ def test_mask_argument_equivalence(float_dtype, array_type):
     )
 
 
-def test_mask(array_type):
+def test_mask(array_type, request):
     if array_type is as_dense_dask_array:
         pytest.xfail("TODO: Dask arrays are not supported")
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
 
     if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
-        pytest.xfail(
-            "TODO: Previous version of anndata would return an F ordered array for one"
-            " case here, which suprisingly considerably changes the results of PCA. "
+        request.node.add_marker(
+            pytest.mark.xfail(
+                "TODO: Previous version of anndata would return an F ordered array for one"
+                " case here, which suprisingly considerably changes the results of PCA. "
+            )
         )
 
     mask = np.random.choice([True, False], adata.shape[1])
