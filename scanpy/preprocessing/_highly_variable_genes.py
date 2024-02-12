@@ -304,7 +304,7 @@ def _get_disp_stats(
     disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
     if flavor == "seurat":
         disp_bin_stats = disp_grouped.agg(avg="mean", dev="std")
-        _postprocess_seurat(disp_bin_stats, df["mean_bin"])
+        _postprocess_dispersions_seurat(disp_bin_stats, df["mean_bin"])
     elif flavor == "cell_ranger":
         disp_bin_stats = disp_grouped.agg(avg="median", dev=_mad)
     else:
@@ -312,7 +312,9 @@ def _get_disp_stats(
     return disp_bin_stats.loc[df["mean_bin"]].set_index(df.index)
 
 
-def _postprocess_seurat(disp_bin_stats: pd.DataFrame, mean_bin: pd.Series) -> None:
+def _postprocess_dispersions_seurat(
+    disp_bin_stats: pd.DataFrame, mean_bin: pd.Series
+) -> None:
     # retrieve those genes that have nan std, these are the ones where
     # only a single gene fell in the bin and implicitly set them to have
     # a normalized disperion of 1
