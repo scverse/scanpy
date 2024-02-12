@@ -11,6 +11,8 @@ from scipy.sparse import spmatrix
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from anndata._core.sparse_dataset import BaseCompressedSparseDataset
+    from anndata._core.views import ArrayView
     from numpy.typing import NDArray
 
 # --------------------------------------------------------------------------------
@@ -405,6 +407,13 @@ def _get_obs_rep(
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
+) -> (
+    np.ndarray
+    | spmatrix
+    | pd.DataFrame
+    | ArrayView
+    | BaseCompressedSparseDataset
+    | None
 ):
     """
     Choose array aligned with obs annotation.
