@@ -31,7 +31,7 @@ hvg_info <- as.data.frame(HVFInfo(sr))
 hvg_info <- cbind(hvg_info, rownames(hvg_info) %in% sr_hvg)
 colnames(hvg_info) <- c("means", "variances", "variances_norm", "highly_variable")
 
-write.table(hvg_info, "seurat_hvg_v3.csv")
+write.table(hvg_info, "seurat_hvg_v3.dat")
 
 X_1 = X[, 1:1500]
 X_2 = X[, 1501:ncol(X)]
@@ -45,4 +45,4 @@ sr2 <- FindVariableFeatures(object = sr2, selection.method = "vst", nfeatures = 
 srs = list(sr1, sr2)
 
 features <- SelectIntegrationFeatures(srs, nfeatures=4000)
-write.table(features, "seurat_hvg_v3_batch.csv")
+write.table(features, "seurat_hvg_v3_batch.dat")

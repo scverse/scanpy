@@ -34,9 +34,12 @@ qc_vars
     Keys for boolean columns of `.var` which identify variables you could
     want to control for (e.g. "ERCC" or "mito").
 percent_top
-    Which proportions of top genes to cover. If empty or `None` don't
-    calculate. Values are considered 1-indexed, `percent_top=[50]` finds
-    cumulative proportion to the 50th most expressed gene.\
+    List of ranks (where genes are ranked by expression) at which the cumulative
+    proportion of expression will be reported as a percentage. This can be used to
+    assess library complexity. Ranks are considered 1-indexed, and if empty or None
+    don't calculate.
+
+    E.g. `percent_top=[50]` finds cumulative proportion to the 50th most expressed gene.
 """
 
 doc_qc_metric_naming = """\
