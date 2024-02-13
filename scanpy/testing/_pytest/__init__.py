@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import sys
+import warnings
 from typing import TYPE_CHECKING
 
 import pytest
@@ -71,10 +72,12 @@ def _fix_dask_df_warning():
         import dask  # noqa: F401
     except ImportError:
         return
-    with pytest.warns(
-        DeprecationWarning,
-        match=r"The current Dask DataFrame implementation is deprecated",
-    ):
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            category=DeprecationWarning,
+            message=r"The current Dask DataFrame implementation is deprecated",
+        )
         import dask.dataframe  # noqa: F401
 
 
