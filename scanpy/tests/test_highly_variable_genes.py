@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -315,6 +316,7 @@ def test_highly_variable_genes_pearson_residuals_batch(
         assert len(output_df) == n_genes
 
 
+@pytest.mark.parametrize("func", ["hvg", "fgd"])
 @pytest.mark.parametrize(
     ("flavor", "params", "ref_path"),
     [
@@ -326,37 +328,53 @@ def test_highly_variable_genes_pearson_residuals_batch(
         ),
     ],
 )
-def test_compare_to_upstream(flavor, params, ref_path):
-    seurat_hvg_info = pd.read_csv(ref_path)
+def test_compare_to_upstream(
+    request: pytest.FixtureRequest,
+    func: Literal["hvg", "fgd"],
+    flavor: Literal["seurat", "cell_ranger"],
+    params: dict[str, float | int],
+    ref_path: Path,
+):
+    if func == "fgd" and flavor == "cell_ranger":
+        msg = "The deprecated filter_genes_dispersion behaves differently with cell_ranger"
+        request.node.add_marker(pytest.mark.xfail(reason=msg))
+    hvg_info = pd.read_csv(ref_path)
 
     pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
     pbmc.var_names_make_unique()
 
     sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
-    sc.pp.log1p(pbmc)
-    sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
+    if func == "hvg":
+        sc.pp.log1p(pbmc)
+        sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
+    elif func == "fgd":
+        sc.pp.filter_genes_dispersion(
+            pbmc, flavor=flavor, **params, log=True, subset=False
+        )
+    else:
+        raise AssertionError()
 
     np.testing.assert_array_equal(
-        seurat_hvg_info["highly_variable"], pbmc.var["highly_variable"]
+        hvg_info["highly_variable"], pbmc.var["highly_variable"]
     )
 
     # (still) Not equal to tolerance rtol=2e-05, atol=2e-05
     # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
     np.testing.assert_allclose(
-        seurat_hvg_info["means"],
+        hvg_info["means"],
         pbmc.var["means"],
         rtol=2e-05,
         atol=2e-05,
     )
     np.testing.assert_allclose(
-        seurat_hvg_info["dispersions"],
+        hvg_info["dispersions"],
         pbmc.var["dispersions"],
         rtol=2e-05,
         atol=2e-05,
     )
     np.testing.assert_allclose(
-        seurat_hvg_info["dispersions_norm"],
+        hvg_info["dispersions_norm"],
         pbmc.var["dispersions_norm"],
         rtol=2e-05,
         atol=2e-05,
@@ -432,50 +450,6 @@ def test_highly_variable_genes_seurat_v3_warning():
         match="`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
     ):
         sc.pp.highly_variable_genes(pbmc, flavor="seurat_v3")
-
-
-def test_filter_genes_dispersion_compare_to_seurat():
-    seurat_hvg_info = pd.read_csv(FILE, sep=" ")
-
-    pbmc = pbmc68k_reduced()
-    pbmc.X = pbmc.raw.X
-    pbmc.var_names_make_unique()
-
-    sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
-    sc.pp.filter_genes_dispersion(
-        pbmc,
-        flavor="seurat",
-        log=True,
-        subset=False,
-        min_mean=0.0125,
-        max_mean=3,
-        min_disp=0.5,
-    )
-
-    np.testing.assert_array_equal(
-        seurat_hvg_info["highly_variable"], pbmc.var["highly_variable"]
-    )
-
-    # (still) Not equal to tolerance rtol=2e-05, atol=2e-05:
-    # np.testing.assert_allclose(4, 3.9999, rtol=2e-05, atol=2e-05)
-    np.testing.assert_allclose(
-        seurat_hvg_info["means"],
-        pbmc.var["means"],
-        rtol=2e-05,
-        atol=2e-05,
-    )
-    np.testing.assert_allclose(
-        seurat_hvg_info["dispersions"],
-        pbmc.var["dispersions"],
-        rtol=2e-05,
-        atol=2e-05,
-    )
-    np.testing.assert_allclose(
-        seurat_hvg_info["dispersions_norm"],
-        pbmc.var["dispersions_norm"],
-        rtol=2e-05,
-        atol=2e-05,
-    )
 
 
 def test_highly_variable_genes_batches():
