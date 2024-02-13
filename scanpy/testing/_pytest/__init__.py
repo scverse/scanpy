@@ -68,13 +68,14 @@ def _fix_dask_df_warning():
     once it is no longer raised.
     """
     try:
-        with pytest.warns(
-            DeprecationWarning,
-            match=r"The current Dask DataFrame implementation is deprecated",
-        ):
-            import dask.dataframe  # noqa: F401
+        import dask  # noqa: F401
     except ImportError:
-        pass
+        return
+    with pytest.warns(
+        DeprecationWarning,
+        match=r"The current Dask DataFrame implementation is deprecated",
+    ):
+        import dask.dataframe  # noqa: F401
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
