@@ -5,6 +5,7 @@ from warnings import warn
 
 import anndata as ad
 import numpy as np
+from anndata import AnnData
 from packaging import version
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
@@ -24,7 +25,7 @@ from ._utils import _get_mean_var
     mask_hvg=doc_mask_hvg,
 )
 def pca(
-    data: ad.AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | spmatrix,
     n_comps: int | None = None,
     *,
     layer: str | None = None,
@@ -38,7 +39,7 @@ def pca(
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
-) -> ad.AnnData | np.ndarray | spmatrix | None:
+) -> AnnData | np.ndarray | spmatrix | None:
     """\
     Principal component analysis [Pedregosa11]_.
 
@@ -163,14 +164,14 @@ def pca(
             "reproducible across different computational platforms. For exact "
             "reproducibility, choose `svd_solver='arpack'.`"
         )
-    data_is_AnnData = isinstance(data, ad.AnnData)
+    data_is_AnnData = isinstance(data, AnnData)
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
         if pkg_version("anndata") < version.parse("0.8.0rc1"):
-            adata = ad.AnnData(data, dtype=data.dtype)
+            adata = AnnData(data, dtype=data.dtype)
         else:
-            adata = ad.AnnData(data)
+            adata = AnnData(data)
 
     # Unify new mask argument and deprecated use_highly_varible argument
     mask_param, mask = _handle_mask_param(adata, mask, use_highly_variable)
@@ -350,7 +351,7 @@ def pca(
 
 
 def _handle_mask_param(
-    adata: ad.AnnData,
+    adata: AnnData,
     mask: np.ndarray | str | Empty | None,
     use_highly_variable: bool | None,
 ) -> tuple[np.ndarray | str | None, np.ndarray | None]:
