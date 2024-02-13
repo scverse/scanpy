@@ -75,11 +75,8 @@ def test_normalize_per_cell(
     request: pytest.FixtureRequest, adata: AnnData, adata_dist: AnnData
 ):
     if isinstance(adata_dist.X, DaskArray):
-        request.node.add_marker(
-            pytest.mark.xfail(
-                reason="normalize_per_cell deprecated and broken for Dask"
-            )
-        )
+        msg = "normalize_per_cell deprecated and broken for Dask"
+        request.node.add_marker(pytest.mark.xfail(reason=msg))
     normalize_per_cell(adata_dist)
     assert isinstance(adata_dist.X, DIST_TYPES)
     result = materialize_as_ndarray(adata_dist.X)
