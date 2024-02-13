@@ -13,8 +13,9 @@ from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
-FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
-FILE_V3_BATCH = Path(__file__).parent / Path("_scripts/seurat_hvg_v3_batch.csv")
+FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.dat.gz")
+FILE_V3_BATCH = Path(__file__).parent / Path("_scripts/seurat_hvg_v3_batch.dat")
+FILE_CELL_RANGER = Path(__file__).parent / "_scripts/cell_ranger_hvg.csv"
 
 
 def test_highly_variable_genes_runs():
@@ -314,8 +315,19 @@ def test_highly_variable_genes_pearson_residuals_batch(
         assert len(output_df) == n_genes
 
 
-def test_highly_variable_genes_compare_to_seurat():
-    seurat_hvg_info = pd.read_csv(FILE, sep=" ")
+@pytest.mark.parametrize(
+    ("flavor", "params", "ref_path"),
+    [
+        pytest.param(
+            "seurat", dict(min_mean=0.0125, max_mean=3, min_disp=0.5), FILE, id="seurat"
+        ),
+        pytest.param(
+            "cell_ranger", dict(n_top_genes=100), FILE_CELL_RANGER, id="cell_ranger"
+        ),
+    ],
+)
+def test_compare_to_upstream(flavor, params, ref_path):
+    seurat_hvg_info = pd.read_csv(ref_path)
 
     pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
@@ -323,9 +335,7 @@ def test_highly_variable_genes_compare_to_seurat():
 
     sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
     sc.pp.log1p(pbmc)
-    sc.pp.highly_variable_genes(
-        pbmc, flavor="seurat", min_mean=0.0125, max_mean=3, min_disp=0.5, inplace=True
-    )
+    sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
 
     np.testing.assert_array_equal(
         seurat_hvg_info["highly_variable"], pbmc.var["highly_variable"]
@@ -354,7 +364,7 @@ def test_highly_variable_genes_compare_to_seurat():
 
 
 @needs.skmisc
-def test_highly_variable_genes_compare_to_seurat_v3():
+def test_compare_to_seurat_v3():
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=" ", dtype={"variances_norm": np.float64}
     )
