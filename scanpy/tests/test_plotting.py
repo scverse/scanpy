@@ -1616,7 +1616,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs.scrublet
+@needs.skmisc
 @pytest.mark.parametrize(
     ("id", "params"),
     [
@@ -1636,11 +1636,11 @@ def test_scrublet_plots(monkeypatch, image_comparer, id, params):
     with monkeypatch.context() as m:
         if id == "scrublet_no_threshold":
             m.setattr("skimage.filters.threshold_minimum", None)
-        sc.external.pp.scrublet(adata, use_approx_neighbors=False, **params)
+        sc.pp.scrublet(adata, use_approx_neighbors=False, **params)
     if id == "scrublet_no_threshold":
         assert "threshold" not in adata.uns["scrublet"]
 
-    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
+    sc.pl.scrublet_score_distribution(adata, return_fig=True, show=False)
     save_and_compare_images(id)
 
 
@@ -1685,3 +1685,10 @@ def test_string_mask(tmp_path, check_same_image):
     plt.close()
 
     check_same_image(p1, p2, tol=1)
+
+
+def test_violin_scale_warning(monkeypatch):
+    adata = pbmc3k_processed()
+    monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
+    with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
+        sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
