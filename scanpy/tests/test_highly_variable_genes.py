@@ -364,7 +364,7 @@ def test_compare_to_upstream(flavor, params, ref_path):
 
 
 @needs.skmisc
-def test_compare_to_seurat_v3():
+def test_highly_variable_genes_compare_to_seurat_v3():
     seurat_hvg_info = pd.read_csv(
         FILE_V3, sep=" ", dtype={"variances_norm": np.float64}
     )
