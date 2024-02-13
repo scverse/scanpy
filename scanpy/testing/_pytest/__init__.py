@@ -41,7 +41,7 @@ def _global_test_context(request: pytest.FixtureRequest) -> Generator[None, None
 
 
 @pytest.fixture(autouse=True, scope="session")
-def limit_multithreading():
+def max_threads() -> Generator[int, None, None]:
     """Limit number of threads used per worker when using pytest-xdist.
 
     Prevents oversubscription of the CPU when multiple tests with parallel code are
@@ -55,9 +55,26 @@ def limit_multithreading():
         max_threads = max(n_cpus // n_workers, 1)
 
         with threadpoolctl.threadpool_limits(limits=max_threads):
-            yield
+            yield max_threads
     else:
-        yield
+        yield 0
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _fix_dask_df_warning():
+    """
+    Currently, dask warns when importing dask.dataframe.
+    This fixture preempts the warning and should be removed
+    once it is no longer raised.
+    """
+    try:
+        with pytest.warns(
+            DeprecationWarning,
+            match=r"The current Dask DataFrame implementation is deprecated",
+        ):
+            import dask.dataframe  # noqa: F401
+    except ImportError:
+        pass
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
