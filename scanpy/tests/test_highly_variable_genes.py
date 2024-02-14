@@ -417,11 +417,9 @@ def test_highly_variable_genes_compare_to_seurat_v3():
 
     ### test with batch
     # introduce a dummy "technical covariate"; this is used in Seurat's SelectIntegrationFeatures
-    pbmc.obs["dummy_tech"] = "source_1"
-    pbmc.obs.loc[pbmc.obs.index[500:1000], "dummy_tech"] = "source_2"
-    pbmc.obs.loc[pbmc.obs.index[1000:1500], "dummy_tech"] = "source_3"
-    pbmc.obs.loc[pbmc.obs.index[1500:2000], "dummy_tech"] = "source_4"
-    pbmc.obs.loc[pbmc.obs.index[2000:], "dummy_tech"] = "source_5"
+    pbmc.obs["dummy_tech"] = (
+        "source_" + pd.array([*range(1, 6), 5]).repeat(500).astype("string")
+    )[: pbmc.n_obs]
 
     seurat_v3_paper = sc.pp.highly_variable_genes(
         pbmc,
@@ -442,14 +440,14 @@ def test_highly_variable_genes_compare_to_seurat_v3():
     seurat_hvg_info_batch = pd.read_csv(FILE_V3_BATCH)
     seu = pd.Index(seurat_hvg_info_batch["x"].to_numpy())
 
-    assert (
-        len(seu.intersection(seurat_v3_paper[seurat_v3_paper.highly_variable].index))
-        / 2000
-        > 0.95
+    gene_intersection_paper = seu.intersection(
+        seurat_v3_paper[seurat_v3_paper["highly_variable"]].index
     )
-    assert not (
-        len(seu.intersection(seurat_v3[seurat_v3.highly_variable].index)) / 2000 > 0.95
+    gene_intersection_impl = seu.intersection(
+        seurat_v3[seurat_v3["highly_variable"]].index
     )
+    assert len(gene_intersection_paper) / 2000 > 0.95
+    assert len(gene_intersection_impl) / 2000 < 0.95
 
 
 @needs.skmisc
