@@ -471,7 +471,7 @@ def highly_variable_genes(
             "pass `inplace=False` if you want to return a `pd.DataFrame`."
         )
 
-    if flavor in ["seurat_v3", "seurat_v3_paper"]:
+    if flavor in {"seurat_v3", "seurat_v3_paper"}:
         if n_top_genes is None:
             sig = signature(_highly_variable_genes_seurat_v3)
             n_top_genes = cast(int, sig.parameters["n_top_genes"].default)
