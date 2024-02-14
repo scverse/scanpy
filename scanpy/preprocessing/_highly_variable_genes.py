@@ -81,7 +81,6 @@ def _highly_variable_genes_seurat_v3(
         X_batch = X[batch_info == b]
 
         mean, var = _get_mean_var(X_batch)
-
         not_const = var > 0
         estimat_var = np.zeros(X.shape[1], dtype=np.float64)
 
@@ -152,7 +151,6 @@ def _highly_variable_genes_seurat_v3(
         .sort_values(sort_cols, ascending=sort_ascending, na_position="last")
         .index
     )
-
     df["highly_variable"] = False
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
 
