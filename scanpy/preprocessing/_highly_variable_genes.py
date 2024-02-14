@@ -339,12 +339,7 @@ def highly_variable_genes(
     max_mean: float | None = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: Literal[
-        "seurat",
-        "cell_ranger",
-        "seurat_v3",
-        "seurat_v3_scanpy_legacy",
-    ] = "seurat",
+    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"] = "seurat",
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
