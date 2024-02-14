@@ -140,28 +140,18 @@ def _highly_variable_genes_seurat_v3(
     df["highly_variable_rank"] = median_ranked
     df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
     if flavor == "seurat_v3":
-        sorted_index = (
-            df[["highly_variable_rank", "highly_variable_nbatches"]]
-            .sort_values(
-                ["highly_variable_rank", "highly_variable_nbatches"],
-                ascending=[True, False],
-                na_position="last",
-            )
-            .index
-        )
+        sort_cols = ["highly_variable_rank", "highly_variable_nbatches"]
+        sort_ascending = [True, False]
     elif flavor == "seurat_v3_paper":
-        sorted_index = (
-            df[["highly_variable_nbatches", "highly_variable_rank"]]
-            .sort_values(
-                ["highly_variable_nbatches", "highly_variable_rank"],
-                ascending=[False, True],
-                na_position="last",
-            )
-            .index
-        )
-
+        sort_cols = ["highly_variable_nbatches", "highly_variable_rank"]
+        sort_ascending = [False, True]
     else:
         raise ValueError(f"Did not recognize flavor {flavor}")
+    sorted_index = (
+        df[sort_cols]
+        .sort_values(sort_cols, ascending=sort_ascending, na_position="last")
+        .index
+    )
 
     df["highly_variable"] = False
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
