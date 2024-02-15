@@ -30,6 +30,7 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
         flavor=flavor,
         resolution=resolution,
         n_iterations=n_iterations,
+        directed=(flavor == "leidenalg"),
     )
     assert adata_neighbors.uns["leiden"]["params"]["resolution"] == resolution
     assert adata_neighbors.uns["leiden"]["params"]["n_iterations"] == n_iterations
