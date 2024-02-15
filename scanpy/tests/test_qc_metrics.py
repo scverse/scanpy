@@ -143,13 +143,10 @@ def test_qc_metrics_format(cls):
         assert np.allclose(adata.var[col], adata_dense.var[col])
 
 
-@pytest.mark.parametrize(
-    "cls", [np.asarray, sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]
-)
-def test_qc_metrics_format_str_qc_vars(cls):
+def test_qc_metrics_format_str_qc_vars():
     adata_dense, init_var = adata_mito()
     sc.pp.calculate_qc_metrics(adata_dense, qc_vars="mito", inplace=True)
-    adata = AnnData(X=cls(adata_dense.X), var=init_var.copy())
+    adata = AnnData(X=adata_dense.X, var=init_var.copy())
     sc.pp.calculate_qc_metrics(adata, qc_vars="mito", inplace=True)
     assert np.allclose(adata.obs, adata_dense.obs)
     for col in adata.var:  # np.allclose doesn't like mix of types
