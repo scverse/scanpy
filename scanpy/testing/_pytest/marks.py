@@ -49,7 +49,6 @@ class needs(pytest.MarkDecorator, Enum):
     pypairs = auto()
     samalg = "sam-algorithm"
     scanorama = auto()
-    scrublet = auto()
     trimap = auto()
     wishbone = "wishbone-dev"
 

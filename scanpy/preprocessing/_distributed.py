@@ -37,7 +37,7 @@ def materialize_as_ndarray(
 def materialize_as_ndarray(
     a: ArrayLike | tuple[ArrayLike | ZappyArray | DaskArray, ...],
 ) -> tuple[np.ndarray] | np.ndarray:
-    """Convert distributed arrays to ndarrays."""
+    """Compute distributed arrays and convert them to numpy ndarrays."""
     if not isinstance(a, tuple):
         return np.asarray(a)
 

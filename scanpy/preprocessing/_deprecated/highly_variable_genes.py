@@ -111,7 +111,8 @@ def filter_genes_dispersion(  # noqa: PLR0917
     if n_top_genes is not None and not all(
         x is None for x in [min_disp, max_disp, min_mean, max_mean]
     ):
-        logg.info("If you pass `n_top_genes`, all cutoffs are ignored.")
+        msg = "If you pass `n_top_genes`, all cutoffs are ignored."
+        warnings.warn(msg, UserWarning)
     if min_disp is None:
         min_disp = 0.5
     if min_mean is None:

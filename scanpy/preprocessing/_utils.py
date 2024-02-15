@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING, Literal
 import numba
 import numpy as np
 from scipy import sparse
+from sklearn.random_projection import sample_without_replacement
 
-from .._utils import _SupportedArray, elem_mul
+from .._utils import AnyRandom, _SupportedArray, elem_mul
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -121,3 +122,19 @@ def sparse_mean_var_major_axis(data, indices, indptr, *, major_len, minor_len, d
         variances[i] /= minor_len
 
     return means, variances
+
+
+def sample_comb(
+    dims: tuple[int, ...],
+    nsamp: int,
+    *,
+    random_state: AnyRandom = None,
+    method: Literal[
+        "auto", "tracking_selection", "reservoir_sampling", "pool"
+    ] = "auto",
+) -> NDArray[np.int64]:
+    """Randomly sample indices from a grid, without repeating the same tuple."""
+    idx = sample_without_replacement(
+        np.prod(dims), nsamp, random_state=random_state, method=method
+    )
+    return np.vstack(np.unravel_index(idx, dims)).T

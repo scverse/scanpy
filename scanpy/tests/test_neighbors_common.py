@@ -28,12 +28,14 @@ def mk_knn_matrix(
 ) -> sparse.csr_matrix:
     n_col = n_neighbors + (1 if style == "sklearn" else 0)
     dists = np.abs(np.random.randn(n_obs, n_col)) + 1e-8
-    if style != "rapids":
+    idxs = np.arange(n_obs * n_col).reshape((n_col, n_obs)).T
+    if style == "rapids":
+        idxs[:, 0] += 1  # does not include cell itself
+    else:
         dists[:, 0] = 0.0  # includes cell itself
     if duplicates:
         # Don’t use the first column, as that might be the cell itself
         dists[n_obs // 4 : n_obs, 2] = 0.0
-    idxs = np.arange(n_obs * n_col).reshape((n_col, n_obs)).T
     # keep self column to simulate output from kNN transformers
     mat = _get_sparse_matrix_from_indices_distances(idxs, dists, keep_self=True)
 
