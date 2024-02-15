@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 def _highly_variable_genes_seurat_v3(
     adata: AnnData,
     *,
+    flavor: str = "seurat_v3",
     layer: str | None = None,
     n_top_genes: int = 2000,
     batch_key: str | None = None,
@@ -69,7 +70,7 @@ def _highly_variable_genes_seurat_v3(
 
     if check_values and not check_nonnegative_integers(data):
         warnings.warn(
-            "`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
+            f"`flavor='{flavor}'` expects raw count data, but non-integers were found.",
             UserWarning,
         )
 
@@ -138,24 +139,28 @@ def _highly_variable_genes_seurat_v3(
     ma_ranked = np.ma.masked_invalid(ranked_norm_gene_vars)
     median_ranked = np.ma.median(ma_ranked, axis=0).filled(np.nan)
 
+    df["gene_name"] = df.index
     df["highly_variable_nbatches"] = num_batches_high_var
     df["highly_variable_rank"] = median_ranked
     df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
-
+    if flavor == "seurat_v3":
+        sort_cols = ["highly_variable_rank", "highly_variable_nbatches"]
+        sort_ascending = [True, False]
+    elif flavor == "seurat_v3_paper":
+        sort_cols = ["highly_variable_nbatches", "highly_variable_rank"]
+        sort_ascending = [False, True]
+    else:
+        raise ValueError(f"Did not recognize flavor {flavor}")
     sorted_index = (
-        df[["highly_variable_rank", "highly_variable_nbatches"]]
-        .sort_values(
-            ["highly_variable_rank", "highly_variable_nbatches"],
-            ascending=[True, False],
-            na_position="last",
-        )
+        df[sort_cols]
+        .sort_values(sort_cols, ascending=sort_ascending, na_position="last")
         .index
     )
     df["highly_variable"] = False
     df.loc[sorted_index[: int(n_top_genes)], "highly_variable"] = True
 
     if inplace:
-        adata.uns["hvg"] = {"flavor": "seurat_v3"}
+        adata.uns["hvg"] = {"flavor": flavor}
         logg.hint(
             "added\n"
             "    'highly_variable', boolean vector (adata.var)\n"
@@ -485,7 +490,7 @@ def highly_variable_genes(
     max_mean: float = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: Literal["seurat", "cell_ranger", "seurat_v3"] = "seurat",
+    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"] = "seurat",
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
@@ -494,12 +499,13 @@ def highly_variable_genes(
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
 
-    Expects logarithmized data, except when `flavor='seurat_v3'`, in which count
+    Expects logarithmized data, except when `flavor='seurat_v3'`/`'seurat_v3_paper'`, in which count
     data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_. Seurat v3 flavor
-    requires `scikit-misc` package. If you plan to use this flavor, consider
+    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
+
+    `'seurat_v3'`/`'seurat_v3_paper'` requires `scikit-misc` package. If you plan to use this flavor, consider
     installing `scanpy` with this optional dependency: `scanpy[skmisc]`.
 
     For the dispersion-based methods (`flavor='seurat'` [Satija15]_ and
@@ -508,13 +514,20 @@ def highly_variable_genes(
     falling into a given bin for mean expression of genes. This means that for each
     bin of mean expression, highly variable genes are selected.
 
-    For `flavor='seurat_v3'` [Stuart19]_, a normalized variance for each gene
+    For `flavor='seurat_v3'`/`'seurat_v3_paper'` [Stuart19]_, a normalized variance for each gene
     is computed. First, the data are standardized (i.e., z-score normalization
     per feature) with a regularized standard deviation. Next, the normalized variance
     is computed as the variance of each gene after the transformation. Genes are ranked
     by the normalized variance.
+    Only if `batch_key` is not `None`, the two flavors differ: For `flavor='seurat_v3'`, genes are first sorted by the median (across batches) rank, with ties broken by the number of batches a gene is a HVG.
+    For `flavor='seurat_v3_paper'`, genes are first sorted by the number of batches a gene is a HVG, with ties broken by the median (across batches) rank.
 
-    See also `scanpy.experimental.pp._highly_variable_genes` for additional flavours
+    The following may help when comparing to Seurat's naming:
+    If `batch_key=None` and `flavor='seurat'`, this mimics Seurat's `FindVariableFeatures(…, method='mean.var.plot')`.
+    If `batch_key=None` and `flavor='seurat_v3'`/`flavor='seurat_v3_paper'`, this mimics Seurat's `FindVariableFeatures(..., method='vst')`.
+    If `batch_key` is not `None` and `flavor='seurat_v3_paper'`, this mimics Seurat's `SelectIntegrationFeatures`.
+
+    See also `scanpy.experimental.pp._highly_variable_genes` for additional flavors
     (e.g. Pearson residuals).
 
     Parameters
@@ -558,13 +571,13 @@ def highly_variable_genes(
     batch_key
         If specified, highly-variable genes are selected within each batch separately and merged.
         This simple process avoids the selection of batch-specific genes and acts as a
-        lightweight batch correction method. For all flavors, genes are first sorted
+        lightweight batch correction method. For all flavors, except `seurat_v3`, genes are first sorted
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
-        by normalized dispersion. If `flavor = 'seurat_v3'`, ties are broken by the median
+        by normalized dispersion. For `flavor = 'seurat_v3_paper'`, ties are broken by the median
         (across batches) rank based on within-batch normalized variance.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
-        Only used if `flavor='seurat_v3'`.
+        Only used if `flavor='seurat_v3'`/`'seurat_v3_paper'`.
 
     Returns
     -------
@@ -579,13 +592,13 @@ def highly_variable_genes(
     `adata.var['dispersions_norm']` : :class:`pandas.Series` (dtype `float`)
         For dispersion-based flavors, normalized dispersions per gene
     `adata.var['variances']` : :class:`pandas.Series` (dtype `float`)
-        For `flavor='seurat_v3'`, variance per gene
-    `adata.var['variances_norm']` : :class:`pandas.Series` (dtype `float`)
-        For `flavor='seurat_v3'`, normalized variance per gene, averaged in
+        For `flavor='seurat_v3'`/`'seurat_v3_paper'`, variance per gene
+    `adata.var['variances_norm']`/`'seurat_v3_paper'` : :class:`pandas.Series` (dtype `float`)
+        For `flavor='seurat_v3'`/`'seurat_v3_paper'`, normalized variance per gene, averaged in
         the case of multiple batches
     `adata.var['highly_variable_rank']` : :class:`pandas.Series` (dtype `float`)
-        For `flavor='seurat_v3'`, rank of the gene according to normalized
-        variance, median rank in the case of multiple batches
+        For `flavor='seurat_v3'`/`'seurat_v3_paper'`, rank of the gene according to normalized
+        variance, in case of multiple batches description above
     `adata.var['highly_variable_nbatches']` : :class:`pandas.Series` (dtype `int`)
         If `batch_key` is given, this denotes in how many batches genes are detected as HVG
     `adata.var['highly_variable_intersection']` : :class:`pandas.Series` (dtype `bool`)
@@ -604,12 +617,13 @@ def highly_variable_genes(
             "pass `inplace=False` if you want to return a `pd.DataFrame`."
         )
 
-    if flavor == "seurat_v3":
+    if flavor in {"seurat_v3", "seurat_v3_paper"}:
         if n_top_genes is None:
             sig = signature(_highly_variable_genes_seurat_v3)
             n_top_genes = cast(int, sig.parameters["n_top_genes"].default)
         return _highly_variable_genes_seurat_v3(
             adata,
+            flavor=flavor,
             layer=layer,
             n_top_genes=n_top_genes,
             batch_key=batch_key,
