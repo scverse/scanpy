@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from numpy.typing import NDArray
+    from scipy import sparse
 
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
@@ -36,7 +37,11 @@ def _select_top_n(scores: NDArray, n_top: int):
     return global_indices
 
 
-def _ranks(X, mask=None, mask_rest=None):
+def _ranks(
+    X: np.ndarray | sparse.csr_matrix | sparse.csc_matrix,
+    mask_obs: NDArray[np.bool_] | None = None,
+    mask_obs_rest: NDArray[np.bool_] | None = None,
+):
     CONST_MAX_SIZE = 10000000
 
     n_genes = X.shape[1]
@@ -48,12 +53,12 @@ def _ranks(X, mask=None, mask_rest=None):
         merge = np.vstack
         adapt = lambda X: X
 
-    masked = mask is not None and mask_rest is not None
+    masked = mask_obs is not None and mask_obs_rest is not None
 
     if masked:
-        n_cells = np.count_nonzero(mask) + np.count_nonzero(mask_rest)
+        n_cells = np.count_nonzero(mask_obs) + np.count_nonzero(mask_obs_rest)
         get_chunk = lambda X, left, right: merge(
-            (X[mask, left:right], X[mask_rest, left:right])
+            (X[mask_obs, left:right], X[mask_obs_rest, left:right])
         )
     else:
         n_cells = X.shape[0]
@@ -103,7 +108,7 @@ class _RankGenes:
         else:
             self.expm1_func = np.expm1
 
-        self.groups_order, self.groups_masks = _utils.select_groups(
+        self.groups_order, self.groups_masks_obs = _utils.select_groups(
             adata, groups, groupby
         )
 
@@ -163,7 +168,7 @@ class _RankGenes:
     def _basic_stats(self) -> None:
         """Set self.{means,vars,pts}{,_rest} depending on X."""
         n_genes = self.X.shape[1]
-        n_groups = self.groups_masks.shape[0]
+        n_groups = self.groups_masks_obs.shape[0]
 
         self.means = np.zeros((n_groups, n_genes))
         self.vars = np.zeros((n_groups, n_genes))
@@ -174,7 +179,7 @@ class _RankGenes:
             self.vars_rest = np.zeros((n_groups, n_genes))
             self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
         else:
-            mask_rest = self.groups_masks[self.ireference]
+            mask_rest = self.groups_masks_obs[self.ireference]
             X_rest = self.X[mask_rest]
             self.means[self.ireference], self.vars[self.ireference] = _get_mean_var(
                 X_rest
@@ -187,7 +192,7 @@ class _RankGenes:
         else:
             get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
 
-        for imask, mask in enumerate(self.groups_masks):
+        for imask, mask in enumerate(self.groups_masks_obs):
             X_mask = self.X[mask]
 
             if self.comp_pts:
@@ -216,7 +221,7 @@ class _RankGenes:
         self._basic_stats()
 
         for group_index, (mask, mean_group, var_group) in enumerate(
-            zip(self.groups_masks, self.means, self.vars)
+            zip(self.groups_masks_obs, self.means, self.vars)
         ):
             if self.ireference is not None and group_index == self.ireference:
                 continue
@@ -226,7 +231,7 @@ class _RankGenes:
             if self.ireference is not None:
                 mean_rest = self.means[self.ireference]
                 var_rest = self.vars[self.ireference]
-                ns_other = np.count_nonzero(self.groups_masks[self.ireference])
+                ns_other = np.count_nonzero(self.groups_masks_obs[self.ireference])
             else:
                 mean_rest = self.means_rest[group_index]
                 var_rest = self.vars_rest[group_index]
@@ -278,14 +283,14 @@ class _RankGenes:
             else:
                 T = 1
 
-            for group_index, mask in enumerate(self.groups_masks):
+            for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 if group_index == self.ireference:
                     continue
 
-                mask_rest = self.groups_masks[self.ireference]
+                mask_obs_rest = self.groups_masks_obs[self.ireference]
 
-                n_active = np.count_nonzero(mask)
-                m_active = np.count_nonzero(mask_rest)
+                n_active = np.count_nonzero(mask_obs)
+                m_active = np.count_nonzero(mask_obs_rest)
 
                 if n_active <= 25 or m_active <= 25:
                     logg.hint(
@@ -294,7 +299,7 @@ class _RankGenes:
                     )
 
                 # Calculate rank sums for each chunk for the current mask
-                for ranks, left, right in _ranks(self.X, mask, mask_rest):
+                for ranks, left, right in _ranks(self.X, mask_obs, mask_obs_rest):
                     scores[left:right] = ranks.iloc[0:n_active, :].sum(axis=0)
                     if tie_correct:
                         T[left:right] = _tiecorrect(ranks)
@@ -313,7 +318,7 @@ class _RankGenes:
         # If no reference group exists,
         # ranking needs only to be done once (full mask)
         else:
-            n_groups = self.groups_masks.shape[0]
+            n_groups = self.groups_masks_obs.shape[0]
             scores = np.zeros((n_groups, n_genes))
             n_cells = self.X.shape[0]
 
@@ -322,13 +327,13 @@ class _RankGenes:
 
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
-                for imask, mask in enumerate(self.groups_masks):
-                    scores[imask, left:right] = ranks.iloc[mask, :].sum(axis=0)
+                for imask, mask_obs in enumerate(self.groups_masks_obs):
+                    scores[imask, left:right] = ranks.iloc[mask_obs, :].sum(axis=0)
                     if tie_correct:
                         T[imask, left:right] = _tiecorrect(ranks)
 
-            for group_index, mask in enumerate(self.groups_masks):
-                n_active = np.count_nonzero(mask)
+            for group_index, mask_obs in enumerate(self.groups_masks_obs):
+                n_active = np.count_nonzero(mask_obs)
 
                 if tie_correct:
                     T_i = T[group_index]
@@ -662,7 +667,7 @@ def rank_genes_groups(
         n_genes_user = test_obj.X.shape[1]
 
     logg.debug(f"consider {groupby!r} groups:")
-    logg.debug(f"with sizes: {np.count_nonzero(test_obj.groups_masks, axis=1)}")
+    logg.debug(f"with sizes: {np.count_nonzero(test_obj.groups_masks_obs, axis=1)}")
 
     test_obj.compute_statistics(
         method,

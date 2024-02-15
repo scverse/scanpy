@@ -353,8 +353,8 @@ def _handle_mask_var(
     # First, verify and possibly warn
     if use_highly_variable is not None:
         hint = (
-            'Use_highly_variable=True can be called through mask="highly_variable". '
-            "Use_highly_variable=False can be called through mask=None"
+            'Use_highly_variable=True can be called through mask_var="highly_variable". '
+            "Use_highly_variable=False can be called through mask_var=None"
         )
         msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
         warn(msg, FutureWarning)

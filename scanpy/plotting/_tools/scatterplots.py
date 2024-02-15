@@ -266,7 +266,7 @@ def embedding(
             adata,
             value_to_plot,
             layer=layer,
-            mask=mask_obs,
+            mask_obs=mask_obs,
             use_raw=use_raw,
             gene_symbols=gene_symbols,
             groups=groups,

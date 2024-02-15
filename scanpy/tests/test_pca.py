@@ -311,24 +311,24 @@ def test_mask_highly_var_error(array_type):
 def test_mask_length_error():
     """Check error for n_obs / mask length mismatch."""
     adata = AnnData(A_list)
-    mask = np.random.choice([True, False], adata.shape[1] + 1)
+    mask_var = np.random.choice([True, False], adata.shape[1] + 1)
     with pytest.raises(
         ValueError, match=r"The shape of the mask do not match the data\."
     ):
-        sc.pp.pca(adata, mask=mask, copy=True)
+        sc.pp.pca(adata, mask_var=mask_var, copy=True)
 
 
 def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string"""
 
     adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
-    mask = np.random.choice([True, False], adata_base.shape[1])
+    mask_var = np.random.choice([True, False], adata_base.shape[1])
 
     adata = adata_base.copy()
-    sc.pp.pca(adata, mask_var=mask, dtype=float_dtype)
+    sc.pp.pca(adata, mask_var=mask_var, dtype=float_dtype)
 
     adata_w_mask = adata_base.copy()
-    adata_w_mask.var["mask"] = mask
+    adata_w_mask.var["mask"] = mask_var
     sc.pp.pca(adata_w_mask, mask_var="mask", dtype=float_dtype)
 
     assert np.allclose(
@@ -343,19 +343,19 @@ def test_mask(array_type):
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
 
-    mask = np.random.choice([True, False], adata.shape[1])
+    mask_var = np.random.choice([True, False], adata.shape[1])
 
-    adata_masked = adata[:, mask].copy()
-    sc.pp.pca(adata, mask=mask)
+    adata_masked = adata[:, mask_var].copy()
+    sc.pp.pca(adata, mask_var=mask_var)
     sc.pp.pca(adata_masked)
 
-    masked_var_loadings = adata.varm["PCs"][~mask]
+    masked_var_loadings = adata.varm["PCs"][~mask_var]
     np.testing.assert_equal(masked_var_loadings, np.zeros_like(masked_var_loadings))
 
     np.testing.assert_equal(adata.obsm["X_pca"], adata_masked.obsm["X_pca"])
     # There are slight difference based on whether the matrix was column or row major
     np.testing.assert_allclose(
-        adata.varm["PCs"][mask], adata_masked.varm["PCs"], rtol=1e-11
+        adata.varm["PCs"][mask_var], adata_masked.varm["PCs"], rtol=1e-11
     )
 
 
@@ -377,7 +377,7 @@ def test_mask_defaults(array_type, float_dtype):
     assert without_var.uns["pca"]["params"]["mask"] is None
     assert with_var.uns["pca"]["params"]["mask"] == "highly_variable"
     assert not np.array_equal(without_var.obsm["X_pca"], with_var.obsm["X_pca"])
-    with_no_mask = sc.pp.pca(adata, mask=None, copy=True, dtype=float_dtype)
+    with_no_mask = sc.pp.pca(adata, mask_var=None, copy=True, dtype=float_dtype)
     assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
 
 
