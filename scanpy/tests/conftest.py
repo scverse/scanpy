@@ -11,6 +11,7 @@ import scanpy as _sc  # noqa: F401
 
 if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
     import os
+    from collections.abc import Generator
 
     from scanpy.testing._pytest.fixtures import *  # noqa: F403
 
@@ -18,25 +19,40 @@ if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
 IMPORTED = frozenset(sys.modules.keys())
 
 
-def clear_loggers():
-    """Remove handlers from all loggers
+@pytest.fixture(scope="session", autouse=True)
+def _manage_log_handlers() -> Generator[None, None, None]:
+    """Remove handlers from all loggers on session teardown.
 
-    Fixes: https://github.com/scverse/scanpy/issues/1736
-
-    Code from: https://github.com/pytest-dev/pytest/issues/5502#issuecomment-647157873
+    Fixes <https://github.com/scverse/scanpy/issues/1736>.
+    See also <https://github.com/pytest-dev/pytest/issues/5502>.
     """
     import logging
 
-    loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+    import scanpy as sc
+
+    yield
+
+    loggers = [
+        sc.settings._root_logger,
+        logging.getLogger(),
+        *logging.Logger.manager.loggerDict.values(),
+    ]
     for logger in loggers:
-        handlers = getattr(logger, "handlers", [])
-        for handler in handlers:
-            logger.removeHandler(handler)
+        if not isinstance(logger, logging.Logger):
+            continue  # loggerDict can contain `logging.Placeholder`s
+        for handler in logger.handlers[:]:
+            if isinstance(handler, logging.StreamHandler):
+                logger.removeHandler(handler)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def close_logs_on_teardown(request):
-    request.addfinalizer(clear_loggers)
+@pytest.fixture(autouse=True)
+def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None, None, None]:
+    """Allow use of scanpy’s logger with caplog"""
+    import scanpy as sc
+
+    sc.settings._root_logger.addHandler(caplog.handler)
+    yield
+    sc.settings._root_logger.removeHandler(caplog.handler)
 
 
 @pytest.fixture
