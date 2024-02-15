@@ -168,7 +168,15 @@ class MatrixPlot(BasePlot):
 
         if values_df is None:
             # compute mean value
-            values_df = self.obs_tidy.groupby(level=0, observed=True).mean()
+            values_df = (
+                self.obs_tidy.groupby(level=0, observed=True)
+                .mean()
+                .loc[
+                    self.categories_order
+                    if self.categories_order is not None
+                    else self.categories
+                ]
+            )
 
             if standard_scale == "group":
                 values_df = values_df.sub(values_df.min(1), axis=0)

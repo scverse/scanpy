@@ -20,6 +20,7 @@ from matplotlib.axes import Axes  # noqa: TCH002
 from matplotlib.colors import Colormap, Normalize
 from matplotlib.figure import Figure  # noqa: TCH002
 from numpy.typing import NDArray  # noqa: TCH002
+from packaging.version import Version
 
 from ... import logging as logg
 from ..._settings import settings
@@ -1247,8 +1248,10 @@ def _color_vector(
     }
     # If color_map does not have unique values, this can be slow as the
     # result is not categorical
-    color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
-
+    if Version(pd.__version__) < Version("2.1.0"):
+        color_vector = pd.Categorical(values.map(color_map))
+    else:
+        color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
     # Set color to 'missing color' for all missing values
     if color_vector.isna().any():
         color_vector = color_vector.add_categories([to_hex(na_color)])
