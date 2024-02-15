@@ -30,7 +30,14 @@ except ImportError:
         pass
 
 
-__all__ = ["cache", "DaskArray", "fullname", "pkg_metadata", "pkg_version"]
+__all__ = [
+    "cache",
+    "DaskArray",
+    "ZappyArray",
+    "fullname",
+    "pkg_metadata",
+    "pkg_version",
+]
 
 
 def fullname(typ: type) -> str:
