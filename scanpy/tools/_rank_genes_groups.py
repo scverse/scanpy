@@ -91,13 +91,13 @@ class _RankGenes:
         groups: list[str] | Literal["all"],
         groupby: str,
         *,
-        gene_mask: NDArray[np.bool_] | None = None,
+        mask_var: NDArray[np.bool_] | None = None,
         reference: Literal["rest"] | str = "rest",
         use_raw: bool = True,
         layer: str | None = None,
         comp_pts: bool = False,
     ) -> None:
-        self.gene_mask = gene_mask
+        self.mask_var = mask_var
         if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns["log1p"]["base"]))
         else:
@@ -132,9 +132,9 @@ class _RankGenes:
         if issparse(X):
             X.eliminate_zeros()
 
-        if self.gene_mask is not None:
-            self.X = X[:, self.gene_mask]
-            self.var_names = adata_comp.var_names[self.gene_mask]
+        if self.mask_var is not None:
+            self.X = X[:, self.mask_var]
+            self.var_names = adata_comp.var_names[self.mask_var]
 
         else:
             self.X = X
@@ -469,7 +469,7 @@ def rank_genes_groups(
     adata: AnnData,
     groupby: str,
     *,
-    mask: NDArray[np.bool_] | str | None = None,
+    mask_var: NDArray[np.bool_] | str | None = None,
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
@@ -495,7 +495,7 @@ def rank_genes_groups(
         Annotated data matrix.
     groupby
         The key of the observations grouping to consider.
-    mask
+    mask_var
         Select subset of genes to use in statistical tests.
     use_raw
         Use `raw` attribute of `adata` if present.
@@ -583,8 +583,8 @@ def rank_genes_groups(
     >>> sc.pl.rank_genes_groups(adata)
     """
 
-    if mask is not None:
-        mask = _check_mask(adata, mask, "var")
+    if mask_var is not None:
+        mask_var = _check_mask(adata, mask_var, "var")
 
     if use_raw is None:
         use_raw = adata.raw is not None
@@ -641,7 +641,7 @@ def rank_genes_groups(
         adata,
         groups_order,
         groupby,
-        gene_mask=mask,
+        mask_var=mask_var,
         reference=reference,
         use_raw=use_raw,
         layer=layer,

@@ -318,18 +318,18 @@ def test_mask_length_error():
         sc.pp.pca(adata, mask=mask, copy=True)
 
 
-def test_mask_argument_equivalence(float_dtype, array_type):
+def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string"""
 
     adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
     mask = np.random.choice([True, False], adata_base.shape[1])
 
     adata = adata_base.copy()
-    sc.pp.pca(adata, mask=mask, dtype=float_dtype)
+    sc.pp.pca(adata, mask_var=mask, dtype=float_dtype)
 
     adata_w_mask = adata_base.copy()
     adata_w_mask.var["mask"] = mask
-    sc.pp.pca(adata_w_mask, mask="mask", dtype=float_dtype)
+    sc.pp.pca(adata_w_mask, mask_var="mask", dtype=float_dtype)
 
     assert np.allclose(
         adata.X.toarray() if issparse(adata.X) else adata.X,

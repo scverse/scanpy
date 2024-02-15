@@ -15,8 +15,8 @@ use_raw
     If True, use `adata.raw.X` for expression values instead of `adata.X`.\
 """
 
-doc_mask_hvg = """\
-mask
+doc_mask_var_hvg = """\
+mask_var
     To run only on a certain set of genes given by a boolean array
     or a string referring to an array in :attr:`~anndata.AnnData.var`.
     By default, uses `.var['highly_variable']` if available, else everything.

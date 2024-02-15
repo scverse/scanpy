@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
@@ -16,12 +17,15 @@ from .._compat import DaskArray, pkg_version
 from .._settings import settings
 from .._utils import AnyRandom, Empty, _doc_params, _empty
 from ..get import _check_mask, _get_obs_rep
-from ._docs import doc_mask_hvg
+from ._docs import doc_mask_var_hvg
 from ._utils import _get_mean_var
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 @_doc_params(
-    mask_hvg=doc_mask_hvg,
+    mask_var_hvg=doc_mask_var_hvg,
 )
 def pca(
     data: AnnData | np.ndarray | spmatrix,
@@ -32,7 +36,7 @@ def pca(
     svd_solver: str | None = None,
     random_state: AnyRandom = 0,
     return_info: bool = False,
-    mask: np.ndarray | str | None | Empty = _empty,
+    mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
     dtype: str = "float32",
     copy: bool = False,
@@ -113,7 +117,7 @@ def pca(
     return_info
         Only relevant when not passing an :class:`~anndata.AnnData`:
         see “Returns”.
-    {mask_hvg}
+    {mask_var_hvg}
     layer
         Layer of `adata` to use as expression values.
     dtype
@@ -173,9 +177,9 @@ def pca(
             adata = AnnData(data)
 
     # Unify new mask argument and deprecated use_highly_varible argument
-    mask_param, mask = _handle_mask_param(adata, mask, use_highly_variable)
+    mask_var_param, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
     del use_highly_variable
-    adata_comp = adata[:, mask] if mask is not None else adata
+    adata_comp = adata[:, mask_var] if mask_var is not None else adata
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
@@ -295,17 +299,17 @@ def pca(
     if data_is_AnnData:
         adata.obsm["X_pca"] = X_pca
 
-        if mask is not None:
+        if mask_var is not None:
             adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm["PCs"][mask] = pca_.components_.T
+            adata.varm["PCs"][mask_var] = pca_.components_.T
         else:
             adata.varm["PCs"] = pca_.components_.T
 
         uns_entry = {
             "params": {
                 "zero_center": zero_center,
-                "use_highly_variable": mask_param == "highly_variable",
-                "mask": mask_param,
+                "use_highly_variable": mask_var_param == "highly_variable",
+                "mask_var": mask_var_param,
             },
             "variance": pca_.explained_variance_,
             "variance_ratio": pca_.explained_variance_ratio_,
@@ -336,9 +340,9 @@ def pca(
             return X_pca
 
 
-def _handle_mask_param(
+def _handle_mask_var(
     adata: AnnData,
-    mask: np.ndarray | str | Empty | None,
+    mask_var: NDArray[np.bool_] | str | Empty | None,
     use_highly_variable: bool | None,
 ) -> tuple[np.ndarray | str | None, np.ndarray | None]:
     """\
@@ -354,22 +358,22 @@ def _handle_mask_param(
         )
         msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
         warn(msg, FutureWarning)
-        if mask is not _empty:
+        if mask_var is not _empty:
             msg = f"These arguments are incompatible. {hint}"
             raise ValueError(msg)
 
     # Handle default case and explicit use_highly_variable=True
     if use_highly_variable or (
         use_highly_variable is None
-        and mask is _empty
+        and mask_var is _empty
         and "highly_variable" in adata.var.keys()
     ):
-        mask = "highly_variable"
+        mask_var = "highly_variable"
 
     # Without highly variable genes, we don’t use a mask by default
-    if mask is _empty or mask is None:
+    if mask_var is _empty or mask_var is None:
         return None, None
-    return mask, _check_mask(adata, mask, "var")
+    return mask_var, _check_mask(adata, mask_var, "var")
 
 
 def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):
