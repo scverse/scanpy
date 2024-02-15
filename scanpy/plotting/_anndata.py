@@ -840,6 +840,7 @@ def violin(
                     f"but is of dtype {adata.obs[groupby].dtype}."
                 )
             _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
+            kwds["hue"] = groupby
             kwds["palette"] = dict(
                 zip(obs_df[groupby].cat.categories, adata.uns[f"{groupby}_colors"])
             )
@@ -911,7 +912,7 @@ def violin(
                 data=obs_tidy,
                 order=order,
                 orient="vertical",
-                scale=scale,
+                density_norm=scale,
                 ax=ax,
                 **kwds,
             )

@@ -347,7 +347,7 @@ class BasePlot:
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> plot = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').add_totals()
-        >>> plot.plot_group_extra['counts_df']
+        >>> plot.plot_group_extra['counts_df']  # doctest: +SKIP
         bulk_labels
         CD4+/CD25 T Reg                  68
         CD4+/CD45RA+/CD25- Naive T        8

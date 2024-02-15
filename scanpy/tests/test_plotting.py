@@ -3,22 +3,17 @@ from __future__ import annotations
 from functools import partial
 from itertools import chain, combinations, repeat
 from pathlib import Path
-
-import pytest
-from matplotlib.testing import setup
-from packaging import version
-
-setup()
-
 from typing import TYPE_CHECKING
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pytest
 import seaborn as sns
 from anndata import AnnData
 from matplotlib.testing.compare import compare_images
+from packaging import version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
@@ -35,9 +30,6 @@ if TYPE_CHECKING:
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
-
-sc.pl.set_rcParams_defaults()
-sc.set_figure_params(dpi=40, color_map="viridis")
 
 
 # Test images are saved in the directory ./_images/<test-name>/
@@ -1624,7 +1616,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs.scrublet
+@needs.skmisc
 @pytest.mark.parametrize(
     ("id", "params"),
     [
@@ -1644,11 +1636,11 @@ def test_scrublet_plots(monkeypatch, image_comparer, id, params):
     with monkeypatch.context() as m:
         if id == "scrublet_no_threshold":
             m.setattr("skimage.filters.threshold_minimum", None)
-        sc.external.pp.scrublet(adata, use_approx_neighbors=False, **params)
+        sc.pp.scrublet(adata, use_approx_neighbors=False, **params)
     if id == "scrublet_no_threshold":
         assert "threshold" not in adata.uns["scrublet"]
 
-    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
+    sc.pl.scrublet_score_distribution(adata, return_fig=True, show=False)
     save_and_compare_images(id)
 
 
@@ -1693,3 +1685,10 @@ def test_string_mask(tmp_path, check_same_image):
     plt.close()
 
     check_same_image(p1, p2, tol=1)
+
+
+def test_violin_scale_warning(monkeypatch):
+    adata = pbmc3k_processed()
+    monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
+    with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
+        sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")

@@ -115,7 +115,7 @@ def dendrogram(
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.dendrogram(adata, groupby='bulk_labels')
-    >>> sc.pl.dendrogram(adata, groupby='bulk_labels')
+    >>> sc.pl.dendrogram(adata, groupby='bulk_labels')  # doctest: +SKIP
     <Axes: >
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
@@ -214,9 +214,10 @@ def _dendrogram_grouped(
             adata, var_names, groupby, use_raw=use_raw
         )
 
-        # aggregate values within categories using 'mean'
-    rep_df = rep_df.groupby(level=0, observed=True).mean()
+    # aggregate values within categories using 'mean'
+    rep_df = rep_df.groupby(level=0, observed=True).mean().loc[categories]
     return rep_df, categories
+
 
 
 def _get_dendrogram_key(

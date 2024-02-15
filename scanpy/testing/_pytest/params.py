@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import pytest
-from anndata.tests.helpers import as_dense_dask_array, as_sparse_dask_array, asarray
+from anndata.tests.helpers import asarray
 from scipy import sparse
 
+from .._helpers import as_dense_dask_array, as_sparse_dask_array
 from .._pytest.marks import needs
 
 if TYPE_CHECKING:
@@ -35,10 +36,18 @@ MAP_ARRAY_TYPES: dict[
         pytest.param(sparse.csc_matrix, id="scipy_csc"),
     ),
     ("dask", "dense"): (
-        pytest.param(as_dense_dask_array, marks=[needs.dask], id="dask_array_dense"),
+        pytest.param(
+            as_dense_dask_array,
+            marks=[needs.dask, pytest.mark.anndata_dask_support],
+            id="dask_array_dense",
+        ),
     ),
     ("dask", "sparse"): (
-        pytest.param(as_sparse_dask_array, marks=[needs.dask], id="dask_array_sparse"),
+        pytest.param(
+            as_sparse_dask_array,
+            marks=[needs.dask, pytest.mark.anndata_dask_support],
+            id="dask_array_sparse",
+        ),
         # probably not necessary to also do csc
     ),
 }

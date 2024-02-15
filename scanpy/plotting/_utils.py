@@ -380,8 +380,8 @@ def _validate_palette(adata: AnnData, key: str) -> None:
                 _palette = None
                 break
         _palette.append(color)
-    # Don't modify if nothing changed
-    if _palette is None or np.equal(_palette, adata.uns[color_key]).all():
+    # Don’t modify if nothing changed
+    if _palette is None or np.array_equal(_palette, adata.uns[color_key]):
         return
     adata.uns[color_key] = _palette
 
@@ -1258,3 +1258,17 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
             norm = Normalize(vmin=vmin, vmax=vmax)
 
     return norm
+
+
+DN = Literal["area", "count", "width"]
+
+
+def _deprecated_scale(density_norm: DN, scale: DN | None, *, default: DN) -> DN:
+    if scale is None:
+        return density_norm
+    if density_norm != default:
+        msg = "can’t specify both `scale` and `density_norm`"
+        raise ValueError(msg)
+    msg = "`scale` is deprecated, use `density_norm` instead"
+    warnings.warn(msg, FutureWarning)
+    return scale
