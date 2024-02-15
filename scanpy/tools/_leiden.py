@@ -120,7 +120,7 @@ def leiden(
         try:
             import leidenalg
 
-            msg = 'Use of leidenalg is discouraged and will be deprecated in the future.  Please use `flavor="igraph"` with `directed=False` and `n_iterations=2` to achieve similar results.'
+            msg = 'Use of leidenalg is discouraged and will be deprecated in the future.  Please use `flavor="igraph"` `n_iterations=2` to achieve similar results.  `directed` must also be `False` to work with `igraph`\'s implementation.'
             warnings.warn(msg, FutureWarning)
         except ImportError:
             raise ImportError(
