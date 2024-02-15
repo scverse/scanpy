@@ -192,24 +192,27 @@ class _RankGenes:
         else:
             get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
 
-        for imask, mask in enumerate(self.groups_masks_obs):
-            X_mask = self.X[mask]
+        for group_index, mask_obs in enumerate(self.groups_masks_obs):
+            X_mask = self.X[mask_obs]
 
             if self.comp_pts:
-                self.pts[imask] = get_nonzeros(X_mask) / X_mask.shape[0]
+                self.pts[group_index] = get_nonzeros(X_mask) / X_mask.shape[0]
 
-            if self.ireference is not None and imask == self.ireference:
+            if self.ireference is not None and group_index == self.ireference:
                 continue
 
-            self.means[imask], self.vars[imask] = _get_mean_var(X_mask)
+            self.means[group_index], self.vars[group_index] = _get_mean_var(X_mask)
 
             if self.ireference is None:
-                mask_rest = ~mask
+                mask_rest = ~mask_obs
                 X_rest = self.X[mask_rest]
-                self.means_rest[imask], self.vars_rest[imask] = _get_mean_var(X_rest)
+                (
+                    self.means_rest[group_index],
+                    self.vars_rest[group_index],
+                ) = _get_mean_var(X_rest)
                 # this can be costly for sparse data
                 if self.comp_pts:
-                    self.pts_rest[imask] = get_nonzeros(X_rest) / X_rest.shape[0]
+                    self.pts_rest[group_index] = get_nonzeros(X_rest) / X_rest.shape[0]
                 # deleting the next line causes a memory leak for some reason
                 del X_rest
 
@@ -220,13 +223,13 @@ class _RankGenes:
 
         self._basic_stats()
 
-        for group_index, (mask, mean_group, var_group) in enumerate(
+        for group_index, (mask_obs, mean_group, var_group) in enumerate(
             zip(self.groups_masks_obs, self.means, self.vars)
         ):
             if self.ireference is not None and group_index == self.ireference:
                 continue
 
-            ns_group = np.count_nonzero(mask)
+            ns_group = np.count_nonzero(mask_obs)
 
             if self.ireference is not None:
                 mean_rest = self.means[self.ireference]
@@ -327,10 +330,12 @@ class _RankGenes:
 
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
-                for imask, mask_obs in enumerate(self.groups_masks_obs):
-                    scores[imask, left:right] = ranks.iloc[mask_obs, :].sum(axis=0)
+                for group_index, mask_obs in enumerate(self.groups_masks_obs):
+                    scores[group_index, left:right] = ranks.iloc[mask_obs, :].sum(
+                        axis=0
+                    )
                     if tie_correct:
-                        T[imask, left:right] = _tiecorrect(ranks)
+                        T[group_index, left:right] = _tiecorrect(ranks)
 
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 n_active = np.count_nonzero(mask_obs)

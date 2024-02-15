@@ -1108,7 +1108,7 @@ def pbmc_scatterplots(_pbmc_scatterplots_session):
             partial(
                 sc.pl.pca,
                 color=["LYZ", "CD79A", "louvain"],
-                mask_var="mask",
+                mask_obs="mask",
             ),
         ),
     ],

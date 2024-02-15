@@ -374,8 +374,8 @@ def test_mask_defaults(array_type, float_dtype):
     mask[1] = True
     adata.var["highly_variable"] = mask
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
-    assert without_var.uns["pca"]["params"]["mask"] is None
-    assert with_var.uns["pca"]["params"]["mask"] == "highly_variable"
+    assert without_var.uns["pca"]["params"]["mask_var"] is None
+    assert with_var.uns["pca"]["params"]["mask_var"] == "highly_variable"
     assert not np.array_equal(without_var.obsm["X_pca"], with_var.obsm["X_pca"])
     with_no_mask = sc.pp.pca(adata, mask_var=None, copy=True, dtype=float_dtype)
     assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
