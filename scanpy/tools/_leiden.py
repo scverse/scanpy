@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -34,14 +35,14 @@ def leiden(
     random_state: _utils.AnyRandom = 0,
     key_added: str = "leiden",
     adjacency: sparse.spmatrix | None = None,
-    directed: bool = False,
+    directed: bool = True,
     use_weights: bool = True,
-    n_iterations: int = 2,
+    n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "ipgraph"] = "igraph",
+    flavor: Literal["leidenalg", "ipgraph"] = "leidenalg",
     **clustering_args,
 ) -> AnnData | None:
     """\
@@ -118,6 +119,9 @@ def leiden(
     if flavor == "leidenalg":
         try:
             import leidenalg
+
+            msg = 'Use of leidenalg is discouraged and will be deprecated in the future.  Please use `flavor="igraph"` with `directed=False` and `n_iterations=2` to achieve similar results.'
+            warnings.warn(msg, FutureWarning)
         except ImportError:
             raise ImportError(
                 "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."

@@ -104,7 +104,14 @@ def test_pbmc3k(image_comparer):
 
     # Clustering the graph
 
-    sc.tl.leiden(adata, resolution=0.9, random_state=0)
+    sc.tl.leiden(
+        adata,
+        resolution=0.9,
+        random_state=0,
+        directed=False,
+        n_iterations=2,
+        flavor="igraph",
+    )
 
     # sc.pl.umap(adata, color=["leiden", "CST3", "NKG7"], show=False)
     # save_and_compare_images("umap_2")
