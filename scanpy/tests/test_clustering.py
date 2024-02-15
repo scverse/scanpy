@@ -40,15 +40,31 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
 @needs.igraph
 @pytest.mark.parametrize("flavor", FLAVORS)
 def test_leiden_random_state(adata_neighbors, flavor):
-    directed = flavor == "leidenalg"
+    is_leiden_alg = flavor == "leidenalg"
+    n_iterations = 2 if is_leiden_alg else -1
     adata_1 = sc.tl.leiden(
-        adata_neighbors, flavor=flavor, random_state=1, copy=True, directed=directed
+        adata_neighbors,
+        flavor=flavor,
+        random_state=1,
+        copy=True,
+        directed=is_leiden_alg,
+        n_iterations=n_iterations,
     )
     adata_1_again = sc.tl.leiden(
-        adata_neighbors, flavor=flavor, random_state=1, copy=True, directed=directed
+        adata_neighbors,
+        flavor=flavor,
+        random_state=1,
+        copy=True,
+        directed=is_leiden_alg,
+        n_iterations=n_iterations,
     )
     adata_2 = sc.tl.leiden(
-        adata_neighbors, flavor=flavor, random_state=50, copy=True, directed=directed
+        adata_neighbors,
+        flavor=flavor,
+        random_state=50,
+        copy=True,
+        directed=is_leiden_alg,
+        n_iterations=n_iterations,
     )
     assert (adata_1.obs["leiden"] == adata_1_again.obs["leiden"]).all()
     assert (adata_2.obs["leiden"] != adata_1_again.obs["leiden"]).any()
@@ -86,7 +102,7 @@ def test_leiden_equal_defaults(adata_neighbors):
         adata_neighbors, flavor="leidenalg", directed=True, copy=True
     )
     igraph_clustered = sc.tl.leiden(
-        adata_neighbors, copy=True, n_iterations=2, directred=False
+        adata_neighbors, copy=True, n_iterations=2, directed=False
     )
     assert (
         normalized_mutual_info_score(
@@ -99,7 +115,7 @@ def test_leiden_equal_defaults(adata_neighbors):
 @needs.igraph
 def test_leiden_objective_function(adata_neighbors):
     """Ensure that popping this as a `clustering_kwargs` and using it does not error out."""
-    sc.tl.leiden(adata_neighbors, objective_function="modularity")
+    sc.tl.leiden(adata_neighbors, objective_function="modularity", flavor="igraph")
 
 
 @needs.igraph
