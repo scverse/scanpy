@@ -27,6 +27,7 @@ jobs:
       minimum_versions:
         python.version: '3.9'
         DEPENDENCIES_VERSION: "minimum-version"
+        TEST_TYPE: "coverage"
 
 
   steps:
