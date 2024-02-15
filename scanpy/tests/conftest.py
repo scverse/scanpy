@@ -55,15 +55,6 @@ def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None, None, N
     sc.settings._root_logger.removeHandler(caplog.handler)
 
 
-@pytest.fixture(autouse=True)
-def _caplog_adapter(caplog: pytest.LogCaptureFixture):
-    import scanpy as sc
-
-    sc.settings._root_logger.addHandler(caplog.handler)
-    yield
-    sc.settings._root_logger.removeHandler(caplog.handler)
-
-
 @pytest.fixture
 def imported_modules():
     return IMPORTED
