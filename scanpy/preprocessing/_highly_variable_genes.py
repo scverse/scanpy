@@ -256,7 +256,11 @@ def _highly_variable_genes_single_batch(
 
         df["mean_bin"] = pd.cut(
             df["means"],
-            np.r_[-np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf],
+            np.r_[
+                -np.inf,
+                np.percentile(df["means"], [k * 100 / n_bins for k in range(1, n_bins)]),
+                np.inf,
+            ],
         )
         disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_median_bin = disp_grouped.median()
