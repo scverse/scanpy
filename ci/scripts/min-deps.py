@@ -55,7 +55,7 @@ def extract_min_deps(
     while len(dependencies) > 0:
         req = dependencies.pop()
 
-        # If we are reffering to other optional dependency lists, resolve them
+        # If we are referring to other optional dependency lists, resolve them
         if req.name == project_name:
             assert req.extras, f"Project included itself as dependency, without specifying extras: {req}"
             for extra in req.extras:
