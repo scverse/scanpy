@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, Union, cast
 
 import pytest
 
@@ -75,16 +75,19 @@ def check_same_image(add_nunit_attachment):
 
     from matplotlib.testing.compare import compare_images
 
-    def _(pth1: Path | os.PathLike, pth2: Path | os.PathLike, *, tol: int, basename: str = ""):
+    def check_same_image(
+        expected: Path | os.PathLike,
+        actual: Path | os.PathLike,
+        *,
+        tol: int,
+        basename: str = "",
+    ) -> None:
         def fmt_descr(descr):
-            if basename != "":
-                return f"{descr} ({basename})"
-            else:
-                return descr
+            return f"{descr} ({basename})" if basename else descr
 
         result = cast(
-            CompareResult | None,
-            compare_images(str(pth1), str(pth2), tol=tol, in_decorator=True),
+            Union[CompareResult, None],
+            compare_images(str(expected), str(actual), tol=tol, in_decorator=True),
         )
         if result is None:
             return
@@ -109,7 +112,7 @@ def check_same_image(add_nunit_attachment):
         ).format_map(result_urls)
         raise AssertionError(msg)
 
-    return _
+    return check_same_image
 
 
 @pytest.fixture
