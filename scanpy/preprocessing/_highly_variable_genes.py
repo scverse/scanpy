@@ -252,6 +252,11 @@ def _highly_variable_genes_single_batch(
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
     X = _get_obs_rep(adata, layer=layer)
+
+    if hasattr(X, "_view_args"):  # AnnData array view
+        # For compatibility with anndata<0.9
+        X = X.copy()  # Doesn't actually copy memory, just removes View class wrapper
+
     if flavor == "seurat":
         X = X.copy()
         if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
