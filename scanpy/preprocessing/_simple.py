@@ -784,7 +784,9 @@ def scale(
     obsm
         If provided, which element of obsm to scale.
     mask_obs
-        TODO
+        Restrict both the derivation of scaling parameters and the scaling itself
+        to a certain set of observations. The mask is specified as a boolean array
+        or a string referring to an array in :attr:`~anndata.AnnData.obs`.
 
     Returns
     -------
