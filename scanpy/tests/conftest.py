@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from textwrap import dedent
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import pytest
 
@@ -60,9 +61,19 @@ def imported_modules():
     return IMPORTED
 
 
+class CompareResult(TypedDict):
+    rms: float
+    expected: str
+    actual: str
+    diff: str
+    tol: float
+
+
 @pytest.fixture
 def check_same_image(add_nunit_attachment):
-    from matplotlib.testing.compare import compare_images, make_test_filename
+    from urllib.parse import quote
+
+    from matplotlib.testing.compare import compare_images
 
     def _(pth1, pth2, *, tol: int, basename: str = ""):
         def fmt_descr(descr):
@@ -72,16 +83,33 @@ def check_same_image(add_nunit_attachment):
                 return descr
 
         pth1, pth2 = Path(pth1), Path(pth2)
-        try:
-            result = compare_images(str(pth1), str(pth2), tol=tol)
-            assert result is None, result
-        except Exception as e:
-            diff_pth = make_test_filename(pth2, "failed-diff")
-            add_nunit_attachment(str(pth1), fmt_descr("Expected"))
-            add_nunit_attachment(str(pth2), fmt_descr("Result"))
-            if Path(diff_pth).is_file():
-                add_nunit_attachment(str(diff_pth), fmt_descr("Difference"))
-            raise e
+        result = cast(
+            CompareResult | None,
+            compare_images(str(pth1), str(pth2), tol=tol, in_decorator=True),
+        )
+        if result is None:
+            return
+
+        add_nunit_attachment(str(pth1), fmt_descr("Expected"))
+        add_nunit_attachment(str(pth2), fmt_descr("Result"))
+        if (diff_pth := Path(result["diff"])).is_file():
+            add_nunit_attachment(str(diff_pth), fmt_descr("Difference"))
+
+        result_urls = {
+            k: f"file://{quote(v)}" if isinstance(v, str) else v
+            for k, v in result.items()
+        }
+        msg = dedent(
+            """\
+            Image files did not match.
+            RMS Value:  {rms}
+            Expected:   {expected}
+            Actual:     {actual}
+            Difference: {diff}
+            Tolerance:  {tol}
+            """
+        ).format_map(result_urls)
+        raise AssertionError(msg)
 
     return _
 
