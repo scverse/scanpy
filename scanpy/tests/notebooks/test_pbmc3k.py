@@ -163,19 +163,12 @@ def test_pbmc3k(image_comparer):
     # sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=8)
     # save_and_compare_images('rank_genes_groups_4')
 
-    if adata[adata.obs["leiden"] == "4", "CST3"].X.mean() < 1:
-        new_labels = ["0", "1", "2", "4", "3", "5", "6", "7"]
-        adata.rename_categories("leiden", new_labels)
-        adata.obs["leiden"] = adata.obs["leiden"].cat.reorder_categories(
-            list(map(str, range(len(adata.obs["leiden"].cat.categories)))), ordered=True
-        )
-
     new_cluster_names = [
         "CD4 T cells",
         "CD8 T cells",
         "B cells",
-        "FCGR3A+ Monocytes",
         "NK cells",
+        "FCGR3A+ Monocytes",
         "CD14+ Monocytes",
         "Dendritic cells",
         "Megakaryocytes",
