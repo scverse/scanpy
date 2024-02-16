@@ -26,8 +26,8 @@ from ...experimental._docs import (
     doc_pca_chunk,
 )
 from ...get import _get_obs_rep, _set_obs_rep
-from ...preprocessing._docs import doc_mask_hvg
-from ...preprocessing._pca import _handle_mask_param, pca
+from ...preprocessing._docs import doc_mask_var_hvg
+from ...preprocessing._pca import _handle_mask_var, pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -157,7 +157,7 @@ def normalize_pearson_residuals(
     adata=doc_adata,
     dist_params=doc_dist_params,
     pca_chunk=doc_pca_chunk,
-    mask_hvg=doc_mask_hvg,
+    mask_var_hvg=doc_mask_var_hvg,
     check_values=doc_check_values,
     inplace=doc_inplace,
 )
@@ -169,7 +169,7 @@ def normalize_pearson_residuals_pca(
     n_comps: int | None = 50,
     random_state: float = 0,
     kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
-    mask: np.ndarray | str | None | Empty = _empty,
+    mask_var: np.ndarray | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
     check_values: bool = True,
     inplace: bool = True,
@@ -189,7 +189,7 @@ def normalize_pearson_residuals_pca(
     {adata}
     {dist_params}
     {pca_chunk}
-    {mask_hvg}
+    {mask_var_hvg}
     {check_values}
     {inplace}
 
@@ -219,11 +219,11 @@ def normalize_pearson_residuals_pca(
     """
 
     # Unify new mask argument and deprecated use_highly_varible argument
-    _, mask = _handle_mask_param(adata, mask, use_highly_variable)
+    _, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
     del use_highly_variable
 
-    if mask is not None:
-        adata_sub = adata[:, mask].copy()
+    if mask_var is not None:
+        adata_sub = adata[:, mask_var].copy()
         adata_pca = AnnData(
             adata_sub.X.copy(), obs=adata_sub.obs[[]], var=adata_sub.var[[]]
         )
@@ -239,9 +239,9 @@ def normalize_pearson_residuals_pca(
     if inplace:
         norm_settings = adata_pca.uns["pearson_residuals_normalization"]
         norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
-        if mask is not None:
+        if mask_var is not None:
             adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm["PCs"][mask] = adata_pca.varm["PCs"]
+            adata.varm["PCs"][mask_var] = adata_pca.varm["PCs"]
         else:
             adata.varm["PCs"] = adata_pca.varm["PCs"]
         adata.uns["pca"] = adata_pca.uns["pca"]

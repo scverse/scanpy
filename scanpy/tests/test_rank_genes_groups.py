@@ -318,13 +318,13 @@ def test_mask_n_genes(n_genes_add, n_genes_out_add):
     """
 
     pbmc = pbmc68k_reduced()
-    mask = np.zeros(pbmc.shape[1]).astype(bool)
-    mask[:6].fill(True)
-    no_genes = sum(mask) - 1
+    mask_var = np.zeros(pbmc.shape[1]).astype(bool)
+    mask_var[:6].fill(True)
+    no_genes = sum(mask_var) - 1
 
     rank_genes_groups(
         pbmc,
-        mask=mask,
+        mask_var=mask_var,
         groupby="bulk_labels",
         groups=["CD14+ Monocyte", "Dendritic"],
         reference="CD14+ Monocyte",
@@ -342,8 +342,8 @@ def test_mask_not_equal():
     """
 
     pbmc = pbmc68k_reduced()
-    mask = np.random.choice([True, False], pbmc.shape[1])
-    n_genes = sum(mask)
+    mask_var = np.random.choice([True, False], pbmc.shape[1])
+    n_genes = sum(mask_var)
 
     run = partial(
         rank_genes_groups,
@@ -357,7 +357,7 @@ def test_mask_not_equal():
     run(n_genes=n_genes)
     no_mask = pbmc.uns["rank_genes_groups"]["names"]
 
-    run(mask=mask)
+    run(mask_var=mask_var)
     with_mask = pbmc.uns["rank_genes_groups"]["names"]
 
     assert not np.array_equal(no_mask, with_mask)
