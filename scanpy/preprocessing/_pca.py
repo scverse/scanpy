@@ -196,7 +196,7 @@ def pca(
     # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
     if (
         version.parse(ad.__version__) < version.parse("0.9")
-        and mask is not None
+        and mask_var is not None
         and isinstance(X, np.ndarray)
     ):
         warnings.warn(

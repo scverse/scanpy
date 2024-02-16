@@ -344,7 +344,6 @@ def test_mask(array_type, request):
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
 
-    mask_var = np.random.choice([True, False], adata.shape[1])
     if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
         request.node.add_marker(
             pytest.mark.xfail(
@@ -352,6 +351,7 @@ def test_mask(array_type, request):
                 " case here, which suprisingly considerably changes the results of PCA. "
             )
         )
+    mask_var = np.random.choice([True, False], adata.shape[1])
 
     adata_masked = adata[:, mask_var].copy()
     sc.pp.pca(adata, mask_var=mask_var)
