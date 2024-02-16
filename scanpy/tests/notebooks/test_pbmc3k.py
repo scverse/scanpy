@@ -166,6 +166,9 @@ def test_pbmc3k(image_comparer):
     if adata[adata.obs["leiden"] == "4", "CST3"].X.mean() < 1:
         new_labels = ["0", "1", "2", "4", "3", "5", "6", "7"]
         adata.rename_categories("leiden", new_labels)
+        adata.obs["leiden"] = adata.obs["leiden"].cat.reorder_categories(
+            list(map(str, range(len(adata.obs["leiden"].cat.categories)))), ordered=True
+        )
 
     new_cluster_names = [
         "CD4 T cells",
