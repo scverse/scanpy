@@ -3,7 +3,7 @@ trigger:
 - "*.*.x"
 
 variables:
-  python.version: '3.11'
+  python.version: '3.12'
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
   PYTEST_ADDOPTS: '-v --color=yes --durations=0 --nunit-xml=test-data/test-results.xml'
   TEST_EXTRA: 'test-full'
@@ -18,7 +18,7 @@ jobs:
     matrix:
       Python3.9:
         python.version: '3.9'
-      Python3.11: {}
+      Python3.12: {}
       minimal_dependencies:
         TEST_EXTRA: 'test-min'
       anndata_dev:
@@ -111,8 +111,8 @@ jobs:
 
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.11'
-    displayName: 'Use Python 3.11'
+      versionSpec: '3.12'
+    displayName: 'Use Python 3.12'
 
   - script: |
       python -m pip install --upgrade pip
