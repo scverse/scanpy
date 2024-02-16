@@ -66,7 +66,7 @@ class CompareResult(TypedDict):
     expected: str
     actual: str
     diff: str
-    tol: float
+    tol: int
 
 
 @pytest.fixture
@@ -75,14 +75,13 @@ def check_same_image(add_nunit_attachment):
 
     from matplotlib.testing.compare import compare_images
 
-    def _(pth1, pth2, *, tol: int, basename: str = ""):
+    def _(pth1: Path | os.PathLike, pth2: Path | os.PathLike, *, tol: int, basename: str = ""):
         def fmt_descr(descr):
             if basename != "":
                 return f"{descr} ({basename})"
             else:
                 return descr
 
-        pth1, pth2 = Path(pth1), Path(pth2)
         result = cast(
             CompareResult | None,
             compare_images(str(pth1), str(pth2), tol=tol, in_decorator=True),
@@ -90,10 +89,9 @@ def check_same_image(add_nunit_attachment):
         if result is None:
             return
 
-        add_nunit_attachment(str(pth1), fmt_descr("Expected"))
-        add_nunit_attachment(str(pth2), fmt_descr("Result"))
-        if (diff_pth := Path(result["diff"])).is_file():
-            add_nunit_attachment(str(diff_pth), fmt_descr("Difference"))
+        add_nunit_attachment(result["expected"], fmt_descr("Expected"))
+        add_nunit_attachment(result["actual"], fmt_descr("Result"))
+        add_nunit_attachment(result["diff"], fmt_descr("Difference"))
 
         result_urls = {
             k: f"file://{quote(v)}" if isinstance(v, str) else v
