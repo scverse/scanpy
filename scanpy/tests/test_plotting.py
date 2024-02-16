@@ -1108,7 +1108,7 @@ def pbmc_scatterplots(_pbmc_scatterplots_session):
             partial(
                 sc.pl.pca,
                 color=["LYZ", "CD79A", "louvain"],
-                mask="mask",
+                mask_obs="mask",
             ),
         ),
     ],
@@ -1647,14 +1647,14 @@ def test_scrublet_plots(monkeypatch, image_comparer, id, params):
 def test_umap_mask_equal(tmp_path, check_same_image):
     """Check that all desired cells are coloured and masked cells gray"""
     pbmc = pbmc3k_processed()
-    mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+    mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
     ax = sc.pl.umap(pbmc, size=8.0, show=False)
-    sc.pl.umap(pbmc[mask], size=8.0, color="LDHB", ax=ax)
+    sc.pl.umap(pbmc[mask_obs], size=8.0, color="LDHB", ax=ax)
     plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
     plt.close()
 
-    sc.pl.umap(pbmc, size=8.0, color="LDHB", mask=mask)
+    sc.pl.umap(pbmc, size=8.0, color="LDHB", mask_obs=mask_obs)
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
@@ -1665,8 +1665,8 @@ def test_umap_mask_mult_plots():
     """Check that multiple images are plotted when color is a list."""
     pbmc = pbmc3k_processed()
     color = ["LDHB", "LYZ", "CD79A"]
-    mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
-    axes = sc.pl.umap(pbmc, color=color, mask=mask, show=False)
+    mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+    axes = sc.pl.umap(pbmc, color=color, mask_obs=mask_obs, show=False)
     assert isinstance(axes, list)
     assert len(axes) == len(color)
 
@@ -1674,13 +1674,13 @@ def test_umap_mask_mult_plots():
 def test_string_mask(tmp_path, check_same_image):
     """Check that the same mask given as string or bool array provides the same result"""
     pbmc = pbmc3k_processed()
-    pbmc.obs["mask"] = mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+    pbmc.obs["mask"] = mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
-    sc.pl.umap(pbmc, mask=mask, color="LDHB")
+    sc.pl.umap(pbmc, mask_obs=mask_obs, color="LDHB")
     plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
     plt.close()
 
-    sc.pl.umap(pbmc, color="LDHB", mask="mask")
+    sc.pl.umap(pbmc, color="LDHB", mask_obs="mask")
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 

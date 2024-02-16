@@ -482,7 +482,7 @@ def _set_obs_rep(
 
 def _check_mask(
     data: AnnData | np.ndarray,
-    mask: str | NDArray[np.bool_],
+    mask: NDArray[np.bool_] | str,
     dim: Literal["obs", "var"],
 ) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
     """
