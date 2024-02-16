@@ -492,10 +492,10 @@ def moving_average(a: np.ndarray, n: int):
     return ret[n - 1 :] / n
 
 
-def get_random_state(seed: AnyRandom) -> random.RandomState:
+def get_random_state(seed: AnyRandom) -> np.random.RandomState:
     if isinstance(seed, np.random.RandomState):
         return seed
-    return random.RandomState(seed)
+    return np.random.RandomState(seed)
 
 
 # --------------------------------------------------------------------------------
