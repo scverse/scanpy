@@ -6,10 +6,9 @@ variables:
   python.version: '3.11'
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
   PYTEST_ADDOPTS: '-v --color=yes --durations=0 --nunit-xml=test-data/test-results.xml'
-  ANNDATA_DEV: no
-  RUN_COVERAGE: no
   TEST_EXTRA: 'test-full'
-  PRERELEASE_DEPENDENCIES: no
+  DEPENDENCIES_VERSION: "latest"  # |"pre-release" | "minimum-version"
+  TEST_TYPE: "standard" # | "coverage"
 
 jobs:
 - job: PyTest
@@ -20,12 +19,16 @@ jobs:
       Python3.9:
         python.version: '3.9'
       Python3.11: {}
-      minimal_tests:
+      minimal_dependencies:
         TEST_EXTRA: 'test-min'
       anndata_dev:
-        ANNDATA_DEV: yes
-        RUN_COVERAGE: yes
-        PRERELEASE_DEPENDENCIES: yes
+        DEPENDENCIES_VERSION: "pre-release"
+        TEST_TYPE: "coverage"
+      minimum_versions:
+        python.version: '3.9'
+        DEPENDENCIES_VERSION: "minimum-version"
+        TEST_TYPE: "coverage"
+
 
   steps:
   - task: UsePythonVersion@0
@@ -52,19 +55,22 @@ jobs:
       pip install wheel coverage
       pip install .[dev,$(TEST_EXTRA)]
     displayName: 'Install dependencies'
-    condition: eq(variables['PRERELEASE_DEPENDENCIES'], 'no')
+    condition: eq(variables['DEPENDENCIES_VERSION'], 'latest')
 
   - script: |
       python -m pip install --pre --upgrade pip
       pip install --pre wheel coverage
       pip install --pre .[dev,$(TEST_EXTRA)]
+      pip install -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
     displayName: 'Install dependencies release candidates'
-    condition: eq(variables['PRERELEASE_DEPENDENCIES'], 'yes')
+    condition: eq(variables['DEPENDENCIES_VERSION'], 'pre-release')
 
   - script: |
-      pip install -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
-    displayName: 'Install development anndata'
-    condition: eq(variables['ANNDATA_DEV'], 'yes')
+      python -m pip install pip wheel tomli packaging pytest-cov
+      pip install `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
+      pip install --no-deps .
+    displayName: 'Install dependencies minimum version'
+    condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
   - script: |
       pip list
@@ -72,31 +78,31 @@ jobs:
 
   - script: pytest
     displayName: 'PyTest'
-    condition: eq(variables['RUN_COVERAGE'], 'no')
+    condition: eq(variables['TEST_TYPE'], 'standard')
 
   - script: |
       coverage run -m pytest
       coverage xml
     displayName: 'PyTest (coverage)'
-    condition: eq(variables['RUN_COVERAGE'], 'yes')
+    condition: eq(variables['TEST_TYPE'], 'coverage')
 
   - task: PublishCodeCoverageResults@1
     inputs:
       codeCoverageTool: Cobertura
       summaryFileLocation: 'test-data/coverage.xml'
       failIfCoverageEmpty: true
-    condition: eq(variables['RUN_COVERAGE'], 'yes')
+    condition: eq(variables['TEST_TYPE'], 'coverage')
 
   - task: PublishTestResults@2
     condition: succeededOrFailed()
     inputs:
       testResultsFiles: 'test-data/test-results.xml'
       testResultsFormat: NUnit
-      testRunTitle: 'Publish test results for Python $(python.version)'
+      testRunTitle: 'Publish test results for $(Agent.JobName)'
 
   - script: bash <(curl -s https://codecov.io/bash)
     displayName: 'Upload to codecov.io'
-    condition: eq(variables['RUN_COVERAGE'], 'yes')
+    condition: eq(variables['TEST_TYPE'], 'coverage')
 
 - job: CheckBuild
   pool:

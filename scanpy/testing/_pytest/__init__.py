@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import sys
+import warnings
 from typing import TYPE_CHECKING
 
 import pytest
@@ -71,10 +72,12 @@ def _fix_dask_df_warning():
         import dask  # noqa: F401
     except ImportError:
         return
-    with pytest.warns(
-        DeprecationWarning,
-        match=r"The current Dask DataFrame implementation is deprecated",
-    ):
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            category=DeprecationWarning,
+            message=r"The current Dask DataFrame implementation is deprecated",
+        )
         import dask.dataframe  # noqa: F401
 
 
@@ -118,3 +121,18 @@ def _modify_doctests(request: pytest.FixtureRequest) -> None:
     skip_reason: str | None
     if skip_reason := getattr(func, "_doctest_skip_reason", None):
         pytest.skip(reason=skip_reason)
+
+
+def pytest_itemcollected(item: pytest.Item) -> None:
+    # Dask AnnData tests require anndata > 0.10
+    import anndata
+    from packaging.version import Version
+
+    requires_anndata_dask_support = (
+        len([mark for mark in item.iter_markers(name="anndata_dask_support")]) > 0
+    )
+
+    if requires_anndata_dask_support and Version(anndata.__version__) < Version("0.10"):
+        item.add_marker(
+            pytest.mark.skip(reason="dask support requires anndata version > 0.10")
+        )

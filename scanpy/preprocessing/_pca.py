@@ -4,6 +4,7 @@ import warnings
 from typing import TYPE_CHECKING
 from warnings import warn
 
+import anndata as ad
 import numpy as np
 from anndata import AnnData
 from packaging import version
@@ -191,6 +192,19 @@ def pca(
     logg.info(f"    with n_comps={n_comps}")
 
     X = _get_obs_rep(adata_comp, layer=layer)
+
+    # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
+    if (
+        version.parse(ad.__version__) < version.parse("0.9")
+        and mask is not None
+        and isinstance(X, np.ndarray)
+    ):
+        warnings.warn(
+            "When using a mask parameter with anndata<0.9 on a dense array, the PCA"
+            "can have slightly different results due the array being column major "
+            "instead of row major.",
+            UserWarning,
+        )
 
     is_dask = isinstance(X, DaskArray)
 

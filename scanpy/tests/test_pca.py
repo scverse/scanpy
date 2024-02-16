@@ -3,19 +3,20 @@ from __future__ import annotations
 import warnings
 from typing import Literal
 
+import anndata as ad
 import numpy as np
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import (
-    as_dense_dask_array,
-    as_sparse_dask_array,
     asarray,
     assert_equal,
 )
+from packaging.version import Version
 from scipy import sparse
 from sklearn.utils import issparse
 
 import scanpy as sc
+from scanpy.testing._helpers import as_dense_dask_array, as_sparse_dask_array
 from scanpy.testing._helpers.data import pbmc3k_normalized
 from scanpy.testing._pytest.marks import needs
 from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SUPPORTED, param_with
@@ -337,13 +338,20 @@ def test_mask_var_argument_equivalence(float_dtype, array_type):
     )
 
 
-def test_mask(array_type):
+def test_mask(array_type, request):
     if array_type is as_dense_dask_array:
         pytest.xfail("TODO: Dask arrays are not supported")
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
 
     mask_var = np.random.choice([True, False], adata.shape[1])
+    if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
+        request.node.add_marker(
+            pytest.mark.xfail(
+                reason="TODO: Previous version of anndata would return an F ordered array for one"
+                " case here, which suprisingly considerably changes the results of PCA. "
+            )
+        )
 
     adata_masked = adata[:, mask_var].copy()
     sc.pp.pca(adata, mask_var=mask_var)
@@ -357,6 +365,24 @@ def test_mask(array_type):
     np.testing.assert_allclose(
         adata.varm["PCs"][mask_var], adata_masked.varm["PCs"], rtol=1e-11
     )
+
+
+def test_mask_order_warning(request):
+    if Version(ad.__version__) >= Version("0.9"):
+        request.node.add_marker(
+            pytest.mark.xfail(
+                reason="Not expected to warn in later versions of anndata"
+            )
+        )
+
+    adata = ad.AnnData(X=np.random.randn(50, 5))
+    mask = np.array([True, False, True, False, True])
+
+    with pytest.warns(
+        UserWarning,
+        match="When using a mask parameter with anndata<0.9 on a dense array",
+    ):
+        sc.pp.pca(adata, mask=mask)
 
 
 def test_mask_defaults(array_type, float_dtype):
