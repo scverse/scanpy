@@ -67,7 +67,11 @@ def test_leiden_random_state(adata_neighbors, flavor):
         n_iterations=n_iterations,
     )
     assert (adata_1.obs["leiden"] == adata_1_again.obs["leiden"]).all()
-    assert (adata_2.obs["leiden"] != adata_1_again.obs["leiden"]).any()
+    # This random state produces different categories so can't check the arrays against each other.
+    assert (
+        adata_2.obs["leiden"].cat.categories
+        != adata_1_again.obs["leiden"].cat.categories
+    ).any()
 
 
 @needs.igraph
@@ -115,7 +119,12 @@ def test_leiden_equal_defaults(adata_neighbors):
 @needs.igraph
 def test_leiden_objective_function(adata_neighbors):
     """Ensure that popping this as a `clustering_kwargs` and using it does not error out."""
-    sc.tl.leiden(adata_neighbors, objective_function="modularity", flavor="igraph")
+    sc.tl.leiden(
+        adata_neighbors,
+        objective_function="modularity",
+        flavor="igraph",
+        directed=False,
+    )
 
 
 @needs.igraph
