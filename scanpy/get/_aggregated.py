@@ -155,7 +155,7 @@ def aggregate(
     by: str | list[str],
     func: AggType | Iterable[AggType],
     *,
-    axis: Literal[0, 1] | None = None,
+    axis: Literal["obs", 0, "var", 1] | None = None,
     mask: np.ndarray | str | None = None,
     dof: int = 1,
     layer: str | None = None,
