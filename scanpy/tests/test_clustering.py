@@ -67,7 +67,6 @@ def test_leiden_random_state(adata_neighbors, flavor):
         n_iterations=n_iterations,
     )
     assert (adata_1.obs["leiden"] == adata_1_again.obs["leiden"]).all()
-    # This random state produces different categories so can't check the arrays against each other.
     assert (adata_2.obs["leiden"] != adata_1_again.obs["leiden"]).any()
 
 
