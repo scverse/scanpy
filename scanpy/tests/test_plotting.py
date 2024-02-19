@@ -103,7 +103,14 @@ def test_heatmap(image_comparer):
 
     # test var_names as dict
     pbmc = pbmc68k_reduced()
-    sc.tl.leiden(pbmc, key_added="clusters", resolution=0.5)
+    sc.tl.leiden(
+        pbmc,
+        key_added="clusters",
+        resolution=0.5,
+        flavor="igraph",
+        n_iterations=2,
+        directed=False,
+    )
     # call umap to trigger colors for the clusters
     sc.pl.umap(pbmc, color="clusters")
     marker_genes_dict = {
