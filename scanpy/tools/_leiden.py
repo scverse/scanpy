@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import warnings
 from typing import TYPE_CHECKING, Literal
 
@@ -116,7 +117,25 @@ def leiden(
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
-    if flavor == "leidenalg":
+    if flavor not in {"igraph", "leidenalg"}:
+        raise ValueError(
+            f"flavor must be either 'igraph' or 'leidenalg', but '{flavor}' was passed"
+        )
+    igraph_spec = importlib.util.find_spec("igraph")
+    if igraph_spec is None:
+        raise ImportError(
+            "Please install the igraph package: `conda install -c conda-forge igraph` or `pip3 install igraph`."
+        )
+    if flavor == "igraph":
+        if directed:
+            raise ValueError(
+                "Cannot use igraph's leiden implemntation with a directed graph."
+            )
+        if partition_type is not None:
+            raise ValueError(
+                "Do not pass in partition_type argument when using igraph."
+            )
+    else:
         try:
             import leidenalg
 
@@ -141,39 +160,27 @@ def leiden(
             restrict_categories=restrict_categories,
             adjacency=adjacency,
         )
-    # convert it to igraph
-    if not flavor == "leidenalg" and directed:
-        raise ValueError(
-            "Cannot use igraph's leiden implemntation with a directed graph."
-        )
     g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
-    # flip to the default partition type if not overriden by the user
-    if partition_type is None and flavor == "leidenalg":
-        partition_type = leidenalg.RBConfigurationVertexPartition
-    elif not flavor == "leidenalg" and partition_type is not None:
-        raise ValueError("Do not pass in partition_type argument when using igraph.")
     # Prepare find_partition arguments as a dictionary,
     # appending to whatever the user provided. It needs to be this way
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
-    if use_weights:
-        clustering_args["weights"] = (
-            "weight"
-            if not flavor == "leidenalg"
-            else np.array(g.es["weight"]).astype(np.float64)
-        )
     clustering_args["n_iterations"] = n_iterations
-    if flavor == "leidenalg":
-        clustering_args["seed"] = random_state
     if resolution is not None:
         clustering_args["resolution_parameter"] = resolution
-    # clustering proper
-    if not flavor == "leidenalg":
+    if flavor == "leidenalg":
+        if partition_type is None:
+            partition_type = leidenalg.RBConfigurationVertexPartition
+        if use_weights:
+            clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
+        clustering_args["seed"] = random_state
+        part = leidenalg.find_partition(g, partition_type, **clustering_args)
+    elif flavor == "igraph":
+        if use_weights:
+            clustering_args["weights"] = "weight"
         clustering_args.setdefault("objective_function", "modularity")
         with _utils.set_igraph_random_state(random_state):
             part = g.community_leiden(**clustering_args)
-    else:
-        part = leidenalg.find_partition(g, partition_type, **clustering_args)
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:

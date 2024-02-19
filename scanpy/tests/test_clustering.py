@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import leidenalg
 import pytest
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
@@ -74,6 +75,23 @@ def test_leiden_random_state(adata_neighbors, flavor):
 def test_leiden_igraph_directed(adata_neighbors):
     with pytest.raises(ValueError):
         sc.tl.leiden(adata_neighbors, flavor="igraph")
+
+
+@needs.igraph
+def test_leiden_wrong_flavor(adata_neighbors):
+    with pytest.raises(ValueError):
+        sc.tl.leiden(adata_neighbors, flavor="foo")
+
+
+@needs.igraph
+@needs.leidenalg
+def test_leiden_igraph_partition_type(adata_neighbors):
+    with pytest.raises(ValueError):
+        sc.tl.leiden(
+            adata_neighbors,
+            flavor="igraph",
+            partition_type=leidenalg.RBConfigurationVertexPartition,
+        )
 
 
 @needs.leidenalg
