@@ -175,7 +175,7 @@ def leiden(
             clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
         clustering_args["seed"] = random_state
         part = leidenalg.find_partition(g, partition_type, **clustering_args)
-    elif flavor == "igraph":
+    else:
         if use_weights:
             clustering_args["weights"] = "weight"
         clustering_args.setdefault("objective_function", "modularity")
