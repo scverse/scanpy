@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import leidenalg
 import pytest
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
@@ -86,6 +85,8 @@ def test_leiden_wrong_flavor(adata_neighbors):
 @needs.igraph
 @needs.leidenalg
 def test_leiden_igraph_partition_type(adata_neighbors):
+    import leidenalg
+
     with pytest.raises(ValueError):
         sc.tl.leiden(
             adata_neighbors,
