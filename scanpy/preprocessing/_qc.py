@@ -233,7 +233,7 @@ def calculate_qc_metrics(
     *,
     expr_type: str = "counts",
     var_type: str = "genes",
-    qc_vars: Collection[str] = (),
+    qc_vars: Collection[str] | str = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
     layer: str | None = None,
     use_raw: bool = False,
@@ -307,6 +307,10 @@ def calculate_qc_metrics(
         X = csr_matrix(X)  # COO not subscriptable
     if issparse(X):
         X.eliminate_zeros()
+
+    # Convert qc_vars to list if str
+    if isinstance(qc_vars, str):
+        qc_vars = [qc_vars]
 
     obs_metrics = describe_obs(
         adata,

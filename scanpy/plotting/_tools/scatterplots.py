@@ -60,7 +60,7 @@ def embedding(
     basis: str,
     *,
     color: str | Sequence[str] | None = None,
-    mask: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool_] | str | None = None,
     gene_symbols: str | None = None,
     use_raw: bool | None = None,
     sort_order: bool = True,
@@ -136,10 +136,10 @@ def embedding(
     args_3d = dict(projection="3d") if projection == "3d" else {}
 
     # Checking the mask format and if used together with groups
-    if groups is not None and mask is not None:
+    if groups is not None and mask_obs is not None:
         raise ValueError("Groups and mask arguments are incompatible.")
-    if mask is not None:
-        mask = _check_mask(adata, mask, "obs")
+    if mask_obs is not None:
+        mask_obs = _check_mask(adata, mask_obs, "obs")
 
     # Figure out if we're using raw
     if use_raw is None:
@@ -267,7 +267,7 @@ def embedding(
             adata,
             value_to_plot,
             layer=layer,
-            mask=mask,
+            mask_obs=mask_obs,
             use_raw=use_raw,
             gene_symbols=gene_symbols,
             groups=groups,
@@ -1162,7 +1162,7 @@ def _get_color_source_vector(
     adata: AnnData,
     value_to_plot: str,
     *,
-    mask: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool_] | None = None,
     use_raw: bool = False,
     gene_symbols: str | None = None,
     layer: str | None = None,
@@ -1189,8 +1189,8 @@ def _get_color_source_vector(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
-    if mask is not None:
-        values[~mask] = np.nan
+    if mask_obs is not None:
+        values[~mask_obs] = np.nan
     if groups and isinstance(values, pd.Categorical):
         values = values.remove_categories(values.categories.difference(groups))
     return values
