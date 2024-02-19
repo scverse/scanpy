@@ -73,7 +73,7 @@ def test_leiden_random_state(adata_neighbors, flavor):
 @needs.igraph
 def test_leiden_igraph_directed(adata_neighbors):
     with pytest.raises(ValueError):
-        sc.tl.leiden(adata_neighbors, flavor="igraph")
+        sc.tl.leiden(adata_neighbors, flavor="igraph", directed=True)
 
 
 @needs.igraph

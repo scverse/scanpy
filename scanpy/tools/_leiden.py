@@ -36,7 +36,7 @@ def leiden(
     random_state: _utils.AnyRandom = 0,
     key_added: str = "leiden",
     adjacency: sparse.spmatrix | None = None,
-    directed: bool = True,
+    directed: bool | None = None,
     use_weights: bool = True,
     n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
@@ -83,6 +83,7 @@ def leiden(
         How many iterations of the Leiden clustering algorithm to perform.
         Positive values above 2 define the total number of iterations to perform,
         -1 has the algorithm run until it reaches its optimal clustering.
+        2 is faster and the default for underlying packages.
     partition_type
         Type of partition to use.
         Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`.
@@ -160,7 +161,6 @@ def leiden(
             restrict_categories=restrict_categories,
             adjacency=adjacency,
         )
-    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # Prepare find_partition arguments as a dictionary,
     # appending to whatever the user provided. It needs to be this way
     # as this allows for the accounting of a None resolution
@@ -169,6 +169,8 @@ def leiden(
     if resolution is not None:
         clustering_args["resolution_parameter"] = resolution
     if flavor == "leidenalg":
+        directed = True if directed is None else directed
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if partition_type is None:
             partition_type = leidenalg.RBConfigurationVertexPartition
         if use_weights:
@@ -176,6 +178,7 @@ def leiden(
         clustering_args["seed"] = random_state
         part = leidenalg.find_partition(g, partition_type, **clustering_args)
     else:
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
         if use_weights:
             clustering_args["weights"] = "weight"
         clustering_args.setdefault("objective_function", "modularity")
