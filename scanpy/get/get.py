@@ -11,6 +11,8 @@ from scipy.sparse import spmatrix
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from anndata._core.sparse_dataset import BaseCompressedSparseDataset
+    from anndata._core.views import ArrayView
     from numpy.typing import NDArray
 
 # --------------------------------------------------------------------------------
@@ -258,7 +260,7 @@ def obs_df(
     ... )
     >>> plotdf.columns
     Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
-    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")
+    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")  # doctest: +SKIP
     <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 
     Calculating mean expression for marker genes by cluster:
@@ -405,6 +407,13 @@ def _get_obs_rep(
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
+) -> (
+    np.ndarray
+    | spmatrix
+    | pd.DataFrame
+    | ArrayView
+    | BaseCompressedSparseDataset
+    | None
 ):
     """
     Choose array aligned with obs annotation.
@@ -473,7 +482,7 @@ def _set_obs_rep(
 
 def _check_mask(
     data: AnnData | np.ndarray,
-    mask: str | NDArray[np.bool_],
+    mask: NDArray[np.bool_] | str,
     dim: Literal["obs", "var"],
 ) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
     """

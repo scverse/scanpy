@@ -459,6 +459,12 @@ def moving_average(a: np.ndarray, n: int):
     return ret[n - 1 :] / n
 
 
+def get_random_state(seed: AnyRandom) -> random.RandomState:
+    if isinstance(seed, np.random.RandomState):
+        return seed
+    return random.RandomState(seed)
+
+
 # --------------------------------------------------------------------------------
 # Deal with tool parameters
 # --------------------------------------------------------------------------------
@@ -568,18 +574,18 @@ def select_groups(
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if key + "_masks" in adata.uns:
-        groups_masks = adata.uns[key + "_masks"]
+        groups_masks_obs = adata.uns[key + "_masks"]
     else:
-        groups_masks = np.zeros(
+        groups_masks_obs = np.zeros(
             (len(adata.obs[key].cat.categories), adata.obs[key].values.size), dtype=bool
         )
         for iname, name in enumerate(adata.obs[key].cat.categories):
             # if the name is not found, fallback to index retrieval
             if adata.obs[key].cat.categories[iname] in adata.obs[key].values:
-                mask = adata.obs[key].cat.categories[iname] == adata.obs[key].values
+                mask_obs = adata.obs[key].cat.categories[iname] == adata.obs[key].values
             else:
-                mask = str(iname) == adata.obs[key].values
-            groups_masks[iname] = mask
+                mask_obs = str(iname) == adata.obs[key].values
+            groups_masks_obs[iname] = mask_obs
     groups_ids = list(range(len(groups_order)))
     if groups_order_subset != "all":
         groups_ids = []
@@ -603,11 +609,11 @@ def select_groups(
             from sys import exit
 
             exit(0)
-        groups_masks = groups_masks[groups_ids]
+        groups_masks_obs = groups_masks_obs[groups_ids]
         groups_order_subset = adata.obs[key].cat.categories[groups_ids].values
     else:
         groups_order_subset = groups_order.values
-    return groups_order_subset, groups_masks
+    return groups_order_subset, groups_masks_obs
 
 
 def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917

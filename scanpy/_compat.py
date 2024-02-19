@@ -22,7 +22,22 @@ except ImportError:
         pass
 
 
-__all__ = ["cache", "DaskArray", "fullname", "pkg_metadata", "pkg_version"]
+try:
+    from zappy.base import ZappyArray
+except ImportError:
+
+    class ZappyArray:
+        pass
+
+
+__all__ = [
+    "cache",
+    "DaskArray",
+    "ZappyArray",
+    "fullname",
+    "pkg_metadata",
+    "pkg_version",
+]
 
 
 def fullname(typ: type) -> str:

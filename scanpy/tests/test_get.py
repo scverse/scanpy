@@ -11,6 +11,7 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.datasets._utils import filter_oldformatwarning
+from scanpy.testing._helpers import anndata_v0_8_constructor_compat
 from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
@@ -38,7 +39,7 @@ def adata():
     adata.X is np.ones((2, 2))
     adata.layers['double'] is sparse np.ones((2,2)) * 2 to also test sparse matrices
     """
-    return AnnData(
+    return anndata_v0_8_constructor_compat(
         X=np.ones((2, 2), dtype=int),
         obs=pd.DataFrame(
             {"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]
@@ -60,7 +61,7 @@ def test_obs_df(adata):
     adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
 
     # make raw with different genes than adata
-    adata.raw = AnnData(
+    adata.raw = anndata_v0_8_constructor_compat(
         X=np.array([[1, 2, 3], [2, 4, 6]], dtype=np.float64),
         var=pd.DataFrame(
             {"gene_symbols": ["raw1", "raw2", "raw3"]},

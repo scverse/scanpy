@@ -24,7 +24,7 @@ def doctest_needs(mod: str) -> Callable[[F], F]:
 
     def decorator(func: F) -> F:
         if mark is not None:
-            func._doctest_mark = mark
+            func._doctest_needs = mark
         return func
 
     return decorator
