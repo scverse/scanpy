@@ -850,4 +850,4 @@ def _resolve_axis(
         return (0, "obs")
     if axis in {1, "var"}:
         return (1, "var")
-    raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis}")
+    raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was '{axis}'")
