@@ -182,6 +182,27 @@ def test_aggregate_incorrect_dim():
         sc.get.aggregate(adata, ["louvain"], "sum", axis="foo")
 
 
+def test_aggregate_axis_specification():
+    adata = sc.datasets.blobs()
+    adata.var["labels"] = np.tile(["a", "b"], adata.shape[1])[: adata.shape[1]]
+
+    obs_int = sc.get.aggregate(adata, by="blobs", func="mean", axis=0)
+    obs_str = sc.get.aggregate(adata, by="blobs", func="mean", axis="obs")
+    obs_unspecified = sc.get.aggregate(
+        adata,
+        by="blobs",
+        func="mean",
+    )
+
+    np.testing.assert_equal(obs_int.layers["mean"], obs_str.layers["mean"])
+    np.testing.assert_equal(obs_int.layers["mean"], obs_unspecified.layers["mean"])
+
+    var_int = sc.get.aggregate(adata, by="labels", func="mean", axis=1)
+    var_str = sc.get.aggregate(adata, by="labels", func="mean", axis="var")
+
+    np.testing.assert_equal(var_int.layers["mean"], var_str.layers["mean"])
+
+
 @pytest.mark.parametrize(
     "matrix,df,keys,metrics,expected",
     [

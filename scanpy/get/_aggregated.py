@@ -9,6 +9,7 @@ import pandas as pd
 from anndata import AnnData, utils
 from scipy import sparse
 
+from scanpy._utils import _resolve_axis
 from scanpy.get.get import _check_mask
 
 if TYPE_CHECKING:
@@ -226,20 +227,18 @@ def aggregate(
 
     Note that this filters out any combination of groups that wasn't present in the original data.
     """
-    if axis not in [0, 1, None]:
-        raise ValueError(f"axis must be one of 0 or 1, was '{axis}'")
-    # TODO replace with get helper
-    if mask is not None:
-        mask = _check_mask(adata, mask, ["obs", "var"][axis])
-    data = adata.X
-    if sum(p is not None for p in [varm, obsm, layer]) > 1:
-        raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
-
     if axis is None:
         if varm:
             axis = 1
         else:
             axis = 0
+
+    axis, axis_name = _resolve_axis(axis)
+    if mask is not None:
+        mask = _check_mask(adata, mask, axis_name)
+    data = adata.X
+    if sum(p is not None for p in [varm, obsm, layer]) > 1:
+        raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
 
     if varm is not None:
         if axis != 1:
@@ -257,7 +256,7 @@ def aggregate(
         # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
         data = data.T
 
-    dim_df = getattr(adata, ["obs", "var"][axis])
+    dim_df = getattr(adata, axis_name)
     categorical, new_label_df = _combine_categories(dim_df, by)
     # Actual computation
     layers = aggregate(
