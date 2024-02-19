@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from packaging.version import Version
 from scipy.sparse import spmatrix
 
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 # TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
-    group: str | Iterable[str],
+    group: str | Iterable[str] | None,
     *,
     key: str = "rank_genes_groups",
     pval_cutoff: float | None = None,
@@ -74,7 +75,10 @@ def rank_genes_groups_df(
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
-    d = d.stack(level=1).reset_index()
+    if Version(pd.__version__) >= Version("2.1"):
+        d = d.stack(level=1, future_stack=True).reset_index()
+    else:
+        d = d.stack(level=1).reset_index()
     d["group"] = pd.Categorical(d["group"], categories=group)
     d = d.sort_values(["group", "level_0"]).drop(columns="level_0")
 
