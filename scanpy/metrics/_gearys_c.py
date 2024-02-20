@@ -1,27 +1,31 @@
+from __future__ import annotations
+
 from functools import singledispatch
-from typing import Optional, Union
-import warnings
+from typing import TYPE_CHECKING
 
-
-from anndata import AnnData
-from scanpy.get import _get_obs_rep
 import numba
 import numpy as np
-import pandas as pd
 from scipy import sparse
+
+from .._compat import fullname
+from ..get import _get_obs_rep
+from ._common import _check_vals, _resolve_vals
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 @singledispatch
 def gearys_c(
     adata: AnnData,
     *,
-    vals: Optional[Union[np.ndarray, sparse.spmatrix]] = None,
-    use_graph: Optional[str] = None,
-    layer: Optional[str] = None,
-    obsm: Optional[str] = None,
-    obsp: Optional[str] = None,
+    vals: np.ndarray | sparse.spmatrix | None = None,
+    use_graph: str | None = None,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
     use_raw: bool = False,
-) -> Union[np.ndarray, float]:
+) -> np.ndarray | float:
     r"""
     Calculate `Geary's C <https://en.wikipedia.org/wiki/Geary's_C>`_, as used
     by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
@@ -184,7 +188,7 @@ def _gearys_c_inner_sparse_x_densevec(g_data, g_indices, g_indptr, x, W):
 
 
 @numba.njit(cache=True)
-def _gearys_c_inner_sparse_x_sparsevec(
+def _gearys_c_inner_sparse_x_sparsevec(  # noqa: PLR0917
     g_data, g_indices, g_indptr, x_data, x_indices, N, W
 ):
     x = np.zeros(N, dtype=np.float_)
@@ -227,7 +231,7 @@ def _gearys_c_mtx(g_data, g_indices, g_indptr, X):
 
 
 @numba.njit(cache=True, parallel=True)
-def _gearys_c_mtx_csr(
+def _gearys_c_mtx_csr(  # noqa: PLR0917
     g_data, g_indices, g_indptr, x_data, x_indices, x_indptr, x_shape
 ):
     M, N = x_shape
@@ -251,55 +255,10 @@ def _gearys_c_mtx_csr(
 ###############################################################################
 # Interface
 ###############################################################################
-@singledispatch
-def _resolve_vals(val):
-    return np.asarray(val)
-
-
-@_resolve_vals.register(np.ndarray)
-@_resolve_vals.register(sparse.csr_matrix)
-def _(val):
-    return val
-
-
-@_resolve_vals.register(sparse.spmatrix)
-def _(val):
-    return sparse.csr_matrix(val)
-
-
-@_resolve_vals.register(pd.DataFrame)
-@_resolve_vals.register(pd.Series)
-def _(val):
-    return val.to_numpy()
-
-
-def _check_vals(vals):
-    """\
-    Checks that values wont cause issues in computation.
-
-    Returns new set of vals, and indexer to put values back into result.
-
-    For details on why this is neccesary, see:
-    https://github.com/scverse/scanpy/issues/1806
-    """
-    from scanpy._utils import is_constant
-
-    full_result = np.empty(vals.shape[0], dtype=np.float64)
-    full_result.fill(np.nan)
-    idxer = ~is_constant(vals, axis=1)
-    if idxer.all():
-        idxer = slice(None)
-    else:
-        warnings.warn(
-            UserWarning(
-                f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these.",
-            )
-        )
-    return vals[idxer], idxer, full_result
 
 
 @gearys_c.register(sparse.csr_matrix)
-def _gearys_c(g, vals) -> np.ndarray:
+def _gearys_c(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float_, copy=False)
@@ -327,4 +286,8 @@ def _gearys_c(g, vals) -> np.ndarray:
         full_result[idxer] = result
         return full_result
     else:
-        raise NotImplementedError()
+        msg = (
+            "Geary’s C metric not implemented for vals of type "
+            f"{fullname(type(vals))} and ndim {vals.ndim}."
+        )
+        raise NotImplementedError(msg)

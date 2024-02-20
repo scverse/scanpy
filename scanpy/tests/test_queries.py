@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import pandas as pd
 import pytest
+
 import scanpy as sc
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 
 @pytest.mark.internet
@@ -20,12 +23,12 @@ def test_enrich():
     sc.tl.filter_rank_genes_groups(pbmc, min_fold_change=1)
     sc.queries.enrich(pbmc, "1")
 
-    gene_dict = {'set1': ['KLF4', 'PAX5'], 'set2': ['SOX2', 'NANOG']}
+    gene_dict = {"set1": ["KLF4", "PAX5"], "set2": ["SOX2", "NANOG"]}
     enrich_list = sc.queries.enrich(
-        gene_dict, org="hsapiens", gprofiler_kwargs=dict(sources=['GO:BP'])
+        gene_dict, org="hsapiens", gprofiler_kwargs=dict(sources=["GO:BP"])
     )
-    assert 'set1' in enrich_list['query'].unique()
-    assert 'set2' in enrich_list['query'].unique()
+    assert "set1" in enrich_list["query"].unique()
+    assert "set2" in enrich_list["query"].unique()
 
 
 @pytest.mark.internet

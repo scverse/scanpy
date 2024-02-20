@@ -1,74 +1,153 @@
-from multiprocessing.sharedctypes import Value
-import warnings
-from typing import Optional, Literal
+from __future__ import annotations
 
+import warnings
+from functools import partial
+from math import sqrt
+from typing import TYPE_CHECKING, Literal
+
+import numba as nb
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
 from anndata import AnnData
 
-
 from scanpy import logging as logg
-from scanpy._settings import settings, Verbosity
-from scanpy._utils import check_nonnegative_integers, view_to_actual
-from scanpy.get import _get_obs_rep
-from scanpy._utils import _doc_params
-from scanpy.preprocessing._utils import _get_mean_var
-from scanpy.preprocessing._distributed import materialize_as_ndarray
-from scanpy.preprocessing._simple import filter_genes
+from scanpy._settings import Verbosity, settings
+from scanpy._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from scanpy.experimental._docs import (
     doc_adata,
+    doc_check_values,
     doc_dist_params,
     doc_genes_batch_chunk,
-    doc_check_values,
-    doc_layer,
-    doc_copy,
     doc_inplace,
+    doc_layer,
 )
+from scanpy.get import _get_obs_rep
+from scanpy.preprocessing._distributed import materialize_as_ndarray
+from scanpy.preprocessing._utils import _get_mean_var
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+
+@nb.njit(parallel=True)
+def _calculate_res_sparse(
+    indptr: NDArray[np.integer],
+    index: NDArray[np.integer],
+    data: NDArray[np.float64],
+    *,
+    sums_genes: NDArray[np.float64],
+    sums_cells: NDArray[np.float64],
+    sum_total: np.float64,
+    clip: np.float64,
+    theta: np.float64,
+    n_genes: int,
+    n_cells: int,
+) -> NDArray[np.float64]:
+    def get_value(cell: int, sparse_idx: int, stop_idx: int) -> np.float64:
+        """
+        This function navigates the sparsity of the CSC (Compressed Sparse Column) matrix,
+        returning the value at the specified cell location if it exists, or zero otherwise.
+        """
+        if sparse_idx < stop_idx and index[sparse_idx] == cell:
+            return data[sparse_idx]
+        else:
+            return np.float64(0.0)
+
+    def clac_clipped_res_sparse(gene: int, cell: int, value: np.float64) -> np.float64:
+        mu = sums_genes[gene] * sums_cells[cell] / sum_total
+        mu_sum = value - mu
+        pre_res = mu_sum / sqrt(mu + mu * mu / theta)
+        res = np.float64(min(max(pre_res, -clip), clip))
+        return res
+
+    residuals = np.zeros(n_genes, dtype=np.float64)
+    for gene in nb.prange(n_genes):
+        start_idx = indptr[gene]
+        stop_idx = indptr[gene + 1]
+
+        sparse_idx = start_idx
+        var_sum = np.float64(0.0)
+        sum_clipped_res = np.float64(0.0)
+        for cell in range(n_cells):
+            value = get_value(cell, sparse_idx, stop_idx)
+            clipped_res = clac_clipped_res_sparse(gene, cell, value)
+            if value > 0:
+                sparse_idx += 1
+            sum_clipped_res += clipped_res
+
+        mean_clipped_res = sum_clipped_res / n_cells
+        sparse_idx = start_idx
+        for cell in range(n_cells):
+            value = get_value(cell, sparse_idx, stop_idx)
+            clipped_res = clac_clipped_res_sparse(gene, cell, value)
+            if value > 0:
+                sparse_idx += 1
+            diff = clipped_res - mean_clipped_res
+            var_sum += diff * diff
+
+        residuals[gene] = var_sum / n_cells
+    return residuals
+
+
+@nb.njit(parallel=True)
+def _calculate_res_dense(
+    matrix,
+    *,
+    sums_genes: NDArray[np.float64],
+    sums_cells: NDArray[np.float64],
+    sum_total: np.float64,
+    clip: np.float64,
+    theta: np.float64,
+    n_genes: int,
+    n_cells: int,
+) -> NDArray[np.float64]:
+    def clac_clipped_res_dense(gene: int, cell: int) -> np.float64:
+        mu = sums_genes[gene] * sums_cells[cell] / sum_total
+        value = matrix[cell, gene]
+
+        mu_sum = value - mu
+        pre_res = mu_sum / sqrt(mu + mu * mu / theta)
+        res = np.float64(min(max(pre_res, -clip), clip))
+        return res
+
+    residuals = np.zeros(n_genes, dtype=np.float64)
+
+    for gene in nb.prange(n_genes):
+        sum_clipped_res = np.float64(0.0)
+        for cell in range(n_cells):
+            sum_clipped_res += clac_clipped_res_dense(gene, cell)
+        mean_clipped_res = sum_clipped_res / n_cells
+
+        var_sum = np.float64(0.0)
+        for cell in range(n_cells):
+            clipped_res = clac_clipped_res_dense(gene, cell)
+            diff = clipped_res - mean_clipped_res
+            var_sum += diff * diff
+
+        residuals[gene] = var_sum / n_cells
+    return residuals
 
 
 def _highly_variable_pearson_residuals(
     adata: AnnData,
+    *,
     theta: float = 100,
-    clip: Optional[float] = None,
+    clip: float | None = None,
     n_top_genes: int = 1000,
-    batch_key: Optional[str] = None,
+    batch_key: str | None = None,
     chunksize: int = 1000,
     check_values: bool = True,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     subset: bool = False,
     inplace: bool = True,
-) -> Optional[pd.DataFrame]:
-    """\
-    See `scanpy.experimental.pp.highly_variable_genes`.
-
-    Returns
-    -------
-    If `inplace=True`, `adata.var` is updated with the following fields. Otherwise,
-    returns the same fields as :class:`~pandas.DataFrame`.
-
-    highly_variable : bool
-        boolean indicator of highly-variable genes
-    means : float
-        means per gene
-    variances : float
-        variance per gene
-    residual_variances : float
-        Residual variance per gene. Averaged in the case of multiple batches.
-    highly_variable_rank : float
-        Rank of the gene according to residual variance, median rank in the case of multiple batches
-    highly_variable_nbatches : int
-        If `batch_key` given, denotes in how many batches genes are detected as HVG
-    highly_variable_intersection : bool
-        If `batch_key` given, denotes the genes that are highly variable in all batches
-    """
-
+) -> pd.DataFrame | None:
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer)
-    computed_on = layer if layer else 'adata.X'
+    computed_on = layer if layer else "adata.X"
 
     # Check for raw counts
-    if check_values and (check_nonnegative_integers(X) is False):
+    if check_values and not check_nonnegative_integers(X):
         warnings.warn(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,
@@ -77,7 +156,7 @@ def _highly_variable_pearson_residuals(
     if theta <= 0:
         # TODO: would "underdispersion" with negative theta make sense?
         # then only theta=0 were undefined..
-        raise ValueError('Pearson residuals require theta > 0')
+        raise ValueError("Pearson residuals require theta > 0")
     # prepare clipping
 
     if batch_key is None:
@@ -106,23 +185,31 @@ def _highly_variable_pearson_residuals(
             raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
         if sp_sparse.issparse(X_batch):
-            sums_genes = np.sum(X_batch, axis=0)
-            sums_cells = np.sum(X_batch, axis=1)
-            sum_total = np.sum(sums_genes).squeeze()
+            X_batch = X_batch.tocsc()
+            X_batch.eliminate_zeros()
+            calculate_res = partial(
+                _calculate_res_sparse,
+                X_batch.indptr,
+                X_batch.indices,
+                X_batch.data.astype(np.float64),
+            )
         else:
-            sums_genes = np.sum(X_batch, axis=0, keepdims=True)
-            sums_cells = np.sum(X_batch, axis=1, keepdims=True)
-            sum_total = np.sum(sums_genes)
+            X_batch = np.array(X_batch, dtype=np.float64, order="F")
+            calculate_res = partial(_calculate_res_dense, X_batch)
 
-        # Compute pearson residuals in chunks
-        residual_gene_var = np.empty((X_batch.shape[1]))
-        for start in np.arange(0, X_batch.shape[1], chunksize):
-            stop = start + chunksize
-            mu = np.array(sums_cells @ sums_genes[:, start:stop] / sum_total)
-            X_dense = X_batch[:, start:stop].toarray()
-            residuals = (X_dense - mu) / np.sqrt(mu + mu**2 / theta)
-            residuals = np.clip(residuals, a_min=-clip, a_max=clip)
-            residual_gene_var[start:stop] = np.var(residuals, axis=0)
+        sums_genes = np.array(X_batch.sum(axis=0)).ravel()
+        sums_cells = np.array(X_batch.sum(axis=1)).ravel()
+        sum_total = np.sum(sums_genes)
+
+        residual_gene_var = calculate_res(
+            sums_genes=sums_genes,
+            sums_cells=sums_cells,
+            sum_total=np.float64(sum_total),
+            clip=np.float64(clip),
+            theta=np.float64(theta),
+            n_genes=X_batch.shape[1],
+            n_cells=X_batch.shape[0],
+        )
 
         # Add 0 values for genes that were filtered out
         unmasked_residual_gene_var = np.zeros(len(nonzero_genes))
@@ -161,49 +248,49 @@ def _highly_variable_pearson_residuals(
     # Sort genes by how often they selected as hvg within each batch and
     # break ties with median rank of residual variance across batches
     df.sort_values(
-        ['highly_variable_nbatches', 'highly_variable_rank'],
+        ["highly_variable_nbatches", "highly_variable_rank"],
         ascending=[False, True],
-        na_position='last',
+        na_position="last",
         inplace=True,
     )
 
     high_var = np.zeros(df.shape[0], dtype=bool)
     high_var[:n_top_genes] = True
-    df['highly_variable'] = high_var
+    df["highly_variable"] = high_var
     df = df.loc[adata.var_names, :]
 
     if inplace:
-        adata.uns['hvg'] = {'flavor': 'pearson_residuals', 'computed_on': computed_on}
+        adata.uns["hvg"] = {"flavor": "pearson_residuals", "computed_on": computed_on}
         logg.hint(
-            'added\n'
-            '    \'highly_variable\', boolean vector (adata.var)\n'
-            '    \'highly_variable_rank\', float vector (adata.var)\n'
-            '    \'highly_variable_nbatches\', int vector (adata.var)\n'
-            '    \'highly_variable_intersection\', boolean vector (adata.var)\n'
-            '    \'means\', float vector (adata.var)\n'
-            '    \'variances\', float vector (adata.var)\n'
-            '    \'residual_variances\', float vector (adata.var)'
+            "added\n"
+            "    'highly_variable', boolean vector (adata.var)\n"
+            "    'highly_variable_rank', float vector (adata.var)\n"
+            "    'highly_variable_nbatches', int vector (adata.var)\n"
+            "    'highly_variable_intersection', boolean vector (adata.var)\n"
+            "    'means', float vector (adata.var)\n"
+            "    'variances', float vector (adata.var)\n"
+            "    'residual_variances', float vector (adata.var)"
         )
-        adata.var['means'] = df['means'].values
-        adata.var['variances'] = df['variances'].values
-        adata.var['residual_variances'] = df['residual_variances']
-        adata.var['highly_variable_rank'] = df['highly_variable_rank'].values
+        adata.var["means"] = df["means"].values
+        adata.var["variances"] = df["variances"].values
+        adata.var["residual_variances"] = df["residual_variances"]
+        adata.var["highly_variable_rank"] = df["highly_variable_rank"].values
         if batch_key is not None:
-            adata.var['highly_variable_nbatches'] = df[
-                'highly_variable_nbatches'
+            adata.var["highly_variable_nbatches"] = df[
+                "highly_variable_nbatches"
             ].values
-            adata.var['highly_variable_intersection'] = df[
-                'highly_variable_intersection'
+            adata.var["highly_variable_intersection"] = df[
+                "highly_variable_intersection"
             ].values
-        adata.var['highly_variable'] = df['highly_variable'].values
+        adata.var["highly_variable"] = df["highly_variable"].values
 
         if subset:
-            adata._inplace_subset_var(df['highly_variable'].values)
+            adata._inplace_subset_var(df["highly_variable"].values)
 
     else:
         if batch_key is None:
             df = df.drop(
-                ['highly_variable_nbatches', 'highly_variable_intersection'], axis=1
+                ["highly_variable_nbatches", "highly_variable_intersection"], axis=1
             )
         if subset:
             df = df.iloc[df.highly_variable.values, :]
@@ -223,16 +310,16 @@ def highly_variable_genes(
     adata: AnnData,
     *,
     theta: float = 100,
-    clip: Optional[float] = None,
-    n_top_genes: Optional[int] = None,
-    batch_key: Optional[str] = None,
+    clip: float | None = None,
+    n_top_genes: int | None = None,
+    batch_key: str | None = None,
     chunksize: int = 1000,
-    flavor: Literal['pearson_residuals'] = 'pearson_residuals',
+    flavor: Literal["pearson_residuals"] = "pearson_residuals",
     check_values: bool = True,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     subset: bool = False,
     inplace: bool = True,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """\
     Select highly variable genes using analytic Pearson residuals [Lause21]_.
 
@@ -263,21 +350,21 @@ def highly_variable_genes(
     If `inplace=True`, `adata.var` is updated with the following fields. Otherwise,
     returns the same fields as :class:`~pandas.DataFrame`.
 
-    highly_variable : bool
+    highly_variable : :class:`bool`
         boolean indicator of highly-variable genes.
-    means : float
+    means : :class:`float`
         means per gene.
-    variances : float
+    variances : :class:`float`
         variance per gene.
-    residual_variances : float
+    residual_variances : :class:`float`
         For `flavor='pearson_residuals'`, residual variance per gene. Averaged in the
         case of multiple batches.
-    highly_variable_rank : float
+    highly_variable_rank : :class:`float`
         For `flavor='pearson_residuals'`, rank of the gene according to residual.
         variance, median rank in the case of multiple batches.
-    highly_variable_nbatches : int
+    highly_variable_nbatches : :class:`int`
         If `batch_key` given, denotes in how many batches genes are detected as HVG.
-    highly_variable_intersection : bool
+    highly_variable_intersection : :class:`bool`
         If `batch_key` given, denotes the genes that are highly variable in all batches.
 
     Notes
@@ -285,15 +372,15 @@ def highly_variable_genes(
     Experimental version of `sc.pp.highly_variable_genes()`
     """
 
-    logg.info('extracting highly variable genes')
+    logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):
         raise ValueError(
-            '`pp.highly_variable_genes` expects an `AnnData` argument, '
-            'pass `inplace=False` if you want to return a `pd.DataFrame`.'
+            "`pp.highly_variable_genes` expects an `AnnData` argument, "
+            "pass `inplace=False` if you want to return a `pd.DataFrame`."
         )
 
-    if flavor == 'pearson_residuals':
+    if flavor == "pearson_residuals":
         if n_top_genes is None:
             raise ValueError(
                 "`pp.highly_variable_genes` requires the argument `n_top_genes`"

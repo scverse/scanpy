@@ -1,13 +1,14 @@
-import pytest
-import numpy as np
+from __future__ import annotations
 
+import numpy as np
+import pytest
 from sklearn.neighbors import KDTree
 from umap import UMAP
 
 import scanpy as sc
 from scanpy import settings
 from scanpy._compat import pkg_version
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._helpers.data import pbmc68k_reduced
 
 X = np.array(
     [
@@ -45,8 +46,8 @@ def test_representation(adatas):
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
 
-    assert ing._use_rep == 'X_pca'
-    assert ing._obsm['rep'].shape == (adata_new.n_obs, settings.N_PCS)
+    assert ing._use_rep == "X_pca"
+    assert ing._obsm["rep"].shape == (adata_new.n_obs, settings.N_PCS)
     assert ing._pca_centered
 
     sc.pp.pca(adata_ref, n_comps=30, zero_center=False)
@@ -55,17 +56,17 @@ def test_representation(adatas):
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
 
-    assert ing._use_rep == 'X_pca'
-    assert ing._obsm['rep'].shape == (adata_new.n_obs, 30)
+    assert ing._use_rep == "X_pca"
+    assert ing._obsm["rep"].shape == (adata_new.n_obs, 30)
     assert not ing._pca_centered
 
-    sc.pp.neighbors(adata_ref, use_rep='X')
+    sc.pp.neighbors(adata_ref, use_rep="X")
 
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
 
-    assert ing._use_rep == 'X'
-    assert ing._obsm['rep'] is adata_new.X
+    assert ing._use_rep == "X"
+    assert ing._obsm["rep"] is adata_new.X
 
 
 def test_neighbors(adatas):
@@ -77,8 +78,8 @@ def test_neighbors(adatas):
     ing.neighbors(k=10)
     indices = ing._indices
 
-    tree = KDTree(adata_ref.obsm['X_pca'])
-    true_indices = tree.query(ing._obsm['rep'], 10, return_distance=False)
+    tree = KDTree(adata_ref.obsm["X_pca"])
+    true_indices = tree.query(ing._obsm["rep"], 10, return_distance=False)
 
     num_correct = 0.0
     for i in range(adata_new.n_obs):
@@ -88,7 +89,7 @@ def test_neighbors(adatas):
     assert percent_correct > 0.99
 
 
-@pytest.mark.parametrize('n', [3, 4])
+@pytest.mark.parametrize("n", [3, 4])
 def test_neighbors_defaults(adatas, n):
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()
@@ -112,26 +113,26 @@ def test_ingest_function(adatas):
     sc.tl.ingest(
         adata_new,
         adata_ref,
-        obs='bulk_labels',
-        embedding_method=['umap', 'pca'],
+        obs="bulk_labels",
+        embedding_method=["umap", "pca"],
         inplace=True,
     )
 
-    assert 'bulk_labels' in adata_new.obs
-    assert 'X_umap' in adata_new.obsm
-    assert 'X_pca' in adata_new.obsm
+    assert "bulk_labels" in adata_new.obs
+    assert "X_umap" in adata_new.obsm
+    assert "X_pca" in adata_new.obsm
 
     ad = sc.tl.ingest(
         adata_new,
         adata_ref,
-        obs='bulk_labels',
-        embedding_method=['umap', 'pca'],
+        obs="bulk_labels",
+        embedding_method=["umap", "pca"],
         inplace=False,
     )
 
-    assert 'bulk_labels' in ad.obs
-    assert 'X_umap' in ad.obsm
-    assert 'X_pca' in ad.obsm
+    assert "bulk_labels" in ad.obs
+    assert "X_umap" in ad.obsm
+    assert "X_pca" in ad.obsm
 
 
 def test_ingest_map_embedding_umap():
@@ -139,16 +140,16 @@ def test_ingest_map_embedding_umap():
     adata_new = sc.AnnData(T)
 
     sc.pp.neighbors(
-        adata_ref, method='umap', use_rep='X', n_neighbors=4, random_state=0
+        adata_ref, method="umap", use_rep="X", n_neighbors=4, random_state=0
     )
     sc.tl.umap(adata_ref, random_state=0)
 
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
-    ing.map_embedding(method='umap')
+    ing.map_embedding(method="umap")
 
     reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4)
     reducer.fit(X)
     umap_transformed_t = reducer.transform(T)
 
-    assert np.allclose(ing._obsm['X_umap'], umap_transformed_t)
+    assert np.allclose(ing._obsm["X_umap"], umap_transformed_t)

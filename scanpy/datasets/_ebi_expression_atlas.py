@@ -1,16 +1,18 @@
-from urllib.request import urlopen
-from urllib.error import HTTPError
-from zipfile import ZipFile
+from __future__ import annotations
+
 from typing import BinaryIO
+from urllib.error import HTTPError
+from urllib.request import urlopen
+from zipfile import ZipFile
 
 import anndata
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy import sparse
 
-from ..readwrite import _download
-from .._settings import settings
 from .. import logging as logg
+from .._settings import settings
+from ..readwrite import _download
 from ._utils import check_datasetdir_exists
 
 
@@ -121,7 +123,7 @@ def ebi_expression_atlas(
     experiment_dir = settings.datasetdir / accession
     dataset_path = experiment_dir / f"{accession}.h5ad"
     try:
-        adata = anndata.read(dataset_path)
+        adata = anndata.read_h5ad(dataset_path)
         if filter_boring:
             adata.obs = _filter_boring(adata.obs)
         return adata

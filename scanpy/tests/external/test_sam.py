@@ -1,13 +1,17 @@
-import pytest
-import scanpy as sc
-import scanpy.external as sce
+from __future__ import annotations
+
 import numpy as np
 
-pytest.importorskip("samalg")
+import scanpy as sc
+import scanpy.external as sce
+from scanpy.testing._helpers.data import pbmc3k
+from scanpy.testing._pytest.marks import needs
+
+pytestmark = [needs.samalg]
 
 
 def test_sam():
-    adata_ref = sc.datasets.pbmc3k()
+    adata_ref = pbmc3k()
     ix = np.random.choice(adata_ref.shape[0], size=200, replace=False)
     adata = adata_ref[ix, :].copy()
     sc.pp.normalize_total(adata, target_sum=10000)
@@ -15,4 +19,4 @@ def test_sam():
     sce.tl.sam(adata, inplace=True)
     uns_keys = list(adata.uns.keys())
     obsm_keys = list(adata.obsm.keys())
-    assert all(['sam' in uns_keys, 'X_umap' in obsm_keys, 'neighbors' in uns_keys])
+    assert all(["sam" in uns_keys, "X_umap" in obsm_keys, "neighbors" in uns_keys])

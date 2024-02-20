@@ -1,13 +1,17 @@
-import numpy as np
-import scanpy as sc
-from anndata import AnnData
-from scipy.sparse import csr_matrix
-import pytest
+from __future__ import annotations
+
 import pickle
 from pathlib import Path
-from scanpy.tests._data._cached_datasets import paul15
 
-HERE = Path(__file__).parent / Path('_data/')
+import numpy as np
+import pytest
+from anndata import AnnData
+from scipy.sparse import csr_matrix
+
+import scanpy as sc
+from scanpy.testing._helpers.data import paul15
+
+HERE = Path(__file__).parent / Path("_data/")
 
 
 def _create_random_gene_names(n_genes, name_length):
@@ -16,7 +20,7 @@ def _create_random_gene_names(n_genes, name_length):
     """
     return np.array(
         [
-            ''.join(map(chr, np.random.randint(65, 90, name_length)))
+            "".join(map(chr, np.random.randint(65, 90, name_length)))
             for _ in range(n_genes)
         ]
     )
@@ -26,7 +30,7 @@ def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan):
     """
     creates a sparse matrix, with certain amounts of NaN and Zeros
     """
-    A = np.random.randint(0, 1000, rows * cols).reshape((rows, cols)).astype('float32')
+    A = np.random.randint(0, 1000, rows * cols).reshape((rows, cols)).astype("float32")
     maskzero = np.random.rand(rows, cols) < percent_zero
     masknan = np.random.rand(rows, cols) < percent_nan
     if np.any(maskzero):
@@ -59,11 +63,11 @@ def test_score_with_reference():
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
     sc.pp.scale(adata)
 
-    sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name='Test')
-    with Path(HERE, 'score_genes_reference_paul2015.pkl').open('rb') as file:
+    sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
+    with Path(HERE, "score_genes_reference_paul2015.pkl").open("rb") as file:
         reference = pickle.load(file)
-    # assert np.allclose(reference, adata.obs.Test.values)
-    assert np.array_equal(reference, adata.obs.Test.values)
+    # np.testing.assert_allclose(reference, adata.obs.Test.values)
+    np.testing.assert_array_equal(reference, adata.obs.Test.values)
 
 
 def test_add_score():
@@ -83,8 +87,8 @@ def test_add_score():
     some_genes = np.r_[
         np.unique(np.random.choice(adata.var_names, 10)), np.unique(non_existing_genes)
     ]
-    sc.tl.score_genes(adata, some_genes, score_name='Test')
-    assert adata.obs['Test'].dtype == 'float64'
+    sc.tl.score_genes(adata, some_genes, score_name="Test")
+    assert adata.obs["Test"].dtype == "float64"
 
 
 def test_sparse_nanmean():
@@ -138,11 +142,11 @@ def test_score_genes_sparse_vs_dense():
 
     gene_set = adata_dense.var_names[:10]
 
-    sc.tl.score_genes(adata_sparse, gene_list=gene_set, score_name='Test')
-    sc.tl.score_genes(adata_dense, gene_list=gene_set, score_name='Test')
+    sc.tl.score_genes(adata_sparse, gene_list=gene_set, score_name="Test")
+    sc.tl.score_genes(adata_dense, gene_list=gene_set, score_name="Test")
 
     np.testing.assert_allclose(
-        adata_sparse.obs['Test'].values, adata_dense.obs['Test'].values
+        adata_sparse.obs["Test"].values, adata_dense.obs["Test"].values
     )
 
 
@@ -167,8 +171,8 @@ def test_score_genes_deplete():
         ix_obs = np.random.choice(adata.shape[0], 50)
         adata[ix_obs][:, gene_set].X = 0
 
-        sc.tl.score_genes(adata, gene_list=gene_set, score_name='Test')
-        scores = adata.obs['Test'].values
+        sc.tl.score_genes(adata, gene_list=gene_set, score_name="Test")
+        scores = adata.obs["Test"].values
 
         np.testing.assert_array_less(scores[ix_obs], 0)
 
@@ -186,16 +190,16 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
     gene_set = adata.var_names[:10]
 
     # the unpatched, i.e. _sparse_nanmean version
-    sc.tl.score_genes(adata, gene_list=gene_set, score_name='Test')
-    sparse_scores = adata.obs['Test'].values.tolist()
+    sc.tl.score_genes(adata, gene_list=gene_set, score_name="Test")
+    sparse_scores = adata.obs["Test"].values.tolist()
 
     # now patch _sparse_nanmean by np.nanmean inside sc.tools
     def mock_fn(x, axis):
-        return np.nanmean(x.A, axis, dtype='float64')
+        return np.nanmean(x.A, axis, dtype="float64")
 
-    monkeypatch.setattr(sc.tools._score_genes, '_sparse_nanmean', mock_fn)
-    sc.tl.score_genes(adata, gene_list=gene_set, score_name='Test')
-    dense_scores = adata.obs['Test'].values
+    monkeypatch.setattr(sc.tools._score_genes, "_sparse_nanmean", mock_fn)
+    sc.tl.score_genes(adata, gene_list=gene_set, score_name="Test")
+    dense_scores = adata.obs["Test"].values
 
     np.testing.assert_allclose(sparse_scores, dense_scores)
 

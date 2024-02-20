@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from functools import partial
-from itertools import repeat, chain
+from itertools import chain, repeat
 
 import numpy as np
 import pandas as pd
@@ -9,21 +11,23 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.datasets._utils import filter_oldformatwarning
-from scanpy.tests._data._cached_datasets import pbmc68k_reduced
+from scanpy.testing._helpers import anndata_v0_8_constructor_compat
+from scanpy.testing._helpers.data import pbmc68k_reduced
+
+
+# Override so warning gets caught
+def transpose_adata(adata: AnnData, *, expect_duplicates: bool = False) -> AnnData:
+    if not expect_duplicates:
+        return adata.T
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        return adata.T
+
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
     "dim,transform,func",
     [
-        (
-            "obs",
-            lambda x: x,
-            sc.get.obs_df,
-        ),
-        (
-            "var",
-            lambda x: x.T,
-            sc.get.var_df,
-        ),
+        ("obs", lambda x, expect_duplicates=False: x, sc.get.obs_df),
+        ("var", transpose_adata, sc.get.var_df),
     ],
     ids=["obs_df", "var_df"],
 )
@@ -35,8 +39,8 @@ def adata():
     adata.X is np.ones((2, 2))
     adata.layers['double'] is sparse np.ones((2,2)) * 2 to also test sparse matrices
     """
-    return AnnData(
-        X=np.ones((2, 2)),
+    return anndata_v0_8_constructor_compat(
+        X=np.ones((2, 2), dtype=int),
         obs=pd.DataFrame(
             {"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]
         ),
@@ -44,7 +48,6 @@ def adata():
             {"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]
         ),
         layers={"double": sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},
-        dtype=int,
     )
 
 
@@ -55,16 +58,15 @@ def adata():
 
 def test_obs_df(adata):
     adata.obsm["eye"] = np.eye(2, dtype=int)
-    adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype='float64')
+    adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
 
     # make raw with different genes than adata
-    adata.raw = AnnData(
-        X=np.array([[1, 2, 3], [2, 4, 6]]),
+    adata.raw = anndata_v0_8_constructor_compat(
+        X=np.array([[1, 2, 3], [2, 4, 6]], dtype=np.float64),
         var=pd.DataFrame(
-            {"gene_symbols": ["raw1", "raw2", 'raw3']},
+            {"gene_symbols": ["raw1", "raw2", "raw3"]},
             index=["gene2", "gene3", "gene4"],
         ),
-        dtype='float64',
     )
     pd.testing.assert_frame_equal(
         sc.get.obs_df(
@@ -140,11 +142,12 @@ def test_obs_df(adata):
     assert all(badkey_err.match(k) for k in badkeys)
 
     # test non unique index
-    adata = sc.AnnData(
-        np.arange(16).reshape(4, 4),
-        obs=pd.DataFrame(index=["a", "a", "b", "c"]),
-        var=pd.DataFrame(index=[f"gene{i}" for i in range(4)]),
-    )
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        adata = sc.AnnData(
+            np.arange(16).reshape(4, 4),
+            obs=pd.DataFrame(index=["a", "a", "b", "c"]),
+            var=pd.DataFrame(index=[f"gene{i}" for i in range(4)]),
+        )
     df = sc.get.obs_df(adata, ["gene1"])
     pd.testing.assert_index_equal(df.index, adata.obs_names)
 
@@ -156,9 +159,8 @@ def test_repeated_gene_symbols():
     gene_symbols = [f"symbol_{i}" for i in ["a", "b", "b", "c"]]
     var_names = pd.Index([f"id_{i}" for i in ["a", "b.1", "b.2", "c"]])
     adata = sc.AnnData(
-        np.arange(3 * 4).reshape((3, 4)),
+        np.arange(3 * 4, dtype=np.float32).reshape((3, 4)),
         var=pd.DataFrame({"gene_symbols": gene_symbols}, index=var_names),
-        dtype=np.float32,
     )
 
     with pytest.raises(KeyError, match="symbol_b"):
@@ -176,18 +178,18 @@ def test_repeated_gene_symbols():
 
 @filter_oldformatwarning
 def test_backed_vs_memory():
-    "compares backed vs. memory"
+    """compares backed vs. memory"""
     from pathlib import Path
 
     # get location test h5ad file in datasets
     HERE = Path(sc.__file__).parent
     adata_file = HERE / "datasets/10x_pbmc68k_reduced.h5ad"
-    adata_backed = sc.read(adata_file, backed='r')
+    adata_backed = sc.read(adata_file, backed="r")
     adata = sc.read_h5ad(adata_file)
 
     # use non-sequential list of genes
     genes = list(adata.var_names[20::-2])
-    obs_names = ['bulk_labels', 'n_genes']
+    obs_names = ["bulk_labels", "n_genes"]
     pd.testing.assert_frame_equal(
         sc.get.obs_df(adata, keys=genes + obs_names),
         sc.get.obs_df(adata_backed, keys=genes + obs_names),
@@ -202,11 +204,11 @@ def test_backed_vs_memory():
 
 
 def test_column_content():
-    "uses a larger dataset to test column order and content"
+    """uses a larger dataset to test column order and content"""
     adata = pbmc68k_reduced()
 
     # test that columns content is correct for obs_df
-    query = ['CST3', 'NKG7', 'GNLY', 'louvain', 'n_counts', 'n_genes']
+    query = ["CST3", "NKG7", "GNLY", "louvain", "n_counts", "n_genes"]
     df = sc.get.obs_df(adata, query)
     for col in query:
         assert col in df
@@ -215,7 +217,7 @@ def test_column_content():
 
     # test that columns content is correct for var_df
     cell_ids = list(adata.obs.sample(5).index)
-    query = cell_ids + ['highly_variable', 'dispersions_norm', 'dispersions']
+    query = cell_ids + ["highly_variable", "dispersions_norm", "dispersions"]
     df = sc.get.var_df(adata, query)
     np.testing.assert_array_equal(query, df.columns)
     for col in query:
@@ -224,7 +226,7 @@ def test_column_content():
 
 def test_var_df(adata):
     adata.varm["eye"] = np.eye(2, dtype=int)
-    adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype='float64')
+    adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
 
     pd.testing.assert_frame_equal(
         sc.get.var_df(
@@ -374,16 +376,18 @@ def test_repeated_cols(dim, transform, func):
 
 @TRANSPOSE_PARAMS
 def test_repeated_index_vals(dim, transform, func):
-    # THis one could be reverted, see:
+    # This one could be reverted, see:
     # https://github.com/scverse/scanpy/pull/1583#issuecomment-770641710
     alt_dim = ["obs", "var"][dim == "obs"]
+
     adata = transform(
         sc.AnnData(
             np.ones((5, 10)),
             var=pd.DataFrame(
                 index=["repeated_id"] * 2 + [f"gene-{i}" for i in range(8)]
             ),
-        )
+        ),
+        expect_duplicates=True,
     )
 
     with pytest.raises(
@@ -500,12 +504,12 @@ def test_rank_genes_groups_df():
         sc.get.rank_genes_groups_df(adata, "a")
     dedf2 = sc.get.rank_genes_groups_df(adata, "a", key="different_key")
     pd.testing.assert_frame_equal(dedf, dedf2)
-    assert 'pct_nz_group' in dedf2.columns
-    assert 'pct_nz_reference' in dedf2.columns
+    assert "pct_nz_group" in dedf2.columns
+    assert "pct_nz_reference" in dedf2.columns
 
     # get all groups
     dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
-    assert 'a' in dedf3['group'].unique()
-    assert 'b' in dedf3['group'].unique()
-    adata.var_names.name = 'pr1388'
+    assert "a" in dedf3["group"].unique()
+    assert "b" in dedf3["group"].unique()
+    adata.var_names.name = "pr1388"
     sc.get.rank_genes_groups_df(adata, group=None, key="different_key")

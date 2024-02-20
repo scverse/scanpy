@@ -1,14 +1,26 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
+
+import numba
 import numpy as np
 from scipy import sparse
-import numba
+from sklearn.random_projection import sample_without_replacement
+
+from .._utils import AnyRandom, _SupportedArray, elem_mul
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
-def _get_mean_var(X, *, axis=0):
-    if sparse.issparse(X):
+def _get_mean_var(
+    X: _SupportedArray, *, axis: Literal[0, 1] = 0
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    if isinstance(X, sparse.spmatrix):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
-        mean = np.mean(X, axis=axis, dtype=np.float64)
-        mean_sq = np.multiply(X, X).mean(axis=axis, dtype=np.float64)
+        mean = X.mean(axis=axis, dtype=np.float64)
+        mean_sq = elem_mul(X, X).mean(axis=axis, dtype=np.float64)
         var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
     var *= X.shape[axis] / (X.shape[axis] - 1)
@@ -36,7 +48,12 @@ def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
         raise ValueError("This function only works on sparse csr and csc matrices")
     if axis == ax_minor:
         return sparse_mean_var_major_axis(
-            mtx.data, mtx.indices, mtx.indptr, *shape, np.float64
+            mtx.data,
+            mtx.indices,
+            mtx.indptr,
+            major_len=shape[0],
+            minor_len=shape[1],
+            dtype=np.float64,
         )
     else:
         return sparse_mean_var_minor_axis(mtx.data, mtx.indices, *shape, np.float64)
@@ -78,7 +95,7 @@ def sparse_mean_var_minor_axis(data, indices, major_len, minor_len, dtype):
 
 
 @numba.njit(cache=True)
-def sparse_mean_var_major_axis(data, indices, indptr, major_len, minor_len, dtype):
+def sparse_mean_var_major_axis(data, indices, indptr, *, major_len, minor_len, dtype):
     """
     Computes mean and variance for a sparse array for the major axis.
 
@@ -105,3 +122,19 @@ def sparse_mean_var_major_axis(data, indices, indptr, major_len, minor_len, dtyp
         variances[i] /= minor_len
 
     return means, variances
+
+
+def sample_comb(
+    dims: tuple[int, ...],
+    nsamp: int,
+    *,
+    random_state: AnyRandom = None,
+    method: Literal[
+        "auto", "tracking_selection", "reservoir_sampling", "pool"
+    ] = "auto",
+) -> NDArray[np.int64]:
+    """Randomly sample indices from a grid, without repeating the same tuple."""
+    idx = sample_without_replacement(
+        np.prod(dims), nsamp, random_state=random_state, method=method
+    )
+    return np.vstack(np.unravel_index(idx, dims)).T

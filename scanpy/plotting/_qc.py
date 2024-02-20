@@ -1,25 +1,33 @@
-from typing import Optional, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
 
+from .._compat import old_positionals
+from .._settings import settings
+from .._utils import _doc_params
+from ..preprocessing._normalization import normalize_total
 from . import _utils
 from ._docs import doc_show_save_ax
-from ..preprocessing._normalization import normalize_total
-from .._utils import _doc_params
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+    from matplotlib.axes import Axes
 
 
+@old_positionals("show", "save", "ax", "gene_symbols", "log")
 @_doc_params(show_save_ax=doc_show_save_ax)
 def highest_expr_genes(
     adata: AnnData,
     n_top: int = 30,
-    show: Optional[bool] = None,
-    save: Optional[Union[str, bool]] = None,
-    ax: Optional[Axes] = None,
-    gene_symbols: Optional[str] = None,
+    *,
+    show: bool | None = None,
+    save: str | bool | None = None,
+    ax: Axes | None = None,
+    gene_symbols: str | None = None,
     log: bool = False,
     **kwds,
 ):
@@ -67,14 +75,14 @@ def highest_expr_genes(
     norm_dict = normalize_total(adata, target_sum=100, inplace=False)
 
     # identify the genes with the highest mean
-    if issparse(norm_dict['X']):
-        mean_percent = norm_dict['X'].mean(axis=0).A1
+    if issparse(norm_dict["X"]):
+        mean_percent = norm_dict["X"].mean(axis=0).A1
         top_idx = np.argsort(mean_percent)[::-1][:n_top]
-        counts_top_genes = norm_dict['X'][:, top_idx].A
+        counts_top_genes = norm_dict["X"][:, top_idx].A
     else:
-        mean_percent = norm_dict['X'].mean(axis=0)
+        mean_percent = norm_dict["X"].mean(axis=0)
         top_idx = np.argsort(mean_percent)[::-1][:n_top]
-        counts_top_genes = norm_dict['X'][:, top_idx]
+        counts_top_genes = norm_dict["X"][:, top_idx]
     columns = (
         adata.var_names[top_idx]
         if gene_symbols is None
@@ -89,10 +97,12 @@ def highest_expr_genes(
         # a matplotlib.axes.Axes object needs to be passed.
         height = (n_top * 0.2) + 1.5
         fig, ax = plt.subplots(figsize=(5, height))
-    sns.boxplot(data=counts_top_genes, orient='h', ax=ax, fliersize=1, **kwds)
-    ax.set_xlabel('% of total counts')
+    sns.boxplot(data=counts_top_genes, orient="h", ax=ax, fliersize=1, **kwds)
+    ax.set_xlabel("% of total counts")
     if log:
-        ax.set_xscale('log')
-    _utils.savefig_or_show('highest_expr_genes', show=show, save=save)
-    if show is False:
-        return ax
+        ax.set_xscale("log")
+    show = settings.autoshow if show is None else show
+    _utils.savefig_or_show("highest_expr_genes", show=show, save=save)
+    if show:
+        return None
+    return ax

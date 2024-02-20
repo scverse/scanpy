@@ -1,34 +1,42 @@
-import warnings
-import collections.abc as cabc
-from abc import ABC
-from functools import lru_cache
-from typing import Union, List, Sequence, Tuple, Collection, Optional, Callable, Literal
-import anndata
+from __future__ import annotations
 
-import numpy as np
+import collections.abc as cabc
+import warnings
+from collections.abc import Collection, Sequence
+from typing import TYPE_CHECKING, Callable, Literal
+from typing import Union as _U
+
 import matplotlib as mpl
-from matplotlib import pyplot as pl
-from matplotlib import rcParams, ticker, gridspec, axes
-from matplotlib.axes import Axes
-from matplotlib.colors import is_color_like
-from matplotlib.figure import SubplotParams as sppars, Figure
-from matplotlib.patches import Circle
-from matplotlib.collections import PatchCollection
+import numpy as np
 from cycler import Cycler, cycler
+from matplotlib import axes, gridspec, rcParams, ticker
+from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.collections import PatchCollection
+from matplotlib.colors import Colormap, is_color_like
+from matplotlib.figure import Figure
+from matplotlib.figure import SubplotParams as sppars
+from matplotlib.patches import Circle
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import NeighborsView
 from . import palettes
 
+if TYPE_CHECKING:
+    from anndata import AnnData
+    from matplotlib.typing import MarkerType
+    from numpy.typing import ArrayLike
+    from PIL.Image import Image
 
-ColorLike = Union[str, Tuple[float, ...]]
-_IGraphLayout = Literal['fa', 'fr', 'rt', 'rt_circular', 'drl', 'eq_tree', ...]
-_FontWeight = Literal['light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 'black']
+ColorLike = _U[str, tuple[float, ...]]
+_IGraphLayout = Literal["fa", "fr", "rt", "rt_circular", "drl", "eq_tree", ...]
+_FontWeight = Literal["light", "normal", "medium", "semibold", "bold", "heavy", "black"]
 _FontSize = Literal[
-    'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
+    "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"
 ]
-VBound = Union[str, float, Callable[[Sequence[float]], float]]
+VBound = _U[str, float, Callable[[Sequence[float]], float]]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase):
@@ -40,22 +48,35 @@ class _AxesSubplot(Axes, axes.SubplotBase):
 # -------------------------------------------------------------------------------
 
 
+@old_positionals(
+    "xlabel",
+    "ylabel",
+    "xticks",
+    "yticks",
+    "title",
+    "colorbar_shrink",
+    "color_map",
+    "show",
+    "save",
+    "ax",
+)
 def matrix(
-    matrix,
-    xlabel=None,
-    ylabel=None,
-    xticks=None,
-    yticks=None,
-    title=None,
-    colorbar_shrink=0.5,
-    color_map=None,
-    show=None,
-    save=None,
-    ax=None,
-):
+    matrix: ArrayLike | Image,
+    *,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    xticks: Collection[str] | None = None,
+    yticks: Collection[str] | None = None,
+    title: str | None = None,
+    colorbar_shrink: float = 0.5,
+    color_map: str | Colormap | None = None,
+    show: bool | None = None,
+    save: bool | str | None = None,
+    ax: Axes | None = None,
+) -> None:
     """Plot a matrix."""
     if ax is None:
-        ax = pl.gca()
+        ax = plt.gca()
     img = ax.imshow(matrix, cmap=color_map)
     if xlabel is not None:
         ax.set_xlabel(xlabel)
@@ -64,19 +85,19 @@ def matrix(
     if title is not None:
         ax.set_title(title)
     if xticks is not None:
-        ax.set_xticks(range(len(xticks)), xticks, rotation='vertical')
+        ax.set_xticks(range(len(xticks)), xticks, rotation="vertical")
     if yticks is not None:
         ax.set_yticks(range(len(yticks)), yticks)
-    pl.colorbar(
+    plt.colorbar(
         img, shrink=colorbar_shrink, ax=ax
     )  # need a figure instance for colorbar
-    savefig_or_show('matrix', show=show, save=save)
+    savefig_or_show("matrix", show=show, save=save)
 
 
 def timeseries(X, **kwargs):
     """Plot X. See timeseries_subplot."""
-    pl.figure(
-        figsize=tuple(2 * s for s in rcParams['figure.figsize']),
+    plt.figure(
+        figsize=tuple(2 * s for s in rcParams["figure.figsize"]),
         subplotpars=sppars(left=0.12, right=0.98, bottom=0.13),
     )
     timeseries_subplot(X, **kwargs)
@@ -84,18 +105,20 @@ def timeseries(X, **kwargs):
 
 def timeseries_subplot(
     X: np.ndarray,
+    *,
     time=None,
     color=None,
     var_names=(),
     highlights_x=(),
-    xlabel='',
-    ylabel='gene expression',
+    xlabel="",
+    ylabel="gene expression",
     yticks=None,
     xlim=None,
     legend=True,
-    palette: Union[Sequence[str], Cycler, None] = None,
-    color_map='viridis',
-    ax: Optional[Axes] = None,
+    palette: Sequence[str] | Cycler | None = None,
+    color_map="viridis",
+    ax: Axes | None = None,
+    marker: str | Sequence[str] = ".",
 ):
     """\
     Plot X.
@@ -116,33 +139,38 @@ def timeseries_subplot(
     if X.ndim == 1:
         X = X[:, None]
     if X.shape[1] > 1:
-        colors = palette[: X.shape[1]].by_key()['color']
+        colors = palette[: X.shape[1]].by_key()["color"]
         subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
     elif use_color_map:
         colors = [color]
         subsets = [(x_range, X[:, 0])]
     else:
         levels, _ = np.unique(color, return_inverse=True)
-        colors = np.array(palette[: len(levels)].by_key()['color'])
+        colors = np.array(palette[: len(levels)].by_key()["color"])
         subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
 
+    if isinstance(marker, str):
+        marker = [marker]
+    if len(marker) != len(subsets) and len(marker) == 1:
+        marker = [marker[0] for _ in range(len(subsets))]
+
     if ax is None:
-        ax = pl.subplot()
+        ax = plt.subplot()
     for i, (x, y) in enumerate(subsets):
         ax.scatter(
             x,
             y,
-            marker='.',
-            edgecolor='face',
-            s=rcParams['lines.markersize'],
+            marker=marker[i],
+            edgecolor="face",
+            s=rcParams["lines.markersize"],
             c=colors[i],
-            label=var_names[i] if len(var_names) > 0 else '',
+            label=var_names[i] if len(var_names) > 0 else "",
             cmap=color_map,
             rasterized=settings._vector_friendly,
         )
     ylim = ax.get_ylim()
     for h in highlights_x:
-        ax.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
+        ax.plot([h, h], [ylim[0], ylim[1]], "--", color="black")
     ax.set_ylim(ylim)
     if xlim is not None:
         ax.set_xlim(xlim)
@@ -155,7 +183,7 @@ def timeseries_subplot(
 
 
 def timeseries_as_heatmap(
-    X: np.ndarray, var_names: Collection[str] = (), highlights_x=(), color_map=None
+    X: np.ndarray, *, var_names: Collection[str] = (), highlights_x=(), color_map=None
 ):
     """\
     Plot timeseries as heatmap.
@@ -194,19 +222,19 @@ def timeseries_as_heatmap(
             hold = h
         x_new[:, _hold:] = X[:, hold:]
 
-    _, ax = pl.subplots(figsize=(1.5 * 4, 2 * 4))
+    _, ax = plt.subplots(figsize=(1.5 * 4, 2 * 4))
     img = ax.imshow(
         np.array(X, dtype=np.float_),
-        aspect='auto',
-        interpolation='nearest',
+        aspect="auto",
+        interpolation="nearest",
         cmap=color_map,
     )
-    pl.colorbar(img, shrink=0.5)
-    pl.yticks(range(X.shape[0]), var_names)
+    plt.colorbar(img, shrink=0.5)
+    plt.yticks(range(X.shape[0]), var_names)
     for h in highlights_x:
-        pl.plot([h, h], [0, X.shape[0]], '--', color='black')
-    pl.xlim([0, X.shape[1] - 1])
-    pl.ylim([0, X.shape[0] - 1])
+        plt.plot([h, h], [0, X.shape[0]], "--", color="black")
+    plt.xlim([0, X.shape[1] - 1])
+    plt.ylim([0, X.shape[0] - 1])
 
 
 # -------------------------------------------------------------------------------
@@ -215,40 +243,40 @@ def timeseries_as_heatmap(
 
 
 additional_colors = {
-    'gold2': '#eec900',
-    'firebrick3': '#cd2626',
-    'khaki2': '#eee685',
-    'slategray3': '#9fb6cd',
-    'palegreen3': '#7ccd7c',
-    'tomato2': '#ee5c42',
-    'grey80': '#cccccc',
-    'grey90': '#e5e5e5',
-    'wheat4': '#8b7e66',
-    'grey65': '#a6a6a6',
-    'grey10': '#1a1a1a',
-    'grey20': '#333333',
-    'grey50': '#7f7f7f',
-    'grey30': '#4d4d4d',
-    'grey40': '#666666',
-    'antiquewhite2': '#eedfcc',
-    'grey77': '#c4c4c4',
-    'snow4': '#8b8989',
-    'chartreuse3': '#66cd00',
-    'yellow4': '#8b8b00',
-    'darkolivegreen2': '#bcee68',
-    'olivedrab3': '#9acd32',
-    'azure3': '#c1cdcd',
-    'violetred': '#d02090',
-    'mediumpurple3': '#8968cd',
-    'purple4': '#551a8b',
-    'seagreen4': '#2e8b57',
-    'lightblue3': '#9ac0cd',
-    'orchid3': '#b452cd',
-    'indianred 3': '#cd5555',
-    'grey60': '#999999',
-    'mediumorchid1': '#e066ff',
-    'plum3': '#cd96cd',
-    'palevioletred3': '#cd6889',
+    "gold2": "#eec900",
+    "firebrick3": "#cd2626",
+    "khaki2": "#eee685",
+    "slategray3": "#9fb6cd",
+    "palegreen3": "#7ccd7c",
+    "tomato2": "#ee5c42",
+    "grey80": "#cccccc",
+    "grey90": "#e5e5e5",
+    "wheat4": "#8b7e66",
+    "grey65": "#a6a6a6",
+    "grey10": "#1a1a1a",
+    "grey20": "#333333",
+    "grey50": "#7f7f7f",
+    "grey30": "#4d4d4d",
+    "grey40": "#666666",
+    "antiquewhite2": "#eedfcc",
+    "grey77": "#c4c4c4",
+    "snow4": "#8b8989",
+    "chartreuse3": "#66cd00",
+    "yellow4": "#8b8b00",
+    "darkolivegreen2": "#bcee68",
+    "olivedrab3": "#9acd32",
+    "azure3": "#c1cdcd",
+    "violetred": "#d02090",
+    "mediumpurple3": "#8968cd",
+    "purple4": "#551a8b",
+    "seagreen4": "#2e8b57",
+    "lightblue3": "#9ac0cd",
+    "orchid3": "#b452cd",
+    "indianred 3": "#cd5555",
+    "grey60": "#999999",
+    "mediumorchid1": "#e066ff",
+    "plum3": "#cd96cd",
+    "palevioletred3": "#cd6889",
 }
 
 # -------------------------------------------------------------------------------
@@ -266,41 +294,41 @@ def savefig(writekey, dpi=None, ext=None):
     if dpi is None:
         # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
         if (
-            not isinstance(rcParams['savefig.dpi'], str)
-            and rcParams['savefig.dpi'] < 150
+            not isinstance(rcParams["savefig.dpi"], str)
+            and rcParams["savefig.dpi"] < 150
         ):
             if settings._low_resolution_warning:
                 logg.warning(
-                    'You are using a low resolution (dpi<150) for saving figures.\n'
-                    'Consider running `set_figure_params(dpi_save=...)`, which will '
+                    "You are using a low resolution (dpi<150) for saving figures.\n"
+                    "Consider running `set_figure_params(dpi_save=...)`, which will "
                     "adjust `matplotlib.rcParams['savefig.dpi']`"
                 )
                 settings._low_resolution_warning = False
         else:
-            dpi = rcParams['savefig.dpi']
+            dpi = rcParams["savefig.dpi"]
     settings.figdir.mkdir(parents=True, exist_ok=True)
     if ext is None:
         ext = settings.file_format_figs
-    filename = settings.figdir / f'{writekey}{settings.plot_suffix}.{ext}'
+    filename = settings.figdir / f"{writekey}{settings.plot_suffix}.{ext}"
     # output the following msg at warning level; it's really important for the user
-    logg.warning(f'saving figure to file {filename}')
-    pl.savefig(filename, dpi=dpi, bbox_inches='tight')
+    logg.warning(f"saving figure to file {filename}")
+    plt.savefig(filename, dpi=dpi, bbox_inches="tight")
 
 
 def savefig_or_show(
     writekey: str,
-    show: Optional[bool] = None,
-    dpi: Optional[int] = None,
-    ext: str = None,
-    save: Union[bool, str, None] = None,
+    show: bool | None = None,
+    dpi: int | None = None,
+    ext: str | None = None,
+    save: bool | str | None = None,
 ):
     if isinstance(save, str):
         # check whether `save` contains a figure extension
         if ext is None:
-            for try_ext in ['.svg', '.pdf', '.png']:
+            for try_ext in [".svg", ".pdf", ".png"]:
                 if save.endswith(try_ext):
                     ext = try_ext[1:]
-                    save = save.replace(try_ext, '')
+                    save = save.replace(try_ext, "")
                     break
         # append it
         writekey += save
@@ -310,21 +338,23 @@ def savefig_or_show(
     if save:
         savefig(writekey, dpi=dpi, ext=ext)
     if show:
-        pl.show()
+        plt.show()
     if save:
-        pl.close()  # clear figure
+        plt.close()  # clear figure
 
 
-def default_palette(palette: Union[Sequence[str], Cycler, None] = None) -> Cycler:
+def default_palette(
+    palette: str | Sequence[str] | Cycler | None = None,
+) -> str | Cycler:
     if palette is None:
-        return rcParams['axes.prop_cycle']
-    elif not isinstance(palette, Cycler):
+        return rcParams["axes.prop_cycle"]
+    elif not isinstance(palette, (str, Cycler)):
         return cycler(color=palette)
     else:
         return palette
 
 
-def _validate_palette(adata, key):
+def _validate_palette(adata: AnnData, key: str) -> None:
     """
     checks if the list of colors in adata.uns[f'{key}_colors'] is valid
     and updates the color list in adata.uns[f'{key}_colors'] if needed.
@@ -351,13 +381,14 @@ def _validate_palette(adata, key):
                 _palette = None
                 break
         _palette.append(color)
-    # Don't modify if nothing changed
-    if _palette is not None and list(_palette) != list(adata.uns[color_key]):
-        adata.uns[color_key] = _palette
+    # Don’t modify if nothing changed
+    if _palette is None or np.array_equal(_palette, adata.uns[color_key]):
+        return
+    adata.uns[color_key] = _palette
 
 
 def _set_colors_for_categorical_obs(
-    adata, value_to_plot, palette: Union[str, Sequence[str], Cycler]
+    adata, value_to_plot, palette: str | Sequence[str] | Cycler
 ):
     """
     Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
@@ -379,11 +410,16 @@ def _set_colors_for_categorical_obs(
     """
     from matplotlib.colors import to_hex
 
-    categories = adata.obs[value_to_plot].cat.categories
+    if adata.obs[value_to_plot].dtype == bool:
+        categories = (
+            adata.obs[value_to_plot].astype(str).astype("category").cat.categories
+        )
+    else:
+        categories = adata.obs[value_to_plot].cat.categories
     # check is palette is a valid matplotlib colormap
-    if isinstance(palette, str) and palette in pl.colormaps():
+    if isinstance(palette, str) and palette in plt.colormaps():
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
-        cmap = pl.get_cmap(palette)
+        cmap = plt.get_cmap(palette)
         colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
     elif isinstance(palette, cabc.Mapping):
         colors_list = [to_hex(palette[k], keep_alpha=True) for k in categories]
@@ -420,13 +456,13 @@ def _set_colors_for_categorical_obs(
                 "matplotlib colormap string (eg. Set2), a  list of color names "
                 "or a cycler with a 'color' key."
             )
-        if 'color' not in palette.keys:
+        if "color" not in palette.keys:
             raise ValueError("Please set the palette key 'color'.")
 
         cc = palette()
-        colors_list = [to_hex(next(cc)['color']) for x in range(len(categories))]
+        colors_list = [to_hex(next(cc)["color"]) for x in range(len(categories))]
 
-    adata.uns[value_to_plot + '_colors'] = colors_list
+    adata.uns[value_to_plot + "_colors"] = colors_list
 
 
 def _set_default_colors_for_categorical_obs(adata, value_to_plot):
@@ -444,13 +480,19 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     -------
     None
     """
-    categories = adata.obs[value_to_plot].cat.categories
+    if adata.obs[value_to_plot].dtype == bool:
+        categories = (
+            adata.obs[value_to_plot].astype(str).astype("category").cat.categories
+        )
+    else:
+        categories = adata.obs[value_to_plot].cat.categories
+
     length = len(categories)
 
     # check if default matplotlib palette has enough colors
-    if len(rcParams['axes.prop_cycle'].by_key()['color']) >= length:
-        cc = rcParams['axes.prop_cycle']()
-        palette = [next(cc)['color'] for _ in range(length)]
+    if len(rcParams["axes.prop_cycle"].by_key()["color"]) >= length:
+        cc = rcParams["axes.prop_cycle"]()
+        palette = [next(cc)["color"] for _ in range(length)]
 
     else:
         if length <= 20:
@@ -460,9 +502,9 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
         elif length <= len(palettes.default_102):  # 103 colors
             palette = palettes.default_102
         else:
-            palette = ['grey' for _ in range(length)]
+            palette = ["grey" for _ in range(length)]
             logg.info(
-                f'the obs value {value_to_plot!r} has more than 103 categories. Uniform '
+                f"the obs value {value_to_plot!r} has more than 103 categories. Uniform "
                 "'grey' color will be used for all categories."
             )
 
@@ -482,18 +524,18 @@ def add_colors_for_categorical_sample_annotation(
         _set_default_colors_for_categorical_obs(adata, key)
 
 
-def plot_edges(axs, adata, basis, edges_width, edges_color, neighbors_key=None):
+def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=None):
     import networkx as nx
 
     if not isinstance(axs, cabc.Sequence):
         axs = [axs]
 
     if neighbors_key is None:
-        neighbors_key = 'neighbors'
+        neighbors_key = "neighbors"
     if neighbors_key not in adata.uns:
-        raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
+        raise ValueError("`edges=True` requires `pp.neighbors` to be run before.")
     neighbors = NeighborsView(adata, neighbors_key)
-    g = nx.Graph(neighbors['connectivities'])
+    g = nx.Graph(neighbors["connectivities"])
     basis_key = _get_basis(adata, basis)
 
     with warnings.catch_warnings():
@@ -514,7 +556,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
     if not isinstance(axs, cabc.Sequence):
         axs = [axs]
     v_prefix = next(
-        (p for p in ['velocity', 'Delta'] if f'{p}_{basis}' in adata.obsm), None
+        (p for p in ["velocity", "Delta"] if f"{p}_{basis}" in adata.obsm), None
     )
     if v_prefix is None:
         raise ValueError(
@@ -522,15 +564,15 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
             f"`'velocity_{basis}'` from scvelo or "
             f"`'Delta_{basis}'` from velocyto."
         )
-    if v_prefix == 'velocity':
+    if v_prefix == "velocity":
         logg.warning(
-            'The module `scvelo` has improved plotting facilities. '
-            'Prefer using `scv.pl.velocity_embedding` to `arrows=True`.'
+            "The module `scvelo` has improved plotting facilities. "
+            "Prefer using `scv.pl.velocity_embedding` to `arrows=True`."
         )
 
     basis_key = _get_basis(adata, basis)
     X = adata.obsm[basis_key]
-    V = adata.obsm[f'{v_prefix}_{basis}']
+    V = adata.obsm[f"{v_prefix}_{basis}"]
     for ax in axs:
         quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
         ax.quiver(
@@ -543,49 +585,61 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
         )
 
 
-def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
+def scatter_group(
+    ax: Axes,
+    key: str,
+    cat_code: int,
+    adata: AnnData,
+    Y: np.ndarray,
+    *,
+    projection: Literal["2d", "3d"] = "2d",
+    size: int = 3,
+    alpha: float | None = None,
+    marker: MarkerType = ".",
+):
     """Scatter of group using representation of data Y."""
-    mask = adata.obs[key].cat.categories[imask] == adata.obs[key].values
-    color = adata.uns[key + '_colors'][imask]
+    mask_obs = adata.obs[key].cat.categories[cat_code] == adata.obs[key].values
+    color = adata.uns[key + "_colors"][cat_code]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
 
-        color = rgb2hex(adata.uns[key + '_colors'][imask])
+        color = rgb2hex(adata.uns[key + "_colors"][cat_code])
     if not is_color_like(color):
-        raise ValueError('"{}" is not a valid matplotlib color.'.format(color))
-    data = [Y[mask, 0], Y[mask, 1]]
-    if projection == '3d':
-        data.append(Y[mask, 2])
+        raise ValueError(f'"{color}" is not a valid matplotlib color.')
+    data = [Y[mask_obs, 0], Y[mask_obs, 1]]
+    if projection == "3d":
+        data.append(Y[mask_obs, 2])
     ax.scatter(
         *data,
-        marker='.',
+        marker=marker,
         alpha=alpha,
         c=color,
-        edgecolors='none',
+        edgecolors="none",
         s=size,
-        label=adata.obs[key].cat.categories[imask],
+        label=adata.obs[key].cat.categories[cat_code],
         rasterized=settings._vector_friendly,
     )
-    return mask
+    return mask_obs
 
 
 def setup_axes(
-    ax: Union[Axes, Sequence[Axes]] = None,
-    panels='blue',
+    ax: Axes | Sequence[Axes] | None = None,
+    *,
+    panels="blue",
     colorbars=(False,),
     right_margin=None,
     left_margin=None,
-    projection: Literal['2d', '3d'] = '2d',
+    projection: Literal["2d", "3d"] = "2d",
     show_ticks=False,
 ):
     """Grid of axes for plotting, legends and colorbars."""
     check_projection(projection)
     if left_margin is not None:
-        raise NotImplementedError('We currently don’t support `left_margin`.')
+        raise NotImplementedError("We currently don’t support `left_margin`.")
     if np.any(colorbars) and right_margin is None:
-        right_margin = 1 - rcParams['figure.subplot.right'] + 0.21  # 0.25
+        right_margin = 1 - rcParams["figure.subplot.right"] + 0.21  # 0.25
     elif right_margin is None:
-        right_margin = 1 - rcParams['figure.subplot.right'] + 0.06  # 0.10
+        right_margin = 1 - rcParams["figure.subplot.right"] + 0.06  # 0.10
     # make a list of right margins for each panel
     if not isinstance(right_margin, list):
         right_margin_list = [right_margin for i in range(len(panels))]
@@ -593,12 +647,12 @@ def setup_axes(
         right_margin_list = right_margin
 
     # make a figure with len(panels) panels in a row side by side
-    top_offset = 1 - rcParams['figure.subplot.top']
+    top_offset = 1 - rcParams["figure.subplot.top"]
     bottom_offset = 0.15 if show_ticks else 0.08
     left_offset = 1 if show_ticks else 0.3  # in units of base_height
-    base_height = rcParams['figure.figsize'][1]
+    base_height = rcParams["figure.figsize"][1]
     height = base_height
-    base_width = rcParams['figure.figsize'][0]
+    base_width = rcParams["figure.figsize"][0]
     if show_ticks:
         base_width *= 1.1
 
@@ -620,7 +674,7 @@ def setup_axes(
     )
 
     if ax is None:
-        pl.figure(
+        plt.figure(
             figsize=(figure_width, height),
             subplotpars=sppars(left=0, right=1, bottom=bottom_offset),
         )
@@ -640,10 +694,10 @@ def setup_axes(
             bottom = panel_pos[0][0]
             width = draw_region_width / figure_width
             height = panel_pos[1][0] - bottom
-            if projection == '2d':
-                ax = pl.axes([left, bottom, width, height])
-            elif projection == '3d':
-                ax = pl.axes([left, bottom, width, height], projection='3d')
+            if projection == "2d":
+                ax = plt.axes([left, bottom, width, height])
+            elif projection == "3d":
+                ax = plt.axes([left, bottom, width, height], projection="3d")
             axs.append(ax)
     else:
         axs = ax if isinstance(ax, cabc.Sequence) else [ax]
@@ -653,23 +707,25 @@ def setup_axes(
 
 def scatter_base(
     Y: np.ndarray,
-    colors='blue',
+    *,
+    colors: str | Sequence[ColorLike | np.ndarray] = "blue",
     sort_order=True,
     alpha=None,
     highlights=(),
     right_margin=None,
     left_margin=None,
-    projection: Literal['2d', '3d'] = '2d',
+    projection: Literal["2d", "3d"] = "2d",
     title=None,
-    component_name='DC',
+    component_name="DC",
     component_indexnames=(1, 2, 3),
     axis_labels=None,
     colorbars=(False,),
     sizes=(1,),
-    color_map='viridis',
+    markers=".",
+    color_map="viridis",
     show_ticks=True,
     ax=None,
-) -> Union[Axes, List[Axes]]:
+) -> Axes | list[Axes]:
     """Plot scatter plot of data.
 
     Parameters
@@ -692,10 +748,14 @@ def scatter_base(
     # if we have a single array, transform it into a list with a single array
     if isinstance(colors, str):
         colors = [colors]
+    if isinstance(markers, str):
+        markers = [markers]
     if len(sizes) != len(colors) and len(sizes) == 1:
         sizes = [sizes[0] for _ in range(len(colors))]
+    if len(markers) != len(colors) and len(markers) == 1:
+        markers = [markers[0] for _ in range(len(colors))]
     axs, panel_pos, draw_region_width, figure_width = setup_axes(
-        ax=ax,
+        ax,
         panels=colors,
         colorbars=colorbars,
         projection=projection,
@@ -705,6 +765,7 @@ def scatter_base(
     )
     for icolor, color in enumerate(colors):
         ax = axs[icolor]
+        marker = markers[icolor]
         bottom = panel_pos[0][0]
         height = panel_pos[1][0] - bottom
         Y_sort = Y
@@ -712,19 +773,19 @@ def scatter_base(
             sort = np.argsort(color)
             color = color[sort]
             Y_sort = Y[sort]
-        if projection == '2d':
+        if projection == "2d":
             data = Y_sort[:, 0], Y_sort[:, 1]
-        elif projection == '3d':
+        elif projection == "3d":
             data = Y_sort[:, 0], Y_sort[:, 1], Y_sort[:, 2]
         else:
             raise ValueError(f"Unknown projection {projection!r} not in '2d', '3d'")
-        if not isinstance(color, str) or color != 'white':
+        if not isinstance(color, str) or color != "white":
             sct = ax.scatter(
                 *data,
-                marker='.',
+                marker=marker,
                 c=color,
                 alpha=alpha,
-                edgecolors='none',  # 'face',
+                edgecolors="none",  # 'face',
                 s=sizes[icolor],
                 cmap=color_map,
                 rasterized=settings._vector_friendly,
@@ -733,12 +794,12 @@ def scatter_base(
             width = 0.006 * draw_region_width / len(colors)
             left = (
                 panel_pos[2][2 * icolor + 1]
-                + (1.2 if projection == '3d' else 0.2) * width
+                + (1.2 if projection == "3d" else 0.2) * width
             )
             rectangle = [left, bottom, width, height]
-            fig = pl.gcf()
+            fig = plt.gcf()
             ax_cb = fig.add_axes(rectangle)
-            _ = pl.colorbar(
+            _ = plt.colorbar(
                 sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
             )
         # set the title
@@ -748,14 +809,14 @@ def scatter_base(
         for iihighlight, ihighlight in enumerate(highlights_indices):
             ihighlight = ihighlight if isinstance(ihighlight, int) else int(ihighlight)
             data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]
-            if '3d' in projection:
+            if "3d" in projection:
                 data = [Y[ihighlight, 0]], [Y[ihighlight, 1]], [Y[ihighlight, 2]]
             ax.scatter(
                 *data,
-                c='black',
-                facecolors='black',
-                edgecolors='black',
-                marker='x',
+                c="black",
+                facecolors="black",
+                edgecolors="black",
+                marker="x",
                 s=10,
                 zorder=20,
             )
@@ -769,12 +830,12 @@ def scatter_base(
                 *([d[0] for d in data] + [highlight_text]),
                 zorder=20,
                 fontsize=10,
-                color='black',
+                color="black",
             )
         if not show_ticks:
             ax.set_xticks([])
             ax.set_yticks([])
-            if '3d' in projection:
+            if "3d" in projection:
                 ax.set_zticks([])
     # set default axis_labels
     if axis_labels is None:
@@ -787,7 +848,7 @@ def scatter_base(
     for iax, ax in enumerate(axs):
         ax.set_xlabel(axis_labels[iax][0])
         ax.set_ylabel(axis_labels[iax][1])
-        if '3d' in projection:
+        if "3d" in projection:
             # shift the label closer to the axis
             ax.set_zlabel(axis_labels[iax][2], labelpad=-7)
     for ax in axs:
@@ -806,10 +867,10 @@ def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
     Y
         Data array, data to be plotted needs to be in the first two columns.
     """
-    if 's' not in kwargs:
-        kwargs['s'] = 2 if Y.shape[0] > 500 else 10
-    if 'edgecolors' not in kwargs:
-        kwargs['edgecolors'] = 'face'
+    if "s" not in kwargs:
+        kwargs["s"] = 2 if Y.shape[0] > 500 else 10
+    if "edgecolors" not in kwargs:
+        kwargs["edgecolors"] = "face"
     ax.scatter(Y[:, 0], Y[:, 1], **kwargs, rasterized=settings._vector_friendly)
     ax.set_xticks([])
     ax.set_yticks([])
@@ -860,18 +921,18 @@ def arrows_transitions(ax: Axes, X: np.ndarray, indices: Sequence[int], weight=N
                 width=widthi,
                 head_width=head_widthi,
                 alpha=alphai,
-                color='grey',
+                color="grey",
             )
 
 
 def ticks_formatter(x, pos):
     # pretty scientific notation
     if False:
-        a, b = f'{x:.2e}'.split('e')
+        a, b = f"{x:.2e}".split("e")
         b = int(b)
-        return fr'${a} \times 10^{{{b}}}$'
+        return rf"${a} \times 10^{{{b}}}$"
     else:
-        return f'{x:.3f}'.rstrip('0').rstrip('.')
+        return f"{x:.3f}".rstrip("0").rstrip(".")
 
 
 def pimp_axis(x_or_y_ax):
@@ -951,7 +1012,7 @@ def hierarchy_sc(G, root, node_sets):
             neighbors.remove(parent)
         old_node = node
         for n in node_sets[int(node)]:
-            new_node = str(node) + '_' + str(n)
+            new_node = str(node) + "_" + str(n)
             sc_G.add_node(new_node)
             sc_G.add_edge(old_node, new_node)
             old_node = new_node
@@ -962,17 +1023,17 @@ def hierarchy_sc(G, root, node_sets):
     return make_sc_tree(nx.Graph())
 
 
-def zoom(ax, xy='x', factor=1):
+def zoom(ax, xy="x", factor=1):
     """Zoom into axis.
 
     Parameters
     ----------
     """
-    limits = ax.get_xlim() if xy == 'x' else ax.get_ylim()
+    limits = ax.get_xlim() if xy == "x" else ax.get_ylim()
     new_limits = 0.5 * (limits[0] + limits[1]) + 1.0 / factor * np.array(
         (-0.5, 0.5)
     ) * (limits[1] - limits[0])
-    if xy == 'x':
+    if xy == "x":
         ax.set_xlim(new_limits)
     else:
         ax.set_ylim(new_limits)
@@ -1059,7 +1120,7 @@ def check_projection(projection):
 
 
 def circles(
-    x, y, s, ax, marker=None, c='b', vmin=None, vmax=None, scale_factor=1.0, **kwargs
+    x, y, *, s, ax, marker=None, c="b", vmin=None, vmax=None, scale_factor=1.0, **kwargs
 ):
     """
     Taken from here: https://gist.github.com/syrte/592a062c562cd2a98a83
@@ -1097,7 +1158,7 @@ def circles(
     License
     --------
     This code is under [The BSD 3-Clause License]
-    (http://opensource.org/licenses/BSD-3-Clause)
+    (https://opensource.org/license/bsd-3-clause/)
     """
 
     # You can set `facecolor` with an array for each patch,
@@ -1120,14 +1181,15 @@ def circles(
 
 
 def make_grid_spec(
-    ax_or_figsize: Union[Tuple[int, int], _AxesSubplot],
+    ax_or_figsize: tuple[int, int] | _AxesSubplot,
+    *,
     nrows: int,
     ncols: int,
-    wspace: Optional[float] = None,
-    hspace: Optional[float] = None,
-    width_ratios: Optional[Sequence[float]] = None,
-    height_ratios: Optional[Sequence[float]] = None,
-) -> Tuple[Figure, gridspec.GridSpecBase]:
+    wspace: float | None = None,
+    hspace: float | None = None,
+    width_ratios: Sequence[float] | None = None,
+    height_ratios: Sequence[float] | None = None,
+) -> tuple[Figure, gridspec.GridSpecBase]:
     kw = dict(
         wspace=wspace,
         hspace=hspace,
@@ -1135,11 +1197,11 @@ def make_grid_spec(
         height_ratios=height_ratios,
     )
     if isinstance(ax_or_figsize, tuple):
-        fig = pl.figure(figsize=ax_or_figsize)
+        fig = plt.figure(figsize=ax_or_figsize)
         return fig, gridspec.GridSpec(nrows, ncols, **kw)
     else:
         ax = ax_or_figsize
-        ax.axis('off')
+        ax.axis("off")
         ax.set_frame_on(False)
         ax.set_xticks([])
         ax.set_yticks([])
@@ -1168,9 +1230,8 @@ def fix_kwds(kwds_dict, **kwargs):
 
     >>> def _example(**kwds):
     ...     return fix_kwds(kwds, key1="value1", key2="value2")
-    >>> example(key1="value10", key3="value3")
-        {'key1': 'value10, 'key2': 'value2', 'key3': 'value3'}
-
+    >>> _example(key1="value10", key3="value3")
+    {'key1': 'value10', 'key2': 'value2', 'key3': 'value3'}
     """
 
     kwargs.update(kwds_dict)
@@ -1178,7 +1239,7 @@ def fix_kwds(kwds_dict, **kwargs):
     return kwargs
 
 
-def _get_basis(adata: anndata.AnnData, basis: str):
+def _get_basis(adata: AnnData, basis: str):
     if basis in adata.obsm.keys():
         basis_key = basis
 
@@ -1199,7 +1260,7 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
 
     if norm is not None:
         if (vmin is not None) or (vmax is not None) or (vcenter is not None):
-            raise ValueError('Passing both norm and vmin/vmax/vcenter is not allowed.')
+            raise ValueError("Passing both norm and vmin/vmax/vcenter is not allowed.")
     else:
         if vcenter is not None:
             norm = DivNorm(vmin=vmin, vmax=vmax, vcenter=vcenter)
@@ -1207,3 +1268,17 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
             norm = Normalize(vmin=vmin, vmax=vmax)
 
     return norm
+
+
+DN = Literal["area", "count", "width"]
+
+
+def _deprecated_scale(density_norm: DN, scale: DN | None, *, default: DN) -> DN:
+    if scale is None:
+        return density_norm
+    if density_norm != default:
+        msg = "can’t specify both `scale` and `density_norm`"
+        raise ValueError(msg)
+    msg = "`scale` is deprecated, use `density_norm` instead"
+    warnings.warn(msg, FutureWarning)
+    return scale
