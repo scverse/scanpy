@@ -123,7 +123,7 @@ def umap(
         from umap.umap_ import fuzzy_simplicial_set
 
     X = coo_matrix(([], ([], [])), shape=(n_obs, 1))
-    connectivities = fuzzy_simplicial_set(
+    connectivities, _sigmas, _rhos = fuzzy_simplicial_set(
         X,
         n_neighbors,
         None,
