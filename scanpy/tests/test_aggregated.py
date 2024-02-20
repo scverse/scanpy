@@ -7,6 +7,7 @@ import pytest
 from scipy.sparse import csr_matrix
 
 import scanpy as sc
+from scanpy._utils import _resolve_axis
 from scanpy.testing._helpers import assert_equal
 from scanpy.testing._helpers.data import pbmc3k_processed
 from scanpy.testing._pytest.params import ARRAY_TYPES_MEM
@@ -182,25 +183,22 @@ def test_aggregate_incorrect_dim():
         sc.get.aggregate(adata, ["louvain"], "sum", axis="foo")
 
 
-def test_aggregate_axis_specification():
+@pytest.mark.parametrize("axis_name", ["obs", "var"])
+def test_aggregate_axis_specification(axis_name):
+    axis, axis_name = _resolve_axis(axis_name)
+    by = "blobs" if axis == 0 else "labels"
+
     adata = sc.datasets.blobs()
     adata.var["labels"] = np.tile(["a", "b"], adata.shape[1])[: adata.shape[1]]
 
-    obs_int = sc.get.aggregate(adata, by="blobs", func="mean", axis=0)
-    obs_str = sc.get.aggregate(adata, by="blobs", func="mean", axis="obs")
-    obs_unspecified = sc.get.aggregate(
-        adata,
-        by="blobs",
-        func="mean",
-    )
+    agg_index = sc.get.aggregate(adata, by=by, func="mean", axis=axis)
+    agg_name = sc.get.aggregate(adata, by=by, func="mean", axis=axis_name)
 
-    np.testing.assert_equal(obs_int.layers["mean"], obs_str.layers["mean"])
-    np.testing.assert_equal(obs_int.layers["mean"], obs_unspecified.layers["mean"])
+    np.testing.assert_equal(agg_index.layers["mean"], agg_name.layers["mean"])
 
-    var_int = sc.get.aggregate(adata, by="labels", func="mean", axis=1)
-    var_str = sc.get.aggregate(adata, by="labels", func="mean", axis="var")
-
-    np.testing.assert_equal(var_int.layers["mean"], var_str.layers["mean"])
+    if axis_name == "obs":
+        agg_unspecified = sc.get.aggregate(adata, by=by, func="mean")
+        np.testing.assert_equal(agg_name.layers["mean"], agg_unspecified.layers["mean"])
 
 
 @pytest.mark.parametrize(
