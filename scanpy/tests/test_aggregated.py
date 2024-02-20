@@ -206,7 +206,7 @@ def test_aggregate_axis_specification():
 @pytest.mark.parametrize(
     ("matrix", "df", "keys", "metrics", "expected"),
     [
-        (
+        pytest.param(
             np.block(
                 [
                     [np.ones((2, 2)), np.zeros((2, 2))],
@@ -235,8 +235,9 @@ def test_aggregate_axis_specification():
                     # "mean": np.array([[1, 0], [0, 1]]),
                 },
             ),
+            id="count_nonzero",
         ),
-        (
+        pytest.param(
             np.block(
                 [
                     [np.ones((2, 2)), np.zeros((2, 2))],
@@ -265,8 +266,9 @@ def test_aggregate_axis_specification():
                     ),
                 },
             ),
+            id="sum-mean-count_nonzero",
         ),
-        (
+        pytest.param(
             np.block(
                 [
                     [np.ones((2, 2)), np.zeros((2, 2))],
@@ -291,6 +293,7 @@ def test_aggregate_axis_specification():
                     "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
                 },
             ),
+            id="mean",
         ),
     ],
 )
@@ -311,15 +314,16 @@ def test_aggregate_examples(matrix, df, keys, metrics, expected):
 @pytest.mark.parametrize(
     ("label_cols", "cols", "expected"),
     [
-        (
+        pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
             ),
             ["a", "b"],
             pd.Categorical(["a_d", "b_d", "c_f"]),
+            id="two_of_two",
         ),
-        (
+        pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
@@ -327,8 +331,9 @@ def test_aggregate_examples(matrix, df, keys, metrics, expected):
             ),
             ["a", "b", "c"],
             pd.Categorical(["a_d_g", "b_d_h", "c_f_h"]),
+            id="three_of_three",
         ),
-        (
+        pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
@@ -336,8 +341,9 @@ def test_aggregate_examples(matrix, df, keys, metrics, expected):
             ),
             ["a", "c"],
             pd.Categorical(["a_g", "b_h", "c_h"]),
+            id="two_of_three-1",
         ),
-        (
+        pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
@@ -345,6 +351,7 @@ def test_aggregate_examples(matrix, df, keys, metrics, expected):
             ),
             ["b", "c"],
             pd.Categorical(["d_g", "d_h", "f_h"]),
+            id="two_of_three-2",
         ),
     ],
 )
