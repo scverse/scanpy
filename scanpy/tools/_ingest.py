@@ -222,12 +222,9 @@ class Ingest:
     """
 
     def _init_umap(self, adata):
-        import umap as u
+        from umap import UMAP
 
-        if not self._use_pynndescent:
-            u.umap_._HAVE_PYNNDESCENT = False
-
-        self._umap = u.UMAP(
+        self._umap = UMAP(
             metric=self._metric,
             random_state=adata.uns["umap"]["params"].get("random_state", 0),
         )
@@ -246,20 +243,7 @@ class Ingest:
         self._umap._n_neighbors = self._n_neighbors
         self._umap.n_neighbors = self._n_neighbors
 
-        if not self._use_pynndescent:
-            if self._random_init is not None or self._tree_init is not None:
-                self._umap._random_init = self._random_init
-                self._umap._tree_init = self._tree_init
-                self._umap._search = self._search
-
-            if self._dist_func is not None:
-                self._umap._input_distance_func = self._dist_func
-
-            self._umap._rp_forest = self._rp_forest
-
-            self._umap._search_graph = self._search_graph
-        else:
-            self._umap._knn_search_index = self._nnd_idx
+        self._umap._knn_search_index = self._nnd_idx
 
         self._umap._a = adata.uns["umap"]["params"]["a"]
         self._umap._b = adata.uns["umap"]["params"]["b"]
@@ -268,8 +252,6 @@ class Ingest:
 
     def _init_pynndescent(self, distances):
         from pynndescent import NNDescent
-
-        self._use_pynndescent = True
 
         first_col = np.arange(distances.shape[0])[:, None]
         init_indices = np.hstack((first_col, np.stack(distances.tolil().rows)))
@@ -348,9 +330,6 @@ class Ingest:
 
         self._adata_ref = adata
         self._adata_new = None
-
-        # only use with umap > 0.5.0
-        self._use_pynndescent = False
 
         if "pca" in adata.uns:
             self._init_pca(adata)
@@ -436,29 +415,13 @@ class Ingest:
         random_state = check_random_state(random_state)
         rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
 
-        train = self._rep
         test = self._obsm["rep"]
 
         if k is None:
             k = self._n_neighbors
 
-        if self._use_pynndescent:
-            self._nnd_idx.search_rng_state = rng_state
-
-            self._indices, self._distances = self._nnd_idx.query(test, k, epsilon)
-
-        else:
-            from umap.utils import deheap_sort
-
-            init = self._initialise_search(
-                self._rp_forest, train, test, int(k * queue_size), rng_state=rng_state
-            )
-
-            result = self._search(
-                train, self._search_graph.indptr, self._search_graph.indices, init, test
-            )
-            indices, dists = deheap_sort(result)
-            self._indices, self._distances = indices[:, :k], dists[:, :k]
+        self._nnd_idx.search_rng_state = rng_state
+        self._indices, self._distances = self._nnd_idx.query(test, k, epsilon)
 
     def _umap_transform(self):
         return self._umap.transform(self._obsm["rep"])
