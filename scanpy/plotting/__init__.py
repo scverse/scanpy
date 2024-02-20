@@ -18,6 +18,7 @@ from ._qc import highest_expr_genes
 from ._rcmod import set_rcParams_defaults, set_rcParams_scanpy
 from ._scrublet import scrublet_score_distribution
 from ._stacked_violin import StackedViolin, stacked_violin
+from ._stacked_barplot import stacked_barplot
 from ._tools import (
     dpt_groups_pseudotime,
     dpt_timeseries,
