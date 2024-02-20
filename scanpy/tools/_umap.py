@@ -170,19 +170,7 @@ def umap(
         warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
         import umap
 
-    def simplicial_set_embedding(*args, **kwargs):
-        from umap.umap_ import simplicial_set_embedding
-
-        X_umap, _ = simplicial_set_embedding(
-            *args,
-            densmap=False,
-            densmap_kwds={},
-            output_dens=False,
-            **kwargs,
-        )
-        return X_umap
-
-    from umap.umap_ import find_ab_params
+    from umap.umap_ import find_ab_params, simplicial_set_embedding
 
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
@@ -218,19 +206,22 @@ def umap(
         default_epochs = 500 if neighbors["connectivities"].shape[0] <= 10000 else 200
         n_epochs = default_epochs if maxiter is None else maxiter
         X_umap = simplicial_set_embedding(
-            X,
-            neighbors["connectivities"].tocoo(),
-            n_components,
-            alpha,
-            a,
-            b,
-            gamma,
-            negative_sample_rate,
-            n_epochs,
-            init_coords,
-            random_state,
-            neigh_params.get("metric", "euclidean"),
-            neigh_params.get("metric_kwds", {}),
+            data=X,
+            graph=neighbors["connectivities"].tocoo(),
+            n_components=n_components,
+            initial_alpha=alpha,
+            a=a,
+            b=b,
+            gamma=gamma,
+            negative_sample_rate=negative_sample_rate,
+            n_epochs=n_epochs,
+            init=init_coords,
+            random_state=random_state,
+            metric=neigh_params.get("metric", "euclidean"),
+            metric_kwds=neigh_params.get("metric_kwds", {}),
+            densmap=False,
+            densmap_kwds={},
+            output_dens=False,
             verbose=settings.verbosity > 3,
         )
     elif method == "rapids":
