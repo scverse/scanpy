@@ -874,3 +874,13 @@ def _choose_graph(adata, obsp, neighbors_key):
                 "to compute a neighborhood graph."
             )
         return neighbors["connectivities"]
+
+
+def _resolve_axis(
+    axis: Literal["obs", 0, "var", 1],
+) -> tuple[Literal[0], Literal["obs"]] | tuple[Literal[1], Literal["var"]]:
+    if axis in {0, "obs"}:
+        return (0, "obs")
+    if axis in {1, "var"}:
+        return (1, "var")
+    raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}")
