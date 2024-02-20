@@ -1,21 +1,22 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal, get_args
-from typing import Union as _U
+from typing import TYPE_CHECKING, Literal, Union, get_args
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData, utils
 from scipy import sparse
 
-from scanpy._utils import _resolve_axis
-from scanpy.get.get import _check_mask
+from .._utils import _resolve_axis
+from .get import _check_mask
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Set
+    from collections.abc import Collection, Iterable
 
-Array = _U[np.ndarray, sparse.spmatrix]
+    from numpy.typing import NDArray
+
+Array = Union[np.ndarray, sparse.csc_matrix, sparse.csr_matrix]
 AggType = Literal["count_nonzero", "mean", "sum", "var"]
 
 
@@ -30,31 +31,37 @@ class Aggregate:
     Moments are computed using weighted sum aggregation of data by some feature
     via multiplication by a sparse coordinate matrix A.
 
-    Runtime is effectively computation of the product A @ X, i.e. the count of (non-zero)
-    entries in X with multiplicity the number of group memberships for that entry. This is
-    O(data) for partitions (each observation belonging to exactly one group), independent of
-    the number of groups.
+    Runtime is effectively computation of the product `A @ X`, i.e. the count of (non-zero)
+    entries in X with multiplicity the number of group memberships for that entry.
+    This is `O(data)` for partitions (each observation belonging to exactly one group),
+    independent of the number of groups.
 
     Params
     ------
     groupby
-        `Series` containing values for grouping by.
+        :class:`~pandas.Categorical` containing values for grouping by.
     data
         Data matrix for aggregation.
-    weight
-        Weights to be used for aggregation.
+    mask
+        Mask to be used for aggregation.
     """
 
-    def __init__(self, groupby, data, *, mask: np.ndarray | None = None):
+    def __init__(
+        self,
+        groupby: pd.Categorical,
+        data: Array,
+        *,
+        mask: NDArray[np.bool_] | None = None,
+    ) -> None:
         self.groupby = groupby
         self.indicator_matrix = sparse_indicator(groupby, mask=mask)
         self.data = data
 
-    groupby: pd.Series
+    groupby: pd.Categorical
+    indicator_matrix: sparse.coo_matrix
     data: Array
-    key_set: Set[str] | None
 
-    def count_nonzero(self) -> np.ndarray:
+    def count_nonzero(self) -> NDArray[np.integer]:
         """\
         Count the number of observations in each group.
 
@@ -133,7 +140,7 @@ def _power(X: Array, power: float | int) -> Array:
     """\
     Generate elementwise power of a matrix.
 
-    Needed for non-square sparse matrices because they do not support ** so the `.power` function is used.
+    Needed for non-square sparse matrices because they do not support `**` so the `.power` function is used.
 
     Params
     ------
@@ -152,11 +159,11 @@ def _power(X: Array, power: float | int) -> Array:
 @singledispatch
 def aggregate(
     adata: AnnData,
-    by: str | list[str],
+    by: str | Collection[str],
     func: AggType | Iterable[AggType],
     *,
     axis: Literal["obs", 0, "var", 1] | None = None,
-    mask: np.ndarray | str | None = None,
+    mask: NDArray[np.bool_] | str | None = None,
     dof: int = 1,
     layer: str | None = None,
     obsm: str | None = None,
@@ -228,11 +235,7 @@ def aggregate(
     Note that this filters out any combination of groups that wasn't present in the original data.
     """
     if axis is None:
-        if varm:
-            axis = 1
-        else:
-            axis = 0
-
+        axis = 1 if varm else 0
     axis, axis_name = _resolve_axis(axis)
     if mask is not None:
         mask = _check_mask(adata, mask, axis_name)
@@ -285,7 +288,7 @@ def aggregate_array(
     by: pd.Categorical,
     func: AggType | Iterable[AggType],
     *,
-    mask: np.ndarray | None = None,
+    mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
 ) -> dict[str, np.ndarray]:
     groupby = Aggregate(groupby=by, data=data, mask=mask)
@@ -314,7 +317,7 @@ def aggregate_array(
 
 
 def _combine_categories(
-    label_df: pd.DataFrame, cols: list[str]
+    label_df: pd.DataFrame, cols: Collection[str] | str
 ) -> tuple[pd.Categorical, pd.DataFrame]:
     """
     Returns both the result categories and a dataframe labelling each row
@@ -366,14 +369,17 @@ def _combine_categories(
 
 
 def sparse_indicator(
-    categorical, *, mask: np.ndarray | None = None, weight: np.ndarray | None = None
+    categorical: pd.Categorical,
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    weight: NDArray[np.floating] | None = None,
 ) -> sparse.coo_matrix:
     if mask is not None and weight is None:
-        weight = mask
+        weight = mask.astype(np.float32)
     elif mask is not None and weight is not None:
         weight = mask * weight
     elif mask is None and weight is None:
-        weight = np.broadcast_to(1, len(categorical))
+        weight = np.broadcast_to(1.0, len(categorical))
     A = sparse.coo_matrix(
         (weight, (categorical.codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
