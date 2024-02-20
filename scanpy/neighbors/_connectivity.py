@@ -134,8 +134,4 @@ def umap(
         local_connectivity=local_connectivity,
     )
 
-    if isinstance(connectivities, tuple):
-        # In umap-learn 0.4, this returns (result, sigmas, rhos)
-        connectivities = connectivities[0]
-
     return connectivities.tocsr()

@@ -4,7 +4,6 @@ import warnings
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from packaging import version
 from sklearn.utils import check_array, check_random_state
 
 from .. import logging as logg
@@ -171,22 +170,18 @@ def umap(
         warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
         import umap
 
-    if version.parse(umap.__version__) >= version.parse("0.5.0"):
-
-        def simplicial_set_embedding(*args, **kwargs):
-            from umap.umap_ import simplicial_set_embedding
-
-            X_umap, _ = simplicial_set_embedding(
-                *args,
-                densmap=False,
-                densmap_kwds={},
-                output_dens=False,
-                **kwargs,
-            )
-            return X_umap
-
-    else:
+    def simplicial_set_embedding(*args, **kwargs):
         from umap.umap_ import simplicial_set_embedding
+
+        X_umap, _ = simplicial_set_embedding(
+            *args,
+            densmap=False,
+            densmap_kwds={},
+            output_dens=False,
+            **kwargs,
+        )
+        return X_umap
+
     from umap.umap_ import find_ab_params
 
     if a is None or b is None:

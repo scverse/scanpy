@@ -266,54 +266,6 @@ class Ingest:
 
         self._umap._input_hash = None
 
-    def _init_dist_search(self, dist_args):
-        from functools import partial
-
-        from umap.distances import named_distances
-        from umap.nndescent import initialise_search
-
-        self._random_init = None
-        self._tree_init = None
-
-        self._initialise_search = None
-        self._search = None
-
-        self._dist_func = None
-
-        dist_func = named_distances[self._metric]
-
-        if pkg_version("umap-learn") < version.parse("0.4.0"):
-            from umap.nndescent import (
-                make_initialisations,
-                make_initialized_nnd_search,
-            )
-
-            self._random_init, self._tree_init = make_initialisations(
-                dist_func, dist_args
-            )
-            _initialise_search = partial(
-                initialise_search,
-                init_from_random=self._random_init,
-                init_from_tree=self._tree_init,
-            )
-            _search = make_initialized_nnd_search(dist_func, dist_args)
-
-        else:
-            from numba import njit
-            from umap.nndescent import initialized_nnd_search
-
-            @njit
-            def partial_dist_func(x, y):
-                return dist_func(x, y, *dist_args)
-
-            _initialise_search = partial(initialise_search, dist=partial_dist_func)
-            _search = partial(initialized_nnd_search, dist=partial_dist_func)
-
-            self._dist_func = partial_dist_func
-
-        self._initialise_search = _initialise_search
-        self._search = _search
-
     def _init_pynndescent(self, distances):
         from pynndescent import NNDescent
 
@@ -365,27 +317,13 @@ class Ingest:
 
         if "metric_kwds" in neighbors["params"]:
             self._metric_kwds = neighbors["params"]["metric_kwds"]
-            dist_args = tuple(self._metric_kwds.values())
         else:
             self._metric_kwds = {}
-            dist_args = ()
 
         self._metric = neighbors["params"]["metric"]
 
-        if pkg_version("umap-learn") < version.parse("0.5.0"):
-            self._init_dist_search(dist_args)
-
-            search_graph = neighbors["distances"].copy()
-            search_graph.data = (search_graph.data > 0).astype(np.int8)
-            self._search_graph = search_graph.maximum(search_graph.transpose())
-
-            if "rp_forest" in neighbors:
-                self._rp_forest = _rp_forest_generate(neighbors["rp_forest"])
-            else:
-                self._rp_forest = None
-        else:
-            self._neigh_random_state = neighbors["params"].get("random_state", 0)
-            self._init_pynndescent(neighbors["distances"])
+        self._neigh_random_state = neighbors["params"].get("random_state", 0)
+        self._init_pynndescent(neighbors["distances"])
 
     def _init_pca(self, adata):
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
