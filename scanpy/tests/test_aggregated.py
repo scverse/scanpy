@@ -204,7 +204,7 @@ def test_aggregate_axis_specification():
 
 
 @pytest.mark.parametrize(
-    "matrix,df,keys,metrics,expected",
+    ("matrix", "df", "keys", "metrics", "expected"),
     [
         (
             np.block(
@@ -309,65 +309,57 @@ def test_aggregate_examples(matrix, df, keys, metrics, expected):
 
 
 @pytest.mark.parametrize(
-    "label_df,cols,expected",
+    ("label_cols", "cols", "expected"),
     [
         (
-            pd.DataFrame(
-                {
-                    "a": pd.Categorical(["a", "b", "c"]),
-                    "b": pd.Categorical(["d", "d", "f"]),
-                }
+            dict(
+                a=pd.Categorical(["a", "b", "c"]),
+                b=pd.Categorical(["d", "d", "f"]),
             ),
             ["a", "b"],
             pd.Categorical(["a_d", "b_d", "c_f"]),
         ),
         (
-            pd.DataFrame(
-                {
-                    "a": pd.Categorical(["a", "b", "c"]),
-                    "b": pd.Categorical(["d", "d", "f"]),
-                    "c": pd.Categorical(["g", "h", "h"]),
-                }
+            dict(
+                a=pd.Categorical(["a", "b", "c"]),
+                b=pd.Categorical(["d", "d", "f"]),
+                c=pd.Categorical(["g", "h", "h"]),
             ),
             ["a", "b", "c"],
             pd.Categorical(["a_d_g", "b_d_h", "c_f_h"]),
         ),
         (
-            pd.DataFrame(
-                {
-                    "a": pd.Categorical(["a", "b", "c"]),
-                    "b": pd.Categorical(["d", "d", "f"]),
-                    "c": pd.Categorical(["g", "h", "h"]),
-                }
+            dict(
+                a=pd.Categorical(["a", "b", "c"]),
+                b=pd.Categorical(["d", "d", "f"]),
+                c=pd.Categorical(["g", "h", "h"]),
             ),
             ["a", "c"],
             pd.Categorical(["a_g", "b_h", "c_h"]),
         ),
         (
-            pd.DataFrame(
-                {
-                    "a": pd.Categorical(["a", "b", "c"]),
-                    "b": pd.Categorical(["d", "d", "f"]),
-                    "c": pd.Categorical(["g", "h", "h"]),
-                }
+            dict(
+                a=pd.Categorical(["a", "b", "c"]),
+                b=pd.Categorical(["d", "d", "f"]),
+                c=pd.Categorical(["g", "h", "h"]),
             ),
             ["b", "c"],
             pd.Categorical(["d_g", "d_h", "f_h"]),
         ),
     ],
 )
-def test_combine_categories(label_df, cols, expected):
+def test_combine_categories(label_cols, cols, expected):
     from scanpy.get._aggregated import _combine_categories
 
+    label_df = pd.DataFrame(label_cols)
     result, result_label_df = _combine_categories(label_df, cols)
 
     assert isinstance(result, pd.Categorical)
 
-    # TODO: is there a better function here?
-    pd.testing.assert_series_equal(pd.Series(result), pd.Series(expected))
+    pd.testing.assert_extension_array_equal(result, expected)
 
-    pd.testing.assert_series_equal(
-        pd.Series(result), pd.Series(result_label_df.index.astype("category"))
+    pd.testing.assert_index_equal(
+        pd.Index(result), result_label_df.index.astype("category")
     )
 
     reconstructed_df = pd.DataFrame(

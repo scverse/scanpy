@@ -290,7 +290,7 @@ def aggregate_array(
     *,
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
-) -> dict[str, np.ndarray]:
+) -> dict[AggType, np.ndarray]:
     groupby = Aggregate(groupby=by, data=data, mask=mask)
     result = {}
 
@@ -334,9 +334,9 @@ def _combine_categories(
 
     # It's like np.concatenate([x for x in product(*[range(n) for n in n_categories])])
     code_combinations = np.indices(n_categories).reshape(len(n_categories), -1)
-    result_categories = [
-        "_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])
-    ]
+    result_categories = pd.Index(
+        ["_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])]
+    )
 
     # Dataframe with unique combination of categories for each row
     new_label_df = pd.DataFrame(
