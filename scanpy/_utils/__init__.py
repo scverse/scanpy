@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import random
 import sys
 import warnings
 from collections import namedtuple
+from contextlib import contextmanager
 from enum import Enum
 from functools import partial, singledispatch, wraps
 from textwrap import dedent
@@ -20,10 +22,10 @@ from weakref import WeakSet
 import numpy as np
 from anndata import AnnData
 from anndata import __version__ as anndata_version
-from numpy import random
 from numpy.typing import NDArray
 from packaging import version
 from scipy import sparse
+from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .._compat import DaskArray
@@ -45,7 +47,38 @@ class Empty(Enum):
 _empty = Empty.token
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-AnyRandom = Union[int, random.RandomState, None]  # maybe in the future random.Generator
+# maybe in the future random.Generator
+AnyRandom = Union[int, np.random.RandomState, None]
+
+
+class RNGIgraph:
+    """
+    Random number generator for ipgraph so global seed is not changed.
+    See :func:`igraph.set_random_number_generator` for the requirements.
+    """
+
+    def __init__(self, random_state: int = 0) -> None:
+        self._rng = check_random_state(random_state)
+
+    def __getattr__(self, attr: str):
+        return getattr(self._rng, "normal" if attr == "gauss" else attr)
+
+
+@contextmanager
+def set_igraph_random_state(random_state: int):
+    try:
+        import igraph
+    except ImportError:
+        raise ImportError(
+            "Please install igraph: `conda install -c conda-forge igraph` or `pip3 install igraph`."
+        )
+    rng = RNGIgraph(random_state)
+    try:
+        igraph.set_random_number_generator(rng)
+        yield None
+    finally:
+        igraph.set_random_number_generator(random)
+
 
 EPS = 1e-15
 
@@ -459,10 +492,10 @@ def moving_average(a: np.ndarray, n: int):
     return ret[n - 1 :] / n
 
 
-def get_random_state(seed: AnyRandom) -> random.RandomState:
+def get_random_state(seed: AnyRandom) -> np.random.RandomState:
     if isinstance(seed, np.random.RandomState):
         return seed
-    return random.RandomState(seed)
+    return np.random.RandomState(seed)
 
 
 # --------------------------------------------------------------------------------
@@ -841,3 +874,13 @@ def _choose_graph(adata, obsp, neighbors_key):
                 "to compute a neighborhood graph."
             )
         return neighbors["connectivities"]
+
+
+def _resolve_axis(
+    axis: Literal["obs", 0, "var", 1],
+) -> tuple[Literal[0], Literal["obs"]] | tuple[Literal[1], Literal["var"]]:
+    if axis in {0, "obs"}:
+        return (0, "obs")
+    if axis in {1, "var"}:
+        return (1, "var")
+    raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}")

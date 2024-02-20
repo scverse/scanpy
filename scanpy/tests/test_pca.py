@@ -165,7 +165,7 @@ def test_pca_transform(array_type):
 
     with warnings.catch_warnings(record=True) as record:
         sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
-    assert len(record) == 0
+    assert len(record) == 0, record
 
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 

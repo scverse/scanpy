@@ -28,11 +28,10 @@ ROOT = HERE / "_images_pbmc3k"
 
 @needs.leidenalg
 def test_pbmc3k(image_comparer):
+    # ensure violin plots and other non-determinstic plots have deterministic behavior
+    np.random.seed(0)
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
-
-    adata = sc.read(
-        "./data/pbmc3k_raw.h5ad", backup_url="https://falexwolf.de/data/pbmc3k_raw.h5ad"
-    )
+    adata = sc.datasets.pbmc3k()
 
     # Preprocessing
 
@@ -105,13 +104,48 @@ def test_pbmc3k(image_comparer):
 
     # Clustering the graph
 
-    sc.tl.leiden(adata, resolution=0.9)
-    # sc.pl.umap(adata, color=['leiden', 'CST3', 'NKG7'], show=False)
-    # save_and_compare_images('umap_2')
+    sc.tl.leiden(
+        adata,
+        resolution=0.9,
+        random_state=0,
+        directed=False,
+        n_iterations=2,
+        flavor="igraph",
+    )
+
+    # sc.pl.umap(adata, color=["leiden", "CST3", "NKG7"], show=False)
+    # save_and_compare_images("umap_2")
     sc.pl.scatter(adata, "CST3", "NKG7", color="leiden", show=False)
     save_and_compare_images("scatter_3")
 
     # Finding marker genes
+    # Due to incosistency with our test runner vs local, these clusters need to
+    # be pre-annotated as the numbers for each cluster are not consistent.
+    marker_genes = [
+        "RP11-18H21.1",
+        "GZMK",
+        "CD79A",
+        "FCGR3A",
+        "GNLY",
+        "S100A8",
+        "FCER1A",
+        "PPBP",
+    ]
+    new_labels = ["0", "1", "2", "3", "4", "5", "6", "7"]
+    data_df = adata[:, marker_genes].to_df()
+    data_df["leiden"] = adata.obs["leiden"]
+    max_idxs = data_df.groupby("leiden", observed=True).mean().idxmax()
+    leiden_relabel = {}
+    for marker_gene, new_label in zip(marker_genes, new_labels):
+        leiden_relabel[max_idxs[marker_gene]] = new_label
+    adata.obs["leiden_old"] = adata.obs["leiden"].copy()
+    adata.rename_categories(
+        "leiden", [leiden_relabel[key] for key in sorted(leiden_relabel.keys())]
+    )
+    # ensure that the column can be sorted for consistent plotting since it is by default unordered
+    adata.obs["leiden"] = adata.obs["leiden"].cat.reorder_categories(
+        list(map(str, range(len(adata.obs["leiden"].cat.categories)))), ordered=True
+    )
 
     sc.tl.rank_genes_groups(adata, "leiden")
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
@@ -129,18 +163,13 @@ def test_pbmc3k(image_comparer):
     # sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=8)
     # save_and_compare_images('rank_genes_groups_4')
 
-    if adata[adata.obs["leiden"] == "4", "CST3"].X.mean() < 1:
-        (  # switch clusters
-            adata.obs["leiden"][adata.obs["leiden"] == "4"],
-            adata.obs["leiden"][adata.obs["leiden"] == "5"],
-        ) = ("5", "4")
     new_cluster_names = [
         "CD4 T cells",
-        "CD14+ Monocytes",
-        "B cells",
         "CD8 T cells",
+        "B cells",
         "NK cells",
         "FCGR3A+ Monocytes",
+        "CD14+ Monocytes",
         "Dendritic cells",
         "Megakaryocytes",
     ]
@@ -148,7 +177,6 @@ def test_pbmc3k(image_comparer):
 
     # sc.pl.umap(adata, color='leiden', legend_loc='on data', title='', frameon=False, show=False)
     # save_and_compare_images('umap_3')
-
     sc.pl.violin(
         adata, ["CST3", "NKG7", "PPBP"], groupby="leiden", rotation=90, show=False
     )
