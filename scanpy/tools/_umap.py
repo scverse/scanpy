@@ -204,7 +204,7 @@ def umap(
         # for the init condition in the UMAP embedding
         default_epochs = 500 if neighbors["connectivities"].shape[0] <= 10000 else 200
         n_epochs = default_epochs if maxiter is None else maxiter
-        X_umap = simplicial_set_embedding(
+        X_umap, _ = simplicial_set_embedding(
             data=X,
             graph=neighbors["connectivities"].tocoo(),
             n_components=n_components,
