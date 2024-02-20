@@ -164,7 +164,6 @@ def umap(
             f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap'
         )
 
-    # Compat for umap 0.4 -> 0.5
     with warnings.catch_warnings():
         # umap 0.5.0
         warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
