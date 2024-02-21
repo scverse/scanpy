@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, TypedDict, Union, cast
 
 import pytest
 
+pytest_plugins = ["scanpy.testing._pytest"]
+
 # just import for the IMPORTED check
 import scanpy as _sc  # noqa: F401
 
