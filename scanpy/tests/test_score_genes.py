@@ -234,3 +234,17 @@ def test_invalid_gene_pool(gene_pool):
 
     with pytest.raises(ValueError, match="reference set"):
         sc.tl.score_genes(adata, adata.var_names[:3], gene_pool=gene_pool)
+
+
+def test_no_control_gene():
+    np.random.seed(0)
+    adata = _create_adata(100, 1, p_zero=0, p_nan=0)
+
+    with pytest.raises(AssertionError, match="No control genes found"):
+        sc.tl.score_genes(adata, adata.var_names[:1], ctrl_size=1)
+
+
+def test_gene_list_is_control():
+    np.random.seed(0)
+    adata = sc.datasets.blobs(n_variables=10, n_observations=100, n_centers=20)
+    sc.tl.score_genes(adata, gene_list="3", ctrl_size=1, n_bins=5)
