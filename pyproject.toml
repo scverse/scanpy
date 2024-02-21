@@ -160,7 +160,6 @@ addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
-    # "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
