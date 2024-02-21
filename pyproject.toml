@@ -63,7 +63,7 @@ dependencies = [
     "natsort",
     "joblib",
     "numba>=0.56",
-    "umap-learn>=0.3.10",
+    "umap-learn>=0.5,!=0.5.0",
     "pynndescent>=0.5",
     "packaging>=21.3",
     "session-info",
