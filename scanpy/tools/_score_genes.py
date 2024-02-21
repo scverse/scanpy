@@ -124,7 +124,7 @@ def score_genes(
             genes_to_ignore.append(gene)
     if len(genes_to_ignore) > 0:
         logg.warning(f"genes are not in var_names and ignored: {genes_to_ignore}")
-    gene_list = set(gene_list_in_var)
+    gene_list = gene_list_in_var
 
     if len(gene_list) == 0:
         raise ValueError("No valid genes were passed for scoring.")
@@ -163,7 +163,7 @@ def score_genes(
     control_genes = set()
 
     # now pick `ctrl_size` genes from every cut
-    for cut in np.unique(obs_cut.loc[list(gene_list)]):
+    for cut in obs_cut.loc[gene_list].unique():
         r_genes = obs_cut[
             (obs_cut == cut) & ~obs_cut.index.isin(gene_list)
         ].index.values
@@ -181,8 +181,7 @@ def score_genes(
     assert not any(
         g in control_genes for g in gene_list
     ), "Genes are in both gene_list and control_genes."
-    # control_genes = list(control_genes - gene_list)
-    gene_list = list(gene_list)
+    control_genes = list(control_genes)
 
     X_list = _adata[:, gene_list].X
     if issparse(X_list):
