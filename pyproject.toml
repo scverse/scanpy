@@ -87,6 +87,7 @@ test-min = [
     "pytest>=7.4.2",
     "pytest-nunit",
     "pytest-mock",
+    "pytest-cov",
     "profimp",
 ]
 test = [
