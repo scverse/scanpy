@@ -164,13 +164,24 @@ def score_genes(
 
     # now pick `ctrl_size` genes from every cut
     for cut in np.unique(obs_cut.loc[list(gene_list)]):
-        r_genes = np.array(obs_cut[obs_cut == cut].index)
+        r_genes = obs_cut[
+            (obs_cut == cut) & ~obs_cut.index.isin(gene_list)
+        ].index.values
+        if len(r_genes) == 0:
+            logg.warning(
+                f"No control genes for this cut. You might want to increase "
+                f"ctrl_size={ctrl_size} to sample from more control genes."
+            )
         np.random.shuffle(r_genes)
         # uses full r_genes if ctrl_size > len(r_genes)
         control_genes.update(set(r_genes[:ctrl_size]))
 
     # To index, we need a list – indexing implies an order.
-    control_genes = list(control_genes - gene_list)
+    assert len(control_genes) > 0, "No control genes found."
+    assert not any(
+        g in control_genes for g in gene_list
+    ), "Genes are in both gene_list and control_genes."
+    # control_genes = list(control_genes - gene_list)
     gene_list = list(gene_list)
 
     X_list = _adata[:, gene_list].X
