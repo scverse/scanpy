@@ -87,6 +87,7 @@ test-min = [
     "pytest>=7.4.2",
     "pytest-nunit",
     "pytest-mock",
+    "pytest-cov",
     "profimp",
 ]
 test = [
@@ -159,7 +160,6 @@ addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
-    "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
