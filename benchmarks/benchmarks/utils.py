@@ -1,15 +1,15 @@
+from __future__ import annotations
+
+import gc
+import sys
 from string import ascii_lowercase
 from time import sleep
 
-from memory_profiler import memory_usage
 import numpy as np
 import pandas as pd
-from scipy import sparse
-import sys
-import gc
-
-import anndata
 from anndata import AnnData
+from memory_profiler import memory_usage
+from scipy import sparse
 
 
 def get_actualsize(input_obj):
@@ -122,10 +122,10 @@ def gen_adata(n_obs, n_var, attr_set):
     if "obs,var" in attr_set:
         adata.obs = pd.DataFrame(
             {k: np.random.randint(0, 100, n_obs) for k in ascii_lowercase},
-            index=["cell{}".format(i) for i in range(n_obs)],
+            index=[f"cell{i}" for i in range(n_obs)],
         )
         adata.var = pd.DataFrame(
             {k: np.random.randint(0, 100, n_var) for k in ascii_lowercase},
-            index=["gene{}".format(i) for i in range(n_var)],
+            index=[f"gene{i}" for i in range(n_var)],
         )
     return adata

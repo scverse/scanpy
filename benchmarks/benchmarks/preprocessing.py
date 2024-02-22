@@ -4,34 +4,28 @@ API documentation: https://scanpy.readthedocs.io/en/stable/api.html#module-scanp
 
 
 """
-import tempfile
-from pathlib import Path
-import sys
+from __future__ import annotations
 
-from memory_profiler import memory_usage
-import numpy as np
 import scanpy as sc
-
-from .utils import get_anndata_memsize, sedate, get_peak_mem, get_actualsize
 
 
 class PreprocessingSuite:
     params = [sc.datasets.pbmc68k_reduced()]
-    param_names = ['input_data']
+    param_names = ["input_data"]
 
     def setup(self, input_data):
         self.adata = input_data
 
     def time_calculate_qc_metrics(self, input_data):
-        self.adata.var['mt'] = self.adata.var_names.str.startswith('MT-')
+        self.adata.var["mt"] = self.adata.var_names.str.startswith("MT-")
         sc.pp.calculate_qc_metrics(
-            self.adata, qc_vars=['mt'], percent_top=None, log1p=False, inplace=True
+            self.adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
         )
 
     def peakmem_calculate_qc_metrics(self, input_data):
-        self.adata.var['mt'] = self.adata.var_names.str.startswith('MT-')
+        self.adata.var["mt"] = self.adata.var_names.str.startswith("MT-")
         sc.pp.calculate_qc_metrics(
-            self.adata, qc_vars=['mt'], percent_top=None, log1p=False, inplace=True
+            self.adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
         )
 
     def time_filter_cells(self, input_data):
@@ -59,10 +53,10 @@ class PreprocessingSuite:
         sc.pp.log1p(self.adata)
 
     def time_pca(self, input_data):
-        sc.pp.pca(self.adata, svd_solver='arpack')
+        sc.pp.pca(self.adata, svd_solver="arpack")
 
     def peakmem_pca(self, input_data):
-        sc.pp.pca(self.adata, svd_solver='arpack')
+        sc.pp.pca(self.adata, svd_solver="arpack")
 
     def time_highly_variable_genes(self, input_data):
         sc.pp.highly_variable_genes(
@@ -75,10 +69,10 @@ class PreprocessingSuite:
         )
 
     def time_regress_out(self, input_data):
-        sc.pp.regress_out(self.adata, ['n_counts', 'percent_mito'])
+        sc.pp.regress_out(self.adata, ["n_counts", "percent_mito"])
 
     def peakmem_regress_out(self, input_data):
-        sc.pp.regress_out(self.adata, ['n_counts', 'percent_mito'])
+        sc.pp.regress_out(self.adata, ["n_counts", "percent_mito"])
 
     def time_scale(self, input_data):
         sc.pp.scale(self.adata, max_value=10)

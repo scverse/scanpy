@@ -4,24 +4,18 @@ API documentation: https://scanpy.readthedocs.io/en/stable/api.html#module-scanp
 
 
 """
-import tempfile
-from pathlib import Path
-import sys
+from __future__ import annotations
 
-from memory_profiler import memory_usage
-import numpy as np
 import scanpy as sc
-
-from .utils import get_anndata_memsize, sedate, get_peak_mem, get_actualsize
 
 
 class ToolsSuite:
     params = [sc.datasets.pbmc3k_processed()]
-    param_names = ['input_data']
+    param_names = ["input_data"]
 
     def setup(self, input_data):
         self.adata = input_data
-        
+
     def time_pca(self, input_data):
         sc.tl.pca(self.adata)
 
@@ -60,16 +54,12 @@ class ToolsSuite:
 
     # def time_leiden(self, input_data):
     #     sc.tl.leiden(self.adata)
-    
+
     # def peakmem_leiden(self, input_data):
     #     sc.tl.leiden(self.adata)
 
     # def time_draw_graph(self, input_data):
     #     sc.tl.draw_graph(self.adata)
-    
+
     # def peakmem_draw_graph(self, input_data):
     #     sc.tl.draw_graph(self.adata)
-    
-    
-
-    
