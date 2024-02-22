@@ -52,21 +52,21 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
-      pip install wheel coverage
+      pip install wheel
       pip install .[dev,$(TEST_EXTRA)]
     displayName: 'Install dependencies'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'latest')
 
   - script: |
       python -m pip install --pre --upgrade pip
-      pip install --pre wheel coverage
+      pip install --pre wheel
       pip install --pre .[dev,$(TEST_EXTRA)]
       pip install -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
     displayName: 'Install dependencies release candidates'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'pre-release')
 
   - script: |
-      python -m pip install pip wheel tomli packaging pytest-cov
+      python -m pip install pip wheel tomli packaging
       pip install `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
       pip install --no-deps .
     displayName: 'Install dependencies minimum version'
@@ -81,8 +81,7 @@ jobs:
     condition: eq(variables['TEST_TYPE'], 'standard')
 
   - script: |
-      coverage run -m pytest
-      coverage xml
+      pytest --cov --cov-report=xml --cov-context=test
     displayName: 'PyTest (coverage)'
     condition: eq(variables['TEST_TYPE'], 'coverage')
 

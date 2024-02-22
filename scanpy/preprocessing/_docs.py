@@ -26,7 +26,7 @@ use_highly_variable
     By default uses them if they have been determined beforehand.
 
     .. deprecated:: 1.10.0
-       Use `mask` instead
+       Use `mask_var` instead
 """
 
 doc_obs_qc_args = """\

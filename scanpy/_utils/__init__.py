@@ -84,25 +84,12 @@ EPS = 1e-15
 
 
 def check_versions():
-    from .._compat import pkg_version
-
-    umap_version = pkg_version("umap-learn")
-
     if version.parse(anndata_version) < version.parse("0.6.10"):
         from .. import __version__
 
         raise ImportError(
             f"Scanpy {__version__} needs anndata version >=0.6.10, "
             f"not {anndata_version}.\nRun `pip install anndata -U --no-deps`."
-        )
-
-    if umap_version < version.parse("0.3.0"):
-        from . import __version__
-
-        # make this a warning, not an error
-        # it might be useful for people to still be able to run it
-        logg.warning(
-            f"Scanpy {__version__} needs umap " f"version >=0.3.0, not {umap_version}."
         )
 
 

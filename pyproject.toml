@@ -63,7 +63,7 @@ dependencies = [
     "natsort",
     "joblib",
     "numba>=0.56",
-    "umap-learn>=0.3.10",
+    "umap-learn>=0.5,!=0.5.0",
     "pynndescent>=0.5",
     "packaging>=21.3",
     "session-info",
@@ -87,6 +87,7 @@ test-min = [
     "pytest>=7.4.2",
     "pytest-nunit",
     "pytest-mock",
+    "pytest-cov",
     "profimp",
 ]
 test = [
@@ -159,7 +160,6 @@ addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
-    "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
