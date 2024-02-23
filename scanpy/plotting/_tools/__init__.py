@@ -271,7 +271,23 @@ def dpt_groups_pseudotime(
     save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
 ):
-    """Plot groups and pseudotime."""
+    """Plot groups and pseudotime.
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    color_map
+        Color map to use for continous variables. Can be a name or a\n:class:`~matplotlib.colors.Colormap` instance (e.g. `\"magma`\", `\"viridis\"`\nor `mpl.cm.cividis`), see :func:`~matplotlib.cm.get_cmap`.\nIf `None`, the value of `mpl.rcParams[\"image.cmap\"]` is used.\nThe default `color_map` can be set using :func:`~scanpy.set_figure_params`."
+    palette
+        Colors to use for plotting categorical annotation groups.\nThe palette can be a valid :class:`~matplotlib.colors.ListedColormap` name\n(`'Set2'`, `'tab20'`, \u2026), a :class:`~cycler.Cycler` object, a dict mapping\ncategories to colors, or a sequence of colors. Colors must be valid to\nmatplotlib. (see :func:`~matplotlib.colors.is_color_like`).\nIf `None`, `mpl.rcParams[\"axes.prop_cycle\"]` is used unless the categorical\nvariable already has colors stored in `adata.uns[\"{var}_colors\"]`.\nIf provided, values of `adata.uns[\"{var}_colors\"]` will be set.
+    show
+        Show the plot, do not return axis.
+    save
+        If `True` or a `str`, save the figure.\nA string is appended to the default filename.\nInfer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
+    marker
+        (uknown)
+    """
     _, (ax_grp, ax_ord) = plt.subplots(2, 1)
     timeseries_subplot(
         adata.obs["dpt_groups"].cat.codes,

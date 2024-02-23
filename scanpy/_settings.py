@@ -91,6 +91,41 @@ def _type_check(var: Any, varname: str, types: type | tuple[type, ...]):
 class ScanpyConfig:
     """\
     Config manager for scanpy.
+    
+    Parameters
+    ----------
+    autosave
+        Automatically save figures in figdir (default False).
+    autoshow
+        Automatically show figures if autosave == False (default True).
+    cache_compression
+        Compression for sc.read(..., cache=True) (default 'lzf').
+    cachedir
+        Directory for cache files (default './cache/').
+    categories_to_ignore
+        Categories that are omitted in plotting etc.
+    datasetdir
+        Directory for example datasets (default './data/').
+    figdir
+        Directory for saving figures (default './figures/').
+    file_format_data
+        File format for saving AnnData objects.
+    file_format_figs
+        File format for saving figures.
+    logfile
+        The open file to write logs to.
+    logpath
+        The file path logfile was set to.
+    max_memory
+        Maximum memory usage in Gigabyte.
+    n_jobs
+        Default number of jobs/ CPUs to use for parallel computing.
+    plot_suffix
+        Global suffix that is appended to figure filenames.
+    verbosity
+        Verbosity level (default warning)
+    writedir
+        Directory where the function scanpy.write writes to by default.
     """
 
     N_PCS: int
