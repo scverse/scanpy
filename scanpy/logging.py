@@ -174,7 +174,7 @@ def print_versions(*, file: IO[str] | None = None):
     Print versions of imported packages, OS, and jupyter environment.
 
     For more options (including rich output) use `session_info.show` directly.
-    
+
     Parameters
     ----------
     file

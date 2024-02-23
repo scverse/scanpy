@@ -272,7 +272,7 @@ def dpt_groups_pseudotime(
     marker: str | Sequence[str] = ".",
 ):
     """Plot groups and pseudotime.
-    
+
     Parameters
     ----------
     adata

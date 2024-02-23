@@ -91,7 +91,7 @@ def _type_check(var: Any, varname: str, types: type | tuple[type, ...]):
 class ScanpyConfig:
     """\
     Config manager for scanpy.
-    
+
     Parameters
     ----------
     autosave
