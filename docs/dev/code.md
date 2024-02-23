@@ -20,5 +20,5 @@ We ignore a couple of flake8 checks which are documented in the .flake8 file in 
 To learn how to ignore checks per line please read
 [flake8 violations](https://flake8.pycqa.org/en/latest/user/violations.html).
 Additionally, we use Scanpy’s
-[EditorConfig](https://github.com/scverse/scanpy/blob/master/.editorconfig),
+[EditorConfig](https://github.com/scverse/scanpy/blob/main/.editorconfig),
 so using an editor/IDE with support for both is helpful.
