@@ -31,10 +31,12 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
         resolution=resolution,
         n_iterations=n_iterations,
         directed=(flavor == "leidenalg"),
-        key_added="leiden_custom"
+        key_added="leiden_custom",
     )
     assert adata_neighbors.uns["leiden_custom"]["params"]["resolution"] == resolution
-    assert adata_neighbors.uns["leiden_custom"]["params"]["n_iterations"] == n_iterations
+    assert (
+        adata_neighbors.uns["leiden_custom"]["params"]["n_iterations"] == n_iterations
+    )
 
 
 @needs.leidenalg
@@ -186,13 +188,21 @@ def test_louvain_basic(adata_neighbors):
     sc.tl.louvain(adata_neighbors, use_weights=True, flavor="igraph")
     sc.tl.louvain(adata_neighbors, flavor="igraph")
 
+
 @needs.louvain
-@pytest.mark.parametrize("resolution", [0.9, 1.1])
 @pytest.mark.parametrize("random_state", [10, 999])
-def test_louvain_custom_key_added(adata_neighbors, resolution, random_state):
-    sc.tl.louvain(adata_neighbors, key_added="louvain_custom", random_state=random_state)
+@pytest.mark.parametrize("resolution", [0.9, 1.1])
+def test_louvain_custom_key(adata_neighbors, resolution, random_state):
+    sc.tl.louvain(
+        adata_neighbors,
+        key_added="louvain_custom",
+        random_state=random_state,
+        resolution=resolution,
+    )
+    assert (
+        adata_neighbors.uns["louvain_custom"]["params"]["random_state"] == random_state
+    )
     assert adata_neighbors.uns["louvain_custom"]["params"]["resolution"] == resolution
-    assert adata_neighbors.uns["louvain_custom"]["params"]["resolution"] == random_state
 
 
 @needs.louvain
