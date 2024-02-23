@@ -21,7 +21,7 @@ This is very straight forward if you're using [GitHub's CLI](https://cli.github.
 $ gh repo fork scverse/scanpy --clone --remote
 ```
 
-This will fork the repo to your github account, create a clone of the repo on your current machine, add our repository as a remote, and set the `master` development branch to track our repository.
+This will fork the repo to your github account, create a clone of the repo on your current machine, add our repository as a remote, and set the `main` development branch to track our repository.
 
 To do this manually, first make a fork of the repository by clicking the "fork" button on our main github package. Then, on your machine, run:
 
@@ -32,7 +32,7 @@ git clone https://github.com/{your-username}/scanpy.git
 cd scanpy
 # Add our repository as a remote
 git remote add upstream https://github.com/scverse/scanpy.git
-# git branch --set-upstream-to "upstream/master"
+# git branch --set-upstream-to "upstream/main"
 ```
 
 ### `pre-commit`
@@ -61,11 +61,11 @@ If you choose not to run the hooks on each commit, you can run them manually wit
 ### Creating a branch for your feature
 
 All development should occur in branches dedicated to the particular work being done.
-Additionally, unless you are a maintainer, all changes should be directed at the `master` branch.
+Additionally, unless you are a maintainer, all changes should be directed at the `main` branch.
 You can create a branch with:
 
 ```shell
-git checkout master                 # Starting from the master branch
+git checkout main                   # Starting from the main branch
 git pull                            # Syncing with the repo
 git checkout -b {your-branch-name}  # Making and changing to the new branch
 ```
