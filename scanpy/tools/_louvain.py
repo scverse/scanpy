@@ -133,7 +133,7 @@ def louvain(
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 
-    `adata.uns['louvain']['params']` : :class:`dict`
+    `adata.uns['louvain' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
@@ -255,8 +255,8 @@ def louvain(
         values=groups.astype("U"),
         categories=natsorted(map(str, np.unique(groups))),
     )
-    adata.uns["louvain"] = {}
-    adata.uns["louvain"]["params"] = dict(
+    adata.uns[key_added] = {}
+    adata.uns[key_added]["params"] = dict(
         resolution=resolution,
         random_state=random_state,
     )

@@ -114,7 +114,7 @@ def leiden(
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 
-    `adata.uns['leiden']['params']` : :class:`dict`
+    `adata.uns['leiden' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
@@ -202,8 +202,8 @@ def leiden(
         categories=natsorted(map(str, np.unique(groups))),
     )
     # store information on the clustering parameters
-    adata.uns["leiden"] = {}
-    adata.uns["leiden"]["params"] = dict(
+    adata.uns[key_added] = {}
+    adata.uns[key_added]["params"] = dict(
         resolution=resolution,
         random_state=random_state,
         n_iterations=n_iterations,
