@@ -382,7 +382,7 @@ def test_mask_order_warning(request):
         UserWarning,
         match="When using a mask parameter with anndata<0.9 on a dense array",
     ):
-        sc.pp.pca(adata, mask=mask)
+        sc.pp.pca(adata, mask_var=mask)
 
 
 def test_mask_defaults(array_type, float_dtype):
