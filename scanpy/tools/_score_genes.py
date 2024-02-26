@@ -169,8 +169,8 @@ def score_genes(
         control_genes = control_genes.union(r_genes.difference(gene_list))
 
     assert len(control_genes) > 0, "No control genes found."
-    assert not any(
-        g in control_genes for g in gene_list
+    assert (
+        len(control_genes.intersection(gene_list)) == 0
     ), "Genes are in both gene_list and control_genes."
 
     X_list = _adata[:, gene_list].X
