@@ -66,8 +66,8 @@ def test_score_with_reference():
     sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
     with Path(HERE, "score_genes_reference_paul2015.pkl").open("rb") as file:
         reference = pickle.load(file)
-    # np.testing.assert_allclose(reference, adata.obs.Test.values)
-    np.testing.assert_array_equal(reference, adata.obs.Test.values)
+    # np.testing.assert_allclose(reference, adata.obs["Test"].to_numpy())
+    np.testing.assert_array_equal(reference, adata.obs["Test"].to_numpy())
 
 
 def test_add_score():
