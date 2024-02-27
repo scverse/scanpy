@@ -7,6 +7,7 @@ import pytest
 import zarr
 from anndata import AnnData, read_zarr
 from anndata.experimental import read_elem, sparse_dataset
+from scipy import sparse as sp
 
 from scanpy._compat import DaskArray, ZappyArray
 from scanpy.datasets._utils import filter_oldformatwarning
@@ -77,7 +78,7 @@ def adata_dist(request: pytest.FixtureRequest) -> AnnData:
     assert request.param == "dask"
     import dask.array as da
 
-    a.X = da.from_zarr(input_file_X)
+    a.X = da.from_zarr(input_file_X, chunks=(100, 1000))
     return a
 
 
@@ -117,10 +118,23 @@ def test_filter_cells_array(adata: AnnData, adata_dist: AnnData):
     cell_subset_dist, number_per_cell_dist = filter_cells(adata_dist.X, min_genes=3)
     assert isinstance(cell_subset_dist, DIST_TYPES)
     assert isinstance(number_per_cell_dist, DIST_TYPES)
+    cell_subset_dist, number_per_cell_dist = materialize_as_ndarray(
+        (cell_subset_dist, number_per_cell_dist)
+    )
 
     cell_subset, number_per_cell = filter_cells(adata.X, min_genes=3)
-    npt.assert_allclose(materialize_as_ndarray(cell_subset_dist), cell_subset)
-    npt.assert_allclose(materialize_as_ndarray(number_per_cell_dist), number_per_cell)
+    npt.assert_allclose(
+        cell_subset_dist.toarray()
+        if isinstance(cell_subset_dist, sp.spmatrix)
+        else cell_subset_dist,
+        cell_subset,
+    )
+    npt.assert_allclose(
+        number_per_cell_dist.toarray()
+        if isinstance(number_per_cell_dist, sp.spmatrix)
+        else number_per_cell_dist,
+        number_per_cell,
+    )
 
 
 def test_filter_cells(adata: AnnData, adata_dist: AnnData):
@@ -131,7 +145,9 @@ def test_filter_cells(adata: AnnData, adata_dist: AnnData):
 
     assert result.shape == adata.shape
     npt.assert_array_equal(adata_dist.obs["n_genes"], adata.obs["n_genes"])
-    npt.assert_allclose(result, adata.X)
+    npt.assert_allclose(
+        result.toarray() if isinstance(result, sp.spmatrix) else result, adata.X
+    )
 
 
 def test_filter_genes_array(adata: AnnData, adata_dist: AnnData):
@@ -150,7 +166,9 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
     result = materialize_as_ndarray(adata_dist.X)
     filter_genes(adata, min_cells=2)
     assert result.shape == adata.shape
-    npt.assert_allclose(result, adata.X)
+    npt.assert_allclose(
+        result.toarray() if isinstance(result, sp.spmatrix) else result, adata.X
+    )
 
 
 @filter_oldformatwarning
