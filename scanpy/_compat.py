@@ -108,18 +108,3 @@ def _(X: da.Array, axis=None):
         return da.chunk.sum(np.array(args[0]), **kwargs)
 
     return da.reduction(X, sum_drop_keepdims, aggregate_sum, axis=axis, dtype=dtype)
-
-
-@singledispatch
-def count_nonzero(X: np.ndarray, axis=None):
-    return np.count_nonzero(X, axis=axis)
-
-
-@count_nonzero.register
-def _(X: da.Array, axis=None):
-    return sum(X > 0, axis=axis)
-
-
-@count_nonzero.register
-def _(X: sp.spmatrix, axis=None):
-    return X.getnnz(axis=axis)
