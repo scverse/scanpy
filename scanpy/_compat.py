@@ -6,12 +6,10 @@ from pathlib import Path
 
 import dask.array as da
 import numpy as np
-from dask.distributed import Client
 from legacy_api_wrap import legacy_api
 from packaging import version
 from scipy import sparse as sp
 
-client = Client(processes=False)  # Starts local cluster
 try:
     from functools import cache
 except ImportError:  # Python < 3.9
