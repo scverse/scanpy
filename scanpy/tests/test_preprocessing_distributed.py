@@ -88,7 +88,9 @@ def test_log1p(adata: AnnData, adata_dist: AnnData):
     result = materialize_as_ndarray(adata_dist.X)
     log1p(adata)
     assert result.shape == adata.shape
-    npt.assert_allclose(result, adata.X)
+    npt.assert_allclose(
+        result.toarray() if isinstance(result, sp.spmatrix) else result, adata.X
+    )
 
 
 def test_normalize_per_cell(
