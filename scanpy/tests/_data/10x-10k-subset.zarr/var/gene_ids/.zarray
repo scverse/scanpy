@@ -9,18 +9,13 @@
         "id": "blosc",
         "shuffle": 1
     },
-    "dtype": [
-        [
-            "index",
-            "|S13"
-        ],
-        [
-            "gene_ids",
-            "|S18"
-        ]
+    "dtype": "|O",
+    "fill_value": 0,
+    "filters": [
+        {
+            "id": "vlen-utf8"
+        }
     ],
-    "fill_value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-    "filters": null,
     "order": "C",
     "shape": [
         1000

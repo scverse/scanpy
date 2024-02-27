@@ -1,0 +1,8 @@
+{
+    "encoding-type": "csr_matrix",
+    "encoding-version": "0.1.0",
+    "shape": [
+        10000,
+        1000
+    ]
+}

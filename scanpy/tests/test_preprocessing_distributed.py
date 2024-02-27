@@ -4,7 +4,9 @@ from pathlib import Path
 
 import numpy.testing as npt
 import pytest
+import zarr
 from anndata import AnnData, read_zarr
+from anndata.experimental import read_elem, sparse_dataset
 
 from scanpy._compat import DaskArray, ZappyArray
 from scanpy.datasets._utils import filter_oldformatwarning
@@ -16,6 +18,7 @@ from scanpy.preprocessing import (
     normalize_total,
 )
 from scanpy.preprocessing._distributed import materialize_as_ndarray
+from scanpy.testing._helpers.data import sparse_dataset_as_dask
 from scanpy.testing._pytest.marks import needs
 
 HERE = Path(__file__).parent / Path("_data/")
@@ -25,6 +28,16 @@ DIST_TYPES = (DaskArray, ZappyArray)
 
 
 pytestmark = [needs.zarr]
+
+
+def read_w_sparse_dask(group: zarr.Group, obs_chunk: int = 100) -> AnnData:
+    return AnnData(
+        X=sparse_dataset_as_dask(sparse_dataset(group["layers/CSR_X"]), obs_chunk),
+        **{
+            k: read_elem(group[k]) if k in group else {}
+            for k in ["obs", "var", "obsm", "varm", "uns", "obsp", "varp"]
+        },
+    )
 
 
 @pytest.fixture()
@@ -41,10 +54,16 @@ def adata() -> AnnData:
     params=[
         pytest.param("direct", marks=[needs.zappy]),
         pytest.param("dask", marks=[needs.dask, pytest.mark.anndata_dask_support]),
+        pytest.param(
+            "sparse_chunks_in_dask",
+            marks=[needs.dask, pytest.mark.anndata_dask_support],
+        ),
     ]
 )
 def adata_dist(request: pytest.FixtureRequest) -> AnnData:
     # regular anndata except for X, which we replace on the next line
+    if request.param == "sparse_chunks_in_dask":
+        return read_w_sparse_dask(zarr.open(input_file))
     a = read_zarr(input_file)
     a.var_names_make_unique()
     a.uns["dist-mode"] = request.param
