@@ -67,7 +67,6 @@ def adata_dist(request: pytest.FixtureRequest) -> AnnData:
         return read_w_sparse_dask(zarr.open(input_file))
     a = read_zarr(input_file)
     a.var_names_make_unique()
-    a.uns["dist-mode"] = request.param
     input_file_X = f"{input_file}/X"
     if request.param == "direct":
         import zappy.direct
@@ -180,27 +179,24 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
 
 
 @filter_oldformatwarning
-def test_write_zarr(adata: AnnData, adata_dist: AnnData):
+def test_write_zarr(adata: AnnData, adata_dist: AnnData, tmp_path):
     import zarr
 
     log1p(adata_dist)
     assert isinstance(adata_dist.X, DIST_TYPES)
-    temp_store = zarr.TempStore()
+    temp_store = zarr.TempStore()  # write_elem needs a path
     chunks = adata_dist.X.chunks
     if isinstance(chunks[0], tuple):
         chunks = (chunks[0][0],) + chunks[1]
 
-    # write metadata using regular anndata
-    adata.write_zarr(temp_store, chunks)
-    if adata_dist.uns["dist-mode"] == "dask":
-        adata_dist.X.to_zarr(temp_store.dir_path("X"), overwrite=True)
-    elif adata_dist.uns["dist-mode"] == "direct":
-        adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks)
-    else:
-        assert False, "add branch for new dist-mode"
-
+    adata_dist.write_zarr(temp_store)
     # read back as zarr directly and check it is the same as adata.X
     adata_log1p = read_zarr(temp_store)
 
     log1p(adata)
-    npt.assert_allclose(adata_log1p.X, adata.X)
+    expected = adata.X
+    actual = adata_log1p.X
+    npt.assert_allclose(
+        expected.toarray() if isinstance(expected, sp.spmatrix) else expected,
+        actual.toarray() if isinstance(actual, sp.spmatrix) else actual,
+    )
