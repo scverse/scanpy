@@ -66,15 +66,7 @@ ARRAY_TYPES_SPARSE = tuple(
     at for (_, spsty), ats in MAP_ARRAY_TYPES.items() if spsty == "dense" for at in ats
 )
 
-ARRAY_TYPES_SUPPORTED = tuple(
-    (
-        param_with(at, marks=[pytest.mark.xfail(reason="sparse-in-dask not supported")])
-        if attrs == ("dask", "sparse")
-        else at
-    )
-    for attrs, ats in MAP_ARRAY_TYPES.items()
-    for at in ats
-)
+ARRAY_TYPES_SUPPORTED = tuple(at for ats in MAP_ARRAY_TYPES.values() for at in ats)
 """
 Sparse matrices in dask arrays aren’t officially supported upstream,
 so add xfail to them.

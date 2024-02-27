@@ -190,7 +190,7 @@ def normalize_total(
 
     counts_per_cell = sum(X, axis=1)
     if exclude_highly_expressed:
-        counts_per_cell = X.sum(1)  # original counts per cell
+        counts_per_cell = sum(X, axis=1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
 
         # at least one cell as more than max_fraction of counts per cell

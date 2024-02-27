@@ -95,7 +95,9 @@ def sum(X: np.ndarray | sp.spmatrix, axis=None):
 def _(X: da.Array, axis=None):
     def sum_drop_keepdims(*args, **kwargs):
         kwargs.pop("computing_meta", None)
-        if isinstance(X._meta, sp.spmatrix):  # bad! why are we getting np matrices??
+        if isinstance(X._meta, (sp.spmatrix, np.matrix)) or isinstance(
+            args[0], (sp.spmatrix, np.matrix)
+        ):  # forcing the `_meta` to be a sparse array really isn't desirable?
             kwargs.pop("keepdims", None)
             if isinstance(kwargs["axis"], tuple):
                 kwargs["axis"] = kwargs["axis"][0]
