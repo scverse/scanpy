@@ -107,7 +107,7 @@ def _(X: da.Array, axis=None):
 
     # operates on `np.matrix` for some reason with sparse chunks in dask so need explicit casting
     def aggregate_sum(*args, **kwargs):
-        return np.sum(np.array(args[0]), **kwargs)
+        return da.chunk.sum(np.array(args[0]), **kwargs)
 
     return da.reduction(X, sum_drop_keepdims, aggregate_sum, axis=axis, dtype=dtype)
 
