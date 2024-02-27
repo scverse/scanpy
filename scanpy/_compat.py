@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from functools import partial
+from functools import partial, singledispatch
 from pathlib import Path
 
+import dask.array as da
+import numpy as np
+from dask.distributed import Client
 from legacy_api_wrap import legacy_api
 from packaging import version
+from scipy import sparse as sp
 
+client = Client(processes=False)  # Starts local cluster
 try:
     from functools import cache
 except ImportError:  # Python < 3.9
@@ -81,3 +86,42 @@ def pkg_version(package):
 
 
 old_positionals = partial(legacy_api, category=FutureWarning)
+
+
+@singledispatch
+def sum(X: np.ndarray | sp.spmatrix, axis=None):
+    return np.sum(X, axis=axis)
+
+
+@sum.register
+def _(X: da.Array, axis=None):
+    def sum_drop_keepdims(*args, **kwargs):
+        kwargs.pop("computing_meta", None)
+        if isinstance(X._meta, sp.spmatrix):  # bad! why are we getting np matrices??
+            kwargs.pop("keepdims", None)
+            if isinstance(kwargs["axis"], tuple):
+                kwargs["axis"] = kwargs["axis"][0]
+        return da.chunk.sum(*args, **kwargs)
+
+    dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
+
+    # operates on `np.matrix` for some reason with sparse chunks in dask so need explicit casting
+    def aggregate_sum(*args, **kwargs):
+        return np.sum(np.array(args[0]), **kwargs)
+
+    return da.reduction(X, sum_drop_keepdims, aggregate_sum, axis=axis, dtype=dtype)
+
+
+@singledispatch
+def count_nonzero(X: np.ndarray, axis=None):
+    return np.count_nonzero(X, axis=axis)
+
+
+@count_nonzero.register
+def _(X: da.Array, axis=None):
+    return sum(X > 0, axis=axis)
+
+
+@count_nonzero.register
+def _(X: sp.spmatrix, axis=None):
+    return X.getnnz(axis=axis)
