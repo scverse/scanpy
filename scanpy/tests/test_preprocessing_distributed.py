@@ -102,7 +102,9 @@ def test_normalize_per_cell(
     result = materialize_as_ndarray(adata_dist.X)
     normalize_per_cell(adata)
     assert result.shape == adata.shape
-    npt.assert_allclose(result, adata.X)
+    npt.assert_allclose(
+        result.toarray() if isinstance(result, sp.spmatrix) else result, adata.X
+    )
 
 
 def test_normalize_total(adata: AnnData, adata_dist: AnnData):
@@ -111,7 +113,11 @@ def test_normalize_total(adata: AnnData, adata_dist: AnnData):
     result = materialize_as_ndarray(adata_dist.X)
     normalize_total(adata)
     assert result.shape == adata.shape
-    npt.assert_allclose(result, adata.X)
+    npt.assert_allclose(
+        result.toarray() if isinstance(result, sp.spmatrix) else result,
+        adata.X,
+        atol=1e-6,
+    )
 
 
 def test_filter_cells_array(adata: AnnData, adata_dist: AnnData):

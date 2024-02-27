@@ -8,7 +8,7 @@ from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
 from .. import logging as logg
-from .._compat import DaskArray, old_positionals
+from .._compat import DaskArray, old_positionals, sum
 from .._utils import view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
@@ -35,7 +35,7 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
     elif isinstance(counts, np.ndarray):
         np.divide(X, counts[:, None], out=X)
     else:
-        X = np.divide(X, counts[:, None])  # dask does not support kwarg "out"
+        X = X / counts[:, None]
     return X
 
 
@@ -187,22 +187,23 @@ def normalize_total(
 
     gene_subset = None
     msg = "normalizing counts per cell"
+
+    counts_per_cell = sum(X, axis=1)
     if exclude_highly_expressed:
         counts_per_cell = X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
 
         # at least one cell as more than max_fraction of counts per cell
 
-        gene_subset = (X > counts_per_cell[:, None] * max_fraction).sum(0)
+        gene_subset = sum((X > counts_per_cell[:, None] * max_fraction), axis=0)
         gene_subset = np.asarray(np.ravel(gene_subset) == 0)
 
         msg += (
             ". The following highly-expressed genes are not considered during "
             f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
         )
-        counts_per_cell = X[:, gene_subset].sum(1)
-    else:
-        counts_per_cell = X.sum(1)
+        counts_per_cell = sum(X[:, gene_subset], axis=1)
+
     start = logg.info(msg)
     counts_per_cell = np.ravel(counts_per_cell)
 
@@ -253,3 +254,4 @@ def normalize_total(
         return adata
     elif not inplace:
         return dat
+    return None
