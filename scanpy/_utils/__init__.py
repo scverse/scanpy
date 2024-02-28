@@ -561,6 +561,34 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
 
 
 @singledispatch
+def elem_sum(X: np.ndarray | sparse.spmatrix, axis=None):
+    return np.sum(X, axis=axis)
+
+
+@elem_sum.register
+def _(X: DaskArray, axis=None):
+    import dask.array as da
+
+    def sum_drop_keepdims(*args, **kwargs):
+        kwargs.pop("computing_meta", None)
+        if isinstance(X._meta, (sparse.spmatrix, np.matrix)) or isinstance(
+            args[0], (sparse.spmatrix, np.matrix)
+        ):  # forcing the `_meta` to be a sparse array really isn't desirable?
+            kwargs.pop("keepdims", None)
+            if isinstance(kwargs["axis"], tuple):
+                kwargs["axis"] = kwargs["axis"][0]
+        return da.chunk.sum(*args, **kwargs)
+
+    dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
+
+    # operates on `np.matrix` for some reason with sparse chunks in dask so need explicit casting
+    def aggregate_sum(*args, **kwargs):
+        return da.chunk.sum(np.array(args[0]), **kwargs)
+
+    return da.reduction(X, sum_drop_keepdims, aggregate_sum, axis=axis, dtype=dtype)
+
+
+@singledispatch
 def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
     """Checks values of X to ensure it is count data"""
     raise NotImplementedError

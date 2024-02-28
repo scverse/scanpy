@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from functools import partial, singledispatch
+from functools import partial
 from pathlib import Path
 
-import dask.array as da
-import numpy as np
 from legacy_api_wrap import legacy_api
 from packaging import version
-from scipy import sparse as sp
 
 try:
     from functools import cache
@@ -84,29 +81,3 @@ def pkg_version(package):
 
 
 old_positionals = partial(legacy_api, category=FutureWarning)
-
-
-@singledispatch
-def sum(X: np.ndarray | sp.spmatrix, axis=None):
-    return np.sum(X, axis=axis)
-
-
-@sum.register
-def _(X: da.Array, axis=None):
-    def sum_drop_keepdims(*args, **kwargs):
-        kwargs.pop("computing_meta", None)
-        if isinstance(X._meta, (sp.spmatrix, np.matrix)) or isinstance(
-            args[0], (sp.spmatrix, np.matrix)
-        ):  # forcing the `_meta` to be a sparse array really isn't desirable?
-            kwargs.pop("keepdims", None)
-            if isinstance(kwargs["axis"], tuple):
-                kwargs["axis"] = kwargs["axis"][0]
-        return da.chunk.sum(*args, **kwargs)
-
-    dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
-
-    # operates on `np.matrix` for some reason with sparse chunks in dask so need explicit casting
-    def aggregate_sum(*args, **kwargs):
-        return da.chunk.sum(np.array(args[0]), **kwargs)
-
-    return da.reduction(X, sum_drop_keepdims, aggregate_sum, axis=axis, dtype=dtype)
