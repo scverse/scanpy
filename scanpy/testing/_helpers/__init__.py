@@ -7,9 +7,14 @@ import warnings
 from itertools import permutations
 
 import numpy as np
+import zarr
+from anndata import experimental as ad_ex
 from anndata.tests.helpers import asarray, assert_equal
+from scipy import sparse
 
 import scanpy as sc
+
+from .data import sparse_dataset_as_dask
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
@@ -133,3 +138,10 @@ def as_sparse_dask_array(*args, **kwargs):
     from anndata.tests.helpers import as_sparse_dask_array
 
     return as_sparse_dask_array(*args, **kwargs)
+
+
+def as_sparse_chunks_dask_array(*args, **kwargs):
+    X = sparse.csr_matrix(args[0])
+    group = zarr.group(zarr.storage.TempStore())
+    ad_ex.write_elem(group, "X", X)
+    return sparse_dataset_as_dask(ad_ex.sparse_dataset(group["X"]), 1)

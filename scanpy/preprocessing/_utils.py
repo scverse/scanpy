@@ -7,10 +7,17 @@ import numpy as np
 from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
+from .._compat import sum
 from .._utils import AnyRandom, _SupportedArray, elem_mul
 
 if TYPE_CHECKING:
+    import dask.array as da
     from numpy.typing import NDArray
+
+
+def dask_array_mean(X: da.Array, axis):
+    total = sum(X, axis=axis)
+    return total / X.shape[axis]
 
 
 def _get_mean_var(
@@ -19,8 +26,8 @@ def _get_mean_var(
     if isinstance(X, sparse.spmatrix):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
-        mean = X.mean(axis=axis, dtype=np.float64)
-        mean_sq = elem_mul(X, X).mean(axis=axis, dtype=np.float64)
+        mean = dask_array_mean(X, axis=axis).astype(np.float64)
+        mean_sq = dask_array_mean(elem_mul(X, X), axis=axis).astype(np.float64)
         var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
     var *= X.shape[axis] / (X.shape[axis] - 1)

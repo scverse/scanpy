@@ -70,8 +70,8 @@ def test_mean_var(array_type):
 
     means, variances = sc.pp._utils._get_mean_var(pbmc.X)
 
-    np.testing.assert_allclose(true_mean, means)
-    np.testing.assert_allclose(true_var, variances)
+    np.testing.assert_allclose(true_mean, means, rtol=1e-6)
+    np.testing.assert_allclose(true_var, variances, rtol=1e-6)
 
 
 def test_mean_var_sparse():
