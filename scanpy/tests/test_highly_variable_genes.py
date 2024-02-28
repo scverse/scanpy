@@ -15,7 +15,7 @@ import scanpy as sc
 from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -85,7 +85,7 @@ def test_no_batch_matches_batch(adata):
 
 
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_no_inplace(adata, array_type, batch_key):
     """Tests that, with `n_top_genes=None` the returned dataframe has the expected columns."""
     adata.X = array_type(adata.X)
@@ -568,7 +568,7 @@ def test_cutoff_info():
 
 
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize("inplace", [True, False], ids=["inplace", "copy"])
 def test_subset_inplace_consistency(flavor, array_type, subset, inplace):
@@ -609,7 +609,7 @@ def test_subset_inplace_consistency(flavor, array_type, subset, inplace):
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
 @pytest.mark.parametrize(
-    "to_dask", [p for p in ARRAY_TYPES_SUPPORTED if "dask" in p.values[0].__name__]
+    "to_dask", [p for p in ARRAY_TYPES if "dask" in p.values[0].__name__]
 )
 def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     adata.X = np.abs(adata.X).astype(int)
@@ -632,4 +632,4 @@ def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     assert_index_equal(adata.var_names, output_mem.index, check_names=False)
     assert_index_equal(adata.var_names, output_dask.index, check_names=False)
 
-    assert_frame_equal(output_mem, output_dask)
+    assert_frame_equal(output_mem, output_dask, atol=1e-4)

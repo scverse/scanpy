@@ -18,7 +18,7 @@ from scanpy.testing._helpers import (
 )
 
 # TODO: Add support for sparse-in-dask
-from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -27,7 +27,7 @@ X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
@@ -38,12 +38,10 @@ def test_normalize_total(array_type, dtype):
 
     adata = AnnData(array_type(X_frac).astype(dtype))
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
-    assert np.allclose(
-        np.ravel(sum(adata.X, axis=1))[:2], [2.0, 4.0]
-    )  # TODO: normalizing involves division which is currently not handled well by dask, so we will need a fix for this.
+    assert np.allclose(np.ravel(sum(adata.X, axis=1))[:2], [2.0, 4.0])
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_rep(array_type, dtype):
     # Test that layer kwarg works
@@ -52,7 +50,7 @@ def test_normalize_total_rep(array_type, dtype):
     check_rep_results(sc.pp.normalize_total, X, fields=["layer"])
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_layers(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
@@ -62,7 +60,7 @@ def test_normalize_total_layers(array_type, dtype):
     assert np.allclose(sum(adata.layers["layer"], axis=1), [3.0, 3.0, 3.0])
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_view(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))

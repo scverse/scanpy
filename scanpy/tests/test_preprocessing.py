@@ -17,7 +17,7 @@ from scanpy.testing._helpers import (
     check_rep_results,
 )
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
-from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 
 def test_log1p(tmp_path):
@@ -60,7 +60,7 @@ def test_log1p_rep(count_matrix_format, base, dtype):
 
 
 # TODO: Add support for sparse-in-dask
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_mean_var(array_type):
     pbmc = pbmc3k()
     pbmc.X = array_type(pbmc.X)

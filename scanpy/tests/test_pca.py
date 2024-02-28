@@ -19,7 +19,11 @@ import scanpy as sc
 from scanpy.testing._helpers import as_dense_dask_array, as_sparse_dask_array
 from scanpy.testing._helpers.data import pbmc3k_normalized
 from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SUPPORTED, param_with
+from scanpy.testing._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
+    param_with,
+)
 
 A_list = np.array(
     [
@@ -59,7 +63,7 @@ A_svd = np.array(
 @pytest.fixture(
     params=[
         param_with(at, marks=[needs.dask_ml]) if "dask" in at.id else at
-        for at in ARRAY_TYPES_SUPPORTED
+        for at in ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED
     ]
 )
 def array_type(request: pytest.FixtureRequest):
