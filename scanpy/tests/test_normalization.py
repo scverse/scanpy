@@ -40,7 +40,7 @@ def test_normalize_total(array_type, dtype):
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
     assert np.allclose(
         np.ravel(sum(adata.X, axis=1))[:2], [2.0, 4.0]
-    )  # TODO: indexing into `X` and then sum is broken with sparse data types, but also do we need to support sparse wrapped directly as dask?
+    )  # TODO: normalizing involves division which is currently not handled well by dask, so we will need a fix for this.
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
