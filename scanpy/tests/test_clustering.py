@@ -212,3 +212,26 @@ def test_partition_type(adata_neighbors):
 
     sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
     sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
+
+
+@pytest.mark.parametrize(
+    "clustering,default_key,default_res,custom_resolutions",
+    [
+        pytest.param(sc.tl.leiden, "leiden", 0.8, [0.9, 1.1], marks=needs.leidenalg),
+        pytest.param(sc.tl.louvain, "louvain", 0.8, [0.9, 1.1], marks=needs.louvain),
+    ],
+)
+def test_clustering_custom_key(
+    adata_neighbors, clustering, default_key, default_res, custom_resolutions
+):
+    custom_keys = [f"{default_key}_{res}" for res in custom_resolutions]
+
+    # Run clustering with default key, then custom keys
+    clustering(adata_neighbors, resolution=default_res)
+    for key, res in zip(custom_keys, custom_resolutions):
+        clustering(adata_neighbors, resolution=res, key_added=key)
+
+    # ensure that all clustering parameters are added to user provided keys and not overwritten
+    assert adata_neighbors.uns[default_key]["params"]["resolution"] == default_res
+    for key, res in zip(custom_keys, custom_resolutions):
+        assert adata_neighbors.uns[key]["params"]["resolution"] == res
