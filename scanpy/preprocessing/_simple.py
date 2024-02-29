@@ -133,7 +133,7 @@ def filter_cells(
     """
     if copy:
         logg.warning("`copy` is deprecated, use `inplace` instead.")
-    n_given_options = axis_sum(
+    n_given_options = sum(
         option is not None for option in [min_genes, min_counts, max_genes, max_counts]
     )
     if n_given_options != 1:
@@ -247,7 +247,7 @@ def filter_genes(
     """
     if copy:
         logg.warning("`copy` is deprecated, use `inplace` instead.")
-    n_given_options = axis_sum(
+    n_given_options = sum(
         option is not None for option in [min_cells, min_counts, max_cells, max_counts]
     )
     if n_given_options != 1:
