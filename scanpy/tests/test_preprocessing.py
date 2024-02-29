@@ -59,7 +59,6 @@ def test_log1p_rep(count_matrix_format, base, dtype):
     check_rep_results(sc.pp.log1p, X, base=base)
 
 
-# TODO: Add support for sparse-in-dask
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_mean_var(array_type):
     pbmc = pbmc3k()
