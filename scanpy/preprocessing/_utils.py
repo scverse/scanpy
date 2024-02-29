@@ -22,7 +22,7 @@ def mean_func(X: da.Array, axis, dtype):
 
 
 @mean_func.register
-def mean_func(X: np.ndarray, axis, dtype):
+def _(X: np.ndarray, axis, dtype):
     return X.mean(axis=axis, dtype=dtype)
 
 
