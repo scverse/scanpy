@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import singledispatch
 from typing import TYPE_CHECKING, Literal
 
 import numba
@@ -14,9 +15,15 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-def dask_array_mean(X: da.Array, axis):
+@singledispatch
+def mean_func(X: da.Array, axis, dtype):
     total = axis_sum(X, axis=axis)
-    return total / X.shape[axis]
+    return (total / X.shape[axis]).astype(dtype)
+
+
+@mean_func.register
+def mean_func(X: np.ndarray, axis, dtype):
+    return X.mean(axis=axis, dtype=dtype)
 
 
 def _get_mean_var(
@@ -25,8 +32,8 @@ def _get_mean_var(
     if isinstance(X, sparse.spmatrix):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
-        mean = dask_array_mean(X, axis=axis).astype(np.float64)
-        mean_sq = dask_array_mean(elem_mul(X, X), axis=axis).astype(np.float64)
+        mean = mean_func(X, axis=axis, dtype=np.float64)
+        mean_sq = mean_func(elem_mul(X, X), axis=axis, dtype=np.float64)
         var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
     var *= X.shape[axis] / (X.shape[axis] - 1)
