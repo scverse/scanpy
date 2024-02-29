@@ -561,13 +561,16 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
 
 
 @singledispatch
-def axis_sum(X: np.ndarray | sparse.spmatrix, axis=None):
-    return np.sum(X, axis=axis)
+def axis_sum(X: np.ndarray | sparse.spmatrix, axis=None, dtype=None):
+    return np.sum(X, axis=axis, dtype=dtype)
 
 
 @axis_sum.register
-def _(X: DaskArray, axis=None):
+def _(X: DaskArray, axis=None, dtype=None):
     import dask.array as da
+
+    if dtype is None:
+        dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
 
     def sum_drop_keepdims(*args, **kwargs):
         kwargs.pop("computing_meta", None)
@@ -577,13 +580,11 @@ def _(X: DaskArray, axis=None):
             kwargs.pop("keepdims", None)
             if isinstance(kwargs["axis"], tuple):
                 kwargs["axis"] = kwargs["axis"][0]
-        return da.chunk.sum(*args, **kwargs)
-
-    dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
+        return da.chunk.sum(*args, dtype=dtype, **kwargs)
 
     # operates on `np.matrix` for some reason with sparse chunks in dask so need explicit casting
     def aggregate_sum(*args, **kwargs):
-        return da.chunk.sum(np.array(args[0]), **kwargs)
+        return da.chunk.sum(np.array(args[0]), dtype=dtype, **kwargs)
 
     return da.reduction(X, sum_drop_keepdims, aggregate_sum, axis=axis, dtype=dtype)
 

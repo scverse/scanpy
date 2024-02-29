@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 
 @singledispatch
 def mean_func(X: da.Array, axis, dtype):
-    total = axis_sum(X, axis=axis)
-    return (total / X.shape[axis]).astype(dtype)
+    total = axis_sum(X, axis=axis, dtype=dtype)
+    return total / X.shape[axis]
 
 
 @mean_func.register
