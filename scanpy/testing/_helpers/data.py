@@ -18,15 +18,10 @@ except ImportError:  # Python < 3.9
 
 from typing import TYPE_CHECKING
 
-import dask.array as da
-from dask import delayed
-from scipy import sparse
-
 import scanpy as sc
 
 if TYPE_CHECKING:
     from anndata import AnnData
-    from anndata._core.sparse_dataset import SparseDataset
 # Functions returning the same objects (easy to misuse)
 
 
@@ -80,49 +75,3 @@ def _pbmc3k_normalized() -> AnnData:
 
 def pbmc3k_normalized() -> AnnData:
     return _pbmc3k_normalized().copy()
-
-
-class CSRCallable:
-    """Dummy class to bypass dask checks"""
-
-    def __new__(cls, shape, dtype):
-        return csr_callable(shape, dtype)
-
-
-def csr_callable(shape: tuple[int, int], dtype) -> sparse.csr_matrix:
-    if len(shape) == 0:
-        shape = (0, 0)
-    if len(shape) == 1:
-        shape = (shape[0], 0)
-    elif len(shape) == 2:
-        pass
-    else:
-        raise ValueError(shape)
-
-    return sparse.csr_matrix(shape, dtype=dtype)
-
-
-def make_dask_chunk(x: SparseDataset, start: int, end: int) -> da.Array:
-    def take_slice(x, idx):
-        return x[idx]
-
-    return da.from_delayed(
-        delayed(take_slice)(x, slice(start, end)),
-        dtype=x.dtype,
-        shape=(end - start, x.shape[1]),
-        meta=CSRCallable,
-    )
-
-
-def sparse_dataset_as_dask(x: SparseDataset, stride: int):
-    n_chunks, rem = divmod(x.shape[0], stride)
-
-    chunks = []
-    cur_pos = 0
-    for i in range(n_chunks):
-        chunks.append(make_dask_chunk(x, cur_pos, cur_pos + stride))
-        cur_pos += stride
-    if rem:
-        chunks.append(make_dask_chunk(x, cur_pos, x.shape[0]))
-
-    return da.concatenate(chunks, axis=0)

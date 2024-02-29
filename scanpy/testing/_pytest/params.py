@@ -10,7 +10,6 @@ from scipy import sparse
 
 from .._helpers import (
     as_dense_dask_array,
-    as_sparse_chunks_dask_array,
     as_sparse_dask_array,
 )
 from .._pytest.marks import needs
@@ -51,14 +50,6 @@ MAP_ARRAY_TYPES: dict[
             as_sparse_dask_array,
             marks=[needs.dask, pytest.mark.anndata_dask_support],
             id="dask_array_sparse",
-        ),
-        # probably not necessary to also do csc
-    ),
-    ("dask", "sparse_chunks"): (
-        pytest.param(
-            as_sparse_chunks_dask_array,
-            marks=[needs.dask, pytest.mark.anndata_dask_support],
-            id="dask_array_sparse_chunks",
         ),
         # probably not necessary to also do csc
     ),

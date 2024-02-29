@@ -1,8 +1,0 @@
-{
-    "_index": "index",
-    "column-order": [
-        "gene_ids"
-    ],
-    "encoding-type": "dataframe",
-    "encoding-version": "0.2.0"
-}
