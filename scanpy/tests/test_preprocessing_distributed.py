@@ -17,6 +17,7 @@ from scanpy.preprocessing import (
     log1p,
     normalize_per_cell,
     normalize_total,
+    scale,
 )
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.testing._helpers.data import sparse_dataset_as_dask
@@ -179,7 +180,7 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
 
 
 @filter_oldformatwarning
-def test_write_zarr(adata: AnnData, adata_dist: AnnData, tmp_path):
+def test_write_zarr(adata: AnnData, adata_dist: AnnData):
     import zarr
 
     log1p(adata_dist)
@@ -200,3 +201,26 @@ def test_write_zarr(adata: AnnData, adata_dist: AnnData, tmp_path):
         expected.toarray() if isinstance(expected, sp.spmatrix) else expected,
         actual.toarray() if isinstance(actual, sp.spmatrix) else actual,
     )
+
+
+def test_scale(adata: AnnData, adata_dist: AnnData):
+    adata_zero_centered = scale(adata, copy=True)
+    if sp.issparse(adata_dist.X._meta):
+        with pytest.warns(
+            UserWarning, match="zero-center being used with `DaskArray` sparse chunks"
+        ):
+            adata_dist_zero_centered = scale(adata_dist, copy=True)
+    else:
+        adata_dist_zero_centered = scale(adata_dist, copy=True)
+    npt.assert_allclose(
+        adata_zero_centered.X, adata_dist_zero_centered.X, rtol=1e-6, atol=1e-6
+    )
+
+    adata_non_zero_centered = scale(adata, copy=True, zero_center=False)
+    adata_dist_non_zero_centered = scale(adata_dist, copy=True, zero_center=False)
+    computed_X = adata_dist_non_zero_centered.X.compute()
+    if sp.issparse(computed_X):
+        computed_X = (
+            computed_X.todense()
+        )  # this is a COO matrix now because of the non-zero-centering
+    npt.assert_allclose(adata_non_zero_centered.X, computed_X, rtol=1e-6, atol=1e-6)

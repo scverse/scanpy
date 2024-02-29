@@ -17,7 +17,7 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import DaskArray, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     AnyRandom,
@@ -750,7 +750,7 @@ def _regress_out_chunk(data):
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -758,7 +758,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | spmatrix | np.ndarray | None:
+) -> AnnData | spmatrix | np.ndarray | DaskArray | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -817,15 +817,23 @@ def scale(
 
 
 @scale.register(np.ndarray)
+@scale.register(DaskArray)
 def scale_array(
-    X: np.ndarray,
+    X: np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
     mask_obs: NDArray[np.bool_] | None = None,
-) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
+) -> (
+    np.ndarray
+    | DaskArray
+    | tuple[
+        np.ndarray | DaskArray, NDArray[np.float64] | DaskArray, NDArray[np.float64]
+    ]
+    | DaskArray
+):
     if copy:
         X = X.copy()
     if mask_obs is not None:
@@ -866,6 +874,10 @@ def scale_array(
         sparsefuncs.inplace_column_scale(X, 1 / std)
     else:
         if zero_center:
+            if isinstance(X, DaskArray) and issparse(X._meta):
+                warnings.warn(
+                    "zero-center being used with `DaskArray` sparse chunks.  This can be bad if you have large chunks or intend to eventually read the whole data into memory."
+                )
             X -= mean
         X /= std
 
@@ -1081,7 +1093,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         original_type = type(X)
         if not isspmatrix_csr(X):
             X = csr_matrix(X)
-        totals = np.ravel(X.sum(axis=1))  # Faster for csr matrix
+        totals = np.ravel(axis_sum(X, axis=1))  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
         rows = np.split(X.data, X.indptr[1:-1])
         for rowidx in under_target:
@@ -1097,7 +1109,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         if original_type is not csr_matrix:  # Put it back
             X = original_type(X)
     else:
-        totals = np.ravel(X.sum(axis=1))
+        totals = np.ravel(axis_sum(X, axis=1))
         under_target = np.nonzero(totals > counts_per_cell)[0]
         for rowidx in under_target:
             row = X[rowidx, :]
@@ -1113,7 +1125,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
 
 def _downsample_total_counts(X, total_counts, random_state, replace):
     total_counts = int(total_counts)
-    total = X.sum()
+    total = axis_sum(X)
     if total < total_counts:
         return X
     if issparse(X):
