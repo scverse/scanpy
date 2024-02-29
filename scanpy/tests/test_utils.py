@@ -9,10 +9,10 @@ from scipy.sparse import csr_matrix
 
 from scanpy._compat import DaskArray
 from scanpy._utils import (
+    axis_sum,
     check_nonnegative_integers,
     descend_classes_and_funcs,
     elem_mul,
-    elem_sum,
     is_constant,
 )
 from scanpy.testing._pytest.marks import needs
@@ -49,12 +49,12 @@ def test_elem_mul(array_type):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_elem_sum(array_type):
+def test_axis_sum(array_type):
     m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
     expd_0 = np.array([1, 1, 2])
     expd_1 = np.array([2, 2])
-    res_0 = asarray(elem_sum(m1, axis=0))
-    res_1 = asarray(elem_sum(m1, axis=1))
+    res_0 = asarray(axis_sum(m1, axis=0))
+    res_1 = asarray(axis_sum(m1, axis=1))
     if "matrix" in array_type.__name__:  # for sparse since dimension is kept
         res_0 = res_0.ravel()
         res_1 = res_1.ravel()

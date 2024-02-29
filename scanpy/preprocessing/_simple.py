@@ -22,7 +22,7 @@ from .._settings import settings as sett
 from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
-    elem_sum,
+    axis_sum,
     renamed_arg,
     sanitize_anndata,
     view_to_actual,
@@ -133,7 +133,7 @@ def filter_cells(
     """
     if copy:
         logg.warning("`copy` is deprecated, use `inplace` instead.")
-    n_given_options = elem_sum(
+    n_given_options = axis_sum(
         option is not None for option in [min_genes, min_counts, max_genes, max_counts]
     )
     if n_given_options != 1:
@@ -163,7 +163,7 @@ def filter_cells(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    number_per_cell = elem_sum(
+    number_per_cell = axis_sum(
         X if min_genes is None and max_genes is None else X > 0, axis=1
     )
     if issparse(X):
@@ -173,7 +173,7 @@ def filter_cells(
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
 
-    s = materialize_as_ndarray(elem_sum(~cell_subset))
+    s = materialize_as_ndarray(axis_sum(~cell_subset))
     if s > 0:
         msg = f"filtered out {s} cells that have "
         if min_genes is not None or min_counts is not None:
@@ -247,7 +247,7 @@ def filter_genes(
     """
     if copy:
         logg.warning("`copy` is deprecated, use `inplace` instead.")
-    n_given_options = elem_sum(
+    n_given_options = axis_sum(
         option is not None for option in [min_cells, min_counts, max_cells, max_counts]
     )
     if n_given_options != 1:
@@ -279,7 +279,7 @@ def filter_genes(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
-    number_per_gene = elem_sum(
+    number_per_gene = axis_sum(
         X if min_cells is None and max_cells is None else X > 0, axis=0
     )
     if issparse(X):
@@ -289,7 +289,7 @@ def filter_genes(
     if max_number is not None:
         gene_subset = number_per_gene <= max_number
 
-    s = elem_sum(~gene_subset)
+    s = axis_sum(~gene_subset)
     if s > 0:
         msg = f"filtered out {s} genes that are detected "
         if min_cells is not None or min_counts is not None:

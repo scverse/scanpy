@@ -561,11 +561,11 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
 
 
 @singledispatch
-def elem_sum(X: np.ndarray | sparse.spmatrix, axis=None):
+def axis_sum(X: np.ndarray | sparse.spmatrix, axis=None):
     return np.sum(X, axis=axis)
 
 
-@elem_sum.register
+@axis_sum.register
 def _(X: DaskArray, axis=None):
     import dask.array as da
 

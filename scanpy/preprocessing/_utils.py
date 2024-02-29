@@ -7,7 +7,7 @@ import numpy as np
 from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
-from .._utils import AnyRandom, _SupportedArray, elem_mul, elem_sum
+from .._utils import AnyRandom, _SupportedArray, axis_sum, elem_mul
 
 if TYPE_CHECKING:
     import dask.array as da
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def dask_array_mean(X: da.Array, axis):
-    total = elem_sum(X, axis=axis)
+    total = axis_sum(X, axis=axis)
     return total / X.shape[axis]
 
 
