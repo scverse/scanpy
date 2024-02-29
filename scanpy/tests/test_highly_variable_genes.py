@@ -338,12 +338,14 @@ def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes)
         ),
     ],
 )
-def test_compare_to_upstream(
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_compare_to_upstream(  # noqa: PLR0917
     request: pytest.FixtureRequest,
     func: Literal["hvg", "fgd"],
     flavor: Literal["seurat", "cell_ranger"],
     params: dict[str, float | int],
     ref_path: Path,
+    array_type: list,
 ):
     if func == "fgd" and flavor == "cell_ranger":
         msg = "The deprecated filter_genes_dispersion behaves differently with cell_ranger"
@@ -353,12 +355,13 @@ def test_compare_to_upstream(
     pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
     pbmc.var_names_make_unique()
-
     sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
     if func == "hvg":
         sc.pp.log1p(pbmc)
+        pbmc.X = array_type(pbmc.X)
         sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
     elif func == "fgd":
+        pbmc.X = array_type(pbmc.X)
         sc.pp.filter_genes_dispersion(
             pbmc, flavor=flavor, **params, log=True, subset=False
         )
@@ -386,8 +389,8 @@ def test_compare_to_upstream(
     np.testing.assert_allclose(
         hvg_info["dispersions_norm"],
         pbmc.var["dispersions_norm"],
-        rtol=2e-05,
-        atol=2e-05,
+        rtol=2e-05 if "dask" not in array_type.__name__ else 1e-4,
+        atol=2e-05 if "dask" not in array_type.__name__ else 1e-4,
     )
 
 
