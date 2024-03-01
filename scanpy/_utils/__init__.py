@@ -16,7 +16,7 @@ from enum import Enum
 from functools import partial, singledispatch, wraps
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overload
 from weakref import WeakSet
 
 import numpy as np
@@ -648,13 +648,23 @@ def _(
     return da.map_blocks(divide, dividend, divisor, axis, meta=dividend._meta, out=out)
 
 
-@singledispatch
+@overload
 def axis_sum(
-    X: np.ndarray | sparse.spmatrix,
+    X: sparse.spmatrix,
     *,
     axis: Optional[Union[tuple[Literal[0, 1], ...], Literal[0, 1]]] = None,  # noqa: UP007
     dtype: Optional[np.typing.DTypeLike] = None,  # noqa: UP007
-):
+) -> np.matrix:
+    ...
+
+
+@singledispatch
+def axis_sum(
+    X: np.ndarray,
+    *,
+    axis: Optional[Union[tuple[Literal[0, 1], ...], Literal[0, 1]]] = None,  # noqa: UP007
+    dtype: Optional[np.typing.DTypeLike] = None,  # noqa: UP007
+) -> np.ndarray:
     return np.sum(X, axis=axis, dtype=dtype)
 
 
@@ -664,7 +674,7 @@ def _(
     *,
     axis: Union[tuple[Literal[0, 1], ...], Literal[0, 1], None] = None,  # noqa: UP007
     dtype: Union[np.typing.DTypeLike, None] = None,  # noqa: UP007
-):
+) -> DaskArray:
     import dask.array as da
 
     if dtype is None:

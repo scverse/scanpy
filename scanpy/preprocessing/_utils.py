@@ -8,22 +8,24 @@ import numpy as np
 from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
-from .._utils import AnyRandom, _MemoryArray, _SupportedArray, axis_sum, elem_mul
+from .._utils import AnyRandom, _SupportedArray, axis_sum, elem_mul
 
 if TYPE_CHECKING:
-    import dask.array as da
     from numpy.typing import NDArray
+
+    from .._compat import DaskArray
 
 
 @singledispatch
-def axis_mean(X: da.Array, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike):
+def axis_mean(
+    X: DaskArray, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike
+) -> DaskArray:
     total = axis_sum(X, axis=axis, dtype=dtype)
     return total / X.shape[axis]
 
 
 @axis_mean.register(np.ndarray)
-@axis_mean.register(sparse.spmatrix)
-def _(X: _MemoryArray, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike):
+def _(X: np.ndarray, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike) -> np.ndarray:
     return X.mean(axis=axis, dtype=dtype)
 
 
