@@ -37,7 +37,9 @@ def test_normalize_total(array_type, dtype):
 
     adata = AnnData(array_type(X_frac).astype(dtype))
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
-    assert np.allclose(np.ravel(sc._utils.axis_sum(adata.X, axis=1))[:2], [2.0, 4.0])
+    assert np.allclose(
+        np.ravel(sc._utils.axis_sum(adata.X[:, 1:3], axis=1)), [1.0, 1.0, 1.0]
+    )
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
