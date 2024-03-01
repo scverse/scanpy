@@ -158,6 +158,17 @@ def test_subsample_copy_backed(tmp_path):
         sc.pp.subsample(adata_d, n_obs=40, copy=False)
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_scale_matrix_types(array_type):
+    adata = pbmc68k_reduced()
+    adata.X = adata.raw.X
+    adata_casted = adata.copy()
+    adata_casted.X = array_type(adata_casted.raw.X)
+    sc.pp.scale(adata)
+    sc.pp.scale(adata_casted)
+    assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
+
+
 def test_scale():
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
