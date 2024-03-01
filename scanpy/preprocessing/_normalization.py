@@ -187,7 +187,6 @@ def normalize_total(
 
     counts_per_cell = axis_sum(X, axis=1)
     if exclude_highly_expressed:
-        counts_per_cell = axis_sum(X, axis=1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
 
         # at least one cell as more than max_fraction of counts per cell
@@ -200,8 +199,6 @@ def normalize_total(
             f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
         )
         counts_per_cell = axis_sum(X[:, gene_subset], axis=1)
-    else:
-        counts_per_cell = axis_sum(X, axis=1)
 
     start = logg.info(msg)
     counts_per_cell = np.ravel(counts_per_cell)
