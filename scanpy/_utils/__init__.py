@@ -16,7 +16,7 @@ from enum import Enum
 from functools import partial, singledispatch, wraps
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union
 from weakref import WeakSet
 
 import numpy as np
@@ -610,8 +610,8 @@ def _(dividend: DaskArray, divisor, *, out=None) -> DaskArray:
 def axis_sum(
     X: np.ndarray | sparse.spmatrix,
     *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: np.typing.DTypeLike | None = None,
+    axis: Optional[Union[tuple[Literal[0, 1], ...], Literal[0, 1]]] = None,  # noqa: UP007
+    dtype: Optional[np.typing.DTypeLike] = None,  # noqa: UP007
 ):
     return np.sum(X, axis=axis, dtype=dtype)
 
@@ -620,8 +620,8 @@ def axis_sum(
 def _(
     X: DaskArray,
     *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: np.typing.DTypeLike | None = None,
+    axis: Union[tuple[Literal[0, 1], ...], Literal[0, 1], None] = None,  # noqa: UP007
+    dtype: Union[np.typing.DTypeLike, None] = None,  # noqa: UP007
 ):
     import dask.array as da
 
