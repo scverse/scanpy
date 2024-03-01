@@ -30,7 +30,7 @@ def param_with(
 
 
 MAP_ARRAY_TYPES: dict[
-    tuple[Literal["mem", "dask"], Literal["dense", "sparse", "sparse_chunks"]],
+    tuple[Literal["mem", "dask"], Literal["dense", "sparse"]],
     tuple[ParameterSet, ...],
 ] = {
     ("mem", "dense"): (pytest.param(asarray, id="numpy_ndarray"),),

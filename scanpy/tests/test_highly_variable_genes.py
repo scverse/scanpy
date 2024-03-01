@@ -351,10 +351,11 @@ def test_compare_to_upstream(  # noqa: PLR0917
         msg = "The deprecated filter_genes_dispersion behaves differently with cell_ranger"
         request.node.add_marker(pytest.mark.xfail(reason=msg))
     hvg_info = pd.read_csv(ref_path)
+
     pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
-
     pbmc.var_names_make_unique()
+
     sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
     pbmc.X = array_type(pbmc.X)
 
