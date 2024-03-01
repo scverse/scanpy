@@ -9,7 +9,7 @@ from sklearn.utils import sparsefuncs
 
 from .. import logging as logg
 from .._compat import DaskArray, old_positionals
-from .._utils import axis_sum, view_to_actual
+from .._utils import axis_sum, row_divide, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 if TYPE_CHECKING:
@@ -32,11 +32,8 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
     counts = counts / after
     if issparse(X):
         sparsefuncs.inplace_row_scale(X, 1 / counts)
-    elif isinstance(counts, np.ndarray):
-        np.divide(X, counts[:, None], out=X)
-    else:
-        X = X / counts[:, None]
-    return X
+        return X
+    return row_divide(X, counts, out=X if isinstance(X, np.ndarray) else None)
 
 
 @old_positionals(

@@ -560,6 +560,52 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
     return da.map_blocks(elem_mul, x, y)
 
 
+def to_two_dimensions(divisor: _SupportedArray) -> _SupportedArray:
+    return np.ravel(divisor)[:, None]
+
+
+@singledispatch
+def row_divide(dividend: sparse.csr_matrix, divisor, out=None) -> sparse.csr_matrix:
+    # cannot use `sparsefuncs.inplace_row_scale` because dask tells you not to do that.
+    divisor_indexed = np.ravel(divisor)[dividend.nonzero()[0]]
+    scaled_data = dividend.data / divisor_indexed
+    return sparse.csr_matrix(
+        (scaled_data, dividend.indices, dividend.indptr), shape=dividend.shape
+    )
+
+
+@row_divide.register
+def _(dividend: sparse.csc_matrix, divisor, out=None) -> sparse.csc_matrix:
+    return row_divide(dividend.tocsr(), divisor).tocsc()
+
+
+@row_divide.register(np.ndarray)
+def _(dividend: np.ndarray, divisor, out=None) -> np.ndarray:
+    divisor = to_two_dimensions(divisor)
+    dividend = np.divide(dividend, divisor, out=out if out is not None else None)
+    return dividend
+
+
+@row_divide.register(DaskArray)
+def _(dividend: DaskArray, divisor, out=None) -> DaskArray:
+    # dask needs dividend and divisor to "look alike" in chunks for mapping so we need an extra dimension
+    divisor = to_two_dimensions(divisor)
+    if divisor.shape[0] != dividend.shape[0]:
+        raise ValueError(
+            f"Divisor shape: {divisor.shape} and dividend shape: {dividend.shape} must have same first dimension."
+        )
+    import dask.array as da
+
+    if isinstance(divisor, DaskArray):
+        if not dividend.chunks[0] == divisor.chunks[0]:
+            divisor = divisor.rechunk((dividend.chunks[0], 1))
+            warnings.warn("Rechunking divisor in user operation", UserWarning)
+    else:
+        divisor = da.from_array(divisor, chunks=(dividend.chunks[0], 1))
+
+    return da.map_blocks(row_divide, dividend, divisor, out, meta=dividend._meta)
+
+
 @singledispatch
 def axis_sum(X: np.ndarray | sparse.spmatrix, axis=None, dtype=None):
     return np.sum(X, axis=axis, dtype=dtype)

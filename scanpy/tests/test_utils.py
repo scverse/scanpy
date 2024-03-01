@@ -14,6 +14,7 @@ from scanpy._utils import (
     descend_classes_and_funcs,
     elem_mul,
     is_constant,
+    row_divide,
 )
 from scanpy.testing._pytest.marks import needs
 from scanpy.testing._pytest.params import (
@@ -37,6 +38,15 @@ def test_descend_classes_and_funcs():
     a.b.a = a
 
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, "a"))
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_row_divide(array_type):
+    dividend = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
+    divisor = np.array([0.1, 0.2])
+    expd = np.array([[0, 10, 10], [5, 0, 5]])
+    res = asarray(row_divide(dividend, divisor))
+    np.testing.assert_array_equal(res, expd)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
