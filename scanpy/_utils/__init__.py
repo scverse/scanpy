@@ -574,19 +574,27 @@ def _(X: DaskArray, axis=None, dtype=None):
 
     def sum_drop_keepdims(*args, **kwargs):
         kwargs.pop("computing_meta", None)
+        # masked operations on sparse produce numpy matrices gives the same API issues handled here
         if isinstance(X._meta, (sparse.spmatrix, np.matrix)) or isinstance(
             args[0], (sparse.spmatrix, np.matrix)
-        ):  # forcing the `_meta` to be a sparse array really isn't desirable?
+        ):
             kwargs.pop("keepdims", None)
             if isinstance(kwargs["axis"], tuple):
                 kwargs["axis"] = kwargs["axis"][0]
-        return da.chunk.sum(*args, dtype=dtype, **kwargs)
+        # returns a matrix normally, which is undesireable?
+        return np.array(np.sum(*args, dtype=dtype, **kwargs))
 
-    # operates on `np.matrix` for some reason with sparse chunks in dask so need explicit casting
     def aggregate_sum(*args, **kwargs):
-        return da.chunk.sum(np.array(args[0]), dtype=dtype, **kwargs)
+        return np.sum(args[0], dtype=dtype, **kwargs)
 
-    return da.reduction(X, sum_drop_keepdims, aggregate_sum, axis=axis, dtype=dtype)
+    return da.reduction(
+        X,
+        sum_drop_keepdims,
+        aggregate_sum,
+        axis=axis,
+        dtype=dtype,
+        meta=np.array([], dtype=dtype),
+    )
 
 
 @singledispatch
