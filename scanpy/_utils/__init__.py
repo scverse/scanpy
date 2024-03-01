@@ -25,7 +25,7 @@ from anndata import __version__ as anndata_version
 from numpy.typing import NDArray
 from packaging import version
 from scipy import sparse
-from sklearn.utils import check_random_state
+from sklearn.utils import check_random_state, sparsefuncs
 
 from .. import logging as logg
 from .._compat import DaskArray
@@ -560,50 +560,70 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
     return da.map_blocks(elem_mul, x, y)
 
 
-def to_two_dimensions(divisor: _SupportedArray) -> _SupportedArray:
-    return np.ravel(divisor)[:, None]
-
-
 @singledispatch
-def row_divide(dividend: sparse.csr_matrix, divisor, *, out=None) -> sparse.csr_matrix:
-    # cannot use `sparsefuncs.inplace_row_scale` because dask tells you not to do that.
-    divisor_indexed = np.ravel(divisor)[dividend.nonzero()[0]]
-    scaled_data = dividend.data / divisor_indexed
-    return sparse.csr_matrix(
-        (scaled_data, dividend.indices, dividend.indptr), shape=dividend.shape
-    )
+def divide(
+    dividend: sparse.spmatrix, divisor, axis: Literal[0, 1], *, out=None
+) -> sparse.spmatrix:
+    if dividend is out:
+        if axis == 0:
+            sparsefuncs.inplace_row_scale(dividend, 1 / np.ravel(divisor))
+            return dividend
+        sparsefuncs.inplace_column_scale(dividend, 1 / np.ravel(divisor))
+        return dividend
+
+    dividend_type = type(dividend)
+    types = [sparse.csr_matrix, sparse.csc_matrix]
+    row_divide = axis == 0
+    column_divide = axis == 1
+    if (row_divide and dividend_type == sparse.csr_matrix) or (
+        column_divide and dividend_type == sparse.csc_matrix
+    ):
+        divisor_indexed = np.ravel(divisor)[
+            dividend.nonzero()[types.index(dividend_type)]
+        ]
+        scaled_data = dividend.data / divisor_indexed
+        return dividend_type(
+            (scaled_data, dividend.indices, dividend.indptr), shape=dividend.shape
+        )
+    else:
+        other_sparse_type = list(set(types).difference({dividend_type}))[0]
+        return dividend_type(divide(other_sparse_type(dividend), divisor, axis))
 
 
-@row_divide.register
-def _(dividend: sparse.csc_matrix, divisor, *, out=None) -> sparse.csc_matrix:
-    return row_divide(dividend.tocsr(), divisor).tocsc()
-
-
-@row_divide.register(np.ndarray)
-def _(dividend: np.ndarray, divisor, *, out=None) -> np.ndarray:
-    divisor = to_two_dimensions(divisor)
-    dividend = np.divide(dividend, divisor, out=out if out is not None else None)
+@divide.register(np.ndarray)
+def _(dividend: np.ndarray, divisor, axis: Literal[0, 1], *, out=None) -> np.ndarray:
+    dividend = np.divide(dividend, divisor, out=out)
     return dividend
 
 
-@row_divide.register(DaskArray)
-def _(dividend: DaskArray, divisor, *, out=None) -> DaskArray:
-    # dask needs dividend and divisor to "look alike" in chunks for mapping so we need an extra dimension
-    divisor = to_two_dimensions(divisor)
-    if divisor.shape[0] != dividend.shape[0]:
-        raise ValueError(
-            f"Divisor shape: {divisor.shape} and dividend shape: {dividend.shape} must have same first dimension."
-        )
+@divide.register(DaskArray)
+def _(dividend: DaskArray, divisor, axis: Literal[0, 1], *, out=None) -> DaskArray:
     import dask.array as da
 
-    if isinstance(divisor, DaskArray):
-        if not dividend.chunks[0] == divisor.chunks[0]:
-            divisor = divisor.rechunk((dividend.chunks[0], 1))
-            warnings.warn("Rechunking divisor in user operation", UserWarning)
-    else:
-        divisor = da.from_array(divisor, chunks=(dividend.chunks[0], 1))
+    row_divide = axis == 0
+    column_divide = axis == 1
 
-    return da.map_blocks(row_divide, dividend, divisor, meta=dividend._meta, out=out)
+    if isinstance(divisor, DaskArray):
+        warnings.warn("Rechunking divisor in user operation", UserWarning)
+        if row_divide and not dividend.chunksize[0] == divisor.chunksize[0]:
+            divisor = divisor.rechunk((dividend.chunksize[0], 1))
+        elif column_divide and (
+            (
+                len(divisor.chunksize) == 1
+                and dividend.chunksize[1] != divisor.chunksize[0]
+            )
+            or (
+                len(divisor.chunksize) == 2
+                and dividend.chunksize[1] != divisor.chunksize[1]
+            )
+        ):
+            divisor = divisor.rechunk((1, dividend.chunksize[1]))
+    elif row_divide:
+        divisor = da.from_array(divisor, chunks=(dividend.chunksize[axis], 1))
+    elif column_divide:
+        divisor = da.from_array(divisor, chunks=(1, dividend.chunksize[axis]))
+
+    return da.map_blocks(divide, dividend, divisor, axis, meta=dividend._meta, out=out)
 
 
 @singledispatch

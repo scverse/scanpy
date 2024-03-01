@@ -5,16 +5,16 @@ from types import ModuleType
 import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, issparse
 
 from scanpy._compat import DaskArray
 from scanpy._utils import (
     axis_sum,
     check_nonnegative_integers,
     descend_classes_and_funcs,
+    divide,
     elem_mul,
     is_constant,
-    row_divide,
 )
 from scanpy.testing._pytest.marks import needs
 from scanpy.testing._pytest.params import (
@@ -41,11 +41,22 @@ def test_descend_classes_and_funcs():
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_row_divide(array_type):
-    dividend = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
+def test_divide_row(array_type):
+    dividend = array_type(asarray([[0, 1.0, 1.0], [1.0, 0, 1.0]]))
     divisor = np.array([0.1, 0.2])
-    expd = np.array([[0, 10, 10], [5, 0, 5]])
-    res = asarray(row_divide(dividend, divisor))
+    expd = np.array([[0, 10.0, 10.0], [5.0, 0, 5.0]])
+    out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
+    res = asarray(divide(dividend, divisor[:, None], axis=0, out=out))
+    np.testing.assert_array_equal(res, expd)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_divide_column(array_type):
+    dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
+    divisor = np.array([0.1, 0.2, 0.5])
+    expd = np.array([[0, 5.0, 4.0], [30.0, 0, 8.0]])
+    out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
+    res = asarray(divide(dividend, divisor[None, :], axis=1, out=out))
     np.testing.assert_array_equal(res, expd)
 
 

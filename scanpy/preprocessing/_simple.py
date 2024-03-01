@@ -23,6 +23,7 @@ from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
     axis_sum,
+    divide,
     renamed_arg,
     sanitize_anndata,
     view_to_actual,
@@ -868,18 +869,17 @@ def scale_array(
     mean, var = _get_mean_var(X)
     std = np.sqrt(var)
     std[std == 0] = 1
-    if issparse(X):
-        if zero_center:
+    if zero_center:
+        if issparse(X):
             raise ValueError("Cannot zero-center sparse matrix.")
-        sparsefuncs.inplace_column_scale(X, 1 / std)
-    else:
-        if zero_center:
-            if isinstance(X, DaskArray) and issparse(X._meta):
-                warnings.warn(
-                    "zero-center being used with `DaskArray` sparse chunks.  This can be bad if you have large chunks or intend to eventually read the whole data into memory."
-                )
-            X -= mean
-        X /= std
+        if isinstance(X, DaskArray) and issparse(X._meta):
+            warnings.warn(
+                "zero-center being used with `DaskArray` sparse chunks.  This can be bad if you have large chunks or intend to eventually read the whole data into memory."
+            )
+        X -= mean
+    X = divide(
+        X, std, out=X if isinstance(X, np.ndarray) or issparse(X) else None, axis=1
+    )
 
     # do the clipping
     if max_value is not None:

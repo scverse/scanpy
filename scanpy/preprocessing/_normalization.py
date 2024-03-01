@@ -5,11 +5,10 @@ from warnings import warn
 
 import numpy as np
 from scipy.sparse import issparse
-from sklearn.utils import sparsefuncs
 
 from .. import logging as logg
 from .._compat import DaskArray, old_positionals
-from .._utils import axis_sum, row_divide, view_to_actual
+from .._utils import axis_sum, divide, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 if TYPE_CHECKING:
@@ -30,10 +29,12 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
     after = np.median(counts_greater_than_zero, axis=0) if after is None else after
     counts += counts == 0
     counts = counts / after
-    if issparse(X):
-        sparsefuncs.inplace_row_scale(X, 1 / counts)
-        return X
-    return row_divide(X, counts, out=X if isinstance(X, np.ndarray) else None)
+    return divide(
+        X,
+        counts[:, None],
+        out=X if isinstance(X, np.ndarray) or issparse(X) else None,
+        axis=0,
+    )
 
 
 @old_positionals(
