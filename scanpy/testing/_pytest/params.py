@@ -55,17 +55,17 @@ MAP_ARRAY_TYPES: dict[
     ),
 }
 
-ARRAY_TYPES_MEM = list(
+ARRAY_TYPES_MEM = tuple(
     at for (strg, _), ats in MAP_ARRAY_TYPES.items() if strg == "mem" for at in ats
 )
-ARRAY_TYPES_DASK = list(
+ARRAY_TYPES_DASK = tuple(
     at for (strg, _), ats in MAP_ARRAY_TYPES.items() if strg == "dask" for at in ats
 )
 
-ARRAY_TYPES_DENSE = list(
+ARRAY_TYPES_DENSE = tuple(
     at for (_, spsty), ats in MAP_ARRAY_TYPES.items() if spsty == "dense" for at in ats
 )
-ARRAY_TYPES_SPARSE = list(
+ARRAY_TYPES_SPARSE = tuple(
     at for (_, spsty), ats in MAP_ARRAY_TYPES.items() if "sparse" in spsty for at in ats
 )
 ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED = tuple(
@@ -78,4 +78,4 @@ ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED = tuple(
     for at in ats
 )
 
-ARRAY_TYPES = list(at for ats in MAP_ARRAY_TYPES.values() for at in ats)
+ARRAY_TYPES = tuple(at for ats in MAP_ARRAY_TYPES.values() for at in ats)
