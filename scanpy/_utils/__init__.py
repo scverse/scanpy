@@ -599,6 +599,11 @@ def _(dividend: np.ndarray, divisor, axis: Literal[0, 1], *, out=None) -> np.nda
 
 @divide.register(DaskArray)
 def _(dividend: DaskArray, divisor, axis: Literal[0, 1], *, out=None) -> DaskArray:
+    if out is not None:
+        raise TypeError(
+            "`out` is not `None`. Do not do in-place modifications on dask arrays."
+        )
+
     import dask.array as da
 
     row_divide = axis == 0

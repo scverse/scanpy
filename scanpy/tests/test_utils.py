@@ -48,6 +48,9 @@ def test_divide_row(array_type):
     out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
     res = asarray(divide(dividend, divisor[:, None], axis=0, out=out))
     np.testing.assert_array_equal(res, expd)
+    if isinstance(dividend, DaskArray):
+        with pytest.raises(TypeError):
+            divide(dividend, divisor[None, :], axis=1, out=dividend)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -58,6 +61,9 @@ def test_divide_column(array_type):
     out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
     res = asarray(divide(dividend, divisor[None, :], axis=1, out=out))
     np.testing.assert_array_equal(res, expd)
+    if isinstance(dividend, DaskArray):
+        with pytest.raises(TypeError):
+            divide(dividend, divisor[None, :], axis=1, out=dividend)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
