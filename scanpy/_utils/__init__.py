@@ -562,7 +562,11 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
 
 @singledispatch
 def divide(
-    dividend: sparse.spmatrix, divisor, axis: Literal[0, 1], *, out=None
+    dividend: sparse.spmatrix,
+    divisor,
+    axis: Literal[0, 1],
+    *,
+    out: sparse.spmatrix | None = None,
 ) -> sparse.spmatrix:
     if dividend is out:
         if axis == 0:
@@ -592,13 +596,25 @@ def divide(
 
 
 @divide.register(np.ndarray)
-def _(dividend: np.ndarray, divisor, axis: Literal[0, 1], *, out=None) -> np.ndarray:
+def _(
+    dividend: np.ndarray,
+    divisor: np.ndarray,
+    axis: Literal[0, 1],
+    *,
+    out: np.ndarray | None = None,
+) -> np.ndarray:
     dividend = np.divide(dividend, divisor, out=out)
     return dividend
 
 
 @divide.register(DaskArray)
-def _(dividend: DaskArray, divisor, axis: Literal[0, 1], *, out=None) -> DaskArray:
+def _(
+    dividend: DaskArray,
+    divisor: np.ndarray | DaskArray,
+    axis: Literal[0, 1],
+    *,
+    out: None = None,
+) -> DaskArray:
     if out is not None:
         raise TypeError(
             "`out` is not `None`. Do not do in-place modifications on dask arrays."
