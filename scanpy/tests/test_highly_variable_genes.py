@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from string import ascii_letters
-from typing import Literal
+from typing import Callable, Literal
 
 import numpy as np
 import pandas as pd
@@ -345,7 +345,7 @@ def test_compare_to_upstream(  # noqa: PLR0917
     flavor: Literal["seurat", "cell_ranger"],
     params: dict[str, float | int],
     ref_path: Path,
-    array_type: list,
+    array_type: Callable,
 ):
     if func == "fgd" and flavor == "cell_ranger":
         msg = "The deprecated filter_genes_dispersion behaves differently with cell_ranger"
