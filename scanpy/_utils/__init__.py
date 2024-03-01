@@ -620,7 +620,7 @@ def _(X: DaskArray, axis=None, dtype=None):
 
     def sum_drop_keepdims(*args, **kwargs):
         kwargs.pop("computing_meta", None)
-        # masked operations on sparse produce numpy matrices gives the same API issues handled here
+        # masked operations on sparse produce which numpy matrices gives the same API issues handled here
         if isinstance(X._meta, (sparse.spmatrix, np.matrix)) or isinstance(
             args[0], (sparse.spmatrix, np.matrix)
         ):
