@@ -575,6 +575,7 @@ def divide(
     types = [sparse.csr_matrix, sparse.csc_matrix]
     row_divide = axis == 0
     column_divide = axis == 1
+    # In this case `data` matches the order given by `nonzero` and we can scale directly.
     if (row_divide and dividend_type == sparse.csr_matrix) or (
         column_divide and dividend_type == sparse.csc_matrix
     ):
@@ -585,9 +586,9 @@ def divide(
         return dividend_type(
             (scaled_data, dividend.indices, dividend.indptr), shape=dividend.shape
         )
-    else:
-        other_sparse_type = list(set(types).difference({dividend_type}))[0]
-        return dividend_type(divide(other_sparse_type(dividend), divisor, axis))
+    # We thus need to do the type conversion so that `data` and `nonzero` match by converting to the other for division and then back to return.
+    other_sparse_type = list(set(types).difference({dividend_type}))[0]
+    return dividend_type(divide(other_sparse_type(dividend), divisor, axis))
 
 
 @divide.register(np.ndarray)
