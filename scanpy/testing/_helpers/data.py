@@ -22,6 +22,7 @@ import scanpy as sc
 
 if TYPE_CHECKING:
     from anndata import AnnData
+
 # Functions returning the same objects (easy to misuse)
 
 
