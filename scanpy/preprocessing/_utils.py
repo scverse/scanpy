@@ -8,7 +8,7 @@ import numpy as np
 from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
-from .._utils import AnyRandom, _SupportedArray, axis_sum, elem_mul
+from .._utils import AnyRandom, _MemoryArray, _SupportedArray, axis_sum, elem_mul
 
 if TYPE_CHECKING:
     import dask.array as da
@@ -21,8 +21,9 @@ def mean_func(X: da.Array, axis, dtype):
     return total / X.shape[axis]
 
 
-@mean_func.register
-def _(X: np.ndarray | sparse.spmatrix, axis, dtype):
+@mean_func.register(np.ndarray)
+@mean_func.register(sparse.spmatrix)
+def _(X: _MemoryArray, axis, dtype):
     return X.mean(axis=axis, dtype=dtype)
 
 
