@@ -625,8 +625,13 @@ def _(X: DaskArray, axis=None, dtype=None):
             args[0], (sparse.spmatrix, np.matrix)
         ):
             kwargs.pop("keepdims", None)
-            if isinstance(kwargs["axis"], tuple):
-                kwargs["axis"] = kwargs["axis"][0]
+            axis = kwargs["axis"]
+            if isinstance(axis, tuple):
+                if len(axis) != 1:
+                    raise ValueError(
+                        f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
+                    )
+                kwargs["axis"] = axis[0]
         # returns a matrix normally, which is undesireable?
         return np.array(np.sum(*args, dtype=dtype, **kwargs))
 
