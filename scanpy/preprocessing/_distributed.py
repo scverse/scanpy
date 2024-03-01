@@ -43,4 +43,9 @@ def materialize_as_ndarray(
     if not isinstance(a, tuple):
         return np.asarray(a)
 
-    return tuple(materialize_as_ndarray(arr) for arr in a)
+    if not any(isinstance(arr, DaskArray) for arr in a):
+        return tuple(np.asarray(arr) for arr in a)
+
+    import dask.array as da
+
+    return da.compute(*a, sync=True)
