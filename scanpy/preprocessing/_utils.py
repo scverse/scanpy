@@ -16,14 +16,14 @@ if TYPE_CHECKING:
 
 
 @singledispatch
-def mean_func(X: da.Array, axis, dtype):
+def axis_mean(X: da.Array, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike):
     total = axis_sum(X, axis=axis, dtype=dtype)
     return total / X.shape[axis]
 
 
-@mean_func.register(np.ndarray)
-@mean_func.register(sparse.spmatrix)
-def _(X: _MemoryArray, axis, dtype):
+@axis_mean.register(np.ndarray)
+@axis_mean.register(sparse.spmatrix)
+def _(X: _MemoryArray, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike):
     return X.mean(axis=axis, dtype=dtype)
 
 
@@ -33,8 +33,8 @@ def _get_mean_var(
     if isinstance(X, sparse.spmatrix):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
-        mean = mean_func(X, axis=axis, dtype=np.float64)
-        mean_sq = mean_func(elem_mul(X, X), axis=axis, dtype=np.float64)
+        mean = axis_mean(X, axis=axis, dtype=np.float64)
+        mean_sq = axis_mean(elem_mul(X, X), axis=axis, dtype=np.float64)
         var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
     var *= X.shape[axis] / (X.shape[axis] - 1)
