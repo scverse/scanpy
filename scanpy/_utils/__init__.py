@@ -565,7 +565,7 @@ def to_two_dimensions(divisor: _SupportedArray) -> _SupportedArray:
 
 
 @singledispatch
-def row_divide(dividend: sparse.csr_matrix, divisor, out=None) -> sparse.csr_matrix:
+def row_divide(dividend: sparse.csr_matrix, divisor, *, out=None) -> sparse.csr_matrix:
     # cannot use `sparsefuncs.inplace_row_scale` because dask tells you not to do that.
     divisor_indexed = np.ravel(divisor)[dividend.nonzero()[0]]
     scaled_data = dividend.data / divisor_indexed
@@ -575,19 +575,19 @@ def row_divide(dividend: sparse.csr_matrix, divisor, out=None) -> sparse.csr_mat
 
 
 @row_divide.register
-def _(dividend: sparse.csc_matrix, divisor, out=None) -> sparse.csc_matrix:
+def _(dividend: sparse.csc_matrix, divisor, *, out=None) -> sparse.csc_matrix:
     return row_divide(dividend.tocsr(), divisor).tocsc()
 
 
 @row_divide.register(np.ndarray)
-def _(dividend: np.ndarray, divisor, out=None) -> np.ndarray:
+def _(dividend: np.ndarray, divisor, *, out=None) -> np.ndarray:
     divisor = to_two_dimensions(divisor)
     dividend = np.divide(dividend, divisor, out=out if out is not None else None)
     return dividend
 
 
 @row_divide.register(DaskArray)
-def _(dividend: DaskArray, divisor, out=None) -> DaskArray:
+def _(dividend: DaskArray, divisor, *, out=None) -> DaskArray:
     # dask needs dividend and divisor to "look alike" in chunks for mapping so we need an extra dimension
     divisor = to_two_dimensions(divisor)
     if divisor.shape[0] != dividend.shape[0]:
@@ -603,16 +603,26 @@ def _(dividend: DaskArray, divisor, out=None) -> DaskArray:
     else:
         divisor = da.from_array(divisor, chunks=(dividend.chunks[0], 1))
 
-    return da.map_blocks(row_divide, dividend, divisor, out, meta=dividend._meta)
+    return da.map_blocks(row_divide, dividend, divisor, meta=dividend._meta, out=out)
 
 
 @singledispatch
-def axis_sum(X: np.ndarray | sparse.spmatrix, axis=None, dtype=None):
+def axis_sum(
+    X: np.ndarray | sparse.spmatrix,
+    *,
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: np.typing.DTypeLike | None = None,
+):
     return np.sum(X, axis=axis, dtype=dtype)
 
 
 @axis_sum.register
-def _(X: DaskArray, axis=None, dtype=None):
+def _(
+    X: DaskArray,
+    *,
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: np.typing.DTypeLike | None = None,
+):
     import dask.array as da
 
     if dtype is None:
