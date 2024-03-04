@@ -602,7 +602,7 @@ def axis_scale(
             new_data = X.data * np.repeat(scaling_array, np.diff(X.indptr))
         elif column_scale:
             new_data = X.data * scaling_array.take(X.indices, mode="clip")
-        return sparse.csr_matrix((new_data, X.inidices, X.indptr), shape=X.shape)
+        return sparse.csr_matrix((new_data, X.indices, X.indptr), shape=X.shape)
     return axis_scale(X.T, scaling_array, (axis + 1) % 2).T
 
 
