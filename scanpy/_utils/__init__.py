@@ -603,7 +603,6 @@ def axis_scale(
         elif column_scale:
             new_data = X.data * scaling_array.take(X.indices, mode="clip")
         return X._with_data(new_data)
-    # We thus need to do the type conversion so that `data` and `nonzero` match by converting to the other for division and then back to return.
     return axis_scale(X.T, scaling_array, (axis + 1) % 2).T
 
 
