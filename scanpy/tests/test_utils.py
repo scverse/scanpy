@@ -9,10 +9,10 @@ from scipy.sparse import csr_matrix, issparse
 
 from scanpy._compat import DaskArray
 from scanpy._utils import (
+    axis_scale,
     axis_sum,
     check_nonnegative_integers,
     descend_classes_and_funcs,
-    divide,
     elem_mul,
     is_constant,
 )
@@ -41,29 +41,35 @@ def test_descend_classes_and_funcs():
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_divide_row(array_type):
+def test_scale_row(array_type):
     dividend = array_type(asarray([[0, 1.0, 1.0], [1.0, 0, 1.0]]))
-    divisor = np.array([0.1, 0.2])
+    divisor = 1 / np.array([0.1, 0.2])
     expd = np.array([[0, 10.0, 10.0], [5.0, 0, 5.0]])
     out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
-    res = asarray(divide(dividend, divisor[:, None], axis=0, out=out))
+    res = asarray(axis_scale(dividend, divisor, axis=0, out=out))
     np.testing.assert_array_equal(res, expd)
     if isinstance(dividend, DaskArray):
-        with pytest.raises(TypeError):
-            divide(dividend, divisor[None, :], axis=1, out=dividend)
+        with pytest.raises(
+            TypeError,
+            match="`out` is not `None`. Do not do in-place modifications on dask arrays.",
+        ):
+            axis_scale(dividend, divisor, axis=0, out=dividend)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_divide_column(array_type):
+def test_scale_column(array_type):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
-    divisor = np.array([0.1, 0.2, 0.5])
+    divisor = 1 / np.array([0.1, 0.2, 0.5])
     expd = np.array([[0, 5.0, 4.0], [30.0, 0, 8.0]])
     out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
-    res = asarray(divide(dividend, divisor[None, :], axis=1, out=out))
+    res = asarray(axis_scale(dividend, divisor, axis=1, out=out))
     np.testing.assert_array_equal(res, expd)
     if isinstance(dividend, DaskArray):
-        with pytest.raises(TypeError):
-            divide(dividend, divisor[None, :], axis=1, out=dividend)
+        with pytest.raises(
+            TypeError,
+            match="`out` is not `None`. Do not do in-place modifications on dask arrays.",
+        ):
+            axis_scale(dividend, divisor, axis=1, out=dividend)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)

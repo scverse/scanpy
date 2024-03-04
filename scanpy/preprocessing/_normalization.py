@@ -8,7 +8,7 @@ from scipy.sparse import issparse
 
 from .. import logging as logg
 from .._compat import DaskArray, old_positionals
-from .._utils import axis_sum, divide, view_to_actual
+from .._utils import axis_scale, axis_sum, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 if TYPE_CHECKING:
@@ -29,9 +29,9 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
     after = np.median(counts_greater_than_zero, axis=0) if after is None else after
     counts += counts == 0
     counts = counts / after
-    return divide(
+    return axis_scale(
         X,
-        counts[:, None],
+        1 / counts,
         out=X if isinstance(X, np.ndarray) or issparse(X) else None,
         axis=0,
     )

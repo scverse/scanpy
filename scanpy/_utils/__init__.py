@@ -16,7 +16,16 @@ from enum import Enum
 from functools import partial, singledispatch, wraps
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+    overload,
+)
 from weakref import WeakSet
 
 import numpy as np
@@ -560,57 +569,61 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
     return da.map_blocks(elem_mul, x, y)
 
 
+Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
+
+
+def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
+    divisor = np.ravel(divisor)
+    if axis:
+        return divisor[None, :]
+    return divisor[:, None]
+
+
 @singledispatch
-def divide(
-    dividend: sparse.spmatrix,
-    divisor,
+def axis_scale(
+    X: sparse.spmatrix,
+    scaling_array,
     axis: Literal[0, 1],
     *,
     out: sparse.spmatrix | None = None,
 ) -> sparse.spmatrix:
-    if dividend is out:
+    if X is out:
         if axis == 0:
-            sparsefuncs.inplace_row_scale(dividend, 1 / np.ravel(divisor))
-            return dividend
-        sparsefuncs.inplace_column_scale(dividend, 1 / np.ravel(divisor))
-        return dividend
+            sparsefuncs.inplace_row_scale(X, np.ravel(scaling_array))
+            return X
+        sparsefuncs.inplace_column_scale(X, np.ravel(scaling_array))
+        return X
 
-    dividend_type = type(dividend)
-    types = [sparse.csr_matrix, sparse.csc_matrix]
-    row_divide = axis == 0
-    column_divide = axis == 1
-    # In this case `data` matches the order given by `nonzero` and we can scale directly.
-    if (row_divide and dividend_type == sparse.csr_matrix) or (
-        column_divide and dividend_type == sparse.csc_matrix
-    ):
-        divisor_indexed = np.ravel(divisor)[
-            dividend.nonzero()[types.index(dividend_type)]
-        ]
-        scaled_data = dividend.data / divisor_indexed
-        return dividend_type(
-            (scaled_data, dividend.indices, dividend.indptr), shape=dividend.shape
-        )
+    row_scale = axis == 0
+    column_scale = axis == 1
+    # Same as `inplace_{column,row}_scale`, but not in place
+    if X.format == "csr":
+        if row_scale:
+            new_data = X.data * np.repeat(scaling_array, np.diff(X.indptr))
+        elif column_scale:
+            new_data = X.data * scaling_array.take(X.indices, mode="clip")
+        return X._with_data(new_data)
     # We thus need to do the type conversion so that `data` and `nonzero` match by converting to the other for division and then back to return.
-    other_sparse_type = list(set(types).difference({dividend_type}))[0]
-    return dividend_type(divide(other_sparse_type(dividend), divisor, axis))
+    return axis_scale(X.T, scaling_array, (axis + 1) % 2).T
 
 
-@divide.register(np.ndarray)
+@axis_scale.register(np.ndarray)
 def _(
-    dividend: np.ndarray,
-    divisor: np.ndarray,
+    X: np.ndarray,
+    scaling_array: np.ndarray,
     axis: Literal[0, 1],
     *,
     out: np.ndarray | None = None,
 ) -> np.ndarray:
-    dividend = np.divide(dividend, divisor, out=out)
-    return dividend
+    scaling_array = broadcast_axis(scaling_array, axis)
+    scaled_X = np.multiply(X, scaling_array, out=out)
+    return scaled_X
 
 
-@divide.register(DaskArray)
+@axis_scale.register(DaskArray)
 def _(
-    dividend: DaskArray,
-    divisor: np.ndarray | DaskArray,
+    X: DaskArray,
+    scaling_array: Scaling_T,
     axis: Literal[0, 1],
     *,
     out: None = None,
@@ -622,30 +635,31 @@ def _(
 
     import dask.array as da
 
-    row_divide = axis == 0
-    column_divide = axis == 1
+    scaling_array = broadcast_axis(scaling_array, axis)
+    row_scale = axis == 0
+    column_scale = axis == 1
 
-    if isinstance(divisor, DaskArray):
-        warnings.warn("Rechunking divisor in user operation", UserWarning)
-        if row_divide and not dividend.chunksize[0] == divisor.chunksize[0]:
-            divisor = divisor.rechunk((dividend.chunksize[0], 1))
-        elif column_divide and (
+    if isinstance(scaling_array, DaskArray):
+        warnings.warn("Rechunking scaling_array in user operation", UserWarning)
+        if row_scale and not X.chunksize[0] == scaling_array.chunksize[0]:
+            scaling_array = scaling_array.rechunk((X.chunksize[0], 1))
+        elif column_scale and (
             (
-                len(divisor.chunksize) == 1
-                and dividend.chunksize[1] != divisor.chunksize[0]
+                len(scaling_array.chunksize) == 1
+                and X.chunksize[1] != scaling_array.chunksize[0]
             )
             or (
-                len(divisor.chunksize) == 2
-                and dividend.chunksize[1] != divisor.chunksize[1]
+                len(scaling_array.chunksize) == 2
+                and X.chunksize[1] != scaling_array.chunksize[1]
             )
         ):
-            divisor = divisor.rechunk((1, dividend.chunksize[1]))
-    elif row_divide:
-        divisor = da.from_array(divisor, chunks=(dividend.chunksize[axis], 1))
-    elif column_divide:
-        divisor = da.from_array(divisor, chunks=(1, dividend.chunksize[axis]))
+            scaling_array = scaling_array.rechunk((1, X.chunksize[1]))
+    elif row_scale:
+        scaling_array = da.from_array(scaling_array, chunks=(X.chunksize[axis], 1))
+    elif column_scale:
+        scaling_array = da.from_array(scaling_array, chunks=(1, X.chunksize[axis]))
 
-    return da.map_blocks(divide, dividend, divisor, axis, meta=dividend._meta, out=out)
+    return da.map_blocks(axis_scale, X, scaling_array, axis, meta=X._meta, out=out)
 
 
 @overload

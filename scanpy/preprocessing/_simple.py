@@ -22,8 +22,8 @@ from .._settings import settings as sett
 from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
+    axis_scale,
     axis_sum,
-    divide,
     renamed_arg,
     sanitize_anndata,
     view_to_actual,
@@ -877,8 +877,8 @@ def scale_array(
                 "zero-center being used with `DaskArray` sparse chunks.  This can be bad if you have large chunks or intend to eventually read the whole data into memory."
             )
         X -= mean
-    X = divide(
-        X, std, out=X if isinstance(X, np.ndarray) or issparse(X) else None, axis=1
+    X = axis_scale(
+        X, 1 / std, out=X if isinstance(X, np.ndarray) or issparse(X) else None, axis=1
     )
 
     # do the clipping
