@@ -354,10 +354,10 @@ def test_compare_to_upstream(  # noqa: PLR0917
 
     pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
-    pbmc.var_names_make_unique()
-
-    sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
     pbmc.X = array_type(pbmc.X)
+    pbmc.var_names_make_unique()
+    sc.pp.filter_cells(pbmc, min_counts=1)
+    sc.pp.normalize_total(pbmc, target_sum=1e4)
 
     if func == "hvg":
         sc.pp.log1p(pbmc)
