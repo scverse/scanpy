@@ -1125,7 +1125,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
 
 def _downsample_total_counts(X, total_counts, random_state, replace):
     total_counts = int(total_counts)
-    total = axis_sum(X)
+    total = X.sum()
     if total < total_counts:
         return X
     if issparse(X):
