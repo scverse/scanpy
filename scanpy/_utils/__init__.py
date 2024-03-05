@@ -695,6 +695,9 @@ def _(
     if dtype is None:
         dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
 
+    if isinstance(X._meta, np.ndarray) and not isinstance(X._meta, np.matrix):
+        return X.sum(axis=axis, dtype=dtype)
+
     def sum_drop_keepdims(*args, **kwargs):
         kwargs.pop("computing_meta", None)
         # masked operations on sparse produce which numpy matrices gives the same API issues handled here
