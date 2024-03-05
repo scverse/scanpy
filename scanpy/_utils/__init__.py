@@ -712,7 +712,7 @@ def _(
                         f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
                     )
                 kwargs["axis"] = axis[0]
-        # returns a matrix normally, which is undesireable?
+        # returns a np.matrix normally, which is undesireable
         return np.array(np.sum(*args, dtype=dtype, **kwargs))
 
     def aggregate_sum(*args, **kwargs):
