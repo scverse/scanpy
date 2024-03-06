@@ -8,6 +8,7 @@ from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 from scipy import sparse
 from scipy.sparse import csr_matrix
+from sklearn.utils import issparse
 
 import scanpy as sc
 from scanpy._utils import axis_sum
@@ -25,6 +26,35 @@ if TYPE_CHECKING:
 
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+@pytest.mark.parametrize("target_sum", [None, 1.0])
+@pytest.mark.parametrize("exclude_highly_expressed", [True, False])
+def test_normalize_matrix_types(
+    array_type, dtype, target_sum, exclude_highly_expressed
+):
+    adata = sc.datasets.pbmc68k_reduced()
+    adata.X = (adata.raw.X).astype(dtype)
+    adata_casted = adata.copy()
+    adata_casted.X = array_type(adata_casted.raw.X).astype(dtype)
+    sc.pp.normalize_total(
+        adata, target_sum=target_sum, exclude_highly_expressed=exclude_highly_expressed
+    )
+    sc.pp.normalize_total(
+        adata_casted,
+        target_sum=target_sum,
+        exclude_highly_expressed=exclude_highly_expressed,
+    )
+    X = adata_casted.X
+    if "dask" in array_type.__name__:
+        X = X.compute()
+    if issparse(X):
+        X = X.todense()
+    if issparse(adata.X):
+        adata.X = adata.X.todense()
+    np.testing.assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
