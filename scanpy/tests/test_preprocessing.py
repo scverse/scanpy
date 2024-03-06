@@ -444,3 +444,81 @@ def test_recipe_weinreb():
     orig = adata.copy()
     sc.pp.recipe_weinreb17(adata, log=False, copy=True)
     assert_equal(orig, adata)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize(
+    "max_cells,max_counts,min_cells,min_counts",
+    [
+        [100, None, None, None],
+        [None, 100, None, None],
+        [None, None, 20, None],
+        [None, None, None, 20],
+    ],
+)
+def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
+    adata = pbmc68k_reduced()
+    adata.X = adata.raw.X
+    adata_casted = adata.copy()
+    adata_casted.X = array_type(adata_casted.raw.X)
+    sc.pp.filter_genes(
+        adata,
+        max_cells=max_cells,
+        max_counts=max_counts,
+        min_cells=min_cells,
+        min_counts=min_counts,
+    )
+    sc.pp.filter_genes(
+        adata_casted,
+        max_cells=max_cells,
+        max_counts=max_counts,
+        min_cells=min_cells,
+        min_counts=min_counts,
+    )
+    X = adata_casted.X
+    if "dask" in array_type.__name__:
+        X = X.compute()
+    if issparse(X):
+        X = X.todense()
+    if issparse(adata.X):
+        adata.X = adata.X.todense()
+    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize(
+    "max_genes,max_counts,min_genes,min_counts",
+    [
+        [100, None, None, None],
+        [None, 100, None, None],
+        [None, None, 20, None],
+        [None, None, None, 20],
+    ],
+)
+def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
+    adata = pbmc68k_reduced()
+    adata.X = adata.raw.X
+    adata_casted = adata.copy()
+    adata_casted.X = array_type(adata_casted.raw.X)
+    sc.pp.filter_cells(
+        adata,
+        max_genes=max_genes,
+        max_counts=max_counts,
+        min_genes=min_genes,
+        min_counts=min_counts,
+    )
+    sc.pp.filter_cells(
+        adata_casted,
+        max_genes=max_genes,
+        max_counts=max_counts,
+        min_genes=min_genes,
+        min_counts=min_counts,
+    )
+    X = adata_casted.X
+    if "dask" in array_type.__name__:
+        X = X.compute()
+    if issparse(X):
+        X = X.todense()
+    if issparse(adata.X):
+        adata.X = adata.X.todense()
+    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)

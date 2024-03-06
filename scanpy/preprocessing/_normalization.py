@@ -211,6 +211,12 @@ def normalize_total(
     counts_per_cell = np.ravel(counts_per_cell)
 
     cell_subset = counts_per_cell > 0
+    if isinstance(cell_subset, DaskArray):
+        warn(
+            UserWarning(
+                "Unable to detect if some cells have zero counts because `cell_subset` is being used."
+            )
+        )
     if not np.all(cell_subset):
         warn(UserWarning("Some cells have zero counts"))
 
