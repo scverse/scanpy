@@ -870,11 +870,10 @@ def scale_array(
     std = np.sqrt(var)
     std[std == 0] = 1
     if zero_center:
-        if issparse(X):
-            raise ValueError("Cannot zero-center sparse matrix.")
         if isinstance(X, DaskArray) and issparse(X._meta):
             warnings.warn(
-                "zero-center being used with `DaskArray` sparse chunks.  This can be bad if you have large chunks or intend to eventually read the whole data into memory."
+                "zero-center being used with `DaskArray` sparse chunks.  This can be bad if you have large chunks or intend to eventually read the whole data into memory.",
+                UserWarning,
             )
         X -= mean
     X = axis_scale(
