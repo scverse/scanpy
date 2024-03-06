@@ -217,8 +217,9 @@ def normalize_total(
                 "Unable to detect if some cells have zero counts because `cell_subset` is being used."
             )
         )
-    if not np.all(cell_subset):
-        warn(UserWarning("Some cells have zero counts"))
+    else:
+        if not np.all(cell_subset):
+            warn(UserWarning("Some cells have zero counts"))
 
     if inplace:
         if key_added is not None:
