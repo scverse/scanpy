@@ -21,7 +21,6 @@ from typing import (
     Any,
     Callable,
     Literal,
-    Optional,
     TypeVar,
     Union,
     overload,
@@ -684,8 +683,8 @@ def _(
 def axis_sum(
     X: sparse.spmatrix,
     *,
-    axis: Optional[Union[tuple[Literal[0, 1], ...], Literal[0, 1]]] = None,  # noqa: UP007
-    dtype: Optional[np.typing.DTypeLike] = None,  # noqa: UP007
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: np.typing.DTypeLike | None = None,
 ) -> np.matrix:
     ...
 
@@ -704,8 +703,8 @@ def axis_sum(
 def _(
     X: DaskArray,
     *,
-    axis: Union[tuple[Literal[0, 1], ...], Literal[0, 1], None] = None,  # noqa: UP007
-    dtype: Union[np.typing.DTypeLike, None] = None,  # noqa: UP007
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: np.typing.DTypeLike | None = None,
 ) -> DaskArray:
     import dask.array as da
 
