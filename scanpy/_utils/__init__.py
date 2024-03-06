@@ -699,7 +699,7 @@ def axis_sum(
     return np.sum(X, axis=axis, dtype=dtype)
 
 
-@axis_sum.register
+@axis_sum.register(DaskArray)
 def _(
     X: DaskArray,
     *,
