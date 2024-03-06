@@ -621,6 +621,16 @@ def _(
     return scaled_X
 
 
+def make_axis_chunks(X: DaskArray, axis: Literal[0, 1], pad=True) -> tuple[tuple[int]]:
+    if axis == 0:
+        if pad:
+            return (X.chunks[axis], (1,))
+        return X.chunks[axis]
+    if pad:
+        return ((1,), X.chunks[axis])
+    return X.chunks[axis]
+
+
 @axis_scale.register(DaskArray)
 def _(
     X: DaskArray,
@@ -641,25 +651,28 @@ def _(
     column_scale = axis == 1
 
     if isinstance(scaling_array, DaskArray):
-        warnings.warn("Rechunking scaling_array in user operation", UserWarning)
-        if row_scale and not X.chunksize[0] == scaling_array.chunksize[0]:
-            scaling_array = scaling_array.rechunk((X.chunksize[0], 1))
-        elif column_scale and (
-            (
-                len(scaling_array.chunksize) == 1
-                and X.chunksize[1] != scaling_array.chunksize[0]
-            )
-            or (
-                len(scaling_array.chunksize) == 2
-                and X.chunksize[1] != scaling_array.chunksize[1]
+        if (row_scale and not X.chunksize[0] == scaling_array.chunksize[0]) or (
+            column_scale
+            and (
+                (
+                    len(scaling_array.chunksize) == 1
+                    and X.chunksize[1] != scaling_array.chunksize[0]
+                )
+                or (
+                    len(scaling_array.chunksize) == 2
+                    and X.chunksize[1] != scaling_array.chunksize[1]
+                )
             )
         ):
-            scaling_array = scaling_array.rechunk((1, X.chunksize[1]))
-    elif row_scale:
-        scaling_array = da.from_array(scaling_array, chunks=(X.chunksize[axis], 1))
-    elif column_scale:
-        scaling_array = da.from_array(scaling_array, chunks=(1, X.chunksize[axis]))
-
+            warnings.warn("Rechunking scaling_array in user operation", UserWarning)
+            scaling_array = scaling_array.rechunk(
+                make_axis_chunks(X, axis, pad=len(scaling_array.shape) == 2)
+            )
+    else:
+        scaling_array = da.from_array(
+            scaling_array,
+            chunks=make_axis_chunks(X, axis, pad=len(scaling_array.shape) == 2),
+        )
     return da.map_blocks(axis_scale, X, scaling_array, axis, meta=X._meta, out=out)
 
 
