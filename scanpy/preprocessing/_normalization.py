@@ -11,6 +11,11 @@ from .._compat import DaskArray, old_positionals
 from .._utils import axis_scale, axis_sum, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
+try:
+    import dask.array as da
+except ImportError:
+    da = None
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -21,12 +26,13 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    if isinstance(counts, DaskArray):
-        counts_greater_than_zero = counts[counts > 0].compute_chunk_sizes()
-    else:
-        counts_greater_than_zero = counts[counts > 0]
-
-    after = np.median(counts_greater_than_zero, axis=0) if after is None else after
+    if after is None:
+        if isinstance(counts, DaskArray):
+            counts_nan = da.where(counts > 0, counts, np.nan)
+            after = da.nanmedian(counts_nan, axis=0)
+        else:
+            counts_greater_than_zero = counts[counts > 0]
+            after = np.median(counts_greater_than_zero, axis=0)
     counts += counts == 0
     counts = counts / after
     return axis_scale(
