@@ -883,7 +883,17 @@ def scale_array(
     # do the clipping
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
-        X[X > max_value] = max_value
+        # TODO: Report bug to dask?
+        if isinstance(X, DaskArray):
+
+            def clip_set(x):
+                x = x.copy()
+                x[x > max_value] = max_value
+                return x
+
+            X = da.map_blocks(clip_set, X)
+        else:
+            X[X > max_value] = max_value
     if return_mean_std:
         return X, mean, std
     else:
