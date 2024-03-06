@@ -587,7 +587,7 @@ def axis_scale(
     *,
     out: sparse.spmatrix | None = None,
 ) -> sparse.spmatrix:
-    if X is not None:
+    if out is not None:
         if X is not out:
             raise ValueError(
                 "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
@@ -694,8 +694,8 @@ def axis_sum(
 def axis_sum(
     X: np.ndarray,
     *,
-    axis: Optional[Union[tuple[Literal[0, 1], ...], Literal[0, 1]]] = None,  # noqa: UP007
-    dtype: Optional[np.typing.DTypeLike] = None,  # noqa: UP007
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: np.typing.DTypeLike | None = None,
 ) -> np.ndarray:
     return np.sum(X, axis=axis, dtype=dtype)
 
