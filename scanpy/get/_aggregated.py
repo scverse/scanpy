@@ -71,7 +71,7 @@ class Aggregate:
         """
         # pattern = self.data._with_data(np.broadcast_to(1, len(self.data.data)))
         # return self.indicator_matrix @ pattern
-        return self.indicator_matrix @ (self.data != 0)
+        return utils.asarray(self.indicator_matrix @ (self.data != 0))
 
     def sum(self) -> Array:
         """\
