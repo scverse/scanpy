@@ -20,6 +20,7 @@ from scanpy.testing._pytest.marks import needs
 from scanpy.testing._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
+    ARRAY_TYPES_SPARSE,
     ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
 )
 
@@ -67,14 +68,14 @@ def test_scale_column(array_type):
     np.testing.assert_array_equal(res, expd)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_DASK)
-def test_scale_out_with_dask_raises(array_type):
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
+def test_scale_out_with_dask_or_sparse_raises(array_type):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
     divisor = 1 / np.array([0.1, 0.2, 0.5])
     if isinstance(dividend, DaskArray):
         with pytest.raises(
-            TypeError,
-            match="`out` is not `None`. Do not do in-place modifications on dask arrays.",
+            TypeError if "dask" in array_type.__name__ else ValueError,
+            match="`out`*",
         ):
             axis_scale(dividend, divisor, axis=1, out=dividend)
 

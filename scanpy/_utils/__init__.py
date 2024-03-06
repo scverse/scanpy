@@ -587,7 +587,11 @@ def axis_scale(
     *,
     out: sparse.spmatrix | None = None,
 ) -> sparse.spmatrix:
-    if X is out:
+    if X is not None:
+        if X is not out:
+            raise ValueError(
+                "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
+            )
         if axis == 0:
             sparsefuncs.inplace_row_scale(X, np.ravel(scaling_array))
             return X
