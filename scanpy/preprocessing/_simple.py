@@ -174,29 +174,24 @@ def filter_cells(
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
 
-    if isinstance(cell_subset, DaskArray):
-        logg.info(
-            "Unable to detect the number of cells that were filtered out because `gene_subset` is a dask array."
-        )
-    else:
-        s = axis_sum(~cell_subset)
-        if s > 0:
-            msg = f"filtered out {s} cells that have "
-            if min_genes is not None or min_counts is not None:
-                msg += "less than "
-                msg += (
-                    f"{min_genes} genes expressed"
-                    if min_counts is None
-                    else f"{min_counts} counts"
-                )
-            if max_genes is not None or max_counts is not None:
-                msg += "more than "
-                msg += (
-                    f"{max_genes} genes expressed"
-                    if max_counts is None
-                    else f"{max_counts} counts"
-                )
-            logg.info(msg)
+    s = axis_sum(~cell_subset)
+    if s > 0:
+        msg = f"filtered out {s} cells that have "
+        if min_genes is not None or min_counts is not None:
+            msg += "less than "
+            msg += (
+                f"{min_genes} genes expressed"
+                if min_counts is None
+                else f"{min_counts} counts"
+            )
+        if max_genes is not None or max_counts is not None:
+            msg += "more than "
+            msg += (
+                f"{max_genes} genes expressed"
+                if max_counts is None
+                else f"{max_counts} counts"
+            )
+        logg.info(msg)
     return cell_subset, number_per_cell
 
 
@@ -295,29 +290,20 @@ def filter_genes(
     if max_number is not None:
         gene_subset = number_per_gene <= max_number
 
-    if isinstance(gene_subset, DaskArray):
-        logg.info(
-            "Unable to detect the number of genes filtered out because `gene_subset` is a dask array."
-        )
-    else:
-        s = axis_sum(~gene_subset)
-        if s > 0:
-            msg = f"filtered out {s} genes that are detected "
-            if min_cells is not None or min_counts is not None:
-                msg += "in less than "
-                msg += (
-                    f"{min_cells} cells"
-                    if min_counts is None
-                    else f"{min_counts} counts"
-                )
-            if max_cells is not None or max_counts is not None:
-                msg += "in more than "
-                msg += (
-                    f"{max_cells} cells"
-                    if max_counts is None
-                    else f"{max_counts} counts"
-                )
-            logg.info(msg)
+    s = axis_sum(~gene_subset)
+    if s > 0:
+        msg = f"filtered out {s} genes that are detected "
+        if min_cells is not None or min_counts is not None:
+            msg += "in less than "
+            msg += (
+                f"{min_cells} cells" if min_counts is None else f"{min_counts} counts"
+            )
+        if max_cells is not None or max_counts is not None:
+            msg += "in more than "
+            msg += (
+                f"{max_cells} cells" if max_counts is None else f"{max_counts} counts"
+            )
+        logg.info(msg)
     return gene_subset, number_per_gene
 
 

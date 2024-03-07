@@ -19,22 +19,13 @@ from scanpy.testing._helpers import (
 )
 
 # TODO: Add support for sparse-in-dask
-from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_DASK
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_DASK)
-def test_normalize_dask_warnings(array_type):
-    adata = AnnData(array_type(np.random.randn(10, 20)))
-    with pytest.warns() as record:
-        sc.pp.normalize_total(adata)
-    assert all(["Some cells have zero counts" not in str(r.message) for r in record])
-    assert any(["Unable to detect if some" in str(r.message) for r in record])
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
