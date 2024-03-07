@@ -106,7 +106,8 @@ def normalize_total(
         normalization factor (size factor) for each cell. A gene is considered
         highly expressed, if it has more than `max_fraction` of the total counts
         in at least one cell. The not-excluded genes will sum up to
-        `target_sum`.
+        `target_sum`.  Providing this argument when `adata.X` is a :class:`~dask.array.Array`
+        will incur blocking `.compute()` calls on the array.
     max_fraction
         If `exclude_highly_expressed=True`, consider cells as highly expressed
         that have more counts than `max_fraction` of the original total counts
