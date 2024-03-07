@@ -12,9 +12,11 @@ from .._utils import axis_scale, axis_sum, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 try:
+    import dask
     import dask.array as da
 except ImportError:
     da = None
+    dask = None
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -28,8 +30,16 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
     if after is None:
         if isinstance(counts, DaskArray):
-            counts_nan = da.where(counts > 0, counts, np.nan)
-            after = da.nanmedian(counts_nan, axis=0)
+
+            def nonzero_median(x):
+                return np.ma.median(np.ma.masked_array(x, x == 0)).item()
+
+            after = da.from_delayed(
+                dask.delayed(nonzero_median)(counts),
+                shape=(),
+                meta=counts._meta,
+                dtype=counts.dtype,
+            )
         else:
             counts_greater_than_zero = counts[counts > 0]
             after = np.median(counts_greater_than_zero, axis=0)
