@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from operator import mul, truediv
 from types import ModuleType
 
 import numpy as np
@@ -9,7 +10,7 @@ from scipy.sparse import csr_matrix, issparse
 
 from scanpy._compat import DaskArray
 from scanpy._utils import (
-    axis_scale,
+    axis_mul_or_truediv,
     axis_sum,
     check_nonnegative_integers,
     descend_classes_and_funcs,
@@ -43,59 +44,62 @@ def test_descend_classes_and_funcs():
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_scale_row(array_type):
+@pytest.mark.parametrize("op", [truediv, mul])
+def test_scale_row(array_type, op):
     dividend = array_type(asarray([[0, 1.0, 1.0], [1.0, 0, 1.0]]))
-    divisor = 1 / np.array([0.1, 0.2])
+    divisor = np.array([0.1, 0.2])
+    if op is mul:
+        divisor = 1 / divisor
     expd = np.array([[0, 10.0, 10.0], [5.0, 0, 5.0]])
     out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
-    res = asarray(axis_scale(dividend, divisor, axis=0, out=out))
+    res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=0, out=out))
     np.testing.assert_array_equal(res, expd)
-    if isinstance(dividend, DaskArray):
-        with pytest.raises(
-            TypeError,
-            match="`out` is not `None`. Do not do in-place modifications on dask arrays.",
-        ):
-            axis_scale(dividend, divisor, axis=0, out=dividend)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_scale_column(array_type):
+@pytest.mark.parametrize("op", [truediv, mul])
+def test_scale_column(array_type, op):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
-    divisor = 1 / np.array([0.1, 0.2, 0.5])
+    divisor = np.array([0.1, 0.2, 0.5])
+    if op is mul:
+        divisor = 1 / divisor
     expd = np.array([[0, 5.0, 4.0], [30.0, 0, 8.0]])
     out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
-    res = asarray(axis_scale(dividend, divisor, axis=1, out=out))
+    res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=1, out=out))
     np.testing.assert_array_equal(res, expd)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
 def test_scale_out_with_dask_or_sparse_raises(array_type):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
-    divisor = 1 / np.array([0.1, 0.2, 0.5])
+    divisor = np.array([0.1, 0.2, 0.5])
     if isinstance(dividend, DaskArray):
         with pytest.raises(
             TypeError if "dask" in array_type.__name__ else ValueError,
             match="`out`*",
         ):
-            axis_scale(dividend, divisor, axis=1, out=dividend)
+            axis_mul_or_truediv(dividend, divisor, op=truediv, axis=1, out=dividend)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_DASK)
 @pytest.mark.parametrize("axis", [0, 1])
-def test_scale_rechunk(array_type, axis):
+@pytest.mark.parametrize("op", [truediv, mul])
+def test_scale_rechunk(array_type, axis, op):
     import dask.array as da
 
     dividend = array_type(
         asarray([[0, 1.0, 2.0], [3.0, 0, 4.0], [3.0, 0, 4.0]])
     ).rechunk(((3,), (3,)))
-    divisor = da.from_array(1 / np.array([0.1, 0.2, 0.5]), chunks=(1,))
+    divisor = da.from_array(np.array([0.1, 0.2, 0.5]), chunks=(1,))
+    if op is mul:
+        divisor = 1 / divisor
     if axis == 1:
         expd = np.array([[0, 5.0, 4.0], [30.0, 0, 8.0], [30.0, 0, 8.0]])
     else:
         expd = np.array([[0, 10.0, 20.0], [15.0, 0, 20.0], [6.0, 0, 8.0]])
     out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
     with pytest.warns(UserWarning, match="Rechunking scaling_array*"):
-        res = asarray(axis_scale(dividend, divisor, axis=axis, out=out))
+        res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=axis, out=out))
     np.testing.assert_array_equal(res, expd)
 
 

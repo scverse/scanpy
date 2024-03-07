@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from operator import truediv
 from typing import TYPE_CHECKING, Literal
 from warnings import warn
 
@@ -8,7 +9,7 @@ from scipy.sparse import issparse
 
 from .. import logging as logg
 from .._compat import DaskArray, old_positionals
-from .._utils import axis_scale, axis_sum, view_to_actual
+from .._utils import axis_mul_or_truediv, axis_sum, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 try:
@@ -45,9 +46,10 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
             after = np.median(counts_greater_than_zero, axis=0)
     counts += counts == 0
     counts = counts / after
-    return axis_scale(
+    return axis_mul_or_truediv(
         X,
-        1 / counts,
+        counts,
+        op=truediv,
         out=X if isinstance(X, np.ndarray) or issparse(X) else None,
         axis=0,
     )

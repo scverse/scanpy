@@ -14,6 +14,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 from enum import Enum
 from functools import partial, singledispatch, wraps
+from operator import mul, truediv
 from textwrap import dedent
 from types import MethodType, ModuleType
 from typing import (
@@ -33,7 +34,7 @@ from anndata import __version__ as anndata_version
 from numpy.typing import NDArray
 from packaging import version
 from scipy import sparse
-from sklearn.utils import check_random_state, sparsefuncs
+from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .._compat import DaskArray
@@ -579,49 +580,64 @@ def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
 
 
 @singledispatch
-def axis_scale(
+def axis_mul_or_truediv(
     X: sparse.spmatrix,
     scaling_array,
     axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
     *,
     out: sparse.spmatrix | None = None,
 ) -> sparse.spmatrix:
+    if op not in {truediv, mul}:
+        raise ValueError(f"{op} not one of truediv or mul")
     if out is not None:
-        if X is not out:
+        if X.data is not out.data:
             raise ValueError(
                 "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
             )
-        if axis == 0:
-            sparsefuncs.inplace_row_scale(X, np.ravel(scaling_array))
-            return X
-        sparsefuncs.inplace_column_scale(X, np.ravel(scaling_array))
-        return X
 
     row_scale = axis == 0
     column_scale = axis == 1
-    # Same as `inplace_{column,row}_scale`, but not in place
+    if row_scale:
+
+        def new_data_op(x):
+            return op(x.data, np.repeat(scaling_array, np.diff(x.indptr)))
+
+    elif column_scale:
+
+        def new_data_op(x):
+            return op(x.data, scaling_array.take(x.indices, mode="clip"))
+
     if X.format == "csr":
-        if row_scale:
-            new_data = X.data * np.repeat(scaling_array, np.diff(X.indptr))
-        elif column_scale:
-            new_data = X.data * scaling_array.take(X.indices, mode="clip")
+        indices = X.indices
+        indptr = X.indptr
+        if out is not None:
+            X.data = new_data_op(X)
+            return X
         return sparse.csr_matrix(
-            (new_data, X.indices.copy(), X.indptr.copy()), shape=X.shape
+            (new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape
         )
-    return axis_scale(X.T, scaling_array, axis=1 - axis).T
+    transposed = X.T
+    return axis_mul_or_truediv(
+        transposed, scaling_array, op=op, axis=1 - axis, out=transposed
+    ).T
 
 
-@axis_scale.register(np.ndarray)
+@axis_mul_or_truediv.register(np.ndarray)
 def _(
     X: np.ndarray,
     scaling_array: np.ndarray,
     axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
     *,
     out: np.ndarray | None = None,
 ) -> np.ndarray:
+    if op not in {truediv, mul}:
+        raise ValueError(f"{op} not one of truediv or mul")
     scaling_array = broadcast_axis(scaling_array, axis)
-    scaled_X = np.multiply(X, scaling_array, out=out)
-    return scaled_X
+    if op is mul:
+        return np.multiply(X, scaling_array, out=out)
+    return np.true_divide(X, scaling_array, out=out)
 
 
 def make_axis_chunks(X: DaskArray, axis: Literal[0, 1], pad=True) -> tuple[tuple[int]]:
@@ -634,14 +650,17 @@ def make_axis_chunks(X: DaskArray, axis: Literal[0, 1], pad=True) -> tuple[tuple
     return X.chunks[axis]
 
 
-@axis_scale.register(DaskArray)
+@axis_mul_or_truediv.register(DaskArray)
 def _(
     X: DaskArray,
     scaling_array: Scaling_T,
     axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
     *,
     out: None = None,
 ) -> DaskArray:
+    if op not in {truediv, mul}:
+        raise ValueError(f"{op} not one of truediv or mul")
     if out is not None:
         raise TypeError(
             "`out` is not `None`. Do not do in-place modifications on dask arrays."
@@ -676,7 +695,9 @@ def _(
             scaling_array,
             chunks=make_axis_chunks(X, axis, pad=len(scaling_array.shape) == 2),
         )
-    return da.map_blocks(axis_scale, X, scaling_array, axis, meta=X._meta, out=out)
+    return da.map_blocks(
+        axis_mul_or_truediv, X, scaling_array, axis, op, meta=X._meta, out=out
+    )
 
 
 @overload

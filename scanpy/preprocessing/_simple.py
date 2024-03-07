@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
+from operator import truediv
 from typing import TYPE_CHECKING, Literal
 
 import numba
@@ -22,7 +23,7 @@ from .._settings import settings as sett
 from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
-    axis_scale,
+    axis_mul_or_truediv,
     axis_sum,
     renamed_arg,
     sanitize_anndata,
@@ -876,8 +877,12 @@ def scale_array(
                 UserWarning,
             )
         X -= mean
-    X = axis_scale(
-        X, 1 / std, out=X if isinstance(X, np.ndarray) or issparse(X) else None, axis=1
+    X = axis_mul_or_truediv(
+        X,
+        std,
+        op=truediv,
+        out=X if isinstance(X, np.ndarray) or issparse(X) else None,
+        axis=1,
     )
 
     # do the clipping
