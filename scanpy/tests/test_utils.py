@@ -69,6 +69,26 @@ def test_scale_column(array_type, op):
     np.testing.assert_array_equal(res, expd)
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_divide_by_zero(array_type):
+    dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
+    divisor = np.array([0.1, 0.2, 0.0])
+    expd = np.array([[0, 5.0, 2.0], [30.0, 0, 4.0]])
+    res = asarray(
+        axis_mul_or_truediv(
+            dividend, divisor, op=truediv, axis=1, allow_divide_by_zero=False
+        )
+    )
+    np.testing.assert_array_equal(res, expd)
+    res = asarray(
+        axis_mul_or_truediv(
+            dividend, divisor, op=truediv, axis=1, allow_divide_by_zero=True
+        )
+    )
+    expd = np.array([[0, 5.0, np.inf], [30.0, 0, np.inf]])
+    np.testing.assert_array_equal(res, expd)
+
+
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
 def test_scale_out_with_dask_or_sparse_raises(array_type):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))

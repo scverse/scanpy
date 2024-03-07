@@ -586,6 +586,7 @@ def axis_mul_or_truediv(
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
+    allow_divide_by_zero: bool = True,
     out: sparse.spmatrix | None = None,
 ) -> sparse.spmatrix:
     if op not in {truediv, mul}:
@@ -595,6 +596,8 @@ def axis_mul_or_truediv(
             raise ValueError(
                 "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
             )
+    if not allow_divide_by_zero and op is truediv:
+        scaling_array = scaling_array.copy() + (scaling_array == 0)
 
     row_scale = axis == 0
     column_scale = axis == 1
@@ -619,7 +622,12 @@ def axis_mul_or_truediv(
         )
     transposed = X.T
     return axis_mul_or_truediv(
-        transposed, scaling_array, op=op, axis=1 - axis, out=transposed
+        transposed,
+        scaling_array,
+        op=op,
+        axis=1 - axis,
+        out=transposed,
+        allow_divide_by_zero=allow_divide_by_zero,
     ).T
 
 
@@ -630,6 +638,7 @@ def _(
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
+    allow_divide_by_zero: bool = True,
     out: np.ndarray | None = None,
 ) -> np.ndarray:
     if op not in {truediv, mul}:
@@ -637,6 +646,8 @@ def _(
     scaling_array = broadcast_axis(scaling_array, axis)
     if op is mul:
         return np.multiply(X, scaling_array, out=out)
+    if not allow_divide_by_zero:
+        scaling_array = scaling_array.copy() + (scaling_array == 0)
     return np.true_divide(X, scaling_array, out=out)
 
 
@@ -657,6 +668,7 @@ def _(
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
+    allow_divide_by_zero: bool = True,
     out: None = None,
 ) -> DaskArray:
     if op not in {truediv, mul}:
@@ -696,7 +708,14 @@ def _(
             chunks=make_axis_chunks(X, axis, pad=len(scaling_array.shape) == 2),
         )
     return da.map_blocks(
-        axis_mul_or_truediv, X, scaling_array, axis, op, meta=X._meta, out=out
+        axis_mul_or_truediv,
+        X,
+        scaling_array,
+        axis,
+        op,
+        meta=X._meta,
+        out=out,
+        allow_divide_by_zero=allow_divide_by_zero,
     )
 
 

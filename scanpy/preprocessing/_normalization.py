@@ -44,13 +44,13 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
         else:
             counts_greater_than_zero = counts[counts > 0]
             after = np.median(counts_greater_than_zero, axis=0)
-    counts += counts == 0
     counts = counts / after
     return axis_mul_or_truediv(
         X,
         counts,
         op=truediv,
         out=X if isinstance(X, np.ndarray) or issparse(X) else None,
+        allow_divide_by_zero=False,
         axis=0,
     )
 
