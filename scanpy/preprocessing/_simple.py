@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
 )
 def filter_cells(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_genes: int | None = None,
@@ -200,7 +200,7 @@ def filter_cells(
     "min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy"
 )
 def filter_genes(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_cells: int | None = None,

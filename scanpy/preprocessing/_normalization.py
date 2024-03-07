@@ -94,6 +94,11 @@ def normalize_total(
     Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
     [Zheng17]_ or SPRING [Weinreb17]_.
 
+    .. note::
+        When used with a :class:`~dask.array.Array` in `adata.X`, this function will have to
+        call functions that trigger `.compute()` on the :class:`~dask.array.Array` if `exclude_highly_expressed`
+        is `True`, `layer_norm` is not `None`, or if `key_added` is not `None`.
+
     Params
     ------
     adata
