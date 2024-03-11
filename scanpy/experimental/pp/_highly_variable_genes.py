@@ -129,6 +129,32 @@ def _calculate_res_dense(
     return residuals
 
 
+# @nb.njit(parallel=True)
+def _calculate_res_dense_vectorized(
+    matrix,
+    *,
+    sums_genes: np.ndarray[np.float64],
+    sums_cells: np.ndarray[np.float64],
+    sum_total: np.float64,
+    clip: np.float64,
+    theta: np.float64,
+    n_genes: int,
+    n_cells: int,
+) -> np.ndarray[np.float64]:
+    mu = np.outer(sums_genes, sums_cells) / sum_total
+    values = matrix.T  # Transpose to align with vectorized operations
+
+    mu_sum = values - mu
+    pre_res = mu_sum / np.sqrt(mu + mu * mu / theta)
+    clipped_res = np.clip(pre_res, -clip, clip)
+
+    mean_clipped_res = np.mean(clipped_res, axis=1)
+    var_sum = np.sum((clipped_res.T - mean_clipped_res) ** 2, axis=0)
+
+    residuals = var_sum / n_cells
+    return residuals
+
+
 def _highly_variable_pearson_residuals(
     adata: AnnData,
     *,
@@ -187,6 +213,7 @@ def _highly_variable_pearson_residuals(
         if sp_sparse.issparse(X_batch):
             X_batch = X_batch.tocsc()
             X_batch.eliminate_zeros()
+            print("sparse, and jitted")
             calculate_res = partial(
                 _calculate_res_sparse,
                 X_batch.indptr,
@@ -194,8 +221,11 @@ def _highly_variable_pearson_residuals(
                 X_batch.data.astype(np.float64),
             )
         else:
+            # print("dense, and jitted")
             X_batch = np.array(X_batch, dtype=np.float64, order="F")
-            calculate_res = partial(_calculate_res_dense, X_batch)
+            # calculate_res = partial(_calculate_res_dense, X_batch)
+            print("dense, and vectorized")
+            calculate_res = partial(_calculate_res_dense_vectorized, X_batch)
 
         sums_genes = np.array(X_batch.sum(axis=0)).ravel()
         sums_cells = np.array(X_batch.sum(axis=1)).ravel()

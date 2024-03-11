@@ -6,7 +6,7 @@ from warnings import warn
 
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import issparse
+from scipy.sparse import issparse, spmatrix
 
 from ... import logging as logg
 from ..._utils import (
@@ -32,8 +32,16 @@ from ...preprocessing._pca import _handle_mask_var, pca
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from dask.array import Array as DaskArray  # TODO: compat.py reachable?
 
-def _pearson_residuals(X, theta, clip, check_values, copy: bool = False):
+
+def _pearson_residuals(
+    X: np.ndarray | spmatrix | DaskArray,
+    theta: np.float64,
+    clip: np.float64,
+    check_values: bool,
+    copy: bool = False,
+) -> np.ndarray | spmatrix | DaskArray:
     X = X.copy() if copy else X
 
     # check theta
