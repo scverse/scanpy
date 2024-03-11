@@ -2,7 +2,7 @@
 
 ## Clustering
 
-For getting started, we recommend Scanpy’s reimplementation {doc}`tutorials:pbmc3k`
+For getting started, we recommend Scanpy’s reimplementation {doc}`/tutorials/pbmc3k`
 of Seurat’s {cite}`Satija15` clustering tutorial for 3k PBMCs from 10x Genomics,
 containing preprocessing, clustering and the identification of cell types via
 known marker genes.
@@ -29,9 +29,9 @@ known marker genes.
 
 ## Visualization
 
-Learn how to visually explore genes using scanpy: {doc}`tutorials:plotting/core`
+Learn how to visually explore genes using scanpy: {doc}`/tutorials/plotting/core`
 
-For advanced customization of your plots, see {doc}`tutorials:plotting/advanced`
+For advanced customization of your plots, see {doc}`/tutorials/plotting/advanced`
 
 ```{image} _static/img/stacked_violin_dotplot_matrixplot.png
 :width: 550px
@@ -39,7 +39,7 @@ For advanced customization of your plots, see {doc}`tutorials:plotting/advanced`
 
 ## Trajectory inference
 
-Get started with the following example for hematopoiesis for data of {cite}`Paul15`: {doc}`tutorials:paga-paul15`
+Get started with the following example for hematopoiesis for data of {cite}`Paul15`: {doc}`/tutorials/paga-paul15`
 
 ```{image} _static/img/tutorials/paga_paul15.png
 :width: 450px
@@ -58,7 +58,7 @@ for two hematopoiesis datasets: [DPT example 1] {cite}`Paul15` and [DPT example 
 
 ## Integrating datasets
 
-Map labels and embeddings of reference data to new data: {doc}`tutorials:integrating-data-using-ingest`
+Map labels and embeddings of reference data to new data: {doc}`/tutorials/integrating-data-using-ingest`
 
 ```{image} https://scanpy-tutorials.readthedocs.io/en/latest/_images/integrating-data-using-ingest_21_0.png
 :width: 350px
@@ -66,8 +66,8 @@ Map labels and embeddings of reference data to new data: {doc}`tutorials:integra
 
 ## Spatial data
 
-- Basic analysis of spatial data: {doc}`tutorials:spatial/basic-analysis`
-- Integrating spatial data with scRNA-seq using scanorama: {doc}`tutorials:spatial/integration-scanorama`
+- Basic analysis of spatial data: {doc}`/tutorials/spatial/basic-analysis`
+- Integrating spatial data with scRNA-seq using scanorama: {doc}`/tutorials/spatial/integration-scanorama`
 
 ```{image} _static/img/spatial-basic-analysis.png
 :width: 250px
@@ -98,7 +98,7 @@ See the [cell cycle] notebook.
 
 ### Normalization with Pearson Residuals
 
-Normalization of scRNA-seq data with Pearson Residuals, from {cite}`Lause21`: {doc}`tutorials:tutorial_pearson_residuals`
+Normalization of scRNA-seq data with Pearson Residuals, from {cite}`Lause21`: {doc}`/tutorials/tutorial_pearson_residuals`
 
 ### Scaling Computations
 

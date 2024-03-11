@@ -11,7 +11,7 @@
 The plotting module {mod}`scanpy.pl` largely parallels the `tl.*` and a few of the `pp.*` functions.
 For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
 
-See {doc}`tutorials:plotting/core` for an overview of how to use these functions.
+See {doc}`/tutorials/plotting/core` for an overview of how to use these functions.
 
 ```{note}
 See the {ref}`settings` section for all important plotting configurations.
