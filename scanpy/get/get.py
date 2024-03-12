@@ -1,4 +1,5 @@
 """This module contains helper functions for accessing data."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal

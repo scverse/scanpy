@@ -157,9 +157,9 @@ def dpt(
         logg.info("    this uses a hierarchical implementation")
     if dpt.iroot is not None:
         dpt._set_pseudotime()  # pseudotimes are distances from root point
-        adata.uns[
-            "iroot"
-        ] = dpt.iroot  # update iroot, might have changed when subsampling, for example
+        adata.uns["iroot"] = (
+            dpt.iroot
+        )  # update iroot, might have changed when subsampling, for example
         adata.obs["dpt_pseudotime"] = dpt.pseudotime
     # detect branchings and partition the data into segments
     if n_branchings > 0:

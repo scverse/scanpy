@@ -1,6 +1,7 @@
 """\
 Shared docstrings for plotting function parameters.
 """
+
 from __future__ import annotations
 
 doc_adata_color_etc = """\

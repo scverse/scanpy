@@ -1,5 +1,5 @@
-"""Builtin Datasets.
-"""
+"""Builtin Datasets."""
+
 from __future__ import annotations
 
 from ._datasets import (

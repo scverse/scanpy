@@ -1,6 +1,7 @@
 """
 This file contains helper functions for the scanpy test suite.
 """
+
 from __future__ import annotations
 
 import warnings

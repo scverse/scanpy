@@ -1,5 +1,5 @@
-"""Calculate scores based on the expression of gene lists.
-"""
+"""Calculate scores based on the expression of gene lists."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

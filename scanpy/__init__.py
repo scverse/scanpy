@@ -1,4 +1,5 @@
 """Single-Cell Analysis in Python."""
+
 from __future__ import annotations
 
 import sys

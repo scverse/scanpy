@@ -31,13 +31,11 @@ def _check_axis_supported(wrapped: C) -> C:
 
 
 @overload
-def is_constant(a: NDArray, axis: None = None) -> bool:
-    ...
+def is_constant(a: NDArray, axis: None = None) -> bool: ...
 
 
 @overload
-def is_constant(a: NDArray, axis: Literal[0, 1]) -> NDArray[np.bool_]:
-    ...
+def is_constant(a: NDArray, axis: Literal[0, 1]) -> NDArray[np.bool_]: ...
 
 
 @_check_axis_supported

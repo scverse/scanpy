@@ -2,6 +2,7 @@
 Harmony time series for data visualization with augmented affinity matrix at
 discrete time points
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

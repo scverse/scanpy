@@ -299,12 +299,15 @@ def test_pca_n_pcs():
 def test_mask_highly_var_error(array_type):
     """Check if use_highly_variable=True throws an error if the annotation is missing."""
     adata = AnnData(array_type(A_list).astype("float32"))
-    with pytest.warns(
-        FutureWarning,
-        match=r"Argument `use_highly_variable` is deprecated, consider using the mask argument\.",
-    ), pytest.raises(
-        ValueError,
-        match=r"Did not find `adata\.var\['highly_variable'\]`\.",
+    with (
+        pytest.warns(
+            FutureWarning,
+            match=r"Argument `use_highly_variable` is deprecated, consider using the mask argument\.",
+        ),
+        pytest.raises(
+            ValueError,
+            match=r"Did not find `adata\.var\['highly_variable'\]`\.",
+        ),
     ):
         sc.pp.pca(adata, use_highly_variable=True)
 

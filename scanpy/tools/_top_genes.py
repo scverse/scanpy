@@ -3,6 +3,7 @@
 """\
 This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal

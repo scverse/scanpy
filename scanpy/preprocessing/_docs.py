@@ -1,5 +1,5 @@
-"""Shared docstrings for preprocessing function parameters.
-"""
+"""Shared docstrings for preprocessing function parameters."""
+
 from __future__ import annotations
 
 doc_adata_basic = """\
