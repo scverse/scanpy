@@ -112,7 +112,15 @@ Interactive manifold viewers.
 
 Analyses using curated prior knowledge
 
-- [decoupler](https://github.com/saezlab/decoupler-py) is a collection of footprint enrichment methods that allows to infer transcription factor or pathway activities. {small}`Institute for Computational Biomedicine, Heidelberg University`
+- [decoupler](https://github.com/saezlab/decoupler-py) {small}`Institute for Computational Biomedicine, Heidelberg University`
+
+  > is a collection of footprint enrichment methods that allows to infer transcription factor or pathway activities.
 - [Cubé](https://github.com/connerlambden/Cube) {small}`Harvard University`
 
   > Intuitive Nonparametric Gene Network Search Algorithm that learns from existing biological pathways & multiplicative gene interference patterns.
+
+### GPU-Acceleration
+
+- [rapids-singlecell](https://rapids-singlecell.readthedocs.io/en/latest/) {small}`Charité`
+
+  > A GPU acclerated python package for singlecell data analysis
