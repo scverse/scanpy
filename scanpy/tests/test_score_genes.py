@@ -197,7 +197,7 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
     def mock_fn(x, axis):
         return np.nanmean(x.A, axis, dtype="float64")
 
-    monkeypatch.setattr(sc.tools._score_genes, "_sparse_nanmean", mock_fn)
+    monkeypatch.setattr(sc.tl._score_genes, "_sparse_nanmean", mock_fn)
     sc.tl.score_genes(adata, gene_list=gene_set, score_name="Test")
     dense_scores = adata.obs["Test"].values
 
