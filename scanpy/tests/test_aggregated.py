@@ -378,3 +378,15 @@ def test_combine_categories(label_cols, cols, expected):
         [x.split("_") for x in result], columns=cols, index=result.astype(str)
     ).astype("category")
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
+def test_aggregate_arraytype(array_type, metric):
+    adata = pbmc3k_processed().raw.to_adata()
+    adata = adata[
+        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
+    ].copy()
+    adata.X = array_type(adata.X)
+    aggregate = sc.get.aggregate(adata, ["louvain"], metric)
+    assert isinstance(aggregate.layers[metric], np.ndarray)
