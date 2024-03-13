@@ -21,7 +21,7 @@ New to *scanpy*? Check out the installation guide.
 :::
 
 :::{grid-item-card} Tutorials {octicon}`play;1em;`
-:link: _tutorials
+:link: tutorials/index
 :link-type: doc
 
 The tutorials walk you through real-world applications of scanpy.
@@ -71,7 +71,7 @@ Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest d
 :hidden: true
 :maxdepth: 1
 
-_tutorials
+tutorials/index
 usage-principles
 installation
 api/index
