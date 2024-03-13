@@ -5,4 +5,5 @@
 
 clustering
 integration-scanorama
+knn-transformers
 ```
