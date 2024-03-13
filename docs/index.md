@@ -50,7 +50,7 @@ Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest d
 
 **Other resources**
 * Follow changes in the {ref}`release notes <release-notes>`.
-* Find tools that harmonize well with anndata & Scanpy via the {doc}`external API <external/index>` and the {doc}`ecosystem page <ecosystem>`.
+* Find tools that harmonize well with anndata & Scanpy at [https://scverse.org/packages/]()
 * Check out our {ref}`contributing guide <contribution-guide>` for development practices.
 * Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
 
