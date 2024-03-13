@@ -122,6 +122,7 @@ doc = [
     "nbsphinx>=0.9",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
+    "sphinxcontrib-bibtex",
     # TODO: remove necessity for being able to import doc-linked classes
     "dask",
     "scanpy[paga]",
