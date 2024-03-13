@@ -1,3 +1,0 @@
-[submodule "docs/tutorials/notebooks"]
-	path = docs/tutorials/notebooks
-	url = https://github.com/scverse/scanpy-tutorials
