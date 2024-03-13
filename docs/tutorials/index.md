@@ -1,5 +1,9 @@
 # Tutorials
 
+:::{seealso}
+For more tutorials featureing scanpy and other [scverse](https://scverse.org) ecosystem tools, check out the curated set of tutorials at [https://scverse.org/learn]()
+:::
+
 ## Clustering
 
 For getting started, we recommend Scanpy’s reimplementation {doc}`/tutorials/notebooks/pbmc3k`
