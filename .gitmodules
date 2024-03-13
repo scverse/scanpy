@@ -1,0 +1,3 @@
+[submodule "notebooks"]
+	path = notebooks
+	url = https://github.com/scverse/scanpy-tutorials/
