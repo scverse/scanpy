@@ -52,6 +52,9 @@ jobs:
   - script: |
       export MPLBACKEND="agg"
       echo $MPLBACKEND
+      uv venv
+      echo "VIRTUAL_ENV=$PWD/.venv" >> $GITHUB_ENV
+      echo "$PWD/.venv/bin" >> $GITHUB_PATH
     displayName: 'Set env'
 
   - script: uv pip install 'scanpy[dev,$(TEST_EXTRA)] @ .'
