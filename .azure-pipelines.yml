@@ -52,25 +52,22 @@ jobs:
   - script: |
       export MPLBACKEND="agg"
       echo $MPLBACKEND
-      uv venv
-      echo "VIRTUAL_ENV=$PWD/.venv" >> $GITHUB_ENV
-      echo "$PWD/.venv/bin" >> $GITHUB_PATH
     displayName: 'Set env'
 
-  - script: uv pip install 'scanpy[dev,$(TEST_EXTRA)] @ .'
+  - script: uv pip install --system 'scanpy[dev,$(TEST_EXTRA)] @ .'
     displayName: 'Install dependencies'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'latest')
 
   - script: |
-      uv pip install --pre 'scanpy[dev,$(TEST_EXTRA)] @ .'
-      uv pip install -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
+      uv pip install --system --pre 'scanpy[dev,$(TEST_EXTRA)] @ .'
+      uv pip install --system -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
     displayName: 'Install dependencies release candidates'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'pre-release')
 
   - script: |
-      uv pip install tomli packaging
-      uv pip install `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
-      uv pip install --no-deps 'scanpy @ .'
+      uv pip install --system tomli packaging
+      uv pip install --system `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
+      uv pip install --system --no-deps 'scanpy @ .'
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
