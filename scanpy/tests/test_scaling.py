@@ -106,8 +106,10 @@ def test_mask_string():
     assert "mean of some cells" in adata.var.keys()
 
 
-def test_clip():
+@pytest.mark.parametrize("zero_center", [True, False])
+def test_clip(zero_center):
     adata = sc.datasets.pbmc3k()
-    sc.pp.scale(adata, max_value=1)
-    assert adata.X.min() >= -1
+    sc.pp.scale(adata, max_value=1, zero_center=zero_center)
+    if zero_center:
+        assert adata.X.min() >= -1
     assert adata.X.max() <= 1
