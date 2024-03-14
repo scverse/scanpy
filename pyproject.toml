@@ -145,8 +145,7 @@ scanorama = ["scanorama"]  # Scanorama dataset integration
 scrublet = ["scikit-image"]  # Doublet detection with automatic thresholds
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
-dask = ["dask[array]>=2022.09.2,<2024.3"]  # Use the Dask parallelization engine
-# upper-bound due to https://github.com/scverse/scanpy/issues/2902
+dask = ["dask[array]>=2022.09.2"]  # Use the Dask parallelization engine
 dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.hatch.build]
