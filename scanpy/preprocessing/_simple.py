@@ -871,7 +871,10 @@ def scale_array(
     # do the clipping
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
-        X[X > max_value] = max_value
+        if zero_center:
+            X = np.clip(X, a_min=-max_value, a_max=max_value)
+        else:
+            X[X > max_value] = max_value
     if return_mean_std:
         return X, mean, std
     else:
