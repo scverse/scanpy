@@ -71,9 +71,10 @@ Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest d
 :hidden: true
 :maxdepth: 1
 
+installation
 tutorials/index
 usage-principles
-installation
+how-to/index
 api/index
 external/index
 ecosystem
