@@ -58,16 +58,18 @@ jobs:
     displayName: 'Install dependencies'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'latest')
 
-  - script: |
-      uv pip install --system --pre 'scanpy[dev,$(TEST_EXTRA)] @ .'
-      uv pip install --system -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
+  - script: >
+      uv pip install --system --pre
+        "scanpy[dev,$(TEST_EXTRA)] @ ."
+        "anndata[dev,test] @ git+https://github.com/scverse/anndata"
     displayName: 'Install dependencies release candidates'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'pre-release')
 
-  - script: |
-      uv pip install --system tomli packaging
-      uv pip install --system `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
-      uv pip install --system --no-deps 'scanpy @ .'
+  - script: >
+      uv pip install --system
+        tomli packaging
+        `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
+        "scanpy @ ."
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
