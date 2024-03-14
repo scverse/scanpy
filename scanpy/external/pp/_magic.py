@@ -1,6 +1,7 @@
 """\
 Denoise high-dimensional data using MAGIC
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal

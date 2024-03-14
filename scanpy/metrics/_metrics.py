@@ -1,6 +1,7 @@
 """
 Metrics which don't quite deserve their own file.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
