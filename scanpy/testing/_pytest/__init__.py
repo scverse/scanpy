@@ -1,4 +1,5 @@
 """A private pytest plugin"""
+
 from __future__ import annotations
 
 import os
@@ -6,6 +7,7 @@ import sys
 import warnings
 from typing import TYPE_CHECKING
 
+import pandas as pd
 import pytest
 
 from ..._utils import _import_name
@@ -71,7 +73,8 @@ def _fix_dask_df_warning():
         import dask  # noqa: F401
     except ImportError:
         return
-    with warnings.catch_warnings():
+    # reset COW mode after this block: https://github.com/dask/dask/issues/10996
+    with warnings.catch_warnings(), pd.option_context("mode.copy_on_write", True):
         warnings.filterwarnings(
             "ignore",
             category=DeprecationWarning,
