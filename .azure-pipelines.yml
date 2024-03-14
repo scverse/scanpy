@@ -65,11 +65,10 @@ jobs:
     displayName: 'Install dependencies release candidates'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'pre-release')
 
-  - script: >
-      uv pip install --system
-      tomli packaging
-      `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
-      "scanpy @ ."
+  - script: |
+      uv pip install --system tomli packaging
+      deps=`python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
+      uv pip install --system $deps "scanpy @ ."
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
