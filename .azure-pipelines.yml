@@ -54,21 +54,21 @@ jobs:
       echo $MPLBACKEND
     displayName: 'Set env'
 
-  - script: uv pip install --system 'scanpy[dev,$(TEST_EXTRA)] @ .'
+  - script: uv pip install --system --compile 'scanpy[dev,$(TEST_EXTRA)] @ .'
     displayName: 'Install dependencies'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'latest')
 
   - script: >
-      uv pip install --system --pre
+      uv pip install --system --compile --pre
       "scanpy[dev,$(TEST_EXTRA)] @ ."
       "anndata[dev,test] @ git+https://github.com/scverse/anndata"
     displayName: 'Install dependencies release candidates'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'pre-release')
 
   - script: |
-      uv pip install --system tomli packaging
+      uv pip install --system --compile tomli packaging
       deps=`python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
-      uv pip install --system $deps "scanpy @ ."
+      uv pip install --system --compile $deps "scanpy @ ."
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
