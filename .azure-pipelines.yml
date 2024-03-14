@@ -60,16 +60,16 @@ jobs:
 
   - script: >
       uv pip install --system --pre
-        "scanpy[dev,$(TEST_EXTRA)] @ ."
-        "anndata[dev,test] @ git+https://github.com/scverse/anndata"
+      "scanpy[dev,$(TEST_EXTRA)] @ ."
+      "anndata[dev,test] @ git+https://github.com/scverse/anndata"
     displayName: 'Install dependencies release candidates'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'pre-release')
 
   - script: >
       uv pip install --system
-        tomli packaging
-        `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
-        "scanpy @ ."
+      tomli packaging
+      `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
+      "scanpy @ ."
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
