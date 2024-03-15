@@ -1,5 +1,5 @@
-"""Set the default matplotlib.rcParams.
-"""
+"""Set the default matplotlib.rcParams."""
+
 from __future__ import annotations
 
 import matplotlib as mpl
