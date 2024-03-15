@@ -228,6 +228,18 @@ def test_use_raw_None():
     sc.tl.score_genes(adata, adata_raw.var_names[:3], use_raw=None)
 
 
+def test_layer():
+    adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
+
+    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    sc.pp.log1p(adata)
+    adata.layers["test"] = adata.X.copy()
+
+    gene_set = adata.var_names[:10]
+    sc.tl.score_genes(adata, gene_set, score_name="Test", layer="test")
+    assert adata.obs["Test"].dtype == "float64"
+
+
 @pytest.mark.parametrize("gene_pool", [[], ["foo", "bar"]])
 def test_invalid_gene_pool(gene_pool):
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
