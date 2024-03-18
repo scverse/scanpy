@@ -208,6 +208,7 @@ class DotPlot(BasePlot):
             )
             if len(groupby_cols) > 0:
                 dot_size_df = self._convert_tidy_to_stacked(dot_size_df)
+
         if dot_color_df is None:
             # 2. compute mean expression value value
             if mean_only_expressed:
@@ -806,6 +807,7 @@ class DotPlot(BasePlot):
                 linewidth=edge_lw,
                 edgecolor=edge_color,
             )
+
             dot_ax.scatter(x, y, **kwds)
 
         y_ticks = np.arange(dot_color.shape[0]) + 0.5

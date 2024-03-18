@@ -568,6 +568,7 @@ class StackedViolin(BasePlot):
                 # (in _color_df the values are not renamed as those
                 # values will be used to label the ticks)
                 _df = df[df.genes == row_label]
+
             row_ax = sns.violinplot(
                 x=x,
                 y="values",

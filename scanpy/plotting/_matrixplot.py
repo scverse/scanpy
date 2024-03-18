@@ -167,6 +167,7 @@ class MatrixPlot(BasePlot):
             norm=norm,
             **kwds,
         )
+
         if values_df is None:
             # compute mean value
             values_df = (

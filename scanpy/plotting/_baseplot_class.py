@@ -123,7 +123,9 @@ class BasePlot:
         self.var_group_rotation = var_group_rotation
         self.width, self.height = figsize if figsize is not None else (None, None)
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
-        self.groupby_cols = [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
+        self.groupby_cols = (
+            [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
+        )
         self.has_var_groups = (
             True
             if var_group_positions is not None and len(var_group_positions) > 0
@@ -144,12 +146,12 @@ class BasePlot:
         )
         # reset obs_tidy if using groupby_cols
         if len(self.groupby_cols) > 0:
-            if len(set(self.groupby).intersection(set(self.groupby_cols)))>0:
+            if overlap := (set(self.groupby) & set(self.groupby_cols)):
                 raise ValueError(
-                    f"`groupby` and `groupby_cols` have overlapping elements: {set(self.groupby).intersection(set(self.groupby_cols))}."
+                    f"`groupby` and `groupby_cols` have overlapping elements: {overlap}."
                 )
             # TODO : Check if we rather need the product of categories ?
-            self.categories_cols = adata.obs.loc[:,self.groupby_cols].nunique().sum()
+            self.categories_cols = adata.obs.loc[:, self.groupby_cols].nunique().sum()
             _, self.obs_tidy = _prepare_dataframe(
                 adata,
                 self.var_names,
@@ -394,8 +396,11 @@ class BasePlot:
         _sort = True if sort is not None else False
         _ascending = True if sort == "ascending" else False
         counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
-        if len(self.groupby_cols) > 0:  # could remove the previous line and only use this but this is slower
-            counts_df = self.adata.obs[self.groupby].value_counts(sort=_sort, ascending=_ascending)
+        # could remove the previous line and only use this but this is slower
+        if len(self.groupby_cols) > 0:
+            counts_df = self.adata.obs[self.groupby].value_counts(
+                sort=_sort, ascending=_ascending
+            )
 
         if _sort:
             self.categories_order = counts_df.index
@@ -613,6 +618,7 @@ class BasePlot:
     def _mainplot(self, ax):
         y_labels = self.categories
         x_labels = self.var_names
+
         if self.var_names_idx_order is not None:
             x_labels = [x_labels[x] for x in self.var_names_idx_order]
 
@@ -678,7 +684,8 @@ class BasePlot:
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
             mainplot_width = (
-                len(self.var_names) * category_width  * (1+self.categories_cols) + self.group_extra_size
+                len(self.var_names) * category_width * (1 + self.categories_cols)
+                + self.group_extra_size
             )
             if self.are_axes_swapped:
                 mainplot_height, mainplot_width = mainplot_width, mainplot_height
@@ -880,23 +887,35 @@ class BasePlot:
         self.make_figure()
         plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
-    def _convert_tidy_to_stacked(self, values_df):
+    def _convert_tidy_to_stacked(self, values_df: pd.DataFrame) -> pd.DataFrame:
         """\
         Utility function used to convert obs_tidy into the correct format when using a groupby_col.
         """
         label = values_df.index.name
         stacked_df = values_df.reset_index()
         stacked_df.index = pd.MultiIndex.from_tuples(
-            stacked_df[label].str.split('_').tolist(), names=self.groupby + self.groupby_cols)
+            stacked_df[label].str.split("_").tolist(),
+            names=self.groupby + self.groupby_cols,
+        )
         stacked_df = stacked_df.drop(label, axis=1).unstack(level=self.groupby_cols)
 
         # recreate the original formatting of values_df
         values_df = stacked_df.reset_index(drop=True)
         if isinstance(stacked_df.index, pd.MultiIndex):
-            values_df.index = stacked_df.index.to_series().apply(lambda x: '_'.join(map(str, x))).values
+            values_df.index = (
+                stacked_df.index.to_series()
+                .apply(lambda x: "_".join(map(str, x)))
+                .values
+            )
         else:
-            values_df.index = stacked_df.index.to_series().apply(lambda x: ''.join(map(str, x))).values
-        values_df.columns = stacked_df.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
+            values_df.index = (
+                stacked_df.index.to_series()
+                .apply(lambda x: "".join(map(str, x)))
+                .values
+            )
+        values_df.columns = (
+            stacked_df.columns.to_series().apply(lambda x: "_".join(map(str, x))).values
+        )
         return values_df
 
     def _reorder_categories_after_dendrogram(self, dendrogram) -> None:
@@ -926,6 +945,7 @@ class BasePlot:
             return ", ".join(_categories)
 
         key = _get_dendrogram_key(self.adata, dendrogram, self.groupby)
+
         dendro_info = self.adata.uns[key]
         if self.groupby != dendro_info["groupby"]:
             raise ValueError(
