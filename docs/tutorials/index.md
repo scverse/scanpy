@@ -47,10 +47,6 @@ basics/index
 plotting/index
 ```
 
-Learn how to visually explore genes using scanpy: {doc}`/tutorials/plotting/basic`
-
-For advanced customization of your plots, see {doc}`/tutorials/plotting/advanced`
-
 ## Trajectory inference
 
 ```{seealso}

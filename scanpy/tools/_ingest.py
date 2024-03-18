@@ -45,7 +45,7 @@ def ingest(
     """\
     Map labels and embeddings from reference data to new data.
 
-    :doc:`/tutorials/integrating-data-using-ingest`
+    :doc:`/tutorials/basics/integrating-data-using-ingest`
 
     Integrates embeddings and annotations of an `adata` with a reference dataset
     `adata_ref` through projecting on a PCA (or alternate
