@@ -141,7 +141,7 @@ class DotPlot(BasePlot):
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
         *,
-        groupby_cols: str | Sequence[str] = [],
+        groupby_cols: str | Sequence[str] = (),
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -170,7 +170,7 @@ class DotPlot(BasePlot):
             adata,
             var_names,
             groupby,
-            groupby_cols,
+            groupby_cols=groupby_cols,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
@@ -763,7 +763,8 @@ class DotPlot(BasePlot):
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
         normalize = check_colornorm(vmin, vmax, vcenter, norm)
-        normalize(mean_flat[~np.isnan(mean_flat)])  # circumvent unexpected behavior with nan in matplotlib
+        # circumvent unexpected behavior with nan in matplotlib
+        normalize(mean_flat[~np.isnan(mean_flat)])
 
         if color_on == "square":
             if edge_color is None:
@@ -876,7 +877,7 @@ def dotplot(
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
     *,
-    groupby_cols: str | Sequence[str] = [],
+    groupby_cols: str | Sequence[str] = (),
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
