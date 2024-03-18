@@ -66,6 +66,7 @@ Methods for visualizing quality control and results of preprocessing functions.
    pl.highest_expr_genes
    pl.filter_genes_dispersion
    pl.highly_variable_genes
+   pl.scrublet_score_distribution
 
 ```
 

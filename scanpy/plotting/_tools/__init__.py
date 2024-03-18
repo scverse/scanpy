@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 from scanpy.get import obs_df
 
 from ... import logging as logg
+from ..._compat import old_positionals
 from ..._settings import settings
 from ..._utils import _doc_params, sanitize_anndata, subsample
 from ...get import rank_genes_groups_df
@@ -26,6 +27,7 @@ from .._docs import (
     doc_vbound_percentile,
 )
 from .._utils import (
+    _deprecated_scale,
     savefig_or_show,
     timeseries,
     timeseries_as_heatmap,
@@ -96,9 +98,11 @@ def pca_overview(adata: AnnData, **params):
 pca_scatter = pca
 
 
+@old_positionals("include_lowest", "n_points", "show", "save")
 def pca_loadings(
     adata: AnnData,
     components: str | Sequence[int] | None = None,
+    *,
     include_lowest: bool = True,
     n_points: int | None = None,
     show: bool | None = None,
@@ -169,9 +173,11 @@ def pca_loadings(
     savefig_or_show("pca_loadings", show=show, save=save)
 
 
+@old_positionals("log", "show", "save")
 def pca_variance_ratio(
     adata: AnnData,
     n_pcs: int = 30,
+    *,
     log: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
@@ -210,9 +216,11 @@ def pca_variance_ratio(
 # ------------------------------------------------------------------------------
 
 
+@old_positionals("color_map", "show", "save", "as_heatmap", "marker")
 def dpt_timeseries(
     adata: AnnData,
-    color_map: str | Colormap = None,
+    *,
+    color_map: str | Colormap | None = None,
     show: bool | None = None,
     save: bool | None = None,
     as_heatmap: bool = True,
@@ -253,8 +261,10 @@ def dpt_timeseries(
     savefig_or_show("dpt_timeseries", save=save, show=show)
 
 
+@old_positionals("color_map", "palette", "show", "save", "marker")
 def dpt_groups_pseudotime(
     adata: AnnData,
+    *,
     color_map: str | Colormap | None = None,
     palette: Sequence[str] | Cycler | None = None,
     show: bool | None = None,
@@ -293,10 +303,22 @@ def dpt_groups_pseudotime(
     savefig_or_show("dpt_groups_pseudotime", save=save, show=show)
 
 
+@old_positionals(
+    "n_genes",
+    "gene_symbols",
+    "key",
+    "fontsize",
+    "ncols",
+    "sharey",
+    "show",
+    "save",
+    "ax",
+)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int = 20,
     gene_symbols: str | None = None,
     key: str | None = "rank_genes_groups",
@@ -452,17 +474,18 @@ def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
     """
     if return_fig:
         return plot_obj
-    else:
-        plot_obj.make_figure()
-        savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
-        show = settings.autoshow if show is None else show
-        if show is False:
-            return plot_obj.get_axes()
+    plot_obj.make_figure()
+    savefig_or_show(plot_obj.DEFAULT_SAVE_PREFIX, show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return plot_obj.get_axes()
 
 
 def _rank_genes_groups_plot(
     adata: AnnData,
     plot_type: str = "heatmap",
+    *,
     groups: str | Sequence[str] | None = None,
     n_genes: int | None = None,
     groupby: str | None = None,
@@ -626,10 +649,21 @@ def _rank_genes_groups_plot(
         )
 
 
+@old_positionals(
+    "n_genes",
+    "groupby",
+    "gene_symbols",
+    "var_names",
+    "min_logfoldchange",
+    "key",
+    "show",
+    "save",
+)
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_heatmap(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     gene_symbols: str | None = None,
@@ -699,10 +733,21 @@ def rank_genes_groups_heatmap(
     )
 
 
+@old_positionals(
+    "n_genes",
+    "groupby",
+    "var_names",
+    "gene_symbols",
+    "min_logfoldchange",
+    "key",
+    "show",
+    "save",
+)
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_tracksplot(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     var_names: Sequence[str] | Mapping[str, Sequence[str]] | None = None,
@@ -752,6 +797,18 @@ def rank_genes_groups_tracksplot(
     )
 
 
+@old_positionals(
+    "n_genes",
+    "groupby",
+    "values_to_plot",
+    "var_names",
+    "gene_symbols",
+    "min_logfoldchange",
+    "key",
+    "show",
+    "save",
+    "return_fig",
+)
 @_doc_params(
     params=doc_rank_genes_groups_plot_args,
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
@@ -760,6 +817,7 @@ def rank_genes_groups_tracksplot(
 def rank_genes_groups_dotplot(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     values_to_plot: Literal[
@@ -902,14 +960,15 @@ def rank_genes_groups_dotplot(
     )
 
 
+@old_positionals("n_genes", "groupby", "gene_symbols")
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_stacked_violin(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     gene_symbols: str | None = None,
-    *,
     var_names: Sequence[str] | Mapping[str, Sequence[str]] | None = None,
     min_logfoldchange: float | None = None,
     key: str | None = None,
@@ -965,6 +1024,18 @@ def rank_genes_groups_stacked_violin(
     )
 
 
+@old_positionals(
+    "n_genes",
+    "groupby",
+    "values_to_plot",
+    "var_names",
+    "gene_symbols",
+    "min_logfoldchange",
+    "key",
+    "show",
+    "save",
+    "return_fig",
+)
 @_doc_params(
     params=doc_rank_genes_groups_plot_args,
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
@@ -973,6 +1044,7 @@ def rank_genes_groups_stacked_violin(
 def rank_genes_groups_matrixplot(
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
+    *,
     n_genes: int | None = None,
     groupby: str | None = None,
     values_to_plot: Literal[
@@ -1098,23 +1170,41 @@ def rank_genes_groups_matrixplot(
     )
 
 
+@old_positionals(
+    "n_genes",
+    "gene_names",
+    "gene_symbols",
+    "use_raw",
+    "key",
+    "split",
+    "density_norm",
+    "strip",
+    "jitter",
+    "size",
+    "ax",
+    "show",
+    "save",
+)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_violin(
     adata: AnnData,
     groups: Sequence[str] | None = None,
+    *,
     n_genes: int = 20,
     gene_names: Iterable[str] | None = None,
     gene_symbols: str | None = None,
     use_raw: bool | None = None,
     key: str | None = None,
     split: bool = True,
-    scale: str = "width",
+    density_norm: Literal["area", "count", "width"] = "width",
     strip: bool = True,
     jitter: int | float | bool = True,
     size: int = 1,
     ax: Axes | None = None,
     show: bool | None = None,
     save: bool | None = None,
+    # deprecated
+    scale: Literal["area", "count", "width"] | None = None,
 ):
     """\
     Plot ranking of genes for all tested comparisons.
@@ -1138,7 +1228,7 @@ def rank_genes_groups_violin(
         was used in :func:`~scanpy.tl.rank_genes_groups`.
     split
         Whether to split the violins or not.
-    scale
+    density_norm
         See :func:`~seaborn.violinplot`.
     strip
         Show a strip plot on top of the violin plot.
@@ -1157,6 +1247,8 @@ def rank_genes_groups_violin(
     groups_names = adata.uns[key]["names"].dtype.names if groups is None else groups
     if isinstance(groups_names, str):
         groups_names = [groups_names]
+    density_norm = _deprecated_scale(density_norm, scale, default="width")
+    del scale
     axs = []
     for group_name in groups_names:
         if gene_names is None:
@@ -1187,7 +1279,7 @@ def rank_genes_groups_violin(
             hue_order=hue_order,
             hue="hue",
             split=split,
-            scale=scale,
+            density_norm=density_norm,
             orient="vertical",
             ax=ax,
         )
@@ -1200,7 +1292,7 @@ def rank_genes_groups_violin(
                 dodge=True,
                 hue_order=hue_order,
                 jitter=jitter,
-                color="black",
+                palette="dark:black",
                 size=size,
                 ax=_ax,
             )
@@ -1216,19 +1308,23 @@ def rank_genes_groups_violin(
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
-    if show is False:
-        return axs
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return axs
 
 
+@old_positionals("tmax_realization", "as_heatmap", "shuffle", "show", "save", "marker")
 def sim(
-    adata,
+    adata: AnnData,
+    *,
     tmax_realization: int | None = None,
     as_heatmap: bool = False,
     shuffle: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
-):
+) -> None:
     """\
     Plot results of simulation.
 
@@ -1292,14 +1388,34 @@ def sim(
         savefig_or_show("sim_shuffled", save=save, show=show)
 
 
+@old_positionals(
+    "key",
+    "groupby",
+    "group",
+    "color_map",
+    "bg_dotsize",
+    "fg_dotsize",
+    "vmax",
+    "vmin",
+    "vcenter",
+    "norm",
+    "ncols",
+    "hspace",
+    "wspace",
+    "title",
+    "show",
+    "save",
+    "ax",
+    "return_fig",
+)
 @_doc_params(
     vminmax=doc_vbound_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
 )
 def embedding_density(
     adata: AnnData,
-    # on purpose, there is no asterisk here (for backward compat)
-    basis: str = "umap",  # was positional before 1.4.5
-    key: str | None = None,  # was positional before 1.4.5
+    basis: str = "umap",
+    *,
+    key: str | None = None,
     groupby: str | None = None,
     group: str | Sequence[str] | None | None = "all",
     color_map: Colormap | str = "YlOrRd",
@@ -1567,8 +1683,10 @@ def embedding_density(
     if return_fig:
         return fig
     savefig_or_show(f"{key}_", show=show, save=save)
-    if show is False:
-        return ax
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return ax
 
 
 def _get_values_to_plot(
@@ -1582,6 +1700,7 @@ def _get_values_to_plot(
         "log10_pvals_adj",
     ],
     gene_names: Sequence[str],
+    *,
     groups: Sequence[str] | None = None,
     key: str | None = "rank_genes_groups",
     gene_symbols: str | None = None,

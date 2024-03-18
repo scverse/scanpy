@@ -2,6 +2,7 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -17,11 +18,12 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings as sett
 from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
-    deprecated_arg_names,
+    renamed_arg,
     sanitize_anndata,
     view_to_actual,
 )
@@ -45,15 +47,19 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
+@old_positionals(
+    "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
+)
 def filter_cells(
-    data: AnnData,
+    data: AnnData | spmatrix | np.ndarray,
+    *,
     min_counts: int | None = None,
     min_genes: int | None = None,
     max_counts: int | None = None,
     max_genes: int | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> tuple[np.ndarray, np.ndarray] | None:
+) -> AnnData | tuple[np.ndarray, np.ndarray] | None:
     """\
     Filter cell outliers based on counts and numbers of genes expressed.
 
@@ -96,6 +102,9 @@ def filter_cells(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.krumsiek11()
+    UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
+        utils.warn_names_duplicates("obs")
+    >>> adata.obs_names_make_unique()
     >>> adata.n_obs
     640
     >>> adata.var_names.tolist()  # doctest: +NORMALIZE_WHITESPACE
@@ -135,7 +144,13 @@ def filter_cells(
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         cell_subset, number = materialize_as_ndarray(
-            filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes)
+            filter_cells(
+                adata.X,
+                min_counts=min_counts,
+                min_genes=min_genes,
+                max_counts=max_counts,
+                max_genes=max_genes,
+            ),
         )
         if not inplace:
             return cell_subset, number
@@ -158,7 +173,7 @@ def filter_cells(
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
 
-    s = np.sum(~cell_subset)
+    s = materialize_as_ndarray(np.sum(~cell_subset))
     if s > 0:
         msg = f"filtered out {s} cells that have "
         if min_genes is not None or min_counts is not None:
@@ -179,15 +194,19 @@ def filter_cells(
     return cell_subset, number_per_cell
 
 
+@old_positionals(
+    "min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy"
+)
 def filter_genes(
-    data: AnnData,
+    data: AnnData | spmatrix | np.ndarray,
+    *,
     min_counts: int | None = None,
     min_cells: int | None = None,
     max_counts: int | None = None,
     max_cells: int | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> AnnData | None | tuple[np.ndarray, np.ndarray]:
+) -> AnnData | tuple[np.ndarray, np.ndarray] | None:
     """\
     Filter genes based on number of cells or counts.
 
@@ -287,17 +306,18 @@ def filter_genes(
     return gene_subset, number_per_gene
 
 
+@renamed_arg("X", "data", pos_0=True)
 @singledispatch
 def log1p(
-    X: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | spmatrix,
     *,
     base: Number | None = None,
     copy: bool = False,
-    chunked: bool = None,
+    chunked: bool | None = None,
     chunk_size: int | None = None,
     layer: str | None = None,
     obsm: str | None = None,
-):
+) -> AnnData | np.ndarray | spmatrix | None:
     """\
     Logarithmize the data matrix.
 
@@ -306,7 +326,7 @@ def log1p(
 
     Parameters
     ----------
-    X
+    data
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     base
@@ -331,11 +351,11 @@ def log1p(
     _check_array_function_arguments(
         chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
     )
-    return log1p_array(X, copy=copy, base=base)
+    return log1p_array(data, copy=copy, base=base)
 
 
 @log1p.register(spmatrix)
-def log1p_sparse(X, *, base: Number | None = None, copy: bool = False):
+def log1p_sparse(X: spmatrix, *, base: Number | None = None, copy: bool = False):
     X = check_array(
         X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
@@ -344,7 +364,7 @@ def log1p_sparse(X, *, base: Number | None = None, copy: bool = False):
 
 
 @log1p.register(np.ndarray)
-def log1p_array(X, *, base: Number | None = None, copy: bool = False):
+def log1p_array(X: np.ndarray, *, base: Number | None = None, copy: bool = False):
     # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
@@ -362,7 +382,7 @@ def log1p_array(X, *, base: Number | None = None, copy: bool = False):
 
 @log1p.register(AnnData)
 def log1p_anndata(
-    adata,
+    adata: AnnData,
     *,
     base: Number | None = None,
     copy: bool = False,
@@ -394,12 +414,14 @@ def log1p_anndata(
         return adata
 
 
+@old_positionals("copy", "chunked", "chunk_size")
 def sqrt(
-    data: AnnData,
+    data: AnnData | spmatrix | np.ndarray,
+    *,
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
-) -> AnnData | None:
+) -> AnnData | spmatrix | np.ndarray | None:
     """\
     Square root the data matrix.
 
@@ -438,7 +460,7 @@ def sqrt(
         return X.sqrt()
 
 
-def normalize_per_cell(
+def normalize_per_cell(  # noqa: PLR0917
     data: AnnData | np.ndarray | spmatrix,
     counts_per_cell_after: float | None = None,
     counts_per_cell: np.ndarray | None = None,
@@ -447,7 +469,7 @@ def normalize_per_cell(
     layers: Literal["all"] | Iterable[str] = (),
     use_rep: Literal["after", "X"] | None = None,
     min_counts: int = 1,
-) -> AnnData | None:
+) -> AnnData | np.ndarray | spmatrix | None:
     """\
     Normalize total counts per cell.
 
@@ -543,7 +565,7 @@ def normalize_per_cell(
         else:
             raise ValueError('use_rep should be "after", "X" or None')
         for layer in layers:
-            subset, counts = filter_cells(adata.layers[layer], min_counts=min_counts)
+            _subset, counts = filter_cells(adata.layers[layer], min_counts=min_counts)
             temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
             adata.layers[layer] = temp
 
@@ -568,15 +590,17 @@ def normalize_per_cell(
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
         if not issparse(X):
-            X /= materialize_as_ndarray(counts_per_cell[:, np.newaxis])
+            X /= counts_per_cell[:, np.newaxis]
         else:
             sparsefuncs.inplace_row_scale(X, 1 / counts_per_cell)
     return X if copy else None
 
 
+@old_positionals("layer", "n_jobs", "copy")
 def regress_out(
     adata: AnnData,
     keys: str | Sequence[str],
+    *,
     layer: str | None = None,
     n_jobs: int | None = None,
     copy: bool = False,
@@ -722,16 +746,19 @@ def _regress_out_chunk(data):
     return np.vstack(responses_chunk_list)
 
 
+@renamed_arg("X", "data", pos_0=True)
+@old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    X: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray,
+    *,
     zero_center: bool = True,
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask: NDArray[np.bool_] | str | None = None,
-):
+    mask_obs: NDArray[np.bool_] | str | None = None,
+) -> AnnData | spmatrix | np.ndarray | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -742,7 +769,7 @@ def scale(
 
     Parameters
     ----------
-    X
+    data
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     zero_center
@@ -757,6 +784,10 @@ def scale(
         If provided, which element of layers to scale.
     obsm
         If provided, which element of obsm to scale.
+    mask_obs
+        Restrict both the derivation of scaling parameters and the scaling itself
+        to a certain set of observations. The mask is specified as a boolean array
+        or a string referring to an array in :attr:`~anndata.AnnData.obs`.
 
     Returns
     -------
@@ -773,11 +804,15 @@ def scale(
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:
-        raise ValueError(f"`layer` argument inappropriate for value of type {type(X)}")
+        raise ValueError(
+            f"`layer` argument inappropriate for value of type {type(data)}"
+        )
     if obsm is not None:
-        raise ValueError(f"`obsm` argument inappropriate for value of type {type(X)}")
+        raise ValueError(
+            f"`obsm` argument inappropriate for value of type {type(data)}"
+        )
     return scale_array(
-        X, zero_center=zero_center, max_value=max_value, copy=copy, mask=mask
+        data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
     )
 
 
@@ -789,25 +824,25 @@ def scale_array(
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool_] | None = None,
 ) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
     if copy:
         X = X.copy()
-    if mask is not None:
-        mask = _check_mask(X, mask, "obs")
+    if mask_obs is not None:
+        mask_obs = _check_mask(X, mask_obs, "obs")
         scale_rv = scale_array(
-            X[mask, :],
+            X[mask_obs, :],
             zero_center=zero_center,
             max_value=max_value,
             copy=False,
             return_mean_std=return_mean_std,
-            mask=None,
+            mask_obs=None,
         )
         if return_mean_std:
-            X[mask, :], mean, std = scale_rv
+            X[mask_obs, :], mean, std = scale_rv
             return X, mean, std
         else:
-            X[mask, :] = scale_rv
+            X[mask_obs, :] = scale_rv
             return X
 
     if not zero_center and max_value is not None:
@@ -837,7 +872,10 @@ def scale_array(
     # do the clipping
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
-        X[X > max_value] = max_value
+        if zero_center:
+            X = np.clip(X, a_min=-max_value, a_max=max_value)
+        else:
+            X[X > max_value] = max_value
     if return_mean_std:
         return X, mean, std
     else:
@@ -852,7 +890,7 @@ def scale_sparse(
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool_] | None = None,
 ) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
     # need to add the following here to make inplace logic work
     if zero_center:
@@ -868,7 +906,7 @@ def scale_sparse(
         copy=copy,
         max_value=max_value,
         return_mean_std=return_mean_std,
-        mask=mask,
+        mask_obs=mask_obs,
     )
 
 
@@ -881,16 +919,16 @@ def scale_anndata(
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool_] | str | None = None,
 ) -> AnnData | None:
     adata = adata.copy() if copy else adata
     str_mean_std = ("mean", "std")
-    if mask is not None:
-        if isinstance(mask, str):
-            str_mean_std = (f"mean of {mask}", f"std of {mask}")
+    if mask_obs is not None:
+        if isinstance(mask_obs, str):
+            str_mean_std = (f"mean of {mask_obs}", f"std of {mask_obs}")
         else:
             str_mean_std = ("mean with mask", "std with mask")
-        mask = _check_mask(adata, mask, "obs")
+        mask_obs = _check_mask(adata, mask_obs, "obs")
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer, obsm=obsm)
     X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
@@ -899,20 +937,21 @@ def scale_anndata(
         max_value=max_value,
         copy=False,  # because a copy has already been made, if it were to be made
         return_mean_std=True,
-        mask=mask,
+        mask_obs=mask_obs,
     )
     _set_obs_rep(adata, X, layer=layer, obsm=obsm)
-    if copy:
-        return adata
+    return adata if copy else None
 
 
+@old_positionals("n_obs", "random_state", "copy")
 def subsample(
     data: AnnData | np.ndarray | spmatrix,
     fraction: float | None = None,
+    *,
     n_obs: int | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
-) -> AnnData | None:
+) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int64]] | None:
     """\
     Subsample to a fraction of the number of observations.
 
@@ -967,7 +1006,7 @@ def subsample(
         return X[obs_indices], obs_indices
 
 
-@deprecated_arg_names({"target_counts": "counts_per_cell"})
+@renamed_arg("target_counts", "counts_per_cell")
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: int | Collection[int] | None = None,

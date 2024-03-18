@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 _pd_orig = sphinx.ext.napoleon._process_docstring
 
 
-def pd_new(app, what, name, obj, options, lines):
+def pd_new(app, what, name, obj, options, lines):  # noqa: PLR0917
     _pd_orig(app, what, name, obj, options, lines)
     print(*lines, sep="\n")
 

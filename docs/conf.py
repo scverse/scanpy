@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
-from packaging.version import parse as parse_version
+from packaging.version import Version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
 matplotlib.use("agg")
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = "4.0"  # Nicer param docs
 suppress_warnings = [
-    "ref.citation",
     "myst.header",  # https://github.com/executablebooks/MyST-Parser/issues/262
 ]
 
@@ -37,8 +36,8 @@ copyright = f"{datetime.now():%Y}, the Scanpy development team."
 version = scanpy.__version__.replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that
-if parse_version(version).is_devrelease:
-    parsed = parse_version(version)
+if Version(version).is_devrelease:
+    parsed = Version(version)
     version = f"{parsed.major}.{parsed.minor}.{parsed.micro}.dev"
 
 release = version
@@ -66,6 +65,7 @@ extensions = [
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
     "sphinx.ext.linkcode",
     "sphinx_design",
+    "sphinx_search.extension",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
 ]
@@ -133,13 +133,13 @@ intersphinx_mapping = dict(
 
 # -- Options for HTML output ----------------------------------------------
 
-html_theme = "sphinx_book_theme"
+# The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
+html_theme = "scanpydoc"
 html_theme_options = {
     "repository_url": repository_url,
     "use_repository_button": True,
 }
 html_static_path = ["_static"]
-html_css_files = ["css/override.css"]
 html_show_sphinx = False
 html_logo = "_static/img/Scanpy_Logo_BrightFG.svg"
 html_title = "scanpy"
@@ -183,8 +183,6 @@ texinfo_documents = [
 
 qualname_overrides = {
     "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.metrics.DistanceMetric",
-    # If the docs are built with an old version of numpy, this will make it work:
-    "numpy.random.RandomState": "numpy.random.mtrand.RandomState",
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
@@ -192,12 +190,15 @@ qualname_overrides = {
 }
 
 nitpick_ignore = [
+    # Technical issues
+    ("py:class", "numpy.int64"),  # documented as “attribute”
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
+    ("py:class", "scanpy.plotting._baseplot_class.BasePlot"),
     # Currently undocumented
     # https://github.com/mwaskom/seaborn/issues/1810
-    ("py:class", "seaborn.ClusterGrid"),
+    ("py:class", "seaborn.matrix.ClusterGrid"),
     ("py:class", "samalg.SAM"),
     # Won’t be documented
     ("py:class", "scanpy.plotting._utils._AxesSubplot"),

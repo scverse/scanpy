@@ -1,5 +1,5 @@
-"""BasePlot for dotplot, matrixplot and stacked_violin
-"""
+"""BasePlot for dotplot, matrixplot and stacked_violin"""
+
 from __future__ import annotations
 
 import collections.abc as cabc
@@ -14,6 +14,7 @@ from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
+from .._compat import old_positionals
 from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
 from ._utils import ColorLike, _AxesSubplot, check_colornorm, make_grid_spec
 
@@ -73,11 +74,30 @@ class BasePlot:
 
     MAX_NUM_CATEGORIES = 500  # maximum number of categories allowed to be plotted
 
+    @old_positionals(
+        "use_raw",
+        "log",
+        "num_categories",
+        "categories_order",
+        "title",
+        "figsize",
+        "gene_symbols",
+        "var_group_positions",
+        "var_group_labels",
+        "var_group_rotation",
+        "layer",
+        "ax",
+        "vmin",
+        "vmax",
+        "vcenter",
+        "norm",
+    )
     def __init__(
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        *,
         groupby_cols: str | Sequence[str] = [],
         use_raw: bool | None = None,
         log: bool = False,
@@ -116,9 +136,9 @@ class BasePlot:
             adata,
             self.var_names,
             self.groupby,
-            use_raw,
-            log,
-            num_categories,
+            use_raw=use_raw,
+            log=log,
+            num_categories=num_categories,
             layer=layer,
             gene_symbols=gene_symbols,
         )
@@ -195,7 +215,7 @@ class BasePlot:
         self.ax_dict = None
         self.ax = ax
 
-    def swap_axes(self, swap_axes: bool | None = True):
+    def swap_axes(self, swap_axes: bool | None = True) -> BasePlot:
         """
         Plots a transposed image.
 
@@ -211,7 +231,7 @@ class BasePlot:
 
         Returns
         -------
-        BasePlot
+        Returns `self` for method chaining.
 
         """
         self.DEFAULT_CATEGORY_HEIGHT, self.DEFAULT_CATEGORY_WIDTH = (
@@ -227,7 +247,7 @@ class BasePlot:
         show: bool | None = True,
         dendrogram_key: str | None = None,
         size: float | None = 0.8,
-    ):
+    ) -> BasePlot:
         r"""\
         Show dendrogram based on the hierarchical clustering between the `groupby`
         categories. Categories are reordered to match the dendrogram order.
@@ -262,7 +282,7 @@ class BasePlot:
 
         Returns
         -------
-        BasePlot
+        Returns `self` for method chaining.
 
 
         Examples
@@ -313,7 +333,7 @@ class BasePlot:
         sort: Literal["ascending", "descending"] = None,
         size: float | None = 0.8,
         color: ColorLike | Sequence[ColorLike] | None = None,
-    ):
+    ) -> BasePlot:
         r"""\
         Show barplot for the number of cells in in `groupby` category.
 
@@ -340,7 +360,7 @@ class BasePlot:
 
         Returns
         -------
-        BasePlot
+        Returns `self` for method chaining.
 
 
         Examples
@@ -349,7 +369,7 @@ class BasePlot:
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> plot = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').add_totals()
-        >>> plot.plot_group_extra['counts_df']
+        >>> plot.plot_group_extra['counts_df']  # doctest: +SKIP
         bulk_labels
         CD4+/CD25 T Reg                  68
         CD4+/CD45RA+/CD25- Naive T        8
@@ -389,7 +409,8 @@ class BasePlot:
         }
         return self
 
-    def style(self, cmap: str | None = DEFAULT_COLORMAP):
+    @old_positionals("cmap")
+    def style(self, *, cmap: str | None = DEFAULT_COLORMAP) -> BasePlot:
         """\
         Set visual style parameters
 
@@ -400,17 +421,20 @@ class BasePlot:
 
         Returns
         -------
-        BasePlot
+        Returns `self` for method chaining.
         """
 
         self.cmap = cmap
+        return self
 
+    @old_positionals("show", "title", "width")
     def legend(
         self,
+        *,
         show: bool | None = True,
         title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
         width: float | None = DEFAULT_LEGENDS_WIDTH,
-    ):
+    ) -> BasePlot:
         r"""\
         Configure legend parameters
 
@@ -426,7 +450,7 @@ class BasePlot:
 
         Returns
         -------
-        BasePlot
+        Returns `self` for method chaining.
 
 
         Examples
@@ -452,7 +476,7 @@ class BasePlot:
 
         return self
 
-    def get_axes(self):
+    def get_axes(self) -> dict[str, Axes]:
         if self.ax_dict is None:
             self.make_figure()
         return self.ax_dict
@@ -490,7 +514,7 @@ class BasePlot:
             for p in total_barplot_ax.patches:
                 p.set_x(p.get_x() + 0.5)
                 if p.get_height() >= 1000:
-                    display_number = f"{np.round(p.get_height()/1000, decimals=1)}k"
+                    display_number = f"{np.round(p.get_height() / 1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_height(), decimals=1)
                 total_barplot_ax.annotate(
@@ -520,7 +544,7 @@ class BasePlot:
             max_x = max([p.get_width() for p in total_barplot_ax.patches])
             for p in total_barplot_ax.patches:
                 if p.get_width() >= 1000:
-                    display_number = f"{np.round(p.get_width()/1000, decimals=1)}k"
+                    display_number = f"{np.round(p.get_width() / 1000, decimals=1)}k"
                 else:
                     display_number = np.round(p.get_width(), decimals=1)
                 total_barplot_ax.annotate(
@@ -537,7 +561,7 @@ class BasePlot:
         total_barplot_ax.grid(False)
         total_barplot_ax.axis("off")
 
-    def _plot_colorbar(self, color_legend_ax: Axes, normalize):
+    def _plot_colorbar(self, color_legend_ax: Axes, normalize) -> None:
         """
         Plots a horizontal colorbar given the ax an normalize values
 
@@ -548,7 +572,7 @@ class BasePlot:
 
         Returns
         -------
-        None, updates color_legend_ax
+        `None`, updates color_legend_ax
         """
         cmap = plt.get_cmap(self.cmap)
 
@@ -790,7 +814,7 @@ class BasePlot:
 
         self.ax_dict = return_ax_dict
 
-    def show(self, return_axes: bool | None = None):
+    def show(self, return_axes: bool | None = None) -> dict[str, Axes] | None:
         """
         Show the figure
 
@@ -814,8 +838,8 @@ class BasePlot:
         -------
         >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').show()
+        >>> markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
+        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby="bulk_labels").show()
         """
 
         self.make_figure()
@@ -848,8 +872,10 @@ class BasePlot:
         -------
         >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-        >>> sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').savefig('plot.pdf')
+        >>> markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
+        >>> sc.pl._baseplot_class.BasePlot(
+        ...     adata, markers, groupby="bulk_labels"
+        ... ).savefig("plot.pdf")
         """
         self.make_figure()
         plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
@@ -873,7 +899,7 @@ class BasePlot:
         values_df.columns = stacked_df.columns.to_series().apply(lambda x: '_'.join(map(str, x))).values
         return values_df
 
-    def _reorder_categories_after_dendrogram(self, dendrogram):
+    def _reorder_categories_after_dendrogram(self, dendrogram) -> None:
         """\
         Function used by plotting functions that need to reorder the the groupby
         observations based on the dendrogram results.
@@ -887,7 +913,7 @@ class BasePlot:
 
         Returns
         -------
-        None internally updates
+        `None`, internally updates
         'categories_idx_ordered', 'var_group_names_idx_ordered',
         'var_group_labels' and 'var_group_positions'
         """
@@ -967,13 +993,14 @@ class BasePlot:
     @staticmethod
     def _plot_var_groups_brackets(
         gene_groups_ax: Axes,
+        *,
         group_positions: Iterable[tuple[int, int]],
         group_labels: Sequence[str],
         left_adjustment: float = -0.3,
         right_adjustment: float = 0.3,
         rotation: float | None = None,
         orientation: Literal["top", "right"] = "top",
-    ):
+    ) -> None:
         """\
         Draws brackets that represent groups of genes on the give axis.
         For best results, this axis is located on top of an image whose
@@ -1005,9 +1032,6 @@ class BasePlot:
             rotated, otherwise, they are rotated 90 degrees
         orientation
             location of the brackets. Either `top` or `right`
-        Returns
-        -------
-        None
         """
         import matplotlib.patches as patches
         from matplotlib.path import Path
@@ -1090,17 +1114,12 @@ class BasePlot:
             axis="x", bottom=False, labelbottom=False, labeltop=False
         )
 
-    def _update_var_groups(self):
+    def _update_var_groups(self) -> None:
         """
         checks if var_names is a dict. Is this is the cases, then set the
         correct values for var_group_labels and var_group_positions
 
         updates var_names, var_group_labels, var_group_positions
-
-        Returns
-        -------
-        None
-
         """
         if isinstance(self.var_names, cabc.Mapping):
             if self.has_var_groups:

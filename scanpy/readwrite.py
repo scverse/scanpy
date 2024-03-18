@@ -1,12 +1,12 @@
-"""Reading and Writing
-"""
+"""Reading and Writing"""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path, PurePath
 from typing import BinaryIO, Literal
 
-import anndata
+import anndata.utils
 import h5py
 import numpy as np
 import pandas as pd
@@ -14,15 +14,16 @@ from anndata import (
     AnnData,
     read_csv,
     read_excel,
+    read_h5ad,
     read_hdf,
     read_loom,
     read_mtx,
     read_text,
 )
-from anndata import read as read_h5ad
 from matplotlib.image import imread
 
 from . import logging as logg
+from ._compat import old_positionals
 from ._settings import settings
 from ._utils import Empty, _empty
 
@@ -52,9 +53,19 @@ avail_exts = {
 # --------------------------------------------------------------------------------
 
 
+@old_positionals(
+    "sheet",
+    "ext",
+    "delimiter",
+    "first_column_names",
+    "backup_url",
+    "cache",
+    "cache_compression",
+)
 def read(
     filename: Path | str,
     backed: Literal["r", "r+"] | None = None,
+    *,
     sheet: str | None = None,
     ext: str | None = None,
     delimiter: str | None = None,
@@ -136,8 +147,10 @@ def read(
     return read_h5ad(filename, backed=backed)
 
 
+@old_positionals("genome", "gex_only", "backup_url")
 def read_10x_h5(
-    filename: str | Path,
+    filename: Path | str,
+    *,
     genome: str | None = None,
     gex_only: bool = True,
     backup_url: str | None = None,
@@ -336,13 +349,13 @@ def _read_v3_10x_h5(filename, *, start=None):
 
 
 def read_visium(
-    path: str | Path,
+    path: Path | str,
     genome: str | None = None,
     *,
     count_file: str = "filtered_feature_bc_matrix.h5",
     library_id: str | None = None,
     load_images: bool | None = True,
-    source_image_path: str | Path | None = None,
+    source_image_path: Path | str | None = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted visum dataset.
@@ -494,15 +507,16 @@ def read_visium(
     return adata
 
 
+@old_positionals("var_names", "make_unique", "cache", "cache_compression", "gex_only")
 def read_10x_mtx(
     path: Path | str,
+    *,
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
     cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
     gex_only: bool = True,
-    *,
-    prefix: str = None,
+    prefix: str | None = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted mtx directory.
@@ -537,99 +551,69 @@ def read_10x_mtx(
     """
     path = Path(path)
     prefix = "" if prefix is None else prefix
-    genefile_exists = (path / f"{prefix}genes.tsv").is_file()
-    read = _read_legacy_10x_mtx if genefile_exists else _read_v3_10x_mtx
-    adata = read(
-        str(path),
+    is_legacy = (path / f"{prefix}genes.tsv").is_file()
+    adata = _read_10x_mtx(
+        path,
         var_names=var_names,
         make_unique=make_unique,
         cache=cache,
         cache_compression=cache_compression,
         prefix=prefix,
+        is_legacy=is_legacy,
     )
-    if genefile_exists or not gex_only:
+    if is_legacy or not gex_only:
         return adata
-    else:
-        gex_rows = list(
-            map(lambda x: x == "Gene Expression", adata.var["feature_types"])
-        )
-        return adata[:, gex_rows].copy()
+    gex_rows = adata.var["feature_types"] == "Gene Expression"
+    return adata[:, gex_rows].copy()
 
 
-def _read_legacy_10x_mtx(
-    path,
-    var_names="gene_symbols",
-    make_unique=True,
-    cache=False,
-    cache_compression=_empty,
+def _read_10x_mtx(
+    path: Path,
     *,
-    prefix="",
-):
+    var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
+    make_unique: bool = True,
+    cache: bool = False,
+    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
+    prefix: str = "",
+    is_legacy: bool,
+) -> AnnData:
     """
-    Read mex from output from Cell Ranger v2 or earlier versions
+    Read mex from output from Cell Ranger v2- or v3+
     """
-    path = Path(path)
+    suffix = "" if is_legacy else ".gz"
     adata = read(
-        path / f"{prefix}matrix.mtx",
+        path / f"{prefix}matrix.mtx{suffix}",
         cache=cache,
         cache_compression=cache_compression,
     ).T  # transpose the data
-    genes = pd.read_csv(path / f"{prefix}genes.tsv", header=None, sep="\t")
+    genes = pd.read_csv(
+        path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
+        header=None,
+        sep="\t",
+    )
     if var_names == "gene_symbols":
-        var_names = genes[1].values
+        var_names_idx = pd.Index(genes[1].values)
         if make_unique:
-            var_names = anndata.utils.make_index_unique(pd.Index(var_names))
-        adata.var_names = var_names
+            var_names_idx = anndata.utils.make_index_unique(var_names_idx)
+        adata.var_names = var_names_idx
         adata.var["gene_ids"] = genes[0].values
     elif var_names == "gene_ids":
         adata.var_names = genes[0].values
         adata.var["gene_symbols"] = genes[1].values
     else:
         raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
-    adata.obs_names = pd.read_csv(path / f"{prefix}barcodes.tsv", header=None)[0].values
+    if not is_legacy:
+        adata.var["feature_types"] = genes[2].values
+    barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
+    adata.obs_names = barcodes[0].values
     return adata
 
 
-def _read_v3_10x_mtx(
-    path,
-    var_names="gene_symbols",
-    make_unique=True,
-    cache=False,
-    cache_compression=_empty,
-    *,
-    prefix="",
-):
-    """
-    Read mtx from output from Cell Ranger v3 or later versions
-    """
-    path = Path(path)
-    adata = read(
-        path / f"{prefix}matrix.mtx.gz",
-        cache=cache,
-        cache_compression=cache_compression,
-    ).T  # transpose the data
-    genes = pd.read_csv(path / f"{prefix}features.tsv.gz", header=None, sep="\t")
-    if var_names == "gene_symbols":
-        var_names = genes[1].values
-        if make_unique:
-            var_names = anndata.utils.make_index_unique(pd.Index(var_names))
-        adata.var_names = var_names
-        adata.var["gene_ids"] = genes[0].values
-    elif var_names == "gene_ids":
-        adata.var_names = genes[0].values
-        adata.var["gene_symbols"] = genes[1].values
-    else:
-        raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
-    adata.var["feature_types"] = genes[2].values
-    adata.obs_names = pd.read_csv(path / f"{prefix}barcodes.tsv.gz", header=None)[
-        0
-    ].values
-    return adata
-
-
+@old_positionals("ext", "compression", "compression_opts")
 def write(
-    filename: str | Path,
+    filename: Path | str,
     adata: AnnData,
+    *,
     ext: Literal["h5", "csv", "txt", "npz"] | None = None,
     compression: Literal["gzip", "lzf"] | None = "gzip",
     compression_opts: int | None = None,
@@ -748,6 +732,7 @@ def write_params(path: Path | str, *args, **maps):
 
 def _read(
     filename: Path,
+    *,
     backed=None,
     sheet=None,
     ext=None,
@@ -904,7 +889,7 @@ def _read_softgz(filename: str | bytes | Path | BinaryIO) -> AnnData:
     X = np.array(X).T
     obs = pd.DataFrame({"groups": groups}, index=sample_names)
     var = pd.DataFrame(index=gene_names)
-    return AnnData(X=X, obs=obs, var=var, dtype=X.dtype)
+    return AnnData(X=X, obs=obs, var=var)
 
 
 # -------------------------------------------------------------------------------
@@ -1020,13 +1005,16 @@ def _download(url: str, path: Path):
 
         with open_url as resp:
             total = resp.info().get("content-length", None)
-            with tqdm(
-                unit="B",
-                unit_scale=True,
-                miniters=1,
-                unit_divisor=1024,
-                total=total if total is None else int(total),
-            ) as t, path.open("wb") as f:
+            with (
+                tqdm(
+                    unit="B",
+                    unit_scale=True,
+                    miniters=1,
+                    unit_divisor=1024,
+                    total=total if total is None else int(total),
+                ) as t,
+                path.open("wb") as f,
+            ):
                 block = resp.read(blocksize)
                 while block:
                     f.write(block)

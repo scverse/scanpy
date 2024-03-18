@@ -31,4 +31,4 @@ hvg_info <- cbind(hvg_info, rownames(hvg_info) %in% sr_hvg)
 colnames(hvg_info) <- c("means", "dispersions", "dispersions_norm", "highly_variable")
 hvg_info <- hvg_info[rownames(sr@data),]
 
-write.table(hvg_info, "seurat_hvg.csv")
+write.csv(hvg_info, "seurat_hvg.csv")

@@ -1,5 +1,5 @@
-"""Plotting functions for AnnData.
-"""
+"""Plotting functions for AnnData."""
+
 from __future__ import annotations
 
 import collections.abc as cabc
@@ -18,6 +18,7 @@ from scipy.sparse import issparse
 
 from .. import get
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _check_use_raw, _doc_params, sanitize_anndata
 from . import _utils
@@ -41,6 +42,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from cycler import Cycler
     from matplotlib.axes import Axes
+    from seaborn import FacetGrid
+    from seaborn.matrix import ClusterGrid
 
 VALID_LEGENDLOCS = {
     "none",
@@ -65,26 +68,44 @@ _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
 _VarNames = Union[str, Sequence[str]]
 
 
+@old_positionals(
+    "color",
+    "use_raw",
+    "layers",
+    "sort_order",
+    "alpha",
+    "basis",
+    "groups",
+    "components",
+    "projection",
+    "legend_loc",
+    "legend_fontsize",
+    "legend_fontweight",
+    "legend_fontoutline",
+    "color_map",
+    # 17 positionals are enough for backwards compatibility
+)
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
 def scatter(
     adata: AnnData,
     x: str | None = None,
     y: str | None = None,
-    color: str | Collection[str] = None,
+    *,
+    color: str | Collection[str] | None = None,
     use_raw: bool | None = None,
-    layers: str | Collection[str] = None,
+    layers: str | Collection[str] | None = None,
     sort_order: bool = True,
     alpha: float | None = None,
     basis: _Basis | None = None,
-    groups: str | Iterable[str] = None,
-    components: str | Collection[str] = None,
+    groups: str | Iterable[str] | None = None,
+    components: str | Collection[str] | None = None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: str = "right margin",
     legend_fontsize: int | float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight | None = None,
-    legend_fontoutline: float = None,
-    color_map: str | Colormap = None,
-    palette: Cycler | ListedColormap | ColorLike | Sequence[ColorLike] = None,
+    legend_fontoutline: float | None = None,
+    color_map: str | Colormap | None = None,
+    palette: Cycler | ListedColormap | ColorLike | Sequence[ColorLike] | None = None,
     frameon: bool | None = None,
     right_margin: float | None = None,
     left_margin: float | None = None,
@@ -94,7 +115,7 @@ def scatter(
     show: bool | None = None,
     save: str | bool | None = None,
     ax: Axes | None = None,
-):
+) -> Axes | list[Axes] | None:
     """\
     Scatter plot along observations or variables axes.
 
@@ -163,6 +184,7 @@ def scatter(
 
 
 def _scatter_obs(
+    *,
     adata: AnnData,
     x=None,
     y=None,
@@ -190,7 +212,7 @@ def _scatter_obs(
     show=None,
     save=None,
     ax=None,
-):
+) -> Axes | list[Axes] | None:
     """See docstring of scatter."""
     sanitize_anndata(adata)
 
@@ -311,7 +333,7 @@ def _scatter_obs(
     show_ticks = True if component_name is None else False
 
     # generate the colors
-    color_ids = []
+    color_ids: list[np.ndarray | ColorLike] = []
     categoricals = []
     colorbars = []
     for ikey, key in enumerate(keys):
@@ -323,7 +345,7 @@ def _scatter_obs(
             if isinstance(adata.obs[key].dtype, CategoricalDtype):
                 categorical = True
             else:
-                c = adata.obs[key]
+                c = adata.obs[key].to_numpy()
         # coloring according to gene expression
         elif use_raw and adata.raw is not None and key in adata.raw.var_names:
             c = adata.raw.obs_vector(key)
@@ -398,7 +420,7 @@ def _scatter_obs(
                         iname,
                         adata,
                         Y,
-                        projection,
+                        projection=projection,
                         size=size,
                         alpha=alpha,
                         marker=marker,
@@ -424,7 +446,7 @@ def _scatter_obs(
                         iname,
                         adata,
                         Y,
-                        projection,
+                        projection=projection,
                         size=size,
                         alpha=alpha,
                         marker=marker,
@@ -509,23 +531,37 @@ def _scatter_obs(
 
     show = settings.autoshow if show is None else show
     _utils.savefig_or_show("scatter" if basis is None else basis, show=show, save=save)
-    if not show:
-        return axs if len(keys) > 1 else axs[0]
+    if show:
+        return None
+    if len(keys) > 1:
+        return axs
+    return axs[0]
 
 
+@old_positionals(
+    "dictionary",
+    "indices",
+    "labels",
+    "color",
+    "n_points",
+    "log",
+    "include_lowest",
+    "show",
+)
 def ranking(
     adata: AnnData,
     attr: Literal["var", "obs", "uns", "varm", "obsm"],
     keys: str | Sequence[str],
-    dictionary=None,
-    indices=None,
-    labels=None,
-    color="black",
-    n_points=30,
-    log=False,
-    include_lowest=False,
-    show=None,
-):
+    *,
+    dictionary: str | None = None,
+    indices: Sequence[int] | None = None,
+    labels: str | Sequence[str] | None = None,
+    color: ColorLike = "black",
+    n_points: int = 30,
+    log: bool = False,
+    include_lowest: bool = False,
+    show: bool | None = None,
+) -> gridspec.GridSpec | None:
     """\
     Plot rankings.
 
@@ -625,15 +661,34 @@ def ranking(
             (1.05 if score_max > 0 else 0.95) * score_max,
         )
     show = settings.autoshow if show is None else show
-    if not show:
-        return gs
+    if show:
+        return None
+    return gs
 
 
+@old_positionals(
+    "log",
+    "use_raw",
+    "stripplot",
+    "jitter",
+    "size",
+    "layer",
+    "scale",
+    "order",
+    "multi_panel",
+    "xlabel",
+    "ylabel",
+    "rotation",
+    "show",
+    "save",
+    "ax",
+)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def violin(
     adata: AnnData,
     keys: str | Sequence[str],
     groupby: str | None = None,
+    *,
     log: bool = False,
     use_raw: bool | None = None,
     stripplot: bool = True,
@@ -650,7 +705,7 @@ def violin(
     save: bool | str | None = None,
     ax: Axes | None = None,
     **kwds,
-):
+) -> Axes | FacetGrid | None:
     """\
     Violin plot.
 
@@ -783,6 +838,7 @@ def violin(
                     f"but is of dtype {adata.obs[groupby].dtype}."
                 )
             _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
+            kwds["hue"] = groupby
             kwds["palette"] = dict(
                 zip(obs_df[groupby].cat.categories, adata.uns[f"{groupby}_colors"])
             )
@@ -802,7 +858,7 @@ def violin(
         # keys if groupby is None.
         y = ys[0]
 
-        g = sns.catplot(
+        g: sns.axisgrid.FacetGrid = sns.catplot(
             y=y,
             data=obs_tidy,
             kind="violin",
@@ -816,7 +872,7 @@ def violin(
         )
 
         if stripplot:
-            grouped_df = obs_tidy.groupby(x)
+            grouped_df = obs_tidy.groupby(x, observed=True)
             for ax_id, key in zip(range(g.axes.shape[1]), keys):
                 sns.stripplot(
                     y=y,
@@ -840,7 +896,7 @@ def violin(
 
         if ax is None:
             axs, _, _, _ = setup_axes(
-                ax=ax,
+                ax,
                 panels=["x"] if groupby is None else keys,
                 show_ticks=True,
                 right_margin=0.3,
@@ -854,7 +910,7 @@ def violin(
                 data=obs_tidy,
                 order=order,
                 orient="vertical",
-                scale=scale,
+                density_norm=scale,
                 ax=ax,
                 **kwds,
             )
@@ -881,24 +937,26 @@ def violin(
                 ax.tick_params(axis="x", labelrotation=rotation)
     show = settings.autoshow if show is None else show
     _utils.savefig_or_show("violin", show=show, save=save)
-    if not show:
-        if multi_panel and groupby is None and len(ys) == 1:
-            return g
-        elif len(axs) == 1:
-            return axs[0]
-        else:
-            return axs
+    if show:
+        return None
+    if multi_panel and groupby is None and len(ys) == 1:
+        return g
+    if len(axs) == 1:
+        return axs[0]
+    return axs
 
 
+@old_positionals("use_raw", "show", "save")
 @_doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
     adata: AnnData,
-    obs_keys: str = None,
+    obs_keys: str | None = None,
+    *,
     use_raw: bool | None = None,
     show: bool | None = None,
     save: bool | str | None = None,
     **kwds,
-):
+) -> ClusterGrid | None:
     """\
     Hierarchically-clustered heatmap.
 
@@ -919,7 +977,7 @@ def clustermap(
 
     Returns
     -------
-    If `show` is `False`, a :class:`~seaborn.ClusterGrid` object
+    If `show` is `False`, a :class:`~seaborn.matrix.ClusterGrid` object
     (see :func:`~seaborn.clustermap`).
 
     Examples
@@ -960,10 +1018,31 @@ def clustermap(
     _utils.savefig_or_show("clustermap", show=show, save=save)
     if show:
         plt.show()
-    else:
-        return g
+        return None
+    return g
 
 
+@old_positionals(
+    "use_raw",
+    "log",
+    "num_categories",
+    "dendrogram",
+    "gene_symbols",
+    "var_group_positions",
+    "var_group_labels",
+    "var_group_rotation",
+    "layer",
+    "standard_scale",
+    "swap_axes",
+    "show_gene_labels",
+    "show",
+    "save",
+    "figsize",
+    "vmin",
+    "vmax",
+    "vcenter",
+    "norm",
+)
 @_doc_params(
     vminmax=doc_vboundnorm,
     show_save_ax=doc_show_save_ax,
@@ -973,6 +1052,7 @@ def heatmap(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    *,
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
@@ -993,7 +1073,7 @@ def heatmap(
     vcenter: float | None = None,
     norm: Normalize | None = None,
     **kwds,
-):
+) -> dict[str, Axes] | None:
     """\
     Heatmap of the expression values of genes.
 
@@ -1021,7 +1101,7 @@ def heatmap(
 
     Returns
     -------
-    List of :class:`~matplotlib.axes.Axes`
+    Dict of :class:`~matplotlib.axes.Axes`
 
     Examples
     -------
@@ -1048,9 +1128,9 @@ def heatmap(
         adata,
         var_names,
         groupby,
-        use_raw,
-        log,
-        num_categories,
+        use_raw=use_raw,
+        log=log,
+        num_categories=num_categories,
         gene_symbols=gene_symbols,
         layer=layer,
     )
@@ -1377,15 +1457,29 @@ def heatmap(
 
     _utils.savefig_or_show("heatmap", show=show, save=save)
     show = settings.autoshow if show is None else show
-    if not show:
-        return return_ax_dict
+    if show:
+        return None
+    return return_ax_dict
 
 
+@old_positionals(
+    "use_raw",
+    "log",
+    "dendrogram",
+    "gene_symbols",
+    "var_group_positions",
+    "var_group_labels",
+    "layer",
+    "show",
+    "save",
+    "figsize",
+)
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def tracksplot(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    *,
     use_raw: bool | None = None,
     log: bool = False,
     dendrogram: bool | str = False,
@@ -1397,7 +1491,7 @@ def tracksplot(
     save: str | bool | None = None,
     figsize: tuple[float, float] | None = None,
     **kwds,
-):
+) -> dict[str, Axes] | None:
     """\
     In this type of plot each var_name is plotted as a filled line plot where the
     y values correspond to the var_name values and x is each of the cells. Best results
@@ -1460,9 +1554,9 @@ def tracksplot(
         adata,
         var_names,
         groupby,
-        use_raw,
-        log,
-        None,
+        use_raw=use_raw,
+        log=log,
+        num_categories=None,  # TODO: fix this line
         gene_symbols=gene_symbols,
         layer=layer,
     )
@@ -1636,8 +1730,9 @@ def tracksplot(
 
     _utils.savefig_or_show("tracksplot", show=show, save=save)
     show = settings.autoshow if show is None else show
-    if not show:
-        return return_ax_dict
+    if show:
+        return None
+    return return_ax_dict
 
 
 @_doc_params(show_save_ax=doc_show_save_ax)
@@ -1651,7 +1746,7 @@ def dendrogram(
     show: bool | None = None,
     save: str | bool | None = None,
     ax: Axes | None = None,
-):
+) -> Axes:
     """\
     Plots a dendrogram of the categories defined in `groupby`.
 
@@ -1705,10 +1800,23 @@ def dendrogram(
     return ax
 
 
+@old_positionals(
+    "show_correlation_numbers",
+    "dendrogram",
+    "figsize",
+    "show",
+    "save",
+    "ax",
+    "vmin",
+    "vmax",
+    "vcenter",
+    "norm",
+)
 @_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vboundnorm)
 def correlation_matrix(
     adata: AnnData,
     groupby: str,
+    *,
     show_correlation_numbers: bool = False,
     dendrogram: bool | str | None = None,
     figsize: tuple[float, float] | None = None,
@@ -1720,7 +1828,7 @@ def correlation_matrix(
     vcenter: float | None = None,
     norm: Normalize | None = None,
     **kwds,
-) -> Axes | list[Axes]:
+) -> list[Axes] | None:
     """\
     Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
 
@@ -1749,6 +1857,7 @@ def correlation_matrix(
 
     Returns
     -------
+    If `show=False`, returns a list of :class:`matplotlib.axes.Axes` objects.
 
     Examples
     --------
@@ -1869,20 +1978,22 @@ def correlation_matrix(
 
     show = settings.autoshow if show is None else show
     _utils.savefig_or_show("correlation_matrix", show=show, save=save)
-    if ax is None and not show:
-        return axs
+    if ax is not None or show:
+        return None
+    return axs
 
 
 def _prepare_dataframe(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str] | None = None,
+    *,
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
-    layer=None,
+    layer: str | None = None,
     gene_symbols: str | None = None,
-):
+) -> tuple[Sequence[str], pd.DataFrame]:
     """
     Given the anndata object, prepares a data frame in which the row index are the categories
     defined by group by and the columns correspond to var_names.
@@ -1997,6 +2108,7 @@ def _prepare_dataframe(
 
 def _plot_gene_groups_brackets(
     gene_groups_ax: Axes,
+    *,
     group_positions: Iterable[tuple[int, int]],
     group_labels: Sequence[str],
     left_adjustment: float = -0.3,
@@ -2134,6 +2246,7 @@ def _reorder_categories_after_dendrogram(
     adata: AnnData,
     groupby,
     dendrogram,
+    *,
     var_names=None,
     var_group_labels=None,
     var_group_positions=None,
@@ -2274,6 +2387,7 @@ def _plot_dendrogram(
     dendro_ax: Axes,
     adata: AnnData,
     groupby: str,
+    *,
     dendrogram_key: str | None = None,
     orientation: Literal["top", "bottom", "left", "right"] = "right",
     remove_labels: bool = True,

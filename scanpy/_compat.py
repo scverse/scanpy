@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 
+from legacy_api_wrap import legacy_api
 from packaging import version
 
 try:
@@ -20,7 +22,22 @@ except ImportError:
         pass
 
 
-__all__ = ["cache", "DaskArray", "fullname", "pkg_metadata", "pkg_version"]
+try:
+    from zappy.base import ZappyArray
+except ImportError:
+
+    class ZappyArray:
+        pass
+
+
+__all__ = [
+    "cache",
+    "DaskArray",
+    "ZappyArray",
+    "fullname",
+    "pkg_metadata",
+    "pkg_version",
+]
 
 
 def fullname(typ: type) -> str:
@@ -61,3 +78,6 @@ def pkg_version(package):
     from importlib.metadata import version as v
 
     return version.parse(v(package))
+
+
+old_positionals = partial(legacy_api, category=FutureWarning)

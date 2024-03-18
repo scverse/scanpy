@@ -6,6 +6,8 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
+from .._compat import old_positionals
+from .._settings import settings
 from . import _utils
 
 # --------------------------------------------------------------------------------
@@ -13,13 +15,15 @@ from . import _utils
 # --------------------------------------------------------------------------------
 
 
+@old_positionals("log", "show", "save", "highly_variable_genes")
 def highly_variable_genes(
     adata_or_result: AnnData | pd.DataFrame | np.recarray,
+    *,
     log: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
     highly_variable_genes: bool = True,
-):
+) -> None:
     """Plot dispersions or normalized variance versus means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() and
@@ -91,9 +95,11 @@ def highly_variable_genes(
             + (" (normalized)" if idx == 0 else " (not normalized)")
         )
 
+    show = settings.autoshow if show is None else show
     _utils.savefig_or_show("filter_genes_dispersion", show=show, save=save)
-    if show is False:
-        return plt.gca()
+    if show:
+        return None
+    return plt.gca()
 
 
 # backwards compat
@@ -102,7 +108,7 @@ def filter_genes_dispersion(
     log: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
-):
+) -> None:
     """\
     Plot dispersions versus means for genes.
 

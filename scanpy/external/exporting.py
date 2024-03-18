@@ -1,6 +1,7 @@
 """\
 Exporting to formats for other software.
 """
+
 from __future__ import annotations
 
 import json
@@ -14,6 +15,7 @@ import numpy as np
 import scipy.sparse
 from pandas.api.types import CategoricalDtype
 
+from .._compat import old_positionals
 from .._utils import NeighborsView
 from ..preprocessing._utils import _get_mean_var
 
@@ -22,18 +24,29 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
+__all__ = ["spring_project", "cellbrowser"]
 
+
+@old_positionals(
+    "subplot_name",
+    "cell_groupings",
+    "custom_color_tracks",
+    "total_counts_key",
+    "neighbors_key",
+    "overwrite",
+)
 def spring_project(
     adata: AnnData,
     project_dir: Path | str,
     embedding_method: str,
+    *,
     subplot_name: str | None = None,
     cell_groupings: str | Iterable[str] | None = None,
     custom_color_tracks: str | Iterable[str] | None = None,
     total_counts_key: str = "n_counts",
     neighbors_key: str | None = None,
     overwrite: bool = False,
-):
+) -> None:
     """\
     Exports to a SPRING project directory [Weinreb17]_.
 
@@ -96,8 +109,8 @@ def spring_project(
 
     # Make project directory and subplot directory (subplot has same name as project)
     # For now, the subplot is just all cells in adata
-    project_dir: Path = Path(project_dir)
-    subplot_dir: Path = (
+    project_dir = Path(project_dir)
+    subplot_dir = (
         project_dir.parent if subplot_name is None else project_dir / subplot_name
     )
     subplot_dir.mkdir(parents=True, exist_ok=True)
@@ -472,10 +485,21 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     return None
 
 
+@old_positionals(
+    "embedding_keys",
+    "annot_keys",
+    "cluster_field",
+    "nb_marker",
+    "skip_matrix",
+    "html_dir",
+    "port",
+    "do_debug",
+)
 def cellbrowser(
     adata: AnnData,
     data_dir: Path | str,
     data_name: str,
+    *,
     embedding_keys: Iterable[str] | Mapping[str, str] | str | None = None,
     annot_keys: Iterable[str] | Mapping[str, str] | None = (
         "louvain",

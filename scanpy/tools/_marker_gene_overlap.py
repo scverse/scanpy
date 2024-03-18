@@ -1,6 +1,7 @@
 """\
 Calculate overlaps of rank_genes_groups marker genes with marker gene dictionaries
 """
+
 from __future__ import annotations
 
 import collections.abc as cabc

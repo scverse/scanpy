@@ -18,6 +18,7 @@ from sklearn.utils import check_random_state
 
 from ... import _utils as _sc_utils
 from ... import logging as logg
+from ..._compat import old_positionals
 from ..._settings import settings
 from .. import _utils
 from .._utils import _FontSize, _FontWeight, _IGraphLayout, matrix
@@ -29,9 +30,33 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
 
 
+@old_positionals(
+    "edges",
+    "color",
+    "alpha",
+    "groups",
+    "components",
+    "projection",
+    "legend_loc",
+    "legend_fontsize",
+    "legend_fontweight",
+    "legend_fontoutline",
+    "color_map",
+    "palette",
+    "frameon",
+    "size",
+    "title",
+    "right_margin",
+    "left_margin",
+    "show",
+    "save",
+    "title_graph",
+    "groups_graph",
+)
 def paga_compare(
     adata: AnnData,
     basis=None,
+    *,
     edges=False,
     color=None,
     alpha=None,
@@ -53,7 +78,6 @@ def paga_compare(
     save=None,
     title_graph=None,
     groups_graph=None,
-    *,
     pos=None,
     **paga_graph_params,
 ):
@@ -81,10 +105,7 @@ def paga_compare(
     -------
     A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
     """
-    axs, _, _, _ = _utils.setup_axes(
-        panels=[0, 1],
-        right_margin=right_margin,
-    )
+    axs, _, _, _ = _utils.setup_axes(panels=[0, 1], right_margin=right_margin)
     if color is None:
         color = adata.uns["paga"]["groups"]
     suptitle = None  # common title for entire figure
@@ -171,12 +192,14 @@ def paga_compare(
     if suptitle is not None:
         plt.suptitle(suptitle)
     _utils.savefig_or_show("paga_compare", show=show, save=save)
-    if show is False:
-        return axs
+    if show:
+        return None
+    return axs
 
 
 def _compute_pos(
     adjacency_solid,
+    *,
     layout=None,
     random_state=0,
     init_pos=None,
@@ -282,8 +305,28 @@ def _compute_pos(
     return pos_array
 
 
+@old_positionals(
+    "threshold",
+    "color",
+    "layout",
+    "layout_kwds",
+    "init_pos",
+    "root",
+    "labels",
+    "single_component",
+    "solid_edges",
+    "dashed_edges",
+    "transitions",
+    "fontsize",
+    "fontweight",
+    "fontoutline",
+    "text_kwds",
+    "node_size_scale",
+    # 17 positionals are enough for backwards compat
+)
 def paga(
     adata: AnnData,
+    *,
     threshold: float | None = None,
     color: str | Mapping[str | int, Mapping[Any, float]] | None = None,
     layout: _IGraphLayout | None = None,
@@ -308,9 +351,9 @@ def paga(
     title: str | None = None,
     left_margin: float = 0.01,
     random_state: int | None = 0,
-    pos: np.ndarray | str | Path | None = None,
+    pos: np.ndarray | Path | str | None = None,
     normalize_to_color: bool = False,
-    cmap: str | Colormap = None,
+    cmap: str | Colormap | None = None,
     cax: Axes | None = None,
     colorbar=None,  # TODO: this seems to be unused
     cb_kwds: Mapping[str, Any] = MappingProxyType({}),
@@ -570,9 +613,7 @@ def paga(
 
     if plot:
         axs, panel_pos, draw_region_width, figure_width = _utils.setup_axes(
-            ax=ax,
-            panels=colors,
-            colorbars=colorbars,
+            ax, panels=colors, colorbars=colorbars
         )
 
         if len(colors) == 1 and not isinstance(axs, list):
@@ -634,17 +675,22 @@ def paga(
     if add_pos:
         adata.uns["paga"]["pos"] = pos
         logg.hint("added 'pos', the PAGA positions (adata.uns['paga'])")
-    if plot:
-        _utils.savefig_or_show("paga", show=show, save=save)
-        if len(colors) == 1 and isinstance(axs, list):
-            axs = axs[0]
-        if show is False:
-            return axs
+
+    if not plot:
+        return None
+    _utils.savefig_or_show("paga", show=show, save=save)
+    if len(colors) == 1 and isinstance(axs, list):
+        axs = axs[0]
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return axs
 
 
 def _paga_graph(
     adata,
     ax,
+    *,
     solid_edges=None,
     dashed_edges=None,
     adjacency_solid=None,
@@ -988,10 +1034,36 @@ def _paga_graph(
     return sct
 
 
+@old_positionals(
+    "use_raw",
+    "annotations",
+    "color_map",
+    "color_maps_annotations",
+    "palette_groups",
+    "n_avg",
+    "groups_key",
+    "xlim",
+    "title",
+    "left_margin",
+    "ytick_fontsize",
+    "title_fontsize",
+    "show_node_names",
+    "show_yticks",
+    "show_colorbar",
+    "legend_fontsize",
+    "legend_fontweight",
+    "normalize_to_zero_one",
+    "as_heatmap",
+    "return_data",
+    "show",
+    "save",
+    "ax",
+)
 def paga_path(
     adata: AnnData,
     nodes: Sequence[str | int],
     keys: Sequence[str],
+    *,
     use_raw: bool = True,
     annotations: Sequence[str] = ("dpt_pseudotime",),
     color_map: str | Colormap | None = None,
@@ -1017,7 +1089,7 @@ def paga_path(
     show: bool | None = None,
     save: bool | str | None = None,
     ax: Axes | None = None,
-) -> Axes | None:
+) -> tuple[Axes, pd.DataFrame] | Axes | pd.DataFrame | None:
     """\
     Gene expression and annotation changes along paths in the abstracted graph.
 
@@ -1301,20 +1373,21 @@ def paga_path(
         df["groups"] = moving_average(groups)  # groups is without moving average, yet
         if "dpt_pseudotime" in anno_dict:
             df["distance"] = anno_dict["dpt_pseudotime"].T
-        return ax, df if ax_was_none and not show else df
-    else:
-        return ax if ax_was_none and not show else None
+    if not ax_was_none or show:
+        return df if return_data else None
+    return (ax, df) if return_data else ax
 
 
 def paga_adjacency(
-    adata,
-    adjacency="connectivities",
-    adjacency_tree="connectivities_tree",
-    as_heatmap=True,
-    color_map=None,
-    show=None,
-    save=None,
-):
+    adata: AnnData,
+    *,
+    adjacency: str = "connectivities",
+    adjacency_tree: str = "connectivities_tree",
+    as_heatmap: bool = True,
+    color_map: str | Colormap | None = None,
+    show: bool | None = None,
+    save: bool | str | None = None,
+) -> None:
     """Connectivity of paga groups."""
     connectivity = adata.uns[adjacency].toarray()
     connectivity_select = adata.uns[adjacency_tree]

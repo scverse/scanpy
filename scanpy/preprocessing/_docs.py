@@ -1,5 +1,5 @@
-"""Shared docstrings for preprocessing function parameters.
-"""
+"""Shared docstrings for preprocessing function parameters."""
+
 from __future__ import annotations
 
 doc_adata_basic = """\
@@ -15,8 +15,8 @@ use_raw
     If True, use `adata.raw.X` for expression values instead of `adata.X`.\
 """
 
-doc_mask_hvg = """\
-mask
+doc_mask_var_hvg = """\
+mask_var
     To run only on a certain set of genes given by a boolean array
     or a string referring to an array in :attr:`~anndata.AnnData.var`.
     By default, uses `.var['highly_variable']` if available, else everything.
@@ -26,7 +26,7 @@ use_highly_variable
     By default uses them if they have been determined beforehand.
 
     .. deprecated:: 1.10.0
-       Use `mask` instead
+       Use `mask_var` instead
 """
 
 doc_obs_qc_args = """\
@@ -34,9 +34,12 @@ qc_vars
     Keys for boolean columns of `.var` which identify variables you could
     want to control for (e.g. "ERCC" or "mito").
 percent_top
-    Which proportions of top genes to cover. If empty or `None` don't
-    calculate. Values are considered 1-indexed, `percent_top=[50]` finds
-    cumulative proportion to the 50th most expressed gene.\
+    List of ranks (where genes are ranked by expression) at which the cumulative
+    proportion of expression will be reported as a percentage. This can be used to
+    assess library complexity. Ranks are considered 1-indexed, and if empty or None
+    don't calculate.
+
+    E.g. `percent_top=[50]` finds cumulative proportion to the 50th most expressed gene.
 """
 
 doc_qc_metric_naming = """\
@@ -57,7 +60,7 @@ Observation level metrics include:
     E.g. "pct_counts_in_top_50_genes". Cumulative percentage of counts
     for 50 most expressed genes in a cell.
 `total_{expr_type}_{qc_var}` – for `qc_var` in `qc_vars`
-    E.g. "total_counts_mito". Total number of counts for variabes in
+    E.g. "total_counts_mito". Total number of counts for variables in
     `qc_vars`.
 `pct_{expr_type}_{qc_var}` – for `qc_var` in `qc_vars`
     E.g. "pct_counts_mito". Proportion of total counts for a cell which

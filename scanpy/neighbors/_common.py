@@ -16,9 +16,8 @@ def _has_self_column(
     indices: NDArray[np.int32 | np.int64],
     distances: NDArray[np.float32 | np.float64],
 ) -> bool:
-    return (distances[:, 0] == 0.0).all() and (
-        indices[:, 0] == np.arange(indices.shape[0])
-    ).all()
+    # some algorithms have some messed up reordering.
+    return (indices[:, 0] == np.arange(indices.shape[0])).any()
 
 
 def _remove_self_column(

@@ -10,6 +10,7 @@ import pandas as pd
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
@@ -20,7 +21,11 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
+@old_positionals(
+    "n_variables", "n_centers", "cluster_std", "n_observations", "random_state"
+)
 def blobs(
+    *,
     n_variables: int = 11,
     n_centers: int = 5,
     cluster_std: float = 1.0,
@@ -192,7 +197,7 @@ def paul15() -> ad.AnnData:
     # names reflecting the cell type identifications from the paper
     cell_type = 6 * ["Ery"]
     cell_type += "MEP Mk GMP GMP DC Baso Baso Mo Mo Neu Neu Eos Lymph".split()
-    adata.obs["paul15_clusters"] = [f"{i}{cell_type[i-1]}" for i in clusters]
+    adata.obs["paul15_clusters"] = [f"{i}{cell_type[i - 1]}" for i in clusters]
     # make string annotations categorical (optional)
     _utils.sanitize_anndata(adata)
     # just keep the first of the two equivalent names per gene

@@ -11,6 +11,8 @@ import scipy
 from scipy.sparse import csr_matrix, issparse
 from sklearn.utils import check_random_state
 
+from .._compat import old_positionals
+
 if TYPE_CHECKING:
     from anndata import AnnData
     from igraph import Graph
@@ -102,6 +104,7 @@ def neighbors(
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
+        See :doc:`tutorials:knn-transformers` for more details.
         Also accepts the following known options:
 
         `None` (the default)
@@ -160,6 +163,10 @@ def neighbors(
     >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='manhattan', algorithm='kd_tree')
     >>> sc.pp.neighbors(adata, transformer=transformer)
     >>> # now you can e.g. access the index: `transformer._tree`
+
+    See also
+    --------
+    :doc:`tutorials:knn-transformers`
     """
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata
@@ -276,6 +283,7 @@ class OnFlySymMatrix:
         self,
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
+        *,
         DC_start: int = 0,
         DC_end: int = -1,
         rows: MutableMapping[Any, np.ndarray] | None = None,
@@ -342,9 +350,11 @@ class Neighbors:
         Where to look in `.uns` and `.obsp` for neighbors data
     """
 
+    @old_positionals("n_dcs", "neighbors_key")
     def __init__(
         self,
         adata: AnnData,
+        *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
     ):
@@ -435,7 +445,7 @@ class Neighbors:
 
         Is conjugate to the symmetrized transition matrix via::
 
-            self.transitions = self.Z *  self.transitions_sym / self.Z
+            self.transitions = self.Z * self.transitions_sym / self.Z
 
         where ``self.Z`` is the diagonal matrix storing the normalization of the
         underlying kernel matrix.
@@ -456,7 +466,7 @@ class Neighbors:
 
         Is conjugate to the transition matrix via::
 
-            self.transitions_sym = self.Z /  self.transitions * self.Z
+            self.transitions_sym = self.Z / self.transitions * self.Z
 
         where ``self.Z`` is the diagonal matrix storing the normalization of the
         underlying kernel matrix.
@@ -495,7 +505,7 @@ class Neighbors:
         *,
         use_rep: str | None = None,
         knn: bool = True,
-        method: _Method = "umap",
+        method: _Method | None = "umap",
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
         metric: _Metric | _MetricFn = "euclidean",
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
@@ -512,10 +522,14 @@ class Neighbors:
         {use_rep}
         knn
             Restrict result to `n_neighbors` nearest neighbors.
+        method
+            See :func:`scanpy.pp.neighbors`.
+            If `None`, skip calculating connectivities.
 
         Returns
         -------
-        Writes sparse graph attributes `.distances` and `.connectivities`.
+        Writes sparse graph attributes `.distances` and,
+        if `method` is not `None`, `.connectivities`.
         """
         from ..tools._utils import _choose_representation
 
@@ -566,8 +580,8 @@ class Neighbors:
                     self._rp_forest = _make_forest_dict(index)
                 except Exception:  # TODO catch the correct exception
                     pass
-
         start_connect = logg.debug("computed neighbors", time=start_neighbors)
+
         if method == "umap":
             self._connectivities = _connectivity.umap(
                 knn_indices,
@@ -579,25 +593,26 @@ class Neighbors:
             self._connectivities = _connectivity.gauss(
                 self._distances, self.n_neighbors, knn=self.knn
             )
-        else:
+        elif method is not None:
             msg = f"{method!r} should have been coerced in _handle_transform_args"
             raise AssertionError(msg)
-        logg.debug("computed connectivities", time=start_connect)
         self._number_connected_components = 1
         if issparse(self._connectivities):
             from scipy.sparse.csgraph import connected_components
 
             self._connected_components = connected_components(self._connectivities)
             self._number_connected_components = self._connected_components[0]
+        if method is not None:
+            logg.debug("computed connectivities", time=start_connect)
 
     def _handle_transformer(
         self,
-        method: _Method | Literal["gauss"],
+        method: _Method | Literal["gauss"] | None,
         transformer: KnnTransformerLike | _KnownTransformer | None,
         *,
         knn: bool,
         kwds: KwdsForTransformer,
-    ) -> tuple[_Method, KnnTransformerLike, bool]:
+    ) -> tuple[_Method | None, KnnTransformerLike, bool]:
         """Return effective `method` and transformer.
 
         `method` will be coerced to `'gauss'` or `'umap'`.
@@ -615,8 +630,8 @@ class Neighbors:
         use_dense_distances = (
             kwds["metric"] == "euclidean" and self._adata.n_obs < 8192
         ) or not knn
-        shortcut = transformer is None and (
-            use_dense_distances or self._adata.n_obs < 4096
+        shortcut = transformer == "sklearn" or (
+            transformer is None and (use_dense_distances or self._adata.n_obs < 4096)
         )
 
         # Coerce `method` to 'gauss' or 'umap'
@@ -626,12 +641,12 @@ class Neighbors:
                 raise ValueError(msg)
             method = "umap"
             transformer = "rapids"
-        elif method not in (methods := set(get_args(_Method))):
+        elif method not in (methods := set(get_args(_Method))) and method is not None:
             msg = f"`method` needs to be one of {methods}."
             raise ValueError(msg)
 
         # Validate `knn`
-        conn_method = "gauss" if method == "gauss" else "umap"
+        conn_method = method if method in {"gauss", None} else "umap"
         if not knn and not (conn_method == "gauss" and transformer is None):
             # “knn=False” seems to be only intended for method “gauss”
             msg = f"`method = {method!r} only with `knn = True`."
@@ -641,11 +656,14 @@ class Neighbors:
         if shortcut:
             from sklearn.neighbors import KNeighborsTransformer
 
-            assert transformer is None
+            assert transformer in {None, "sklearn"}
+            n_neighbors = self._adata.n_obs - 1
+            if knn:  # only obey n_neighbors arg if knn set
+                n_neighbors = min(n_neighbors, kwds["n_neighbors"])
             transformer = KNeighborsTransformer(
                 algorithm="brute",
                 n_jobs=settings.n_jobs,
-                n_neighbors=self._adata.n_obs - 1,  # ignore n_neighbors
+                n_neighbors=n_neighbors,
                 metric=kwds["metric"],
                 metric_params=dict(kwds["metric_params"]),  # needs dict
                 # no random_state
@@ -746,14 +764,14 @@ class Neighbors:
         -------
         Writes the following attributes.
 
-        eigen_values : numpy.ndarray
+        eigen_values : :class:`~numpy.ndarray`
             Eigenvalues of transition matrix.
-        eigen_basis : numpy.ndarray
-             Matrix of eigenvectors (stored in columns).  `.eigen_basis` is
-             projection of data matrix on right eigenvectors, that is, the
-             projection on the diffusion components.  these are simply the
-             components of the right eigenvectors and can directly be used for
-             plotting.
+        eigen_basis : :class:`~numpy.ndarray`
+            Matrix of eigenvectors (stored in columns).  `.eigen_basis` is
+            projection of data matrix on right eigenvectors, that is, the
+            projection on the diffusion components.  these are simply the
+            components of the right eigenvectors and can directly be used for
+            plotting.
         """
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
@@ -845,7 +863,7 @@ class Neighbors:
         self.pseudotime = self.distances_dpt[self.iroot].copy()
         self.pseudotime /= np.max(self.pseudotime[self.pseudotime < np.inf])
 
-    def _set_iroot_via_xroot(self, xroot):
+    def _set_iroot_via_xroot(self, xroot: np.ndarray):
         """Determine the index of the root cell.
 
         Given an expression vector, find the observation index that is closest
@@ -853,7 +871,7 @@ class Neighbors:
 
         Parameters
         ----------
-        xroot : np.ndarray
+        xroot
             Vector that marks the root cell, the vector storing the initial
             condition, only relevant for computing pseudotime.
         """

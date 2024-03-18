@@ -1,16 +1,20 @@
 """This module contains helper functions for accessing data."""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from packaging.version import Version
 from scipy.sparse import spmatrix
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from anndata._core.sparse_dataset import BaseCompressedSparseDataset
+    from anndata._core.views import ArrayView
     from numpy.typing import NDArray
 
 # --------------------------------------------------------------------------------
@@ -21,7 +25,7 @@ if TYPE_CHECKING:
 # TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
-    group: str | Iterable[str],
+    group: str | Iterable[str] | None,
     *,
     key: str = "rank_genes_groups",
     pval_cutoff: float | None = None,
@@ -72,7 +76,10 @@ def rank_genes_groups_df(
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
-    d = d.stack(level=1).reset_index()
+    if Version(pd.__version__) >= Version("2.1"):
+        d = d.stack(level=1, future_stack=True).reset_index()
+    else:
+        d = d.stack(level=1).reset_index()
     d["group"] = pd.Categorical(d["group"], categories=group)
     d = d.sort_values(["group", "level_0"]).drop(columns="level_0")
 
@@ -106,6 +113,7 @@ def rank_genes_groups_df(
 def _check_indices(
     dim_df: pd.DataFrame,
     alt_index: pd.Index,
+    *,
     dim: Literal["obs", "var"],
     keys: list[str],
     alias_index: pd.Index | None = None,
@@ -217,8 +225,8 @@ def obs_df(
     keys: Iterable[str] = (),
     obsm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str = None,
-    gene_symbols: str = None,
+    layer: str | None = None,
+    gene_symbols: str | None = None,
     use_raw: bool = False,
 ) -> pd.DataFrame:
     """\
@@ -257,7 +265,7 @@ def obs_df(
     ... )
     >>> plotdf.columns
     Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
-    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")
+    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")  # doctest: +SKIP
     <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 
     Calculating mean expression for marker genes by cluster:
@@ -268,7 +276,7 @@ def obs_df(
     ...     pbmc,
     ...     keys=["louvain", *marker_genes]
     ... )
-    >>> grouped = genedf.groupby("louvain")
+    >>> grouped = genedf.groupby("louvain", observed=True)
     >>> mean, var = grouped.mean(), grouped.var()
     """
     if use_raw:
@@ -286,8 +294,8 @@ def obs_df(
     obs_cols, var_idx_keys, var_symbols = _check_indices(
         adata.obs,
         var.index,
-        "obs",
-        keys,
+        dim="obs",
+        keys=keys,
         alias_index=alias_index,
         use_raw=use_raw,
     )
@@ -335,7 +343,7 @@ def var_df(
     keys: Iterable[str] = (),
     varm_keys: Iterable[tuple[str, int]] = (),
     *,
-    layer: str = None,
+    layer: str | None = None,
 ) -> pd.DataFrame:
     """\
     Return values for observations in adata.
@@ -357,7 +365,9 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
-    var_cols, obs_idx_keys, _ = _check_indices(adata.var, adata.obs_names, "var", keys)
+    var_cols, obs_idx_keys, _ = _check_indices(
+        adata.var, adata.obs_names, dim="var", keys=keys
+    )
 
     # initialize df
     df = pd.DataFrame(index=adata.var.index)
@@ -395,7 +405,21 @@ def var_df(
     return df
 
 
-def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
+def _get_obs_rep(
+    adata: AnnData,
+    *,
+    use_raw: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
+) -> (
+    np.ndarray
+    | spmatrix
+    | pd.DataFrame
+    | ArrayView
+    | BaseCompressedSparseDataset
+    | None
+):
     """
     Choose array aligned with obs annotation.
     """
@@ -426,7 +450,15 @@ def _get_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
         )
 
 
-def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None):
+def _set_obs_rep(
+    adata: AnnData,
+    val: Any,
+    *,
+    use_raw: bool = False,
+    layer: str | None = None,
+    obsm: str | None = None,
+    obsp: str | None = None,
+):
     """
     Set value for observation rep.
     """
@@ -455,7 +487,7 @@ def _set_obs_rep(adata, val, *, use_raw=False, layer=None, obsm=None, obsp=None)
 
 def _check_mask(
     data: AnnData | np.ndarray,
-    mask: str | NDArray[np.bool_],
+    mask: NDArray[np.bool_] | str,
     dim: Literal["obs", "var"],
 ) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
     """

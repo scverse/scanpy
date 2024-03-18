@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 from anndata.tests.helpers import assert_equal
 from sklearn.metrics import silhouette_score
 
@@ -59,8 +60,9 @@ def test_combat_obs_names():
         {"batch": pd.Categorical(np.random.randint(0, 2, 200))},
         index=np.repeat(np.arange(100), 2).astype(str),  # Non-unique index
     )
-    a = sc.AnnData(X, obs)
-    b = a.copy()
+    with pytest.warns(UserWarning, match="Observation names are not unique"):
+        a = sc.AnnData(X, obs)
+        b = a.copy()
     b.obs_names_make_unique()
 
     sc.pp.combat(a, "batch")

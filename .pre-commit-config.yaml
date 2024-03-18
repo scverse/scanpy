@@ -1,10 +1,17 @@
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.5
+    rev: v0.3.2
     hooks:
     -   id: ruff
+        types_or: [python, pyi, jupyter]
         args: ["--fix"]
     -   id: ruff-format
+        types_or: [python, pyi, jupyter]
+    # The following can be removed once PLR0917 is out of preview
+    -   name: ruff preview rules
+        id: ruff
+        types_or: [python, pyi, jupyter]
+        args: ["--preview", "--select=PLR0917"]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
@@ -19,7 +26,7 @@ repos:
     -   id: check-merge-conflict
     -   id: detect-private-key
     -   id: no-commit-to-branch
-        args: ["--branch=master", "--branch=main"]
+        args: ["--branch=main"]
 
 ci:
     autofix_prs: false

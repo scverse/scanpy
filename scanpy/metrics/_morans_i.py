@@ -1,4 +1,5 @@
 """Moran's I global spatial autocorrelation."""
+
 from __future__ import annotations
 
 from functools import singledispatch
@@ -126,7 +127,7 @@ def morans_i(
 
 
 @njit(cache=True)
-def _morans_i_vec_W_sparse(
+def _morans_i_vec_W_sparse(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,
     g_indptr: np.ndarray,
@@ -191,7 +192,7 @@ def _morans_i_mtx(
 
 
 @njit(cache=True, parallel=True)
-def _morans_i_mtx_csr(
+def _morans_i_mtx_csr(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,
     g_indptr: np.ndarray,

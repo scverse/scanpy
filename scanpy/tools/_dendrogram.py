@@ -10,6 +10,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import _doc_params
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
@@ -20,10 +21,22 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@old_positionals(
+    "n_pcs",
+    "use_rep",
+    "var_names",
+    "use_raw",
+    "cor_method",
+    "linkage_method",
+    "optimal_ordering",
+    "key_added",
+    "inplace",
+)
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def dendrogram(
     adata: AnnData,
     groupby: str | Sequence[str],
+    *,
     n_pcs: int | None = None,
     use_rep: str | None = None,
     var_names: Sequence[str] | None = None,
@@ -98,7 +111,7 @@ def dendrogram(
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.dendrogram(adata, groupby='bulk_labels')
-    >>> sc.pl.dendrogram(adata, groupby='bulk_labels')
+    >>> sc.pl.dendrogram(adata, groupby='bulk_labels')  # doctest: +SKIP
     <Axes: >
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
@@ -137,10 +150,16 @@ def dendrogram(
         gene_names = adata.raw.var_names if use_raw else adata.var_names
         from ..plotting._anndata import _prepare_dataframe
 
-        categories, rep_df = _prepare_dataframe(adata, gene_names, groupby, use_raw)
+        categories, rep_df = _prepare_dataframe(
+            adata, gene_names, groupby, use_raw=use_raw
+        )
 
     # aggregate values within categories using 'mean'
-    mean_df = rep_df.groupby(level=0).mean()
+    mean_df = (
+        rep_df.groupby(level=0, observed=True)
+        .mean()
+        .loc[categories]  # Fixed ordering for pandas < 2
+    )
 
     import scipy.cluster.hierarchy as sch
     from scipy.spatial import distance

@@ -1,9 +1,11 @@
 """
 Tests to make sure the example datasets load.
 """
+
 from __future__ import annotations
 
 import subprocess
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -64,7 +66,8 @@ def test_ebi_expression_atlas(tmp_dataset_dir):
 
 
 def test_krumsiek11(tmp_dataset_dir):
-    adata = sc.datasets.krumsiek11()
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        adata = sc.datasets.krumsiek11()
     assert adata.shape == (640, 11)
     assert all(
         np.unique(adata.obs["cell_type"])
@@ -80,13 +83,14 @@ def test_blobs():
 
 
 def test_toggleswitch():
-    sc.datasets.toggleswitch()
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        sc.datasets.toggleswitch()
 
 
 def test_pbmc68k_reduced():
-    with pytest.warns(None) as records:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         sc.datasets.pbmc68k_reduced()
-    assert len(records) == 0  # Test that loading a dataset does not warn
 
 
 @pytest.mark.internet

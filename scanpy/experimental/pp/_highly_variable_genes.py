@@ -131,6 +131,7 @@ def _calculate_res_dense(
 
 def _highly_variable_pearson_residuals(
     adata: AnnData,
+    *,
     theta: float = 100,
     clip: float | None = None,
     n_top_genes: int = 1000,
@@ -198,7 +199,7 @@ def _highly_variable_pearson_residuals(
 
         sums_genes = np.array(X_batch.sum(axis=0)).ravel()
         sums_cells = np.array(X_batch.sum(axis=1)).ravel()
-        sum_total = np.sum(sums_genes).ravel()
+        sum_total = np.sum(sums_genes)
 
         residual_gene_var = calculate_res(
             sums_genes=sums_genes,
@@ -349,21 +350,21 @@ def highly_variable_genes(
     If `inplace=True`, `adata.var` is updated with the following fields. Otherwise,
     returns the same fields as :class:`~pandas.DataFrame`.
 
-    highly_variable : bool
+    highly_variable : :class:`bool`
         boolean indicator of highly-variable genes.
-    means : float
+    means : :class:`float`
         means per gene.
-    variances : float
+    variances : :class:`float`
         variance per gene.
-    residual_variances : float
+    residual_variances : :class:`float`
         For `flavor='pearson_residuals'`, residual variance per gene. Averaged in the
         case of multiple batches.
-    highly_variable_rank : float
+    highly_variable_rank : :class:`float`
         For `flavor='pearson_residuals'`, rank of the gene according to residual.
         variance, median rank in the case of multiple batches.
-    highly_variable_nbatches : int
+    highly_variable_nbatches : :class:`int`
         If `batch_key` given, denotes in how many batches genes are detected as HVG.
-    highly_variable_intersection : bool
+    highly_variable_intersection : :class:`bool`
         If `batch_key` given, denotes the genes that are highly variable in all batches.
 
     Notes

@@ -8,6 +8,7 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from ..neighbors import Neighbors
 
 if TYPE_CHECKING:
@@ -16,14 +17,16 @@ if TYPE_CHECKING:
 _AVAIL_MODELS = {"v1.0", "v1.2"}
 
 
+@old_positionals("use_rna_velocity", "model", "neighbors_key", "copy")
 def paga(
     adata: AnnData,
     groups: str | None = None,
+    *,
     use_rna_velocity: bool = False,
     model: Literal["v1.2", "v1.0"] = "v1.2",
     neighbors_key: str | None = None,
     copy: bool = False,
-):
+) -> AnnData | None:
     """\
     Mapping out the coarse-grained connectivity structures of complex manifolds [Wolf19]_.
 
@@ -405,12 +408,12 @@ def paga_degrees(adata: AnnData) -> list[int]:
     return degrees
 
 
-def paga_expression_entropies(adata) -> list[float]:
+def paga_expression_entropies(adata: AnnData) -> list[float]:
     """Compute the median expression entropy for each node-group.
 
     Parameters
     ----------
-    adata : AnnData
+    adata
         Annotated data matrix.
 
     Returns

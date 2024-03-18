@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
+from .._compat import old_positionals
+from .._settings import settings
 from .._utils import _doc_params
 from ..preprocessing._normalization import normalize_total
 from . import _utils
@@ -16,10 +18,12 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
 
 
+@old_positionals("show", "save", "ax", "gene_symbols", "log")
 @_doc_params(show_save_ax=doc_show_save_ax)
 def highest_expr_genes(
     adata: AnnData,
     n_top: int = 30,
+    *,
     show: bool | None = None,
     save: str | bool | None = None,
     ax: Axes | None = None,
@@ -97,6 +101,8 @@ def highest_expr_genes(
     ax.set_xlabel("% of total counts")
     if log:
         ax.set_xscale("log")
+    show = settings.autoshow if show is None else show
     _utils.savefig_or_show("highest_expr_genes", show=show, save=save)
-    if show is False:
-        return ax
+    if show:
+        return None
+    return ax

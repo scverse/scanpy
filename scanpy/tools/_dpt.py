@@ -8,6 +8,7 @@ import scipy as sp
 from natsort import natsorted
 
 from .. import logging as logg
+from .._compat import old_positionals
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 if TYPE_CHECKING:
@@ -34,9 +35,13 @@ def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
     )
 
 
+@old_positionals(
+    "n_branchings", "min_group_size", "allow_kendall_tau_shift", "neighbors_key", "copy"
+)
 def dpt(
     adata: AnnData,
     n_dcs: int = 10,
+    *,
     n_branchings: int = 0,
     min_group_size: float = 0.01,
     allow_kendall_tau_shift: bool = True,
@@ -152,9 +157,9 @@ def dpt(
         logg.info("    this uses a hierarchical implementation")
     if dpt.iroot is not None:
         dpt._set_pseudotime()  # pseudotimes are distances from root point
-        adata.uns[
-            "iroot"
-        ] = dpt.iroot  # update iroot, might have changed when subsampling, for example
+        adata.uns["iroot"] = (
+            dpt.iroot
+        )  # update iroot, might have changed when subsampling, for example
         adata.obs["dpt_pseudotime"] = dpt.pseudotime
     # detect branchings and partition the data into segments
     if n_branchings > 0:
@@ -201,12 +206,13 @@ class DPT(Neighbors):
 
     def __init__(
         self,
-        adata,
-        n_dcs=None,
-        min_group_size=0.01,
-        n_branchings=0,
-        allow_kendall_tau_shift=False,
-        neighbors_key=None,
+        adata: AnnData,
+        *,
+        n_dcs: int | None = None,
+        min_group_size: float = 0.01,
+        n_branchings: int = 0,
+        allow_kendall_tau_shift: bool = False,
+        neighbors_key: str | None = None,
     ):
         super().__init__(adata, n_dcs=n_dcs, neighbors_key=neighbors_key)
         self.flavor = "haghverdi16"
@@ -228,13 +234,13 @@ class DPT(Neighbors):
 
         Writes
         ------
-        segs : np.ndarray
+        segs : :class:`~numpy.ndarray`
             Array of dimension (number of segments) × (number of data
             points). Each row stores a mask array that defines a segment.
-        segs_tips : np.ndarray
+        segs_tips : :class:`~numpy.ndarray`
             Array of dimension (number of segments) × 2. Each row stores the
             indices of the two tip points of each segment.
-        segs_names : np.ndarray
+        segs_names : :class:`~numpy.ndarray`
             Array of dimension (number of data points). Stores an integer label
             for each segment.
         """
@@ -249,9 +255,9 @@ class DPT(Neighbors):
 
         Writes Attributes
         -----------------
-        segs : np.ndarray
+        segs : :class:`~numpy.ndarray`
             List of integer index arrays.
-        segs_tips : np.ndarray
+        segs_tips : :class:`~numpy.ndarray`
             List of indices of the tips of segments.
         """
         logg.debug(
@@ -316,13 +322,13 @@ class DPT(Neighbors):
             )  # [third start end]
             # detect branching and update segs and segs_tips
             self.detect_branching(
-                segs,
-                segs_tips,
-                segs_connects,
-                segs_undecided,
-                segs_adjacency,
-                iseg,
-                tips3,
+                segs=segs,
+                segs_tips=segs_tips,
+                segs_connects=segs_connects,
+                segs_undecided=segs_undecided,
+                segs_adjacency=segs_adjacency,
+                iseg=iseg,
+                tips3=tips3,
             )
         # store as class members
         self.segs = segs
@@ -495,10 +501,10 @@ class DPT(Neighbors):
 
         Writes
         ------
-        indices : np.ndarray
+        indices : :class:`~numpy.ndarray`
             Index array of shape n, which stores an ordering of the data points
             with respect to increasing segment index and increasing pseudotime.
-        changepoints : np.ndarray
+        changepoints : :class:`~numpy.ndarray`
             Index array of shape len(ssegs)-1, which stores the indices of
             points where the segment index changes, with respect to the ordering
             of indices.
@@ -531,6 +537,7 @@ class DPT(Neighbors):
 
     def detect_branching(
         self,
+        *,
         segs: Sequence[np.ndarray],
         segs_tips: Sequence[np.ndarray],
         segs_connects,
@@ -1009,7 +1016,7 @@ class DPT(Neighbors):
             ibranch = imax + 1
         return idcs[:ibranch]
 
-    def kendall_tau_split(self, a, b) -> int:
+    def kendall_tau_split(self, a: np.ndarray, b: np.ndarray) -> int:
         """Return splitting index that maximizes correlation in the sequences.
 
         Compute difference in Kendall tau for all splitted sequences.
@@ -1023,7 +1030,8 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        a, b : np.ndarray
+        a
+        b
             One dimensional sequences.
 
         Returns

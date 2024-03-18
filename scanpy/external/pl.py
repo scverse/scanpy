@@ -4,11 +4,13 @@ from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+from anndata import AnnData  # noqa: TCH002
 from matplotlib.axes import Axes  # noqa: TCH002
+from sklearn.utils import deprecated
 
+from .._compat import old_positionals
 from .._utils import _doc_params
-from ..plotting import _utils, embedding
+from ..plotting import _scrublet, _utils, embedding
 from ..plotting._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
@@ -22,7 +24,14 @@ from .tl._wishbone import _anndata_to_wishbone
 if TYPE_CHECKING:
     from collections.abc import Collection
 
-    from anndata import AnnData
+
+__all__ = [
+    "phate",
+    "trimap",
+    "harmony_timeseries",
+    "sam",
+    "wishbone_marker_trajectory",
+]
 
 
 @doctest_needs("phate")
@@ -33,7 +42,7 @@ if TYPE_CHECKING:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def phate(adata, **kwargs) -> list[Axes] | None:
+def phate(adata: AnnData, **kwargs) -> list[Axes] | None:
     """\
     Scatter plot in PHATE basis.
 
@@ -83,7 +92,7 @@ def phate(adata, **kwargs) -> list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def trimap(adata, **kwargs) -> Axes | list[Axes] | None:
+def trimap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     """\
     Scatter plot in TriMap basis.
 
@@ -109,7 +118,7 @@ def trimap(adata, **kwargs) -> Axes | list[Axes] | None:
     show_save_ax=doc_show_save_ax,
 )
 def harmony_timeseries(
-    adata, *, show: bool = True, return_fig: bool = False, **kwargs
+    adata: AnnData, *, show: bool = True, return_fig: bool = False, **kwargs
 ) -> Axes | list[Axes] | None:
     """\
     Scatter plot in Harmony force-directed layout basis.
@@ -145,13 +154,16 @@ def harmony_timeseries(
         p.set_axis_off()
     if return_fig:
         return fig
-    elif not show:
-        return axes
+    if show:
+        return None
+    return axes
 
 
+@old_positionals("c", "cmap", "linewidth", "edgecolor", "axes", "colorbar", "s")
 def sam(
     adata: AnnData,
     projection: str | np.ndarray = "X_umap",
+    *,
     c: str | np.ndarray | None = None,
     cmap: str = "Spectral_r",
     linewidth: float = 0.0,
@@ -246,10 +258,22 @@ def sam(
     return axes
 
 
+@old_positionals(
+    "no_bins",
+    "smoothing_factor",
+    "min_delta",
+    "show_variance",
+    "figsize",
+    "return_fig",
+    "show",
+    "save",
+    "ax",
+)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def wishbone_marker_trajectory(
     adata: AnnData,
     markers: Collection[str],
+    *,
     no_bins: int = 150,
     smoothing_factor: int = 1,
     min_delta: float = 0.1,
@@ -329,140 +353,11 @@ def wishbone_marker_trajectory(
 
     if return_fig:
         return fig
-    elif not show:
-        return ax
+    if show:
+        return None
+    return ax
 
 
-def scrublet_score_distribution(
-    adata,
-    scale_hist_obs: str = "log",
-    scale_hist_sim: str = "linear",
-    figsize: tuple[float, float] | None = (8, 3),
-    return_fig: bool = False,
-    show: bool = True,
-    save: str | bool | None = None,
-):
-    """\
-    Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
-
-    The histogram for simulated doublets is useful for determining the correct doublet
-    score threshold.
-
-    Scrublet must have been run previously with the input object.
-
-    Parameters
-    ----------
-    adata
-        An annData object resulting from func:`~scanpy.external.scrublet`.
-    scale_hist_obs
-        Set y axis scale transformation in matplotlib for the plot of observed
-        transcriptomes (e.g. "linear", "log", "symlog", "logit")
-    scale_hist_sim
-        Set y axis scale transformation in matplotlib for the plot of simulated
-        doublets (e.g. "linear", "log", "symlog", "logit")
-    figsize
-        width, height
-    show
-         Show the plot, do not return axis.
-    save
-        If `True` or a `str`, save the figure.
-        A string is appended to the default filename.
-        Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
-
-    Returns
-    -------
-    If `return_fig` is True, a :class:`~matplotlib.figure.Figure`.
-    If `show==False` a list of :class:`~matplotlib.axes.Axes`.
-
-    See also
-    --------
-    :func:`~scanpy.external.pp.scrublet`: Main way of running Scrublet, runs
-        preprocessing, doublet simulation and calling.
-    :func:`~scanpy.external.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
-        simulation separately for advanced usage.
-    """
-
-    def _plot_scores(
-        ax: plt.Axes, scores: np.ndarray, scale: str, title: str, threshold=None
-    ):
-        ax.hist(
-            scores,
-            np.linspace(0, 1, 50),
-            color="gray",
-            linewidth=0,
-            density=True,
-        )
-        ax.set_yscale(scale)
-        yl = ax.get_ylim()
-        ax.set_ylim(yl)
-
-        if threshold is not None:
-            ax.plot(threshold * np.ones(2), yl, c="black", linewidth=1)
-
-        ax.set_title(title)
-        ax.set_xlabel("Doublet score")
-        ax.set_ylabel("Prob. density")
-
-    if "scrublet" not in adata.uns:
-        raise ValueError(
-            "Please run scrublet before trying to generate the scrublet plot."
-        )
-
-    # If batched_by is populated, then we know Scrublet was run over multiple batches
-
-    if "batched_by" in adata.uns["scrublet"]:
-        batched_by = adata.uns["scrublet"]["batched_by"]
-        batches = adata.obs[batched_by].astype("category", copy=False)
-        n_batches = len(batches.cat.categories)
-        figsize = (figsize[0], figsize[1] * n_batches)
-    else:
-        batches = pd.Series(
-            np.broadcast_to(0, adata.n_obs), dtype="category", index=adata.obs_names
-        )
-        n_batches = 1
-
-    fig, axs = plt.subplots(n_batches, 2, figsize=figsize)
-
-    for idx, (batch_key, sub_obs) in enumerate(adata.obs.groupby(batches)):
-        # We'll need multiple rows if Scrublet was run in multiple batches
-        if "batched_by" in adata.uns["scrublet"]:
-            threshold = adata.uns["scrublet"]["batches"][batch_key].get(
-                "threshold", None
-            )
-            doublet_scores_sim = adata.uns["scrublet"]["batches"][batch_key][
-                "doublet_scores_sim"
-            ]
-            axis_lab_suffix = " (%s)" % batch_key
-            obs_ax = axs[idx][0]
-            sim_ax = axs[idx][1]
-
-        else:
-            threshold = adata.uns["scrublet"].get("threshold", None)
-            doublet_scores_sim = adata.uns["scrublet"]["doublet_scores_sim"]
-            axis_lab_suffix = ""
-            obs_ax = axs[0]
-            sim_ax = axs[1]
-
-        # Make the plots
-        _plot_scores(
-            obs_ax,
-            sub_obs["doublet_score"],
-            scale=scale_hist_obs,
-            title=f"Observed transcriptomes {axis_lab_suffix}",
-            threshold=threshold,
-        )
-        _plot_scores(
-            sim_ax,
-            doublet_scores_sim,
-            scale=scale_hist_sim,
-            title=f"Simulated doublets {axis_lab_suffix}",
-            threshold=threshold,
-        )
-
-    fig.tight_layout()
-
-    _utils.savefig_or_show("scrublet_score_distribution", show=show, save=save)
-    if return_fig:
-        return fig
-    elif not show:
-        return axs
+scrublet_score_distribution = deprecated("Import from sc.pl instead")(
+    _scrublet.scrublet_score_distribution
+)

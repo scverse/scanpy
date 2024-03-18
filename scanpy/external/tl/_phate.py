@@ -1,11 +1,13 @@
 """\
 Embed high-dimensional data using PHATE
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
 from ... import logging as logg
+from ..._compat import old_positionals
 from ..._settings import settings
 from ...testing._doctests import doctest_needs
 
@@ -15,10 +17,26 @@ if TYPE_CHECKING:
     from ..._utils import AnyRandom
 
 
+@old_positionals(
+    "k",
+    "a",
+    "n_landmark",
+    "t",
+    "gamma",
+    "n_pca",
+    "knn_dist",
+    "mds_dist",
+    "mds",
+    "n_jobs",
+    "random_state",
+    "verbose",
+    "copy",
+)
 @doctest_needs("phate")
 def phate(
     adata: AnnData,
     n_components: int = 2,
+    *,
     k: int = 5,
     a: int = 15,
     n_landmark: int = 2000,

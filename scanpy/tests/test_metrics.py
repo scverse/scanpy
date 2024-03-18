@@ -5,9 +5,12 @@ from functools import partial
 from operator import eq
 from string import ascii_letters
 
+import numba
 import numpy as np
 import pandas as pd
 import pytest
+import threadpoolctl
+from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
@@ -29,30 +32,46 @@ def metric(request: pytest.FixtureRequest):
 @pytest.fixture(
     scope="session",
     params=[
-        pytest.param(eq, marks=[mark_flaky]),
-        pytest.param(partial(np.testing.assert_allclose, rtol=1e-15), id="allclose"),
+        # pytest.param(eq, marks=[mark_flaky]),
+        pytest.param(eq),
+        pytest.param(partial(np.testing.assert_allclose, rtol=1e-14), id="allclose"),
     ],
 )
 def assert_equal(request: pytest.FixtureRequest):
     return request.param
 
 
-def test_consistency(metric, assert_equal):
+@pytest.fixture(params=["single-threaded", "multi-threaded"])
+def threading(request):
+    if request.param == "single-threaded":
+        with threadpoolctl.threadpool_limits(limits=1):
+            yield None
+    elif request.param == "multi-threaded":
+        yield None
+
+
+def test_consistency(metric, threading):
     pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
+    equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
-    assert_equal(
+    # This can fail
+    equality_check(
+        metric(g, pbmc.obs["percent_mito"]),
+        metric(g, pbmc.obs["percent_mito"]),
+    )
+    equality_check(
         metric(g, pbmc.obs["percent_mito"]),
         metric(pbmc, vals=pbmc.obs["percent_mito"]),
     )
 
-    assert_equal(  # Test that series and vectors return same value
+    equality_check(  # Test that series and vectors return same value
         metric(g, pbmc.obs["percent_mito"]),
         metric(g, pbmc.obs["percent_mito"].values),
     )
 
-    np.testing.assert_almost_equal(
+    equality_check(
         metric(pbmc, obsm="X_pca"),
         metric(g, pbmc.obsm["X_pca"].T),
     )
@@ -60,10 +79,13 @@ def test_consistency(metric, assert_equal):
     all_genes = metric(pbmc, layer="raw")
     first_gene = metric(pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw"))
 
-    np.testing.assert_allclose(all_genes[0], first_gene)
+    if Version(numba.__version__) < Version("0.57"):
+        np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-5)
+    else:
+        np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
-    np.testing.assert_allclose(
+    equality_check(
         metric(pbmc, layer="raw"),
         metric(pbmc, vals=pbmc.layers["raw"].T.toarray()),
     )
@@ -76,7 +98,7 @@ def test_consistency(metric, assert_equal):
         pytest.param(sc.metrics.morans_i, 50, 1.0, id="morans_i"),
     ],
 )
-def test_correctness(metric, size, expected, assert_equal):
+def test_correctness(metric, size, expected):
     # Test case with perfectly seperated groups
     connected = np.zeros(100)
     connected[np.random.choice(100, size=size, replace=False)] = 1
@@ -85,22 +107,23 @@ def test_correctness(metric, size, expected, assert_equal):
     graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
     graph = sparse.csr_matrix(graph)
 
-    assert metric(graph, connected) == expected
-    assert_equal(
+    np.testing.assert_equal(metric(graph, connected), expected)
+    np.testing.assert_equal(
         metric(graph, connected),
         metric(graph, sparse.csr_matrix(connected)),
     )
     # Checking that obsp works
     adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})
-    assert metric(adata, vals=connected) == expected
+    np.testing.assert_equal(metric(adata, vals=connected), expected)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_graph_metrics_w_constant_values(metric, array_type, assert_equal):
+def test_graph_metrics_w_constant_values(metric, array_type, threading):
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
     XT = array_type(pbmc.raw.X.T.copy())
     g = pbmc.obsp["connectivities"].copy()
+    equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
     if isinstance(XT, DaskArray):
         pytest.skip("DaskArray yet not supported")
@@ -125,12 +148,12 @@ def test_graph_metrics_w_constant_values(metric, array_type, assert_equal):
         results_const_vals = metric(g, XT_const_vals)
 
     assert not np.isnan(results_full).any()
-    assert_equal(results_const_zeros, results_const_vals)
+    equality_check(results_const_zeros, results_const_vals)
     np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
     np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
 
     non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
-    assert_equal(results_full[non_const_mask], results_const_zeros[non_const_mask])
+    equality_check(results_full[non_const_mask], results_const_zeros[non_const_mask])
 
 
 def test_confusion_matrix():

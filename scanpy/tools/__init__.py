@@ -7,15 +7,18 @@ from ._diffmap import diffmap
 from ._dpt import dpt
 from ._draw_graph import draw_graph
 from ._embedding_density import embedding_density
-from ._ingest import Ingest, ingest
+from ._ingest import (
+    Ingest,  # noqa: F401
+    ingest,
+)
 from ._leiden import leiden
 from ._louvain import louvain
 from ._marker_gene_overlap import marker_gene_overlap
 from ._paga import (
     paga,
-    paga_compare_paths,
-    paga_degrees,
-    paga_expression_entropies,
+    paga_compare_paths,  # noqa: F401
+    paga_degrees,  # noqa: F401
+    paga_expression_entropies,  # noqa: F401
 )
 from ._rank_genes_groups import filter_rank_genes_groups, rank_genes_groups
 from ._score_genes import score_genes, score_genes_cell_cycle
@@ -38,15 +41,11 @@ __all__ = [
     "dpt",
     "draw_graph",
     "embedding_density",
-    "Ingest",
     "ingest",
     "leiden",
     "louvain",
     "marker_gene_overlap",
     "paga",
-    "paga_compare_paths",
-    "paga_degrees",
-    "paga_expression_entropies",
     "filter_rank_genes_groups",
     "rank_genes_groups",
     "score_genes",

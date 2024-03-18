@@ -1,5 +1,8 @@
 """Single-Cell Analysis in Python."""
+
 from __future__ import annotations
+
+import sys
 
 try:  # See https://github.com/maresb/hatch-vcs-footgun-example
     from setuptools_scm import get_version
@@ -21,6 +24,11 @@ del check_versions
 
 # the actual API
 # (start with settings as several tools are using it)
+
+from ._settings import Verbosity, settings
+
+set_figure_params = settings.set_figure_params
+
 from anndata import (
     AnnData,
     concat,
@@ -38,15 +46,10 @@ from . import datasets, experimental, external, get, logging, metrics, queries
 from . import plotting as pl
 from . import preprocessing as pp
 from . import tools as tl
-from ._settings import Verbosity, settings
 from .neighbors import Neighbors
 from .readwrite import read, read_10x_h5, read_10x_mtx, read_visium, write
 
-set_figure_params = settings.set_figure_params
-
 # has to be done at the end, after everything has been imported
-import sys
-
 sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["tl", "pp", "pl"]})
 from ._utils import annotate_doc_types
 

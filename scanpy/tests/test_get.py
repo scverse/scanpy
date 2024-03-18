@@ -11,21 +11,23 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.datasets._utils import filter_oldformatwarning
+from scanpy.testing._helpers import anndata_v0_8_constructor_compat
 from scanpy.testing._helpers.data import pbmc68k_reduced
+
+
+# Override so warning gets caught
+def transpose_adata(adata: AnnData, *, expect_duplicates: bool = False) -> AnnData:
+    if not expect_duplicates:
+        return adata.T
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        return adata.T
+
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
     "dim,transform,func",
     [
-        (
-            "obs",
-            lambda x: x,
-            sc.get.obs_df,
-        ),
-        (
-            "var",
-            lambda x: x.T,
-            sc.get.var_df,
-        ),
+        ("obs", lambda x, expect_duplicates=False: x, sc.get.obs_df),
+        ("var", transpose_adata, sc.get.var_df),
     ],
     ids=["obs_df", "var_df"],
 )
@@ -37,7 +39,7 @@ def adata():
     adata.X is np.ones((2, 2))
     adata.layers['double'] is sparse np.ones((2,2)) * 2 to also test sparse matrices
     """
-    return AnnData(
+    return anndata_v0_8_constructor_compat(
         X=np.ones((2, 2), dtype=int),
         obs=pd.DataFrame(
             {"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]
@@ -59,7 +61,7 @@ def test_obs_df(adata):
     adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
 
     # make raw with different genes than adata
-    adata.raw = AnnData(
+    adata.raw = anndata_v0_8_constructor_compat(
         X=np.array([[1, 2, 3], [2, 4, 6]], dtype=np.float64),
         var=pd.DataFrame(
             {"gene_symbols": ["raw1", "raw2", "raw3"]},
@@ -140,11 +142,12 @@ def test_obs_df(adata):
     assert all(badkey_err.match(k) for k in badkeys)
 
     # test non unique index
-    adata = sc.AnnData(
-        np.arange(16).reshape(4, 4),
-        obs=pd.DataFrame(index=["a", "a", "b", "c"]),
-        var=pd.DataFrame(index=[f"gene{i}" for i in range(4)]),
-    )
+    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+        adata = sc.AnnData(
+            np.arange(16).reshape(4, 4),
+            obs=pd.DataFrame(index=["a", "a", "b", "c"]),
+            var=pd.DataFrame(index=[f"gene{i}" for i in range(4)]),
+        )
     df = sc.get.obs_df(adata, ["gene1"])
     pd.testing.assert_index_equal(df.index, adata.obs_names)
 
@@ -373,16 +376,18 @@ def test_repeated_cols(dim, transform, func):
 
 @TRANSPOSE_PARAMS
 def test_repeated_index_vals(dim, transform, func):
-    # THis one could be reverted, see:
+    # This one could be reverted, see:
     # https://github.com/scverse/scanpy/pull/1583#issuecomment-770641710
     alt_dim = ["obs", "var"][dim == "obs"]
+
     adata = transform(
         sc.AnnData(
             np.ones((5, 10)),
             var=pd.DataFrame(
                 index=["repeated_id"] * 2 + [f"gene-{i}" for i in range(8)]
             ),
-        )
+        ),
+        expect_duplicates=True,
     )
 
     with pytest.raises(

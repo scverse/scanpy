@@ -1,6 +1,7 @@
 """\
 Embed high-dimensional data using TriMap
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
@@ -8,6 +9,7 @@ from typing import TYPE_CHECKING, Literal
 import scipy.sparse as scp
 
 from ... import logging as logg
+from ..._compat import old_positionals
 from ..._settings import settings
 from ...testing._doctests import doctest_needs
 
@@ -15,10 +17,22 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@old_positionals(
+    "n_inliers",
+    "n_outliers",
+    "n_random",
+    "metric",
+    "weight_adj",
+    "lr",
+    "n_iters",
+    "verbose",
+    "copy",
+)
 @doctest_needs("trimap")
 def trimap(
     adata: AnnData,
     n_components: int = 2,
+    *,
     n_inliers: int = 10,
     n_outliers: int = 5,
     n_random: int = 5,

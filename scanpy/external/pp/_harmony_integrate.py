@@ -1,22 +1,26 @@
 """
 Use harmony to integrate cells from different experiments.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 import numpy as np
 
+from ..._compat import old_positionals
 from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@old_positionals("basis", "adjusted_basis")
 @doctest_needs("harmonypy")
 def harmony_integrate(
     adata: AnnData,
     key: str,
+    *,
     basis: str = "X_pca",
     adjusted_basis: str = "X_pca_harmony",
     **kwargs,

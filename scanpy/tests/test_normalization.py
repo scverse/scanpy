@@ -189,10 +189,11 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
         pytest.param(
             True, dict(use_highly_variable=False), "n_genes", id="hvg_opt_out"
         ),
-        pytest.param(False, dict(mask="test_mask"), "n_unmasked", id="mask"),
+        pytest.param(False, dict(mask_var="test_mask"), "n_unmasked", id="mask"),
     ],
 )
 def test_normalize_pearson_residuals_pca(
+    *,
     pbmc3k_parametrized_small: Callable[[], AnnData],
     n_hvgs: int,
     n_comps: int,

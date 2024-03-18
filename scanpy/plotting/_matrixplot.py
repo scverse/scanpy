@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
 from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from anndata import AnnData
+    from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
 
 
@@ -94,11 +96,32 @@ class MatrixPlot(BasePlot):
     DEFAULT_EDGE_COLOR = "gray"
     DEFAULT_EDGE_LW = 0.1
 
+    @old_positionals(
+        "use_raw",
+        "log",
+        "num_categories",
+        "categories_order",
+        "title",
+        "figsize",
+        "gene_symbols",
+        "var_group_positions",
+        "var_group_labels",
+        "var_group_rotation",
+        "layer",
+        "standard_scale",
+        "ax",
+        "values_df",
+        "vmin",
+        "vmax",
+        "vcenter",
+        "norm",
+    )
     def __init__(
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
+        *,
         groupby_cols: str | Sequence[str] = [],
         use_raw: bool | None = None,
         log: bool = False,
@@ -146,7 +169,15 @@ class MatrixPlot(BasePlot):
         )
         if values_df is None:
             # compute mean value
-            values_df = self.obs_tidy.groupby(level=0).mean()
+            values_df = (
+                self.obs_tidy.groupby(level=0, observed=True)
+                .mean()
+                .loc[
+                    self.categories_order
+                    if self.categories_order is not None
+                    else self.categories
+                ]
+            )
 
             if standard_scale == "group":
                 values_df = values_df.sub(values_df.min(1), axis=0)
@@ -284,6 +315,23 @@ class MatrixPlot(BasePlot):
         return normalize
 
 
+@old_positionals(
+    "use_raw",
+    "log",
+    "num_categories",
+    "figsize",
+    "dendrogram",
+    "title",
+    "cmap",
+    "colorbar_title",
+    "gene_symbols",
+    "var_group_positions",
+    "var_group_labels",
+    "var_group_rotation",
+    "layer",
+    "standard_scale",
+    # 17 positionals are enough for backwards compatibility
+)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
@@ -294,6 +342,7 @@ def matrixplot(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
+    *,
     groupby_cols: str | Sequence[str] = [],
     use_raw: bool | None = None,
     log: bool = False,
@@ -308,7 +357,7 @@ def matrixplot(
     var_group_labels: Sequence[str] | None = None,
     var_group_rotation: float | None = None,
     layer: str | None = None,
-    standard_scale: Literal["var", "group"] = None,
+    standard_scale: Literal["var", "group"] | None = None,
     values_df: pd.DataFrame | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
@@ -320,7 +369,7 @@ def matrixplot(
     vcenter: float | None = None,
     norm: Normalize | None = None,
     **kwds,
-) -> MatrixPlot | dict | None:
+) -> MatrixPlot | dict[str, Axes] | None:
     """\
     Creates a heatmap of the mean expression values per group of each var_names.
     Columns can optionally be grouped by specifying `groupby_cols`.
@@ -418,9 +467,9 @@ def matrixplot(
     mp = mp.style(cmap=cmap).legend(title=colorbar_title)
     if return_fig:
         return mp
-    else:
-        mp.make_figure()
-        savefig_or_show(MatrixPlot.DEFAULT_SAVE_PREFIX, show=show, save=save)
-        show = settings.autoshow if show is None else show
-        if not show:
-            return mp.get_axes()
+    mp.make_figure()
+    savefig_or_show(MatrixPlot.DEFAULT_SAVE_PREFIX, show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return mp.get_axes()

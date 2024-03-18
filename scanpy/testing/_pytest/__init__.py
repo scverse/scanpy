@@ -1,35 +1,86 @@
 """A private pytest plugin"""
+
 from __future__ import annotations
 
+import os
 import sys
-from typing import TYPE_CHECKING, Any
+import warnings
+from typing import TYPE_CHECKING
 
+import pandas as pd
 import pytest
 
+from ..._utils import _import_name
 from .fixtures import *  # noqa: F403
+from .marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
-doctest_env_marker = pytest.mark.usefixtures("doctest_env")
-
 
 # Defining it here because it’s autouse.
 @pytest.fixture(autouse=True)
-def global_test_context() -> Generator[None, None, None]:
+def _global_test_context(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
+    # make sure seaborn is imported and did its thing
+    import seaborn as sns  # noqa: F401
     from matplotlib import pyplot as plt
+    from matplotlib.testing import setup
 
-    from scanpy import settings
+    import scanpy as sc
 
-    plt.switch_backend("agg")
-    settings.logfile = sys.stderr
-    settings.verbosity = "hint"
-    settings.autoshow = True
+    setup()
+    sc.settings.logfile = sys.stderr
+    sc.settings.verbosity = "hint"
+    sc.settings.autoshow = True
+
+    if isinstance(request.node, pytest.DoctestItem):
+        _modify_doctests(request)
 
     yield
 
     plt.close("all")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def max_threads() -> Generator[int, None, None]:
+    """Limit number of threads used per worker when using pytest-xdist.
+
+    Prevents oversubscription of the CPU when multiple tests with parallel code are
+    running at once.
+    """
+    if (n_workers := os.environ.get("PYTEST_XDIST_WORKER_COUNT")) is not None:
+        import threadpoolctl
+
+        n_cpus = os.cpu_count() or 1
+        n_workers = int(n_workers)
+        max_threads = max(n_cpus // n_workers, 1)
+
+        with threadpoolctl.threadpool_limits(limits=max_threads):
+            yield max_threads
+    else:
+        yield 0
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _fix_dask_df_warning():
+    """
+    Currently, dask warns when importing dask.dataframe.
+    This fixture preempts the warning and should be removed
+    once it is no longer raised.
+    """
+    try:
+        import dask  # noqa: F401
+    except ImportError:
+        return
+    # reset COW mode after this block: https://github.com/dask/dask/issues/10996
+    with warnings.catch_warnings(), pd.option_context("mode.copy_on_write", True):
+        warnings.filterwarnings(
+            "ignore",
+            category=DeprecationWarning,
+            message=r"The current Dask DataFrame implementation is deprecated",
+        )
+        import dask.dataframe  # noqa: F401
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -58,34 +109,32 @@ def pytest_collection_modifyitems(
             item.add_marker(skip_internet)
 
 
+def _modify_doctests(request: pytest.FixtureRequest) -> None:
+    assert isinstance(request.node, pytest.DoctestItem)
+
+    request.getfixturevalue("_doctest_env")
+
+    func = _import_name(request.node.name)
+    needs_mod: str | None
+    if needs_mod := getattr(func, "_doctest_needs", None):
+        needs_marker = needs[needs_mod]
+        if needs_marker.mark.args[0]:
+            pytest.skip(reason=needs_marker.mark.kwargs["reason"])
+    skip_reason: str | None
+    if skip_reason := getattr(func, "_doctest_skip_reason", None):
+        pytest.skip(reason=skip_reason)
+
+
 def pytest_itemcollected(item: pytest.Item) -> None:
-    import pytest
+    # Dask AnnData tests require anndata > 0.10
+    import anndata
+    from packaging.version import Version
 
-    if not isinstance(item, pytest.DoctestItem):
-        return
+    requires_anndata_dask_support = (
+        len([mark for mark in item.iter_markers(name="anndata_dask_support")]) > 0
+    )
 
-    item.add_marker(doctest_env_marker)
-
-    func = _import_name(item.name)
-    if marker := getattr(func, "_doctest_mark", None):
-        item.add_marker(marker)
-    if skip_reason := getattr(func, "_doctest_skip_reason", False):
-        item.add_marker(pytest.mark.skip(reason=skip_reason))
-
-
-def _import_name(name: str) -> Any:
-    from importlib import import_module
-
-    parts = name.split(".")
-    obj = import_module(parts[0])
-    for i, name in enumerate(parts[1:]):
-        try:
-            obj = import_module(f"{obj.__name__}.{name}")
-        except ModuleNotFoundError:
-            break
-    for name in parts[i + 1 :]:
-        try:
-            obj = getattr(obj, name)
-        except AttributeError:
-            raise RuntimeError(f"{parts[:i]}, {parts[i+1:]}, {obj} {name}")
-    return obj
+    if requires_anndata_dask_support and Version(anndata.__version__) < Version("0.10"):
+        item.add_marker(
+            pytest.mark.skip(reason="dask support requires anndata version > 0.10")
+        )

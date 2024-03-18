@@ -1,6 +1,7 @@
 """\
 Perform clustering using PhenoGraph
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
@@ -9,6 +10,8 @@ import pandas as pd
 from anndata import AnnData
 
 from ... import logging as logg
+from ..._compat import old_positionals
+from ..._utils import renamed_arg
 from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -18,10 +21,30 @@ if TYPE_CHECKING:
     from ...tools._leiden import MutableVertexPartition
 
 
+@renamed_arg("adata", "data", pos_0=True)
+@old_positionals(
+    "k",
+    "directed",
+    "prune",
+    "min_cluster_size",
+    "jaccard",
+    "primary_metric",
+    "n_jobs",
+    "q_tol",
+    "louvain_time_limit",
+    "nn_method",
+    "partition_type",
+    "resolution_parameter",
+    "n_iterations",
+    "use_weights",
+    "seed",
+    "copy",
+)
 @doctest_needs("phenograph")
 def phenograph(
-    adata: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | spmatrix,
     clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
+    *,
     k: int = 30,
     directed: bool = False,
     prune: bool = False,
@@ -44,7 +67,7 @@ def phenograph(
     seed: int | None = None,
     copy: bool = False,
     **kargs: Any,
-) -> tuple[np.ndarray | None, spmatrix, float | None]:
+) -> tuple[np.ndarray | None, spmatrix, float | None] | None:
     """\
     PhenoGraph clustering [Levine15]_.
 
@@ -63,7 +86,7 @@ def phenograph(
 
     Parameters
     ----------
-    adata
+    data
         AnnData, or Array of data to cluster, or sparse matrix of k-nearest neighbor
         graph. If ndarray, n-by-d array of n cells in d dimensions. if sparse matrix,
         n-by-n adjacency matrix.
@@ -206,13 +229,14 @@ def phenograph(
             "pip install -U PhenoGraph"
         )
 
-    if isinstance(adata, AnnData):
+    if isinstance(data, AnnData):
+        adata = data
         try:
-            data = adata.obsm["X_pca"]
+            data = data.obsm["X_pca"]
         except KeyError:
-            raise KeyError("Please run `sc.pp.pca` on `adata` and try again!")
+            raise KeyError("Please run `sc.pp.pca` on `data` and try again!")
     else:
-        data = adata
+        adata = None
         copy = True
 
     comm_key = (
@@ -246,7 +270,8 @@ def phenograph(
 
     if copy:
         return communities, graph, Q
-    else:
+
+    if adata is not None:
         adata.obsp[ig_key] = graph.tocsr()
         if comm_key:
             adata.obs[comm_key] = pd.Categorical(communities)

@@ -1,21 +1,38 @@
 """\
 Run the Self-Assembling Manifold algorithm
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
+
+from ... import logging as logg
+from ..._compat import old_positionals
+from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from samalg import SAM
 
-from ... import logging as logg
-from ...testing._doctests import doctest_needs
 
-
+@old_positionals(
+    "max_iter",
+    "num_norm_avg",
+    "k",
+    "distance",
+    "standardization",
+    "weight_pcs",
+    "sparse_pca",
+    "n_pcs",
+    "n_genes",
+    "projection",
+    "inplace",
+    "verbose",
+)
 @doctest_needs("samalg")
 def sam(
     adata: AnnData,
+    *,
     max_iter: int = 10,
     num_norm_avg: int = 50,
     k: int = 20,

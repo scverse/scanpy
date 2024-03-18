@@ -11,6 +11,7 @@ from packaging import version
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._utils import _choose_graph
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -30,9 +31,24 @@ except ImportError:
     MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
+@old_positionals(
+    "random_state",
+    "restrict_to",
+    "key_added",
+    "adjacency",
+    "flavor",
+    "directed",
+    "use_weights",
+    "partition_type",
+    "partition_kwargs",
+    "neighbors_key",
+    "obsp",
+    "copy",
+)
 def louvain(
     adata: AnnData,
     resolution: float | None = None,
+    *,
     random_state: _utils.AnyRandom = 0,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
@@ -117,7 +133,7 @@ def louvain(
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 
-    `adata.uns['louvain']['params']` : :class:`dict`
+    `adata.uns['louvain' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
@@ -135,8 +151,8 @@ def louvain(
         adjacency, restrict_indices = restrict_adjacency(
             adata,
             restrict_key,
-            restrict_categories,
-            adjacency,
+            restrict_categories=restrict_categories,
+            adjacency=adjacency,
         )
     if flavor in {"vtraag", "igraph"}:
         if flavor == "igraph" and resolution is not None:
@@ -229,18 +245,18 @@ def louvain(
             key_added += "_R"
         groups = rename_groups(
             adata,
-            key_added,
-            restrict_key,
-            restrict_categories,
-            restrict_indices,
-            groups,
+            key_added=key_added,
+            restrict_key=restrict_key,
+            restrict_categories=restrict_categories,
+            restrict_indices=restrict_indices,
+            groups=groups,
         )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype("U"),
         categories=natsorted(map(str, np.unique(groups))),
     )
-    adata.uns["louvain"] = {}
-    adata.uns["louvain"]["params"] = dict(
+    adata.uns[key_added] = {}
+    adata.uns[key_added]["params"] = dict(
         resolution=resolution,
         random_state=random_state,
     )

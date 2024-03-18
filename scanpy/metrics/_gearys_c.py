@@ -188,7 +188,7 @@ def _gearys_c_inner_sparse_x_densevec(g_data, g_indices, g_indptr, x, W):
 
 
 @numba.njit(cache=True)
-def _gearys_c_inner_sparse_x_sparsevec(
+def _gearys_c_inner_sparse_x_sparsevec(  # noqa: PLR0917
     g_data, g_indices, g_indptr, x_data, x_indices, N, W
 ):
     x = np.zeros(N, dtype=np.float_)
@@ -231,7 +231,7 @@ def _gearys_c_mtx(g_data, g_indices, g_indptr, X):
 
 
 @numba.njit(cache=True, parallel=True)
-def _gearys_c_mtx_csr(
+def _gearys_c_mtx_csr(  # noqa: PLR0917
     g_data, g_indices, g_indptr, x_data, x_indices, x_indptr, x_shape
 ):
     M, N = x_shape

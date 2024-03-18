@@ -8,6 +8,7 @@ TODO
 ----
 Beta Version. The code will be reorganized soon.
 """
+
 from __future__ import annotations
 
 import itertools
@@ -22,6 +23,7 @@ import scipy as sp
 
 from .. import _utils, readwrite
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
 
 if TYPE_CHECKING:
@@ -30,8 +32,20 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@old_positionals(
+    "params_file",
+    "tmax",
+    "branching",
+    "nrRealizations",
+    "noiseObs",
+    "noiseDyn",
+    "step",
+    "seed",
+    "writedir",
+)
 def sim(
     model: Literal["krumsiek11", "toggleswitch"],
+    *,
     params_file: bool = True,
     tmax: int | None = None,
     branching: bool | None = None,
@@ -40,7 +54,7 @@ def sim(
     noiseDyn: float | None = None,
     step: int | None = None,
     seed: int | None = None,
-    writedir: str | Path | None = None,
+    writedir: Path | str | None = None,
 ) -> AnnData:
     """\
     Simulate dynamic gene expression data [Wittmann09]_ [Wolf18]_.
@@ -201,7 +215,7 @@ def sample_dynamic_data(**params):
                     break
         logg.debug(
             f"mean nr of offdiagonal edges {nrOffEdges_list.mean()} "
-            f"compared to total nr {grnsim.dim*(grnsim.dim-1)/2.}"
+            f"compared to total nr {grnsim.dim * (grnsim.dim - 1) / 2.}"
         )
 
     # more complex models
@@ -275,6 +289,7 @@ def sample_dynamic_data(**params):
 
 def write_data(
     X,
+    *,
     dir=Path("sim/test"),
     append=False,
     header="",
@@ -385,6 +400,7 @@ class GRNsim:
 
     def __init__(
         self,
+        *,
         dim=3,
         model="ex0",
         modelType="var",
@@ -401,9 +417,8 @@ class GRNsim:
             either string for predefined model,
             or directory with a model file and a couple matrix files
         """
-        self.dim = (
-            dim if Coupl is None else Coupl.shape[0]
-        )  # number of nodes / dimension of system
+        # number of nodes / dimension of system
+        self.dim = dim if Coupl is None else Coupl.shape[0]
         self.maxnpar = 1  # maximal number of parents
         self.p_indep = 0.4  # fraction of independent genes
         self.model = model
@@ -867,6 +882,7 @@ class GRNsim:
     def write_data(
         self,
         X,
+        *,
         dir=Path("sim/test"),
         noiseObs=0.0,
         append=False,
@@ -887,9 +903,9 @@ class GRNsim:
         # call helper function
         write_data(
             X,
-            dir,
-            append,
-            header,
+            dir=dir,
+            append=append,
+            header=header,
             varNames=self.varNames,
             Adj=self.Adj,
             Coupl=self.Coupl,

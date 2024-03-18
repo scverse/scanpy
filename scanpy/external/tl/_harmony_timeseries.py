@@ -2,6 +2,7 @@
 Harmony time series for data visualization with augmented affinity matrix at
 discrete time points
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -10,16 +11,19 @@ import numpy as np
 import pandas as pd
 
 from ... import logging as logg
+from ..._compat import old_positionals
 from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@old_positionals("n_neighbors", "n_components", "n_jobs", "copy")
 @doctest_needs("harmony")
 def harmony_timeseries(
     adata: AnnData,
     tp: str,
+    *,
     n_neighbors: int = 30,
     n_components: int | None = 1000,
     n_jobs: int = -2,

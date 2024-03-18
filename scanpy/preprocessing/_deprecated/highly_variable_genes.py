@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -12,9 +12,12 @@ from ... import logging as logg
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
+if TYPE_CHECKING:
+    from scipy.sparse import spmatrix
 
-def filter_genes_dispersion(
-    data: AnnData,
+
+def filter_genes_dispersion(  # noqa: PLR0917
+    data: AnnData | spmatrix | np.ndarray,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
     min_disp: float | None = None,
     max_disp: float | None = None,
@@ -25,7 +28,7 @@ def filter_genes_dispersion(
     log: bool = True,
     subset: bool = True,
     copy: bool = False,
-):
+) -> AnnData | np.recarray | None:
     """\
     Extract highly variable genes [Satija15]_ [Zheng17]_.
 
@@ -108,7 +111,8 @@ def filter_genes_dispersion(
     if n_top_genes is not None and not all(
         x is None for x in [min_disp, max_disp, min_mean, max_mean]
     ):
-        logg.info("If you pass `n_top_genes`, all cutoffs are ignored.")
+        msg = "If you pass `n_top_genes`, all cutoffs are ignored."
+        warnings.warn(msg, UserWarning)
     if min_disp is None:
         min_disp = 0.5
     if min_mean is None:
@@ -151,7 +155,7 @@ def filter_genes_dispersion(
     df["dispersion"] = dispersion
     if flavor == "seurat":
         df["mean_bin"] = pd.cut(df["mean"], bins=n_bins)
-        disp_grouped = df.groupby("mean_bin")["dispersion"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersion"]
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
         # retrieve those genes that have nan std, these are the ones where
@@ -181,7 +185,7 @@ def filter_genes_dispersion(
             df["mean"],
             np.r_[-np.inf, np.percentile(df["mean"], np.arange(10, 105, 5)), np.inf],
         )
-        disp_grouped = df.groupby("mean_bin")["dispersion"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersion"]
         disp_median_bin = disp_grouped.median()
         # the next line raises the warning: "Mean of empty slice"
         with warnings.catch_warnings():

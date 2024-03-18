@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 _Method = Literal["umap", "gauss"]
 
-_KnownTransformer = Literal["pynndescent", "rapids"]
+_KnownTransformer = Literal["pynndescent", "sklearn", "rapids"]
 
 _MetricFn = _C[[np.ndarray, np.ndarray], float]
 # from sklearn.metrics.pairwise_distances.__doc__:
@@ -46,19 +46,14 @@ _Metric = _U[_MetricSparseCapable, _MetricScipySpatial]
 class KnnTransformerLike(Protocol):
     """See :class:`~sklearn.neighbors.KNeighborsTransformer`."""
 
-    def fit(self, X, y: None = None):
-        ...
+    def fit(self, X, y: None = None): ...
 
-    def transform(self, X) -> spmatrix:
-        ...
+    def transform(self, X) -> spmatrix: ...
 
     # from TransformerMixin
-    def fit_transform(self, X, y: None = None) -> spmatrix:
-        ...
+    def fit_transform(self, X, y: None = None) -> spmatrix: ...
 
     # from BaseEstimator
-    def get_params(self, deep: bool = True) -> dict[str, Any]:
-        ...
+    def get_params(self, deep: bool = True) -> dict[str, Any]: ...
 
-    def set_params(self, **params: Any) -> Self:
-        ...
+    def set_params(self, **params: Any) -> Self: ...

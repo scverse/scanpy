@@ -66,7 +66,7 @@ def _prepare_pbmc_testdata(
     import scanpy as sc
 
     if small:
-        adata = adata[:1000, :500]
+        adata = adata[:1000, :500].copy()
         sc.pp.filter_cells(adata, min_genes=1)
     np.random.seed(42)
     adata.obs["batch"] = np.random.randint(0, 3, size=adata.shape[0])
