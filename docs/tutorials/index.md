@@ -118,6 +118,12 @@ See the [cell cycle] notebook.
 
 Normalization of scRNA-seq data with Pearson Residuals, from {cite}`Lause21`: {doc}`/tutorials/notebooks/tutorial_pearson_residuals`
 
+```{toctree}
+:maxdepth: 2
+
+experimental/index
+```
+
 ### Scaling Computations
 
 - Visualize and cluster [1.3M neurons] from 10x Genomics.
