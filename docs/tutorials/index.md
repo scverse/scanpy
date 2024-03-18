@@ -60,7 +60,11 @@ For more powerful tools for analysing single cell dynamics, check out the Scvers
 * [Dynamo](https://dynamo-release.readthedocs.io/en/latest/)
 ```
 
-Get started with the following example for hematopoiesis for data of {cite}`Paul15`: {doc}`/tutorials/notebooks/paga-paul15`
+```{toctree}
+:maxdepth: 2
+
+trajectories/index
+```
 
 ```{image} /_static/img/tutorials/paga_paul15.png
 :width: 450px
@@ -73,10 +77,6 @@ animals, such as for [planaria] for data of {cite}`Plass18`.
 ```{image} /_static/img/tutorials/paga_planaria.png
 :width: 350px
 ```
-
-As a reference for simple pseudotime analyses, we provide the diffusion pseudotime (DPT) analyses of {cite}`Haghverdi16`
-for two hematopoiesis datasets: [DPT example 1] {cite}`Paul15` and [DPT example 2] {cite}`Moignard15`.
-
 
 ## Spatial data
 
@@ -94,7 +94,22 @@ For more up-to-date tutorials on working with spatial data, see:
 spatial/index
 ```
 
-## Further Tutorials
+## Experimental
+
+```{toctree}
+:maxdepth: 2
+
+experimental/index
+```
+
+## Older tutorials
+
+A number of older tutorials can be found at:
+
+* The [`scanpy_usage`](https://github.com/scverse/scanpy_usage) repository
+
+
+## External Tutorials
 
 (conversion-to-r)=
 
@@ -115,16 +130,6 @@ See the [cell cycle] notebook.
 ```{image} /_static/img/tutorials/170522_visualizing_one_million_cells/tsne_1.3M.png
 :align: right
 :width: 120px
-```
-
-### Normalization with Pearson Residuals
-
-Normalization of scRNA-seq data with Pearson Residuals, from {cite}`Lause21`: {doc}`/tutorials/experimental/pearson_residuals`
-
-```{toctree}
-:maxdepth: 2
-
-experimental/index
 ```
 
 ### Scaling Computations
@@ -164,6 +169,3 @@ See pseudotime-time inference on deep-learning based features for [cell cycle re
 [dpt example 2]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb
 [myeloid differentiation]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170430_krumsiek11/krumsiek11.ipynb
 [planaria]: https://nbviewer.jupyter.org/github/theislab/paga/blob/master/planaria/planaria.ipynb
-[scanpy in r]: https://theislab.github.io/scanpy-in-R/
-[seurat to anndata]: https://github.com/LuckyMD/Code_snippets/blob/master/Seurat_to_anndata.ipynb
-[toggleswitch]: https://nbviewer.jupyter.org/github/scverse/scanpy_usage/blob/master/170430_krumsiek11/toggleswitch.ipynb
