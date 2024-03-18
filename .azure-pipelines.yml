@@ -4,7 +4,6 @@ trigger:
 
 variables:
   python.version: '3.12'
-  PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
   PYTEST_ADDOPTS: '-v --color=yes --durations=0 --nunit-xml=test-data/test-results.xml'
   TEST_EXTRA: 'test-full'
   DEPENDENCIES_VERSION: "latest"  # |"pre-release" | "minimum-version"
@@ -36,13 +35,18 @@ jobs:
       versionSpec: '$(python.version)'
     displayName: 'Use Python $(python.version)'
 
+  - script: |
+      python -m pip install --upgrade uv
+      echo "##vso[task.setvariable variable=uv_cache_dir]`uv cache dir`"
+    displayName: 'Install tools'
+
   - task: Cache@2
     inputs:
       key: '"python $(python.version)" | "$(Agent.OS)" | pyproject.toml'
       restoreKeys: |
         python | "$(Agent.OS)"
         python
-      path: $(PIP_CACHE_DIR)
+      path: $(uv_cache_dir)
     displayName: Cache pip packages
 
   - script: |
@@ -50,30 +54,25 @@ jobs:
       echo $MPLBACKEND
     displayName: 'Set env'
 
-  - script: |
-      python -m pip install --upgrade pip
-      pip install wheel
-      pip install .[dev,$(TEST_EXTRA)]
+  - script: uv pip install --system --compile 'scanpy[dev,$(TEST_EXTRA)] @ .'
     displayName: 'Install dependencies'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'latest')
 
-  - script: |
-      python -m pip install --pre --upgrade pip
-      pip install --pre wheel
-      pip install --pre .[dev,$(TEST_EXTRA)]
-      pip install -v "anndata[dev,test] @ git+https://github.com/scverse/anndata"
+  - script: >
+      uv pip install --system --compile --pre
+      "scanpy[dev,$(TEST_EXTRA)] @ ."
+      "anndata[dev,test] @ git+https://github.com/scverse/anndata"
     displayName: 'Install dependencies release candidates'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'pre-release')
 
   - script: |
-      python -m pip install pip wheel tomli packaging
-      pip install `python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
-      pip install --no-deps .
+      uv pip install --system --compile tomli packaging
+      deps=`python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
+      uv pip install --system --compile $deps "scanpy @ ."
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
-  - script: |
-      pip list
+  - script: uv pip list
     displayName: 'Display installed versions'
 
   - script: pytest

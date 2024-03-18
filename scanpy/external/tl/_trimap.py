@@ -1,6 +1,7 @@
 """\
 Embed high-dimensional data using TriMap
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal

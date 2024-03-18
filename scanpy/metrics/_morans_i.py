@@ -1,4 +1,5 @@
 """Moran's I global spatial autocorrelation."""
+
 from __future__ import annotations
 
 from functools import singledispatch

@@ -1,6 +1,7 @@
 """
 Tests to make sure the example datasets load.
 """
+
 from __future__ import annotations
 
 import subprocess

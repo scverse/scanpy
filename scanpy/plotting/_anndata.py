@@ -1,5 +1,5 @@
-"""Plotting functions for AnnData.
-"""
+"""Plotting functions for AnnData."""
+
 from __future__ import annotations
 
 import collections.abc as cabc
