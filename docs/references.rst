@@ -27,7 +27,7 @@ References
 
 .. [Coifman05] Coifman *et al.* (2005),
    *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
-   `PNAS <https://doi.org/10.1038/nmeth.3971>`__.
+   `PNAS <https://doi.org/10.1073/pnas.0500334102>`__.
 
 .. [Csardi06] Csardi *et al.* (2006),
    *The igraph software package for complex network research*,
