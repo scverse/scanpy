@@ -413,9 +413,8 @@ class StackedViolin(BasePlot):
             self.vboundnorm.vcenter,
             self.vboundnorm.norm,
         )
-        normalize(
-            _color_df.values[~np.isnan(_color_df.values)]
-        )  # circumvent unexpected behavior with nan in matplotlib
+        # circumvent unexpected behavior with nan in matplotlib
+        normalize(_color_df.values[~np.isnan(_color_df.values)])
         colormap_array = cmap(normalize(_color_df.values))
         x_spacer_size = self.plot_x_padding
         y_spacer_size = self.plot_y_padding

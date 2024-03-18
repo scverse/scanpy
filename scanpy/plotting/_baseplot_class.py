@@ -98,7 +98,7 @@ class BasePlot:
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
         *,
-        groupby_cols: str | Sequence[str] = [],
+        groupby_cols: str | Sequence[str] = (),
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
