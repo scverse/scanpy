@@ -12,6 +12,13 @@ from .._compat import DaskArray, old_positionals
 from .._utils import view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
+try:
+    import dask
+    import dask.array as da
+except ImportError:
+    da = None
+    dask = None
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -22,10 +29,21 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    if isinstance(counts, DaskArray):
-        counts_greater_than_zero = counts[counts > 0].compute_chunk_sizes()
-    else:
-        counts_greater_than_zero = counts[counts > 0]
+    if after is None:
+        if isinstance(counts, DaskArray):
+
+            def nonzero_median(x):
+                return np.ma.median(np.ma.masked_array(x, x == 0)).item()
+
+            after = da.from_delayed(
+                dask.delayed(nonzero_median)(counts),
+                shape=(),
+                meta=counts._meta,
+                dtype=counts.dtype,
+            )
+        else:
+            counts_greater_than_zero = counts[counts > 0]
+            after = np.median(counts_greater_than_zero, axis=0)
 
     after = np.median(counts_greater_than_zero, axis=0) if after is None else after
     counts += counts == 0
@@ -207,7 +225,7 @@ def normalize_total(
     counts_per_cell = np.ravel(counts_per_cell)
 
     cell_subset = counts_per_cell > 0
-    if not np.all(cell_subset):
+    if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn(UserWarning("Some cells have zero counts"))
 
     if inplace:
