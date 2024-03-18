@@ -1,12 +1,12 @@
 # Tutorials
 
 :::{seealso}
-For more tutorials featureing scanpy and other [scverse](https://scverse.org) ecosystem tools, check out the curated set of tutorials at [https://scverse.org/learn]()
+For more tutorials featureing scanpy and other [scverse](https://scverse.org) ecosystem tools, check out the curated set of tutorials at [scverse.org/learn](https://scverse.org/learn)
 :::
 
-## Clustering
+## Basic workflows
 
-For getting started, we recommend Scanpy’s reimplementation {doc}`/tutorials/notebooks/pbmc3k`
+For getting started, we recommend Scanpy’s reimplementation {doc}`basics/clustering-2017`
 of Seurat’s {cite}`Satija15` clustering tutorial for 3k PBMCs from 10x Genomics,
 containing preprocessing, clustering and the identification of cell types via
 known marker genes.
@@ -51,10 +51,6 @@ Learn how to visually explore genes using scanpy: {doc}`/tutorials/plotting/basi
 
 For advanced customization of your plots, see {doc}`/tutorials/plotting/advanced`
 
-```{image} /_static/img/stacked_violin_dotplot_matrixplot.png
-:width: 550px
-```
-
 ## Trajectory inference
 
 Get started with the following example for hematopoiesis for data of {cite}`Paul15`: {doc}`/tutorials/notebooks/paga-paul15`
@@ -83,6 +79,20 @@ Map labels and embeddings of reference data to new data: {doc}`/tutorials/notebo
 ```
 
 ## Spatial data
+
+```{seealso}
+For more up-to-date tutorials on working with spatial data, see:
+
+* [SquidPy tutorials](https://squidpy.readthedocs.io/en/stable/notebooks/tutorials/index.html)
+* [SpatialData tutorials](https://spatialdata.scverse.org/en/latest/tutorials/notebooks/notebooks.html)
+* [Scverse ecosystem spatial tutorials](https://scverse.org/learn/)
+```
+
+```{toctree}
+:maxdepth: 2
+
+spatial/index
+```
 
 - Basic analysis of spatial data: {doc}`/tutorials/notebooks/spatial/basic-analysis`
 - Integrating spatial data with scRNA-seq using scanorama: {doc}`/tutorials/notebooks/spatial/integration-scanorama`
@@ -116,7 +126,7 @@ See the [cell cycle] notebook.
 
 ### Normalization with Pearson Residuals
 
-Normalization of scRNA-seq data with Pearson Residuals, from {cite}`Lause21`: {doc}`/tutorials/notebooks/tutorial_pearson_residuals`
+Normalization of scRNA-seq data with Pearson Residuals, from {cite}`Lause21`: {doc}`/tutorials/experimental/pearson_residuals`
 
 ```{toctree}
 :maxdepth: 2
