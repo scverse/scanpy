@@ -53,6 +53,13 @@ For advanced customization of your plots, see {doc}`/tutorials/plotting/advanced
 
 ## Trajectory inference
 
+```{seealso}
+For more powerful tools for analysing single cell dynamics, check out the Scverse ecosystem packages:
+
+* [CellRank](https://cellrank.readthedocs.io)
+* [Dynamo](https://dynamo-release.readthedocs.io/en/latest/)
+```
+
 Get started with the following example for hematopoiesis for data of {cite}`Paul15`: {doc}`/tutorials/notebooks/paga-paul15`
 
 ```{image} /_static/img/tutorials/paga_paul15.png
@@ -70,13 +77,6 @@ animals, such as for [planaria] for data of {cite}`Plass18`.
 As a reference for simple pseudotime analyses, we provide the diffusion pseudotime (DPT) analyses of {cite}`Haghverdi16`
 for two hematopoiesis datasets: [DPT example 1] {cite}`Paul15` and [DPT example 2] {cite}`Moignard15`.
 
-## Integrating datasets
-
-Map labels and embeddings of reference data to new data: {doc}`/tutorials/notebooks/integrating-data-using-ingest`
-
-```{image} https://scanpy-tutorials.readthedocs.io/en/latest/_images/integrating-data-using-ingest_21_0.png
-:width: 350px
-```
 
 ## Spatial data
 
@@ -92,13 +92,6 @@ For more up-to-date tutorials on working with spatial data, see:
 :maxdepth: 2
 
 spatial/index
-```
-
-- Basic analysis of spatial data: {doc}`/tutorials/notebooks/spatial/basic-analysis`
-- Integrating spatial data with scRNA-seq using scanorama: {doc}`/tutorials/notebooks/spatial/integration-scanorama`
-
-```{image} /_static/img/spatial-basic-analysis.png
-:width: 250px
 ```
 
 ## Further Tutorials
