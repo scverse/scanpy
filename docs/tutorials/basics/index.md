@@ -4,6 +4,6 @@
 :maxdepth: 1
 
 clustering
-clustering-2019
+clustering-2017
 integration-scanorama
 ```
