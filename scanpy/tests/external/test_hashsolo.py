@@ -32,4 +32,4 @@ def test_cell_demultiplexing():
     )
     negatives = ["Negative"] * 10
     classification = doublets + classes + negatives
-    assert all(test_data.obs["Classification"].astype(str) == classification)
+    assert test_data.obs["Classification"].astype(str).tolist() == classification
