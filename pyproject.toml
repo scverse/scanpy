@@ -100,8 +100,8 @@ test = [
 ]
 test-full = [
     "scanpy[test]",
-    # tested algorithms
-    "scanpy[leiden]",
+    # additional tested algorithms
+    "scanpy[louvain]",
     "scanpy[magic]",
     "scanpy[skmisc]",
     "scanpy[harmony]",
