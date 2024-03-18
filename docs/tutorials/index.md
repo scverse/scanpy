@@ -7,7 +7,7 @@ For more tutorials featureing scanpy and other [scverse](https://scverse.org) ec
 ## Basic workflows
 
 For getting started, we recommend Scanpy’s reimplementation {doc}`basics/clustering-2017`
-of Seurat’s {cite}`Satija15` clustering tutorial for 3k PBMCs from 10x Genomics,
+of Seurat’s {cite-hack}`Satija15` clustering tutorial for 3k PBMCs from 10x Genomics,
 containing preprocessing, clustering and the identification of cell types via
 known marker genes.
 
@@ -67,8 +67,8 @@ trajectories/index
 ```
 
 More examples for trajectory inference on complex datasets can be found in the
-[PAGA](https://github.com/theislab/paga) repository {cite}`Wolf19`, for instance, multi-resolution analyses of whole
-animals, such as for [planaria] for data of {cite}`Plass18`.
+[PAGA](https://github.com/theislab/paga) repository {cite-hack}`Wolf19`, for instance, multi-resolution analyses of whole
+animals, such as for [planaria] for data of {cite-hack}`Plass18`.
 
 ```{image} /_static/img/tutorials/paga_planaria.png
 :width: 350px
@@ -134,7 +134,7 @@ See the [cell cycle] notebook.
 
 ### Simulations
 
-Simulating single cells using literature-curated gene regulatory networks {cite}`Wittmann09`.
+Simulating single cells using literature-curated gene regulatory networks {cite-hack}`Wittmann09`.
 
 ```{image} /_static/img/tutorials/170430_krumsiek11/timeseries.png
 :align: right
@@ -146,7 +146,7 @@ Simulating single cells using literature-curated gene regulatory networks {cite}
 
 ### Images
 
-See pseudotime-time inference on deep-learning based features for [cell cycle reconstruction] from image data {cite}`Eulenberg17`.
+See pseudotime-time inference on deep-learning based features for [cell cycle reconstruction] from image data {cite-hack}`Eulenberg17`.
 
 % User Examples
 % ~~~~~~~~~~~~~

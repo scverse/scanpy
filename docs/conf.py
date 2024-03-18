@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 
 # -- General configuration ------------------------------------------------
 
-bibtex_bibfiles = ["references.bib"]
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = "4.0"  # Nicer param docs
 suppress_warnings = [
@@ -41,6 +40,11 @@ if Version(version).is_devrelease:
     version = f"{parsed.major}.{parsed.minor}.{parsed.micro}.dev"
 
 release = version
+
+# Bibliography settings
+bibtex_bibfiles = ["references.bib"]
+bibtex_reference_style = "author_year"
+
 
 # default settings
 templates_path = ["_templates"]
