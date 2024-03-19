@@ -268,6 +268,7 @@ def aggregate(
         dof=dof,
     )
 
+    # Define new var dataframe
     if obsm or varm:
         if isinstance(data, pd.DataFrame):
             # Check if there could be labels
@@ -277,7 +278,8 @@ def aggregate(
             var = pd.DataFrame(index=pd.RangeIndex(data.shape[1]).astype(str))
     else:
         var = getattr(adata, "var" if axis == 0 else "obs")
-    print(var)
+
+    # It's all coming together
     result = AnnData(layers=layers, obs=new_label_df, var=var)
 
     if axis == 1:
