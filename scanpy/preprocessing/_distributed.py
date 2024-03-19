@@ -11,27 +11,23 @@ if TYPE_CHECKING:
 
 
 @overload
-def materialize_as_ndarray(a: ArrayLike) -> np.ndarray:
-    ...
+def materialize_as_ndarray(a: ArrayLike) -> np.ndarray: ...
 
 
 @overload
-def materialize_as_ndarray(a: tuple[ArrayLike]) -> tuple[np.ndarray]:
-    ...
+def materialize_as_ndarray(a: tuple[ArrayLike]) -> tuple[np.ndarray]: ...
 
 
 @overload
 def materialize_as_ndarray(
     a: tuple[ArrayLike, ArrayLike],
-) -> tuple[np.ndarray, np.ndarray]:
-    ...
+) -> tuple[np.ndarray, np.ndarray]: ...
 
 
 @overload
 def materialize_as_ndarray(
     a: tuple[ArrayLike, ArrayLike, ArrayLike],
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    ...
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]: ...
 
 
 def materialize_as_ndarray(

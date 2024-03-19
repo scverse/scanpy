@@ -71,9 +71,9 @@ class Scrublet:
 
     # init fields
 
-    counts_obs: InitVar[
-        sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer]
-    ] = field(**kw_only(False))
+    counts_obs: InitVar[sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer]] = (
+        field(**kw_only(False))
+    )
     total_counts_obs: InitVar[NDArray[np.integer] | None] = None
     sim_doublet_ratio: float = 2.0
     n_neighbors: InitVar[int | None] = None
@@ -360,7 +360,8 @@ class Scrublet:
             random_state=self._random_state,
         )
         neighbors, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
-
+        if use_approx_nn:
+            neighbors = neighbors[:, 1:]
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
         doub_neigh_mask: NDArray[np.bool_] = (
             manifold.obs["doub_labels"].to_numpy()[neighbors] == "sim"
