@@ -267,11 +267,18 @@ def aggregate(
         mask=mask,
         dof=dof,
     )
-    result = AnnData(
-        layers=layers,
-        obs=new_label_df,
-        var=getattr(adata, "var" if axis == 0 else "obs"),
-    )
+
+    if obsm or varm:
+        if isinstance(data, pd.DataFrame):
+            # Check if there could be labels
+            var = pd.DataFrame(index=data.columns)
+        else:
+            # Create them otherwise
+            var = pd.DataFrame(index=pd.RangeIndex(data.shape[1]).astype(str))
+    else:
+        var = getattr(adata, "var" if axis == 0 else "obs")
+    print(var)
+    result = AnnData(layers=layers, obs=new_label_df, var=var)
 
     if axis == 1:
         return result.T

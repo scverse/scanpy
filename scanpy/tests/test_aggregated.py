@@ -390,3 +390,29 @@ def test_aggregate_arraytype(array_type, metric):
     adata.X = array_type(adata.X)
     aggregate = sc.get.aggregate(adata, ["louvain"], metric)
     assert isinstance(aggregate.layers[metric], np.ndarray)
+
+
+def test_aggregate_obsm_varm():
+    adata_obsm = sc.datasets.blobs()
+    adata_obsm.obs["blobs"] = adata_obsm.obs["blobs"].astype(str)
+    adata_obsm.obsm["test"] = adata_obsm.X[:, ::2].copy()
+    adata_varm = adata_obsm.T.copy()
+
+    result_obsm = sc.get.aggregate(adata_obsm, "blobs", ["sum", "mean"], obsm="test")
+    result_varm = sc.get.aggregate(adata_varm, "blobs", ["sum", "mean"], varm="test")
+
+    assert_equal(result_obsm, result_varm.T)
+
+    expected_sum = (
+        pd.DataFrame(adata_obsm.obsm["test"], index=adata_obsm.obs_names)
+        .groupby(adata_obsm.obs["blobs"], observed=True)
+        .sum()
+    )
+    expected_mean = (
+        pd.DataFrame(adata_obsm.obsm["test"], index=adata_obsm.obs_names)
+        .groupby(adata_obsm.obs["blobs"], observed=True)
+        .mean()
+    )
+
+    assert_equal(expected_sum.values, result_obsm.layers["sum"])
+    assert_equal(expected_mean.values, result_obsm.layers["mean"])
