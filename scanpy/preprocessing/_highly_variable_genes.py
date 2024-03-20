@@ -267,7 +267,7 @@ def _highly_variable_genes_single_batch(
         else:
             X = np.expm1(X)
 
-    mean, var = _get_mean_var(X)
+    mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -277,9 +277,7 @@ def _highly_variable_genes_single_batch(
         mean = np.log1p(mean)
 
     # all of the following quantities are "per-gene" here
-    df = pd.DataFrame(
-        dict(zip(["means", "dispersions"], materialize_as_ndarray((mean, dispersion))))
-    )
+    df = pd.DataFrame(dict(zip(["means", "dispersions"], (mean, dispersion))))
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
     disp_stats = _get_disp_stats(df, flavor)
 
