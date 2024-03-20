@@ -163,11 +163,16 @@ def filter_cells(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    number_per_cell = np.sum(
-        X if min_genes is None and max_genes is None else X > 0, axis=1
-    )
-    if issparse(X):
-        number_per_cell = number_per_cell.A1
+    if min_genes is None and max_genes is None:
+        number_per_cell = np.sum(X, axis=1)
+        if issparse(X):
+            number_per_cell = number_per_cell.A1
+    elif isspmatrix_csr(X):
+        number_per_cell = np.diff(X.indptr)
+    else:
+        number_per_cell = np.sum(X > 0, axis=1)
+        if issparse(X):
+            number_per_cell = number_per_cell.A1
     if min_number is not None:
         cell_subset = number_per_cell >= min_number
     if max_number is not None:
@@ -279,11 +284,16 @@ def filter_genes(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
-    number_per_gene = np.sum(
-        X if min_cells is None and max_cells is None else X > 0, axis=0
-    )
-    if issparse(X):
-        number_per_gene = number_per_gene.A1
+    if min_cells is None and max_cells is None:
+        number_per_gene = np.sum(X, axis=0)
+        if issparse(X):
+            number_per_gene = number_per_gene.A1
+    elif isspmatrix_csr(X):
+        number_per_gene = np.bincount(X.indices, minlength=X.shape[1])
+    else:
+        number_per_gene = np.sum(X > 0, axis=0)
+        if issparse(X):
+            number_per_gene = number_per_gene.A1
     if min_number is not None:
         gene_subset = number_per_gene >= min_number
     if max_number is not None:
