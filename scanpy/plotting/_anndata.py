@@ -2097,7 +2097,7 @@ def _prepare_dataframe(
         categorical = categorical.cat.reorder_categories(
             sorted(categorical.cat.categories, key=lambda x: order[x])
         )
-    obs_tidy = obs_tidy[np.unique(var_names)].set_index(categorical)
+    obs_tidy = obs_tidy[var_names].set_index(categorical)
     categories = obs_tidy.index.categories
 
     if log:
