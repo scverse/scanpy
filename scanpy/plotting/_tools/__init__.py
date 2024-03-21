@@ -1002,8 +1002,9 @@ def rank_genes_groups_stacked_violin(
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
 
-    >>> sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=4,
-    ... min_logfoldchange=4, figsize=(8,6))
+    >>> sc.pl.rank_genes_groups_stacked_violin(
+    ...     adata, n_genes=4, min_logfoldchange=4, figsize=(8,6)
+    ... )
 
     """
 

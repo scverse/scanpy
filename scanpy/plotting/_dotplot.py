@@ -574,7 +574,7 @@ class DotPlot(BasePlot):
             self._plot_colorbar(color_legend_ax, normalize)
             return_ax_dict["color_legend_ax"] = color_legend_ax
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
         # DotPlot object, for example once with swap_axes and other without

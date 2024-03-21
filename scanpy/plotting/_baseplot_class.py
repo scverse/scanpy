@@ -155,7 +155,7 @@ class BasePlot:
             _, self.obs_tidy = _prepare_dataframe(
                 adata,
                 self.var_names,
-                self.groupby + self.groupby_cols,
+                [*self.groupby, *self.groupby_cols],
                 use_raw,
                 log,
                 num_categories,
@@ -615,7 +615,7 @@ class BasePlot:
         self._plot_colorbar(color_legend_ax, normalize)
         return_ax_dict["color_legend_ax"] = color_legend_ax
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         y_labels = self.categories
         x_labels = self.var_names
 

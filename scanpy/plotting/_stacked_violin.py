@@ -25,12 +25,10 @@ from ._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import (
-        Mapping,  # Special
-        Sequence,  # ABCs
-    )
+    from collections.abc import Mapping, Sequence
 
     from anndata import AnnData
+    from matplotlib.axes import Axes
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -374,7 +372,7 @@ class StackedViolin(BasePlot):
 
         return self
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # to make the stacked violin plots, the
         # `ax` is subdivided horizontally and in each horizontal sub ax
         # a seaborn violin plot is added.
@@ -453,7 +451,13 @@ class StackedViolin(BasePlot):
         return normalize
 
     def _make_rows_of_violinplots(
-        self, ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
+        self,
+        ax: Axes,
+        _matrix: pd.DataFrame,
+        colormap_array: np.ndarray,
+        _color_df: pd.DataFrame,
+        x_spacer_size: float | None,
+        y_spacer_size: float | None,
     ):
         import seaborn as sns  # Slow import, only import if called
 
@@ -477,16 +481,16 @@ class StackedViolin(BasePlot):
                 "Duplicate gene or condition labels present."
                 "Results might be unexpected."
             )
-        # transform the  dataframe into a dataframe having three columns:
+        # transform the dataframe into a dataframe having three columns:
         # the categories name (from groupby),
         # the gene name
         # the expression value
         # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
         if Version(pd.__version__) >= Version("2.1"):
-            stack_kwargs = {"future_stack": True}
+            stack_kwargs = dict(future_stack=True)
         else:
-            stack_kwargs = {"dropna": False}
+            stack_kwargs = dict(dropna=False)
 
         if len(self.groupby_cols) < 1:
             df = (
@@ -510,25 +514,25 @@ class StackedViolin(BasePlot):
             )
         else:
             # partially taken from self._convert_tidy_to_stacked
-            label = _matrix.index.name
+            label: str = _matrix.index.name
             stacked_df = _matrix.reset_index()
             stacked_df.index = pd.MultiIndex.from_tuples(
                 stacked_df[label].str.split("_").tolist(),
-                names=self.groupby + self.groupby_cols,
+                names=[*self.groupby, *self.groupby_cols],
             )
             stacked_df = (
                 stacked_df.drop(label, axis=1)
                 .reset_index()
-                .melt(id_vars=self.groupby + self.groupby_cols)
+                .melt(id_vars=[*self.groupby, *self.groupby_cols])
             )
-            stacked_df["genes"] = stacked_df[["variable"] + self.groupby_cols].apply(
+            stacked_df["genes"] = stacked_df[["variable", *self.groupby_cols]].apply(
                 lambda row: "_".join(row.values.astype(str)), axis=1
             )
             stacked_df["categories"] = stacked_df[self.groupby].apply(
                 lambda row: "_".join(row.values.astype(str)), axis=1
             )
             stacked_df = stacked_df.drop(
-                self.groupby + self.groupby_cols + ["variable"], axis=1
+                [*self.groupby, *self.groupby_cols, "variable"], axis=1
             ).rename(columns={"value": "values"})
             df = stacked_df
 

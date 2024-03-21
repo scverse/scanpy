@@ -257,7 +257,7 @@ class MatrixPlot(BasePlot):
 
         return self
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
         # MatrixPlot object, for example once with swap_axes and other without

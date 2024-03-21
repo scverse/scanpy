@@ -2060,7 +2060,7 @@ def _prepare_dataframe(
         # and does not need to be given
         groupby = groupby.copy()  # copy to not modify user passed parameter
         groupby.remove(groupby_index)
-    keys = list(groupby) + list(np.unique(var_names))
+    keys = [*groupby, *np.unique(var_names)]
     obs_tidy = get.obs_df(
         adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
     )
@@ -2097,7 +2097,7 @@ def _prepare_dataframe(
         categorical = categorical.cat.reorder_categories(
             sorted(categorical.cat.categories, key=lambda x: order[x])
         )
-    obs_tidy = obs_tidy[var_names].set_index(categorical)
+    obs_tidy = obs_tidy[np.unique(var_names)].set_index(categorical)
     categories = obs_tidy.index.categories
 
     if log:
