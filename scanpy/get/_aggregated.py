@@ -71,7 +71,7 @@ class Aggregate:
         """
         # pattern = self.data._with_data(np.broadcast_to(1, len(self.data.data)))
         # return self.indicator_matrix @ pattern
-        return self.indicator_matrix @ (self.data != 0)
+        return utils.asarray(self.indicator_matrix @ (self.data != 0))
 
     def sum(self) -> Array:
         """\
@@ -179,8 +179,6 @@ def aggregate(
     in the output `AnnData` object.
 
     If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
-    If `func` only has length 1 or is just an `AggType`, then aggregation data is written to `X`.
-    Otherwise, it is written to `layers` or `xxxm` as appropriate for the dimensions of the aggregation data.
 
     Params
     ------
