@@ -303,12 +303,15 @@ def test_pca_n_pcs():
 def test_mask_highly_var_error(array_type):
     """Check if use_highly_variable=True throws an error if the annotation is missing."""
     adata = AnnData(array_type(A_list).astype("float32"))
-    with pytest.warns(
-        FutureWarning,
-        match=r"Argument `use_highly_variable` is deprecated, consider using the mask argument\.",
-    ), pytest.raises(
-        ValueError,
-        match=r"Did not find `adata\.var\['highly_variable'\]`\.",
+    with (
+        pytest.warns(
+            FutureWarning,
+            match=r"Argument `use_highly_variable` is deprecated, consider using the mask argument\.",
+        ),
+        pytest.raises(
+            ValueError,
+            match=r"Did not find `adata\.var\['highly_variable'\]`\.",
+        ),
     ):
         sc.pp.pca(adata, use_highly_variable=True)
 
@@ -394,14 +397,13 @@ def test_mask_defaults(array_type, float_dtype):
     Test if pca result is equal without highly variable and with-but mask is None
     and if pca takes highly variable as mask as default
     """
-    A = array_type(A_list).astype("float32")
+    A = array_type(A_list).astype("float64")
     adata = AnnData(A)
 
     without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
 
-    mask = np.random.choice([True, False], adata.shape[1])
-    mask[0] = True
-    mask[1] = True
+    rng = np.random.default_rng(8)
+    mask = rng.choice([True, False], adata.shape[1])
     adata.var["highly_variable"] = mask
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
     assert without_var.uns["pca"]["params"]["mask_var"] is None

@@ -2,6 +2,7 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -894,11 +895,16 @@ def scale_array(
             def clip_set(x):
                 x = x.copy()
                 x[x > max_value] = max_value
+                if zero_center:
+                    x[x < -max_value] = -max_value
                 return x
 
             X = da.map_blocks(clip_set, X)
         else:
-            X[X > max_value] = max_value
+            if zero_center:
+                X = np.clip(X, a_min=-max_value, a_max=max_value)
+            else:
+                X[X > max_value] = max_value
     if return_mean_std:
         return X, mean, std
     else:
