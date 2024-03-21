@@ -3,13 +3,16 @@
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
 """
+
 from __future__ import annotations
 
 import importlib.util
 import inspect
+import random
 import sys
 import warnings
 from collections import namedtuple
+from contextlib import contextmanager
 from enum import Enum
 from functools import partial, singledispatch, wraps
 from textwrap import dedent
@@ -20,10 +23,10 @@ from weakref import WeakSet
 import numpy as np
 from anndata import AnnData
 from anndata import __version__ as anndata_version
-from numpy import random
 from numpy.typing import NDArray
 from packaging import version
 from scipy import sparse
+from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .._compat import DaskArray
@@ -45,31 +48,49 @@ class Empty(Enum):
 _empty = Empty.token
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-AnyRandom = Union[int, random.RandomState, None]  # maybe in the future random.Generator
+# maybe in the future random.Generator
+AnyRandom = Union[int, np.random.RandomState, None]
+
+
+class RNGIgraph:
+    """
+    Random number generator for ipgraph so global seed is not changed.
+    See :func:`igraph.set_random_number_generator` for the requirements.
+    """
+
+    def __init__(self, random_state: int = 0) -> None:
+        self._rng = check_random_state(random_state)
+
+    def __getattr__(self, attr: str):
+        return getattr(self._rng, "normal" if attr == "gauss" else attr)
+
+
+@contextmanager
+def set_igraph_random_state(random_state: int):
+    try:
+        import igraph
+    except ImportError:
+        raise ImportError(
+            "Please install igraph: `conda install -c conda-forge igraph` or `pip3 install igraph`."
+        )
+    rng = RNGIgraph(random_state)
+    try:
+        igraph.set_random_number_generator(rng)
+        yield None
+    finally:
+        igraph.set_random_number_generator(random)
+
 
 EPS = 1e-15
 
 
 def check_versions():
-    from .._compat import pkg_version
-
-    umap_version = pkg_version("umap-learn")
-
     if version.parse(anndata_version) < version.parse("0.6.10"):
         from .. import __version__
 
         raise ImportError(
             f"Scanpy {__version__} needs anndata version >=0.6.10, "
             f"not {anndata_version}.\nRun `pip install anndata -U --no-deps`."
-        )
-
-    if umap_version < version.parse("0.3.0"):
-        from . import __version__
-
-        # make this a warning, not an error
-        # it might be useful for people to still be able to run it
-        logg.warning(
-            f"Scanpy {__version__} needs umap " f"version >=0.3.0, not {umap_version}."
         )
 
 
@@ -459,6 +480,12 @@ def moving_average(a: np.ndarray, n: int):
     return ret[n - 1 :] / n
 
 
+def get_random_state(seed: AnyRandom) -> np.random.RandomState:
+    if isinstance(seed, np.random.RandomState):
+        return seed
+    return np.random.RandomState(seed)
+
+
 # --------------------------------------------------------------------------------
 # Deal with tool parameters
 # --------------------------------------------------------------------------------
@@ -568,18 +595,18 @@ def select_groups(
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if key + "_masks" in adata.uns:
-        groups_masks = adata.uns[key + "_masks"]
+        groups_masks_obs = adata.uns[key + "_masks"]
     else:
-        groups_masks = np.zeros(
+        groups_masks_obs = np.zeros(
             (len(adata.obs[key].cat.categories), adata.obs[key].values.size), dtype=bool
         )
         for iname, name in enumerate(adata.obs[key].cat.categories):
             # if the name is not found, fallback to index retrieval
             if adata.obs[key].cat.categories[iname] in adata.obs[key].values:
-                mask = adata.obs[key].cat.categories[iname] == adata.obs[key].values
+                mask_obs = adata.obs[key].cat.categories[iname] == adata.obs[key].values
             else:
-                mask = str(iname) == adata.obs[key].values
-            groups_masks[iname] = mask
+                mask_obs = str(iname) == adata.obs[key].values
+            groups_masks_obs[iname] = mask_obs
     groups_ids = list(range(len(groups_order)))
     if groups_order_subset != "all":
         groups_ids = []
@@ -603,11 +630,11 @@ def select_groups(
             from sys import exit
 
             exit(0)
-        groups_masks = groups_masks[groups_ids]
+        groups_masks_obs = groups_masks_obs[groups_ids]
         groups_order_subset = adata.obs[key].cat.categories[groups_ids].values
     else:
         groups_order_subset = groups_order.values
-    return groups_order_subset, groups_masks
+    return groups_order_subset, groups_masks_obs
 
 
 def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
@@ -835,3 +862,13 @@ def _choose_graph(adata, obsp, neighbors_key):
                 "to compute a neighborhood graph."
             )
         return neighbors["connectivities"]
+
+
+def _resolve_axis(
+    axis: Literal["obs", 0, "var", 1],
+) -> tuple[Literal[0], Literal["obs"]] | tuple[Literal[1], Literal["var"]]:
+    if axis in {0, "obs"}:
+        return (0, "obs")
+    if axis in {1, "var"}:
+        return (1, "var")
+    raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}")

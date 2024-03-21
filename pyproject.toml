@@ -12,10 +12,6 @@ authors = [
     {name = "Abdou Khadre Djeylani Diouf"},
 ]
 readme = "README.md"
-
-dependencies = [
-    "scanpy",
-    "plotly",
 ]
 dynamic = ["version"]
 
@@ -23,8 +19,6 @@ dynamic = ["version"]
 Reposityory = "https://github.com/kaderhoussein/scoop"
 
 
-test = [
-    "pytest"
 ]
 
 doc = [
@@ -42,6 +36,7 @@ doc = [
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
     # TODO: remove necessity for being able to import doc-linked classes
+    "dask",
     "scanpy[paga]",
     "sam-algorithm",
 ]
@@ -49,11 +44,12 @@ dev = [
     "pre-commit",
 ]
 
+
 [tool.hatch.build]
 exclude = ["scoop/tests"]
 [tool.hatch.version]
 source = "vcs"
 [tool.hatch.build.hooks.vcs]
-version-file = "scoop/_version.py"
+
 
 

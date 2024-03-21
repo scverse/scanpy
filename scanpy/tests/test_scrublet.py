@@ -11,14 +11,12 @@ from anndata.tests.helpers import assert_equal
 from numpy.testing import assert_allclose, assert_array_equal
 
 import scanpy as sc
-import scanpy.external as sce
-import scanpy.preprocessing as pp
 from scanpy.testing._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-pytestmark = [needs.scrublet]
+pytestmark = [needs.skimage]
 
 
 def pbmc200() -> AnnData:
@@ -36,18 +34,20 @@ def paul500() -> AnnData:
 @pytest.mark.parametrize(
     ("mk_data", "expected_idx", "expected_scores"),
     [
-        pytest.param(pbmc200, [13, 105, 138], [0.216495] * 3, id="sparse"),
-        pytest.param(paul500, [180, 230], [0.30275229] * 2, id="dense"),
+        pytest.param(pbmc200, [13, 138], [0.149254] * 2, id="sparse"),
+        pytest.param(paul500, [180], [0.219178], id="dense"),
     ],
 )
+@pytest.mark.parametrize("use_approx_neighbors", [True, False])
 def test_scrublet(
     mk_data: Callable[[], AnnData],
     expected_idx: list[int],
     expected_scores: list[float],
+    use_approx_neighbors: bool,
 ):
     """Check that scrublet runs and detects some doublets."""
     adata = mk_data()
-    sce.pp.scrublet(adata, use_approx_neighbors=False)
+    sc.pp.scrublet(adata, use_approx_neighbors=use_approx_neighbors)
 
     doublet_idx = np.flatnonzero(adata.obs["predicted_doublet"]).tolist()
     assert doublet_idx == expected_idx
@@ -65,14 +65,14 @@ def test_scrublet_batched():
     adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
     split = [adata[adata.obs["batch"] == x].copy() for x in ("a", "b")]
 
-    sce.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
 
     doublet_idx = np.flatnonzero(adata.obs["predicted_doublet"]).tolist()
     # only one in the first batch (<100)
-    assert doublet_idx == [35, 132, 135, 136, 139, 153, 157, 168, 170, 171, 175, 180]
+    assert doublet_idx == [0, 2, 8, 15, 43, 88, 108, 113, 115, 132, 135, 175]
     assert_allclose(
         adata.obs["doublet_score"].iloc[doublet_idx],
-        np.array([0.164835, 0.109375])[([0] * 3 + [1] * 7 + [0, 1])],
+        np.array([0.109375, 0.164835])[([0] * 4 + [1] + [0] * 3 + [1] + [0] * 3)],
         atol=1e-5,
         rtol=1e-5,
     )
@@ -80,7 +80,7 @@ def test_scrublet_batched():
 
     # Check that results are independent
     for s in split:
-        sce.pp.scrublet(s, use_approx_neighbors=False)
+        sc.pp.scrublet(s, use_approx_neighbors=False)
     merged = concat(split)
 
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
@@ -88,12 +88,12 @@ def test_scrublet_batched():
 
 def _preprocess_for_scrublet(adata: AnnData) -> AnnData:
     adata_pp = adata.copy()
-    pp.filter_genes(adata_pp, min_cells=3)
-    pp.filter_cells(adata_pp, min_genes=3)
+    sc.pp.filter_genes(adata_pp, min_cells=3)
+    sc.pp.filter_cells(adata_pp, min_genes=3)
     adata_pp.layers["raw"] = adata_pp.X.copy()
-    pp.normalize_total(adata_pp)
-    logged = pp.log1p(adata_pp, copy=True)
-    pp.highly_variable_genes(logged)
+    sc.pp.normalize_total(adata_pp)
+    logged = sc.pp.log1p(adata_pp, copy=True)
+    sc.pp.highly_variable_genes(logged)
     return adata_pp[:, logged.var["highly_variable"]].copy()
 
 
@@ -125,7 +125,7 @@ def test_scrublet_data():
     random_state = 1234
 
     # Run Scrublet and let the main function run simulations
-    adata_scrublet_auto_sim = sce.pp.scrublet(
+    adata_scrublet_auto_sim = sc.pp.scrublet(
         pbmc200(),
         use_approx_neighbors=False,
         copy=True,
@@ -144,10 +144,10 @@ def test_scrublet_data():
     )
 
     # Apply the same post-normalisation the Scrublet function would
-    pp.normalize_total(adata_obs, target_sum=1e6)
-    pp.normalize_total(adata_sim, target_sum=1e6)
+    sc.pp.normalize_total(adata_obs, target_sum=1e6)
+    sc.pp.normalize_total(adata_sim, target_sum=1e6)
 
-    adata_scrublet_manual_sim = sce.pp.scrublet(
+    adata_scrublet_manual_sim = sc.pp.scrublet(
         adata_obs,
         adata_sim=adata_sim,
         use_approx_neighbors=False,
@@ -171,7 +171,7 @@ def _scrub_small_sess() -> AnnData:
     adata = pbmc200()
     sc.pp.filter_genes(adata, min_counts=100)
 
-    sce.pp.scrublet(adata, use_approx_neighbors=False)
+    sc.pp.scrublet(adata, use_approx_neighbors=False)
     return adata
 
 
@@ -200,7 +200,7 @@ def test_scrublet_params(scrub_small: AnnData, param: str, value: Any):
 
     Check that changes to parameters change scrublet results.
     """
-    curr = sce.pp.scrublet(
+    curr = sc.pp.scrublet(
         adata=scrub_small, use_approx_neighbors=False, copy=True, **{param: value}
     )
     with pytest.raises(AssertionError):
@@ -219,11 +219,11 @@ def test_scrublet_simulate_doublets():
     _ = sc.pp.highly_variable_genes(logged)
     adata_obs = adata_obs[:, logged.var["highly_variable"]]
 
-    adata_sim = sce.pp.scrublet_simulate_doublets(
+    adata_sim = sc.pp.scrublet_simulate_doublets(
         adata_obs, sim_doublet_ratio=0.02, layer="raw"
     )
 
     assert_array_equal(
         adata_sim.obsm["doublet_parents"],
-        np.array([[172, 47], [117, 192], [67, 195], [103, 9]]),
+        np.array([[13, 132], [106, 43], [152, 3], [160, 103]]),
     )

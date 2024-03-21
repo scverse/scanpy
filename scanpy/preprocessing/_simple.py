@@ -2,6 +2,7 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -746,7 +747,7 @@ def _regress_out_chunk(data):
 
 
 @renamed_arg("X", "data", pos_0=True)
-@old_positionals("zero_center", "max_value", "copy", "layer", "obsm", "mask")
+@old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
     data: AnnData | spmatrix | np.ndarray,
@@ -756,7 +757,7 @@ def scale(
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool_] | str | None = None,
 ) -> AnnData | spmatrix | np.ndarray | None:
     """\
     Scale data to unit variance and zero mean.
@@ -783,6 +784,10 @@ def scale(
         If provided, which element of layers to scale.
     obsm
         If provided, which element of obsm to scale.
+    mask_obs
+        Restrict both the derivation of scaling parameters and the scaling itself
+        to a certain set of observations. The mask is specified as a boolean array
+        or a string referring to an array in :attr:`~anndata.AnnData.obs`.
 
     Returns
     -------
@@ -807,7 +812,7 @@ def scale(
             f"`obsm` argument inappropriate for value of type {type(data)}"
         )
     return scale_array(
-        data, zero_center=zero_center, max_value=max_value, copy=copy, mask=mask
+        data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
     )
 
 
@@ -819,25 +824,25 @@ def scale_array(
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool_] | None = None,
 ) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
     if copy:
         X = X.copy()
-    if mask is not None:
-        mask = _check_mask(X, mask, "obs")
+    if mask_obs is not None:
+        mask_obs = _check_mask(X, mask_obs, "obs")
         scale_rv = scale_array(
-            X[mask, :],
+            X[mask_obs, :],
             zero_center=zero_center,
             max_value=max_value,
             copy=False,
             return_mean_std=return_mean_std,
-            mask=None,
+            mask_obs=None,
         )
         if return_mean_std:
-            X[mask, :], mean, std = scale_rv
+            X[mask_obs, :], mean, std = scale_rv
             return X, mean, std
         else:
-            X[mask, :] = scale_rv
+            X[mask_obs, :] = scale_rv
             return X
 
     if not zero_center and max_value is not None:
@@ -867,7 +872,10 @@ def scale_array(
     # do the clipping
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
-        X[X > max_value] = max_value
+        if zero_center:
+            X = np.clip(X, a_min=-max_value, a_max=max_value)
+        else:
+            X[X > max_value] = max_value
     if return_mean_std:
         return X, mean, std
     else:
@@ -882,7 +890,7 @@ def scale_sparse(
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool_] | None = None,
 ) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
     # need to add the following here to make inplace logic work
     if zero_center:
@@ -898,7 +906,7 @@ def scale_sparse(
         copy=copy,
         max_value=max_value,
         return_mean_std=return_mean_std,
-        mask=mask,
+        mask_obs=mask_obs,
     )
 
 
@@ -911,16 +919,16 @@ def scale_anndata(
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool_] | str | None = None,
 ) -> AnnData | None:
     adata = adata.copy() if copy else adata
     str_mean_std = ("mean", "std")
-    if mask is not None:
-        if isinstance(mask, str):
-            str_mean_std = (f"mean of {mask}", f"std of {mask}")
+    if mask_obs is not None:
+        if isinstance(mask_obs, str):
+            str_mean_std = (f"mean of {mask_obs}", f"std of {mask_obs}")
         else:
             str_mean_std = ("mean with mask", "std with mask")
-        mask = _check_mask(adata, mask, "obs")
+        mask_obs = _check_mask(adata, mask_obs, "obs")
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer, obsm=obsm)
     X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
@@ -929,7 +937,7 @@ def scale_anndata(
         max_value=max_value,
         copy=False,  # because a copy has already been made, if it were to be made
         return_mean_std=True,
-        mask=mask,
+        mask_obs=mask_obs,
     )
     _set_obs_rep(adata, X, layer=layer, obsm=obsm)
     return adata if copy else None

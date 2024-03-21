@@ -111,7 +111,7 @@ def dendrogram(
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.dendrogram(adata, groupby='bulk_labels')
-    >>> sc.pl.dendrogram(adata, groupby='bulk_labels')
+    >>> sc.pl.dendrogram(adata, groupby='bulk_labels')  # doctest: +SKIP
     <Axes: >
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
@@ -155,7 +155,11 @@ def dendrogram(
         )
 
     # aggregate values within categories using 'mean'
-    mean_df = rep_df.groupby(level=0, observed=True).mean()
+    mean_df = (
+        rep_df.groupby(level=0, observed=True)
+        .mean()
+        .loc[categories]  # Fixed ordering for pandas < 2
+    )
 
     import scipy.cluster.hierarchy as sch
     from scipy.spatial import distance

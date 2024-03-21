@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize, is_color_like
+from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -13,7 +15,13 @@ from .._settings import settings
 from .._utils import _doc_params
 from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
-from ._utils import _AxesSubplot, check_colornorm, make_grid_spec, savefig_or_show
+from ._utils import (
+    _AxesSubplot,
+    _deprecated_scale,
+    check_colornorm,
+    make_grid_spec,
+    savefig_or_show,
+)
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -52,7 +60,7 @@ class StackedViolin(BasePlot):
         Order in which to show the categories. Note: if `dendrogram=True`
         the categories order will be given by the dendrogram and `order`
         will be ignored.
-    scale
+    density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
@@ -108,7 +116,7 @@ class StackedViolin(BasePlot):
     DEFAULT_JITTER_SIZE = 1
     DEFAULT_LINE_WIDTH = 0.2
     DEFAULT_ROW_PALETTE = None
-    DEFAULT_SCALE = "width"
+    DEFAULT_DENSITY_NORM: Literal["area", "count", "width"] = "width"
     DEFAULT_PLOT_YTICKLABELS = False
     DEFAULT_YLIM = None
     DEFAULT_PLOT_X_PADDING = 0.5  # a unit is the distance between two x-axis ticks
@@ -130,6 +138,18 @@ class StackedViolin(BasePlot):
     # If point or stick, show each underlying datapoint. Using
     # None will draw unadorned violins.
     DEFAULT_INNER = None
+
+    def __getattribute__(self, name: str) -> object:
+        """Called unconditionally when accessing an instance attribute"""
+        # If the user has set the deprecated version on the class,
+        # and our code accesses the new version from the instance,
+        # return the user-specified version instead and warn.
+        # This is done because class properties are hard to do.
+        if name == "DEFAULT_DENSITY_NORM" and hasattr(self, "DEFAULT_SCALE"):
+            msg = "Don’t set DEFAULT_SCALE, use DEFAULT_DENSITY_NORM instead"
+            warnings.warn(msg, FutureWarning)
+            return object.__getattribute__(self, "DEFAULT_SCALE")
+        return object.__getattribute__(self, name)
 
     @old_positionals(
         "use_raw",
@@ -224,7 +244,7 @@ class StackedViolin(BasePlot):
         self.kwds.setdefault("cut", self.DEFAULT_CUT)
         self.kwds.setdefault("inner", self.DEFAULT_INNER)
         self.kwds.setdefault("linewidth", self.DEFAULT_LINE_WIDTH)
-        self.kwds.setdefault("scale", self.DEFAULT_SCALE)
+        self.kwds.setdefault("density_norm", self.DEFAULT_DENSITY_NORM)
 
     @old_positionals(
         "cmap",
@@ -233,7 +253,7 @@ class StackedViolin(BasePlot):
         "jitter_size",
         "linewidth",
         "row_palette",
-        "scale",
+        "density_norm",
         "yticklabels",
         "ylim",
         "x_padding",
@@ -248,11 +268,13 @@ class StackedViolin(BasePlot):
         jitter_size: int | None = DEFAULT_JITTER_SIZE,
         linewidth: float | None = DEFAULT_LINE_WIDTH,
         row_palette: str | None = DEFAULT_ROW_PALETTE,
-        scale: Literal["area", "count", "width"] | None = DEFAULT_SCALE,
+        density_norm: Literal["area", "count", "width"] = DEFAULT_DENSITY_NORM,
         yticklabels: bool | None = DEFAULT_PLOT_YTICKLABELS,
         ylim: tuple[float, float] | None = DEFAULT_YLIM,
         x_padding: float | None = DEFAULT_PLOT_X_PADDING,
         y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
+        # deprecated
+        scale: Literal["area", "count", "width"] | None = None,
     ):
         r"""\
         Modifies plot visual parameters
@@ -277,7 +299,7 @@ class StackedViolin(BasePlot):
             (see :func:`~seaborn.color_palette`).
             Alternatively, a single color name or hex value can be passed,
             e.g. `'red'` or `'#cc33ff'`.
-        scale
+        density_norm
             The method used to scale the width of each violin.
             If 'width' (the default), each violin will have the same width.
             If 'area', each violin will have the same area.
@@ -338,8 +360,14 @@ class StackedViolin(BasePlot):
             self.plot_y_padding = y_padding
         if linewidth != self.kwds["linewidth"] and linewidth != self.DEFAULT_LINE_WIDTH:
             self.kwds["linewidth"] = linewidth
-        if scale != self.kwds["scale"] and scale != self.DEFAULT_SCALE:
-            self.kwds["scale"] = scale
+        density_norm = _deprecated_scale(
+            density_norm, scale, default=self.DEFAULT_DENSITY_NORM
+        )
+        if (
+            density_norm != self.kwds["density_norm"]
+            and density_norm != self.DEFAULT_DENSITY_NORM
+        ):
+            self.kwds["density_norm"] = density_norm
 
         return self
 
@@ -356,20 +384,21 @@ class StackedViolin(BasePlot):
         if self.var_names_idx_order is not None:
             _matrix = _matrix.iloc[:, self.var_names_idx_order]
 
-        if self.categories_order is not None:
-            _matrix.index = _matrix.index.reorder_categories(
-                self.categories_order, ordered=True
-            )
-
         # get mean values for color and transform to color values
         # using colormap
-        _color_df = _matrix.groupby(level=0, observed=True).median()
+        _color_df = (
+            _matrix.groupby(level=0, observed=True)
+            .median()
+            .loc[
+                self.categories_order
+                if self.categories_order is not None
+                else self.categories
+            ]
+        )
         if self.are_axes_swapped:
             _color_df = _color_df.T
 
-        cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
-        if "cmap" in self.kwds:
-            del self.kwds["cmap"]
+        cmap = plt.get_cmap(self.kwds.pop("cmap", self.cmap))
         normalize = check_colornorm(
             self.vboundnorm.vmin,
             self.vboundnorm.vmax,
@@ -418,9 +447,7 @@ class StackedViolin(BasePlot):
     ):
         import seaborn as sns  # Slow import, only import if called
 
-        row_palette = self.kwds.get("color", self.row_palette)
-        if "color" in self.kwds:
-            del self.kwds["color"]
+        row_palette = self.kwds.pop("color", self.row_palette)
         if row_palette is not None:
             if is_color_like(row_palette):
                 row_colors = [row_palette] * _color_df.shape[0]
@@ -442,9 +469,13 @@ class StackedViolin(BasePlot):
         # the expression value
         # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
+        if Version(pd.__version__) >= Version("2.1"):
+            stack_kwargs = {"future_stack": True}
+        else:
+            stack_kwargs = {"dropna": False}
 
         df = (
-            pd.DataFrame(_matrix.stack(dropna=False))
+            pd.DataFrame(_matrix.stack(**stack_kwargs))
             .reset_index()
             .rename(
                 columns={
@@ -484,10 +515,9 @@ class StackedViolin(BasePlot):
             row_ax = fig.add_subplot(gs[idx + 1, 1:-1])
             axs_list.append(row_ax)
 
-            if row_colors[idx] is None:
-                palette_colors = colormap_array[idx, :]
-            else:
-                palette_colors = None
+            palette_colors = (
+                list(colormap_array[idx, :]) if row_colors[idx] is None else None
+            )
 
             if not self.are_axes_swapped:
                 x = "genes"
@@ -506,6 +536,9 @@ class StackedViolin(BasePlot):
                 data=_df,
                 orient="vertical",
                 ax=row_ax,
+                # use a single `color`` if row_colors[idx] is defined
+                # else use the palette
+                hue=None if palette_colors is None else x,
                 palette=palette_colors,
                 color=row_colors[idx],
                 **self.kwds,
@@ -630,7 +663,7 @@ def stacked_violin(
     stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
     jitter: float | bool = StackedViolin.DEFAULT_JITTER,
     size: int = StackedViolin.DEFAULT_JITTER_SIZE,
-    scale: Literal["area", "count", "width"] = StackedViolin.DEFAULT_SCALE,
+    scale: Literal["area", "count", "width"] = StackedViolin.DEFAULT_DENSITY_NORM,
     yticklabels: bool | None = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     order: Sequence[str] | None = None,
     swap_axes: bool = False,
@@ -779,7 +812,7 @@ def stacked_violin(
         jitter=jitter,
         jitter_size=size,
         row_palette=row_palette,
-        scale=kwds.get("scale", scale),
+        density_norm=kwds.get("density_norm", scale),
         yticklabels=yticklabels,
         linewidth=kwds.get("linewidth", StackedViolin.DEFAULT_LINE_WIDTH),
     ).legend(title=colorbar_title)

@@ -11,6 +11,7 @@ from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
 from scanpy import Neighbors
+from scanpy.testing._helpers import anndata_v0_8_constructor_compat
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -113,7 +114,7 @@ transitions_gauss_noknn = [
 
 
 def get_neighbors() -> Neighbors:
-    return Neighbors(AnnData(np.array(X)))
+    return Neighbors(anndata_v0_8_constructor_compat(np.array(X)))
 
 
 @pytest.fixture
