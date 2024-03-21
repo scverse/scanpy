@@ -3,110 +3,30 @@ build-backend = "hatchling.build"
 requires = ["hatchling", "hatch-vcs"]
 
 [project]
-name = "scanpy"
-description = "Single-Cell Analysis in Python."
+name = "scoop"
+description = ""
 requires-python = ">=3.9"
 license = "BSD-3-clause"
 authors = [
-    {name = "Alex Wolf"},
-    {name = "Philipp Angerer"},
-    {name = "Fidel Ramirez"},
-    {name = "Isaac Virshup"},
-    {name = "Sergei Rybakov"},
-    {name = "Gokcen Eraslan"},
-    {name = "Tom White"},
-    {name = "Malte Luecken"},
-    {name = "Davide Cittaro"},
-    {name = "Tobias Callies"},
-    {name = "Marius Lange"},
-    {name = "Andrés R. Muñoz-Rojas"},
-]
-maintainers = [
-    {name = "Isaac Virshup", email = "ivirshup@gmail.com"},
-    {name = "Philipp Angerer", email = "phil.angerer@gmail.com"},
-    {name = "Alex Wolf", email = "f.alex.wolf@gmx.de"},
+    {name = "Benamad Kader Houssein"},
+    {name = "Abdou Khadre Djeylani Diouf"},
 ]
 readme = "README.md"
-classifiers = [
-    "License :: OSI Approved :: BSD License",
-    "Development Status :: 5 - Production/Stable",
-    "Environment :: Console",
-    "Framework :: Jupyter",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Natural Language :: English",
-    "Operating System :: MacOS :: MacOS X",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Topic :: Scientific/Engineering :: Bio-Informatics",
-    "Topic :: Scientific/Engineering :: Visualization",
-]
+
 dependencies = [
-    "anndata>=0.7.4",
-    # numpy needs a version due to #1320
-    "numpy>=1.17.0",
-    "matplotlib>=3.6",
-    "pandas >=2.1.3",
-    "scipy>=1.4",
-    "seaborn>=0.13.0",
-    "h5py>=3",
-    "tqdm",
-    "scikit-learn>=0.24",
-    "statsmodels>=0.10.0rc2",
-    "patsy",
-    "networkx>=2.3",
-    "natsort",
-    "joblib",
-    "numba>=0.41.0",
-    "umap-learn>=0.3.10",
-    "packaging",
-    "session-info",
-    "legacy-api-wrap>=1.4",  # for positional API deprecations
-    "get-annotations; python_version < '3.10'",
+    "scanpy",
+    "plotly",
 ]
 dynamic = ["version"]
 
 [project.urls]
-Documentation = "https://scanpy.readthedocs.io/"
-Source = "https://github.com/scverse/scanpy"
-Home-page = "https://scanpy.org"
-Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
-Twitter = "https://twitter.com/scverse_team"
+Reposityory = "https://github.com/kaderhoussein/scoop"
 
-[project.scripts]
-scanpy = "scanpy.cli:console_main"
 
-[project.optional-dependencies]
-test-min = [
-    "pytest>=7.4.2",
-    "pytest-nunit",
-    "pytest-mock",
-    "profimp",
-]
 test = [
-    "scanpy[test-min]",
-    # Optional but important dependencies
-    "scanpy[leiden]",
-    "zarr",
-    "scanpy[dask]",
-    # Temp. before moving into scanpy
-    "scrublet==0.2.3",
+    "pytest"
 ]
-test-full = [
-    "scanpy[test]",
-    # tested algorithms
-    "scanpy[leiden]",
-    "scanpy[magic]",
-    "scanpy[skmisc]",
-    "scanpy[harmony]",
-    "scanpy[scanorama]",
-    "scanpy[scrublet]",
-    "scanpy[dask-ml]",
-]
+
 doc = [
     "sphinx>=7",
     "sphinx-book-theme>=1.1.0",
@@ -126,113 +46,14 @@ doc = [
     "sam-algorithm",
 ]
 dev = [
-    # getting the dev version
-    "setuptools_scm",
-    # static checking
     "pre-commit",
 ]
-# Algorithms
-paga = ["igraph"]
-louvain = ["igraph", "louvain>=0.6,!=0.6.2"]  # Louvain community detection
-leiden = ["igraph>=0.10", "leidenalg>=0.9"]  # Leiden community detection
-bbknn = ["bbknn"]  # Batch balanced KNN (batch correction)
-magic = ["magic-impute>=2.0"]  # MAGIC imputation method
-skmisc = ["scikit-misc>=0.1.3"]  # highly_variable_genes method 'seurat_v3'
-harmony = ["harmonypy"]  # Harmony dataset integration
-scanorama = ["scanorama"]  # Scanorama dataset integration
-scrublet = ["scrublet"]  # Doublet detection
-# Acceleration
-rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
-dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
-dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.hatch.build]
-exclude = ["scanpy/tests"]
+exclude = ["scoop/tests"]
 [tool.hatch.version]
 source = "vcs"
 [tool.hatch.build.hooks.vcs]
-version-file = "scanpy/_version.py"
+version-file = "scoop/_version.py"
 
-[tool.pytest.ini_options]
-addopts = [
-    "--import-mode=importlib",
-    "--strict-markers",
-    "--doctest-modules",
-    "-pscanpy.testing._pytest",
-]
-testpaths = ["scanpy"]
-norecursedirs = ["scanpy/tests/_images"]
-xfail_strict = true
-nunit_attach_on = "fail"
-markers = [
-    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
-    "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
-]
-filterwarnings = [
-    # legacy-api-wrap: internal use of positional API
-    "error:The specified parameters:FutureWarning",
-    # When calling `.show()` in tests, this is raised
-    "ignore:FigureCanvasAgg is non-interactive:UserWarning",
-    # We explicitly handle these errors in tests
-    "error:`anndata.read` is deprecated:FutureWarning",
-    "error:Observation names are not unique:UserWarning",
-    "error:The dtype argument is deprecated and will be removed:FutureWarning",
-    "error:The behavior of DataFrame\\.sum with axis=None is deprecated:FutureWarning",
-    "error:The default of observed=False is deprecated:FutureWarning",
-    "error:Series\\.__getitem__ treating keys as positions is deprecated:FutureWarning",
-    "error:The default value of 'ignore' for the `na_action` parameter in pandas\\.Categorical\\.map:FutureWarning",
-    "error:The provided callable.* is currently using:FutureWarning",
-    "error:The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
-    "error:A value is trying to be set on a copy of a slice from a DataFrame",
-]
 
-[tool.coverage.run]
-data_file = "test-data/coverage"
-source_pkgs = ["scanpy"]
-omit = ["*/tests/*"]
-[tool.coverage.xml]
-output = "test-data/coverage.xml"
-[tool.coverage.paths]
-source = [".", "**/site-packages"]
-[tool.coverage.report]
-exclude_also = [
-    "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:",
-]
-
-[tool.ruff.format]
-docstring-code-format = true
-
-[tool.ruff.lint]
-select = [
-    "E",       # Error detected by Pycodestyle
-    "F",       # Errors detected by Pyflakes
-    "W",       # Warning detected by Pycodestyle
-    "UP",      # pyupgrade
-    "I",       # isort
-    "TCH",     # manage type checking blocks
-    "TID251",  # Banned imports
-    "ICN",     # Follow import conventions
-    "PTH",     # Pathlib instead of os.path
-    "PLR0917", # Ban APIs with too many positional parameters
-]
-ignore = [
-    # line too long -> we accept long comment lines; black gets rid of long code lines
-    "E501",
-    # module level import not at top of file -> required to circumvent circular imports for Scanpys API
-    "E402",
-    # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections
-    "E262",
-    # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
-    "E741",
-]
-[tool.ruff.lint.per-file-ignores]
-# Do not assign a lambda expression, use a def
-"scanpy/tools/_rank_genes_groups.py" = ["E731"]
-[tool.ruff.lint.isort]
-known-first-party = ["scanpy"]
-required-imports = ["from __future__ import annotations"]
-[tool.ruff.lint.flake8-tidy-imports.banned-api]
-"pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
-"pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
-"pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
