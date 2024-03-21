@@ -726,8 +726,7 @@ def axis_sum(
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
     dtype: np.typing.DTypeLike | None = None,
-) -> np.matrix:
-    ...
+) -> np.matrix: ...
 
 
 @singledispatch
