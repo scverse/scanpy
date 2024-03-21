@@ -21,19 +21,24 @@ from matplotlib.colors import Colormap, Normalize
 from matplotlib.figure import Figure  # noqa: TCH002
 from numpy.typing import NDArray  # noqa: TCH002
 
-from ... import logging as logg
-from ..._settings import settings
-from ..._utils import Empty, _doc_params, _empty, sanitize_anndata
-from ...get import _check_mask
-from .. import _utils
-from .._docs import (
-    doc_adata_color_etc,
-    doc_edges_arrows,
-    doc_scatter_embedding,
-    doc_scatter_spatial,
-    doc_show_save_ax,
+from scanpy.plotting._tools.scatterplots import (
+    _get_basis,
+    _components_to_dimensions,
+    _broadcast_args,
+    _color_vector,
+    _get_vboundnorm,
 )
-from .._utils import (
+
+import scanpy as sc
+import plotly.graph_objects as go
+
+from ... import logging as logg
+from scanpy._settings import settings
+from scanpy._utils import Empty, _doc_params, _empty, sanitize_anndata
+from scanpy.get import _check_mask
+from .. import _utils
+
+from scanpy.plotting._utils import (
     ColorLike,
     VBound,
     _FontSize,
@@ -44,16 +49,8 @@ from .._utils import (
     circles,
 )
 
-if TYPE_CHECKING:
-    from collections.abc import Collection
 
 
-@_doc_params(
-    adata_color_etc=doc_adata_color_etc,
-    edges_arrows=doc_edges_arrows,
-    scatter_bulk=doc_scatter_embedding,
-    show_save_ax=doc_show_save_ax,
-)
 def embedding(
     adata: AnnData,
     basis: str,
@@ -623,7 +620,7 @@ def _wraps_plot_scatter(wrapper):
 
 # API
 
-
+"""
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -631,6 +628,7 @@ def _wraps_plot_scatter(wrapper):
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
+"""
 def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in UMAP basis.
@@ -685,7 +683,7 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """
     return embedding(adata, "umap", **kwargs)
 
-
+"""
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -693,6 +691,7 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
+"""
 def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in tSNE basis.
@@ -726,13 +725,14 @@ def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """
     return embedding(adata, "tsne", **kwargs)
 
-
+""""
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
+"""
 def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in Diffusion Map basis.
@@ -763,16 +763,35 @@ def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     --------
     tl.diffmap
     """
-    return embedding(adata, "diffmap", **kwargs)
+    # Compute neighborhood graph
+    sc.pp.neighbors(adata)
+    
+    # Perform diffusion map embedding
+    sc.tl.diffmap(adata)
+    
+    # Perform trajectory inference
+    sc.tl.dpt(adata)
+    
+    # Create an interactive scatter plot
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=adata.obsm['X_diffmap'][:, 0], y=adata.obsm['X_diffmap'][:, 1], mode='markers', marker=dict(color=adata.obs['dpt_pseudotime'],colorscale='viridis'),text=adata.obs_names))
+    
+    # Add layout and axis labels
+    fig.update_layout(title='Interactive Trajectory Plot', xaxis_title='Diffmap Component 1',yaxis_title='Diffmap Component 2')
+    
+    # Show the plot
+    fig.show(config={"displayModeBar": True}, auto_open=True)
+    #return embedding(adata, "diffmap", **kwargs)
 
 
 @_wraps_plot_scatter
-@_doc_params(
-    adata_color_etc=doc_adata_color_etc,
-    edges_arrows=doc_edges_arrows,
-    scatter_bulk=doc_scatter_embedding,
-    show_save_ax=doc_show_save_ax,
-)
+
+#@_doc_params(
+#    adata_color_etc=doc_adata_color_etc,
+#    edges_arrows=doc_edges_arrows,
+#    scatter_bulk=doc_scatter_embedding,
+#    show_save_ax=doc_show_save_ax,
+#)
 def draw_graph(
     adata: AnnData, *, layout: _IGraphLayout | None = None, **kwargs
 ) -> Figure | Axes | list[Axes] | None:
@@ -819,13 +838,14 @@ def draw_graph(
 
     return embedding(adata, basis, **kwargs)
 
-
+"""
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
+"""
 def pca(
     adata: AnnData,
     *,
@@ -921,7 +941,7 @@ def pca(
         return None
     return axs
 
-
+""""
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -929,6 +949,7 @@ def pca(
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
+"""
 def spatial(
     adata: AnnData,
     *,
@@ -1048,43 +1069,6 @@ def spatial(
     if show:
         return None
     return axs
-
-
-# Helpers
-def _components_to_dimensions(
-    components: str | Collection[str] | None,
-    dimensions: Collection[int] | Collection[Collection[int]] | None,
-    *,
-    projection: Literal["2d", "3d"] = "2d",
-    total_dims: int,
-) -> list[Collection[int]]:
-    """Normalize components/ dimensions args for embedding plots."""
-    # TODO: Deprecate components kwarg
-    ndims = {"2d": 2, "3d": 3}[projection]
-    if components is None and dimensions is None:
-        dimensions = [tuple(i for i in range(ndims))]
-    elif components is not None and dimensions is not None:
-        raise ValueError("Cannot provide both dimensions and components")
-
-    # TODO: Consider deprecating this
-    # If components is not None, parse them and set dimensions
-    if components == "all":
-        dimensions = list(combinations(range(total_dims), ndims))
-    elif components is not None:
-        if isinstance(components, str):
-            components = [components]
-        # Components use 1 based indexing
-        dimensions = [[int(dim) - 1 for dim in c.split(",")] for c in components]
-
-    if all(isinstance(el, Integral) for el in dimensions):
-        dimensions = [dimensions]
-    # if all(isinstance(el, Collection) for el in dimensions):
-    for dims in dimensions:
-        if len(dims) != ndims or not all(isinstance(d, Integral) for d in dims):
-            raise ValueError()
-
-    return dimensions
-
 
 def _add_categorical_legend(
     ax,
