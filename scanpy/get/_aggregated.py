@@ -288,6 +288,11 @@ def aggregate(
         return result
 
 
+@aggregate.register(pd.DataFrame)
+def aggregate_df(data, by, func, *, mask=None, dof=1):
+    return aggregate(data.values, by, func, mask=mask, dof=dof)
+
+
 @aggregate.register(np.ndarray)
 @aggregate.register(sparse.spmatrix)
 def aggregate_array(
