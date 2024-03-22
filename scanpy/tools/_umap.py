@@ -17,11 +17,10 @@ if TYPE_CHECKING:
 
 _InitPos = Literal["paga", "spectral", "random"]
 
-_MethodKwds = TypedDict("_MethodKwds", {
-    "dens_lambda": float,
-    "dens_frac": float,
-    "dens_var_shift": float,
-}, total=False)
+class _MethodKwds(TypedDict, total=False):
+    dens_lambda: float
+    dens_frac: float
+    dens_var_shift: float
 
 
 @old_positionals(
