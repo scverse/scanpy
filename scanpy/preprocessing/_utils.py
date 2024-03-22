@@ -187,7 +187,7 @@ def _update_csr_inplace(indptr, data, *, update_indptr, update_data, mask):
         stop_idx = indptr[subidx + 1]
 
         if sub_stop_idx - sub_start_idx == stop_idx - start_idx:
-            for j in range(sub_stop_idx - sub_start_idx):
+            for j in numba.prange(sub_stop_idx - sub_start_idx):
                 data[start_idx + j] = update_data[sub_start_idx + j]
 
 
@@ -203,9 +203,9 @@ def _update_csc_inplace(
         stop_idx = indptr[i + 1]
 
         breaker = 0
-        for j in range(sub_stop_idx - sub_start_idx):
+        for j in numba.prange(sub_stop_idx - sub_start_idx):
             sub_idx = mask[update_indices[sub_start_idx + j]]
-            for k in range(start_idx + breaker, stop_idx):
+            for k in numba.prange(start_idx + breaker, stop_idx):
                 if indices[k] == sub_idx:
                     data[k] = update_data[sub_start_idx + j]
                     breaker = k - start_idx
