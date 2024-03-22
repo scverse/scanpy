@@ -1,16 +1,23 @@
 from __future__ import annotations
 
+from operator import truediv
 from typing import TYPE_CHECKING, Literal
 from warnings import warn
 
 import numpy as np
 from scipy.sparse import issparse
-from sklearn.utils import sparsefuncs
 
 from .. import logging as logg
 from .._compat import DaskArray, old_positionals
-from .._utils import view_to_actual
+from .._utils import axis_mul_or_truediv, axis_sum, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
+
+try:
+    import dask
+    import dask.array as da
+except ImportError:
+    da = None
+    dask = None
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -22,21 +29,30 @@ def _normalize_data(X, counts, after=None, copy: bool = False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    if isinstance(counts, DaskArray):
-        counts_greater_than_zero = counts[counts > 0].compute_chunk_sizes()
-    else:
-        counts_greater_than_zero = counts[counts > 0]
+    if after is None:
+        if isinstance(counts, DaskArray):
 
-    after = np.median(counts_greater_than_zero, axis=0) if after is None else after
-    counts += counts == 0
+            def nonzero_median(x):
+                return np.ma.median(np.ma.masked_array(x, x == 0)).item()
+
+            after = da.from_delayed(
+                dask.delayed(nonzero_median)(counts),
+                shape=(),
+                meta=counts._meta,
+                dtype=counts.dtype,
+            )
+        else:
+            counts_greater_than_zero = counts[counts > 0]
+            after = np.median(counts_greater_than_zero, axis=0)
     counts = counts / after
-    if issparse(X):
-        sparsefuncs.inplace_row_scale(X, 1 / counts)
-    elif isinstance(counts, np.ndarray):
-        np.divide(X, counts[:, None], out=X)
-    else:
-        X = np.divide(X, counts[:, None])  # dask does not support kwarg "out"
-    return X
+    return axis_mul_or_truediv(
+        X,
+        counts,
+        op=truediv,
+        out=X if isinstance(X, np.ndarray) or issparse(X) else None,
+        allow_divide_by_zero=False,
+        axis=0,
+    )
 
 
 @old_positionals(
@@ -78,6 +94,11 @@ def normalize_total(
     Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
     [Zheng17]_ or SPRING [Weinreb17]_.
 
+    .. note::
+        When used with a :class:`~dask.array.Array` in `adata.X`, this function will have to
+        call functions that trigger `.compute()` on the :class:`~dask.array.Array` if `exclude_highly_expressed`
+        is `True`, `layer_norm` is not `None`, or if `key_added` is not `None`.
+
     Params
     ------
     adata
@@ -92,7 +113,8 @@ def normalize_total(
         normalization factor (size factor) for each cell. A gene is considered
         highly expressed, if it has more than `max_fraction` of the total counts
         in at least one cell. The not-excluded genes will sum up to
-        `target_sum`.
+        `target_sum`.  Providing this argument when `adata.X` is a :class:`~dask.array.Array`
+        will incur blocking `.compute()` calls on the array.
     max_fraction
         If `exclude_highly_expressed=True`, consider cells as highly expressed
         that have more counts than `max_fraction` of the original total counts
@@ -187,27 +209,27 @@ def normalize_total(
 
     gene_subset = None
     msg = "normalizing counts per cell"
+
+    counts_per_cell = axis_sum(X, axis=1)
     if exclude_highly_expressed:
-        counts_per_cell = X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
 
         # at least one cell as more than max_fraction of counts per cell
 
-        gene_subset = (X > counts_per_cell[:, None] * max_fraction).sum(0)
+        gene_subset = axis_sum((X > counts_per_cell[:, None] * max_fraction), axis=0)
         gene_subset = np.asarray(np.ravel(gene_subset) == 0)
 
         msg += (
             ". The following highly-expressed genes are not considered during "
             f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
         )
-        counts_per_cell = X[:, gene_subset].sum(1)
-    else:
-        counts_per_cell = X.sum(1)
+        counts_per_cell = axis_sum(X[:, gene_subset], axis=1)
+
     start = logg.info(msg)
     counts_per_cell = np.ravel(counts_per_cell)
 
     cell_subset = counts_per_cell > 0
-    if not np.all(cell_subset):
+    if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn(UserWarning("Some cells have zero counts"))
 
     if inplace:
