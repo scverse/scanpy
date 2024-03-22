@@ -15,9 +15,18 @@ from collections import namedtuple
 from contextlib import contextmanager
 from enum import Enum
 from functools import partial, singledispatch, wraps
+from operator import mul, truediv
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Literal,
+    TypeVar,
+    Union,
+    overload,
+)
 from weakref import WeakSet
 
 import numpy as np
@@ -540,6 +549,218 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
     import dask.array as da
 
     return da.map_blocks(elem_mul, x, y)
+
+
+Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
+
+
+def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
+    divisor = np.ravel(divisor)
+    if axis:
+        return divisor[None, :]
+    return divisor[:, None]
+
+
+def check_op(op):
+    if op not in {truediv, mul}:
+        raise ValueError(f"{op} not one of truediv or mul")
+
+
+@singledispatch
+def axis_mul_or_truediv(
+    X: sparse.spmatrix,
+    scaling_array,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: sparse.spmatrix | None = None,
+) -> sparse.spmatrix:
+    check_op(op)
+    if out is not None:
+        if X.data is not out.data:
+            raise ValueError(
+                "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
+            )
+    if not allow_divide_by_zero and op is truediv:
+        scaling_array = scaling_array.copy() + (scaling_array == 0)
+
+    row_scale = axis == 0
+    column_scale = axis == 1
+    if row_scale:
+
+        def new_data_op(x):
+            return op(x.data, np.repeat(scaling_array, np.diff(x.indptr)))
+
+    elif column_scale:
+
+        def new_data_op(x):
+            return op(x.data, scaling_array.take(x.indices, mode="clip"))
+
+    if X.format == "csr":
+        indices = X.indices
+        indptr = X.indptr
+        if out is not None:
+            X.data = new_data_op(X)
+            return X
+        return sparse.csr_matrix(
+            (new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape
+        )
+    transposed = X.T
+    return axis_mul_or_truediv(
+        transposed,
+        scaling_array,
+        op=op,
+        axis=1 - axis,
+        out=transposed,
+        allow_divide_by_zero=allow_divide_by_zero,
+    ).T
+
+
+@axis_mul_or_truediv.register(np.ndarray)
+def _(
+    X: np.ndarray,
+    scaling_array: np.ndarray,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: np.ndarray | None = None,
+) -> np.ndarray:
+    check_op(op)
+    scaling_array = broadcast_axis(scaling_array, axis)
+    if op is mul:
+        return np.multiply(X, scaling_array, out=out)
+    if not allow_divide_by_zero:
+        scaling_array = scaling_array.copy() + (scaling_array == 0)
+    return np.true_divide(X, scaling_array, out=out)
+
+
+def make_axis_chunks(
+    X: DaskArray, axis: Literal[0, 1], pad=True
+) -> tuple[tuple[int], tuple[int]]:
+    if axis == 0:
+        return (X.chunks[axis], (1,))
+    return ((1,), X.chunks[axis])
+
+
+@axis_mul_or_truediv.register(DaskArray)
+def _(
+    X: DaskArray,
+    scaling_array: Scaling_T,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: None = None,
+) -> DaskArray:
+    check_op(op)
+    if out is not None:
+        raise TypeError(
+            "`out` is not `None`. Do not do in-place modifications on dask arrays."
+        )
+
+    import dask.array as da
+
+    scaling_array = broadcast_axis(scaling_array, axis)
+    row_scale = axis == 0
+    column_scale = axis == 1
+
+    if isinstance(scaling_array, DaskArray):
+        if (row_scale and not X.chunksize[0] == scaling_array.chunksize[0]) or (
+            column_scale
+            and (
+                (
+                    len(scaling_array.chunksize) == 1
+                    and X.chunksize[1] != scaling_array.chunksize[0]
+                )
+                or (
+                    len(scaling_array.chunksize) == 2
+                    and X.chunksize[1] != scaling_array.chunksize[1]
+                )
+            )
+        ):
+            warnings.warn("Rechunking scaling_array in user operation", UserWarning)
+            scaling_array = scaling_array.rechunk(make_axis_chunks(X, axis))
+    else:
+        scaling_array = da.from_array(
+            scaling_array,
+            chunks=make_axis_chunks(X, axis),
+        )
+    return da.map_blocks(
+        axis_mul_or_truediv,
+        X,
+        scaling_array,
+        axis,
+        op,
+        meta=X._meta,
+        out=out,
+        allow_divide_by_zero=allow_divide_by_zero,
+    )
+
+
+@overload
+def axis_sum(
+    X: sparse.spmatrix,
+    *,
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: np.typing.DTypeLike | None = None,
+) -> np.matrix: ...
+
+
+@singledispatch
+def axis_sum(
+    X: np.ndarray,
+    *,
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: np.typing.DTypeLike | None = None,
+) -> np.ndarray:
+    return np.sum(X, axis=axis, dtype=dtype)
+
+
+@axis_sum.register(DaskArray)
+def _(
+    X: DaskArray,
+    *,
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: np.typing.DTypeLike | None = None,
+) -> DaskArray:
+    import dask.array as da
+
+    if dtype is None:
+        dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
+
+    if isinstance(X._meta, np.ndarray) and not isinstance(X._meta, np.matrix):
+        return X.sum(axis=axis, dtype=dtype)
+
+    def sum_drop_keepdims(*args, **kwargs):
+        kwargs.pop("computing_meta", None)
+        # masked operations on sparse produce which numpy matrices gives the same API issues handled here
+        if isinstance(X._meta, (sparse.spmatrix, np.matrix)) or isinstance(
+            args[0], (sparse.spmatrix, np.matrix)
+        ):
+            kwargs.pop("keepdims", None)
+            axis = kwargs["axis"]
+            if isinstance(axis, tuple):
+                if len(axis) != 1:
+                    raise ValueError(
+                        f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
+                    )
+                kwargs["axis"] = axis[0]
+        # returns a np.matrix normally, which is undesireable
+        return np.array(np.sum(*args, dtype=dtype, **kwargs))
+
+    def aggregate_sum(*args, **kwargs):
+        return np.sum(args[0], dtype=dtype, **kwargs)
+
+    return da.reduction(
+        X,
+        sum_drop_keepdims,
+        aggregate_sum,
+        axis=axis,
+        dtype=dtype,
+        meta=np.array([], dtype=dtype),
+    )
 
 
 @singledispatch
