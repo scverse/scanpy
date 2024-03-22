@@ -69,6 +69,7 @@ def test_diffmap():
     d3 = pbmc.obsm["X_diffmap"].copy()
     assert_raises(AssertionError, assert_array_equal, d1, d3)
 
+
 def test_densmap():
     pbmc = pbmc68k_reduced()
 

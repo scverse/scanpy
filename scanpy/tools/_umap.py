@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 _InitPos = Literal["paga", "spectral", "random"]
 
+
 class _MethodKwds(TypedDict, total=False):
     dens_lambda: float
     dens_frac: float
@@ -244,23 +245,29 @@ def umap(
     if method_kwds is None:
         method_kwds = {}
 
-    densmap_kwds = {
-        "graph_dists": neighbors["distances"],
-        "n_neighbors": neigh_params.get("n_neighbors", 15),
-        # Default params from umap package
-        # Reference: https://github.com/lmcinnes/umap/blob/868e55cb614f361a0d31540c1f4a4b175136025c/umap/umap_.py#L1692
-        # If user provided method_kwds, the user-provided values should
-        # overwrite the default values specified above.
-        "lambda": method_kwds.get("dens_lambda", 2.0),
-        "frac": method_kwds.get("dens_frac", 0.3),
-        "var_shift": method_kwds.get("dens_var_shift", 0.1),
-    } if method == "densmap" else {}
+    densmap_kwds = (
+        {
+            "graph_dists": neighbors["distances"],
+            "n_neighbors": neigh_params.get("n_neighbors", 15),
+            # Default params from umap package
+            # Reference: https://github.com/lmcinnes/umap/blob/868e55cb614f361a0d31540c1f4a4b175136025c/umap/umap_.py#L1692
+            # If user provided method_kwds, the user-provided values should
+            # overwrite the default values specified above.
+            "lambda": method_kwds.get("dens_lambda", 2.0),
+            "frac": method_kwds.get("dens_frac", 0.3),
+            "var_shift": method_kwds.get("dens_var_shift", 0.1),
+        }
+        if method == "densmap"
+        else {}
+    )
     if method == "densmap":
-        adata.uns[uns_name]["params"].update({
-            "dens_lambda": densmap_kwds["lambda"],
-            "dens_frac": densmap_kwds["frac"],
-            "dens_var_shift": densmap_kwds["var_shift"],
-        })
+        adata.uns[uns_name]["params"].update(
+            {
+                "dens_lambda": densmap_kwds["lambda"],
+                "dens_frac": densmap_kwds["frac"],
+                "dens_var_shift": densmap_kwds["var_shift"],
+            }
+        )
 
     if method == "umap" or method == "densmap":
         # the data matrix X is really only used for determining the number of connected components
@@ -329,6 +336,7 @@ def umap(
         deep=("added\n" f"    '{obsm_key}', {obsm_name} coordinates (adata.obsm)"),
     )
     return adata if copy else None
+
 
 # Convenience function for densMAP
 
