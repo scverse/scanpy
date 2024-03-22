@@ -9,7 +9,7 @@
 
 ### `rapids-singlecell` brings scanpy to the GPU! {small}`2024-03-18`
 
-[`rapids-singlecell`](https://rapids-singlecell.readthedocs.io/en/latest/) by Severin Dicks provides a scanpy-like API with accelerated operations implemented on GPU.
+[`rapids-singlecell`](https://rapids-singlecell.readthedocs.io/) by Severin Dicks provides a scanpy-like API with accelerated operations implemented on GPU.
 
 ### Scanpy hits 100 contributors! {small}`2022-03-31`
 
