@@ -355,7 +355,7 @@ def densmap(
     """\
     Embed the neighborhood graph using densMAP [Narayan21]_.
 
-    We use the mplementation of densMAP defined in
+    We use the implementation of densMAP defined in
     `umap-learn <https://github.com/lmcinnes/umap>`__
     [McInnes18]_.
 
