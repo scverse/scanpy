@@ -14,7 +14,7 @@ import numpy as np
 import scipy as sp
 from anndata import AnnData
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
+from scipy.sparse import csr_matrix, issparse, isspmatrix_csc, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
@@ -830,6 +830,8 @@ def scale_array(
         X = X.copy()
     if mask_obs is not None:
         mask_obs = _check_mask(X, mask_obs, "obs")
+        if isspmatrix_csc(X):
+            X = X.tocsr()
         scale_rv = scale_array(
             X[mask_obs, :],
             zero_center=zero_center,

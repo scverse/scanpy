@@ -154,26 +154,14 @@ def update_spmatrix_inplace(X, update, mask):
         The mask of the values to update.
     """
     subset_mask = np.where(mask)[0]
-    if isinstance(X, sparse.csr_matrix):
-        _update_csr_inplace(
-            X.indptr,
-            X.data,
-            update_indptr=update.indptr,
-            update_data=update.data,
-            mask=subset_mask,
-        )
-    elif isinstance(X, sparse.csc_matrix):
-        _update_csc_inplace(
-            X.indptr,
-            X.indices,
-            X.data,
-            update_indptr=update.indptr,
-            update_indices=update.indices,
-            update_data=update.data,
-            mask=subset_mask,
-        )
-    else:
-        raise ValueError("X must be a CSR or CSC matrix")
+
+    _update_csr_inplace(
+        X.indptr,
+        X.data,
+        update_indptr=update.indptr,
+        update_data=update.data,
+        mask=subset_mask,
+    )
 
 
 @numba.njit()
@@ -189,24 +177,3 @@ def _update_csr_inplace(indptr, data, *, update_indptr, update_data, mask):
         if sub_stop_idx - sub_start_idx == stop_idx - start_idx:
             for j in range(sub_stop_idx - sub_start_idx):
                 data[start_idx + j] = update_data[sub_start_idx + j]
-
-
-@numba.njit()
-def _update_csc_inplace(
-    indptr, indices, data, *, update_indptr, update_indices, update_data, mask
-):
-    for i in range(len(indptr - 1)):
-        sub_start_idx = update_indptr[i]
-        sub_stop_idx = update_indptr[i + 1]
-
-        start_idx = indptr[i]
-        stop_idx = indptr[i + 1]
-
-        breaker = 0
-        for j in range(sub_stop_idx - sub_start_idx):
-            sub_idx = mask[update_indices[sub_start_idx + j]]
-            for k in range(start_idx + breaker, stop_idx):
-                if indices[k] == sub_idx:
-                    data[k] = update_data[sub_start_idx + j]
-                    breaker = k - start_idx
-                    break
