@@ -580,6 +580,11 @@ def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
     return divisor[:, None]
 
 
+def check_op(op):
+    if op not in {truediv, mul}:
+        raise ValueError(f"{op} not one of truediv or mul")
+
+
 @singledispatch
 def axis_mul_or_truediv(
     X: sparse.spmatrix,
@@ -590,8 +595,7 @@ def axis_mul_or_truediv(
     allow_divide_by_zero: bool = True,
     out: sparse.spmatrix | None = None,
 ) -> sparse.spmatrix:
-    if op not in {truediv, mul}:
-        raise ValueError(f"{op} not one of truediv or mul")
+    check_op(op)
     if out is not None:
         if X.data is not out.data:
             raise ValueError(
@@ -642,8 +646,7 @@ def _(
     allow_divide_by_zero: bool = True,
     out: np.ndarray | None = None,
 ) -> np.ndarray:
-    if op not in {truediv, mul}:
-        raise ValueError(f"{op} not one of truediv or mul")
+    check_op(op)
     scaling_array = broadcast_axis(scaling_array, axis)
     if op is mul:
         return np.multiply(X, scaling_array, out=out)
@@ -652,14 +655,12 @@ def _(
     return np.true_divide(X, scaling_array, out=out)
 
 
-def make_axis_chunks(X: DaskArray, axis: Literal[0, 1], pad=True) -> tuple[tuple[int]]:
+def make_axis_chunks(
+    X: DaskArray, axis: Literal[0, 1], pad=True
+) -> tuple[tuple[int], tuple[int]]:
     if axis == 0:
-        if pad:
-            return (X.chunks[axis], (1,))
-        return X.chunks[axis]
-    if pad:
-        return ((1,), X.chunks[axis])
-    return X.chunks[axis]
+        return (X.chunks[axis], (1,))
+    return ((1,), X.chunks[axis])
 
 
 @axis_mul_or_truediv.register(DaskArray)
@@ -672,8 +673,7 @@ def _(
     allow_divide_by_zero: bool = True,
     out: None = None,
 ) -> DaskArray:
-    if op not in {truediv, mul}:
-        raise ValueError(f"{op} not one of truediv or mul")
+    check_op(op)
     if out is not None:
         raise TypeError(
             "`out` is not `None`. Do not do in-place modifications on dask arrays."
@@ -700,13 +700,11 @@ def _(
             )
         ):
             warnings.warn("Rechunking scaling_array in user operation", UserWarning)
-            scaling_array = scaling_array.rechunk(
-                make_axis_chunks(X, axis, pad=len(scaling_array.shape) == 2)
-            )
+            scaling_array = scaling_array.rechunk(make_axis_chunks(X, axis))
     else:
         scaling_array = da.from_array(
             scaling_array,
-            chunks=make_axis_chunks(X, axis, pad=len(scaling_array.shape) == 2),
+            chunks=make_axis_chunks(X, axis),
         )
     return da.map_blocks(
         axis_mul_or_truediv,

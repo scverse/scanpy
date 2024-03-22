@@ -43,6 +43,20 @@ def test_descend_classes_and_funcs():
     assert {a.A, a.b.B} == set(descend_classes_and_funcs(a, "a"))
 
 
+def test_axis_mul_or_truediv_badop():
+    dividend = np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]])
+    divisor = np.array([0.1, 0.2])
+    with pytest.raises(ValueError, match=".*not one of truediv or mul"):
+        axis_mul_or_truediv(dividend, divisor, op=np.add, axis=0)
+
+
+def test_axis_mul_or_truediv_bad_out():
+    dividend = csr_matrix(np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]]))
+    divisor = np.array([0.1, 0.2])
+    with pytest.raises(ValueError, match="`out` argument provided but not equal to X"):
+        axis_mul_or_truediv(dividend, divisor, op=truediv, out=dividend.copy(), axis=0)
+
+
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("op", [truediv, mul])
 def test_scale_row(array_type, op):
