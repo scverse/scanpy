@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 from anndata import AnnData
-from scipy.sparse import csr_matrix
+from scipy.sparse import csc_matrix, csr_matrix
 
 import scanpy as sc
 
@@ -53,7 +53,9 @@ X_centered_for_mask = [
 ]
 
 
-@pytest.mark.parametrize("typ", [np.array, csr_matrix], ids=lambda x: x.__name__)
+@pytest.mark.parametrize(
+    "typ", [np.array, csr_matrix, csc_matrix], ids=lambda x: x.__name__
+)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize(
     ("mask_obs", "X", "X_centered", "X_scaled"),
