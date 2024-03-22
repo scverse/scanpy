@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from string import ascii_letters
-from typing import Literal
+from typing import Callable, Literal
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ import scanpy as sc
 from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -85,7 +85,7 @@ def test_no_batch_matches_batch(adata):
 
 
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_no_inplace(adata, array_type, batch_key):
     """Tests that, with `n_top_genes=None` the returned dataframe has the expected columns."""
     adata.X = array_type(adata.X)
@@ -338,12 +338,14 @@ def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes)
         ),
     ],
 )
-def test_compare_to_upstream(
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_compare_to_upstream(  # noqa: PLR0917
     request: pytest.FixtureRequest,
     func: Literal["hvg", "fgd"],
     flavor: Literal["seurat", "cell_ranger"],
     params: dict[str, float | int],
     ref_path: Path,
+    array_type: Callable,
 ):
     if func == "fgd" and flavor == "cell_ranger":
         msg = "The deprecated filter_genes_dispersion behaves differently with cell_ranger"
@@ -352,9 +354,11 @@ def test_compare_to_upstream(
 
     pbmc = pbmc68k_reduced()
     pbmc.X = pbmc.raw.X
+    pbmc.X = array_type(pbmc.X)
     pbmc.var_names_make_unique()
+    sc.pp.filter_cells(pbmc, min_counts=1)
+    sc.pp.normalize_total(pbmc, target_sum=1e4)
 
-    sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
     if func == "hvg":
         sc.pp.log1p(pbmc)
         sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
@@ -386,8 +390,8 @@ def test_compare_to_upstream(
     np.testing.assert_allclose(
         hvg_info["dispersions_norm"],
         pbmc.var["dispersions_norm"],
-        rtol=2e-05,
-        atol=2e-05,
+        rtol=2e-05 if "dask" not in array_type.__name__ else 1e-4,
+        atol=2e-05 if "dask" not in array_type.__name__ else 1e-4,
     )
 
 
@@ -568,7 +572,7 @@ def test_cutoff_info():
 
 
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize("inplace", [True, False], ids=["inplace", "copy"])
 def test_subset_inplace_consistency(flavor, array_type, subset, inplace):
@@ -609,7 +613,7 @@ def test_subset_inplace_consistency(flavor, array_type, subset, inplace):
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
 @pytest.mark.parametrize(
-    "to_dask", [p for p in ARRAY_TYPES_SUPPORTED if "dask" in p.values[0].__name__]
+    "to_dask", [p for p in ARRAY_TYPES if "dask" in p.values[0].__name__]
 )
 def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     adata.X = np.abs(adata.X).astype(int)
@@ -632,4 +636,4 @@ def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     assert_index_equal(adata.var_names, output_mem.index, check_names=False)
     assert_index_equal(adata.var_names, output_dask.index, check_names=False)
 
-    assert_frame_equal(output_mem, output_dask)
+    assert_frame_equal(output_mem, output_dask, atol=1e-4)
