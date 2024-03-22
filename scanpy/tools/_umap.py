@@ -144,12 +144,12 @@ def umap(
         (default storage places for pp.neighbors).
         If specified, umap looks .uns[neighbors_key] for neighbors settings and
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
-    
+
     method_kwds
         Additional method parameters.
 
         If method is ``'densmap'``, the following parameters are available:
-            
+
             ``dens_lambda`` : `float`, optional (default: 2.0)
                 Controls the regularization weight of the density correlation term
                 in densMAP. Higher values prioritize density preservation over the
@@ -173,7 +173,7 @@ def umap(
         UMAP coordinates of data.
     `adata.uns['umap']` : :class:`dict`
         UMAP parameters.
-    
+
     When method is 'densmap', sets the following fields:
 
     `adata.obsm['X_densmap']` : :class:`numpy.ndarray` (dtype `float`)
@@ -212,12 +212,12 @@ def umap(
     else:
         a = a
         b = b
-    
+
     uns_name = "densmap" if method == "densmap" else "umap"
     obsm_key = "X_densmap" if method == "densmap" else "X_umap"
     obsm_name = "densMAP" if method == "densmap" else "UMAP"
 
-    adata.uns[uns_name] = {"params": { "a": a, "b": b }}
+    adata.uns[uns_name] = {"params": {"a": a, "b": b}}
 
     if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
@@ -332,6 +332,8 @@ def umap(
     return adata if copy else None
 
 # Convenience function for densMAP
+
+
 def densmap(
     adata: AnnData,
     *,
