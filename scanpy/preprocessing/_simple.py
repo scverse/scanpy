@@ -29,7 +29,7 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
-from ._utils import _get_mean_var
+from ._utils import _get_mean_var, update_spmatrix_inplace
 
 # install dask if available
 try:
@@ -838,12 +838,21 @@ def scale_array(
             return_mean_std=return_mean_std,
             mask_obs=None,
         )
-        if return_mean_std:
-            X[mask_obs, :], mean, std = scale_rv
-            return X, mean, std
-        else:
-            X[mask_obs, :] = scale_rv
-            return X
+        if isinstance(X, np.ndarray):
+            if return_mean_std:
+                X[mask_obs, :], mean, std = scale_rv
+                return X, mean, std
+            else:
+                X[mask_obs, :] = scale_rv
+                return X
+        elif issparse(X):
+            if return_mean_std:
+                scaled, mean, std = scale_rv
+                update_spmatrix_inplace(X, scaled, mask_obs)
+                return X, mean, std
+            else:
+                update_spmatrix_inplace(X, scale_rv, mask_obs)
+                return X
 
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
