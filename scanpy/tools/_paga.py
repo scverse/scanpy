@@ -186,7 +186,7 @@ class PAGA:
         n = sum(ns)
         es_inner_cluster = [vc.subgraph(i).ecount() for i in range(len(ns))]
         cg = vc.cluster_graph(combine_edges="sum")
-        inter_es = _utils.get_sparse_from_igraph(cg, weight_attr="weight")
+        inter_es = cg.get_adjacency_sparse(attribute="weight")
         es = np.array(es_inner_cluster) + inter_es.sum(axis=1).A1
         inter_es = inter_es + inter_es.T  # \epsilon_i + \epsilon_j
         connectivities = inter_es.copy()
@@ -220,7 +220,7 @@ class PAGA:
         )
         ns = vc.sizes()
         cg = vc.cluster_graph(combine_edges="sum")
-        inter_es = _utils.get_sparse_from_igraph(cg, weight_attr="weight") / 2
+        inter_es = cg.get_adjacency_sparse(attribute="weight") / 2
         connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
         n_neighbors_sq = self._neighbors.n_neighbors**2
@@ -301,7 +301,7 @@ class PAGA:
         )
         # set combine_edges to False if you want self loops
         cg_full = vc.cluster_graph(combine_edges="sum")
-        transitions = _utils.get_sparse_from_igraph(cg_full, weight_attr="weight")
+        transitions = cg_full.get_adjacency_sparse(attribute="weight")
         transitions = transitions - transitions.T
         transitions_conf = transitions.copy()
         transitions = transitions.tocoo()
@@ -343,7 +343,7 @@ class PAGA:
             g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values
         )
         cg_bool = vc_bool.cluster_graph(combine_edges="sum")  # collapsed version
-        transitions = _utils.get_sparse_from_igraph(cg_bool, weight_attr="weight")
+        transitions = cg_bool.get_adjacency_sparse(attribute="weight")
         total_n = self._neighbors.n_neighbors * np.array(vc_bool.sizes())
         transitions_ttest = transitions.copy()
         transitions_confidence = transitions.copy()
