@@ -12,8 +12,6 @@ For more tutorials featureing scanpy and other [scverse](https://scverse.org) ec
 basics/index
 ```
 
-
-
 ## Visualization
 
 ```{toctree}
@@ -35,18 +33,6 @@ For more powerful tools for analysing single cell dynamics, check out the Scvers
 :maxdepth: 2
 
 trajectories/index
-```
-
-```{image} /_static/img/tutorials/paga_paul15.png
-:width: 450px
-```
-
-More examples for trajectory inference on complex datasets can be found in the
-[PAGA](https://github.com/theislab/paga) repository {cite-hack}`Wolf19`, for instance, multi-resolution analyses of whole
-animals, such as for [planaria] for data of {cite-hack}`Plass18`.
-
-```{image} /_static/img/tutorials/paga_planaria.png
-:width: 350px
 ```
 
 ## Spatial data
