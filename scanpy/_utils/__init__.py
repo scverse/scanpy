@@ -280,25 +280,6 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     return g
 
 
-def get_sparse_from_igraph(graph, weight_attr=None):
-    from scipy.sparse import csr_matrix
-
-    edges = graph.get_edgelist()
-    if weight_attr is None:
-        weights = [1] * len(edges)
-    else:
-        weights = graph.es[weight_attr]
-    if not graph.is_directed():
-        edges.extend([(v, u) for u, v in edges])
-        weights.extend(weights)
-    shape = graph.vcount()
-    shape = (shape, shape)
-    if len(edges) > 0:
-        return csr_matrix((weights, zip(*edges)), shape=shape)
-    else:
-        return csr_matrix(shape)
-
-
 # --------------------------------------------------------------------------------
 # Group stuff
 # --------------------------------------------------------------------------------
