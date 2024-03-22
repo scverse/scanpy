@@ -133,6 +133,10 @@ References
    *UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction*,
    `arXiv <https://arxiv.org/abs/1802.03426>`__.
 
+.. [Narayan21] Narayan *et al.* (2021),
+   *Assessing single-cell transcriptomic variability through density-preserving data visualization*,
+   `Nature Biotechnology <https://doi.org/10.1038/s41587-020-00801-7>`__.
+
 .. [Moignard15] Moignard *et al.* (2015),
    *Decoding the regulatory network of early blood development from single-cell gene expression measurements*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.3154>`__.
