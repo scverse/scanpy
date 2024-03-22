@@ -889,7 +889,6 @@ def scale_array(
     # do the clipping
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
-        # TODO: Report bug to dask?
         if isinstance(X, DaskArray) and issparse(X._meta):
 
             def clip_set(x):
