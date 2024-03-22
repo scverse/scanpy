@@ -78,12 +78,17 @@ def test_densmap():
     d2 = pbmc.obsm["X_densmap"].copy()
     assert_array_equal(d1, d2)
 
+    # Should have same result via sc.tl.umap with "densmap" as method
+    sc.tl.umap(pbmc, method="densmap")
+    d3 = pbmc.obsm["X_densmap"].copy()
+    assert_array_equal(d1, d3)
+
     # Checking if specifying random_state  works, arrays shouldn't be equal
     sc.tl.densmap(pbmc, random_state=1234)
-    d3 = pbmc.obsm["X_densmap"].copy()
-    assert_raises(AssertionError, assert_array_equal, d1, d3)
+    d4 = pbmc.obsm["X_densmap"].copy()
+    assert_raises(AssertionError, assert_array_equal, d1, d4)
 
     # Checking if specifying dens_lambda  works, arrays shouldn't be equal
     sc.tl.densmap(pbmc, dens_lambda=2.3456)
-    d4 = pbmc.obsm["X_densmap"].copy()
-    assert_raises(AssertionError, assert_array_equal, d1, d4)
+    d5 = pbmc.obsm["X_densmap"].copy()
+    assert_raises(AssertionError, assert_array_equal, d1, d5)
