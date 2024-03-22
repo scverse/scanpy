@@ -902,7 +902,8 @@ def scale_array(
             X = da.map_blocks(clip_set, X)
         else:
             if zero_center:
-                X = np.clip(X, a_min=-max_value, a_max=max_value)
+                a_min, a_max = -max_value, max_value
+                X = np.clip(X, a_min, a_max)  # dask does not accept these as kwargs
             else:
                 X[X > max_value] = max_value
     if return_mean_std:
