@@ -250,24 +250,16 @@ def _make_forest_dict(forest):
     d = {}
     props = ("hyperplanes", "offsets", "children", "indices")
     for prop in props:
+        data_list = [getattr(tree, prop) for tree in forest]
+        sizes = np.array([data.shape[0] for data in data_list])
         d[prop] = {}
-        sizes = np.fromiter(
-            (getattr(tree, prop).shape[0] for tree in forest), dtype=int
+        d[prop]["start"] = np.cumsum(sizes) - sizes
+        dims = (
+            (sizes.sum(),)
+            if prop == "offsets"
+            else (sizes.sum(), data_list[0].shape[1])
         )
-        d[prop]["start"] = np.zeros_like(sizes)
-        if prop == "offsets":
-            dims = sizes.sum()
-        else:
-            dims = (sizes.sum(), getattr(forest[0], prop).shape[1])
-        dtype = getattr(forest[0], prop).dtype
-        dat = np.empty(dims, dtype=dtype)
-        start = 0
-        for i, size in enumerate(sizes):
-            d[prop]["start"][i] = start
-            end = start + size
-            dat[start:end] = getattr(forest[i], prop)
-            start = end
-        d[prop]["data"] = dat
+        d[prop]["data"] = np.concatenate(data_list)
     return d
 
 
