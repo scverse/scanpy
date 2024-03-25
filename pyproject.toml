@@ -177,6 +177,7 @@ filterwarnings = [
     "error:The specified parameters:FutureWarning",
     # When calling `.show()` in tests, this is raised
     "ignore:FigureCanvasAgg is non-interactive:UserWarning",
+
     # We explicitly handle the below errors in tests
     "error:`anndata.read` is deprecated:FutureWarning",
     "error:Observation names are not unique:UserWarning",
