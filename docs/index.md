@@ -85,6 +85,6 @@ contributors
 references
 ```
 
-[discourse]: https://discourse.scverse.org/
+[contributing guide]: ../CONTRIBUTING.md
 [genome biology (2018)]: https://doi.org/10.1186/s13059-017-1382-0
 [github]: https://github.com/scverse/scanpy
