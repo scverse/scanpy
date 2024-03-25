@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import warnings
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -140,8 +139,8 @@ def leiden(
         try:
             import leidenalg
 
-            msg = 'Use of leidenalg is discouraged and will be deprecated in the future.  Please use `flavor="igraph"` `n_iterations=2` to achieve similar results.  `directed` must also be `False` to work with `igraph`\'s implementation.'
-            warnings.warn(msg, FutureWarning)
+            msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
+            _utils.warn_once(msg, FutureWarning, stacklevel=3)
         except ImportError:
             raise ImportError(
                 "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
