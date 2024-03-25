@@ -179,8 +179,6 @@ def aggregate(
     in the output `AnnData` object.
 
     If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
-    If `func` only has length 1 or is just an `AggType`, then aggregation data is written to `X`.
-    Otherwise, it is written to `layers` or `xxxm` as appropriate for the dimensions of the aggregation data.
 
     Params
     ------
@@ -269,16 +267,30 @@ def aggregate(
         mask=mask,
         dof=dof,
     )
-    result = AnnData(
-        layers=layers,
-        obs=new_label_df,
-        var=getattr(adata, "var" if axis == 0 else "obs"),
-    )
+
+    # Define new var dataframe
+    if obsm or varm:
+        if isinstance(data, pd.DataFrame):
+            # Check if there could be labels
+            var = pd.DataFrame(index=data.columns)
+        else:
+            # Create them otherwise
+            var = pd.DataFrame(index=pd.RangeIndex(data.shape[1]).astype(str))
+    else:
+        var = getattr(adata, "var" if axis == 0 else "obs")
+
+    # It's all coming together
+    result = AnnData(layers=layers, obs=new_label_df, var=var)
 
     if axis == 1:
         return result.T
     else:
         return result
+
+
+@aggregate.register(pd.DataFrame)
+def aggregate_df(data, by, func, *, mask=None, dof=1):
+    return aggregate(data.values, by, func, mask=mask, dof=dof)
 
 
 @aggregate.register(np.ndarray)
