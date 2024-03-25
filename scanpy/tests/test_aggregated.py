@@ -454,3 +454,9 @@ def test_aggregate_obsm_labels():
     )
     result = sc.get.aggregate(adata, by="labels", func="sum", obsm="entry")
     assert_equal(expected, result)
+
+
+def test_dispatch_not_implemented():
+    adata = sc.datasets.blobs()
+    with pytest.raises(NotImplementedError):
+        sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")
