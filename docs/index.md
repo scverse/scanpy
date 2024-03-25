@@ -1,5 +1,5 @@
 ```{include} ../README.md
-:end-line: 36
+:end-before: ## Citation
 ```
 
 ```{eval-rst}
