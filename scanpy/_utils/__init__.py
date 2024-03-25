@@ -860,7 +860,6 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
 
 def warn_once(msg: str, category: type[Warning], stacklevel: int = 1):
     warnings.warn(msg, category, stacklevel=stacklevel)
-    # Prevent from showing up every time an awkward array is used
     # You'd think `'once'` works, but it doesn't at the repl and in notebooks
     warnings.filterwarnings("ignore", category=category, message=re.escape(msg))
 
