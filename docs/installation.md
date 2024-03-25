@@ -65,7 +65,7 @@ flit install -s --deps=develop
 On Windows, you might have to use `flit install --pth-file`
 if you are not able to give yourself the [create symbolic links] privilege.
 
-For instructions on how to work with the code, see the {ref}`contributing guide <contribution-guide>`.
+For instructions on how to work with the code, see the {ref}`contribution guide <contribution-guide>`.
 
 ## Docker
 

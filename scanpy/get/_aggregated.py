@@ -156,7 +156,6 @@ def _power(X: Array, power: float | int) -> Array:
     return X**power if isinstance(X, np.ndarray) else X.power(power)
 
 
-@singledispatch
 def aggregate(
     adata: AnnData,
     by: str | Collection[str],
@@ -232,6 +231,11 @@ def aggregate(
 
     Note that this filters out any combination of groups that wasn't present in the original data.
     """
+    if not isinstance(adata, AnnData):
+        raise NotImplementedError(
+            "sc.get.aggregate is currently only implemented for AnnData input, "
+            f"was passed {type(adata)}."
+        )
     if axis is None:
         axis = 1 if varm else 0
     axis, axis_name = _resolve_axis(axis)
@@ -260,7 +264,7 @@ def aggregate(
     dim_df = getattr(adata, axis_name)
     categorical, new_label_df = _combine_categories(dim_df, by)
     # Actual computation
-    layers = aggregate(
+    layers = _aggregate(
         data,
         by=categorical,
         func=func,
@@ -288,13 +292,25 @@ def aggregate(
         return result
 
 
-@aggregate.register(pd.DataFrame)
+@singledispatch
+def _aggregate(
+    data,
+    by: pd.Categorical,
+    func: AggType | Iterable[AggType],
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    dof: int = 1,
+):
+    raise NotImplementedError(f"Data type {type(data)} not supported for aggregation")
+
+
+@_aggregate.register(pd.DataFrame)
 def aggregate_df(data, by, func, *, mask=None, dof=1):
-    return aggregate(data.values, by, func, mask=mask, dof=dof)
+    return _aggregate(data.values, by, func, mask=mask, dof=dof)
 
 
-@aggregate.register(np.ndarray)
-@aggregate.register(sparse.spmatrix)
+@_aggregate.register(np.ndarray)
+@_aggregate.register(sparse.spmatrix)
 def aggregate_array(
     data,
     by: pd.Categorical,

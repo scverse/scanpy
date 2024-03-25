@@ -1,5 +1,5 @@
 ```{include} ../README.md
-:end-line: 36
+:end-line: 40
 ```
 
 ```{eval-rst}
@@ -52,7 +52,7 @@ Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest d
 
 * Follow changes in the {ref}`release notes <release-notes>`.
 * Find tools that harmonize well with anndata & Scanpy at [scverse.org/packages/](https://scverse.org/packages/)
-* Check out our {ref}`contributing guide <contribution-guide>` for development practices.
+* Check out our {ref}`contribution guide <contribution-guide>` for development practices.
 * Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
 
 ## News
@@ -87,6 +87,6 @@ contributors
 references
 ```
 
-[discourse]: https://discourse.scverse.org/
+[contribution guide]: dev/index.md
 [genome biology (2018)]: https://doi.org/10.1186/s13059-017-1382-0
 [github]: https://github.com/scverse/scanpy

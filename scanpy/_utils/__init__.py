@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import random
+import re
 import sys
 import warnings
 from collections import namedtuple
@@ -855,6 +856,12 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
         file if hasattr(file, "write") else sys.stderr
     )
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
+
+
+def warn_once(msg: str, category: type[Warning], stacklevel: int = 1):
+    warnings.warn(msg, category, stacklevel=stacklevel)
+    # You'd think `'once'` works, but it doesn't at the repl and in notebooks
+    warnings.filterwarnings("ignore", category=category, message=re.escape(msg))
 
 
 def subsample(
