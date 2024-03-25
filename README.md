@@ -17,7 +17,7 @@ expression testing.  The Python-based implementation efficiently deals with
 datasets of more than one million cells.
 
 Discuss usage on the scverse [Discourse](https://discourse.scverse.org/). Read the [documentation](https://scanpy.readthedocs.io).
-If you'd like to contribute by opening an issue or creating a pull request, please take a look at our [contributing guide](CONTRIBUTING.md).
+If you'd like to contribute by opening an issue or creating a pull request, please take a look at our [contributing guide](https://scanpy.readthedocs.io/en/latest/dev/index.html).
 
 [//]: # (numfocus-fiscal-sponsor-attribution)
 
