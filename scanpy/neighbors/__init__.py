@@ -104,7 +104,7 @@ def neighbors(
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
-        See :doc:`tutorials:knn-transformers` for more details.
+        See :doc:`/how-to/knn-transformers` for more details.
         Also accepts the following known options:
 
         `None` (the default)
@@ -166,7 +166,7 @@ def neighbors(
 
     See also
     --------
-    :doc:`tutorials:knn-transformers`
+    :doc:`/how-to/knn-transformers`
     """
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata
