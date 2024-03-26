@@ -30,4 +30,4 @@ def cite_role(  # noqa: PLR0917
 
 
 def setup(app: Sphinx):
-    app.add_role("cite", cite_role, override=True)
+    app.add_role("cite-hack", cite_role, override=True)
