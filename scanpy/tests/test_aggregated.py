@@ -460,3 +460,19 @@ def test_dispatch_not_implemented():
     adata = sc.datasets.blobs()
     with pytest.raises(NotImplementedError):
         sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")
+
+
+def test_factors():
+    from itertools import product
+
+    obs = pd.DataFrame(
+        product(range(5), range(5), range(5), range(5)), columns=list("abcd")
+    )
+    obs.index = [f"cell_{i:04d}" for i in range(obs.shape[0])]
+    adata = ad.AnnData(
+        X=np.arange(obs.shape[0]).reshape(-1, 1),
+        obs=obs,
+    )
+
+    res = sc.get.aggregate(adata, by=["a", "b", "c", "d"], func="sum")
+    np.testing.assert_equal(res.layers["sum"], adata.X)
