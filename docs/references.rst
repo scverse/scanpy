@@ -37,10 +37,6 @@ References
    *Single cell RNA-seq denoising using a deep count autoencoder*,
    `bioRxiv <https://doi.org/10.1101/300681>`__.
 
-.. [Eulenberg17] Eulenberg *et al.* (2017),
-   *Reconstructing cell cycle and disease progression using deep learning*
-   `Nature Communications <https://doi.org/10.1101/081364>`__.
-
 .. [Fechtner18]
    *PyPairs*,
    `GitHub <https://github.com/rfechtner/pypairs>`__.
@@ -233,3 +229,5 @@ References
 .. [Zunder15] Zunder *et al.* (2015),
    *A continuous molecular roadmap to iPSC reprogramming through progression analysis of single-cell mass cytometry*,
    `Cell Stem Cell <https://doi.org/10.1016/j.stem.2015.01.015>`__.
+
+.. bibliography::

@@ -7,6 +7,10 @@
 
 ```
 
+### `rapids-singlecell` brings scanpy to the GPU! {small}`2024-03-18`
+
+{doc}`rapids-singlecell <rapids_singlecell:index>` by Severin Dicks provides a scanpy-like API with accelerated operations implemented on GPU.
+
 ### Scanpy hits 100 contributors! {small}`2022-03-31`
 
 [100 people have contributed to Scanpy's source code!](https://github.com/scverse/scanpy/graphs/contributors)
@@ -59,7 +63,7 @@ Bioconda, Seurat, Bioconductor, and others.
 
 ### Science “Breakthrough of the Year 2018” {small}`2018-12-01`
 
-The Science “Breakthrough of the Year 2018”, [Development cell by cell](https://vis.sciencemag.org/breakthrough2018/finalists/#cell-development), mentions the first application of PAGA {cite}`Plass18` among 5 papers.
+The Science “Breakthrough of the Year 2018”, [Development cell by cell](https://vis.sciencemag.org/breakthrough2018/finalists/#cell-development), mentions the first application of PAGA {cite-hack}`Plass18` among 5 papers.
 
 [32 projects]: https://chanzuckerberg.com/eoss/proposals/
 [essential open source software for science]: https://chanzuckerberg.com/newsroom/chan-zuckerberg-initiative-awards-5-million-for-open-source-software-projects-essential-to-science/
