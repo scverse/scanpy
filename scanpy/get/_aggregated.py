@@ -377,7 +377,7 @@ def _combine_categories(
 
     # Calculating result codes
     factors = np.ones(len(cols) + 1, dtype=np.int32)  # First factor needs to be 1
-    np.cumsum(n_categories[::-1], out=factors[1:])
+    np.cumprod(n_categories[::-1], out=factors[1:])
     factors = factors[:-1][::-1]
 
     code_array = np.zeros((len(cols), df.shape[0]), dtype=np.int32)
