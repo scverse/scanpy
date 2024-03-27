@@ -60,6 +60,7 @@ def score_genes(
     random_state: AnyRandom = 0,
     copy: bool = False,
     use_raw: bool | None = None,
+    layer: str | None = None,
 ) -> AnnData | None:
     """\
     Score a set of genes [Satija15]_.
@@ -95,6 +96,8 @@ def score_genes(
 
         .. versionchanged:: 1.4.5
            Default value changed from `False` to `None`.
+    layer
+        Key from `adata.layers` whose value will be used to perform tests on.
 
     Returns
     -------
@@ -134,10 +137,19 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    _adata = adata.raw if use_raw else adata
+    _adata = adata
+    if layer is not None:
+        if use_raw:
+            raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
+        _adata.X = _adata.layers[layer]
+    else:
+        if use_raw and adata.raw is not None:
+            _adata = adata.raw
+
     _adata_subset = (
         _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
     )
+
     # average expression of genes
     if issparse(_adata_subset.X):
         obs_avg = pd.Series(
