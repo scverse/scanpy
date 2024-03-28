@@ -32,7 +32,7 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
-from ._utils import _get_mean_var, update_spmatrix_inplace
+from ._utils import _get_mean_var
 
 # install dask if available
 try:
@@ -852,21 +852,13 @@ def scale_array(
             return_mean_std=return_mean_std,
             mask_obs=None,
         )
-        if issparse(X):
-            if return_mean_std:
-                scaled, mean, std = scale_rv
-                update_spmatrix_inplace(X, scaled, mask_obs)
-                return X, mean, std
-            else:
-                update_spmatrix_inplace(X, scale_rv, mask_obs)
-                return X
+
+        if return_mean_std:
+            X[mask_obs, :], mean, std = scale_rv
+            return X, mean, std
         else:
-            if return_mean_std:
-                X[mask_obs, :], mean, std = scale_rv
-                return X, mean, std
-            else:
-                X[mask_obs, :] = scale_rv
-                return X
+            X[mask_obs, :] = scale_rv
+            return X
 
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
@@ -941,14 +933,64 @@ def scale_sparse(
         )
         X = X.toarray()
         copy = False  # Since the data has been copied
-    return scale_array(
-        X,
-        zero_center=zero_center,
-        copy=copy,
-        max_value=max_value,
-        return_mean_std=return_mean_std,
+        return scale_array(
+            X,
+            zero_center=zero_center,
+            copy=copy,
+            max_value=max_value,
+            return_mean_std=return_mean_std,
+            mask_obs=mask_obs,
+        )
+    elif isspmatrix_csc(X) and mask_obs is None:
+        return scale_array(
+            X,
+            zero_center=zero_center,
+            copy=copy,
+            max_value=max_value,
+            return_mean_std=return_mean_std,
+            mask_obs=mask_obs,
+        )
+    else:
+        if isspmatrix_csc(X):
+            X = X.tocsr()
+        elif copy:
+            X = X.copy()
+
+        if mask_obs is not None:
+            mask_obs = _check_mask(X, mask_obs, "obs")
+        else:
+            mask_obs = np.ones(X.shape[0], dtype=bool)
+    mean, var = _get_mean_var(X[mask_obs, :])
+
+    std = np.sqrt(var)
+    std[std == 0] = 1
+
+    @numba.njit()
+    def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
+        for i in range(len(indptr) - 1):
+            if mask_obs[i]:
+                for j in range(indptr[i], indptr[i + 1]):
+                    if clip:
+                        data[j] = min(clip, data[j] / std[indices[j]])
+                    else:
+                        data[j] /= std[indices[j]]
+
+    if max_value is None:
+        max_value = np.inf
+
+    _scale_sparse_numba(
+        X.indptr,
+        X.indices,
+        X.data,
+        std=std.astype(X.dtype),
         mask_obs=mask_obs,
+        clip=max_value,
     )
+
+    if return_mean_std:
+        return X, mean, std
+    else:
+        return X
 
 
 @scale.register(AnnData)

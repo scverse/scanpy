@@ -6,7 +6,6 @@ from anndata import AnnData
 from scipy.sparse import csc_matrix, csr_matrix
 
 import scanpy as sc
-from scanpy.preprocessing._utils import _update_csr_inplace, update_spmatrix_inplace
 
 # test "data" for 3 cells * 4 genes
 X_original = [
@@ -116,23 +115,3 @@ def test_clip(zero_center):
     if zero_center:
         assert adata.X.min() >= -1
     assert adata.X.max() <= 1
-
-
-def test_inplace_sparse():
-    org = csr_matrix(np.array([[2, 0, 2], [2, 0, 2], [2, 0, 2], [2, 0, 2]]))
-    sub = csr_matrix(np.array([[1, 0, 1], [1, 0, 1]]))
-    res = csr_matrix(np.array([[2, 0, 2], [1, 0, 1], [1, 0, 1], [2, 0, 2]]))
-    mask = np.array([False, True, True, False])
-    update_spmatrix_inplace(org, sub, mask)
-    np.testing.assert_equal(org.toarray(), res.toarray())
-
-
-def test_inplace_sparse_kernel():
-    org = csr_matrix(np.array([[2, 0, 2], [2, 0, 2], [2, 0, 2], [2, 0, 2]]))
-    sub = csr_matrix(np.array([[1, 0, 1], [1, 0, 1]]))
-    res = csr_matrix(np.array([[2, 0, 2], [1, 0, 1], [1, 0, 1], [2, 0, 2]]))
-    mask = np.array([1, 2])
-    _update_csr_inplace(
-        org.indptr, org.data, update_indptr=sub.indptr, update_data=sub.data, mask=mask
-    )
-    np.testing.assert_equal(org.toarray(), res.toarray())
