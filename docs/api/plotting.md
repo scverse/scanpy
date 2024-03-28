@@ -36,6 +36,7 @@ See the {ref}`settings` section for all important plotting configurations.
    pl.clustermap
    pl.ranking
    pl.dendrogram
+   pl.stacked_barplot
 
 ```
 
