@@ -155,11 +155,23 @@ def score_genes(
     control_genes = pd.Index([], dtype="string")
 
     # now pick `ctrl_size` genes from every cut
-    for cut in np.unique(obs_cut.loc[gene_list]):
-        r_genes: pd.Index[str] = obs_cut[obs_cut == cut].index
+    for cut in obs_cut.loc[gene_list].unique():
+        r_genes: pd.Index[str] = obs_cut[
+            (obs_cut == cut) & ~obs_cut.index.isin(gene_list)
+        ].index
+        if len(r_genes) == 0:
+            logg.warning(
+                f"No control genes for this cut. You might want to increase "
+                f"ctrl_size={ctrl_size} to sample from more control genes."
+            )
         if ctrl_size < len(r_genes):
             r_genes = r_genes.to_series().sample(ctrl_size).index
         control_genes = control_genes.union(r_genes.difference(gene_list))
+
+    assert len(control_genes) > 0, "No control genes found."
+    assert (
+        len(control_genes.intersection(gene_list)) == 0
+    ), "Genes are in both gene_list and control_genes."
 
     X_list = _adata[:, gene_list].X
     if issparse(X_list):
