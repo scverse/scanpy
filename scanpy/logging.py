@@ -1,5 +1,5 @@
-"""Logging and Profiling
-"""
+"""Logging and Profiling"""
+
 from __future__ import annotations
 
 import logging

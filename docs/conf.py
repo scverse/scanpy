@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 
 # -- General configuration ------------------------------------------------
 
-
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = "4.0"  # Nicer param docs
 suppress_warnings = [
@@ -42,6 +41,11 @@ if Version(version).is_devrelease:
 
 release = version
 
+# Bibliography settings
+bibtex_bibfiles = ["references.bib"]
+bibtex_reference_style = "author_year"
+
+
 # default settings
 templates_path = ["_templates"]
 master_doc = "index"
@@ -59,6 +63,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.extlinks",
+    "sphinxcontrib.bibtex",
     "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "git_ref",  # needs to be before scanpydoc.rtd_github_links
@@ -90,7 +95,7 @@ myst_enable_extensions = [
     "html_image",
     "html_admonition",
 ]
-myst_url_schemes = ("http", "https", "mailto")
+myst_url_schemes = ("http", "https", "mailto", "ftp")
 nb_output_stderr = "remove"
 nb_execution_mode = "off"
 nb_merge_streams = True
@@ -127,7 +132,6 @@ intersphinx_mapping = dict(
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
-    tutorials=("https://scanpy-tutorials.readthedocs.io/en/latest/", None),
 )
 
 

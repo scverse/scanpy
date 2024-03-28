@@ -38,14 +38,16 @@ def paul500() -> AnnData:
         pytest.param(paul500, [180], [0.219178], id="dense"),
     ],
 )
+@pytest.mark.parametrize("use_approx_neighbors", [True, False])
 def test_scrublet(
     mk_data: Callable[[], AnnData],
     expected_idx: list[int],
     expected_scores: list[float],
+    use_approx_neighbors: bool,
 ):
     """Check that scrublet runs and detects some doublets."""
     adata = mk_data()
-    sc.pp.scrublet(adata, use_approx_neighbors=False)
+    sc.pp.scrublet(adata, use_approx_neighbors=use_approx_neighbors)
 
     doublet_idx = np.flatnonzero(adata.obs["predicted_doublet"]).tolist()
     assert doublet_idx == expected_idx

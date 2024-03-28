@@ -484,9 +484,9 @@ def _scrublet_call_doublets(
         adata_obs.obs["predicted_doublet"] = False
 
     if get_doublet_neighbor_parents:
-        adata_obs.uns["scrublet"][
-            "doublet_neighbor_parents"
-        ] = scrub.doublet_neighbor_parents_
+        adata_obs.uns["scrublet"]["doublet_neighbor_parents"] = (
+            scrub.doublet_neighbor_parents_
+        )
 
     return adata_obs
 

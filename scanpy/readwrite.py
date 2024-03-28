@@ -1,5 +1,5 @@
-"""Reading and Writing
-"""
+"""Reading and Writing"""
+
 from __future__ import annotations
 
 import json
@@ -1005,13 +1005,16 @@ def _download(url: str, path: Path):
 
         with open_url as resp:
             total = resp.info().get("content-length", None)
-            with tqdm(
-                unit="B",
-                unit_scale=True,
-                miniters=1,
-                unit_divisor=1024,
-                total=total if total is None else int(total),
-            ) as t, path.open("wb") as f:
+            with (
+                tqdm(
+                    unit="B",
+                    unit_scale=True,
+                    miniters=1,
+                    unit_divisor=1024,
+                    total=total if total is None else int(total),
+                ) as t,
+                path.open("wb") as f,
+            ):
                 block = resp.read(blocksize)
                 while block:
                     f.write(block)
