@@ -24,7 +24,7 @@ from ._rank_genes_groups import filter_rank_genes_groups, rank_genes_groups
 from ._score_genes import score_genes, score_genes_cell_cycle
 from ._sim import sim
 from ._tsne import tsne
-from ._umap import umap
+from ._umap import densmap, umap
 
 
 def __getattr__(name: str) -> Any:
@@ -53,4 +53,5 @@ __all__ = [
     "sim",
     "tsne",
     "umap",
+    "densmap",
 ]
