@@ -15,7 +15,7 @@ import numpy as np
 import scipy as sp
 from anndata import AnnData
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
+from scipy.sparse import csr_matrix, issparse, isspmatrix_csc, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
@@ -791,6 +791,7 @@ def scale(
         Restrict both the derivation of scaling parameters and the scaling itself
         to a certain set of observations. The mask is specified as a boolean array
         or a string referring to an array in :attr:`~anndata.AnnData.obs`.
+        This will transform data from csc to csr format if `issparse(data)`.
 
     Returns
     -------
@@ -849,6 +850,7 @@ def scale_array(
             return_mean_std=return_mean_std,
             mask_obs=None,
         )
+
         if return_mean_std:
             X[mask_obs, :], mean, std = scale_rv
             return X, mean, std
@@ -929,14 +931,64 @@ def scale_sparse(
         )
         X = X.toarray()
         copy = False  # Since the data has been copied
-    return scale_array(
-        X,
-        zero_center=zero_center,
-        copy=copy,
-        max_value=max_value,
-        return_mean_std=return_mean_std,
+        return scale_array(
+            X,
+            zero_center=zero_center,
+            copy=copy,
+            max_value=max_value,
+            return_mean_std=return_mean_std,
+            mask_obs=mask_obs,
+        )
+    elif isspmatrix_csc(X) and mask_obs is None:
+        return scale_array(
+            X,
+            zero_center=zero_center,
+            copy=copy,
+            max_value=max_value,
+            return_mean_std=return_mean_std,
+            mask_obs=mask_obs,
+        )
+    else:
+        if isspmatrix_csc(X):
+            X = X.tocsr()
+        elif copy:
+            X = X.copy()
+
+        if mask_obs is not None:
+            mask_obs = _check_mask(X, mask_obs, "obs")
+        else:
+            mask_obs = np.ones(X.shape[0], dtype=bool)
+    mean, var = _get_mean_var(X[mask_obs, :])
+
+    std = np.sqrt(var)
+    std[std == 0] = 1
+
+    @numba.njit()
+    def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
+        for i in range(len(indptr) - 1):
+            if mask_obs[i]:
+                for j in range(indptr[i], indptr[i + 1]):
+                    if clip:
+                        data[j] = min(clip, data[j] / std[indices[j]])
+                    else:
+                        data[j] /= std[indices[j]]
+
+    if max_value is None:
+        max_value = np.inf
+
+    _scale_sparse_numba(
+        X.indptr,
+        X.indices,
+        X.data,
+        std=std.astype(X.dtype),
         mask_obs=mask_obs,
+        clip=max_value,
     )
+
+    if return_mean_std:
+        return X, mean, std
+    else:
+        return X
 
 
 @scale.register(AnnData)
