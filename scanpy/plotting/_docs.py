@@ -203,6 +203,8 @@ var_names
     then the `var_group_labels` and `var_group_positions` are set.
 groupby
     The key of the observation grouping to consider.
+groupby_cols
+    The key of the observation grouping to consider for grouping columns.
 use_raw
     Use `raw` attribute of `adata` if present.
 log

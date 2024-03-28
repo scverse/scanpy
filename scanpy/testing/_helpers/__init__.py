@@ -12,6 +12,8 @@ from anndata.tests.helpers import asarray, assert_equal
 
 import scanpy as sc
 
+from . import data  # noqa: F401
+
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
 
