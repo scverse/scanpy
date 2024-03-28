@@ -91,6 +91,17 @@ def recipe_seurat(
 
     Expects non-logarithmized data.
     If using logarithmized data, pass `log=False`.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    log
+        Logarithmize data?
+    plot
+        Show a plot of the gene dispersion vs. mean relation.
+    copy
+        Return a copy if true.
     """
     if copy:
         adata = adata.copy()
