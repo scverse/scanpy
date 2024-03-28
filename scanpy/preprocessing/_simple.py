@@ -852,20 +852,20 @@ def scale_array(
             return_mean_std=return_mean_std,
             mask_obs=None,
         )
-        if isinstance(X, np.ndarray):
-            if return_mean_std:
-                X[mask_obs, :], mean, std = scale_rv
-                return X, mean, std
-            else:
-                X[mask_obs, :] = scale_rv
-                return X
-        elif issparse(X):
+        if issparse(X):
             if return_mean_std:
                 scaled, mean, std = scale_rv
                 update_spmatrix_inplace(X, scaled, mask_obs)
                 return X, mean, std
             else:
                 update_spmatrix_inplace(X, scale_rv, mask_obs)
+                return X
+        else:
+            if return_mean_std:
+                X[mask_obs, :], mean, std = scale_rv
+                return X, mean, std
+            else:
+                X[mask_obs, :] = scale_rv
                 return X
 
     if not zero_center and max_value is not None:
