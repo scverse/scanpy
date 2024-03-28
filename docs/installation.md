@@ -43,27 +43,15 @@ If you are using `pip>=21.3`, an editable install can be made:
 pip install -e '.[dev,doc,test]'
 ```
 
-For older versions of `pip`, [flit] can be used directly.
-To install using symbolic links (stay up to date with your cloned version after you update with `git pull`) call:
-
-```shell
-flit install -s --deps=develop  # from an activated venv or conda env
-# or
-flit install -s --deps=develop --python path/to/venv/bin/python
-```
-
 If you want to let [conda] handle the installations of dependencies, do:
 
 ```shell
-pip install beni
+pipx install beni
 beni pyproject.toml > environment.yml
 conda env create -f environment.yml
 conda activate scanpy
-flit install -s --deps=develop
+pip install -e '.[dev,doc,test]'
 ```
-
-On Windows, you might have to use `flit install --pth-file`
-if you are not able to give yourself the [create symbolic links] privilege.
 
 For instructions on how to work with the code, see the {ref}`contribution guide <contribution-guide>`.
 
@@ -119,7 +107,6 @@ The whole process takes just a couple of minutes.
 [compiling igraph]: https://stackoverflow.com/q/29589696/247482
 [create symbolic links]: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
 [docker]: https://en.wikipedia.org/wiki/Docker_(software)
-[flit]: https://flit.readthedocs.io/en/latest/
 [from pypi]: https://pypi.org/project/scanpy
 [gcfntnu/scanpy]: https://hub.docker.com/r/gcfntnu/scanpy
 [leiden]: https://leidenalg.readthedocs.io
