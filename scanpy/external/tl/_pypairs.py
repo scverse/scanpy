@@ -1,6 +1,7 @@
 """\
 Calculate scores based on relative expression change of maker pairs
 """
+
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping

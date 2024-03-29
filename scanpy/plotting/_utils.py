@@ -26,6 +26,7 @@ from . import palettes
 
 if TYPE_CHECKING:
     from anndata import AnnData
+    from matplotlib.typing import MarkerType
     from numpy.typing import ArrayLike
     from PIL.Image import Image
 
@@ -585,20 +586,29 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
 
 
 def scatter_group(
-    ax, key, imask, adata, Y, *, projection="2d", size=3, alpha=None, marker="."
+    ax: Axes,
+    key: str,
+    cat_code: int,
+    adata: AnnData,
+    Y: np.ndarray,
+    *,
+    projection: Literal["2d", "3d"] = "2d",
+    size: int = 3,
+    alpha: float | None = None,
+    marker: MarkerType = ".",
 ):
     """Scatter of group using representation of data Y."""
-    mask = adata.obs[key].cat.categories[imask] == adata.obs[key].values
-    color = adata.uns[key + "_colors"][imask]
+    mask_obs = adata.obs[key].cat.categories[cat_code] == adata.obs[key].values
+    color = adata.uns[key + "_colors"][cat_code]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
 
-        color = rgb2hex(adata.uns[key + "_colors"][imask])
+        color = rgb2hex(adata.uns[key + "_colors"][cat_code])
     if not is_color_like(color):
         raise ValueError(f'"{color}" is not a valid matplotlib color.')
-    data = [Y[mask, 0], Y[mask, 1]]
+    data = [Y[mask_obs, 0], Y[mask_obs, 1]]
     if projection == "3d":
-        data.append(Y[mask, 2])
+        data.append(Y[mask_obs, 2])
     ax.scatter(
         *data,
         marker=marker,
@@ -606,10 +616,10 @@ def scatter_group(
         c=color,
         edgecolors="none",
         s=size,
-        label=adata.obs[key].cat.categories[imask],
+        label=adata.obs[key].cat.categories[cat_code],
         rasterized=settings._vector_friendly,
     )
-    return mask
+    return mask_obs
 
 
 def setup_axes(
@@ -1258,3 +1268,17 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
             norm = Normalize(vmin=vmin, vmax=vmax)
 
     return norm
+
+
+DN = Literal["area", "count", "width"]
+
+
+def _deprecated_scale(density_norm: DN, scale: DN | None, *, default: DN) -> DN:
+    if scale is None:
+        return density_norm
+    if density_norm != default:
+        msg = "can’t specify both `scale` and `density_norm`"
+        raise ValueError(msg)
+    msg = "`scale` is deprecated, use `density_norm` instead"
+    warnings.warn(msg, FutureWarning)
+    return scale

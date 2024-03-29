@@ -21,6 +21,22 @@ def test_defaults():
     assert s.logpath is None
 
 
+def test_records(caplog: pytest.LogCaptureFixture):
+    s.verbosity = Verbosity.debug
+    log.error("0")
+    log.warning("1")
+    log.info("2")
+    log.hint("3")
+    log.debug("4")
+    assert caplog.record_tuples == [
+        ("root", 40, "0"),
+        ("root", 30, "1"),
+        ("root", 20, "2"),
+        ("root", 15, "3"),
+        ("root", 10, "4"),
+    ]
+
+
 def test_formats(capsys: pytest.CaptureFixture):
     s.logfile = sys.stderr
     s.verbosity = Verbosity.debug
@@ -50,7 +66,7 @@ def test_deep(capsys: pytest.CaptureFixture):
     assert capsys.readouterr().err == "--> 3: 3!\n"
 
 
-def test_logfile(tmp_path: Path):
+def test_logfile(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     s.verbosity = Verbosity.hint
 
     io = StringIO()
@@ -60,6 +76,9 @@ def test_logfile(tmp_path: Path):
     log.error("test!")
     assert io.getvalue() == "ERROR: test!\n"
 
+    # setting a logfile removes all handlers
+    assert not caplog.records
+
     p = tmp_path / "test.log"
     s.logpath = p
     assert s.logpath == p
@@ -67,6 +86,9 @@ def test_logfile(tmp_path: Path):
     log.hint("test2")
     log.debug("invisible")
     assert s.logpath.read_text() == "--> test2\n"
+
+    # setting a logfile removes all handlers
+    assert not caplog.records
 
 
 def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
@@ -84,15 +106,24 @@ def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
     s.verbosity = Verbosity.debug
 
     log.hint("1")
-    assert counter == 1 and capsys.readouterr().err == "--> 1\n"
+    assert counter == 1
+    assert capsys.readouterr().err == "--> 1\n"
+
     start = log.info("2")
-    assert counter == 2 and capsys.readouterr().err == "2\n"
+    assert counter == 2
+    assert capsys.readouterr().err == "2\n"
+
     log.hint("3")
-    assert counter == 3 and capsys.readouterr().err == "--> 3\n"
+    assert counter == 3
+    assert capsys.readouterr().err == "--> 3\n"
+
     log.info("4", time=start)
-    assert counter == 4 and capsys.readouterr().err == "4 (0:00:02)\n"
+    assert counter == 4
+    assert capsys.readouterr().err == "4 (0:00:02)\n"
+
     log.info("5 {time_passed}", time=start)
-    assert counter == 5 and capsys.readouterr().err == "5 0:00:03\n"
+    assert counter == 5
+    assert capsys.readouterr().err == "5 0:00:03\n"
 
 
 @pytest.mark.parametrize(

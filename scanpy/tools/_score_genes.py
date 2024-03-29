@@ -1,5 +1,5 @@
-"""Calculate scores based on the expression of gene lists.
-"""
+"""Calculate scores based on the expression of gene lists."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -51,10 +51,10 @@ def _sparse_nanmean(X, axis):
 )
 def score_genes(
     adata: AnnData,
-    gene_list: Sequence[str],
+    gene_list: Sequence[str] | pd.Index[str],
     *,
     ctrl_size: int = 50,
-    gene_pool: Sequence[str] | None = None,
+    gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
     score_name: str = "score",
     random_state: AnyRandom = 0,
@@ -114,26 +114,20 @@ def score_genes(
     if random_state is not None:
         np.random.seed(random_state)
 
-    gene_list_in_var = []
     var_names = adata.raw.var_names if use_raw else adata.var_names
-    genes_to_ignore = []
-    for gene in gene_list:
-        if gene in var_names:
-            gene_list_in_var.append(gene)
-        else:
-            genes_to_ignore.append(gene)
+    gene_list = pd.Index([gene_list] if isinstance(gene_list, str) else gene_list)
+    genes_to_ignore = gene_list.difference(var_names, sort=False)  # first get missing
+    gene_list = gene_list.intersection(var_names)  # then restrict to present
     if len(genes_to_ignore) > 0:
         logg.warning(f"genes are not in var_names and ignored: {genes_to_ignore}")
-    gene_list = set(gene_list_in_var)
-
     if len(gene_list) == 0:
         raise ValueError("No valid genes were passed for scoring.")
 
     if gene_pool is None:
-        gene_pool = list(var_names)
+        gene_pool = pd.Index(var_names, dtype="string")
     else:
-        gene_pool = [x for x in gene_pool if x in var_names]
-    if not gene_pool:
+        gene_pool = pd.Index(gene_pool, dtype="string").intersection(var_names)
+    if len(gene_pool) == 0:
         raise ValueError("No valid genes were passed for reference set.")
 
     # Trying here to match the Seurat approach in scoring cells.
@@ -144,34 +138,28 @@ def score_genes(
     _adata_subset = (
         _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
     )
+    # average expression of genes
     if issparse(_adata_subset.X):
         obs_avg = pd.Series(
             np.array(_sparse_nanmean(_adata_subset.X, axis=0)).flatten(),
             index=gene_pool,
-        )  # average expression of genes
+        )
     else:
-        obs_avg = pd.Series(
-            np.nanmean(_adata_subset.X, axis=0), index=gene_pool
-        )  # average expression of genes
+        obs_avg = pd.Series(np.nanmean(_adata_subset.X, axis=0), index=gene_pool)
 
-    obs_avg = obs_avg[
-        np.isfinite(obs_avg)
-    ]  # Sometimes (and I don't know how) missing data may be there, with nansfor
+    # Sometimes (and I don't know how) missing data may be there, with nansfor
+    obs_avg = obs_avg[np.isfinite(obs_avg)]
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method="min") // n_items
-    control_genes = set()
+    control_genes = pd.Index([], dtype="string")
 
     # now pick `ctrl_size` genes from every cut
-    for cut in np.unique(obs_cut.loc[list(gene_list)]):
-        r_genes = np.array(obs_cut[obs_cut == cut].index)
-        np.random.shuffle(r_genes)
-        # uses full r_genes if ctrl_size > len(r_genes)
-        control_genes.update(set(r_genes[:ctrl_size]))
-
-    # To index, we need a list – indexing implies an order.
-    control_genes = list(control_genes - gene_list)
-    gene_list = list(gene_list)
+    for cut in np.unique(obs_cut.loc[gene_list]):
+        r_genes: pd.Index[str] = obs_cut[obs_cut == cut].index
+        if ctrl_size < len(r_genes):
+            r_genes = r_genes.to_series().sample(ctrl_size).index
+        control_genes = control_genes.union(r_genes.difference(gene_list))
 
     X_list = _adata[:, gene_list].X
     if issparse(X_list):

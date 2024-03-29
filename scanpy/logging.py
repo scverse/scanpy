@@ -1,5 +1,5 @@
-"""Logging and Profiling
-"""
+"""Logging and Profiling"""
+
 from __future__ import annotations
 
 import logging
@@ -35,7 +35,7 @@ class _RootLogger(logging.RootLogger):
         msg: str,
         *,
         extra: dict | None = None,
-        time: datetime = None,
+        time: datetime | None = None,
         deep: str | None = None,
     ) -> datetime:
         from ._settings import settings
@@ -76,18 +76,16 @@ def _set_log_file(settings: ScanpyConfig):
     h = logging.StreamHandler(file) if name is None else logging.FileHandler(name)
     h.setFormatter(_LogFormatter())
     h.setLevel(root.level)
-    if len(root.handlers) == 1:
-        root.removeHandler(root.handlers[0])
-    elif len(root.handlers) > 1:
-        raise RuntimeError("Scanpy’s root logger somehow got more than one handler")
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
     root.addHandler(h)
 
 
 def _set_log_level(settings: ScanpyConfig, level: int):
     root = settings._root_logger
     root.setLevel(level)
-    (h,) = root.handlers  # may only be 1
-    h.setLevel(level)
+    for h in list(root.handlers):
+        h.setLevel(level)
 
 
 class _LogFormatter(logging.Formatter):

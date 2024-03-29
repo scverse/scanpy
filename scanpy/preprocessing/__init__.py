@@ -8,6 +8,7 @@ from ._normalization import normalize_total
 from ._pca import pca
 from ._qc import calculate_qc_metrics
 from ._recipes import recipe_seurat, recipe_weinreb17, recipe_zheng17
+from ._scrublet import scrublet, scrublet_simulate_doublets
 from ._simple import (
     downsample_counts,
     filter_cells,
@@ -31,6 +32,8 @@ __all__ = [
     "recipe_seurat",
     "recipe_weinreb17",
     "recipe_zheng17",
+    "scrublet",
+    "scrublet_simulate_doublets",
     "downsample_counts",
     "filter_cells",
     "filter_genes",

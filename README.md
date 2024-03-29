@@ -3,7 +3,7 @@
 [![Downloads](https://static.pepy.tech/badge/scanpy)](https://pepy.tech/project/scanpy)
 [![Conda](https://img.shields.io/conda/dn/conda-forge/scanpy?logo=Anaconda)](https://anaconda.org/conda-forge/scanpy)
 [![Docs](https://readthedocs.com/projects/icb-scanpy/badge/?version=latest)](https://scanpy.readthedocs.io)
-[![Build Status](https://dev.azure.com/scverse/scanpy/_apis/build/status/theislab.scanpy?branchName=master)](https://dev.azure.com/scverse/scanpy/_build)
+[![Build Status](https://dev.azure.com/scverse/scanpy/_apis/build/status/theislab.scanpy?branchName=main)](https://dev.azure.com/scverse/scanpy/_build)
 [![Discourse topics](https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org)](https://discourse.scverse.org/)
 [![Chat](https://img.shields.io/badge/zulip-join_chat-%2367b08f.svg)](https://scverse.zulipchat.com)
 [![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://numfocus.org/)
@@ -11,13 +11,17 @@
 # Scanpy – Single-Cell Analysis in Python
 
 Scanpy is a scalable toolkit for analyzing single-cell gene expression data
-built jointly with [anndata](https://anndata.readthedocs.io).  It includes
+built jointly with [anndata][].  It includes
 preprocessing, visualization, clustering, trajectory inference and differential
 expression testing.  The Python-based implementation efficiently deals with
 datasets of more than one million cells.
 
-Discuss usage on the scverse [Discourse]. Read the [documentation].
-If you'd like to contribute by opening an issue or creating a pull request, please take a look at our [contributing guide].
+Discuss usage on the scverse [Discourse][]. Read the [documentation][].
+If you'd like to contribute by opening an issue or creating a pull request, please take a look at our [contribution guide][].
+
+[anndata]: https://anndata.readthedocs.io
+[discourse]: https://discourse.scverse.org/
+[documentation]: https://scanpy.readthedocs.io
 
 [//]: # (numfocus-fiscal-sponsor-attribution)
 
@@ -52,6 +56,5 @@ You can cite the scverse publication as follows:
 >
 > _Nat Biotechnol._ 2023 Apr 10. doi: [10.1038/s41587-023-01733-8](https://doi.org/10.1038/s41587-023-01733-8).
 
-[contributing guide]: CONTRIBUTING.md
-[discourse]: https://discourse.scverse.org/
-[documentation]: https://scanpy.readthedocs.io
+
+[contribution guide]: CONTRIBUTING.md

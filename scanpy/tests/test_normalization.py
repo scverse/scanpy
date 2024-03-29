@@ -8,8 +8,10 @@ from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 from scipy import sparse
 from scipy.sparse import csr_matrix
+from sklearn.utils import issparse
 
 import scanpy as sc
+from scanpy._utils import axis_sum
 from scanpy.testing._helpers import (
     _check_check_values_warnings,
     check_rep_mutation,
@@ -17,7 +19,7 @@ from scanpy.testing._helpers import (
 )
 
 # TODO: Add support for sparse-in-dask
-from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -26,21 +28,50 @@ X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+@pytest.mark.parametrize("target_sum", [None, 1.0])
+@pytest.mark.parametrize("exclude_highly_expressed", [True, False])
+def test_normalize_matrix_types(
+    array_type, dtype, target_sum, exclude_highly_expressed
+):
+    adata = sc.datasets.pbmc68k_reduced()
+    adata.X = (adata.raw.X).astype(dtype)
+    adata_casted = adata.copy()
+    adata_casted.X = array_type(adata_casted.raw.X).astype(dtype)
+    sc.pp.normalize_total(
+        adata, target_sum=target_sum, exclude_highly_expressed=exclude_highly_expressed
+    )
+    sc.pp.normalize_total(
+        adata_casted,
+        target_sum=target_sum,
+        exclude_highly_expressed=exclude_highly_expressed,
+    )
+    X = adata_casted.X
+    if "dask" in array_type.__name__:
+        X = X.compute()
+    if issparse(X):
+        X = X.todense()
+    if issparse(adata.X):
+        adata.X = adata.X.todense()
+    np.testing.assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
     sc.pp.normalize_total(adata, key_added="n_counts")
-    assert np.allclose(np.ravel(adata.X.sum(axis=1)), [3.0, 3.0, 3.0])
+    assert np.allclose(np.ravel(axis_sum(adata.X, axis=1)), [3.0, 3.0, 3.0])
     sc.pp.normalize_total(adata, target_sum=1, key_added="n_counts2")
-    assert np.allclose(np.ravel(adata.X.sum(axis=1)), [1.0, 1.0, 1.0])
+    assert np.allclose(np.ravel(axis_sum(adata.X, axis=1)), [1.0, 1.0, 1.0])
 
     adata = AnnData(array_type(X_frac).astype(dtype))
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
-    assert np.allclose(np.ravel(adata.X[:, 1:3].sum(axis=1)), [1.0, 1.0, 1.0])
+    assert np.allclose(np.ravel(axis_sum(adata.X[:, 1:3], axis=1)), [1.0, 1.0, 1.0])
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_rep(array_type, dtype):
     # Test that layer kwarg works
@@ -49,17 +80,17 @@ def test_normalize_total_rep(array_type, dtype):
     check_rep_results(sc.pp.normalize_total, X, fields=["layer"])
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_layers(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
     adata.layers["layer"] = adata.X.copy()
     with pytest.warns(FutureWarning, match=r".*layers.*deprecated"):
         sc.pp.normalize_total(adata, layers=["layer"])
-    assert np.allclose(adata.layers["layer"].sum(axis=1), [3.0, 3.0, 3.0])
+    assert np.allclose(axis_sum(adata.layers["layer"], axis=1), [3.0, 3.0, 3.0])
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_view(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
@@ -189,7 +220,7 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
         pytest.param(
             True, dict(use_highly_variable=False), "n_genes", id="hvg_opt_out"
         ),
-        pytest.param(False, dict(mask="test_mask"), "n_unmasked", id="mask"),
+        pytest.param(False, dict(mask_var="test_mask"), "n_unmasked", id="mask"),
     ],
 )
 def test_normalize_pearson_residuals_pca(

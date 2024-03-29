@@ -59,6 +59,17 @@ Also see [Data integration]. Note that a simple batch correction method is avail
    pp.combat
 ```
 
+### Doublet detection
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pp.scrublet
+   pp.scrublet_simulate_doublets
+```
+
 ### Neighbors
 
 ```{eval-rst}

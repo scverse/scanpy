@@ -8,6 +8,7 @@ TODO
 ----
 Beta Version. The code will be reorganized soon.
 """
+
 from __future__ import annotations
 
 import itertools

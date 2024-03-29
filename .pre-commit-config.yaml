@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.14
+    rev: v0.3.4
     hooks:
     -   id: ruff
         types_or: [python, pyi, jupyter]
@@ -26,7 +26,7 @@ repos:
     -   id: check-merge-conflict
     -   id: detect-private-key
     -   id: no-commit-to-branch
-        args: ["--branch=master", "--branch=main"]
+        args: ["--branch=main"]
 
 ci:
     autofix_prs: false

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import importlib
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -34,14 +35,15 @@ def leiden(
     random_state: _utils.AnyRandom = 0,
     key_added: str = "leiden",
     adjacency: sparse.spmatrix | None = None,
-    directed: bool = True,
+    directed: bool | None = None,
     use_weights: bool = True,
     n_iterations: int = -1,
     partition_type: type[MutableVertexPartition] | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    **partition_kwargs,
+    flavor: Literal["leidenalg", "ipgraph"] = "leidenalg",
+    **clustering_args,
 ) -> AnnData | None:
     """\
     Cluster cells into subgroups [Traag18]_.
@@ -80,6 +82,7 @@ def leiden(
         How many iterations of the Leiden clustering algorithm to perform.
         Positive values above 2 define the total number of iterations to perform,
         -1 has the algorithm run until it reaches its optimal clustering.
+        2 is faster and the default for underlying packages.
     partition_type
         Type of partition to use.
         Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`.
@@ -96,9 +99,11 @@ def leiden(
         `obsp` and `neighbors_key` at the same time.
     copy
         Whether to copy `adata` or modify it inplace.
-    **partition_kwargs
-        Any further arguments to pass to `~leidenalg.find_partition`
-        (which in turn passes arguments to the `partition_type`).
+    flavor
+        Which package's implementation to use.
+    **clustering_args
+        Any further arguments to pass to :func:`~leidenalg.find_partition` (which in turn passes arguments to the `partition_type`)
+        or :meth:`igraph.Graph.community_leiden` from `igraph`.
 
     Returns
     -------
@@ -108,17 +113,39 @@ def leiden(
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 
-    `adata.uns['leiden']['params']` : :class:`dict`
+    `adata.uns['leiden' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
-    try:
-        import leidenalg
-    except ImportError:
-        raise ImportError(
-            "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
+    if flavor not in {"igraph", "leidenalg"}:
+        raise ValueError(
+            f"flavor must be either 'igraph' or 'leidenalg', but '{flavor}' was passed"
         )
-    partition_kwargs = dict(partition_kwargs)
+    igraph_spec = importlib.util.find_spec("igraph")
+    if igraph_spec is None:
+        raise ImportError(
+            "Please install the igraph package: `conda install -c conda-forge igraph` or `pip3 install igraph`."
+        )
+    if flavor == "igraph":
+        if directed:
+            raise ValueError(
+                "Cannot use igraph's leiden implemntation with a directed graph."
+            )
+        if partition_type is not None:
+            raise ValueError(
+                "Do not pass in partition_type argument when using igraph."
+            )
+    else:
+        try:
+            import leidenalg
+
+            msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
+            _utils.warn_once(msg, FutureWarning, stacklevel=3)
+        except ImportError:
+            raise ImportError(
+                "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
+            )
+    clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
     adata = adata.copy() if copy else adata
@@ -133,23 +160,29 @@ def leiden(
             restrict_categories=restrict_categories,
             adjacency=adjacency,
         )
-    # convert it to igraph
-    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
-    # flip to the default partition type if not overriden by the user
-    if partition_type is None:
-        partition_type = leidenalg.RBConfigurationVertexPartition
     # Prepare find_partition arguments as a dictionary,
     # appending to whatever the user provided. It needs to be this way
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
-    if use_weights:
-        partition_kwargs["weights"] = np.array(g.es["weight"]).astype(np.float64)
-    partition_kwargs["n_iterations"] = n_iterations
-    partition_kwargs["seed"] = random_state
+    clustering_args["n_iterations"] = n_iterations
     if resolution is not None:
-        partition_kwargs["resolution_parameter"] = resolution
-    # clustering proper
-    part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
+        clustering_args["resolution_parameter"] = resolution
+    if flavor == "leidenalg":
+        directed = True if directed is None else directed
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
+        if partition_type is None:
+            partition_type = leidenalg.RBConfigurationVertexPartition
+        if use_weights:
+            clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
+        clustering_args["seed"] = random_state
+        part = leidenalg.find_partition(g, partition_type, **clustering_args)
+    else:
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
+        if use_weights:
+            clustering_args["weights"] = "weight"
+        clustering_args.setdefault("objective_function", "modularity")
+        with _utils.set_igraph_random_state(random_state):
+            part = g.community_leiden(**clustering_args)
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:
@@ -168,8 +201,8 @@ def leiden(
         categories=natsorted(map(str, np.unique(groups))),
     )
     # store information on the clustering parameters
-    adata.uns["leiden"] = {}
-    adata.uns["leiden"]["params"] = dict(
+    adata.uns[key_added] = {}
+    adata.uns[key_added]["params"] = dict(
         resolution=resolution,
         random_state=random_state,
         n_iterations=n_iterations,

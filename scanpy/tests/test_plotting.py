@@ -103,7 +103,14 @@ def test_heatmap(image_comparer):
 
     # test var_names as dict
     pbmc = pbmc68k_reduced()
-    sc.tl.leiden(pbmc, key_added="clusters", resolution=0.5)
+    sc.tl.leiden(
+        pbmc,
+        key_added="clusters",
+        resolution=0.5,
+        flavor="igraph",
+        n_iterations=2,
+        directed=False,
+    )
     # call umap to trigger colors for the clusters
     sc.pl.umap(pbmc, color="clusters")
     marker_genes_dict = {
@@ -1108,7 +1115,7 @@ def pbmc_scatterplots(_pbmc_scatterplots_session):
             partial(
                 sc.pl.pca,
                 color=["LYZ", "CD79A", "louvain"],
-                mask="mask",
+                mask_obs="mask",
             ),
         ),
     ],
@@ -1616,7 +1623,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     check_same_image(pth_a, pth_b, tol=1)
 
 
-@needs.scrublet
+@needs.skmisc
 @pytest.mark.parametrize(
     ("id", "params"),
     [
@@ -1636,25 +1643,25 @@ def test_scrublet_plots(monkeypatch, image_comparer, id, params):
     with monkeypatch.context() as m:
         if id == "scrublet_no_threshold":
             m.setattr("skimage.filters.threshold_minimum", None)
-        sc.external.pp.scrublet(adata, use_approx_neighbors=False, **params)
+        sc.pp.scrublet(adata, use_approx_neighbors=False, **params)
     if id == "scrublet_no_threshold":
         assert "threshold" not in adata.uns["scrublet"]
 
-    sc.external.pl.scrublet_score_distribution(adata, return_fig=True)
+    sc.pl.scrublet_score_distribution(adata, return_fig=True, show=False)
     save_and_compare_images(id)
 
 
 def test_umap_mask_equal(tmp_path, check_same_image):
     """Check that all desired cells are coloured and masked cells gray"""
     pbmc = pbmc3k_processed()
-    mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+    mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
     ax = sc.pl.umap(pbmc, size=8.0, show=False)
-    sc.pl.umap(pbmc[mask], size=8.0, color="LDHB", ax=ax)
+    sc.pl.umap(pbmc[mask_obs], size=8.0, color="LDHB", ax=ax)
     plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
     plt.close()
 
-    sc.pl.umap(pbmc, size=8.0, color="LDHB", mask=mask)
+    sc.pl.umap(pbmc, size=8.0, color="LDHB", mask_obs=mask_obs)
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
@@ -1665,8 +1672,8 @@ def test_umap_mask_mult_plots():
     """Check that multiple images are plotted when color is a list."""
     pbmc = pbmc3k_processed()
     color = ["LDHB", "LYZ", "CD79A"]
-    mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
-    axes = sc.pl.umap(pbmc, color=color, mask=mask, show=False)
+    mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+    axes = sc.pl.umap(pbmc, color=color, mask_obs=mask_obs, show=False)
     assert isinstance(axes, list)
     assert len(axes) == len(color)
 
@@ -1674,14 +1681,21 @@ def test_umap_mask_mult_plots():
 def test_string_mask(tmp_path, check_same_image):
     """Check that the same mask given as string or bool array provides the same result"""
     pbmc = pbmc3k_processed()
-    pbmc.obs["mask"] = mask = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
+    pbmc.obs["mask"] = mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
-    sc.pl.umap(pbmc, mask=mask, color="LDHB")
+    sc.pl.umap(pbmc, mask_obs=mask_obs, color="LDHB")
     plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
     plt.close()
 
-    sc.pl.umap(pbmc, color="LDHB", mask="mask")
+    sc.pl.umap(pbmc, color="LDHB", mask_obs="mask")
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
     check_same_image(p1, p2, tol=1)
+
+
+def test_violin_scale_warning(monkeypatch):
+    adata = pbmc3k_processed()
+    monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
+    with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
+        sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")

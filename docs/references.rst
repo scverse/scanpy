@@ -27,7 +27,7 @@ References
 
 .. [Coifman05] Coifman *et al.* (2005),
    *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
-   `PNAS <https://doi.org/10.1038/nmeth.3971>`__.
+   `PNAS <https://doi.org/10.1073/pnas.0500334102>`__.
 
 .. [Csardi06] Csardi *et al.* (2006),
    *The igraph software package for complex network research*,
@@ -36,10 +36,6 @@ References
 .. [Eraslan18] Eraslan and Simon *et al.* (2018),
    *Single cell RNA-seq denoising using a deep count autoencoder*,
    `bioRxiv <https://doi.org/10.1101/300681>`__.
-
-.. [Eulenberg17] Eulenberg *et al.* (2017),
-   *Reconstructing cell cycle and disease progression using deep learning*
-   `Nature Communications <https://doi.org/10.1101/081364>`__.
 
 .. [Fechtner18]
    *PyPairs*,
@@ -233,3 +229,5 @@ References
 .. [Zunder15] Zunder *et al.* (2015),
    *A continuous molecular roadmap to iPSC reprogramming through progression analysis of single-cell mass cytometry*,
    `Cell Stem Cell <https://doi.org/10.1016/j.stem.2015.01.015>`__.
+
+.. bibliography::

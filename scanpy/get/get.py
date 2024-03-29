@@ -1,4 +1,5 @@
 """This module contains helper functions for accessing data."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
@@ -6,11 +7,14 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from packaging.version import Version
 from scipy.sparse import spmatrix
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from anndata._core.sparse_dataset import BaseCompressedSparseDataset
+    from anndata._core.views import ArrayView
     from numpy.typing import NDArray
 
 # --------------------------------------------------------------------------------
@@ -21,7 +25,7 @@ if TYPE_CHECKING:
 # TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
-    group: str | Iterable[str],
+    group: str | Iterable[str] | None,
     *,
     key: str = "rank_genes_groups",
     pval_cutoff: float | None = None,
@@ -72,7 +76,10 @@ def rank_genes_groups_df(
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
-    d = d.stack(level=1).reset_index()
+    if Version(pd.__version__) >= Version("2.1"):
+        d = d.stack(level=1, future_stack=True).reset_index()
+    else:
+        d = d.stack(level=1).reset_index()
     d["group"] = pd.Categorical(d["group"], categories=group)
     d = d.sort_values(["group", "level_0"]).drop(columns="level_0")
 
@@ -258,7 +265,7 @@ def obs_df(
     ... )
     >>> plotdf.columns
     Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
-    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")
+    >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")  # doctest: +SKIP
     <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 
     Calculating mean expression for marker genes by cluster:
@@ -405,6 +412,13 @@ def _get_obs_rep(
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
+) -> (
+    np.ndarray
+    | spmatrix
+    | pd.DataFrame
+    | ArrayView
+    | BaseCompressedSparseDataset
+    | None
 ):
     """
     Choose array aligned with obs annotation.
@@ -473,7 +487,7 @@ def _set_obs_rep(
 
 def _check_mask(
     data: AnnData | np.ndarray,
-    mask: str | NDArray[np.bool_],
+    mask: NDArray[np.bool_] | str,
     dim: Literal["obs", "var"],
 ) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
     """

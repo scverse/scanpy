@@ -42,28 +42,30 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 dependencies = [
-    "anndata>=0.7.4",
+    "anndata>=0.8",
     # numpy needs a version due to #1320
-    "numpy>=1.17.0",
+    "numpy>=1.23",
     "matplotlib>=3.6",
-    "pandas >=2.1.3",
-    "scipy>=1.4",
-    "seaborn>=0.13.0",
-    "h5py>=3",
+    "pandas >=1.5",
+    "scipy>=1.8",
+    "seaborn>=0.13",
+    "h5py>=3.1",
     "tqdm",
     "scikit-learn>=0.24",
-    "statsmodels>=0.10.0rc2",
+    "statsmodels>=0.13",
     "patsy",
-    "networkx>=2.3",
+    "networkx>=2.7",
     "natsort",
     "joblib",
-    "numba>=0.41.0",
-    "umap-learn>=0.3.10",
-    "packaging",
+    "numba>=0.56",
+    "umap-learn>=0.5,!=0.5.0",
+    "pynndescent>=0.5",
+    "packaging>=21.3",
     "session-info",
     "legacy-api-wrap>=1.4",  # for positional API deprecations
     "get-annotations; python_version < '3.10'",
@@ -85,6 +87,7 @@ test-min = [
     "pytest>=7.4.2",
     "pytest-nunit",
     "pytest-mock",
+    "pytest-cov",
     "profimp",
 ]
 test = [
@@ -93,18 +96,16 @@ test = [
     "scanpy[leiden]",
     "zarr",
     "scanpy[dask]",
-    # Temp. before moving into scanpy
-    "scrublet==0.2.3",
+    "scanpy[scrublet]",
 ]
 test-full = [
     "scanpy[test]",
-    # tested algorithms
-    "scanpy[leiden]",
+    # additional tested algorithms
+    "scanpy[louvain]",
     "scanpy[magic]",
     "scanpy[skmisc]",
     "scanpy[harmony]",
     "scanpy[scanorama]",
-    "scanpy[scrublet]",
     "scanpy[dask-ml]",
 ]
 doc = [
@@ -121,7 +122,10 @@ doc = [
     "nbsphinx>=0.9",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
+    "sphinxcontrib-bibtex",
+    "setuptools",
     # TODO: remove necessity for being able to import doc-linked classes
+    "dask",
     "scanpy[paga]",
     "sam-algorithm",
 ]
@@ -133,17 +137,17 @@ dev = [
 ]
 # Algorithms
 paga = ["igraph"]
-louvain = ["igraph", "louvain>=0.6,!=0.6.2"]  # Louvain community detection
-leiden = ["igraph>=0.10", "leidenalg>=0.9"]  # Leiden community detection
+louvain = ["igraph", "louvain>=0.6.0,!=0.6.2"]  # Louvain community detection
+leiden = ["igraph>=0.10", "leidenalg>=0.9.0"]  # Leiden community detection
 bbknn = ["bbknn"]  # Batch balanced KNN (batch correction)
 magic = ["magic-impute>=2.0"]  # MAGIC imputation method
 skmisc = ["scikit-misc>=0.1.3"]  # highly_variable_genes method 'seurat_v3'
 harmony = ["harmonypy"]  # Harmony dataset integration
 scanorama = ["scanorama"]  # Scanorama dataset integration
-scrublet = ["scrublet"]  # Doublet detection
+scrublet = ["scikit-image"]  # Doublet detection with automatic thresholds
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
-dask = ["dask[array]!=2.17.0"]  # Use the Dask parallelization engine
+dask = ["dask[array]>=2022.09.2"]  # Use the Dask parallelization engine
 dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.hatch.build]
@@ -158,7 +162,6 @@ addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
-    "-pscanpy.testing._pytest",
 ]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
@@ -167,13 +170,15 @@ nunit_attach_on = "fail"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
+    "anndata_dask_support: tests that require dask support in anndata",
 ]
 filterwarnings = [
     # legacy-api-wrap: internal use of positional API
     "error:The specified parameters:FutureWarning",
     # When calling `.show()` in tests, this is raised
     "ignore:FigureCanvasAgg is non-interactive:UserWarning",
-    # We explicitly handle these errors in tests
+
+    # We explicitly handle the below errors in tests
     "error:`anndata.read` is deprecated:FutureWarning",
     "error:Observation names are not unique:UserWarning",
     "error:The dtype argument is deprecated and will be removed:FutureWarning",
@@ -184,6 +189,10 @@ filterwarnings = [
     "error:The provided callable.* is currently using:FutureWarning",
     "error:The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
     "error:A value is trying to be set on a copy of a slice from a DataFrame",
+    "error:No data for colormapping provided via 'c'",
+    "error:\\n*The `scale` parameter has been renamed and will be removed",
+    "error:\\n*Passing `palette` without assigning `hue` is deprecated",
+    "error:\\n*Setting a gradient palette using color= is deprecated",
 ]
 
 [tool.coverage.run]

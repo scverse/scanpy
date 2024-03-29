@@ -2,10 +2,12 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+
 from __future__ import annotations
 
 import warnings
 from functools import singledispatch
+from operator import truediv
 from typing import TYPE_CHECKING, Literal
 
 import numba
@@ -17,11 +19,13 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import DaskArray, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     AnyRandom,
     _check_array_function_arguments,
+    axis_mul_or_truediv,
+    axis_sum,
     renamed_arg,
     sanitize_anndata,
     view_to_actual,
@@ -50,7 +54,7 @@ if TYPE_CHECKING:
     "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
 )
 def filter_cells(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_genes: int | None = None,
@@ -162,7 +166,7 @@ def filter_cells(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    number_per_cell = np.sum(
+    number_per_cell = axis_sum(
         X if min_genes is None and max_genes is None else X > 0, axis=1
     )
     if issparse(X):
@@ -172,7 +176,7 @@ def filter_cells(
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
 
-    s = materialize_as_ndarray(np.sum(~cell_subset))
+    s = axis_sum(~cell_subset)
     if s > 0:
         msg = f"filtered out {s} cells that have "
         if min_genes is not None or min_counts is not None:
@@ -197,7 +201,7 @@ def filter_cells(
     "min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy"
 )
 def filter_genes(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_cells: int | None = None,
@@ -278,7 +282,7 @@ def filter_genes(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
-    number_per_gene = np.sum(
+    number_per_gene = axis_sum(
         X if min_cells is None and max_cells is None else X > 0, axis=0
     )
     if issparse(X):
@@ -288,7 +292,7 @@ def filter_genes(
     if max_number is not None:
         gene_subset = number_per_gene <= max_number
 
-    s = np.sum(~gene_subset)
+    s = axis_sum(~gene_subset)
     if s > 0:
         msg = f"filtered out {s} genes that are detected "
         if min_cells is not None or min_counts is not None:
@@ -746,18 +750,18 @@ def _regress_out_chunk(data):
 
 
 @renamed_arg("X", "data", pos_0=True)
-@old_positionals("zero_center", "max_value", "copy", "layer", "obsm", "mask")
+@old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask: NDArray[np.bool_] | str | None = None,
-) -> AnnData | spmatrix | np.ndarray | None:
+    mask_obs: NDArray[np.bool_] | str | None = None,
+) -> AnnData | spmatrix | np.ndarray | DaskArray | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -783,6 +787,10 @@ def scale(
         If provided, which element of layers to scale.
     obsm
         If provided, which element of obsm to scale.
+    mask_obs
+        Restrict both the derivation of scaling parameters and the scaling itself
+        to a certain set of observations. The mask is specified as a boolean array
+        or a string referring to an array in :attr:`~anndata.AnnData.obs`.
 
     Returns
     -------
@@ -807,37 +815,45 @@ def scale(
             f"`obsm` argument inappropriate for value of type {type(data)}"
         )
     return scale_array(
-        data, zero_center=zero_center, max_value=max_value, copy=copy, mask=mask
+        data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
     )
 
 
 @scale.register(np.ndarray)
+@scale.register(DaskArray)
 def scale_array(
-    X: np.ndarray,
+    X: np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask: NDArray[np.bool_] | None = None,
-) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
+    mask_obs: NDArray[np.bool_] | None = None,
+) -> (
+    np.ndarray
+    | DaskArray
+    | tuple[
+        np.ndarray | DaskArray, NDArray[np.float64] | DaskArray, NDArray[np.float64]
+    ]
+    | DaskArray
+):
     if copy:
         X = X.copy()
-    if mask is not None:
-        mask = _check_mask(X, mask, "obs")
+    if mask_obs is not None:
+        mask_obs = _check_mask(X, mask_obs, "obs")
         scale_rv = scale_array(
-            X[mask, :],
+            X[mask_obs, :],
             zero_center=zero_center,
             max_value=max_value,
             copy=False,
             return_mean_std=return_mean_std,
-            mask=None,
+            mask_obs=None,
         )
         if return_mean_std:
-            X[mask, :], mean, std = scale_rv
+            X[mask_obs, :], mean, std = scale_rv
             return X, mean, std
         else:
-            X[mask, :] = scale_rv
+            X[mask_obs, :] = scale_rv
             return X
 
     if not zero_center and max_value is not None:
@@ -855,19 +871,40 @@ def scale_array(
     mean, var = _get_mean_var(X)
     std = np.sqrt(var)
     std[std == 0] = 1
-    if issparse(X):
-        if zero_center:
-            raise ValueError("Cannot zero-center sparse matrix.")
-        sparsefuncs.inplace_column_scale(X, 1 / std)
-    else:
-        if zero_center:
-            X -= mean
-        X /= std
+    if zero_center:
+        if isinstance(X, DaskArray) and issparse(X._meta):
+            warnings.warn(
+                "zero-center being used with `DaskArray` sparse chunks.  This can be bad if you have large chunks or intend to eventually read the whole data into memory.",
+                UserWarning,
+            )
+        X -= mean
+    X = axis_mul_or_truediv(
+        X,
+        std,
+        op=truediv,
+        out=X if isinstance(X, np.ndarray) or issparse(X) else None,
+        axis=1,
+    )
 
     # do the clipping
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
-        X[X > max_value] = max_value
+        if isinstance(X, DaskArray) and issparse(X._meta):
+
+            def clip_set(x):
+                x = x.copy()
+                x[x > max_value] = max_value
+                if zero_center:
+                    x[x < -max_value] = -max_value
+                return x
+
+            X = da.map_blocks(clip_set, X)
+        else:
+            if zero_center:
+                a_min, a_max = -max_value, max_value
+                X = np.clip(X, a_min, a_max)  # dask does not accept these as kwargs
+            else:
+                X[X > max_value] = max_value
     if return_mean_std:
         return X, mean, std
     else:
@@ -882,7 +919,7 @@ def scale_sparse(
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool_] | None = None,
 ) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
     # need to add the following here to make inplace logic work
     if zero_center:
@@ -898,7 +935,7 @@ def scale_sparse(
         copy=copy,
         max_value=max_value,
         return_mean_std=return_mean_std,
-        mask=mask,
+        mask_obs=mask_obs,
     )
 
 
@@ -911,16 +948,16 @@ def scale_anndata(
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool_] | str | None = None,
 ) -> AnnData | None:
     adata = adata.copy() if copy else adata
     str_mean_std = ("mean", "std")
-    if mask is not None:
-        if isinstance(mask, str):
-            str_mean_std = (f"mean of {mask}", f"std of {mask}")
+    if mask_obs is not None:
+        if isinstance(mask_obs, str):
+            str_mean_std = (f"mean of {mask_obs}", f"std of {mask_obs}")
         else:
             str_mean_std = ("mean with mask", "std with mask")
-        mask = _check_mask(adata, mask, "obs")
+        mask_obs = _check_mask(adata, mask_obs, "obs")
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer, obsm=obsm)
     X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
@@ -929,7 +966,7 @@ def scale_anndata(
         max_value=max_value,
         copy=False,  # because a copy has already been made, if it were to be made
         return_mean_std=True,
-        mask=mask,
+        mask_obs=mask_obs,
     )
     _set_obs_rep(adata, X, layer=layer, obsm=obsm)
     return adata if copy else None
@@ -1076,7 +1113,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         original_type = type(X)
         if not isspmatrix_csr(X):
             X = csr_matrix(X)
-        totals = np.ravel(X.sum(axis=1))  # Faster for csr matrix
+        totals = np.ravel(axis_sum(X, axis=1))  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
         rows = np.split(X.data, X.indptr[1:-1])
         for rowidx in under_target:
@@ -1092,7 +1129,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         if original_type is not csr_matrix:  # Put it back
             X = original_type(X)
     else:
-        totals = np.ravel(X.sum(axis=1))
+        totals = np.ravel(axis_sum(X, axis=1))
         under_target = np.nonzero(totals > counts_per_cell)[0]
         for rowidx in under_target:
             row = X[rowidx, :]

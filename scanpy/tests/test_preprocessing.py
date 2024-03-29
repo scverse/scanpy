@@ -9,11 +9,16 @@ from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
 from numpy.testing import assert_allclose
 from scipy import sparse as sp
+from sklearn.utils import issparse
 
 import scanpy as sc
-from scanpy.testing._helpers import check_rep_mutation, check_rep_results
+from scanpy.testing._helpers import (
+    anndata_v0_8_constructor_compat,
+    check_rep_mutation,
+    check_rep_results,
+)
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
-from scanpy.testing._pytest.params import ARRAY_TYPES_SUPPORTED
+from scanpy.testing._pytest.params import ARRAY_TYPES
 
 
 def test_log1p(tmp_path):
@@ -55,8 +60,7 @@ def test_log1p_rep(count_matrix_format, base, dtype):
     check_rep_results(sc.pp.log1p, X, base=base)
 
 
-# TODO: Add support for sparse-in-dask
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_mean_var(array_type):
     pbmc = pbmc3k()
     pbmc.X = array_type(pbmc.X)
@@ -155,6 +159,43 @@ def test_subsample_copy_backed(tmp_path):
         sc.pp.subsample(adata_d, n_obs=40, copy=False)
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("zero_center", [True, False])
+@pytest.mark.parametrize("max_value", [None, 1.0])
+def test_scale_matrix_types(array_type, zero_center, max_value):
+    adata = pbmc68k_reduced()
+    adata.X = adata.raw.X
+    adata_casted = adata.copy()
+    adata_casted.X = array_type(adata_casted.raw.X)
+    sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
+    sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
+    X = adata_casted.X
+    if "dask" in array_type.__name__:
+        X = X.compute()
+    if issparse(X):
+        X = X.todense()
+    if issparse(adata.X):
+        adata.X = adata.X.todense()
+    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+ARRAY_TYPES_DASK_SPARSE = [
+    a for a in ARRAY_TYPES if "sparse" in a.id and "dask" in a.id
+]
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_DASK_SPARSE)
+def test_scale_zero_center_warns_dask_sparse(array_type):
+    adata = pbmc68k_reduced()
+    adata.X = adata.raw.X
+    adata_casted = adata.copy()
+    adata_casted.X = array_type(adata_casted.raw.X)
+    with pytest.warns(UserWarning, match="zero-center being used with `DaskArray`*"):
+        sc.pp.scale(adata_casted)
+    sc.pp.scale(adata)
+    assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
+
+
 def test_scale():
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
@@ -187,11 +228,11 @@ def test_scale_array(count_matrix_format, zero_center):
     Test that running sc.pp.scale on an anndata object and an array returns the same results.
     """
     X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
-    adata = sc.AnnData(X=X.copy().astype(np.float64))
+    adata = anndata_v0_8_constructor_compat(X=X.copy())
 
     sc.pp.scale(adata, zero_center=zero_center)
     scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
-    assert np.array_equal(asarray(scaled_X), asarray(adata.X))
+    np.testing.assert_equal(asarray(scaled_X), asarray(adata.X))
 
 
 def test_recipe_plotting():
@@ -314,7 +355,7 @@ def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     TARGET = 1000
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = AnnData(X=count_matrix_format(X).astype(dtype))
+    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(
             adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace
@@ -346,7 +387,7 @@ def test_downsample_counts_per_cell_multiple_targets(
     TARGETS = np.random.randint(500, 1500, 1000)
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = AnnData(X=count_matrix_format(X).astype(dtype))
+    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
@@ -372,7 +413,7 @@ def test_downsample_counts_per_cell_multiple_targets(
 def test_downsample_total_counts(count_matrix_format, replace, dtype):
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata_orig = AnnData(X=count_matrix_format(X))
+    adata_orig = anndata_v0_8_constructor_compat(X=count_matrix_format(X))
     total = X.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))
@@ -403,3 +444,81 @@ def test_recipe_weinreb():
     orig = adata.copy()
     sc.pp.recipe_weinreb17(adata, log=False, copy=True)
     assert_equal(orig, adata)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize(
+    "max_cells,max_counts,min_cells,min_counts",
+    [
+        [100, None, None, None],
+        [None, 100, None, None],
+        [None, None, 20, None],
+        [None, None, None, 20],
+    ],
+)
+def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
+    adata = pbmc68k_reduced()
+    adata.X = adata.raw.X
+    adata_casted = adata.copy()
+    adata_casted.X = array_type(adata_casted.raw.X)
+    sc.pp.filter_genes(
+        adata,
+        max_cells=max_cells,
+        max_counts=max_counts,
+        min_cells=min_cells,
+        min_counts=min_counts,
+    )
+    sc.pp.filter_genes(
+        adata_casted,
+        max_cells=max_cells,
+        max_counts=max_counts,
+        min_cells=min_cells,
+        min_counts=min_counts,
+    )
+    X = adata_casted.X
+    if "dask" in array_type.__name__:
+        X = X.compute()
+    if issparse(X):
+        X = X.todense()
+    if issparse(adata.X):
+        adata.X = adata.X.todense()
+    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize(
+    "max_genes,max_counts,min_genes,min_counts",
+    [
+        [100, None, None, None],
+        [None, 100, None, None],
+        [None, None, 20, None],
+        [None, None, None, 20],
+    ],
+)
+def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
+    adata = pbmc68k_reduced()
+    adata.X = adata.raw.X
+    adata_casted = adata.copy()
+    adata_casted.X = array_type(adata_casted.raw.X)
+    sc.pp.filter_cells(
+        adata,
+        max_genes=max_genes,
+        max_counts=max_counts,
+        min_genes=min_genes,
+        min_counts=min_counts,
+    )
+    sc.pp.filter_cells(
+        adata_casted,
+        max_genes=max_genes,
+        max_counts=max_counts,
+        min_genes=min_genes,
+        min_counts=min_counts,
+    )
+    X = adata_casted.X
+    if "dask" in array_type.__name__:
+        X = X.compute()
+    if issparse(X):
+        X = X.todense()
+    if issparse(adata.X):
+        adata.X = adata.X.todense()
+    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)

@@ -1,48 +1,45 @@
+# This script generates the reference test data "seurat_hvg_v3.csv" (this file is compressed to .gz afterwards) and "seurat_hvg_v3_batch.csv"
+# Requires to load the data from this link: https://cf.10xgenomics.com/samples/cell/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz
+
+library(dplyr)
 library(Seurat)
-library(reticulate)
-use_python("/usr/local/bin/python3")
+library(patchwork)
 
-sc <- import("scanpy", convert=FALSE)
+################################################################################
+### FindVariableFeatures (no batch covariate)
 
-ad <- sc$datasets$pbmc3k()
-ad$X <- ad$X$toarray()
+# Load the PBMC dataset - load the data from the link above!
+# pbmc.data <- Read10X(data.dir = "<INSERT_PATH_TO_DATA_HERE>/filtered_gene_bc_matrices/hg19/")
+pbmc.data <- Read10X(data.dir = "/Users/eljas.roellin/Documents/R_stuff/filtered_gene_bc_matrices/hg19/")
 
-ad$var_names_make_unique()
+# Initialize the Seurat object with the raw (non-normalized data).
+pbmc <- CreateSeuratObject(counts = pbmc.data, project = "pbmc3k", min.cells = 3, min.features = 200)
+pbmc
 
-sc$pp$highly_variable_genes(ad, n_top_genes=1000, flavor="seurat_v3")
+pbmc <- FindVariableFeatures(pbmc,  mean.function=ExpMean, selection.method = 'vst', nfeatures = 2000)
 
+hvf_info <- HVFInfo(pbmc)
 
-X <- py_to_r(ad$X$T)
-bc <- py_to_r(ad$obs_names$tolist())
-colnames(X) <- bc
-genes <- py_to_r(ad$var_names$tolist())
-rownames(X) <- genes
+write.csv(hvf_info, "seurat_hvg_v3.csv")
 
-sr <- CreateSeuratObject(counts = X)
-ad_hvg <- py_to_r(ad$var["highly_variable"])
-ad_hvg <- names(ad_hvg[ad_hvg])
+################################################################################
+### SelectIntegrationFeatures (with batch covariate)
 
-sr <- FindVariableFeatures(object = sr, selection.method = "vst", nfeatures = 1000)
-sr_hvg <- sr@assays$RNA@var.features
+# introduce dummy "technical covariates"
+pbmc.data <- Read10X(data.dir = "/Users/eljas.roellin/Documents/R_stuff/filtered_gene_bc_matrices/hg19/")
 
-print(all(sr_hvg==ad_hvg))
+# Initialize the Seurat object with the raw (non-normalized data).
+pbmc <- CreateSeuratObject(counts = pbmc.data, project = "pbmc3k_2", min.cells = 3, min.features = 200)
+pbmc
 
-hvg_info <- as.data.frame(HVFInfo(sr))
-hvg_info <- cbind(hvg_info, rownames(hvg_info) %in% sr_hvg)
-colnames(hvg_info) <- c("means", "variances", "variances_norm", "highly_variable")
+pbmc@meta.data["dummy_tech"] = "source_1"
+pbmc@meta.data[501:1001, "dummy_tech"] = "source_2"
+pbmc@meta.data[1001:1500, "dummy_tech"] = "source_3"
+pbmc@meta.data[1501:2000, "dummy_tech"] = "source_4"
+pbmc@meta.data[2001:nrow(pbmc@meta.data), "dummy_tech"] = "source_5"
 
-write.table(hvg_info, "seurat_hvg_v3.csv")
+pbmc_list = SplitObject(pbmc, split.by='dummy_tech')
 
-X_1 = X[, 1:1500]
-X_2 = X[, 1501:ncol(X)]
+features = SelectIntegrationFeatures(pbmc_list)
 
-sr1 <- CreateSeuratObject(counts = X_1)
-sr2 <- CreateSeuratObject(counts = X_2)
-
-sr1 <- FindVariableFeatures(object = sr1, selection.method = "vst", nfeatures = 4000)
-sr2 <- FindVariableFeatures(object = sr2, selection.method = "vst", nfeatures = 4000)
-
-srs = list(sr1, sr2)
-
-features <- SelectIntegrationFeatures(srs, nfeatures=4000)
-write.table(features, "seurat_hvg_v3_batch.csv")
+write.csv(features, "seurat_hvg_v3_batch.csv")

@@ -3,22 +3,27 @@ from __future__ import annotations
 import warnings
 from typing import Literal
 
+import anndata as ad
 import numpy as np
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import (
-    as_dense_dask_array,
-    as_sparse_dask_array,
     asarray,
     assert_equal,
 )
+from packaging.version import Version
 from scipy import sparse
 from sklearn.utils import issparse
 
 import scanpy as sc
+from scanpy.testing._helpers import as_dense_dask_array, as_sparse_dask_array
 from scanpy.testing._helpers.data import pbmc3k_normalized
 from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SUPPORTED, param_with
+from scanpy.testing._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
+    param_with,
+)
 
 A_list = np.array(
     [
@@ -58,7 +63,7 @@ A_svd = np.array(
 @pytest.fixture(
     params=[
         param_with(at, marks=[needs.dask_ml]) if "dask" in at.id else at
-        for at in ARRAY_TYPES_SUPPORTED
+        for at in ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED
     ]
 )
 def array_type(request: pytest.FixtureRequest):
@@ -164,7 +169,7 @@ def test_pca_transform(array_type):
 
     with warnings.catch_warnings(record=True) as record:
         sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
-    assert len(record) == 0
+    assert len(record) == 0, record
 
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
@@ -298,12 +303,15 @@ def test_pca_n_pcs():
 def test_mask_highly_var_error(array_type):
     """Check if use_highly_variable=True throws an error if the annotation is missing."""
     adata = AnnData(array_type(A_list).astype("float32"))
-    with pytest.warns(
-        FutureWarning,
-        match=r"Argument `use_highly_variable` is deprecated, consider using the mask argument\.",
-    ), pytest.raises(
-        ValueError,
-        match=r"Did not find `adata\.var\['highly_variable'\]`\.",
+    with (
+        pytest.warns(
+            FutureWarning,
+            match=r"Argument `use_highly_variable` is deprecated, consider using the mask argument\.",
+        ),
+        pytest.raises(
+            ValueError,
+            match=r"Did not find `adata\.var\['highly_variable'\]`\.",
+        ),
     ):
         sc.pp.pca(adata, use_highly_variable=True)
 
@@ -311,25 +319,25 @@ def test_mask_highly_var_error(array_type):
 def test_mask_length_error():
     """Check error for n_obs / mask length mismatch."""
     adata = AnnData(A_list)
-    mask = np.random.choice([True, False], adata.shape[1] + 1)
+    mask_var = np.random.choice([True, False], adata.shape[1] + 1)
     with pytest.raises(
         ValueError, match=r"The shape of the mask do not match the data\."
     ):
-        sc.pp.pca(adata, mask=mask, copy=True)
+        sc.pp.pca(adata, mask_var=mask_var, copy=True)
 
 
-def test_mask_argument_equivalence(float_dtype, array_type):
+def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string"""
 
     adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
-    mask = np.random.choice([True, False], adata_base.shape[1])
+    mask_var = np.random.choice([True, False], adata_base.shape[1])
 
     adata = adata_base.copy()
-    sc.pp.pca(adata, mask=mask, dtype=float_dtype)
+    sc.pp.pca(adata, mask_var=mask_var, dtype=float_dtype)
 
     adata_w_mask = adata_base.copy()
-    adata_w_mask.var["mask"] = mask
-    sc.pp.pca(adata_w_mask, mask="mask", dtype=float_dtype)
+    adata_w_mask.var["mask"] = mask_var
+    sc.pp.pca(adata_w_mask, mask_var="mask", dtype=float_dtype)
 
     assert np.allclose(
         adata.X.toarray() if issparse(adata.X) else adata.X,
@@ -337,26 +345,51 @@ def test_mask_argument_equivalence(float_dtype, array_type):
     )
 
 
-def test_mask(array_type):
+def test_mask(array_type, request):
     if array_type is as_dense_dask_array:
         pytest.xfail("TODO: Dask arrays are not supported")
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
 
-    mask = np.random.choice([True, False], adata.shape[1])
+    if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
+        request.node.add_marker(
+            pytest.mark.xfail(
+                reason="TODO: Previous version of anndata would return an F ordered array for one"
+                " case here, which suprisingly considerably changes the results of PCA. "
+            )
+        )
+    mask_var = np.random.choice([True, False], adata.shape[1])
 
-    adata_masked = adata[:, mask].copy()
-    sc.pp.pca(adata, mask=mask)
+    adata_masked = adata[:, mask_var].copy()
+    sc.pp.pca(adata, mask_var=mask_var)
     sc.pp.pca(adata_masked)
 
-    masked_var_loadings = adata.varm["PCs"][~mask]
+    masked_var_loadings = adata.varm["PCs"][~mask_var]
     np.testing.assert_equal(masked_var_loadings, np.zeros_like(masked_var_loadings))
 
     np.testing.assert_equal(adata.obsm["X_pca"], adata_masked.obsm["X_pca"])
     # There are slight difference based on whether the matrix was column or row major
     np.testing.assert_allclose(
-        adata.varm["PCs"][mask], adata_masked.varm["PCs"], rtol=1e-11
+        adata.varm["PCs"][mask_var], adata_masked.varm["PCs"], rtol=1e-11
     )
+
+
+def test_mask_order_warning(request):
+    if Version(ad.__version__) >= Version("0.9"):
+        request.node.add_marker(
+            pytest.mark.xfail(
+                reason="Not expected to warn in later versions of anndata"
+            )
+        )
+
+    adata = ad.AnnData(X=np.random.randn(50, 5))
+    mask = np.array([True, False, True, False, True])
+
+    with pytest.warns(
+        UserWarning,
+        match="When using a mask parameter with anndata<0.9 on a dense array",
+    ):
+        sc.pp.pca(adata, mask_var=mask)
 
 
 def test_mask_defaults(array_type, float_dtype):
@@ -364,20 +397,19 @@ def test_mask_defaults(array_type, float_dtype):
     Test if pca result is equal without highly variable and with-but mask is None
     and if pca takes highly variable as mask as default
     """
-    A = array_type(A_list).astype("float32")
+    A = array_type(A_list).astype("float64")
     adata = AnnData(A)
 
     without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
 
-    mask = np.random.choice([True, False], adata.shape[1])
-    mask[0] = True
-    mask[1] = True
+    rng = np.random.default_rng(8)
+    mask = rng.choice([True, False], adata.shape[1])
     adata.var["highly_variable"] = mask
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
-    assert without_var.uns["pca"]["params"]["mask"] is None
-    assert with_var.uns["pca"]["params"]["mask"] == "highly_variable"
+    assert without_var.uns["pca"]["params"]["mask_var"] is None
+    assert with_var.uns["pca"]["params"]["mask_var"] == "highly_variable"
     assert not np.array_equal(without_var.obsm["X_pca"], with_var.obsm["X_pca"])
-    with_no_mask = sc.pp.pca(adata, mask=None, copy=True, dtype=float_dtype)
+    with_no_mask = sc.pp.pca(adata, mask_var=None, copy=True, dtype=float_dtype)
     assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
 
 

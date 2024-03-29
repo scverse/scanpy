@@ -5,9 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import pytest
-from anndata.tests.helpers import as_dense_dask_array, as_sparse_dask_array, asarray
+from anndata.tests.helpers import asarray
 from scipy import sparse
 
+from .._helpers import (
+    as_dense_dask_array,
+    as_sparse_dask_array,
+)
 from .._pytest.marks import needs
 
 if TYPE_CHECKING:
@@ -35,10 +39,18 @@ MAP_ARRAY_TYPES: dict[
         pytest.param(sparse.csc_matrix, id="scipy_csc"),
     ),
     ("dask", "dense"): (
-        pytest.param(as_dense_dask_array, marks=[needs.dask], id="dask_array_dense"),
+        pytest.param(
+            as_dense_dask_array,
+            marks=[needs.dask, pytest.mark.anndata_dask_support],
+            id="dask_array_dense",
+        ),
     ),
     ("dask", "sparse"): (
-        pytest.param(as_sparse_dask_array, marks=[needs.dask], id="dask_array_sparse"),
+        pytest.param(
+            as_sparse_dask_array,
+            marks=[needs.dask, pytest.mark.anndata_dask_support],
+            id="dask_array_sparse",
+        ),
         # probably not necessary to also do csc
     ),
 }
@@ -54,21 +66,16 @@ ARRAY_TYPES_DENSE = tuple(
     at for (_, spsty), ats in MAP_ARRAY_TYPES.items() if spsty == "dense" for at in ats
 )
 ARRAY_TYPES_SPARSE = tuple(
-    at for (_, spsty), ats in MAP_ARRAY_TYPES.items() if spsty == "dense" for at in ats
+    at for (_, spsty), ats in MAP_ARRAY_TYPES.items() if "sparse" in spsty for at in ats
 )
-
-ARRAY_TYPES_SUPPORTED = tuple(
+ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED = tuple(
     (
         param_with(at, marks=[pytest.mark.xfail(reason="sparse-in-dask not supported")])
-        if attrs == ("dask", "sparse")
+        if attrs[0] == "dask" and "sparse" in attrs[1]
         else at
     )
     for attrs, ats in MAP_ARRAY_TYPES.items()
     for at in ats
 )
-"""
-Sparse matrices in dask arrays aren’t officially supported upstream,
-so add xfail to them.
-"""
 
 ARRAY_TYPES = tuple(at for ats in MAP_ARRAY_TYPES.values() for at in ats)

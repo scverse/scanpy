@@ -67,4 +67,4 @@ If you want to replicate the process more exactly, make sure you are careful,
 and create a version tag before building (make sure you delete it after uploading to TestPyPI!).
 
 [hatch-build]: https://hatch.pypa.io/latest/config/build/
-[publish workflow]: https://github.com/scverse/scanpy/tree/master/.github/workflows/publish.yml
+[publish workflow]: https://github.com/scverse/scanpy/tree/main/.github/workflows/publish.yml

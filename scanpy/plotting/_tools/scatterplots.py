@@ -20,6 +20,7 @@ from matplotlib.axes import Axes  # noqa: TCH002
 from matplotlib.colors import Colormap, Normalize
 from matplotlib.figure import Figure  # noqa: TCH002
 from numpy.typing import NDArray  # noqa: TCH002
+from packaging.version import Version
 
 from ... import logging as logg
 from ..._settings import settings
@@ -59,7 +60,7 @@ def embedding(
     basis: str,
     *,
     color: str | Sequence[str] | None = None,
-    mask: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool_] | str | None = None,
     gene_symbols: str | None = None,
     use_raw: bool | None = None,
     sort_order: bool = True,
@@ -135,10 +136,10 @@ def embedding(
     args_3d = dict(projection="3d") if projection == "3d" else {}
 
     # Checking the mask format and if used together with groups
-    if groups is not None and mask is not None:
+    if groups is not None and mask_obs is not None:
         raise ValueError("Groups and mask arguments are incompatible.")
-    if mask is not None:
-        mask = _check_mask(adata, mask, "obs")
+    if mask_obs is not None:
+        mask_obs = _check_mask(adata, mask_obs, "obs")
 
     # Figure out if we're using raw
     if use_raw is None:
@@ -166,7 +167,6 @@ def embedding(
             cmap = color_map
     cmap = copy(colormaps.get_cmap(cmap))
     cmap.set_bad(na_color)
-    kwargs["cmap"] = cmap
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
@@ -262,16 +262,17 @@ def embedding(
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
     for count, (value_to_plot, dims) in enumerate(zip(color, dimensions)):
+        kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
             layer=layer,
-            mask=mask,
+            mask_obs=mask_obs,
             use_raw=use_raw,
             gene_symbols=gene_symbols,
             groups=groups,
         )
-        color_vector, categorical = _color_vector(
+        color_vector, color_type = _color_vector(
             adata,
             value_to_plot,
             values=color_source_vector,
@@ -281,10 +282,10 @@ def embedding(
 
         # Order points
         order = slice(None)
-        if sort_order is True and value_to_plot is not None and categorical is False:
+        if sort_order and value_to_plot is not None and color_type == "cont":
             # Higher values plotted on top, null values on bottom
             order = np.argsort(-color_vector, kind="stable")[::-1]
-        elif sort_order and categorical:
+        elif sort_order and color_type == "cat":
             # Null points go on bottom
             order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
         # Set orders
@@ -316,18 +317,17 @@ def embedding(
                 )
                 ax.set_title(value_to_plot)
 
-        if not categorical:
+        if color_type == "cont":
             vmin_float, vmax_float, vcenter_float, norm_obj = _get_vboundnorm(
                 vmin, vmax, vcenter, norm=norm, index=count, colors=color_vector
             )
-            normalize = check_colornorm(
+            kwargs_scatter["norm"] = check_colornorm(
                 vmin_float,
                 vmax_float,
                 vcenter_float,
                 norm_obj,
             )
-        else:
-            normalize = None
+            kwargs_scatter["cmap"] = cmap
 
         # make the scatter plot
         if projection == "3d":
@@ -337,9 +337,8 @@ def embedding(
                 coords[:, 2],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
-                norm=normalize,
                 marker=marker[count],
-                **kwargs,
+                **kwargs_scatter,
             )
         else:
             scatter = (
@@ -370,42 +369,35 @@ def embedding(
 
                 # remove edge from kwargs if present
                 # because edge needs to be set to None
-                kwargs["edgecolor"] = "none"
+                kwargs_scatter["edgecolor"] = "none"
+                # For points, if user did not set alpha, set alpha to 0.7
+                kwargs_scatter.setdefault("alpha", 0.7)
 
-                # remove alpha for outline
-                alpha = kwargs.pop("alpha") if "alpha" in kwargs else None
+                # remove alpha and color mapping for outline
+                kwargs_outline = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if k not in {"alpha", "cmap", "norm"}
+                }
 
-                ax.scatter(
-                    coords[:, 0],
-                    coords[:, 1],
-                    s=bg_size,
-                    c=bg_color,
-                    rasterized=settings._vector_friendly,
-                    norm=normalize,
-                    marker=marker[count],
-                    **kwargs,
-                )
-                ax.scatter(
-                    coords[:, 0],
-                    coords[:, 1],
-                    s=gap_size,
-                    c=gap_color,
-                    rasterized=settings._vector_friendly,
-                    norm=normalize,
-                    marker=marker[count],
-                    **kwargs,
-                )
-                # if user did not set alpha, set alpha to 0.7
-                kwargs["alpha"] = 0.7 if alpha is None else alpha
+                for s, c in [(bg_size, bg_color), (gap_size, gap_color)]:
+                    ax.scatter(
+                        coords[:, 0],
+                        coords[:, 1],
+                        s=s,
+                        c=c,
+                        rasterized=settings._vector_friendly,
+                        marker=marker[count],
+                        **kwargs_outline,
+                    )
 
             cax = scatter(
                 coords[:, 0],
                 coords[:, 1],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
-                norm=normalize,
                 marker=marker[count],
-                **kwargs,
+                **kwargs_scatter,
             )
 
         # remove y and x ticks
@@ -445,7 +437,7 @@ def embedding(
             path_effect = None
 
         # Adding legends
-        if categorical or color_vector.dtype == bool:
+        if color_type == "cat":
             _add_categorical_legend(
                 ax,
                 color_source_vector,
@@ -997,7 +989,7 @@ def spatial(
     --------
     :func:`scanpy.datasets.visium_sge`
         Example visium data.
-    :doc:`tutorials:spatial/basic-analysis`
+    :doc:`/tutorials/spatial/basic-analysis`
         Tutorial on spatial analysis.
     """
     # get default image params if available
@@ -1170,7 +1162,7 @@ def _get_color_source_vector(
     adata: AnnData,
     value_to_plot: str,
     *,
-    mask: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool_] | None = None,
     use_raw: bool = False,
     gene_symbols: str | None = None,
     layer: str | None = None,
@@ -1197,8 +1189,8 @@ def _get_color_source_vector(
         values = adata.raw.obs_vector(value_to_plot)
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
-    if mask is not None:
-        values[~mask] = np.nan
+    if mask_obs is not None:
+        values[~mask_obs] = np.nan
     if groups and isinstance(values, pd.Categorical):
         values = values.remove_categories(values.categories.difference(groups))
     return values
@@ -1224,12 +1216,12 @@ def _get_palette(adata, values_key: str, palette=None):
 
 def _color_vector(
     adata: AnnData,
-    values_key: str,
+    values_key: str | None,
     *,
     values: np.ndarray | pd.api.extensions.ExtensionArray,
     palette: str | Sequence[str] | Cycler | None,
     na_color: ColorLike = "lightgray",
-) -> tuple[np.ndarray | pd.api.extensions.ExtensionArray, bool]:
+) -> tuple[np.ndarray | pd.api.extensions.ExtensionArray, Literal["cat", "na", "cont"]]:
     """
     Map array of values to array of hex (plus alpha) codes.
 
@@ -1244,11 +1236,11 @@ def _color_vector(
     # 'obs' or in 'var'
     to_hex = partial(colors.to_hex, keep_alpha=True)
     if values_key is None:
-        return np.broadcast_to(to_hex(na_color), adata.n_obs), False
+        return np.broadcast_to(to_hex(na_color), adata.n_obs), "na"
     if values.dtype == bool:
         values = pd.Categorical(values.astype(str))
     elif not isinstance(values, pd.Categorical):
-        return values, False
+        return values, "cont"
 
     color_map = {
         k: to_hex(v)
@@ -1256,13 +1248,15 @@ def _color_vector(
     }
     # If color_map does not have unique values, this can be slow as the
     # result is not categorical
-    color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
-
+    if Version(pd.__version__) < Version("2.1.0"):
+        color_vector = pd.Categorical(values.map(color_map))
+    else:
+        color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
     # Set color to 'missing color' for all missing values
     if color_vector.isna().any():
         color_vector = color_vector.add_categories([to_hex(na_color)])
         color_vector = color_vector.fillna(to_hex(na_color))
-    return color_vector, True
+    return color_vector, "cat"
 
 
 def _basis2name(basis):

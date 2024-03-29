@@ -14,7 +14,7 @@ body:
       required: true
     - label: I have confirmed this bug exists on the latest version of scanpy.
       required: true
-    - label: (optional) I have confirmed this bug exists on the master branch of scanpy.
+    - label: (optional) I have confirmed this bug exists on the main branch of scanpy.
       required: false
 - type: markdown
   attributes:
