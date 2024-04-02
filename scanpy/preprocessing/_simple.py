@@ -968,22 +968,22 @@ def scale_sparse(
     @numba.njit()
     def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, has_mask, clip):
         def _loop_scale(i):
-            for j in range(indptr[i], indptr[i + 1]):
+            for j in numba.prange(indptr[i], indptr[i + 1]):
                 if clip:
                     data[j] = min(clip, data[j] / std[indices[j]])
                 else:
                     data[j] /= std[indices[j]]
 
         if has_mask:
-            for i in range(len(indptr) - 1):
+            for i in numba.prange(len(indptr) - 1):
                 if mask_obs[i]:
                     _loop_scale(i, indptr=indptr, indices=indices, data=data, clip=clip)
         else:
-            for i in range(len(indptr) - 1):
+            for i in numba.prange(len(indptr) - 1):
                 _loop_scale(i, indptr=indptr, indices=indices, data=data, clip=clip)
 
     if max_value is None:
-        max_value = np.inf
+        max_value = 0
 
     _scale_sparse_numba(
         X.indptr,
