@@ -939,7 +939,7 @@ def scale_sparse(
             return_mean_std=return_mean_std,
             mask_obs=mask_obs,
         )
-    elif mask_obs is None:
+    elif mask_obs is None and isspmatrix_csc(X):
         return scale_array(
             X,
             zero_center=zero_center,
