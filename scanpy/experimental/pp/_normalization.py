@@ -13,6 +13,7 @@ from ..._utils import (
     Empty,
     _doc_params,
     _empty,
+    axis_sum,
     check_nonnegative_integers,
     view_to_actual,
 )
@@ -32,7 +33,9 @@ from ...preprocessing._pca import _handle_mask_var, pca
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from dask.array import Array as DaskArray  # TODO: compat.py reachable?
+    # from dask.array import Array as DaskArray  # TODO: compat.py reachable?
+
+from ..._compat import DaskArray
 
 
 def _pearson_residuals(
@@ -62,21 +65,33 @@ def _pearson_residuals(
             UserWarning,
         )
 
-    if issparse(X):
-        sums_genes = np.sum(X, axis=0)
-        sums_cells = np.sum(X, axis=1)
-        sum_total = np.sum(sums_genes).squeeze()
+    if not isinstance(X, DaskArray):
+        if issparse(X):
+            sums_genes = np.sum(X, axis=0)
+            sums_cells = np.sum(X, axis=1)
+            sum_total = np.sum(sums_genes).squeeze()
+        else:
+            sums_genes = np.sum(X, axis=0, keepdims=True)
+            sums_cells = np.sum(X, axis=1, keepdims=True)
+            sum_total = np.sum(sums_genes).squeeze()
     else:
-        sums_genes = np.sum(X, axis=0, keepdims=True)
-        sums_cells = np.sum(X, axis=1, keepdims=True)
-        sum_total = np.sum(sums_genes)
+        sums_genes = axis_sum(X, axis=0, dtype=np.float32).reshape(1, -1)
+        sums_cells = axis_sum(X, axis=1, dtype=np.float32).reshape(-1, 1)
+        sum_total = sums_genes.sum()
 
-    mu = np.array(sums_cells @ sums_genes / sum_total)
-    diff = np.array(X - mu)
-    residuals = diff / np.sqrt(mu + mu**2 / theta)
+    if not isinstance(X, DaskArray):
+        mu = np.array(sums_cells @ sums_genes / sum_total)
+        diff = np.array(X - mu)
+    else:
+        mu = sums_cells @ sums_genes / sum_total
+        diff = (
+            X - mu
+        )  # here, potentially a dask sparse array and a dense sparse array are subtracted from each other
+
+    residuals = diff / np.sqrt(mu + mu**2 / theta).sqrt()
 
     # clip
-    residuals = np.clip(residuals, a_min=-clip, a_max=clip)
+    residuals = residuals.clip(-clip, clip)
 
     return residuals
 

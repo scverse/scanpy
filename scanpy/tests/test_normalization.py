@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
+from dask import array as da
 from scipy import sparse
-from scipy.sparse import csr_matrix
 from sklearn.utils import issparse
 
 import scanpy as sc
@@ -26,6 +26,22 @@ if TYPE_CHECKING:
 
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
+
+
+# TODO:
+# this is just a quick fix to have the tests running
+# how should this be done, do we need this at multiple places?
+# max in dask with sparse array is not that straightforward it seems?
+def general_max(x, array_type):
+    if "dask" in array_type.__name__:
+        return x.compute().max()
+    return x.max()
+
+
+def general_min(x, array_type):
+    if "dask" in array_type.__name__:
+        return x.compute().min()
+    return x.min()
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -103,16 +119,27 @@ def test_normalize_total_view(array_type, dtype):
     assert_equal(adata, v)
 
 
-def test_normalize_pearson_residuals_warnings(pbmc3k_parametrized):
-    adata = pbmc3k_parametrized()
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+def test_normalize_pearson_residuals_warnings(array_type, dtype):
+    adata = sc.datasets.pbmc3k()
+    adata.X = array_type(adata.X).astype(dtype)
 
     if np.issubdtype(adata.X.dtype, np.integer):
         pytest.skip("Can’t store non-integral data with int dtype")
 
     # depending on check_values, warnings should be raised for non-integer data
     adata_noninteger = adata.copy()
-    x, y = np.nonzero(adata_noninteger.X)
-    adata_noninteger.X[x[0], y[0]] = 0.5
+
+    def clip(x, min, max):
+        x[x < min] = min
+        x[x > max] = max
+        return x
+
+    if "dask" in array_type.__name__:
+        adata_noninteger.X = da.map_blocks(clip, adata.X, 0, 0.5, dtype=adata.X.dtype)
+    else:
+        adata_noninteger.X = clip(adata_noninteger.X, 0, 0.5)
 
     _check_check_values_warnings(
         function=sc.experimental.pp.normalize_pearson_residuals,
@@ -121,6 +148,8 @@ def test_normalize_pearson_residuals_warnings(pbmc3k_parametrized):
     )
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize(
     ("params", "match"),
     [
@@ -133,20 +162,72 @@ def test_normalize_pearson_residuals_warnings(pbmc3k_parametrized):
         ),
     ],
 )
-def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
-    adata = pbmc3k_parametrized()
+def test_normalize_pearson_residuals_errors(array_type, dtype, params, match):
+    adata = sc.datasets.pbmc3k()
+    adata.X = array_type(adata.X).astype(dtype)
 
     with pytest.raises(ValueError, match=match):
         sc.experimental.pp.normalize_pearson_residuals(adata, **params)
 
 
-@pytest.mark.parametrize(
-    "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
-)
+# @pytest.mark.parametrize(
+#     "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
+# )
+# @pytest.mark.parametrize("dtype", ["float32", "int64"])
+# @pytest.mark.parametrize("theta", [0.01, 1, 100, np.Inf])
+# @pytest.mark.parametrize("clip", [None, 1, np.Inf])
+# def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
+#     # toy data
+#     X = np.array([[3, 6], [2, 4], [1, 0]])
+#     ns = np.sum(X, axis=1)
+#     ps = np.sum(X, axis=0) / np.sum(X)
+#     mu = np.outer(ns, ps)
+
+#     # compute reference residuals
+#     if np.isinf(theta):
+#         # Poisson case
+#         residuals_reference = (X - mu) / np.sqrt(mu)
+#     else:
+#         # NB case
+#         residuals_reference = (X - mu) / np.sqrt(mu + mu**2 / theta)
+
+#     # compute output to test
+#     adata = AnnData(sparsity_func(X).astype(dtype))
+#     output = sc.experimental.pp.normalize_pearson_residuals(
+#         adata, theta=theta, clip=clip, inplace=False
+#     )
+#     output_X = output["X"]
+#     sc.experimental.pp.normalize_pearson_residuals(
+#         adata, theta=theta, clip=clip, inplace=True
+#     )
+
+#     # check for correct new `adata.uns` keys
+#     assert {"pearson_residuals_normalization"} <= adata.uns.keys()
+#     assert {"theta", "clip", "computed_on"} <= adata.uns[
+#         "pearson_residuals_normalization"
+#     ].keys()
+#     # test against inplace
+#     np.testing.assert_array_equal(adata.X, output_X)
+
+#     if clip is None:
+#         # default clipping: compare to sqrt(n) threshold
+#         clipping_threshold = np.sqrt(adata.shape[0]).astype(np.float32)
+#         assert np.max(output_X) <= clipping_threshold
+#         assert np.min(output_X) >= -clipping_threshold
+#     elif np.isinf(clip):
+#         # no clipping: compare to raw residuals
+#         assert np.allclose(output_X, residuals_reference)
+#     else:
+#         # custom clipping: compare to custom threshold
+#         assert np.max(output_X) <= clip
+#         assert np.min(output_X) >= -clip
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize("theta", [0.01, 1, 100, np.Inf])
 @pytest.mark.parametrize("clip", [None, 1, np.Inf])
-def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
+def test_normalize_pearson_residuals_values(array_type, dtype, theta, clip):
     # toy data
     X = np.array([[3, 6], [2, 4], [1, 0]])
     ns = np.sum(X, axis=1)
@@ -162,7 +243,7 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
         residuals_reference = (X - mu) / np.sqrt(mu + mu**2 / theta)
 
     # compute output to test
-    adata = AnnData(sparsity_func(X).astype(dtype))
+    adata = AnnData(array_type(X).astype(dtype))
     output = sc.experimental.pp.normalize_pearson_residuals(
         adata, theta=theta, clip=clip, inplace=False
     )
@@ -182,15 +263,17 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
     if clip is None:
         # default clipping: compare to sqrt(n) threshold
         clipping_threshold = np.sqrt(adata.shape[0]).astype(np.float32)
-        assert np.max(output_X) <= clipping_threshold
-        assert np.min(output_X) >= -clipping_threshold
+        assert general_max(output_X, array_type) <= clipping_threshold
+        assert general_min(output_X, array_type) >= -clipping_threshold
     elif np.isinf(clip):
         # no clipping: compare to raw residuals
+        if "dask" in array_type.__name__:
+            output_X = output_X.compute()
         assert np.allclose(output_X, residuals_reference)
     else:
         # custom clipping: compare to custom threshold
-        assert np.max(output_X) <= clip
-        assert np.min(output_X) >= -clip
+        assert general_max(output_X, array_type) <= clip
+        assert general_min(output_X, array_type) >= -clip
 
 
 def _check_pearson_pca_fields(ad, n_cells, n_comps):
@@ -210,6 +293,7 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
     ), "Wrong shape of PCA output in `X_pca`"
 
 
+# TODO: I just realized this is a huge test suite. Is the different numbers of HVGs and PCs really necessary?
 @pytest.mark.parametrize("n_hvgs", [100, 200])
 @pytest.mark.parametrize("n_comps", [30, 50])
 @pytest.mark.parametrize(
