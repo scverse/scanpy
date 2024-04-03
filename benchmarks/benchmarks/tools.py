@@ -4,6 +4,7 @@ API documentation: https://scanpy.readthedocs.io/en/stable/api.html#module-scanp
 
 
 """
+
 from __future__ import annotations
 
 import scanpy as sc
