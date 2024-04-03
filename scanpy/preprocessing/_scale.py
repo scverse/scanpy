@@ -165,6 +165,7 @@ def scale_array(
                 UserWarning,
             )
         X -= mean
+
     X = axis_mul_or_truediv(
         X,
         std,
@@ -224,7 +225,7 @@ def scale_sparse(
             return_mean_std=return_mean_std,
             mask_obs=mask_obs,
         )
-    elif mask_obs is None and isspmatrix_csc(X):
+    elif mask_obs is None:
         return scale_array(
             X,
             zero_center=zero_center,
@@ -241,17 +242,14 @@ def scale_sparse(
 
         if mask_obs is not None:
             mask_obs = _check_mask(X, mask_obs, "obs")
-            has_mask = True
-        else:
-            mask_obs = np.ones(X.shape[0], dtype=bool)
-            has_mask = False
+
     mean, var = _get_mean_var(X[mask_obs, :])
 
     std = np.sqrt(var)
     std[std == 0] = 1
 
     @numba.njit(cache=True)
-    def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, has_mask, clip):
+    def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
         def _loop_scale(cell_ix):
             for j in numba.prange(indptr[cell_ix], indptr[cell_ix + 1]):
                 if clip:
@@ -259,12 +257,8 @@ def scale_sparse(
                 else:
                     data[j] /= std[indices[j]]
 
-        if has_mask:
-            for i in numba.prange(len(indptr) - 1):
-                if mask_obs[i]:
-                    _loop_scale(i)
-        else:
-            for i in numba.prange(len(indptr) - 1):
+        for i in numba.prange(len(indptr) - 1):
+            if mask_obs[i]:
                 _loop_scale(i)
 
     if max_value is None:
@@ -276,7 +270,6 @@ def scale_sparse(
         X.data,
         std=std.astype(X.dtype),
         mask_obs=mask_obs,
-        has_mask=has_mask,
         clip=max_value,
     )
 
