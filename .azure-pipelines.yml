@@ -8,20 +8,10 @@ variables:
   TEST_EXTRA: 'test-full'
   DEPENDENCIES_VERSION: "latest"  # |"pre-release" | "minimum-version"
   TEST_TYPE: "standard" # | "coverage"
-
-strategy:
-  matrix:
-    linux:
-      imageName: 'ubuntu-latest'
-    mac:
-      imageName: 'macOS-latest'
-    windows:
-      imageName: 'windows-latest'
+  IMAGE_NAME: "ubuntu-latest"
 
 jobs:
 - job: PyTest
-  pool:
-    vmImage: $(imageName)
   strategy:
     matrix:
       Python3.9:
@@ -36,8 +26,10 @@ jobs:
         python.version: '3.9'
         DEPENDENCIES_VERSION: "minimum-version"
         TEST_TYPE: "coverage"
-
-
+      windows:
+        IMAGE_NAME: 'windows-latest'
+  pool:
+    vmImage: $(IMAGE_NAME)
   steps:
   - task: UsePythonVersion@0
     inputs:
