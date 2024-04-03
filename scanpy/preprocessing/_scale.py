@@ -192,7 +192,10 @@ def scale_array(
                 a_min, a_max = -max_value, max_value
                 X = np.clip(X, a_min, a_max)  # dask does not accept these as kwargs
             else:
-                X[X > max_value] = max_value
+                if issparse(X):
+                    X.data[X.data > max_value] = max_value
+                else:
+                    X[X > max_value] = max_value
     if return_mean_std:
         return X, mean, std
     else:
@@ -248,7 +251,9 @@ def scale_sparse(
     std = np.sqrt(var)
     std[std == 0] = 1
 
-    @numba.njit(cache=True)
+    print(mask_obs)
+
+    @numba.njit(cache=True, parallel=True)
     def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
         def _loop_scale(cell_ix):
             for j in numba.prange(indptr[cell_ix], indptr[cell_ix + 1]):
