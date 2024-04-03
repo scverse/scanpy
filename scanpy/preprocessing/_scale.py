@@ -251,8 +251,6 @@ def scale_sparse(
     std = np.sqrt(var)
     std[std == 0] = 1
 
-    print(mask_obs)
-
     @numba.njit(cache=True, parallel=True)
     def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
         def _loop_scale(cell_ix):
