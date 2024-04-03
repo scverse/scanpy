@@ -9,10 +9,19 @@ variables:
   DEPENDENCIES_VERSION: "latest"  # |"pre-release" | "minimum-version"
   TEST_TYPE: "standard" # | "coverage"
 
+strategy:
+  matrix:
+    linux:
+      imageName: 'ubuntu-latest'
+    mac:
+      imageName: 'macOS-latest'
+    windows:
+      imageName: 'windows-latest'
+
 jobs:
 - job: PyTest
   pool:
-    vmImage: 'ubuntu-22.04'
+    vmImage: $(imageName)
   strategy:
     matrix:
       Python3.9:
@@ -104,7 +113,7 @@ jobs:
 
 - job: CheckBuild
   pool:
-    vmImage: 'ubuntu-22.04'
+    vmImage: $(imageName)
   steps:
 
   - task: UsePythonVersion@0
