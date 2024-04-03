@@ -54,6 +54,13 @@ jobs:
       export MPLBACKEND="agg"
       echo $MPLBACKEND
     displayName: 'Set env'
+    condition: eq(variables['IMAGE_NAME'], 'ubuntu-latest')
+
+  - script: |
+      set MPLBACKEND=agg
+      echo $MPLBACKEND
+    displayName: 'Set env'
+    condition: eq(variables['IMAGE_NAME'], 'windows-latest')
 
   - script: uv pip install --system --compile 'scanpy[dev,$(TEST_EXTRA)] @ .'
     displayName: 'Install dependencies'
