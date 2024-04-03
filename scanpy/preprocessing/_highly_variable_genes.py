@@ -267,7 +267,7 @@ def _highly_variable_genes_single_batch(
         else:
             X = np.expm1(X)
 
-    mean, var = _get_mean_var(X)
+    mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -277,9 +277,7 @@ def _highly_variable_genes_single_batch(
         mean = np.log1p(mean)
 
     # all of the following quantities are "per-gene" here
-    df = pd.DataFrame(
-        dict(zip(["means", "dispersions"], materialize_as_ndarray((mean, dispersion))))
-    )
+    df = pd.DataFrame(dict(zip(["means", "dispersions"], (mean, dispersion))))
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
     disp_stats = _get_disp_stats(df, flavor)
 
@@ -362,7 +360,7 @@ def _subset_genes(
 ) -> NDArray[np.bool_] | DaskArray:
     """Get boolean mask of genes with normalized dispersion in bounds."""
     if isinstance(cutoff, _Cutoffs):
-        dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
+        dispersion_norm = np.nan_to_num(dispersion_norm)  # similar to Seurat
         return cutoff.in_bounds(mean, dispersion_norm)
     n_top_genes = cutoff
     del cutoff
@@ -462,8 +460,7 @@ def _highly_variable_genes_batched(
         )
         df["highly_variable"] = np.arange(df.shape[0]) < cutoff
     else:
-        dispersion_norm = df["dispersions_norm"].to_numpy()
-        dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
+        df["dispersions_norm"] = df["dispersions_norm"].fillna(0)  # similar to Seurat
         df["highly_variable"] = cutoff.in_bounds(df["means"], df["dispersions_norm"])
 
     return df

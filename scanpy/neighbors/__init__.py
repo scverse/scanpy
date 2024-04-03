@@ -104,6 +104,7 @@ def neighbors(
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
+        See :doc:`/how-to/knn-transformers` for more details.
         Also accepts the following known options:
 
         `None` (the default)
@@ -162,6 +163,10 @@ def neighbors(
     >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='manhattan', algorithm='kd_tree')
     >>> sc.pp.neighbors(adata, transformer=transformer)
     >>> # now you can e.g. access the index: `transformer._tree`
+
+    See also
+    --------
+    :doc:`/how-to/knn-transformers`
     """
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata

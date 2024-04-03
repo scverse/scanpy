@@ -1,4 +1,5 @@
 """A private pytest plugin"""
+
 from __future__ import annotations
 
 import os
@@ -6,15 +7,15 @@ import sys
 import warnings
 from typing import TYPE_CHECKING
 
+import pandas as pd
 import pytest
 
 from ..._utils import _import_name
 from .fixtures import *  # noqa: F403
+from .marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
-
-    from .marks import needs
 
 
 # Defining it here because it’s autouse.
@@ -72,7 +73,8 @@ def _fix_dask_df_warning():
         import dask  # noqa: F401
     except ImportError:
         return
-    with warnings.catch_warnings():
+    # reset COW mode after this block: https://github.com/dask/dask/issues/10996
+    with warnings.catch_warnings(), pd.option_context("mode.copy_on_write", True):
         warnings.filterwarnings(
             "ignore",
             category=DeprecationWarning,
@@ -113,9 +115,9 @@ def _modify_doctests(request: pytest.FixtureRequest) -> None:
     request.getfixturevalue("_doctest_env")
 
     func = _import_name(request.node.name)
-    needs_marker: needs | None
-    if needs_marker := getattr(func, "_doctest_needs", None):
-        assert needs_marker.mark.name == "skipif"
+    needs_mod: str | None
+    if needs_mod := getattr(func, "_doctest_needs", None):
+        needs_marker = needs[needs_mod]
         if needs_marker.mark.args[0]:
             pytest.skip(reason=needs_marker.mark.kwargs["reason"])
     skip_reason: str | None

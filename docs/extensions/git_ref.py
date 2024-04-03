@@ -32,7 +32,7 @@ def get() -> str | None:
         try:
             git_ref = git("rev-parse", "HEAD")
         except Exception:
-            git_ref = "master"
+            git_ref = "main"
     return git_ref
 
 
