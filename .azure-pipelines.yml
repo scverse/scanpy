@@ -38,7 +38,7 @@ jobs:
 
   - script: |
       python -m pip install --upgrade uv
-      echo "##vso[task.setvariable variable=uv_cache_dir]`uv cache dir`"
+      echo "##vso[task.setvariable variable=uv_cache_dir]`uv_cache_dir`"
     displayName: 'Install tools'
 
   - task: Cache@2
