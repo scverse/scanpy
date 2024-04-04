@@ -5,6 +5,7 @@ from functools import partial
 from math import sqrt
 from typing import TYPE_CHECKING, Literal
 
+import dask.array as da
 import numba as nb
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 from scanpy import logging as logg
+from scanpy._compat import DaskArray
 from scanpy._settings import Verbosity, settings
 from scanpy._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from scanpy.experimental._docs import (
@@ -24,7 +26,7 @@ from scanpy.experimental._docs import (
 )
 from scanpy.get import _get_obs_rep
 from scanpy.preprocessing._distributed import materialize_as_ndarray
-from scanpy.preprocessing._utils import _get_mean_var
+from scanpy.preprocessing._utils import _get_mean_var, axis_mean, axis_sum
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -90,46 +92,6 @@ def _calculate_res_sparse(
     return residuals
 
 
-@nb.njit(parallel=True)
-def _calculate_res_dense(
-    matrix,
-    *,
-    sums_genes: NDArray[np.float64],
-    sums_cells: NDArray[np.float64],
-    sum_total: np.float64,
-    clip: np.float64,
-    theta: np.float64,
-    n_genes: int,
-    n_cells: int,
-) -> NDArray[np.float64]:
-    def clac_clipped_res_dense(gene: int, cell: int) -> np.float64:
-        mu = sums_genes[gene] * sums_cells[cell] / sum_total
-        value = matrix[cell, gene]
-
-        mu_sum = value - mu
-        pre_res = mu_sum / sqrt(mu + mu * mu / theta)
-        res = np.float64(min(max(pre_res, -clip), clip))
-        return res
-
-    residuals = np.zeros(n_genes, dtype=np.float64)
-
-    for gene in nb.prange(n_genes):
-        sum_clipped_res = np.float64(0.0)
-        for cell in range(n_cells):
-            sum_clipped_res += clac_clipped_res_dense(gene, cell)
-        mean_clipped_res = sum_clipped_res / n_cells
-
-        var_sum = np.float64(0.0)
-        for cell in range(n_cells):
-            clipped_res = clac_clipped_res_dense(gene, cell)
-            diff = clipped_res - mean_clipped_res
-            var_sum += diff * diff
-
-        residuals[gene] = var_sum / n_cells
-    return residuals
-
-
-# @nb.njit(parallel=True)
 def _calculate_res_dense_vectorized(
     matrix,
     *,
@@ -138,18 +100,32 @@ def _calculate_res_dense_vectorized(
     sum_total: np.float64,
     clip: np.float64,
     theta: np.float64,
-    n_genes: int,
+    n_genes: int,  # TODO: delete if not used
     n_cells: int,
 ) -> np.ndarray[np.float64]:
-    mu = np.outer(sums_genes, sums_cells) / sum_total
-    values = matrix.T  # Transpose to align with vectorized operations
+    # TODO: what is a nice way of checking that, actually? dispatching outer product?
+    if isinstance(matrix, DaskArray):
+        mu = da.outer(sums_genes, sums_cells) / sum_total
+    else:
+        mu = np.outer(sums_genes, sums_cells) / sum_total
+
+    values = matrix.T
 
     mu_sum = values - mu
     pre_res = mu_sum / np.sqrt(mu + mu * mu / theta)
-    clipped_res = np.clip(pre_res, -clip, clip)
 
-    mean_clipped_res = np.mean(clipped_res, axis=1)
-    var_sum = np.sum((clipped_res.T - mean_clipped_res) ** 2, axis=0)
+    def custom_clip(x, clip_val):
+        x[x < -clip_val] = -clip_val
+        x[x > clip_val] = clip_val
+        return x
+
+    # np clip doesn't work with sparse-in-dask: although pre_res is not sparse since computed as outer product
+    clipped_res = custom_clip(pre_res, clip)
+
+    mean_clipped_res = axis_mean(clipped_res, axis=1, dtype=np.float32)
+    var_sum = axis_sum(
+        (clipped_res.T - mean_clipped_res) ** 2, axis=0, dtype=np.float32
+    )
 
     residuals = var_sum / n_cells
     return residuals
@@ -199,9 +175,13 @@ def _highly_variable_pearson_residuals(
 
         # Filter out zero genes
         with settings.verbosity.override(Verbosity.error):
-            nonzero_genes = np.ravel(X_batch_prefilter.sum(axis=0)) != 0
-        adata_subset = adata_subset_prefilter[:, nonzero_genes]
-        X_batch = _get_obs_rep(adata_subset, layer=layer)
+            nonzero_genes = (
+                np.ravel(axis_sum(X_batch_prefilter, axis=0, dtype=np.float32)) != 0
+            )
+        # TODO: a good way of doing that? nonzero_genes is a 1xn_genes array
+        if isinstance(nonzero_genes, DaskArray):
+            nonzero_genes = nonzero_genes.compute()
+        X_batch = X_batch_prefilter[:, nonzero_genes]
 
         # Prepare clipping
         if clip is None:
@@ -213,7 +193,6 @@ def _highly_variable_pearson_residuals(
         if sp_sparse.issparse(X_batch):
             X_batch = X_batch.tocsc()
             X_batch.eliminate_zeros()
-            print("sparse, and jitted")
             calculate_res = partial(
                 _calculate_res_sparse,
                 X_batch.indptr,
@@ -221,14 +200,12 @@ def _highly_variable_pearson_residuals(
                 X_batch.data.astype(np.float64),
             )
         else:
-            # print("dense, and jitted")
-            X_batch = np.array(X_batch, dtype=np.float64, order="F")
-            # calculate_res = partial(_calculate_res_dense, X_batch)
-            print("dense, and vectorized")
+            # TODO: why was this necessary before?
+            # X_batch = np.array(X_batch, dtype=np.float64, order="F")
             calculate_res = partial(_calculate_res_dense_vectorized, X_batch)
 
-        sums_genes = np.array(X_batch.sum(axis=0)).ravel()
-        sums_cells = np.array(X_batch.sum(axis=1)).ravel()
+        sums_genes = np.asarray(axis_sum(X_batch, axis=0, dtype=np.float32)).ravel()
+        sums_cells = np.asarray(axis_sum(X_batch, axis=1, dtype=np.float32)).ravel()
         sum_total = np.sum(sums_genes)
 
         residual_gene_var = calculate_res(
