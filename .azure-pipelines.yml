@@ -38,10 +38,12 @@ jobs:
 
   - script: |
       python -m pip install --upgrade uv
-
-      echo "##vso[task.setvariable variable=uv_cache_dir]`uv cache dir`"
-      echo $(uv_cache_dir)
+      echo "##vso[task.setvariable variable=uv_cache_dir;]`uv cache dir`"
     displayName: 'Install tools'
+
+  - script: |
+      echo "$(uv_cache_dir)""
+    displayName: 'Show cache dir'
 
   - task: Cache@2
     inputs:
@@ -53,16 +55,12 @@ jobs:
     displayName: Cache pip packages
 
   - script: |
-      export MPLBACKEND="agg"
-      echo $MPLBACKEND
+      echo "##vso[task.setvariable variable=MPLBACKEND;]agg"
     displayName: 'Set env'
-    condition: eq(variables['IMAGE_NAME'], 'ubuntu-latest')
 
   - script: |
-      set MPLBACKEND=agg
-      echo $MPLBACKEND
-    displayName: 'Set env'
-    condition: eq(variables['IMAGE_NAME'], 'windows-latest')
+      echo $(MPLBACKEND)
+    displayName: 'Show env'
 
   - script: uv pip install --system --compile 'scanpy[dev,$(TEST_EXTRA)] @ .'
     displayName: 'Install dependencies'
