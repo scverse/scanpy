@@ -69,7 +69,7 @@ jobs:
     displayName: 'Set env'
     condition: eq(variables['IMAGE_NAME'], 'windows-latest')
 
-  - script: uv pip install --system --compile 'scanpy[dev,$(TEST_EXTRA)] @ .'
+  - script: uv pip install --system --compile "scanpy[dev,$(TEST_EXTRA)] @ .
     displayName: 'Install dependencies'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'latest')
 
