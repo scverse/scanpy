@@ -27,9 +27,6 @@ try:
 except ImportError:
     da = None
 
-# backwards compat
-from ._deprecated.highly_variable_genes import filter_genes_dispersion  # noqa: F401
-
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
