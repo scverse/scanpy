@@ -45,9 +45,6 @@ jobs:
 
   - script: |
       python -m pip install --upgrade uv
-      set uv_cache_dir_var=$(uv cache dir)
-      echo "##vso[task.setvariable variable=uv_cache_dir]$uv_cache_dir_var"
-      echo $uv_cache_dir
     displayName: 'Install tools'
     condition: eq(variables['IMAGE_NAME'], 'windows-latest')
 
