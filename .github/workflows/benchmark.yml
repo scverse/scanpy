@@ -44,11 +44,12 @@ jobs:
           key: benchmark-state-${{ hashFiles('benchmarks/**') }}
 
       - name: Install dependencies
-        run: |
-          pip install asv
+        run: pip install asv
+
+      - name: Configure ASV
+        working-directory: ${{ env.ASV_DIR }}
+        run: asv machine --yes
 
       - name: Quick benchmark run
         working-directory: ${{ env.ASV_DIR }}
-        run: |
-          asv machine --yes
-          asv run --no-pull --dry-run --quick --show-stderr --verbose
+        run: asv run --no-pull --dry-run --quick --show-stderr --verbose
