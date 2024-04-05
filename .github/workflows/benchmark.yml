@@ -56,4 +56,4 @@ jobs:
 
       - name: Quick benchmark run
         working-directory: ${{ env.ASV_DIR }}
-        run: asv run --dry-run --quick --show-stderr --verbose HEAD
+        run: asv run --dry-run --quick --show-stderr --verbose HEAD^!
