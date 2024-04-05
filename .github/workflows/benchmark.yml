@@ -1,58 +1,54 @@
 name: Benchmark
 
 on:
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-    benchmark:
-        runs-on: ${{ matrix.os }}
-        defaults:
-            run:
-                shell: bash -e {0} # -e to fail on error
+  benchmark:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -e {0} # -e to fail on error
 
-        strategy:
-            fail-fast: false
-            matrix:
-                python: ["3.10"]
-                os: [ubuntu-latest]
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12"]
+        os: [ubuntu-latest]
 
-        env:
-            OS: ${{ matrix.os }}
-            PYTHON: ${{ matrix.python }}
-            ASV_DIR: "./benchmarks"
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python }}
+      ASV_DIR: "./benchmarks"
 
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                fetch-depth: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
 
-            - run: git fetch origin main:main
-              if: ${{ github.ref_name != 'main' }}
-              # Errors on main branch
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: 'pip'
 
-            - name: Set up Python ${{ matrix.python }}
-              uses: actions/setup-python@v4
-              with:
-                  python-version: ${{ matrix.python }}
-                  cache: 'pip'
-                  cache-dependency-path: "**/pyproject.toml"
+      - name: Cache datasets
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache
+          key: benchmark-state-${{ hashFiles('benchmarks/**') }}
 
-            - name: Cache datasets
-              uses: actions/cache@v3
-              with:
-                path: |
-                  ~/.cache
-                key: benchmark-state-${{ hashFiles('benchmarks/**') }}
+      - name: Install dependencies
+        run: |
+          pip install asv
 
-            - name: Install dependencies
-              run: |
-                  pip install asv
-
-            - name: Quick benchmark run
-              working-directory: ${{ env.ASV_DIR }}
-              run: |
-                  asv machine --yes
-                  asv run -qev --strict
+      - name: Quick benchmark run
+        working-directory: ${{ env.ASV_DIR }}
+        run: |
+          asv machine --yes
+          asv run --quick --show-stderr --verbose HEAD
