@@ -30,6 +30,10 @@ jobs:
           fetch-depth: 0
           filter: blob:none
 
+      - name: Fetch main branch for `asv run`’s hash
+        run: git fetch origin main:main
+        if: ${{ github.ref_name != 'main' }}
+
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
