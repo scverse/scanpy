@@ -11,11 +11,12 @@ import scanpy as sc
 
 
 class PreprocessingSuite:
-    params = [sc.datasets.pbmc68k_reduced()]
+    _data_dict = dict(pbmc68k_reduced=sc.datasets.pbmc68k_reduced())
+    params = _data_dict.keys()
     param_names = ["input_data"]
 
     def setup(self, input_data):
-        self.adata = input_data
+        self.adata = self._data_dict[input_data]
 
     def time_calculate_qc_metrics(self, input_data):
         self.adata.var["mt"] = self.adata.var_names.str.startswith("MT-")
