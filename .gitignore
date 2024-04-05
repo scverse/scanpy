@@ -45,4 +45,5 @@ Thumbs.db
 /.vscode/
 
 # asv benchmark files
-benchmarks/.asv
+/benchmarks/.asv
+/benchmarks/data/
