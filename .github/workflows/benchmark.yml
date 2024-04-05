@@ -45,7 +45,7 @@ jobs:
         with:
           path: |
             ~/.cache
-          key: benchmark-state-${{ hashFiles('benchmarks/**') }}-2
+          key: benchmark-state-${{ hashFiles('benchmarks/**') }}
 
       - name: Install dependencies
         run: pip install asv
@@ -56,4 +56,4 @@ jobs:
 
       - name: Quick benchmark run
         working-directory: ${{ env.ASV_DIR }}
-        run: asv run --no-pull --dry-run --quick --show-stderr --verbose
+        run: asv run --dry-run --quick --show-stderr --verbose HEAD
