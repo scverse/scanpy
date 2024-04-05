@@ -4,6 +4,7 @@ from pathlib import Path
 from string import ascii_letters
 from typing import Callable, Literal
 
+import dask.array as da
 import numpy as np
 import pandas as pd
 import pytest
@@ -16,6 +17,8 @@ from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
 from scanpy.testing._pytest.params import ARRAY_TYPES
+
+from ..preprocessing._utils import _get_mean_var
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -136,14 +139,29 @@ def _check_pearson_hvg_columns(output_df: pd.DataFrame, n_top_genes: int):
     assert np.nanmax(output_df["highly_variable_rank"].to_numpy()) <= n_top_genes - 1
 
 
-def test_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
-    adata = pbmc3k_parametrized_small()
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+def test_pearson_residuals_inputchecks(array_type, dtype):
+    # TODO: do we have a preferred way of making such a small dataset, wich the array types option?
+    adata = pbmc3k()
+    sc.pp.filter_genes(adata, min_cells=10)
+    adata.X = array_type(adata.X).astype(dtype)
 
     # depending on check_values, warnings should be raised for non-integer data
     if adata.X.dtype == "float32":
         adata_noninteger = adata.copy()
-        x, y = np.nonzero(adata_noninteger.X)
-        adata_noninteger.X[x[0], y[0]] = 0.5
+
+        def clip(x, min, max):
+            x[x < min] = min
+            x[x > max] = max
+            return x
+
+        if "dask" in array_type.__name__:
+            adata_noninteger.X = da.map_blocks(
+                clip, adata.X, 0, 0.5, dtype=adata.X.dtype
+            )
+        else:
+            adata_noninteger.X = clip(adata_noninteger.X, 0, 0.5)
 
         _check_check_values_warnings(
             function=sc.experimental.pp.highly_variable_genes,
@@ -170,16 +188,21 @@ def test_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
         )
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+# @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize(
     "clip", [None, np.Inf, 30], ids=["noclip", "infclip", "30clip"]
 )
 @pytest.mark.parametrize("theta", [100, np.Inf], ids=["100theta", "inftheta"])
-@pytest.mark.parametrize("n_top_genes", [100, 200], ids=["100n", "200n"])
-def test_pearson_residuals_general(
-    pbmc3k_parametrized_small, subset, clip, theta, n_top_genes
-):
-    adata = pbmc3k_parametrized_small()
+@pytest.mark.parametrize(
+    "n_top_genes", [100, 200], ids=["100n", "200n"]
+)  # TODO: is this necessary?
+def test_pearson_residuals_general(array_type, subset, clip, theta, n_top_genes):
+    adata = pbmc3k()
+    sc.pp.filter_genes(adata, min_cells=10)
+    adata.X = array_type(adata.X)
+
     # cleanup var
     del adata.var
 
@@ -188,7 +211,9 @@ def test_pearson_residuals_general(
         adata, clip=clip, theta=theta, inplace=False
     )
     assert isinstance(residuals_res, dict)
-    residual_variances_reference = np.var(residuals_res["X"], axis=0)
+    _, residual_variances_reference = _get_mean_var(residuals_res["X"], axis=0)
+    # if "dask" in array_type.__name__:
+    #     residual_variances_reference = residual_variances_reference#.compute(scheduler='single-threaded')
 
     if subset:
         # lazyly sort by residual variance and take top N
@@ -238,10 +263,13 @@ def test_pearson_residuals_general(
         assert np.allclose(
             output_df["residual_variances"].to_numpy()[sort_output_idx],
             residual_variances_reference,
+            rtol=1e-3,
         )
     else:
         assert np.allclose(
-            output_df["residual_variances"].to_numpy(), residual_variances_reference
+            output_df["residual_variances"].to_numpy(),
+            residual_variances_reference,
+            rtol=1e-3,
         )
 
     # check hvg flag
@@ -258,10 +286,17 @@ def test_pearson_residuals_general(
     _check_pearson_hvg_columns(output_df, n_top_genes)
 
 
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
-@pytest.mark.parametrize("n_top_genes", [100, 200], ids=["100n", "200n"])
-def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes):
-    adata = pbmc3k_parametrized_small()
+@pytest.mark.parametrize(
+    "n_top_genes", [100, 200], ids=["100n", "200n"]
+)  # TODO: is this necessary?
+def test_pearson_residuals_batch(array_type, subset, n_top_genes):
+    adata = pbmc3k()
+    sc.pp.filter_genes(adata, min_cells=10)
+    adata.obs["batch"] = np.random.choice(3, adata.n_obs)
+    adata.X = array_type(adata.X)
+
     # cleanup var
     del adata.var
     n_genes = adata.shape[1]

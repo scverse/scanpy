@@ -9,6 +9,7 @@ from anndata import AnnData
 from scipy.sparse import issparse, spmatrix
 
 from ... import logging as logg
+from ..._compat import DaskArray
 from ..._utils import (
     Empty,
     _doc_params,
@@ -32,10 +33,6 @@ from ...preprocessing._pca import _handle_mask_var, pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-    # from dask.array import Array as DaskArray  # TODO: compat.py reachable?
-
-from ..._compat import DaskArray
 
 
 def _pearson_residuals(
@@ -75,10 +72,11 @@ def _pearson_residuals(
             sums_cells = np.sum(X, axis=1, keepdims=True)
             sum_total = np.sum(sums_genes).squeeze()
     else:
-        sums_genes = axis_sum(X, axis=0, dtype=np.float32).reshape(1, -1)
-        sums_cells = axis_sum(X, axis=1, dtype=np.float32).reshape(-1, 1)
+        sums_genes = axis_sum(X, axis=0, dtype=np.float64).reshape(1, -1)
+        sums_cells = axis_sum(X, axis=1, dtype=np.float64).reshape(-1, 1)
         sum_total = sums_genes.sum()
 
+    # TODO: Consider deduplicating computations in _highly_variable_genes?
     if not isinstance(X, DaskArray):
         mu = np.array(sums_cells @ sums_genes / sum_total)
         diff = np.array(X - mu)
@@ -87,10 +85,10 @@ def _pearson_residuals(
         diff = (
             X - mu
         )  # here, potentially a dask sparse array and a dense sparse array are subtracted from each other
+        diff = diff.map_blocks(np.array, dtype=np.float64)
+    residuals = diff / np.sqrt(mu + mu**2 / theta)
 
-    residuals = diff / np.sqrt(mu + mu**2 / theta).sqrt()
-
-    # clip
+    # residuals are dense, hence no circumventing for sparse-in-dask needed
     residuals = residuals.clip(-clip, clip)
 
     return residuals

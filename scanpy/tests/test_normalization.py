@@ -122,6 +122,7 @@ def test_normalize_total_view(array_type, dtype):
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_pearson_residuals_warnings(array_type, dtype):
+    # TODO: is there a common test dataset we use now with these array types?
     adata = sc.datasets.pbmc3k()
     adata.X = array_type(adata.X).astype(dtype)
 
@@ -168,59 +169,6 @@ def test_normalize_pearson_residuals_errors(array_type, dtype, params, match):
 
     with pytest.raises(ValueError, match=match):
         sc.experimental.pp.normalize_pearson_residuals(adata, **params)
-
-
-# @pytest.mark.parametrize(
-#     "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
-# )
-# @pytest.mark.parametrize("dtype", ["float32", "int64"])
-# @pytest.mark.parametrize("theta", [0.01, 1, 100, np.Inf])
-# @pytest.mark.parametrize("clip", [None, 1, np.Inf])
-# def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
-#     # toy data
-#     X = np.array([[3, 6], [2, 4], [1, 0]])
-#     ns = np.sum(X, axis=1)
-#     ps = np.sum(X, axis=0) / np.sum(X)
-#     mu = np.outer(ns, ps)
-
-#     # compute reference residuals
-#     if np.isinf(theta):
-#         # Poisson case
-#         residuals_reference = (X - mu) / np.sqrt(mu)
-#     else:
-#         # NB case
-#         residuals_reference = (X - mu) / np.sqrt(mu + mu**2 / theta)
-
-#     # compute output to test
-#     adata = AnnData(sparsity_func(X).astype(dtype))
-#     output = sc.experimental.pp.normalize_pearson_residuals(
-#         adata, theta=theta, clip=clip, inplace=False
-#     )
-#     output_X = output["X"]
-#     sc.experimental.pp.normalize_pearson_residuals(
-#         adata, theta=theta, clip=clip, inplace=True
-#     )
-
-#     # check for correct new `adata.uns` keys
-#     assert {"pearson_residuals_normalization"} <= adata.uns.keys()
-#     assert {"theta", "clip", "computed_on"} <= adata.uns[
-#         "pearson_residuals_normalization"
-#     ].keys()
-#     # test against inplace
-#     np.testing.assert_array_equal(adata.X, output_X)
-
-#     if clip is None:
-#         # default clipping: compare to sqrt(n) threshold
-#         clipping_threshold = np.sqrt(adata.shape[0]).astype(np.float32)
-#         assert np.max(output_X) <= clipping_threshold
-#         assert np.min(output_X) >= -clipping_threshold
-#     elif np.isinf(clip):
-#         # no clipping: compare to raw residuals
-#         assert np.allclose(output_X, residuals_reference)
-#     else:
-#         # custom clipping: compare to custom threshold
-#         assert np.max(output_X) <= clip
-#         assert np.min(output_X) >= -clip
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)

@@ -93,7 +93,7 @@ def _calculate_res_sparse(
 
 
 def _calculate_res_dense_vectorized(
-    matrix,
+    matrix: np.ndarray[np.float64],
     *,
     sums_genes: np.ndarray[np.float64],
     sums_cells: np.ndarray[np.float64],
@@ -122,12 +122,51 @@ def _calculate_res_dense_vectorized(
     # np clip doesn't work with sparse-in-dask: although pre_res is not sparse since computed as outer product
     clipped_res = custom_clip(pre_res, clip)
 
-    mean_clipped_res = axis_mean(clipped_res, axis=1, dtype=np.float32)
+    mean_clipped_res = axis_mean(clipped_res, axis=1, dtype=np.float64)
     var_sum = axis_sum(
-        (clipped_res.T - mean_clipped_res) ** 2, axis=0, dtype=np.float32
+        (clipped_res.T - mean_clipped_res) ** 2, axis=0, dtype=np.float64
     )
 
     residuals = var_sum / n_cells
+    return residuals
+
+
+@nb.njit(parallel=True)
+def _calculate_res_dense(
+    matrix,
+    *,
+    sums_genes: NDArray[np.float64],
+    sums_cells: NDArray[np.float64],
+    sum_total: np.float64,
+    clip: np.float64,
+    theta: np.float64,
+    n_genes: int,
+    n_cells: int,
+) -> NDArray[np.float64]:
+    def clac_clipped_res_dense(gene: int, cell: int) -> np.float64:
+        mu = sums_genes[gene] * sums_cells[cell] / sum_total
+        value = matrix[cell, gene]
+
+        mu_sum = value - mu
+        pre_res = mu_sum / sqrt(mu + mu * mu / theta)
+        res = np.float64(min(max(pre_res, -clip), clip))
+        return res
+
+    residuals = np.zeros(n_genes, dtype=np.float64)
+
+    for gene in nb.prange(n_genes):
+        sum_clipped_res = np.float64(0.0)
+        for cell in range(n_cells):
+            sum_clipped_res += clac_clipped_res_dense(gene, cell)
+        mean_clipped_res = sum_clipped_res / n_cells
+
+        var_sum = np.float64(0.0)
+        for cell in range(n_cells):
+            clipped_res = clac_clipped_res_dense(gene, cell)
+            diff = clipped_res - mean_clipped_res
+            var_sum += diff * diff
+
+        residuals[gene] = var_sum / n_cells
     return residuals
 
 
@@ -176,7 +215,7 @@ def _highly_variable_pearson_residuals(
         # Filter out zero genes
         with settings.verbosity.override(Verbosity.error):
             nonzero_genes = (
-                np.ravel(axis_sum(X_batch_prefilter, axis=0, dtype=np.float32)) != 0
+                np.ravel(axis_sum(X_batch_prefilter, axis=0, dtype=np.float64)) != 0
             )
         # TODO: a good way of doing that? nonzero_genes is a 1xn_genes array
         if isinstance(nonzero_genes, DaskArray):
@@ -190,7 +229,11 @@ def _highly_variable_pearson_residuals(
         if clip < 0:
             raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
-        if sp_sparse.issparse(X_batch):
+        if isinstance(X_batch, DaskArray):
+            # TODO: map_block with modified _calculate_res_sparse and _calculate_res_dense possible I think
+            calculate_res = partial(_calculate_res_dense_vectorized, X_batch)
+
+        elif sp_sparse.issparse(X_batch):
             X_batch = X_batch.tocsc()
             X_batch.eliminate_zeros()
             calculate_res = partial(
@@ -200,14 +243,15 @@ def _highly_variable_pearson_residuals(
                 X_batch.data.astype(np.float64),
             )
         else:
-            # TODO: why was this necessary before?
+            # TODO: why this line needed?
             # X_batch = np.array(X_batch, dtype=np.float64, order="F")
-            calculate_res = partial(_calculate_res_dense_vectorized, X_batch)
+            calculate_res = partial(_calculate_res_dense, X_batch)
 
-        sums_genes = np.asarray(axis_sum(X_batch, axis=0, dtype=np.float32)).ravel()
-        sums_cells = np.asarray(axis_sum(X_batch, axis=1, dtype=np.float32)).ravel()
+        sums_genes = np.asarray(axis_sum(X_batch, axis=0, dtype=np.float64)).ravel()
+        sums_cells = np.asarray(axis_sum(X_batch, axis=1, dtype=np.float64)).ravel()
         sum_total = np.sum(sums_genes)
 
+        # TODO: da.reduction with modified _calculate_res_sparse possible?
         residual_gene_var = calculate_res(
             sums_genes=sums_genes,
             sums_cells=sums_cells,
