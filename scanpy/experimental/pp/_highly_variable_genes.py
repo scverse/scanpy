@@ -103,7 +103,8 @@ def _calculate_res_dense_vectorized(
     n_genes: int,  # TODO: delete if not used
     n_cells: int,
 ) -> np.ndarray[np.float64]:
-    # TODO: what is a nice way of checking that, actually? dispatching outer product?
+    # TODO: potentially a lot to rewrite here
+    # TODO: is there a better/more common way we use? e.g. with dispatching?
     if isinstance(matrix, DaskArray):
         mu = da.outer(sums_genes, sums_cells) / sum_total
     else:
@@ -120,6 +121,7 @@ def _calculate_res_dense_vectorized(
         return x
 
     # np clip doesn't work with sparse-in-dask: although pre_res is not sparse since computed as outer product
+    # TODO: we have such a clip function in multiple places..?
     clipped_res = custom_clip(pre_res, clip)
 
     mean_clipped_res = axis_mean(clipped_res, axis=1, dtype=np.float64)
@@ -230,7 +232,7 @@ def _highly_variable_pearson_residuals(
             raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
         if isinstance(X_batch, DaskArray):
-            # TODO: map_block with modified _calculate_res_sparse and _calculate_res_dense possible I think
+            # TODO: map_block with modified _calculate_res_sparse and _calculate_res_dense possible?
             calculate_res = partial(_calculate_res_dense_vectorized, X_batch)
 
         elif sp_sparse.issparse(X_batch):

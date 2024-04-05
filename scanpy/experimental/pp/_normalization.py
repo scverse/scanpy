@@ -76,7 +76,7 @@ def _pearson_residuals(
         sums_cells = axis_sum(X, axis=1, dtype=np.float64).reshape(-1, 1)
         sum_total = sums_genes.sum()
 
-    # TODO: Consider deduplicating computations in _highly_variable_genes?
+    # TODO: Consider deduplicating computations below which are similarly required in _highly_variable_genes?
     if not isinstance(X, DaskArray):
         mu = np.array(sums_cells @ sums_genes / sum_total)
         diff = np.array(X - mu)
