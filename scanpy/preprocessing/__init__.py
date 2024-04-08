@@ -8,6 +8,7 @@ from ._normalization import normalize_total
 from ._pca import pca
 from ._qc import calculate_qc_metrics
 from ._recipes import recipe_seurat, recipe_weinreb17, recipe_zheng17
+from ._scale import scale
 from ._scrublet import scrublet, scrublet_simulate_doublets
 from ._simple import (
     downsample_counts,
@@ -16,7 +17,6 @@ from ._simple import (
     log1p,
     normalize_per_cell,
     regress_out,
-    scale,
     sqrt,
     subsample,
 )
