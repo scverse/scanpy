@@ -1,84 +1,101 @@
-# """
-# This module will benchmark io of ScanPy readwrite operations
+"""
+This module will benchmark io of Scanpy readwrite operations
 
-# Things to test:
+Things to test:
 
-# * Read time, write time
-# * Peak memory during io
-# * File sizes
+* Read time, write time
+* Peak memory during io
+* File sizes
 
-# Parameterized by:
+Parameterized by:
 
-# * What method is being used
-# * What data is being included
-# * Size of data being used
+* What method is being used
+* What data is being included
+* Size of data being used
 
-# Also interesting:
+Also interesting:
 
-# * io for views
-# * io for backed objects
-# * Reading dense as sparse, writing sparse as dense
-# """
-# import tempfile
-# from pathlib import Path
-# import sys
+* io for views
+* io for backed objects
+* Reading dense as sparse, writing sparse as dense
+"""
 
-# from memory_profiler import memory_usage
-# import numpy as np
-# import pooch
-# import scanpy as sc
-# import anndata
+from __future__ import annotations
 
-# from .utils import get_anndata_memsize, sedate, get_peak_mem, get_actualsize
+import sys
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
+import anndata
+import numpy as np
+from memory_profiler import memory_usage
 
-# #PBMC_3K_URL = "http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz"
-# PBMC_3K_URL = "http://falexwolf.de/data/pbmc3k_raw.h5ad"
+import scanpy as sc
 
-# class H5ADInMemorySizeSuite:
-#     params = [PBMC_3K_URL]
-#     param_names = ["input_url"]
+from .utils import get_actualsize, sedate
 
-#     def setup(self, input_url):
-#         #self.filepath = pooch.unzip(pooch.retrieve(url=input_url, known_hash=None))
-#         self.filepath = pooch.retrieve(url=input_url, known_hash=None)
-
-#     def track_in_memory_size(self, input_url):
-#         adata = anndata.read_h5ad(self.filepath)
-#         adata_size = sys.getsizeof(adata)
-
-#         return adata_size
-
-#     def track_actual_in_memory_size(self, input_url):
-#         adata = sc.read_10x_mtx(self.filepath)
-#         adata_size = get_actualsize(adata)
-
-#         return adata_size
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
 
 
-# class H5ADReadSuite:
-#     # params = [PBMC_REDUCED_PATH, PBMC_3K_PATH, BM_43K_CSR_PATH]
-#     params = [PBMC_3K_URL]
-#     param_names = ["input_url"]
+@dataclass
+class Dataset:
+    path: Path
+    get: Callable[[], anndata.AnnData]
 
-#     def setup(self, input_url):
-#         self.filepath = pooch.retrieve(url=input_url, known_hash=None)
 
-#     def time_read_full(self, input_url):
-#         sc.read_10x_mtx(self.filepath)
+pbmc3k = Dataset(
+    path=sc.settings.datasetdir / "pbmc3k_raw.h5ad", get=sc.datasets.pbmc3k
+)
 
-#     def peakmem_read_full(self, input_url):
-#         sc.read_10x_mtx(self.filepath)
 
-#     def mem_readfull_object(self, input_url):
-#         return sc.read_10x_mtx(self.filepath)
+class H5ADInMemorySizeSuite:
+    _data_dict = dict(pbmc3k=pbmc3k)
+    params = _data_dict.keys()
+    param_names = ["input_data"]
 
-# def track_read_full_memratio(self, input_url):
-#     mem_recording = memory_usage(
-#         (sedate(sc.read_10x_mtx, 0.005), (self.filepath,)), interval=0.001
-#     )
+    def setup(self, input_data: str):
+        self.path = self._data_dict[input_data].path
+        self.data = self._data_dict[input_data].get()
 
-#     base_size = mem_recording[-1] - mem_recording[0]
-#     print(np.max(mem_recording) - np.min(mem_recording))
-#     print(base_size)
-#     return (np.max(mem_recording) - np.min(mem_recording)) / base_size
+    def track_in_memory_size(self, input_data: str):
+        adata = anndata.read_h5ad(self.path)
+        adata_size = sys.getsizeof(adata)
+
+        return adata_size
+
+    def track_actual_in_memory_size(self, input_data: str):
+        adata = anndata.read_h5ad(self.path)
+        adata_size = get_actualsize(adata)
+
+        return adata_size
+
+
+class H5ADReadSuite:
+    _data_dict = dict(pbmc3k=pbmc3k)
+    params = _data_dict.keys()
+    param_names = ["input_data"]
+
+    def setup(self, input_data: str):
+        self.path = self._data_dict[input_data].path
+        self.data = self._data_dict[input_data].get()
+
+    def time_read_full(self, input_data: str):
+        anndata.read_h5ad(self.path)
+
+    def peakmem_read_full(self, input_data: str):
+        anndata.read_h5ad(self.path)
+
+    def mem_read_full(self, input_data: str):
+        anndata.read_h5ad(self.path)
+
+    def track_read_full_memratio(self, input_data: str):
+        mem_recording = memory_usage(
+            (sedate(anndata.read_h5ad, 0.005), (self.path,)), interval=0.001
+        )
+
+        base_size = mem_recording[-1] - mem_recording[0]
+        print(np.max(mem_recording) - np.min(mem_recording))
+        print(base_size)
+        return (np.max(mem_recording) - np.min(mem_recording)) / base_size

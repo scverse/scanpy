@@ -16,7 +16,7 @@ class ToolsSuite:
     param_names = ["input_data"]
 
     def setup(self, input_data):
-        self.adata = self._data_dict[input_data]
+        self.adata = self._data_dict[input_data].copy()
 
     def time_pca(self, input_data):
         sc.tl.pca(self.adata)
