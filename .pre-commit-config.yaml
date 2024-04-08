@@ -12,6 +12,22 @@ repos:
         id: ruff
         types_or: [python, pyi, jupyter]
         args: ["--preview", "--select=PLR0917"]
+-   repo: https://github.com/FlamingTempura/bibtex-tidy
+    rev: v1.11.0
+    hooks:
+    -   id: bibtex-tidy
+        args:
+        -   --omit=abstract
+        -   --curly
+        #-   --numeric
+        -   --space=4
+        -   --align=13
+        -   --sort=key
+        -   --duplicates=key,doi
+        -   --no-escape
+        -   --sort-fields
+        -   --trailing-commas
+        -   -m
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
