@@ -31,6 +31,17 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
+@numba.njit(cache=True, parallel=True)
+def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
+    for i in numba.prange(len(indptr) - 1):
+        if mask_obs[i]:
+            for j in range(indptr[i], indptr[i + 1]):
+                if clip:
+                    data[j] = min(clip, data[j] / std[indices[j]])
+                else:
+                    data[j] /= std[indices[j]]
+
+
 @renamed_arg("X", "data", pos_0=True)
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
@@ -247,19 +258,6 @@ def scale_sparse(
 
     std = np.sqrt(var)
     std[std == 0] = 1
-
-    @numba.njit(cache=True)
-    def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
-        def _loop_scale(cell_ix):
-            for j in numba.prange(indptr[cell_ix], indptr[cell_ix + 1]):
-                if clip:
-                    data[j] = min(clip, data[j] / std[indices[j]])
-                else:
-                    data[j] /= std[indices[j]]
-
-        for i in numba.prange(len(indptr) - 1):
-            if mask_obs[i]:
-                _loop_scale(i)
 
     if max_value is None:
         max_value = 0
