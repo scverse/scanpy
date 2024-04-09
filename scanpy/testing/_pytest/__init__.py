@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import os
 import sys
-import warnings
 from typing import TYPE_CHECKING
 
-import pandas as pd
 import pytest
 
 from ..._utils import _import_name
@@ -60,27 +58,6 @@ def max_threads() -> Generator[int, None, None]:
             yield max_threads
     else:
         yield 0
-
-
-@pytest.fixture(autouse=True, scope="session")
-def _fix_dask_df_warning():
-    """
-    Currently, dask warns when importing dask.dataframe.
-    This fixture preempts the warning and should be removed
-    once it is no longer raised.
-    """
-    try:
-        import dask  # noqa: F401
-    except ImportError:
-        return
-    # reset COW mode after this block: https://github.com/dask/dask/issues/10996
-    with warnings.catch_warnings(), pd.option_context("mode.copy_on_write", True):
-        warnings.filterwarnings(
-            "ignore",
-            category=DeprecationWarning,
-            message=r"The current Dask DataFrame implementation is deprecated",
-        )
-        import dask.dataframe  # noqa: F401
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
