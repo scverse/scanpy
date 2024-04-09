@@ -432,6 +432,7 @@ def read_visium(
         tissue_positions_file = (
             path / "spatial/tissue_positions.csv"
             if (path / "spatial/tissue_positions.csv").exists()
+            else path / "spatial/tissue_positions.parquet" if (path / "spatial/tissue_positions.parquet").exists()
             else path / "spatial/tissue_positions_list.csv"
         )
         files = dict(
@@ -473,11 +474,16 @@ def read_visium(
         }
 
         # read coordinates
-        positions = pd.read_csv(
-            files["tissue_positions_file"],
-            header=0 if tissue_positions_file.name == "tissue_positions.csv" else None,
-            index_col=0,
-        )
+        if files["tissue_positions_file"].name.endswith(".csv"):
+            positions = pd.read_csv(
+                files["tissue_positions_file"],
+                header=0 if tissue_positions_file.name == "tissue_positions.csv" else None,
+                index_col=0,
+            )
+        elif files["tissue_positions_file"].name.endswith(".parquet"):
+            positions = pd.read_parquet(files["tissue_positions_file"])
+            #need to set the barcode to be the index
+            positions.set_index("barcode", inplace=True)
         positions.columns = [
             "in_tissue",
             "array_row",
