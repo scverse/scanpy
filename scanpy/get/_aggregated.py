@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import TYPE_CHECKING, Literal, Union, get_args
 
+import numba as nb
 import numpy as np
 import pandas as pd
 from anndata import AnnData, utils
@@ -56,6 +57,7 @@ class Aggregate:
         self.groupby = groupby
         self.indicator_matrix = sparse_indicator(groupby, mask=mask)
         self.data = data
+        self.mask = mask
 
     groupby: pd.Categorical
     indicator_matrix: sparse.coo_matrix
@@ -135,6 +137,119 @@ class Aggregate:
             var_ *= (group_counts / (group_counts - dof))[:, np.newaxis]
         return mean_, var_
 
+    def sparse_aggregate(self, dof=1):
+        """\
+        Compute aggregation of data by some feature.
+
+        Params
+        ------
+        func
+            Aggregation function to use.
+
+        Returns
+        -------
+        Aggregated data.
+        """
+        assert dof >= 0
+        if self.data.format == "csc":
+            self.data = self.data.tocsr()
+
+        row_ind = np.zeros(self.data.nnz, dtype=np.int32)
+        col_ind = np.zeros(self.data.nnz, dtype=np.int32)
+        means = np.zeros(self.data.nnz, dtype=np.float64)
+        var = np.zeros(self.data.nnz, dtype=np.float64)
+        sums = np.zeros(self.data.nnz, dtype=np.float64)
+        counts = np.zeros(self.data.nnz, dtype=np.float32)
+        n_cells = self.indicator_matrix.sum(axis=1).astype(np.float64)
+        numcells = np.array(self.groupby.codes).astype(np.int64)
+        if self.mask is None:
+            self.mask = np.ones(self.data.shape[0], dtype=bool)
+
+        @nb.njit(cache=True)
+        def _aggr_kernel(
+            indptr,
+            indices,
+            data,
+            *,
+            row_ind,
+            col_ind,
+            means,
+            var,
+            sums,
+            counts,
+            n_cells,
+            numcells,
+            mask,
+        ):
+            for i in nb.prange(len(indptr) - 1):
+                if mask[i]:
+                    cell_start = indptr[i]
+                    cell_end = indptr[i + 1]
+                    group = int(numcells[i])
+                    major = n_cells[group]
+                    print(major)
+                    for j in nb.prange(cell_start, cell_end):
+                        row_ind[j] = group
+                        col_ind[j] = indices[j]
+                        means[j] = data[j] / major
+                        var[j] = (data[j] ** 2) / major
+                        sums[j] = data[j]
+                        counts[j] = 1
+
+        _aggr_kernel(
+            indptr=self.data.indptr,
+            indices=self.data.indices,
+            data=self.data.data.astype(np.float64),
+            row_ind=row_ind,
+            col_ind=col_ind,
+            means=means.astype(np.float64),
+            var=var.astype(np.float64),
+            sums=sums.astype(np.float64),
+            counts=counts,
+            n_cells=n_cells,
+            numcells=numcells,
+            mask=self.mask,
+        )
+
+        counts = sparse.csr_matrix(
+            (counts.ravel(), (row_ind, col_ind)),
+            shape=(self.indicator_matrix.shape[0], self.data.shape[1]),
+        )
+        means = sparse.csr_matrix(
+            (means.ravel(), (row_ind, col_ind)),
+            shape=(self.indicator_matrix.shape[0], self.data.shape[1]),
+        )
+
+        var = sparse.csr_matrix(
+            (var.ravel(), (row_ind, col_ind)),
+            shape=(self.indicator_matrix.shape[0], self.data.shape[1]),
+        )
+
+        sums = sparse.csr_matrix(
+            (sums.ravel(), (row_ind, col_ind)),
+            shape=(self.indicator_matrix.shape[0], self.data.shape[1]),
+        )
+
+        @nb.njit(cache=True)
+        def _sparse_var(indptr, data, means_data, *, n_cells, dof):
+            for i in nb.prange(len(indptr) - 1):
+                group_start = indptr[i]
+                group_end = indptr[i + 1]
+                doffer = n_cells[i] / (n_cells[i] - dof)
+                for j in range(group_start, group_end):
+                    data[j] = data[j] - (means_data[j] ** 2)
+                    data[j] = data[j] * doffer
+
+        _sparse_var(
+            indptr=var.indptr,
+            data=var.data,
+            means_data=means.data,
+            n_cells=n_cells,
+            dof=dof,
+        )
+
+        return counts, means, var, sums
+
 
 def _power(X: Array, power: float | int) -> Array:
     """\
@@ -167,6 +282,7 @@ def aggregate(
     layer: str | None = None,
     obsm: str | None = None,
     varm: str | None = None,
+    return_sparse: bool = False,
 ) -> AnnData:
     """\
     Aggregate data matrix based on some categorical grouping.
@@ -199,7 +315,8 @@ def aggregate(
         If not None, key for aggregation data.
     varm
         If not None, key for aggregation data.
-
+    return_sparse
+        Whether to return a sparse matrix. Only works for sparse input data.
     Returns
     -------
     Aggregated :class:`~anndata.AnnData`.
@@ -270,6 +387,7 @@ def aggregate(
         func=func,
         mask=mask,
         dof=dof,
+        return_sparse=return_sparse,
     )
 
     # Define new var dataframe
@@ -300,6 +418,7 @@ def _aggregate(
     *,
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
+    return_sparse: bool = False,
 ):
     raise NotImplementedError(f"Data type {type(data)} not supported for aggregation")
 
@@ -318,6 +437,7 @@ def aggregate_array(
     *,
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
+    return_sparse: bool = False,
 ) -> dict[AggType, np.ndarray]:
     groupby = Aggregate(groupby=by, data=data, mask=mask)
     result = {}
@@ -325,6 +445,9 @@ def aggregate_array(
     funcs = set([func] if isinstance(func, str) else func)
     if unknown := funcs - set(get_args(AggType)):
         raise ValueError(f"func {unknown} is not one of {get_args(AggType)}")
+
+    if isinstance(data, sparse.spmatrix) and return_sparse:
+        return groupby.sparse_aggregate(dof)
 
     if "sum" in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
