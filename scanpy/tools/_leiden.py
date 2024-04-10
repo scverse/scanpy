@@ -165,9 +165,9 @@ def leiden(
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
     clustering_args["n_iterations"] = n_iterations
-    if resolution is not None:
-        clustering_args["resolution_parameter"] = resolution
     if flavor == "leidenalg":
+        if resolution is not None:
+            clustering_args["resolution_parameter"] = resolution
         directed = True if directed is None else directed
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if partition_type is None:
@@ -180,6 +180,8 @@ def leiden(
         g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
         if use_weights:
             clustering_args["weights"] = "weight"
+        if resolution is not None:
+            clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
         with _utils.set_igraph_random_state(random_state):
             part = g.community_leiden(**clustering_args)
