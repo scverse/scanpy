@@ -8,7 +8,7 @@ Implementations may change, but the only way we can know the code is working bef
 ## Running the tests
 
 We use [pytest](https://docs.pytest.org/en/stable/) to test scanpy.
-To run the tests first make sure you have the required dependencies (`pip install -e ".[tests]"`), then run `pytest` from the root of the repository.
+To run the tests first make sure you have the required dependencies (`pip install -e ".[test,dev]"`), then run `pytest` from the root of the repository.
 
 It can take a while to run the whole test suite. There are a few ways to cut down on this while working on a PR:
 

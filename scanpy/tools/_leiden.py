@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import warnings
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -114,7 +113,7 @@ def leiden(
         Array of dim (number of samples) that stores the subgroup id
         (``'0'``, ``'1'``, ...) for each cell.
 
-    `adata.uns['leiden']['params']` : :class:`dict`
+    `adata.uns['leiden' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
     """
@@ -140,8 +139,8 @@ def leiden(
         try:
             import leidenalg
 
-            msg = 'Use of leidenalg is discouraged and will be deprecated in the future.  Please use `flavor="igraph"` `n_iterations=2` to achieve similar results.  `directed` must also be `False` to work with `igraph`\'s implementation.'
-            warnings.warn(msg, FutureWarning)
+            msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
+            _utils.warn_once(msg, FutureWarning, stacklevel=3)
         except ImportError:
             raise ImportError(
                 "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
@@ -166,9 +165,9 @@ def leiden(
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
     clustering_args["n_iterations"] = n_iterations
-    if resolution is not None:
-        clustering_args["resolution_parameter"] = resolution
     if flavor == "leidenalg":
+        if resolution is not None:
+            clustering_args["resolution_parameter"] = resolution
         directed = True if directed is None else directed
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if partition_type is None:
@@ -181,6 +180,8 @@ def leiden(
         g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
         if use_weights:
             clustering_args["weights"] = "weight"
+        if resolution is not None:
+            clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
         with _utils.set_igraph_random_state(random_state):
             part = g.community_leiden(**clustering_args)
@@ -202,8 +203,8 @@ def leiden(
         categories=natsorted(map(str, np.unique(groups))),
     )
     # store information on the clustering parameters
-    adata.uns["leiden"] = {}
-    adata.uns["leiden"]["params"] = dict(
+    adata.uns[key_added] = {}
+    adata.uns[key_added]["params"] = dict(
         resolution=resolution,
         random_state=random_state,
         n_iterations=n_iterations,

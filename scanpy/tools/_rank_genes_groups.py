@@ -14,7 +14,7 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import check_nonnegative_integers
 from ..get import _check_mask
-from ..preprocessing._simple import _get_mean_var
+from ..preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable

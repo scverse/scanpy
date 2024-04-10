@@ -84,7 +84,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=7.4.2",
+    "pytest>=7.4.2,<8.1",
     "pytest-nunit",
     "pytest-mock",
     "pytest-cov",
@@ -100,8 +100,8 @@ test = [
 ]
 test-full = [
     "scanpy[test]",
-    # tested algorithms
-    "scanpy[leiden]",
+    # additional tested algorithms
+    "scanpy[louvain]",
     "scanpy[magic]",
     "scanpy[skmisc]",
     "scanpy[harmony]",
@@ -122,6 +122,8 @@ doc = [
     "nbsphinx>=0.9",
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
+    "sphinxcontrib-bibtex",
+    "setuptools",
     # TODO: remove necessity for being able to import doc-linked classes
     "dask",
     "scanpy[paga]",
