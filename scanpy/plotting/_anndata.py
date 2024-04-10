@@ -8,11 +8,13 @@ from collections.abc import Collection, Iterable, Mapping, Sequence
 from itertools import product
 from typing import TYPE_CHECKING, Literal, Union
 
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
 from matplotlib import gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap, ListedColormap, Normalize, is_color_like
+from packaging.version import Version
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
 from scipy.sparse import issparse
 
@@ -518,7 +520,11 @@ def _scatter_obs(
                 frameon=False, loc=legend_loc, fontsize=legend_fontsize
             )
         if legend is not None:
-            for handle in legend.legend_handles:
+            if Version(mpl.__version__) < Version("3.7"):
+                _attr = "legendHandles"
+            else:
+                _attr = "legend_handles"
+            for handle in getattr(legend, _attr):
                 handle.set_sizes([300.0])
 
     # draw a frame around the scatter
