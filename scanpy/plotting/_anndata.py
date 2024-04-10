@@ -518,7 +518,7 @@ def _scatter_obs(
                 frameon=False, loc=legend_loc, fontsize=legend_fontsize
             )
         if legend is not None:
-            for handle in legend.legendHandles:
+            for handle in legend.legend_handles:
                 handle.set_sizes([300.0])
 
     # draw a frame around the scatter
