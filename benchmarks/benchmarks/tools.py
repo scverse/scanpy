@@ -35,23 +35,17 @@ class ToolsSuite:
     # def peakmem_embedding_density(self, *_):
     #     sc.tl.embedding_density(self.adata, groupby="batch")
 
-    # def time_louvain(self, *_):
-    #     sc.tl.louvain(self.adata)
+    def time_leiden(self, *_):
+        sc.tl.leiden(self.adata)
 
-    # def peakmem_louvain(self, *_):
-    #     sc.tl.louvain(self.adata)
+    def peakmem_leiden(self, *_):
+        sc.tl.leiden(self.adata)
 
     # def time_paga(self, *_):
-    #     sc.tl.paga(self.adata, groups='louvain')
+    #     sc.tl.paga(self.adata, groups='leiden')
 
     # def peakmem_paga(self, *_):
-    #     sc.tl.paga(self.adata, groups='louvain')
-
-    # def time_leiden(self, *_):
-    #     sc.tl.leiden(self.adata)
-
-    # def peakmem_leiden(self, *_):
-    #     sc.tl.leiden(self.adata)
+    #     sc.tl.paga(self.adata, groups='leiden')
 
     # def time_draw_graph(self, *_):
     #     sc.tl.draw_graph(self.adata)
