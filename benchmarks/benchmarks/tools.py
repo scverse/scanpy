@@ -15,12 +15,7 @@ class ToolsSuite:
 
     def setup(self, input_data):
         self.adata = self._data_dict[input_data].copy()
-
-    def time_pca(self, *_):
-        sc.tl.pca(self.adata)
-
-    def peakmem_pca(self, *_):
-        sc.tl.pca(self.adata)
+        assert "X_pca" in self.adata.obsm
 
     def time_umap(self, *_):
         sc.tl.umap(self.adata)

@@ -119,7 +119,7 @@ def take_view(
     index_kind: IndexKind,
     ratio: float = 0.5,
     nviews: int = 100,
-):
+) -> None:
     subset = gen_indexer(adata, dim_name, index_kind=index_kind, ratio=ratio)
     views = []
     for _ in range(nviews):
@@ -133,7 +133,7 @@ def take_repeated_view(
     index_kind: IndexKind,
     ratio: float = 0.9,
     nviews: int = 10,
-):
+) -> None:
     v = adata
     views = []
     for _ in range(nviews):
