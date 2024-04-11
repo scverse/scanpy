@@ -81,6 +81,7 @@
         "zarr": [""],
         "pytest": [""],
         "scanpy": [""],
+        "igraph": [""],
         // "psutil": [""]
     },
 
