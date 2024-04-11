@@ -92,7 +92,7 @@ class H5ADReadSuite:
 
     def track_read_full_memratio(self, *_):
         mem_recording = memory_usage(
-            (sedate(anndata.read_h5ad, 0.005), (self.path,)), interval=0.001
+            (sedate(anndata.read_h5ad, seconds=0.005), (self.path,)), interval=0.001
         )
 
         base_size = mem_recording[-1] - mem_recording[0]
