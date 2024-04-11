@@ -59,13 +59,13 @@ class H5ADInMemorySizeSuite:
         self.path = self._data_dict[input_data].path
         self.data = self._data_dict[input_data].get()
 
-    def track_in_memory_size(self, input_data: str):
+    def track_in_memory_size(self, *_):
         adata = anndata.read_h5ad(self.path)
         adata_size = sys.getsizeof(adata)
 
         return adata_size
 
-    def track_actual_in_memory_size(self, input_data: str):
+    def track_actual_in_memory_size(self, *_):
         adata = anndata.read_h5ad(self.path)
         adata_size = get_actualsize(adata)
 
@@ -81,16 +81,16 @@ class H5ADReadSuite:
         self.path = self._data_dict[input_data].path
         self.data = self._data_dict[input_data].get()
 
-    def time_read_full(self, input_data: str):
+    def time_read_full(self, *_):
         anndata.read_h5ad(self.path)
 
-    def peakmem_read_full(self, input_data: str):
+    def peakmem_read_full(self, *_):
         anndata.read_h5ad(self.path)
 
-    def mem_read_full(self, input_data: str):
+    def mem_read_full(self, *_):
         anndata.read_h5ad(self.path)
 
-    def track_read_full_memratio(self, input_data: str):
+    def track_read_full_memratio(self, *_):
         mem_recording = memory_usage(
             (sedate(anndata.read_h5ad, 0.005), (self.path,)), interval=0.001
         )
