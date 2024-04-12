@@ -75,14 +75,21 @@ class RNGIgraph:
         return getattr(self._rng, "normal" if attr == "gauss" else attr)
 
 
+def ensure_igraph() -> None:
+    if importlib.util.find_spec("igraph"):
+        return
+    raise ImportError(
+        "Please install the igraph package: "
+        "`conda install -c conda-forge python-igraph` or "
+        "`pip3 install igraph`."
+    )
+
+
 @contextmanager
 def set_igraph_random_state(random_state: int):
-    try:
-        import igraph
-    except ImportError:
-        raise ImportError(
-            "Please install igraph: `conda install -c conda-forge python-igraph` or `pip3 install igraph`."
-        )
+    ensure_igraph()
+    import igraph
+
     rng = RNGIgraph(random_state)
     try:
         igraph.set_random_number_generator(rng)

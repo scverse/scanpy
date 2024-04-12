@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -121,11 +120,7 @@ def leiden(
         raise ValueError(
             f"flavor must be either 'igraph' or 'leidenalg', but '{flavor}' was passed"
         )
-    igraph_spec = importlib.util.find_spec("igraph")
-    if igraph_spec is None:
-        raise ImportError(
-            "Please install the igraph package: `conda install -c conda-forge python-igraph` or `pip3 install igraph`."
-        )
+    _utils.ensure_igraph()
     if flavor == "igraph":
         if directed:
             raise ValueError(
