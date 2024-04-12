@@ -42,7 +42,7 @@ def leiden(
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "ipgraph"] = "leidenalg",
+    flavor: Literal["leidenalg", "igraph"] = "leidenalg",
     **clustering_args,
 ) -> AnnData | None:
     """\

@@ -36,10 +36,10 @@ class ToolsSuite:
     #     sc.tl.embedding_density(self.adata, groupby="batch")
 
     def time_leiden(self, *_):
-        sc.tl.leiden(self.adata)
+        sc.tl.leiden(self.adata, flavor="igraph")
 
     def peakmem_leiden(self, *_):
-        sc.tl.leiden(self.adata)
+        sc.tl.leiden(self.adata, flavor="igraph")
 
     # def time_paga(self, *_):
     #     sc.tl.paga(self.adata, groups='leiden')
