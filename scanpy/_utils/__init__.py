@@ -81,7 +81,7 @@ def set_igraph_random_state(random_state: int):
         import igraph
     except ImportError:
         raise ImportError(
-            "Please install igraph: `conda install -c conda-forge igraph` or `pip3 install igraph`."
+            "Please install igraph: `conda install -c conda-forge python-igraph` or `pip3 install igraph`."
         )
     rng = RNGIgraph(random_state)
     try:
