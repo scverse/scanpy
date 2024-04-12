@@ -4,4 +4,5 @@ This section contains short examples on how to perform specific tasks with scanp
 
 ```{toctree}
 knn-transformers
+plotting-with-marsilea
 ```

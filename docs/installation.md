@@ -40,7 +40,7 @@ cd scanpy
 If you are using `pip>=21.3`, an editable install can be made:
 
 ```shell
-pip install -e '.[dev,doc,test]'
+pip install -e '.[dev,test]'
 ```
 
 If you want to let [conda] handle the installations of dependencies, do:
