@@ -153,6 +153,9 @@ class Aggregate:
         assert dof >= 0
         if self.data.format == "csc":
             self.data = self.data.tocsr()
+        import time
+
+        t1 = time.time()
 
         row_ind = np.zeros(self.data.nnz, dtype=np.int32)
         col_ind = np.zeros(self.data.nnz, dtype=np.int32)
@@ -160,10 +163,12 @@ class Aggregate:
         var = np.zeros(self.data.nnz, dtype=np.float64)
         sums = np.zeros(self.data.nnz, dtype=np.float64)
         counts = np.zeros(self.data.nnz, dtype=np.float32)
-        n_cells = self.indicator_matrix.sum(axis=1).astype(np.float64)
-        numcells = np.array(self.groupby.codes).astype(np.int64)
+        n_cells = np.bincount(self.groupby.codes)
+        numcells = np.array(self.groupby.codes)
         if self.mask is None:
             self.mask = np.ones(self.data.shape[0], dtype=bool)
+        else:
+            self.mask = np.array(self.mask, dtype=bool)
 
         @nb.njit(cache=True)
         def _aggr_kernel(
@@ -187,30 +192,30 @@ class Aggregate:
                     cell_end = indptr[i + 1]
                     group = int(numcells[i])
                     major = n_cells[group]
-                    print(major)
                     for j in nb.prange(cell_start, cell_end):
                         row_ind[j] = group
                         col_ind[j] = indices[j]
-                        means[j] = data[j] / major
-                        var[j] = (data[j] ** 2) / major
-                        sums[j] = data[j]
+                        dat = data[j]
+                        means[j] = dat / major
+                        var[j] = (dat**2) / major
+                        sums[j] = dat
                         counts[j] = 1
 
         _aggr_kernel(
             indptr=self.data.indptr,
             indices=self.data.indices,
-            data=self.data.data.astype(np.float64),
+            data=self.data.data,
             row_ind=row_ind,
             col_ind=col_ind,
-            means=means.astype(np.float64),
-            var=var.astype(np.float64),
-            sums=sums.astype(np.float64),
+            means=means,
+            var=var,
+            sums=sums,
             counts=counts,
             n_cells=n_cells,
             numcells=numcells,
             mask=self.mask,
         )
-
+        t2 = time.time()
         counts = sparse.csr_matrix(
             (counts.ravel(), (row_ind, col_ind)),
             shape=(self.indicator_matrix.shape[0], self.data.shape[1]),
@@ -229,6 +234,7 @@ class Aggregate:
             (sums.ravel(), (row_ind, col_ind)),
             shape=(self.indicator_matrix.shape[0], self.data.shape[1]),
         )
+        t3 = time.time()
 
         @nb.njit(cache=True)
         def _sparse_var(indptr, data, means_data, *, n_cells, dof):
@@ -247,7 +253,10 @@ class Aggregate:
             n_cells=n_cells,
             dof=dof,
         )
-
+        t4 = time.time()
+        print(f"Time taken for kernel: {t2-t1}")
+        print(f"Time taken for sparse matrix creation: {t3-t2}")
+        print(f"Time taken for variance calculation: {t4-t3}")
         return counts, means, var, sums
 
 
@@ -447,7 +456,18 @@ def aggregate_array(
         raise ValueError(f"func {unknown} is not one of {get_args(AggType)}")
 
     if isinstance(data, sparse.spmatrix) and return_sparse:
-        return groupby.sparse_aggregate(dof)
+        counts, means, var, sums = groupby.sparse_aggregate(dof)
+
+        if "count_nonzero" in funcs:
+            result["count_nonzero"] = counts
+        if "mean" in funcs:
+            result["mean"] = means
+        if "var" in funcs:
+            result["var"] = var
+        if "sum" in funcs:
+            result["sum"] = sums
+
+        return result
 
     if "sum" in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
