@@ -149,7 +149,7 @@ def normalize_pearson_residuals(
     msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
 
-    residuals = _pearson_residuals(X, theta, clip, check_values, copy=~inplace)
+    residuals = _pearson_residuals(X, theta, clip, check_values, copy=not inplace)
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
 
     if inplace:
