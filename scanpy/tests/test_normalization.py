@@ -11,7 +11,7 @@ from scipy import sparse
 from sklearn.utils import issparse
 
 import scanpy as sc
-from scanpy._utils import axis_sum
+from scanpy._utils import axis_sum, clip_array
 from scanpy.testing._helpers import (
     _check_check_values_warnings,
     check_rep_mutation,
@@ -132,15 +132,18 @@ def test_normalize_pearson_residuals_warnings(array_type, dtype):
     # depending on check_values, warnings should be raised for non-integer data
     adata_noninteger = adata.copy()
 
-    def clip(x, min, max):
-        x[x < min] = min
-        x[x > max] = max
-        return x
+    # adata_noninteger.X = clip_array(adata_noninteger.X, 0, 0.5)
+    # def clip(x, min, max):
+    #     x[x < min] = min
+    #     x[x > max] = max
+    #     return x
 
     if "dask" in array_type.__name__:
-        adata_noninteger.X = da.map_blocks(clip, adata.X, 0, 0.5, dtype=adata.X.dtype)
+        adata_noninteger.X = da.map_blocks(
+            clip_array, adata.X, 0, 0.5, dtype=adata.X.dtype
+        )
     else:
-        adata_noninteger.X = clip(adata_noninteger.X, 0, 0.5)
+        adata_noninteger.X = clip_array(adata_noninteger.X, 0, 0.5)
 
     _check_check_values_warnings(
         function=sc.experimental.pp.normalize_pearson_residuals,

@@ -15,7 +15,12 @@ from anndata import AnnData
 from scanpy import logging as logg
 from scanpy._compat import DaskArray
 from scanpy._settings import Verbosity, settings
-from scanpy._utils import _doc_params, check_nonnegative_integers, view_to_actual
+from scanpy._utils import (
+    _doc_params,
+    check_nonnegative_integers,
+    clip_array,
+    view_to_actual,
+)
 from scanpy.experimental._docs import (
     doc_adata,
     doc_check_values,
@@ -115,14 +120,8 @@ def _calculate_res_dense_vectorized(
     mu_sum = values - mu
     pre_res = mu_sum / np.sqrt(mu + mu * mu / theta)
 
-    def custom_clip(x, clip_val):
-        x[x < -clip_val] = -clip_val
-        x[x > clip_val] = clip_val
-        return x
-
     # np clip doesn't work with sparse-in-dask: although pre_res is not sparse since computed as outer product
-    # TODO: we have such a clip function in multiple places..?
-    clipped_res = custom_clip(pre_res, clip)
+    clipped_res = clip_array(pre_res, -clip, clip)
 
     mean_clipped_res = axis_mean(clipped_res, axis=1, dtype=np.float64)
     var_sum = axis_sum(

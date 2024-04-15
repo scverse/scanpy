@@ -552,6 +552,12 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
     return da.map_blocks(elem_mul, x, y)
 
 
+def clip_array(x: _SupportedArray, min: np.float64, max) -> _SupportedArray:
+    x[x < min] = min
+    x[x > max] = max
+    return x
+
+
 Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
 
 

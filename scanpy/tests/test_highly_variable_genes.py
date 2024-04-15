@@ -4,7 +4,6 @@ from pathlib import Path
 from string import ascii_letters
 from typing import Callable, Literal
 
-import dask.array as da
 import numpy as np
 import pandas as pd
 import pytest
@@ -13,6 +12,7 @@ from pandas.testing import assert_frame_equal, assert_index_equal
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._utils import clip_array
 from scanpy.testing._helpers import _check_check_values_warnings
 from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
 from scanpy.testing._pytest.marks import needs
@@ -151,17 +151,7 @@ def test_pearson_residuals_inputchecks(array_type, dtype):
     if adata.X.dtype == "float32":
         adata_noninteger = adata.copy()
 
-        def clip(x, min, max):
-            x[x < min] = min
-            x[x > max] = max
-            return x
-
-        if "dask" in array_type.__name__:
-            adata_noninteger.X = da.map_blocks(
-                clip, adata.X, 0, 0.5, dtype=adata.X.dtype
-            )
-        else:
-            adata_noninteger.X = clip(adata_noninteger.X, 0, 0.5)
+        adata_noninteger.X = clip_array(adata_noninteger.X, 0, 0.5)
 
         _check_check_values_warnings(
             function=sc.experimental.pp.highly_variable_genes,

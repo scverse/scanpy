@@ -6,7 +6,6 @@ from warnings import warn
 
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import issparse, spmatrix
 
 from ... import logging as logg
 from ..._compat import DaskArray
@@ -16,6 +15,7 @@ from ..._utils import (
     _empty,
     axis_sum,
     check_nonnegative_integers,
+    clip_array,
     view_to_actual,
 )
 from ...experimental._docs import (
@@ -33,6 +33,8 @@ from ...preprocessing._pca import _handle_mask_var, pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from scipy.sparse import spmatrix
 
 
 def _pearson_residuals(
@@ -62,19 +64,9 @@ def _pearson_residuals(
             UserWarning,
         )
 
-    if not isinstance(X, DaskArray):
-        if issparse(X):
-            sums_genes = np.sum(X, axis=0)
-            sums_cells = np.sum(X, axis=1)
-            sum_total = np.sum(sums_genes).squeeze()
-        else:
-            sums_genes = np.sum(X, axis=0, keepdims=True)
-            sums_cells = np.sum(X, axis=1, keepdims=True)
-            sum_total = np.sum(sums_genes).squeeze()
-    else:
-        sums_genes = axis_sum(X, axis=0, dtype=np.float64).reshape(1, -1)
-        sums_cells = axis_sum(X, axis=1, dtype=np.float64).reshape(-1, 1)
-        sum_total = sums_genes.sum()
+    sums_genes = axis_sum(X, axis=0, dtype=np.float64).reshape(1, -1)
+    sums_cells = axis_sum(X, axis=1, dtype=np.float64).reshape(-1, 1)
+    sum_total = sums_genes.sum()
 
     # TODO: Consider deduplicating computations below which are similarly required in _highly_variable_genes?
     if not isinstance(X, DaskArray):
@@ -89,7 +81,7 @@ def _pearson_residuals(
     residuals = diff / np.sqrt(mu + mu**2 / theta)
 
     # residuals are dense, hence no circumventing for sparse-in-dask needed
-    residuals = residuals.clip(-clip, clip)
+    residuals = clip_array(residuals, -clip, clip)
 
     return residuals
 
