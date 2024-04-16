@@ -94,8 +94,5 @@ class H5ADReadSuite:
         mem_recording = memory_usage(
             (sedate(anndata.read_h5ad, seconds=0.005), (self.path,)), interval=0.001
         )
-
         base_size = mem_recording[-1] - mem_recording[0]
-        print(np.max(mem_recording) - np.min(mem_recording))
-        print(base_size)
         return (np.max(mem_recording) - np.min(mem_recording)) / base_size
