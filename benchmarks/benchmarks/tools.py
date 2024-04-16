@@ -5,32 +5,44 @@ API documentation: https://scanpy.readthedocs.io/en/stable/api/tools.html
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import scanpy as sc
 
+from .utils import pbmc68k_reduced
 
-class ToolsSuite:
-    _data_dict = dict(pbmc68k_reduced=sc.datasets.pbmc68k_reduced())
-    params = _data_dict.keys()
-    param_names = ["input_data"]
+if TYPE_CHECKING:
+    from anndata import AnnData
 
-    def setup(self, input_data):
-        self.adata = self._data_dict[input_data].copy()
-        assert "X_pca" in self.adata.obsm
 
-    def time_umap(self, *_):
-        sc.tl.umap(self.adata)
+adata: AnnData
 
-    def peakmem_umap(self, *_):
-        sc.tl.umap(self.adata)
 
-    def time_diffmap(self, *_):
-        sc.tl.diffmap(self.adata)
+def setup():
+    global adata
+    adata = pbmc68k_reduced()
+    assert "X_pca" in adata.obsm
 
-    def peakmem_diffmap(self, *_):
-        sc.tl.diffmap(self.adata)
 
-    def time_leiden(self, *_):
-        sc.tl.leiden(self.adata, flavor="igraph")
+def time_umap():
+    sc.tl.umap(adata)
 
-    def peakmem_leiden(self, *_):
-        sc.tl.leiden(self.adata, flavor="igraph")
+
+def peakmem_umap():
+    sc.tl.umap(adata)
+
+
+def time_diffmap():
+    sc.tl.diffmap(adata)
+
+
+def peakmem_diffmap():
+    sc.tl.diffmap(adata)
+
+
+def time_leiden():
+    sc.tl.leiden(adata, flavor="igraph")
+
+
+def peakmem_leiden():
+    sc.tl.leiden(adata, flavor="igraph")
