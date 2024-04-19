@@ -68,7 +68,7 @@ def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
             mtx.indptr,
             major_len=shape[0],
             minor_len=shape[1],
-            nthr=numba.get_num_threads(),
+            n_threads=numba.get_num_threads(),
         )
     else:
         return sparse_mean_var_minor_axis(
@@ -77,7 +77,7 @@ def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
             mtx.indptr,
             major_len=shape[0],
             minor_len=shape[1],
-            nthr=numba.get_num_threads(),
+            n_threads=numba.get_num_threads(),
         )
 
 
