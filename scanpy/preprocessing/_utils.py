@@ -109,9 +109,7 @@ def sparse_mean_var_minor_axis(
         sum_minor = sums_minor[:, c].sum()
         means[c] = sum_minor / major_len
         variances[c] = (
-            (squared_sums_minor[:, c].sum() / major_len - (sum_minor / major_len) ** 2)
-            * major_len
-            / (major_len - 1)
+            squared_sums_minor[:, c].sum() / major_len - (sum_minor / major_len) ** 2
         )
     return means, variances
 
@@ -141,9 +139,7 @@ def sparse_mean_var_major_axis(data, indptr, *, major_len, minor_len, n_threads)
     for c in numba.prange(major_len):
         mean = means[c] / minor_len
         means[c] = mean
-        variances[c] = (
-            (variances[c] / minor_len - mean * mean) * minor_len / (minor_len - 1)
-        )
+        variances[c] = variances[c] / minor_len - mean * mean
     return means, variances
 
 
