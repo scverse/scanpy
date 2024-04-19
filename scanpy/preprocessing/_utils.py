@@ -113,8 +113,6 @@ def sparse_mean_var_minor_axis(data, indices, indptr, *, major_len, minor_len, n
         )
     return means, variances
 
-    return means, variances
-
 
 @numba.njit(cache=True, parallel=True)
 def sparse_mean_var_major_axis(data, indptr, *, major_len, minor_len, nthr):
