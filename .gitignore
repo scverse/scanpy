@@ -43,3 +43,7 @@ Thumbs.db
 # IDEs and editors
 /.idea/
 /.vscode/
+
+# asv benchmark files
+/benchmarks/.asv
+/benchmarks/data/
