@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -42,7 +41,7 @@ def leiden(
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "ipgraph"] = "leidenalg",
+    flavor: Literal["leidenalg", "igraph"] = "leidenalg",
     **clustering_args,
 ) -> AnnData | None:
     """\
@@ -121,11 +120,7 @@ def leiden(
         raise ValueError(
             f"flavor must be either 'igraph' or 'leidenalg', but '{flavor}' was passed"
         )
-    igraph_spec = importlib.util.find_spec("igraph")
-    if igraph_spec is None:
-        raise ImportError(
-            "Please install the igraph package: `conda install -c conda-forge igraph` or `pip3 install igraph`."
-        )
+    _utils.ensure_igraph()
     if flavor == "igraph":
         if directed:
             raise ValueError(
@@ -165,9 +160,9 @@ def leiden(
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
     clustering_args["n_iterations"] = n_iterations
-    if resolution is not None:
-        clustering_args["resolution_parameter"] = resolution
     if flavor == "leidenalg":
+        if resolution is not None:
+            clustering_args["resolution_parameter"] = resolution
         directed = True if directed is None else directed
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if partition_type is None:
@@ -180,6 +175,8 @@ def leiden(
         g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
         if use_weights:
             clustering_args["weights"] = "weight"
+        if resolution is not None:
+            clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
         with _utils.set_igraph_random_state(random_state):
             part = g.community_leiden(**clustering_args)
