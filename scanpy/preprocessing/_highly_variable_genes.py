@@ -125,8 +125,6 @@ def _highly_variable_genes_seurat_v3(
                 for c in numba.prange(n_cols):
                     squared_batch_counts_sum[c] += squared_sum_buffer[:, c].sum()
                     batch_counts_sum[c] += sum_buffer[:, c].sum()
-                # squared_batch_counts_sum = squared_sum_buffer.sum(axis=0)
-                # batch_counts_sum= sum_buffer.sum(axis=0)
                 return squared_batch_counts_sum, batch_counts_sum
 
             squared_batch_counts_sum, batch_counts_sum = _clip_sparse(
