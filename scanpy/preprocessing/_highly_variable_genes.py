@@ -101,19 +101,13 @@ def _highly_variable_genes_seurat_v3(
         N = data_batch.shape[0]
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
-        print(clip_val.dtype)
         if sp_sparse.issparse(data_batch):
             batch_counts = sp_sparse.csr_matrix(data_batch)
 
-            # n_threads = numba.get_num_threads()
-            @numba.njit(cache=True, parallel=True)
-            def _clip_sparse(batch_counts, clip_val):
-                indices = batch_counts.indices
-                data = batch_counts.data
-                squared_batch_counts_sum = np.zeros(
-                    batch_counts.shape[1], dtype=np.float64
-                )
-                batch_counts_sum = np.zeros(batch_counts.shape[1], dtype=np.float64)
+            @numba.njit(cache=True)
+            def _clip_sparse(indices, data, n_genes, clip_val):
+                squared_batch_counts_sum = np.zeros(n_genes, dtype=np.float64)
+                batch_counts_sum = np.zeros(n_genes, dtype=np.float64)
                 for i in numba.prange(len(data)):
                     idx = indices[i]
                     element = min(np.float64(data[i]), clip_val[idx])
@@ -122,7 +116,7 @@ def _highly_variable_genes_seurat_v3(
                 return squared_batch_counts_sum, batch_counts_sum
 
             squared_batch_counts_sum, batch_counts_sum = _clip_sparse(
-                batch_counts, clip_val
+                batch_counts.indices, batch_counts.data, batch_counts.shape[1], clip_val
             )
         else:
             batch_counts = data_batch.astype(np.float64).copy()
