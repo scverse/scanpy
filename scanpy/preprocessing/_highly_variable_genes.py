@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from inspect import signature
 from typing import TYPE_CHECKING, Literal, cast
 
+import numba
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -96,19 +97,35 @@ def _highly_variable_genes_seurat_v3(
         estimat_var[not_const] = model.outputs.fitted_values
         reg_std = np.sqrt(10**estimat_var)
 
-        batch_counts = data_batch.astype(np.float64).copy()
         # clip large values as in Seurat
         N = data_batch.shape[0]
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
-        if sp_sparse.issparse(batch_counts):
-            batch_counts = sp_sparse.csr_matrix(batch_counts)
-            mask = batch_counts.data > clip_val[batch_counts.indices]
-            batch_counts.data[mask] = clip_val[batch_counts.indices[mask]]
+        print(clip_val.dtype)
+        if sp_sparse.issparse(data_batch):
+            batch_counts = sp_sparse.csr_matrix(data_batch)
 
-            squared_batch_counts_sum = np.array(batch_counts.power(2).sum(axis=0))
-            batch_counts_sum = np.array(batch_counts.sum(axis=0))
+            # n_threads = numba.get_num_threads()
+            @numba.njit(cache=True, parallel=True)
+            def _clip_sparse(batch_counts, clip_val):
+                indices = batch_counts.indices
+                data = batch_counts.data
+                squared_batch_counts_sum = np.zeros(
+                    batch_counts.shape[1], dtype=np.float64
+                )
+                batch_counts_sum = np.zeros(batch_counts.shape[1], dtype=np.float64)
+                for i in numba.prange(len(data)):
+                    idx = indices[i]
+                    element = min(np.float64(data[i]), clip_val[idx])
+                    squared_batch_counts_sum[idx] += element**2
+                    batch_counts_sum[idx] += element
+                return squared_batch_counts_sum, batch_counts_sum
+
+            squared_batch_counts_sum, batch_counts_sum = _clip_sparse(
+                batch_counts, clip_val
+            )
         else:
+            batch_counts = data_batch.astype(np.float64).copy()
             clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
             np.putmask(
                 batch_counts,
