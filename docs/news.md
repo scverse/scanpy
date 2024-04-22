@@ -7,6 +7,8 @@
 
 ```
 
+<!-- marker: after prelude -->
+
 ### `rapids-singlecell` brings scanpy to the GPU! {small}`2024-03-18`
 
 {doc}`rapids-singlecell <rapids_singlecell:index>` by Severin Dicks provides a scanpy-like API with accelerated operations implemented on GPU.
@@ -33,6 +35,8 @@ Two large toolkits extending our ecosystem to new modalities have had their manu
 
 * [Muon](https://muon.readthedocs.io/), a framework for multimodal has been published in [Genome Biology](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-021-02577-8).
 * [Squidpy](https://squidpy.readthedocs.io/) a toolkit for working with spatial single cell data has been published in [Nature Methods](https://www.nature.com/articles/s41592-021-01358-2).
+
+<!-- marker: before old news -->
 
 ### scVelo on the cover of Nature Biotechnology {small}`2020-12-01`
 

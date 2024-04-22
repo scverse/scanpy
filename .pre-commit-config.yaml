@@ -12,6 +12,13 @@ repos:
         id: ruff
         types_or: [python, pyi, jupyter]
         args: ["--preview", "--select=PLR0917"]
+-   repo: https://github.com/flying-sheep/bibfmt
+    rev: v4.3.0
+    hooks:
+    -   id: bibfmt
+        args:
+        - --sort-by-bibkey
+        - --drop=abstract
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
