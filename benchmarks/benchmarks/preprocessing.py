@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import scanpy as sc
 from scanpy.preprocessing._utils import _get_mean_var
 
-from .utils import pbmc3k, pbmc68k_reduced
+from .utils import lung93k, pbmc3k, pbmc68k_reduced
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -20,13 +20,21 @@ adata: AnnData
 
 
 def setup(*params: str):
-    """Setup all tests. The SparseDenseSuite below defines a parameter"""
+    """Setup all tests.
+
+    The SparseDenseSuite below defines a parameter,
+    the other tests none.
+    """
     global adata
 
     if len(params) == 0 or params[0] == "pbmc68k_reduced":
         adata = pbmc68k_reduced()
-    else:
+    elif params[0] == "pbmc3k":
         adata = pbmc3k()
+    elif params[0] == "lung93k":
+        adata = lung93k()
+    else:
+        raise ValueError(f"Unknown dataset {params[0]}")
 
 
 def time_calculate_qc_metrics():
@@ -108,7 +116,7 @@ def peakmem_scale():
 
 
 class SparseDenseSuite:
-    params = ["pbmc68k_reduced", "pbmc3k"]
+    params = ["pbmc68k_reduced", "pbmc3k", "lung93k"]
     param_names = ["dataset"]
 
     def time_mean_var(self, *_):
