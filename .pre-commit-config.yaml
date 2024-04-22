@@ -13,7 +13,7 @@ repos:
         types_or: [python, pyi, jupyter]
         args: ["--preview", "--select=PLR0917"]
 -   repo: https://github.com/flying-sheep/bibfmt
-    rev: 1004edd3d6ef8598fd09c4b00d29fd7b5edb7896
+    rev: "3c02bc613ed95ce402cb168de9b4f5416be2088c"
     hooks:
     -   id: bibfmt
         args:
