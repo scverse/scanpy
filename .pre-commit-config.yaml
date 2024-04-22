@@ -12,22 +12,13 @@ repos:
         id: ruff
         types_or: [python, pyi, jupyter]
         args: ["--preview", "--select=PLR0917"]
--   repo: https://github.com/FlamingTempura/bibtex-tidy
-    rev: v1.11.0
+-   repo: https://github.com/flying-sheep/bibfmt
+    rev: 1004edd3d6ef8598fd09c4b00d29fd7b5edb7896
     hooks:
-    -   id: bibtex-tidy
+    -   id: bibfmt
         args:
-        -   --omit=abstract
-        -   --curly
-        #-   --numeric
-        -   --space=4
-        -   --align=13
-        -   --sort=key
-        -   --duplicates=key,doi
-        -   --no-escape
-        -   --sort-fields
-        -   --trailing-commas
-        -   -m
+        - --sort-by-bibkey
+        - --drop=abstract
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
