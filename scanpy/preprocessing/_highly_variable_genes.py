@@ -103,20 +103,41 @@ def _highly_variable_genes_seurat_v3(
         clip_val = reg_std * vmax + mean
         if sp_sparse.issparse(data_batch):
             batch_counts = sp_sparse.csr_matrix(data_batch)
+            n_threads = numba.get_num_threads()
 
-            @numba.njit(cache=True)
-            def _clip_sparse(indices, data, n_genes, clip_val):
-                squared_batch_counts_sum = np.zeros(n_genes, dtype=np.float64)
-                batch_counts_sum = np.zeros(n_genes, dtype=np.float64)
-                for i in numba.prange(len(data)):
-                    idx = indices[i]
-                    element = min(np.float64(data[i]), clip_val[idx])
-                    squared_batch_counts_sum[idx] += element**2
-                    batch_counts_sum[idx] += element
+            @numba.njit(cache=True, parallel=True)
+            def _clip_sparse(
+                indptr, indices, data, *, n_rows, n_cols, nnz, clip_val, n_threads
+            ):
+                squared_sum_buffer = np.zeros((n_threads, n_cols), dtype=np.float64)
+                sum_buffer = np.zeros((n_threads, n_cols), dtype=np.float64)
+                squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+                batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+                for i in numba.prange(n_threads):
+                    for row in range(i, len(indptr) - 1, n_threads):
+                        for j in range(indptr[row], indptr[row + 1]):
+                            idx = indices[j]
+                            if idx >= n_cols:
+                                continue
+                            element = min(np.float64(data[j]), clip_val[idx])
+                            squared_sum_buffer[i, idx] += element**2
+                            sum_buffer[i, idx] += element
+                for c in numba.prange(n_cols):
+                    squared_batch_counts_sum[c] += squared_sum_buffer[:, c].sum()
+                    batch_counts_sum[c] += sum_buffer[:, c].sum()
+                # squared_batch_counts_sum = squared_sum_buffer.sum(axis=0)
+                # batch_counts_sum= sum_buffer.sum(axis=0)
                 return squared_batch_counts_sum, batch_counts_sum
 
             squared_batch_counts_sum, batch_counts_sum = _clip_sparse(
-                batch_counts.indices, batch_counts.data, batch_counts.shape[1], clip_val
+                batch_counts.indptr,
+                batch_counts.indices,
+                batch_counts.data,
+                n_rows=batch_counts.shape[0],
+                n_cols=batch_counts.shape[1],
+                nnz=batch_counts.nnz,
+                clip_val=clip_val,
+                n_threads=n_threads,
             )
         else:
             batch_counts = data_batch.astype(np.float64).copy()
