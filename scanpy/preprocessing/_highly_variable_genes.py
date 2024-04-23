@@ -105,28 +105,6 @@ def _highly_variable_genes_seurat_v3(
             batch_counts = sp_sparse.csr_matrix(data_batch)
             n_threads = numba.get_num_threads()
 
-            @numba.njit(cache=True, parallel=True)
-            def _clip_sparse(
-                indptr, indices, data, *, n_rows, n_cols, nnz, clip_val, n_threads
-            ):
-                squared_sum_buffer = np.zeros((n_threads, n_cols), dtype=np.float64)
-                sum_buffer = np.zeros((n_threads, n_cols), dtype=np.float64)
-                squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-                batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-                for i in numba.prange(n_threads):
-                    for row in range(i, len(indptr) - 1, n_threads):
-                        for j in range(indptr[row], indptr[row + 1]):
-                            idx = indices[j]
-                            if idx >= n_cols:
-                                continue
-                            element = min(np.float64(data[j]), clip_val[idx])
-                            squared_sum_buffer[i, idx] += element**2
-                            sum_buffer[i, idx] += element
-                for c in numba.prange(n_cols):
-                    squared_batch_counts_sum[c] += squared_sum_buffer[:, c].sum()
-                    batch_counts_sum[c] += sum_buffer[:, c].sum()
-                return squared_batch_counts_sum, batch_counts_sum
-
             squared_batch_counts_sum, batch_counts_sum = _clip_sparse(
                 batch_counts.indptr,
                 batch_counts.indices,
@@ -219,6 +197,37 @@ def _highly_variable_genes_seurat_v3(
             df = df.iloc[df["highly_variable"].to_numpy(), :]
 
         return df
+
+
+@numba.njit(cache=True, parallel=True)
+def _clip_sparse(
+    indptr: NDArray[np.integer],
+    indices: NDArray[np.integer],
+    data: NDArray[np.floating],
+    *,
+    n_rows: int,
+    n_cols: int,
+    nnz: int,
+    clip_val: NDArray[np.float64],
+    n_threads: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    squared_sum_buffer = np.zeros((n_threads, n_cols), dtype=np.float64)
+    sum_buffer = np.zeros((n_threads, n_cols), dtype=np.float64)
+    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    for i in numba.prange(n_threads):
+        for row in range(i, len(indptr) - 1, n_threads):
+            for j in range(indptr[row], indptr[row + 1]):
+                idx = indices[j]
+                if idx >= n_cols:
+                    continue
+                element = min(np.float64(data[j]), clip_val[idx])
+                squared_sum_buffer[i, idx] += element**2
+                sum_buffer[i, idx] += element
+    for c in numba.prange(n_cols):
+        squared_batch_counts_sum[c] += squared_sum_buffer[:, c].sum()
+        batch_counts_sum[c] += sum_buffer[:, c].sum()
+    return squared_batch_counts_sum, batch_counts_sum
 
 
 @dataclass
