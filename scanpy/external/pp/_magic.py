@@ -49,7 +49,7 @@ def magic(
 
     The algorithm implemented here has changed primarily in two ways
     compared to the algorithm described in :cite:`vanDijk2018`. Firstly, we use
-    the adaptive kernel described in :cite:`Moon2017` for
+    the adaptive kernel described in :cite:`Moon2019` for
     improved stability. Secondly, data diffusion is applied
     in the PCA space, rather than the data space, for speed and
     memory improvements.

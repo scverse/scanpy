@@ -81,7 +81,7 @@ def louvain(
         For the default flavor (``'vtraag'``) or for ```RAPIDS```, you can provide a
         resolution (higher resolution means finding more and smaller clusters),
         which defaults to 1.0.
-        See “Time as a resolution parameter” in :cite:`Lambiotte2009`.
+        See “Time as a resolution parameter” in :cite:`Lambiotte2014`.
     random_state
         Change the initialization of the optimization.
     restrict_to

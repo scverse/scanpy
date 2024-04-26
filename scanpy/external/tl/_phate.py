@@ -53,7 +53,7 @@ def phate(
     **kwargs,
 ) -> AnnData | None:
     """\
-    PHATE :cite:p:`Moon2017`.
+    PHATE :cite:p:`Moon2019`.
 
     Potential of Heat-diffusion for Affinity-based Trajectory Embedding (PHATE)
     embeds high dimensional single-cell data into two or three dimensions for
