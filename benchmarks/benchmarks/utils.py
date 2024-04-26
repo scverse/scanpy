@@ -44,6 +44,7 @@ def _bmmc8k() -> AnnData:
         path = registry.fetch(filename)
         sample_adata = sc.read_10x_h5(path)
         sample_adata.var_names_make_unique()
+        sc.pp.subsample(sample_adata, n_obs=8000 // len(samples))
         adatas[sample_id] = sample_adata
 
     adata = concat(adatas, label="sample")
