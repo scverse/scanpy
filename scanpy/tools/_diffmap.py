@@ -21,11 +21,11 @@ def diffmap(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf18]_.
+    Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
 
-    Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell
-    data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested
-    by [Haghverdi16]_ in the implementation of [Wolf18]_.
+    Diffusion maps :cite:p:`Coifman2005` has been proposed for visualizing single-cell
+    data by :cite:t:`Haghverdi2015`. The tool uses the adapted Gaussian kernel suggested
+    by :cite:t:`Haghverdi2016` in the implementation of :cite:t:`Wolf2018`.
 
     The width ("sigma") of the connectivity kernel is implicitly determined by
     the number of neighbors used to compute the single-cell graph in
