@@ -29,7 +29,7 @@ def sandbag(
     filter_samples: Genes | None = None,
 ) -> dict[str, list[tuple[str, str]]]:
     """\
-    Calculate marker pairs of genes :cite:p:`Scialdone2015; Fechtner2018`.
+    Calculate marker pairs of genes :cite:p:`Scialdone2015,Fechtner2018`.
 
     Calculates the pairs of genes serving as marker pairs for each phase,
     based on a matrix of gene counts and an annotation of known phases.

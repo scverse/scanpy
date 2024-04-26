@@ -63,7 +63,7 @@ def louvain(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Cluster cells into subgroups :cite:p:`Blondel2008; Levine2015; Traag2017`.
+    Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
     of :cite:`Traag2017`. The Louvain algorithm has been proposed for single-cell

@@ -42,7 +42,7 @@ def tsne(
     metric: str = "euclidean",
 ) -> AnnData | None:
     """\
-    t-SNE :cite:p:`vanDerMaaten2008; Amir2013; Pedregosa2011`.
+    t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
 
     t-distributed stochastic neighborhood embedding (tSNE, :cite:t:`vanDerMaaten2008`) has been
     proposed for visualizating single-cell data by :cite:`Amir2013`. Here, by default,

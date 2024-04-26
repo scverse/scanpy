@@ -21,7 +21,7 @@ def diffmap(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Diffusion Maps :cite:p:`Coifman2005; Haghverdi2015; Wolf2018`.
+    Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
 
     Diffusion maps :cite:p:`Coifman2005` has been proposed for visualizing single-cell
     data by :cite:`Haghverdi2015`. The tool uses the adapted Gaussian kernel suggested

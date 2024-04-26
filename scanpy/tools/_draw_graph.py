@@ -46,7 +46,7 @@ def draw_graph(
     **kwds,
 ) -> AnnData | None:
     """\
-    Force-directed graph drawing :cite:p:`Islam2011; Jacomy2014; Chippada2018`.
+    Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
     better. This requires to run :func:`~scanpy.pp.neighbors`, first.

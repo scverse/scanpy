@@ -499,7 +499,7 @@ def highly_variable_genes(
     check_values: bool = True,
 ) -> pd.DataFrame | None:
     """\
-    Annotate highly variable genes :cite:p:`Satija2015; Zheng2017; Stuart2019`.
+    Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
 
     Expects logarithmized data, except when `flavor='seurat_v3'`/`'seurat_v3_paper'`, in which count
     data is expected.

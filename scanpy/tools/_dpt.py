@@ -50,7 +50,7 @@ def dpt(
 ) -> AnnData | None:
     """\
     Infer progression of cells through geodesic distance along the graph
-    :cite:p:`Haghverdi2016; Wolf2019`.
+    :cite:p:`Haghverdi2016,Wolf2019`.
 
     Reconstruct the progression of a biological process from snapshot
     data. `Diffusion Pseudotime` has been introduced by :cite:`Haghverdi2016` and

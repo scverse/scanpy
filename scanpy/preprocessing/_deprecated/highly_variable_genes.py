@@ -30,7 +30,7 @@ def filter_genes_dispersion(  # noqa: PLR0917
     copy: bool = False,
 ) -> AnnData | np.recarray | None:
     """\
-    Extract highly variable genes :cite:p:`Satija2015; Zheng2017`.
+    Extract highly variable genes :cite:p:`Satija2015,Zheng2017`.
 
     .. warning::
         .. deprecated:: 1.3.6

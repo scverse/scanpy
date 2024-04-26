@@ -144,7 +144,7 @@ def combat(
     inplace: bool = True,
 ) -> np.ndarray | None:
     """\
-    ComBat function for batch effect correction :cite:p:`Johnson2006; Leek2012; Pedersen2012`.
+    ComBat function for batch effect correction :cite:p:`Johnson2006,Leek2012,Pedersen2012`.
 
     Corrects for batch effects by fitting linear models, gains statistical power
     via an EB framework where information is borrowed across genes.
