@@ -33,7 +33,7 @@ def bbknn(
     **kwargs,
 ) -> AnnData | None:
     """\
-    Batch balanced kNN [Polanski19]_.
+    Batch balanced kNN [Polanski2019]_.
 
     Batch balanced kNN alters the kNN procedure to identify each cell's top neighbours in
     each batch separately instead of the entire cell pool with no accounting for batch.

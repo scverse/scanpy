@@ -45,10 +45,10 @@ def pca(
     chunk_size: int | None = None,
 ) -> AnnData | np.ndarray | spmatrix | None:
     """\
-    Principal component analysis [Pedregosa11]_.
+    Principal component analysis [Pedregosa2011]_.
 
     Computes PCA coordinates, loadings and variance decomposition.
-    Uses the implementation of *scikit-learn* [Pedregosa11]_.
+    Uses the implementation of *scikit-learn* [Pedregosa2011]_.
 
     .. versionchanged:: 1.5.0
 

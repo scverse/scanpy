@@ -90,13 +90,13 @@ def burczynski06() -> ad.AnnData:
 
 def krumsiek11() -> ad.AnnData:
     """\
-    Simulated myeloid progenitors [Krumsiek11]_.
+    Simulated myeloid progenitors [Krumsiek2011]_.
 
-    The literature-curated boolean network from [Krumsiek11]_ was used to
+    The literature-curated boolean network from [Krumsiek2011]_ was used to
     simulate the data. It describes development to four cell fates: 'monocyte',
     'erythrocyte', 'megakaryocyte' and 'neutrophil'.
 
-    See also the discussion of this data in [Wolf19]_.
+    See also the discussion of this data in [Wolf2019]_.
 
     Simulate via :func:`~scanpy.tl.sim`.
 
@@ -123,7 +123,7 @@ def krumsiek11() -> ad.AnnData:
 @check_datasetdir_exists
 def moignard15() -> ad.AnnData:
     """\
-    Hematopoiesis in early mouse embryos [Moignard15]_.
+    Hematopoiesis in early mouse embryos [Moignard2015]_.
 
     Returns
     -------
@@ -161,7 +161,7 @@ def moignard15() -> ad.AnnData:
 @check_datasetdir_exists
 def paul15() -> ad.AnnData:
     """\
-    Development of Myeloid Progenitors [Paul15]_.
+    Development of Myeloid Progenitors [Paul2015]_.
 
     Non-logarithmized raw data.
 
@@ -218,7 +218,7 @@ def toggleswitch() -> ad.AnnData:
     """\
     Simulated toggleswitch.
 
-    Data obtained simulating a simple toggleswitch [Gardner00]_
+    Data obtained simulating a simple toggleswitch [Gardner2000]_
 
     Simulate via :func:`~scanpy.tl.sim`.
 

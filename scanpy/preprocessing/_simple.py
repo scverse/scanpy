@@ -487,8 +487,8 @@ def normalize_per_cell(  # noqa: PLR0917
     Normalize each cell by total counts over all genes, so that every cell has
     the same total count after normalization.
 
-    Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
-    [Zheng17]_ or SPRING [Weinreb17]_.
+    Similar functions are used, for example, by Seurat [Satija2015]_, Cell Ranger
+    [Zheng2017]_ or SPRING [Weinreb2017]_.
 
     Parameters
     ----------
@@ -609,7 +609,7 @@ def regress_out(
     Regress out (mostly) unwanted sources of variation.
 
     Uses simple linear regression. This is inspired by Seurat's `regressOut`
-    function in R [Satija15]. Note that this function tends to overcorrect
+    function in R [Satija2015]_. Note that this function tends to overcorrect
     in certain circumstances as described in :issue:`526`.
 
     Parameters

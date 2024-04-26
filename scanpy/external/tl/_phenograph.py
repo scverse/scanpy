@@ -69,7 +69,7 @@ def phenograph(
     **kargs: Any,
 ) -> tuple[np.ndarray | None, spmatrix, float | None] | None:
     """\
-    PhenoGraph clustering [Levine15]_.
+    PhenoGraph clustering [Levine2015]_.
 
     **PhenoGraph** is a clustering method designed for high-dimensional single-cell
     data. It works by creating a graph ("network") representing phenotypic similarities

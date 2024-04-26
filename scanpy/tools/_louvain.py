@@ -63,11 +63,11 @@ def louvain(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
+    Cluster cells into subgroups [Blondel2008]_ [Levine2015]_ [Traag2017]_.
 
-    Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation
-    of [Traag17]_. The Louvain algorithm has been proposed for single-cell
-    analysis by [Levine15]_.
+    Cluster cells using the Louvain algorithm [Blondel2008]_ in the implementation
+    of [Traag2017]_. The Louvain algorithm has been proposed for single-cell
+    analysis by [Levine2015]_.
 
     This requires having ran :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first,
@@ -81,7 +81,7 @@ def louvain(
         For the default flavor (``'vtraag'``) or for ```RAPIDS```, you can provide a
         resolution (higher resolution means finding more and smaller clusters),
         which defaults to 1.0.
-        See “Time as a resolution parameter” in [Lambiotte09]_.
+        See “Time as a resolution parameter” in [Lambiotte2009]_.
     random_state
         Change the initialization of the optimization.
     restrict_to

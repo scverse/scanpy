@@ -29,7 +29,7 @@ def wishbone(
 ):
     """\
     Wishbone identifies bifurcating developmental trajectories from single-cell data
-    [Setty16]_.
+    [Setty2016]_.
 
     Wishbone is an algorithm for positioning single cells along bifurcating
     developmental trajectories with high resolution. Wishbone uses multi-dimensional

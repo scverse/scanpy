@@ -40,7 +40,7 @@ def recipe_weinreb17(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Normalization and filtering as of [Weinreb17]_.
+    Normalization and filtering as of [Weinreb2017]_.
 
     Expects non-logarithmized data.
     If using logarithmized data, pass `log=False`.
@@ -85,7 +85,7 @@ def recipe_seurat(
     adata: AnnData, *, log: bool = True, plot: bool = False, copy: bool = False
 ) -> AnnData | None:
     """\
-    Normalization and filtering as of Seurat [Satija15]_.
+    Normalization and filtering as of Seurat [Satija2015]_.
 
     This uses a particular preprocessing.
 
@@ -123,9 +123,9 @@ def recipe_zheng17(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Normalization and filtering as of [Zheng17]_.
+    Normalization and filtering as of [Zheng2017]_.
 
-    Reproduces the preprocessing of [Zheng17]_ – the Cell Ranger R Kit of 10x
+    Reproduces the preprocessing of [Zheng2017]_ – the Cell Ranger R Kit of 10x
     Genomics.
 
     Expects non-logarithmized data.

@@ -30,7 +30,7 @@ def filter_genes_dispersion(  # noqa: PLR0917
     copy: bool = False,
 ) -> AnnData | np.recarray | None:
     """\
-    Extract highly variable genes [Satija15]_ [Zheng17]_.
+    Extract highly variable genes [Satija2015]_ [Zheng2017]_.
 
     .. warning::
         .. deprecated:: 1.3.6
@@ -48,7 +48,7 @@ def filter_genes_dispersion(  # noqa: PLR0917
     If trying out parameters, pass the data matrix instead of AnnData.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_ and Cell Ranger [Zheng17]_.
+    [Satija2015]_ and Cell Ranger [Zheng2017]_.
 
     The normalized dispersion is obtained by scaling with the mean and standard
     deviation of the dispersions for genes falling into a given bin for mean

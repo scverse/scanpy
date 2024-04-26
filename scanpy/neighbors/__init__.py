@@ -69,13 +69,13 @@ def neighbors(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Computes the nearest neighbors distance matrix and a neighborhood graph of observations [McInnes18]_.
+    Computes the nearest neighbors distance matrix and a neighborhood graph of observations [McInnes2018]_.
 
-    The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
+    The neighbor search efficiency of this heavily relies on UMAP [McInnes2018]_,
     which also provides a method for estimating connectivities of data points -
     the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
-    connectivities are computed according to [Coifman05]_, in the adaption of
-    [Haghverdi16]_.
+    connectivities are computed according to [Coifman2005]_, in the adaption of
+    [Haghverdi2016]_.
 
     Parameters
     ----------
@@ -99,8 +99,8 @@ def neighbors(
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
     method
-        Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
-        with adaptive width [Haghverdi16]_) for computing connectivities.
+        Use 'umap' [McInnes2018]_ or 'gauss' (Gauss kernel following [Coifman2005]_
+        with adaptive width [Haghverdi2016]_) for computing connectivities.
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
@@ -487,8 +487,8 @@ class Neighbors:
     def distances_dpt(self) -> OnFlySymMatrix:
         """DPT distances.
 
-        This is yields [Haghverdi16]_, Eq. 15 from the supplement with the
-        extensions of [Wolf19]_, supplement on random-walk based distance
+        This is yields [Haghverdi2016]_, Eq. 15 from the supplement with the
+        extensions of [Wolf2019]_, supplement on random-walk based distance
         measures.
         """
         return OnFlySymMatrix(self._get_dpt_row, shape=self._adata.shape)

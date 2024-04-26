@@ -38,10 +38,10 @@ def mnn_correct(
     list[tuple[float | None, int]] | None,
 ]:
     """\
-    Correct batch effects by matching mutual nearest neighbors [Haghverdi18]_ [Kang18]_.
+    Correct batch effects by matching mutual nearest neighbors [Haghverdi2018]_ [Kang2018]_.
 
     This uses the implementation of `mnnpy
-    <https://github.com/chriscainx/mnnpy>`__ [Kang18]_.
+    <https://github.com/chriscainx/mnnpy>`__ [Kang2018]_.
 
     Depending on `do_concatenate`, returns matrices or `AnnData` objects in the
     original order containing corrected expression values or a concatenated

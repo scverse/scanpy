@@ -499,24 +499,24 @@ def highly_variable_genes(
     check_values: bool = True,
 ) -> pd.DataFrame | None:
     """\
-    Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
+    Annotate highly variable genes [Satija2015]_ [Zheng2017]_ [Stuart2019]_.
 
     Expects logarithmized data, except when `flavor='seurat_v3'`/`'seurat_v3_paper'`, in which count
     data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
+    [Satija2015]_, Cell Ranger [Zheng2017]_, and Seurat v3 [Stuart2019]_.
 
     `'seurat_v3'`/`'seurat_v3_paper'` requires `scikit-misc` package. If you plan to use this flavor, consider
     installing `scanpy` with this optional dependency: `scanpy[skmisc]`.
 
-    For the dispersion-based methods (`flavor='seurat'` [Satija15]_ and
-    `flavor='cell_ranger'` [Zheng17]_), the normalized dispersion is obtained
+    For the dispersion-based methods (`flavor='seurat'` [Satija2015]_ and
+    `flavor='cell_ranger'` [Zheng2017]_), the normalized dispersion is obtained
     by scaling with the mean and standard deviation of the dispersions for genes
     falling into a given bin for mean expression of genes. This means that for each
     bin of mean expression, highly variable genes are selected.
 
-    For `flavor='seurat_v3'`/`'seurat_v3_paper'` [Stuart19]_, a normalized variance for each gene
+    For `flavor='seurat_v3'`/`'seurat_v3_paper'` [Stuart2019]_, a normalized variance for each gene
     is computed. First, the data are standardized (i.e., z-score normalization
     per feature) with a regularized standard deviation. Next, the normalized variance
     is computed as the variance of each gene after the transformation. Genes are ranked

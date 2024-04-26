@@ -108,7 +108,7 @@ def umap(
     local_connectivity: float = 1.0,
 ) -> csr_matrix:
     """\
-    This is from umap.fuzzy_simplicial_set [McInnes18]_.
+    This is from umap.fuzzy_simplicial_set [McInnes2018]_.
 
     Given a set of data X, a neighborhood size, and a measure of distance
     compute the fuzzy simplicial set (here represented as a fuzzy graph in

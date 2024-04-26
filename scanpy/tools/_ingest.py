@@ -50,7 +50,7 @@ def ingest(
     Integrates embeddings and annotations of an `adata` with a reference dataset
     `adata_ref` through projecting on a PCA (or alternate
     model) that has been fitted on the reference data. The function uses a knn
-    classifier for mapping labels and the UMAP package [McInnes18]_ for mapping
+    classifier for mapping labels and the UMAP package [McInnes2018]_ for mapping
     the embeddings.
 
     .. note::
