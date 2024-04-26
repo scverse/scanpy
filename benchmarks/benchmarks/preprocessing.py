@@ -12,7 +12,7 @@ from asv_runner.benchmarks.mark import skip_for_params
 import scanpy as sc
 from scanpy.preprocessing._utils import _get_mean_var
 
-from .utils import bmmc8k, lung93k, pbmc68k_reduced
+from .utils import bmmc8k, lung93k, pbmc3k, pbmc68k_reduced
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 adata: AnnData
 
 params = ["pbmc68k_reduced"]  # , "bmmc8k"]
-# param_names = ["dataset"]
+param_names = ["dataset"]
 
 
 def setup(*params: str):
@@ -32,7 +32,9 @@ def setup(*params: str):
     """
     global adata
 
-    if params[0] == "pbmc68k_reduced":
+    if params[0] == "pbmc3k":
+        adata = pbmc3k()
+    elif params[0] == "pbmc68k_reduced":
         adata = pbmc68k_reduced()
     elif params[0] == "bmmc8k":
         adata = bmmc8k()
@@ -72,13 +74,13 @@ def peakmem_filter_genes(*_):
     sc.pp.filter_genes(adata, min_cells=3)
 
 
-# scublet doesn’t work with pbmc68k_reduced
-@skip_for_params([("pbmc68k_reduced",)])
+# scublet doesn’t work with these datasets
+@skip_for_params([("pbmc3k",), ("pbmc68k_reduced",)])
 def time_scrublet(*_):
     sc.pp.scrublet(adata, batch_key="sample")
 
 
-@skip_for_params([("pbmc68k_reduced",)])
+@skip_for_params([("pbmc3k",), ("pbmc68k_reduced",)])
 def peakmem_scrublet(*_):
     sc.pp.scrublet(adata, batch_key="sample")
 
@@ -132,7 +134,7 @@ def peakmem_scale(*_):
 
 
 class SparseDenseSuite:
-    params = ["pbmc68k_reduced", "bmmc8k", "lung93k"]
+    params = ["pbmc3k", "pbmc68k_reduced", "bmmc8k", "lung93k"]
     param_names = ["dataset"]
 
     def time_mean_var(self, *_):
