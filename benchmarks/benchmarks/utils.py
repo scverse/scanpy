@@ -4,6 +4,7 @@ from functools import cache
 from typing import TYPE_CHECKING
 
 import pooch
+from anndata import concat
 
 import scanpy as sc
 
@@ -27,6 +28,32 @@ def _pbmc3k() -> AnnData:
 
 def pbmc3k() -> AnnData:
     return _pbmc3k().copy()
+
+
+@cache
+def _bmmc8k() -> AnnData:
+    registry = pooch.create(
+        path=pooch.os_cache("pooch"),
+        base_url="doi:10.6084/m9.figshare.22716739.v1/",
+    )
+    registry.load_registry_from_doi()
+    samples = {smp: f"{smp}_filtered_feature_bc_matrix.h5" for smp in ("s1d1", "s1d3")}
+    adatas = {}
+
+    for sample_id, filename in samples.items():
+        path = registry.fetch(filename)
+        sample_adata = sc.read_10x_h5(path)
+        sample_adata.var_names_make_unique()
+        adatas[sample_id] = sample_adata
+
+    adata = concat(adatas, label="sample")
+    adata.obs_names_make_unique()
+
+    return adata
+
+
+def bmmc8k() -> AnnData:
+    return _bmmc8k().copy()
 
 
 @cache
