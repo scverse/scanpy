@@ -121,7 +121,7 @@ def dpt(
 
     Notes
     -----
-    The tool is similar to the R package `destiny` of [Angerer2016]_.
+    The tool is similar to the R package `destiny` of [Angerer2015]_.
     """
     # standard errors, warnings etc.
     adata = adata.copy() if copy else adata

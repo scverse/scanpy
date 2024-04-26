@@ -144,7 +144,7 @@ def combat(
     inplace: bool = True,
 ) -> np.ndarray | None:
     """\
-    ComBat function for batch effect correction [Johnson2007]_ [Leek2012]_
+    ComBat function for batch effect correction [Johnson2006]_ [Leek2012]_
     [Pedersen2012]_.
 
     Corrects for batch effects by fitting linear models, gains statistical power
@@ -163,7 +163,7 @@ def combat(
     covariates
         Additional covariates besides the batch variable such as adjustment
         variables or biological condition. This parameter refers to the design
-        matrix `X` in Equation 2.1 in [Johnson2007]_ and to the `mod` argument in
+        matrix `X` in Equation 2.1 in [Johnson2006]_ and to the `mod` argument in
         the original combat function in the sva R package.
         Note that not including covariates may introduce bias or lead to the
         removal of biological signal in unbalanced designs.

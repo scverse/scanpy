@@ -102,7 +102,7 @@ def draw_graph(
         Return a copy instead of writing to adata.
     **kwds
         Parameters of chosen igraph layout. See e.g.
-        :meth:`~igraph.GraphBase.layout_fruchterman_reingold` [Fruchterman2091]_.
+        :meth:`~igraph.GraphBase.layout_fruchterman_reingold` [Fruchterman1991]_.
         One of the most important ones is `maxiter`.
 
     Returns
