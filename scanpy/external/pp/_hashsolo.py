@@ -289,7 +289,7 @@ def hashsolo(
     number_of_noise_barcodes: int | None = None,
     inplace: bool = True,
 ) -> AnnData | None:
-    """Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
+    """Probabilistic demultiplexing of cell hashing data using HashSolo :cite:p:`Bernstein2020`.
 
     .. note::
         More information and bug reports `here <https://github.com/calico/solo>`__.
