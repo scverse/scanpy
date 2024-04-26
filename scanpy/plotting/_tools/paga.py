@@ -374,9 +374,9 @@ def paga(
     Compute a coarse-grained layout of the data. Reuse this by passing
     `init_pos='paga'` to :func:`~scanpy.tl.umap` or
     :func:`~scanpy.tl.draw_graph` and obtain embeddings with more meaningful
-    global topology [Wolf2019]_.
+    global topology :cite:p:`Wolf2019`.
 
-    This uses ForceAtlas2 or igraph's layout algorithms for most layouts [Csardi2006]_.
+    This uses ForceAtlas2 or igraph's layout algorithms for most layouts :cite:p:`Csardi2006`.
 
     Parameters
     ----------

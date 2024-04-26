@@ -29,13 +29,13 @@ def sandbag(
     filter_samples: Genes | None = None,
 ) -> dict[str, list[tuple[str, str]]]:
     """\
-    Calculate marker pairs of genes. [Scialdone2015]_ [Fechtner2018]_.
+    Calculate marker pairs of genes :cite:p:`Scialdone2015; Fechtner2018`.
 
     Calculates the pairs of genes serving as marker pairs for each phase,
     based on a matrix of gene counts and an annotation of known phases.
 
-    This reproduces the approach of [Scialdone2015]_ in the implementation of
-    [Fechtner2018]_.
+    This reproduces the approach of :cite:`Scialdone2015` in the implementation of
+    :cite:`Fechtner2018`.
 
     More information and bug reports `here
     <https://github.com/rfechtner/pypairs>`__.
@@ -94,13 +94,13 @@ def cyclone(
     min_pairs: int = 50,
 ) -> pd.DataFrame:
     """\
-    Assigns scores and predicted class to observations [Scialdone2015]_ [Fechtner2018]_.
+    Assigns scores and predicted class to observations :cite:p:`Scialdone2015` :cite:p:`Fechtner2018`.
 
     Calculates scores for each observation and each phase and assigns prediction
     based on marker pairs indentified by :func:`~scanpy.external.tl.sandbag`.
 
-    This reproduces the approach of [Scialdone2015]_ in the implementation of
-    [Fechtner2018]_.
+    This reproduces the approach of :cite:`Scialdone2015` in the implementation of
+    :cite:`Fechtner2018`.
 
     Parameters
     ----------

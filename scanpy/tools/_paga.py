@@ -28,7 +28,7 @@ def paga(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Mapping out the coarse-grained connectivity structures of complex manifolds [Wolf2019]_.
+    Mapping out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
 
     By quantifying the connectivity of partitions (groups, clusters) of the
     single-cell graph, partition-based graph abstraction (PAGA) generates a much
@@ -43,7 +43,7 @@ def paga(
     partitions. We do not provide a p-value as this null model does not
     precisely capture what one would consider "connected" in real data, hence it
     strongly overestimates the expected value. See an extensive discussion of
-    this in [Wolf2019]_.
+    this in :cite:`Wolf2019`.
 
     .. note::
         Note that you can use the result of :func:`~scanpy.pl.paga` in

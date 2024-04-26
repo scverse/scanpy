@@ -57,11 +57,11 @@ def sim(
     writedir: Path | str | None = None,
 ) -> AnnData:
     """\
-    Simulate dynamic gene expression data [Wittmann2009]_ [Wolf2018]_.
+    Simulate dynamic gene expression data :cite:p:`Wittmann2009` :cite:p:`Wolf2018`.
 
     Sample from a stochastic differential equation model built from
     literature-curated boolean gene regulatory networks, as suggested by
-    [Wittmann2009]_. The Scanpy implementation is due to [Wolf2018]_.
+    :cite:`Wittmann2009`. The Scanpy implementation is due to :cite:`Wolf2018`.
 
     Parameters
     ----------

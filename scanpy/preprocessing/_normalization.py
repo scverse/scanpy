@@ -89,10 +89,10 @@ def normalize_total(
     If `exclude_highly_expressed=True`, very highly expressed genes are excluded
     from the computation of the normalization factor (size factor) for each
     cell. This is meaningful as these can strongly influence the resulting
-    normalized values for all other genes [Weinreb2017]_.
+    normalized values for all other genes :cite:p:`Weinreb2017`.
 
-    Similar functions are used, for example, by Seurat [Satija2015]_, Cell Ranger
-    [Zheng2017]_ or SPRING [Weinreb2017]_.
+    Similar functions are used, for example, by Seurat :cite:p:`Satija2015`, Cell Ranger
+    :cite:p:`Zheng2017` or SPRING :cite:p:`Weinreb2017`.
 
     .. note::
         When used with a :class:`~dask.array.Array` in `adata.X`, this function will have to

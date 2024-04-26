@@ -45,11 +45,11 @@ def leiden(
     **clustering_args,
 ) -> AnnData | None:
     """\
-    Cluster cells into subgroups [Traag2019]_.
+    Cluster cells into subgroups :cite:p:`Traag2019`.
 
-    Cluster cells using the Leiden algorithm [Traag2019]_,
-    an improved version of the Louvain algorithm [Blondel2008]_.
-    It has been proposed for single-cell analysis by [Levine2015]_.
+    Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
+    an improved version of the Louvain algorithm :cite:p:`Blondel2008`.
+    It has been proposed for single-cell analysis by :cite:`Levine2015`.
 
     This requires having ran :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first.

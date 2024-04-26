@@ -48,12 +48,12 @@ def spring_project(
     overwrite: bool = False,
 ) -> None:
     """\
-    Exports to a SPRING project directory [Weinreb2017]_.
+    Exports to a SPRING project directory :cite:p:`Weinreb2017`.
 
     Visualize annotation present in `adata`. By default, export all gene expression data
     from `adata.raw` and categorical and continuous annotations present in `adata.obs`.
 
-    See `SPRING <https://github.com/AllonKleinLab/SPRING>`__ or [Weinreb2017]_ for details.
+    See `SPRING <https://github.com/AllonKleinLab/SPRING>`__ or :cite:`Weinreb2017` for details.
 
     Parameters
     ----------

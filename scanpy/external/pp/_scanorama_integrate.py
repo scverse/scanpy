@@ -33,15 +33,16 @@ def scanorama_integrate(
     **kwargs,
 ) -> None:
     """\
-    Use Scanorama [Hie2019]_ to integrate different experiments.
+    Use Scanorama :cite:p:`Hie2019` to integrate different experiments.
 
-    Scanorama [Hie2019]_ is an algorithm for integrating single-cell
+    Scanorama :cite:p:`Hie2019` is an algorithm for integrating single-cell
     data from multiple experiments stored in an AnnData object. This
     function should be run after performing PCA but before computing
     the neighbor graph, as illustrated in the example below.
 
-    This uses the implementation of `scanorama
-    <https://github.com/brianhie/scanorama>`__ [Hie2019]_.
+    This uses the implementation of scanorama_ :cite:p:`Hie2019`.
+
+    .. _scanorama: https://github.com/brianhie/scanorama
 
     Parameters
     ----------

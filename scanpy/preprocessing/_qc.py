@@ -246,7 +246,7 @@ def calculate_qc_metrics(
 
     Calculates a number of qc metrics for an AnnData object, see section
     `Returns` for specifics. Largely based on `calculateQCMetrics` from scater
-    [McCarthy2017]_. Currently is most efficient on a sparse CSR or dense matrix.
+    :cite:p:`McCarthy2017`. Currently is most efficient on a sparse CSR or dense matrix.
 
     Note that this method can take a while to compile on the first call. That
     result is then cached to disk to be used later.

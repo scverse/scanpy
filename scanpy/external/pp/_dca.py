@@ -71,7 +71,7 @@ def dca(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Deep count autoencoder [Eraslan2018]_.
+    Deep count autoencoder :cite:p:`Eraslan2018`.
 
     Fits a count autoencoder to the raw count data given in the anndata object
     in order to denoise the data and to capture hidden representation of
