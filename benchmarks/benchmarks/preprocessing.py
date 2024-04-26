@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 adata: AnnData
 
-params = ["pbmc68k_reduced"]  # , "bmmc8k"]
+params = ["pbmc68k_reduced", "bmmc8k"]
 param_names = ["dataset"]
 
 
