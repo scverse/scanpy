@@ -67,7 +67,7 @@ Bioconda, Seurat, Bioconductor, and others.
 
 ### Science “Breakthrough of the Year 2018” {small}`2018-12-01`
 
-The Science “Breakthrough of the Year 2018”, [Development cell by cell](https://vis.sciencemag.org/breakthrough2018/finalists/#cell-development), mentions the first application of PAGA [Plass2018]_ among 5 papers.
+The Science “Breakthrough of the Year 2018”, [Development cell by cell](https://vis.sciencemag.org/breakthrough2018/finalists/#cell-development), mentions the first application of PAGA {cite:p}`Plass2018` among 5 papers.
 
 [32 projects]: https://chanzuckerberg.com/eoss/proposals/
 [essential open source software for science]: https://chanzuckerberg.com/newsroom/chan-zuckerberg-initiative-awards-5-million-for-open-source-software-projects-essential-to-science/

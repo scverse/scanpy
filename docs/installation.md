@@ -24,7 +24,7 @@ pip install 'scanpy[leiden]'
 ```
 
 The extra `[leiden]` installs two packages that are needed for popular
-parts of scanpy but aren't requirements: [igraph] [Csardi2006]_ and [leiden] [Traag2019]_.
+parts of scanpy but aren't requirements: [igraph] {cite:p}`Csardi2006` and [leiden] {cite:p}`Traag2019`.
 
 (dev-install-instructions)=
 
