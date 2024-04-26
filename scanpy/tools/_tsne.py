@@ -42,9 +42,9 @@ def tsne(
     metric: str = "euclidean",
 ) -> AnnData | None:
     """\
-    t-SNE [Maaten2008]_ [Amir2013]_ [Pedregosa2011]_.
+    t-SNE [vanDerMaaten2008]_ [Amir2013]_ [Pedregosa2011]_.
 
-    t-distributed stochastic neighborhood embedding (tSNE) [Maaten2008]_ has been
+    t-distributed stochastic neighborhood embedding (tSNE) [vanDerMaaten2008]_ has been
     proposed for visualizating single-cell data by [Amir2013]_. Here, by default,
     we use the implementation of *scikit-learn* [Pedregosa2011]_. You can achieve
     a huge speedup and better convergence if you install `Multicore-tSNE
