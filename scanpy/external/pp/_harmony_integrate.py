@@ -26,9 +26,9 @@ def harmony_integrate(
     **kwargs,
 ):
     """\
-    Use harmonypy [Korunsky19]_ to integrate different experiments.
+    Use harmonypy :cite:p:`Korsunsky2019` to integrate different experiments.
 
-    Harmony [Korunsky19]_ is an algorithm for integrating single-cell
+    Harmony :cite:p:`Korsunsky2019` is an algorithm for integrating single-cell
     data from multiple experiments. This function uses the python
     port of Harmony, ``harmonypy``, to integrate single-cell data
     stored in an AnnData object. As Harmony works by adjusting the
