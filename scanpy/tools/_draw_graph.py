@@ -46,19 +46,19 @@ def draw_graph(
     **kwds,
 ) -> AnnData | None:
     """\
-    Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.
+    Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
     better. This requires to run :func:`~scanpy.pp.neighbors`, first.
 
-    The default layout ('fa', `ForceAtlas2`) [Jacomy14]_ uses the package |fa2|_
-    [Chippada18]_, which can be installed via `pip install fa2`.
+    The default layout ('fa', `ForceAtlas2`, :cite:t:`Jacomy2014`) uses the package |fa2|_
+    :cite:p:`Chippada2018`, which can be installed via `pip install fa2`.
 
     `Force-directed graph drawing`_ describes a class of long-established
     algorithms for visualizing graphs.
-    It has been suggested for visualizing single-cell data by [Islam11]_.
-    Many other layouts as implemented in igraph [Csardi06]_ are available.
-    Similar approaches have been used by [Zunder15]_ or [Weinreb17]_.
+    It has been suggested for visualizing single-cell data by :cite:t:`Islam2011`.
+    Many other layouts as implemented in igraph :cite:p:`Csardi2006` are available.
+    Similar approaches have been used by :cite:t:`Zunder2015` or :cite:t:`Weinreb2017`.
 
     .. |fa2| replace:: `fa2`
     .. _fa2: https://github.com/bhargavchippada/forceatlas2
@@ -102,7 +102,7 @@ def draw_graph(
         Return a copy instead of writing to adata.
     **kwds
         Parameters of chosen igraph layout. See e.g.
-        :meth:`~igraph.GraphBase.layout_fruchterman_reingold` [Fruchterman91]_.
+        :meth:`~igraph.GraphBase.layout_fruchterman_reingold` :cite:p:`Fruchterman1991`.
         One of the most important ones is `maxiter`.
 
     Returns

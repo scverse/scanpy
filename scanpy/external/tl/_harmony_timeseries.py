@@ -31,7 +31,7 @@ def harmony_timeseries(
 ) -> AnnData | None:
     """\
     Harmony time series for data visualization with augmented affinity matrix
-    at discrete time points [Nowotschin18i]_.
+    at discrete time points :cite:p:`Nowotschin2019`.
 
     Harmony time series is a framework for data visualization, trajectory
     detection and interpretation for scRNA-seq data measured at discrete
