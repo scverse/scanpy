@@ -34,8 +34,8 @@ def sandbag(
     Calculates the pairs of genes serving as marker pairs for each phase,
     based on a matrix of gene counts and an annotation of known phases.
 
-    This reproduces the approach of :cite:`Scialdone2015` in the implementation of
-    :cite:`Fechtner2018`.
+    This reproduces the approach of :cite:t:`Scialdone2015` in the implementation of
+    :cite:t:`Fechtner2018`.
 
     More information and bug reports `here
     <https://github.com/rfechtner/pypairs>`__.
@@ -99,8 +99,8 @@ def cyclone(
     Calculates scores for each observation and each phase and assigns prediction
     based on marker pairs indentified by :func:`~scanpy.external.tl.sandbag`.
 
-    This reproduces the approach of :cite:`Scialdone2015` in the implementation of
-    :cite:`Fechtner2018`.
+    This reproduces the approach of :cite:t:`Scialdone2015` in the implementation of
+    :cite:t:`Fechtner2018`.
 
     Parameters
     ----------

@@ -63,7 +63,7 @@ def umap(
     nearest-neighbor distances in the embedding such that these best match the
     distribution of distances in the high-dimensional space.
     We use the implementation of umap-learn_ :cite:p:`McInnes2018`.
-    For a few comparisons of UMAP with tSNE, see :cite:`Becht2018`.
+    For a few comparisons of UMAP with tSNE, see :cite:t:`Becht2018`.
 
     .. _umap-learn: https://github.com/lmcinnes/umap
 

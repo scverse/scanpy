@@ -56,9 +56,9 @@ def draw_graph(
 
     `Force-directed graph drawing`_ describes a class of long-established
     algorithms for visualizing graphs.
-    It has been suggested for visualizing single-cell data by :cite:`Islam2011`.
+    It has been suggested for visualizing single-cell data by :cite:t:`Islam2011`.
     Many other layouts as implemented in igraph :cite:p:`Csardi2006` are available.
-    Similar approaches have been used by :cite:`Zunder2015` or :cite:`Weinreb2017`.
+    Similar approaches have been used by :cite:t:`Zunder2015` or :cite:t:`Weinreb2017`.
 
     .. |fa2| replace:: `fa2`
     .. _fa2: https://github.com/bhargavchippada/forceatlas2

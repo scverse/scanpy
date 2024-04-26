@@ -61,7 +61,7 @@ def sim(
 
     Sample from a stochastic differential equation model built from
     literature-curated boolean gene regulatory networks, as suggested by
-    :cite:`Wittmann2009`. The Scanpy implementation is due to :cite:`Wolf2018`.
+    :cite:t:`Wittmann2009`. The Scanpy implementation is due to :cite:t:`Wolf2018`.
 
     Parameters
     ----------

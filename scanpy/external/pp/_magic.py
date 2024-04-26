@@ -48,8 +48,8 @@ def magic(
     and uses diffusion to smooth out noise and recover the data manifold.
 
     The algorithm implemented here has changed primarily in two ways
-    compared to the algorithm described in :cite:`vanDijk2018`. Firstly, we use
-    the adaptive kernel described in :cite:`Moon2019` for
+    compared to the algorithm described in :cite:t:`vanDijk2018`. Firstly, we use
+    the adaptive kernel described in :cite:t:`Moon2019` for
     improved stability. Secondly, data diffusion is applied
     in the PCA space, rather than the data space, for speed and
     memory improvements.
@@ -85,7 +85,7 @@ def magic(
         roughly log(n_samples) time. If `None`, no PCA is performed.
     solver
         Which solver to use. "exact" uses the implementation described
-        in :cite:`vanDijk2018`. "approximate" uses a faster
+        in :cite:t:`vanDijk2018`. "approximate" uses a faster
         implementation that performs imputation in the PCA space and then
         projects back to the gene space. Note, the "approximate" solver may
         return negative values.

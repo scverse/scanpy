@@ -43,7 +43,7 @@ def paga(
     partitions. We do not provide a p-value as this null model does not
     precisely capture what one would consider "connected" in real data, hence it
     strongly overestimates the expected value. See an extensive discussion of
-    this in :cite:`Wolf2019`.
+    this in :cite:t:`Wolf2019`.
 
     .. note::
         Note that you can use the result of :func:`~scanpy.pl.paga` in

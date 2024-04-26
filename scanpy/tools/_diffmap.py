@@ -24,8 +24,8 @@ def diffmap(
     Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
 
     Diffusion maps :cite:p:`Coifman2005` has been proposed for visualizing single-cell
-    data by :cite:`Haghverdi2015`. The tool uses the adapted Gaussian kernel suggested
-    by :cite:`Haghverdi2016` in the implementation of :cite:`Wolf2018`.
+    data by :cite:t:`Haghverdi2015`. The tool uses the adapted Gaussian kernel suggested
+    by :cite:t:`Haghverdi2016` in the implementation of :cite:t:`Wolf2018`.
 
     The width ("sigma") of the connectivity kernel is implicitly determined by
     the number of neighbors used to compute the single-cell graph in

@@ -162,7 +162,7 @@ def combat(
     covariates
         Additional covariates besides the batch variable such as adjustment
         variables or biological condition. This parameter refers to the design
-        matrix `X` in Equation 2.1 in :cite:`Johnson2006` and to the `mod` argument in
+        matrix `X` in Equation 2.1 in :cite:t:`Johnson2006` and to the `mod` argument in
         the original combat function in the sva R package.
         Note that not including covariates may introduce bias or lead to the
         removal of biological signal in unbalanced designs.

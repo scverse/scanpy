@@ -323,7 +323,7 @@ def highly_variable_genes(
     """\
     Select highly variable genes using analytic Pearson residuals :cite:p:`Lause2021`.
 
-    In :cite:`Lause2021`, Pearson residuals of a negative binomial offset model are computed
+    In :cite:t:`Lause2021`, Pearson residuals of a negative binomial offset model are computed
     (with overdispersion `theta` shared across genes). By default, overdispersion
     `theta=100` is used and residuals are clipped to `sqrt(n_obs)`. Finally, genes
     are ranked by residual variance.

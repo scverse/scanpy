@@ -53,7 +53,7 @@ def spring_project(
     Visualize annotation present in `adata`. By default, export all gene expression data
     from `adata.raw` and categorical and continuous annotations present in `adata.obs`.
 
-    See `SPRING <https://github.com/AllonKleinLab/SPRING>`__ or :cite:`Weinreb2017` for details.
+    See `SPRING <https://github.com/AllonKleinLab/SPRING>`__ or :cite:t:`Weinreb2017` for details.
 
     Parameters
     ----------

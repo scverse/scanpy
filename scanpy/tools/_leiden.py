@@ -49,7 +49,7 @@ def leiden(
 
     Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
     an improved version of the Louvain algorithm :cite:p:`Blondel2008`.
-    It has been proposed for single-cell analysis by :cite:`Levine2015`.
+    It has been proposed for single-cell analysis by :cite:t:`Levine2015`.
 
     This requires having ran :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first.

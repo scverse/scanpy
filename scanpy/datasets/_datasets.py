@@ -92,11 +92,11 @@ def krumsiek11() -> ad.AnnData:
     """\
     Simulated myeloid progenitors :cite:p:`Krumsiek2011`.
 
-    The literature-curated boolean network from :cite:`Krumsiek2011` was used to
+    The literature-curated boolean network from :cite:t:`Krumsiek2011` was used to
     simulate the data. It describes development to four cell fates: 'monocyte',
     'erythrocyte', 'megakaryocyte' and 'neutrophil'.
 
-    See also the discussion of this data in :cite:`Wolf2019`.
+    See also the discussion of this data in :cite:t:`Wolf2019`.
 
     Simulate via :func:`~scanpy.tl.sim`.
 

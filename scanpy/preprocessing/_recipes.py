@@ -123,9 +123,9 @@ def recipe_zheng17(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Normalization and filtering as of :cite:`Zheng2017`.
+    Normalization and filtering as of :cite:t:`Zheng2017`.
 
-    Reproduces the preprocessing of :cite:`Zheng2017` – the Cell Ranger R Kit of 10x
+    Reproduces the preprocessing of :cite:t:`Zheng2017` – the Cell Ranger R Kit of 10x
     Genomics.
 
     Expects non-logarithmized data.

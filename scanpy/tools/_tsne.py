@@ -45,10 +45,10 @@ def tsne(
     t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
 
     t-distributed stochastic neighborhood embedding (tSNE, :cite:t:`vanDerMaaten2008`) has been
-    proposed for visualizating single-cell data by :cite:`Amir2013`. Here, by default,
+    proposed for visualizating single-cell data by :cite:t:`Amir2013`. Here, by default,
     we use the implementation of *scikit-learn* :cite:p:`Pedregosa2011`. You can achieve
     a huge speedup and better convergence if you install Multicore-tSNE_
-    by :cite:`Ulyanov2016`, which will be automatically detected by Scanpy.
+    by :cite:t:`Ulyanov2016`, which will be automatically detected by Scanpy.
 
     .. _multicore-tsne: https://github.com/DmitryUlyanov/Multicore-TSNE
 
