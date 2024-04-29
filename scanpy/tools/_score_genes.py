@@ -168,10 +168,8 @@ def score_genes(
             r_genes = r_genes.to_series().sample(ctrl_size).index
         control_genes = control_genes.union(r_genes)
 
-    assert len(control_genes) > 0, "No control genes found."
-    assert (
-        len(control_genes.intersection(gene_list)) == 0
-    ), "Genes are in both gene_list and control_genes."
+    if len(control_genes) == 0:
+        raise RuntimeError("No control genes found in any cut.")
 
     X_list = _adata[:, gene_list].X
     if issparse(X_list):
