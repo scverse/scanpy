@@ -166,7 +166,7 @@ def score_genes(
             )
         if ctrl_size < len(r_genes):
             r_genes = r_genes.to_series().sample(ctrl_size).index
-        control_genes = control_genes.union(r_genes.difference(gene_list))
+        control_genes = control_genes.union(r_genes)
 
     assert len(control_genes) > 0, "No control genes found."
     assert (
