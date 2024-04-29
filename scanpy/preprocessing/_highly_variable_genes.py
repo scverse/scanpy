@@ -111,7 +111,6 @@ def _highly_variable_genes_seurat_v3(
                 batch_counts.data,
                 n_rows=batch_counts.shape[0],
                 n_cols=batch_counts.shape[1],
-                nnz=batch_counts.nnz,
                 clip_val=clip_val,
                 n_threads=n_threads,
             )
@@ -207,7 +206,6 @@ def _clip_sparse(
     *,
     n_rows: int,
     n_cols: int,
-    nnz: int,
     clip_val: NDArray[np.float64],
     n_threads: int,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
