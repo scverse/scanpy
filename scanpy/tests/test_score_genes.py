@@ -234,10 +234,12 @@ def test_layer():
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
     sc.pp.log1p(adata)
     adata.layers["test"] = adata.X.copy()
+    assert not np.array_equal(adata.X, adata.layers["test"])
 
     gene_set = adata.var_names[:10]
-    sc.tl.score_genes(adata, gene_set, score_name="Test", layer="test")
-    assert adata.obs["Test"].dtype == "float64"
+    sc.tl.score_genes(adata, gene_set, score_name="X_score")
+    sc.tl.score_genes(adata, gene_set, score_name="test_score", layer="test")
+    assert adata.obs["X_score"].equals(adata.obs["test_score"])
 
 
 @pytest.mark.parametrize("gene_pool", [[], ["foo", "bar"]])
