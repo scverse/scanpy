@@ -12,6 +12,7 @@ from scanpy._utils import _check_use_raw
 
 from .. import logging as logg
 from .._compat import old_positionals
+from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -137,27 +138,23 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    _adata = adata
-    if layer is not None:
-        if use_raw:
-            raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
-        _adata.X = _adata.layers[layer]
+    if use_raw:
+        var_names = adata.raw.var_names
     else:
-        if use_raw and adata.raw is not None:
-            _adata = adata.raw
+        var_names = adata.var_names
 
-    _adata_subset = (
-        _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
-    )
+    X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+    gene_pool_idx = var_names.get_indexer(gene_pool)
+    X = X[:, gene_pool_idx]
 
     # average expression of genes
-    if issparse(_adata_subset.X):
+    if issparse(X):
         obs_avg = pd.Series(
-            np.array(_sparse_nanmean(_adata_subset.X, axis=0)).flatten(),
+            np.array(_sparse_nanmean(X, axis=0)).flatten(),
             index=gene_pool,
         )
     else:
-        obs_avg = pd.Series(np.nanmean(_adata_subset.X, axis=0), index=gene_pool)
+        obs_avg = pd.Series(np.nanmean(X, axis=0), index=gene_pool)
 
     # Sometimes (and I don't know how) missing data may be there, with nansfor
     obs_avg = obs_avg[np.isfinite(obs_avg)]
@@ -173,13 +170,15 @@ def score_genes(
             r_genes = r_genes.to_series().sample(ctrl_size).index
         control_genes = control_genes.union(r_genes.difference(gene_list))
 
-    X_list = _adata[:, gene_list].X
+    gene_list_idx = var_names.get_indexer(gene_list)
+    X_list = X[:, gene_list_idx]
     if issparse(X_list):
         X_list = np.array(_sparse_nanmean(X_list, axis=1)).flatten()
     else:
         X_list = np.nanmean(X_list, axis=1, dtype="float64")
 
-    X_control = _adata[:, control_genes].X
+    control_genes_idx = var_names.get_indexer(control_genes)
+    X_control = X[:, control_genes_idx]
     if issparse(X_control):
         X_control = np.array(_sparse_nanmean(X_control, axis=1)).flatten()
     else:
