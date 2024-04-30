@@ -104,7 +104,7 @@ def scrublet_score_distribution(
             doublet_scores_sim = adata.uns["scrublet"]["batches"][batch_key][
                 "doublet_scores_sim"
             ]
-            axis_lab_suffix = " (%s)" % batch_key
+            axis_lab_suffix = f" ({batch_key})"
             obs_ax = axs[idx][0]
             sim_ax = axs[idx][1]
 
