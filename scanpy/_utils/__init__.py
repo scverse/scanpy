@@ -79,11 +79,6 @@ class RNGIgraph:
         self.random = self._rng.uniform
         self.randint = self._rng.integers
 
-    def getrandbits(self, k: int) -> int:
-        numbytes = (k + 7) // 8  # bits / 8 and rounded up
-        x = int.from_bytes(self._rng.bytes(numbytes), "big")
-        return x >> (numbytes * 8 - k)  # trim excess bits
-
 
 def ensure_igraph() -> None:
     if importlib.util.find_spec("igraph"):
