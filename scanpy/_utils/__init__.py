@@ -77,7 +77,9 @@ class RNGIgraph:
 
         self.gauss = self._rng.normal
         self.random = self._rng.uniform
-        self.randint = self._rng.integers
+
+    def randint(self, low, high):
+        return int(self._rng.integers(low, high))
 
 
 def ensure_igraph() -> None:
