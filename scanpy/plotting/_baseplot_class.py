@@ -416,7 +416,7 @@ class BasePlot:
             the right of the plot, or height when shown on top. The unit is the same
             as in matplotlib (inches).
         color
-            Color for the bar plots or list of colors for each of the bar plots.
+            Colormap or list of colors for each of the colorblocks.
             By default, each bar plot uses the colors assigned in
             `adata.uns[{groupby}_colors]`.
 
@@ -433,18 +433,17 @@ class BasePlot:
         >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
         >>> plot = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').add_colorblocks()
         >>> plot.plot_group_extra['counts_df']  # doctest: +SKIP
-        bulk_labels
-        CD4+/CD25 T Reg                  68
-        CD4+/CD45RA+/CD25- Naive T        8
-        CD4+/CD45RO+ Memory              19
-        CD8+ Cytotoxic T                 54
-        CD8+/CD45RA+ Naive Cytotoxic     43
-        CD14+ Monocyte                  129
-        CD19+ B                          95
-        CD34+                            13
-        CD56+ NK                         31
-        Dendritic                       240
-        Name: count, dtype: int64
+        CD4+/CD25 T Reg                 0
+        CD4+/CD45RA+/CD25- Naive T      1
+        CD4+/CD45RO+ Memory             2
+        CD8+ Cytotoxic T                3
+        CD8+/CD45RA+ Naive Cytotoxic    4
+        CD14+ Monocyte                  5
+        CD19+ B                         6
+        CD34+                           7
+        CD56+ NK                        8
+        Dendritic                       9
+        dtype: int64
         """
         self.group_extra_size = size
 
@@ -460,8 +459,6 @@ class BasePlot:
 
         # determine groupby label positions such that they appear
         # centered next/below to the color code rectangle assigned to the category
-        value_sum = 0
-        #ticks = []  # list of centered position of the labels
         labels = []
         label2code = {}  # dictionary of numerical values asigned to each label
         for code, (label, value) in enumerate(
