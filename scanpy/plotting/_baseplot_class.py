@@ -10,11 +10,9 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
-from matplotlib import gridspec
+from matplotlib import colormaps, gridspec
 from matplotlib import pyplot as plt
 from matplotlib.colors import BoundaryNorm, ListedColormap
-from matplotlib import colormaps
-
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -23,7 +21,7 @@ from ._utils import ColorLike, _AxesSubplot, check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
     from anndata import AnnData
-    from matplotlib.axes import Axes  
+    from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
 
 
@@ -389,7 +387,7 @@ class BasePlot:
             "color": color,
         }
         return self
-    
+
     def add_colorblocks(
         self,
         show: bool | None = True,
@@ -455,7 +453,7 @@ class BasePlot:
 
         _sort = True if sort is not None else False
         _ascending = True if sort == "ascending" else False
-        #counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
+        # counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
 
         # determine groupby label positions such that they appear
         # centered next/below to the color code rectangle assigned to the category
@@ -464,9 +462,9 @@ class BasePlot:
         for code, (label, value) in enumerate(
             self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending).items()
         ):
-            #ticks.append(value_sum + (value / 2))
+            # ticks.append(value_sum + (value / 2))
             labels.append(label)
-            #value_sum += value
+            # value_sum += value
             label2code[label] = code
 
         counts_df = pd.Series(label2code)
@@ -482,7 +480,6 @@ class BasePlot:
             "color": color,
         }
         return self
-
 
     @old_positionals("cmap")
     def style(self, *, cmap: str | None = DEFAULT_COLORMAP) -> BasePlot:
@@ -562,41 +559,42 @@ class BasePlot:
         """
         Makes the annotation plot for group labels
         """
-        
+
         params = self.plot_group_extra
         counts_df = params["counts_df"]
         if self.categories_order is not None:
             counts_df = counts_df.loc[self.categories_order]
         if params["color"] is None:
             if f"{self.groupby}_colors" in self.adata.uns:
-                color = ListedColormap(self.adata.uns[f"{self.groupby}_colors"], 
-                                       f"{self.groupby}_cmap")
+                color = ListedColormap(
+                    self.adata.uns[f"{self.groupby}_colors"], f"{self.groupby}_cmap"
+                )
             else:
                 color = plt.get_cmap("tab20")
         else:
             if params["color"] in list(colormaps):
                 color = plt.get_cmap(params["color"])
-            else: #if it is a list of colors    
+            else:  # if it is a list of colors
                 color = ListedColormap(params["color"], f"{self.groupby}_cmap")
-        #color scaling
+        # color scaling
         norm = BoundaryNorm(np.arange(color.N + 1) - 0.5, color.N)
 
         if orientation == "top":
             group_color_ax.imshow(
-                counts_df.values.reshape(1,-1),
+                counts_df.values.reshape(1, -1),
                 aspect="auto",
-                extent = [0, len(counts_df), 1, 0],
+                extent=[0, len(counts_df), 1, 0],
                 cmap=color,
-                norm=norm
+                norm=norm,
             )
 
         elif orientation == "right":
             group_color_ax.imshow(
-                counts_df.values.reshape(-1,1),
+                counts_df.values.reshape(-1, 1),
                 aspect="auto",
-                extent = [0, 1, len(counts_df), 0],
+                extent=[0, 1, len(counts_df), 0],
                 cmap=color,
-                norm=norm
+                norm=norm,
             )
 
         # remove x/y ticks and labels
@@ -878,8 +876,16 @@ class BasePlot:
         # second row is for brackets (if needed),
         # third row is for mainplot and dendrogram/totals (legend goes in gs[0,1]
         # defined earlier)
-        wspace_adj = self.wspace if self.plot_group_extra is None and self.are_axes_swapped is False else 0.05 
-        hspace_adj = 0.05 if self.plot_group_extra is not None and self.are_axes_swapped is True else 0 
+        wspace_adj = (
+            self.wspace
+            if self.plot_group_extra is None and self.are_axes_swapped is False
+            else 0.05
+        )
+        hspace_adj = (
+            0.05
+            if self.plot_group_extra is not None and self.are_axes_swapped is True
+            else 0
+        )
 
         mainplot_gs = gridspec.GridSpecFromSubplotSpec(
             nrows=3,
@@ -921,7 +927,6 @@ class BasePlot:
                 self._plot_totals(group_extra_ax, group_extra_orientation)
             if self.plot_group_extra["kind"] == "group_colors":
                 self._plot_colorblocks(group_extra_ax, group_extra_orientation)
-            
 
             return_ax_dict["group_extra_ax"] = group_extra_ax
 
