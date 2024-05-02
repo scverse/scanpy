@@ -9,8 +9,12 @@ from typing import TYPE_CHECKING, Literal, Union
 from warnings import warn
 
 import numpy as np
+import pandas as pd
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
+from matplotlib.colors import BoundaryNorm, ListedColormap
+from matplotlib import colormaps
+
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -19,8 +23,9 @@ from ._utils import ColorLike, _AxesSubplot, check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
     from anndata import AnnData
-    from matplotlib.axes import Axes
+    from matplotlib.axes import Axes  
     from matplotlib.colors import Normalize
+
 
 _VarNames = Union[str, Sequence[str]]
 
@@ -384,6 +389,103 @@ class BasePlot:
             "color": color,
         }
         return self
+    
+    def add_colorblocks(
+        self,
+        show: bool | None = True,
+        sort: Literal["ascending", "descending"] = None,
+        size: float | None = 0.5,
+        color: ColorLike | Sequence[ColorLike] | None = None,
+    ) -> BasePlot:
+        r"""\
+        Show colorblocks of `groupby` category.
+
+        The annotation colorblocks is by default shown on the right side of the plot or on top
+        if the axes are swapped.
+
+
+        Parameters
+        ----------
+        show
+            Boolean to turn on (True) or off (False) 'add_colorblocks'
+        sort
+            Set to either 'ascending' or 'descending' to reorder the categories
+            by category name
+        size
+            size of the annotation colorblocks. Corresponds to width when shown on
+            the right of the plot, or height when shown on top. The unit is the same
+            as in matplotlib (inches).
+        color
+            Color for the bar plots or list of colors for each of the bar plots.
+            By default, each bar plot uses the colors assigned in
+            `adata.uns[{groupby}_colors]`.
+
+
+        Returns
+        -------
+        Returns `self` for method chaining.
+
+
+        Examples
+        --------
+        >>> import scanpy as sc
+        >>> adata = sc.datasets.pbmc68k_reduced()
+        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
+        >>> plot = sc.pl._baseplot_class.BasePlot(adata, markers, groupby='bulk_labels').add_colorblocks()
+        >>> plot.plot_group_extra['counts_df']  # doctest: +SKIP
+        bulk_labels
+        CD4+/CD25 T Reg                  68
+        CD4+/CD45RA+/CD25- Naive T        8
+        CD4+/CD45RO+ Memory              19
+        CD8+ Cytotoxic T                 54
+        CD8+/CD45RA+ Naive Cytotoxic     43
+        CD14+ Monocyte                  129
+        CD19+ B                          95
+        CD34+                            13
+        CD56+ NK                         31
+        Dendritic                       240
+        Name: count, dtype: int64
+        """
+        self.group_extra_size = size
+
+        if not show:
+            # hide colorblocks
+            self.plot_group_extra = None
+            self.group_extra_size = 0
+            return self
+
+        _sort = True if sort is not None else False
+        _ascending = True if sort == "ascending" else False
+        #counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
+
+        # determine groupby label positions such that they appear
+        # centered next/below to the color code rectangle assigned to the category
+        value_sum = 0
+        #ticks = []  # list of centered position of the labels
+        labels = []
+        label2code = {}  # dictionary of numerical values asigned to each label
+        for code, (label, value) in enumerate(
+            self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending).items()
+        ):
+            #ticks.append(value_sum + (value / 2))
+            labels.append(label)
+            #value_sum += value
+            label2code[label] = code
+
+        counts_df = pd.Series(label2code)
+
+        if _sort:
+            self.categories_order = counts_df.index
+
+        self.plot_group_extra = {
+            "kind": "group_colors",
+            "width": size,
+            "sort": sort,
+            "counts_df": counts_df,
+            "color": color,
+        }
+        return self
+
 
     @old_positionals("cmap")
     def style(self, *, cmap: str | None = DEFAULT_COLORMAP) -> BasePlot:
@@ -456,6 +558,62 @@ class BasePlot:
         if self.ax_dict is None:
             self.make_figure()
         return self.ax_dict
+
+    def _plot_colorblocks(
+        self, group_color_ax: Axes, orientation: Literal["top", "right"]
+    ):
+        """
+        Makes the annotation plot for group labels
+        """
+        
+        params = self.plot_group_extra
+        counts_df = params["counts_df"]
+        if self.categories_order is not None:
+            counts_df = counts_df.loc[self.categories_order]
+        if params["color"] is None:
+            if f"{self.groupby}_colors" in self.adata.uns:
+                color = ListedColormap(self.adata.uns[f"{self.groupby}_colors"], 
+                                       f"{self.groupby}_cmap")
+            else:
+                color = plt.get_cmap("tab20")
+        else:
+            if params["color"] in list(colormaps):
+                color = plt.get_cmap(params["color"])
+            else: #if it is a list of colors    
+                color = ListedColormap(params["color"], f"{self.groupby}_cmap")
+        #color scaling
+        norm = BoundaryNorm(np.arange(color.N + 1) - 0.5, color.N)
+
+        if orientation == "top":
+            group_color_ax.imshow(
+                counts_df.values.reshape(1,-1),
+                aspect="auto",
+                extent = [0, len(counts_df), 1, 0],
+                cmap=color,
+                norm=norm
+            )
+
+        elif orientation == "right":
+            group_color_ax.imshow(
+                counts_df.values.reshape(-1,1),
+                aspect="auto",
+                extent = [0, 1, len(counts_df), 0],
+                cmap=color,
+                norm=norm
+            )
+
+        # remove x/y ticks and labels
+        group_color_ax.tick_params(axis="x", bottom=False, labelbottom=False)
+        group_color_ax.tick_params(axis="y", bottom=False, labelbottom=False)
+
+        # remove surrounding lines
+        group_color_ax.spines["right"].set_visible(False)
+        group_color_ax.spines["top"].set_visible(False)
+        group_color_ax.spines["left"].set_visible(False)
+        group_color_ax.spines["bottom"].set_visible(False)
+
+        group_color_ax.grid(False)
+        group_color_ax.axis("off")
 
     def _plot_totals(
         self, total_barplot_ax: Axes, orientation: Literal["top", "right"]
@@ -723,11 +881,14 @@ class BasePlot:
         # second row is for brackets (if needed),
         # third row is for mainplot and dendrogram/totals (legend goes in gs[0,1]
         # defined earlier)
+        wspace_adj = self.wspace if self.plot_group_extra is None and self.are_axes_swapped is False else 0.05 
+        hspace_adj = 0.05 if self.plot_group_extra is not None and self.are_axes_swapped is True else 0 
+
         mainplot_gs = gridspec.GridSpecFromSubplotSpec(
             nrows=3,
             ncols=2,
-            wspace=self.wspace,
-            hspace=0.0,
+            wspace=wspace_adj,
+            hspace=hspace_adj,
             subplot_spec=gs[0, 0],
             width_ratios=width_ratios,
             height_ratios=height_ratios,
@@ -761,6 +922,9 @@ class BasePlot:
                 )
             if self.plot_group_extra["kind"] == "group_totals":
                 self._plot_totals(group_extra_ax, group_extra_orientation)
+            if self.plot_group_extra["kind"] == "group_colors":
+                self._plot_colorblocks(group_extra_ax, group_extra_orientation)
+            
 
             return_ax_dict["group_extra_ax"] = group_extra_ax
 
