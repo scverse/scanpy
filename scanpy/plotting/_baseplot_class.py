@@ -597,16 +597,6 @@ class BasePlot:
                 norm=norm,
             )
 
-        # remove x/y ticks and labels
-        group_color_ax.tick_params(axis="x", bottom=False, labelbottom=False)
-        group_color_ax.tick_params(axis="y", bottom=False, labelbottom=False)
-
-        # remove surrounding lines
-        group_color_ax.spines["right"].set_visible(False)
-        group_color_ax.spines["top"].set_visible(False)
-        group_color_ax.spines["left"].set_visible(False)
-        group_color_ax.spines["bottom"].set_visible(False)
-
         group_color_ax.grid(False)
         group_color_ax.axis("off")
 
