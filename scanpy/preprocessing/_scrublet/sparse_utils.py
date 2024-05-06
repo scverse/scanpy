@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 from scipy import sparse
 
-from ..._utils import AnyRandom, _get_mean_var, get_random_state
+from scanpy.preprocessing._utils import _get_mean_var
+
+from ..._utils import AnyRandom, get_random_state
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
