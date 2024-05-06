@@ -21,6 +21,10 @@ from ._simple import (
     subsample,
 )
 
+# Turn on scikit-learn optimizations with these 2 simple lines:
+from sklearnex import patch_sklearn
+patch_sklearn()
+
 __all__ = [
     "neighbors",
     "combat",

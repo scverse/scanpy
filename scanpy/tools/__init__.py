@@ -25,7 +25,9 @@ from ._score_genes import score_genes, score_genes_cell_cycle
 from ._sim import sim
 from ._tsne import tsne
 from ._umap import umap
-
+# Turn on scikit-learn optimizations with these 2 simple lines:
+from sklearnex import patch_sklearn
+patch_sklearn()
 
 def __getattr__(name: str) -> Any:
     if name == "pca":
