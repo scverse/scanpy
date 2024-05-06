@@ -199,10 +199,10 @@ def scrublet(
             pp.normalize_total(ad_obs)
 
             # HVG process needs log'd data.
-            adata.layers["log1p"] = adata.X.copy()
+            ad_obs.layers["log1p"] = ad_obs.X.copy()
             pp.log1p(ad_obs, layer="log1p")
-            pp.highly_variable_genes(adata, layer="log1p")
-            del adata.layers["log1p"]
+            pp.highly_variable_genes(ad_obs, layer="log1p")
+            del ad_obs.layers["log1p"]
             ad_obs = ad_obs[:, ad_obs.var["highly_variable"]].copy()
 
             # Simulate the doublets based on the raw expressions from the normalised
