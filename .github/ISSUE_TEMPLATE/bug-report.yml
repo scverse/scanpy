@@ -1,7 +1,9 @@
 name: Bug report
 description: Scanpy doesn’t do what it should? Please help us fix it!
 #title: ...
-labels: ['Bug 🐛']
+labels:
+- Bug 🐛
+- Triage 🩺
 #assignees: []
 body:
 - type: checkboxes
