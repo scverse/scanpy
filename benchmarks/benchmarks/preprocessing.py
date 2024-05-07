@@ -12,7 +12,7 @@ from asv_runner.benchmarks.mark import skip_for_params
 import scanpy as sc
 from scanpy.preprocessing._utils import _get_mean_var
 
-from .utils import bmmc8k, lung93k, pbmc3k, pbmc68k_reduced
+from .utils import bmmc4k, lung93k, pbmc3k, pbmc68k_reduced
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -37,7 +37,7 @@ def setup(*params: str):
     elif params[0] == "pbmc68k_reduced":
         adata = pbmc68k_reduced()
     elif params[0] == "bmmc8k":
-        adata = bmmc8k()
+        adata = bmmc4k()
     elif params[0] == "lung93k":
         adata = lung93k()
     else:
@@ -75,12 +75,12 @@ def peakmem_filter_genes(*_):
 
 
 # scublet doesn’t work with these datasets
-@skip_for_params([("pbmc3k",), ("pbmc68k_reduced",)])
+@skip_for_params([("pbmc68k_reduced",)])
 def time_scrublet(*_):
     sc.pp.scrublet(adata, batch_key="sample")
 
 
-@skip_for_params([("pbmc3k",), ("pbmc68k_reduced",)])
+@skip_for_params([("pbmc68k_reduced",)])
 def peakmem_scrublet(*_):
     sc.pp.scrublet(adata, batch_key="sample")
 

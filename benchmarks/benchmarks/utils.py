@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import warnings
 from functools import cache
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pooch
 from anndata import concat
 
@@ -31,7 +33,7 @@ def pbmc3k() -> AnnData:
 
 
 @cache
-def _bmmc8k() -> AnnData:
+def _bmmc4k() -> AnnData:
     registry = pooch.create(
         path=pooch.os_cache("pooch"),
         base_url="doi:10.6084/m9.figshare.22716739.v1/",
@@ -42,19 +44,29 @@ def _bmmc8k() -> AnnData:
 
     for sample_id, filename in samples.items():
         path = registry.fetch(filename)
-        sample_adata = sc.read_10x_h5(path)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", r"Variable names are not unique")
+            sample_adata = sc.read_10x_h5(path)
         sample_adata.var_names_make_unique()
-        sc.pp.subsample(sample_adata, n_obs=8000 // len(samples))
+        sc.pp.subsample(sample_adata, n_obs=4000 // len(samples))
         adatas[sample_id] = sample_adata
 
-    adata = concat(adatas, label="sample")
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r"Observation names are not unique")
+        adata = concat(adatas, label="sample")
     adata.obs_names_make_unique()
+
+    adata.var["is_mito"] = adata.var_names.str.startswith("MT-").sum()
+    adata.obs["percent_mito"] = (
+        np.sum(adata[:, adata.var["is_mito"]].X, axis=1).A1 / np.sum(adata.X, axis=1).A1
+    )
+    adata.obs["n_counts"] = adata.X.sum(axis=1).A1
 
     return adata
 
 
-def bmmc8k() -> AnnData:
-    return _bmmc8k().copy()
+def bmmc4k() -> AnnData:
+    return _bmmc4k().copy()
 
 
 @cache
