@@ -13,7 +13,7 @@ from anndata.tests.helpers import (
 )
 from packaging.version import Version
 from scipy import sparse
-from sklearn.utils import issparse
+from scipy.sparse import issparse
 
 import scanpy as sc
 from scanpy.testing._helpers import as_dense_dask_array, as_sparse_dask_array
