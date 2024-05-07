@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 adata: AnnData
 
-params = ["pbmc68k_reduced", "bmmc8k"]
+params = ["pbmc68k_reduced", "bmmc4k"]
 param_names = ["dataset"]
 
 
@@ -36,7 +36,7 @@ def setup(*params: str):
         adata = pbmc3k()
     elif params[0] == "pbmc68k_reduced":
         adata = pbmc68k_reduced()
-    elif params[0] == "bmmc8k":
+    elif params[0] == "bmmc4k":
         adata = bmmc4k()
     elif params[0] == "lung93k":
         adata = lung93k()
@@ -134,7 +134,7 @@ def peakmem_scale(*_):
 
 
 class SparseDenseSuite:
-    params = ["pbmc3k", "pbmc68k_reduced", "bmmc8k", "lung93k"]
+    params = ["pbmc3k", "pbmc68k_reduced", "bmmc4k", "lung93k"]
     param_names = ["dataset"]
 
     def time_mean_var(self, *_):

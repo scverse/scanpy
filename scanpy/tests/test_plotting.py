@@ -1282,12 +1282,13 @@ def test_scatter_raw(tmp_path):
 def test_binary_scatter(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
-    data = AnnData(
+    adata = AnnData(
         np.asarray([[-1, 2, 0], [3, 4, 0], [1, 2, 0]]).T,
         obs=dict(binary=np.asarray([False, True, True])),
     )
-    sc.pp.pca(data)
-    sc.pl.pca(data, color="binary")
+    sc.pp.pca(adata)
+    assert False, adata.obsm["X_pca"]
+    sc.pl.pca(adata, color="binary")
     save_and_compare_images("binary_pca")
 
 
