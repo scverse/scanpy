@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import pytest
-from anndata import AnnData
+from anndata import AnnData, read_h5ad
 from anndata.tests.helpers import asarray, assert_equal
 from numpy.testing import assert_allclose
 from scipy import sparse as sp
@@ -39,6 +39,13 @@ def test_log1p(tmp_path):
     ad4 = AnnData(A)
     sc.pp.log1p(ad4, base=2)
     assert np.allclose(ad4.X, A_l / np.log(2))
+
+
+def test_log1p_backed(backed_adata_path):
+    with pytest.raises(
+        NotImplementedError, match="log1p is not implemented for backed AnnData"
+    ):
+        sc.pp.log1p(read_h5ad(backed_adata_path, backed="r"))
 
 
 def test_log1p_deprecated_arg():
@@ -179,6 +186,13 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
 
+def test_scale_backed(backed_adata_path):
+    with pytest.raises(
+        NotImplementedError, match="scale is not implemented for backed AnnData"
+    ):
+        sc.pp.scale(read_h5ad(backed_adata_path, backed="r"))
+
+
 ARRAY_TYPES_DASK_SPARSE = [
     a for a in ARRAY_TYPES if "sparse" in a.id and "dask" in a.id
 ]
@@ -262,6 +276,16 @@ def test_regress_out_ordinal():
     )
 
     np.testing.assert_array_equal(single.X, multi.X)
+
+
+def test_regress_out_backed(backed_adata_path):
+    adata = read_h5ad(backed_adata_path, backed="r")
+    adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
+    adata.obs["n_counts"] = adata.X[...].sum(axis=1)
+    with pytest.raises(
+        NotImplementedError, match="regress_out is not implemented for backed AnnData"
+    ):
+        sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
 
 
 def test_regress_out_layer():
@@ -436,6 +460,20 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
     assert X.dtype == adata.X.dtype
 
 
+def test_downsample_counts_backed(backed_adata_path):
+    adata = read_h5ad(backed_adata_path, backed="r")
+    with pytest.raises(
+        NotImplementedError,
+        match="downsample_counts is not implemented for backed AnnData",
+    ):
+        sc.pp.downsample_counts(adata, counts_per_cell=1000)
+    with pytest.raises(
+        NotImplementedError,
+        match="downsample_counts is not implemented for backed AnnData",
+    ):
+        sc.pp.downsample_counts(adata, total_counts=1000)
+
+
 def test_recipe_weinreb():
     # Just tests for failure for now
     adata = pbmc68k_reduced().raw.to_adata()
@@ -483,6 +521,14 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
     if issparse(adata.X):
         adata.X = adata.X.todense()
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+def test_filter_genes_backed(backed_adata_path):
+    adata = read_h5ad(backed_adata_path, backed="r")
+    with pytest.raises(
+        NotImplementedError, match="filter_genes is not implemented for backed AnnData"
+    ):
+        sc.pp.filter_genes(adata, max_cells=100)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)

@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
+import tempfile
 from itertools import product
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
+from anndata import AnnData
 from scipy import sparse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from anndata import AnnData
 
 
 @pytest.fixture(
@@ -40,6 +40,15 @@ def pbmc3k_parametrized(_pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
 @pytest.fixture
 def pbmc3k_parametrized_small(_pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
     return _pbmc3ks_parametrized_session[True].copy
+
+
+@pytest.fixture(scope="session")
+def backed_adata_path():
+    tmp_path = f"{tempfile.gettempdir()}/test.h5ad"
+    X = sparse.random(200, 10, format="csr").astype(np.float32)
+    adata = AnnData(X)
+    adata.write_h5ad(tmp_path)
+    return tmp_path
 
 
 def _prepare_pbmc_testdata(

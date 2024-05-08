@@ -288,6 +288,8 @@ def scale_anndata(
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
 ) -> AnnData | None:
+    if adata.isbacked:
+        raise NotImplementedError("scale is not implemented for backed AnnData")
     adata = adata.copy() if copy else adata
     str_mean_std = ("mean", "std")
     if mask_obs is not None:

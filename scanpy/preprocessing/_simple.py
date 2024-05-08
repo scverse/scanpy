@@ -257,6 +257,10 @@ def filter_genes(
         )
 
     if isinstance(data, AnnData):
+        if data.isbacked:
+            raise NotImplementedError(
+                "filter_genes is not implemented for backed AnnData"
+            )
         adata = data.copy() if copy else data
         gene_subset, number = materialize_as_ndarray(
             filter_genes(
@@ -391,6 +395,8 @@ def log1p_anndata(
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | None:
+    if adata.isbacked:
+        raise NotImplementedError("log1p is not implemented for backed AnnData")
     if "log1p" in adata.uns_keys():
         logg.warning("adata.X seems to be already log-transformed.")
 
@@ -633,6 +639,8 @@ def regress_out(
     `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Corrected count data matrix.
     """
+    if adata.isbacked:
+        raise NotImplementedError("regress_out is not implemented for backed AnnData")
     start = logg.info(f"regressing out {keys}")
     adata = adata.copy() if copy else adata
 
@@ -852,6 +860,10 @@ def downsample_counts(
     `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse.spmatrix` (dtype `float`)
         Downsampled counts matrix.
     """
+    if adata.isbacked:
+        raise NotImplementedError(
+            "downsample_counts is not implemented for backed AnnData"
+        )
     # This logic is all dispatch
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
