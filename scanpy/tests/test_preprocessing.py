@@ -41,11 +41,20 @@ def test_log1p(tmp_path):
     assert np.allclose(ad4.X, A_l / np.log(2))
 
 
-def test_log1p_backed(backed_adata_path):
+def test_log1p_backed_errors(backed_adata_path):
+    adata = read_h5ad(backed_adata_path, backed="r")
     with pytest.raises(
-        NotImplementedError, match="log1p is not implemented for backed AnnData"
+        NotImplementedError,
+        match="log1p is not implemented for backed AnnData with chunked as False or backed mode not r+",
     ):
-        sc.pp.log1p(read_h5ad(backed_adata_path, backed="r"))
+        sc.pp.log1p(adata)
+    adata.file.close()
+    adata = read_h5ad(backed_adata_path, backed="r+")
+    with pytest.raises(
+        NotImplementedError,
+        match="log1p is not implemented for backed AnnData with chunked as False or backed mode not r+",
+    ):
+        sc.pp.log1p(adata)
 
 
 def test_log1p_deprecated_arg():

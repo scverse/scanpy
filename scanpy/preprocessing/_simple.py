@@ -395,8 +395,10 @@ def log1p_anndata(
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | None:
-    if adata.isbacked and not chunked:
-        raise NotImplementedError("log1p is not implemented for backed AnnData")
+    if adata.isbacked and (not chunked or adata.file._filemode != "r+"):
+        raise NotImplementedError(
+            "log1p is not implemented for backed AnnData with chunked as False or backed mode not r+"
+        )
     if "log1p" in adata.uns_keys():
         logg.warning("adata.X seems to be already log-transformed.")
 
