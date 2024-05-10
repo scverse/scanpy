@@ -22,7 +22,7 @@ from ._docs import doc_mask_var_hvg
 from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
+    from numpy.typing import DTypeLike, NDArray
 
 
 @_doc_params(
@@ -39,7 +39,7 @@ def pca(
     return_info: bool = False,
     mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
-    dtype: str = "float32",
+    dtype: DTypeLike = "float32",
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
@@ -305,7 +305,8 @@ def pca(
         )
         X_pca = pca_.fit_transform(X)
     else:
-        raise Exception("This shouldn't happen. Please open a bug report.")
+        msg = "This shouldn’t happen. Please open a bug report."
+        raise AssertionError(msg)
 
     if X_pca.dtype.descr != np.dtype(dtype).descr:
         X_pca = X_pca.astype(dtype)

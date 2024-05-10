@@ -47,6 +47,8 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
+    from numpy.typing import DTypeLike
+
 
 class Empty(Enum):
     token = 0
@@ -712,7 +714,7 @@ def axis_sum(
     X: sparse.spmatrix,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: np.typing.DTypeLike | None = None,
+    dtype: DTypeLike | None = None,
 ) -> np.matrix: ...
 
 
@@ -721,7 +723,7 @@ def axis_sum(
     X: np.ndarray,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: np.typing.DTypeLike | None = None,
+    dtype: DTypeLike | None = None,
 ) -> np.ndarray:
     return np.sum(X, axis=axis, dtype=dtype)
 
@@ -731,7 +733,7 @@ def _(
     X: DaskArray,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: np.typing.DTypeLike | None = None,
+    dtype: DTypeLike | None = None,
 ) -> DaskArray:
     import dask.array as da
 
