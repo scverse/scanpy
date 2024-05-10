@@ -7,7 +7,7 @@ from warnings import warn
 import anndata as ad
 import numpy as np
 from anndata import AnnData
-from packaging import version
+from packaging.version import Version
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
@@ -172,7 +172,7 @@ def pca(
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
-        if pkg_version("anndata") < version.parse("0.8.0rc1"):
+        if pkg_version("anndata") < Version("0.8.0rc1"):
             adata = AnnData(data, dtype=data.dtype)
         else:
             adata = AnnData(data)
@@ -195,7 +195,7 @@ def pca(
 
     # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
     if (
-        version.parse(ad.__version__) < version.parse("0.9")
+        Version(ad.__version__) < Version("0.9")
         and mask_var is not None
         and isinstance(X, np.ndarray)
     ):
@@ -391,7 +391,14 @@ def _handle_mask_var(
     return mask_var, _check_mask(adata, mask_var, "var")
 
 
-def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):
+def _pca_with_sparse(
+    X: spmatrix,
+    n_pcs: int,
+    *,
+    solver: str = "arpack",
+    mu: NDArray[np.floating] | None = None,
+    random_state: AnyRandom = None,
+):
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(X.shape))
@@ -430,8 +437,11 @@ def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):
         rmatmat=rmatmat,
     )
 
-    u, s, v = svds(XL, solver=solver, k=npcs, v0=random_init)
-    u, v = svd_flip(u, v)
+    u, s, v = svds(XL, solver=solver, k=n_pcs, v0=random_init)
+    # u_based_decision was changed in https://github.com/scikit-learn/scikit-learn/pull/27491
+    u, v = svd_flip(
+        u, v, u_based_decision=pkg_version("scikit-learn") < Version("1.5.0rc1")
+    )
     idx = np.argsort(-s)
     v = v[idx, :]
 
