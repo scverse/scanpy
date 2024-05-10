@@ -13,7 +13,7 @@ import pytest
 import seaborn as sns
 from anndata import AnnData
 from matplotlib.testing.compare import compare_images
-from packaging import version
+from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
@@ -152,7 +152,7 @@ def test_heatmap(image_comparer):
 
 
 @pytest.mark.skipif(
-    pkg_version("matplotlib") < version.parse("3.1"),
+    pkg_version("matplotlib") < Version("3.1"),
     reason="https://github.com/mwaskom/seaborn/issues/1953",
 )
 @pytest.mark.parametrize(
@@ -1288,7 +1288,10 @@ def test_binary_scatter(image_comparer):
     )
     sc.pp.pca(data)
     sc.pl.pca(data, color="binary")
-    save_and_compare_images("binary_pca")
+    if pkg_version("scikit-learn") >= Version("1.5.0rc1"):
+        save_and_compare_images("binary_pca")
+    else:
+        save_and_compare_images("binary_pca_old")
 
 
 def test_scatter_specify_layer_and_raw():
