@@ -4,7 +4,7 @@ import warnings
 from functools import wraps
 
 import anndata as ad
-from packaging import version
+from packaging.version import Version
 
 from .._settings import settings
 
@@ -26,7 +26,7 @@ def filter_oldformatwarning(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         with warnings.catch_warnings():
-            if version.parse(ad.__version__).release >= (0, 8):
+            if Version(ad.__version__).release >= (0, 8):
                 warnings.filterwarnings(
                     "ignore", category=ad.OldFormatWarning, module="anndata"
                 )
