@@ -84,6 +84,8 @@ def check_same_image(add_nunit_attachment):
         tol: int,
         basename: str = "",
     ) -> None:
+        __tracebackhide__ = True
+
         def fmt_descr(descr):
             return f"{descr} ({basename})" if basename else descr
 
@@ -122,6 +124,8 @@ def image_comparer(check_same_image):
     from matplotlib import pyplot as plt
 
     def save_and_compare(*path_parts: Path | os.PathLike, tol: int):
+        __tracebackhide__ = True
+
         base_pth = Path(*path_parts)
 
         if not base_pth.is_dir():
