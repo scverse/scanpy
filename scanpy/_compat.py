@@ -5,7 +5,7 @@ from functools import partial
 from pathlib import Path
 
 from legacy_api_wrap import legacy_api
-from packaging import version
+from packaging.version import Version
 
 try:
     from functools import cache
@@ -68,16 +68,16 @@ except ImportError:  # Python < 3.11
 
 
 def pkg_metadata(package):
-    from importlib.metadata import metadata as m
+    from importlib.metadata import metadata
 
-    return m(package)
+    return metadata(package)
 
 
 @cache
 def pkg_version(package):
-    from importlib.metadata import version as v
+    from importlib.metadata import version
 
-    return version.parse(v(package))
+    return Version(version(package))
 
 
 old_positionals = partial(legacy_api, category=FutureWarning)

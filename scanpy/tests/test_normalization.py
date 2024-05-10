@@ -7,8 +7,7 @@ import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 from scipy import sparse
-from scipy.sparse import csr_matrix
-from sklearn.utils import issparse
+from scipy.sparse import csr_matrix, issparse
 
 import scanpy as sc
 from scanpy._utils import axis_sum
