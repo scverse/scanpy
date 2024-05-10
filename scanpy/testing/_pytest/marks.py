@@ -12,7 +12,12 @@ def _next_val(name: str, start: int, count: int, last_values: list[str]) -> str:
     return name.replace("_", "-")
 
 
-class needs(pytest.MarkDecorator, Enum):
+class QuietMarkDecorator(pytest.MarkDecorator):
+    def __init__(self, mark: pytest.Mark) -> None:
+        super().__init__(mark, _ispytest=True)
+
+
+class needs(QuietMarkDecorator, Enum):
     """
     Pytest skip marker evaluated at module import.
 
@@ -57,4 +62,4 @@ class needs(pytest.MarkDecorator, Enum):
         if self._name_.casefold() != mod.casefold().replace("-", "_"):
             reason = f"{reason} (`pip install {mod}`)"
         dec = pytest.mark.skipif(not find_spec(self._name_), reason=reason)
-        super().__init__(dec.mark, _ispytest=True)
+        super().__init__(dec.mark)
