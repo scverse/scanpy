@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 import pandas as pd
 from natsort import natsorted
-from packaging import version
+from packaging.version import Version
 
 from .. import _utils
 from .. import logging as logg
@@ -175,7 +175,7 @@ def louvain(
                 partition_kwargs["resolution_parameter"] = resolution
             if use_weights:
                 partition_kwargs["weights"] = weights
-            if version.parse(louvain.__version__) < version.parse("0.7.0"):
+            if Version(louvain.__version__) < Version("0.7.0"):
                 louvain.set_rng_seed(random_state)
             else:
                 partition_kwargs["seed"] = random_state

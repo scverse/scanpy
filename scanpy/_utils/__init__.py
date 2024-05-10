@@ -34,7 +34,7 @@ import numpy as np
 from anndata import AnnData
 from anndata import __version__ as anndata_version
 from numpy.typing import NDArray
-from packaging import version
+from packaging.version import Version
 from scipy import sparse
 from sklearn.utils import check_random_state
 
@@ -104,7 +104,7 @@ EPS = 1e-15
 
 
 def check_versions():
-    if version.parse(anndata_version) < version.parse("0.6.10"):
+    if Version(anndata_version) < Version("0.6.10"):
         from .. import __version__
 
         raise ImportError(
