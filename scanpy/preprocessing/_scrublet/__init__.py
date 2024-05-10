@@ -245,9 +245,11 @@ def scrublet(
 
     if batch_key is not None:
         if batch_key not in adata.obs.keys():
-            raise ValueError(
-                "`batch_key` must be a column of .obs in the input annData object."
+            msg = (
+                "`batch_key` must be a column of .obs in the input AnnData object,"
+                f"but {batch_key!r} is not in {adata.obs.keys()!r}."
             )
+            raise ValueError(msg)
 
         # Run Scrublet independently on batches and return just the
         # scrublet-relevant parts of the objects to add to the input object

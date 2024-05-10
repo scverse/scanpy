@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from functools import cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pooch
@@ -13,10 +13,18 @@ import scanpy as sc
 if TYPE_CHECKING:
     from anndata import AnnData
 
+    Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
+
 
 @cache
 def _pbmc68k_reduced() -> AnnData:
-    return sc.datasets.pbmc68k_reduced()
+    adata = sc.datasets.pbmc68k_reduced()
+    mapper = dict(
+        percent_mito="pct_counts_mt",
+        n_counts="total_counts",
+    )
+    adata.obs.rename(columns=mapper, inplace=True)
+    return adata
 
 
 def pbmc68k_reduced() -> AnnData:
@@ -25,7 +33,14 @@ def pbmc68k_reduced() -> AnnData:
 
 @cache
 def _pbmc3k() -> AnnData:
-    return sc.datasets.pbmc3k()
+    adata = sc.datasets.pbmc3k()
+    adata.var["mt"] = adata.var_names.str.startswith("MT-")
+    sc.pp.calculate_qc_metrics(
+        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
+    )
+    adata.layers["counts"] = adata.X.copy()
+    sc.pp.log1p(adata)
+    return adata
 
 
 def pbmc3k() -> AnnData:
@@ -33,7 +48,7 @@ def pbmc3k() -> AnnData:
 
 
 @cache
-def _bmmc4k() -> AnnData:
+def _bmmc(n_obs: int = 4000) -> AnnData:
     registry = pooch.create(
         path=pooch.os_cache("pooch"),
         base_url="doi:10.6084/m9.figshare.22716739.v1/",
@@ -48,7 +63,7 @@ def _bmmc4k() -> AnnData:
             warnings.filterwarnings("ignore", r"Variable names are not unique")
             sample_adata = sc.read_10x_h5(path)
         sample_adata.var_names_make_unique()
-        sc.pp.subsample(sample_adata, n_obs=4000 // len(samples))
+        sc.pp.subsample(sample_adata, n_obs=n_obs // len(samples))
         adatas[sample_id] = sample_adata
 
     with warnings.catch_warnings():
@@ -65,8 +80,8 @@ def _bmmc4k() -> AnnData:
     return adata
 
 
-def bmmc4k() -> AnnData:
-    return _bmmc4k().copy()
+def bmmc(n_obs: int = 400) -> AnnData:
+    return _bmmc(n_obs).copy()
 
 
 @cache
@@ -80,3 +95,18 @@ def _lung93k() -> AnnData:
 
 def lung93k() -> AnnData:
     return _lung93k().copy()
+
+
+def get_dataset(dataset: Dataset) -> tuple[AnnData, str | None]:
+    if dataset == "pbmc68k_reduced":
+        return pbmc68k_reduced(), "bulk_labels"
+    if dataset == "pbmc3k":
+        return pbmc3k(), None  # can’t use this with batches
+    if dataset == "bmmc":
+        # TODO: allow specifying bigger variant
+        return bmmc(400), "sample"
+    if dataset == "lung93k":
+        return lung93k(), "PatientNumber"
+
+    msg = f"Unknown dataset {dataset}"
+    raise AssertionError(msg)
