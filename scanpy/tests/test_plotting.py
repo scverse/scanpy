@@ -5,6 +5,7 @@ from itertools import chain, combinations, repeat
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import anndata
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1279,6 +1280,12 @@ def test_scatter_raw(tmp_path):
     assert "Error" in comp, "Plots should change depending on use_raw."
 
 
+def test_scatter_backed(backed_adata_path):
+    adata = anndata.read_h5ad(backed_adata_path, backed="r")
+    sc.pp.pca(adata, chunked=True)
+    sc.pl.scatter(adata, color="0", basis="pca")
+
+
 def test_binary_scatter(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
@@ -1521,6 +1528,11 @@ def test_groupby_index(image_comparer):
     pbmc_subset = pbmc[:10].copy()
     sc.pl.dotplot(pbmc_subset, genes, groupby="index")
     save_and_compare_images("dotplot_groupby_index")
+
+
+def test_dotplot_backed(backed_adata_path):
+    adata = anndata.read_h5ad(backed_adata_path, backed="r")
+    sc.pl.dotplot(adata, ["0", "1", "2", "3"], groupby="cat")
 
 
 # test category order when groupby is a list (#1735)
