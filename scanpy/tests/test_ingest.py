@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import tempfile
+
+import anndata
 import numpy as np
 import pytest
 from sklearn.neighbors import KDTree
@@ -153,3 +156,20 @@ def test_ingest_map_embedding_umap():
     umap_transformed_t = reducer.transform(T)
 
     assert np.allclose(ing._obsm["X_umap"], umap_transformed_t)
+
+
+def test_ingest_backed(adatas):
+    adata_ref = adatas[0].copy()
+    adata_new = adatas[1].copy()
+
+    tmp_path = tempfile.gettempdir()
+
+    adata_new.write_h5ad(f"{tmp_path}/new.h5ad")
+
+    adata_new = anndata.read_h5ad(f"{tmp_path}/new.h5ad", backed="r")
+
+    ing = sc.tl.Ingest(adata_ref)
+    with pytest.raises(
+        NotImplementedError, match="Ingest.fit is not implemented for backed AnnData"
+    ):
+        ing.fit(adata_new)

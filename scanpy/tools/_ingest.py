@@ -388,6 +388,10 @@ class Ingest:
         `adata` refers to the :class:`~anndata.AnnData` object
         that is passed during the initialization of an Ingest instance.
         """
+        if adata_new.isbacked:
+            raise NotImplementedError(
+                "Ingest.fit is not implemented for backed AnnData"
+            )
         ref_var_names = self._adata_ref.var_names.str.upper()
         new_var_names = adata_new.var_names.str.upper()
 
