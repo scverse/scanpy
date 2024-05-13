@@ -170,6 +170,10 @@ def pca(
         )
     data_is_AnnData = isinstance(data, AnnData)
     if data_is_AnnData:
+        if data.isbacked and not chunked:
+            raise NotImplementedError(
+                "PCA is not implemented for backed AnnData with chunked as False"
+            )
         adata = data.copy() if copy else data
     else:
         if pkg_version("anndata") < version.parse("0.8.0rc1"):

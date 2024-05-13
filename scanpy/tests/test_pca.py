@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import Literal
 
+import anndata
 import anndata as ad
 import numpy as np
 import pytest
@@ -314,6 +315,15 @@ def test_mask_highly_var_error(array_type):
         ),
     ):
         sc.pp.pca(adata, use_highly_variable=True)
+
+
+def test_pca_backed(backed_adata_path):
+    adata = anndata.read_h5ad(backed_adata_path, backed="r")
+    with pytest.raises(
+        NotImplementedError,
+        match="PCA is not implemented for backed AnnData with chunked as False",
+    ):
+        sc.pp.pca(adata)
 
 
 def test_mask_length_error():
