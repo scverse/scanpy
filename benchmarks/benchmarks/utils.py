@@ -99,7 +99,7 @@ def lung93k() -> AnnData:
 
 def get_dataset(dataset: Dataset) -> tuple[AnnData, str | None]:
     if dataset == "pbmc68k_reduced":
-        return pbmc68k_reduced(), "bulk_labels"
+        return pbmc68k_reduced(), None
     if dataset == "pbmc3k":
         return pbmc3k(), None  # can’t use this with batches
     if dataset == "bmmc":

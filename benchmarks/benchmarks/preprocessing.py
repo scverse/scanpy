@@ -66,13 +66,10 @@ def peakmem_filter_genes(*_):
     sc.pp.filter_genes(adata, min_cells=3)
 
 
-# scublet doesn’t work with these datasets
-@skip_for_params([("pbmc68k_reduced",)])
 def time_scrublet(*_):
     sc.pp.scrublet(adata, batch_key=batch_key)
 
 
-@skip_for_params([("pbmc68k_reduced",)])
 def peakmem_scrublet(*_):
     sc.pp.scrublet(adata, batch_key=batch_key)
 
