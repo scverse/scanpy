@@ -12,12 +12,14 @@ from asv_runner.benchmarks.mark import skip_for_params
 import scanpy as sc
 from scanpy.preprocessing._utils import _get_mean_var
 
-from .utils import get_dataset
+from ._utils import get_dataset
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .utils import Dataset
+    from ._utils import Dataset
+
+# setup variables
 
 
 adata: AnnData
@@ -30,7 +32,7 @@ def setup(dataset: Dataset, *_):
     adata, batch_key = get_dataset(dataset)
 
 
-# The actual test suite begins here
+# ASV suite
 
 params: list[Dataset] = ["pbmc68k_reduced", "pbmc3k"]
 param_names = ["dataset"]

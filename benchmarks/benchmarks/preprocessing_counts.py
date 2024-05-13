@@ -9,13 +9,14 @@ from typing import TYPE_CHECKING
 
 import scanpy as sc
 
-from .utils import get_count_dataset
+from ._utils import get_count_dataset
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .utils import Dataset
+    from ._utils import Dataset
 
+# setup variables
 
 adata: AnnData
 batch_key: str | None
@@ -28,7 +29,7 @@ def setup(dataset: Dataset, *_):
     assert "log1p" not in adata.uns
 
 
-# The actual test suite begins here
+# ASV suite
 
 params: list[Dataset] = ["pbmc68k_reduced", "pbmc3k"]
 param_names = ["dataset"]
@@ -81,7 +82,8 @@ def peakmem_normalize_total(*_):
 
 
 def time_log1p(*_):
-    assert "log1p" not in adata.uns, "ASV bug?"
+    # TODO: This would fail: assert "log1p" not in adata.uns, "ASV bug?"
+    # https://github.com/scverse/scanpy/issues/3052
     sc.pp.log1p(adata)
 
 

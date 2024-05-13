@@ -9,11 +9,12 @@ from typing import TYPE_CHECKING
 
 import scanpy as sc
 
-from .utils import pbmc68k_reduced
+from ._utils import pbmc68k_reduced
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
+# setup variables
 
 adata: AnnData
 
