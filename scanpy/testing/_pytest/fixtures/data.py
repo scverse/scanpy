@@ -11,6 +11,8 @@ import pytest
 from anndata import AnnData
 from scipy import sparse
 
+import scanpy as sc
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -48,7 +50,9 @@ def pbmc3k_parametrized_small(_pbmc3ks_parametrized_session) -> Callable[[], Ann
 def backed_adata_path():
     tmp_path = f"{tempfile.gettempdir()}/test.h5ad"
     X = sparse.random(200, 10, format="csr").astype(np.float32)
-    adata = AnnData(X)
+    cat = np.random.randint(0, 3, (200,))
+    adata = AnnData(X, obs={"cat": cat})
+    adata.obs["cat"] = adata.obs["cat"].astype("category")
     adata.write_h5ad(tmp_path)
     return tmp_path
 
@@ -73,8 +77,6 @@ def _prepare_pbmc_testdata(
     small
         False (default) returns full data, True returns small subset of the data.
     """
-
-    import scanpy as sc
 
     if small:
         adata = adata[:1000, :500].copy()

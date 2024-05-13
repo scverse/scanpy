@@ -116,6 +116,10 @@ def dendrogram(
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
+
+    if adata.isbacked:
+        raise NotImplementedError("dendrogram is not implemented for backed AnnData")
+
     if isinstance(groupby, str):
         # if not a list, turn into a list
         groupby = [groupby]
