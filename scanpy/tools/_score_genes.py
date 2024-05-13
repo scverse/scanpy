@@ -107,6 +107,8 @@ def score_genes(
     --------
     See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
+    if adata.isbacked:
+        raise NotImplementedError("score_genes is not implemented for backed AnnData")
     start = logg.info(f"computing score {score_name!r}")
     adata = adata.copy() if copy else adata
     use_raw = _check_use_raw(adata, use_raw)
