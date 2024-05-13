@@ -14,7 +14,6 @@ from scipy import sparse
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from anndata import AnnData
     from numpy.typing import DTypeLike
 
 
