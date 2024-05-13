@@ -592,7 +592,10 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-
+    if adata.isbacked:
+        raise NotImplementedError(
+            "rank_genes_groups is not implemented for backed AnnData"
+        )
     if mask_var is not None:
         mask_var = _check_mask(adata, mask_var, "var")
 

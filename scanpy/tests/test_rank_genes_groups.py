@@ -5,6 +5,7 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import anndata
 import numpy as np
 import pandas as pd
 import pytest
@@ -177,6 +178,16 @@ def test_results_layers(array_type):
             true_scores_t_test[name][:7],
             adata.uns["rank_genes_groups"]["scores"][name][:7],
         )
+
+
+def test_rank_genes_groups_backed(backed_adata_path):
+    adata = anndata.read_h5ad(backed_adata_path, backed="r")
+
+    with pytest.raises(
+        NotImplementedError,
+        match="rank_genes_groups is not implemented for backed AnnData",
+    ):
+        sc.tl.rank_genes_groups(adata, groupby="cat")
 
 
 def test_rank_genes_groups_use_raw():
