@@ -19,6 +19,9 @@ if TYPE_CHECKING:
 @cache
 def _pbmc68k_reduced() -> AnnData:
     adata = sc.datasets.pbmc68k_reduced()
+    # raw has the same number of genes, so we can use it for counts
+    # it doesn’t actually contain counts for some reason, but close enough
+    adata.layers["counts"] = adata.raw.X.copy()
     mapper = dict(
         percent_mito="pct_counts_mt",
         n_counts="total_counts",
@@ -38,7 +41,7 @@ def _pbmc3k() -> AnnData:
     sc.pp.calculate_qc_metrics(
         adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
     )
-    adata.layers["counts"] = adata.X.copy()
+    adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
     sc.pp.log1p(adata)
     return adata
 
@@ -71,9 +74,9 @@ def _bmmc(n_obs: int = 4000) -> AnnData:
         adata = concat(adatas, label="sample")
     adata.obs_names_make_unique()
 
-    adata.var["is_mito"] = adata.var_names.str.startswith("MT-").sum()
-    adata.obs["percent_mito"] = (
-        np.sum(adata[:, adata.var["is_mito"]].X, axis=1).A1 / np.sum(adata.X, axis=1).A1
+    adata.var["mt"] = adata.var_names.str.startswith("MT-")
+    sc.pp.calculate_qc_metrics(
+        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
     )
     adata.obs["n_counts"] = adata.X.sum(axis=1).A1
 
@@ -110,3 +113,13 @@ def get_dataset(dataset: Dataset) -> tuple[AnnData, str | None]:
 
     msg = f"Unknown dataset {dataset}"
     raise AssertionError(msg)
+
+
+def get_count_dataset(dataset: Dataset) -> tuple[AnnData, str | None]:
+    adata, batch_key = get_dataset(dataset)
+
+    adata.X = adata.layers.pop("counts")
+    # remove indicators that X was transformed
+    adata.uns.pop("log1p", None)
+
+    return adata, batch_key
