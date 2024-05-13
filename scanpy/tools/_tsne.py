@@ -101,6 +101,8 @@ def tsne(
     """
     import sklearn
 
+    if adata.isbacked:
+        raise NotImplementedError("tsne is not implemented for backed AnnData")
     start = logg.info("computing tSNE")
     adata = adata.copy() if copy else adata
     X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)

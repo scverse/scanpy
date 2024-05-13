@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import anndata
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
@@ -29,6 +30,15 @@ def test_tsne():
     assert euclidean1.uns["tsne"]["params"]["metric"] == "euclidean"
     assert euclidean2.uns["tsne"]["params"]["metric"] == "euclidean"
     assert cosine.uns["tsne"]["params"]["metric"] == "cosine"
+
+
+def test_tsne_backed(backed_adata_path):
+    adata = anndata.read_h5ad(backed_adata_path, backed="r")
+    with pytest.raises(
+        NotImplementedError,
+        match="tsne is not implemented for backed AnnData",
+    ):
+        sc.tl.tsne(adata)
 
 
 def test_umap_init_dtype():
