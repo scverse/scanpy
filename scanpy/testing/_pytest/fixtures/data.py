@@ -14,6 +14,9 @@ from scipy import sparse
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from anndata import AnnData
+    from numpy.typing import DTypeLike
+
 
 @pytest.fixture(
     scope="session",
@@ -56,7 +59,7 @@ def _prepare_pbmc_testdata(
     sparsity_func: Callable[
         [np.ndarray | sparse.spmatrix], np.ndarray | sparse.spmatrix
     ],
-    dtype: str | np.dtype,
+    dtype: DTypeLike,
     *,
     small: bool,
 ) -> AnnData:
