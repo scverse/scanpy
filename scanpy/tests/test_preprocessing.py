@@ -55,9 +55,10 @@ def test_log1p_backed_errors(backed_adata):
     ):
         sc.pp.log1p(backed_adata)
     backed_adata.layers["X_copy"] = backed_adata.X
+    layer_type = type(backed_adata.layers["X_copy"])
     with pytest.raises(
         NotImplementedError,
-        match=f"log1p is not implemented for matrices of type {type(backed_adata.layers["X_copy"])} from layers",
+        match=f"log1p is not implemented for matrices of type {layer_type} from layers",
     ):
         sc.pp.log1p(backed_adata, layer="X_copy")
     backed_adata.file.close()
