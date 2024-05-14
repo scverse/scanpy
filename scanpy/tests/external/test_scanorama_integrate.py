@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import scanpy as sc
 import scanpy.external as sce
-from scanpy.testing._helpers.data import pbmc68k_reduced
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 pytestmark = [needs.scanorama]
 

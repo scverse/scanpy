@@ -12,7 +12,7 @@ from anndata import AnnData
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._utils import renamed_arg
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     import numpy as np
