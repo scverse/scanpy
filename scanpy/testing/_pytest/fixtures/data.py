@@ -9,11 +9,26 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData, read_h5ad
-from anndata._core.sparse_dataset import BaseCompressedSparseDataset
-from anndata.experimental import sparse_dataset
+from anndata import __version__ as anndata_version
+from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
+
+if Version(anndata_version) >= Version("0.10.0"):
+    from anndata._core.sparse_dataset import (
+        BaseCompressedSparseDataset as SparseDataset,
+    )
+    from anndata.experimental import sparse_dataset
+
+    def make_sparse(x):
+        return sparse_dataset(x)
+else:
+    from anndata._core.sparse_dataset import SparseDataset as SparseDataset
+
+    def make_sparse(x):
+        return SparseDataset(x)
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -65,8 +80,8 @@ def backed_adata(request, worker_id="serial"):
     adata.write_h5ad(tmp_path)
     adata = read_h5ad(tmp_path, backed="r")
     adata.layers["X_copy"] = (
-        sparse_dataset(adata.file["X"])
-        if isinstance(adata.X, BaseCompressedSparseDataset)
+        make_sparse(adata.file["X"])
+        if isinstance(adata.X, SparseDataset)
         else adata.file["X"]
     )
     return adata
