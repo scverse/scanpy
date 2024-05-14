@@ -2066,7 +2066,7 @@ def _prepare_dataframe(
         # and does not need to be given
         groupby = groupby.copy()  # copy to not modify user passed parameter
         groupby.remove(groupby_index)
-    keys = list(groupby) + list(np.unique(var_names))
+    keys = [*groupby, *np.unique(var_names)]
     obs_tidy = get.obs_df(
         adata, keys=keys, layer=layer, use_raw=use_raw, gene_symbols=gene_symbols
     )

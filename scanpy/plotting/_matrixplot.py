@@ -122,6 +122,7 @@ class MatrixPlot(BasePlot):
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
         *,
+        groupby_cols: str | Sequence[str] = (),
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -147,6 +148,7 @@ class MatrixPlot(BasePlot):
             adata,
             var_names,
             groupby,
+            groupby_cols=groupby_cols,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
@@ -188,6 +190,9 @@ class MatrixPlot(BasePlot):
                 pass
             else:
                 logg.warning("Unknown type for standard_scale, ignored")
+
+            if len(groupby_cols) > 0:
+                values_df = self._convert_tidy_to_stacked(values_df)
 
         self.values_df = values_df
 
@@ -252,7 +257,7 @@ class MatrixPlot(BasePlot):
 
         return self
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
         # MatrixPlot object, for example once with swap_axes and other without
@@ -339,6 +344,7 @@ def matrixplot(
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
     *,
+    groupby_cols: str | Sequence[str] = (),
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
@@ -367,6 +373,7 @@ def matrixplot(
 ) -> MatrixPlot | dict[str, Axes] | None:
     """\
     Creates a heatmap of the mean expression values per group of each var_names.
+    Columns can optionally be grouped by specifying `groupby_cols`.
 
     This function provides a convenient interface to the :class:`~scanpy.pl.MatrixPlot`
     class. If you need more flexibility, you should use :class:`~scanpy.pl.MatrixPlot`
@@ -432,6 +439,7 @@ def matrixplot(
         adata,
         var_names,
         groupby=groupby,
+        groupby_cols=groupby_cols,
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,

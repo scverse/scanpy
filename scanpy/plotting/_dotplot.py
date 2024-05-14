@@ -141,6 +141,7 @@ class DotPlot(BasePlot):
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
         *,
+        groupby_cols: str | Sequence[str] = (),
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -169,6 +170,7 @@ class DotPlot(BasePlot):
             adata,
             var_names,
             groupby,
+            groupby_cols=groupby_cols,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
@@ -204,6 +206,8 @@ class DotPlot(BasePlot):
                 obs_bool.groupby(level=0, observed=True).sum()
                 / obs_bool.groupby(level=0, observed=True).count()
             )
+            if len(groupby_cols) > 0:
+                dot_size_df = self._convert_tidy_to_stacked(dot_size_df)
 
         if dot_color_df is None:
             # 2. compute mean expression value value
@@ -227,6 +231,8 @@ class DotPlot(BasePlot):
                 pass
             else:
                 logg.warning("Unknown type for standard_scale, ignored")
+            if len(groupby_cols) > 0:
+                dot_color_df = self._convert_tidy_to_stacked(dot_color_df)
         else:
             # check that both matrices have the same shape
             if dot_color_df.shape != dot_size_df.shape:
@@ -568,7 +574,7 @@ class DotPlot(BasePlot):
             self._plot_colorbar(color_legend_ax, normalize)
             return_ax_dict["color_legend_ax"] = color_legend_ax
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
         # DotPlot object, for example once with swap_axes and other without
@@ -737,7 +743,7 @@ class DotPlot(BasePlot):
         mean_flat = dot_color.values.flatten()
         cmap = plt.get_cmap(cmap)
         if dot_max is None:
-            dot_max = np.ceil(max(frac) * 10) / 10
+            dot_max = np.ceil(np.nanmax(frac) * 10) / 10
         else:
             if dot_max < 0 or dot_max > 1:
                 raise ValueError("`dot_max` value has to be between 0 and 1")
@@ -758,6 +764,8 @@ class DotPlot(BasePlot):
         # rescale size to match smallest_dot and largest_dot
         size = size * (largest_dot - smallest_dot) + smallest_dot
         normalize = check_colornorm(vmin, vmax, vcenter, norm)
+        # circumvent unexpected behavior with nan in matplotlib
+        normalize(mean_flat[~np.isnan(mean_flat)])
 
         if color_on == "square":
             if edge_color is None:
@@ -871,6 +879,7 @@ def dotplot(
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
     *,
+    groupby_cols: str | Sequence[str] = (),
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
@@ -907,6 +916,7 @@ def dotplot(
     Makes a *dot plot* of the expression values of `var_names`.
 
     For each var_name and each `groupby` category a dot is plotted.
+    Columns can optionally be grouped by specifying `groupby_cols`.
     Each dot represents two values: mean expression within each category
     (visualized by color) and fraction of cells expressing the `var_name` in the
     category (visualized by the size of the dot). If `groupby` is not given,
@@ -1013,7 +1023,8 @@ def dotplot(
     dp = DotPlot(
         adata,
         var_names,
-        groupby,
+        groupby=groupby,
+        groupby_cols=groupby_cols,
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,

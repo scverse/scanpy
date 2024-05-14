@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal, Union
 from warnings import warn
 
 import numpy as np
+import pandas as pd
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
@@ -97,6 +98,7 @@ class BasePlot:
         var_names: _VarNames | Mapping[str, _VarNames],
         groupby: str | Sequence[str],
         *,
+        groupby_cols: str | Sequence[str] = (),
         use_raw: bool | None = None,
         log: bool = False,
         num_categories: int = 7,
@@ -120,7 +122,10 @@ class BasePlot:
         self.var_group_positions = var_group_positions
         self.var_group_rotation = var_group_rotation
         self.width, self.height = figsize if figsize is not None else (None, None)
-
+        self.groupby = [groupby] if isinstance(groupby, str) else groupby
+        self.groupby_cols = (
+            [groupby_cols] if isinstance(groupby_cols, str) else groupby_cols
+        )
         self.has_var_groups = (
             True
             if var_group_positions is not None and len(var_group_positions) > 0
@@ -132,13 +137,33 @@ class BasePlot:
         self.categories, self.obs_tidy = _prepare_dataframe(
             adata,
             self.var_names,
-            groupby,
+            self.groupby,
             use_raw=use_raw,
             log=log,
             num_categories=num_categories,
             layer=layer,
             gene_symbols=gene_symbols,
         )
+        # reset obs_tidy if using groupby_cols
+        if len(self.groupby_cols) > 0:
+            if overlap := (set(self.groupby) & set(self.groupby_cols)):
+                raise ValueError(
+                    f"`groupby` and `groupby_cols` have overlapping elements: {overlap}."
+                )
+            # TODO : Check if we rather need the product of categories ?
+            self.categories_cols = adata.obs.loc[:, self.groupby_cols].nunique().sum()
+            _, self.obs_tidy = _prepare_dataframe(
+                adata,
+                self.var_names,
+                [*self.groupby, *self.groupby_cols],
+                use_raw,
+                log,
+                num_categories,
+                layer=layer,
+                gene_symbols=gene_symbols,
+            )
+        else:
+            self.categories_cols = 0
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
             warn(
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
@@ -159,7 +184,6 @@ class BasePlot:
                 return
 
         self.adata = adata
-        self.groupby = [groupby] if isinstance(groupby, str) else groupby
         self.log = log
         self.kwds = kwds
 
@@ -372,6 +396,11 @@ class BasePlot:
         _sort = True if sort is not None else False
         _ascending = True if sort == "ascending" else False
         counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
+        # could remove the previous line and only use this but this is slower
+        if len(self.groupby_cols) > 0:
+            counts_df = self.adata.obs[self.groupby].value_counts(
+                sort=_sort, ascending=_ascending
+            )
 
         if _sort:
             self.categories_order = counts_df.index
@@ -586,7 +615,7 @@ class BasePlot:
         self._plot_colorbar(color_legend_ax, normalize)
         return_ax_dict["color_legend_ax"] = color_legend_ax
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         y_labels = self.categories
         x_labels = self.var_names
 
@@ -655,7 +684,8 @@ class BasePlot:
         if self.height is None:
             mainplot_height = len(self.categories) * category_height
             mainplot_width = (
-                len(self.var_names) * category_width + self.group_extra_size
+                len(self.var_names) * category_width * (1 + self.categories_cols)
+                + self.group_extra_size
             )
             if self.are_axes_swapped:
                 mainplot_height, mainplot_width = mainplot_width, mainplot_height
@@ -856,6 +886,37 @@ class BasePlot:
         """
         self.make_figure()
         plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
+
+    def _convert_tidy_to_stacked(self, values_df: pd.DataFrame) -> pd.DataFrame:
+        """\
+        Utility function used to convert obs_tidy into the correct format when using a groupby_col.
+        """
+        label = values_df.index.name
+        stacked_df = values_df.reset_index()
+        stacked_df.index = pd.MultiIndex.from_tuples(
+            stacked_df[label].str.split("_").tolist(),
+            names=self.groupby + self.groupby_cols,
+        )
+        stacked_df = stacked_df.drop(label, axis=1).unstack(level=self.groupby_cols)
+
+        # recreate the original formatting of values_df
+        values_df = stacked_df.reset_index(drop=True)
+        if isinstance(stacked_df.index, pd.MultiIndex):
+            values_df.index = (
+                stacked_df.index.to_series()
+                .apply(lambda x: "_".join(map(str, x)))
+                .values
+            )
+        else:
+            values_df.index = (
+                stacked_df.index.to_series()
+                .apply(lambda x: "".join(map(str, x)))
+                .values
+            )
+        values_df.columns = (
+            stacked_df.columns.to_series().apply(lambda x: "_".join(map(str, x))).values
+        )
+        return values_df
 
     def _reorder_categories_after_dendrogram(self, dendrogram) -> None:
         """\
