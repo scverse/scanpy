@@ -488,7 +488,9 @@ def visium_sge(
     include_hires_tiff: bool = False,
 ) -> AnnData:
     """\
-    Processed Visium Spatial Gene Expression data from 10x Genomics’ database_.
+    Processed Visium Spatial Gene Expression data from 10x Genomics’ database.
+
+    The database_ can be browsed online to find the ``sample_id`` you want.
 
     .. _database: https://support.10xgenomics.com/spatial-gene-expression/datasets
 
