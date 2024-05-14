@@ -34,7 +34,6 @@ import h5py
 import numpy as np
 from anndata import AnnData
 from anndata import __version__ as anndata_version
-from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from numpy.typing import NDArray
 from packaging.version import Version
 from scipy import sparse
@@ -44,6 +43,13 @@ from .. import logging as logg
 from .._compat import DaskArray
 from .._settings import settings
 from .compute.is_constant import is_constant  # noqa: F401
+
+if Version(anndata_version) >= Version("0.10.0"):
+    from anndata._core.sparse_dataset import (
+        BaseCompressedSparseDataset as SparseDataset,
+    )
+else:
+    from anndata._core.sparse_dataset import SparseDataset as SparseDataset
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -1095,7 +1101,7 @@ def _resolve_axis(
 
 
 def is_backed_type(X):
-    return isinstance(X, (BaseCompressedSparseDataset, h5py.File, h5py.Dataset))
+    return isinstance(X, (SparseDataset, h5py.File, h5py.Dataset))
 
 
 def raise_not_implemented_error_if_backed_type(X, method_name):
